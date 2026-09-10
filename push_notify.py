@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+# 固化微信推送脚本：从 data.js 读最新数据，按模块空行排版，推送给 .notify-config.json 中所有人
+# 用法: python3 push_notify.py [ashare|us|weekend]
+import subprocess, json, sys, urllib.request, time, os
+
+BASE = '/Users/loccco/WorkBuddy/2026-09-04-11-53-22/market-dashboard'
+os.chdir(BASE)
+
+# 1) 用 node 把 data.js 转成 JSON
+node_src = r'''
+const fs = require('fs');
+let s = fs.readFileSync('data.js','utf8');
+let m = s.match(/window\s*\.\s*DASHBOARD_DATA\s*=\s*(\{[\s\S]*\});?\s*$/);
+process.stdout.write(JSON.stringify(eval('(' + m[1] + ')')));
+'''
+p = subprocess.run(['node','-e',node_src], capture_output=True, text=True, cwd=BASE)
+if p.returncode != 0:
+    print('node parse failed:', p.stderr); sys.exit(1)
+D = json.loads(p.stdout)
+
+mode = sys.argv[1] if len(sys.argv) > 1 else 'ashare'
+
+def fmt_pct(x):
+    try: return f"{float(x):+.2f}%"
+    except: return str(x)
+
+if mode == 'ashare':
+    a = D['ashare']
+    idx0 = a['indices'][0]
+    title = f"[A股收盘] {a['tradeDate'][5:]} 沪指{fmt_pct(idx0['changePct'])}"
+    leaders = '  '.join([f"{s['name']}{fmt_pct(s['pct'])}" for s in a['sectorsUp'][:5]])
+    laggards = '  '.join([f"{s['name']}{fmt_pct(s['pct'])}" for s in a['sectorsDown'][:5]])
+    fi = ' '.join([f"{s['name']}{s['value']:+.1f}亿" for s in a['fundIn'][:3]])
+    fo = ' '.join([f"{s['name']}{s['value']:+.1f}亿" for s in a['fundOut'][:3]])
+    ai = D['aiPrediction'].get('verification')
+    ai_txt = ai['summary'] if ai else '（待16:00验证）'
+    desp = '\n\n'.join([
+        '🌐 https://chiuzzzjamm.github.io/market-dashboard',
+        f"📊 大盘趋势：{a['summary']}",
+        f"🎯 AI验证：{ai_txt}",
+        f"📈 领涨：{leaders}",
+        f"📉 领跌：{laggards}",
+        f"💰 资金：流入 {fi} | 流出 {fo}",
+        "🌏 日韩：详见网页（9/10 收盘）",
+    ])
+
+elif mode == 'us':
+    u = D['us']
+    us_date = u['tradeDate'].split('（')[0][5:]
+    title = f"[美股] {us_date} 道指{fmt_pct(u['indices'][0]['changePct'])}"
+    up = '  '.join([f"{s['name']}{fmt_pct(s['pct'])}" for s in u['sectorsUp'][:4]])
+    down = '  '.join([f"{s['name']}{fmt_pct(s['pct'])}" for s in u['sectorsDown'][:4]])
+    ai = D['aiPrediction']
+    ai_txt = ai.get('summary','')
+    desp = '\n\n'.join([
+        '🌐 https://chiuzzzjamm.github.io/market-dashboard',
+        f"📊 大盘研判：{u['summary']}",
+        f"🎯 AI预测今日：{ai_txt}",
+        f"📈 隔夜美股：{'  '.join([i['name']+fmt_pct(i['changePct']) for i in u['indices'][:3]])}",
+        f"📰 要闻：{'  '.join([n['title'] for n in (u.get('bullNews',[])[:2] + u.get('bearNews',[])[:2])])}",
+        "🌏 韩日：9/10 开盘参考（详见网页）",
+    ])
+
+elif mode == 'weekend':
+    w = D['weekendNews']
+    title = f"[周末消息] {w['date'][5:]} 要闻汇总"
+    desp = '\n\n'.join([
+        '🌐 https://chiuzzzjamm.github.io/market-dashboard',
+        f"📊 美股周五：{w.get('summary','')[:120]}",
+        f"✅ 利好：{'  '.join([t['theme'] for t in w.get('bullish',[])[:3]])}",
+        f"⚠️ 利空：{'  '.join([t['theme'] for t in w.get('bearish',[])[:3]])}",
+        f"🔮 周一预判：{w.get('mondayOutlook','')}",
+    ])
+
+else:
+    print('unknown mode'); sys.exit(1)
+
+# 推送
+cfg = json.load(open('.notify-config.json'))
+sendkeys = [r['sendkey'] for r in cfg['recipients']]
+DRY = os.environ.get('PUSH_DRY') == '1'
+print('=== TITLE ===')
+print(title)
+print('=== DESP ===')
+print(desp)
+print('=== sendkeys ===', sendkeys)
+if DRY:
+    print('[DRY-RUN] 未实际发送')
+    sys.exit(0)
+
+for sendkey in sendkeys:
+    url = f'https://sctapi.ftqq.com/{sendkey}.send'
+    data = json.dumps({'title':title,'desp':desp}, ensure_ascii=False).encode('utf-8')
+    req = urllib.request.Request(url, data=data, headers={'Content-Type':'application/json'})
+    last_err = ''
+    for attempt in range(1,4):
+        try:
+            resp = urllib.request.urlopen(req, timeout=15)
+            print('push ok:', sendkey, resp.read().decode('utf-8')[:120]); break
+        except Exception as e:
+            last_err = str(e)
+            print('push attempt', attempt, 'failed:', sendkey, e)
+            if attempt < 3: time.sleep(3)
+    else:
+        print('push failed after 3 attempts:', sendkey, last_err)
