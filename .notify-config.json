@@ -1,6 +1,15 @@
 {
   "provider": "serverchan",
-  "sendkey": "SCT413242T0YtE6WAvk3gAd014iwyzBosC",
-  "endpoint": "https://sctapi.ftqq.com/{sendkey}.send",
-  "note": "Server 酱 Turbo 推送配置。每次自动更新后通过此通道发送摘要到微信。"
+  "note": "Server 酱 Turbo 推送配置。每次自动更新后通过此通道发送摘要到微信。支持多人推送。",
+  "recipients": [
+    {
+      "name": "主账号",
+      "sendkey": "SCT413242T0YtE6WAvk3gAd014iwyzBosC"
+    },
+    {
+      "name": "二号",
+      "sendkey": "SCT416003T0EGQ0JvxUNHwpxP7QRRsk2IG"
+    }
+  ],
+  "endpoint": "https://sctapi.ftqq.com/{sendkey}.send"
 }
