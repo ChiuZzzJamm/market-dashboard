@@ -1,0 +1,17 @@
+# 敏感凭证与配置（公开仓库中绝对不能提交）
+.github-token
+.notify-config.json
+.wx-config.json
+.vscode/launch.json
+
+# 个人脚本/无关文件
+router-wol-schedule.sh
+
+# 临时文件
+*.log
+*.tmp
+.DS_Store
+
+# 打包与备份
+market-dashboard.zip
+*.bak

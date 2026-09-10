@@ -1,49 +1,75 @@
 #!/bin/bash
-# Cloudflare Pages 自动部署脚本
+# 每日市场看板自动部署脚本
 # 用法: ./deploy.sh
-# 环境变量:
-#   CF_ACCOUNT_ID - Cloudflare Account ID
-#   CF_API_TOKEN  - Cloudflare API Token
+# 说明: 更新 index.html 版本戳后推送到 GitHub，触发 GitHub Pages 自动部署
 
-set -e
+set -euo pipefail
 
-ACCOUNT_ID="${CF_ACCOUNT_ID:-00ab4b240ad76c8bb8b009e8f9e4932e}"
-TOKEN="${CF_API_TOKEN:-cfut_y1PvFdVcZXF7qBBrpYk3p6urjRkfdZMws7e7jhEW726c5fec}"
-PROJECT="market-dashboard"
+REPO_DIR="/Users/loccco/WorkBuddy/2026-09-04-11-53-22/market-dashboard"
+cd "$REPO_DIR"
 
-# 计算文件 hash (SHA256)
-hash_index=$(shasum -a 256 index.html | awk '{print $1}')
-hash_data=$(shasum -a 256 data.js | awk '{print $1}')
+# ---------- 读取 GitHub PAT ----------
+# 优先级: 1) 环境变量 GITHUB_TOKEN  2) ~/.github-token 文件
+GITHUB_TOKEN="${GITHUB_TOKEN:-}"
+if [[ -z "$GITHUB_TOKEN" && -f "$HOME/.github-token" ]]; then
+    GITHUB_TOKEN=$(cat "$HOME/.github-token" | tr -d '[:space:]')
+fi
 
-# 更新时间戳，防止 CDN/浏览器缓存旧版本
-echo "Updating cache-buster timestamp..."
+if [[ -z "$GITHUB_TOKEN" ]]; then
+    echo "❌ 未找到 GitHub PAT"
+    echo "   请生成 Personal Access Token (classic) 并写入 ~/.github-token，或设置环境变量 GITHUB_TOKEN"
+    echo "   生成地址: https://github.com/settings/tokens"
+    echo "   所需权限: repo (或至少 public_repo)"
+    exit 1
+fi
+
+# ---------- 配置 git 使用 token 推送到 HTTPS ----------
+# 这样无需依赖 macOS keychain 或 SSH agent，适合自动化环境
+ORIGIN_URL="https://$GITHUB_TOKEN@github.com/ChiuZzzJamm/market-dashboard.git"
+git remote set-url origin "$ORIGIN_URL"
+# 禁用交互式密码提示，防止卡住
+git config --local credential.helper ''
+
+# ---------- 更新缓存版本号 ----------
+echo "📈 更新 data.js 版本戳防止浏览器/CDN缓存..."
 TIMESTAMP=$(date +%Y%m%d%H%M)
-perl -pi -e "s|data\.js\?v=[^\"]*|data.js?v=$TIMESTAMP|g" index.html
-echo "  Timestamp: $TIMESTAMP"
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    sed -i '' -E "s|data\.js\?v=[^\"']*|data.js?v=$TIMESTAMP|g" index.html
+else
+    sed -i -E "s|data\.js\?v=[^\"']*|data.js?v=$TIMESTAMP|g" index.html
+fi
 
-echo "Deploying to Cloudflare Pages..."
-echo "  index.html -> ${hash_index:0:16}..."
-echo "  data.js -> ${hash_data:0:16}..."
+# ---------- 校验 data.js 语法 ----------
+echo "🔍 校验 data.js 语法..."
+node --check data.js
 
-# 创建 manifest JSON
-manifest="{\"index.html\":\"$hash_index\",\"data.js\":\"$hash_data\"}"
+# ---------- 提交并推送 ----------
+echo "📤 提交并推送到 GitHub（触发 GitHub Pages 自动部署）..."
+git add index.html data.js .gitignore deploy.sh
+if git diff --cached --quiet; then
+    echo "ℹ️ 没有可提交的变更"
+    exit 0
+fi
 
-# 部署
-curl -s -X POST \
-  "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/pages/projects/$PROJECT/deployments" \
-  -H "Authorization: Bearer $TOKEN" \
-  -F "manifest=$manifest" \
-  -F "index.html=@index.html" \
-  -F "data.js=@data.js" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-if data.get('success'):
-    result = data['result']
-    print(f\"\\n✅ 部署成功!\")
-    print(f\"   URL: {result.get('url', 'N/A')}\")
-    print(f\"   Deployment ID: {result.get('short_id', 'N/A')}\")
-else:
-    print(f\"\\n❌ 部署失败:\")
-    print(json.dumps(data, indent=2, ensure_ascii=False))
-    sys.exit(1)
-"
+git commit -m "update: $(date '+%Y-%m-%d %H:%M') market data"
+
+# 带重试的 push（网络波动时）
+for i in 1 2 3; do
+    echo "   推送尝试 $i/3..."
+    if GIT_TERMINAL_PROMPT=0 git push origin main 2>&1; then
+        echo "✅ 推送成功！GitHub Pages 将在 1-2 分钟内自动部署。"
+        echo "   公开访问地址: https://chiuzzzjamm.github.io/market-dashboard"
+        # 推送成功后恢复普通 HTTPS URL（避免 token 留在 .git/config）
+        git remote set-url origin "https://github.com/ChiuZzzJamm/market-dashboard.git"
+        exit 0
+    fi
+    echo "   推送失败，5秒后重试..."
+    sleep 5
+done
+
+# 全部重试失败
+# 恢复普通 URL，避免 token 长期留在配置中
+git remote set-url origin "https://github.com/ChiuZzzJamm/market-dashboard.git"
+echo "❌ git push 连续 3 次失败，部署未触发。"
+echo "   请检查 ~/.github-token 是否有效，或网络连接。"
+exit 1
