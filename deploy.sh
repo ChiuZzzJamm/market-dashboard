@@ -18,19 +18,23 @@ if [[ ! -f "$DEPLOY_KEY" ]]; then
 fi
 
 # 用 GIT_SSH_COMMAND 显式指定私钥，不依赖 ssh-agent / macOS keychain，适合自动化环境
-export GIT_SSH_COMMAND="ssh -i $DEPLOY_KEY -o StrictHostKeyChecking=no -o BatchMode=yes"
+# 注意：本环境 22 端口 SSH 被协议级过滤，改用 GitHub 的 443 端口 SSH（ssh.github.com:443）
+export GIT_SSH_COMMAND="ssh -i $DEPLOY_KEY -o StrictHostKeyChecking=no -o BatchMode=yes -p 443"
 
-# remote 统一使用 SSH 地址（推送走 SSH 而非 HTTPS）
-git remote set-url origin "git@github.com:ChiuZzzJamm/market-dashboard.git"
+# remote 统一使用 SSH over 443 地址（绕过 22 端口过滤）
+git remote set-url origin "ssh://git@ssh.github.com:443/ChiuZzzJamm/market-dashboard.git"
 
 # ---------- 更新缓存版本号（防浏览器/CDN 缓存）----------
 echo "📈 更新 data.js 版本戳防止浏览器/CDN缓存..."
-TIMESTAMP=$(date +%Y%m%d%H%M)
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    sed -i '' -E "s|data\.js\?v=[^\"']*|data.js?v=$TIMESTAMP|g" index.html
-else
-    sed -i -E "s|data\.js\?v=[^\"']*|data.js?v=$TIMESTAMP|g" index.html
-fi
+python3 - <<'PY'
+import re, pathlib, time
+p = pathlib.Path("index.html")
+t = p.read_text(encoding="utf-8")
+ts = time.strftime("%Y%m%d%H%M")
+t2 = re.sub(r'(data\.js\?v=)\d+', r'\g<1>' + ts, t)
+p.write_text(t2, encoding="utf-8")
+print("version stamp updated to", ts)
+PY
 
 # ---------- 校验 data.js 语法 ----------
 echo "🔍 校验 data.js 语法..."
