@@ -98,6 +98,7 @@ if mode == 'ashare':
         f"📉 领跌：{laggards}",
         f"💰 资金：流入 {fi} | 流出 {fo}",
         build_panorama_line(D.get('panorama')),
+        f"💡 一句话：{a.get('outlook','')}",
     ])
 
 elif mode == 'us':
