@@ -226,11 +226,11 @@ window.DASHBOARD_DATA = {
         { name: "电力 / 公用事业", pct: 0.86, ref: "XLU 公用事业【行业ETF】" },
         { name: "中概股", pct: -2.65, ref: "KWEB 中国海外互联网【主题ETF】" }
       ]},
-      { key: "kr", name: "韩股", date: "9/9 收盘（9/10 未收盘）", items: [
+      { key: "kr", name: "韩股", date: "9/10 开盘", items: [
         { name: "半导体/存储", pct: 1.76, ref: "三星电子 0.00%、SK海力士 +3.51%（2龙头均值）" },
         { name: "金融", pct: -0.98, ref: "KB金融 -0.98%（单一龙头）" }
       ]},
-      { key: "jp", name: "日经", date: "9/9 收盘（9/10 未收盘）", items: [
+      { key: "jp", name: "日经", date: "9/10 开盘", items: [
         { name: "AI/科技投资", pct: 3.87, ref: "软银集团 +3.87%（单一龙头）" },
         { name: "半导体设备", pct: -0.56, ref: "东京电子 -0.56%（单一龙头）" },
         { name: "存储", pct: -0.71, ref: "铠侠 -0.71%（单一龙头）" }
