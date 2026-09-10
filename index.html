@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="vuWegjTUbUryFQN7317dIj">
 <title>📈每日市场看板 · A股 / 美股</title>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609101109"></script>
+<script src="data.js?v=202609101112"></script>
 <style>
   :root {
     --up: #d43030;
@@ -304,7 +304,16 @@ var panoCurrent = 'us';
 function renderPano() {
   var pano = window.DASHBOARD_DATA.panorama;
   if (!pano || !pano.markets) { document.getElementById('pano-card').style.display = 'none'; return; }
-  document.getElementById('pano-note').textContent = pano.note || '';
+  // 用各市场 date 动态拼接日期说明，根治 panorama.note 里硬编码日期与实际脱节的问题
+  var usDate = ((pano.markets.filter(function (m) { return m.key === 'us'; })[0]) || {}).date || '未知';
+  var krDate = ((pano.markets.filter(function (m) { return m.key === 'kr'; })[0]) || {}).date || '未知';
+  var jpDate = ((pano.markets.filter(function (m) { return m.key === 'jp'; })[0]) || {}).date || '未知';
+  var autoNote = '产业板块全景：美股为 ' + usDate + '，韩股为 ' + krDate + '，日经为 ' + jpDate + '。';
+  if (pano.note) {
+    // 保留原 note 中除首句日期说明外的口径说明
+    autoNote += pano.note.replace(/^产业板块全景：[^。]*。?\s*/, '');
+  }
+  document.getElementById('pano-note').textContent = autoNote;
   var tabsHtml = '';
   pano.markets.forEach(function (m) {
     tabsHtml += '<div class="pano-tab' + (m.key === panoCurrent ? ' active' : '') + '" onclick="switchPano(\'' + m.key + '\')">' + esc(m.name) + '</div>';
