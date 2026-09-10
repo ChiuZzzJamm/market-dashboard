@@ -1,10 +1,27 @@
 #!/usr/bin/env python3
 # 固化微信推送脚本：从 data.js 读最新数据，按模块空行排版，推送给 .notify-config.json 中所有人
 # 用法: python3 push_notify.py [ashare|us|weekend]
-import subprocess, json, sys, urllib.request, time, os
+import subprocess, json, sys, urllib.request, time, os, shutil, glob
 
 BASE = '/Users/loccco/WorkBuddy/2026-09-04-11-53-22/market-dashboard'
 os.chdir(BASE)
+
+# 定位 node：优先 PATH，其次 workbuddy 管理的多版本目录（避免定时任务环境 PATH 缺失导致崩溃）
+def find_node():
+    p = shutil.which('node')
+    if p:
+        return p
+    cands = sorted(glob.glob('/Users/loccco/.workbuddy/binaries/node/versions/*/bin/node'))
+    if cands:
+        return cands[-1]
+    # 兜底：常见系统路径
+    for c in ['/usr/local/bin/node', '/usr/bin/node']:
+        if os.path.exists(c):
+            return c
+    raise RuntimeError('node not found in PATH or known locations')
+
+NODE = find_node()
+print('[info] using node:', NODE)
 
 # 1) 用 node 把 data.js 转成 JSON
 node_src = r'''
@@ -13,7 +30,7 @@ let s = fs.readFileSync('data.js','utf8');
 let m = s.match(/window\s*\.\s*DASHBOARD_DATA\s*=\s*(\{[\s\S]*\});?\s*$/);
 process.stdout.write(JSON.stringify(eval('(' + m[1] + ')')));
 '''
-p = subprocess.run(['node','-e',node_src], capture_output=True, text=True, cwd=BASE)
+p = subprocess.run([NODE,'-e',node_src], capture_output=True, text=True, cwd=BASE)
 if p.returncode != 0:
     print('node parse failed:', p.stderr); sys.exit(1)
 D = json.loads(p.stdout)
