@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # 固化微信推送脚本：从 data.js 读最新数据，按模块空行排版，推送给 .notify-config.json 中所有人
 # 用法: python3 push_notify.py [ashare|us|weekend]
-import subprocess, json, sys, urllib.request, time, os, shutil, glob
+import subprocess, json, sys, urllib.request, time, os, shutil, glob, re
 
 BASE = '/Users/loccco/WorkBuddy/2026-09-04-11-53-22/market-dashboard'
 os.chdir(BASE)
@@ -41,6 +41,45 @@ def fmt_pct(x):
     try: return f"{float(x):+.2f}%"
     except: return str(x)
 
+def fmt_panorama_items(market, max_items=4):
+    """把 panorama 一个市场的 items 格式化为紧凑字符串"""
+    if not market or not market.get('items'):
+        return ''
+    parts = []
+    for it in market['items'][:max_items]:
+        name = it.get('name', '')
+        pct = fmt_pct(it.get('pct', 0))
+        ref = it.get('ref', '')
+        # 去掉 ref 末尾的"（2龙头均值）""（单一龙头）"等口径后缀，保留龙头列表
+        ref = re.sub(r'[（(].*?均值|.*?龙头.*?[）)]$', '', ref).strip('、 ')
+        if ref:
+            parts.append(f"{name}{pct}（{ref}）")
+        else:
+            parts.append(f"{name}{pct}")
+    return ' '.join(parts)
+
+def build_panorama_line(panorama):
+    """生成 🌏 日韩 推送行；数据缺失才 fallback 详见网页"""
+    if not panorama or not panorama.get('markets'):
+        return '🌏 日韩：详见网页'
+    markets = {m['key']: m for m in panorama['markets']}
+    kr = markets.get('kr')
+    jp = markets.get('jp')
+    if not kr and not jp:
+        return '🌏 日韩：详见网页'
+    pieces = []
+    if kr:
+        kr_txt = fmt_panorama_items(kr)
+        if kr_txt:
+            pieces.append(f"韩股 {kr.get('date','')}：{kr_txt}")
+    if jp:
+        jp_txt = fmt_panorama_items(jp)
+        if jp_txt:
+            pieces.append(f"日经 {jp.get('date','')}：{jp_txt}")
+    if pieces:
+        return '🌏 日韩：' + ' | '.join(pieces)
+    return '🌏 日韩：详见网页'
+
 if mode == 'ashare':
     a = D['ashare']
     idx0 = a['indices'][0]
@@ -58,7 +97,7 @@ if mode == 'ashare':
         f"📈 领涨：{leaders}",
         f"📉 领跌：{laggards}",
         f"💰 资金：流入 {fi} | 流出 {fo}",
-        "🌏 日韩：详见网页（9/10 收盘）",
+        build_panorama_line(D.get('panorama')),
     ])
 
 elif mode == 'us':
@@ -75,7 +114,7 @@ elif mode == 'us':
         f"🎯 AI预测今日：{ai_txt}",
         f"📈 隔夜美股：{'  '.join([i['name']+fmt_pct(i['changePct']) for i in u['indices'][:3]])}",
         f"📰 要闻：{'  '.join([n['title'] for n in (u.get('bullNews',[])[:2] + u.get('bearNews',[])[:2])])}",
-        "🌏 韩日：9/10 开盘参考（详见网页）",
+        build_panorama_line(D.get('panorama')),
     ])
 
 elif mode == 'weekend':
