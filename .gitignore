@@ -4,6 +4,10 @@
 .wx-config.json
 .vscode/launch.json
 
+# 部署专用 SSH 私钥（仅本机使用，禁止提交）
+.deploy_key
+.deploy_key.pub
+
 # 个人脚本/无关文件
 router-wol-schedule.sh
 

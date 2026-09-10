@@ -1,36 +1,29 @@
 #!/bin/bash
 # 每日市场看板自动部署脚本
 # 用法: ./deploy.sh
-# 说明: 更新 index.html 版本戳后推送到 GitHub，触发 GitHub Pages 自动部署
+# 说明: 更新 index.html 版本戳后，用部署专用 SSH 私钥推送到 GitHub，触发 GitHub Pages 自动部署
+#       不再依赖 GitHub PAT（token 复制易截断），改用项目内 .deploy_key 私钥。
 
 set -euo pipefail
 
 REPO_DIR="/Users/loccco/WorkBuddy/2026-09-04-11-53-22/market-dashboard"
 cd "$REPO_DIR"
 
-# ---------- 读取 GitHub PAT ----------
-# 优先级: 1) 环境变量 GITHUB_TOKEN  2) ~/.github-token 文件
-GITHUB_TOKEN="${GITHUB_TOKEN:-}"
-if [[ -z "$GITHUB_TOKEN" && -f "$HOME/.github-token" ]]; then
-    GITHUB_TOKEN=$(cat "$HOME/.github-token" | tr -d '[:space:]')
-fi
-
-if [[ -z "$GITHUB_TOKEN" ]]; then
-    echo "❌ 未找到 GitHub PAT"
-    echo "   请生成 Personal Access Token (classic) 并写入 ~/.github-token，或设置环境变量 GITHUB_TOKEN"
-    echo "   生成地址: https://github.com/settings/tokens"
-    echo "   所需权限: repo (或至少 public_repo)"
+# ---------- 配置 git 使用部署专用 SSH 私钥 ----------
+DEPLOY_KEY="$REPO_DIR/.deploy_key"
+if [[ ! -f "$DEPLOY_KEY" ]]; then
+    echo "❌ 找不到部署私钥: $DEPLOY_KEY"
+    echo "   请确认 .deploy_key 存在于项目目录（由本机生成，不可提交到仓库）。"
     exit 1
 fi
 
-# ---------- 配置 git 使用 token 推送到 HTTPS ----------
-# 这样无需依赖 macOS keychain 或 SSH agent，适合自动化环境
-ORIGIN_URL="https://$GITHUB_TOKEN@github.com/ChiuZzzJamm/market-dashboard.git"
-git remote set-url origin "$ORIGIN_URL"
-# 禁用交互式密码提示，防止卡住
-git config --local credential.helper ''
+# 用 GIT_SSH_COMMAND 显式指定私钥，不依赖 ssh-agent / macOS keychain，适合自动化环境
+export GIT_SSH_COMMAND="ssh -i $DEPLOY_KEY -o StrictHostKeyChecking=no -o BatchMode=yes"
 
-# ---------- 更新缓存版本号 ----------
+# remote 统一使用 SSH 地址（推送走 SSH 而非 HTTPS）
+git remote set-url origin "git@github.com:ChiuZzzJamm/market-dashboard.git"
+
+# ---------- 更新缓存版本号（防浏览器/CDN 缓存）----------
 echo "📈 更新 data.js 版本戳防止浏览器/CDN缓存..."
 TIMESTAMP=$(date +%Y%m%d%H%M)
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -47,11 +40,13 @@ node --check data.js
 echo "📤 提交并推送到 GitHub（触发 GitHub Pages 自动部署）..."
 git add index.html data.js .gitignore deploy.sh
 if git diff --cached --quiet; then
-    echo "ℹ️ 没有可提交的变更"
-    exit 0
+    echo "ℹ️ 没有可提交的变更，仅确保远程最新..."
 fi
 
-git commit -m "update: $(date '+%Y-%m-%d %H:%M') market data"
+# 有变更才提交
+if ! git diff --cached --quiet; then
+    git commit -m "update: $(date '+%Y-%m-%d %H:%M') market data"
+fi
 
 # 带重试的 push（网络波动时）
 for i in 1 2 3; do
@@ -59,17 +54,14 @@ for i in 1 2 3; do
     if GIT_TERMINAL_PROMPT=0 git push origin main 2>&1; then
         echo "✅ 推送成功！GitHub Pages 将在 1-2 分钟内自动部署。"
         echo "   公开访问地址: https://chiuzzzjamm.github.io/market-dashboard"
-        # 推送成功后恢复普通 HTTPS URL（避免 token 留在 .git/config）
-        git remote set-url origin "https://github.com/ChiuZzzJamm/market-dashboard.git"
         exit 0
     fi
-    echo "   推送失败，5秒后重试..."
+    echo "   推送失败，${i}<3 时 5 秒后重试..."
     sleep 5
 done
 
 # 全部重试失败
-# 恢复普通 URL，避免 token 长期留在配置中
-git remote set-url origin "https://github.com/ChiuZzzJamm/market-dashboard.git"
 echo "❌ git push 连续 3 次失败，部署未触发。"
-echo "   请检查 ~/.github-token 是否有效，或网络连接。"
+echo "   可能原因: 公钥尚未添加到 GitHub，或网络异常。"
+echo "   请确认已将 .deploy_key.pub 的内容添加到 GitHub → Settings → SSH and GPG keys。"
 exit 1
