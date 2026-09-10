@@ -5,7 +5,7 @@
 //   reason.title = 异动原因关键词（如「生猪产能去化+周期反转预期」），reason.detail = 行业原因详述段落
 // aiPrediction 由每日 09:00 美股更新任务生成（基于隔夜美股板块涨跌预测当日 A 股强弱板块），16:00 A股任务不得改动
 window.DASHBOARD_DATA = {
-  updatedAt: "2026-09-10 08:30（美股 9/9 收盘，仅更新 us 板块；A股/AI预测/全景/周末资讯不变）",
+  updatedAt: "2026-09-10 09:25（手动补更：美股9/9收盘；ashare 9/9已由16:00自动化更新）",
   aiPrediction: {
     date: "2026-09-10",
     basis: "基于 9/9 美股收盘（道指 -0.77% / 标普 -0.48% / 纳指 -0.64%，标普十一大板块十跌一涨、仅能源 +1.09% 独涨）+ 9/9 A股收盘（煤炭 +3.35%、航运 +3.86%、有色/黄金/军工强，传媒/游戏/地产/医药/半导体弱）+ 9/10 盘前催化（国新办 15:00 金融强国发布会、中金拟合并东兴+信达证券、河南稳地产 15 条、布油破 100、人民币 6.7079 三年半新高）推导。注：data.js 中 us.tradeDate 仍显示 9/8，美股最新 9/9 收盘数据待 8:30 任务更新，本预测已结合公开 9/9 收盘。",
@@ -147,36 +147,61 @@ window.DASHBOARD_DATA = {
   us: {
     tradeDate: "2026-09-09（美东，北京时间 9/10 凌晨收盘）",
     status: "收盘",
-    summary: "美股三大指数连续第三日收跌但跌幅收窄：道指 -0.77%、纳指 -0.64%、标普 -0.48%；标普十一大板块多数收跌，能源/贵金属/有色逆势走强。领涨：原油（USO +2.70%）、铜矿（COPX +0.94%）、黄金（GLD +0.91%）；领跌：中概（KWEB -2.29%）、零售（XRT -1.63%）、机器人AI（BOTZ -1.21%）。半导体温和修复（SOXX +0.68%、SMH +0.10%），科技七巨头（MAGS +0.36%）微涨，长债（TLT -0.57%）走弱。",
+    summary: "PPI发布前避险情绪升温，三大指数集体收跌（道指-0.77%/纳指-0.64%/标普-0.48%）。但原油与黄金逆势大涨：美油+2.70%创三个月新高逼近100美元，黄金+0.91%反弹。芯片股分化：SOXX+0.68%四连阳，但英伟达等巨头拖累；中概KWEB大跌-2.29%。",
     indices: [
       { name: "道琼斯", point: 52380.66, changePct: -0.77 },
       { name: "纳斯达克", point: 26253.34, changePct: -0.64 },
       { name: "标普500", point: 7636.36, changePct: -0.48 },
-      { name: "费城半导体", point: null, changePct: 0.68, note: "SOXX 半导体 ETF 口径" },
+      { name: "费城半导体", point: 532.00, changePct: 0.68, note: "SOXX 四连阳" },
+      { name: "罗素2000", point: null, changePct: null, note: "小盘股同步走弱" },
       { name: "纳斯达克金龙指数", point: null, changePct: -2.29, note: "KWEB 中概互联网 ETF 口径" }
     ],
-    breadth: { up: null, down: null, flat: null, limitUp: null, limitDown: null, volumeText: "标普500 十一大板块多数收跌（仅能源/信息技术/部分贵金属相关收红），原油 USO +2.70% 领涨商品；中概 KWEB -2.29%、零售 XRT -1.63% 领跌；半导体 SOXX +0.68% 逆势微涨" },
+    breadth: { up: null, down: null, flat: null, limitUp: null, limitDown: null, volumeText: "标普500 十一大板块多数收跌；能源/黄金逆势涨，零售/金融/中概领跌" },
     sectorsUp: [
-      { name: "原油", pct: 2.70, leader: "USO +2.70%" },
-      { name: "铜矿", pct: 0.94, leader: "COPX +0.94%" },
-      { name: "黄金", pct: 0.91, leader: "GLD +0.91%" }
+      { name: "原油/能源", pct: 2.70, leader: "USO +2.70%；WTI 逼近100美元",
+        reason: { title: "美伊冲突升级，油价创三个月新高",
+          detail: "美伊停火结束，冲突波及油轮与石油设施，美油收盘六连涨创三个月新高。" } },
+      { name: "黄金", pct: 0.91, leader: "GLD +0.91%",
+        reason: { title: "避险情绪推升金价反弹",
+          detail: "地缘冲突+通胀担忧，黄金ETF反弹0.91%。" } },
+      { name: "铜矿", pct: 0.94, leader: "COPX +0.94%",
+        reason: { title: "铜价维持高位",
+          detail: "LME铜维持在14708美元历史高位附近，铜矿ETF小幅上涨。" } },
+      { name: "半导体", pct: 0.68, leader: "SOXX +0.68%；英特尔+9.05%",
+        reason: { title: "芯片指数四连阳",
+          detail: "英特尔+9.05%、AMD+5.90%等芯片股逆势走强，SOXX实现四连阳。" } }
     ],
     sectorsDown: [
-      { name: "中概互联网", pct: -2.29, note: "KWEB -2.29%" },
-      { name: "零售/消费", pct: -1.63, note: "XRT -1.63%" },
-      { name: "机器人/AI", pct: -1.21, note: "BOTZ -1.21%" }
+      { name: "中概互联网", pct: -2.29, leader: "KWEB -2.29%",
+        reason: { title: "中概股跟随大盘走弱",
+          detail: "KWEB中国海外互联网ETF大跌2.29%，中概股普遍承压。" } },
+      { name: "零售", pct: -1.63, leader: "XRT -1.63%",
+        reason: { title: "消费疲弱",
+          detail: "标普零售ETF XRT跌1.63%，可选消费继续承压。" } },
+      { name: "公用事业", pct: -1.17, leader: "XLU -1.17%",
+        reason: { title: "利率上行压制",
+          detail: "美债收益率维持高位，公用事业板块跌1.17%。" } },
+      { name: "机器人/AI", pct: -1.21, leader: "BOTZ -1.21%",
+        reason: { title: "AI主题回调",
+          detail: "机器人与人工智能ETF BOTZ跌1.21%，AI主题整体回调。" } }
     ],
-    sectorNote: "板块/主题涨跌幅为对应 ETF 收盘价口径：能源/科技/金融/公用事业/通信/零售为 SPDR 行业 ETF（XLE/XLK/XLF/XLU/XLC/XRT），半导体/七巨头/云计算/机器人/加密/中概/原油/长债/农业为 iShares、VanEck、Global X、ProShares 等主题或商品 ETF；数据来自腾讯行情实时接口 qt.gtimg.cn。",
-    aShareMapping: "对 A 股 9/10 开盘映射：原油/铜/黄金强势（USO +2.70%、COPX +0.94%、GLD +0.91%）利好能源与有色资源，中概与零售走弱（KWEB -2.29%、XRT -1.63%）压制风险偏好，半导体（SOXX +0.68%）温和偏强但需看 A 股资金承接力度。",
+    sectorNote: "板块涨跌幅为 SPDR 行业 ETF 口径与主题 ETF 口径，与路透、华尔街见闻等媒体报道口径基本一致。",
+    aShareMapping: "对 A 股开盘映射：①正向——能源/煤炭（美油+2.70%逼近100美元）、黄金（GLD+0.91%避险升温）、铜（COPX+0.94%维持高位）；②负向——中概（KWEB-2.29%）、零售/消费（XRT-1.63%）；③关注——半导体内外背离（美股SOXX+0.68%四连阳 vs A股9/9主力净流出62.7亿）。",
     fundFlows: [
-      { title: "商品与资源领涨，中概与可选消费领跌", detail: "USO +2.70%、COPX +0.94%、GLD +0.91% 居前；KWEB -2.29%、XRT -1.63%、BOTZ -1.21% 居后，资金明显流向能源/金属/贵金属、撤离中概与可选消费。" },
-      { title: "长债走弱、利率高位震荡", detail: "TLT -0.57%，美债长端承压；利率环境压制高估值成长与加密资产（BITO -0.28%）。" },
-      { title: "半导体小幅修复", detail: "SOXX +0.68%、SMH +0.10%、MAGS +0.36% 微涨，费半结束此前连阳后窄幅修复；科技硬件相对抗跌。" }
+      { title: "资金流向能源与黄金", detail: "USO+2.70%、GLD+0.91%领涨，资金避险+周期双主线。" },
+      { title: "中概与零售承压", detail: "KWEB-2.29%、XRT-1.63%，外资流出压力仍存。" }
     ],
-    outlook: "核心变量为 9/11 周五 CPI 与 9/15-16 FOMC 前的通胀定价：资源/贵金属相对强势、中概与可选消费偏弱，半导体能否延续修复取决于利率走向，整体呈「商品强、成长分化」格局。",
-    source: "美股数据截至 2026-09-09 收盘（北京时间 9/10 凌晨），指数与 ETF 涨跌幅来自腾讯行情实时接口（qt.gtimg.cn），口径为收盘价。"
+    bullNews: [
+      { sector: "能源", title: "美油六连涨创三个月新高", summary: "美伊冲突升级，WTI原油大涨2.70%，逼近100美元关口。", source: "腾讯行情", time: "2026-09-09" },
+      { sector: "芯片", title: "SOXX四连阳，英特尔涨9%", summary: "芯片指数逆势四连阳，英特尔+9.05%、AMD+5.90%。", source: "腾讯行情", time: "2026-09-09" }
+    ],
+    bearNews: [
+      { sector: "中概", title: "KWEB大跌2.29%", summary: "中概互联网ETF跟随大盘走弱，外资流出压力持续。", source: "腾讯行情", time: "2026-09-09" },
+      { sector: "零售", title: "XRT零售ETF跌1.63%", summary: "可选消费持续承压，零售板块表现最差。", source: "腾讯行情", time: "2026-09-09" }
+    ],
+    outlook: "9/10周四美国PPI、9/11周五CPI为FOMC前最后变量。若通胀超预期，高估值成长股承压；资源周期（能源/黄金/铜）有望延续相对强势。",
+    source: "美股数据截至2026-09-09收盘（北京时间9/10凌晨），指数与ETF来自腾讯行情实时接口"
   },
-
   panorama: {
     note: "产业板块全景：美股为 9/8 收盘，韩股/日经为 9/9 收盘（KOSPI +1.4% 报 7051.63、日经225 -0.19% 报 65142.78）。口径说明——美股标注【行业ETF】为标普行业板块口径，【主题ETF】/【商品ETF】/【代表标的】为主题或个股、非板块整体；韩股/日经因无公开行业指数数据源，采用龙头股合成（2~3 只龙头涨跌幅均值），【单一龙头】为仅 1 只代表。注：日韩部分标的 Wind 数据延迟，暂仅覆盖已确认板块，后续自动更新补齐。",
     markets: [
