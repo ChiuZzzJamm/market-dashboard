@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="vuWegjTUbUryFQN7317dIj">
 <title>📈每日市场看板 · A股 / 美股</title>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609110953"></script>
+<script src="data.js?v=202609111005"></script>
 <style>
   :root {
     --up: #d43030;
@@ -359,7 +359,7 @@ function renderAiPrediction() {
     }
     html += '</div>';
   });
-  html += '</div><div class="ai-foot">标的筛选口径：每个走强方向 5 只，要求业绩支撑或题材贴合，已排除科创板（688 开头）及北交所。<br>' + esc(p.riskNote) + '</div>';
+  html += '</div><div class="ai-foot">标的筛选口径：每个板块 5 只 A 股，要求业绩支撑或题材贴合，已排除科创板（688 开头）及北交所。<br>' + esc(p.riskNote) + '</div>';
   if (p.verification) {
     var v = p.verification;
     var vHtml = '<div class="ai-verify"><div class="v-title">📊 预测验证：' + esc(v.summary || '') + '</div>';
