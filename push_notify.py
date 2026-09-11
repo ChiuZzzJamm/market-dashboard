@@ -51,7 +51,7 @@ def fmt_panorama_items(market, max_items=4):
         pct = fmt_pct(it.get('pct', 0))
         ref = it.get('ref', '')
         # 去掉 ref 末尾的"（2龙头均值）""（单一龙头）"等口径后缀，保留龙头列表
-        ref = re.sub(r'[（(].*?均值|.*?龙头.*?[）)]$', '', ref).strip('、 ')
+        ref = re.sub(r'[（(][^（）()]*[）)]', '', ref).strip('、 ')
         if ref:
             parts.append(f"{name}{pct}（{ref}）")
         else:
@@ -119,14 +119,19 @@ elif mode == 'us':
     ])
 
 elif mode == 'weekend':
-    w = D['weekendNews']
-    title = f"[周末消息] {w['date'][5:]} 要闻汇总"
+    w = D.get('weekendNews') or {}
+    title = f"[周末消息] {w.get('date','')[5:]} 要闻汇总"
+    ap = D.get('aiPrediction') or {}
+    ai_sectors = '  '.join([f"{s.get('sector','')}({s.get('direction','')})" for s in ap.get('sectors',[])])
+    ai_summary = ap.get('summary','')
     desp = '\n\n'.join([
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
         f"📊 美股周五：{w.get('summary','')[:120]}",
-        f"✅ 利好：{'  '.join([t['theme'] for t in w.get('bullish',[])[:3]])}",
-        f"⚠️ 利空：{'  '.join([t['theme'] for t in w.get('bearish',[])[:3]])}",
+        f"✅ 利好：{'  '.join([t.get('theme','') for t in w.get('bullish',[])[:3]])}",
+        f"⚠️ 利空：{'  '.join([t.get('theme','') for t in w.get('bearish',[])[:3]])}",
         f"🔮 周一预判：{w.get('mondayOutlook','')}",
+        f"🎯 周一板块：{ai_sectors}",
+        f"🧭 AI研判：{ai_summary}",
     ])
 
 else:
