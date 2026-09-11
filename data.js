@@ -542,6 +542,12 @@ window.DASHBOARD_DATA = {
         "key": "kr",
         "name": "韩股",
         "date": "9/10 开盘",
+        "indices": [
+          {
+            "name": "韩国综合指数 KOSPI",
+            "changePct": -0.25
+          }
+        ],
         "items": [
           {
             "name": "半导体/存储",
@@ -559,6 +565,12 @@ window.DASHBOARD_DATA = {
         "key": "jp",
         "name": "日经",
         "date": "9/10 开盘",
+        "indices": [
+          {
+            "name": "日经225",
+            "changePct": 0.2
+          }
+        ],
         "items": [
           {
             "name": "AI/科技投资",
