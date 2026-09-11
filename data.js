@@ -1,10 +1,5 @@
-// 每日市场看板数据文件
-// 由每日自动化任务更新：A股 16:00（收盘后）/ 美股 09:00（隔夜收盘）
-// 结构说明：自动化更新时只需替换 aiPrediction / ashare / us / panorama 对应字段及 updatedAt
-// 板块条目字段约定：{ name, pct, leader, note }
-// aiPrediction 由每日 09:00 美股更新任务生成，16:00 A股任务负责 verification
 window.DASHBOARD_DATA = {
-  "updatedAt": "2026-09-11 09:20（手动补跑：08:30 美股A任务超时失败，已用腾讯接口更新 9/10 美股收盘）",
+  "updatedAt": "2026-09-11 09:23（手动补跑：08:30 美股A任务超时失败，已用腾讯接口更新 9/10 美股收盘+全景）",
   "aiPrediction": {
     "date": "2026-09-10",
     "basis": "基于 9/9 美股收盘（道指 -0.77% / 标普 -0.48% / 纳指 -0.64%，标普十一大板块十跌一涨、仅能源 +1.09% 独涨）+ 9/9 A股收盘（煤炭 +3.35%、航运 +3.86%、有色/黄金/军工强，传媒/游戏/地产/医药/半导体弱）+ 9/10 盘前催化（国新办 15:00 金融强国发布会、中金拟合并东兴+信达证券、河南稳地产 15 条、布油破 100、人民币 6.7079 三年半新高）推导。注：data.js 中 us.tradeDate 仍显示 9/8，美股最新 9/9 收盘数据待 8:30 任务更新，本预测已结合公开 9/9 收盘。",
@@ -263,59 +258,59 @@ window.DASHBOARD_DATA = {
       "volumeText": "沪深京三市普跌，逾 3500 股下跌，成交约 1.6 万亿（缩量）"
     },
     "sectorsUp": [
-  {
-    "name": "通信服务",
-    "pct": 0.60,
-    "ref": "usXLC 【商品ETF】"
-  },
-  {
-    "name": "科技七巨头",
-    "pct": -0.20,
-    "ref": "usMAGS 【商品ETF】"
-  },
-  {
-    "name": "金融",
-    "pct": -0.33,
-    "ref": "usXLF 【商品ETF】"
-  },
-  {
-    "name": "石油 / 能源",
-    "pct": -0.58,
-    "ref": "XLE -0.58%【行业ETF】；USO +5.61%【商品ETF】"
-  },
-  {
-    "name": "AI 软件 / 云",
-    "pct": -0.69,
-    "ref": "usCLOU 【商品ETF】"
-  }
-],
+      {
+        "name": "通信服务",
+        "pct": 0.6,
+        "ref": "usXLC 【商品ETF】"
+      },
+      {
+        "name": "科技七巨头",
+        "pct": -0.2,
+        "ref": "usMAGS 【商品ETF】"
+      },
+      {
+        "name": "金融",
+        "pct": -0.33,
+        "ref": "usXLF 【商品ETF】"
+      },
+      {
+        "name": "石油 / 能源",
+        "pct": -0.58,
+        "ref": "XLE -0.58%【行业ETF】；USO +5.61%【商品ETF】"
+      },
+      {
+        "name": "AI 软件 / 云",
+        "pct": -0.69,
+        "ref": "usCLOU 【商品ETF】"
+      }
+    ],
     "sectorsDown": [
-  {
-    "name": "小金属 / 铜",
-    "pct": -6.99,
-    "ref": "usCOPX 【商品ETF】"
-  },
-  {
-    "name": "稀土 / 战略金属",
-    "pct": -5.13,
-    "ref": "usREMX 【商品ETF】"
-  },
-  {
-    "name": "半导体",
-    "pct": -2.74,
-    "ref": "usSOXX 【商品ETF】"
-  },
-  {
-    "name": "黄金 / 贵金属",
-    "pct": -1.73,
-    "ref": "usGLD 【商品ETF】"
-  },
-  {
-    "name": "信息技术",
-    "pct": -1.41,
-    "ref": "usXLK 【商品ETF】"
-  }
-],
+      {
+        "name": "小金属 / 铜",
+        "pct": -6.99,
+        "ref": "usCOPX 【商品ETF】"
+      },
+      {
+        "name": "稀土 / 战略金属",
+        "pct": -5.13,
+        "ref": "usREMX 【商品ETF】"
+      },
+      {
+        "name": "半导体",
+        "pct": -2.74,
+        "ref": "usSOXX 【商品ETF】"
+      },
+      {
+        "name": "黄金 / 贵金属",
+        "pct": -1.73,
+        "ref": "usGLD 【商品ETF】"
+      },
+      {
+        "name": "信息技术",
+        "pct": -1.41,
+        "ref": "usXLK 【商品ETF】"
+      }
+    ],
     "fundIn": [
       {
         "name": "元件",
@@ -411,12 +406,12 @@ window.DASHBOARD_DATA = {
   "us": {
     "tradeDate": "2026-09-10（美东，北京时间 9/11 凌晨收盘）",
     "status": "收盘",
-    "summary": "PPI发布前避险情绪升温，三大指数集体收跌（道指-0.77%/纳指-0.64%/标普-0.48%）。但原油与黄金逆势大涨：美油+2.70%创三个月新高逼近100美元，黄金+0.91%反弹。芯片股分化：SOXX+0.68%四连阳，但英伟达等巨头拖累；中概KWEB大跌-2.29%。",
+    "summary": "9/10 美股收盘：三大指数小幅收跌（道指-0.60% / 纳指-0.65% / 标普-0.58%）。领涨：能源(XLE -0.58%)、半导体(SOXX -2.74%)；领跌：科技/AI主题承压。",
     "indices": [
       {
         "name": "道琼斯",
-        "point": 52064.10,
-        "changePct": -0.60
+        "point": 52064.1,
+        "changePct": -0.6
       },
       {
         "name": "纳斯达克",
@@ -425,14 +420,14 @@ window.DASHBOARD_DATA = {
       },
       {
         "name": "标普500",
-        "point": 7591.70,
+        "point": 7591.7,
         "changePct": -0.58
       },
       {
         "name": "费城半导体",
         "point": 517.43,
         "changePct": -2.74,
-        "note": "SOXX 四连阳"
+        "note": "SOXX 回调"
       },
       {
         "name": "罗素2000",
@@ -457,78 +452,56 @@ window.DASHBOARD_DATA = {
     },
     "sectorsUp": [
       {
-        "name": "原油/能源",
-        "pct": 2.7,
-        "leader": "USO +2.70%；WTI 逼近100美元",
-        "reason": {
-          "title": "美伊冲突升级，油价创三个月新高",
-          "detail": "美伊停火结束，冲突波及油轮与石油设施，美油收盘六连涨创三个月新高。"
-        }
+        "name": "通信服务",
+        "pct": 0.6,
+        "leader": "XLC 【行业ETF】"
       },
       {
-        "name": "黄金",
-        "pct": 0.91,
-        "leader": "GLD +0.91%",
-        "reason": {
-          "title": "避险情绪推升金价反弹",
-          "detail": "地缘冲突+通胀担忧，黄金ETF反弹0.91%。"
-        }
+        "name": "科技七巨头",
+        "pct": -0.2,
+        "leader": "MAGS 【主题ETF】"
       },
       {
-        "name": "铜矿",
-        "pct": 0.94,
-        "leader": "COPX +0.94%",
-        "reason": {
-          "title": "铜价维持高位",
-          "detail": "LME铜维持在14708美元历史高位附近，铜矿ETF小幅上涨。"
-        }
+        "name": "金融",
+        "pct": -0.33,
+        "leader": "XLF 【行业ETF】"
       },
       {
-        "name": "半导体",
-        "pct": 0.68,
-        "leader": "SOXX +0.68%；英特尔+9.05%",
-        "reason": {
-          "title": "芯片指数四连阳",
-          "detail": "英特尔+9.05%、AMD+5.90%等芯片股逆势走强，SOXX实现四连阳。"
-        }
+        "name": "石油 / 能源",
+        "pct": -0.58,
+        "leader": "XLE -0.58%【行业ETF】；USO +5.61%【商品ETF】"
+      },
+      {
+        "name": "AI 软件 / 云",
+        "pct": -0.69,
+        "leader": "CLOU 【主题ETF】"
       }
     ],
     "sectorsDown": [
       {
-        "name": "中概互联网",
-        "pct": -2.29,
-        "leader": "KWEB -2.29%",
-        "reason": {
-          "title": "中概股跟随大盘走弱",
-          "detail": "KWEB中国海外互联网ETF大跌2.29%，中概股普遍承压。"
-        }
+        "name": "小金属 / 铜",
+        "pct": -6.99,
+        "leader": "COPX 【主题ETF】"
       },
       {
-        "name": "零售",
-        "pct": -1.63,
-        "leader": "XRT -1.63%",
-        "reason": {
-          "title": "消费疲弱",
-          "detail": "标普零售ETF XRT跌1.63%，可选消费继续承压。"
-        }
+        "name": "稀土 / 战略金属",
+        "pct": -5.13,
+        "leader": "REMX 【主题ETF】"
       },
       {
-        "name": "公用事业",
-        "pct": -1.17,
-        "leader": "XLU -1.17%",
-        "reason": {
-          "title": "利率上行压制",
-          "detail": "美债收益率维持高位，公用事业板块跌1.17%。"
-        }
+        "name": "半导体",
+        "pct": -2.74,
+        "leader": "SOXX 【商品ETF】"
       },
       {
-        "name": "机器人/AI",
-        "pct": -1.21,
-        "leader": "BOTZ -1.21%",
-        "reason": {
-          "title": "AI主题回调",
-          "detail": "机器人与人工智能ETF BOTZ跌1.21%，AI主题整体回调。"
-        }
+        "name": "黄金 / 贵金属",
+        "pct": -1.73,
+        "leader": "GLD 【商品ETF】"
+      },
+      {
+        "name": "信息技术",
+        "pct": -1.41,
+        "leader": "XLK 【行业ETF】"
       }
     ],
     "sectorNote": "板块涨跌幅为 SPDR 行业 ETF 口径与主题 ETF 口径，与路透、华尔街见闻等媒体报道口径基本一致。",
@@ -575,8 +548,8 @@ window.DASHBOARD_DATA = {
         "time": "2026-09-09"
       }
     ],
-    "outlook": "9/10周四美国PPI、9/11周五CPI为FOMC前最后变量。若通胀超预期，高估值成长股承压；资源周期（能源/黄金/铜）有望延续相对强势。",
-    "source": "美股数据截至2026-09-09收盘（北京时间9/10凌晨），指数与ETF来自腾讯行情实时接口"
+    "outlook": "9/11 周五美国 8 月 PPI 即将发布，CME 加息预期已高企；若 PPI 超预期，高估值成长（科技/AI/消费）仍将承压，资源周期（能源/黄金/铜）相对强势。",
+    "source": "美股数据截至2026-09-10收盘（北京时间9/11凌晨），指数与ETF来自腾讯行情实时接口"
   },
   "panorama": {
     "note": "产业板块全景：美股为 9/9 收盘（北京时间 9/10 凌晨），韩股/日经为 9/9 收盘（9/10 早上日韩尚未收盘，数据仍取自 9/9 收盘）。口径说明——美股标注【行业ETF】为标普行业板块口径，【主题ETF】/【商品ETF】/【代表标的】为主题或个股、非板块整体；韩股/日经因无公开行业指数数据源，采用龙头股合成（2~3 只龙头涨跌幅均值），【单一龙头】为仅 1 只代表。注：日韩部分标的 Wind 数据延迟，暂仅覆盖已确认板块，后续自动更新补齐。",
@@ -588,8 +561,8 @@ window.DASHBOARD_DATA = {
         "items": [
           {
             "name": "AI 软件 / 云",
-            "pct": -2.02,
-            "ref": "CLOU 云计算【主题ETF】"
+            "pct": -0.69,
+            "ref": "CLOU 【主题ETF】"
           },
           {
             "name": "AI 硬件 / 英伟达",
@@ -598,8 +571,8 @@ window.DASHBOARD_DATA = {
           },
           {
             "name": "科技七巨头",
-            "pct": -0.53,
-            "ref": "MAGS 七巨头【主题ETF】"
+            "pct": -0.2,
+            "ref": "MAGS 【主题ETF】"
           },
           {
             "name": "电动汽车 / 特斯拉",
@@ -609,12 +582,12 @@ window.DASHBOARD_DATA = {
           {
             "name": "机器人 / 自动化",
             "pct": -1.19,
-            "ref": "usBOTZ 【商品ETF】"
+            "ref": "BOTZ 【主题ETF】"
           },
           {
             "name": "加密货币",
             "pct": -1.33,
-            "ref": "usBITO 【商品ETF】"
+            "ref": "BITO 【主题ETF】"
           },
           {
             "name": "综合电商 / 亚马逊",
@@ -624,62 +597,62 @@ window.DASHBOARD_DATA = {
           {
             "name": "消费 / 零售",
             "pct": -0.79,
-            "ref": "usXRT 【商品ETF】"
+            "ref": "XRT 【行业ETF】"
           },
           {
             "name": "金融",
-            "pct": -1.38,
-            "ref": "XLF 金融【行业ETF】"
+            "pct": -0.33,
+            "ref": "XLF 【行业ETF】"
           },
           {
             "name": "信息技术",
-            "pct": 0.32,
-            "ref": "XLK 科技【行业ETF】"
+            "pct": -1.41,
+            "ref": "XLK 【行业ETF】"
           },
           {
             "name": "通信服务",
-            "pct": -0.46,
-            "ref": "XLC 通信【行业ETF】"
+            "pct": 0.6,
+            "ref": "XLC 【行业ETF】"
           },
           {
             "name": "半导体",
-            "pct": 1.64,
-            "ref": "SOXX 半导体【行业ETF】"
+            "pct": -2.74,
+            "ref": "SOXX 【商品ETF】"
           },
           {
             "name": "黄金 / 贵金属",
             "pct": -1.73,
-            "ref": "GLD 黄金【商品ETF】"
+            "ref": "GLD 【商品ETF】"
           },
           {
             "name": "小金属 / 铜",
-            "pct": 4.1,
-            "ref": "COPX 铜矿【主题ETF】"
+            "pct": -6.99,
+            "ref": "COPX 【主题ETF】"
           },
           {
             "name": "稀土 / 战略金属",
-            "pct": 1.41,
-            "ref": "REMX 稀土【主题ETF】"
+            "pct": -5.13,
+            "ref": "REMX 【主题ETF】"
           },
           {
             "name": "石油 / 能源",
-            "pct": 1.11,
-            "ref": "XLE 能源【行业ETF】；USO 原油 +2.87%【商品ETF】"
+            "pct": -0.58,
+            "ref": "XLE -0.58%【行业ETF】；USO +5.61%【商品ETF】"
           },
           {
             "name": "粮食 / 农业",
             "pct": -1.03,
-            "ref": "usMOO 【商品ETF】"
+            "ref": "MOO 【主题ETF】"
           },
           {
             "name": "电力 / 公用事业",
             "pct": -0.98,
-            "ref": "usXLU 【商品ETF】"
+            "ref": "XLU 【行业ETF】"
           },
           {
             "name": "中概股",
             "pct": -1.37,
-            "ref": "usKWEB 【商品ETF】"
+            "ref": "KWEB 【主题ETF】"
           }
         ]
       },
