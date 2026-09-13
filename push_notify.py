@@ -127,28 +127,74 @@ elif mode == 'weekend':
     idxs = ' '.join([f"{i.get('name','')}{fmt_pct(i.get('changePct'))}" for i in uf.get('indices',[])[:3]])
     ups = ' '.join([f"{s.get('name','')}{fmt_pct(s.get('pct'))}" for s in uf.get('sectorsUp',[])[:2]])
     downs = ' '.join([f"{s.get('name','')}{fmt_pct(s.get('pct'))}" for s in uf.get('sectorsDown',[])[:2]])
-    # 微信推送：利好/利空各 3 条；取每条主题的核心短语（括号前内容），避免截断
-    def core_theme(t):
-        s = t.get('theme','')
-        # 取第一个中文/英文括号前的内容，防止语义被截断
-        s = re.split(r'[（(]', s)[0].strip()
-        return s[:32]
-    bullish = ' '.join([core_theme(t) for t in w.get('bullish',[])[:3]])
-    bearish = ' '.join([core_theme(t) for t in w.get('bearish',[])[:3]])
-    # 美股周五精简：只保留三大指数 + 各一个领涨/领跌
+
+    # 美股周五精简：三大指数 + 领涨/领跌
     if ups and downs:
         us_line = f"{idxs} | 领涨 {ups.split()[0]} | 领跌 {downs.split()[0]}"
     else:
         us_line = w.get('summary','')[:50]
-    # 用 weekendNews.mondayOutlook 作为完整周一研判（明确主线+原因），不简化不截断
+
+    # 周末要闻：地缘+大宗各一句话
+    geo = w.get('geopolitical','').split('。')[0].strip() if w.get('geopolitical') else ''
+    comm = w.get('commodities','').split('；')[0].strip() if w.get('commodities') else ''
+    news_parts = []
+    if geo:
+        news_parts.append(f"🌍 地缘：{geo[:55]}{'…' if len(geo) > 55 else ''}")
+    if comm:
+        news_parts.append(f"⛽ 大宗：{comm[:55]}{'…' if len(comm) > 55 else ''}")
+    weekend_news = '\n'.join(news_parts) if news_parts else '（详见网页）'
+
+    # 完整周一研判
     monday_outlook = w.get('mondayOutlook','')
-    desp = '\n\n'.join([
+
+    # 利好板块：保留括号内板块说明 + 核心受益股
+    def fmt_bullish(t, idx):
+        theme = t.get('theme','').strip()
+        theme = re.sub(r'\s+', ' ', theme)
+        # 优先保留括号内的板块说明
+        m = re.match(r'^(.+?)[（(]([^）)]+)[）)](.*)$', theme)
+        if m:
+            before = m.group(1).strip()
+            inner = m.group(2).strip()
+            before = before[:18] + ('…' if len(before) > 18 else '')
+            inner = inner[:22] + ('…' if len(inner) > 22 else '')
+            theme = f"{before}（{inner}）"
+        elif len(theme) > 34:
+            theme = theme[:34] + '…'
+        stocks = ' '.join([s.get('name','') for s in t.get('stocks',[])[:3]])
+        if stocks:
+            return f"{idx}. {theme}｜{stocks[:28]}"
+        return f"{idx}. {theme}"
+    bullish_lines = [fmt_bullish(t, i+1) for i, t in enumerate(w.get('bullish',[])[:3])]
+
+    # 利空板块：保留括号内板块/方向说明，明确利空哪些板块
+    def fmt_bearish(t, idx):
+        theme = t.get('theme','').strip()
+        theme = re.sub(r'\s+', ' ', theme)
+        m = re.match(r'^(.+?)[（(]([^）)]+)[）)](.*)$', theme)
+        if m:
+            before = m.group(1).strip()
+            inner = m.group(2).strip()
+            before = before[:18] + ('…' if len(before) > 18 else '')
+            inner = inner[:26] + ('…' if len(inner) > 26 else '')
+            theme = f"{before}（{inner}）"
+        elif len(theme) > 42:
+            theme = theme[:42] + '…'
+        return f"{idx}. {theme}"
+    bearish_lines = [fmt_bearish(t, i+1) for i, t in enumerate(w.get('bearish',[])[:3])]
+
+    # 顺序：美股周五 → 周末要闻 → AI预测周一 → 利好 → 利空
+    parts = [
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
         f"📊 美股周五：{us_line}",
-        f"✅ 利好：{bullish}" if bullish else '',
-        f"⚠️ 利空：{bearish}" if bearish else '',
-        f"🔮 周一研判：{monday_outlook}" if monday_outlook else '',
-    ])
+        f"📰 周末要闻：\n{weekend_news}",
+        f"🔮 周一研判：{monday_outlook}",
+    ]
+    if bullish_lines:
+        parts.append("✅ 利好板块：\n" + '\n'.join(bullish_lines))
+    if bearish_lines:
+        parts.append("⚠️ 利空板块：\n" + '\n'.join(bearish_lines))
+    desp = '\n\n'.join(parts)
 
 else:
     print('unknown mode'); sys.exit(1)
