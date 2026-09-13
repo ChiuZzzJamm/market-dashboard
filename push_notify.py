@@ -127,24 +127,27 @@ elif mode == 'weekend':
     idxs = ' '.join([f"{i.get('name','')}{fmt_pct(i.get('changePct'))}" for i in uf.get('indices',[])[:3]])
     ups = ' '.join([f"{s.get('name','')}{fmt_pct(s.get('pct'))}" for s in uf.get('sectorsUp',[])[:2]])
     downs = ' '.join([f"{s.get('name','')}{fmt_pct(s.get('pct'))}" for s in uf.get('sectorsDown',[])[:2]])
-    # 微信单条长度有限，各只取 1 条最核心主题（完整显示），避免截断导致语义残缺
-    bullish = (w.get('bullish',[]) or [{}])[0].get('theme','')[:50]
-    bearish = (w.get('bearish',[]) or [{}])[0].get('theme','')[:50]
+    # 微信推送：利好/利空各 3 条；取每条主题的核心短语（括号前内容），避免截断
+    def core_theme(t):
+        s = t.get('theme','')
+        # 取第一个中文/英文括号前的内容，防止语义被截断
+        s = re.split(r'[（(]', s)[0].strip()
+        return s[:32]
+    bullish = ' '.join([core_theme(t) for t in w.get('bullish',[])[:3]])
+    bearish = ' '.join([core_theme(t) for t in w.get('bearish',[])[:3]])
     # 美股周五精简：只保留三大指数 + 各一个领涨/领跌
     if ups and downs:
         us_line = f"{idxs} | 领涨 {ups.split()[0]} | 领跌 {downs.split()[0]}"
     else:
         us_line = w.get('summary','')[:50]
-    # 周一板块只显示名称+方向简称
-    dir_map = {'走强': '强', '偏强': '中', '承压': '弱'}
-    ai_sectors = ' '.join([f"{s.get('sector','')[:6]}({dir_map.get(s.get('direction',''), s.get('direction',''))})" for s in ap.get('sectors',[])])
-    # AI研判与周一板块/利好利空高度重复，推送里省略，详情见网页
+    # 用 weekendNews.mondayOutlook 作为完整周一研判（明确主线+原因），不简化不截断
+    monday_outlook = w.get('mondayOutlook','')
     desp = '\n\n'.join([
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
         f"📊 美股周五：{us_line}",
         f"✅ 利好：{bullish}" if bullish else '',
         f"⚠️ 利空：{bearish}" if bearish else '',
-        f"🎯 周一板块：{ai_sectors}",
+        f"🔮 周一研判：{monday_outlook}" if monday_outlook else '',
     ])
 
 else:
