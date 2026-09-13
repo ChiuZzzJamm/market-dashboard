@@ -134,14 +134,36 @@ elif mode == 'weekend':
     else:
         us_line = w.get('summary','')[:50]
 
-    # 周末要闻：地缘+大宗各一句话
-    geo = w.get('geopolitical','').split('。')[0].strip() if w.get('geopolitical') else ''
-    comm = w.get('commodities','').split('；')[0].strip() if w.get('commodities') else ''
+    # 周末要闻：从利好/利空主题中分国内/国际各取 2 条短摘要（保留括号内说明）
+    def short_theme(t, max_len=36):
+        theme = t.get('theme','').strip()
+        theme = re.sub(r'\s+', ' ', theme)
+        # 优先保留括号内的说明，整体截断
+        if len(theme) > max_len:
+            theme = theme[:max_len] + '…'
+        return theme
+
+    dom_keys = ['国常会','证监会','央行','工信部','国务院','A股','政策','十五五','券商','算力网','算力大会']
+    intl_keys = ['美联储','中东','亚太','油价','能源','油运','战争','沙特','俄乌','日元','日本','美元','加息','美债']
+    domestic = []
+    international = []
+    seen_themes = set()
+
+    for t in w.get('bullish',[]) + w.get('bearish',[]):
+        theme_full = t.get('theme','').strip()
+        if theme_full in seen_themes:
+            continue
+        seen_themes.add(theme_full)
+        if any(k in theme_full for k in dom_keys) and len(domestic) < 2:
+            domestic.append(short_theme(t, 34))
+        elif any(k in theme_full for k in intl_keys) and len(international) < 2:
+            international.append(short_theme(t, 34))
+
     news_parts = []
-    if geo:
-        news_parts.append(f"🌍 地缘：{geo[:55]}{'…' if len(geo) > 55 else ''}")
-    if comm:
-        news_parts.append(f"⛽ 大宗：{comm[:55]}{'…' if len(comm) > 55 else ''}")
+    for d in domestic:
+        news_parts.append(f"🇨🇳 国内：{d}")
+    for i in international:
+        news_parts.append(f"🌍 国际：{i}")
     weekend_news = '\n'.join(news_parts) if news_parts else '（详见网页）'
 
     # 完整周一研判
