@@ -134,13 +134,31 @@ elif mode == 'weekend':
     else:
         us_line = w.get('summary','')[:50]
 
-    # 周末要闻：从利好/利空主题中分国内/国际各取 2 条短摘要（保留括号内说明）
-    def short_theme(t, max_len=36):
+    # 周末要闻：从利好/利空主题中分国内/国际各取 2 条短摘要（控制每段长度避免微信截断）
+    def short_theme(t, max_len=26):
         theme = t.get('theme','').strip()
         theme = re.sub(r'\s+', ' ', theme)
-        # 优先保留括号内的说明，整体截断
+        # 识别括号内容：若括号内是事件描述则保留，否则只取括号前
+        m = re.match(r'^(.+?)[（(]([^）)]+)[）)](.*)$', theme)
+        if m:
+            before = m.group(1).strip()
+            inner = m.group(2).strip()
+            event_keys = ['证监会','央行','国常会','改革','冲突','加息','油价','概率','沙特','霍尔木兹','战争','管道','遭袭','谈判','制裁']
+            if any(k in inner for k in event_keys):
+                # 组合为 板块（事件）
+                if len(before) + len(inner) + 3 <= max_len:
+                    return f"{before}（{inner}）"
+                inner_short = inner[:max(6, max_len - len(before) - 3)]
+                if len(inner) > max_len - len(before) - 3:
+                    inner_short += '…'
+                return f"{before}（{inner_short}）"
+            else:
+                # 括号内只是板块说明，取括号前
+                if len(before) <= max_len:
+                    return before
+                return before[:max_len] + '…'
         if len(theme) > max_len:
-            theme = theme[:max_len] + '…'
+            return theme[:max_len] + '…'
         return theme
 
     dom_keys = ['国常会','证监会','央行','工信部','国务院','A股','政策','十五五','券商','算力网','算力大会']
@@ -155,16 +173,17 @@ elif mode == 'weekend':
             continue
         seen_themes.add(theme_full)
         if any(k in theme_full for k in dom_keys) and len(domestic) < 2:
-            domestic.append(short_theme(t, 34))
+            domestic.append(short_theme(t, 100))
         elif any(k in theme_full for k in intl_keys) and len(international) < 2:
-            international.append(short_theme(t, 34))
+            international.append(short_theme(t, 100))
 
     news_parts = []
     for d in domestic:
-        news_parts.append(f"🇨🇳 国内：{d}")
+        news_parts.append(f"🇨🇳 {d}")
     for i in international:
-        news_parts.append(f"🌍 国际：{i}")
-    weekend_news = '\n'.join(news_parts) if news_parts else '（详见网页）'
+        news_parts.append(f"🌍 {i}")
+    # 微信对主动换行的单行有截断阈值；合并成连续自然段，让微信自动换行，显示更完整
+    weekend_news = ' '.join(news_parts) if news_parts else '（详见网页）'
 
     # 完整周一研判
     monday_outlook = w.get('mondayOutlook','')
