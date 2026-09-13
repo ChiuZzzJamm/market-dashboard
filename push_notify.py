@@ -124,15 +124,21 @@ elif mode == 'weekend':
     title = f"[周末消息] {w.get('date','')[5:]} 要闻汇总"
     # 控制长度，避免微信折叠/截断；每个字段都加防御性 .get
     uf = w.get('usFriday') or {}
-    idxs = ' '.join([f"{i.get('name','')}{fmt_pct(i.get('changePct'))}" for i in uf.get('indices',[])[:3]])
-    ups = ' '.join([f"{s.get('name','')}{fmt_pct(s.get('pct'))}" for s in uf.get('sectorsUp',[])[:2]])
-    downs = ' '.join([f"{s.get('name','')}{fmt_pct(s.get('pct'))}" for s in uf.get('sectorsDown',[])[:2]])
 
-    # 美股周五精简：三大指数 + 领涨/领跌
-    if ups and downs:
-        us_line = f"{idxs} | 领涨 {ups.split()[0]} | 领跌 {downs.split()[0]}"
+    # 美股周五：三大指数 + 领涨板块 + 领跌板块（参考工作日 us 模式完整格式）
+    us_summary = uf.get('summary','').strip()
+    if us_summary:
+        us_line = us_summary
     else:
-        us_line = w.get('summary','')[:50]
+        up_str = '、'.join([f"{s.get('name','')}{fmt_pct(s.get('pct'))}" for s in uf.get('sectorsUp',[])[:3]])
+        down_str = '、'.join([f"{s.get('name','')}{fmt_pct(s.get('pct'))}" for s in uf.get('sectorsDown',[])[:3]])
+        idx_part = ' '.join([f"{i.get('name','')}{fmt_pct(i.get('changePct'))}" for i in uf.get('indices',[])[:3]])
+        if up_str and down_str:
+            us_line = f"{idx_part}。领涨：{up_str}；领跌：{down_str}。"
+        elif idx_part:
+            us_line = idx_part
+        else:
+            us_line = '（详见网页）'
 
     # 周末要闻：从利好/利空主题中分国内/国际各取 2 条短摘要（控制每段长度避免微信截断）
     def short_theme(t, max_len=26):
