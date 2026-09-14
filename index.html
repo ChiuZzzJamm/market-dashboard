@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="vuWegjTUbUryFQN7317dIj">
 <title>📈每日市场看板 · A股 / 美股</title>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609141721"></script>
+<script src="data.js?v=202609141746"></script>
 <style>
   :root {
     --up: #d43030;
@@ -152,6 +152,15 @@ function cls(v) { return v > 0 ? "up" : (v < 0 ? "down" : "flat"); }
 function fmtPct(v) { if (v === null || v === undefined) return "—"; return (v > 0 ? "+" : "") + v.toFixed(2) + "%"; }
 function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 function dateTag(tradeDate) { var m = String(tradeDate).match(/(\d{4})-(\d{2})-(\d{2})/); return m ? m[2] + "月" + m[3] + "日" : ""; }
+function formatOutlook(text) {
+  if (!text) return '—';
+  // 按「【」标题分段，每段渲染成 <p> 实现网页内换行；微信推送端保持原始连续文本
+  var segs = String(text).split(/(?=【)/).filter(function(s){ return s.trim(); });
+  if (segs.length <= 1) return '<p style="margin:0 0 10px 0; line-height:1.7;">' + esc(text) + '</p>';
+  return segs.map(function(seg){
+    return '<p style="margin:0 0 10px 0; line-height:1.7;">' + esc(seg.trim()) + '</p>';
+  }).join('');
+}
 
 function renderIndexCards(indices) {
   var html = '<div class="idx-grid">';
@@ -262,7 +271,7 @@ function render(market) {
 
   html += '<div class="card"><h2>大盘指数</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + '</div>';
 
-  html += '<div class="card"><h2>大盘趋势研判</h2><div class="outlook">' + esc(d.outlook) + '</div></div>';
+  html += '<div class="card"><h2>大盘趋势研判</h2><div class="outlook">' + formatOutlook(d.outlook) + '</div></div>';
 
   if (!isA) {
     html += '<div class="card"><h2>资金流向特征</h2>' + renderFlowCards(d.fundFlows) + '</div>';
@@ -394,15 +403,14 @@ function renderWeekendNews() {
   var w = window.DASHBOARD_DATA.weekendNews;
   var box = document.getElementById('weekend-news');
   if (!w || !box) return;
-  // 周末消息前瞻只在「周日 23:00 后」到「周一 09:30 开盘前」显示，
-  // 周一开盘后至周五收盘期间不再占用首页，避免用旧消息干扰当日研判。
+  // 周末消息前瞻只在「周日 23:00 后」到「周一 16:00 A 股收盘更新前」显示，
+  // 16:00 之后 A 股收盘数据已更新，旧的前瞻不再占用首页。
   var now = new Date();
   var day = now.getDay();
   var hour = now.getHours();
-  var minute = now.getMinutes();
   var show = false;
   if (day === 0 && hour >= 23) show = true;
-  if (day === 1 && (hour < 9 || (hour === 9 && minute < 30))) show = true;
+  if (day === 1 && hour < 16) show = true;
   if (!show) { box.innerHTML = ''; box.style.display = 'none'; return; }
   var html = '<div class="wk-card"><div class="wk-head"><span class="wk-badge">周末消息面前瞻</span><span class="date">' + esc(w.date) + '</span></div>' +
     '<div class="wk-summary">' + esc(w.summary) + '</div>';
@@ -450,7 +458,7 @@ function renderWeekendNews() {
   }
   if (w.geopolitical) html += '<div class="wk-section"><h4>地缘政治</h4><div class="wk-item"><div class="dtl">' + esc(w.geopolitical) + '</div></div></div>';
   if (w.commodities) html += '<div class="wk-section"><h4>大宗 / 汇率 / 美债</h4><div class="wk-item"><div class="dtl">' + esc(w.commodities) + '</div></div></div>';
-  if (w.mondayOutlook) html += '<div class="wk-outlook"><b>周一开盘预判：</b>' + esc(w.mondayOutlook) + '</div>';
+  if (w.mondayOutlook) html += '<div class="wk-outlook"><b>周一开盘预判：</b>' + formatOutlook(w.mondayOutlook) + '</div>';
   html += '<div class="wk-src">来源：' + esc(w.source) + '</div></div>';
   box.innerHTML = html;
   box.style.display = '';
