@@ -88,17 +88,16 @@ if mode == 'ashare':
     laggards = '  '.join([f"{s['name']}{fmt_pct(s['pct'])}" for s in a['sectorsDown'][:5]])
     fi = ' '.join([f"{s['name']}{s['value']:+.1f}亿" for s in a['fundIn'][:3]])
     fo = ' '.join([f"{s['name']}{s['value']:+.1f}亿" for s in a['fundOut'][:3]])
-    ai = D['aiPrediction'].get('verification')
-    ai_txt = ai['summary'] if ai else '（待16:00验证）'
+    # 微信推送保持连续自然段，避免主动换行被截断；data.js 里 outlook 本身无换行，这里做兜底
+    outlook_text = a.get('outlook','').replace('\n',' ').strip()
     desp = '\n\n'.join([
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
         f"📊 大盘趋势：{a['summary']}",
-        f"🎯 AI验证：{ai_txt}",
         f"📈 领涨：{leaders}",
         f"📉 领跌：{laggards}",
         f"💰 资金：流入 {fi} | 流出 {fo}",
         build_panorama_line(D.get('panorama')),
-        f"💡 一句话：{a.get('outlook','')}",
+        f"💡 一句话：{outlook_text}",
     ])
 
 elif mode == 'us':
@@ -107,12 +106,9 @@ elif mode == 'us':
     title = f"[美股] {us_date} 道指{fmt_pct(u['indices'][0]['changePct'])}"
     up = '  '.join([f"{s['name']}{fmt_pct(s['pct'])}" for s in u['sectorsUp'][:4]])
     down = '  '.join([f"{s['name']}{fmt_pct(s['pct'])}" for s in u['sectorsDown'][:4]])
-    ai = D['aiPrediction']
-    ai_txt = ai.get('summary','')
     desp = '\n\n'.join([
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
         f"📊 大盘研判：{u['summary']}",
-        f"🎯 AI预测今日：{ai_txt}",
         f"📈 隔夜美股：{'  '.join([i['name']+fmt_pct(i['changePct']) for i in u['indices'][:3]])}",
         f"📰 要闻：{'  '.join([n['title'] for n in (u.get('bullNews',[])[:2] + u.get('bearNews',[])[:2])])}",
         build_panorama_line(D.get('panorama')),
@@ -191,8 +187,8 @@ elif mode == 'weekend':
     # 微信对主动换行的单行有截断阈值；合并成连续自然段，让微信自动换行，显示更完整
     weekend_news = ' '.join(news_parts) if news_parts else '（详见网页）'
 
-    # 完整周一研判
-    monday_outlook = w.get('mondayOutlook','')
+    # 完整周一研判；微信端保持连续自然段，避免被截断
+    monday_outlook = w.get('mondayOutlook','').replace('\n',' ').strip()
 
     # 利好板块：保留括号内板块说明 + 核心受益股
     def fmt_bullish(t, idx):
