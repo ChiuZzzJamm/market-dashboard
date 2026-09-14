@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="vuWegjTUbUryFQN7317dIj">
 <title>📈每日市场看板 · A股 / 美股</title>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609141639"></script>
+<script src="data.js?v=202609141721"></script>
 <style>
   :root {
     --up: #d43030;
@@ -394,12 +394,16 @@ function renderWeekendNews() {
   var w = window.DASHBOARD_DATA.weekendNews;
   var box = document.getElementById('weekend-news');
   if (!w || !box) return;
-  // 只在周一显示周末消息：判断 ashare.tradeDate 是否为周一
-  var td = window.DASHBOARD_DATA.ashare && window.DASHBOARD_DATA.ashare.tradeDate;
-  if (td) {
-    var d = new Date(td + 'T00:00:00+08:00');
-    if (d.getDay() !== 1) { box.innerHTML = ''; box.style.display = 'none'; return; }
-  }
+  // 周末消息前瞻只在「周日 23:00 后」到「周一 09:30 开盘前」显示，
+  // 周一开盘后至周五收盘期间不再占用首页，避免用旧消息干扰当日研判。
+  var now = new Date();
+  var day = now.getDay();
+  var hour = now.getHours();
+  var minute = now.getMinutes();
+  var show = false;
+  if (day === 0 && hour >= 23) show = true;
+  if (day === 1 && (hour < 9 || (hour === 9 && minute < 30))) show = true;
+  if (!show) { box.innerHTML = ''; box.style.display = 'none'; return; }
   var html = '<div class="wk-card"><div class="wk-head"><span class="wk-badge">周末消息面前瞻</span><span class="date">' + esc(w.date) + '</span></div>' +
     '<div class="wk-summary">' + esc(w.summary) + '</div>';
   if (w.usFriday) {
