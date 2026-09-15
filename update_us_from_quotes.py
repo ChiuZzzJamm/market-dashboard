@@ -173,6 +173,23 @@ def prior_us_trading_day(from_date):
     return None
 
 
+def us_market_open(now_utc):
+    """判断当前是否处于美股常规交易时段（美东 9:30-16:00 且为交易日）。
+    盘中行情是动态数据而非收盘数据，此时写入会把盘中误标为「收盘」；
+    排程任务（07:30 / 周日23:00）均在休市时段，不受影响。"""
+    try:
+        from zoneinfo import ZoneInfo
+        et = now_utc.astimezone(ZoneInfo('America/New_York'))
+    except Exception:
+        # 兜底：美国夏令时约 3 月中旬~11 月上旬（UTC-4），其余 UTC-5
+        off = -4 if 3 <= now_utc.month <= 11 else -5
+        et = (now_utc + timedelta(hours=off)).replace(tzinfo=None)
+    if not is_us_trading_day(et.date()):
+        return False
+    t = et.hour * 60 + et.minute
+    return 9 * 60 + 30 <= t < 16 * 60
+
+
 # 读取 data.js
 D = load_dashboard_data(BASE)
 
@@ -186,6 +203,13 @@ if not q:
 
 if not q:
     print('no quote data found, skip update')
+    raise SystemExit(0)
+
+# 美股盘中闸门：美东常规交易时段内（工作日 9:30-16:00 ET）行情为盘中数据，
+# 写入会把盘中误标为「收盘」并污染看板（曾致 9/15 晚手动实跑写入盘中数据）。
+# 直接保留原数据退出，不写 data.js 任何字段。
+if us_market_open(datetime.now(timezone.utc)):
+    print('[warn] 当前处于美股常规交易时段（美东），行情为盘中数据而非收盘，保留原数据不写入')
     raise SystemExit(0)
 
 def get(code):
