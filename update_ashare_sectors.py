@@ -91,13 +91,98 @@ def fetch_breadth():
                 down += v
             else:
                 flat += v
-    lu = fetch_pool_count("getTopicZTPool", today, "fbt%3Aasc")
-    ld = fetch_pool_count("getTopicDTPool", today, "fund%3Aasc")
-    if lu is None:  # 涨停池失败时用分布近似（涨幅>=10% 桶）
+    lu_codes, ld_codes = fetch_pool_codes(today)
+    comp_zt, comp_ld = fetch_full_market_limits()
+    # 涨停：东财涨停池口径准确（tc 与三大 App 一致），优先用；全市场计算次之；分布近似兜底
+    if lu_codes:
+        lu = len(lu_codes)
+    elif comp_zt:
+        lu = len(comp_zt)
+    else:
         lu = approx_bucket(d, lambda k: k >= 10)
-    if ld is None:
+    # 跌停：东财跌停池剔除 ST/*ST（实测 tc=27、pool=27、ST=0），与 App 的 33 差 6 只 ST，不可作主源；
+    # 改用全市场快照计算（含 ST、收盘封板口径），与 App 差异仅 2 只（App 计入盘中曾触及跌停的个股）。
+    if comp_ld:
+        ld = len(comp_ld)
+    elif ld_codes:
+        ld = len(ld_codes)
+    else:
         ld = approx_bucket(d, lambda k: k <= -10)
     return {"up": up, "down": down, "flat": flat, "limitUp": lu, "limitDown": ld}
+
+def fetch_pool_codes(date):
+    """返回 (涨停池代码集, 跌停池代码集)；失败返回 None。"""
+    def codes(api, sort):
+        d = get_json(f"{EX}/{api}?ut={UT_ZT}&dpt=wz.ztzt&Pageindex=0&pagesize=600&sort={sort}&date={date}")
+        try:
+            data = d["data"] or {}
+            return {p["c"] for p in (data.get("pool") or [])}, data.get("tc")
+        except Exception:
+            return None, None
+    zt, _ = codes("getTopicZTPool", "fbt%3Aasc")
+    ld, _ = codes("getTopicDTPool", "fund%3Aasc")
+    return zt, ld
+
+def fetch_full_market_limits():
+    """全市场快照（东财 push2delay 分板块翻页），按交易所规则计算收盘涨跌停代码集。
+    用于修正东财涨跌停池剔除 ST 股的口径缺陷。失败返回 (None, None)。"""
+    from decimal import Decimal, ROUND_HALF_UP
+    SEGS = ["m:0%2Bt:6", "m:0%2Bt:80", "m:0%2Bt:3", "m:1%2Bt:2", "m:1%2Bt:23", "m:1%2Bt:3",
+            "m:0%2Bt:81%2Bs:20480"]
+    rows = []
+    for seg in SEGS:
+        pn = 1
+        empty_retry = 0
+        while True:
+            d = get_json(f"{DELAY}/api/qt/clist/get?pn={pn}&pz=100&po=1&np=1&fltt=2&invt=2&fid=f12&fs={seg}"
+                         f"&fields=f2,f12,f14,f18&ut={UT}")
+            diff = (d.get("data") or {}).get("diff") if d else None
+            if not diff:
+                # 东财偶发限流会返回空页，此时若直接 break 会丢失后续分页的股票（含跌停股）。
+                # 改为重试，连续 3 次空页才放弃该板块。
+                empty_retry += 1
+                if empty_retry >= 3:
+                    break
+                time.sleep(1)
+                continue
+            empty_retry = 0
+            rows += diff
+            if len(diff) < 100:
+                break
+            pn += 1
+            time.sleep(0.08)  # 降低限流概率
+    if len(rows) < 4000:  # 快照不完整则放弃（全市场约 5600 只，分页偶发截断时保守放弃）
+        return None, None
+    seen, uniq = set(), []
+    for r in rows:
+        if r.get("f12") and r["f12"] not in seen:
+            seen.add(r["f12"]); uniq.append(r)
+
+    def ratio_of(code, name):
+        if code.startswith(("30", "68")): return Decimal("0.20")   # 创业板/科创板（含ST）±20%
+        if code.startswith(("4", "8", "92")): return Decimal("0.30")  # 北交所 ±30%
+        if "ST" in name.upper() or "退" in name: return Decimal("0.05")
+        return Decimal("0.10")
+
+    zt, ld = set(), set()
+    for r in uniq:
+        code, name = r["f12"], (r.get("f14") or "").replace(" ", "")
+        price, prev = r.get("f2"), r.get("f18")
+        if not isinstance(price, (int, float)) or not isinstance(prev, (int, float)) or prev <= 0:
+            continue
+        if name.startswith(("N", "C")) and len(name) <= 3:  # 新股上市初期无涨跌幅限制
+            continue
+        ratio = ratio_of(code, name)
+        q = Decimal("0.01")
+        lim_u = float((Decimal(str(prev)) * (1 + ratio)).quantize(q, rounding=ROUND_HALF_UP))
+        lim_d = float((Decimal(str(prev)) * (1 - ratio)).quantize(q, rounding=ROUND_HALF_UP))
+        # 浮点精确比较可能漏掉边界股（lim 经 Decimal 量化后转 float 与原始 float 有 1e-9 级差异），
+        # 用半分钱容差兜底
+        if abs(price - lim_u) < 0.005:
+            zt.add(code)
+        elif abs(price - lim_d) < 0.005:
+            ld.add(code)
+    return zt, ld
 
 def approx_bucket(fenbu_resp, cond):
     n = 0
@@ -106,19 +191,6 @@ def approx_bucket(fenbu_resp, cond):
             if cond(int(k)):
                 n += v
     return n
-
-def fetch_pool_count(api, date, sort):
-    d = get_json(f"{EX}/{api}?ut={UT_ZT}&dpt=wz.ztzt&Pageindex=0&pagesize=1&sort={sort}&date={date}")
-    try:
-        data = d["data"] or {}
-        # tc = 当日池总数（最可靠）；pool 仅在 pagesize 足够时才全
-        tc = data.get("tc")
-        if isinstance(tc, int):
-            return tc
-        pool = data.get("pool")
-        return len(pool) if pool else 0
-    except Exception:
-        return None
 
 # ---------- 3) 行业板块（东财 push2delay，fs=m:90%2Bt:2） ----------
 BOARD_FIELDS = "f3,f12,f14,f62,f128,f136"
