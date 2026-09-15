@@ -265,10 +265,6 @@ function render(market) {
   var html = '';
   html += '<div class="card"><div class="status-line">' + esc(d.tradeDate) + ' · ' + esc(d.status) + '</div><div class="summary">' + esc(d.summary) + '</div></div>';
 
-  if (!isA && d.aShareMapping) {
-    html += '<div class="card"><h2>对今日 A 股 9:30 开盘的映射参考</h2><div class="mapping">' + esc(d.aShareMapping) + '</div></div>';
-  }
-
   html += '<div class="card"><h2>大盘指数</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + '</div>';
 
   html += '<div class="card"><h2>大盘趋势研判</h2><div class="outlook">' + formatOutlook(d.outlook) + '</div></div>';

@@ -163,11 +163,6 @@ us_obj = {
     "sectorsUp": [to_us_sector(s) for s in sorted_up],
     "sectorsDown": [to_us_sector(s) for s in sorted_down],
     "sectorNote": "板块涨跌幅为 SPDR 行业 ETF 口径与主题 ETF 口径，与路透、华尔街见闻等媒体报道口径基本一致。",
-    "aShareMapping": (
-        f"对 A 股开盘映射：①正向——{sorted_up[0]['name']}{fmt_pct(sorted_up[0]['pct'])}、"
-        f"{sorted_up[1]['name']}{fmt_pct(sorted_up[1]['pct'])}；②负向——{sorted_down[0]['name']}{fmt_pct(sorted_down[0]['pct'])}、"
-        f"{sorted_down[1]['name']}{fmt_pct(sorted_down[1]['pct'])}；③关注——美联储议息与美债走势。"
-    ) if (sorted_up and sorted_down) else "",
     "fundFlows": [
         {"title": "隔夜美股主线", "detail": f"领涨 {sorted_up[0]['name']}{fmt_pct(sorted_up[0]['pct'])}，资金偏好{'AI硬件与周期' if sorted_up[0]['name'] in ['半导体','机器人 / 自动化','AI 硬件 / 英伟达'] else sorted_up[0]['name']}方向。"},
         {"title": "承压方向", "detail": f"{sorted_down[0]['name']}{fmt_pct(sorted_down[0]['pct'])}领跌，注意对 A 股映射拖累。"}
