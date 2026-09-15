@@ -42,7 +42,8 @@ node --check data.js
 
 # ---------- 提交并推送 ----------
 echo "📤 提交并推送到 GitHub（触发 GitHub Pages 自动部署）..."
-git add index.html data.js .gitignore deploy.sh
+# git add -A：纳入所有改动（含 .py 脚本），敏感文件（.deploy_key/.notify-config.json 等）已由 .gitignore 排除
+git add -A
 if git diff --cached --quiet; then
     echo "ℹ️ 没有可提交的变更，仅确保远程最新..."
 fi
