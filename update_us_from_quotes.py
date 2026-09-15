@@ -104,8 +104,17 @@ valid_items = [it for it in pano_items if it['pct'] is not None]
 sorted_up = sorted(valid_items, key=lambda x: x['pct'], reverse=True)[:5]
 sorted_down = sorted(valid_items, key=lambda x: x['pct'])[:5]
 
+# 保留旧 us 中各板块的 reason（周一等场景下，reason 由 07:30 任务写入，周末脚本不应覆盖）
+old_reason_map = {}
+for s in D.get('us', {}).get('sectorsUp', []) + D.get('us', {}).get('sectorsDown', []):
+    if 'reason' in s:
+        old_reason_map[s['name']] = s['reason']
+
 def to_us_sector(it):
-    return {"name": it["name"], "pct": it["pct"], "leader": it["ref"]}
+    obj = {"name": it["name"], "pct": it["pct"], "leader": it["ref"]}
+    if it["name"] in old_reason_map:
+        obj["reason"] = old_reason_map[it["name"]]
+    return obj
 
 # 尝试读取日期，形如 2026-09-11 -> 9/11
 match_date = re.search(r'(\d{4})-(\d{2})-(\d{2})', get('usDJI').get('name', '') or '')
