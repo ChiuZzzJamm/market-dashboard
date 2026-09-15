@@ -177,7 +177,44 @@ window.DASHBOARD_DATA = {
       }
     ],
     "riskNote": "① 美联储9/15-16议息、加息概率92.4%、10Y美债破5%，高估值成长（半导体/光通信/黄金/消费）承压加剧，北京时间9/17凌晨决议前难言企稳；② 美股光通信-12%、费半-5.86%对A股CPO/光模块/半导体映射直接利空，警惕周一大幅低开与高开低走；③ 中东霍尔木兹会议推迟+油价破百，能源/油运含双向回吐风险（特朗普「战争将结束」言论）；④ 量能缩至1.6万亿、存量博弈，追高需谨慎，真正的定价窗口是周四凌晨美联储决议；⑤ 亚太科技弱（日经-0.81%/KOSPI-3.26%于9/14）且9/15早盘仍弱，算力链传导打折。",
-    "verification": {"total":5,"hit":2,"miss":3,"details":[{"sector":"半导体/光通信(CPO)","predicted":"承压","actualPct":-0.83,"result":"命中"},{"sector":"医药/CRO","predicted":"走强","actualPct":-1.42,"result":"未命中"},{"sector":"大金融","predicted":"走强","actualPct":-1.26,"result":"未命中"},{"sector":"能源/油运","predicted":"偏强","actualPct":-1.48,"result":"未命中"},{"sector":"贵金属","predicted":"承压","actualPct":-0.83,"result":"命中"}],"summary":"5项预测2项命中：半导体/光通信✓ 医药/CRO✗ 大金融✗ 能源/油运✗ 贵金属✓"}
+    "verification": {
+      "total": 5,
+      "hit": 2,
+      "miss": 3,
+      "details": [
+        {
+          "sector": "半导体/光通信(CPO)",
+          "predicted": "承压",
+          "actualPct": -0.83,
+          "result": "命中"
+        },
+        {
+          "sector": "医药/CRO",
+          "predicted": "走强",
+          "actualPct": -1.42,
+          "result": "未命中"
+        },
+        {
+          "sector": "大金融",
+          "predicted": "走强",
+          "actualPct": -1.26,
+          "result": "未命中"
+        },
+        {
+          "sector": "能源/油运",
+          "predicted": "偏强",
+          "actualPct": -1.48,
+          "result": "未命中"
+        },
+        {
+          "sector": "贵金属",
+          "predicted": "承压",
+          "actualPct": -0.83,
+          "result": "命中"
+        }
+      ],
+      "summary": "5项预测2项命中：半导体/光通信✓ 医药/CRO✗ 大金融✗ 能源/油运✗ 贵金属✓"
+    }
   },
   "ashare": {
     "tradeDate": "2026-09-15",
@@ -947,48 +984,48 @@ window.DASHBOARD_DATA = {
       {
         "key": "kr",
         "name": "韩股",
-        "date": "9/15 早盘",
         "indices": [
           {
             "name": "韩国综合指数 KOSPI",
-            "changePct": 0.05
+            "changePct": -0.85
           }
         ],
         "items": [
           {
             "name": "半导体/存储",
-            "pct": 0.86,
-            "ref": "SK海力士 +1.12%、三星电子 +0.60%（2龙头均值）"
+            "pct": -0.3,
+            "ref": "SK海力士 -0.41%、三星电子 -0.20%（2龙头均值）"
           }
-        ]
+        ],
+        "date": "9/15 收盘"
       },
       {
         "key": "jp",
         "name": "日经",
-        "date": "9/15 早盘",
         "indices": [
           {
             "name": "日经225",
-            "changePct": 0.35
+            "changePct": -0.01
           }
         ],
         "items": [
           {
             "name": "AI/科技投资",
-            "pct": 8.99,
-            "ref": "软银集团 +8.99%（单一龙头）"
+            "pct": 7.54,
+            "ref": "软银集团 +7.54%（单一龙头）"
           },
           {
             "name": "半导体设备",
-            "pct": 0.24,
-            "ref": "东京电子 +0.24%（单一龙头）"
+            "pct": -0.55,
+            "ref": "东京电子 -0.55%（单一龙头）"
           },
           {
             "name": "存储",
-            "pct": 2.31,
-            "ref": "铠侠 +2.31%（单一龙头）"
+            "pct": 2.29,
+            "ref": "铠侠 +2.29%（单一龙头）"
           }
-        ]
+        ],
+        "date": "9/15 收盘"
       }
     ]
   },
