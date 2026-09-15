@@ -80,6 +80,39 @@ def build_panorama_line(panorama):
         return '🌏 日韩：' + ' | '.join(pieces)
     return '🌏 日韩：详见网页'
 
+def fmt_bullish(t, idx):
+    """利好板块：保留括号内板块说明 + 核心受益股"""
+    theme = t.get('theme','').strip()
+    theme = re.sub(r'\s+', ' ', theme)
+    m = re.match(r'^(.+?)[（(]([^）)]+)[）)](.*)$', theme)
+    if m:
+        before = m.group(1).strip()
+        inner = m.group(2).strip()
+        before = before[:18] + ('…' if len(before) > 18 else '')
+        inner = inner[:22] + ('…' if len(inner) > 22 else '')
+        theme = f"{before}（{inner}）"
+    elif len(theme) > 34:
+        theme = theme[:34] + '…'
+    stocks = ' '.join([s.get('name','') for s in t.get('stocks',[])[:3]])
+    if stocks:
+        return f"{idx}. {theme}｜{stocks[:28]}"
+    return f"{idx}. {theme}"
+
+def fmt_bearish(t, idx):
+    """利空板块：保留括号内板块/方向说明，明确利空哪些板块"""
+    theme = t.get('theme','').strip()
+    theme = re.sub(r'\s+', ' ', theme)
+    m = re.match(r'^(.+?)[（(]([^）)]+)[）)](.*)$', theme)
+    if m:
+        before = m.group(1).strip()
+        inner = m.group(2).strip()
+        before = before[:18] + ('…' if len(before) > 18 else '')
+        inner = inner[:26] + ('…' if len(inner) > 26 else '')
+        theme = f"{before}（{inner}）"
+    elif len(theme) > 42:
+        theme = theme[:42] + '…'
+    return f"{idx}. {theme}"
+
 if mode == 'ashare':
     a = D['ashare']
     idx0 = a['indices'][0]
@@ -92,30 +125,38 @@ if mode == 'ashare':
     outlook_text = a.get('outlook','').replace('\n',' ').strip()
     desp = '\n\n'.join([
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
-        f"📊 大盘趋势：{a['summary']}",
+        f"📊 A股：{a['summary']}",
         f"📈 领涨：{leaders}",
         f"📉 领跌：{laggards}",
         f"💰 资金：流入 {fi} | 流出 {fo}",
         build_panorama_line(D.get('panorama')),
-        f"💡 一句话：{outlook_text}",
+        f"💡 研判：{outlook_text}",
     ])
 
 elif mode == 'us':
     u = D['us']
     us_date = u['tradeDate'].split('（')[0][5:]
     title = f"[美股] {us_date} 道指{fmt_pct(u['indices'][0]['changePct'])}"
-    up = '  '.join([f"{s['name']}{fmt_pct(s['pct'])}" for s in u['sectorsUp'][:4]])
-    down = '  '.join([f"{s['name']}{fmt_pct(s['pct'])}" for s in u['sectorsDown'][:4]])
     # 微信端保持连续自然段，避免被截断
     outlook_text = u.get('outlook','').replace('\n',' ').strip()
-    desp = '\n\n'.join([
+    # 利好/利空板块：优先取当日 us.bullish/bearish（若 08:30 任务已生成），否则回退周末消息，格式同周日
+    w = D.get('weekendNews') or {}
+    bull_src = (u.get('bullish') or w.get('bullish', []))
+    bear_src = (u.get('bearish') or w.get('bearish', []))
+    bullish_lines = [fmt_bullish(t, i+1) for i, t in enumerate(bull_src[:3])]
+    bearish_lines = [fmt_bearish(t, i+1) for i, t in enumerate(bear_src[:3])]
+    parts = [
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
-        f"📊 大盘研判：{u['summary']}",
-        f"📈 隔夜美股：{'  '.join([i['name']+fmt_pct(i['changePct']) for i in u['indices'][:3]])}",
+        f"📊 美股：{u['summary']}",
         f"📰 要闻：{'  '.join([n['title'] for n in (u.get('bullNews',[])[:2] + u.get('bearNews',[])[:2])])}",
         build_panorama_line(D.get('panorama')),
         f"💡 研判：{outlook_text}" if outlook_text else '',
-    ])
+    ]
+    if bullish_lines:
+        parts.append("✅ 利好：\n" + '\n'.join(bullish_lines))
+    if bearish_lines:
+        parts.append("⚠️ 利空：\n" + '\n'.join(bearish_lines))
+    desp = '\n\n'.join(parts)
 
 elif mode == 'weekend':
     w = D.get('weekendNews') or {}
@@ -193,53 +234,20 @@ elif mode == 'weekend':
     # 完整周一研判；微信端保持连续自然段，避免被截断
     monday_outlook = w.get('mondayOutlook','').replace('\n',' ').strip()
 
-    # 利好板块：保留括号内板块说明 + 核心受益股
-    def fmt_bullish(t, idx):
-        theme = t.get('theme','').strip()
-        theme = re.sub(r'\s+', ' ', theme)
-        # 优先保留括号内的板块说明
-        m = re.match(r'^(.+?)[（(]([^）)]+)[）)](.*)$', theme)
-        if m:
-            before = m.group(1).strip()
-            inner = m.group(2).strip()
-            before = before[:18] + ('…' if len(before) > 18 else '')
-            inner = inner[:22] + ('…' if len(inner) > 22 else '')
-            theme = f"{before}（{inner}）"
-        elif len(theme) > 34:
-            theme = theme[:34] + '…'
-        stocks = ' '.join([s.get('name','') for s in t.get('stocks',[])[:3]])
-        if stocks:
-            return f"{idx}. {theme}｜{stocks[:28]}"
-        return f"{idx}. {theme}"
     bullish_lines = [fmt_bullish(t, i+1) for i, t in enumerate(w.get('bullish',[])[:3])]
-
-    # 利空板块：保留括号内板块/方向说明，明确利空哪些板块
-    def fmt_bearish(t, idx):
-        theme = t.get('theme','').strip()
-        theme = re.sub(r'\s+', ' ', theme)
-        m = re.match(r'^(.+?)[（(]([^）)]+)[）)](.*)$', theme)
-        if m:
-            before = m.group(1).strip()
-            inner = m.group(2).strip()
-            before = before[:18] + ('…' if len(before) > 18 else '')
-            inner = inner[:26] + ('…' if len(inner) > 26 else '')
-            theme = f"{before}（{inner}）"
-        elif len(theme) > 42:
-            theme = theme[:42] + '…'
-        return f"{idx}. {theme}"
     bearish_lines = [fmt_bearish(t, i+1) for i, t in enumerate(w.get('bearish',[])[:3])]
 
-    # 顺序：美股周五 → 周末要闻 → AI预测周一 → 利好 → 利空
+    # 顺序：美股 → 要闻 → 研判 → 利好 → 利空
     parts = [
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
-        f"📊 美股周五：{us_line}",
-        f"📰 周末要闻：\n{weekend_news}",
-        f"🔮 周一研判：{monday_outlook}",
+        f"📊 美股：{us_line}",
+        f"📰 要闻：\n{weekend_news}",
+        f"💡 研判：{monday_outlook}",
     ]
     if bullish_lines:
-        parts.append("✅ 利好板块：\n" + '\n'.join(bullish_lines))
+        parts.append("✅ 利好：\n" + '\n'.join(bullish_lines))
     if bearish_lines:
-        parts.append("⚠️ 利空板块：\n" + '\n'.join(bearish_lines))
+        parts.append("⚠️ 利空：\n" + '\n'.join(bearish_lines))
     desp = '\n\n'.join(parts)
 
 else:
