@@ -5,8 +5,8 @@
 数据源（全部为 curl HTTP 直连，任何会话/自动化环境均可用）：
 - 个股（三星电子/SK海力士/软银/东京电子/铠侠）：腾讯 qt.gtimg.cn，
   代码前缀 kr005930 / kr000660 / jp9984 / jp8035 / jp285A
-- 指数（KOSPI/日经225）：东方财富 push2 HTTP 直连（secid=100.KS11 / 100.N225），
-  Yahoo chart API（^KS11 / ^N225）兜底——带时间戳校验，杜绝旧数据
+- 指数（KOSPI/日经225）：Yahoo chart API（^KS11 / ^N225）主用（更稳定），
+  东方财富 push2 HTTP 直连（secid=100.KS11 / 100.N225）兜底——两者均带时间戳校验，杜绝旧数据
 - 注意：这是 HTTP 行情接口，与「东财 MCP（mx-ds-mcp）」完全无关，后者已证明不可靠并禁用
 
 流程：抓取 → 时间戳校验（必须今日）→ 方向一致性/异常值校验 → 写回 data.js 的 panorama.kr/jp。
@@ -108,7 +108,7 @@ def fetch_stock_yahoo(std):
         return None
 
 
-# ---------- 指数：东财 push2 直连 + Yahoo 兜底 ----------
+# ---------- 指数：Yahoo 主用 + 东财 push2 直连兜底 ----------
 def fetch_index_eastmoney(secid):
     raw = curl_get(
         f'https://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields=f43,f58,f60,f86,f170',
@@ -163,12 +163,13 @@ def collect():
 
     indices = {}
     for key in ('KS11.GI', 'N225.GI'):
-        idx = fetch_index_eastmoney(EASTMONEY_SECID[key])
+        # Yahoo 主用（更稳），东财 push2 兜底；两者口径一致且均带「必须今日」时间戳校验
+        sym, name = YAHOO_INDEX[key]
+        idx = fetch_index_yahoo(sym, name)
         if not idx:
-            sym, name = YAHOO_INDEX[key]
-            idx = fetch_index_yahoo(sym, name)
+            idx = fetch_index_eastmoney(EASTMONEY_SECID[key])
             if idx:
-                print(f'[info] {name} 使用 Yahoo 兜底')
+                print(f'[info] {name} 东财兜底')
         if idx:
             indices[key] = idx
         else:
