@@ -6,23 +6,12 @@
   curl -s --max-time 30 "http://qt.gtimg.cn/q=usTSLA,usAMZN,usNVDA" | iconv -f gb2312 -t utf-8 > /tmp/us_stocks.txt
 """
 import json, re, subprocess, os, shutil, glob
+from common import find_node, load_dashboard_data
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(BASE)
 
 QUOTE_FILES = ['/tmp/us_quote.txt', '/tmp/us_stocks.txt']
-
-def find_node():
-    p = shutil.which('node')
-    if p:
-        return p
-    cands = sorted(glob.glob('/Users/loccco/.workbuddy/binaries/node/versions/*/bin/node'))
-    if cands:
-        return cands[-1]
-    for c in ['/usr/local/bin/node', '/usr/bin/node']:
-        if os.path.exists(c):
-            return c
-    raise RuntimeError('node not found')
 
 NODE = find_node()
 
@@ -51,18 +40,7 @@ def parse_quote_file(path):
     return out
 
 # 读取 data.js
-node_src = r"""
-const fs = require('fs');
-let s = fs.readFileSync('data.js','utf8');
-let m = s.match(/window\s*\.\s*DASHBOARD_DATA\s*=\s*(\{[\s\S]*\});?\s*$/);
-if (!m) { console.error('data.js parse failed'); process.exit(1); }
-process.stdout.write(JSON.stringify(eval('(' + m[1] + ')')));
-"""
-p = subprocess.run([NODE, '-e', node_src], capture_output=True, text=True)
-if p.returncode != 0:
-    print('node parse failed:', p.stderr)
-    raise SystemExit(1)
-D = json.loads(p.stdout)
+D = load_dashboard_data(BASE)
 
 # 合并行情
 q = {}
@@ -187,7 +165,7 @@ us_obj = {
     ] if (sorted_up and sorted_down) else [],
     "bullNews": D['us'].get('bullNews', []),
     "bearNews": D['us'].get('bearNews', []),
-    "outlook": "关注美联储议息、美债收益率与地缘风险对高估值板块的影响。",
+    "outlook": D['us'].get('outlook', "关注美联储议息、美债收益率与地缘风险对高估值板块的影响。"),
     "source": "美股数据来自腾讯行情实时接口"
 }
 
