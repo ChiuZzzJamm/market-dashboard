@@ -12,6 +12,7 @@ A股板块/指数/涨跌家数抓取（零 MCP 依赖，全部 HTTP 直连）：
 """
 import json, re, subprocess, os, sys, time, argparse
 from datetime import datetime, timezone, timedelta
+from common import find_node
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(BASE)
@@ -330,11 +331,17 @@ def main():
                               f"（A股收盘已自动更新：{'/'.join(updated_parts)}）")
         out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, indent=2) + ";\n"
         open("data.js", "w", encoding="utf-8").write(out)
-        chk = subprocess.run([os.environ.get("NODE_BIN", "node"), "--check", "data.js"],
-                             capture_output=True, text=True)
-        if chk.returncode != 0:
-            print("[error] data.js 语法校验失败：" + chk.stderr[:300])
-            sys.exit(2)
+        # 语法校验：定位 node（与 deploy.sh/run_push.sh/push_notify.py 一致，避免自动化环境
+        # PATH 缺失 node 而崩溃）。node 实在不可用时跳过校验（json.dumps 已保证结构有效），
+        # 仅当 node 可用且校验确实失败时仍报错，防止推送坏数据。
+        try:
+            node_bin = find_node()
+            chk = subprocess.run([node_bin, "--check", "data.js"], capture_output=True, text=True)
+            if chk.returncode != 0:
+                print("[error] data.js 语法校验失败：" + (chk.stderr or "")[:300])
+                sys.exit(2)
+        except Exception as e:
+            print("[warn] 跳过 node --check（node 不可用）：" + str(e))
         print(f"[info] data.js 已更新（{'/'.join(updated_parts)}）")
     else:
         print("[dry-run] 指数:", json.dumps(indices, ensure_ascii=False))
