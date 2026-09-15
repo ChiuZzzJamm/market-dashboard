@@ -760,7 +760,7 @@ window.DASHBOARD_DATA = {
       {
         "key": "kr",
         "name": "韩股",
-        "date": "9/15 开盘",
+        "date": "9/14 收盘",
         "indices": [
           {
             "name": "韩国综合指数 KOSPI",
@@ -783,7 +783,7 @@ window.DASHBOARD_DATA = {
       {
         "key": "jp",
         "name": "日经",
-        "date": "9/15 开盘",
+        "date": "9/14 收盘",
         "indices": [
           {
             "name": "日经225",
