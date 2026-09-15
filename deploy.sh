@@ -9,6 +9,13 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$REPO_DIR"
 
+# 自动化环境 PATH 可能缺失 python3 / node，显式定位（与 run_push.sh 一致）
+PY=$(command -v python3 2>/dev/null || ls /Users/loccco/.workbuddy/binaries/python/versions/*/bin/python3 2>/dev/null | tail -1)
+NODE=$(command -v node 2>/dev/null || ls /Users/loccco/.workbuddy/binaries/node/versions/*/bin/node 2>/dev/null | tail -1)
+if [ -z "$PY" ]; then echo "❌ 找不到 python3"; exit 1; fi
+if [ -z "$NODE" ]; then echo "❌ 找不到 node"; exit 1; fi
+echo "[info] using python3: $PY | node: $NODE"
+
 # ---------- 配置 git 使用部署专用 SSH 私钥 ----------
 DEPLOY_KEY="$REPO_DIR/.deploy_key"
 if [[ ! -f "$DEPLOY_KEY" ]]; then
@@ -26,7 +33,7 @@ git remote set-url origin "ssh://git@ssh.github.com:443/ChiuZzzJamm/market-dashb
 
 # ---------- 更新缓存版本号（防浏览器/CDN 缓存）----------
 echo "📈 更新 data.js 版本戳防止浏览器/CDN缓存..."
-python3 - <<'PY'
+"$PY" - <<'PY'
 import re, pathlib, time
 p = pathlib.Path("index.html")
 t = p.read_text(encoding="utf-8")
@@ -38,7 +45,7 @@ PY
 
 # ---------- 校验 data.js 语法 ----------
 echo "🔍 校验 data.js 语法..."
-node --check data.js
+"$NODE" --check data.js
 
 # ---------- 提交并推送 ----------
 echo "📤 提交并推送到 GitHub（触发 GitHub Pages 自动部署）..."

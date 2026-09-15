@@ -93,18 +93,20 @@ def fmt_bearish(t, idx):
     return f"{idx}. {theme}"
 
 if mode == 'ashare':
-    a = D['ashare']
-    idx0 = a['indices'][0]
-    title = f"[A股收盘] {a['tradeDate'][5:]} 沪指{fmt_pct(idx0['changePct'])}"
-    leaders = '  '.join([f"{s['name']}{fmt_pct(s['pct'])}" for s in a['sectorsUp'][:5]])
-    laggards = '  '.join([f"{s['name']}{fmt_pct(s['pct'])}" for s in a['sectorsDown'][:5]])
-    fi = ' '.join([f"{s['name']}{s['value']:+.1f}亿" for s in a['fundIn'][:3]])
-    fo = ' '.join([f"{s['name']}{s['value']:+.1f}亿" for s in a['fundOut'][:3]])
+    a = D.get('ashare')
+    if not a or not a.get('indices'):
+        print('[warn] ashare 数据缺失，跳过推送'); sys.exit(0)
+    idx0 = (a.get('indices') or [{}])[0]
+    title = f"[A股收盘] {a.get('tradeDate','')[-5:]} 沪指{fmt_pct(idx0.get('changePct'))}"
+    leaders = '  '.join([f"{s.get('name','')}{fmt_pct(s.get('pct'))}" for s in (a.get('sectorsUp') or [])[:5]])
+    laggards = '  '.join([f"{s.get('name','')}{fmt_pct(s.get('pct'))}" for s in (a.get('sectorsDown') or [])[:5]])
+    fi = ' '.join([f"{s.get('name','')}{s.get('value',0):+.1f}亿" for s in (a.get('fundIn') or [])[:3]])
+    fo = ' '.join([f"{s.get('name','')}{s.get('value',0):+.1f}亿" for s in (a.get('fundOut') or [])[:3]])
     # 微信推送保持连续自然段，避免主动换行被截断；data.js 里 outlook 本身无换行，这里做兜底
-    outlook_text = a.get('outlook','').replace('\n',' ').strip()
+    outlook_text = (a.get('outlook','') or '').replace('\n',' ').strip()
     desp = '\n\n'.join([
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
-        f"📊 A股：{a['summary']}",
+        f"📊 A股：{a.get('summary','')}",
         f"📈 领涨：{leaders}",
         f"📉 领跌：{laggards}",
         f"💰 资金：流入 {fi} | 流出 {fo}",
@@ -113,21 +115,26 @@ if mode == 'ashare':
     ])
 
 elif mode == 'us':
-    u = D['us']
-    us_date = u['tradeDate'].split('（')[0][5:]
-    title = f"[美股] {us_date} 道指{fmt_pct(u['indices'][0]['changePct'])}"
+    u = D.get('us')
+    if not u:
+        print('[warn] us 数据缺失，跳过推送'); sys.exit(0)
+    us_trade = u.get('tradeDate', '') or ''
+    us_date = (us_trade.split('（')[0][5:] if us_trade else '')
+    idx0 = (u.get('indices') or [{}])[0]
+    title = f"[美股] {us_date} 道指{fmt_pct(idx0.get('changePct'))}"
     # 微信端保持连续自然段，避免被截断
-    outlook_text = u.get('outlook','').replace('\n',' ').strip()
+    outlook_text = (u.get('outlook','') or '').replace('\n',' ').strip()
     # 利好/利空板块：优先取当日 us.bullish/bearish（若 08:30 任务已生成），否则回退周末消息，格式同周日
     w = D.get('weekendNews') or {}
     bull_src = (u.get('bullish') or w.get('bullish', []))
     bear_src = (u.get('bearish') or w.get('bearish', []))
     bullish_lines = [fmt_bullish(t, i+1) for i, t in enumerate(bull_src[:3])]
     bearish_lines = [fmt_bearish(t, i+1) for i, t in enumerate(bear_src[:3])]
+    news_titles = [n.get('title','') for n in ((u.get('bullNews') or [])[:2] + (u.get('bearNews') or [])[:2])]
     parts = [
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
-        f"📊 美股：{u['summary']}",
-        f"📰 要闻：{'  '.join([n['title'] for n in (u.get('bullNews',[])[:2] + u.get('bearNews',[])[:2])])}",
+        f"📊 美股：{u.get('summary','')}",
+        f"📰 要闻：{'  '.join(news_titles)}",
         build_panorama_line(D.get('panorama')),
         f"💡 研判：{outlook_text}" if outlook_text else '',
     ]
@@ -233,8 +240,13 @@ else:
     print('unknown mode'); sys.exit(1)
 
 # 推送
-cfg = json.load(open('.notify-config.json'))
-sendkeys = [r['sendkey'] for r in cfg['recipients']]
+try:
+    cfg = json.load(open('.notify-config.json'))
+    sendkeys = [r['sendkey'] for r in (cfg.get('recipients') or [])]
+except Exception as e:
+    print('[warn] 读取 .notify-config.json 失败，跳过推送:', e); sys.exit(0)
+if not sendkeys:
+    print('[warn] 无有效 sendkey，跳过推送'); sys.exit(0)
 DRY = os.environ.get('PUSH_DRY') == '1'
 print('=== TITLE ===')
 print(title)

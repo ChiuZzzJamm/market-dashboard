@@ -214,12 +214,12 @@ us_obj = {
         {"title": "隔夜美股主线", "detail": f"领涨 {sorted_up[0]['name']}{fmt_pct(sorted_up[0]['pct'])}，资金偏好{'AI硬件与周期' if sorted_up[0]['name'] in ['半导体','机器人 / 自动化','AI 硬件 / 英伟达'] else sorted_up[0]['name']}方向。"},
         {"title": "承压方向", "detail": f"{sorted_down[0]['name']}{fmt_pct(sorted_down[0]['pct'])}领跌，注意对 A 股映射拖累。"}
     ] if (sorted_up and sorted_down) else [],
-    "bullNews": D['us'].get('bullNews', []),
-    "bearNews": D['us'].get('bearNews', []),
+    "bullNews": D.get('us', {}).get('bullNews', []),
+    "bearNews": D.get('us', {}).get('bearNews', []),
     # 保留 08:30 任务写入的当日 AI 利好/利空主题，不得覆盖（否则微信推送会回退到周末旧数据）
-    "bullish": D['us'].get('bullish'),
-    "bearish": D['us'].get('bearish'),
-    "outlook": D['us'].get('outlook', "关注美联储议息、美债收益率与地缘风险对高估值板块的影响。"),
+    "bullish": D.get('us', {}).get('bullish'),
+    "bearish": D.get('us', {}).get('bearish'),
+    "outlook": D.get('us', {}).get('outlook', "关注美联储议息、美债收益率与地缘风险对高估值板块的影响。"),
     "source": "美股数据来自腾讯行情实时接口"
 }
 
@@ -228,7 +228,7 @@ if pct('usDJI') is None and pct('usIXIC') is None and pct('usINX') is None:
     print('main indices missing, skip us update')
 else:
     D['us'] = us_obj
-    for m in D['panorama']['markets']:
+    for m in D.get('panorama', {}).get('markets', []):
         if m.get('key') == 'us':
             m['date'] = f"{trade_md} 收盘（北京时间 次日 凌晨）" if trade_md != "未知" else "未知日期"
             m['items'] = pano_items

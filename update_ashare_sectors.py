@@ -25,8 +25,9 @@ UT_ZT = "7eea3edcaed734bea9cbfc24409ed989"
 
 def curl(url, timeout=20):
     # gtimg 返回 GBK、东财返回 UTF-8，这里统一按字节取回再容错解码
-    r = subprocess.run(["curl", "-s", "--max-time", str(timeout), url, "-H", "User-Agent: " + UA],
-                       capture_output=True)
+    # -H 放在 URL 之前；subprocess 额外加 timeout 兜底，杜绝 curl 异常挂死
+    r = subprocess.run(["curl", "-s", "--max-time", str(timeout), "-H", "User-Agent: " + UA, url],
+                       capture_output=True, timeout=timeout + 10)
     return (r.stdout or b"").decode("utf-8", errors="replace")
 
 def get_json(url, retries=2, gap=3):
@@ -76,7 +77,7 @@ def fetch_indices():
     return out, (vol or None)
 
 # ---------- 2) 涨跌家数 + 涨跌停（东财 push2ex） ----------
-def fetch_breadth():
+def fetch_breadth(prev_breadth=None):
     today = datetime.now(TZ8).strftime("%Y%m%d")
     d = get_json(f"{EX}/getTopicZDFenBu?ut={UT_ZT}&dpt=wz.ztzt")
     if not d or not (d.get("data") or {}).get("fenbu"):
@@ -91,37 +92,32 @@ def fetch_breadth():
                 down += v
             else:
                 flat += v
-    lu_codes, ld_codes = fetch_pool_codes(today)
+    lu_codes = fetch_zt_codes(today)
     comp_zt, comp_ld = fetch_full_market_limits()
-    # 涨停：东财涨停池口径准确（tc 与三大 App 一致），优先用；全市场计算次之；分布近似兜底
+    # 涨停：东财涨停池口径准确（tc 与三大 App 一致=32），优先用；全市场计算次之；分布近似兜底
     if lu_codes:
         lu = len(lu_codes)
     elif comp_zt:
         lu = len(comp_zt)
     else:
         lu = approx_bucket(d, lambda k: k >= 10)
-    # 跌停：东财跌停池剔除 ST/*ST（实测 tc=27、pool=27、ST=0），与 App 的 33 差 6 只 ST，不可作主源；
-    # 改用全市场快照计算（含 ST、收盘封板口径），与 App 差异仅 2 只（App 计入盘中曾触及跌停的个股）。
+    # 跌停：东财跌停池剔除 ST/*ST（tc≈27）与 App 的 33 不符，绝不作为数据源；
+    # 改用全市场快照计算（含 ST、收盘封板口径，≈31）。若快照失败，保留上一轮跌停数（绝不回退到27）。
     if comp_ld:
         ld = len(comp_ld)
-    elif ld_codes:
-        ld = len(ld_codes)
     else:
-        ld = approx_bucket(d, lambda k: k <= -10)
+        ld = (prev_breadth or {}).get("limitDown")
     return {"up": up, "down": down, "flat": flat, "limitUp": lu, "limitDown": ld}
 
-def fetch_pool_codes(date):
-    """返回 (涨停池代码集, 跌停池代码集)；失败返回 None。"""
-    def codes(api, sort):
-        d = get_json(f"{EX}/{api}?ut={UT_ZT}&dpt=wz.ztzt&Pageindex=0&pagesize=600&sort={sort}&date={date}")
-        try:
-            data = d["data"] or {}
-            return {p["c"] for p in (data.get("pool") or [])}, data.get("tc")
-        except Exception:
-            return None, None
-    zt, _ = codes("getTopicZTPool", "fbt%3Aasc")
-    ld, _ = codes("getTopicDTPool", "fund%3Aasc")
-    return zt, ld
+def fetch_zt_codes(date):
+    """返回东财涨停池代码集（tc 与三大 App 一致，=32）；失败返回 None。
+    跌停池(getTopicDTPool)剔除 ST 股，tc 固定≈27，与 App 的 33 不符，不作数据源。"""
+    d = get_json(f"{EX}/getTopicZTPool?ut={UT_ZT}&dpt=wz.ztzt&Pageindex=0&pagesize=600&sort=fbt%3Aasc&date={date}")
+    try:
+        data = d["data"] or {}
+        return {p["c"] for p in (data.get("pool") or [])}
+    except Exception:
+        return None
 
 def fetch_full_market_limits():
     """全市场快照（东财 push2delay 分板块翻页），按交易所规则计算收盘涨跌停代码集。
@@ -133,24 +129,24 @@ def fetch_full_market_limits():
     for seg in SEGS:
         pn = 1
         empty_retry = 0
-        while True:
+        while pn <= 200:  # 翻页硬上限，防止异常时无限循环
             d = get_json(f"{DELAY}/api/qt/clist/get?pn={pn}&pz=100&po=1&np=1&fltt=2&invt=2&fid=f12&fs={seg}"
                          f"&fields=f2,f12,f14,f18&ut={UT}")
             diff = (d.get("data") or {}).get("diff") if d else None
             if not diff:
                 # 东财偶发限流会返回空页，此时若直接 break 会丢失后续分页的股票（含跌停股）。
-                # 改为重试，连续 3 次空页才放弃该板块。
+                # 改为退避重试，连续 4 次空页才放弃该板块。
                 empty_retry += 1
-                if empty_retry >= 3:
+                if empty_retry >= 4:
                     break
-                time.sleep(1)
+                time.sleep(2)  # 限流时加长退避，提高恢复概率
                 continue
             empty_retry = 0
             rows += diff
             if len(diff) < 100:
                 break
             pn += 1
-            time.sleep(0.08)  # 降低限流概率
+            time.sleep(0.1)  # 降低限流概率
     if len(rows) < 4000:  # 快照不完整则放弃（全市场约 5600 只，分页偶发截断时保守放弃）
         return None, None
     seen, uniq = set(), []
@@ -254,10 +250,21 @@ def main():
     ap.add_argument("--dry-run", action="store_true", help="只打印不写回 data.js")
     args = ap.parse_args()
 
+    # 先读取现有 data.js，用于保留上一轮字段（如跌停数失败时回退到原值）
+    try:
+        with open("data.js", encoding="utf-8") as f:
+            s = f.read()
+        m = re.search(r'window\s*\.\s*DASHBOARD_DATA\s*=\s*(\{[\s\S]*\});?\s*$', s)
+        D = json.loads(m.group(1))
+    except Exception as e:
+        print("[error] 读取 data.js 失败：" + str(e))
+        sys.exit(1)
+    prev_breadth = (D.get("ashare") or {}).get("breadth")
+
     indices, vol = fetch_indices()
     if indices is None:
         print("[warn] 指数获取失败，保留原值")
-    breadth = fetch_breadth()
+    breadth = fetch_breadth(prev_breadth)
     if breadth is None:
         print("[warn] 涨跌家数获取失败，保留原值")
     sectors_up, sectors_down = build_sectors()
@@ -281,10 +288,7 @@ def main():
         volume_text = f"成交约 {total_yi/10000:.2f} 万亿" if total_yi >= 10000 else f"成交约 {total_yi:.0f} 亿"
 
     if not args.dry_run:
-        # 写回 data.js
-        s = open("data.js", encoding="utf-8").read()
-        m = re.search(r'window\s*\.\s*DASHBOARD_DATA\s*=\s*(\{[\s\S]*\});?\s*$', s)
-        D = json.loads(m.group(1))
+        # 写回 data.js（D 已在 main 开头读取）
         a = D.setdefault("ashare", {})
         now = datetime.now(TZ8).strftime("%Y-%m-%d")
         if indices is not None:
