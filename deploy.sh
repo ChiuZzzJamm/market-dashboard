@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-REPO_DIR="/Users/loccco/WorkBuddy/2026-09-04-11-53-22/market-dashboard"
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$REPO_DIR"
 
 # ---------- 配置 git 使用部署专用 SSH 私钥 ----------

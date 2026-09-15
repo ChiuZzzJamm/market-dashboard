@@ -5,15 +5,13 @@
   curl -s --max-time 30 "http://qt.gtimg.cn/q=usDJI,usIXIC,usINX,usSOXX,usXLK,usXLF,usXLE,usXLU,usXLC,usXRT,usCLOU,usBOTZ,usBITO,usGLD,usCOPX,usREMX,usMOO,usMAGS,usKWEB,usSMH,usUSO,usTLT" | iconv -f gb2312 -t utf-8 > /tmp/us_quote.txt
   curl -s --max-time 30 "http://qt.gtimg.cn/q=usTSLA,usAMZN,usNVDA" | iconv -f gb2312 -t utf-8 > /tmp/us_stocks.txt
 """
-import json, re, subprocess, os, shutil, glob
-from common import find_node, load_dashboard_data
+import json, re, subprocess, os
+from common import load_dashboard_data
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(BASE)
 
 QUOTE_FILES = ['/tmp/us_quote.txt', '/tmp/us_stocks.txt']
-
-NODE = find_node()
 
 def fmt_pct(x):
     try:
@@ -116,8 +114,6 @@ def to_us_sector(it):
         obj["reason"] = old_reason_map[it["name"]]
     return obj
 
-# 尝试读取日期，形如 2026-09-11 -> 9/11
-match_date = re.search(r'(\d{4})-(\d{2})-(\d{2})', get('usDJI').get('name', '') or '')
 # 若行情文件是从 Tencent 获取，col30 为更新时间，形如 2026-09-11 16:46:29
 time_str = ''
 raw = open('/tmp/us_quote.txt', encoding='utf-8').read() if os.path.exists('/tmp/us_quote.txt') else ''
@@ -138,11 +134,20 @@ index_name_map = {
     'usKWEB': '中概互联网',
 }
 
+# 三大指数涨跌趋势：三大齐涨/齐跌才用“收涨/收跌”，否则“涨跌不一”
+_di, _ix, _sp = pct('usDJI'), pct('usIXIC'), pct('usINX')
+_trend = '涨跌不一'
+if None not in (_di, _ix, _sp):
+    if _di > 0 and _ix > 0 and _sp > 0:
+        _trend = '收涨'
+    elif _di < 0 and _ix < 0 and _sp < 0:
+        _trend = '收跌'
+
 us_obj = {
     "tradeDate": f"{trade_iso}（美东，北京时间 次日 凌晨收盘）" if trade_iso != "未知日期" else "未知日期",
     "status": "收盘",
     "summary": (
-        f"{trade_md} 美股收盘：三大指数{('收跌' if pct('usDJI') and pct('usDJI') < 0 else '收涨')}（"
+        f"{trade_md} 美股收盘：三大指数{_trend}（"
         f"道指{fmt_pct(pct('usDJI'))} / 纳指{fmt_pct(pct('usIXIC'))} / 标普{fmt_pct(pct('usINX'))}）。"
         f"领涨：{sorted_up[0]['name']}{fmt_pct(sorted_up[0]['pct'])}、{sorted_up[1]['name']}{fmt_pct(sorted_up[1]['pct'])}；"
         f"领跌：{sorted_down[0]['name']}{fmt_pct(sorted_down[0]['pct'])}、{sorted_down[1]['name']}{fmt_pct(sorted_down[1]['pct'])}。"
@@ -169,6 +174,9 @@ us_obj = {
     ] if (sorted_up and sorted_down) else [],
     "bullNews": D['us'].get('bullNews', []),
     "bearNews": D['us'].get('bearNews', []),
+    # 保留 08:30 任务写入的当日 AI 利好/利空主题，不得覆盖（否则微信推送会回退到周末旧数据）
+    "bullish": D['us'].get('bullish'),
+    "bearish": D['us'].get('bearish'),
     "outlook": D['us'].get('outlook', "关注美联储议息、美债收益率与地缘风险对高估值板块的影响。"),
     "source": "美股数据来自腾讯行情实时接口"
 }

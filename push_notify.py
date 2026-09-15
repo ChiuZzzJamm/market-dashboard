@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # 固化微信推送脚本：从 data.js 读最新数据，按模块空行排版，推送给 .notify-config.json 中所有人
 # 用法: python3 push_notify.py [ashare|us|weekend]
-import subprocess, json, sys, urllib.request, time, os, shutil, glob, re
+import subprocess, json, sys, urllib.request, time, os, re
 from common import find_node, load_dashboard_data
 
-BASE = '/Users/loccco/WorkBuddy/2026-09-04-11-53-22/market-dashboard'
+BASE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(BASE)
 
 # 定位 node：优先 PATH，其次 workbuddy 管理的多版本目录（避免定时任务环境 PATH 缺失导致崩溃）
