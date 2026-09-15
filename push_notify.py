@@ -106,12 +106,15 @@ elif mode == 'us':
     title = f"[美股] {us_date} 道指{fmt_pct(u['indices'][0]['changePct'])}"
     up = '  '.join([f"{s['name']}{fmt_pct(s['pct'])}" for s in u['sectorsUp'][:4]])
     down = '  '.join([f"{s['name']}{fmt_pct(s['pct'])}" for s in u['sectorsDown'][:4]])
+    # 微信端保持连续自然段，避免被截断
+    outlook_text = u.get('outlook','').replace('\n',' ').strip()
     desp = '\n\n'.join([
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
         f"📊 大盘研判：{u['summary']}",
         f"📈 隔夜美股：{'  '.join([i['name']+fmt_pct(i['changePct']) for i in u['indices'][:3]])}",
         f"📰 要闻：{'  '.join([n['title'] for n in (u.get('bullNews',[])[:2] + u.get('bearNews',[])[:2])])}",
         build_panorama_line(D.get('panorama')),
+        f"💡 研判：{outlook_text}" if outlook_text else '',
     ])
 
 elif mode == 'weekend':
