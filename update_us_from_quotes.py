@@ -72,6 +72,107 @@ def fetch_trade_date():
     return None
 
 
+# ---------- 美股节假日历（脚本级判定，避免休市/旧文件把旧收盘误写为新交易日数据） ----------
+def _nth_weekday(year, month, weekday, n):
+    """返回 year 年 month 月第 n 个 weekday（0=周一…6=周日）的日期"""
+    d = datetime(year, month, 1)
+    offset = (weekday - d.weekday()) % 7
+    d = d + timedelta(days=offset) + timedelta(days=7 * (n - 1))
+    return d.date()
+
+
+def _last_weekday(year, month, weekday):
+    if month == 12:
+        nxt = datetime(year + 1, 1, 1)
+    else:
+        nxt = datetime(year, month + 1, 1)
+    d = nxt - timedelta(days=1)
+    offset = (d.weekday() - weekday) % 7
+    return (d - timedelta(days=offset)).date()
+
+
+def _easter(year):
+    a = year % 19
+    b = year // 100
+    c = year % 100
+    d = b // 4
+    e = b % 4
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i = c // 4
+    k = c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    month = (h + l - 7 * m + 114) // 31
+    day = ((h + l - 7 * m + 114) % 31) + 1
+    return datetime(year, month, day).date()
+
+
+def us_holidays(year):
+    """返回该年度美股休市日期集合（NYSE 规则，含周末顺延）"""
+    h = set()
+    jan1 = datetime(year, 1, 1).date()
+    if jan1.weekday() == 5:
+        h.add(jan1 - timedelta(days=1))
+    elif jan1.weekday() == 6:
+        h.add(jan1 + timedelta(days=1))
+    else:
+        h.add(jan1)
+    h.add(_nth_weekday(year, 1, 0, 3))              # 马丁路德金日（1月第3周一）
+    h.add(_nth_weekday(year, 2, 0, 3))              # 总统日（2月第3周一）
+    h.add(_easter(year) - timedelta(days=2))        # 耶稣受难日
+    h.add(_last_weekday(year, 5, 0))                # 阵亡将士纪念日（5月最后周一）
+    j6 = datetime(year, 6, 19).date()               # 六月节
+    if j6.weekday() == 5:
+        h.add(j6 - timedelta(days=1))
+    elif j6.weekday() == 6:
+        h.add(j6 + timedelta(days=1))
+    else:
+        h.add(j6)
+    j4 = datetime(year, 7, 4).date()                # 独立日
+    if j4.weekday() == 5:
+        h.add(j4 - timedelta(days=1))
+    elif j4.weekday() == 6:
+        h.add(j4 + timedelta(days=1))
+    else:
+        h.add(j4)
+    h.add(_nth_weekday(year, 9, 0, 1))              # 劳动节（9月第1周一）
+    h.add(_nth_weekday(year, 11, 3, 4))             # 感恩节（11月第4周四）
+    d25 = datetime(year, 12, 25).date()             # 圣诞
+    if d25.weekday() == 5:
+        h.add(d25 - timedelta(days=1))
+    elif d25.weekday() == 6:
+        h.add(d25 + timedelta(days=1))
+    else:
+        h.add(d25)
+    return h
+
+
+_HOLIDAYS = {}
+def _holidays_for(year):
+    if year not in _HOLIDAYS:
+        _HOLIDAYS[year] = us_holidays(year)
+        _HOLIDAYS[year + 1] = us_holidays(year + 1)
+    return _HOLIDAYS[year]
+
+
+def is_us_trading_day(d):
+    if d.weekday() >= 5:
+        return False
+    return d not in _holidays_for(d.year)
+
+
+def prior_us_trading_day(from_date):
+    """返回 from_date 之前（不含 from_date 当天）最近的一个美股交易日"""
+    d = from_date - timedelta(days=1)
+    for _ in range(14):
+        if is_us_trading_day(d):
+            return d
+        d -= timedelta(days=1)
+    return None
+
+
 # 读取 data.js
 D = load_dashboard_data(BASE)
 
@@ -166,6 +267,24 @@ if trade_iso != "未知日期":
     trade_md = f"{int(trade_iso[5:7])}/{int(trade_iso[8:10])}"
 else:
     trade_md = "未知"
+
+# 脚本级美股节假日/过期判定：若抓取到的行情日期早于「应更新的最近交易日」，
+# 说明是休市或数据过期（避免把旧收盘误写为新交易日数据），保留上一交易日数据并退出。
+_now_bj = datetime.now(timezone(timedelta(hours=8)))
+if trade_iso != "未知日期":
+    try:
+        _data_date = datetime.strptime(trade_iso, "%Y-%m-%d").date()
+        _expected = prior_us_trading_day(_now_bj.date())
+        if _expected and _data_date < _expected:
+            print(f"[warn] 行情日期 {trade_iso} 早于应更新的最近交易日 {_expected.isoformat()}，"
+                  f"判定为休市/数据过期，保留上一交易日数据，不覆盖")
+            D['updatedAt'] = f"{_now_bj.strftime('%Y-%m-%d %H:%M')}（美股休市/行情过期，保留上一交易日数据）"
+            with open('data.js', 'w', encoding='utf-8') as f:
+                f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, indent=2) + ';\n')
+            print('us market closed/stale, kept previous us data')
+            raise SystemExit(0)
+    except Exception:
+        pass
 
 # 中文名称映射
 index_name_map = {
