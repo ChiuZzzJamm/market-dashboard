@@ -302,6 +302,20 @@ def main():
             b["volumeText"] = volume_text
             a["breadth"] = b
         if sectors_up is not None:
+            # 当日 reason 保留：16:00 自动化由 AI 写入板块 reason，本脚本重建板块时
+            # 若直接覆盖会把当日的 reason 洗掉（页面上"异动原因"消失）。
+            # 仅当已有数据同为今日（tradeDate 相同）时按板块名保留 reason；
+            # 跨日不保留，避免昨天的原因挂今天的行情（跨日 reason 由 16:00 AI 重新生成）。
+            if a.get("tradeDate") == now:
+                old_reason = {}
+                for s in (a.get("sectorsUp") or []) + (a.get("sectorsDown") or []):
+                    if isinstance(s, dict) and s.get("reason") and s.get("name"):
+                        old_reason[s["name"]] = s["reason"]
+                for s in sectors_up + sectors_down:
+                    if s.get("name") in old_reason:
+                        s["reason"] = old_reason[s["name"]]
+                if old_reason:
+                    print(f"[info] 保留当日板块 reason {len(old_reason)} 条")
             a["sectorsUp"] = sectors_up
             a["sectorsDown"] = sectors_down
             updated_parts.append("行业板块TOP5")
