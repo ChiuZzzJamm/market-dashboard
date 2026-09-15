@@ -41,10 +41,20 @@ else:
 
 # Step 2: 收集文件
 print("Step 2: Collecting files...")
-files_list = sorted([f for f in DIST.rglob("*") if f.is_file() and f.name not in {
+# 排除清单：除显式排除项外，严禁上传任何密钥/凭据（尤其 .deploy_key、.env、*.key/*.pem 等）
+EXCLUDE_NAMES = {
     ".notify-config.json", ".wx-config.json", "deploy.py",
-    "router-wol-schedule.sh", "market-dashboard.zip"
-}])
+    "router-wol-schedule.sh", "market-dashboard.zip",
+    ".deploy_key", ".env", ".gitignore",
+}
+EXCLUDE_SUFFIX = (".key", ".pem", ".p12", ".keystore")
+files_list = sorted([
+    f for f in DIST.rglob("*")
+    if f.is_file()
+    and f.name not in EXCLUDE_NAMES
+    and not f.name.endswith(EXCLUDE_SUFFIX)
+    and ".git" not in f.parts
+])
 
 manifest = {}
 file_map = {}

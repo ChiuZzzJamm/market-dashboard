@@ -309,6 +309,7 @@ def main():
     if not replaced['jp']:
         markets.append(jp)
 
+    D['updatedAt'] = f"{datetime.now(TZ8).strftime('%Y-%m-%d %H:%M')}（韩日 {date_display} 数据已自动更新）"
     with open('data.js', 'w', encoding='utf-8') as f:
         f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, indent=2) + ';\n')
     print('[info] data.js 已更新')

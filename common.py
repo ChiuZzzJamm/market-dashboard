@@ -2,7 +2,24 @@
 """看板脚本共用工具：定位 node、把 data.js 解析为 JSON。
 供 push_notify.py 与 update_us_from_quotes.py 复用，避免重复实现。
 """
-import os, shutil, glob, json, subprocess
+import os, shutil, glob, json, subprocess, time
+
+
+def http_get(url, timeout=15, retries=3, decode='utf-8'):
+    """用 curl 抓取（urllib 会被部分源拒连）；失败返回 None。decode='gb2312' 用于腾讯行情。"""
+    cmd = ['curl', '-s', '--max-time', str(timeout),
+           '-H', 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)']
+    for i in range(1, retries + 1):
+        try:
+            p = subprocess.run(cmd + [url], capture_output=True, timeout=timeout + 5)
+        except Exception:
+            p = None
+        out = p.stdout if (p and p.returncode == 0) else b''
+        if out.strip():
+            return out.decode(decode, errors='replace')
+        if i < retries:
+            time.sleep(2)
+    return None
 
 
 def find_node():

@@ -5,8 +5,9 @@
   curl -s --max-time 30 "http://qt.gtimg.cn/q=usDJI,usIXIC,usINX,usSOXX,usXLK,usXLF,usXLE,usXLU,usXLC,usXRT,usCLOU,usBOTZ,usBITO,usGLD,usCOPX,usREMX,usMOO,usMAGS,usKWEB,usSMH,usUSO,usTLT" | iconv -f gb2312 -t utf-8 > /tmp/us_quote.txt
   curl -s --max-time 30 "http://qt.gtimg.cn/q=usTSLA,usAMZN,usNVDA" | iconv -f gb2312 -t utf-8 > /tmp/us_stocks.txt
 """
-import json, re, subprocess, os
-from common import load_dashboard_data
+import json, re, os
+from datetime import datetime, timezone, timedelta
+from common import load_dashboard_data, http_get
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(BASE)
@@ -19,12 +20,9 @@ def fmt_pct(x):
     except Exception:
         return str(x)
 
-def parse_quote_file(path):
-    if not os.path.exists(path):
-        return {}
-    s = open(path, encoding='utf-8').read()
+def parse_quote_text(text):
     out = {}
-    for code, line in re.findall(r'v_([^=]+)="([^"]+)"', s):
+    for code, line in re.findall(r'v_([^=]+)="([^"]+)"', text):
         parts = line.split('~')
         if len(parts) < 34:
             continue
@@ -37,13 +35,53 @@ def parse_quote_file(path):
         out[code] = {'name': parts[1], 'point': point, 'pct': pct}
     return out
 
+
+def parse_quote_file(path):
+    if not os.path.exists(path):
+        return {}
+    return parse_quote_text(open(path, encoding='utf-8').read())
+
+
+US_QUOTE_SETS = [
+    'usDJI,usIXIC,usINX,usSOXX,usXLK,usXLF,usXLE,usXLU,usXLC,usXRT,usCLOU,usBOTZ,usBITO,usGLD,usCOPX,usREMX,usMOO,usMAGS,usKWEB,usSMH,usUSO,usTLT',
+    'usTSLA,usAMZN,usNVDA',
+]
+
+
+def fetch_us_quotes_live():
+    """实时抓取腾讯美股行情，作为 /tmp 行情文件缺失时的兜底（去掉对自动化预取文件的硬依赖，杜绝静默跳过）"""
+    out = {}
+    for s in US_QUOTE_SETS:
+        text = http_get(f'http://qt.gtimg.cn/q={s}', decode='gb2312')
+        if text:
+            out.update(parse_quote_text(text))
+    return out
+
+
+def fetch_trade_date():
+    """从实时 usDJI 行情 parts[30] 取交易日期（美东日期），兜底用"""
+    text = http_get('http://qt.gtimg.cn/q=usDJI', decode='gb2312')
+    if not text:
+        return None
+    m = re.search(r'v_usDJI="([^"]*)"', text)
+    if not m:
+        return None
+    parts = m.group(1).split('~')
+    if len(parts) > 30 and re.match(r'\d{4}-\d{2}-\d{2}', parts[30] or ''):
+        return parts[30][:10]
+    return None
+
+
 # 读取 data.js
 D = load_dashboard_data(BASE)
 
-# 合并行情
+# 合并行情：优先用自动化预取的 /tmp 文件，缺失时实时抓取兜底（避免静默跳过）
 q = {}
 for path in QUOTE_FILES:
     q.update(parse_quote_file(path))
+if not q:
+    print('[info] /tmp 美股行情缺失，改为实时抓取腾讯行情...')
+    q = fetch_us_quotes_live()
 
 if not q:
     print('no quote data found, skip update')
@@ -114,15 +152,19 @@ def to_us_sector(it):
         obj["reason"] = old_reason_map[it["name"]]
     return obj
 
-# 若行情文件是从 Tencent 获取，col30 为更新时间，形如 2026-09-11 16:46:29
-time_str = ''
+# 交易日期：优先用 /tmp 文件时间戳（自动化预取），缺失时从实时行情 parts[30]（美东日期）兜底
+trade_iso = "未知日期"
 raw = open('/tmp/us_quote.txt', encoding='utf-8').read() if os.path.exists('/tmp/us_quote.txt') else ''
 m = re.search(r'~(\d{4}-\d{2}-\d{2}) \d{2}:\d{2}:\d{2}~', raw)
 if m:
     trade_iso = m.group(1)
+if trade_iso == "未知日期":
+    td = fetch_trade_date()
+    if td:
+        trade_iso = td
+if trade_iso != "未知日期":
     trade_md = f"{int(trade_iso[5:7])}/{int(trade_iso[8:10])}"
 else:
-    trade_iso = "未知日期"
     trade_md = "未知"
 
 # 中文名称映射
@@ -190,6 +232,7 @@ else:
         if m.get('key') == 'us':
             m['date'] = f"{trade_md} 收盘（北京时间 次日 凌晨）" if trade_md != "未知" else "未知日期"
             m['items'] = pano_items
+    D['updatedAt'] = f"{datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d %H:%M')}（美股收盘数据已自动更新）"
     print(f"updated us/panorama.us for {trade_iso}")
 
 # 写回 data.js
