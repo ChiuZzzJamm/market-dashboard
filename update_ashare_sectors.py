@@ -3,7 +3,9 @@
 """
 A股板块/指数/涨跌家数抓取（零 MCP 依赖，全部 HTTP 直连）：
   - 指数+成交额：腾讯 gtimg（sh000001/sz399001/sz399006/sh000688/sh000016，另取 sz399106 算两市成交额）
-  - 涨跌家数：东财 push2ex getTopicZDFenBu；涨跌停数：getTopicZTPool / getTopicDTPool（真实涨跌停池）
+  - 涨跌家数：东财 push2ex getTopicZDFenBu（注意：该接口为「涨停板专题」口径，剔除全部 ST 股）
+    + 风险警示板(b:BK0511)补充 ST 股涨跌平家数 → 与主流行情 App 的全市场口径一致（实测逐家吻合）；
+    涨跌停数：getTopicZTPool（真实涨停池）/ 全市场快照收盘封板计算（跌停，含 ST）
   - 行业板块涨跌 TOP5/BOTTOM5：东财 push2delay clist（fs=m:90+t:2 行业板块，注意 + 必须写成 %2B）
   - 主力资金流入/流出 TOP3：同接口按 f62 排序（f62 单位=元，换算亿元）
 写入 data.js 的 ashare 字段：tradeDate/status/indices/breadth/sectorsUp/sectorsDown/fundIn/fundOut。
@@ -78,6 +80,49 @@ def fetch_indices():
     return out, (vol or None)
 
 # ---------- 2) 涨跌家数 + 涨跌停（东财 push2ex） ----------
+def fetch_st_breadth():
+    """风险警示板（东财 b:BK0511，ST/*ST）补充统计。
+    getTopicZDFenBu 属涨停板专题，剔除全部 ST 股（比主流 App 少约 200 家）；
+    把 ST 板块内当日正常交易（有成交量）的涨/跌/平家数补回，使 breadth 与
+    主流行情 App 的全市场口径一致（2026-09-15 实测：fenbu 1090/4209/49
+    + ST 30/167/3 = 1120/4376/52，与东财/同花顺 App 完全一致）。
+    当日停牌（vol='-' 或 0）不计——App 同样不计（停牌股平盘不进统计）。
+    长期停牌/已退市残留行 f2='-' 自动跳过。失败返回 None。"""
+    rows, pn, empty = [], 1, 0
+    while pn <= 10:  # ST 板块约 200+ 行，硬上限防异常循环
+        d = get_json(f"{DELAY}?pn={pn}&pz=100&po=1&np=1&fltt=2&invt=2&fid=f12&fs=b%3ABK0511"
+                     f"&fields=f2,f5,f12,f18&ut={UT}")
+        diff = (d.get("data") or {}).get("diff") if d else None
+        if not diff:
+            empty += 1
+            if empty >= 3:
+                break
+            time.sleep(2)
+            continue
+        empty = 0
+        rows += diff
+        if len(diff) < 100:
+            break
+        pn += 1
+        time.sleep(0.1)
+    if not rows:
+        return None
+    up = down = flat = 0
+    for r in rows:
+        price, prev, vol = r.get("f2"), r.get("f18"), r.get("f5")
+        if not isinstance(price, (int, float)) or not isinstance(prev, (int, float)) or prev <= 0:
+            continue  # 已退市/长期停牌残留行
+        if vol in (0, "0", "-"):
+            continue  # 当日停牌不计（与 App 口径一致）
+        if price > prev:
+            up += 1
+        elif price < prev:
+            down += 1
+        else:
+            flat += 1
+    return up, down, flat
+
+
 def fetch_breadth(prev_breadth=None):
     today = datetime.now(TZ8).strftime("%Y%m%d")
     d = get_json(f"{EX}/getTopicZDFenBu?ut={UT_ZT}&dpt=wz.ztzt")
@@ -93,6 +138,12 @@ def fetch_breadth(prev_breadth=None):
                 down += v
             else:
                 flat += v
+    # ST 补充：fenbu 剔除 ST，补回风险警示板正常交易家数（与主流 App 全市场口径对齐）
+    st = fetch_st_breadth()
+    if st:
+        up += st[0]
+        down += st[1]
+        flat += st[2]
     lu_codes = fetch_zt_codes(today)
     comp_zt, comp_ld = fetch_full_market_limits()
     # 涨停：东财涨停池口径准确（tc 与三大 App 一致=32），优先用；全市场计算次之；分布近似兜底
@@ -102,8 +153,10 @@ def fetch_breadth(prev_breadth=None):
         lu = len(comp_zt)
     else:
         lu = approx_bucket(d, lambda k: k >= 10)
-    # 跌停：东财跌停池剔除 ST/*ST（tc≈27）与 App 的 33 不符，绝不作为数据源；
-    # 改用全市场快照计算（含 ST、收盘封板口径，≈31）。若快照失败，保留上一轮跌停数（绝不回退到27）。
+    # 跌停：东财跌停池剔除 ST/*ST（tc≈27）不作数据源；App 显示的跌停数还包含
+    # 盘中触及跌停后打开的股票（无公开接口可复现该口径，如 2026-09-15 App=33 vs
+    # 收盘封板=31，差 2 只为正和生态/杭州热电盘中开板）。这里采用「全市场快照收盘
+    # 封板（含 ST）」口径。若快照失败，保留上一轮跌停数（绝不回退到27）。
     if comp_ld:
         ld = len(comp_ld)
     else:
@@ -111,8 +164,8 @@ def fetch_breadth(prev_breadth=None):
     return {"up": up, "down": down, "flat": flat, "limitUp": lu, "limitDown": ld}
 
 def fetch_zt_codes(date):
-    """返回东财涨停池代码集（tc 与三大 App 一致，=32）；失败返回 None。
-    跌停池(getTopicDTPool)剔除 ST 股，tc 固定≈27，与 App 的 33 不符，不作数据源。"""
+    """返回东财涨停池代码集（tc 与三大 App 一致）；失败返回 None。
+    跌停池(getTopicDTPool)剔除 ST 股（tc≈27，且不含盘中开板股），不作数据源。"""
     d = get_json(f"{EX}/getTopicZTPool?ut={UT_ZT}&dpt=wz.ztzt&Pageindex=0&pagesize=600&sort=fbt%3Aasc&date={date}")
     try:
         data = d["data"] or {}
