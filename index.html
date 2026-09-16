@@ -5,19 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="vuWegjTUbUryFQN7317dIj">
 <title>📈每日市场看板 · A股 / 美股</title>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609161124"></script>
+<script src="data.js?v=202609161149"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&display=swap');
   :root {
-    --up: #c8312b;
-    --down: #1f8a5b;
-    --bg: #f4f2ec;
-    --paper: #ffffff;
-    --ink: #232019;
-    --ink2: #6a6358;
-    --line: #e3ddd2;
-    --accent: #9c2b22;
-    --gold: #b08930;
+    --up: #6f1d3b;
+    --down: #47725f;
+    --bg: #f3eef0;
+    --paper: #fdfbfc;
+    --ink: #32242b;
+    --ink2: #777581;
+    --line: #ecd5d8;
+    --accent: #6f1d3b;
+    --gold: #bd9b7d;
+    --rose: #f9e9e9;
+    --rose2: #d9b9ba;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -41,7 +43,7 @@
   .status-line { font-size: 13px; color: var(--accent); font-weight: 700; margin-bottom: 8px; letter-spacing: 1px; }
   .summary { font-size: 15px; }
   .idx-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap:14px; }
-  .idx { background: #faf8f3; border:1px solid var(--line); border-radius: 4px; padding: 12px 14px; }
+  .idx { background: var(--rose); border:1px solid var(--line); border-radius: 4px; padding: 12px 14px; }
   .idx .nm { font-size: 13px; color: var(--ink2); }
   .idx .pt { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .idx .pc { font-size: 14px; font-weight: 700; }
@@ -51,37 +53,37 @@
   .breadth b { font-size: 16px; }
   .chart { width:100%; height:340px; }
   .chart-tall { width:100%; height:380px; }
-  .reason-block { background: #fbf7ef; border-left: 3px solid var(--gold); border-radius: 3px; padding: 13px 16px; margin-bottom: 12px; }
+  .reason-block { background: var(--rose); border-left: 3px solid var(--gold); border-radius: 3px; padding: 13px 16px; margin-bottom: 12px; }
   .reason-head { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom: 8px; }
   .reason-head .date-tag { background: var(--accent); color:#fff; font-size: 12px; font-weight: 700; border-radius: 3px; padding: 2px 9px; }
   .reason-head .kw { font-size: 16px; font-weight: 800; color: var(--ink); }
   .reason-head .sec { font-size: 12.5px; color: var(--ink2); }
-  .reason-body { font-size: 13.5px; color: #3a342a; }
+  .reason-body { font-size: 13.5px; color: #4a3a42; }
   .reason-body b.label { display:block; margin-bottom: 2px; color: var(--ink2); }
   .tag-list { display:flex; flex-wrap:wrap; gap:10px; }
-  .sector-tag { background: #eef6f0; border:1px solid #cfe3d6; border-radius: 4px; padding: 8px 14px; font-size: 13px; }
+  .sector-tag { background: var(--rose); border:1px solid var(--rose2); border-radius: 4px; padding: 8px 14px; font-size: 13px; }
   .sector-tag b { color: var(--down); }
   .sector-tag .nt { display:block; font-size: 11px; color: var(--ink2); }
-  .src-line { font-size: 12px; color: #a59c8c; margin-top: 10px; }
+  .src-line { font-size: 12px; color: #a89aa1; margin-top: 10px; }
   .note-line { font-size: 12.5px; color: var(--ink2); margin-bottom: 10px; }
   footer.disclaimer { margin-top: 36px; font-size: 12px; color: var(--ink2); background: var(--paper); border:1px solid var(--line); border-radius: 4px; padding: 16px 20px; line-height: 1.7; }
-  .outlook { font-size: 14.5px; background: #fdfaf3; border:1px solid #ecdfc1; border-radius: 4px; padding: 16px 18px; }
+  .outlook { font-size: 14.5px; background: #fbf3f4; border:1px solid var(--line); border-radius: 4px; padding: 16px 18px; }
   .pano-indices { display:flex; flex-wrap:wrap; gap:14px; margin-bottom:14px; }
-  .pano-idx { background: #faf8f3; border:1px solid var(--line); border-radius: 4px; padding: 12px 18px; min-width: 200px; }
+  .pano-idx { background: var(--rose); border:1px solid var(--line); border-radius: 4px; padding: 12px 18px; min-width: 200px; }
   .pano-idx .nm { font-size:13px; color: var(--ink2); }
   .pano-idx .pc { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .pano-tabs { display:flex; gap:8px; margin-bottom: 14px; }
-  .pano-tab { padding: 6px 22px; border-radius: 4px; background: #efece4; color: var(--ink2); font-size: 13.5px; font-weight: 700; cursor:pointer; border:1px solid var(--line); }
+  .pano-tab { padding: 6px 22px; border-radius: 4px; background: #eadfe2; color: var(--ink2); font-size: 13.5px; font-weight: 700; cursor:pointer; border:1px solid var(--line); }
   .pano-tab.active { background: var(--paper); color: var(--accent); border-color: var(--accent); }
   .pano-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
   @media (max-width: 720px) { .pano-grid { grid-template-columns: 1fr; } }
-  .pano-cell { display:flex; justify-content: space-between; align-items:center; background: #faf8f3; border-radius: 3px; padding: 9px 14px; }
+  .pano-cell { display:flex; justify-content: space-between; align-items:center; background: var(--rose); border-radius: 3px; padding: 9px 14px; }
   .pano-cell .nm { font-size: 13.5px; font-weight: 600; }
   .pano-cell .nm .ref { display:block; font-size: 11px; color: var(--ink2); font-weight: 400; }
   .pano-cell .pc { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .pano-date { font-size: 12.5px; color: var(--ink2); margin-bottom: 10px; }
-  .ai-card { background: linear-gradient(180deg,#fbf6ec,#f6f1e8); border: 1px solid #e6dcc5; border-radius: 4px; padding: 22px 26px; margin-bottom: 22px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
-  .ai-head { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom: 12px; border-bottom: 1px solid #e6dcc5; padding-bottom: 10px; }
+  .ai-card { background: linear-gradient(180deg,var(--rose),var(--bg)); border: 1px solid var(--rose2); border-radius: 4px; padding: 22px 26px; margin-bottom: 22px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .ai-head { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom: 12px; border-bottom: 1px solid var(--rose2); padding-bottom: 10px; }
   .ai-badge { background: var(--accent); color:#fff; font-size: 13px; font-weight: 800; border-radius: 3px; padding: 3px 12px; letter-spacing: 2px; }
   .ai-summary { font-size: 14.5px; margin-bottom: 16px; }
   .ai-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -92,22 +94,22 @@
   .dir-badge { font-size: 11.5px; font-weight: 700; color:#fff; border-radius: 3px; padding: 1px 8px; }
   .dir-up { background: var(--up); }
   .dir-down { background: var(--down); }
-  .conf-badge { font-size: 11px; border-radius: 3px; padding: 1px 7px; border:1px solid #d8c98e; color: #8a6d1a; background: #fbf4dc; }
+  .conf-badge { font-size: 11px; border-radius: 3px; padding: 1px 7px; border:1px solid var(--rose2); color: #8a5f43; background: #f7ebe4; }
   .ai-item .drv { font-size: 12px; color: var(--ink2); margin-bottom: 3px; }
-  .ai-item .lgc { font-size: 12.5px; color: #3a342a; }
+  .ai-item .lgc { font-size: 12.5px; color: #4a3a42; }
   .stock-chips { display:flex; flex-wrap:wrap; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
-  .stock-chip { background: #f4f1ea; border:1px solid var(--line); border-radius: 3px; padding: 3px 8px; font-size: 12px; }
+  .stock-chip { background: var(--rose); border:1px solid var(--line); border-radius: 3px; padding: 3px 8px; font-size: 12px; }
   .stock-chip b { font-weight: 700; }
   .stock-chip .cd { color: var(--ink2); font-size: 11px; margin-left: 3px; }
-  .stock-chip .nt { display:block; font-size: 10.5px; color: #a59c8c; }
-  .ai-foot { margin-top: 14px; font-size: 12px; color: var(--ink2); border-top: 1px solid #e6dcc5; padding-top: 10px; }
-  .ai-verify { margin-top: 10px; font-size: 12.5px; background: #eef6f0; border:1px solid #cfe3d6; border-radius: 3px; padding: 10px 14px; color: #1f6b46; }
+  .stock-chip .nt { display:block; font-size: 10.5px; color: #a89aa1; }
+  .ai-foot { margin-top: 14px; font-size: 12px; color: var(--ink2); border-top: 1px solid var(--rose2); padding-top: 10px; }
+  .ai-verify { margin-top: 10px; font-size: 12.5px; background: #eaf0ec; border:1px solid #c6d6cb; border-radius: 3px; padding: 10px 14px; color: #3d5a4b; }
   .ai-verify .v-title { font-weight: 700; margin-bottom: 4px; }
-  .ai-verify .v-detail { font-size: 12px; color: #357a55; line-height: 1.7; }
+  .ai-verify .v-detail { font-size: 12px; color: #5f7d6d; line-height: 1.7; }
   .ai-verify .v-detail .hit { color: var(--up); font-weight: 700; }
   .ai-verify .v-detail .miss { color: var(--down); font-weight: 700; }
-  .wk-card { background: linear-gradient(180deg,#fbf6ec,#f3eee2); border: 1px solid #e6dcc5; border-radius: 4px; padding: 22px 26px; margin-bottom: 22px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
-  .wk-head { display:flex; align-items:center; gap:10px; margin-bottom: 12px; border-bottom: 1px solid #e6dcc5; padding-bottom: 10px; }
+  .wk-card { background: linear-gradient(180deg,var(--rose),var(--bg)); border: 1px solid var(--rose2); border-radius: 4px; padding: 22px 26px; margin-bottom: 22px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .wk-head { display:flex; align-items:center; gap:10px; margin-bottom: 12px; border-bottom: 1px solid var(--rose2); padding-bottom: 10px; }
   .wk-badge { background: var(--gold); color:#fff; font-size: 13px; font-weight: 800; border-radius: 3px; padding: 3px 12px; letter-spacing: 2px; }
   .wk-head .date { font-size: 12.5px; color: var(--ink2); }
   .wk-summary { font-size: 14.5px; margin-bottom: 16px; line-height: 1.7; }
@@ -119,14 +121,14 @@
   .wk-item .thm { font-size: 13.5px; font-weight: 700; margin-bottom: 3px; }
   .wk-item .dtl { font-size: 12.5px; color: var(--ink2); line-height: 1.6; }
   .wk-stock-chips { display:flex; flex-wrap:wrap; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
-  .news-impact { margin-top: 8px; padding: 8px 12px; border-radius: 4px; background: #faf8f3; border-left: 3px solid var(--line); }
+  .news-impact { margin-top: 8px; padding: 8px 12px; border-radius: 4px; background: var(--rose); border-left: 3px solid var(--line); }
   .news-impact.bull { border-left-color: var(--up); }
   .news-impact.bear { border-left-color: var(--down); }
   .news-impact .imp-label { font-size: 12px; font-weight: 700; color: var(--up); margin-right: 8px; }
   .news-impact.bear .imp-label { color: var(--down); }
   .news-impact .imp-theme { font-size: 13px; font-weight: 700; }
-  .wk-outlook { background: #fdfaf3; border:1px solid #ecdfc1; border-radius: 4px; padding: 12px 14px; font-size: 13.5px; margin-top: 10px; }
-  .wk-src { font-size: 11.5px; color: #a59c8c; margin-top: 8px; }
+  .wk-outlook { background: #fbf3f4; border:1px solid var(--line); border-radius: 4px; padding: 12px 14px; font-size: 13.5px; margin-top: 10px; }
+  .wk-src { font-size: 11.5px; color: #a89aa1; margin-top: 8px; }
 </style>
 </head>
 <body data-page-node-id="TAH5BmatrhYqIV0xEREx7e">
@@ -158,7 +160,7 @@
 var charts = [];
 function cls(v) { return v > 0 ? "up" : (v < 0 ? "down" : "flat"); }
 function fmtPct(v) { if (v === null || v === undefined) return "—"; return (v > 0 ? "+" : "") + v.toFixed(2) + "%"; }
-function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function esc(s) { if (s === null || s === undefined) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 function dateTag(tradeDate) { var m = String(tradeDate).match(/(\d{4})-(\d{2})-(\d{2})/); return m ? m[2] + "月" + m[3] + "日" : ""; }
 function formatOutlook(text) {
   if (!text) return '—';
@@ -171,6 +173,7 @@ function formatOutlook(text) {
 }
 
 function renderIndexCards(indices) {
+  indices = indices || [];
   var html = '<div class="idx-grid">';
   indices.forEach(function (d) {
     var c = cls(d.changePct);
@@ -183,6 +186,7 @@ function renderIndexCards(indices) {
 }
 
 function renderBreadth(b) {
+  b = b || {};
   var items = [];
   if (b.up !== null && b.up !== undefined) {
     items.push('上涨 <b class="up">' + b.up + '</b> 家');
@@ -196,6 +200,7 @@ function renderBreadth(b) {
 }
 
 function renderSectorTags(list) {
+  list = list || [];
   var html = '<div class="tag-list">';
   list.forEach(function (s) {
     html += '<div class="sector-tag"><b>' + esc(s.name) + (s.pct !== null && s.pct !== undefined ? ' ' + fmtPct(s.pct) : '') + '</b>' +
@@ -205,6 +210,7 @@ function renderSectorTags(list) {
 }
 
 function renderReasons(list, tradeDate) {
+  list = list || [];
   var html = '';
   var tag = dateTag(tradeDate);
   list.forEach(function (s) {
@@ -223,18 +229,18 @@ function barOption(names, values, colorFn, unit) {
     tooltip: {
       trigger: 'axis', axisPointer: { type: 'shadow' },
       formatter: function (ps) { var p = ps[0]; return '<b>' + p.name + '</b><br/>' + (p.value > 0 ? '+' : '') + p.value + unit; },
-      backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e3e6ea', textStyle: { color: '#1f2329', fontSize: 12 }, extraCssText: 'box-shadow:0 2px 8px rgba(0,0,0,0.08);border-radius:6px;'
+      backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#ecd5d8', textStyle: { color: '#32242b', fontSize: 12 }, extraCssText: 'box-shadow:0 2px 8px rgba(0,0,0,0.08);border-radius:6px;'
     },
     grid: { left: 10, right: 60, top: 18, bottom: 18, containLabel: true },
     xAxis: {
       type: 'value',
-      axisLabel: { fontSize: 11, color: '#888', formatter: function (v) { return (v > 0 ? '+' : '') + v + unit; } },
-      splitLine: { lineStyle: { type: 'dashed', color: '#eee' } },
+      axisLabel: { fontSize: 11, color: '#9a8f96', formatter: function (v) { return (v > 0 ? '+' : '') + v + unit; } },
+      splitLine: { lineStyle: { type: 'dashed', color: '#ecd5d8' } },
       axisLine: { show: false }, axisTick: { show: false }
     },
     yAxis: {
       type: 'category', inverse: true, data: names,
-      axisLabel: { fontSize: 12.5, color: '#444', fontWeight: 600 },
+      axisLabel: { fontSize: 12.5, color: '#4a3a42', fontWeight: 600 },
       axisLine: { show: false }, axisTick: { show: false }
     },
     series: [{
@@ -243,7 +249,7 @@ function barOption(names, values, colorFn, unit) {
         return { value: v, itemStyle: { color: colorFn(v), borderRadius: v >= 0 ? [0, 8, 8, 0] : [8, 0, 0, 8] } };
       }),
       label: {
-        show: true, position: 'right', fontSize: 11.5, color: '#333', fontWeight: 600,
+        show: true, position: 'right', fontSize: 11.5, color: '#4a3a42', fontWeight: 600,
         formatter: function (p) { return (p.value > 0 ? '+' : '') + p.value + unit; }
       }
     }]
@@ -259,14 +265,15 @@ function switchTab(market) {
 function render(market) {
   charts.forEach(function (c) { c.dispose(); });
   charts = [];
-  var d = window.DASHBOARD_DATA[market];
+  var d = window.DASHBOARD_DATA[market] || {};
   var isA = market === 'ashare';
 
   var html = '';
   html += '<div class="card"><div class="status-line">' + esc(d.tradeDate) + ' · ' + esc(d.status) + '</div><div class="summary">' + esc(d.summary) + '</div></div>';
-  html += renderNewsCard(d);
 
   html += '<div class="card"><h2>大盘指数</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + '</div>';
+
+  html += renderNewsCard(d);
 
   html += '<div class="card"><h2>大盘趋势研判</h2><div class="outlook">' + formatOutlook(d.outlook) + '</div></div>';
 
@@ -285,19 +292,22 @@ function render(market) {
 
   document.getElementById('content').innerHTML = html;
 
-  var upList = d.sectorsUp.filter(function (s) { return s.pct !== null && s.pct !== undefined; });
+  var upList = (d.sectorsUp || []).filter(function (s) { return s.pct !== null && s.pct !== undefined; });
   var upNames = upList.map(function (s) { return s.name + (s.leader ? '（' + s.leader + '）' : ''); });
   var upVals = upList.map(function (s) { return s.pct; });
   var c1 = echarts.init(document.getElementById('chart-up'));
-  c1.setOption(barOption(upNames, upVals, function (v) { return v >= 0 ? '#d43030' : '#189a50'; }, '%'));
+  c1.setOption(barOption(upNames, upVals, function (v) { return v >= 0 ? '#6f1d3b' : '#47725f'; }, '%'));
   charts.push(c1);
 
   if (isA) {
-    var fNames = d.fundIn.map(function (f) { return f.name; }).concat(d.fundOut.map(function (f) { return f.name; }));
-    var fVals = d.fundIn.map(function (f) { return f.value; }).concat(d.fundOut.map(function (f) { return f.value; }));
-    var c2 = echarts.init(document.getElementById('chart-fund'));
-    c2.setOption(barOption(fNames, fVals, function (v) { return v >= 0 ? '#d43030' : '#189a50'; }, ' 亿'));
-    charts.push(c2);
+    var fIn = d.fundIn || [], fOut = d.fundOut || [];
+    var fNames = fIn.map(function (f) { return f.name; }).concat(fOut.map(function (f) { return f.name; }));
+    var fVals = fIn.map(function (f) { return f.value; }).concat(fOut.map(function (f) { return f.value; }));
+    if (fNames.length) {
+      var c2 = echarts.init(document.getElementById('chart-fund'));
+      c2.setOption(barOption(fNames, fVals, function (v) { return v >= 0 ? '#6f1d3b' : '#47725f'; }, ' 亿'));
+      charts.push(c2);
+    }
   }
 }
 
@@ -333,7 +343,7 @@ function renderPano() {
     });
     html += '</div>';
   }
-  cur.items.forEach(function (it) {
+  (cur.items || []).forEach(function (it) {
     var c = cls(it.pct);
     html += '<div class="pano-cell"><div class="nm">' + esc(it.name) +
       (it.ref ? '<span class="ref">' + esc(it.ref) + '</span>' : '') + '</div>' +
@@ -348,6 +358,7 @@ function renderAiPrediction() {
   var p = window.DASHBOARD_DATA.aiPrediction;
   var box = document.getElementById('ai-prediction');
   if (!p) { box.style.display = 'none'; return; }
+  p.sectors = p.sectors || [];
   var html = '<div class="ai-card"><div class="ai-head"><span class="ai-badge">AI 预测分析</span></div>' +
     '<div class="ai-summary">' + (p.indexLine ? esc(p.indexLine) + '。' : '') + '通过隔夜美股各板块涨跌推导今日 A 股强弱方向：' + esc(p.summary) + '</div>' +
     '<div class="ai-grid">';
@@ -378,7 +389,7 @@ function renderAiPrediction() {
       v.details.forEach(function(d) {
         var r = String(d.result);
         var vcls = r.indexOf('未命中') !== -1 ? 'miss' : (r.indexOf('命中') !== -1 ? 'hit' : 'miss');
-        vHtml += '<div class="' + vcls + '">· ' + esc(d.sector) + '：预测「' + esc(d.predicted) + '」→ 实际 ' + (d.actualPct >= 0 ? '+' : '') + d.actualPct + '% → ' + esc(d.result) + '</div>';
+        vHtml += '<div class="' + vcls + '">· ' + esc(d.sector) + '：预测「' + esc(d.predicted) + '」→ 实际 ' + (d.actualPct === null || d.actualPct === undefined ? '—' : (d.actualPct >= 0 ? '+' : '') + d.actualPct + '%') + ' → ' + esc(d.result) + '</div>';
       });
       vHtml += '</div>';
     }
