@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="vuWegjTUbUryFQN7317dIj">
 <title>📈每日市场看板 · A股 / 美股</title>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609161046"></script>
+<script src="data.js?v=202609161107"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&display=swap');
   :root {
@@ -62,9 +62,6 @@
   .sector-tag { background: #eef6f0; border:1px solid #cfe3d6; border-radius: 4px; padding: 8px 14px; font-size: 13px; }
   .sector-tag b { color: var(--down); }
   .sector-tag .nt { display:block; font-size: 11px; color: var(--ink2); }
-  .flow-card { background: #faf8f3; border:1px solid var(--line); border-radius: 4px; padding: 12px 16px; margin-bottom: 10px; }
-  .flow-card .tt { font-size: 14px; font-weight: 700; }
-  .flow-card .sm { font-size: 13px; color: var(--ink2); }
   .src-line { font-size: 12px; color: #a59c8c; margin-top: 10px; }
   .note-line { font-size: 12.5px; color: var(--ink2); margin-bottom: 10px; }
   footer.disclaimer { margin-top: 36px; font-size: 12px; color: var(--ink2); background: var(--paper); border:1px solid var(--line); border-radius: 4px; padding: 16px 20px; line-height: 1.7; }
@@ -86,7 +83,6 @@
   .ai-card { background: linear-gradient(180deg,#fbf6ec,#f6f1e8); border: 1px solid #e6dcc5; border-radius: 4px; padding: 22px 26px; margin-bottom: 22px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
   .ai-head { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom: 12px; border-bottom: 1px solid #e6dcc5; padding-bottom: 10px; }
   .ai-badge { background: var(--accent); color:#fff; font-size: 13px; font-weight: 800; border-radius: 3px; padding: 3px 12px; letter-spacing: 2px; }
-  .ai-head .basis { font-size: 12.5px; color: var(--ink2); }
   .ai-summary { font-size: 14.5px; margin-bottom: 16px; }
   .ai-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 860px) { .ai-grid { grid-template-columns: 1fr; } }
@@ -216,14 +212,6 @@ function renderReasons(list, tradeDate) {
   return html;
 }
 
-function renderFlowCards(list) {
-  var html = '';
-  list.forEach(function (f) {
-    html += '<div class="flow-card"><div class="tt">' + esc(f.title) + '</div><div class="sm">' + esc(f.detail) + '</div></div>';
-  });
-  return html;
-}
-
 function barOption(names, values, colorFn, unit) {
   return {
     tooltip: {
@@ -275,10 +263,6 @@ function render(market) {
   html += '<div class="card"><h2>大盘指数</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + '</div>';
 
   html += '<div class="card"><h2>大盘趋势研判</h2><div class="outlook">' + formatOutlook(d.outlook) + '</div></div>';
-
-  if (!isA) {
-    html += '<div class="card"><h2>资金流向特征</h2>' + renderFlowCards(d.fundFlows) + '</div>';
-  }
 
   html += '<div class="card"><h2>领涨板块</h2><div id="chart-up" class="chart"></div>' +
     '<div style="height:14px"></div>' + renderReasons(d.sectorsUp, d.tradeDate) + '</div>';
@@ -358,9 +342,8 @@ function renderAiPrediction() {
   var p = window.DASHBOARD_DATA.aiPrediction;
   var box = document.getElementById('ai-prediction');
   if (!p) { box.style.display = 'none'; return; }
-  var html = '<div class="ai-card"><div class="ai-head"><span class="ai-badge">AI 预测分析</span>' +
-    '<span class="basis">' + esc(p.date) + ' · ' + esc(p.basis) + '</span></div>' +
-    '<div class="ai-summary">通过隔夜美股各板块涨跌推导今日 A 股强弱方向：' + esc(p.summary) + '</div>' +
+  var html = '<div class="ai-card"><div class="ai-head"><span class="ai-badge">AI 预测分析</span></div>' +
+    '<div class="ai-summary">' + (p.indexLine ? esc(p.indexLine) + '。' : '') + '通过隔夜美股各板块涨跌推导今日 A 股强弱方向：' + esc(p.summary) + '</div>' +
     '<div class="ai-grid">';
   p.sectors.forEach(function (s) {
     var isUp = s.direction.indexOf('承压') === -1;
