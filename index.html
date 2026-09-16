@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="vuWegjTUbUryFQN7317dIj">
 <title>📈每日市场看板 · A股 / 美股</title>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609161002"></script>
+<script src="data.js?v=202609161046"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&display=swap');
   :root {
@@ -270,6 +270,7 @@ function render(market) {
 
   var html = '';
   html += '<div class="card"><div class="status-line">' + esc(d.tradeDate) + ' · ' + esc(d.status) + '</div><div class="summary">' + esc(d.summary) + '</div></div>';
+  html += renderNewsCard(d);
 
   html += '<div class="card"><h2>大盘指数</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + '</div>';
 
@@ -400,6 +401,69 @@ function renderAiPrediction() {
 }
 
 window.addEventListener('resize', function () { charts.forEach(function (c) { c.resize(); }); });
+
+function newsTag(item) {
+  // 国内(🇨🇳)/国际(🌍)要闻识别，未命中给 🌐；title 优先（与微信推送一致）
+  var DOM = ['国常会','证监会','央行','国务院','工信部','财政部','发改委','中方','我国','国内','A股','港股','政策','十五五','券商','印花税','北向','两融','逆回购','LPR','光博会','算力网','算力大会','人民币','出口','关税'];
+  var INTL = ['美联储','美股','纳指','道指','标普','美债','美元','加息','降息','特朗普','白宫','中东','沙特','伊朗','以色列','俄乌','俄罗斯','乌克兰','地缘','油价','原油','黄金','能源','油运','日本','日经','日元','韩国','KOSPI','亚太','欧洲','英国','英伟达','苹果','特斯拉','半导体','芯片'];
+  var title = (item.title||'').trim();
+  var summary = (item.summary||'').trim();
+  var i;
+  for (i=0;i<DOM.length;i++) if (title.indexOf(DOM[i])>=0) return '🇨🇳';
+  for (i=0;i<INTL.length;i++) if (title.indexOf(INTL[i])>=0) return '🌍';
+  var text = title + ' ' + summary;
+  for (i=0;i<DOM.length;i++) if (text.indexOf(DOM[i])>=0) return '🇨🇳';
+  for (i=0;i<INTL.length;i++) if (text.indexOf(INTL[i])>=0) return '🌍';
+  return '🌐';
+}
+
+function renderNewsCard(d) {
+  // A股/美股共用：与周末消息前瞻一致，渲染 要闻(bullNews/bearNews) + 利好方向(bullish) + 利空方向(bearish)
+  if (!d) return '';
+  var bn = d.bullNews||[], be = d.bearNews||[], bull = d.bullish||[], bear = d.bearish||[];
+  if (!bn.length && !be.length && !bull.length && !bear.length) return '';
+  var html = '<div class="wk-card"><div class="wk-head"><span class="wk-badge">要闻与利好利空</span>'
+    + '<span class="date">' + esc(d.tradeDate||'') + '</span></div>';
+  var news = bn.concat(be);
+  if (news.length) {
+    html += '<div class="wk-section"><h4>要闻</h4>';
+    news.forEach(function(it){
+      html += '<div class="wk-item"><div class="thm">' + newsTag(it) + ' ' + esc(it.sector||'') + '</div>'
+        + '<div class="dtl"><b>' + esc(it.title||'') + '</b> — ' + esc(it.summary||'') + '</div></div>';
+    });
+    html += '</div>';
+  }
+  if (bull.length) {
+    html += '<div class="wk-section"><h4 class="bull">利好方向</h4>';
+    bull.forEach(function(b){
+      html += '<div class="wk-item"><div class="thm">' + esc(b.theme||'') + '</div>';
+      if (b.detail) html += '<div class="dtl">' + esc(b.detail) + '</div>';
+      if (b.stocks && b.stocks.length) {
+        html += '<div class="wk-stock-chips">';
+        b.stocks.forEach(function(st){
+          html += '<span class="stock-chip"><b>' + esc(st.name||'') + '</b>'
+            + '<span class="cd">' + esc(st.code||'') + '</span>'
+            + (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+  if (bear.length) {
+    html += '<div class="wk-section"><h4 class="bear">利空方向</h4>';
+    bear.forEach(function(b){
+      html += '<div class="wk-item"><div class="thm">' + esc(b.theme||'') + '</div>';
+      if (b.detail) html += '<div class="dtl">' + esc(b.detail) + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+  if (d.source) html += '<div class="wk-src">来源：' + esc(d.source) + '</div>';
+  html += '</div>';
+  return html;
+}
 
 function renderWeekendNews() {
   var w = window.DASHBOARD_DATA.weekendNews;

@@ -124,15 +124,32 @@ if mode == 'ashare':
     fo = ' '.join([f"{s.get('name','')}{s.get('value',0):+.1f}亿" for s in (a.get('fundOut') or [])[:3]])
     # 微信推送保持连续自然段，避免主动换行被截断；data.js 里 outlook 本身无换行，这里做兜底
     outlook_text = (a.get('outlook','') or '').replace('\n',' ').strip()
-    desp = '\n\n'.join([
+    # A股要闻：带 🇨🇳/🌍 国内/国际图标（与美股/周末推送一致），合并成连续自然段避免微信截断
+    news_parts = []
+    seen_news = set()
+    for n in ((a.get('bullNews') or [])[:2] + (a.get('bearNews') or [])[:2]):
+        t = (n.get('title','') or '').strip()
+        if t and t not in seen_news:
+            seen_news.add(t)
+            news_parts.append(f"{news_tag(n)} {t}")
+    # 利好/利空方向（与美股/周末推送一致）
+    bullish_lines = [fmt_bullish(t, i+1) for i, t in enumerate((a.get('bullish') or [])[:3])]
+    bearish_lines = [fmt_bearish(t, i+1) for i, t in enumerate((a.get('bearish') or [])[:3])]
+    desp_parts = [
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
         f"📊 A股：{a.get('summary','')}",
         f"📈 领涨：{leaders}",
         f"📉 领跌：{laggards}",
         f"💰 资金：流入 {fi} | 流出 {fo}",
         build_panorama_line(D.get('panorama')),
-        f"💡 研判：{outlook_text}",
-    ])
+        f"📰 要闻：{'  '.join(news_parts)}" if news_parts else '📰 要闻：详见网页',
+        f"💡 研判：{outlook_text}" if outlook_text else '',
+    ]
+    if bullish_lines:
+        desp_parts.append("✅ 利好：\n" + '\n'.join(bullish_lines))
+    if bearish_lines:
+        desp_parts.append("⚠️ 利空：\n" + '\n'.join(bearish_lines))
+    desp = '\n\n'.join(desp_parts)
 
 elif mode == 'us':
     u = D.get('us')
