@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609161259"></script>
+<script src="data.js?v=202609161305"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -109,7 +109,7 @@
   .ai-item .drv { font-size: 12px; color: var(--ink2); margin-bottom: 3px; }
   .ai-item .lgc { font-size: 12.5px; color: var(--ink); }
   .stock-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
-  .stock-chip { background: var(--accent-soft); border: 1px solid var(--line); border-radius: 10px; padding: 3px 9px; font-size: 12px; }
+  .stock-chip { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 3px 9px; font-size: 12px; }
   .stock-chip b { font-weight: 700; }
   .stock-chip .cd { color: var(--ink2); font-size: 11px; margin-left: 3px; }
   .stock-chip .nt { display: block; font-size: 10.5px; color: var(--ink2); }
@@ -140,6 +140,8 @@
   .news-impact .imp-label { font-size: 12px; font-weight: 700; color: var(--up); margin-right: 8px; }
   .news-impact.bear .imp-label { color: var(--down); }
   .news-impact .imp-theme { font-size: 13px; font-weight: 700; }
+  .news-impact.bull .stock-chip { border-color: #f2c4ca; }
+  .news-impact.bear .stock-chip { border-color: #b9e2d8; }
   .wk-outlook { background: var(--accent-soft); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 13.5px; margin-top: 10px; }
   .wk-src { font-size: 11.5px; color: var(--ink2); margin-top: 8px; }
 
@@ -333,7 +335,18 @@ function render(market) {
   document.getElementById('content').innerHTML = html;
 
   var upList = (d.sectorsUp || []).filter(function (s) { return s.pct !== null && s.pct !== undefined; });
-  var upNames = upList.map(function (s) { return s.name + (s.leader ? '（' + s.leader + '）' : ''); });
+  function leaderText(s) {
+    var l = s.leader, base = s.name || '';
+    if (!l) return base;
+    if (typeof l === 'string') return base + '（' + l + '）';
+    if (typeof l === 'object') {
+      var t = l.name || '';
+      if (l.changePct !== null && l.changePct !== undefined) t += (t ? ' ' : '') + (l.changePct >= 0 ? '+' : '') + l.changePct + '%';
+      return t ? base + '（' + t + '）' : base;
+    }
+    return base;
+  }
+  var upNames = upList.map(leaderText);
   var upVals = upList.map(function (s) { return s.pct; });
   var c1 = echarts.init(document.getElementById('chart-up'));
   c1.setOption(barOption(upNames, upVals, '%'));
