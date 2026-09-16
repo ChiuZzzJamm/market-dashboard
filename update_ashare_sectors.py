@@ -291,7 +291,7 @@ def build_funds():
         v = to_f(r.get("f62"))
         if v is None or not r.get("f14"):
             return None
-        return {"name": r.get("f14"), "value": round(abs(v) / 1e8, 2)}
+        return {"name": r.get("f14"), "value": round(v / 1e8, 2)}
     ins = [x for x in (mk(r) for r in in_rows) if x][:3]
     outs = [x for x in (mk(r) for r in out_rows) if x][:3]
     if not ins or not outs:
