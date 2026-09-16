@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="vuWegjTUbUryFQN7317dIj">
 <title>📈每日市场看板 · A股 / 美股</title>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609161107"></script>
+<script src="data.js?v=202609161124"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&display=swap');
   :root {
@@ -119,6 +119,12 @@
   .wk-item .thm { font-size: 13.5px; font-weight: 700; margin-bottom: 3px; }
   .wk-item .dtl { font-size: 12.5px; color: var(--ink2); line-height: 1.6; }
   .wk-stock-chips { display:flex; flex-wrap:wrap; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
+  .news-impact { margin-top: 8px; padding: 8px 12px; border-radius: 4px; background: #faf8f3; border-left: 3px solid var(--line); }
+  .news-impact.bull { border-left-color: var(--up); }
+  .news-impact.bear { border-left-color: var(--down); }
+  .news-impact .imp-label { font-size: 12px; font-weight: 700; color: var(--up); margin-right: 8px; }
+  .news-impact.bear .imp-label { color: var(--down); }
+  .news-impact .imp-theme { font-size: 13px; font-weight: 700; }
   .wk-outlook { background: #fdfaf3; border:1px solid #ecdfc1; border-radius: 4px; padding: 12px 14px; font-size: 13.5px; margin-top: 10px; }
   .wk-src { font-size: 11.5px; color: #a59c8c; margin-top: 8px; }
 </style>
@@ -401,48 +407,39 @@ function newsTag(item) {
 }
 
 function renderNewsCard(d) {
-  // A股/美股共用：与周末消息前瞻一致，渲染 要闻(bullNews/bearNews) + 利好方向(bullish) + 利空方向(bearish)
+  // A股/美股共用：大标题「全球要闻」，每条要闻下方直接挂对应的利好/利空板块与标的（impacts），不再单独汇总
   if (!d) return '';
-  var bn = d.bullNews||[], be = d.bearNews||[], bull = d.bullish||[], bear = d.bearish||[];
-  if (!bn.length && !be.length && !bull.length && !bear.length) return '';
-  var html = '<div class="wk-card"><div class="wk-head"><span class="wk-badge">要闻与利好利空</span>'
-    + '<span class="date">' + esc(d.tradeDate||'') + '</span></div>';
-  var news = bn.concat(be);
-  if (news.length) {
-    html += '<div class="wk-section"><h4>要闻</h4>';
-    news.forEach(function(it){
-      html += '<div class="wk-item"><div class="thm">' + newsTag(it) + ' ' + esc(it.sector||'') + '</div>'
-        + '<div class="dtl"><b>' + esc(it.title||'') + '</b> — ' + esc(it.summary||'') + '</div></div>';
-    });
-    html += '</div>';
-  }
-  if (bull.length) {
-    html += '<div class="wk-section"><h4 class="bull">利好方向</h4>';
-    bull.forEach(function(b){
-      html += '<div class="wk-item"><div class="thm">' + esc(b.theme||'') + '</div>';
-      if (b.detail) html += '<div class="dtl">' + esc(b.detail) + '</div>';
-      if (b.stocks && b.stocks.length) {
-        html += '<div class="wk-stock-chips">';
-        b.stocks.forEach(function(st){
-          html += '<span class="stock-chip"><b>' + esc(st.name||'') + '</b>'
+  var bn = d.bullNews||[], be = d.bearNews||[];
+  if (!bn.length && !be.length) return '';
+  var impactHtml = function (it, dir) {
+    if (!it.impacts || !it.impacts.length) return '';
+    var s = '';
+    it.impacts.forEach(function (im) {
+      s += '<div class="news-impact ' + dir + '"><span class="imp-label">' + (dir === 'bull' ? '利好' : '利空') + '</span>'
+        + '<span class="imp-theme">' + esc(im.theme || im.sector || '') + '</span>';
+      if (im.stocks && im.stocks.length) {
+        s += '<div class="wk-stock-chips">';
+        im.stocks.forEach(function (st) {
+          s += '<span class="stock-chip"><b>' + esc(st.name||'') + '</b>'
             + '<span class="cd">' + esc(st.code||'') + '</span>'
             + (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
         });
-        html += '</div>';
+        s += '</div>';
       }
-      html += '</div>';
+      s += '</div>';
     });
-    html += '</div>';
-  }
-  if (bear.length) {
-    html += '<div class="wk-section"><h4 class="bear">利空方向</h4>';
-    bear.forEach(function(b){
-      html += '<div class="wk-item"><div class="thm">' + esc(b.theme||'') + '</div>';
-      if (b.detail) html += '<div class="dtl">' + esc(b.detail) + '</div>';
-      html += '</div>';
-    });
-    html += '</div>';
-  }
+    return s;
+  };
+  var html = '<div class="wk-card"><div class="wk-head"><span class="wk-badge">全球要闻</span>'
+    + '<span class="date">' + esc(d.tradeDate||'') + '</span></div>';
+  html += '<div class="wk-section">';
+  bn.concat(be).forEach(function (it) {
+    var dir = bn.indexOf(it) >= 0 ? 'bull' : 'bear';
+    html += '<div class="wk-item"><div class="thm">' + newsTag(it) + ' ' + esc(it.sector||'') + '</div>'
+      + '<div class="dtl"><b>' + esc(it.title||'') + '</b> — ' + esc(it.summary||'') + '</div>'
+      + impactHtml(it, dir) + '</div>';
+  });
+  html += '</div>';
   if (d.source) html += '<div class="wk-src">来源：' + esc(d.source) + '</div>';
   html += '</div>';
   return html;
