@@ -92,6 +92,26 @@ def fmt_bearish(t, idx):
         theme = theme[:42] + '…'
     return f"{idx}. {theme}"
 
+# 国内/国际要闻识别关键词（用于给要闻打 🇨🇳/🌍 图标；面向新闻 title/summary 文本，比 weekend 模式的 theme 关键词更宽）
+DOM_KEYS = ['国常会','证监会','央行','国务院','工信部','财政部','发改委','中方','我国','国内','A股','港股','政策','十五五','券商','印花税','北向','两融','逆回购','LPR','光博会','算力网','算力大会','人民币','出口','关税']
+INTL_KEYS = ['美联储','美股','纳指','道指','标普','美债','美元','加息','降息','特朗普','白宫','中东','沙特','伊朗','以色列','俄乌','俄罗斯','乌克兰','地缘','油价','原油','黄金','能源','油运','日本','日经','日元','韩国','KOSPI','亚太','欧洲','英国','英伟达','苹果','特斯拉','半导体','芯片']
+
+def news_tag(item):
+    """按 title/summary 识别国内(🇨🇳)/国际(🌍)要闻，未命中给 🌐。
+    title 优先（title 更能代表新闻归属，避免国际新闻因 summary 提及 A 股映射被误判为国内）"""
+    title = (item.get('title','') or '').strip()
+    summary = (item.get('summary','') or '').strip()
+    if any(k in title for k in DOM_KEYS):
+        return '🇨🇳'
+    if any(k in title for k in INTL_KEYS):
+        return '🌍'
+    text = title + ' ' + summary
+    if any(k in text for k in DOM_KEYS):
+        return '🇨🇳'
+    if any(k in text for k in INTL_KEYS):
+        return '🌍'
+    return '🌐'
+
 if mode == 'ashare':
     a = D.get('ashare')
     if not a or not a.get('indices'):
@@ -130,11 +150,18 @@ elif mode == 'us':
     bear_src = (u.get('bearish') or w.get('bearish', []))
     bullish_lines = [fmt_bullish(t, i+1) for i, t in enumerate(bull_src[:3])]
     bearish_lines = [fmt_bearish(t, i+1) for i, t in enumerate(bear_src[:3])]
-    news_titles = [n.get('title','') for n in ((u.get('bullNews') or [])[:2] + (u.get('bearNews') or [])[:2])]
+    # 要闻：带 🇨🇳/🌍 国内/国际图标（与周末推送样式一致），合并成连续自然段避免微信截断
+    news_parts = []
+    seen_news = set()
+    for n in ((u.get('bullNews') or [])[:2] + (u.get('bearNews') or [])[:2]):
+        t = (n.get('title','') or '').strip()
+        if t and t not in seen_news:
+            seen_news.add(t)
+            news_parts.append(f"{news_tag(n)} {t}")
     parts = [
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
         f"📊 美股：{u.get('summary','')}",
-        f"📰 要闻：{'  '.join(news_titles)}",
+        f"📰 要闻：{'  '.join(news_parts)}" if news_parts else '📰 要闻：详见网页',
         build_panorama_line(D.get('panorama')),
         f"💡 研判：{outlook_text}" if outlook_text else '',
     ]
