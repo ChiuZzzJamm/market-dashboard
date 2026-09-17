@@ -326,7 +326,23 @@ def build_funds():
     outs = [x for x in (mk(r) for r in out_rows) if x][:3]
     if not ins or not outs:
         return None, None
-    return ins, outs
+        return ins, outs
+
+def build_all_boards():
+    """约前 120 个板块（涨前60+跌前60）完整涨幅榜，供 16:00 AI 预测验证按板块名匹配实际涨跌幅；不参与页面展示。"""
+    out = {}
+    for po in (1, 0):
+        rows = fetch_boards("f3", po)
+        if not rows:
+            continue
+        for r in rows[:60]:
+            code = r.get("f12")
+            name = r.get("f14")
+            pct = to_f(r.get("f3"))
+            if not code or not name or pct is None:
+                continue
+            out[code] = {"code": code, "name": name, "pct": round(pct, 2)}
+    return list(out.values())
 
 # ---------- 主流程 ----------
 def main():
@@ -403,6 +419,10 @@ def main():
             a["sectorsUp"] = sectors_up
             a["sectorsDown"] = sectors_down
             updated_parts.append("行业板块TOP5")
+            # 全板块涨幅榜（约前120个板块，供 16:00 AI 预测验证按板块名匹配实际涨跌幅；不参与页面展示）
+            all_b = build_all_boards()
+            if all_b:
+                a["allBoards"] = all_b
         if fund_in is not None:
             a["fundIn"] = fund_in
             a["fundOut"] = fund_out

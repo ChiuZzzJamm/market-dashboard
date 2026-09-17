@@ -310,7 +310,17 @@ def main():
     if not replaced['jp']:
         markets.append(jp)
 
-    D['updatedAt'] = f"{datetime.now(TZ8).strftime('%Y-%m-%d %H:%M')}（韩日 {date_display} 数据已自动更新）"
+    # 追加而非覆盖：保留前序脚本（如 A股 update_ashare_sectors / 美股 update_us_from_quotes）
+    # 已写入的更新说明，避免 16:00 任务里韩日脚本把"A股收盘已自动更新…"整段覆盖掉。
+    ts = datetime.now(TZ8).strftime('%Y-%m-%d %H:%M')
+    addon = f"韩日 {date_display} 数据已自动更新"
+    prev = D.get('updatedAt') or ''
+    if '（' in prev and prev.rstrip().endswith('）'):
+        prev_desc = prev.split('（', 1)[1].rstrip('）')
+    else:
+        prev_desc = prev
+    new_desc = prev_desc if '韩日' in prev_desc else ((prev_desc + '；' + addon) if prev_desc else addon)
+    D['updatedAt'] = f"{ts}（{new_desc}）"
     with open('data.js', 'w', encoding='utf-8') as f:
         f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, indent=2) + ';\n')
     print('[info] data.js 已更新')
