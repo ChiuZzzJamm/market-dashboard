@@ -273,6 +273,11 @@ def fetch_top5(board_code, po):
         pct, vol, name = to_f(r.get("f3")), to_f(r.get("f5")), r.get("f14")
         if pct is None or vol is None or vol <= 0 or not name:
             continue
+        # 同向过滤：领涨板块(po=1)只取涨幅>=0、领跌板块(po=0)只取跌幅<=0，避免混入反向股
+        if po == 1 and pct < 0:
+            continue
+        if po == 0 and pct > 0:
+            continue
         out.append({"name": name, "changePct": round(pct, 2)})
         if len(out) >= 5:
             break

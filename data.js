@@ -1,5 +1,5 @@
 window.DASHBOARD_DATA = {
-  "updatedAt": "2026-09-17 18:02（A股收盘已自动更新：指数/涨跌家数/行业板块TOP5/主力资金）",
+  "updatedAt": "2026-09-17 18:33（A股收盘已自动更新：指数/涨跌家数/行业板块TOP5/主力资金）",
   "aiPrediction": {
     "date": "2026-09-17",
     "indexLine": "道指 -1.21%、标指 -0.45%、纳指 -0.01%",
@@ -312,10 +312,6 @@ window.DASHBOARD_DATA = {
           {
             "name": "我爱我家",
             "changePct": 6.42
-          },
-          {
-            "name": "宁波富达",
-            "changePct": -0.61
           }
         ],
         "reason": {
