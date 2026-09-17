@@ -305,13 +305,17 @@ if not q:
 # 补全行情：/tmp 预取文件未含的成分股/指数代码时，实时抓取合并（避免静默缺失）
 _missing = [c for c in _ALL_US_CODES if c not in q]
 if _missing:
+    print(f'[info] 预取文件缺失 {len(_missing)} 个代码，实时补抓中...')
     for i in range(0, len(_missing), 50):
-        _txt = http_get('http://qt.gtimg.cn/q=' + ','.join(_missing[i:i + 50]), decode='gb2312')
-        if _txt:
-            q.update(parse_quote_text(_txt))
+        try:
+            _txt = http_get('http://qt.gtimg.cn/q=' + ','.join(_missing[i:i + 50]), decode='gb2312')
+            if _txt:
+                q.update(parse_quote_text(_txt))
+        except Exception as _e:
+            print(f'[warn] 补抓成分股行情异常（第 {i // 50 + 1} 块）: {_e}')
 
 if not q:
-    print('no quote data found, skip update')
+    print('[ERROR] 美股行情全量缺失（/tmp 预取失败且实时兜底也失败），保留上一交易日 us 数据，不写盘')
     raise SystemExit(0)
 
 # 美股盘中闸门：美东常规交易时段内（工作日 9:30-16:00 ET）行情为盘中数据，
@@ -355,6 +359,12 @@ valid_items = [it for it in pano_items if it['pct'] is not None]
 # 涨榜只收正值的板块、跌榜只收负值的板块，避免微涨板块因排序被误列入「领跌」
 sorted_up = sorted([it for it in valid_items if it['pct'] > 0], key=lambda x: x['pct'], reverse=True)
 sorted_down = sorted([it for it in valid_items if it['pct'] < 0], key=lambda x: x['pct'])
+
+# 覆盖守卫：有效板块数过低说明行情抓取残缺（限流/网络抖动），宁可保留上一交易日数据，
+# 避免「半空」的美股看板上线（页面不崩但板块残缺，肉眼难以及时发现）。正常约 24 个板块。
+if len(valid_items) < 15:
+    print(f'[ERROR] 美股有效板块仅 {len(valid_items)} 个（阈值 15），疑似行情抓取残缺，保留上一交易日数据，不覆盖')
+    raise SystemExit(0)
 
 # 保留旧 us 中各板块的 reason（周一等场景下，reason 由 07:30 任务写入，周末脚本不应覆盖）
 old_reason_map = {}
