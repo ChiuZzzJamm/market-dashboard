@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609171708"></script>
+<script src="data.js?v=202609171737"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -77,10 +77,12 @@
   .reason-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 8px; }
   .reason-head .date-tag { background: var(--accent-deep); color: #fff; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; }
   .reason-head .kw { font-size: 16px; font-weight: 800; color: var(--ink); }
-  .reason-head .sec { font-size: 13px; color: var(--ink); font-weight: 700; background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; }
-  .reason-head .sec b.u { color: var(--up); }
-  .reason-head .sec b.d { color: var(--down); }
-  .reason-head .lead { font-size: 12.5px; color: var(--accent-deep); font-weight: 700; background: var(--paper); border: 1px dashed var(--accent-deep); border-radius: 999px; padding: 3px 12px; }
+  .reason-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .reason-meta .sec { font-size: 12px; color: var(--ink); font-weight: 700; background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; }
+  .reason-meta .pct { font-size: 12px; font-weight: 800; color: #fff; border-radius: 999px; padding: 3px 12px; }
+  .reason-meta .pct.u { background: var(--up); }
+  .reason-meta .pct.d { background: var(--down); }
+  .reason-meta .lead { font-size: 12px; color: var(--accent-deep); font-weight: 700; background: var(--paper); border: 1px dashed var(--accent-deep); border-radius: 999px; padding: 3px 12px; }
   .reason-body { font-size: 13.5px; color: var(--ink); }
   .reason-body b.label { display: block; margin-bottom: 2px; color: var(--ink2); }
   .src-line { font-size: 12px; color: var(--ink2); margin-top: 10px; }
@@ -239,12 +241,14 @@ function renderBreadth(b) {
 }
 
 function leaderLabel(s, isUp) {
-  var l = s.leader, label = isUp ? '领涨股' : '领跌股';
+  var l = s.leader;
   if (!l) return '';
   if (typeof l === 'object') {
+    // 东财板块接口 f128/f136 固定返回「板块内领涨股」（与板块本身涨跌方向无关），
+    // 故对象型 leader 统一标「板块领涨股」，避免领跌板块出现"+0.3%却叫领跌股"的语义错误
     var t = l.name || '';
     if (l.changePct !== null && l.changePct !== undefined) t += ' ' + (l.changePct >= 0 ? '+' : '') + l.changePct + '%';
-    return t ? label + '：' + t : '';
+    return t ? '板块领涨股：' + t : '';
   }
   if (typeof l === 'string' && l.trim()) return (isUp ? '领涨标的' : '领跌标的') + '：' + l.trim();
   return '';
@@ -256,12 +260,12 @@ function renderReasons(list, tradeDate, isUp) {
   var tag = dateTag(tradeDate);
   list.forEach(function (s) {
     if (!s.reason) return;
-    var pctHtml = (s.pct !== null && s.pct !== undefined) ? '<b class="' + (s.pct >= 0 ? 'u' : 'd') + '">' + fmtPct(s.pct) + '</b>' : '';
+    var pctHtml = (s.pct !== null && s.pct !== undefined) ? '<span class="pct ' + (s.pct >= 0 ? 'u' : 'd') + '">' + fmtPct(s.pct) + '</span>' : '';
     var lead = leaderLabel(s, isUp);
     html += '<div class="reason-block"><div class="reason-head">' +
       '<span class="date-tag">' + esc(tag) + '异动原因</span>' +
       '<span class="kw">' + esc(s.reason.title) + '</span></div>' +
-      '<div class="reason-meta"><span class="sec">' + esc(s.name) + (pctHtml ? ' ' + pctHtml : '') + '</span>' +
+      '<div class="reason-meta"><span class="sec">' + esc(s.name) + '</span>' + pctHtml +
       (lead ? '<span class="lead">' + esc(lead) + '</span>' : '') + '</div>' +
       '<div class="reason-body"><b class="label">行业原因：</b>' + esc(s.reason.detail) + '</div></div>';
   });
@@ -270,7 +274,9 @@ function renderReasons(list, tradeDate, isUp) {
 
 function barOption(names, values, unit) {
   var up = cssVar('--up'), down = cssVar('--down'), ink = cssVar('--ink'), ink2 = cssVar('--ink2'), line = cssVar('--line');
+  var FONT = 'Microsoft YaHei, 微软雅黑, PingFang SC, sans-serif';
   return {
+    textStyle: { fontFamily: FONT },
     tooltip: {
       trigger: 'axis', axisPointer: { type: 'shadow' },
       formatter: function (ps) { var p = ps[0]; return '<b>' + p.name + '</b><br/>' + (p.value > 0 ? '+' : '') + p.value + unit; },
