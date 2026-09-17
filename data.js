@@ -1,5 +1,5 @@
 window.DASHBOARD_DATA = {
-  "updatedAt": "2026-09-17 19:19（A股收盘已自动更新：指数/涨跌家数/行业板块TOP5/主力资金；韩日 9/17 收盘 数据已自动更新）",
+  "updatedAt": "2026-09-18 07:31（美股收盘数据已自动更新）",
   "aiPrediction": {
     "date": "2026-09-17",
     "indexLine": "道指 -1.21%、标指 -0.45%、纳指 -0.01%",
@@ -1636,29 +1636,29 @@ window.DASHBOARD_DATA = {
     ]
   },
   "us": {
-    "tradeDate": "2026-09-16（美东，北京时间 次日 凌晨收盘）",
+    "tradeDate": "2026-09-17（美东，北京时间 次日 凌晨收盘）",
     "status": "收盘",
-    "summary": "9/16 美股收盘：三大指数收跌（道指-1.21% / 纳指-0.01% / 标普-0.45%）。领涨：AI 硬件 / 英伟达+0.82%、半导体+0.64%；领跌：石油 / 能源-3.52%、金融-1.62%。",
+    "summary": "9/17 美股收盘：三大指数收涨（道指+0.61% / 纳指+1.69% / 标普+1.14%）。领涨：商业航天+6.26%、加密货币 / 比特币+5.88%；领跌：军工-0.96%、CPO / 光模块-0.32%。",
     "indices": [
       {
         "name": "道琼斯",
-        "point": 51461.9,
-        "changePct": -1.21
+        "point": 51778.04,
+        "changePct": 0.61
       },
       {
         "name": "纳斯达克",
-        "point": 25978.42,
-        "changePct": -0.01
+        "point": 26418.3,
+        "changePct": 1.69
       },
       {
         "name": "标普500",
-        "point": 7551.81,
-        "changePct": -0.45
+        "point": 7637.76,
+        "changePct": 1.14
       },
       {
         "name": "费城半导体",
-        "point": 502.06,
-        "changePct": 0.64,
+        "point": 519.1,
+        "changePct": 3.39,
         "note": "SOXX"
       },
       {
@@ -1670,7 +1670,7 @@ window.DASHBOARD_DATA = {
       {
         "name": "纳斯达克金龙指数",
         "point": null,
-        "changePct": -0.98,
+        "changePct": 0.66,
         "note": "KWEB 中概互联网 ETF 口径"
       }
     ],
@@ -1680,111 +1680,716 @@ window.DASHBOARD_DATA = {
       "flat": null,
       "limitUp": null,
       "limitDown": null,
-      "volumeText": "标普500 板块涨跌互现，ETF 口径仅供参考"
+      "volumeText": "板块涨跌为美股成分股均值口径，覆盖 AI/半导体/能源/金融等 20+ 产业方向。"
     },
     "sectorsUp": [
       {
-        "name": "AI 硬件 / 英伟达",
-        "pct": 0.82,
-        "leader": "NVDA +0.82% 个股【代表标的】",
+        "name": "商业航天",
+        "pct": 6.26,
+        "tops": [
+          {
+            "name": "LUNR",
+            "changePct": 6.63
+          },
+          {
+            "name": "RKLB",
+            "changePct": 6.47
+          },
+          {
+            "name": "SPCE",
+            "changePct": 6.14
+          },
+          {
+            "name": "ASTS",
+            "changePct": 5.8
+          }
+        ],
+        "ref": "4只成分股均值",
         "reason": {
-          "title": "议息前资金抱团AI硬件 NVDA续弹",
-          "detail": "9/16 NVDA +0.82%领涨，议息前资金缩圈至确定性AI硬件，博通、AMD、台积电ADR跟涨；国内《电子信息十五五规划》+算力网大会给算力PCB/服务器政策底座，硬件端连续两日修复。"
+          "title": "商业航天全线爆发 四股齐涨超5%",
+          "detail": "9/17 商业航天板块集体飙升，LUNR +6.63%、RKLB +6.47%、SPCE +6.14%、ASTS +5.80% 四只成分股同步大涨；卫星互联网订单预期与发射节奏提速驱动资金集中配置，风险偏好回归下高β主线。"
+        }
+      },
+      {
+        "name": "加密货币 / 比特币",
+        "pct": 5.88,
+        "tops": [
+          {
+            "name": "RIOT",
+            "changePct": 7.52
+          },
+          {
+            "name": "COIN",
+            "changePct": 5.75
+          },
+          {
+            "name": "MARA",
+            "changePct": 5.43
+          },
+          {
+            "name": "MSTR",
+            "changePct": 4.81
+          }
+        ],
+        "ref": "4只成分股均值",
+        "reason": {
+          "title": "比特币反弹 加密概念集体走强",
+          "detail": "9/17 加密板块随比特币走强，RIOT +7.52%、COIN +5.75%、MARA +5.43%、MSTR +4.81%；加息落地后美元回落、风险资产情绪修复，Coinbase 与矿企同步上扬，资金回流高弹性加密敞口。"
+        }
+      },
+      {
+        "name": "AI 算力",
+        "pct": 5.85,
+        "tops": [
+          {
+            "name": "SMCI",
+            "changePct": 9.5
+          },
+          {
+            "name": "ARM",
+            "changePct": 8.57
+          },
+          {
+            "name": "AMD",
+            "changePct": 6.36
+          },
+          {
+            "name": "NVDA",
+            "changePct": 2.54
+          },
+          {
+            "name": "AVGO",
+            "changePct": 2.29
+          }
+        ],
+        "ref": "5只成分股均值",
+        "reason": {
+          "title": "AI服务器需求再确认 算力链大涨",
+          "detail": "9/17 AI算力板块强势，SMCI +9.50%、ARM +8.57%、AMD +6.36%、NVDA +2.54%、AVGO +2.29%；云厂商资本开支指引上修、液冷服务器订单饱满，AI硬件景气从龙头扩散至二线标的。"
+        }
+      },
+      {
+        "name": "核电",
+        "pct": 5.15,
+        "tops": [
+          {
+            "name": "OKLO",
+            "changePct": 11.31
+          },
+          {
+            "name": "SMR",
+            "changePct": 8.92
+          },
+          {
+            "name": "VST",
+            "changePct": 2.26
+          },
+          {
+            "name": "TLN",
+            "changePct": 1.99
+          },
+          {
+            "name": "CEG",
+            "changePct": 1.26
+          }
+        ],
+        "ref": "5只成分股均值",
+        "reason": {
+          "title": "SMR小型堆热潮 核电股普涨",
+          "detail": "9/17 核电板块大涨，OKLO +11.31%、SMR +8.92%、VST +2.26%、TLN +1.99%、CEG +1.26%；小型模块化反应堆(SMR)政策推进与AI数据中心供电长协预期，带飞核电与电力标的。"
+        }
+      },
+      {
+        "name": "锂 / 电池材料",
+        "pct": 4.53,
+        "tops": [
+          {
+            "name": "ALB",
+            "changePct": 5.1
+          },
+          {
+            "name": "SQM",
+            "changePct": 4.54
+          },
+          {
+            "name": "LAC",
+            "changePct": 3.96
+          }
+        ],
+        "ref": "3只成分股均值",
+        "reason": {
+          "title": "锂价触底预期 材料股超跌反弹",
+          "detail": "9/17 锂与电池材料反弹，ALB +5.10%、SQM +4.54%、LAC +3.96%；锂盐价格跌至成本线后供给端减产预期升温，储能与电动车补库带动材料需求边际改善，板块超跌修复。"
+        }
+      },
+      {
+        "name": "存储",
+        "pct": 3.98,
+        "tops": [
+          {
+            "name": "SNDK",
+            "changePct": 6.21
+          },
+          {
+            "name": "MU",
+            "changePct": 5.5
+          },
+          {
+            "name": "STX",
+            "changePct": 2.55
+          },
+          {
+            "name": "WDC",
+            "changePct": 1.65
+          }
+        ],
+        "ref": "4只成分股均值",
+        "reason": {
+          "title": "存储涨价周期 闪存龙头领涨",
+          "detail": "9/17 存储板块走强，SNDK +6.21%、MU +5.50%、STX +2.55%、WDC +1.65%；DRAM/NAND 合约价连续上调、AI服务器HBM与高容量SSD需求旺盛，重掺硅片紧缺支撑涨价周期延续。"
+        }
+      },
+      {
+        "name": "新能源 / 光伏",
+        "pct": 3.4,
+        "tops": [
+          {
+            "name": "RUN",
+            "changePct": 5.5
+          },
+          {
+            "name": "FSLR",
+            "changePct": 5.28
+          },
+          {
+            "name": "SEDG",
+            "changePct": 3.81
+          },
+          {
+            "name": "ENPH",
+            "changePct": 1.29
+          },
+          {
+            "name": "NEE",
+            "changePct": 1.13
+          }
+        ],
+        "ref": "5只成分股均值",
+        "reason": {
+          "title": "光伏装机预期改善 逆变器领涨",
+          "detail": "9/17 新能源/光伏板块修复，RUN +5.50%、FSLR +5.28%、SEDG +3.81%、ENPH +1.29%、NEE +1.13%；美国地面电站装机节奏回暖、IRA税收抵免延续预期，逆变器与组件龙头获资金回补。"
         }
       },
       {
         "name": "半导体",
-        "pct": 0.64,
-        "leader": "SOXX +0.64% 【商品ETF】",
+        "pct": 3.32,
+        "tops": [
+          {
+            "name": "INTC",
+            "changePct": 7.67
+          },
+          {
+            "name": "MRVL",
+            "changePct": 4.81
+          },
+          {
+            "name": "TSM",
+            "changePct": 3
+          },
+          {
+            "name": "QCOM",
+            "changePct": 2.09
+          },
+          {
+            "name": "TXN",
+            "changePct": -0.97
+          }
+        ],
+        "ref": "5只成分股均值",
         "reason": {
-          "title": "费半连日修复 设备链低吸承接",
-          "detail": "9/16 SOXX +0.64%自9/14 -5.63%后连续修复，阿斯麦、应用材料、科磊等设备股逢低承接；关税冲击情绪释放后估值修复，日本光刻胶提价催化国产替代链。"
+          "title": "费半反包 设备与代工同步修复",
+          "detail": "9/17 半导体板块反弹，SOXX +3.39%、INTC +7.67%、MRVL +4.81%、TSM +3.00%、QCOM +2.09%；台海关税冲击情绪释放后估值修复，AI算力需求支撑晶圆代工与设备订单，板块自9/14重挫后连续反包。"
         }
       },
       {
-        "name": "电动汽车 / 特斯拉",
-        "pct": 0.42,
-        "leader": "TSLA +0.42% 个股【代表标的】",
+        "name": "黄金 / 贵金属",
+        "pct": 2.71,
+        "tops": [
+          {
+            "name": "GFI",
+            "changePct": 3.29
+          },
+          {
+            "name": "AEM",
+            "changePct": 2.97
+          },
+          {
+            "name": "KGC",
+            "changePct": 2.41
+          },
+          {
+            "name": "NEM",
+            "changePct": 2.16
+          }
+        ],
+        "ref": "4只成分股均值",
         "reason": {
-          "title": "TSLA逆市收红 Robotaxi预期支撑",
-          "detail": "9/16 TSLA +0.42%逆市收红，Robotaxi路测扩张与储能订单预期支撑，特斯拉、Rivian等电动车概念在纳指持平中显相对韧性，资金偏向高β成长。"
+          "title": "美元回落 黄金矿股低位反弹",
+          "detail": "9/17 黄金/贵金属反弹，GFI +3.29%、AEM +2.97%、KGC +2.41%、NEM +2.16%；加息靴子落地后美元指数回落、实际利率边际松动，避险资金回补金矿，金价自逾月低位修复。"
         }
       },
       {
-        "name": "机器人 / 自动化",
-        "pct": 0.26,
-        "leader": "BOTZ +0.26% 【主题ETF】",
+        "name": "铜 / 有色",
+        "pct": 2.37,
+        "tops": [
+          {
+            "name": "SCCO",
+            "changePct": 3.28
+          },
+          {
+            "name": "RIO",
+            "changePct": 2.35
+          },
+          {
+            "name": "FCX",
+            "changePct": 2.33
+          },
+          {
+            "name": "TECK",
+            "changePct": 1.51
+          }
+        ],
+        "ref": "4只成分股均值",
         "reason": {
-          "title": "硬科技外溢 自动化设备获配置",
-          "detail": "9/16 BOTZ +0.26%微涨，AI算力资本开支外溢至工业机器人/自动化设备，发那科、直觉外科、ABB获配置；与半导体硬件反弹同属硬科技抱团外溢。"
+          "title": "铜价反弹 资源股跟随修复",
+          "detail": "9/17 铜/有色走强，SCCO +3.28%、RIO +2.35%、FCX +2.33%、TECK +1.51%；LME铜自低位反弹、供给扰动持续，电网与AI数据中心用铜需求刚性，矿企盈利预期改善带动板块修复。"
         }
       },
       {
-        "name": "信息技术",
-        "pct": 0.1,
-        "leader": "XLK +0.10% 【行业ETF】",
+        "name": "电动车",
+        "pct": 2.02,
+        "tops": [
+          {
+            "name": "GM",
+            "changePct": 2.76
+          },
+          {
+            "name": "TSLA",
+            "changePct": 2.27
+          },
+          {
+            "name": "F",
+            "changePct": 1.95
+          },
+          {
+            "name": "RIVN",
+            "changePct": 1.12
+          }
+        ],
+        "ref": "4只成分股均值",
         "reason": {
-          "title": "科技权重企稳 议息前守大型股",
-          "detail": "9/16 XLK +0.10%微涨，议息前资金守大型科技权重，微软、苹果、英伟达等软硬件龙头企稳；SaaS（CRM、甲骨文）订单稳健对冲利率扰动。"
+          "title": "车市旺季 电动车链估值修复",
+          "detail": "9/17 电动车板块回升，GM +2.76%、TSLA +2.27%、F +1.95%、RIVN +1.12%；北美车市进入旺季、新车周期与储能订单支撑，动力电池与整车估值随风险偏好同步修复。"
+        }
+      },
+      {
+        "name": "自动驾驶",
+        "pct": 1.59,
+        "tops": [
+          {
+            "name": "MBLY",
+            "changePct": 2.81
+          },
+          {
+            "name": "GOOGL",
+            "changePct": 1.3
+          },
+          {
+            "name": "APTV",
+            "changePct": 0.65
+          }
+        ],
+        "ref": "3只成分股均值",
+        "reason": {
+          "title": "智驾渗透提速 传感与算法受益",
+          "detail": "9/17 自动驾驶板块上行，MBLY +2.81%、GOOGL +1.30%、APTV +0.65%；L3/L4法规落地与Robotaxi路测扩张推升传感器、域控与算法需求，Mobileye与零部件供应商跟涨科技主线。"
+        }
+      },
+      {
+        "name": "稀土 / 战略金属",
+        "pct": 1.46,
+        "tops": [
+          {
+            "name": "UUUU",
+            "changePct": 2.13
+          },
+          {
+            "name": "MP",
+            "changePct": 0.8
+          }
+        ],
+        "ref": "2只成分股均值",
+        "reason": {
+          "title": "稀土止跌 战略金属随有色回稳",
+          "detail": "9/17 稀土/战略金属回稳，UUUU +2.13%、MP +0.80%；前期美元走强导致的抛压缓解，稀土价格企稳、国内旺季备货启动，MP Materials等矿企随有色整体修复。"
+        }
+      },
+      {
+        "name": "云计算 / 软件",
+        "pct": 1.45,
+        "tops": [
+          {
+            "name": "ORCL",
+            "changePct": 5.19
+          },
+          {
+            "name": "AMZN",
+            "changePct": 2.13
+          },
+          {
+            "name": "MSFT",
+            "changePct": 1.52
+          },
+          {
+            "name": "GOOGL",
+            "changePct": 1.3
+          },
+          {
+            "name": "CRM",
+            "changePct": -2.9
+          }
+        ],
+        "ref": "5只成分股均值",
+        "reason": {
+          "title": "云资本开支强 软件龙头企稳",
+          "detail": "9/17 云计算/软件板块回升，ORCL +5.19%、AMZN +2.13%、MSFT +1.52%、GOOGL +1.30%（CRM -2.90%分化）；Oracle云订单超预期、AI推理需求拉动云基础设施，龙头估值修复。"
+        }
+      },
+      {
+        "name": "数据中心",
+        "pct": 1.2,
+        "tops": [
+          {
+            "name": "DLR",
+            "changePct": 1.76
+          },
+          {
+            "name": "EQIX",
+            "changePct": 0.96
+          },
+          {
+            "name": "VRT",
+            "changePct": 0.87
+          }
+        ],
+        "ref": "3只成分股均值",
+        "reason": {
+          "title": "AI供电刚需 数据中心REITs走强",
+          "detail": "9/17 数据中心板块小涨，DLR +1.76%、EQIX +0.96%、VRT +0.87%；AI算力扩张推升机柜与供电需求，Equinix/Digital Realty受益于云厂商长协，维谛技术(电源制冷)跟涨。"
+        }
+      },
+      {
+        "name": "机器人",
+        "pct": 1.15,
+        "tops": [
+          {
+            "name": "TER",
+            "changePct": 3.51
+          },
+          {
+            "name": "ZBRA",
+            "changePct": 1.94
+          },
+          {
+            "name": "ISRG",
+            "changePct": 0.33
+          },
+          {
+            "name": "ROK",
+            "changePct": -1.17
+          }
+        ],
+        "ref": "4只成分股均值",
+        "reason": {
+          "title": "工业自动化 机器视觉订单回暖",
+          "detail": "9/17 机器人板块微涨，TER +3.51%、ZBRA +1.94%、ISRG +0.33%（ROK -1.17%分化）；AI资本开支外溢至工业机器人/机器视觉，泰瑞达测试设备与斑马技术条码终端需求改善。"
+        }
+      },
+      {
+        "name": "生物医药",
+        "pct": 1.15,
+        "tops": [
+          {
+            "name": "MRK",
+            "changePct": 1.55
+          },
+          {
+            "name": "LLY",
+            "changePct": 1.28
+          },
+          {
+            "name": "JNJ",
+            "changePct": 1.1
+          },
+          {
+            "name": "PFE",
+            "changePct": 0.66
+          }
+        ],
+        "ref": "4只成分股均值",
+        "reason": {
+          "title": "防御回补 创新药龙头企稳",
+          "detail": "9/17 生物医药板块回升，MRK +1.55%、LLY +1.28%、JNJ +1.10%、PFE +0.66%；利率见顶预期下长久期医药估值修复，礼来/默沙东减重与肿瘤管线支撑防御性配置。"
+        }
+      },
+      {
+        "name": "电网 / 电力设备",
+        "pct": 0.85,
+        "tops": [
+          {
+            "name": "ETN",
+            "changePct": 2.93
+          },
+          {
+            "name": "HUBB",
+            "changePct": 0.95
+          },
+          {
+            "name": "GEV",
+            "changePct": -0.02
+          },
+          {
+            "name": "PWR",
+            "changePct": -0.44
+          }
+        ],
+        "ref": "4只成分股均值",
+        "reason": {
+          "title": "电网升级 电气设备订单稳健",
+          "detail": "9/17 电网/电力设备微涨，ETN +2.93%、HUBB +0.95%（GEV -0.02%、PWR -0.44%分化）；美国电网改造与数据中心供电扩容带动中压设备订单，伊顿受益于配电与电能管理需求。"
+        }
+      },
+      {
+        "name": "天然气",
+        "pct": 0.78,
+        "tops": [
+          {
+            "name": "KMI",
+            "changePct": 1.89
+          },
+          {
+            "name": "LNG",
+            "changePct": 0.78
+          },
+          {
+            "name": "OKE",
+            "changePct": 0.56
+          },
+          {
+            "name": "EQT",
+            "changePct": -0.12
+          }
+        ],
+        "ref": "4只成分股均值",
+        "reason": {
+          "title": "气价企稳 管道与LNG出口稳",
+          "detail": "9/17 天然气板块小涨，KMI +1.89%、LNG +0.78%、OKE +0.56%（EQT -0.12%分化）；供暖季前库存回补、LNG出口终端满载，金德摩根管道运量与钱尼尔能源出口预期平稳。"
+        }
+      },
+      {
+        "name": "银行金融",
+        "pct": 0.48,
+        "tops": [
+          {
+            "name": "GS",
+            "changePct": 1.44
+          },
+          {
+            "name": "MS",
+            "changePct": 0.54
+          },
+          {
+            "name": "BAC",
+            "changePct": 0.48
+          },
+          {
+            "name": "JPM",
+            "changePct": 0.11
+          },
+          {
+            "name": "WFC",
+            "changePct": -0.18
+          }
+        ],
+        "ref": "5只成分股均值",
+        "reason": {
+          "title": "加息落地 银行息差预期改善",
+          "detail": "9/17 银行金融板块小涨，GS +1.44%、MS +0.54%、BAC +0.48%、JPM +0.11%（WFC -0.18%分化）；加息周期临近尾声、净息差触底预期升温，高盛等投行受益于资本市场活跃。"
+        }
+      },
+      {
+        "name": "中概股",
+        "pct": 0.34,
+        "tops": [
+          {
+            "name": "BIDU",
+            "changePct": 1.67
+          },
+          {
+            "name": "BABA",
+            "changePct": 1.18
+          },
+          {
+            "name": "NIO",
+            "changePct": 1.12
+          },
+          {
+            "name": "JD",
+            "changePct": -0.97
+          },
+          {
+            "name": "PDD",
+            "changePct": -1.31
+          }
+        ],
+        "ref": "5只成分股均值",
+        "reason": {
+          "title": "中概温和反弹 平台经济企稳",
+          "detail": "9/17 中概股微涨，BIDU +1.67%、BABA +1.18%、NIO +1.12%（JD -0.97%、PDD -1.31%分化）；国内稳增长政策与平台经济常态化监管预期改善风险偏好，百度阿里领涨中概。"
+        }
+      },
+      {
+        "name": "石油",
+        "pct": 0.21,
+        "tops": [
+          {
+            "name": "COP",
+            "changePct": 0.49
+          },
+          {
+            "name": "EOG",
+            "changePct": 0.37
+          },
+          {
+            "name": "CVX",
+            "changePct": 0.01
+          },
+          {
+            "name": "XOM",
+            "changePct": -0.03
+          }
+        ],
+        "ref": "4只成分股均值",
+        "reason": {
+          "title": "油价窄幅 油企盈利预期平稳",
+          "detail": "9/17 石油板块接近平收，COP +0.49%、EOG +0.37%、CVX +0.01%（XOM -0.03%分化）；中东霍尔木兹溢价回吐后油价窄幅波动，上游勘探与综合油企盈利预期平稳，缺乏单边催化。"
         }
       }
     ],
     "sectorsDown": [
       {
-        "name": "石油 / 能源",
-        "pct": -3.52,
-        "leader": "USO -3.52%【商品ETF】；XLE -2.88%【行业ETF】",
+        "name": "军工",
+        "pct": -0.96,
+        "tops": [
+          {
+            "name": "RTX",
+            "changePct": -1.67
+          },
+          {
+            "name": "NOC",
+            "changePct": -1.28
+          },
+          {
+            "name": "GD",
+            "changePct": -1.13
+          },
+          {
+            "name": "HWM",
+            "changePct": -0.87
+          },
+          {
+            "name": "LMT",
+            "changePct": 0.16
+          }
+        ],
+        "ref": "5只成分股均值",
         "reason": {
-          "title": "中东溢价回吐 油价回落 能源领跌",
-          "detail": "9/16 USO -3.52%、XLE -2.88%领跌，前一日霍尔木兹封锁溢价快速回吐——特朗普称战事将结束、阿曼-美讨论缓和，WTI自105回落；埃克森美孚、雪佛龙随油价下挫。"
+          "title": "国防预算观望 军工股回调",
+          "detail": "9/17 军工板块领跌，RTX -1.67%、NOC -1.28%、GD -1.13%、HWM -0.87%（LMT +0.16%分化）；前期地缘溢价退潮、新财年国防预算待落地，雷神与诺斯罗普等防务龙头遭获利了结。"
         }
       },
       {
-        "name": "金融",
-        "pct": -1.62,
-        "leader": "XLF -1.62% 【行业ETF】",
+        "name": "CPO / 光模块",
+        "pct": -0.32,
+        "tops": [
+          {
+            "name": "FNSR",
+            "changePct": -2.99
+          },
+          {
+            "name": "LITE",
+            "changePct": -2.81
+          },
+          {
+            "name": "ANET",
+            "changePct": 1.01
+          },
+          {
+            "name": "CIEN",
+            "changePct": 1.1
+          },
+          {
+            "name": "COHR",
+            "changePct": 2.09
+          }
+        ],
+        "ref": "5只成分股均值",
         "reason": {
-          "title": "加息预期压制 银行股遭减配",
-          "detail": "9/16 XLF -1.62%领跌权重，美联储加息25bp概率约90%、10Y美债近5%抬升融资成本与贴现率；摩根大通、高盛、美国银行等承压，净息差与让利预期叠加。"
+          "title": "光器件分化 短线获利回吐",
+          "detail": "9/17 CPO/光模块微跌，FNSR -2.99%、LITE -2.81%（ANET +1.01%、CIEN +1.10%、COHR +2.09%分化）；部分光器件标的短线获利回吐，但Arista、Ciena与Coherent随AI硬件链仍走强，板块内部分化。"
         }
       },
       {
-        "name": "粮食 / 农业",
-        "pct": -1.41,
-        "leader": "MOO -1.41% 【主题ETF】",
+        "name": "消费",
+        "pct": -0.02,
+        "tops": [
+          {
+            "name": "WMT",
+            "changePct": -0.66
+          },
+          {
+            "name": "MCD",
+            "changePct": -0.03
+          },
+          {
+            "name": "COST",
+            "changePct": 0.02
+          },
+          {
+            "name": "KO",
+            "changePct": 0.22
+          },
+          {
+            "name": "PG",
+            "changePct": 0.36
+          }
+        ],
+        "ref": "5只成分股均值",
         "reason": {
-          "title": "农业获利了结 防御属性失效",
-          "detail": "9/16 MOO -1.41%回吐前日涨幅，极端天气与化肥需求叙事暂歇、缺乏新催化，迪尔、ADM、邦吉等农业龙头遭获利了结；道指大跌中防御属性失效。"
-        }
-      },
-      {
-        "name": "稀土 / 战略金属",
-        "pct": -1.01,
-        "leader": "REMX -1.01% 【主题ETF】",
-        "reason": {
-          "title": "美元走强 战略金属随有色回撤",
-          "detail": "9/16 REMX -1.01%走弱，美元指数反弹压制战略金属价格、LME铜自高位回撤；MP Materials、Lynas等稀土矿企随有色普跌，国内旺季需求兑现偏慢。"
-        }
-      },
-      {
-        "name": "综合电商 / 亚马逊",
-        "pct": -0.99,
-        "leader": "AMZN -0.99% 个股【代表标的】",
-        "reason": {
-          "title": "消费走弱 AMZN延续获利了结",
-          "detail": "9/16 AMZN -0.99%延续回落，美国消费动能边际放缓、信用卡违约率抬头压制可选消费，AWS资本开支担忧叠加；亚马逊、易贝跟随零售主线同步下修。"
+          "title": "必选消费平淡 防御属性弱化",
+          "detail": "9/17 消费板块接近平收，WMT -0.66%、MCD -0.03%（COST +0.02%、KO +0.22%、PG +0.36%分化）；利率高位下可选消费承压、必选防御属性弱化，沃尔玛等零售龙头随大盘温和波动。"
         }
       }
     ],
-    "sectorNote": "板块涨跌幅为 SPDR 行业 ETF 口径与主题 ETF 口径，与路透、华尔街见闻等媒体报道口径基本一致。",
+    "sectorNote": "板块涨跌幅为同板块多只美股真实成分股涨跌幅均值（非 ETF 口径），更贴近板块真实表现。",
     "fundFlows": [
       {
         "title": "隔夜美股主线",
-        "detail": "领涨 AI 硬件 / 英伟达+0.82%，资金偏好AI硬件与周期方向。"
+        "detail": "领涨 商业航天+6.26%，资金偏好商业航天方向。"
       },
       {
         "title": "承压方向",
-        "detail": "石油 / 能源-3.52%领跌，注意对 A 股映射拖累。"
+        "detail": "军工-0.96%领跌，注意对 A 股映射拖累。"
       }
     ],
     "bullNews": [
@@ -2275,7 +2880,7 @@ window.DASHBOARD_DATA = {
         ]
       }
     ],
-    "outlook": "【美股盘面】9/16美股剧烈分化：道指重挫-1.21%、标普-0.45%，纳指几乎持平-0.01%，费半SOXX +0.64%连续修复、金龙中概-0.98%；道指成分中能源与工业权重拖累，涨跌广度偏防御失效，量能温和。\n【资金与结构】领涨AI硬件/NVDA +0.82%、半导体+0.64%、TSLA +0.42%，呈议息前资金缩圈至确定性硬科技；领跌石油/能源-3.52%、金融-1.62%、农业-1.41%，前一日避险主线（能源）回吐，高低切明显。\n【A股映射】①负向——能源-3.52%（油价回吐，中国海油、招商轮船、中远海能短线承压）、金融-1.62%（银行保险映射）、电商-0.99%/中概KWEB-0.98%（跨境电商、商贸零售、中概概念）；②正向——半导体+0.64%/NVDA+0.82%促设备链（北方华创、华海清科、沪硅产业）弱修复，AI硬件映射算力PCB/CPO（工业富联、沪电股份）；③关键变量——9/17凌晨美联储决议+10Y近5%，开盘看北向、半导体与油气量能及决议前仓位。\n【板块轮动与机会】A股偏强在半导体设备/算力硬件（超跌强反弹延续）、光通信CPO（高位但政策支撑）、券商（若决议偏鸽）；回避油气/油运（油价回吐）、高位消费/电商。\n【风险与避险】最大变量为9/17凌晨美联储决议，加息预期下美债美元双高压制成长与黄金；能源回吐、加密退潮为双向风险；控仓、议息前不追高，决议落地再择向。",
+    "outlook": "【美股盘面】9/17美股强势反弹：道指+0.61%、纳指+1.69%、标普+1.14%，费半SOXX +3.39%领涨，金龙中概+0.66%；加息冲击消化后风险偏好回归，量能放大、涨跌广度修复，纳指领涨呈典型risk-on。\n【资金与结构】领涨集中硬科技与高β：商业航天+6.26%(LUNR/RKLB)、加密+5.88%(RIOT/COIN)、AI算力+5.85%(SMCI+9.5%/ARM+8.6%)、核电+5.15%(OKLO+11.3%)、半导体+3.32%(INTC+7.7%)；仅军工-0.96%回调，资金自防御切回成长，ETF资金回流SOXX/SMH与杠杆加密敞口。\n【A股映射】①负向——军工-0.96%映射中航沈飞、航发动力等防务链短线承压，消费-0.02%映射必选平淡；②正向——AI算力/SOXX映射CPO(中际旭创/新易盛)、半导体设备(北方华创)、存储(兆易创新)，核电OKLO映射SMR/可控核聚变(久立特材)，商业航天映射卫星互联(中国卫星)；③关键变量——9/18周五为期指交割日，盯北向、半导体/光模块量能及开盘溢价。\n【板块轮动与机会】A股偏强：光通信CPO(1.6T交付)、半导体设备(十五五+国产替代)、存储(涨价)、核电SMR(政策+AI供电)；美股映射最顺为算力硬件与半导体链，黄金/有色因美元回落或止跌但趋势未反转。\n【风险与避险】外部变量为加息后美元美债走向与中东油价；回避高位获利了结的军工及分化的光器件短线筹码，加密高β宜谨慎。9/18期指交割+周五波动放大，控仓不追高，待开盘确认半导体/CPO强度再择向。",
     "source": "美股数据来自腾讯行情实时接口"
   },
   "panorama": {
@@ -2284,102 +2889,602 @@ window.DASHBOARD_DATA = {
       {
         "key": "us",
         "name": "美股",
-        "date": "9/16 收盘（北京时间 次日 凌晨）",
+        "date": "9/17 收盘（北京时间 次日 凌晨）",
         "items": [
           {
-            "name": "AI 软件 / 云",
-            "pct": -0.6,
-            "ref": "CLOU 【主题ETF】"
+            "name": "AI 算力",
+            "pct": 5.85,
+            "ref": "5只成分股均值",
+            "constituents": [
+              {
+                "name": "NVDA",
+                "changePct": 2.54
+              },
+              {
+                "name": "AMD",
+                "changePct": 6.36
+              },
+              {
+                "name": "AVGO",
+                "changePct": 2.29
+              },
+              {
+                "name": "ARM",
+                "changePct": 8.57
+              },
+              {
+                "name": "SMCI",
+                "changePct": 9.5
+              }
+            ]
           },
           {
-            "name": "AI 硬件 / 英伟达",
-            "pct": 0.82,
-            "ref": "NVDA 个股【代表标的】"
-          },
-          {
-            "name": "科技七巨头",
-            "pct": -0.11,
-            "ref": "MAGS 【主题ETF】"
-          },
-          {
-            "name": "电动汽车 / 特斯拉",
-            "pct": 0.42,
-            "ref": "TSLA 个股【代表标的】"
-          },
-          {
-            "name": "机器人 / 自动化",
-            "pct": 0.26,
-            "ref": "BOTZ 【主题ETF】"
-          },
-          {
-            "name": "加密货币",
-            "pct": -0.1,
-            "ref": "BITO 【主题ETF】"
-          },
-          {
-            "name": "综合电商 / 亚马逊",
-            "pct": -0.99,
-            "ref": "AMZN 个股【代表标的】"
-          },
-          {
-            "name": "消费 / 零售",
-            "pct": -0.59,
-            "ref": "XRT 【行业ETF】"
-          },
-          {
-            "name": "金融",
-            "pct": -1.62,
-            "ref": "XLF 【行业ETF】"
-          },
-          {
-            "name": "信息技术",
-            "pct": 0.1,
-            "ref": "XLK 【行业ETF】"
-          },
-          {
-            "name": "通信服务",
-            "pct": -0.9,
-            "ref": "XLC 【行业ETF】"
+            "name": "CPO / 光模块",
+            "pct": -0.32,
+            "ref": "5只成分股均值",
+            "constituents": [
+              {
+                "name": "COHR",
+                "changePct": 2.09
+              },
+              {
+                "name": "LITE",
+                "changePct": -2.81
+              },
+              {
+                "name": "CIEN",
+                "changePct": 1.1
+              },
+              {
+                "name": "FNSR",
+                "changePct": -2.99
+              },
+              {
+                "name": "ANET",
+                "changePct": 1.01
+              }
+            ]
           },
           {
             "name": "半导体",
-            "pct": 0.64,
-            "ref": "SOXX 【商品ETF】"
+            "pct": 3.32,
+            "ref": "5只成分股均值",
+            "constituents": [
+              {
+                "name": "INTC",
+                "changePct": 7.67
+              },
+              {
+                "name": "TSM",
+                "changePct": 3
+              },
+              {
+                "name": "QCOM",
+                "changePct": 2.09
+              },
+              {
+                "name": "TXN",
+                "changePct": -0.97
+              },
+              {
+                "name": "MRVL",
+                "changePct": 4.81
+              }
+            ]
+          },
+          {
+            "name": "存储",
+            "pct": 3.98,
+            "ref": "4只成分股均值",
+            "constituents": [
+              {
+                "name": "MU",
+                "changePct": 5.5
+              },
+              {
+                "name": "WDC",
+                "changePct": 1.65
+              },
+              {
+                "name": "STX",
+                "changePct": 2.55
+              },
+              {
+                "name": "SNDK",
+                "changePct": 6.21
+              }
+            ]
+          },
+          {
+            "name": "电网 / 电力设备",
+            "pct": 0.85,
+            "ref": "4只成分股均值",
+            "constituents": [
+              {
+                "name": "ETN",
+                "changePct": 2.93
+              },
+              {
+                "name": "HUBB",
+                "changePct": 0.95
+              },
+              {
+                "name": "PWR",
+                "changePct": -0.44
+              },
+              {
+                "name": "GEV",
+                "changePct": -0.02
+              }
+            ]
+          },
+          {
+            "name": "核电",
+            "pct": 5.15,
+            "ref": "5只成分股均值",
+            "constituents": [
+              {
+                "name": "CEG",
+                "changePct": 1.26
+              },
+              {
+                "name": "VST",
+                "changePct": 2.26
+              },
+              {
+                "name": "TLN",
+                "changePct": 1.99
+              },
+              {
+                "name": "OKLO",
+                "changePct": 11.31
+              },
+              {
+                "name": "SMR",
+                "changePct": 8.92
+              }
+            ]
+          },
+          {
+            "name": "数据中心",
+            "pct": 1.2,
+            "ref": "3只成分股均值",
+            "constituents": [
+              {
+                "name": "DLR",
+                "changePct": 1.76
+              },
+              {
+                "name": "EQIX",
+                "changePct": 0.96
+              },
+              {
+                "name": "VRT",
+                "changePct": 0.87
+              }
+            ]
+          },
+          {
+            "name": "云计算 / 软件",
+            "pct": 1.45,
+            "ref": "5只成分股均值",
+            "constituents": [
+              {
+                "name": "MSFT",
+                "changePct": 1.52
+              },
+              {
+                "name": "AMZN",
+                "changePct": 2.13
+              },
+              {
+                "name": "GOOGL",
+                "changePct": 1.3
+              },
+              {
+                "name": "ORCL",
+                "changePct": 5.19
+              },
+              {
+                "name": "CRM",
+                "changePct": -2.9
+              }
+            ]
+          },
+          {
+            "name": "商业航天",
+            "pct": 6.26,
+            "ref": "4只成分股均值",
+            "constituents": [
+              {
+                "name": "RKLB",
+                "changePct": 6.47
+              },
+              {
+                "name": "LUNR",
+                "changePct": 6.63
+              },
+              {
+                "name": "ASTS",
+                "changePct": 5.8
+              },
+              {
+                "name": "SPCE",
+                "changePct": 6.14
+              }
+            ]
+          },
+          {
+            "name": "机器人",
+            "pct": 1.15,
+            "ref": "4只成分股均值",
+            "constituents": [
+              {
+                "name": "ROK",
+                "changePct": -1.17
+              },
+              {
+                "name": "ISRG",
+                "changePct": 0.33
+              },
+              {
+                "name": "TER",
+                "changePct": 3.51
+              },
+              {
+                "name": "ZBRA",
+                "changePct": 1.94
+              }
+            ]
+          },
+          {
+            "name": "自动驾驶",
+            "pct": 1.59,
+            "ref": "3只成分股均值",
+            "constituents": [
+              {
+                "name": "MBLY",
+                "changePct": 2.81
+              },
+              {
+                "name": "APTV",
+                "changePct": 0.65
+              },
+              {
+                "name": "GOOGL",
+                "changePct": 1.3
+              }
+            ]
+          },
+          {
+            "name": "军工",
+            "pct": -0.96,
+            "ref": "5只成分股均值",
+            "constituents": [
+              {
+                "name": "LMT",
+                "changePct": 0.16
+              },
+              {
+                "name": "RTX",
+                "changePct": -1.67
+              },
+              {
+                "name": "NOC",
+                "changePct": -1.28
+              },
+              {
+                "name": "GD",
+                "changePct": -1.13
+              },
+              {
+                "name": "HWM",
+                "changePct": -0.87
+              }
+            ]
+          },
+          {
+            "name": "新能源 / 光伏",
+            "pct": 3.4,
+            "ref": "5只成分股均值",
+            "constituents": [
+              {
+                "name": "FSLR",
+                "changePct": 5.28
+              },
+              {
+                "name": "ENPH",
+                "changePct": 1.29
+              },
+              {
+                "name": "SEDG",
+                "changePct": 3.81
+              },
+              {
+                "name": "RUN",
+                "changePct": 5.5
+              },
+              {
+                "name": "NEE",
+                "changePct": 1.13
+              }
+            ]
+          },
+          {
+            "name": "锂 / 电池材料",
+            "pct": 4.53,
+            "ref": "3只成分股均值",
+            "constituents": [
+              {
+                "name": "ALB",
+                "changePct": 5.1
+              },
+              {
+                "name": "SQM",
+                "changePct": 4.54
+              },
+              {
+                "name": "LAC",
+                "changePct": 3.96
+              }
+            ]
+          },
+          {
+            "name": "铜 / 有色",
+            "pct": 2.37,
+            "ref": "4只成分股均值",
+            "constituents": [
+              {
+                "name": "FCX",
+                "changePct": 2.33
+              },
+              {
+                "name": "SCCO",
+                "changePct": 3.28
+              },
+              {
+                "name": "TECK",
+                "changePct": 1.51
+              },
+              {
+                "name": "RIO",
+                "changePct": 2.35
+              }
+            ]
+          },
+          {
+            "name": "石油",
+            "pct": 0.21,
+            "ref": "4只成分股均值",
+            "constituents": [
+              {
+                "name": "XOM",
+                "changePct": -0.03
+              },
+              {
+                "name": "CVX",
+                "changePct": 0.01
+              },
+              {
+                "name": "COP",
+                "changePct": 0.49
+              },
+              {
+                "name": "EOG",
+                "changePct": 0.37
+              }
+            ]
+          },
+          {
+            "name": "天然气",
+            "pct": 0.78,
+            "ref": "4只成分股均值",
+            "constituents": [
+              {
+                "name": "LNG",
+                "changePct": 0.78
+              },
+              {
+                "name": "EQT",
+                "changePct": -0.12
+              },
+              {
+                "name": "KMI",
+                "changePct": 1.89
+              },
+              {
+                "name": "OKE",
+                "changePct": 0.56
+              }
+            ]
           },
           {
             "name": "黄金 / 贵金属",
-            "pct": -0.61,
-            "ref": "GLD 【商品ETF】"
+            "pct": 2.71,
+            "ref": "4只成分股均值",
+            "constituents": [
+              {
+                "name": "NEM",
+                "changePct": 2.16
+              },
+              {
+                "name": "AEM",
+                "changePct": 2.97
+              },
+              {
+                "name": "KGC",
+                "changePct": 2.41
+              },
+              {
+                "name": "GFI",
+                "changePct": 3.29
+              }
+            ]
           },
           {
-            "name": "小金属 / 铜",
-            "pct": -0.47,
-            "ref": "COPX 【主题ETF】"
+            "name": "银行金融",
+            "pct": 0.48,
+            "ref": "5只成分股均值",
+            "constituents": [
+              {
+                "name": "JPM",
+                "changePct": 0.11
+              },
+              {
+                "name": "BAC",
+                "changePct": 0.48
+              },
+              {
+                "name": "WFC",
+                "changePct": -0.18
+              },
+              {
+                "name": "GS",
+                "changePct": 1.44
+              },
+              {
+                "name": "MS",
+                "changePct": 0.54
+              }
+            ]
+          },
+          {
+            "name": "生物医药",
+            "pct": 1.15,
+            "ref": "4只成分股均值",
+            "constituents": [
+              {
+                "name": "LLY",
+                "changePct": 1.28
+              },
+              {
+                "name": "JNJ",
+                "changePct": 1.1
+              },
+              {
+                "name": "PFE",
+                "changePct": 0.66
+              },
+              {
+                "name": "MRK",
+                "changePct": 1.55
+              }
+            ]
+          },
+          {
+            "name": "消费",
+            "pct": -0.02,
+            "ref": "5只成分股均值",
+            "constituents": [
+              {
+                "name": "WMT",
+                "changePct": -0.66
+              },
+              {
+                "name": "COST",
+                "changePct": 0.02
+              },
+              {
+                "name": "PG",
+                "changePct": 0.36
+              },
+              {
+                "name": "KO",
+                "changePct": 0.22
+              },
+              {
+                "name": "MCD",
+                "changePct": -0.03
+              }
+            ]
           },
           {
             "name": "稀土 / 战略金属",
-            "pct": -1.01,
-            "ref": "REMX 【主题ETF】"
+            "pct": 1.46,
+            "ref": "2只成分股均值",
+            "constituents": [
+              {
+                "name": "MP",
+                "changePct": 0.8
+              },
+              {
+                "name": "UUUU",
+                "changePct": 2.13
+              }
+            ]
           },
           {
-            "name": "石油 / 能源",
-            "pct": -3.52,
-            "ref": "USO -3.52%【商品ETF】；XLE -2.88%【行业ETF】"
-          },
-          {
-            "name": "粮食 / 农业",
-            "pct": -1.41,
-            "ref": "MOO 【主题ETF】"
-          },
-          {
-            "name": "电力 / 公用事业",
-            "pct": 0,
-            "ref": "XLU 【行业ETF】"
+            "name": "加密货币 / 比特币",
+            "pct": 5.88,
+            "ref": "4只成分股均值",
+            "constituents": [
+              {
+                "name": "COIN",
+                "changePct": 5.75
+              },
+              {
+                "name": "MSTR",
+                "changePct": 4.81
+              },
+              {
+                "name": "RIOT",
+                "changePct": 7.52
+              },
+              {
+                "name": "MARA",
+                "changePct": 5.43
+              }
+            ]
           },
           {
             "name": "中概股",
-            "pct": -0.98,
-            "ref": "KWEB 【主题ETF】"
+            "pct": 0.34,
+            "ref": "5只成分股均值",
+            "constituents": [
+              {
+                "name": "BABA",
+                "changePct": 1.18
+              },
+              {
+                "name": "JD",
+                "changePct": -0.97
+              },
+              {
+                "name": "PDD",
+                "changePct": -1.31
+              },
+              {
+                "name": "BIDU",
+                "changePct": 1.67
+              },
+              {
+                "name": "NIO",
+                "changePct": 1.12
+              }
+            ]
+          },
+          {
+            "name": "电动车",
+            "pct": 2.02,
+            "ref": "4只成分股均值",
+            "constituents": [
+              {
+                "name": "TSLA",
+                "changePct": 2.27
+              },
+              {
+                "name": "RIVN",
+                "changePct": 1.12
+              },
+              {
+                "name": "F",
+                "changePct": 1.95
+              },
+              {
+                "name": "GM",
+                "changePct": 2.76
+              }
+            ]
           }
         ]
       },
