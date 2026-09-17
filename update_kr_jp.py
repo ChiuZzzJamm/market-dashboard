@@ -22,15 +22,32 @@ os.chdir(BASE)
 UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
 TZ8 = timezone(timedelta(hours=8))  # 北京时间
 
-# 腾讯代码 -> 中文名 -> 标准代码 / Yahoo 代码
-STOCKS = [
-    ('kr005930', '三星电子', '005930.KS', '005930.KS'),
-    ('kr000660', 'SK海力士', '000660.KS', '000660.KS'),
-    ('kr105560', 'KB金融',   '105560.KS', '105560.KS'),
-    ('jp9984',   '软银集团', '9984.T',   '9984.T'),
-    ('jp8035',   '东京电子', '8035.T',   '8035.T'),
-    ('jp285A',   '铠侠',     '285A.T',   '285A.T'),
+# 腾讯代码 -> 中文名 -> 标准代码（Yahoo 兜底用）。板块 -> 龙头个股聚合，比单只龙头更贴近板块真实表现。
+KR_BOARDS = [
+    ('半导体/存储', [('kr005930', '三星电子', '005930.KS'), ('kr000660', 'SK海力士', '000660.KS'), ('kr009150', '三星电机', '009150.KS')]),
+    ('汽车', [('kr005380', '现代汽车', '005380.KS'), ('kr000270', '起亚', '000270.KS'), ('kr012330', '现代摩比斯', '012330.KS')]),
+    ('金融', [('kr105560', 'KB金融', '105560.KS'), ('kr055550', '新韩金融', '055550.KS'), ('kr086790', '韩亚金融', '086790.KS'), ('kr316140', '三星生命', '316140.KS')]),
+    ('电池/化工', [('kr051910', 'LG化学', '051910.KS'), ('kr096770', 'SK Innovation', '096770.KS'), ('kr373220', 'LG能源', '373220.KS'), ('kr003670', 'SKC', '003670.KS')]),
+    ('钢铁', [('kr005490', 'POSCO', '005490.KS'), ('kr015760', '现代制铁', '015760.KS')]),
+    ('医药', [('kr068270', 'Celltrion', '068270.KS'), ('kr207940', '三星生物', '207940.KS')]),
+    ('通信', [('kr005935', 'SK电信', '005935.KS'), ('kr017670', 'KT', '017670.KS'), ('kr030200', 'LG Uplus', '030200.KS')]),
+    ('零售', [('kr004170', '乐天购物', '004170.KS'), ('kr139480', '新世界', '139480.KS'), ('kr004100', 'CJ', '004100.KS')]),
+    ('造船', [('kr009540', 'HD现代重工', '009540.KS'), ('kr042660', '三星重工', '042660.KS')]),
 ]
+JP_BOARDS = [
+    ('汽车', [('jp7203', '丰田', '7203.T'), ('jp7267', '本田', '7267.T'), ('jp7201', '日产', '7201.T')]),
+    ('电子元件/设备', [('jp8035', '东京电子', '8035.T'), ('jp6857', 'Advantest', '6857.T'), ('jp6981', '村田', '6981.T'), ('jp6273', 'SMC', '6273.T')]),
+    ('银行金融', [('jp8316', '三菱UFJ', '8316.T'), ('jp8411', '瑞穗', '8411.T'), ('jp8306', '三井住友', '8306.T')]),
+    ('通信', [('jp9432', 'NTT', '9432.T'), ('jp9433', 'KDDI', '9433.T'), ('jp9434', 'SoftBank电信', '9434.T')]),
+    ('医药', [('jp4568', '第一三共', '4568.T'), ('jp4502', '武田', '4502.T'), ('jp4519', 'Chugai', '4519.T')]),
+    ('零售消费', [('jp9983', '迅销', '9983.T'), ('jp8267', '永旺', '8267.T'), ('jp3382', '7&i', '3382.T')]),
+    ('重工机械', [('jp6301', '小松', '6301.T'), ('jp6954', '发那科', '6954.T'), ('jp6305', '日立建机', '6305.T')]),
+    ('化工', [('jp4063', '信越化学', '4063.T'), ('jp3407', '旭化成', '3407.T'), ('jp4452', '花王', '4452.T')]),
+    ('电力能源', [('jp9501', '东京电力', '9501.T'), ('jp9503', '关西电力', '9503.T'), ('jp9508', '九州电力', '9508.T')]),
+    ('地产', [('jp8801', '三菱地所', '8801.T'), ('jp8802', '三井不动产', '8802.T'), ('jp8804', '东京建物', '8804.T')]),
+]
+# 扁平化（腾讯代码, 中文名, 标准代码）供抓取与兜底
+ALL_STOCKS = [(tc, cn, std) for boards in (KR_BOARDS, JP_BOARDS) for _, members in boards for tc, cn, std in members]
 
 TODAY = datetime.now(TZ8).strftime('%Y-%m-%d')
 TS_RE = re.compile(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}')
@@ -58,7 +75,7 @@ def bj_date_from_ts(unix_ts):
 
 # ---------- 个股：腾讯 ----------
 def fetch_stocks_tencent():
-    codes = ','.join(c for c, _, _, _ in STOCKS)
+    codes = ','.join(c for c, _, _ in ALL_STOCKS)
     raw = curl_get(f'http://qt.gtimg.cn/q={codes}')
     if not raw:
         return None
@@ -80,7 +97,7 @@ def fetch_stocks_tencent():
             pct = float(f[2])
         except ValueError:
             continue
-        for code, cn, std, _ in STOCKS:
+        for code, cn, std in ALL_STOCKS:
             if m.group(1).lower() == code.lower():
                 out[std] = {'name': cn, 'changePct': round(pct, 2)}
                 break
@@ -101,7 +118,7 @@ def fetch_stock_yahoo(std):
         pct = meta.get('regularMarketChangePercent')
         if pct is None:
             return None
-        cn = next((c for _, c, s, _ in STOCKS if s == std), std)
+        cn = next((c for tc, c, s in ALL_STOCKS if s == std), std)
         return {'name': cn, 'changePct': round(float(pct), 2)}
     except Exception as e:
         print(f'[warn] yahoo {std} parse failed: {e}')
@@ -153,7 +170,7 @@ def fetch_index_yahoo(sym, name):
 def collect():
     """返回 (indices, stocks)"""
     stocks = fetch_stocks_tencent()
-    for _, cn, std, _ in STOCKS:
+    for _, cn, std in ALL_STOCKS:
         if stocks is None or std not in stocks:
             fb = fetch_stock_yahoo(std)
             if fb:
@@ -184,8 +201,8 @@ def validate(indices, stocks):
 
     # 指数涨跌幅绝对值 < 0.8% 时方向属噪音（个股独立行情常见），不做否决
     checks = [
-        ('KS11.GI', ['005930.KS', '000660.KS'], 'KOSPI', '韩股龙头'),
-        ('N225.GI', ['9984.T', '8035.T', '285A.T'], '日经225', '日经龙头'),
+        ('KS11.GI', ['005930.KS', '000660.KS', '005380.KS'], 'KOSPI', '韩股龙头'),
+        ('N225.GI', ['8035.T', '7203.T', '9983.T'], '日经225', '日经龙头'),
     ]
     for idx_key, stock_keys, idx_name, leader_name in checks:
         idx_pct = indices.get(idx_key, {}).get('changePct')
@@ -212,26 +229,19 @@ def validate(indices, stocks):
 
 def build_kr(indices, stocks):
     kospi = indices.get('KS11.GI', {}).get('changePct')
-    samsung = stocks.get('005930.KS', {}).get('changePct')
-    skhynix = stocks.get('000660.KS', {}).get('changePct')
-
     items = []
-    if samsung is not None and skhynix is not None:
-        avg = round((samsung + skhynix) / 2, 2)
-        items.append({'name': '半导体/存储', 'pct': avg,
-                      'ref': f'SK海力士 {skhynix:+.2f}%、三星电子 {samsung:+.2f}%（2龙头均值）'})
-    elif skhynix is not None:
-        items.append({'name': '半导体/存储', 'pct': skhynix,
-                      'ref': f'SK海力士 {skhynix:+.2f}%（单一龙头）'})
-    elif samsung is not None:
-        items.append({'name': '半导体/存储', 'pct': samsung,
-                      'ref': f'三星电子 {samsung:+.2f}%（单一龙头）'})
-
-    kb = stocks.get('105560.KS')
-    if kb is not None:
-        items.append({'name': '金融', 'pct': kb['changePct'],
-                      'ref': f"KB金融 {kb['changePct']:+.2f}%（单一龙头）"})
-
+    for bname, members in KR_BOARDS:
+        pts, detail = [], []
+        for tc, cn, std in members:
+            sp = stocks.get(std, {}).get('changePct')
+            if sp is None:
+                continue
+            pts.append(sp)
+            detail.append(f'{cn}{sp:+.2f}%')
+        if not pts:
+            continue
+        avg = round(sum(pts) / len(pts), 2)
+        items.append({'name': bname, 'pct': avg, 'ref': '、'.join(detail) + f'（{len(pts)}只均值）'})
     return {'key': 'kr', 'name': '韩股',
             'indices': [{'name': '韩国综合指数 KOSPI', 'changePct': kospi}] if kospi is not None else [],
             'items': items}
@@ -239,21 +249,19 @@ def build_kr(indices, stocks):
 
 def build_jp(indices, stocks):
     n225 = indices.get('N225.GI', {}).get('changePct')
-    softbank = stocks.get('9984.T', {}).get('changePct')
-    tokyoelec = stocks.get('8035.T', {}).get('changePct')
-    kioxia = stocks.get('285A.T', {}).get('changePct')
-
     items = []
-    if softbank is not None:
-        items.append({'name': 'AI/科技投资', 'pct': softbank,
-                      'ref': f'软银集团 {softbank:+.2f}%（单一龙头）'})
-    if tokyoelec is not None:
-        items.append({'name': '半导体设备', 'pct': tokyoelec,
-                      'ref': f'东京电子 {tokyoelec:+.2f}%（单一龙头）'})
-    if kioxia is not None:
-        items.append({'name': '存储', 'pct': kioxia,
-                      'ref': f'铠侠 {kioxia:+.2f}%（单一龙头）'})
-
+    for bname, members in JP_BOARDS:
+        pts, detail = [], []
+        for tc, cn, std in members:
+            sp = stocks.get(std, {}).get('changePct')
+            if sp is None:
+                continue
+            pts.append(sp)
+            detail.append(f'{cn}{sp:+.2f}%')
+        if not pts:
+            continue
+        avg = round(sum(pts) / len(pts), 2)
+        items.append({'name': bname, 'pct': avg, 'ref': '、'.join(detail) + f'（{len(pts)}只均值）'})
     return {'key': 'jp', 'name': '日经',
             'indices': [{'name': '日经225', 'changePct': n225}] if n225 is not None else [],
             'items': items}

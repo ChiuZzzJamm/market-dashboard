@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 """
-根据腾讯实时行情文件（/tmp/us_quote.txt、/tmp/us_stocks.txt）更新 data.js 中的 us 与 panorama.us。
-行情文件通过以下命令获取：
-  curl -s --max-time 30 "http://qt.gtimg.cn/q=usDJI,usIXIC,usINX,usSOXX,usXLK,usXLF,usXLE,usXLU,usXLC,usXRT,usCLOU,usBOTZ,usBITO,usGLD,usCOPX,usREMX,usMOO,usMAGS,usKWEB,usSMH,usUSO,usTLT" | iconv -f gb2312 -t utf-8 > /tmp/us_quote.txt
-  curl -s --max-time 30 "http://qt.gtimg.cn/q=usTSLA,usAMZN,usNVDA" | iconv -f gb2312 -t utf-8 > /tmp/us_stocks.txt
+根据腾讯实时行情更新 data.js 中的 us 与 panorama.us。
+美股板块采用「中文概念 -> 真实成分股」聚合口径（见 US_SECTORS）：板块涨跌幅 = 成分股涨跌幅均值，
+成分股 TOP 直接展示真实个股（不再用 ETF 充当板块或成分股）。指数参考（道指/纳指/标普/SOXX/金龙）
+单独抓取，不混入板块。行情优先用 /tmp 预取文件，缺失成分股/指数时代码自动实时抓取兜底（零新增依赖）。
 """
-import json, re, os
+import json, re, os, argparse
 from datetime import datetime, timezone, timedelta
 from common import load_dashboard_data, http_get
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(BASE)
+
+# 测试用：--dry-run 仅打印计算结果、不写回 data.js，并跳过美股盘中闸门（生产调用不传此参数）
+_PARSER = argparse.ArgumentParser(description='美股收盘数据更新（零 MCP 依赖）')
+_PARSER.add_argument('--dry-run', action='store_true', help='只打印计算结果，不写回 data.js（并跳过盘中闸门，仅供测试）')
+ARGS = _PARSER.parse_args()
 
 QUOTE_FILES = ['/tmp/us_quote.txt', '/tmp/us_stocks.txt']
 
@@ -42,10 +47,106 @@ def parse_quote_file(path):
     return parse_quote_text(open(path, encoding='utf-8').read())
 
 
-US_QUOTE_SETS = [
-    'usDJI,usIXIC,usINX,usSOXX,usXLK,usXLF,usXLE,usXLU,usXLC,usXRT,usCLOU,usBOTZ,usBITO,usGLD,usCOPX,usREMX,usMOO,usMAGS,usKWEB,usSMH,usUSO,usTLT',
-    'usTSLA,usAMZN,usNVDA',
+# ---------- 美股板块：中文概念 -> 真实成分股（腾讯代码，不带后缀）----------
+# 板块涨跌幅 = 成分股涨跌幅简单平均（更接近板块真实表现，避免单一 ETF 的跟踪误差/持仓偏差）；
+# 成分股 TOP 直接展示这些真实个股，不再出现任何 ETF（ETF 仅作指数参考，不进板块）。
+US_SECTORS = [
+    {"name": "AI 算力", "constituents": [
+        {"code": "usNVDA", "name": "NVDA"}, {"code": "usAMD", "name": "AMD"},
+        {"code": "usAVGO", "name": "AVGO"}, {"code": "usARM", "name": "ARM"},
+        {"code": "usSMCI", "name": "SMCI"}]},
+    {"name": "CPO / 光模块", "constituents": [
+        {"code": "usCOHR", "name": "COHR"}, {"code": "usLITE", "name": "LITE"},
+        {"code": "usCIEN", "name": "CIEN"}, {"code": "usFN", "name": "FNSR"},
+        {"code": "usANET", "name": "ANET"}]},
+    {"name": "半导体", "constituents": [
+        {"code": "usINTC", "name": "INTC"}, {"code": "usTSM", "name": "TSM"},
+        {"code": "usQCOM", "name": "QCOM"}, {"code": "usTXN", "name": "TXN"},
+        {"code": "usMRVL", "name": "MRVL"}]},
+    {"name": "存储", "constituents": [
+        {"code": "usMU", "name": "MU"}, {"code": "usWDC", "name": "WDC"},
+        {"code": "usSTX", "name": "STX"}, {"code": "usSNDK", "name": "SNDK"}]},
+    {"name": "电网 / 电力设备", "constituents": [
+        {"code": "usETN", "name": "ETN"}, {"code": "usHUBB", "name": "HUBB"},
+        {"code": "usPWR", "name": "PWR"}, {"code": "usGEV", "name": "GEV"}]},
+    {"name": "核电", "constituents": [
+        {"code": "usCEG", "name": "CEG"}, {"code": "usVST", "name": "VST"},
+        {"code": "usTLN", "name": "TLN"}, {"code": "usOKLO", "name": "OKLO"},
+        {"code": "usSMR", "name": "SMR"}]},
+    {"name": "数据中心", "constituents": [
+        {"code": "usDLR", "name": "DLR"}, {"code": "usEQIX", "name": "EQIX"},
+        {"code": "usVRT", "name": "VRT"}]},
+    {"name": "云计算 / 软件", "constituents": [
+        {"code": "usMSFT", "name": "MSFT"}, {"code": "usAMZN", "name": "AMZN"},
+        {"code": "usGOOGL", "name": "GOOGL"}, {"code": "usORCL", "name": "ORCL"},
+        {"code": "usCRM", "name": "CRM"}]},
+    {"name": "商业航天", "constituents": [
+        {"code": "usRKLB", "name": "RKLB"}, {"code": "usLUNR", "name": "LUNR"},
+        {"code": "usASTS", "name": "ASTS"}, {"code": "usSPCE", "name": "SPCE"}]},
+    {"name": "机器人", "constituents": [
+        {"code": "usROK", "name": "ROK"}, {"code": "usISRG", "name": "ISRG"},
+        {"code": "usTER", "name": "TER"}, {"code": "usZBRA", "name": "ZBRA"}]},
+    {"name": "自动驾驶", "constituents": [
+        {"code": "usMBLY", "name": "MBLY"}, {"code": "usAPTV", "name": "APTV"},
+        {"code": "usGOOGL", "name": "GOOGL"}]},
+    {"name": "军工", "constituents": [
+        {"code": "usLMT", "name": "LMT"}, {"code": "usRTX", "name": "RTX"},
+        {"code": "usNOC", "name": "NOC"}, {"code": "usGD", "name": "GD"},
+        {"code": "usHWM", "name": "HWM"}]},
+    {"name": "新能源 / 光伏", "constituents": [
+        {"code": "usFSLR", "name": "FSLR"}, {"code": "usENPH", "name": "ENPH"},
+        {"code": "usSEDG", "name": "SEDG"}, {"code": "usRUN", "name": "RUN"},
+        {"code": "usNEE", "name": "NEE"}]},
+    {"name": "锂 / 电池材料", "constituents": [
+        {"code": "usALB", "name": "ALB"}, {"code": "usSQM", "name": "SQM"},
+        {"code": "usLAC", "name": "LAC"}]},
+    {"name": "铜 / 有色", "constituents": [
+        {"code": "usFCX", "name": "FCX"}, {"code": "usSCCO", "name": "SCCO"},
+        {"code": "usTECK", "name": "TECK"}, {"code": "usRIO", "name": "RIO"}]},
+    {"name": "石油", "constituents": [
+        {"code": "usXOM", "name": "XOM"}, {"code": "usCVX", "name": "CVX"},
+        {"code": "usCOP", "name": "COP"}, {"code": "usEOG", "name": "EOG"}]},
+    {"name": "天然气", "constituents": [
+        {"code": "usLNG", "name": "LNG"}, {"code": "usEQT", "name": "EQT"},
+        {"code": "usKMI", "name": "KMI"}, {"code": "usOKE", "name": "OKE"}]},
+    {"name": "黄金 / 贵金属", "constituents": [
+        {"code": "usNEM", "name": "NEM"}, {"code": "usAEM", "name": "AEM"},
+        {"code": "usKGC", "name": "KGC"}, {"code": "usGFI", "name": "GFI"}]},
+    {"name": "银行金融", "constituents": [
+        {"code": "usJPM", "name": "JPM"}, {"code": "usBAC", "name": "BAC"},
+        {"code": "usWFC", "name": "WFC"}, {"code": "usGS", "name": "GS"},
+        {"code": "usMS", "name": "MS"}]},
+    {"name": "生物医药", "constituents": [
+        {"code": "usLLY", "name": "LLY"}, {"code": "usJNJ", "name": "JNJ"},
+        {"code": "usPFE", "name": "PFE"}, {"code": "usMRK", "name": "MRK"}]},
+    {"name": "消费", "constituents": [
+        {"code": "usWMT", "name": "WMT"}, {"code": "usCOST", "name": "COST"},
+        {"code": "usPG", "name": "PG"}, {"code": "usKO", "name": "KO"},
+        {"code": "usMCD", "name": "MCD"}]},
+    {"name": "稀土 / 战略金属", "constituents": [
+        {"code": "usMP", "name": "MP"}, {"code": "usUUUU", "name": "UUUU"}]},
+    {"name": "加密货币 / 比特币", "constituents": [
+        {"code": "usCOIN", "name": "COIN"}, {"code": "usMSTR", "name": "MSTR"},
+        {"code": "usRIOT", "name": "RIOT"}, {"code": "usMARA", "name": "MARA"}]},
+    {"name": "中概股", "constituents": [
+        {"code": "usBABA", "name": "BABA"}, {"code": "usJD", "name": "JD"},
+        {"code": "usPDD", "name": "PDD"}, {"code": "usBIDU", "name": "BIDU"},
+        {"code": "usNIO", "name": "NIO"}]},
+    {"name": "电动车", "constituents": [
+        {"code": "usTSLA", "name": "TSLA"}, {"code": "usRIVN", "name": "RIVN"},
+        {"code": "usF", "name": "F"}, {"code": "usGM", "name": "GM"}]},
 ]
+
+# 指数参考（用于 us.indices 展示，独立口径，不混入板块）
+US_INDEX_CODES = ['usDJI', 'usIXIC', 'usINX', 'usSOXX', 'usKWEB']
+
+# 全部需抓代码（指数 + 所有成分股），分块用于实时兜底抓取
+_ALL_US_CODES = list(US_INDEX_CODES)
+for _s in US_SECTORS:
+    for _c in _s['constituents']:
+        if _c['code'] not in _ALL_US_CODES:
+            _ALL_US_CODES.append(_c['code'])
+US_QUOTE_SETS = [','.join(_ALL_US_CODES[i:i + 50]) for i in range(0, len(_ALL_US_CODES), 50)]
 
 
 def fetch_us_quotes_live():
@@ -201,15 +302,13 @@ if not q:
     print('[info] /tmp 美股行情缺失，改为实时抓取腾讯行情...')
     q = fetch_us_quotes_live()
 
-# 补全 lead2 龙头个股行情：/tmp 预取文件未含这些代码时，实时抓取合并（避免静默缺失导致美股只 1 个代表标的）
-_lead2_codes = []
-for _c in PANO_ITEMS:
-    if 'lead2' in _c and _c['lead2'].get('code') and _c['lead2']['code'] not in q:
-        _lead2_codes.append(_c['lead2']['code'])
-if _lead2_codes:
-    _txt = http_get('http://qt.gtimg.cn/q=' + ','.join(_lead2_codes), decode='gb2312')
-    if _txt:
-        q.update(parse_quote_text(_txt))
+# 补全行情：/tmp 预取文件未含的成分股/指数代码时，实时抓取合并（避免静默缺失）
+_missing = [c for c in _ALL_US_CODES if c not in q]
+if _missing:
+    for i in range(0, len(_missing), 50):
+        _txt = http_get('http://qt.gtimg.cn/q=' + ','.join(_missing[i:i + 50]), decode='gb2312')
+        if _txt:
+            q.update(parse_quote_text(_txt))
 
 if not q:
     print('no quote data found, skip update')
@@ -218,7 +317,7 @@ if not q:
 # 美股盘中闸门：美东常规交易时段内（工作日 9:30-16:00 ET）行情为盘中数据，
 # 写入会把盘中误标为「收盘」并污染看板（曾致 9/15 晚手动实跑写入盘中数据）。
 # 直接保留原数据退出，不写 data.js 任何字段。
-if us_market_open(datetime.now(timezone.utc)):
+if us_market_open(datetime.now(timezone.utc)) and not ARGS.dry_run:
     print('[warn] 当前处于美股常规交易时段（美东），行情为盘中数据而非收盘，保留原数据不写入')
     raise SystemExit(0)
 
@@ -232,55 +331,30 @@ def pct(code):
 def point(code):
     return get(code).get('point')
 
-# 板块映射：panorama.us.items 与 us.sectorsUp/Down 共用同一组口径
-PANO_ITEMS = [
-    {"name": "AI 软件 / 云", "code": "usCLOU", "ref": "CLOU 【主题ETF】", "lead2": {"code": "usMSFT", "name": "MSFT"}},
-    {"name": "AI 硬件 / 英伟达", "code": "usNVDA", "ref": "NVDA 个股【代表标的】", "lead2": {"code": "usAMD", "name": "AMD"}},
-    {"name": "科技七巨头", "code": "usMAGS", "ref": "MAGS 【主题ETF】", "lead2": {"code": "usAAPL", "name": "AAPL"}},
-    {"name": "电动汽车 / 特斯拉", "code": "usTSLA", "ref": "TSLA 个股【代表标的】", "lead2": {"code": "usNIO", "name": "NIO"}},
-    {"name": "机器人 / 自动化", "code": "usBOTZ", "ref": "BOTZ 【主题ETF】", "lead2": {"code": "usISRG", "name": "ISRG"}},
-    {"name": "加密货币", "code": "usBITO", "ref": "BITO 【主题ETF】", "lead2": {"code": "usCOIN", "name": "COIN"}},
-    {"name": "综合电商 / 亚马逊", "code": "usAMZN", "ref": "AMZN 个股【代表标的】", "lead2": {"code": "usBABA", "name": "BABA"}},
-    {"name": "消费 / 零售", "code": "usXRT", "ref": "XRT 【行业ETF】", "lead2": {"code": "usHD", "name": "HD"}},
-    {"name": "金融", "code": "usXLF", "ref": "XLF 【行业ETF】", "lead2": {"code": "usJPM", "name": "JPM"}},
-    {"name": "信息技术", "code": "usXLK", "ref": "XLK 【行业ETF】", "lead2": {"code": "usMSFT", "name": "MSFT"}},
-    {"name": "通信服务", "code": "usXLC", "ref": "XLC 【行业ETF】", "lead2": {"code": "usGOOGL", "name": "GOOGL"}},
-    {"name": "半导体", "code": "usSOXX", "ref": "SOXX 【商品ETF】", "lead2": {"code": "usAMD", "name": "AMD"}},
-    {"name": "黄金 / 贵金属", "code": "usGLD", "ref": "GLD 【商品ETF】", "lead2": {"code": "usNEM", "name": "NEM"}},
-    {"name": "小金属 / 铜", "code": "usCOPX", "ref": "COPX 【主题ETF】", "lead2": {"code": "usFCX", "name": "FCX"}},
-    {"name": "稀土 / 战略金属", "code": "usREMX", "ref": "REMX 【主题ETF】", "lead2": {"code": "usMP", "name": "MP"}},
-    {"name": "石油 / 能源", "code": "usUSO", "codes": ["usUSO", "usXLE"], "ref_tpl": "USO {usUSO:+.2f}%【商品ETF】；XLE {usXLE:+.2f}%【行业ETF】", "lead2": {"code": "usXOM", "name": "XOM"}},
-    {"name": "粮食 / 农业", "code": "usMOO", "ref": "MOO 【主题ETF】", "lead2": {"code": "usDE", "name": "DE"}},
-    {"name": "电力 / 公用事业", "code": "usXLU", "ref": "XLU 【行业ETF】", "lead2": {"code": "usNEE", "name": "NEE"}},
-    {"name": "中概股", "code": "usKWEB", "ref": "KWEB 【主题ETF】", "lead2": {"code": "usBABA", "name": "BABA"}},
-]
-
+# 板块映射：panorama.us.items 与 us.sectorsUp/Down 共用同一组口径（真实成分股聚合，非 ETF）
 pano_items = []
-for cfg in PANO_ITEMS:
+for cfg in US_SECTORS:
     name = cfg['name']
-    c = cfg['code']
-    p = pct(c)
-    if 'codes' in cfg:
-        vals = {cd: pct(cd) for cd in cfg['codes']}
-        try:
-            ref = cfg['ref_tpl'].format(**vals)
-        except Exception:
-            ref = cfg['ref_tpl']
-    else:
-        ref = cfg['ref']
-    # 代表标的 TOP：主标的（板块自身 ETF/个股）+ 龙头个股（lead2）
-    main_rep = {"name": (c[2:] if c.startswith('us') else c), "changePct": p}
-    lead2 = None
-    if 'lead2' in cfg:
-        lp = pct(cfg['lead2']['code'])
-        if lp is not None:
-            lead2 = {"name": cfg['lead2']['name'], "changePct": lp}
-    pano_items.append({"name": name, "pct": p, "ref": ref, "main_rep": main_rep, "lead2": lead2})
+    vals = []  # (个股名, 涨跌幅)
+    for c in cfg['constituents']:
+        cp = pct(c['code'])
+        if cp is not None:
+            vals.append((c['name'], cp))
+    if not vals:
+        continue  # 成分股全无行情则跳过该板块
+    avg = round(sum(v[1] for v in vals) / len(vals), 2)
+    pano_items.append({
+        "name": name,
+        "pct": avg,
+        "ref": f"{len(vals)}只成分股均值",
+        "constituents": [{"name": n, "changePct": p} for n, p in vals],
+    })
 
 # 用于 us.sectorsUp/Down：排除没有 pct 的项目
 valid_items = [it for it in pano_items if it['pct'] is not None]
-sorted_up = sorted(valid_items, key=lambda x: x['pct'], reverse=True)[:5]
-sorted_down = sorted(valid_items, key=lambda x: x['pct'])[:5]
+# 涨榜只收正值的板块、跌榜只收负值的板块，避免微涨板块因排序被误列入「领跌」
+sorted_up = sorted([it for it in valid_items if it['pct'] > 0], key=lambda x: x['pct'], reverse=True)
+sorted_down = sorted([it for it in valid_items if it['pct'] < 0], key=lambda x: x['pct'])
 
 # 保留旧 us 中各板块的 reason（周一等场景下，reason 由 07:30 任务写入，周末脚本不应覆盖）
 old_reason_map = {}
@@ -288,14 +362,14 @@ for s in D.get('us', {}).get('sectorsUp', []) + D.get('us', {}).get('sectorsDown
     if 'reason' in s:
         old_reason_map[s['name']] = s['reason']
 
-def to_us_sector(it):
-    # 代表标的（1-2 只）：主标的（ETF/个股）+ 龙头个股（lead2），输出 tops 数组供页面 TOP 胶囊展示
-    tops = []
-    if it.get("main_rep") and it["main_rep"].get("changePct") is not None:
-        tops.append(it["main_rep"])
-    if it.get("lead2") and it["lead2"].get("changePct") is not None:
-        tops.append(it["lead2"])
-    obj = {"name": it["name"], "pct": it["pct"], "tops": tops}
+def to_us_sector(it, is_up):
+    # 成分股 TOP：展示该板块真实成分股；涨板块按涨幅降序取前5（板块领涨），跌板块按涨幅升序取前5（板块领跌）
+    cons = it.get("constituents") or []
+    if is_up:
+        tops = sorted(cons, key=lambda x: x["changePct"], reverse=True)[:5]
+    else:
+        tops = sorted(cons, key=lambda x: x["changePct"])[:5]
+    obj = {"name": it["name"], "pct": it["pct"], "tops": tops, "ref": it.get("ref")}
     if it["name"] in old_reason_map:
         obj["reason"] = old_reason_map[it["name"]]
     return obj
@@ -326,8 +400,9 @@ if trade_iso != "未知日期":
             print(f"[warn] 行情日期 {trade_iso} 早于应更新的最近交易日 {_expected.isoformat()}，"
                   f"判定为休市/数据过期，保留上一交易日数据，不覆盖")
             D['updatedAt'] = f"{_now_bj.strftime('%Y-%m-%d %H:%M')}（美股休市/行情过期，保留上一交易日数据）"
-            with open('data.js', 'w', encoding='utf-8') as f:
-                f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, indent=2) + ';\n')
+            if not ARGS.dry_run:
+                with open('data.js', 'w', encoding='utf-8') as f:
+                    f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, indent=2) + ';\n')
             print('us market closed/stale, kept previous us data')
             raise SystemExit(0)
     except Exception:
@@ -371,13 +446,13 @@ us_obj = {
     "breadth": {
         "up": None, "down": None, "flat": None,
         "limitUp": None, "limitDown": None,
-        "volumeText": "标普500 板块涨跌互现，ETF 口径仅供参考"
+        "volumeText": "板块涨跌为美股成分股均值口径，覆盖 AI/半导体/能源/金融等 20+ 产业方向。"
     },
-    "sectorsUp": [to_us_sector(s) for s in sorted_up],
-    "sectorsDown": [to_us_sector(s) for s in sorted_down],
-    "sectorNote": "板块涨跌幅为 SPDR 行业 ETF 口径与主题 ETF 口径，与路透、华尔街见闻等媒体报道口径基本一致。",
+    "sectorsUp": [to_us_sector(s, True) for s in sorted_up],
+    "sectorsDown": [to_us_sector(s, False) for s in sorted_down],
+    "sectorNote": "板块涨跌幅为同板块多只美股真实成分股涨跌幅均值（非 ETF 口径），更贴近板块真实表现。",
     "fundFlows": [
-        {"title": "隔夜美股主线", "detail": f"领涨 {sorted_up[0]['name']}{fmt_pct(sorted_up[0]['pct'])}，资金偏好{'AI硬件与周期' if sorted_up[0]['name'] in ['半导体','机器人 / 自动化','AI 硬件 / 英伟达'] else sorted_up[0]['name']}方向。"},
+        {"title": "隔夜美股主线", "detail": f"领涨 {sorted_up[0]['name']}{fmt_pct(sorted_up[0]['pct'])}，资金偏好{'AI硬件与算力' if any(k in sorted_up[0]['name'] for k in ['AI', '半导体', '算力', 'CPO']) else sorted_up[0]['name']}方向。"},
         {"title": "承压方向", "detail": f"{sorted_down[0]['name']}{fmt_pct(sorted_down[0]['pct'])}领跌，注意对 A 股映射拖累。"}
     ] if (sorted_up and sorted_down) else [],
     "bullNews": D.get('us', {}).get('bullNews', []),
@@ -401,6 +476,15 @@ else:
     D['updatedAt'] = f"{datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d %H:%M')}（美股收盘数据已自动更新）"
     print(f"updated us/panorama.us for {trade_iso}")
 
-# 写回 data.js
-with open('data.js', 'w', encoding='utf-8') as f:
-    f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, indent=2) + ';\n')
+# 写回 data.js（--dry-run 仅打印，不写盘）
+if ARGS.dry_run:
+    print('[dry-run] 不写回 data.js')
+    print(json.dumps({
+        'tradeDate': us_obj.get('tradeDate'),
+        'sectorsUp': [{'name': s['name'], 'pct': s['pct'], 'tops': s.get('tops')} for s in us_obj.get('sectorsUp', [])],
+        'sectorsDown': [{'name': s['name'], 'pct': s['pct'], 'tops': s.get('tops')} for s in us_obj.get('sectorsDown', [])],
+        'panorama_us_items': [{'name': i['name'], 'pct': i['pct'], 'n': len(i.get('constituents', []))} for i in pano_items],
+    }, ensure_ascii=False, indent=2))
+else:
+    with open('data.js', 'w', encoding='utf-8') as f:
+        f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, indent=2) + ';\n')
