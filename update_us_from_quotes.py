@@ -272,7 +272,13 @@ for s in D.get('us', {}).get('sectorsUp', []) + D.get('us', {}).get('sectorsDown
         old_reason_map[s['name']] = s['reason']
 
 def to_us_sector(it):
-    obj = {"name": it["name"], "pct": it["pct"], "leader": it["ref"]}
+    lead = it["ref"]
+    # leader 必须带涨跌幅（页面异动原因块直接展示）；ref 模板未含 % 时用板块自身涨跌幅补上
+    if it["pct"] is not None and '%' not in lead:
+        tk = lead.split(' ', 1)[0]
+        rest = lead[len(tk):].strip()
+        lead = f"{tk} {it['pct']:+.2f}% {rest}".rstrip()
+    obj = {"name": it["name"], "pct": it["pct"], "leader": lead}
     if it["name"] in old_reason_map:
         obj["reason"] = old_reason_map[it["name"]]
     return obj

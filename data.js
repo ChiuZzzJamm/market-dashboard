@@ -952,7 +952,7 @@ window.DASHBOARD_DATA ={
       {
         "name": "AI 硬件 / 英伟达",
         "pct": 0.82,
-        "leader": "NVDA 个股【代表标的】",
+        "leader": "NVDA +0.82% 个股【代表标的】",
         "reason": {
           "title": "议息前资金抱团AI硬件 NVDA续弹",
           "detail": "9/16 NVDA +0.82%领涨，议息前资金缩圈至确定性AI硬件，博通、AMD、台积电ADR跟涨；国内《电子信息十五五规划》+算力网大会给算力PCB/服务器政策底座，硬件端连续两日修复。"
@@ -961,7 +961,7 @@ window.DASHBOARD_DATA ={
       {
         "name": "半导体",
         "pct": 0.64,
-        "leader": "SOXX 【商品ETF】",
+        "leader": "SOXX +0.64% 【商品ETF】",
         "reason": {
           "title": "费半连日修复 设备链低吸承接",
           "detail": "9/16 SOXX +0.64%自9/14 -5.63%后连续修复，阿斯麦、应用材料、科磊等设备股逢低承接；关税冲击情绪释放后估值修复，日本光刻胶提价催化国产替代链。"
@@ -970,7 +970,7 @@ window.DASHBOARD_DATA ={
       {
         "name": "电动汽车 / 特斯拉",
         "pct": 0.42,
-        "leader": "TSLA 个股【代表标的】",
+        "leader": "TSLA +0.42% 个股【代表标的】",
         "reason": {
           "title": "TSLA逆市收红 Robotaxi预期支撑",
           "detail": "9/16 TSLA +0.42%逆市收红，Robotaxi路测扩张与储能订单预期支撑，特斯拉、Rivian等电动车概念在纳指持平中显相对韧性，资金偏向高β成长。"
@@ -979,7 +979,7 @@ window.DASHBOARD_DATA ={
       {
         "name": "机器人 / 自动化",
         "pct": 0.26,
-        "leader": "BOTZ 【主题ETF】",
+        "leader": "BOTZ +0.26% 【主题ETF】",
         "reason": {
           "title": "硬科技外溢 自动化设备获配置",
           "detail": "9/16 BOTZ +0.26%微涨，AI算力资本开支外溢至工业机器人/自动化设备，发那科、直觉外科、ABB获配置；与半导体硬件反弹同属硬科技抱团外溢。"
@@ -988,7 +988,7 @@ window.DASHBOARD_DATA ={
       {
         "name": "信息技术",
         "pct": 0.1,
-        "leader": "XLK 【行业ETF】",
+        "leader": "XLK +0.10% 【行业ETF】",
         "reason": {
           "title": "科技权重企稳 议息前守大型股",
           "detail": "9/16 XLK +0.10%微涨，议息前资金守大型科技权重，微软、苹果、英伟达等软硬件龙头企稳；SaaS（CRM、甲骨文）订单稳健对冲利率扰动。"
@@ -1008,7 +1008,7 @@ window.DASHBOARD_DATA ={
       {
         "name": "金融",
         "pct": -1.62,
-        "leader": "XLF 【行业ETF】",
+        "leader": "XLF -1.62% 【行业ETF】",
         "reason": {
           "title": "加息预期压制 银行股遭减配",
           "detail": "9/16 XLF -1.62%领跌权重，美联储加息25bp概率约90%、10Y美债近5%抬升融资成本与贴现率；摩根大通、高盛、美国银行等承压，净息差与让利预期叠加。"
@@ -1017,7 +1017,7 @@ window.DASHBOARD_DATA ={
       {
         "name": "粮食 / 农业",
         "pct": -1.41,
-        "leader": "MOO 【主题ETF】",
+        "leader": "MOO -1.41% 【主题ETF】",
         "reason": {
           "title": "农业获利了结 防御属性失效",
           "detail": "9/16 MOO -1.41%回吐前日涨幅，极端天气与化肥需求叙事暂歇、缺乏新催化，迪尔、ADM、邦吉等农业龙头遭获利了结；道指大跌中防御属性失效。"
@@ -1026,7 +1026,7 @@ window.DASHBOARD_DATA ={
       {
         "name": "稀土 / 战略金属",
         "pct": -1.01,
-        "leader": "REMX 【主题ETF】",
+        "leader": "REMX -1.01% 【主题ETF】",
         "reason": {
           "title": "美元走强 战略金属随有色回撤",
           "detail": "9/16 REMX -1.01%走弱，美元指数反弹压制战略金属价格、LME铜自高位回撤；MP Materials、Lynas等稀土矿企随有色普跌，国内旺季需求兑现偏慢。"
@@ -1035,7 +1035,7 @@ window.DASHBOARD_DATA ={
       {
         "name": "综合电商 / 亚马逊",
         "pct": -0.99,
-        "leader": "AMZN 个股【代表标的】",
+        "leader": "AMZN -0.99% 个股【代表标的】",
         "reason": {
           "title": "消费走弱 AMZN延续获利了结",
           "detail": "9/16 AMZN -0.99%延续回落，美国消费动能边际放缓、信用卡违约率抬头压制可选消费，AWS资本开支担忧叠加；亚马逊、易贝跟随零售主线同步下修。"
