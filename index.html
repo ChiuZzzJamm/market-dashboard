@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609171754"></script>
+<script src="data.js?v=202609171807"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -82,7 +82,12 @@
   .reason-meta .pct { font-size: 12px; font-weight: 800; color: #fff; border-radius: 999px; padding: 3px 12px; }
   .reason-meta .pct.u { background: var(--up); }
   .reason-meta .pct.d { background: var(--down); }
-  .reason-meta .lead { font-size: 12px; color: var(--accent-deep); font-weight: 700; background: var(--paper); border: 1px dashed var(--accent-deep); border-radius: 999px; padding: 3px 12px; }
+  /* 板块成分股 TOP 列表：标题 + 每只为红涨绿跌小胶囊（白字） */
+  .reason-tops { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 10px; }
+  .reason-tops .tops-h { font-size: 12px; color: var(--ink2); font-weight: 700; margin-right: 2px; }
+  .reason-tops .tchip { font-size: 11px; font-weight: 700; color: #fff; border-radius: 999px; padding: 2px 9px; }
+  .reason-tops .tchip.u { background: var(--up); }
+  .reason-tops .tchip.d { background: var(--down); }
   .reason-body { font-size: 13.5px; color: var(--ink); }
   .reason-body b.label { display: block; margin-bottom: 2px; color: var(--ink2); }
   .src-line { font-size: 12px; color: var(--ink2); margin-top: 10px; }
@@ -240,23 +245,39 @@ function renderBreadth(b) {
     '<span style="color:var(--ink2)">' + esc(b.volumeText || '') + '</span></div>';
 }
 
-function leaderLabel(s, isUp) {
-  var l = s.leader;
-  if (!l) return '';
-  if (typeof l === 'object') {
-    // 东财 f128/f136 = 板块内领涨股，f140/f141 = 板块内领跌股。
-    // 涨板块显示领涨股；跌板块优先显示领跌股（旧数据无 laggard 时回退领涨股）
-    if (!isUp && l.laggard && l.laggard.name) {
-      var g = l.laggard, gt = g.name;
-      if (g.changePct !== null && g.changePct !== undefined) gt += ' ' + (g.changePct >= 0 ? '+' : '') + g.changePct + '%';
-      return '板块领跌股：' + gt;
+// 板块成分股 TOP 列表：A股 tops 含成分股 TOP5（涨前5/跌前5），美股 tops 含代表标的（1-2只）。
+// 兼容旧数据：仅有 leader 字段时按旧规则归一化。
+function renderTops(s, isUp) {
+  var arr = s.tops || null;
+  if (!arr || !arr.length) {
+    var l = s.leader;
+    if (typeof l === 'object' && l) {
+      if (!isUp && l.laggard && l.laggard.name) {
+        var g = l.laggard;
+        arr = [g.name + ' ' + (g.changePct >= 0 ? '+' : '') + g.changePct + '%'];
+      } else if (l.name) {
+        arr = [l.name + (l.changePct !== null && l.changePct !== undefined ? ' ' + (l.changePct >= 0 ? '+' : '') + l.changePct + '%' : '')];
+      }
+    } else if (typeof l === 'string' && l.trim()) {
+      arr = [(isUp ? '领涨标的：' : '领跌标的：') + l.trim()];
     }
-    var t = l.name || '';
-    if (l.changePct !== null && l.changePct !== undefined) t += ' ' + (l.changePct >= 0 ? '+' : '') + l.changePct + '%';
-    return t ? '板块领涨股：' + t : '';
   }
-  if (typeof l === 'string' && l.trim()) return (isUp ? '领涨标的' : '领跌标的') + '：' + l.trim();
-  return '';
+  if (!arr || !arr.length) return '';
+  var n = Math.min(arr.length, 5);
+  var label = isUp ? '板块领涨 TOP' + n : '板块领跌 TOP' + n;
+  var chips = arr.slice(0, 5).map(function (it) {
+    var name, pct;
+    if (typeof it === 'object') { name = it.name || ''; pct = it.changePct; }
+    else if (typeof it === 'string') {
+      var mm = it.match(/^(.*?)\s*([+-]?\d+(?:\.\d+)?%?)\s*$/);
+      if (mm) { name = mm[1].replace(/[：:]$/, ''); pct = parseFloat(mm[2]); }
+      else { name = it; pct = null; }
+    }
+    var cls = (pct === null || pct === undefined) ? '' : (pct >= 0 ? ' u' : ' d');
+    var pctStr = (pct === null || pct === undefined) ? '' : ' ' + (pct >= 0 ? '+' : '') + pct + '%';
+    return '<span class="tchip' + cls + '">' + esc(name) + pctStr + '</span>';
+  }).join('');
+  return '<div class="reason-tops"><span class="tops-h">' + label + '</span>' + chips + '</div>';
 }
 
 function renderReasons(list, tradeDate, isUp) {
@@ -269,12 +290,11 @@ function renderReasons(list, tradeDate, isUp) {
     var pctHtml = (s.pct !== null && s.pct !== undefined)
       ? '<span class="pct ' + (s.pct >= 0 ? 'u' : 'd') + '">' + esc(s.name) + ' ' + fmtPct(s.pct) + '</span>'
       : '<span class="sec">' + esc(s.name) + '</span>';
-    var lead = leaderLabel(s, isUp);
     html += '<div class="reason-block"><div class="reason-head">' +
       '<span class="date-tag">' + esc(tag) + '异动原因</span>' +
       '<span class="kw">' + esc(s.reason.title) + '</span></div>' +
       '<div class="reason-meta">' + pctHtml +
-      (lead ? '<span class="lead">' + esc(lead) + '</span>' : '') + '</div>' +
+      '</div>' + renderTops(s, isUp) +
       '<div class="reason-body"><b class="label">行业原因：</b>' + esc(s.reason.detail) + '</div></div>';
   });
   return html;

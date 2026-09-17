@@ -201,6 +201,16 @@ if not q:
     print('[info] /tmp 美股行情缺失，改为实时抓取腾讯行情...')
     q = fetch_us_quotes_live()
 
+# 补全 lead2 龙头个股行情：/tmp 预取文件未含这些代码时，实时抓取合并（避免静默缺失导致美股只 1 个代表标的）
+_lead2_codes = []
+for _c in PANO_ITEMS:
+    if 'lead2' in _c and _c['lead2'].get('code') and _c['lead2']['code'] not in q:
+        _lead2_codes.append(_c['lead2']['code'])
+if _lead2_codes:
+    _txt = http_get('http://qt.gtimg.cn/q=' + ','.join(_lead2_codes), decode='gb2312')
+    if _txt:
+        q.update(parse_quote_text(_txt))
+
 if not q:
     print('no quote data found, skip update')
     raise SystemExit(0)
@@ -224,25 +234,25 @@ def point(code):
 
 # 板块映射：panorama.us.items 与 us.sectorsUp/Down 共用同一组口径
 PANO_ITEMS = [
-    {"name": "AI 软件 / 云", "code": "usCLOU", "ref": "CLOU 【主题ETF】"},
-    {"name": "AI 硬件 / 英伟达", "code": "usNVDA", "ref": "NVDA 个股【代表标的】"},
-    {"name": "科技七巨头", "code": "usMAGS", "ref": "MAGS 【主题ETF】"},
-    {"name": "电动汽车 / 特斯拉", "code": "usTSLA", "ref": "TSLA 个股【代表标的】"},
-    {"name": "机器人 / 自动化", "code": "usBOTZ", "ref": "BOTZ 【主题ETF】"},
-    {"name": "加密货币", "code": "usBITO", "ref": "BITO 【主题ETF】"},
-    {"name": "综合电商 / 亚马逊", "code": "usAMZN", "ref": "AMZN 个股【代表标的】"},
-    {"name": "消费 / 零售", "code": "usXRT", "ref": "XRT 【行业ETF】"},
-    {"name": "金融", "code": "usXLF", "ref": "XLF 【行业ETF】"},
-    {"name": "信息技术", "code": "usXLK", "ref": "XLK 【行业ETF】"},
-    {"name": "通信服务", "code": "usXLC", "ref": "XLC 【行业ETF】"},
-    {"name": "半导体", "code": "usSOXX", "ref": "SOXX 【商品ETF】"},
-    {"name": "黄金 / 贵金属", "code": "usGLD", "ref": "GLD 【商品ETF】"},
-    {"name": "小金属 / 铜", "code": "usCOPX", "ref": "COPX 【主题ETF】"},
-    {"name": "稀土 / 战略金属", "code": "usREMX", "ref": "REMX 【主题ETF】"},
-    {"name": "石油 / 能源", "code": "usUSO", "codes": ["usUSO", "usXLE"], "ref_tpl": "USO {usUSO:+.2f}%【商品ETF】；XLE {usXLE:+.2f}%【行业ETF】"},
-    {"name": "粮食 / 农业", "code": "usMOO", "ref": "MOO 【主题ETF】"},
-    {"name": "电力 / 公用事业", "code": "usXLU", "ref": "XLU 【行业ETF】"},
-    {"name": "中概股", "code": "usKWEB", "ref": "KWEB 【主题ETF】"},
+    {"name": "AI 软件 / 云", "code": "usCLOU", "ref": "CLOU 【主题ETF】", "lead2": {"code": "usMSFT", "name": "MSFT"}},
+    {"name": "AI 硬件 / 英伟达", "code": "usNVDA", "ref": "NVDA 个股【代表标的】", "lead2": {"code": "usAMD", "name": "AMD"}},
+    {"name": "科技七巨头", "code": "usMAGS", "ref": "MAGS 【主题ETF】", "lead2": {"code": "usAAPL", "name": "AAPL"}},
+    {"name": "电动汽车 / 特斯拉", "code": "usTSLA", "ref": "TSLA 个股【代表标的】", "lead2": {"code": "usNIO", "name": "NIO"}},
+    {"name": "机器人 / 自动化", "code": "usBOTZ", "ref": "BOTZ 【主题ETF】", "lead2": {"code": "usISRG", "name": "ISRG"}},
+    {"name": "加密货币", "code": "usBITO", "ref": "BITO 【主题ETF】", "lead2": {"code": "usCOIN", "name": "COIN"}},
+    {"name": "综合电商 / 亚马逊", "code": "usAMZN", "ref": "AMZN 个股【代表标的】", "lead2": {"code": "usBABA", "name": "BABA"}},
+    {"name": "消费 / 零售", "code": "usXRT", "ref": "XRT 【行业ETF】", "lead2": {"code": "usHD", "name": "HD"}},
+    {"name": "金融", "code": "usXLF", "ref": "XLF 【行业ETF】", "lead2": {"code": "usJPM", "name": "JPM"}},
+    {"name": "信息技术", "code": "usXLK", "ref": "XLK 【行业ETF】", "lead2": {"code": "usMSFT", "name": "MSFT"}},
+    {"name": "通信服务", "code": "usXLC", "ref": "XLC 【行业ETF】", "lead2": {"code": "usGOOGL", "name": "GOOGL"}},
+    {"name": "半导体", "code": "usSOXX", "ref": "SOXX 【商品ETF】", "lead2": {"code": "usAMD", "name": "AMD"}},
+    {"name": "黄金 / 贵金属", "code": "usGLD", "ref": "GLD 【商品ETF】", "lead2": {"code": "usNEM", "name": "NEM"}},
+    {"name": "小金属 / 铜", "code": "usCOPX", "ref": "COPX 【主题ETF】", "lead2": {"code": "usFCX", "name": "FCX"}},
+    {"name": "稀土 / 战略金属", "code": "usREMX", "ref": "REMX 【主题ETF】", "lead2": {"code": "usMP", "name": "MP"}},
+    {"name": "石油 / 能源", "code": "usUSO", "codes": ["usUSO", "usXLE"], "ref_tpl": "USO {usUSO:+.2f}%【商品ETF】；XLE {usXLE:+.2f}%【行业ETF】", "lead2": {"code": "usXOM", "name": "XOM"}},
+    {"name": "粮食 / 农业", "code": "usMOO", "ref": "MOO 【主题ETF】", "lead2": {"code": "usDE", "name": "DE"}},
+    {"name": "电力 / 公用事业", "code": "usXLU", "ref": "XLU 【行业ETF】", "lead2": {"code": "usNEE", "name": "NEE"}},
+    {"name": "中概股", "code": "usKWEB", "ref": "KWEB 【主题ETF】", "lead2": {"code": "usBABA", "name": "BABA"}},
 ]
 
 pano_items = []
@@ -258,7 +268,14 @@ for cfg in PANO_ITEMS:
             ref = cfg['ref_tpl']
     else:
         ref = cfg['ref']
-    pano_items.append({"name": name, "pct": p, "ref": ref})
+    # 代表标的 TOP：主标的（板块自身 ETF/个股）+ 龙头个股（lead2）
+    main_rep = {"name": (c[2:] if c.startswith('us') else c), "changePct": p}
+    lead2 = None
+    if 'lead2' in cfg:
+        lp = pct(cfg['lead2']['code'])
+        if lp is not None:
+            lead2 = {"name": cfg['lead2']['name'], "changePct": lp}
+    pano_items.append({"name": name, "pct": p, "ref": ref, "main_rep": main_rep, "lead2": lead2})
 
 # 用于 us.sectorsUp/Down：排除没有 pct 的项目
 valid_items = [it for it in pano_items if it['pct'] is not None]
@@ -272,13 +289,13 @@ for s in D.get('us', {}).get('sectorsUp', []) + D.get('us', {}).get('sectorsDown
         old_reason_map[s['name']] = s['reason']
 
 def to_us_sector(it):
-    lead = it["ref"]
-    # leader 必须带涨跌幅（页面异动原因块直接展示）；ref 模板未含 % 时用板块自身涨跌幅补上
-    if it["pct"] is not None and '%' not in lead:
-        tk = lead.split(' ', 1)[0]
-        rest = lead[len(tk):].strip()
-        lead = f"{tk} {it['pct']:+.2f}% {rest}".rstrip()
-    obj = {"name": it["name"], "pct": it["pct"], "leader": lead}
+    # 代表标的（1-2 只）：主标的（ETF/个股）+ 龙头个股（lead2），输出 tops 数组供页面 TOP 胶囊展示
+    tops = []
+    if it.get("main_rep") and it["main_rep"].get("changePct") is not None:
+        tops.append(it["main_rep"])
+    if it.get("lead2") and it["lead2"].get("changePct") is not None:
+        tops.append(it["lead2"])
+    obj = {"name": it["name"], "pct": it["pct"], "tops": tops}
     if it["name"] in old_reason_map:
         obj["reason"] = old_reason_map[it["name"]]
     return obj

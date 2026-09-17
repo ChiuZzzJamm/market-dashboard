@@ -260,20 +260,23 @@ def to_f(v):
     except (TypeError, ValueError):
         return None
 
-def fetch_laggard(board_code):
-    """板块成分股按涨幅升序第一只有效股 = 板块内领跌股（过滤退市残留/停牌/无成交量行）"""
-    url = (f"{DELAY}?pn=1&pz=8&po=0&np=1&fltt=2&invt=2&fid=f3"
+def fetch_top5(board_code, po):
+    """板块成分股 TOP5：po=1 涨幅前5（领涨）；po=0 跌幅前5（领跌）。过滤退市残留/停牌/无成交量行。"""
+    url = (f"{DELAY}?pn=1&pz=6&po={po}&np=1&fltt=2&invt=2&fid=f3"
            f"&fs=b%3A{board_code}&fields=f2,f3,f5,f14&ut={UT}")
     d = get_json(url)
     if not d:
-        return None
+        return []
     rows = (d.get("data") or {}).get("diff") or []
+    out = []
     for r in rows:
         pct, vol, name = to_f(r.get("f3")), to_f(r.get("f5")), r.get("f14")
         if pct is None or vol is None or vol <= 0 or not name:
             continue
-        return {"name": name, "changePct": round(pct, 2)}
-    return None
+        out.append({"name": name, "changePct": round(pct, 2)})
+        if len(out) >= 5:
+            break
+    return out
 
 def build_sectors():
     up_rows = fetch_boards("f3", 1)    # 按涨跌幅降序 → 领涨
@@ -281,26 +284,21 @@ def build_sectors():
     down_rows = fetch_boards("f3", 0)  # 升序 → 领跌
     if not up_rows or not down_rows:
         return None, None
-    def mk(r, with_laggard=False):
+    def mk(r, po):
         pct = to_f(r.get("f3"))
         if pct is None:
             return None
         item = {"name": r.get("f14"), "pct": round(pct, 2)}
-        lp, lname = to_f(r.get("f136")), r.get("f128")
-        if lname and lp is not None:
-            item["leader"] = {"name": lname, "changePct": round(lp, 2)}
-        # 领跌板块补「板块内领跌股」（成分股中跌幅最大者）：clist 接口无领跌股字段，须查成分股
-        if with_laggard and r.get("f12"):
-            lg = fetch_laggard(r["f12"])
-            if lg:
-                item.setdefault("leader", {})["laggard"] = lg
+        # tops = 该板块成分股 TOP5（涨板块取涨幅前5，跌板块取跌幅前5）
+        if r.get("f12"):
+            item["tops"] = fetch_top5(r["f12"], po)
         return item
-    ups = [x for x in (mk(r) for r in up_rows) if x][:5]
+    ups = [x for x in (mk(r, 1) for r in up_rows) if x][:5]
     downs = []
     for r in down_rows:
         if len(downs) >= 5:
             break
-        x = mk(r, with_laggard=True)
+        x = mk(r, 0)
         if x:
             downs.append(x)
             time.sleep(1)  # 成分股请求间隔，防限流
