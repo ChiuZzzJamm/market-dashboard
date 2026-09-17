@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609171811"></script>
+<script src="data.js?v=202609171818"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -84,7 +84,7 @@
   .reason-meta .pct.d { background: var(--down); }
   /* 板块成分股 TOP 列表：标题 + 每只为红涨绿跌小胶囊（白字） */
   .reason-tops { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 10px; }
-  .reason-tops .tops-h { font-size: 12px; color: var(--ink2); font-weight: 700; margin-right: 2px; }
+  .reason-tops .tops-h { font-size: 12px; color: var(--accent-deep); font-weight: 700; margin-right: 2px; }
   .reason-tops .tchip { font-size: 11px; font-weight: 700; color: var(--accent-deep); background: var(--accent-soft); border-radius: 999px; padding: 2px 9px; }
   .reason-tops .tchip.u { background: var(--up); color: #fff; }
   .reason-tops .tchip.d { background: var(--down); color: #fff; }
@@ -270,8 +270,8 @@ function renderTops(s, isUp) {
     var name, pct;
     if (typeof it === 'object') { name = it.name || ''; pct = it.changePct; }
     else if (typeof it === 'string') {
-      var mm = it.match(/^(.*?)[\s]*([+-]?\d+(?:\.\d+)?%?)\s*(【[^】]*】)?\s*$/);
-      if (mm) { name = mm[1].replace(/[：:]\s*$/, ''); pct = parseFloat(mm[2]); if (mm[3]) name = (name ? name + ' ' : '') + mm[3]; }
+      var mm = it.match(/^(.*?)[\s]*([+-]?\d+(?:\.\d+)?%?)\s*([^【]*?)(【[^】]*】)?\s*$/);
+      if (mm) { name = mm[1].replace(/[：:]\s*$/, ''); pct = parseFloat(mm[2]); var tail = (mm[3] || '').trim(); if (mm[4]) tail += ' ' + mm[4]; if (tail) name = (name ? name + ' ' : '') + tail; }
       else { name = it; pct = null; }
     }
     var cls = (pct === null || pct === undefined) ? '' : (pct >= 0 ? ' u' : ' d');
@@ -435,7 +435,7 @@ function renderAiPrediction() {
     '<div class="ai-summary">' + (p.indexLine ? esc(p.indexLine) + '。' : '') + '通过隔夜美股各板块涨跌推导今日 A 股强弱方向：' + esc(p.summary) + '</div>' +
     '<div class="ai-grid">';
   p.sectors.forEach(function (s) {
-    var isUp = s.direction.indexOf('承压') === -1;
+    var isUp = String(s.direction || '').indexOf('承压') === -1;
     var conf = String(s.confidence || '');
     var confCls = conf.indexOf('高') >= 0 ? 'conf-high' : (conf.indexOf('中') >= 0 ? 'conf-mid' : 'conf-low');
     html += '<div class="ai-item"><div class="row1">' +
