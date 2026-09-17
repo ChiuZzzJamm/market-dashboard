@@ -260,13 +260,28 @@ def to_f(v):
     except (TypeError, ValueError):
         return None
 
+def fetch_laggard(board_code):
+    """板块成分股按涨幅升序第一只有效股 = 板块内领跌股（过滤退市残留/停牌/无成交量行）"""
+    url = (f"{DELAY}?pn=1&pz=8&po=0&np=1&fltt=2&invt=2&fid=f3"
+           f"&fs=b%3A{board_code}&fields=f2,f3,f5,f14&ut={UT}")
+    d = get_json(url)
+    if not d:
+        return None
+    rows = (d.get("data") or {}).get("diff") or []
+    for r in rows:
+        pct, vol, name = to_f(r.get("f3")), to_f(r.get("f5")), r.get("f14")
+        if pct is None or vol is None or vol <= 0 or not name:
+            continue
+        return {"name": name, "changePct": round(pct, 2)}
+    return None
+
 def build_sectors():
     up_rows = fetch_boards("f3", 1)    # 按涨跌幅降序 → 领涨
     time.sleep(2)
     down_rows = fetch_boards("f3", 0)  # 升序 → 领跌
     if not up_rows or not down_rows:
         return None, None
-    def mk(r):
+    def mk(r, with_laggard=False):
         pct = to_f(r.get("f3"))
         if pct is None:
             return None
@@ -274,9 +289,21 @@ def build_sectors():
         lp, lname = to_f(r.get("f136")), r.get("f128")
         if lname and lp is not None:
             item["leader"] = {"name": lname, "changePct": round(lp, 2)}
+        # 领跌板块补「板块内领跌股」（成分股中跌幅最大者）：clist 接口无领跌股字段，须查成分股
+        if with_laggard and r.get("f12"):
+            lg = fetch_laggard(r["f12"])
+            if lg:
+                item.setdefault("leader", {})["laggard"] = lg
         return item
     ups = [x for x in (mk(r) for r in up_rows) if x][:5]
-    downs = [x for x in (mk(r) for r in down_rows) if x][:5]
+    downs = []
+    for r in down_rows:
+        if len(downs) >= 5:
+            break
+        x = mk(r, with_laggard=True)
+        if x:
+            downs.append(x)
+            time.sleep(1)  # 成分股请求间隔，防限流
     if len(ups) < 3 or len(downs) < 3:
         return None, None
     return ups, downs

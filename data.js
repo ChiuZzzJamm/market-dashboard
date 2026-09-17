@@ -1,5 +1,5 @@
-window.DASHBOARD_DATA ={
-  "updatedAt": "2026-09-17 16:17（韩日 9/17 收盘 数据已自动更新）",
+window.DASHBOARD_DATA = {
+  "updatedAt": "2026-09-17 17:54（A股收盘已自动更新：指数/涨跌家数/行业板块TOP5/主力资金）",
   "aiPrediction": {
     "date": "2026-09-17",
     "indexLine": "道指 -1.21%、标指 -0.45%、纳指 -0.01%",
@@ -321,10 +321,14 @@ window.DASHBOARD_DATA ={
     "sectorsDown": [
       {
         "name": "白银",
-        "pct": -6,
+        "pct": -6.0,
         "leader": {
           "name": "兴业银锡",
-          "changePct": -5.26
+          "changePct": -5.26,
+          "laggard": {
+            "name": "盛达资源",
+            "changePct": -6.92
+          }
         },
         "reason": {
           "title": "强美元压制 白银跟跌",
@@ -336,7 +340,11 @@ window.DASHBOARD_DATA ={
         "pct": -5.35,
         "leader": {
           "name": "恒邦股份",
-          "changePct": -3.8
+          "changePct": -3.8,
+          "laggard": {
+            "name": "盛达资源",
+            "changePct": -6.92
+          }
         },
         "reason": {
           "title": "加息+强美元 贵金属领跌两市",
@@ -348,7 +356,11 @@ window.DASHBOARD_DATA ={
         "pct": -5.15,
         "leader": {
           "name": "恒邦股份",
-          "changePct": -3.8
+          "changePct": -3.8,
+          "laggard": {
+            "name": "山东黄金",
+            "changePct": -6.46
+          }
         },
         "reason": {
           "title": "金价跳水 黄金股重挫",
@@ -360,7 +372,11 @@ window.DASHBOARD_DATA ={
         "pct": -2.65,
         "leader": {
           "name": "郴电国际",
-          "changePct": 0.3
+          "changePct": 0.3,
+          "laggard": {
+            "name": "乐山电力",
+            "changePct": -5.49
+          }
         },
         "reason": {
           "title": "电力防御失效 公用走弱",
@@ -372,7 +388,11 @@ window.DASHBOARD_DATA ={
         "pct": -2.6,
         "leader": {
           "name": "北方稀土",
-          "changePct": -2.03
+          "changePct": -2.03,
+          "laggard": {
+            "name": "中稀有色",
+            "changePct": -3.33
+          }
         },
         "reason": {
           "title": "美元走强 稀土永磁承压",

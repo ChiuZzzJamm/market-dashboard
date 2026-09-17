@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609171744"></script>
+<script src="data.js?v=202609171754"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -244,8 +244,13 @@ function leaderLabel(s, isUp) {
   var l = s.leader;
   if (!l) return '';
   if (typeof l === 'object') {
-    // 东财板块接口 f128/f136 固定返回「板块内领涨股」（与板块本身涨跌方向无关），
-    // 故对象型 leader 统一标「板块领涨股」，避免领跌板块出现"+0.3%却叫领跌股"的语义错误
+    // 东财 f128/f136 = 板块内领涨股，f140/f141 = 板块内领跌股。
+    // 涨板块显示领涨股；跌板块优先显示领跌股（旧数据无 laggard 时回退领涨股）
+    if (!isUp && l.laggard && l.laggard.name) {
+      var g = l.laggard, gt = g.name;
+      if (g.changePct !== null && g.changePct !== undefined) gt += ' ' + (g.changePct >= 0 ? '+' : '') + g.changePct + '%';
+      return '板块领跌股：' + gt;
+    }
     var t = l.name || '';
     if (l.changePct !== null && l.changePct !== undefined) t += ' ' + (l.changePct >= 0 ? '+' : '') + l.changePct + '%';
     return t ? '板块领涨股：' + t : '';
