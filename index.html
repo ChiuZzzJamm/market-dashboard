@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609171737"></script>
+<script src="data.js?v=202609171744"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -260,12 +260,15 @@ function renderReasons(list, tradeDate, isUp) {
   var tag = dateTag(tradeDate);
   list.forEach(function (s) {
     if (!s.reason) return;
-    var pctHtml = (s.pct !== null && s.pct !== undefined) ? '<span class="pct ' + (s.pct >= 0 ? 'u' : 'd') + '">' + fmtPct(s.pct) + '</span>' : '';
+    // 板块名与涨跌幅合并为一枚胶囊：涨=红底白字，跌=绿底白字；无涨跌幅时退回白底胶囊
+    var pctHtml = (s.pct !== null && s.pct !== undefined)
+      ? '<span class="pct ' + (s.pct >= 0 ? 'u' : 'd') + '">' + esc(s.name) + ' ' + fmtPct(s.pct) + '</span>'
+      : '<span class="sec">' + esc(s.name) + '</span>';
     var lead = leaderLabel(s, isUp);
     html += '<div class="reason-block"><div class="reason-head">' +
       '<span class="date-tag">' + esc(tag) + '异动原因</span>' +
       '<span class="kw">' + esc(s.reason.title) + '</span></div>' +
-      '<div class="reason-meta"><span class="sec">' + esc(s.name) + '</span>' + pctHtml +
+      '<div class="reason-meta">' + pctHtml +
       (lead ? '<span class="lead">' + esc(lead) + '</span>' : '') + '</div>' +
       '<div class="reason-body"><b class="label">行业原因：</b>' + esc(s.reason.detail) + '</div></div>';
   });
