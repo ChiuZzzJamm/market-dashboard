@@ -326,7 +326,7 @@ def build_funds():
     outs = [x for x in (mk(r) for r in out_rows) if x][:3]
     if not ins or not outs:
         return None, None
-        return ins, outs
+    return ins, outs
 
 def build_all_boards():
     """约前 120 个板块（涨前60+跌前60）完整涨幅榜，供 16:00 AI 预测验证按板块名匹配实际涨跌幅；不参与页面展示。"""
