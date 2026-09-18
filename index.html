@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609181254"></script>
+<script src="data.js?v=202609181300"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -114,12 +114,12 @@
   .ai-item .drv { font-size: 12px; color: var(--ink2); margin-bottom: 3px; }
   .ai-item .lgc { font-size: 12.5px; color: var(--ink); margin-bottom: 8px; }
   .stock-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--line); }
-  .stock-chip { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 4px 7px; font-size: 12px; min-width: 0; overflow: hidden; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .stock-chip { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 4px 7px; font-size: 12px; min-width: 0; overflow: hidden; cursor: pointer; -webkit-tap-highlight-color: transparent; position: relative; }
   .stock-chip b { font-weight: 700; white-space: nowrap; }
   .stock-chip .cd { color: var(--ink2); font-size: 10.5px; margin-left: 3px; white-space: nowrap; }
   .stock-chip .nt { display: block; font-size: 10.5px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .stock-chip.expanded { background: var(--accent-soft); }
-  .stock-chip.expanded .nt { white-space: normal; overflow: visible; text-overflow: clip; }
+  .stock-chip.expanded { background: var(--accent-soft); overflow: visible; z-index: 40; }
+  .chip-pop { position: absolute; left: -6px; right: -6px; top: calc(100% + 5px); z-index: 50; background: var(--paper); border: 1px solid var(--accent); border-radius: 10px; box-shadow: 0 8px 20px rgba(43,51,60,.15); padding: 7px 9px; font-size: 11px; line-height: 1.55; color: var(--ink); white-space: normal; text-align: left; cursor: default; }
   .ai-foot { margin-top: 14px; font-size: 12px; color: var(--ink2); border-top: 1px solid var(--line); padding-top: 10px; }
   .ai-verify { margin-top: 10px; font-size: 12.5px; background: var(--down-soft); border: 1px solid var(--down-soft); border-radius: 12px; padding: 10px 14px; color: var(--ink); }
   .ai-verify .v-title { font-weight: 700; margin-bottom: 4px; }
@@ -619,9 +619,27 @@ document.getElementById('updatedAt').textContent = '数据更新：' + window.DA
 renderAiPrediction();
 renderWeekendNews();
 
+  function closeChips() {
+    document.querySelectorAll('.stock-chip.expanded').forEach(function (c) {
+      c.classList.remove('expanded');
+      var pop = c.querySelector('.chip-pop'); if (pop) pop.remove();
+    });
+  }
   document.addEventListener('click', function (e) {
     var chip = e.target.closest ? e.target.closest('.stock-chip') : null;
-    if (chip) chip.classList.toggle('expanded');
+    if (!chip) { closeChips(); return; }
+    var wasOpen = chip.classList.contains('expanded');
+    closeChips();
+    if (!wasOpen) {
+      chip.classList.add('expanded');
+      var nt = chip.querySelector('.nt');
+      if (nt) {
+        var pop = document.createElement('div');
+        pop.className = 'chip-pop';
+        pop.textContent = nt.textContent;
+        chip.appendChild(pop);
+      }
+    }
   });
 render('ashare');
 renderPano();
