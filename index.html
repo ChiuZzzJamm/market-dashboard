@@ -100,7 +100,7 @@
   .ai-summary { font-size: 14.5px; margin-bottom: 16px; }
   .ai-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 860px) { .ai-grid { grid-template-columns: 1fr; } }
-  .ai-item { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; }
+  .ai-item { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; display: flex; flex-direction: column; }
   .ai-item .row1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
   .ai-item .sec-nm { font-size: 14px; font-weight: 700; }
   .dir-badge { font-size: 11.5px; font-weight: 700; color: #fff; border-radius: 999px; padding: 2px 9px; }
@@ -112,8 +112,8 @@
   .conf-mid { background: #85b9ea; color: #fff; }
   .conf-high { background: #2b6cb0; color: #fff; }
   .ai-item .drv { font-size: 12px; color: var(--ink2); margin-bottom: 3px; }
-  .ai-item .lgc { font-size: 12.5px; color: var(--ink); }
-  .stock-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
+  .ai-item .lgc { font-size: 12.5px; color: var(--ink); margin-bottom: 8px; }
+  .stock-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--line); }
   .stock-chip { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 4px 7px; font-size: 12px; min-width: 0; overflow: hidden; }
   .stock-chip b { font-weight: 700; white-space: nowrap; }
   .stock-chip .cd { color: var(--ink2); font-size: 10.5px; margin-left: 3px; white-space: nowrap; }
@@ -466,7 +466,7 @@ function renderAiPrediction() {
     }
     html += '</div>';
   });
-  html += '</div><div class="ai-foot">标的筛选口径：每个板块 8 只 A 股，按「2-3 只行业龙头/中军 + 5-6 只小盘人气股/游资票」搭配（小盘票盘子偏小、历史上涨停基因好、换手活跃、机构与游资合力偏好），要求业绩支撑或题材贴合，已排除科创板（688 开头）及北交所。<br>' + esc(p.riskNote) + '</div>';
+  html += '</div><div class="ai-foot">标的筛选口径：每个板块 8 只 A 股，按「2 只板块龙头 + 2 只相关概念股 + 2 只游资/机构偏好小盘人气股（涨停基因好）+ 2 只断板反包图形股（1-5 日前涨停、次日放量倍量、随后缩量回调）」搭配，已排除科创板（688 开头）及北交所。<br>' + esc(p.riskNote) + '</div>';
   if (p.verification && (p.verification.summary || (p.verification.details && p.verification.details.length))) {
     var v = p.verification;
     var vHtml = '<div class="ai-verify"><div class="v-title">📊 预测验证：' + esc(v.summary || '') + '</div>';
