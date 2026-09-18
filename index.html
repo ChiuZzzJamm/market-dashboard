@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609181005"></script>
+<script src="data.js?v=202609181011"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -152,13 +152,16 @@
   .wk-src { font-size: 11.5px; color: var(--ink2); margin-top: 8px; }
 
   /* ===== 行业全景（沿用原版样式：市场 tab + 板块网格） ===== */
-  .pano-indices { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 14px; }
-  .pano-idx { background: var(--accent-soft); border: 1px solid var(--line); border-radius: 12px; padding: 12px 18px; min-width: 200px; }
-  .pano-idx .nm { font-size: 13px; color: var(--ink2); }
-  .pano-idx .pc { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  /* pano-indices 卡片已删除：指数内嵌至市场 tab */
   .pano-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
   .pano-tab { padding: 6px 22px; border-radius: 999px; background: var(--accent-soft); color: var(--ink2); font-size: 13.5px; font-weight: 700; cursor: pointer; border: 1px solid var(--line); transition: all .25s ease; }
   .pano-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .pano-tab { padding: 6px 16px; white-space: nowrap; }
+  .pano-tab .tn { font-size: 11.5px; font-weight: 600; margin-left: 7px; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+  .pano-tab .n-up { color: var(--up); }
+  .pano-tab .n-down { color: var(--down); }
+  .pano-tab.active .n-up { color: #ffe3e7; }
+  .pano-tab.active .n-down { color: #c9f7ea; }
   .pano-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
   @media (max-width: 720px) { .pano-grid { grid-template-columns: 1fr; } }
   .pano-cell { display: flex; justify-content: space-between; align-items: center; background: var(--accent-soft); border-radius: 12px; padding: 9px 14px; }
@@ -192,7 +195,6 @@
     <h2>行业全景 · 美股 / 韩股 / 日经</h2>
     <div class="pano-tabs" id="pano-tabs"></div>
     <div class="pano-date" id="pano-date"></div>
-    <div class="pano-indices" id="pano-indices"></div>
     <div class="pano-grid" id="pano-grid"></div>
   </div>
 
@@ -388,22 +390,31 @@ var panoCurrent = 'us';
 function renderPano() {
   var pano = window.DASHBOARD_DATA.panorama;
   if (!pano || !pano.markets) { document.getElementById('pano-card').style.display = 'none'; return; }
+  var PANO_IDX_SHORT = { '道琼斯': '道指', '标普500': '标指', '纳斯达克': '纳指' };
+  function panoTabIdx(m) {
+    var out = [];
+    if (m.key === 'us') {
+      var ui = ((window.DASHBOARD_DATA.us || {}).indices) || [];
+      ['道琼斯', '标普500', '纳斯达克'].forEach(function (n) {
+        ui.forEach(function (i) { if (i.name === n && i.changePct != null) out.push({ name: PANO_IDX_SHORT[n], pct: i.changePct }); });
+      });
+    } else if (m.key === 'kr' && m.indices && m.indices.length) {
+      out.push({ name: 'KOSPI', pct: m.indices[0].changePct });
+    } else if (m.key === 'jp' && m.indices && m.indices.length) {
+      out.push({ name: '日经225', pct: m.indices[0].changePct });
+    }
+    return out;
+  }
   var tabsHtml = '';
   pano.markets.forEach(function (m) {
-    tabsHtml += '<div class="pano-tab' + (m.key === panoCurrent ? ' active' : '') + '" onclick="switchPano(\'' + m.key + '\')">' + esc(m.name) + '</div>';
+    var nums = panoTabIdx(m).map(function (i) {
+      return '<span class="tn n-' + (i.pct >= 0 ? 'up' : 'down') + '">' + esc(i.name) + fmtPct(i.pct) + '</span>';
+    }).join('');
+    tabsHtml += '<div class="pano-tab' + (m.key === panoCurrent ? ' active' : '') + '" onclick="switchPano(\'' + m.key + '\')">' + esc(m.name) + nums + '</div>';
   });
   document.getElementById('pano-tabs').innerHTML = tabsHtml;
   var cur = pano.markets.filter(function (m) { return m.key === panoCurrent; })[0] || pano.markets[0];
   document.getElementById('pano-date').textContent = '数据时点：' + cur.date;
-  var idxHtml = '';
-  if (cur.indices && cur.indices.length) {
-    cur.indices.forEach(function (idx) {
-      var c = cls(idx.changePct);
-      idxHtml += '<div class="pano-idx"><div class="nm">' + esc(idx.name) + '</div>' +
-        '<div class="pc ' + c + '">' + fmtPct(idx.changePct) + '</div></div>';
-    });
-  }
-  document.getElementById('pano-indices').innerHTML = idxHtml;
   var html = '';
   (cur.items || []).forEach(function (it) {
     var c = cls(it.pct);
