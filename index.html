@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609181011"></script>
+<script src="data.js?v=202609181020"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -15,8 +15,8 @@
     --ink: #2b333c;
     --ink2: #76889a;
     --line: #e3ecf4;
-    --up: #ff7585;          /* 涨：珊瑚红 */
-    --down: #25b894;        /* 跌：绿色 */
+    --up: #f0435c;          /* 涨：珊瑚红（加深 2026-09-18） */
+    --down: #0f9d78;        /* 跌：绿色（加深 2026-09-18） */
     --up-soft: #ffe7ea;
     --down-soft: #def5ee;
     --accent: #4aa8e0;      /* 雾霾蓝 */
@@ -85,9 +85,9 @@
   /* 板块成分股 TOP 列表：标题 + 每只为红涨绿跌小胶囊（白字） */
   .reason-tops { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 10px; }
   .reason-tops .tops-h { font-size: 12px; color: var(--accent-deep); font-weight: 700; margin-right: 2px; }
-  .reason-tops .tchip { font-size: 11px; font-weight: 700; color: var(--accent-deep); background: var(--accent-soft); border-radius: 999px; padding: 2px 9px; }
-  .reason-tops .tchip.u { background: var(--up); color: #fff; }
-  .reason-tops .tchip.d { background: var(--down); color: #fff; }
+  .reason-tops .tchip { font-size: 11.5px; font-weight: 700; color: var(--ink2); }
+  .reason-tops .tchip.u { color: var(--up); }
+  .reason-tops .tchip.d { color: var(--down); }
   .reason-body { font-size: 13.5px; color: var(--ink); }
   .reason-body b.label { display: block; margin-bottom: 2px; color: var(--ink2); }
   .src-line { font-size: 12px; color: var(--ink2); margin-top: 10px; }
