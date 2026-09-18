@@ -74,7 +74,15 @@ def fetch_indices():
         if m.group(1) == VOL_CODE:
             continue
         name = dict(INDEX_CODES).get(m.group(1), p[1])
-        out.append({"name": name, "point": point, "changePct": pct})
+        it = {"name": name, "point": point, "changePct": pct}
+        try:
+            # 开盘涨跌幅：今开(p[5])/昨收(p[4])-1，供盘面叙事区分高开/低开与高走/低走
+            _prev, _open = float(p[4]), float(p[5])
+            if _prev > 0 and _open > 0:
+                it["openPct"] = round((_open / _prev - 1) * 100, 2)
+        except Exception:
+            pass
+        out.append(it)
     if len(out) < 5:
         return None, None
     return out, (vol or None)
@@ -263,7 +271,7 @@ def to_f(v):
 def fetch_top5(board_code, po):
     """板块成分股 TOP5：po=1 涨幅前5（领涨）；po=0 跌幅前5（领跌）。过滤退市残留/停牌/无成交量行。"""
     url = (f"{DELAY}?pn=1&pz=6&po={po}&np=1&fltt=2&invt=2&fid=f3"
-           f"&fs=b%3A{board_code}&fields=f2,f3,f5,f14&ut={UT}")
+           f"&fs=b%3A{board_code}&fields=f2,f3,f5,f14,f17,f18&ut={UT}")
     d = get_json(url)
     if not d:
         return []
@@ -278,7 +286,14 @@ def fetch_top5(board_code, po):
             continue
         if po == 0 and pct > 0:
             continue
-        out.append({"name": name, "changePct": round(pct, 2)})
+        op = None
+        _prev, _open = to_f(r.get("f18")), to_f(r.get("f17"))
+        if _prev and _open and _prev > 0 and _open > 0:
+            op = round((_open / _prev - 1) * 100, 2)  # 个股开盘涨跌幅
+        entry = {"name": name, "changePct": round(pct, 2)}
+        if op is not None:
+            entry["openPct"] = op
+        out.append(entry)
         if len(out) >= 5:
             break
     return out
@@ -297,6 +312,10 @@ def build_sectors():
         # tops = 该板块成分股 TOP5（涨板块取涨幅前5，跌板块取跌幅前5）
         if r.get("f12"):
             item["tops"] = fetch_top5(r["f12"], po)
+        # 板块开盘涨跌近似 = 成分股今开涨跌幅均值（东财板块级无今开字段），供盘面叙事用
+        _ops = [t["openPct"] for t in item.get("tops", []) if isinstance(t, dict) and "openPct" in t]
+        if len(_ops) >= 2:
+            item["openPct"] = round(sum(_ops) / len(_ops), 2)
         return item
     ups = [x for x in (mk(r, 1) for r in up_rows) if x][:5]
     downs = []

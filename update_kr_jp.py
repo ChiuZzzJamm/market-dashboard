@@ -194,17 +194,23 @@ def collect():
     return indices, stocks
 
 
-def validate(indices, stocks):
-    """方向一致性 + 异常值校验；不通过返回 False"""
+def validate(indices, stocks, label='收盘'):
+    """方向一致性 + 异常值校验；不通过返回 False。
+    方向一致性校验仅收盘启用：早盘（开盘30-90分钟）个股与指数短期背离属常态，
+    曾误杀正常早盘数据导致日韩板块长期停留在上一交易日；时间戳校验已杜绝旧数据混入。"""
     def same_direction(a, b):
         return (a >= 0) == (b >= 0)
 
-    # 指数涨跌幅绝对值 < 0.8% 时方向属噪音（个股独立行情常见），不做否决
+    if label != '收盘':
+        pass  # 早盘跳过方向一致性否决（下方异常值过滤仍执行）
     checks = [
         ('KS11.GI', ['005930.KS', '000660.KS', '005380.KS'], 'KOSPI', '韩股龙头'),
         ('N225.GI', ['8035.T', '7203.T', '9983.T'], '日经225', '日经龙头'),
     ]
+    direction_check_on = (label == '收盘')
     for idx_key, stock_keys, idx_name, leader_name in checks:
+        if not direction_check_on:
+            break
         idx_pct = indices.get(idx_key, {}).get('changePct')
         if idx_pct is None or abs(idx_pct) < 0.8:
             continue
@@ -282,7 +288,7 @@ def main():
     if not indices and not stocks:
         print('[error] 所有数据源均失败，保留 panorama.kr/jp 原值')
         sys.exit(1)
-    if not validate(indices, stocks):
+    if not validate(indices, stocks, label):
         print('[info] 校验未通过，保留原值')
         sys.exit(0)
 
@@ -291,6 +297,16 @@ def main():
     kr['date'] = date_display
     jp = build_jp(indices, stocks)
     jp['date'] = date_display
+
+    # 覆盖守卫：有效板块不足半数视为部分失败，保留该市场原值，防止降级覆盖
+    kr_ok = len(kr['items']) >= (len(KR_BOARDS) + 1) // 2
+    jp_ok = len(jp['items']) >= (len(JP_BOARDS) + 1) // 2
+    if not kr_ok:
+        print(f"[warn] 韩股有效板块 {len(kr['items'])}/{len(KR_BOARDS)} 不足半数，保留原值不覆盖")
+    if not jp_ok:
+        print(f"[warn] 日股有效板块 {len(jp['items'])}/{len(JP_BOARDS)} 不足半数，保留原值不覆盖")
+    if not kr_ok and not jp_ok:
+        sys.exit(1)
 
     print(f'[info] panorama.kr/jp -> {date_display}')
     for k, v in indices.items():
@@ -308,14 +324,16 @@ def main():
     replaced = {'kr': False, 'jp': False}
     for i, m in enumerate(markets):
         if m.get('key') == 'kr':
-            markets[i] = kr
-            replaced['kr'] = True
+            if kr_ok:
+                markets[i] = kr
+                replaced['kr'] = True
         elif m.get('key') == 'jp':
-            markets[i] = jp
-            replaced['jp'] = True
-    if not replaced['kr']:
+            if jp_ok:
+                markets[i] = jp
+                replaced['jp'] = True
+    if not replaced['kr'] and kr_ok:
         markets.append(kr)
-    if not replaced['jp']:
+    if not replaced['jp'] and jp_ok:
         markets.append(jp)
 
     # 追加而非覆盖：保留前序脚本（如 A股 update_ashare_sectors / 美股 update_us_from_quotes）

@@ -37,7 +37,16 @@ def parse_quote_text(text):
         except Exception:
             pct = None
             point = None
-        out[code] = {'name': parts[1], 'point': point, 'pct': pct}
+        # 开盘涨跌幅：今开(parts[5])/昨收(parts[4])-1，供盘面叙事区分高开/低开与高走/低走
+        open_pct = None
+        try:
+            if parts[4] and parts[5]:
+                _prev, _open = float(parts[4]), float(parts[5])
+                if _prev > 0 and _open > 0:
+                    open_pct = round((_open / _prev - 1) * 100, 2)
+        except Exception:
+            open_pct = None
+        out[code] = {'name': parts[1], 'point': point, 'pct': pct, 'openPct': open_pct}
     return out
 
 
@@ -335,24 +344,35 @@ def pct(code):
 def point(code):
     return get(code).get('point')
 
+def open_pct(code):
+    v = get(code).get('openPct')
+    return round(v, 2) if v is not None else None
+
 # 板块映射：panorama.us.items 与 us.sectorsUp/Down 共用同一组口径（真实成分股聚合，非 ETF）
 pano_items = []
 for cfg in US_SECTORS:
     name = cfg['name']
     vals = []  # (个股名, 涨跌幅)
+    opens = []  # 成分股开盘涨跌幅
     for c in cfg['constituents']:
         cp = pct(c['code'])
         if cp is not None:
             vals.append((c['name'], cp))
+        op = open_pct(c['code'])
+        if op is not None:
+            opens.append(op)
     if not vals:
         continue  # 成分股全无行情则跳过该板块
     avg = round(sum(v[1] for v in vals) / len(vals), 2)
-    pano_items.append({
+    _item = {
         "name": name,
         "pct": avg,
         "ref": f"{len(vals)}只成分股均值",
         "constituents": [{"name": n, "changePct": p} for n, p in vals],
-    })
+    }
+    if len(opens) >= 2:  # 板块开盘涨跌近似 = 成分股今开涨跌幅均值
+        _item["openPct"] = round(sum(opens) / len(opens), 2)
+    pano_items.append(_item)
 
 # 用于 us.sectorsUp/Down：排除没有 pct 的项目
 valid_items = [it for it in pano_items if it['pct'] is not None]
@@ -380,6 +400,8 @@ def to_us_sector(it, is_up):
     else:
         tops = sorted(cons, key=lambda x: x["changePct"])[:5]
     obj = {"name": it["name"], "pct": it["pct"], "tops": tops, "ref": it.get("ref")}
+    if it.get("openPct") is not None:
+        obj["openPct"] = it["openPct"]
     if it["name"] in old_reason_map:
         obj["reason"] = old_reason_map[it["name"]]
     return obj
@@ -446,9 +468,9 @@ us_obj = {
         f"领跌：{sorted_down[0]['name']}{fmt_pct(sorted_down[0]['pct'])}、{sorted_down[1]['name']}{fmt_pct(sorted_down[1]['pct'])}。"
     ) if (sorted_up and sorted_down) else f"{trade_md} 美股收盘数据已更新。",
     "indices": [
-        {"name": index_name_map.get('usDJI','道琼斯'), "point": point('usDJI'), "changePct": pct('usDJI')},
-        {"name": index_name_map.get('usIXIC','纳斯达克'), "point": point('usIXIC'), "changePct": pct('usIXIC')},
-        {"name": index_name_map.get('usINX','标普500'), "point": point('usINX'), "changePct": pct('usINX')},
+        {"name": index_name_map.get('usDJI','道琼斯'), "point": point('usDJI'), "changePct": pct('usDJI'), "openPct": open_pct('usDJI')},
+        {"name": index_name_map.get('usIXIC','纳斯达克'), "point": point('usIXIC'), "changePct": pct('usIXIC'), "openPct": open_pct('usIXIC')},
+        {"name": index_name_map.get('usINX','标普500'), "point": point('usINX'), "changePct": pct('usINX'), "openPct": open_pct('usINX')},
         {"name": index_name_map.get('usSOXX','费城半导体'), "point": point('usSOXX'), "changePct": pct('usSOXX'), "note": "SOXX"},
         {"name": "罗素2000", "point": None, "changePct": None, "note": "小盘股"},
         {"name": "纳斯达克金龙指数", "point": None, "changePct": pct('usKWEB'), "note": "KWEB 中概互联网 ETF 口径"},
@@ -491,9 +513,9 @@ if ARGS.dry_run:
     print('[dry-run] 不写回 data.js')
     print(json.dumps({
         'tradeDate': us_obj.get('tradeDate'),
-        'sectorsUp': [{'name': s['name'], 'pct': s['pct'], 'tops': s.get('tops')} for s in us_obj.get('sectorsUp', [])],
-        'sectorsDown': [{'name': s['name'], 'pct': s['pct'], 'tops': s.get('tops')} for s in us_obj.get('sectorsDown', [])],
-        'panorama_us_items': [{'name': i['name'], 'pct': i['pct'], 'n': len(i.get('constituents', []))} for i in pano_items],
+        'sectorsUp': [{'name': s['name'], 'pct': s['pct'], 'openPct': s.get('openPct'), 'tops': s.get('tops')} for s in us_obj.get('sectorsUp', [])],
+        'sectorsDown': [{'name': s['name'], 'pct': s['pct'], 'openPct': s.get('openPct'), 'tops': s.get('tops')} for s in us_obj.get('sectorsDown', [])],
+        'panorama_us_items': [{'name': i['name'], 'pct': i['pct'], 'openPct': i.get('openPct'), 'n': len(i.get('constituents', []))} for i in pano_items],
     }, ensure_ascii=False, indent=2))
 else:
     with open('data.js', 'w', encoding='utf-8') as f:
