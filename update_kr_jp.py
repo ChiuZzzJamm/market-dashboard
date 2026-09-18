@@ -9,7 +9,7 @@
   东方财富 push2 HTTP 直连（secid=100.KS11 / 100.N225）兜底——两者均带时间戳校验，杜绝旧数据
 - 注意：这是 HTTP 行情接口，与「东财 MCP（mx-ds-mcp）」完全无关，后者已证明不可靠并禁用
 
-流程：抓取 → 时间戳校验（必须今日）→ 方向一致性/异常值校验 → 写回 data.js 的 panorama.kr/jp。
+流程：抓取 → 时间戳校验（必须今日）→ 异常值校验 → 写回 data.js 的 panorama.kr/jp。
 用法：python3 update_kr_jp.py --label 早盘|收盘（默认按时间：北京时间>=14:00 为收盘，否则早盘）
 """
 import json, os, sys, re, subprocess, argparse, time
@@ -203,32 +203,10 @@ def collect():
 
 
 def validate(indices, stocks, label='收盘'):
-    """方向一致性 + 异常值校验；不通过返回 False。
-    方向一致性校验仅收盘启用：早盘（开盘30-90分钟）个股与指数短期背离属常态，
-    曾误杀正常早盘数据导致日韩板块长期停留在上一交易日；时间戳校验已杜绝旧数据混入。"""
-    def same_direction(a, b):
-        return (a >= 0) == (b >= 0)
-
-    # 方向一致性校验仅收盘启用（direction_check_on）；早盘跳过否决，异常值过滤仍执行
-    checks = [
-        ('KS11.GI', ['005930.KS', '000660.KS', '005380.KS'], 'KOSPI', '韩股龙头'),
-        ('N225.GI', ['8035.T', '7203.T', '9983.T'], '日经225', '日经龙头'),
-    ]
-    direction_check_on = (label == '收盘')
-    for idx_key, stock_keys, idx_name, leader_name in checks:
-        if not direction_check_on:
-            break
-        idx_pct = indices.get(idx_key, {}).get('changePct')
-        if idx_pct is None or abs(idx_pct) < 0.8:
-            continue
-        leaders = [stocks.get(s, {}).get('changePct') for s in stock_keys]
-        leaders = [x for x in leaders if x is not None]
-        if leaders:
-            matched = sum(1 for x in leaders if same_direction(idx_pct, x))
-            if matched / len(leaders) < 0.5:
-                print(f'[warn] {idx_name} {idx_pct:+.2f}% 与{leader_name} {leaders} 方向严重背离，放弃写入')
-                return False
-
+    """异常值校验；不通过返回 False。
+    方向一致性校验已按用户要求移除（2026-09-18）：龙头与指数短期背离属常态，
+    该校验多次误杀正常收盘数据（如日经 +1.38% 与龙头背离）导致日韩板块停留上一交易日；
+    时间戳校验（必须当日）仍保留，足以杜绝旧数据混入。"""
     for k, v in list(indices.items()):
         if abs(v['changePct']) > 15:
             print(f'[warn] 指数 {k} {v["changePct"]}% 异常，丢弃')

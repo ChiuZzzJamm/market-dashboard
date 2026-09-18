@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609181748"></script>
+<script src="data.js?v=202609181818"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -154,12 +154,9 @@
   .nc-dtl b { font-weight: 700; }
   .nc-imp { margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--line); }
   .nc-imp-theme { font-size: 12.5px; font-weight: 700; color: var(--accent-deep); }
-  .nc-stocks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
-  .nc-chip { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 4px 8px; font-size: 12px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .news-cell.bull .nc-chip { border-color: #f2c4ca; }
-  .news-cell.bear .nc-chip { border-color: #b9e2d8; }
-  .nc-chip b { font-weight: 700; }
-  .nc-chip .cd { color: var(--ink2); font-size: 11px; margin-left: 4px; }
+  .nc-stocks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: 6px; }
+  .news-cell.bull .stock-chip { border-color: #f2c4ca; }
+  .news-cell.bear .stock-chip { border-color: #b9e2d8; }
   .nc-empty { font-size: 12.5px; color: var(--ink2); }
   .wk-outlook { background: var(--accent-soft); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 13.5px; margin-top: 10px; }
   .wk-src { font-size: 11.5px; color: var(--ink2); margin-top: 8px; }
@@ -528,7 +525,7 @@ function renderNewsCard(d) {
       }
       s += '<div class="nc-stocks">';
       im.stocks.forEach(function (st) {
-        s += '<span class="nc-chip"><b>' + esc(st.name||'') + '</b><span class="cd">' + esc(st.code||'') + '</span></span>';
+        s += '<span class="stock-chip" title="' + escAttr((st.name||'') + ' ' + (st.code||'') + (st.note ? ' · ' + st.note : '')) + '"><b>' + esc(st.name||'') + '</b><span class="cd">' + esc(st.code||'') + '</span>' + (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
       });
       s += '</div></div>';
     });
