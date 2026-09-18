@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609181240"></script>
+<script src="data.js?v=202609181247"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -220,6 +220,7 @@ var currentMarket = 'ashare';
 function cls(v) { return v > 0 ? "up" : (v < 0 ? "down" : "flat"); }
 function fmtPct(v) { if (v === null || v === undefined) return "—"; return (v > 0 ? "+" : "") + v.toFixed(2) + "%"; }
 function esc(s) { if (s === null || s === undefined) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function escAttr(s){ return esc(s).replace(/"/g, '&quot;'); }
 function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 function dateTag(tradeDate) { var m = String(tradeDate).match(/(\d{4})-(\d{2})-(\d{2})/); return m ? m[2] + "月" + m[3] + "日" : ""; }
 function formatOutlook(text) {
@@ -459,7 +460,7 @@ function renderAiPrediction() {
     if (s.stocks && s.stocks.length) {
       html += '<div class="stock-chips">';
       s.stocks.forEach(function (st) {
-        html += '<span class="stock-chip"><b>' + esc(st.name) + '</b><span class="cd">' + esc(st.code) + '</span>' +
+        html += '<span class="stock-chip" title="' + escAttr(st.name + ' ' + st.code + (st.note ? ' · ' + st.note : '')) + '"><b>' + esc(st.name) + '</b><span class="cd">' + esc(st.code) + '</span>' +
           (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
       });
       html += '</div>';
@@ -588,7 +589,7 @@ function renderWeekendNews() {
       if (b.stocks && b.stocks.length) {
         html += '<div class="wk-stock-chips">';
         b.stocks.forEach(function (st) {
-          html += '<span class="stock-chip"><b>' + esc(st.name) + '</b><span class="cd">' + esc(st.code) + '</span>' +
+          html += '<span class="stock-chip" title="' + escAttr(st.name + ' ' + st.code + (st.note ? ' · ' + st.note : '')) + '"><b>' + esc(st.name) + '</b><span class="cd">' + esc(st.code) + '</span>' +
             (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
         });
         html += '</div>';
