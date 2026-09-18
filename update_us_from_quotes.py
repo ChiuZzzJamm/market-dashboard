@@ -483,10 +483,6 @@ us_obj = {
     "sectorsUp": [to_us_sector(s, True) for s in sorted_up],
     "sectorsDown": [to_us_sector(s, False) for s in sorted_down],
     "sectorNote": "板块涨跌幅为同板块多只美股真实成分股涨跌幅均值（非 ETF 口径），更贴近板块真实表现。",
-    "fundFlows": [
-        {"title": "隔夜美股主线", "detail": f"领涨 {sorted_up[0]['name']}{fmt_pct(sorted_up[0]['pct'])}，资金偏好{'AI硬件与算力' if any(k in sorted_up[0]['name'] for k in ['AI', '半导体', '算力', 'CPO']) else sorted_up[0]['name']}方向。"},
-        {"title": "承压方向", "detail": f"{sorted_down[0]['name']}{fmt_pct(sorted_down[0]['pct'])}领跌，注意对 A 股映射拖累。"}
-    ] if (sorted_up and sorted_down) else [],
     "bullNews": D.get('us', {}).get('bullNews', []),
     "bearNews": D.get('us', {}).get('bearNews', []),
     # 保留 08:30 任务写入的当日 AI 利好/利空主题，不得覆盖（否则微信推送会回退到周末旧数据）
