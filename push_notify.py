@@ -190,7 +190,6 @@ elif mode == 'us':
 
 elif mode == 'weekend':
     w = D.get('weekendNews') or {}
-    ap = D.get('aiPrediction') or {}
     title = f"[周末消息] {w.get('date','')[5:]} 要闻汇总"
     # 控制长度，避免微信折叠/截断；每个字段都加防御性 .get
     uf = w.get('usFriday') or {}
