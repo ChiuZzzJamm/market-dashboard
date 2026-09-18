@@ -466,7 +466,7 @@ function renderAiPrediction() {
     }
     html += '</div>';
   });
-  html += '</div><div class="ai-foot">标的筛选口径：每个板块 5 只 A 股，要求业绩支撑或题材贴合，已排除科创板（688 开头）及北交所。<br>' + esc(p.riskNote) + '</div>';
+  html += '</div><div class="ai-foot">标的筛选口径：每个板块 8 只 A 股，按「2-3 只行业龙头/中军 + 5-6 只小盘人气股/游资票」搭配（小盘票盘子偏小、历史上涨停基因好、换手活跃、机构与游资合力偏好），要求业绩支撑或题材贴合，已排除科创板（688 开头）及北交所。<br>' + esc(p.riskNote) + '</div>';
   if (p.verification && (p.verification.summary || (p.verification.details && p.verification.details.length))) {
     var v = p.verification;
     var vHtml = '<div class="ai-verify"><div class="v-title">📊 预测验证：' + esc(v.summary || '') + '</div>';
