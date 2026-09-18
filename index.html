@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609181224"></script>
+<script src="data.js?v=202609181240"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -144,13 +144,13 @@
   .nc-head { font-size: 14.5px; font-weight: 800; margin-bottom: 8px; letter-spacing: 1px; }
   .nc-head.bull { color: var(--up); }
   .nc-head.bear { color: var(--down); }
-  .news-cell { background: var(--accent-soft); border-radius: 14px; border-left: 4px solid var(--up); padding: 12px 14px; }
+  .news-cell { background: var(--accent-soft); border-radius: 14px; border-left: 4px solid var(--up); padding: 12px 14px; display: flex; flex-direction: column; }
   .news-cell.ghost { visibility: hidden; padding: 0; border: none; background: none; }
   .news-cell.bear { border-left-color: var(--down); }
   .nc-theme { font-size: 14px; font-weight: 800; margin-bottom: 4px; }
-  .nc-dtl { font-size: 13px; color: var(--ink); line-height: 1.65; }
+  .nc-dtl { font-size: 13px; color: var(--ink); line-height: 1.65; margin-bottom: 10px; }
   .nc-dtl b { font-weight: 700; }
-  .nc-imp { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); }
+  .nc-imp { margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--line); }
   .nc-imp-theme { font-size: 12.5px; font-weight: 700; color: var(--accent-deep); }
   .nc-stocks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
   .nc-chip { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 4px 8px; font-size: 12px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -516,7 +516,13 @@ function renderNewsCard(d) {
     s += '<div class="nc-dtl"><b>' + esc(it.title||'') + '</b> — ' + esc(it.summary||'') + '</div>';
     (it.impacts||[]).forEach(function (im) {
       if (!im.stocks || !im.stocks.length) return;
-      s += '<div class="nc-imp"><span class="nc-imp-theme">' + esc(im.theme || im.sector || '') + '</span>';
+      var impTheme = im.theme || im.sector || '';
+      // 与条目标题同名的板块标签不再重复展示（页面更干净），仅成分股块本身贴底对齐
+      if (impTheme && impTheme !== (it.sector||'')) {
+        s += '<div class="nc-imp"><span class="nc-imp-theme">' + esc(impTheme) + '</span>';
+      } else {
+        s += '<div class="nc-imp">';
+      }
       s += '<div class="nc-stocks">';
       im.stocks.forEach(function (st) {
         s += '<span class="nc-chip"><b>' + esc(st.name||'') + '</b><span class="cd">' + esc(st.code||'') + '</span></span>';

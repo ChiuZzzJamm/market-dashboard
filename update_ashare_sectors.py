@@ -192,7 +192,7 @@ def fetch_full_market_limits():
         pn = 1
         empty_retry = 0
         while pn <= 200:  # 翻页硬上限，防止异常时无限循环
-            d = get_json(f"{DELAY}/api/qt/clist/get?pn={pn}&pz=100&po=1&np=1&fltt=2&invt=2&fid=f12&fs={seg}"
+            d = get_json(f"{DELAY}?pn={pn}&pz=100&po=1&np=1&fltt=2&invt=2&fid=f12&fs={seg}"
                          f"&fields=f2,f12,f14,f18&ut={UT}")
             diff = (d.get("data") or {}).get("diff") if d else None
             if not diff:

@@ -59,6 +59,23 @@ def build_panorama_line(panorama):
         return '🌏 日韩：' + ' | '.join(pieces)
     return '🌏 日韩：详见网页'
 
+def fmt_ai_line(ap, label):
+    """AI 预测紧凑摘要：每板块「板块名方向(置信度)」，一行带过（微信不宜展开 6×8 明细）。
+    ap 缺失或 sectors 为空返回 None，调用方跳过该段。"""
+    if not ap or not ap.get('sectors'):
+        return None
+    items = []
+    for s in ap['sectors'][:6]:
+        sec = (s.get('sector') or '').strip()
+        if not sec:
+            continue
+        d = (s.get('direction') or '').strip()
+        c = (s.get('confidence') or '').strip()
+        items.append(f"{sec}{d}({c})" if c else f"{sec}{d}")
+    if not items:
+        return None
+    return f"🎯 {label}：{'｜'.join(items)}"
+
 def fmt_bullish(t, idx):
     """利好板块：保留括号内板块说明 + 核心受益股"""
     theme = t.get('theme','').strip()
@@ -182,6 +199,10 @@ elif mode == 'us':
         build_panorama_line(D.get('panorama')),
         f"💡 研判：{outlook_text}" if outlook_text else '',
     ]
+    # 当日 AI 预测（08:30 任务已写入顶层 aiPrediction）：紧凑一行，与 prompt 口径一致
+    ai_line = fmt_ai_line(D.get('aiPrediction'), '今日AI预测')
+    if ai_line:
+        parts.append(ai_line)
     if bullish_lines:
         parts.append("✅ 利好：\n" + '\n'.join(bullish_lines))
     if bearish_lines:
@@ -266,13 +287,17 @@ elif mode == 'weekend':
     bullish_lines = [fmt_bullish(t, i+1) for i, t in enumerate(w.get('bullish',[])[:3])]
     bearish_lines = [fmt_bearish(t, i+1) for i, t in enumerate(w.get('bearish',[])[:3])]
 
-    # 顺序：美股 → 要闻 → 研判 → 利好 → 利空
+    # 顺序：美股 → 要闻 → 研判 → AI预测（周一板块） → 利好 → 利空
     parts = [
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
         f"📊 美股：{us_line}",
         f"📰 要闻：\n{weekend_news}",
         f"💡 研判：{monday_outlook}",
     ]
+    # 周一板块 AI 预测（date 应为下个周一）：紧凑一行
+    ai_line = fmt_ai_line(D.get('aiPrediction'), '周一AI预测')
+    if ai_line:
+        parts.append(ai_line)
     if bullish_lines:
         parts.append("✅ 利好：\n" + '\n'.join(bullish_lines))
     if bearish_lines:

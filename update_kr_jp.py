@@ -170,13 +170,21 @@ def fetch_index_yahoo(sym, name):
 def collect():
     """返回 (indices, stocks)"""
     stocks = fetch_stocks_tencent()
+    # Yahoo 单只兜底带连续失败熔断：全部数据源故障时避免 50 只个股逐只慢超时拖长整体耗时
+    fb_fail = 0
     for _, cn, std in ALL_STOCKS:
         if stocks is None or std not in stocks:
+            if fb_fail >= 6:
+                print(f'[warn] Yahoo 兜底连续失败 {fb_fail} 次，跳过剩余个股兜底')
+                continue
             fb = fetch_stock_yahoo(std)
             if fb:
                 stocks = stocks or {}
                 stocks[std] = fb
+                fb_fail = 0
                 print(f'[info] {cn} 使用 Yahoo 兜底')
+            else:
+                fb_fail += 1
 
     indices = {}
     for key in ('KS11.GI', 'N225.GI'):
@@ -201,8 +209,7 @@ def validate(indices, stocks, label='收盘'):
     def same_direction(a, b):
         return (a >= 0) == (b >= 0)
 
-    if label != '收盘':
-        pass  # 早盘跳过方向一致性否决（下方异常值过滤仍执行）
+    # 方向一致性校验仅收盘启用（direction_check_on）；早盘跳过否决，异常值过滤仍执行
     checks = [
         ('KS11.GI', ['005930.KS', '000660.KS', '005380.KS'], 'KOSPI', '韩股龙头'),
         ('N225.GI', ['8035.T', '7203.T', '9983.T'], '日经225', '日经龙头'),
