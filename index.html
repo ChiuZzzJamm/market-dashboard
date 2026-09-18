@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609181033"></script>
+<script src="data.js?v=202609181040"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -139,14 +139,25 @@
   .wk-item .thm { font-size: 13.5px; font-weight: 700; margin-bottom: 3px; }
   .wk-item .dtl { font-size: 12.5px; color: var(--ink2); line-height: 1.6; }
   .wk-stock-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
-  .news-impact { margin-top: 8px; padding: 10px 14px; border-radius: 12px; background: var(--accent-soft); border-left: 4px solid var(--line); }
-  .news-impact.bull { border-left-color: var(--up); }
-  .news-impact.bear { border-left-color: var(--down); }
-  .news-impact .imp-label { font-size: 12px; font-weight: 700; color: var(--up); margin-right: 8px; }
-  .news-impact.bear .imp-label { color: var(--down); }
-  .news-impact .imp-theme { font-size: 13px; font-weight: 700; }
-  .news-impact.bull .stock-chip { border-color: #f2c4ca; }
-  .news-impact.bear .stock-chip { border-color: #b9e2d8; }
+  .news-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .news-cols { grid-template-columns: 1fr; } }
+  .nc-head { font-size: 14.5px; font-weight: 800; margin-bottom: 8px; letter-spacing: 1px; }
+  .nc-head.bull { color: var(--up); }
+  .nc-head.bear { color: var(--down); }
+  .news-cell { background: var(--accent-soft); border-radius: 14px; border-left: 4px solid var(--up); padding: 12px 14px; margin-bottom: 10px; }
+  .news-cell.bear { border-left-color: var(--down); }
+  .nc-theme { font-size: 14px; font-weight: 800; margin-bottom: 4px; }
+  .nc-dtl { font-size: 13px; color: var(--ink); line-height: 1.65; }
+  .nc-dtl b { font-weight: 700; }
+  .nc-imp { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); }
+  .nc-imp-theme { font-size: 12.5px; font-weight: 700; color: var(--accent-deep); }
+  .nc-stocks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+  .nc-chip { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 4px 8px; font-size: 12px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .news-cell.bull .nc-chip { border-color: #f2c4ca; }
+  .news-cell.bear .nc-chip { border-color: #b9e2d8; }
+  .nc-chip b { font-weight: 700; }
+  .nc-chip .cd { color: var(--ink2); font-size: 11px; margin-left: 4px; }
+  .nc-empty { font-size: 12.5px; color: var(--ink2); }
   .wk-outlook { background: var(--accent-soft); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 13.5px; margin-top: 10px; }
   .wk-src { font-size: 11.5px; color: var(--ink2); margin-top: 8px; }
 
@@ -492,38 +503,38 @@ function newsTag(item) {
 }
 
 function renderNewsCard(d) {
-  // A股/美股共用：大标题「全球要闻」（与其他卡片统一的圆点标题样式），每条要闻下方直接挂利好/利空板块与标的（impacts）
+  // A股/美股共用：大标题「全球要闻」，两栏布局——左列利好、右列利空，标的胶囊一行两个
   if (!d) return '';
   var bn = d.bullNews||[], be = d.bearNews||[];
   if (!bn.length && !be.length) return '';
-  var impactHtml = function (it, dir) {
-    if (!it.impacts || !it.impacts.length) return '';
-    var s = '';
-    it.impacts.forEach(function (im) {
-      s += '<div class="news-impact ' + dir + '"><span class="imp-label">' + (dir === 'bull' ? '利好' : '利空') + '</span>'
-        + '<span class="imp-theme">' + esc(im.theme || im.sector || '') + '</span>';
-      if (im.stocks && im.stocks.length) {
-        s += '<div class="wk-stock-chips">';
-        im.stocks.forEach(function (st) {
-          s += '<span class="stock-chip"><b>' + esc(st.name||'') + '</b>'
-            + '<span class="cd">' + esc(st.code||'') + '</span>'
-            + (st.note ? '<span class="nt">' + esc(st.note||'') + '</span>' : '') + '</span>';
-        });
-        s += '</div>';
-      }
-      s += '</div>';
+  var itemHtml = function (it, dir) {
+    var s = '<div class="news-cell ' + dir + '">';
+    s += '<div class="nc-theme">' + esc(it.sector||'') + '</div>';
+    s += '<div class="nc-dtl"><b>' + esc(it.title||'') + '</b> — ' + esc(it.summary||'') + '</div>';
+    (it.impacts||[]).forEach(function (im) {
+      if (!im.stocks || !im.stocks.length) return;
+      s += '<div class="nc-imp"><span class="nc-imp-theme">' + esc(im.theme || im.sector || '') + '</span>';
+      s += '<div class="nc-stocks">';
+      im.stocks.forEach(function (st) {
+        s += '<span class="nc-chip"><b>' + esc(st.name||'') + '</b><span class="cd">' + esc(st.code||'') + '</span></span>';
+      });
+      s += '</div></div>';
     });
+    s += '</div>';
+    return s;
+  };
+  var colHtml = function (arr, dir, label) {
+    var s = '<div class="news-col ' + dir + '"><div class="nc-head ' + dir + '">' + label + '</div>';
+    if (!arr.length) s += '<div class="nc-empty">今日暂无</div>';
+    arr.forEach(function (it) { s += itemHtml(it, dir); });
+    s += '</div>';
     return s;
   };
   var html = '<div class="wk-card"><div class="wk-head"><h2>全球要闻</h2>'
     + '<span class="date">' + esc(d.tradeDate||'') + '</span></div>';
-  html += '<div class="wk-section">';
-  bn.concat(be).forEach(function (it) {
-    var dir = bn.indexOf(it) >= 0 ? 'bull' : 'bear';
-    html += '<div class="wk-item"><div class="thm">' + newsTag(it) + ' ' + esc(it.sector||'') + '</div>'
-      + '<div class="dtl"><b>' + esc(it.title||'') + '</b> — ' + esc(it.summary||'') + '</div>'
-      + impactHtml(it, dir) + '</div>';
-  });
+  html += '<div class="news-cols">';
+  html += colHtml(bn, 'bull', '利好方向');
+  html += colHtml(be, 'bear', '利空方向');
   html += '</div>';
   if (d.source) html += '<div class="wk-src">来源：' + esc(d.source) + '</div>';
   html += '</div>';
