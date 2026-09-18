@@ -367,7 +367,7 @@ for cfg in US_SECTORS:
     _item = {
         "name": name,
         "pct": avg,
-        "ref": f"{len(vals)}只成分股均值",
+        "ref": "、".join(f"{n}{p_:+.2f}%" for n, p_ in vals) + f"（{len(vals)}只均值）",
         "constituents": [{"name": n, "changePct": p} for n, p in vals],
     }
     if len(opens) >= 2:  # 板块开盘涨跌近似 = 成分股今开涨跌幅均值

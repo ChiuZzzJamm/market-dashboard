@@ -2884,7 +2884,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "AI 算力",
             "pct": 5.85,
-            "ref": "5只成分股均值",
+            "ref": "NVDA+2.54%、AMD+6.36%、AVGO+2.29%、ARM+8.57%、SMCI+9.5%（5只均值）",
             "constituents": [
               {
                 "name": "NVDA",
@@ -2912,7 +2912,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "CPO / 光模块",
             "pct": -0.32,
-            "ref": "5只成分股均值",
+            "ref": "COHR+2.09%、LITE-2.81%、CIEN+1.1%、FNSR-2.99%、ANET+1.01%（5只均值）",
             "constituents": [
               {
                 "name": "COHR",
@@ -2940,7 +2940,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "半导体",
             "pct": 3.32,
-            "ref": "5只成分股均值",
+            "ref": "INTC+7.67%、TSM+3%、QCOM+2.09%、TXN-0.97%、MRVL+4.81%（5只均值）",
             "constituents": [
               {
                 "name": "INTC",
@@ -2968,7 +2968,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "存储",
             "pct": 3.98,
-            "ref": "4只成分股均值",
+            "ref": "MU+5.5%、WDC+1.65%、STX+2.55%、SNDK+6.21%（4只均值）",
             "constituents": [
               {
                 "name": "MU",
@@ -2992,7 +2992,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "电网 / 电力设备",
             "pct": 0.85,
-            "ref": "4只成分股均值",
+            "ref": "ETN+2.93%、HUBB+0.95%、PWR-0.44%、GEV-0.02%（4只均值）",
             "constituents": [
               {
                 "name": "ETN",
@@ -3016,7 +3016,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "核电",
             "pct": 5.15,
-            "ref": "5只成分股均值",
+            "ref": "CEG+1.26%、VST+2.26%、TLN+1.99%、OKLO+11.31%、SMR+8.92%（5只均值）",
             "constituents": [
               {
                 "name": "CEG",
@@ -3044,7 +3044,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "数据中心",
             "pct": 1.2,
-            "ref": "3只成分股均值",
+            "ref": "DLR+1.76%、EQIX+0.96%、VRT+0.87%（3只均值）",
             "constituents": [
               {
                 "name": "DLR",
@@ -3064,7 +3064,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "云计算 / 软件",
             "pct": 1.45,
-            "ref": "5只成分股均值",
+            "ref": "MSFT+1.52%、AMZN+2.13%、GOOGL+1.3%、ORCL+5.19%、CRM-2.9%（5只均值）",
             "constituents": [
               {
                 "name": "MSFT",
@@ -3092,7 +3092,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "商业航天",
             "pct": 6.26,
-            "ref": "4只成分股均值",
+            "ref": "RKLB+6.47%、LUNR+6.63%、ASTS+5.8%、SPCE+6.14%（4只均值）",
             "constituents": [
               {
                 "name": "RKLB",
@@ -3116,7 +3116,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "机器人",
             "pct": 1.15,
-            "ref": "4只成分股均值",
+            "ref": "ROK-1.17%、ISRG+0.33%、TER+3.51%、ZBRA+1.94%（4只均值）",
             "constituents": [
               {
                 "name": "ROK",
@@ -3140,7 +3140,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "自动驾驶",
             "pct": 1.59,
-            "ref": "3只成分股均值",
+            "ref": "MBLY+2.81%、APTV+0.65%、GOOGL+1.3%（3只均值）",
             "constituents": [
               {
                 "name": "MBLY",
@@ -3160,7 +3160,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "军工",
             "pct": -0.96,
-            "ref": "5只成分股均值",
+            "ref": "LMT+0.16%、RTX-1.67%、NOC-1.28%、GD-1.13%、HWM-0.87%（5只均值）",
             "constituents": [
               {
                 "name": "LMT",
@@ -3188,7 +3188,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "新能源 / 光伏",
             "pct": 3.4,
-            "ref": "5只成分股均值",
+            "ref": "FSLR+5.28%、ENPH+1.29%、SEDG+3.81%、RUN+5.5%、NEE+1.13%（5只均值）",
             "constituents": [
               {
                 "name": "FSLR",
@@ -3216,7 +3216,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "锂 / 电池材料",
             "pct": 4.53,
-            "ref": "3只成分股均值",
+            "ref": "ALB+5.1%、SQM+4.54%、LAC+3.96%（3只均值）",
             "constituents": [
               {
                 "name": "ALB",
@@ -3236,7 +3236,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "铜 / 有色",
             "pct": 2.37,
-            "ref": "4只成分股均值",
+            "ref": "FCX+2.33%、SCCO+3.28%、TECK+1.51%、RIO+2.35%（4只均值）",
             "constituents": [
               {
                 "name": "FCX",
@@ -3260,7 +3260,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "石油",
             "pct": 0.21,
-            "ref": "4只成分股均值",
+            "ref": "XOM-0.03%、CVX+0.01%、COP+0.49%、EOG+0.37%（4只均值）",
             "constituents": [
               {
                 "name": "XOM",
@@ -3284,7 +3284,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "天然气",
             "pct": 0.78,
-            "ref": "4只成分股均值",
+            "ref": "LNG+0.78%、EQT-0.12%、KMI+1.89%、OKE+0.56%（4只均值）",
             "constituents": [
               {
                 "name": "LNG",
@@ -3308,7 +3308,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "黄金 / 贵金属",
             "pct": 2.71,
-            "ref": "4只成分股均值",
+            "ref": "NEM+2.16%、AEM+2.97%、KGC+2.41%、GFI+3.29%（4只均值）",
             "constituents": [
               {
                 "name": "NEM",
@@ -3332,7 +3332,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "银行金融",
             "pct": 0.48,
-            "ref": "5只成分股均值",
+            "ref": "JPM+0.11%、BAC+0.48%、WFC-0.18%、GS+1.44%、MS+0.54%（5只均值）",
             "constituents": [
               {
                 "name": "JPM",
@@ -3360,7 +3360,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "生物医药",
             "pct": 1.15,
-            "ref": "4只成分股均值",
+            "ref": "LLY+1.28%、JNJ+1.1%、PFE+0.66%、MRK+1.55%（4只均值）",
             "constituents": [
               {
                 "name": "LLY",
@@ -3384,7 +3384,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "消费",
             "pct": -0.02,
-            "ref": "5只成分股均值",
+            "ref": "WMT-0.66%、COST+0.02%、PG+0.36%、KO+0.22%、MCD-0.03%（5只均值）",
             "constituents": [
               {
                 "name": "WMT",
@@ -3412,7 +3412,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "稀土 / 战略金属",
             "pct": 1.46,
-            "ref": "2只成分股均值",
+            "ref": "MP+0.8%、UUUU+2.13%（2只均值）",
             "constituents": [
               {
                 "name": "MP",
@@ -3428,7 +3428,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "加密货币 / 比特币",
             "pct": 5.88,
-            "ref": "4只成分股均值",
+            "ref": "COIN+5.75%、MSTR+4.81%、RIOT+7.52%、MARA+5.43%（4只均值）",
             "constituents": [
               {
                 "name": "COIN",
@@ -3452,7 +3452,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "中概股",
             "pct": 0.34,
-            "ref": "5只成分股均值",
+            "ref": "BABA+1.18%、JD-0.97%、PDD-1.31%、BIDU+1.67%、NIO+1.12%（5只均值）",
             "constituents": [
               {
                 "name": "BABA",
@@ -3480,7 +3480,7 @@ window.DASHBOARD_DATA = {
           {
             "name": "电动车",
             "pct": 2.02,
-            "ref": "4只成分股均值",
+            "ref": "TSLA+2.27%、RIVN+1.12%、F+1.95%、GM+2.76%（4只均值）",
             "constituents": [
               {
                 "name": "TSLA",
