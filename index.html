@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609200022"></script>
+<script src="data.js?v=202609200253"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -158,6 +158,12 @@
   .news-cell.bull .stock-chip { border-color: #f2c4ca; }
   .news-cell.bear .stock-chip { border-color: #b9e2d8; }
   .nc-empty { font-size: 12.5px; color: var(--ink2); }
+  /* 题材掘金 · 个股事件驱动 */
+  .tp-item { background: var(--accent-soft); border-radius: 12px; padding: 11px 13px; margin-bottom: 10px; border-left: 4px solid var(--accent-deep); }
+  .tp-item:last-child { margin-bottom: 0; }
+  .tp-event { font-size: 13.5px; font-weight: 800; color: var(--accent-deep); margin-bottom: 5px; line-height: 1.5; }
+  .tp-logic { font-size: 12.5px; color: var(--ink); line-height: 1.65; margin-bottom: 9px; }
+  .tp-why { font-size: 12px; color: var(--ink2); line-height: 1.65; margin-top: 9px; padding-top: 9px; border-top: 1px dashed var(--line); }
   .wk-outlook { background: var(--accent-soft); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 13.5px; margin-top: 10px; }
   .wk-src { font-size: 11.5px; color: var(--ink2); margin-top: 8px; }
 
@@ -370,6 +376,10 @@ function render(market) {
 
   html += '<div class="card"><h2>大盘趋势研判</h2><div class="outlook">' + formatOutlook(d.outlook) + '</div></div>';
 
+  if (isA && d.themePicks && d.themePicks.length) {
+    html += '<div class="card"><h2>题材掘金 · 个股事件驱动</h2>' + renderThemePicks(d.themePicks) + '</div>';
+  }
+
   html += '<div class="card"><h2>领涨板块</h2>' + renderReasons(d.sectorsUp, d.tradeDate, true) + '</div>';
 
   html += '<div class="card"><h2>调整 / 领跌板块</h2>' +
@@ -548,6 +558,32 @@ function renderNewsCard(d) {
   if (d.source) html += '<div class="wk-src">来源：' + esc(d.source) + '</div>';
   html += '</div>';
   return html;
+}
+
+/* 题材掘金 · 个股事件驱动（方案C：在板块级复盘之外补充个股级事件归因）
+   结构：themePicks = [{event, logic, stocks:[{code,name,note,chg}], why}]
+   复用 .stock-chips / .stock-chip（悬停title + 点击chip-pop浮层） */
+function renderThemePicks(list) {
+  if (!list || !list.length) return '';
+  var s = '';
+  list.forEach(function (it) {
+    s += '<div class="tp-item">';
+    if (it.event) s += '<div class="tp-event">⚡ ' + esc(it.event) + '</div>';
+    if (it.logic) s += '<div class="tp-logic">逻辑传导：' + esc(it.logic) + '</div>';
+    var sts = it.stocks || [];
+    if (sts.length) {
+      s += '<div class="stock-chips">';
+      sts.forEach(function (st) {
+        var note = (st.note || '') + (st.chg ? ' · ' + st.chg : '');
+        var title = (st.name || '') + ' ' + (st.code || '') + (note ? ' · ' + note : '');
+        s += '<span class="stock-chip" title="' + escAttr(title) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + (note ? '<span class="nt">' + esc(note) + '</span>' : '') + '</span>';
+      });
+      s += '</div>';
+    }
+    if (it.why) s += '<div class="tp-why">' + esc(it.why) + '</div>';
+    s += '</div>';
+  });
+  return s;
 }
 
 function renderWeekendNews() {
