@@ -169,7 +169,8 @@ def fetch_index_yahoo(sym, name):
 
 def collect():
     """返回 (indices, stocks)"""
-    stocks = fetch_stocks_tencent()
+    # 腾讯全失败时返回 None，统一转成空 dict，避免后续 validate()/build_* 对 None 调用 .items()/.get() 崩溃
+    stocks = fetch_stocks_tencent() or {}
     # Yahoo 单只兜底带连续失败熔断：全部数据源故障时避免 50 只个股逐只慢超时拖长整体耗时
     fb_fail = 0
     for _, cn, std in ALL_STOCKS:

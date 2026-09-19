@@ -217,10 +217,11 @@ def fetch_full_market_limits():
             seen.add(r["f12"]); uniq.append(r)
 
     def ratio_of(code, name):
-        if code.startswith(("30", "68")): return Decimal("0.20")   # 创业板/科创板（含ST）±20%
+        # 2026-07-06 新规：沪深主板 ST/*ST 涨跌幅 5%→10%，与主板普通股并轨；
+        # 创业板/科创板 ST 仍 ±20%、北交所 ±30%。全市场已无 ±5% 档，按板块判定即可。
+        if code.startswith(("30", "68")): return Decimal("0.20")   # 创业板/科创板 ±20%（含 ST）
         if code.startswith(("4", "8", "92")): return Decimal("0.30")  # 北交所 ±30%
-        if "ST" in name.upper() or "退" in name: return Decimal("0.05")
-        return Decimal("0.10")
+        return Decimal("0.10")                                     # 沪深主板 ±10%（含 ST/*ST）
 
     zt, ld = set(), set()
     for r in uniq:

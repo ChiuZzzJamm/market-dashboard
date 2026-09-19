@@ -25,6 +25,21 @@ def fmt_pct(x):
     except Exception:
         return str(x)
 
+
+def _us_summary(trade_md, trend, sorted_up, sorted_down):
+    """安全构造美股收盘 summary：领涨/领跌板块各最多取前 2，避免极端单边市
+    （某一侧仅 1 个板块）触发 sorted_up[1]/sorted_down[1] 的 IndexError 崩溃。"""
+    def _pair(items):
+        return "、".join(f"{it['name']}{fmt_pct(it['pct'])}" for it in items[:2])
+
+    lead, trail = _pair(sorted_up), _pair(sorted_down)
+    if not (sorted_up or sorted_down):
+        return f"{trade_md} 美股收盘数据已更新。"
+    head = (f"{trade_md} 美股收盘：三大指数{trend}（"
+            f"道指{fmt_pct(pct('usDJI'))} / 纳指{fmt_pct(pct('usIXIC'))} / 标普{fmt_pct(pct('usINX'))}）。")
+    tail = (f"领涨：{lead}；" if lead else "") + (f"领跌：{trail}。" if trail else "。")
+    return head + tail
+
 def parse_quote_text(text):
     out = {}
     for code, line in re.findall(r'v_([^=]+)="([^"]+)"', text):
@@ -461,12 +476,7 @@ if None not in (_di, _ix, _sp):
 us_obj = {
     "tradeDate": f"{trade_iso}（美东，北京时间 次日 凌晨收盘）" if trade_iso != "未知日期" else "未知日期",
     "status": "收盘",
-    "summary": (
-        f"{trade_md} 美股收盘：三大指数{_trend}（"
-        f"道指{fmt_pct(pct('usDJI'))} / 纳指{fmt_pct(pct('usIXIC'))} / 标普{fmt_pct(pct('usINX'))}）。"
-        f"领涨：{sorted_up[0]['name']}{fmt_pct(sorted_up[0]['pct'])}、{sorted_up[1]['name']}{fmt_pct(sorted_up[1]['pct'])}；"
-        f"领跌：{sorted_down[0]['name']}{fmt_pct(sorted_down[0]['pct'])}、{sorted_down[1]['name']}{fmt_pct(sorted_down[1]['pct'])}。"
-    ) if (sorted_up and sorted_down) else f"{trade_md} 美股收盘数据已更新。",
+    "summary": _us_summary(trade_md, _trend, sorted_up, sorted_down),
     "indices": [
         {"name": index_name_map.get('usDJI','道琼斯'), "point": point('usDJI'), "changePct": pct('usDJI'), "openPct": open_pct('usDJI')},
         {"name": index_name_map.get('usIXIC','纳斯达克'), "point": point('usIXIC'), "changePct": pct('usIXIC'), "openPct": open_pct('usIXIC')},
