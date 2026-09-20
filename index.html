@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609202223"></script>
+<script src="data.js?v=202609202230"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -425,12 +425,6 @@ function render(market) {
 
   html += '<div class="card"><h2>大盘趋势研判</h2><div class="outlook">' + formatOutlook(d.outlook) + '</div></div>';
 
-  if (isA) {
-    html += '<div class="card"><h2>主力资金流向</h2>';
-    if (d.fundNote) html += '<div class="note-line">' + esc(d.fundNote) + '</div>';
-    html += '<div id="chart-fund" class="chart-tall"></div></div>';
-  }
-
   html += '<div class="card"><h2>领涨板块</h2>' + renderReasons(d.sectorsUp, d.tradeDate, true) + '</div>';
 
   html += '<div class="card"><h2>调整 / 领跌板块</h2>' +
@@ -448,6 +442,13 @@ function render(market) {
     }
   }
 
+  // 主力资金流向紧贴行业全景上方（2026-09-20 用户要求：挪到行业全景上面）
+  if (isA) {
+    html += '<div class="card"><h2>主力资金流向</h2>';
+    if (d.fundNote) html += '<div class="note-line">' + esc(d.fundNote) + '</div>';
+    html += '<div id="chart-fund" class="chart-tall"></div></div>';
+  }
+
   document.getElementById('content').innerHTML = html;
 
   if (isA) {
@@ -463,7 +464,7 @@ function render(market) {
 }
 
 /* 行业全景（沿用原版：市场 tab + 板块网格） */
-var panoCurrent = 'us';
+var panoCurrent = 'ashare';
 function renderPano() {
   var pano = window.DASHBOARD_DATA.panorama;
   if (!pano || !pano.markets) { document.getElementById('pano-card').style.display = 'none'; return; }
@@ -479,6 +480,9 @@ function renderPano() {
       out.push({ name: 'KOSPI', pct: m.indices[0].changePct });
     } else if (m.key === 'jp' && m.indices && m.indices.length) {
       out.push({ name: '日经225', pct: m.indices[0].changePct });
+    } else if (m.key === 'ashare' && m.indices && m.indices.length) {
+      var ASHORT = { '上证指数': '上证', '深证成指': '深成', '创业板指': '创业板', '科创50': '科创50', '上证50': '上证50' };
+      m.indices.slice(0, 3).forEach(function (i) { out.push({ name: ASHORT[i.name] || i.name, pct: i.changePct }); });
     }
     return out;
   }

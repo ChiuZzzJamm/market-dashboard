@@ -510,6 +510,28 @@ def main():
             all_b = build_all_boards()
             if all_b:
                 a["allBoards"] = all_b
+                # 行业全景 A股 tab：全板块涨幅同步到 panorama.markets（前端 A股 tab 板块网格）。
+                # 与 us/kr/jp 市场项并列，in-place 更新，不动其他市场项。
+                pano_mk = D.setdefault("panorama", {}).setdefault("markets", [])
+                ash_m = None
+                for _m in pano_mk:
+                    if isinstance(_m, dict) and _m.get("key") == "ashare":
+                        ash_m = _m
+                        break
+                if ash_m is None:
+                    ash_m = {"key": "ashare", "name": "A股"}
+                    pano_mk.insert(0, ash_m)
+                try:
+                    ash_m["date"] = f"{int(now[5:7])}/{int(now[8:10])} 收盘"
+                except Exception:
+                    ash_m["date"] = f"{now} 收盘"
+                if indices:
+                    ash_m["indices"] = [
+                        {"name": _i.get("name"), "changePct": _i.get("changePct")}
+                        for _i in indices
+                        if isinstance(_i, dict) and _i.get("changePct") is not None
+                    ]
+                ash_m["items"] = [{"name": _b["name"], "pct": _b["pct"]} for _b in all_b if isinstance(_b, dict) and _b.get("name") is not None and isinstance(_b.get("pct"), (int, float))]
         if fund_in is not None:
             a["fundIn"] = fund_in
             a["fundOut"] = fund_out
