@@ -520,7 +520,7 @@ else:
     for m in D.get('panorama', {}).get('markets', []):
         if m.get('key') == 'us':
             m['date'] = f"{trade_md} 收盘（北京时间 次日 凌晨）" if trade_md != "未知" else "未知日期"
-            m['items'] = pano_items
+            m['items'] = sorted(pano_items, key=lambda x: (x.get('pct') is None, -(x.get('pct') or 0)))
     D['updatedAt'] = f"{datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d %H:%M')}（美股收盘数据已自动更新）"
     print(f"updated us/panorama.us for {trade_iso}")
 

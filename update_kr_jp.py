@@ -234,6 +234,7 @@ def build_kr(indices, stocks):
             continue
         avg = round(sum(pts) / len(pts), 2)
         items.append({'name': bname, 'pct': avg, 'ref': '、'.join(detail) + f'（{len(pts)}只均值）'})
+    items.sort(key=lambda x: -x['pct'])
     return {'key': 'kr', 'name': '韩股',
             'indices': [{'name': '韩国综合指数 KOSPI', 'changePct': kospi}] if kospi is not None else [],
             'items': items}
@@ -254,6 +255,7 @@ def build_jp(indices, stocks):
             continue
         avg = round(sum(pts) / len(pts), 2)
         items.append({'name': bname, 'pct': avg, 'ref': '、'.join(detail) + f'（{len(pts)}只均值）'})
+    items.sort(key=lambda x: -x['pct'])
     return {'key': 'jp', 'name': '日经',
             'indices': [{'name': '日经225', 'changePct': n225}] if n225 is not None else [],
             'items': items}

@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609202230"></script>
+<script src="data.js?v=202609202235"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -504,7 +504,16 @@ function renderPano() {
   }
   document.getElementById('pano-date').textContent = '数据时点：' + cur.date;
   var html = '';
-  (cur.items || []).forEach(function (it) {
+  // 行业全景板块按当日涨幅降序排列（无涨幅的置底）
+  var panoItems = (cur.items || []).slice().sort(function (a, b) {
+    var pa = (a && typeof a.pct === 'number') ? a.pct : null;
+    var pb = (b && typeof b.pct === 'number') ? b.pct : null;
+    if (pa === null && pb === null) return 0;
+    if (pa === null) return 1;
+    if (pb === null) return -1;
+    return pb - pa;
+  });
+  panoItems.forEach(function (it) {
     var c = cls(it.pct);
     html += '<div class="pano-cell"><div class="nm">' + esc(it.name) +
       (it.ref ? '<span class="ref">' + esc(it.ref) + '</span>' : '') + '</div>' +

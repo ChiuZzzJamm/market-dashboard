@@ -531,7 +531,9 @@ def main():
                         for _i in indices
                         if isinstance(_i, dict) and _i.get("changePct") is not None
                     ]
-                ash_m["items"] = [{"name": _b["name"], "pct": _b["pct"]} for _b in all_b if isinstance(_b, dict) and _b.get("name") is not None and isinstance(_b.get("pct"), (int, float))]
+                _items = [{"name": _b["name"], "pct": _b["pct"]} for _b in all_b if isinstance(_b, dict) and _b.get("name") is not None and isinstance(_b.get("pct"), (int, float))]
+                _items.sort(key=lambda x: -x["pct"])
+                ash_m["items"] = _items
         if fund_in is not None:
             a["fundIn"] = fund_in
             a["fundOut"] = fund_out
