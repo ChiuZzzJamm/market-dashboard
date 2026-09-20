@@ -158,6 +158,10 @@
   .nc-stocks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: 6px; }
   .news-cell.bull .stock-chip { border-color: #f2c4ca; }
   .news-cell.bear .stock-chip { border-color: #b9e2d8; }
+  /* 手机端：4 列网格芯片过窄会导致股票名+代码被 overflow:hidden 截断，改 2 列保证完整显示 */
+  @media (max-width: 560px) {
+    .stock-chips, .nc-stocks, .lb-stocks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
   .nc-empty { font-size: 12.5px; color: var(--ink2); }
   /* 题材掘金 · 个股事件驱动 */
   .tp-item { background: var(--accent-soft); border-radius: 12px; padding: 11px 13px; margin-bottom: 10px; border-left: 4px solid var(--accent-deep); }
@@ -729,6 +733,12 @@ renderWeekendNews();
         pop.className = 'chip-pop';
         pop.textContent = nt.textContent;
         chip.appendChild(pop);
+        // 手机端：弹层超出视口底部时翻到芯片上方，避免被裁切
+        var popRect = pop.getBoundingClientRect();
+        if (popRect.bottom > window.innerHeight - 4) {
+          pop.style.top = 'auto';
+          pop.style.bottom = 'calc(100% + 5px)';
+        }
       }
     }
   });
