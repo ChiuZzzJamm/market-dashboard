@@ -473,6 +473,14 @@ if None not in (_di, _ix, _sp):
     elif _di < 0 and _ix < 0 and _sp < 0:
         _trend = '收跌'
 
+# 题材掘金同日保留：themePicks 由 07:30/周日 AI 基于当日真实新闻生成，本脚本同日重跑时
+# 不得洗掉；跨日（trade_iso 变化）则清空，由当日 AI 重新生成，避免旧事件挂新行情。
+_old_tp = D.get('us', {}).get('themePicks') or []
+_old_us_date = (D.get('us', {}).get('tradeDate') or '')[:10]
+keep_tp = _old_tp if (trade_iso != "未知日期" and _old_us_date == trade_iso) else []
+if not keep_tp and _old_tp:
+    print('[info] us.themePicks 跨日，清空待当日 AI 重新生成')
+
 us_obj = {
     "tradeDate": f"{trade_iso}（美东，北京时间 次日 凌晨收盘）" if trade_iso != "未知日期" else "未知日期",
     "status": "收盘",
@@ -499,6 +507,7 @@ us_obj = {
     "bullish": D.get('us', {}).get('bullish'),
     "bearish": D.get('us', {}).get('bearish'),
     "outlook": D.get('us', {}).get('outlook', "关注美联储议息、美债收益率与地缘风险对高估值板块的影响。"),
+    "themePicks": keep_tp,
     "source": "美股数据来自腾讯行情实时接口"
 }
 

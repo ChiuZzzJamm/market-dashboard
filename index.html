@@ -158,10 +158,16 @@
   .wk-item .thm { font-size: 13.5px; font-weight: 700; margin-bottom: 3px; }
   .wk-item .dtl { font-size: 12.5px; color: var(--ink2); line-height: 1.6; }
   .wk-stock-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
-  .news-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; align-items: start; }
-  .news-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-  .news-col .nc-head { margin-bottom: 0; }
-  @media (max-width: 700px) { .news-cols { grid-template-columns: 1fr; } }
+  .news-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+  .news-cols .news-cell { min-width: 0; }
+  .news-cell.ghost-slot { visibility: hidden; padding: 0; border: none; background: none; }
+  @media (max-width: 700px) {
+    .news-cols { grid-template-columns: 1fr; }
+    .news-cols .nc-head.bull { order: 1; }
+    .news-cols .p-bull { order: 2; }
+    .news-cols .nc-head.bear { order: 3; }
+    .news-cols .p-bear { order: 4; }
+  }
   .nc-head { font-size: 14.5px; font-weight: 800; margin-bottom: 8px; letter-spacing: 1px; }
   .nc-head.bull { color: var(--up); }
   .nc-head.bear { color: var(--down); }
@@ -437,7 +443,7 @@ function render(market) {
     (d.sectorNote ? '<div class="src-line">' + esc(d.sectorNote) + '</div>' : '') +
     renderReasons(d.sectorsDown, d.tradeDate, false) + '</div>';
 
-  if (isA && d.themePicks && d.themePicks.length) {
+  if (d.themePicks && d.themePicks.length) {
     html += '<div class="card"><h2>题材掘金 · 个股事件驱动</h2>' + renderThemePicks(d.themePicks) + '</div>';
   }
 
@@ -598,8 +604,7 @@ function newsTag(item) {
 }
 
 function renderNewsCard(d) {
-  // A股/美股共用：大标题「全球要闻」，两栏布局——左列利好、右列利空，标的胶囊一行两个
-  // 2026-09-18 改：bull/bear 按行配对放入同一网格，左右每行顶对齐且等高；窄屏媒体查询回退单列
+  // A股/美股共用：大标题「全球要闻」，桌面两栏按行配对（同行等高、左右对齐），手机单列组内重排
   if (!d) return '';
   var bn = d.bullNews||[], be = d.bearNews||[];
   if (!bn.length && !be.length) return '';
@@ -625,20 +630,18 @@ function renderNewsCard(d) {
     s += '</div>';
     return s;
   };
-  var colHtml = function (arr, dir, label) {
-    var s = '<div class="news-col ' + dir + '"><div class="nc-head ' + dir + '">' + label + '</div>';
-    if (!arr.length) {
-      s += '<div class="news-cell ' + dir + '"><div class="nc-empty">今日暂无</div></div>';
-    } else {
-      arr.forEach(function (it) { s += itemHtml(it, dir); });
-    }
-    s += '</div>';
-    return s;
-  };
+  // 桌面：第 i 行 = 利好第 i 条 + 利空第 i 条（网格同行等高，左右始终对齐）
+  // 手机(≤700px)：单列 + order 重排为 利好标题→利好条目→利空标题→利空条目
   var html = '<div class="wk-card"><div class="wk-head"><h2>全球要闻</h2>'
     + '<span class="date">' + esc(d.tradeDate||'') + '</span></div>';
   html += '<div class="news-cols">';
-  html += colHtml(bn, 'bull', '利好方向') + colHtml(be, 'bear', '利空方向');
+  html += '<div class="nc-head bull">利好方向</div><div class="nc-head bear">利空方向</div>';
+  var nRows = Math.max(bn.length, be.length);
+  for (var i = 0; i < nRows; i++) {
+    html += i < bn.length ? itemHtml(bn[i], 'bull').replace('news-cell bull"', 'news-cell bull p-bull"') : '<div class="news-cell ghost-slot"></div>';
+    html += i < be.length ? itemHtml(be[i], 'bear').replace('news-cell bear"', 'news-cell bear p-bear"') : '<div class="news-cell ghost-slot"></div>';
+  }
+  if (!nRows) html += '<div class="news-cell bull p-bull"><div class="nc-empty">今日暂无</div></div><div class="news-cell bear p-bear"><div class="nc-empty">今日暂无</div></div>';
   html += '</div>';
   if (d.source) html += '<div class="wk-src">来源：' + esc(d.source) + '</div>';
   html += '</div>';
