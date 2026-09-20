@@ -350,6 +350,9 @@ def main():
             time.sleep(0.6)
 
     # 按板块分组
+    # R75：剔除科创板(688)与北交所(8开头)——用户要求提供标的均不含这两类（含断板反包）
+    results = [r for r in results
+               if not (str(r["code"]).startswith("688") or str(r["code"]).startswith("8"))]
     grouped = {}
     for r in results:
         grouped.setdefault(r["hybk"] or "其他", []).append(r)
