@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609210220"></script>
+<script src="data.js?v=202609210228"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -716,22 +716,31 @@ function renderLianban(list) {
   return s;
 }
 
-function renderWeekendNews() {
-  // 周末消息面前瞻卡已删除（与全球要闻高度重合）；仅保留「周一开盘预判」独立小卡
-  var w = window.DASHBOARD_DATA.weekendNews;
+function renderOpenOutlook() {
+  // 每日开盘前瞻（R72）：顶层 openOutlook 带日期，前端按日期显示、过期自动隐藏
+  var D = window.DASHBOARD_DATA;
+  var o = D.openOutlook;
   var box = document.getElementById('weekend-news');
-  if (!w || !box) return;
-  // 周一开盘预判只在「周日 23:00 后」到「周一 16:00 A 股收盘更新前」显示
+  if (!o || !box) return;
+  var pad = function (n) { return (n < 10 ? '0' : '') + n; };
   var now = new Date();
   var day = now.getDay();
-  var hour = now.getHours();
-  var show = false;
-  if (day === 0 && hour >= 23) show = true;
-  if (day === 1 && hour < 16) show = true;
-  if (!show || !w.mondayOutlook) { box.innerHTML = ''; box.style.display = 'none'; return; }
-  var html = '<div class="wk-card"><div class="wk-head"><h2>周一开盘预判</h2><span class="date">' + esc(w.date || '') + '</span></div>' +
-    '<div class="wk-outlook">' + formatOutlook(w.mondayOutlook) + '</div>';
-  if (w.source) html += '<div class="wk-src">来源：' + esc(w.source) + '</div>';
+  var target;
+  if (day >= 1 && day <= 5) {
+    // 周一至周五：显示当日开盘前瞻
+    target = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+  } else {
+    // 周六/周日：显示下周一（周末前瞻）
+    var diff = (8 - day) % 7; if (diff === 0) diff = 1;
+    var nm = new Date(now); nm.setDate(now.getDate() + diff);
+    target = nm.getFullYear() + '-' + pad(nm.getMonth() + 1) + '-' + pad(nm.getDate());
+  }
+  if (o.date !== target) { box.innerHTML = ''; box.style.display = 'none'; return; }
+  var title = (day >= 1 && day <= 5)
+    ? ('开盘前瞻 · ' + target) : ('周末开盘前瞻 · ' + target);
+  var html = '<div class="wk-card"><div class="wk-head"><h2>' + title + '</h2><span class="date">' + esc(o.date || '') + '</span></div>' +
+    '<div class="wk-outlook">' + formatOutlook(o.content) + '</div>';
+  if (o.source) html += '<div class="wk-src">来源：' + esc(o.source) + '</div>';
   html += '</div>';
   box.innerHTML = html;
   box.style.display = '';
@@ -739,7 +748,7 @@ function renderWeekendNews() {
 
 document.getElementById('updatedAt').textContent = '数据更新：' + window.DASHBOARD_DATA.updatedAt;
 renderAiPrediction();
-renderWeekendNews();
+renderOpenOutlook();
 
   function closeChips() {
     document.querySelectorAll('.stock-chip.expanded, .tchip.expanded').forEach(function (c) {

@@ -260,8 +260,9 @@ elif mode == 'weekend':
     bullish_lines = [fmt_bullish(news_to_theme(t), i+1) for i, t in enumerate((src.get('bullNews') or [])[:3])]
     bearish_lines = [fmt_bearish(news_to_theme(t), i+1) for i, t in enumerate((src.get('bearNews') or [])[:3])]
 
-    # 周一开盘预判（weekendNews 仅存 date/mondayOutlook/source）
-    monday_outlook = (w.get('mondayOutlook') or '').replace('\n', ' ').strip()
+    # 开盘前瞻（R72 起为顶层 openOutlook.content，带日期；周末/周一均适用）
+    _oo = D.get('openOutlook') or {}
+    monday_outlook = (_oo.get('content') or '').replace('\n', ' ').strip()
 
     # 顺序：美股 → 要闻 → 周一研判 → AI预测（周一板块） → 利好 → 利空
     parts = [
