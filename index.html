@@ -384,6 +384,18 @@ function render(market) {
 
   html += '<div class="card"><h2>大盘趋势研判</h2><div class="outlook">' + formatOutlook(d.outlook) + '</div></div>';
 
+  if (isA) {
+    html += '<div class="card"><h2>主力资金流向</h2>';
+    if (d.fundNote) html += '<div class="note-line">' + esc(d.fundNote) + '</div>';
+    html += '<div id="chart-fund" class="chart-tall"></div></div>';
+  }
+
+  html += '<div class="card"><h2>领涨板块</h2>' + renderReasons(d.sectorsUp, d.tradeDate, true) + '</div>';
+
+  html += '<div class="card"><h2>调整 / 领跌板块</h2>' +
+    (d.sectorNote ? '<div class="src-line">' + esc(d.sectorNote) + '</div>' : '') +
+    renderReasons(d.sectorsDown, d.tradeDate, false) + '</div>';
+
   if (isA && d.themePicks && d.themePicks.length) {
     html += '<div class="card"><h2>题材掘金 · 个股事件驱动</h2>' + renderThemePicks(d.themePicks) + '</div>';
   }
@@ -393,18 +405,6 @@ function render(market) {
     if (lbHtml) {
       html += '<div class="card"><h2>🔥 连板梯队</h2>' + lbHtml + '</div>';
     }
-  }
-
-  html += '<div class="card"><h2>领涨板块</h2>' + renderReasons(d.sectorsUp, d.tradeDate, true) + '</div>';
-
-  html += '<div class="card"><h2>调整 / 领跌板块</h2>' +
-    (d.sectorNote ? '<div class="src-line">' + esc(d.sectorNote) + '</div>' : '') +
-    renderReasons(d.sectorsDown, d.tradeDate, false) + '</div>';
-
-  if (isA) {
-    html += '<div class="card"><h2>主力资金流向</h2>';
-    if (d.fundNote) html += '<div class="note-line">' + esc(d.fundNote) + '</div>';
-    html += '<div id="chart-fund" class="chart-tall"></div></div>';
   }
 
   document.getElementById('content').innerHTML = html;
