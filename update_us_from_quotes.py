@@ -367,13 +367,13 @@ def open_pct(code):
 pano_items = []
 for cfg in US_SECTORS:
     name = cfg['name']
-    vals = []  # (个股名, 涨跌幅)
+    vals = []  # (个股名, 涨跌幅, 今开涨跌幅)
     opens = []  # 成分股开盘涨跌幅
     for c in cfg['constituents']:
         cp = pct(c['code'])
-        if cp is not None:
-            vals.append((c['name'], cp))
         op = open_pct(c['code'])
+        if cp is not None:
+            vals.append((c['name'], cp, op))
         if op is not None:
             opens.append(op)
     if not vals:
@@ -382,8 +382,8 @@ for cfg in US_SECTORS:
     _item = {
         "name": name,
         "pct": avg,
-        "ref": "、".join(f"{n}{p_:+.2f}%" for n, p_ in vals) + f"（{len(vals)}只均值）",
-        "constituents": [{"name": n, "changePct": p} for n, p in vals],
+        "ref": "、".join(f"{n}{p_:+.2f}%" for n, p_, _o in vals) + f"（{len(vals)}只均值）",
+        "constituents": [{"name": n, "changePct": p, **({"openPct": o} if o is not None else {})} for n, p, o in vals],
     }
     if len(opens) >= 2:  # 板块开盘涨跌近似 = 成分股今开涨跌幅均值
         _item["openPct"] = round(sum(opens) / len(opens), 2)
