@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 """断板反包形态真实核验（确定性脚本，供自动化 AI 生成四类标的时调用）
 
-形态规则（用户定稿口径）：
-  1-5 个交易日前涨停(T) → 涨停次日(T+1)约 2 倍量且断板（未续板）
-  → 随后 2-3 日成交量缩量递减 → 收盘不破 T 日低点、不破 5 日线（MA5，容差 1%）
+形态规则（用户定稿口径，R70 放宽）：
+  1-5 个交易日前涨停(T) → 涨停次日(T+1) 1.1~3.5 倍量且断板（未续板）
+  → T+2 缩量（< T+1）；T+3（若存在）低于断板日量即可（允许小幅反复，不要求逐日递减）
+  → 收盘不破 T 日低点、不破 5 日线（MA5，容差 1%）
 
 数据源（零 MCP，纯 HTTP）：
   - 东财 push2ex getTopicZTPool 涨停池（含 hybk 行业板块字段，date=YYYYMMDD 无横线）
@@ -80,12 +81,16 @@ def recent_trade_dates(n):
 
 
 def fetch_zt_pool(date):
-    """返回涨停池列表 [{c,n,hybk,...}]；空池/限频返回 []。"""
-    j = get_json_curl(f"{EX}/getTopicZTPool?ut={UT_ZT}&dpt=wz.ztzt"
-                      f"&Pageindex=0&pagesize=600&sort=fbt%3Aasc&date={date}")
-    if not j or j.get("rc") not in (0, "0", None) or not j.get("data"):
-        return []
-    return j["data"].get("pool") or []
+    """返回涨停池列表 [{c,n,hybk,...}]。区分失败与空池：失败返回 None（限频/网络），
+    空池返回 []（节假日等）。失败自动重试 2 次（退避 3s/6s）。"""
+    for attempt in range(3):
+        j = get_json_curl(f"{EX}/getTopicZTPool?ut={UT_ZT}&dpt=wz.ztzt"
+                          f"&Pageindex=0&pagesize=600&sort=fbt%3Aasc&date={date}")
+        if j is not None and j.get("rc") in (0, "0", None):
+            return (j.get("data") or {}).get("pool") or []
+        if attempt < 2:
+            time.sleep(3 * (attempt + 1))
+    return None
 
 
 def sina_symbol(code):
@@ -133,19 +138,19 @@ def check_form(code, kline, zt_date_iso):
     vT = V(iT)
     if vT <= 0:
         return None
-    # T+1 约 2 倍量（1.5~3.0x）且断板（未再涨停）
+    # T+1 约 2 倍量（1.1~3.5x，R70 放宽下限：温和放量亦算）且断板（未再涨停）
     i1 = iT + 1
     r1 = V(i1) / vT
-    if not (1.3 <= r1 <= 3.5):
+    if not (1.1 <= r1 <= 3.5):
         return None
     if pctchg(i1) >= th:
         return None
-    # T+2 起缩量递减（T+2 < T+1 必查；若存在 T+3 则 T+3 < T+2）
+    # T+2 起缩量（T+2 < T+1 必查）；T+3 起只要求低于断板日量（允许小幅反复，R70）
     i2 = iT + 2
     if i2 > n - 1 or not (0 < V(i2) < V(i1)):
         return None
     i3 = iT + 3
-    if i3 <= n - 1 and not (0 < V(i3) < V(i2)):
+    if i3 <= n - 1 and not (0 < V(i3) < V(i1)):
         return None
     # 不破 T 日低点（容差 0.5%）
     lowT = float(kline[iT].get("low") or 0)
@@ -163,7 +168,7 @@ def check_form(code, kline, zt_date_iso):
 def main():
     ap = argparse.ArgumentParser(description="断板反包形态真实核验")
     ap.add_argument("--days", type=int, default=5, help="回看交易日数（默认5）")
-    ap.add_argument("--limit", type=int, default=80, help="最多核验的候选股数（默认80）")
+    ap.add_argument("--limit", type=int, default=300, help="最多核验的候选股数（默认300，覆盖全池勿低于250）")
     ap.add_argument("--json", action="store_true", help="输出 JSON（供自动化消费）")
     args = ap.parse_args()
 
@@ -173,6 +178,10 @@ def main():
     valid_dates = []
     for d in dates:
         pool = fetch_zt_pool(d)
+        if pool is None:
+            # 限频/网络失败（≠空池）：重试后仍失败则明确告警，避免静默漏候选（R70）
+            print(f"[warn] 涨停池 {d} 拉取失败（限频/网络），该日候选缺失", file=sys.stderr)
+            continue
         if not pool:
             continue
         valid_dates.append(d)
@@ -194,12 +203,14 @@ def main():
     cands = sorted(cand.items(), key=lambda kv: max(kv[1]["zt"]), reverse=True)[:args.limit]
 
     results = []
+    failed = []  # K线拉取失败的候选（多为新浪限频），冷却后二轮重试（R70）
     for code, rec in cands:
         sym = sina_symbol(code)
         if not sym:
             continue
-        kl = get_json_urllib(SINA_KLINE.format(sym=sym))
+        kl = get_json_urllib(SINA_KLINE.format(sym=sym), retries=3, gap=1)
         if not isinstance(kl, list) or not kl:
+            failed.append((code, rec))
             continue
         for d in sorted(rec["zt"], reverse=True):
             iso = f"{d[:4]}-{d[4:6]}-{d[6:]}"
@@ -211,7 +222,30 @@ def main():
                 results.append({"code": code, "name": rec["name"],
                                 "hybk": rec["hybk"], "ztDate": iso, "form": form})
                 break  # 取最近一次达标形态即可
-        time.sleep(0.25)  # 新浪限频保护
+        time.sleep(0.4)  # 新浪限频保护（R70: 0.25→0.4）
+
+    # 二轮重试：冷却 15s 后对失败候选重试一次（新浪限频窗口恢复）
+    if failed:
+        time.sleep(15)
+        for code, rec in failed:
+            sym = sina_symbol(code)
+            if not sym:
+                continue
+            kl = get_json_urllib(SINA_KLINE.format(sym=sym), retries=3, gap=2)
+            if not isinstance(kl, list) or not kl:
+                print(f"[warn] {code} {rec['name']} K线两次拉取失败，本候选缺失", file=sys.stderr)
+                continue
+            for d in sorted(rec["zt"], reverse=True):
+                iso = f"{d[:4]}-{d[4:6]}-{d[6:]}"
+                try:
+                    form = check_form(code, kl, iso)
+                except Exception:
+                    form = None
+                if form:
+                    results.append({"code": code, "name": rec["name"],
+                                    "hybk": rec["hybk"], "ztDate": iso, "form": form})
+                    break
+            time.sleep(0.6)
 
     # 按板块分组
     grouped = {}
