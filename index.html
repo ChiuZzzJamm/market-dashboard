@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609201702"></script>
+<script src="data.js?v=202609201728"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -48,7 +48,7 @@
   .hero .sub { margin-top: 6px; color: var(--ink2); font-size: 13.5px; letter-spacing: 3px; }
   .hero .updated { margin-top: 10px; display: inline-block; font-size: 11px; color: var(--ink2); background: rgba(255,255,255,.6); border: 1px solid var(--line); border-radius: 999px; padding: 4px 14px; white-space: nowrap; }
 
-  .schedule-note { font-size: 11px; color: var(--ink2); background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 8px 18px; display: block; margin: 0 auto 24px; text-align: center; max-width: none; box-shadow: var(--shadow); white-space: nowrap; width: fit-content; }
+  .schedule-note { font-size: 11px; color: var(--ink2); background: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.9); border-radius: 999px; padding: 7px 16px; display: block; margin: 12px auto 0; text-align: center; white-space: nowrap; width: fit-content; max-width: 100%; }
   @media (max-width: 900px) { .schedule-note, .hero .updated { white-space: normal; } }
 
   /* ===== Tabs（胶囊） ===== */
@@ -64,7 +64,7 @@
   .status-line { font-size: 13px; color: var(--accent-deep); font-weight: 700; margin-bottom: 8px; letter-spacing: 1px; }
   .summary { font-size: 15px; }
   .idx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
-  .idx { background: linear-gradient(160deg, var(--accent-soft), var(--paper)); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; }
+  .idx { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; box-shadow: 0 2px 10px rgba(17,17,26,.05); }
   .idx .nm { font-size: 13px; color: var(--ink2); }
   .idx .pt { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .idx .pc { font-size: 14px; font-weight: 700; }
@@ -95,13 +95,13 @@
   .outlook { font-size: 14.5px; background: var(--accent-soft); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
 
   /* ===== AI 预测 ===== */
-  .ai-card { background: linear-gradient(180deg, var(--accent-soft), var(--paper)); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 26px; margin-bottom: 20px; box-shadow: var(--shadow); }
+  .ai-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 26px; margin-bottom: 20px; box-shadow: var(--shadow); }
   .ai-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
   .ai-head h2 { margin: 0; }
   .ai-summary { font-size: 14.5px; margin-bottom: 16px; }
   .ai-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 860px) { .ai-grid { grid-template-columns: 1fr; } }
-  .ai-item { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; display: flex; flex-direction: column; }
+  .ai-item { background: #f7fafd; border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; display: flex; flex-direction: column; }
   .ai-item .row1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
   .ai-item .sec-nm { font-size: 14px; font-weight: 700; }
   .dir-badge { font-size: 11.5px; font-weight: 700; color: #fff; border-radius: 999px; padding: 2px 9px; }
@@ -115,21 +115,21 @@
   .ai-item .drv { font-size: 12px; color: var(--ink2); margin-bottom: 3px; }
   .ai-item .lgc { font-size: 12.5px; color: var(--ink); margin-bottom: 8px; }
   .stock-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--line); }
-  .stock-chip { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 4px 7px; font-size: 12px; min-width: 0; overflow: hidden; cursor: pointer; -webkit-tap-highlight-color: transparent; position: relative; }
+  .stock-chip { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 4px 7px; font-size: 12px; min-width: 0; overflow: hidden; cursor: pointer; -webkit-tap-highlight-color: transparent; position: relative; }
   .stock-chip b { font-weight: 700; white-space: nowrap; }
   .stock-chip .cd { color: var(--ink2); font-size: 10.5px; margin-left: 3px; white-space: nowrap; }
   .stock-chip .nt { display: block; font-size: 10.5px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .stock-chip.expanded { background: var(--accent-soft); overflow: visible; z-index: 40; }
   .chip-pop { position: absolute; left: -6px; right: -6px; top: calc(100% + 5px); z-index: 50; background: var(--paper); border: 1px solid var(--accent); border-radius: 10px; box-shadow: 0 8px 20px rgba(43,51,60,.15); padding: 7px 9px; font-size: 11px; line-height: 1.55; color: var(--ink); white-space: normal; text-align: left; cursor: default; }
   .ai-foot { margin-top: 14px; font-size: 12px; color: var(--ink2); border-top: 1px solid var(--line); padding-top: 10px; }
-  .ai-verify { margin-top: 10px; font-size: 12.5px; background: var(--down-soft); border: 1px solid var(--down-soft); border-radius: 12px; padding: 10px 14px; color: var(--ink); }
+  .ai-verify { margin-top: 10px; font-size: 12.5px; background: var(--accent-soft); border: 1px solid #cfe3f5; border-radius: 12px; padding: 10px 14px; color: var(--ink); }
   .ai-verify .v-title { font-weight: 700; margin-bottom: 4px; }
   .ai-verify .v-detail { font-size: 12px; line-height: 1.7; }
   .ai-verify .v-detail .hit { color: var(--up); font-weight: 700; }
   .ai-verify .v-detail .miss { color: var(--down); font-weight: 700; }
 
   /* ===== 全球要闻 / 周末 ===== */
-  .wk-card { background: linear-gradient(180deg, var(--accent-soft), var(--paper)); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 26px; margin-bottom: 20px; box-shadow: var(--shadow); }
+  .wk-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 26px; margin-bottom: 20px; box-shadow: var(--shadow); }
   .wk-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
   .wk-head h2 { margin: 0; }
   .wk-head .date { font-size: 12.5px; color: var(--ink2); }
@@ -138,7 +138,7 @@
   .wk-section h4 { font-size: 14px; font-weight: 700; margin: 0 0 6px 0; color: var(--accent-deep); letter-spacing: 1px; }
   .wk-section h4.bull { color: var(--up); }
   .wk-section h4.bear { color: var(--down); }
-  .wk-item { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; margin-bottom: 10px; }
+  .wk-item { background: #f7fafd; border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; margin-bottom: 10px; }
   .wk-item .thm { font-size: 13.5px; font-weight: 700; margin-bottom: 3px; }
   .wk-item .dtl { font-size: 12.5px; color: var(--ink2); line-height: 1.6; }
   .wk-stock-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
@@ -223,8 +223,8 @@
     <h1>每日市场看板</h1>
     <div class="sub">A 股 · 美股 · 全球产业全景</div>
     <span class="updated" id="updatedAt"></span>
+    <div class="schedule-note">自动更新：A股 周一至周五 16:00（收盘后） · 美股 周一至周五 08:30（隔夜收盘，含 AI 预测与 A 股开盘映射参考） · 周日 23:00（周末消息面汇总，含周一开盘预判与利好标的）</div>
   </div>
-  <div class="schedule-note">自动更新：A股 周一至周五 16:00（收盘后） · 美股 周一至周五 08:30（隔夜收盘，含 AI 预测与 A 股开盘映射参考） · 周日 23:00（周末消息面汇总，含周一开盘预判与利好标的）</div>
 
   <div id="overview"></div>
   <div id="ai-prediction"></div>
