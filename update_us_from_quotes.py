@@ -26,17 +26,36 @@ def fmt_pct(x):
         return str(x)
 
 
+def _walk_desc(op, chg):
+    """开盘→收盘的盘中走势短语：|openPct|<=1 视为平开；收盘相对开盘 >0.3pp 走高、<-0.3pp 走低。"""
+    try:
+        if op is None or chg is None:
+            return ""
+        if abs(float(op)) <= 1:
+            o = "平开"
+        else:
+            o = ("高开" + fmt_pct(op)) if op > 0 else ("低开" + fmt_pct(op))
+        d = float(chg) - float(op)
+        w = "走高" if d > 0.3 else ("走低" if d < -0.3 else "窄幅震荡")
+        return f"{o}{w}"
+    except Exception:
+        return ""
+
+
 def _us_summary(trade_md, trend, sorted_up, sorted_down):
-    """安全构造美股收盘 summary：领涨/领跌板块各最多取前 2，避免极端单边市
-    （某一侧仅 1 个板块）触发 sorted_up[1]/sorted_down[1] 的 IndexError 崩溃。"""
+    """安全构造美股收盘 summary：带盘中走势（openPct×changePct，高开高走/低走等），
+    领涨/领跌板块各最多取前 2，避免极端单边市（某一侧仅 1 个板块）触发 IndexError 崩溃。"""
     def _pair(items):
         return "、".join(f"{it['name']}{fmt_pct(it['pct'])}" for it in items[:2])
 
     lead, trail = _pair(sorted_up), _pair(sorted_down)
     if not (sorted_up or sorted_down):
         return f"{trade_md} 美股收盘数据已更新。"
-    head = (f"{trade_md} 美股收盘：三大指数{trend}（"
-            f"道指{fmt_pct(pct('usDJI'))} / 纳指{fmt_pct(pct('usIXIC'))} / 标普{fmt_pct(pct('usINX'))}）。")
+    dw = _walk_desc(open_pct('usDJI'), pct('usDJI'))
+    nw = _walk_desc(open_pct('usIXIC'), pct('usIXIC'))
+    sw = _walk_desc(open_pct('usINX'), pct('usINX'))
+    head = (f"{trade_md} 美股收盘：三大指数{trend}"
+            f"（道指{dw}收{fmt_pct(pct('usDJI'))} / 纳指{nw}收{fmt_pct(pct('usIXIC'))} / 标普{sw}收{fmt_pct(pct('usINX'))}）。")
     tail = (f"领涨：{lead}；" if lead else "") + (f"领跌：{trail}。" if trail else "。")
     return head + tail
 
@@ -489,9 +508,7 @@ us_obj = {
         {"name": index_name_map.get('usDJI','道琼斯'), "point": point('usDJI'), "changePct": pct('usDJI'), "openPct": open_pct('usDJI')},
         {"name": index_name_map.get('usIXIC','纳斯达克'), "point": point('usIXIC'), "changePct": pct('usIXIC'), "openPct": open_pct('usIXIC')},
         {"name": index_name_map.get('usINX','标普500'), "point": point('usINX'), "changePct": pct('usINX'), "openPct": open_pct('usINX')},
-        {"name": index_name_map.get('usSOXX','费城半导体'), "point": point('usSOXX'), "changePct": pct('usSOXX'), "note": "SOXX"},
-        {"name": "罗素2000", "point": None, "changePct": None, "note": "小盘股"},
-        {"name": "纳斯达克金龙指数", "point": None, "changePct": pct('usKWEB'), "note": "KWEB 中概互联网 ETF 口径"},
+        {"name": index_name_map.get('usSOXX','费城半导体'), "point": point('usSOXX'), "changePct": pct('usSOXX'), "openPct": open_pct('usSOXX'), "note": "SOXX"},
     ],
     "breadth": {
         "up": None, "down": None, "flat": None,

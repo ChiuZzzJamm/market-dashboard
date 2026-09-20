@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609210000"></script>
+<script src="data.js?v=202609210024"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -642,6 +642,12 @@ function renderNewsCard(d) {
     if (!nRows) html += '<div class="news-cell bull p-bull"><div class="nc-empty">今日暂无</div></div><div class="news-cell bear p-bear"><div class="nc-empty">今日暂无</div></div>';
     html += '</div>';
   }
+  // 投行观点（高盛 / 大摩 / 中金 / 中信等研报级观点）
+  if (bank.length) {
+    html += '<div class="wk-section bank"><h4>投行观点</h4>';
+    bank.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true) + '</div>'; });
+    html += '</div>';
+  }
   // 宏观（央行 / 通胀 / 大宗 / 美债 / 汇率）
   if (macro.length) {
     html += '<div class="wk-section macro"><h4>宏观 · 央行 / 通胀 / 大宗 / 美债</h4>';
@@ -652,12 +658,6 @@ function renderNewsCard(d) {
   if (intl.length) {
     html += '<div class="wk-section intl"><h4>彭博 / 路透 / WSJ 视角</h4>';
     intl.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true) + '</div>'; });
-    html += '</div>';
-  }
-  // 投行观点（高盛 / 大摩 / 巴克莱等研报级量化预测）
-  if (bank.length) {
-    html += '<div class="wk-section bank"><h4>投行观点</h4>';
-    bank.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true) + '</div>'; });
     html += '</div>';
   }
   if (d.source) html += '<div class="wk-src">来源：' + esc(d.source) + '</div>';

@@ -112,7 +112,7 @@ def check_form(code, kline, zt_date_iso):
         return None
     days_ago = n - 1 - iT
     # 至少留 2 根后续K线确认缩量递减；最多 4 日前（倍量后 2-3 日缩量窗口，5 日外形态过期）
-    if not (2 <= days_ago <= 4):
+    if not (2 <= days_ago <= 5):
         return None
 
     def C(i):
@@ -136,7 +136,7 @@ def check_form(code, kline, zt_date_iso):
     # T+1 约 2 倍量（1.5~3.0x）且断板（未再涨停）
     i1 = iT + 1
     r1 = V(i1) / vT
-    if not (1.5 <= r1 <= 3.0):
+    if not (1.3 <= r1 <= 3.5):
         return None
     if pctchg(i1) >= th:
         return None
@@ -149,11 +149,11 @@ def check_form(code, kline, zt_date_iso):
         return None
     # 不破 T 日低点（容差 0.5%）
     lowT = float(kline[iT].get("low") or 0)
-    if lowT > 0 and min(C(i) for i in range(i1, n)) < lowT * 0.995:
+    if lowT > 0 and min(C(i) for i in range(i1, n)) < lowT * 0.98:
         return None
     # 不破 MA5（最新收盘 ≥ MA5×0.99）
     ma5 = sum(C(i) for i in range(n - 5, n)) / 5.0
-    if C(n - 1) < ma5 * 0.99:
+    if C(n - 1) < ma5 * 0.97:
         return None
     zt_md = f"{zt_date_iso[5:7]}/{zt_date_iso[8:10]}"
     n_shrink = n - 1 - i1
