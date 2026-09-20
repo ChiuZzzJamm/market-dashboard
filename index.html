@@ -126,6 +126,23 @@
   .ai-verify .v-detail { font-size: 12px; line-height: 1.7; }
   .ai-verify .v-detail .hit { color: var(--up); font-weight: 700; }
   .ai-verify .v-detail .miss { color: var(--down); font-weight: 700; }
+  /* AI 预测折叠 */
+  .ai-item { transition: box-shadow .2s ease; cursor: pointer; }
+  .ai-item:hover { box-shadow: 0 2px 10px rgba(43,51,60,.07); }
+  .ai-item .fold-ic { margin-left: auto; color: var(--ink2); font-size: 11px; transition: transform .2s ease; }
+  .ai-item.expanded .fold-ic { transform: rotate(90deg); }
+  .ai-item .drv, .ai-item .lgc { display: none; }
+  .ai-item:not(.expanded) .stock-chips { display: none; }
+  .ai-item.expanded .drv, .ai-item.expanded .lgc { display: block; }
+  .ai-item.expanded .stock-chips { display: grid; }
+  .ai-toggle { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--accent-deep); background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
+  .ai-toggle:hover { background: var(--accent-soft); }
+  .ai-verify { cursor: default; }
+  .ai-verify .v-title { cursor: pointer; }
+  .ai-verify .fold-ic { display: inline-block; margin-left: 6px; color: var(--ink2); font-size: 11px; transition: transform .2s ease; }
+  .ai-verify.expanded .fold-ic { transform: rotate(90deg); }
+  .ai-verify .v-detail { display: none; }
+  .ai-verify.expanded .v-detail { display: block; }
 
   /* ===== 全球要闻 / 周末 ===== */
   .wk-card { background: linear-gradient(180deg, var(--accent-soft), var(--paper)); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 26px; margin-bottom: 20px; box-shadow: var(--shadow); }
@@ -219,6 +236,7 @@
   </div>
   <div class="schedule-note">自动更新：A股 周一至周五 16:00（收盘后） · 美股 周一至周五 08:30（隔夜收盘，含 AI 预测与 A 股开盘映射参考） · 周日 23:00（周末消息面汇总，含周一开盘预判与利好标的）</div>
 
+  <div id="overview"></div>
   <div id="ai-prediction"></div>
   <div id="weekend-news"></div>
 
@@ -383,6 +401,15 @@ function switchTab(market) {
   render(market);
 }
 
+function renderOverview(d) {
+  var box = document.getElementById('overview');
+  if (!box) return;
+  var tradeDate = d.tradeDate || '', status = d.status || '', summary = d.summary || '';
+  if (!tradeDate && !status && !summary) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  box.innerHTML = '<div class="card"><div class="status-line">' + esc(tradeDate) + ' · ' + esc(status) + '</div><div class="summary">' + esc(summary) + '</div></div>';
+}
+
 function render(market) {
   charts.forEach(function (c) { c.dispose(); });
   charts = [];
@@ -390,7 +417,7 @@ function render(market) {
   var isA = market === 'ashare';
 
   var html = '';
-  html += '<div class="card"><div class="status-line">' + esc(d.tradeDate) + ' · ' + esc(d.status) + '</div><div class="summary">' + esc(d.summary) + '</div></div>';
+  renderOverview(d);
 
   html += '<div class="card"><h2>大盘指数</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + '</div>';
 
@@ -489,7 +516,7 @@ function renderAiPrediction() {
   var box = document.getElementById('ai-prediction');
   if (!p) { box.style.display = 'none'; return; }
   p.sectors = p.sectors || [];
-  var html = '<div class="ai-card"><div class="ai-head"><h2>AI 预测分析</h2></div>' +
+  var html = '<div class="ai-card"><div class="ai-head"><h2>AI 预测分析</h2><button type="button" class="ai-toggle" onclick="toggleAllAi()">展开全部 ▾</button></div>' +
     '<div class="ai-summary">' + (p.indexLine ? esc(p.indexLine) + '。' : '') + '通过隔夜美股各板块涨跌推导今日 A 股强弱方向：' + esc(p.summary) + '</div>' +
     '<div class="ai-grid">';
   p.sectors.forEach(function (s) {
@@ -499,7 +526,8 @@ function renderAiPrediction() {
     html += '<div class="ai-item"><div class="row1">' +
       '<span class="sec-nm">' + esc(s.sector) + '</span>' +
       '<span class="dir-badge ' + (isUp ? 'dir-up' : 'dir-down') + '">预计' + esc(s.direction) + '</span>' +
-      '<span class="conf-badge ' + confCls + '">置信度 ' + esc(s.confidence) + '</span></div>' +
+      '<span class="conf-badge ' + confCls + '">置信度 ' + esc(s.confidence) + '</span>' +
+      '<span class="fold-ic"></span></div>' +
       '<div class="drv">隔夜驱动：' + esc(s.usDriver) + '</div>' +
       '<div class="lgc">映射逻辑：' + esc(s.logic) + '</div>';
     if (s.stocks && s.stocks.length) {
@@ -515,7 +543,7 @@ function renderAiPrediction() {
   html += '</div><div class="ai-foot">标的筛选口径：每个板块 8 只 A 股，按「2 只板块龙头 + 2 只相关概念股 + 2 只游资/机构偏好小盘人气股（涨停基因好）+ 2 只断板反包图形股（1-5 日前涨停、次日放量倍量、随后缩量回调）」搭配，已排除科创板（688 开头）及北交所。<br>' + esc(p.riskNote) + '</div>';
   if (p.verification && (p.verification.summary || (p.verification.details && p.verification.details.length))) {
     var v = p.verification;
-    var vHtml = '<div class="ai-verify"><div class="v-title">📊 预测验证：' + esc(v.summary || '') + '</div>';
+    var vHtml = '<div class="ai-verify"><div class="v-title">📊 预测验证：' + esc(v.summary || '') + ' <span class="fold-ic v-fold"></span></div>';
     if (v.details && v.details.length) {
       vHtml += '<div class="v-detail">';
       v.details.forEach(function(d) {
@@ -530,6 +558,26 @@ function renderAiPrediction() {
   }
   html += '</div>';
   box.innerHTML = html;
+  box.querySelectorAll('.ai-item').forEach(function (it) {
+    it.addEventListener('click', function (e) {
+      if (e.target.closest('.stock-chip')) return;
+      it.classList.toggle('expanded');
+    });
+  });
+  box.querySelectorAll('.ai-verify .v-title').forEach(function (t) {
+    t.addEventListener('click', function () { t.parentNode.classList.toggle('expanded'); });
+  });
+}
+
+function toggleAllAi() {
+  var box = document.getElementById('ai-prediction');
+  if (!box) return;
+  var items = box.querySelectorAll('.ai-item');
+  var anyCollapsed = false;
+  items.forEach(function (it) { if (!it.classList.contains('expanded')) anyCollapsed = true; });
+  items.forEach(function (it) { it.classList.toggle('expanded', anyCollapsed); });
+  var btn = box.querySelector('.ai-toggle');
+  if (btn) btn.textContent = anyCollapsed ? '收起全部 ▴' : '展开全部 ▾';
 }
 
 window.addEventListener('resize', function () { charts.forEach(function (c) { c.resize(); }); });
