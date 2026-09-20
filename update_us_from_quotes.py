@@ -498,8 +498,9 @@ us_obj = {
         "limitUp": None, "limitDown": None,
         "volumeText": "板块涨跌为美股成分股均值口径，覆盖 AI/半导体/能源/金融等 20+ 产业方向。"
     },
-    "sectorsUp": [to_us_sector(s, True) for s in sorted_up],
-    "sectorsDown": [to_us_sector(s, False) for s in sorted_down],
+    # 与 A 股口径一致：领涨/领跌板块各只取 TOP5（防止板块全量写入导致列表过长）
+    "sectorsUp": [to_us_sector(s, True) for s in sorted_up[:5]],
+    "sectorsDown": [to_us_sector(s, False) for s in sorted_down[:5]],
     "sectorNote": "板块涨跌幅为同板块多只美股真实成分股涨跌幅均值（非 ETF 口径），更贴近板块真实表现。",
     "bullNews": D.get('us', {}).get('bullNews', []),
     "bearNews": D.get('us', {}).get('bearNews', []),
