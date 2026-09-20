@@ -211,11 +211,12 @@ elif mode == 'us':
 
 elif mode == 'weekend':
     # 周末推送改源：周末消息面前瞻卡已删除（与全球要闻重合），推送改用
-    # 周末更新的全球要闻（ashare.bullNews/bearNews/intlNews/bankViews/macroNews）
-    # + 周一开盘预判（weekendNews.mondayOutlook）。
+    # 周末更新的全球要闻（R68 起周日写入美股卡：us.bullNews/bearNews/intlNews/bankViews/macroNews，
+    # 旧数据兜底读 ashare 同名字段）+ 周一开盘预判（weekendNews.mondayOutlook）。
     a = D.get('ashare') or {}
     w = D.get('weekendNews') or {}
     u = D.get('us') or {}
+    src = u if (u.get('bullNews') or u.get('macroNews') or u.get('intlNews')) else a
     title = f"[周末要闻] {(w.get('date') or a.get('tradeDate') or '')[5:]} 汇总"
 
     # 美股周五收盘（直接取 us 最新数据，周日脚本已更新到周五）
@@ -232,7 +233,7 @@ elif mode == 'weekend':
     # 要闻：从周末全球要闻标题中分国内/国际各取 2 条（news_tag 识别， title 截 40 字）
     pool = []
     for grp in ('bullNews', 'bearNews', 'intlNews', 'bankViews', 'macroNews'):
-        for n in (a.get(grp) or []):
+        for n in (src.get(grp) or []):
             if isinstance(n, dict) and n.get('title'):
                 pool.append(n)
     domestic, international, seen_titles = [], [], set()
@@ -256,8 +257,8 @@ elif mode == 'weekend':
     def news_to_theme(it):
         return {'theme': f"{(it.get('sector') or '').strip()}（{(it.get('title') or '').strip()}）",
                 'stocks': ((it.get('impacts') or [{}])[0].get('stocks') or [])}
-    bullish_lines = [fmt_bullish(news_to_theme(t), i+1) for i, t in enumerate((a.get('bullNews') or [])[:3])]
-    bearish_lines = [fmt_bearish(news_to_theme(t), i+1) for i, t in enumerate((a.get('bearNews') or [])[:3])]
+    bullish_lines = [fmt_bullish(news_to_theme(t), i+1) for i, t in enumerate((src.get('bullNews') or [])[:3])]
+    bearish_lines = [fmt_bearish(news_to_theme(t), i+1) for i, t in enumerate((src.get('bearNews') or [])[:3])]
 
     # 周一开盘预判（weekendNews 仅存 date/mondayOutlook/source）
     monday_outlook = (w.get('mondayOutlook') or '').replace('\n', ' ').strip()
