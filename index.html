@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609201756"></script>
+<script src="data.js?v=202609201809"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -332,7 +332,7 @@ function renderTops(s, isUp) {
     var op = (typeof it === 'object' && it) ? it.openPct : null;
     var info = name + (pctStr ? ' ' + pctStr : '');
     if (bname) info += ' · ' + bname + (isUp ? ' 领涨第' : ' 领跌第') + (idx + 1) + '位';
-    if (op !== null && op !== undefined) info += ' · 今开 ' + (op >= 0 ? '+' : '') + op + '%' + (op > 0.3 ? '（高开）' : op < -0.3 ? '（低开）' : '（平开）');
+    if (op !== null && op !== undefined) info += ' · 今开 ' + (op >= 0 ? '+' : '') + op + '%' + (op > 2 ? '（高开）' : op < -2 ? '（低开）' : '（平开）');
     return '<span class="tchip" title="' + escAttr(info) + '"><b>' + esc(name) + '</b>' + (pctStr ? '<span class="tp ' + cls + '">' + pctStr + '</span>' : '') + '<span class="nt">' + esc(info) + '</span></span>';
   }).join('');
   return '<div class="reason-tops"><span class="tops-h">' + label + '</span>' + chips + '</div>';
