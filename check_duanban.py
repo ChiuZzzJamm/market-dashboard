@@ -308,7 +308,9 @@ def main():
         sym = sina_symbol(code)
         if not sym:
             continue
-        kl = get_json_urllib(SINA_KLINE.format(sym=sym), retries=3, gap=1)
+        # R72 修复：首轮也走 get_kline（含本地缓存 + 腾讯备用源），不再裸打新浪
+        # —— 限频窗口下首轮即可借缓存/腾讯兜底，省去整轮失败后再走 15s 冷却二轮。
+        kl = get_kline(code, sym)
         if not isinstance(kl, list) or not kl:
             failed.append((code, rec))
             continue
