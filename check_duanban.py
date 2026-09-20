@@ -22,6 +22,7 @@
 """
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -67,6 +68,105 @@ def get_json_urllib(url, retries=1, gap=2, timeout=12):
         except Exception:
             if i < retries:
                 time.sleep(gap)
+    return None
+
+
+# ---------- Plan B (R71): 本地缓存 + 腾讯备用源，抵御新浪限频 ----------
+CACHE_DIR = "/tmp/duanban_kline_cache"
+
+
+def ensure_cache():
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+    except Exception:
+        pass
+
+
+def _cache_path(code):
+    return os.path.join(CACHE_DIR, code + ".json")
+
+
+def _today_str():
+    return datetime.now().strftime("%Y-%m-%d")
+
+
+def _tencent_code(code):
+    if code.startswith(("60", "68", "9", "5")):
+        return "sh" + code
+    if code.startswith(("00", "30", "2", "1")):
+        return "sz" + code
+    return code
+
+
+def fetch_kline_tencent(code):
+    """备用 K 线源（腾讯 ifzq），与新浪独立域名，限频时兜底。
+    返回统一 schema [{day,open,high,low,close,volume}] 或 None；
+    量单位为手，但 check_form 只用比值，不影响形态判定。"""
+    tcode = _tencent_code(code)
+    url = ("https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param="
+           + tcode + ",day,,,40,qfq")
+    raw = curl_text(url, timeout=15)
+    if not raw.strip():
+        return None
+    try:
+        j = json.loads(raw)
+    except Exception:
+        return None
+    if j.get("code") not in (0, "0", None) or not j.get("data"):
+        return None
+    data = (j.get("data") or {}).get(tcode) or {}
+    arr = data.get("qfqday") or data.get("day") or []
+    out = []
+    for a in arr:
+        if not isinstance(a, list) or len(a) < 6:
+            continue
+        try:
+            out.append({"day": str(a[0]), "open": float(a[1]),
+                        "close": float(a[2]), "high": float(a[3]),
+                        "low": float(a[4]), "volume": float(a[5])})
+        except Exception:
+            continue
+    return out if len(out) >= 8 else None
+
+
+def get_kline(code, sym):
+    """带缓存 + 双源容错的 K 线获取：
+       当日缓存命中（已含最新K线）→ 新浪主源 → 腾讯备用源 → 过期缓存兜底。
+       缓存只作为「限频/网络失败时」的韧性兜底，不跳过当日最新K线。"""
+    ensure_cache()
+    cp = _cache_path(code)
+    fresh = stale = None
+    if os.path.exists(cp):
+        try:
+            c = json.load(open(cp, encoding="utf-8"))
+            if isinstance(c, dict) and c.get("bars"):
+                if time.time() - c.get("ts", 0) < 24 * 3600:
+                    fresh = c["bars"]
+                else:
+                    stale = c["bars"]
+        except Exception:
+            pass
+    if fresh and (fresh[-1].get("day") or "")[:10] == _today_str():
+        return fresh  # 已含当日最新K线，无需重抓（同 run 重试/同日重跑复用）
+    kl = get_json_urllib(SINA_KLINE.format(sym=sym), retries=3, gap=1)
+    if isinstance(kl, list) and kl:
+        try:
+            json.dump({"ts": time.time(), "bars": kl},
+                      open(cp, "w", encoding="utf-8"))
+        except Exception:
+            pass
+        return kl
+    kl2 = fetch_kline_tencent(code)
+    if isinstance(kl2, list) and kl2:
+        try:
+            json.dump({"ts": time.time(), "bars": kl2},
+                      open(cp, "w", encoding="utf-8"))
+        except Exception:
+            pass
+        return kl2
+    if fresh or stale:
+        print(f"[warn] {code} 新浪/腾讯均失败，启用本地缓存兜底", file=sys.stderr)
+        return fresh or stale
     return None
 
 
@@ -231,7 +331,7 @@ def main():
             sym = sina_symbol(code)
             if not sym:
                 continue
-            kl = get_json_urllib(SINA_KLINE.format(sym=sym), retries=3, gap=2)
+            kl = get_kline(code, sym)
             if not isinstance(kl, list) or not kl:
                 print(f"[warn] {code} {rec['name']} K线两次拉取失败，本候选缺失", file=sys.stderr)
                 continue
