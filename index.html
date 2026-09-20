@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609201749"></script>
+<script src="data.js?v=202609201756"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -85,7 +85,9 @@
   /* 板块成分股 TOP 列表：标题 + 每只为红涨绿跌小胶囊（白字） */
   .reason-tops { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 10px; font-size: 12.5px; }
   .reason-tops .tops-h { font-size: 12.5px; color: var(--accent-deep); font-weight: 700; margin-right: 2px; }
-  .reason-tops .tchip { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 3px 9px; font-size: 12px; box-shadow: 0 1px 3px rgba(30,60,110,.06); display: inline-flex; align-items: baseline; gap: 5px; }
+  .reason-tops .tchip { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 3px 9px; font-size: 12px; box-shadow: 0 1px 3px rgba(30,60,110,.06); display: inline-flex; align-items: baseline; gap: 5px; position: relative; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .reason-tops .tchip .nt { display: none; }
+  .reason-tops .tchip.expanded { background: var(--accent-soft); overflow: visible; z-index: 40; }
   .reason-tops .tchip b { font-weight: 700; color: var(--ink); white-space: nowrap; }
   .reason-tops .tchip .tp { font-weight: 700; font-size: 11.5px; white-space: nowrap; }
   .reason-tops .tchip .tp.u { color: var(--up); }
@@ -315,7 +317,8 @@ function renderTops(s, isUp) {
   if (!arr || !arr.length) return '';
   var n = Math.min(arr.length, 5);
   var label = isUp ? '板块领涨 TOP' + n : '板块领跌 TOP' + n;
-  var chips = arr.slice(0, 5).map(function (it) {
+  var bname = s.name || '';
+  var chips = arr.slice(0, 5).map(function (it, idx) {
     var name, pct;
     if (typeof it === 'object') { name = it.name || ''; pct = it.changePct; }
     else if (typeof it === 'string') {
@@ -325,7 +328,12 @@ function renderTops(s, isUp) {
     }
     var cls = (pct === null || pct === undefined) ? '' : (pct >= 0 ? 'u' : 'd');
     var pctStr = (pct === null || pct === undefined) ? '' : (pct >= 0 ? '+' : '') + pct + '%';
-    return '<span class="tchip"><b>' + esc(name) + '</b>' + (pctStr ? '<span class="tp ' + cls + '">' + pctStr + '</span>' : '') + '</span>';
+    // 悬停/点击信息：所属板块 + 领涨/领跌位次 + 今开涨跌幅（盘中形态）
+    var op = (typeof it === 'object' && it) ? it.openPct : null;
+    var info = name + (pctStr ? ' ' + pctStr : '');
+    if (bname) info += ' · ' + bname + (isUp ? ' 领涨第' : ' 领跌第') + (idx + 1) + '位';
+    if (op !== null && op !== undefined) info += ' · 今开 ' + (op >= 0 ? '+' : '') + op + '%' + (op > 0.3 ? '（高开）' : op < -0.3 ? '（低开）' : '（平开）');
+    return '<span class="tchip" title="' + escAttr(info) + '"><b>' + esc(name) + '</b>' + (pctStr ? '<span class="tp ' + cls + '">' + pctStr + '</span>' : '') + '<span class="nt">' + esc(info) + '</span></span>';
   }).join('');
   return '<div class="reason-tops"><span class="tops-h">' + label + '</span>' + chips + '</div>';
 }
@@ -722,13 +730,13 @@ renderAiPrediction();
 renderWeekendNews();
 
   function closeChips() {
-    document.querySelectorAll('.stock-chip.expanded').forEach(function (c) {
+    document.querySelectorAll('.stock-chip.expanded, .tchip.expanded').forEach(function (c) {
       c.classList.remove('expanded');
       var pop = c.querySelector('.chip-pop'); if (pop) pop.remove();
     });
   }
   document.addEventListener('click', function (e) {
-    var chip = e.target.closest ? e.target.closest('.stock-chip') : null;
+    var chip = e.target.closest ? e.target.closest('.stock-chip, .tchip') : null;
     if (!chip) { closeChips(); return; }
     var wasOpen = chip.classList.contains('expanded');
     closeChips();
