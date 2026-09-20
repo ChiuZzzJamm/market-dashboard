@@ -171,15 +171,78 @@ def fetch_breadth(prev_breadth=None):
         ld = (prev_breadth or {}).get("limitDown")
     return {"up": up, "down": down, "flat": flat, "limitUp": lu, "limitDown": ld}
 
-def fetch_zt_codes(date):
-    """返回东财涨停池代码集（tc 与三大 App 一致）；失败返回 None。
-    跌停池(getTopicDTPool)剔除 ST 股（tc≈27，且不含盘中开板股），不作数据源。"""
+# 涨停池缓存：同一交易日内多次调用只请求一次东财（push2ex 限频 rc:102，避免重复打）。
+_zt_pool_cache = {}
+
+def fetch_zt_pool_raw(date):
+    """返回东财涨停池原始记录列表；失败(get_json 返回 None)返回 None。
+    跌停池(getTopicDTPool)剔除 ST 股，不作数据源。"""
+    if date in _zt_pool_cache:
+        return _zt_pool_cache[date]
     d = get_json(f"{EX}/getTopicZTPool?ut={UT_ZT}&dpt=wz.ztzt&Pageindex=0&pagesize=600&sort=fbt%3Aasc&date={date}")
     try:
-        data = d["data"] or {}
-        return {p["c"] for p in (data.get("pool") or [])}
+        pool = (d.get("data") or {}).get("pool") or []
+    except Exception:
+        pool = None
+    _zt_pool_cache[date] = pool
+    return pool
+
+def fetch_zt_codes(date):
+    """返回东财涨停池代码集（tc 与三大 App 一致）；失败返回 None。"""
+    pool = fetch_zt_pool_raw(date)
+    if pool is None:
+        return None
+    try:
+        return {p["c"] for p in pool}
     except Exception:
         return None
+
+def fetch_zt_ladder(date):
+    """连板梯队：从东财涨停池提取 {code,name,pct,lbc,reason,hybk,fund}，按 lbc 降序、pct 降序。
+    失败返回 None（调用方保留原值）；成功但空池返回 []。
+    连板数字段为东财标准 lbc；涨停原因字段为 reason（东财整理的涨停揭秘）。二者均防御式读取，
+    字段缺失不崩（lbc 缺省按 1 计，reason 缺省空串）。"""
+    pool = fetch_zt_pool_raw(date)
+    if pool is None:
+        return None
+    try:
+        out = []
+        for p in pool:
+            raw_lbc = p.get("lbc")
+            try:
+                lbc = int(raw_lbc) if raw_lbc not in (None, "") else 1
+            except Exception:
+                lbc = 1
+            pct = p.get("zdp")
+            try:
+                fpct = float(pct) if pct not in (None, "") else 0
+            except Exception:
+                fpct = 0
+            out.append({
+                "code": str(p.get("c") or ""),
+                "name": str(p.get("n") or ""),
+                "pct": pct,
+                "lbc": lbc,
+                "reason": str(p.get("reason") or "").strip(),
+                "hybk": str(p.get("hybk") or "").strip(),
+                "fund": p.get("fund"),
+            })
+        out.sort(key=lambda x: (-(x["lbc"] or 1), -fpct_of(x)))
+        # 调试输出实际字段，便于核对 lbc/reason 是否存在（生产日志可见）
+        keys = set()
+        for p in pool:
+            keys.update(p.keys())
+        print("[info] 涨停池字段: " + ",".join(sorted(keys)))
+        return out
+    except Exception as e:
+        print("[warn] 连板梯队解析失败：" + str(e))
+        return None
+
+def fpct_of(x):
+    try:
+        return float(x["pct"]) if x.get("pct") not in (None, "") else 0
+    except Exception:
+        return 0
 
 def fetch_full_market_limits():
     """全市场快照（东财 push2delay 分板块翻页），按交易所规则计算收盘涨跌停代码集。
@@ -394,6 +457,10 @@ def main():
     if fund_in is None:
         print("[warn] 主力资金获取失败，保留原值")
 
+    # 连板梯队（东财涨停池，含连板数 lbc + 涨停原因 reason；数据驱动，不依赖 AI）
+    today_str = datetime.now(TZ8).strftime("%Y%m%d")
+    lianban = fetch_zt_ladder(today_str)
+
     if sectors_up is None and indices is None:
         print("[error] 所有 A 股数据源均失败，保留原值")
         sys.exit(1)
@@ -447,6 +514,13 @@ def main():
             a["fundIn"] = fund_in
             a["fundOut"] = fund_out
             updated_parts.append("主力资金")
+        if lianban is not None:
+            # 空池且已有原值时保留（避免限频 rc:102 空池清空真实数据）；非空或首次则写回
+            if lianban or not a.get("lianban"):
+                a["lianban"] = lianban
+                updated_parts.append("连板梯队")
+            else:
+                print("[info] 连板梯队空池，保留原值")
         a["tradeDate"] = now
         a["status"] = "收盘"
         if updated_parts:
