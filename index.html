@@ -6,7 +6,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609210115"></script>
+<script src="data.js?v=202609210124"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -63,7 +63,7 @@
   .card h2::before, .ai-card h2::before, .wk-card h2::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); flex-shrink: 0; }
   .status-line { font-size: 13px; color: var(--accent-deep); font-weight: 700; margin-bottom: 8px; letter-spacing: 1px; }
   .summary { font-size: 15px; }
-  .idx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+  .idx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
   .idx { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; box-shadow: 0 2px 10px rgba(17,17,26,.05); text-align: center; }
   .idx .nm { font-size: 13px; color: var(--ink2); }
   .idx .pt { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }

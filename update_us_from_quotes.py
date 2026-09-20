@@ -501,7 +501,7 @@ if not keep_tp and _old_tp:
     print('[info] us.themePicks 跨日，清空待当日 AI 重新生成')
 
 us_obj = {
-    "tradeDate": f"{trade_iso}（美东，北京时间 次日 凌晨收盘）" if trade_iso != "未知日期" else "未知日期",
+    "tradeDate": f"{trade_iso}（美东）" if trade_iso != "未知日期" else "未知日期",
     "status": "收盘",
     "summary": _us_summary(trade_md, _trend, sorted_up, sorted_down),
     "indices": [
@@ -536,7 +536,7 @@ else:
     D['us'] = us_obj
     for m in D.get('panorama', {}).get('markets', []):
         if m.get('key') == 'us':
-            m['date'] = f"{trade_md} 收盘（北京时间 次日 凌晨）" if trade_md != "未知" else "未知日期"
+            m['date'] = f"{trade_md} 收盘（美东）" if trade_md != "未知" else "未知日期"
             m['items'] = sorted(pano_items, key=lambda x: (x.get('pct') is None, -(x.get('pct') or 0)))
     D['updatedAt'] = f"{datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d %H:%M')}（美股收盘数据已自动更新）"
     print(f"updated us/panorama.us for {trade_iso}")
