@@ -210,91 +210,65 @@ elif mode == 'us':
     desp = '\n\n'.join(parts)
 
 elif mode == 'weekend':
+    # 周末推送改源：周末消息面前瞻卡已删除（与全球要闻重合），推送改用
+    # 周末更新的全球要闻（ashare.bullNews/bearNews/intlNews/bankViews/macroNews）
+    # + 周一开盘预判（weekendNews.mondayOutlook）。
+    a = D.get('ashare') or {}
     w = D.get('weekendNews') or {}
-    title = f"[周末消息] {w.get('date','')[5:]} 要闻汇总"
-    # 控制长度，避免微信折叠/截断；每个字段都加防御性 .get
-    uf = w.get('usFriday') or {}
+    u = D.get('us') or {}
+    title = f"[周末要闻] {(w.get('date') or a.get('tradeDate') or '')[5:]} 汇总"
 
-    # 美股周五：三大指数 + 领涨板块 + 领跌板块（参考工作日 us 模式完整格式）
-    us_summary = uf.get('summary','').strip()
-    if us_summary:
-        us_line = us_summary
+    # 美股周五收盘（直接取 us 最新数据，周日脚本已更新到周五）
+    idx_part = ' '.join([f"{i.get('name','')}{fmt_pct(i.get('changePct'))}" for i in (u.get('indices') or [])[:3]])
+    up_str = '、'.join([f"{s.get('name','')}{fmt_pct(s.get('pct'))}" for s in (u.get('sectorsUp') or [])[:3]])
+    down_str = '、'.join([f"{s.get('name','')}{fmt_pct(s.get('pct'))}" for s in (u.get('sectorsDown') or [])[:3]])
+    if up_str and down_str:
+        us_line = f"{idx_part}。领涨：{up_str}；领跌：{down_str}。"
+    elif idx_part:
+        us_line = idx_part
     else:
-        up_str = '、'.join([f"{s.get('name','')}{fmt_pct(s.get('pct'))}" for s in uf.get('sectorsUp',[])[:3]])
-        down_str = '、'.join([f"{s.get('name','')}{fmt_pct(s.get('pct'))}" for s in uf.get('sectorsDown',[])[:3]])
-        idx_part = ' '.join([f"{i.get('name','')}{fmt_pct(i.get('changePct'))}" for i in uf.get('indices',[])[:3]])
-        if up_str and down_str:
-            us_line = f"{idx_part}。领涨：{up_str}；领跌：{down_str}。"
-        elif idx_part:
-            us_line = idx_part
-        else:
-            us_line = '（详见网页）'
+        us_line = '（详见网页）'
 
-    # 周末要闻：从利好/利空主题中分国内/国际各取 2 条短摘要（控制每段长度避免微信截断）
-    def short_theme(t, max_len=26):
-        theme = t.get('theme','').strip()
-        theme = re.sub(r'\s+', ' ', theme)
-        # 识别括号内容：若括号内是事件描述则保留，否则只取括号前
-        m = re.match(r'^(.+?)[（(]([^）)]+)[）)](.*)$', theme)
-        if m:
-            before = m.group(1).strip()
-            inner = m.group(2).strip()
-            event_keys = ['证监会','央行','国常会','改革','冲突','加息','油价','概率','沙特','霍尔木兹','战争','管道','遭袭','谈判','制裁']
-            if any(k in inner for k in event_keys):
-                # 组合为 板块（事件）
-                if len(before) + len(inner) + 3 <= max_len:
-                    return f"{before}（{inner}）"
-                inner_short = inner[:max(6, max_len - len(before) - 3)]
-                if len(inner) > max_len - len(before) - 3:
-                    inner_short += '…'
-                return f"{before}（{inner_short}）"
-            else:
-                # 括号内只是板块说明，取括号前
-                if len(before) <= max_len:
-                    return before
-                return before[:max_len] + '…'
-        if len(theme) > max_len:
-            return theme[:max_len] + '…'
-        return theme
-
-    dom_keys = ['国常会','证监会','央行','工信部','国务院','A股','政策','十五五','券商','算力网','算力大会']
-    intl_keys = ['美联储','中东','亚太','油价','能源','油运','战争','沙特','俄乌','日元','日本','美元','加息','美债']
-    domestic = []
-    international = []
-    seen_themes = set()
-
-    for t in w.get('bullish',[]) + w.get('bearish',[]):
-        theme_full = t.get('theme','').strip()
-        if theme_full in seen_themes:
+    # 要闻：从周末全球要闻标题中分国内/国际各取 2 条（news_tag 识别， title 截 40 字）
+    pool = []
+    for grp in ('bullNews', 'bearNews', 'intlNews', 'bankViews', 'macroNews'):
+        for n in (a.get(grp) or []):
+            if isinstance(n, dict) and n.get('title'):
+                pool.append(n)
+    domestic, international, seen_titles = [], [], set()
+    for n in pool:
+        t = (n.get('title') or '').strip()
+        if not t or t in seen_titles:
             continue
-        seen_themes.add(theme_full)
-        if any(k in theme_full for k in dom_keys) and len(domestic) < 2:
-            domestic.append(short_theme(t, 100))
-        elif any(k in theme_full for k in intl_keys) and len(international) < 2:
-            international.append(short_theme(t, 100))
-
-    news_parts = []
-    for d in domestic:
-        news_parts.append(f"🇨🇳 {d}")
-    for i in international:
-        news_parts.append(f"🌍 {i}")
-    # 微信对主动换行的单行有截断阈值；合并成连续自然段，让微信自动换行，显示更完整
+        seen_titles.add(t)
+        tag = news_tag(n)
+        short = t[:40] + ('…' if len(t) > 40 else '')
+        if tag == '🇨🇳' and len(domestic) < 2:
+            domestic.append(short)
+        elif tag in ('🌍', '🌐') and len(international) < 2:
+            international.append(short)
+        if len(domestic) >= 2 and len(international) >= 2:
+            break
+    news_parts = [f"🇨🇳 {d}" for d in domestic] + [f"🌍 {i}" for i in international]
     weekend_news = ' '.join(news_parts) if news_parts else '（详见网页）'
 
-    # 完整周一研判；微信端保持连续自然段，避免被截断
-    monday_outlook = w.get('mondayOutlook','').replace('\n',' ').strip()
+    # 利好/利空：映射 bullNews/bearNews → fmt_bullish/fmt_bearish 所需 {theme, stocks}
+    def news_to_theme(it):
+        return {'theme': f"{(it.get('sector') or '').strip()}（{(it.get('title') or '').strip()}）",
+                'stocks': ((it.get('impacts') or [{}])[0].get('stocks') or [])}
+    bullish_lines = [fmt_bullish(news_to_theme(t), i+1) for i, t in enumerate((a.get('bullNews') or [])[:3])]
+    bearish_lines = [fmt_bearish(news_to_theme(t), i+1) for i, t in enumerate((a.get('bearNews') or [])[:3])]
 
-    bullish_lines = [fmt_bullish(t, i+1) for i, t in enumerate(w.get('bullish',[])[:3])]
-    bearish_lines = [fmt_bearish(t, i+1) for i, t in enumerate(w.get('bearish',[])[:3])]
+    # 周一开盘预判（weekendNews 仅存 date/mondayOutlook/source）
+    monday_outlook = (w.get('mondayOutlook') or '').replace('\n', ' ').strip()
 
-    # 顺序：美股 → 要闻 → 研判 → AI预测（周一板块） → 利好 → 利空
+    # 顺序：美股 → 要闻 → 周一研判 → AI预测（周一板块） → 利好 → 利空
     parts = [
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
         f"📊 美股：{us_line}",
         f"📰 要闻：\n{weekend_news}",
-        f"💡 研判：{monday_outlook}",
+        f"💡 周一研判：{monday_outlook}",
     ]
-    # 周一板块 AI 预测（date 应为下个周一）：紧凑一行
     ai_line = fmt_ai_line(D.get('aiPrediction'), '周一AI预测')
     if ai_line:
         parts.append(ai_line)
