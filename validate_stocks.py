@@ -14,8 +14,9 @@
 2) aiPrediction.sectors 每个板块：同样恰好 8 只 + 上述配比。
 3) bullish/bearish 每个主题：恰好 4 只（不分层）。
 4) 所有标的 code 必须为 60/00 开头沪深主板（禁 688/689、300/301/302、4/8/92 开头）。
-5) macroNews/intlNews/bankViews 每条要闻卡必须含 direction 字段，取值仅限 看涨/看跌/中性
-   （bullNews/bearNews 落在利好/利空列、无 direction，不校验；缺失方向则页面涨跌徽标空白）。
+5) macroNews/intlNews/bankViews 每条要闻卡应含 direction 字段（看涨/看跌/中性）；缺失或非法值
+   在写回 data.js 时自动补为 中性（前端渲染为中性灰，降级表现与旧版一致），并输出 WARNING 日志，
+   但不阻断部署（避免单一装饰字段卡死整轮更新）。bullNews/bearNews 无 direction，不处理。
 
 类别按 note 前缀判定：断板反包→断板；板块龙头/龙头→龙头；相关概念/概念→概念；
 小盘→小盘；其余前缀视为无法识别（报违规）。
@@ -133,14 +134,22 @@ def check4(stocks, where, violations):
         violations.append(f"{where}: 共 {len(stocks)} 只（应为 4）")
 
 
-def check_direction(nw, where, violations):
-    """macroNews/intlNews/bankViews 每条必须带 direction（看涨/看跌/中性），否则页面涨跌徽标空白。"""
-    if not isinstance(nw, dict):
-        return
-    d = nw.get('direction')
-    if d not in VALID_DIR:
-        violations.append(
-            f"{where}: 缺少/非法 direction（应为 看涨/看跌/中性 之一，实际 {d!r}）")
+def fix_direction_inplace(D):
+    """macroNews/intlNews/bankViews 每条应带 direction（看涨/看跌/中性）；缺失/非法自动补为 中性。
+    返回 WARNING 信息列表（非致命，不阻断部署；direction 在写回 data.js 时一并修正）。"""
+    warns = []
+    for mk in ('ashare', 'us'):
+        sec = D.get(mk) or {}
+        for key in DIR_KEYS:
+            for i, nw in enumerate(sec.get(key) or []):
+                if not isinstance(nw, dict):
+                    continue
+                d = nw.get('direction')
+                if d not in VALID_DIR:
+                    nw['direction'] = '中性'
+                    warns.append(
+                        f"{mk}.{key}[{i}]({(nw.get('sector') or '')[:14]}): direction 缺失/非法（{d!r}）→ 自动补为 中性")
+    return warns
 
 
 def reorder_inplace(D):
@@ -175,8 +184,9 @@ def main():
     as_json = '--json' in sys.argv
     D = load_data()
 
-    # 先无破坏性地按统一顺序重排（龙头→概念→小盘人气→断板反包），
-    # 再校验数量/配比/主板；顺序问题在此被自动纠正，不会触发 FAIL。
+    # 先自动补救 direction（缺失/非法 → 中性），再无破坏性地按统一顺序重排
+    # （龙头→概念→小盘人气→断板反包）；两者均写回 data.js，但都不阻断部署。
+    dir_warns = fix_direction_inplace(D)
     if '--no-fix-order' not in sys.argv:
         reorder_inplace(D)
         with open('data.js', 'w', encoding='utf-8') as f:
@@ -190,8 +200,6 @@ def main():
             for i, nw in enumerate(sec.get(key) or []):
                 if not isinstance(nw, dict):
                     continue
-                if key in DIR_KEYS:
-                    check_direction(nw, f"{mk}.{key}[{i}]({(nw.get('sector') or '')[:14]})", violations)
                 for j, imp in enumerate(nw.get('impacts') or []):
                     if isinstance(imp, dict):
                         check_tiered(imp.get('stocks'),
@@ -208,8 +216,10 @@ def main():
             check_tiered(s.get('stocks'), f"aiPrediction.{(s.get('sector') or '')[:16]}", violations)
 
     if as_json:
-        print(json.dumps({'ok': not violations, 'violations': violations},
-                         ensure_ascii=False, indent=2))
+        print(json.dumps({'ok': not violations, 'direction_warnings': dir_warns,
+                          'violations': violations}, ensure_ascii=False, indent=2))
+    for w in dir_warns:
+        print("[WARN] direction 自动补救:", w)
     if violations:
         print(f"[FAIL] 共 {len(violations)} 处违规：")
         for v in violations:
