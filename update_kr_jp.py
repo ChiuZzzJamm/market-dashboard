@@ -419,15 +419,17 @@ def main():
         return
 
     # updatedAt：覆盖式（单一固定描述，不累积、不拼长括号说明）—— 修复 A1 累积污染
-    desc = '韩日'
-    if kr_holiday and not jp_holiday:
-        desc = '韩股（日经休市）'
-    elif jp_holiday and not kr_holiday:
-        desc = '日经（韩股休市）'
-    elif kr_holiday and jp_holiday:
-        desc = '韩日（均休市）'
+    # 修复：逐市场写明「已更新/休市」，不使用易误读的「X（Y休市）」缩写（此前映射写反：
+    # 日经休市时误写「日经（韩股休市）」，读者会误解为日经已更新）
+    parts = []
+    for hk, nm in (('kr', '韩股'), ('jp', '日经')):
+        holi = kr_holiday if hk == 'kr' else jp_holiday
+        if holi:
+            parts.append(f"{nm} {int(TODAY[5:7])}/{int(TODAY[8:10])} 休市")
+        else:
+            parts.append(f"{nm} {date_display} 已更新")
     ts = datetime.now(TZ8).strftime('%Y-%m-%d %H:%M')
-    D['updatedAt'] = f"{ts}（{desc} {date_display} 数据已自动更新）"
+    D['updatedAt'] = f"{ts}（{'；'.join(parts)}）"
 
     with open('data.js', 'w', encoding='utf-8') as f:
         f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, indent=2) + ';\n')
