@@ -14,6 +14,8 @@
 2) aiPrediction.sectors 每个板块：同样恰好 8 只 + 上述配比。
 3) bullish/bearish 每个主题：恰好 4 只（不分层）。
 4) 所有标的 code 必须为 60/00 开头沪深主板（禁 688/689、300/301/302、4/8/92 开头）。
+5) macroNews/intlNews/bankViews 每条要闻卡必须含 direction 字段，取值仅限 看涨/看跌/中性
+   （bullNews/bearNews 落在利好/利空列、无 direction，不校验；缺失方向则页面涨跌徽标空白）。
 
 类别按 note 前缀判定：断板反包→断板；板块龙头/龙头→龙头；相关概念/概念→概念；
 小盘→小盘；其余前缀视为无法识别（报违规）。
@@ -33,6 +35,11 @@ import os
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 BAD_PREFIX = ('688', '689', '300', '301', '302', '4', '8', '92')
+
+VALID_DIR = ('看涨', '看跌', '中性')
+
+# 仅这三节要闻需要 direction（页面涨跌徽标来源）；bullNews/bearish 落在利好/利空列。
+DIR_KEYS = ('macroNews', 'intlNews', 'bankViews')
 
 TIERS = {
     5: (1, 1, 1), 6: (1, 1, 1),  # N>=5
@@ -126,6 +133,16 @@ def check4(stocks, where, violations):
         violations.append(f"{where}: 共 {len(stocks)} 只（应为 4）")
 
 
+def check_direction(nw, where, violations):
+    """macroNews/intlNews/bankViews 每条必须带 direction（看涨/看跌/中性），否则页面涨跌徽标空白。"""
+    if not isinstance(nw, dict):
+        return
+    d = nw.get('direction')
+    if d not in VALID_DIR:
+        violations.append(
+            f"{where}: 缺少/非法 direction（应为 看涨/看跌/中性 之一，实际 {d!r}）")
+
+
 def reorder_inplace(D):
     """无破坏性地把所有标的清单重排为 龙头→概念→小盘人气→断板反包（同类内保序）。
     仅调顺序，不改数量与内容；幂等。"""
@@ -173,6 +190,8 @@ def main():
             for i, nw in enumerate(sec.get(key) or []):
                 if not isinstance(nw, dict):
                     continue
+                if key in DIR_KEYS:
+                    check_direction(nw, f"{mk}.{key}[{i}]({(nw.get('sector') or '')[:14]})", violations)
                 for j, imp in enumerate(nw.get('impacts') or []):
                     if isinstance(imp, dict):
                         check_tiered(imp.get('stocks'),
@@ -197,7 +216,8 @@ def main():
             print("  -", v)
         sys.exit(1)
     print("ALL OK: 全部 impacts/aiPrediction 恰好 8 只且配比符合 N 分层表、"
-          "顺序为龙头→概念→小盘人气→断板反包，bullish/bearish 恰好 4 只，全部标的为沪深主板。")
+          "顺序为龙头→概念→小盘人气→断板反包，bullish/bearish 恰好 4 只，全部标的为沪深主板；"
+          "macroNews/intlNews/bankViews 均含合法 direction（看涨/看跌/中性）。")
 
 
 if __name__ == '__main__':
