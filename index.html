@@ -112,6 +112,7 @@
   .ai-item .row1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
   .ai-item .sec-nm { font-size: 14px; font-weight: 700; }
   .dir-badge { font-size: 11.5px; font-weight: 700; color: #fff; border-radius: 999px; padding: 2px 9px; }
+  .persp-tag { font-size: 10.5px; font-weight: 600; color: var(--ink2); border: 1px solid var(--line, #d8dee6); border-radius: 999px; padding: 1.5px 8px; margin-left: 6px; white-space: nowrap; }
   .dir-up { background: var(--up); }
   .dir-down { background: var(--down); }
   /* 置信度：低→浅蓝，中→中蓝，高→深蓝 */
@@ -180,6 +181,7 @@
   .nc-imp { margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--line); }
   .nc-imp-theme { font-size: 12.5px; font-weight: 700; color: var(--accent-deep); }
   .dir-badge { font-size: 11px; font-weight: 700; margin-left: 6px; }
+  .persp-tag { font-size: 10px; margin-left: 5px; padding: 1px 6px; }
   .dir-badge.up { color: var(--up); }
   .dir-badge.down { color: var(--down); }
   .dir-badge.flat { color: var(--ink2); }
@@ -597,14 +599,15 @@ function newsTag(item) {
   return '🌐';
 }
 
-function newsEntryInner(it, showSrc) {
+function newsEntryInner(it, showSrc, tag) {
   // 单条要闻内部内容：板块标签 + 标题简述 + 各板块成分股（8 只四类标的）；全球要闻卡与周末卡共用
   var dirBadge = '';
   if (it.direction) {
     var dc = it.direction === '看涨' ? 'up' : (it.direction === '看跌' ? 'down' : 'flat');
     dirBadge = '<span class="dir-badge ' + dc + '">' + esc(it.direction) + '</span>';
   }
-  var s = '<div class="nc-theme">' + esc(it.sector || '') + dirBadge + '</div>';
+  var perspTag = tag ? '<span class="persp-tag">' + esc(tag) + '</span>' : '';
+  var s = '<div class="nc-theme">' + esc(it.sector || '') + dirBadge + perspTag + '</div>';
   s += '<div class="nc-dtl"><b>' + esc(it.title || '') + '</b> — ' + esc(it.summary || '') + '</div>';
   (it.impacts || []).forEach(function (im) {
     if (!im.stocks || !im.stocks.length) return;
@@ -628,7 +631,7 @@ function renderNewsCard(d) {
   var macro = d.macroNews||[];
   if (!bn.length && !be.length && !intl.length && !bank.length && !macro.length) return '';
   var itemHtml = function (it, dir) {
-    return '<div class="news-cell ' + dir + '">' + newsEntryInner(it, false) + '</div>';
+    return '<div class="news-cell ' + dir + '">' + newsEntryInner(it, false, '短线·盘面') + '</div>';
   };
   // 桌面：第 i 行 = 利好第 i 条 + 利空第 i 条（网格同行等高，左右始终对齐）
   // 手机(≤700px)：单列 + order 重排为 利好标题→利好条目→利空标题→利空条目
@@ -648,19 +651,19 @@ function renderNewsCard(d) {
   // 宏观（央行 / 通胀 / 大宗 / 美债 / 汇率）——顺序（R68 定稿）：宏观 → 彭博/路透/WSJ → 投行观点
   if (macro.length) {
     html += '<div class="wk-section macro"><h4>宏观 · 央行 / 通胀 / 大宗 / 美债</h4>';
-    macro.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true) + '</div>'; });
+    macro.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true, '宏观·事件') + '</div>'; });
     html += '</div>';
   }
   // 彭博 / 路透 / WSJ 视角（国际通讯社报道，独立成段）
   if (intl.length) {
     html += '<div class="wk-section intl"><h4>彭博 / 路透 / WSJ 视角</h4>';
-    intl.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true) + '</div>'; });
+    intl.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true, '中期·海外产业') + '</div>'; });
     html += '</div>';
   }
   // 投行观点（高盛 / 大摩 / 中金 / 中信等研报级观点）
   if (bank.length) {
     html += '<div class="wk-section bank"><h4>投行观点</h4>';
-    bank.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true) + '</div>'; });
+    bank.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true, '机构·观点') + '</div>'; });
     html += '</div>';
   }
   if (d.source) html += '<div class="wk-src">来源：' + esc(d.source) + '</div>';
