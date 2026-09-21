@@ -48,13 +48,22 @@ def build_panorama_line(panorama):
         return '🌏 日韩：详见网页'
     pieces = []
     if kr:
-        kr_txt = fmt_panorama_items(kr)
-        if kr_txt:
-            pieces.append(f"韩股 {kr.get('date','')}：{kr_txt}")
+        kr_date = kr.get('date','') or ''
+        # 休市日不展示过期板块数据，只标「休市」
+        if '休市' in kr_date:
+            pieces.append(f"韩股 {kr_date}")
+        else:
+            kr_txt = fmt_panorama_items(kr)
+            if kr_txt:
+                pieces.append(f"韩股 {kr_date}：{kr_txt}")
     if jp:
-        jp_txt = fmt_panorama_items(jp)
-        if jp_txt:
-            pieces.append(f"日经 {jp.get('date','')}：{jp_txt}")
+        jp_date = jp.get('date','') or ''
+        if '休市' in jp_date:
+            pieces.append(f"日经 {jp_date}")
+        else:
+            jp_txt = fmt_panorama_items(jp)
+            if jp_txt:
+                pieces.append(f"日经 {jp_date}：{jp_txt}")
     if pieces:
         return '🌏 日韩：' + ' | '.join(pieces)
     return '🌏 日韩：详见网页'
@@ -130,24 +139,48 @@ def news_tag(item):
     return '🌐'
 
 
-def collect_news(src, max_n=5, groups=('bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews')):
-    """汇总多组要闻（利好/利空/宏观/国际/投行），去重后取前 max_n 条，带 🇨🇳/🌍/🌐 图标。
-    修复 B：ashare/us 分支此前只取 bullNews/bearNews 各 2 条=4 条，且完全漏掉 macroNews/
-    intlNews/bankViews；现把宏观(WSJ)/投行三段一并纳入推送正文，要闻保 5 条。"""
-    pool = []
+GROUP_TAG = {'macroNews': '宏观', 'intlNews': '国际', 'bankViews': '投行'}
+
+def collect_news(src, max_n=6, groups=('bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews')):
+    """汇总多组要闻，去重后取前 max_n 条，带 🇨🇳/🌍/🌐 图标；宏观/国际/投行组追加【宏观】【国际】【投行】标签。
+    分配策略（修复：此前按组顺序取前 5，bull/bear 两组共 8-10 条把宏观/国际/投行全部挤出推送）：
+    先保底 bull×2、bear×1、宏观×1、国际×1、投行×1（共 6 条），某组不足时名额轮转给其余组；
+    组内去重，组间按 title 全局去重。"""
+    pools, seen = {}, set()
     for grp in groups:
+        lst = []
         for n in (src.get(grp) or []):
-            if isinstance(n, dict) and (n.get('title') or '').strip():
-                pool.append(n)
-    out, seen = [], set()
-    for n in pool:
-        t = (n.get('title') or '').strip()
-        if not t or t in seen:
-            continue
-        seen.add(t)
-        out.append(f"{news_tag(n)} {t}")
-        if len(out) >= max_n:
+            if isinstance(n, dict):
+                t = (n.get('title') or '').strip()
+                if t and t not in seen:
+                    seen.add(t)
+                    lst.append(n)
+        pools[grp] = lst
+    picked = []
+    def take(grp, n):
+        for x in pools[grp][:n]:
+            picked.append((grp, x))
+        pools[grp] = pools[grp][n:]
+    take('bullNews', 2)
+    take('bearNews', 1)
+    take('macroNews', 1)
+    take('intlNews', 1)
+    take('bankViews', 1)
+    # 名额补足：保底组不足时轮转其余组，直到满 max_n 或无料可取
+    while len(picked) < max_n:
+        before = len(picked)
+        for grp in groups:
+            if pools[grp]:
+                picked.append((grp, pools[grp].pop(0)))
+                break
+        if len(picked) == before:
             break
+    out = []
+    for grp, n in picked[:max_n]:
+        tag = news_tag(n)
+        label = GROUP_TAG.get(grp)
+        t = (n.get('title') or '').strip()
+        out.append(f"{tag}【{label}】{t}" if label else f"{tag} {t}")
     return out
 
 
@@ -200,8 +233,8 @@ elif mode == 'us':
     bear_src = (u.get('bearish') or w.get('bearish', []))
     bullish_lines = [fmt_bullish(t, i+1) for i, t in enumerate(bull_src[:3])]
     bearish_lines = [fmt_bearish(t, i+1) for i, t in enumerate(bear_src[:3])]
-    # 要闻：合并利好/利空/宏观/国际/投行五组，去重后取 5 条，带 🇨🇳/🌍 图标（修复 B）
-    news_parts = collect_news(u, 5)
+    # 要闻：合并利好/利空/宏观/国际/投行五组，保底分配取 6 条，带 🇨🇳/🌍 图标与【宏观】【国际】【投行】标签（修复 B）
+    news_parts = collect_news(u, 6)
     parts = [
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
         f"📊 美股：{u.get('summary','')}",
