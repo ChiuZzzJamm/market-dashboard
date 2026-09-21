@@ -100,7 +100,7 @@ US_SECTORS = [
         {"code": "usSMCI", "name": "SMCI"}]},
     {"name": "CPO / 光模块", "constituents": [
         {"code": "usCOHR", "name": "COHR"}, {"code": "usLITE", "name": "LITE"},
-        {"code": "usCIEN", "name": "CIEN"}, {"code": "usFN", "name": "FNSR"},
+        {"code": "usCIEN", "name": "CIEN"}, {"code": "usFN", "name": "FN"},
         {"code": "usANET", "name": "ANET"}]},
     {"name": "半导体", "constituents": [
         {"code": "usINTC", "name": "INTC"}, {"code": "usTSM", "name": "TSM"},
@@ -521,6 +521,12 @@ us_obj = {
     "sectorNote": "板块涨跌幅为同板块多只美股真实成分股涨跌幅均值（非 ETF 口径），更贴近板块真实表现。",
     "bullNews": D.get('us', {}).get('bullNews', []),
     "bearNews": D.get('us', {}).get('bearNews', []),
+    # 同步保留 macroNews/intlNews/bankViews（修复：此前 us_obj 不含这三节，D['us']=us_obj 会整体删掉；
+    # 一旦后续 AI 新闻检索失败，prompt 里「保留原值」对这三节将无法生效。保留旧值作为兜底，
+    # AI 步骤成功时会整体覆盖重写，不影响正常流程）。
+    "macroNews": D.get('us', {}).get('macroNews', []),
+    "intlNews": D.get('us', {}).get('intlNews', []),
+    "bankViews": D.get('us', {}).get('bankViews', []),
     # 保留 08:30 任务写入的当日 AI 利好/利空主题，不得覆盖（否则微信推送会回退到周末旧数据）
     "bullish": D.get('us', {}).get('bullish'),
     "bearish": D.get('us', {}).get('bearish'),
