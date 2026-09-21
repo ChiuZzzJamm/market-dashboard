@@ -18,6 +18,9 @@
 类别按 note 前缀判定：断板反包→断板；板块龙头/龙头→龙头；相关概念/概念→概念；
 小盘→小盘；其余前缀视为无法识别（报违规）。
 
+顺序硬约束（R83）：每只清单内的标的必须按「龙头 → 概念 → 小盘人气 → 断板反包」
+的先后顺序排列（同类内保持原相对序），不得穿插交错，否则判违规。
+
 用法: python3 validate_stocks.py [--json]
 退出码: 0 = 全部合规(输出 ALL OK)；1 = 有违规。
 """
@@ -70,7 +73,7 @@ def board_bad(code):
 
 
 def check_tiered(stocks, where, violations):
-    """恰好 8 只 + N 分层配比 + 主板过滤。"""
+    """恰好 8 只 + N 分层配比 + 主板过滤 + 顺序硬约束（龙头→概念→小盘→断板）。"""
     if not isinstance(stocks, list) or not stocks:
         violations.append(f"{where}: stocks 缺失或为空")
         return
@@ -79,8 +82,11 @@ def check_tiered(stocks, where, violations):
             violations.append(f"{where}: 含非沪深主板标的 {s.get('code')} {s.get('name','')}")
     from collections import Counter
     cnt = Counter()
+    seq = []
     for s in stocks:
-        cnt[cat_of((s or {}).get('note', ''))] += 1
+        c = cat_of((s or {}).get('note', ''))
+        cnt[c] += 1
+        seq.append(c)
     n = len(stocks)
     if n != 8:
         violations.append(
@@ -100,9 +106,16 @@ def check_tiered(stocks, where, violations):
         violations.append(
             f"{where}: N={d} 应为 龙头{need[0]} 概念{need[1]} 小盘{need[2]} 断板{d}，"
             f"实际 龙头{cnt['L']} 概念{cnt['C']} 小盘{cnt['X']} 断板{cnt['D']}")
+        return
+    # 顺序硬约束：必须严格 龙头(全部) → 概念(全部) → 小盘(全部) → 断板(全部)
+    ORDER = {'L': 0, 'C': 1, 'X': 2, 'D': 3}
+    if seq != sorted(seq, key=lambda c: ORDER[c]):
+        violations.append(
+            f"{where}: 顺序不合规（应为 龙头→概念→小盘人气→断板反包），实际序列 {' '.join(seq)}")
 
 
 def check4(stocks, where, violations):
+    """bullish/bearish 每主题恰好 4 只 + 主板过滤（note 为自由文本，不要求四类前缀/顺序）。"""
     if not isinstance(stocks, list) or not stocks:
         violations.append(f"{where}: stocks 缺失或为空")
         return
@@ -113,9 +126,45 @@ def check4(stocks, where, violations):
         violations.append(f"{where}: 共 {len(stocks)} 只（应为 4）")
 
 
+def reorder_inplace(D):
+    """无破坏性地把所有标的清单重排为 龙头→概念→小盘人气→断板反包（同类内保序）。
+    仅调顺序，不改数量与内容；幂等。"""
+    ORDER = {'L': 0, 'C': 1, 'X': 2, 'D': 3}
+
+    def r(stocks):
+        if not isinstance(stocks, list):
+            return stocks
+        return sorted(stocks, key=lambda s: ORDER.get(cat_of((s or {}).get('note', '')), 9))
+
+    for mk in ('ashare', 'us'):
+        sec = D.get(mk) or {}
+        for key in ('bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews'):
+            for nw in (sec.get(key) or []):
+                if isinstance(nw, dict):
+                    for imp in (nw.get('impacts') or []):
+                        if isinstance(imp, dict) and isinstance(imp.get('stocks'), list):
+                            imp['stocks'] = r(imp['stocks'])
+        for key in ('bullish', 'bearish'):
+            for g in (sec.get(key) or []):
+                if isinstance(g, dict) and isinstance(g.get('stocks'), list):
+                    g['stocks'] = r(g['stocks'])
+    ai = D.get('aiPrediction') or {}
+    for s in (ai.get('sectors') or []):
+        if isinstance(s, dict) and isinstance(s.get('stocks'), list):
+            s['stocks'] = r(s['stocks'])
+
+
 def main():
     as_json = '--json' in sys.argv
     D = load_data()
+
+    # 先无破坏性地按统一顺序重排（龙头→概念→小盘人气→断板反包），
+    # 再校验数量/配比/主板；顺序问题在此被自动纠正，不会触发 FAIL。
+    if '--no-fix-order' not in sys.argv:
+        reorder_inplace(D)
+        with open('data.js', 'w', encoding='utf-8') as f:
+            f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, indent=2) + ';\n')
+
     violations = []
 
     for mk in ('ashare', 'us'):
@@ -147,8 +196,8 @@ def main():
         for v in violations:
             print("  -", v)
         sys.exit(1)
-    print("ALL OK: 全部 impacts/aiPrediction 恰好 8 只且配比符合 N 分层表，"
-          "bullish/bearish 恰好 4 只，全部标的为沪深主板。")
+    print("ALL OK: 全部 impacts/aiPrediction 恰好 8 只且配比符合 N 分层表、"
+          "顺序为龙头→概念→小盘人气→断板反包，bullish/bearish 恰好 4 只，全部标的为沪深主板。")
 
 
 if __name__ == '__main__':
