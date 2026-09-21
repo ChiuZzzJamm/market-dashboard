@@ -129,6 +129,28 @@ def news_tag(item):
         return '🌍'
     return '🌐'
 
+
+def collect_news(src, max_n=5, groups=('bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews')):
+    """汇总多组要闻（利好/利空/宏观/国际/投行），去重后取前 max_n 条，带 🇨🇳/🌍/🌐 图标。
+    修复 B：ashare/us 分支此前只取 bullNews/bearNews 各 2 条=4 条，且完全漏掉 macroNews/
+    intlNews/bankViews；现把宏观(WSJ)/投行三段一并纳入推送正文，要闻保 5 条。"""
+    pool = []
+    for grp in groups:
+        for n in (src.get(grp) or []):
+            if isinstance(n, dict) and (n.get('title') or '').strip():
+                pool.append(n)
+    out, seen = [], set()
+    for n in pool:
+        t = (n.get('title') or '').strip()
+        if not t or t in seen:
+            continue
+        seen.add(t)
+        out.append(f"{news_tag(n)} {t}")
+        if len(out) >= max_n:
+            break
+    return out
+
+
 if mode == 'ashare':
     a = D.get('ashare')
     if not a or not a.get('indices'):
@@ -141,14 +163,8 @@ if mode == 'ashare':
     fo = ' '.join([f"{s.get('name','')}{s.get('value',0):+.1f}亿" for s in (a.get('fundOut') or [])[:3]])
     # 微信推送保持连续自然段，避免主动换行被截断；data.js 里 outlook 本身无换行，这里做兜底
     outlook_text = (a.get('outlook','') or '').replace('\n',' ').strip()
-    # A股要闻：带 🇨🇳/🌍 国内/国际图标（与美股/周末推送一致），合并成连续自然段避免微信截断
-    news_parts = []
-    seen_news = set()
-    for n in ((a.get('bullNews') or [])[:2] + (a.get('bearNews') or [])[:2]):
-        t = (n.get('title','') or '').strip()
-        if t and t not in seen_news:
-            seen_news.add(t)
-            news_parts.append(f"{news_tag(n)} {t}")
+    # A股要闻：合并利好/利空/宏观/国际/投行五组，去重后取 5 条，带 🇨🇳/🌍 图标（修复 B）
+    news_parts = collect_news(a, 5)
     # 利好/利空方向（与美股/周末推送一致）
     bullish_lines = [fmt_bullish(t, i+1) for i, t in enumerate((a.get('bullish') or [])[:3])]
     bearish_lines = [fmt_bearish(t, i+1) for i, t in enumerate((a.get('bearish') or [])[:3])]
@@ -184,14 +200,8 @@ elif mode == 'us':
     bear_src = (u.get('bearish') or w.get('bearish', []))
     bullish_lines = [fmt_bullish(t, i+1) for i, t in enumerate(bull_src[:3])]
     bearish_lines = [fmt_bearish(t, i+1) for i, t in enumerate(bear_src[:3])]
-    # 要闻：带 🇨🇳/🌍 国内/国际图标（与周末推送样式一致），合并成连续自然段避免微信截断
-    news_parts = []
-    seen_news = set()
-    for n in ((u.get('bullNews') or [])[:2] + (u.get('bearNews') or [])[:2]):
-        t = (n.get('title','') or '').strip()
-        if t and t not in seen_news:
-            seen_news.add(t)
-            news_parts.append(f"{news_tag(n)} {t}")
+    # 要闻：合并利好/利空/宏观/国际/投行五组，去重后取 5 条，带 🇨🇳/🌍 图标（修复 B）
+    news_parts = collect_news(u, 5)
     parts = [
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
         f"📊 美股：{u.get('summary','')}",
@@ -216,7 +226,7 @@ elif mode == 'weekend':
     a = D.get('ashare') or {}
     w = D.get('weekendNews') or {}
     u = D.get('us') or {}
-    src = u if (u.get('bullNews') or u.get('macroNews') or u.get('intlNews')) else a
+    src = u if (u.get('bullNews') or u.get('macroNews') or u.get('intlNews') or u.get('bankViews')) else a
     title = f"[周末要闻] {(w.get('date') or a.get('tradeDate') or '')[5:]} 汇总"
 
     # 美股周五收盘（直接取 us 最新数据，周日脚本已更新到周五）
@@ -244,11 +254,11 @@ elif mode == 'weekend':
         seen_titles.add(t)
         tag = news_tag(n)
         short = t[:40] + ('…' if len(t) > 40 else '')
-        if tag == '🇨🇳' and len(domestic) < 2:
+        if tag == '🇨🇳' and len(domestic) < 3:
             domestic.append(short)
         elif tag in ('🌍', '🌐') and len(international) < 2:
             international.append(short)
-        if len(domestic) >= 2 and len(international) >= 2:
+        if len(domestic) + len(international) >= 5:
             break
     news_parts = [f"🇨🇳 {d}" for d in domestic] + [f"🌍 {i}" for i in international]
     weekend_news = ' '.join(news_parts) if news_parts else '（详见网页）'

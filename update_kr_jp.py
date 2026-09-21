@@ -53,6 +53,58 @@ TODAY = datetime.now(TZ8).strftime('%Y-%m-%d')
 TS_RE = re.compile(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}')
 
 
+# ---------- 日本 / 韩国法定休市表（脚本级判定，休市日不抓取、保留上一交易日、date 标注「休市」） ----------
+# 2026 日本法定休市（含振替休日、国民の休日）。盂兰盆(8月)非法定休市，不列入。
+# TODO: 2027 起需更新此集合（或改为动态计算）。
+JP_HOLIDAYS_2026 = {
+    '2026-01-01', '2026-01-02', '2026-01-03',   # 元日 + 银行休业日
+    '2026-01-12',                               # 成人の日（1月第2月曜）
+    '2026-02-11',                               # 建国記念の日
+    '2026-02-23',                               # 天皇誕生日
+    '2026-03-20',                               # 春分の日
+    '2026-04-29',                               # 昭和の日
+    '2026-05-03', '2026-05-04', '2026-05-05',   # 憲法記念日 / みどりの日 / こどもの日（黄金周）
+    '2026-07-20',                               # 海の日（7月第3月曜）
+    '2026-08-11',                               # 山の日
+    '2026-09-21', '2026-09-22', '2026-09-23',   # 敬老の日(3rd月9/21) + 国民の休日(9/22) + 秋分の日(9/23)
+    '2026-10-12',                               # スポーツの日（10月第2月曜）
+    '2026-11-03',                               # 文化の日
+    '2026-11-23',                               # 勤労感謝の日
+    '2026-12-31',                               # 大晦日
+}
+# 2026 韩国法定休市（含代替休日）。설날/추석 前后连休。
+KR_HOLIDAYS_2026 = {
+    '2026-01-01',                               # 元旦
+    '2026-02-17', '2026-02-18', '2026-02-19',   # 설날（农历1/1 = 2/17，连休）
+    '2026-03-01',                               # 三一節
+    '2026-05-05',                               #  어린이날
+    '2026-05-24',                               #  부처님 오신 날（佛诞，农历4/8）
+    '2026-06-06',                               #  현충일
+    '2026-08-15',                               #  광복절
+    '2026-09-25', '2026-09-26', '2026-09-27',   # 추석（农历8/15 = 9/25，连休）
+    '2026-10-03',                               #  개천절
+    '2026-10-09',                               #  한글날
+    '2026-12-25',                               #  크리스마스
+}
+
+
+def is_jp_holiday(d):
+    return d.strftime('%Y-%m-%d') in JP_HOLIDAYS_2026
+
+
+def is_kr_holiday(d):
+    return d.strftime('%Y-%m-%d') in KR_HOLIDAYS_2026
+
+
+def _upsert(markets, entry):
+    """按 key 替换 markets 中的市场项，不存在则追加。"""
+    for i, m in enumerate(markets):
+        if m.get('key') == entry.get('key'):
+            markets[i] = entry
+            return
+    markets.append(entry)
+
+
 def curl_get(url, headers=None, retries=3, timeout=12):
     """用 curl 抓取（urllib 会被部分源拒连，curl 在所有环境可用）；失败返回 None"""
     cmd = ['curl', '-s', '--max-time', str(timeout), '-H', f'User-Agent: {UA}']
@@ -272,6 +324,33 @@ def main():
         args.label = '收盘' if datetime.now(TZ8).hour >= 14 else '早盘'
     label = args.label
 
+    # 休市判定：日本/韩国法定休市日不抓取、保留上一交易日、date 标注「休市」（修复 A2）
+    today_d = datetime.now(TZ8).date()
+    kr_holiday = is_kr_holiday(today_d)
+    jp_holiday = is_jp_holiday(today_d)
+    date_display = f"{int(TODAY[5:7])}/{int(TODAY[8:10])} {label}"
+
+    # 两市场均休市：无需抓取，仅标注休市并保留上一交易日数据
+    if kr_holiday and jp_holiday:
+        D = load_dashboard_data(BASE)
+        markets = D.setdefault('panorama', {}).setdefault('markets', [])
+        for hk, nm in (('kr', '韩股'), ('jp', '日经')):
+            for i, m in enumerate(markets):
+                if m.get('key') == hk:
+                    mk = dict(m)
+                    mk['date'] = f"{int(TODAY[5:7])}/{int(TODAY[8:10])} 休市"
+                    markets[i] = mk
+                    break
+            else:
+                markets.append({'key': hk, 'name': nm, 'indices': [], 'items': [],
+                                'date': f"{int(TODAY[5:7])}/{int(TODAY[8:10])} 休市"})
+        D['updatedAt'] = (f"{datetime.now(TZ8).strftime('%Y-%m-%d %H:%M')}"
+                          f"（韩日 {date_display} 休市，保留上一交易日数据）")
+        with open('data.js', 'w', encoding='utf-8') as f:
+            f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, indent=2) + ';\n')
+        print('[info] 韩日均休市，date 标注休市，保留上一交易日数据')
+        return
+
     indices, stocks = collect()
     if not indices and not stocks:
         print('[error] 所有数据源均失败，保留 panorama.kr/jp 原值')
@@ -280,61 +359,76 @@ def main():
         print('[info] 校验未通过，保留原值')
         sys.exit(0)
 
-    date_display = f"{int(TODAY[5:7])}/{int(TODAY[8:10])} {label}"
-    kr = build_kr(indices, stocks)
-    kr['date'] = date_display
-    jp = build_jp(indices, stocks)
-    jp['date'] = date_display
-
-    # 覆盖守卫：有效板块不足半数视为部分失败，保留该市场原值，防止降级覆盖
-    kr_ok = len(kr['items']) >= (len(KR_BOARDS) + 1) // 2
-    jp_ok = len(jp['items']) >= (len(JP_BOARDS) + 1) // 2
-    if not kr_ok:
-        print(f"[warn] 韩股有效板块 {len(kr['items'])}/{len(KR_BOARDS)} 不足半数，保留原值不覆盖")
-    if not jp_ok:
-        print(f"[warn] 日股有效板块 {len(jp['items'])}/{len(JP_BOARDS)} 不足半数，保留原值不覆盖")
-    if not kr_ok and not jp_ok:
-        sys.exit(1)
-
-    print(f'[info] panorama.kr/jp -> {date_display}')
+    print(f'[info] panorama.kr/jp -> {date_display}'
+          + ('（韩股休市，保留上一交易日）' if kr_holiday else '')
+          + ('（日经休市，保留上一交易日）' if jp_holiday else ''))
     for k, v in indices.items():
         print(f"       {v['name']} {v['changePct']:+.2f}%")
     for _, v in stocks.items():
         print(f"       {v['name']} {v['changePct']:+.2f}%")
 
-    if args.dry_run:
-        print('[dry-run] 不写回 data.js')
-        print(json.dumps({'kr': kr, 'jp': jp}, ensure_ascii=False, indent=2))
-        return
-
     D = load_dashboard_data(BASE)
     markets = D.setdefault('panorama', {}).setdefault('markets', [])
-    replaced = {'kr': False, 'jp': False}
-    for i, m in enumerate(markets):
-        if m.get('key') == 'kr':
-            if kr_ok:
-                markets[i] = kr
-                replaced['kr'] = True
-        elif m.get('key') == 'jp':
-            if jp_ok:
-                markets[i] = jp
-                replaced['jp'] = True
-    if not replaced['kr'] and kr_ok:
-        markets.append(kr)
-    if not replaced['jp'] and jp_ok:
-        markets.append(jp)
 
-    # 追加而非覆盖：保留前序脚本（如 A股 update_ashare_sectors / 美股 update_us_from_quotes）
-    # 已写入的更新说明，避免 16:00 任务里韩日脚本把"A股收盘已自动更新…"整段覆盖掉。
+    # 休市市场：保留上一交易日 items/indices，仅把 date 改为「休市」（不抓取、不写早盘/收盘）
+    for hk, nm in (('kr', '韩股'), ('jp', '日经')):
+        if (hk == 'kr' and kr_holiday) or (hk == 'jp' and jp_holiday):
+            found = False
+            for i, m in enumerate(markets):
+                if m.get('key') == hk:
+                    mk = dict(m)
+                    mk['date'] = f"{int(TODAY[5:7])}/{int(TODAY[8:10])} 休市"
+                    markets[i] = mk
+                    found = True
+                    break
+            if not found:
+                markets.append({'key': hk, 'name': nm, 'indices': [], 'items': [],
+                                'date': f"{int(TODAY[5:7])}/{int(TODAY[8:10])} 休市"})
+            print(f"[info] {nm} {TODAY} 休市，保留上一交易日数据，date 标注休市")
+
+    # 正常市场：抓取并重建（跳过已休市市场）
+    if not kr_holiday:
+        kr = build_kr(indices, stocks)
+        kr['date'] = date_display
+        kr_ok = len(kr['items']) >= (len(KR_BOARDS) + 1) // 2
+        if not kr_ok:
+            print(f"[warn] 韩股有效板块 {len(kr['items'])}/{len(KR_BOARDS)} 不足半数，保留原值不覆盖")
+        else:
+            _upsert(markets, kr)
+    if not jp_holiday:
+        jp = build_jp(indices, stocks)
+        jp['date'] = date_display
+        jp_ok = len(jp['items']) >= (len(JP_BOARDS) + 1) // 2
+        if not jp_ok:
+            print(f"[warn] 日股有效板块 {len(jp['items'])}/{len(JP_BOARDS)} 不足半数，保留原值不覆盖")
+        else:
+            _upsert(markets, jp)
+
+    if args.dry_run:
+        print('[dry-run] 不写回 data.js')
+        out = {}
+        if not kr_holiday:
+            out['kr'] = kr
+        if not jp_holiday:
+            out['jp'] = jp
+        if kr_holiday:
+            out['kr_holiday'] = True
+        if jp_holiday:
+            out['jp_holiday'] = True
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return
+
+    # updatedAt：覆盖式（单一固定描述，不累积、不拼长括号说明）—— 修复 A1 累积污染
+    desc = '韩日'
+    if kr_holiday and not jp_holiday:
+        desc = '韩股（日经休市）'
+    elif jp_holiday and not kr_holiday:
+        desc = '日经（韩股休市）'
+    elif kr_holiday and jp_holiday:
+        desc = '韩日（均休市）'
     ts = datetime.now(TZ8).strftime('%Y-%m-%d %H:%M')
-    addon = f"韩日 {date_display} 数据已自动更新"
-    prev = D.get('updatedAt') or ''
-    if '（' in prev and prev.rstrip().endswith('）'):
-        prev_desc = prev.split('（', 1)[1].rstrip('）')
-    else:
-        prev_desc = prev
-    new_desc = prev_desc if '韩日' in prev_desc else ((prev_desc + '；' + addon) if prev_desc else addon)
-    D['updatedAt'] = f"{ts}（{new_desc}）"
+    D['updatedAt'] = f"{ts}（{desc} {date_display} 数据已自动更新）"
+
     with open('data.js', 'w', encoding='utf-8') as f:
         f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, indent=2) + ';\n')
     print('[info] data.js 已更新')
