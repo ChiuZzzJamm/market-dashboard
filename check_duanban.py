@@ -9,7 +9,8 @@
 
 数据源（零 MCP，纯 HTTP）：
   - 东财 push2ex getTopicZTPool 涨停池（含 hybk 行业板块字段，date=YYYYMMDD 无横线）
-  - 新浪 K线 CN_MarketData.getKLineData（urllib + UA，scale=240 日线）
+  - K 线：腾讯 ifzq fqkline 为主源（web.ifzq.gtimg.cn，独立域名、限频少），
+    新浪 CN_MarketData.getKLineData 为备用源（限频时兜底），均 scale=240 日线
 
 用法：
   python3 check_duanban.py                    # 核验最近 5 个交易日，文本输出
@@ -98,40 +99,43 @@ def _tencent_code(code):
     return code
 
 
-def fetch_kline_tencent(code):
-    """备用 K 线源（腾讯 ifzq），与新浪独立域名，限频时兜底。
-    返回统一 schema [{day,open,high,low,close,volume}] 或 None；
-    量单位为手，但 check_form 只用比值，不影响形态判定。"""
+def fetch_kline_tencent(code, retries=3, gap=1):
+    """主用 K 线源（腾讯 ifzq），与新浪独立域名，限频概率更低（R81 起设为主源）。
+    带重试，内联解析；返回统一 schema [{day,open,high,low,close,volume}] 或 None。
+    check_form 只用成交量比值，同源内单位一致即可，腾讯与新浪切换不影响形态判定。"""
     tcode = _tencent_code(code)
     url = ("https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param="
            + tcode + ",day,,,40,qfq")
-    raw = curl_text(url, timeout=15)
-    if not raw.strip():
-        return None
-    try:
-        j = json.loads(raw)
-    except Exception:
-        return None
-    if j.get("code") not in (0, "0", None) or not j.get("data"):
-        return None
-    data = (j.get("data") or {}).get(tcode) or {}
-    arr = data.get("qfqday") or data.get("day") or []
-    out = []
-    for a in arr:
-        if not isinstance(a, list) or len(a) < 6:
-            continue
-        try:
-            out.append({"day": str(a[0]), "open": float(a[1]),
-                        "close": float(a[2]), "high": float(a[3]),
-                        "low": float(a[4]), "volume": float(a[5])})
-        except Exception:
-            continue
-    return out if len(out) >= 8 else None
+    for i in range(retries + 1):
+        raw = curl_text(url, timeout=15)
+        if raw.strip():
+            try:
+                j = json.loads(raw)
+            except Exception:
+                j = None
+            if isinstance(j, dict) and j.get("code") in (0, "0", None) and j.get("data"):
+                data = (j.get("data") or {}).get(tcode) or {}
+                arr = data.get("qfqday") or data.get("day") or []
+                out = []
+                for a in arr:
+                    if not isinstance(a, list) or len(a) < 6:
+                        continue
+                    try:
+                        out.append({"day": str(a[0]), "open": float(a[1]),
+                                    "close": float(a[2]), "high": float(a[3]),
+                                    "low": float(a[4]), "volume": float(a[5])})
+                    except Exception:
+                        continue
+                if len(out) >= 8:
+                    return out
+        if i < retries:
+            time.sleep(gap)
+    return None
 
 
 def get_kline(code, sym):
-    """带缓存 + 双源容错的 K 线获取：
-       当日缓存命中（已含最新K线）→ 新浪主源 → 腾讯备用源 → 过期缓存兜底。
+    """带缓存 + 双源容错的 K 线获取（R81：腾讯 ifzq 主源，新浪备用，抵御新浪限频）：
+       当日缓存命中（已含最新K线）→ 腾讯主源 → 新浪备用源 → 过期缓存兜底。
        缓存只作为「限频/网络失败时」的韧性兜底，不跳过当日最新K线。"""
     ensure_cache()
     cp = _cache_path(code)
@@ -148,7 +152,8 @@ def get_kline(code, sym):
             pass
     if fresh and (fresh[-1].get("day") or "")[:10] == _today_str():
         return fresh  # 已含当日最新K线，无需重抓（同 run 重试/同日重跑复用）
-    kl = get_json_urllib(SINA_KLINE.format(sym=sym), retries=3, gap=1)
+    # 主源：腾讯 ifzq（独立域名，限频更少，最稳）
+    kl = fetch_kline_tencent(code)
     if isinstance(kl, list) and kl:
         try:
             json.dump({"ts": time.time(), "bars": kl},
@@ -156,7 +161,8 @@ def get_kline(code, sym):
         except Exception:
             pass
         return kl
-    kl2 = fetch_kline_tencent(code)
+    # 备用源：新浪（限频窗口兜底）
+    kl2 = get_json_urllib(SINA_KLINE.format(sym=sym), retries=3, gap=1)
     if isinstance(kl2, list) and kl2:
         try:
             json.dump({"ts": time.time(), "bars": kl2},
@@ -165,7 +171,7 @@ def get_kline(code, sym):
             pass
         return kl2
     if fresh or stale:
-        print(f"[warn] {code} 新浪/腾讯均失败，启用本地缓存兜底", file=sys.stderr)
+        print(f"[warn] {code} 腾讯/新浪均失败，启用本地缓存兜底", file=sys.stderr)
         return fresh or stale
     return None
 
