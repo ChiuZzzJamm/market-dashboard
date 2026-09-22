@@ -328,6 +328,12 @@
   .db-kline svg { width: 100%; height: auto; display: block; }
   .db-refs { margin-top: 10px; font-size: 12px; color: var(--ink2); line-height: 1.7; border-top: 1px dashed var(--line); padding-top: 8px; }
   .db-refs b { color: var(--accent-deep); }
+  .db-ref-p { margin: 5px 0 2px; color: var(--ink); }
+  .db-ref-sum { color: var(--ink2); font-size: 11.5px; line-height: 1.65; margin: 2px 0 0 2px; }
+  .db-kline { position: relative; }
+  .db-tip { position: absolute; display: none; transform: translateX(-50%); background: var(--paper); border: 1px solid var(--accent); border-radius: 8px; padding: 6px 10px; font-size: 11px; line-height: 1.6; color: var(--ink); box-shadow: 0 6px 18px rgba(17,17,26,.18); pointer-events: none; z-index: 10; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .db-tip b.up { color: var(--up); }
+  .db-tip b.down { color: var(--down); }
 
   footer.disclaimer { margin-top: 36px; font-size: 12px; color: var(--ink2); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 22px; line-height: 1.7; box-shadow: var(--shadow); }
 </style>
@@ -938,18 +944,40 @@ function openDbModal(key) {
     '<div><span class="lab">形态：</span>' + esc(e.form || '') + '</div>' +
     '<div><span class="lab">上涨概率：</span><b class="' + probCls + '">' + (e.probability !== null && e.probability !== undefined ? e.probability + '%' : '—') + '</b>' + (e.probNote ? '（' + esc(e.probNote) + '）' : '') + '</div>';
   document.getElementById('db-kline').innerHTML = dbKlineSvg(e.kline);
-  var refs = (e.bullRefs || []).map(function (r) { return '<b>' + esc(r.title || '') + '</b>（' + esc(r.src || '') + '）'; }).join('；');
-  var bears = (e.bearRefs || []).map(esc).join('；');
+  // R89 依据小作文化：story（AI 消息面解读，非空时优先）或结构化 refs（含新闻摘要）逐段渲染
+  function dbRefPara(r) {
+    if (typeof r === 'string') return '<div class="db-ref-p">' + esc(r) + '</div>';
+    var kind = r.kind === 'stock' ? '【个股消息】'
+      : '【板块消息' + (r.kw ? '·' + r.kw : (r.sec ? '·' + r.sec : '')) + '】';
+    var head = ((r.time || '') + ' ' + (r.source || r.src || '')).trim();
+    var h = '<div class="db-ref-p"><b>' + kind + '</b>' + esc(head) + (r.title ? esc('《' + r.title + '》') : '');
+    if (r.summary) h += '<div class="db-ref-sum">' + esc(r.summary) + '</div>';
+    return h + '</div>';
+  }
+  var bullP = (e.bullRefs || []).map(dbRefPara).join('');
+  var bearP = (e.bearRefs || []).map(dbRefPara).join('');
+  var story = typeof e.story === 'string' ? e.story.trim() : '';
   var refsHtml = '';
-  if (e.sentiment === 'bear') {
-    refsHtml += '<b style="color:var(--down)">利空口径：</b>' + (bears || '—');
-    if (refs) refsHtml += '<br><b>利好依据：</b>' + refs;
+  var label = e.sentiment === 'bear' ? '<b style="color:var(--down)">利空口径：</b>'
+    : (e.sentiment === 'neutral' ? '<b>中性口径：</b>' : '<b>利好依据：</b>');
+  if (story) {
+    refsHtml += label + story.split(/\n+/).map(function (p) { return '<div class="db-ref-p">' + esc(p) + '</div>'; }).join('');
+    var allRefs = [].concat(e.bullRefs || [], e.bearRefs || [])
+      .filter(function (r) { return r && typeof r === 'object' && r.title; });
+    if (allRefs.length) {
+      refsHtml += '<div class="db-ref-sum" style="margin-top:4px;">来源：' + esc(allRefs.map(function (r) {
+        return '《' + r.title + '》' + (r.source || r.src || '');
+      }).join('；')) + '</div>';
+    }
+  } else if (e.sentiment === 'bear') {
+    refsHtml += label + (bearP || '—');
+    if (bullP) refsHtml += '<div style="margin-top:6px;"><b>利好依据：</b>' + bullP + '</div>';
   } else if (e.sentiment === 'neutral') {
-    refsHtml += '<b>中性口径：</b>暂无明确利好/利空依据（AI 复核可改判）';
-    if (refs) refsHtml += '<br><b>利好依据：</b>' + refs;
+    refsHtml += label + '暂无明确利好/利空依据（AI 复核可改判）';
+    if (bullP) refsHtml += '<div style="margin-top:6px;"><b>利好依据：</b>' + bullP + '</div>';
   } else {
-    refsHtml += '<b>利好依据：</b>' + (refs || '—');
-    if (bears) refsHtml += '<br><b style="color:var(--down)">利空提示：</b>' + bears;
+    refsHtml += label + (bullP || '—');
+    if (bearP) refsHtml += '<div style="margin-top:6px;"><b style="color:var(--down)">利空提示：</b>' + bearP + '</div>';
   }
   document.getElementById('db-refs').innerHTML =
     refsHtml +
@@ -972,6 +1000,29 @@ document.addEventListener('keydown', function (e) {
 document.getElementById('db-pools').addEventListener('click', function (ev) {
   var chip = ev.target ? ev.target.closest('.db-chip') : null;
   if (chip) openDbModal(chip.getAttribute('data-k'));
+});
+// R89：点击K线红/绿柱显示收盘涨幅浮层（再点同柱或空白处关闭）
+document.getElementById('db-kline').addEventListener('click', function (ev) {
+  var box = document.getElementById('db-kline');
+  var tip = box.querySelector('.db-tip');
+  var bar = ev.target && ev.target.classList && ev.target.classList.contains('db-bar') ? ev.target : null;
+  if (!bar) { if (tip) tip.style.display = 'none'; return; }
+  var day = bar.getAttribute('data-day');
+  if (tip && tip.dataset.day === day) { tip.style.display = 'none'; tip.dataset.day = ''; return; }
+  if (!tip) { tip = document.createElement('div'); tip.className = 'db-tip'; box.appendChild(tip); }
+  var pct = parseFloat(bar.getAttribute('data-pct')) || 0;
+  var v = parseInt(bar.getAttribute('data-v'), 10) || 0;
+  var vTxt = v >= 1e8 ? (v / 1e8).toFixed(2) + '亿' : (v >= 1e4 ? (v / 1e4).toFixed(1) + '万' : String(v));
+  tip.innerHTML = esc(day) + '　收盘 <b>' + esc(bar.getAttribute('data-c')) + '</b><br>较前收 <b class="' +
+    (pct >= 0 ? 'up' : 'down') + '">' + (pct > 0 ? '+' : '') + pct.toFixed(2) + '%</b>　量 ' + vTxt;
+  var svgEl = box.querySelector('svg');
+  var scale = svgEl ? (svgEl.clientWidth / 680) : 1;
+  var left = parseFloat(bar.getAttribute('data-cx')) * scale;
+  left = Math.min(Math.max(left, 80), Math.max(80, box.clientWidth - 80));
+  tip.style.left = left + 'px';
+  tip.style.top = '26px';
+  tip.style.display = 'block';
+  tip.dataset.day = day;
 });
 
 function dbKlineSvg(kline) {
@@ -1029,6 +1080,16 @@ function dbKlineSvg(kline) {
     svg += '<rect x="' + (cx - bw / 2) + '" y="' + ty + '" width="' + bw + '" height="' + Math.max(1, by - ty) + '" fill="' + (up ? '#fff' : col) + '" stroke="' + col + '" stroke-width="1.2"/>';
     var vy = volBot - (v / maxV) * (volBot - volTop);
     svg += '<rect x="' + (cx - bw / 2) + '" y="' + vy + '" width="' + bw + '" height="' + (volBot - vy) + '" fill="' + col + '" opacity="0.55"/>';
+  });
+  // R89：每根K线加透明命中区，点击显示收盘涨幅浮层
+  view.forEach(function (b, i) {
+    var cx = padL + step * (i + 0.5);
+    var prevC = i > 0 ? view[i - 1][2] : (off > 0 ? kline[off - 1][2] : b[2]);
+    var p = prevC > 0 ? (b[2] - prevC) / prevC * 100 : 0;
+    svg += '<rect class="db-bar" data-day="' + esc(String(b[0] || '')) + '" data-c="' + b[2].toFixed(2) +
+      '" data-pct="' + p.toFixed(2) + '" data-v="' + b[5] + '" data-cx="' + (padL + step * (i + 0.5)).toFixed(1) +
+      '" x="' + (cx - step / 2).toFixed(1) + '" y="' + priceTop + '" width="' + step.toFixed(2) +
+      '" height="' + (volBot - priceTop) + '" fill="transparent" style="cursor:pointer"/>';
   });
   [0, Math.floor(n / 2), n - 1].forEach(function (i) {
     var cx = padL + step * (i + 0.5), d = String(view[i][0] || '').slice(5);

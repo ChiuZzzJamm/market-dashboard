@@ -51,6 +51,9 @@ def sanitize(mod):
                 warns.append(f"[WARN] {pool}.{code} probability 缺失/非法，已补 50")
             else:
                 e["probability"] = round(float(p), 1)
+            if not isinstance(e.get("story"), str):
+                e["story"] = ""
+                warns.append(f"[WARN] {pool}.{code} story 缺失/非法，已补空串")
             if not e.get("bullRefs"):
                 warns.append(f"[WARN] {pool}.{code} 无 bullRefs（利好依据为空，请复核）")
             kept.append(e)

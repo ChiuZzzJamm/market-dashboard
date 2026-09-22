@@ -236,6 +236,8 @@ def fix_duanban_inplace(D):
                 warns.append(f"duanban.{pool}: {code} {(e.get('name') or '')} 口径利好但无 bullRefs（请复核）")
             if e.get('sentiment') == 'bear' and not e.get('bearRefs'):
                 warns.append(f"duanban.{pool}: {code} {(e.get('name') or '')} 口径利空但无 bearRefs（请复核）")
+            if not isinstance(e.get('story'), str):
+                warns.append(f"duanban.{pool}: {code} story 缺失/非法（应为小作文文本，请复核）")
             if not e.get('kline'):
                 warns.append(f"duanban.{pool}: {code} 无 kline（前端无K线图可画）")
             kept.append(e)

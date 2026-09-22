@@ -359,33 +359,52 @@ def load_dashboard(path):
 
 
 def collect_sentiment(D):
-    """从看板数据收集利好/利空线索（个股级 + 板块关键词级）。
-    返回 dict：bull_codes {code:[{src,title}]} 个股级利好依据；
-    bull_secs [(kw, ref)] 板块关键词利好；bear_codes set 个股级利空；
-    bear_secs [kw] 板块级利空。"""
-    B = {"bull_codes": {}, "bull_secs": [], "bear_codes": set(), "bear_secs": []}
+    """从看板数据收集利好/利空线索（个股级 + 板块关键词级）。R89：
+    线索不再只带板块名，而是携带命中的真实新闻条目详情（title/summary/source/time/sec），
+    供前端小作文式展示与自动化 AI 改写 story（个股财报/大单/业绩消息由 AI 检索补充）。
+    返回 dict：
+      bull_codes {code:[newsdict]} 个股级利好依据；
+      bull_secs  [(kw, newsdict)]  板块关键词利好；
+      bear_codes {code:[newsdict]} 个股级利空；
+      bear_secs  [(kw, newsdict)]  板块级利空。"""
+    B = {"bull_codes": {}, "bull_secs": [], "bear_codes": {}, "bear_secs": []}
 
-    def add_bull_code(code, src, title):
+    def nd(src, it):
+        return {"src": str(src or ""), "sec": str(it.get("sector") or ""),
+                "title": str(it.get("title") or ""),
+                "summary": str(it.get("summary") or ""),
+                "source": str(it.get("source") or ""),
+                "time": str(it.get("time") or "")}
+
+    def add_bull_code(code, src, it):
         code = str(code or "")
         if not re.fullmatch(r"\d{6}", code):
             return
+        d = nd(src, it)
         lst = B["bull_codes"].setdefault(code, [])
-        if not any(r.get("src") == src for r in lst):
-            lst.append({"src": src, "title": title})
+        if not any(r["src"] == d["src"] and r["title"] == d["title"] for r in lst):
+            lst.append(d)
 
-    def add_bull_sec(kw, src, title):
+    def add_bull_sec(kw, src, it):
         kw = str(kw or "").strip()
         if len(kw) >= 2 and all(kw != k for k, _ in B["bull_secs"]):
-            B["bull_secs"].append((kw, {"src": src, "title": title}))
+            B["bull_secs"].append((kw, nd(src, it)))
 
-    def bear_item(it):
-        B["bear_secs"].append(str(it.get("sector") or ""))
+    def bear_item(src, it):
+        d = nd(src, it)
+        sec = str(it.get("sector") or "")
+        if all(sec != k for k, _ in B["bear_secs"]):
+            B["bear_secs"].append((sec, d))
         for im in it.get("impacts") or []:
-            B["bear_secs"].append(str(im.get("theme") or ""))
+            theme = str(im.get("theme") or "")
+            if theme and all(theme != k for k, _ in B["bear_secs"]):
+                B["bear_secs"].append((theme, d))
             for st in im.get("stocks") or []:
                 c = str(st.get("code") or "")
                 if re.fullmatch(r"\d{6}", c):
-                    B["bear_codes"].add(c)
+                    lst = B["bear_codes"].setdefault(c, [])
+                    if not any(r["title"] == d["title"] for r in lst):
+                        lst.append(d)
 
     def walk(items, src, field):
         for it in items or []:
@@ -393,16 +412,16 @@ def collect_sentiment(D):
             sec = str(it.get("sector") or "")
             # bearNews 落利空列即利空；其余节 direction==看跌 亦利空
             if field == "bearNews" or direction == "看跌":
-                bear_item(it)
+                bear_item(src, it)
                 continue
             # bullNews 落利好列即利好；macro/intl/bank 需显式 direction==看涨
             if field != "bullNews" and direction != "看涨":
                 continue
-            add_bull_sec(sec, src, sec)
+            add_bull_sec(sec, src, it)
             for im in it.get("impacts") or []:
-                add_bull_sec(im.get("theme") or "", src, sec)
+                add_bull_sec(im.get("theme") or "", src, it)
                 for st in im.get("stocks") or []:
-                    add_bull_code(st.get("code"), src, sec)
+                    add_bull_code(st.get("code"), src, it)
 
     for mkt in ("ashare", "us"):
         sec_data = D.get(mkt) or {}
@@ -414,45 +433,79 @@ def collect_sentiment(D):
         d = str(s.get("direction") or "")
         sec = str(s.get("sector") or "")
         if ("承压" in d) or ("走弱" in d) or ("看跌" in d):
-            B["bear_secs"].append(sec)
+            B["bear_secs"].append((sec, {"src": "aiPrediction", "sec": sec,
+                                         "title": f"AI预测看空：{sec}",
+                                         "summary": str(s.get("reason") or d),
+                                         "source": "aiPrediction", "time": ""}))
             for st in s.get("stocks") or []:
                 c = str(st.get("code") or "")
                 if re.fullmatch(r"\d{6}", c):
-                    B["bear_codes"].add(c)
+                    lst = B["bear_codes"].setdefault(c, [])
+                    if not any(r["title"] == f"AI预测看空：{sec}" for r in lst):
+                        lst.append({"src": "aiPrediction", "sec": sec,
+                                    "title": f"AI预测看空：{sec}",
+                                    "summary": str(s.get("reason") or d),
+                                    "source": "aiPrediction", "time": ""})
         elif d:
-            add_bull_sec(sec, "aiPrediction", sec)
+            add_bull_sec(sec, "aiPrediction",
+                         {"sector": sec, "title": f"AI预测看多：{sec}",
+                          "summary": str(s.get("reason") or d),
+                          "source": "aiPrediction", "time": ""})
             for st in s.get("stocks") or []:
-                add_bull_code(st.get("code"), "aiPrediction", sec)
+                add_bull_code(st.get("code"), "aiPrediction",
+                              {"sector": sec, "title": f"AI预测看多：{sec}",
+                               "summary": str(s.get("reason") or d),
+                               "source": "aiPrediction", "time": ""})
     return B
 
 
+def _fmt_ref(r):
+    """单条线索 → 小作文段落（kind 区分个股/板块消息）。"""
+    kind = "个股消息" if r.get("kind") == "stock" else \
+        f"板块消息（{r.get('kw') or r.get('sec') or ''}）"
+    head = " ".join(x for x in (r.get("time"), r.get("source") or r.get("src")) if x)
+    title = f"《{r['title']}》" if r.get("title") else ""
+    body = r.get("summary") or ""
+    return f"{kind}：{head}{title}" + (f"：{body}" if body else "")
+
+
 def tag_entries(entries, D):
-    """R88 口径打标（--module 口径，取代 R87 硬排除闸门）：
+    """R88 口径打标 + R89 依据小作文化（--module 口径，取代 R87 硬排除闸门）：
     所有形态达标/观察标的全部保留入池，逐一与 data.js 要闻/AI预测交叉核验后
     标注 sentiment：
       - bear：个股被利空要闻/AI预测看空点名，或所属板块关键词命中看空内容
         （利好利空同时命中时从严记 bear）；
       - bull：有利好要闻/AI预测看涨依据（个股级优先，板块关键词兜底）且未被看空；
       - neutral：暂无明确方向依据（AI 可复核板块语义后改判）。
-    每项附 sentiment / bullRefs / bearRefs 供前端与 AI 复核消费。"""
+    每项附 sentiment / bullRefs / bearRefs（携带命中的真实新闻 title/summary/
+    source/time）/ story（由命中的新闻摘要自动拼装的小作文底稿，
+    自动化 AI 复核时须补充个股层面消息后改写）。"""
     B = collect_sentiment(D)
     out = []
     for e in entries:
         code, hybk = str(e["code"]), str(e.get("hybk") or "")
-        bear_hits = []
-        if code in B["bear_codes"]:
-            bear_hits.append("个股被利空要闻/AI预测看空点名")
-        for kw in B["bear_secs"]:
-            if kw and len(kw) >= 2 and hybk and hybk in kw:
-                bear_hits.append(f"板块「{hybk}」命中看空内容「{kw}」")
-        refs = list(B["bull_codes"].get(code) or [])
+        bear_refs = []
+        for d in B["bear_codes"].get(code) or []:
+            bear_refs.append(dict(d, kind="stock"))
+        for kw, d in B["bear_secs"]:
+            if kw and len(kw) >= 2 and hybk and hybk in kw and \
+                    not any(b["title"] == d["title"] for b in bear_refs):
+                bear_refs.append(dict(d, kind="sector", kw=kw))
+        refs = [dict(d, kind="stock") for d in B["bull_codes"].get(code) or []]
         if not refs:
-            kw_hit = next(((kw, ref) for kw, ref in B["bull_secs"]
+            kw_hit = next(((kw, d) for kw, d in B["bull_secs"]
                            if hybk and hybk in kw), None)
             if kw_hit:
-                refs = [{"src": "sector-match", "title": kw_hit[0]}]
-        sent = "bear" if bear_hits else ("bull" if refs else "neutral")
-        out.append(dict(e, sentiment=sent, bullRefs=refs, bearRefs=bear_hits))
+                refs = [dict(kw_hit[1], kind="sector", kw=kw_hit[0])]
+        sent = "bear" if bear_refs else ("bull" if refs else "neutral")
+        if bear_refs:
+            story = "\n".join(_fmt_ref(r) for r in bear_refs[:3])
+        elif refs:
+            story = "\n".join(_fmt_ref(r) for r in refs[:3])
+        else:
+            story = "暂无明确利好/利空消息（板块与个股近1日无点名新闻；自动化 AI 复核时请检索个股公告/财报/大单等补充）"
+        out.append(dict(e, sentiment=sent, bullRefs=refs, bearRefs=bear_refs,
+                        story=story))
     return out
 
 
@@ -629,7 +682,7 @@ def main():
                                   "form": p["stage_info"]["form"], "pct": 0,
                                   "probability": None, "probNote": "",
                                   "sentiment": "neutral",
-                                  "bullRefs": [], "bearRefs": [], "kline": []}
+                                  "bullRefs": [], "bearRefs": [], "story": "", "kline": []}
                                  for p in pairs if p["stage_info"]["pool"] == "confirmed"],
                    "watching": [{"code": p["code"], "name": p["name"],
                                  "sector": p["hybk"] or "其他", "ztDate": p["ztDate"],
@@ -637,7 +690,7 @@ def main():
                                  "form": p["stage_info"]["form"], "pct": 0,
                                  "probability": None, "probNote": "",
                                  "sentiment": "neutral",
-                                 "bullRefs": [], "bearRefs": [], "kline": []}
+                                 "bullRefs": [], "bearRefs": [], "story": "", "kline": []}
                                 for p in pairs if p["stage_info"]["pool"] != "confirmed"]}
         else:
             mod = build_module(pairs, D)
