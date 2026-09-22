@@ -290,6 +290,7 @@
   .db-chip .r1 { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
   .db-chip b { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .db-chip .cd { color: var(--ink2); font-size: 10.5px; white-space: nowrap; }
+  .db-chip .db-sec-pill { font-size: 9px; font-weight: 700; color: var(--accent-deep); background: var(--accent-soft); border-radius: 4px; padding: 0.5px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 72px; flex-shrink: 0; }
   .db-chip .db-prob { margin-left: auto; font-size: 11.5px; font-weight: 800; color: var(--up); font-variant-numeric: tabular-nums; flex-shrink: 0; }
   .db-chip .r2 { display: flex; align-items: center; gap: 5px; min-width: 0; }
   .db-chip .db-stage { font-size: 10px; font-weight: 700; border-radius: 999px; padding: 1px 7px; flex-shrink: 0; }
@@ -855,10 +856,11 @@ function dbSentBadge(e, style) {
   return '<span class="db-sent ' + map[1] + '"' + st + '>' + map[0] + '</span>';
 }
 
-function dbChipHtml(e, key, done) {
+function dbChipHtml(e, key, done, showSec) {
   var stageCls = done ? 'done' : 'hold';
   var stageTxt = done ? '已确认' : e.stage;
   var prob = (e.probability !== null && e.probability !== undefined) ? e.probability + '%' : '—';
+  var secPill = showSec ? '<span class="db-sec-pill">' + esc(e.sector || '其他') + '</span>' : '';
   var tip = e.name + ' ' + e.code + '（' + (e.sector || '') + '）\n'
     + (done ? '确认池 · 全流程达标' : '观察池 · ' + e.stage) + '\n'
     + '形态：' + (e.form || '') + '\n'
@@ -868,7 +870,7 @@ function dbChipHtml(e, key, done) {
     + '点击查看K线与利好依据';
   return '<div class="db-chip" data-k="' + escAttr(key) + '" title="' + escAttr(tip) + '">' +
     dbSentBadge(e, 'position:absolute;top:6px;right:7px;') +
-    '<div class="r1"><b>' + esc(e.name) + '</b><span class="cd">' + esc(e.code) + '</span></div>' +
+    '<div class="r1"><b>' + esc(e.name) + '</b>' + secPill + '<span class="cd">' + esc(e.code) + '</span></div>' +
     '<div class="r2"><span class="db-stage ' + stageCls + '">' + esc(stageTxt) + '</span>' +
     '<span class="db-prob2 ' + (e.sentiment === 'bear' ? 'down' : (e.sentiment === 'bull' ? 'up' : '')) + '">' + prob + '</span>' +
     '<span class="nt">' + esc((e.form || '').replace(/^.*?断板/, '断板')) + '</span></div></div>';
@@ -878,22 +880,42 @@ function dbPoolHtml(title, cls, sub, list, done, poolKey) {
   var h = '<div class="db-pool ' + cls + '"><h2>' + esc(title) + ' · ' + list.length + ' 只</h2>' +
     '<div class="db-sub">' + esc(sub) + '</div>';
   if (!list.length) return h + '<div class="db-empty">暂无标的（形态核验宁缺毋滥，无达标即如实留空）</div></div>';
-  // 板块分组：板块按组内最高上涨概率降序；组内按上涨概率降序
+  // 板块分组：板块按组内最高上涨概率降序；组内按上涨概率降序。
+  // R89b 紧凑排版：≥3 只的板块独立成组；1~2 只的小板块合并进末尾「其他板块」，
+  // 连续排满网格不留空位，卡片上加板块小标签标明归属。
   var groups = {};
   list.forEach(function (e) { var s = e.sector || '其他'; (groups[s] = groups[s] || []).push(e); });
   var maxP = function (a) { return Math.max.apply(null, a.map(function (x) { return x.probability || 0; })); };
-  Object.keys(groups).sort(function (a, b) { return maxP(groups[b]) - maxP(groups[a]); })
-    .forEach(function (s) {
-      var arr = groups[s].slice().sort(function (x, y) { return (y.probability || 0) - (x.probability || 0); });
-      h += '<div class="db-sec">' + esc(s) + '<span class="db-sec-n">' + arr.length + ' 只</span></div><div class="db-chips">';
-      arr.forEach(function (e) {
-        var key = poolKey + '|' + e.code;
-        DB_INDEX[key] = e;
-        DB_ORDER.push(key);
-        h += dbChipHtml(e, key, done);
-      });
-      h += '</div>';
+  var secKeys = Object.keys(groups).sort(function (a, b) { return maxP(groups[b]) - maxP(groups[a]); });
+  var renderChips = function (arr, secName) {
+    arr.forEach(function (e) {
+      var key = poolKey + '|' + e.code;
+      DB_INDEX[key] = e;
+      DB_ORDER.push(key);
+      h += dbChipHtml(e, key, done, secName);
     });
+  };
+  var smallMerged = [];
+  secKeys.forEach(function (s) {
+    var arr = groups[s].slice().sort(function (x, y) { return (y.probability || 0) - (x.probability || 0); });
+    if (arr.length >= 3) {
+      h += '<div class="db-sec">' + esc(s) + '<span class="db-sec-n">' + arr.length + ' 只</span></div><div class="db-chips">';
+      renderChips(arr, null);
+      h += '</div>';
+    } else {
+      smallMerged = smallMerged.concat(arr);
+    }
+  });
+  if (smallMerged.length) {
+    smallMerged.sort(function (a, b) {
+      var sa = a.sector || '其他', sb = b.sector || '其他';
+      return sa !== sb ? sa.localeCompare(sb, 'zh') : (b.probability || 0) - (a.probability || 0);
+    });
+    var nSecs = secKeys.filter(function (s) { return groups[s].length < 3; }).length;
+    h += '<div class="db-sec">其他板块<span class="db-sec-n">' + smallMerged.length + ' 只 · ' + nSecs + ' 个板块</span></div><div class="db-chips">';
+    renderChips(smallMerged, true);
+    h += '</div>';
+  }
   return h + '</div>';
 }
 
