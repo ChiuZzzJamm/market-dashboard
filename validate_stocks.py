@@ -323,6 +323,28 @@ def check_lianban_notes(D):
     return warns
 
 
+def check_story_quality(D):
+    """R91j 用户反馈软闸门：断板反包 story 文本质量。
+    ① 严禁出现「（形态：…）」形态描述——形态已有弹窗「形态」独立字段展示，
+       story 只写消息面（利好/利空依据），走势描述不构成利好也不入 story；
+    ② 严禁出现省略号「…」截断——story 须完整（可依据 bullRefs/bearRefs 全文重建）。"""
+    db = D.get('duanban')
+    if not isinstance(db, dict):
+        return []
+    warns = []
+    for pool in ('confirmed', 'watching'):
+        for e in db.get(pool) or []:
+            if not isinstance(e, dict):
+                continue
+            st = e.get('story') or ''
+            code, name = e.get('code'), e.get('name')
+            if '（形态' in st or '仅作背景' in st:
+                warns.append(f"{pool}.{code} {name} story 含「（形态：…）」形态描述——形态已在独立字段展示，story 只写消息面")
+            if '…' in st:
+                warns.append(f"{pool}.{code} {name} story 含省略号截断——请依据 bullRefs/bearRefs 全文重建完整 story")
+    return warns
+
+
 def check_top_boards(D):
     """R91j：duanban.topBoards（近3日板块TOP10）缺失/非数组 → WARN（16:00 自动化职责）。"""
     db = D.get('duanban')
@@ -426,6 +448,7 @@ def main():
     src_warns = check_source_names(D)
     lb_warns = check_lianban_notes(D)
     tb_warns = check_top_boards(D)
+    st_warns = check_story_quality(D)
 
     for mk in ('ashare', 'us'):
         sec = D.get(mk) or {}
@@ -457,6 +480,7 @@ def main():
                           'source_name_warnings': src_warns,
                           'lianban_warnings': lb_warns,
                           'top_boards_warnings': tb_warns,
+                          'story_warnings': st_warns,
                           'duanban_warnings': duanban_warns,
                           'violations': violations}, ensure_ascii=False, indent=2))
     for w in dir_warns:
@@ -477,6 +501,8 @@ def main():
         print("[WARN] 连板标注:", w)
     for w in tb_warns:
         print("[WARN] 板块TOP10:", w)
+    for w in st_warns:
+        print("[WARN] story质量:", w)
     if violations:
         print(f"[FAIL] 共 {len(violations)} 处违规：")
         for v in violations:
