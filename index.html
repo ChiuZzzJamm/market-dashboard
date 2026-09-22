@@ -178,8 +178,12 @@
   .nc-theme { font-size: 14px; font-weight: 800; margin-bottom: 4px; }
   .nc-dtl { font-size: 13px; color: var(--ink); line-height: 1.65; margin-bottom: 10px; }
   .nc-dtl b { font-weight: 700; }
-  .nc-imp { margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--line); }
-  .nc-imp-theme { font-size: 12.5px; font-weight: 700; color: var(--accent-deep); }
+  /* 分组间距：仅第一组锚底（左右两栏底部对齐），后续组固定紧凑间距，避免 auto 均分导致组间大空隙 */
+  .news-cell .nc-imp { padding-top: 8px; border-top: 1px dashed var(--line); }
+  .news-cell .nc-dtl + .nc-imp { margin-top: auto; }
+  .news-cell .nc-imp + .nc-imp { margin-top: 8px; }
+  .nc-imp-theme { font-size: 12.5px; font-weight: 700; color: var(--accent-deep); display: inline-flex; align-items: center; gap: 5px; }
+  .nc-imp-theme::before { content: ''; width: 3px; height: 11px; border-radius: 2px; background: var(--accent); flex: none; }
   .dir-badge { font-size: 11px; font-weight: 700; margin-left: 6px; }
   .persp-tag { font-size: 10px; margin-left: 5px; padding: 1px 6px; }
   .dir-badge.up { color: var(--up); }
