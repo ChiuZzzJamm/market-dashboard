@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609222343"></script>
+<script src="data.js?v=202609230005"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -966,7 +966,7 @@ function renderDuanban() {
   var tb = (db && db.topBoards) || [];
   if (tb.length) {
     html += '<div class="db-pool" style="padding-bottom:14px;"><h2>📈 近3个交易日涨幅居前板块 TOP10</h2>' +
-      '<div class="db-sub">东财行业板块口径 · 3个交易日累计涨幅（每日 16:00 随断板反包更新）</div><div class="db-tb">';
+      '<div class="db-sub">申万行业口径（与断板个股板块同源） · 3个交易日累计涨幅 · 今日=当日涨幅（每日 16:00 随断板反包更新）</div><div class="db-tb">';
     tb.forEach(function (b, i) {
       var up3 = b.pct3 >= 0, up1 = b.pctToday >= 0;
       html += '<div class="db-tb-cell"><div class="db-tb-rank"><b>' + (i + 1) + '</b>' +
