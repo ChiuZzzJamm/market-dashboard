@@ -187,7 +187,8 @@ def check_news_quality(D):
     a) theme 相关性：impact theme 与该条 title+summary 无任何二字片段交集 → 可能凑板块；
     b) 组内重复凑数：同一 impact 组内同 code 出现 >1 次，超额（重复只数）>2 → WARN；
     c) 条目级复用：同一条要闻内同一标的跨组出现 >3 次 → WARN；
-    d) 跨节同主题重复：同一卡内同一 sector 出现在 ≥2 节 → WARN（美债既看涨又中性类问题）。"""
+    d) 跨节同主题重复：同一卡内同一 sector 出现在 ≥2 节 → WARN（美债既看涨又中性类问题）。
+    e) 主角板块（R91e）：第一组 theme 与 title/summary 无二字交集 → WARN（主角板块缺席、只挂外围板块类问题）。"""
     warns = []
     for mk in ('ashare', 'us'):
         sec = D.get(mk) or {}
@@ -205,7 +206,10 @@ def check_news_quality(D):
                         continue
                     th = str(imp.get('theme') or '')
                     if th and not (_bigrams(th) & text_bg):
-                        warns.append(f"{label}.impacts[{j}](theme={th[:12]}): theme 未在 title/summary 传导链出现，疑似凑板块（B口径：宁少勿凑）")
+                        if j == 0:
+                            warns.append(f"{label}.impacts[0](theme={th[:12]}): 第一组非主角板块且与新闻无传导关联（R91e：第一组必须是消息主角板块本身，如黄金新闻第一组应为「贵金属」而非「饰品」）")
+                        else:
+                            warns.append(f"{label}.impacts[{j}](theme={th[:12]}): theme 未在 title/summary 传导链出现，疑似凑板块（B口径：宁少勿凑）")
                     stocks = imp.get('stocks') or []
                     from collections import Counter
                     cc = Counter(str(s.get('code')) for s in stocks if isinstance(s, dict))
