@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609221834"></script>
+<script src="data.js?v=202609221849"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -156,7 +156,7 @@
   .wk-tags .tag { font-size: 11.5px; background: var(--accent-soft); border-radius: 8px; padding: 2px 9px; color: var(--accent-deep); }
   .nc-src { font-size: 11.5px; color: var(--ink2); margin-top: 7px; }
   .wk-item .nc-theme { font-size: 13.5px; font-weight: 800; margin-bottom: 3px; }
-  .wk-item .nc-dtl { font-size: 12.5px; color: var(--ink); line-height: 1.6; margin-bottom: 8px; }
+  .wk-item .nc-dtl { font-size: 12.5px; color: var(--ink); line-height: 1.6; margin-bottom: 8px; min-height: 0; }
   .wk-item .nc-imp { margin-top: 6px; padding-top: 7px; border-top: 1px dashed var(--line); }
   .wk-item .nc-imp-theme { font-size: 12px; font-weight: 700; color: var(--accent-deep); }
   .wk-item .nc-stocks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: 6px; }
@@ -732,11 +732,12 @@ function newsEntryInner(it, showSrc, tag) {
   }
   var perspTag = tag ? '<span class="persp-tag">' + esc(tag) + '</span>' : '';
   var s = '<div class="nc-theme">' + esc(it.sector || '') + dirBadge + perspTag + '</div>';
-  s += '<div class="nc-dtl"><b>' + esc(it.title || '') + '</b> — ' + esc(it.summary || '') + '</div>';
+  var dtlFull = (it.title || '') + ' — ' + (it.summary || '');
+  s += '<div class="nc-dtl" title="' + escAttr(dtlFull) + '"><b>' + esc(it.title || '') + '</b> — ' + esc(it.summary || '') + '</div>';
   (it.impacts || []).forEach(function (im) {
     if (!im.stocks || !im.stocks.length) return;
     var impTheme = im.theme || im.sector || '';
-    s += '<div class="nc-imp">' + (impTheme ? '<span class="nc-imp-theme">' + esc(impTheme) + '</span>' : '');
+    s += '<div class="nc-imp">' + (impTheme ? '<span class="nc-imp-theme">' + esc(impTheme) + '</span>' : '') + (im.horizon ? '<span class="nc-imp-hz">' + esc(im.horizon) + '</span>' : '');
     s += '<div class="nc-stocks">';
     im.stocks.forEach(function (st) {
       s += '<span class="stock-chip" title="' + escAttr((st.name || '') + ' ' + (st.code || '') + (st.note ? ' · ' + st.note : '')) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
@@ -746,6 +747,14 @@ function newsEntryInner(it, showSrc, tag) {
   if (showSrc && it.source) s += '<div class="nc-src">来源：' + esc(it.source) + '</div>';
   return s;
 }
+
+(function () {
+  // R91：摘要 nc-dtl 点击展开/收起（悬停由 title 提示承担）
+  document.addEventListener('click', function (e) {
+    var t = e.target && e.target.closest ? e.target.closest('.nc-dtl') : null;
+    if (t) t.classList.toggle('expanded');
+  });
+})();
 
 function renderNewsCard(d) {
   // A股/美股共用：大标题「全球要闻」，桌面两栏按行配对（同行等高、左右对齐），手机单列组内重排
