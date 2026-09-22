@@ -108,6 +108,12 @@ def check_tiered(stocks, where, violations):
             f"{where}: 共 {n} 只（应为 8）| 配比 L{cnt['L']} C{cnt['C']} X{cnt['X']} D{cnt['D']}"
             + ("| 含无法识别类别note" + dict(cnt)['?'] if cnt['?'] else ''))
         return
+    # 组内 code 必须互不相同（防「8 个位置只有 6~7 只不同标的」的隐藏重复 bug）
+    codes = [str((s or {}).get('code')) for s in stocks]
+    if len(set(codes)) != 8:
+        dup = [c for c, k in Counter(codes).items() if k > 1]
+        violations.append(f"{where}: 组内标的 code 存在重复 {dup}（{len(set(codes))} 只互异，应为 8 只互不相同）")
+        return
     d = cnt['D']
     if d > 5:
         violations.append(f"{where}: 断板反包 {d} 只 > 5，超出分层表上限")
