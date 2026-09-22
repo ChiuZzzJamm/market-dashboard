@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609221849"></script>
+<script src="data.js?v=202609221850"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -176,8 +176,10 @@
   .news-cell { background: var(--accent-soft); border-radius: 14px; border-left: 4px solid var(--up); padding: 12px 14px; display: flex; flex-direction: column; }
   .news-cell.bear { border-left-color: var(--down); }
   .nc-theme { font-size: 14px; font-weight: 800; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .nc-dtl { font-size: 13px; color: var(--ink); line-height: 1.65; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; min-height: calc(13px * 1.65 * 3); }
+  .nc-dtl { font-size: 13px; color: var(--ink); line-height: 1.65; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; min-height: calc(13px * 1.65 * 3); cursor: pointer; }
+  .nc-dtl.expanded { display: block; -webkit-line-clamp: unset; overflow: visible; min-height: 0; }
   .nc-dtl b { font-weight: 700; }
+  .nc-imp-hz { font-size: 11px; font-weight: 600; color: var(--ink2); background: var(--line); border-radius: 8px; padding: 1px 7px; flex: none; line-height: 1.5; margin-left: 6px; }
   /* 分组间距：顶对齐——分组紧跟摘要排（固定 8px），剩余空间留白在卡片底部，上方不留大空隙 */
   .news-cell .nc-imp { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
   .nc-imp-theme { font-size: 12.5px; font-weight: 700; color: var(--accent-deep); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
