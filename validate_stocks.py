@@ -205,8 +205,9 @@ def reorder_inplace(D):
 
 
 def fix_duanban_inplace(D):
-    """duanban 断板反包模块软闸门（R87）：非主板标的自动剔除、probability 补 50，
-    缺 bullRefs/kline 告警。模块整体缺失不处理（属 16:00 自动化职责）。返回 (改动?, 告警列表)。"""
+    """duanban 断板反包模块软闸门（R87 / R88 打标制）：非主板标的自动剔除、
+    sentiment 非法补 neutral、probability 补 50，缺 bullRefs/kline 告警。
+    模块整体缺失不处理（属 16:00 自动化职责）。返回 (改动?, 告警列表)。"""
     db = D.get('duanban')
     if not isinstance(db, dict):
         return False, []
@@ -221,13 +222,20 @@ def fix_duanban_inplace(D):
                 warns.append(f"duanban.{pool}: 非沪深主板标的 {code} {(e.get('name') or '')} → 自动剔除")
                 changed = True
                 continue
+            sent = str(e.get('sentiment') or '')
+            if sent not in ('bull', 'bear', 'neutral'):
+                e['sentiment'] = 'neutral'
+                warns.append(f"duanban.{pool}: {code} sentiment 缺失/非法（{sent!r}）→ 自动补 neutral")
+                changed = True
             p = e.get('probability')
             if not isinstance(p, (int, float)) or not (0 <= p <= 100):
                 e['probability'] = 50
                 warns.append(f"duanban.{pool}: {code} probability 缺失/非法（{p!r}）→ 自动补 50")
                 changed = True
-            if not e.get('bullRefs'):
-                warns.append(f"duanban.{pool}: {code} {(e.get('name') or '')} 无 bullRefs 利好依据（请复核一致性闸门）")
+            if e.get('sentiment') == 'bull' and not e.get('bullRefs'):
+                warns.append(f"duanban.{pool}: {code} {(e.get('name') or '')} 口径利好但无 bullRefs（请复核）")
+            if e.get('sentiment') == 'bear' and not e.get('bearRefs'):
+                warns.append(f"duanban.{pool}: {code} {(e.get('name') or '')} 口径利空但无 bearRefs（请复核）")
             if not e.get('kline'):
                 warns.append(f"duanban.{pool}: {code} 无 kline（前端无K线图可画）")
             kept.append(e)

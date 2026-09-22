@@ -75,8 +75,10 @@ def main():
     for w in warns:
         print(w, file=sys.stderr)
     n_ok = len(mod["confirmed"]) + len(mod["watching"])
+    n_bear = sum(1 for pool in ("confirmed", "watching")
+                 for e in mod[pool] if e.get("sentiment") == "bear")
     print(f"[merge] 确认池 {len(mod['confirmed'])} 只 + 观察池 {len(mod['watching'])} 只"
-          f"（excluded {len(mod['excluded'])} 只不进池）", file=sys.stderr)
+          f"（其中利空口径 {n_bear} 只）", file=sys.stderr)
     if args.check_only:
         return
     if n_ok == 0:

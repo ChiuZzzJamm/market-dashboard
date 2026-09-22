@@ -118,7 +118,7 @@ def fetch_kline_tencent(code, retries=3, gap=1):
     check_form 只用成交量比值，同源内单位一致即可，腾讯与新浪切换不影响形态判定。"""
     tcode = _tencent_code(code)
     url = ("https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param="
-           + tcode + ",day,,,40,qfq")
+           + tcode + ",day,,,70,qfq")
     for i in range(retries + 1):
         raw = curl_text(url, timeout=15)
         if raw.strip():
@@ -426,42 +426,43 @@ def collect_sentiment(D):
     return B
 
 
-def screen_entries(entries, D):
-    """利好一致性闸门（模块内所有标的必须有相关利好新闻/内容/AI预测看涨支撑）。
-    硬排除：个股被利空要闻/AI预测点名看空 / 所属板块关键词命中看空内容；
-    无任何利好依据者进 excluded（不进池，供 AI 复核板块语义后取舍）。
-    返回 (kept, excluded)；kept 每项附 bullRefs。"""
+def tag_entries(entries, D):
+    """R88 口径打标（--module 口径，取代 R87 硬排除闸门）：
+    所有形态达标/观察标的全部保留入池，逐一与 data.js 要闻/AI预测交叉核验后
+    标注 sentiment：
+      - bear：个股被利空要闻/AI预测看空点名，或所属板块关键词命中看空内容
+        （利好利空同时命中时从严记 bear）；
+      - bull：有利好要闻/AI预测看涨依据（个股级优先，板块关键词兜底）且未被看空；
+      - neutral：暂无明确方向依据（AI 可复核板块语义后改判）。
+    每项附 sentiment / bullRefs / bearRefs 供前端与 AI 复核消费。"""
     B = collect_sentiment(D)
-    kept, excluded = [], []
+    out = []
     for e in entries:
         code, hybk = str(e["code"]), str(e.get("hybk") or "")
+        bear_hits = []
         if code in B["bear_codes"]:
-            excluded.append(dict(e, excludeReason="个股被利空要闻/AI预测看空点名"))
-            continue
-        hit_bear = next((kw for kw in B["bear_secs"]
-                         if kw and len(kw) >= 2 and hybk and hybk in kw), None)
-        if hit_bear:
-            excluded.append(dict(e, excludeReason=f"板块「{hybk}」命中看空内容「{hit_bear}」"))
-            continue
+            bear_hits.append("个股被利空要闻/AI预测看空点名")
+        for kw in B["bear_secs"]:
+            if kw and len(kw) >= 2 and hybk and hybk in kw:
+                bear_hits.append(f"板块「{hybk}」命中看空内容「{kw}」")
         refs = list(B["bull_codes"].get(code) or [])
         if not refs:
             kw_hit = next(((kw, ref) for kw, ref in B["bull_secs"]
                            if hybk and hybk in kw), None)
             if kw_hit:
                 refs = [{"src": "sector-match", "title": kw_hit[0]}]
-        if not refs:
-            excluded.append(dict(e, excludeReason="无利好新闻/AI预测看涨依据（AI 可复核板块语义后取舍）"))
-            continue
-        kept.append(dict(e, bullRefs=refs))
-    return kept, excluded
+        sent = "bear" if bear_hits else ("bull" if refs else "neutral")
+        out.append(dict(e, sentiment=sent, bullRefs=refs, bearRefs=bear_hits))
+    return out
 
 
 def build_module(pairs, D):
     """pairs: [{code,name,hybk,ztDate,stage_info,kl}] → 断板反包模块 dict。
-    每只附近 14 根日K与当日涨跌幅；probability 留空由自动化 AI 填写。"""
+    每只附近 60 根日K（前端渲染近 30 根并计算 MA5/10/20/30）与当日涨跌幅；
+    sentiment 由 tag_entries 按要闻/AI预测打标；probability 留空由自动化 AI 填写。"""
     entries = []
     for p in pairs:
-        kl = p["kl"][-14:]
+        kl = p["kl"][-60:]
         bars = []
         for b in kl:
             try:
@@ -482,17 +483,17 @@ def build_module(pairs, D):
                         "stage": p["stage_info"]["stage"], "form": p["stage_info"]["form"],
                         "pct": pct, "probability": None, "probNote": "",
                         "kline": bars})
-    kept, excluded = screen_entries(entries, D)
-    confirmed = [e for e in kept if e["stage"] == "全流程达标"]
-    watching = [e for e in kept if e["stage"] != "全流程达标"]
-    # 观察池内更接近确认的（待企稳）排前
-    watching.sort(key=lambda e: 0 if e["stage"] == "待企稳" else 1)
+    tagged = tag_entries(entries, D)
+    confirmed = [e for e in tagged if e["stage"] == "全流程达标"]
+    watching = [e for e in tagged if e["stage"] != "全流程达标"]
+    # 观察池内更接近确认的（待企稳）排前，同阶段利空靠后
+    watching.sort(key=lambda e: (0 if e["stage"] == "待企稳" else 1,
+                                 {"bull": 0, "neutral": 1, "bear": 2}[e["sentiment"]]))
     return {
         "generatedAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "note": "确认池=走完「涨停→放量断板→缩量→不破T日低点与MA5」全流程；观察池=形态进行中、只差最后一根确认K线（待企稳＞待缩量）。全部标的经利好一致性闸门核验：须有利好要闻/AI预测看涨支撑，板块被看空者已剔除。probability（0-100 上涨概率）由自动化 AI 基于形态完成度+量价结构+题材热度填写。",
+        "note": "确认池=走完「涨停→放量断板→缩量→不破T日低点与MA5」全流程；观察池=形态进行中、只差最后一根确认K线（待企稳＞待缩量）。每只标的按当日要闻/AI预测自动标注口径：利好（有利好依据且未被看空）/利空（个股或板块被看空点名）/中性（暂无明确方向依据）；口径与 probability 由自动化 AI 复核校准。",
         "confirmed": confirmed,
         "watching": watching,
-        "excluded": excluded,
     }
 
 
@@ -611,31 +612,33 @@ def main():
     pairs = [p for p in pairs if str(p["code"]).startswith(("60", "00"))]
 
     if args.module:
-        # R87 断板反包独立模块：双池 + 利好一致性闸门（对照 data.js 要闻/AI预测）
+        # R88 断板反包独立模块：双池 + 口径打标（对照 data.js 要闻/AI预测，
+        # R87 的硬排除闸门改为打标不排除——利空/中性标的保留入池并如实标注）
         dash = args.dashboard or os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "data.js")
         try:
             D = load_dashboard(dash)
         except Exception as e:
-            print(f"[warn] data.js 解析失败（{e}），跳过一致性闸门——全部入池不加 bullRefs",
+            print(f"[warn] data.js 解析失败（{e}），跳过口径打标——全部按 neutral 标注",
                   file=sys.stderr)
             mod = {"generatedAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                   "note": "（一致性闸门未运行：data.js 不可用）",
+                   "note": "（口径打标未运行：data.js 不可用，全部按中性标注）",
                    "confirmed": [{"code": p["code"], "name": p["name"],
                                   "sector": p["hybk"] or "其他", "ztDate": p["ztDate"],
                                   "stage": p["stage_info"]["stage"],
                                   "form": p["stage_info"]["form"], "pct": 0,
                                   "probability": None, "probNote": "",
-                                  "bullRefs": [], "kline": []}
+                                  "sentiment": "neutral",
+                                  "bullRefs": [], "bearRefs": [], "kline": []}
                                  for p in pairs if p["stage_info"]["pool"] == "confirmed"],
                    "watching": [{"code": p["code"], "name": p["name"],
                                  "sector": p["hybk"] or "其他", "ztDate": p["ztDate"],
                                  "stage": p["stage_info"]["stage"],
                                  "form": p["stage_info"]["form"], "pct": 0,
                                  "probability": None, "probNote": "",
-                                 "bullRefs": [], "kline": []}
-                                for p in pairs if p["stage_info"]["pool"] != "confirmed"],
-                   "excluded": []}
+                                 "sentiment": "neutral",
+                                 "bullRefs": [], "bearRefs": [], "kline": []}
+                                for p in pairs if p["stage_info"]["pool"] != "confirmed"]}
         else:
             mod = build_module(pairs, D)
         out = json.dumps(mod, ensure_ascii=False, indent=1)
@@ -643,11 +646,13 @@ def main():
             with open(args.out, "w", encoding="utf-8") as f:
                 f.write(out + "\n")
             print(f"[module] 草稿已写入 {args.out}", file=sys.stderr)
+        pools = mod["confirmed"] + mod["watching"]
+        n_bull = sum(1 for e in pools if e.get("sentiment") == "bull")
+        n_bear = sum(1 for e in pools if e.get("sentiment") == "bear")
+        n_neu = len(pools) - n_bull - n_bear
         print(f"[module] 确认池 {len(mod['confirmed'])} 只 / 观察池 {len(mod['watching'])} 只"
-              f" / 闸门排除 {len(mod['excluded'])} 只（详情见 excluded，供 AI 复核）",
+              f"（口径：利好 {n_bull} 只 · 中性 {n_neu} 只 · 利空 {n_bear} 只，供 AI 复核校准）",
               file=sys.stderr)
-        for e in mod["excluded"]:
-            print(f"[module] 排除 {e['code']} {e['name']}：{e['excludeReason']}", file=sys.stderr)
         print(out)
         return
 

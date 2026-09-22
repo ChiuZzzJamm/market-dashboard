@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609221126"></script>
+<script src="data.js?v=202609221209"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -296,7 +296,23 @@
   .db-chip .db-stage.done { background: var(--up-soft); color: var(--up); }
   .db-chip .db-stage.hold { background: var(--accent-soft); color: var(--accent-deep); }
   .db-chip .nt { font-size: 10.5px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .db-chip .db-prob2 { margin-left: auto; font-size: 11px; font-weight: 800; color: var(--ink2); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  .db-chip .db-prob2.up { color: var(--up); }
+  .db-chip .db-prob2.down { color: var(--down); }
+  /* 口径三色标签（R88）：利好=红 / 利空=绿 / 中性=灰 */
+  .db-sent { font-size: 10px; font-weight: 800; border-radius: 999px; padding: 1px 7px; flex-shrink: 0; letter-spacing: .5px; line-height: 1.5; }
+  .db-sent.bull { background: var(--up-soft); color: var(--up); border: 1px solid var(--up); }
+  .db-sent.bear { background: var(--down-soft); color: var(--down); border: 1px solid var(--down); }
+  .db-sent.neu  { background: #eef1f5; color: var(--ink2); border: 1px solid #d6dee7; }
+  .db-chip .db-sent { position: absolute; top: 6px; right: 7px; }
   .db-empty { font-size: 13px; color: var(--ink2); padding: 14px 4px; }
+
+  /* 弹窗左右箭头切换（R88） */
+  .db-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--paper); color: var(--accent-deep); font-size: 20px; line-height: 1; cursor: pointer; box-shadow: 0 4px 14px rgba(17,17,26,.18); display: flex; align-items: center; justify-content: center; z-index: 5; transition: all .15s ease; -webkit-tap-highlight-color: transparent; }
+  .db-nav:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-50%) scale(1.06); }
+  .db-nav.db-prev { left: 26px; }
+  .db-nav.db-next { right: 26px; }
+  @media (max-width: 700px) { .db-nav { width: 34px; height: 34px; font-size: 17px; } .db-nav.db-prev { left: 10px; } .db-nav.db-next { right: 10px; } }
 
   /* K线弹窗 */
   #db-modal { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(30,45,60,.45); align-items: center; justify-content: center; padding: 20px; }
@@ -359,6 +375,8 @@
 </div>
 
 <div id="db-modal" onclick="if(event.target===this)closeDbModal()">
+  <button class="db-nav db-prev" onclick="dbStep(-1)" title="上一个标的（←）">←</button>
+  <button class="db-nav db-next" onclick="dbStep(1)" title="下一个标的（→）">→</button>
   <div class="db-modal-box">
     <div class="db-modal-head" id="db-modal-head"></div>
     <div class="db-modal-meta" id="db-modal-meta"></div>
@@ -822,19 +840,31 @@ function renderLianban(list) {
 var DB_INDEX = {};
 function duanbanData() { return window.DASHBOARD_DATA.duanban || null; }
 
+// R88 口径三色标签：利好(红)/利空(绿)/中性(灰)
+var DB_SENT = { bull: ['利好', 'bull'], bear: ['利空', 'bear'], neutral: ['中性', 'neu'] };
+function dbSentBadge(e, style) {
+  var s = (e && e.sentiment) || 'neutral';
+  var map = DB_SENT[s] || DB_SENT.neutral;
+  var st = style ? ' style="' + style + '"' : '';
+  return '<span class="db-sent ' + map[1] + '"' + st + '>' + map[0] + '</span>';
+}
+
 function dbChipHtml(e, key, done) {
   var stageCls = done ? 'done' : 'hold';
   var stageTxt = done ? '已确认' : e.stage;
+  var prob = (e.probability !== null && e.probability !== undefined) ? e.probability + '%' : '—';
   var tip = e.name + ' ' + e.code + '（' + (e.sector || '') + '）\n'
     + (done ? '确认池 · 全流程达标' : '观察池 · ' + e.stage) + '\n'
     + '形态：' + (e.form || '') + '\n'
-    + '上涨概率：' + (e.probability !== null && e.probability !== undefined ? e.probability + '%' : '—') + (e.probNote ? '（' + e.probNote + '）' : '') + '\n'
+    + '口径：' + ({ bull: '利好', bear: '利空', neutral: '中性' }[e.sentiment] || '中性') + '\n'
+    + '上涨概率：' + prob + (e.probNote ? '（' + e.probNote + '）' : '') + '\n'
     + '今日：' + fmtPct(e.pct) + '\n'
     + '点击查看K线与利好依据';
   return '<div class="db-chip" data-k="' + escAttr(key) + '" title="' + escAttr(tip) + '">' +
-    '<div class="r1"><b>' + esc(e.name) + '</b><span class="cd">' + esc(e.code) + '</span>' +
-    '<span class="db-prob">' + (e.probability !== null && e.probability !== undefined ? e.probability + '%' : '—') + '</span></div>' +
+    dbSentBadge(e, 'position:absolute;top:6px;right:7px;') +
+    '<div class="r1"><b>' + esc(e.name) + '</b><span class="cd">' + esc(e.code) + '</span></div>' +
     '<div class="r2"><span class="db-stage ' + stageCls + '">' + esc(stageTxt) + '</span>' +
+    '<span class="db-prob2 ' + (e.sentiment === 'bear' ? 'down' : (e.sentiment === 'bull' ? 'up' : '')) + '">' + prob + '</span>' +
     '<span class="nt">' + esc((e.form || '').replace(/^.*?断板/, '断板')) + '</span></div></div>';
 }
 
@@ -853,6 +883,7 @@ function dbPoolHtml(title, cls, sub, list, done, poolKey) {
       arr.forEach(function (e) {
         var key = poolKey + '|' + e.code;
         DB_INDEX[key] = e;
+        DB_ORDER.push(key);
         h += dbChipHtml(e, key, done);
       });
       h += '</div>';
@@ -861,10 +892,10 @@ function dbPoolHtml(title, cls, sub, list, done, poolKey) {
 }
 
 function renderDuanban() {
-  DB_INDEX = {};
+  DB_INDEX = {}; DB_ORDER = [];
   var db = duanbanData();
-  document.getElementById('db-date').textContent = db && db.generatedAt ? '数据生成：' + db.generatedAt + '（每日 16:00 收盘后更新）' : '数据生成：—（待 16:00 自动化首跑）';
-  document.getElementById('db-note').textContent = (db && db.note) || '断板反包形态由脚本确定性核验（东财涨停池 + 腾讯日K，check_duanban.py），全部标的经利好一致性闸门核验：必须有利好要闻/内容/AI预测看涨支撑，板块被看空的标的已剔除。';
+  document.getElementById('db-date').textContent = db && db.generatedAt ? '数据生成：' + db.generatedAt + '（每日 16:00 收盘后更新 · 次日 07:30 隔夜复核）' : '数据生成：—（待 16:00 自动化首跑）';
+  document.getElementById('db-note').textContent = (db && db.note) || '断板反包形态由脚本确定性核验（东财涨停池 + 腾讯日K，check_duanban.py）。每只标的按当日要闻/AI预测自动标注口径：利好（红）/利空（绿）/中性（灰）；口径与上涨概率由自动化 AI 复核校准（16:00 收盘后生成，次日 07:30 结合隔夜美股与全球要闻复核）。';
   var conf = (db && db.confirmed) || [], watch = (db && db.watching) || [];
   var badge = document.getElementById('db-badge');
   badge.textContent = (conf.length + watch.length) ? ('确认 ' + conf.length + ' · 观察 ' + watch.length) : '';
@@ -894,24 +925,50 @@ window.addEventListener('popstate', function () {
 function openDbModal(key) {
   var e = DB_INDEX[key];
   if (!e) return;
+  DB_CURR = key;
   var done = key.indexOf('c|') === 0;
   document.getElementById('db-modal-head').innerHTML =
     '<span class="nm">' + esc(e.name) + '</span><span class="cd2">' + esc(e.code) + '</span>' +
     '<span class="db-stage ' + (done ? 'done' : 'hold') + '" style="font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;' + (done ? 'background:var(--up-soft);color:var(--up)' : 'background:var(--accent-soft);color:var(--accent-deep)') + '">' + (done ? '确认池' : '观察池 · ' + esc(e.stage)) + '</span>' +
+    dbSentBadge(e, 'font-size:11px;padding:2px 9px;') +
     '<button class="db-modal-close" onclick="closeDbModal()">×</button>';
+  var probCls = e.sentiment === 'bear' ? 'down' : (e.sentiment === 'neutral' ? '' : 'up');
   document.getElementById('db-modal-meta').innerHTML =
     '<div><span class="lab">所属板块：</span>' + esc(e.sector || '') + '　<span class="lab">涨停日：</span>' + esc(e.ztDate || '') + '　<span class="lab">今日：</span><b class="' + (e.pct >= 0 ? 'up' : 'down') + '">' + fmtPct(e.pct) + '</b></div>' +
     '<div><span class="lab">形态：</span>' + esc(e.form || '') + '</div>' +
-    '<div><span class="lab">上涨概率：</span><b class="up">' + (e.probability !== null && e.probability !== undefined ? e.probability + '%' : '—') + '</b>' + (e.probNote ? '（' + esc(e.probNote) + '）' : '') + '</div>';
+    '<div><span class="lab">上涨概率：</span><b class="' + probCls + '">' + (e.probability !== null && e.probability !== undefined ? e.probability + '%' : '—') + '</b>' + (e.probNote ? '（' + esc(e.probNote) + '）' : '') + '</div>';
   document.getElementById('db-kline').innerHTML = dbKlineSvg(e.kline);
   var refs = (e.bullRefs || []).map(function (r) { return '<b>' + esc(r.title || '') + '</b>（' + esc(r.src || '') + '）'; }).join('；');
+  var bears = (e.bearRefs || []).map(esc).join('；');
+  var refsHtml = '';
+  if (e.sentiment === 'bear') {
+    refsHtml += '<b style="color:var(--down)">利空口径：</b>' + (bears || '—');
+    if (refs) refsHtml += '<br><b>利好依据：</b>' + refs;
+  } else if (e.sentiment === 'neutral') {
+    refsHtml += '<b>中性口径：</b>暂无明确利好/利空依据（AI 复核可改判）';
+    if (refs) refsHtml += '<br><b>利好依据：</b>' + refs;
+  } else {
+    refsHtml += '<b>利好依据：</b>' + (refs || '—');
+    if (bears) refsHtml += '<br><b style="color:var(--down)">利空提示：</b>' + bears;
+  }
   document.getElementById('db-refs').innerHTML =
-    '<b>利好依据（已过一致性闸门）：</b>' + (refs || '—') +
+    refsHtml +
     '<br>形态核验：check_duanban.py 确定性脚本（东财涨停池 + 腾讯日K）；观察池标的待最后一根确认K线，确认失败即移出。';
   document.getElementById('db-modal').classList.add('open');
 }
-function closeDbModal() { document.getElementById('db-modal').classList.remove('open'); }
-document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDbModal(); });
+function closeDbModal() { DB_CURR = null; document.getElementById('db-modal').classList.remove('open'); }
+function dbStep(delta) {
+  if (!DB_ORDER.length) return;
+  var i = DB_ORDER.indexOf(DB_CURR);
+  if (i < 0) i = 0; else i = (i + delta + DB_ORDER.length) % DB_ORDER.length;
+  openDbModal(DB_ORDER[i]);
+}
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') closeDbModal();
+  if (!DB_CURR) return;
+  if (e.key === 'ArrowLeft') dbStep(-1);
+  if (e.key === 'ArrowRight') dbStep(1);
+});
 document.getElementById('db-pools').addEventListener('click', function (ev) {
   var chip = ev.target ? ev.target.closest('.db-chip') : null;
   if (chip) openDbModal(chip.getAttribute('data-k'));
@@ -919,13 +976,28 @@ document.getElementById('db-pools').addEventListener('click', function (ev) {
 
 function dbKlineSvg(kline) {
   if (!kline || kline.length < 2) return '<div class="db-empty">暂无K线数据</div>';
-  var W = 680, H = 360, padL = 8, padR = 54, priceTop = 16, priceBot = 236, volTop = 256, volBot = 336;
-  var n = kline.length;
-  var hi = Math.max.apply(null, kline.map(function (b) { return b[3]; }));
-  var lo = Math.min.apply(null, kline.map(function (b) { return b[4]; }));
+  // R88：数据含近 60 根（供均线计算），只渲染近 30 根；均线基于全量序列计算
+  var view = kline.slice(-30);
+  var off = kline.length - view.length;
+  var W = 680, H = 360, padL = 8, padR = 54, priceTop = 20, priceBot = 236, volTop = 256, volBot = 336;
+  var n = view.length;
+  function maAt(gi, p) {
+    if (gi < p - 1) return null;
+    var s = 0; for (var j = gi - p + 1; j <= gi; j++) s += kline[j][2];
+    return s / p;
+  }
+  var MAS = [[5, '#4aa8e0', 'MA5'], [10, '#f5a623', 'MA10'], [20, '#9b59b6', 'MA20'], [30, '#16a085', 'MA30']];
+  var hi = -Infinity, lo = Infinity;
+  view.forEach(function (b) { hi = Math.max(hi, b[3]); lo = Math.min(lo, b[4]); });
+  MAS.forEach(function (m) {
+    for (var i = 0; i < n; i++) {
+      var v = maAt(off + i, m[0]);
+      if (v !== null) { hi = Math.max(hi, v); lo = Math.min(lo, v); }
+    }
+  });
   if (hi <= lo) { hi += 1; lo -= 1; }
   var pad = (hi - lo) * 0.07; hi += pad; lo -= pad;
-  var maxV = Math.max.apply(null, kline.map(function (b) { return b[5]; })) || 1;
+  var maxV = Math.max.apply(null, view.map(function (b) { return b[5]; })) || 1;
   var step = (W - padL - padR) / n;
   var bw = Math.min(16, step * 0.62);
   function y(p) { return priceBot - (p - lo) / (hi - lo) * (priceBot - priceTop); }
@@ -935,14 +1007,20 @@ function dbKlineSvg(kline) {
     svg += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (W - padR + 6) + '" y2="' + gy + '" stroke="#e3ecf4" stroke-dasharray="3 3"/>';
     svg += '<text x="' + (W - padR + 10) + '" y="' + (gy + 4) + '" font-size="10" fill="#5a6e82">' + gv.toFixed(2) + '</text>';
   }
-  // MA5（窗口内满 5 根起画）
-  var maPath = '';
-  kline.forEach(function (b, i) {
-    if (i < 4) return;
-    var s = 0; for (var j = i - 4; j <= i; j++) s += kline[j][2];
-    maPath += (maPath ? ' L ' : 'M ') + (padL + step * (i + 0.5)).toFixed(1) + ' ' + y(s / 5).toFixed(1);
+  // 均线（图例 + 折线）
+  var legend = '';
+  MAS.forEach(function (m, mi) {
+    legend += '<tspan fill="' + m[1] + '" font-weight="700">' + m[2] + '</tspan>' + (mi < 3 ? '<tspan fill="#8aa0b5">  </tspan>' : '');
+    var path = '';
+    for (var i = 0; i < n; i++) {
+      var v = maAt(off + i, m[0]);
+      if (v === null) continue;
+      path += (path ? ' L ' : 'M ') + (padL + step * (i + 0.5)).toFixed(1) + ' ' + y(v).toFixed(1);
+    }
+    if (path) svg += '<path d="' + path + '" fill="none" stroke="' + m[1] + '" stroke-width="1.2" opacity="0.9"/>';
   });
-  kline.forEach(function (b, i) {
+  svg += '<text x="' + (padL + 4) + '" y="12" font-size="10">' + legend + '</text>';
+  view.forEach(function (b, i) {
     var cx = padL + step * (i + 0.5);
     var o = b[1], c = b[2], h = b[3], l = b[4], v = b[5];
     var up = c >= o, col = up ? '#f0435c' : '#0f9d78';
@@ -952,9 +1030,8 @@ function dbKlineSvg(kline) {
     var vy = volBot - (v / maxV) * (volBot - volTop);
     svg += '<rect x="' + (cx - bw / 2) + '" y="' + vy + '" width="' + bw + '" height="' + (volBot - vy) + '" fill="' + col + '" opacity="0.55"/>';
   });
-  if (maPath) svg += '<path d="' + maPath + '" fill="none" stroke="#4aa8e0" stroke-width="1.4"/>';
   [0, Math.floor(n / 2), n - 1].forEach(function (i) {
-    var cx = padL + step * (i + 0.5), d = String(kline[i][0] || '').slice(5);
+    var cx = padL + step * (i + 0.5), d = String(view[i][0] || '').slice(5);
     svg += '<text x="' + cx + '" y="' + (H - 6) + '" font-size="10" fill="#5a6e82" text-anchor="middle">' + esc(d) + '</text>';
   });
   svg += '<text x="' + (W - padR + 10) + '" y="' + (volTop - 4) + '" font-size="9.5" fill="#8aa0b5">成交量</text>';
