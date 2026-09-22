@@ -238,6 +238,26 @@ def check_freshness(D):
     return []
 
 
+def check_horizon(D):
+    """R91：macroNews/intlNews/bankViews 每个 impact 须带 horizon（长线/短线）→ 缺失/非法 WARN。"""
+    warns = []
+    for mk in ('ashare', 'us'):
+        sec = D.get(mk) or {}
+        for key in ('macroNews', 'intlNews', 'bankViews'):
+            for i, nw in enumerate(sec.get(key) or []):
+                if not isinstance(nw, dict):
+                    continue
+                for j, imp in enumerate(nw.get('impacts') or []):
+                    if not isinstance(imp, dict):
+                        continue
+                    hz = imp.get('horizon')
+                    if hz not in ('长线', '短线'):
+                        warns.append(
+                            f"{mk}.{key}[{i}].impacts[{j}]({imp.get('theme', '')}): "
+                            f"horizon 缺失或非法（{hz!r}），须为「长线」或「短线」")
+    return warns
+
+
 def reorder_inplace(D):
     """无破坏性地把所有标的清单重排为 龙头→概念→小盘人气→断板反包（同类内保序）。
     仅调顺序，不改数量与内容；幂等。"""
@@ -326,6 +346,7 @@ def main():
     imp_cnt_warns = check_impact_count(D)
     quality_warns = check_news_quality(D)
     fresh_warns = check_freshness(D)
+    horizon_warns = check_horizon(D)
 
     for mk in ('ashare', 'us'):
         sec = D.get(mk) or {}
@@ -353,6 +374,7 @@ def main():
                           'impact_count_warnings': imp_cnt_warns,
                           'quality_warnings': quality_warns,
                           'freshness_warnings': fresh_warns,
+                          'horizon_warnings': horizon_warns,
                           'duanban_warnings': duanban_warns,
                           'violations': violations}, ensure_ascii=False, indent=2))
     for w in dir_warns:
@@ -363,6 +385,8 @@ def main():
         print("[WARN] 要闻质量:", w)
     for w in fresh_warns:
         print("[WARN] 时间戳:", w)
+    for w in horizon_warns:
+        print("[WARN] horizon:", w)
     for w in duanban_warns:
         print("[WARN] duanban:", w)
     if violations:
