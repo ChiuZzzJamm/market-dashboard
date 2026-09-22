@@ -294,6 +294,129 @@ def fetch_board_pct_on(bk_code, date_iso):
     return hist.get(date_iso)
 
 
+# ---------- R91j: 近3日涨幅居前板块 TOP10（东财行业板块口径） ----------
+BOARD_KLINE_CACHE = "/tmp/duanban_board_kline_cache"
+CLIST_HOSTS = ["https://push2delay.eastmoney.com",
+               "https://82.push2.eastmoney.com",
+               "https://push2.eastmoney.com"]
+HIS_HOSTS = ["https://push2his.eastmoney.com",
+             "https://92.push2his.eastmoney.com",
+             "https://23.push2his.eastmoney.com"]
+
+
+def _board_clist_all():
+    """主源：clist 一次拉全量行业板块（f3 今日涨幅 / f109 3日涨幅），按主机轮询容错。
+    成功返回 {name: {code, pct, pct3}}，全部失败返回 None。"""
+    for host in CLIST_HOSTS:
+        rows, pn = [], 1
+        while pn <= 4:
+            url = (f"{host}/api/qt/clist/get?pn={pn}&pz=500&po=1&np=1&fltt=2&invt=2"
+                   f"&fid=f109&fs=m:90%2Bt:2&fields=f12,f14,f3,f109&ut={EM_UT}")
+            j = get_json_curl(url, retries=1, gap=2)
+            page = (j.get("data") or {}).get("diff") or [] if j else []
+            if not page:
+                rows = []
+                break
+            rows.extend(page)
+            if len(page) < 500:
+                break
+            pn += 1
+            time.sleep(0.3)
+        if rows:
+            m = {}
+            for r in rows:
+                name = str(r.get("f14") or "").strip()
+                code = str(r.get("f12") or "").strip()
+                try:
+                    pct = float(r.get("f3"))
+                    pct3 = float(r.get("f109"))
+                except (TypeError, ValueError):
+                    continue
+                if name and code:
+                    m[name] = {"code": code, "pct": pct, "pct3": pct3}
+            if m:
+                return m
+        time.sleep(1)  # 换下一主机前稍歇
+    return None
+
+
+def fetch_top_boards(D, top=10, days=3):
+    """近 N 个交易日涨幅居前的板块 TOP10（东财行业板块口径）。
+    主源：clist f109（一次请求全量，自动化环境可达）；备源：data.js allBoards
+    （含 BK 代码）逐板块取 push2his 日K（多镜像轮询 + 当日缓存）自行计算。
+    全部失败返回 []（前端隐藏模块，不阻塞主流程）。"""
+    # ---- 主源：clist f109 ----
+    m = _board_clist_all()
+    if m:
+        rows = [{"code": v["code"], "name": k, "pct3": round(v["pct3"], 2),
+                 "pctToday": round(v["pct"], 2)}
+                for k, v in m.items()]
+        rows.sort(key=lambda r: r["pct3"], reverse=True)
+        return rows[:top]
+    # ---- 备源：allBoards + push2his 日K ----
+    boards = ((D.get("ashare") or {}).get("allBoards") or [])
+    if not isinstance(boards, list) or not boards:
+        return []
+    try:
+        os.makedirs(BOARD_KLINE_CACHE, exist_ok=True)
+    except Exception:
+        pass
+    today = _today_str()
+    rows = []
+    for bi, b in enumerate(boards):
+        if not isinstance(b, dict):
+            continue
+        bk = str(b.get("code") or "")
+        name = str(b.get("name") or "").strip()
+        if not bk.startswith("BK") or not name:
+            continue
+        closes = None
+        cp = os.path.join(BOARD_KLINE_CACHE, bk + ".json")
+        if os.path.exists(cp):
+            try:
+                c = json.load(open(cp, encoding="utf-8"))
+                if c.get("lastDay") == today and isinstance(c.get("closes"), list) \
+                        and len(c["closes"]) >= days + 2:
+                    closes = c["closes"]
+            except Exception:
+                pass
+        if closes is None:
+            host = HIS_HOSTS[bi % len(HIS_HOSTS)]  # 轮询镜像，分散限频
+            url = (f"{host}/api/qt/stock/kline/get?secid=90.{bk}&fields1=f1,f2,f3"
+                   f"&fields2=f51,f53&klt=101&fqt=1&beg=0&end=20500101&ut={EM_UT}")
+            j = get_json_curl(url, retries=1, gap=1)
+            kls = (((j or {}).get("data") or {}).get("klines") or []) if j else []
+            closes = []
+            for kl in kls:
+                parts = kl.split(",")
+                if len(parts) >= 2:
+                    try:
+                        closes.append((parts[0], float(parts[1])))
+                    except Exception:
+                        continue
+            if closes:
+                try:
+                    json.dump({"lastDay": closes[-1][0], "closes": closes},
+                              open(cp, "w", encoding="utf-8"))
+                except Exception:
+                    pass
+            time.sleep(0.25)  # push2his 限频保护
+        if not closes or len(closes) < days + 1:
+            continue
+        if closes[-1][0] < today:  # K线未含最新交易日（停牌/失败），跳过
+            continue
+        base = closes[-(days + 1)][1]
+        last = closes[-1][1]
+        prev = closes[-2][1]
+        if not base or not prev:
+            continue
+        pct3 = round((last / base - 1) * 100, 2)
+        pct_today = round((last / prev - 1) * 100, 2)
+        rows.append({"code": bk, "name": name, "pct3": pct3, "pctToday": pct_today})
+    rows.sort(key=lambda r: r["pct3"], reverse=True)
+    return rows[:top]
+
+
 def sina_symbol(code):
     if code.startswith(("60", "68")):
         return "sh" + code
@@ -553,20 +676,18 @@ def _fmt_ref(r):
 
 
 def tag_entries(entries, D):
-    """R88 口径打标 + R89 依据小作文化（--module 口径，取代 R87 硬排除闸门）：
-    所有形态达标/观察标的全部保留入池，逐一与 data.js 要闻/AI预测交叉核验后
-    标注 sentiment：
-      - bear：个股被利空要闻/AI预测看空点名，或所属板块关键词命中看空内容
-        （利好利空同时命中时从严记 bear）；
-      - bull：有利好要闻/AI预测看涨依据（个股级优先，板块关键词兜底）且未被看空；
-      - neutral：暂无明确方向依据（AI 可复核板块语义后改判）。
+    """R88 口径打标 + R89 依据小作文化（--module 口径，取代 R87 硬排除闸门）；
+    R91j 修订：利好/利空判定只依据新闻内容——
+      - 利好：真实个股/板块级新闻（走势形态描述不构成利好，过滤）；
+      - 利空：个股/板块被利空新闻或 AI预测看空点名（当日涨跌不构成利空/利好，
+        15点后利好新闻而当日下跌属洗盘，应标利好）；
+      - 中性：暂无明确方向新闻依据（AI 可复核板块语义后改判）。
     每项附 sentiment / bullRefs / bearRefs（携带命中的真实新闻 title/summary/
     source/time）/ story（由命中的新闻摘要自动拼装的小作文底稿，
     自动化 AI 复核时须补充个股层面消息后改写）。"""
     def _src_tag(src, kw, hybk, D):
-        """利好/利空依据来源标签：🇨🇳 国内新闻 / 隔夜美股 / 🌍 全球新闻 / 📉板块(板块/个股跌幅)。"""
-        if src == "板块今日跌幅" or str(src or "").startswith("板块"):
-            return "📉板块"
+        """利好/利空依据来源标签：🇨🇳 国内新闻 / 隔夜美股 / 🌍 全球新闻。
+        （R91j：判定只看新闻，跌幅类依据已废除，📉板块标签随之移除）"""
         if src == "aiPrediction":
             return "🇨🇳"
         if src and str(src).startswith("ashare."):
@@ -591,14 +712,20 @@ def tag_entries(entries, D):
         return "🇨🇳"
 
     B = collect_sentiment(D)
+    # R91j：纯走势/形态描述（断板反包形态、缩量、MA5、企稳、二次启动等）不构成
+    # 个股利好依据——利好必须有真实公司级/板块级新闻，走势只是形态背景。
+    FORM_ONLY = re.compile(
+        r"断板反包|倍量断板|缩量|站稳MA5|待收复MA5|二次启动|已确认企稳|技术面呈|涨停→次")
+
+    def _is_form_only(r):
+        txt = (str(r.get("title") or "") + str(r.get("summary") or ""))
+        return bool(FORM_ONLY.search(txt))
+
     out = []
     for e in entries:
         code, hybk = str(e["code"]), str(e.get("hybk") or "")
-        bpt = e.get("boardPctToday")
-        epct = e.get("pct")
-        # 上方压力技术信号（非利好）：双头/套牢盘/压力位/受阻/顶背离
-        tech_bear = bool(re.search(r"双头|套牢|压力|受阻|顶背离|上方", str(e.get("form") or "")))
-        # ---- 利空依据 ----
+        # ---- 利空依据（R91j：只看新闻，当日涨跌不构成利空——15点后利好新闻
+        #      而当日下跌属洗盘情形，绝不因跌幅标利空） ----
         bear_refs = []
         for d in B["bear_codes"].get(code) or []:
             nd2 = dict(d, kind="stock"); nd2["srcTag"] = _src_tag(d.get("src"), None, hybk, D)
@@ -608,27 +735,10 @@ def tag_entries(entries, D):
                     not any(b["title"] == d["title"] for b in bear_refs):
                 nd2 = dict(d, kind="sector", kw=kw); nd2["srcTag"] = _src_tag(d.get("src"), kw, hybk, D)
                 bear_refs.append(nd2)
-        # 今日大盘走弱 → 板块/个股跌幅利空（无利好依据时）
-        if not bear_refs and not (B["bull_codes"].get(code) or []):
-            br = None
-            if bpt is not None and bpt <= -1.5:
-                br = {"src": "板块今日跌幅", "sec": hybk,
-                      "title": f"所属板块「{hybk}」今日下跌{bpt:.1f}%",
-                      "summary": "今日大盘走弱，所属板块同步下挫，技术面承压",
-                      "source": "板块实时涨幅", "time": _today_str(), "kind": "sector", "kw": hybk}
-            elif epct is not None and epct <= -2.5:
-                br = {"src": "板块今日跌幅", "sec": hybk,
-                      "title": f"个股今日下跌{epct:.1f}%",
-                      "summary": "随今日大盘走弱收跌，断板反包形态未完成确认，技术面承压",
-                      "source": "个股实时涨幅", "time": _today_str(), "kind": "stock", "kw": hybk}
-            if br:
-                br["srcTag"] = _src_tag("板块今日跌幅", hybk, hybk, D)
-                bear_refs.append(br)
-        # ---- 利好依据 ----
-        refs = []
-        for d in B["bull_codes"].get(code) or []:
-            nd2 = dict(d, kind="stock"); nd2["srcTag"] = _src_tag(d.get("src"), None, hybk, D)
-            refs.append(nd2)
+        # ---- 利好依据（个股级须为真实新闻，纯走势描述过滤；板块关键词兜底） ----
+        refs = [d for d in (B["bull_codes"].get(code) or []) if not _is_form_only(d)]
+        for d in refs:
+            d.setdefault("kind", "stock"); d["srcTag"] = _src_tag(d.get("src"), None, hybk, D)
         if not refs:
             kw_hit = next(((kw, d) for kw, d in B["bull_secs"]
                            if hybk and (hybk in kw or kw in hybk)), None)
@@ -645,11 +755,6 @@ def tag_entries(entries, D):
             story = "\n".join(_fmt_ref(r) for r in refs[:3])
         else:
             story = "暂无明确利好/利空消息（板块与个股近1日无点名新闻；自动化 AI 复核时请检索个股公告/财报/大单等补充）"
-        if tech_bear and sent != "bear":
-            # 上方压力信号：属非利好技术面，作为补充提示写入 story（不污染利好依据）
-            note = "【技术面】形态显示上方套牢盘/双头压力（属上方压力，非个股利好），反弹需放量突破。"
-            if note not in story:
-                story = (story + "\n" + note) if story else note
         out.append(dict(e, sentiment=sent, bullType=bull_type,
                         bullRefs=refs, bearRefs=bear_refs, story=story))
     return out
@@ -694,7 +799,8 @@ def build_module(pairs, D):
                                  {"bull": 0, "neutral": 1, "bear": 2}[e["sentiment"]]))
     return {
         "generatedAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "note": "确认池=走完「涨停→放量断板→缩量→不破T日低点与MA5」全流程；观察池=形态进行中、只差最后一根确认K线（待企稳＞待缩量）。每只标的按当日要闻/AI预测自动标注口径：利好（有利好依据且未被看空）/利空（个股或板块被看空点名）/中性（暂无明确方向依据）；口径与 probability 由自动化 AI 复核校准。",
+        "note": "确认池=走完「涨停→放量断板→缩量→不破T日低点与MA5」全流程；观察池=形态进行中、只差最后一根确认K线（待企稳＞待缩量）。每只标的按当日要闻/AI预测自动标注口径：利好（有利好新闻依据且未被看空）/利空（被利空新闻或AI预测看空点名）/中性（暂无明确新闻依据）；利好/利空只看新闻内容，当日涨跌与走势形态不作为依据（R91j）。口径与 probability 由自动化 AI 复核校准。",
+        "topBoards": fetch_top_boards(D),
         "confirmed": confirmed,
         "watching": watching,
     }
@@ -759,7 +865,13 @@ def main():
         if args.module:
             mod = {"generatedAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
                    "note": "涨停池为空或不可用，无候选",
-                   "confirmed": [], "watching": [], "excluded": []}
+                   "topBoards": [], "confirmed": [], "watching": [], "excluded": []}
+            try:
+                mod["topBoards"] = fetch_top_boards(load_dashboard(
+                    args.dashboard or os.path.join(
+                        os.path.dirname(os.path.abspath(__file__)), "data.js")))
+            except Exception:
+                pass
             print(json.dumps(mod, ensure_ascii=False, indent=1))
             return
         print("[]" if args.json else "无达标候选（涨停池为空或不可用）")
@@ -826,6 +938,7 @@ def main():
                   file=sys.stderr)
             mod = {"generatedAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
                    "note": "（口径打标未运行：data.js 不可用，全部按中性标注）",
+                   "topBoards": [],
                    "confirmed": [{"code": p["code"], "name": p["name"],
                                   "sector": p["hybk"] or "其他", "ztDate": p["ztDate"],
                                   "stage": p["stage_info"]["stage"],

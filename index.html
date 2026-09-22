@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609222031"></script>
+<script src="data.js?v=202609222131"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -277,6 +277,16 @@
   .db-pool.p-conf h2::before { background: var(--up); box-shadow: 0 0 0 4px var(--up-soft); }
   .db-pool.p-watch h2::before { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
   .db-pool .db-sub { font-size: 12px; color: var(--ink2); margin-bottom: 14px; }
+  /* R91j: 近3日涨幅居前板块 TOP10 */
+  .db-tb { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 900px) { .db-tb { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .db-tb-cell { background: #f7fafd; border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; display: flex; flex-direction: column; gap: 3px; }
+  .db-tb-rank { display: flex; align-items: center; gap: 7px; }
+  .db-tb-rank b { width: 18px; height: 18px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-deep); font-size: 11px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .db-tb-cell:nth-child(n+4) .db-tb-rank b { background: transparent; color: var(--ink2); }
+  .db-tb-nm { font-size: 12.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .db-tb-p3 { font-size: 14px; font-weight: 800; }
+  .db-tb-today { font-size: 11px; color: var(--ink2); }
   .db-sec { margin: 16px 0 8px; font-size: 13.5px; font-weight: 800; color: var(--accent-deep); display: flex; align-items: center; gap: 6px; }
   .db-sec::before { content: ''; width: 3px; height: 12px; border-radius: 2px; background: var(--accent); }
   .db-sec .db-sec-n { font-size: 11px; color: var(--ink2); font-weight: 600; }
@@ -792,7 +802,7 @@ function renderNewsCard(d, market) {
   }
   // 视角标题（R91h）：A股页用国内财经媒体视角（卡片来源已切财联社/华尔街见闻/证券时报），美股页保留国际通讯社视角
   if (intl.length) {
-    html += '<div class="wk-section intl"><h4>' + (market === 'ashare' ? '国内财经媒体视角' : '彭博 / 路透 / WSJ 视角') + '</h4>';
+    html += '<div class="wk-section intl"><h4>' + (market === 'ashare' ? '国内财经媒体视角' : '彭博社 / 路透社 / 华尔街日报 视角') + '</h4>';
     intl.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true, '中期·海外产业') + '</div>'; });
     html += '</div>';
   }
@@ -952,6 +962,20 @@ function renderDuanban() {
   var badge = document.getElementById('db-badge');
   badge.textContent = (conf.length + watch.length) ? ('确认 ' + conf.length + ' · 观察 ' + watch.length) : '';
   var html = '';
+  // R91j: 近3个交易日涨幅居前板块 TOP10（确认池上方）
+  var tb = (db && db.topBoards) || [];
+  if (tb.length) {
+    html += '<div class="db-pool" style="padding-bottom:14px;"><h2>📈 近3个交易日涨幅居前板块 TOP10</h2>' +
+      '<div class="db-sub">东财行业板块口径 · 3个交易日累计涨幅（每日 16:00 随断板反包更新）</div><div class="db-tb">';
+    tb.forEach(function (b, i) {
+      var up3 = b.pct3 >= 0, up1 = b.pctToday >= 0;
+      html += '<div class="db-tb-cell"><div class="db-tb-rank"><b>' + (i + 1) + '</b>' +
+        '<span class="db-tb-nm">' + esc(b.name) + '</span></div>' +
+        '<div class="db-tb-p3 ' + (up3 ? 'up' : 'down') + '">' + (up3 ? '+' : '') + b.pct3.toFixed(2) + '%</div>' +
+        '<div class="db-tb-today">今日 <b class="' + (up1 ? 'up' : 'down') + '">' + (up1 ? '+' : '') + b.pctToday.toFixed(2) + '%</b></div></div>';
+    });
+    html += '</div></div>';
+  }
   html += dbPoolHtml('确认池', 'p-conf', '已走完「涨停 → 放量断板 → 缩量 → 不破T日低点与MA5」全流程', conf, true, 'c');
   html += dbPoolHtml('观察池', 'p-watch', '形态进行中、只差最后一根确认K线（待企稳 ＞ 待缩量）', watch, false, 'w');
   document.getElementById('db-pools').innerHTML = html;

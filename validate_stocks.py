@@ -268,6 +268,72 @@ def check_horizon(D):
     return warns
 
 
+def check_source_names(D):
+    """R91h/R91j 来源命名软闸门：全文只允许「彭博社」「路透社」「华尔街日报」，
+    出现 彭博新闻社/路透通讯社/WSJ 或简称「彭博」「路透」→ WARN（不阻断部署）。"""
+    forb = re.compile(r'彭博新闻社|路透通讯社|WSJ')
+    short = re.compile(r'彭博(?!社)|路透(?!社)')
+    hits = []
+
+    def walk(o):
+        if isinstance(o, dict):
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+        elif isinstance(o, str):
+            if forb.search(o):
+                hits.append('旧全称/WSJ: ' + o[:44])
+            elif short.search(o):
+                hits.append('简称: ' + o[:44])
+    walk(D)
+    out = [f"来源命名违规（只允许 彭博社/路透社/华尔街日报）：{h}" for h in hits[:8]]
+    if len(hits) > 8:
+        out.append(f"……另有 {len(hits) - 8} 处同类违规")
+    return out
+
+
+def check_lianban_notes(D):
+    """R91j 连板标注软闸门：标的 note 中的「N连板」必须与东财涨停池真实连板一致
+    （离线口径：ashare.lianban 模块 lbc），不符/虚构 → WARN（不阻断部署）。"""
+    lb = (D.get('ashare') or {}).get('lianban') or []
+    lbc = {str(s.get('code') or ''): int(s.get('lbc') or 0)
+           for s in lb if isinstance(s, dict)}
+    warns = []
+
+    def walk(o):
+        if isinstance(o, dict):
+            note = o.get('note')
+            code = str(o.get('code') or '')
+            if isinstance(note, str) and code and '连板' in note:
+                m = re.search(r'(\d+)连板', note)
+                if m:
+                    n, real = int(m.group(1)), lbc.get(code, 0)
+                    if real < n:
+                        warns.append(
+                            f"{code} {(o.get('name') or '')} note「{note}」"
+                            f"与涨停池真实连板不符（连板梯队 lbc={real}）——连板数只能取自东财涨停池")
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+    walk(D)
+    return warns
+
+
+def check_top_boards(D):
+    """R91j：duanban.topBoards（近3日板块TOP10）缺失/非数组 → WARN（16:00 自动化职责）。"""
+    db = D.get('duanban')
+    if not isinstance(db, dict):
+        return []
+    tb = db.get('topBoards')
+    if not isinstance(tb, list):
+        return ["duanban.topBoards 缺失或非数组——近3日板块TOP10 模块将不显示，请由 check_duanban.py --module 生成"]
+    return []
+
+
 def reorder_inplace(D):
     """无破坏性地把所有标的清单重排为 龙头→概念→小盘人气→断板反包（同类内保序）。
     仅调顺序，不改数量与内容；幂等。"""
@@ -357,6 +423,9 @@ def main():
     quality_warns = check_news_quality(D)
     fresh_warns = check_freshness(D)
     horizon_warns = check_horizon(D)
+    src_warns = check_source_names(D)
+    lb_warns = check_lianban_notes(D)
+    tb_warns = check_top_boards(D)
 
     for mk in ('ashare', 'us'):
         sec = D.get(mk) or {}
@@ -385,6 +454,9 @@ def main():
                           'quality_warnings': quality_warns,
                           'freshness_warnings': fresh_warns,
                           'horizon_warnings': horizon_warns,
+                          'source_name_warnings': src_warns,
+                          'lianban_warnings': lb_warns,
+                          'top_boards_warnings': tb_warns,
                           'duanban_warnings': duanban_warns,
                           'violations': violations}, ensure_ascii=False, indent=2))
     for w in dir_warns:
@@ -399,6 +471,12 @@ def main():
         print("[WARN] horizon:", w)
     for w in duanban_warns:
         print("[WARN] duanban:", w)
+    for w in src_warns:
+        print("[WARN] 来源命名:", w)
+    for w in lb_warns:
+        print("[WARN] 连板标注:", w)
+    for w in tb_warns:
+        print("[WARN] 板块TOP10:", w)
     if violations:
         print(f"[FAIL] 共 {len(violations)} 处违规：")
         for v in violations:
