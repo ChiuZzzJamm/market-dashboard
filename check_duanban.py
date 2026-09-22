@@ -476,7 +476,16 @@ def fetch_top_boards(D, top=10, days=3):
         pct_today = round((last / prev - 1) * 100, 2)
         rows.append({"code": bk, "name": name, "pct3": pct3, "pctToday": pct_today})
     rows.sort(key=lambda r: r["pct3"], reverse=True)
-    return rows[:top]
+    if rows:
+        return rows[:top]
+    # 终极兜底：东财全量聚合/行业 clist/push2his 均不可达（本地沙箱封锁东财域名）。
+    # 保留 data.js 既有 duanban.topBoards（最近一次成功写入的申万口径 TOP10），
+    # 避免自动化空跑把已部署的板块榜清成空（前端弹窗 TOP10 消失）。R91m 防护。
+    old = (D.get("duanban") or {}).get("topBoards") if isinstance(D, dict) else None
+    if old:
+        print("[warn] 板块榜全源不可达，保留既有 topBoards %d 条" % len(old), file=sys.stderr)
+        return old
+    return []
 
 
 def sina_symbol(code):
@@ -912,10 +921,12 @@ def main():
     # 1) 收集候选：code -> {name, hybk, zt_dates:[...]}
     cand = {}
     valid_dates = []
+    any_fetch_failed = False
     for d in dates:
         pool = fetch_zt_pool(d)
         if pool is None:
             # 限频/网络失败（≠空池）：重试后仍失败则明确告警，避免静默漏候选（R70）
+            any_fetch_failed = True
             print(f"[warn] 涨停池 {d} 拉取失败（限频/网络），该日候选缺失", file=sys.stderr)
             continue
         if not pool:
@@ -933,6 +944,24 @@ def main():
         time.sleep(0.4)  # push2ex 限频保护
     if not valid_dates or not cand:
         if args.module:
+            if any_fetch_failed:
+                # 东财涨停池全源拉取失败（本地沙箱封锁东财域名）：保留既有 duanban 模块，
+                # 避免把已部署的确认池/观察池/topBoards 清成空（R91m 防护）。
+                # 仅在「网络失败」时触发；若涨停池真实为空（非失败）仍按原逻辑写空模块。
+                try:
+                    old_mod = load_dashboard(args.dashboard or os.path.join(
+                        os.path.dirname(os.path.abspath(__file__)), "data.js")).get("duanban") or {}
+                    if old_mod.get("confirmed") or old_mod.get("watching") or old_mod.get("topBoards"):
+                        old_mod.setdefault("generatedAt", "")
+                        old_mod.setdefault("note", "东财涨停池不可达，保留既有模块")
+                        print("[warn] 涨停池全源不可达，保留既有 duanban 模块"
+                              "（确认池 %d / 观察池 %d）"
+                              % (len(old_mod.get("confirmed") or []),
+                                 len(old_mod.get("watching") or [])), file=sys.stderr)
+                        print(json.dumps(old_mod, ensure_ascii=False, indent=1))
+                        return
+                except Exception as e:
+                    print("[warn] 保留既有模块失败，回退空模块：%s" % e, file=sys.stderr)
             mod = {"generatedAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
                    "note": "涨停池为空或不可用，无候选",
                    "topBoards": [], "confirmed": [], "watching": [], "excluded": []}
