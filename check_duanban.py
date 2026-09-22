@@ -340,12 +340,74 @@ def _board_clist_all():
     return None
 
 
+def _stock_clist_agg():
+    """R91m 主源：clist 一次拉全量沪深A股，按 **申万行业（f100，与涨停池 hybk 同口径）**
+    聚合等权平均（f3 今日涨幅 / f109 3日涨幅）。
+    返回 {行业名: {"pct": 均值, "pct3": 均值, "n": 成分数}}，全部失败返回 None。"""
+    for host in CLIST_HOSTS:
+        rows, pn = [], 1
+        while pn <= 8:
+            url = (f"{host}/api/qt/clist/get?pn={pn}&pz=1000&po=1&np=1&fltt=2&invt=2"
+                   f"&fid=f12&fs=m:0%2Bt:6%2Cm:0%2Bt:80%2Cm:1%2Bt:2%2Cm:1%2Bt:23"
+                   f"&fields=f12,f14,f100,f3,f109&ut={EM_UT}")
+            j = get_json_curl(url, retries=1, gap=2)
+            page = (j.get("data") or {}).get("diff") or [] if j else []
+            if not page:
+                rows = []
+                break
+            rows.extend(page)
+            if len(page) < 1000:
+                break
+            pn += 1
+            time.sleep(0.3)
+        if rows:
+            agg = {}
+            for r in rows:
+                name = str(r.get("f100") or "").strip()
+                if not name:
+                    continue
+                try:
+                    pct = float(r.get("f3"))
+                    pct3 = float(r.get("f109"))
+                except (TypeError, ValueError):
+                    continue
+                a = agg.setdefault(name, {"sp": 0.0, "sp3": 0.0, "n": 0})
+                a["sp"] += pct
+                a["sp3"] += pct3
+                a["n"] += 1
+            if agg:
+                return {k: {"pct": v["sp"] / v["n"], "pct3": v["sp3"] / v["n"], "n": v["n"]}
+                        for k, v in agg.items()}
+        time.sleep(1)  # 换下一主机前稍歇
+    return None
+
+
+def _industry_of(hybk, agg):
+    """hybk（涨停池申万行业，可能4字截断）→ agg 里的完整行业名（前缀互配）。"""
+    if not hybk or not agg:
+        return None
+    if hybk in agg:
+        return hybk
+    for name in agg:
+        if len(hybk) >= 3 and (name.startswith(hybk) or hybk.startswith(name)):
+            return name
+    return None
+
+
 def fetch_top_boards(D, top=10, days=3):
-    """近 N 个交易日涨幅居前的板块 TOP10（东财行业板块口径）。
-    主源：clist f109（一次请求全量，自动化环境可达）；备源：data.js allBoards
-    （含 BK 代码）逐板块取 push2his 日K（多镜像轮询 + 当日缓存）自行计算。
-    全部失败返回 []（前端隐藏模块，不阻塞主流程）。"""
-    # ---- 主源：clist f109 ----
+    """近 N 个交易日涨幅居前板块 TOP10（**申万行业口径**，R91m 定稿——与断板反包
+    个股 sector/hybk 同源同层级，全市场个股按 f100 聚合等权平均）。
+    主源：clist 全量个股聚合（自动化环境可达）；备源：东财行业板块 clist f109；
+    末级备源：data.js allBoards + push2his 日K。全部失败返回 []（前端隐藏模块）。"""
+    # ---- 主源：全市场个股按申万行业（f100）聚合 ----
+    agg = _stock_clist_agg()
+    if agg:
+        rows = [{"code": "", "name": k,
+                 "pct3": round(v["pct3"], 2), "pctToday": round(v["pct"], 2)}
+                for k, v in agg.items() if v["n"] >= 5]
+        rows.sort(key=lambda r: r["pct3"], reverse=True)
+        return rows[:top]
+    # ---- 备源：东财行业板块 clist（东财细分口径，仅作降级） ----
     m = _board_clist_all()
     if m:
         rows = [{"code": v["code"], "name": k, "pct3": round(v["pct3"], 2),
@@ -353,7 +415,7 @@ def fetch_top_boards(D, top=10, days=3):
                 for k, v in m.items()]
         rows.sort(key=lambda r: r["pct3"], reverse=True)
         return rows[:top]
-    # ---- 备源：allBoards + push2his 日K ----
+    # ---- 末级备源：allBoards + push2his 日K ----
     boards = ((D.get("ashare") or {}).get("allBoards") or [])
     if not isinstance(boards, list) or not boards:
         return []
@@ -766,6 +828,7 @@ def build_module(pairs, D):
     sentiment 由 tag_entries 按要闻/AI预测打标；probability 留空由自动化 AI 填写。"""
     entries = []
     board_map = fetch_board_map()  # 本地不可达时返回 {}，boardPctToday/Zt 为 None
+    ind_agg = _stock_clist_agg()   # 申万行业口径聚合（主源），失败为 None
     for p in pairs:
         kl = p["kl"][-60:]
         bars = []
@@ -783,7 +846,14 @@ def build_module(pairs, D):
         if len(kl) >= 2 and float(kl[-2].get("close") or 0) > 0:
             pct = round((float(kl[-1].get("close") or 0) - float(kl[-2].get("close") or 0))
                         / float(kl[-2].get("close")) * 100, 2)
-        bk_code, bpt = resolve_board(p["hybk"], board_map)
+        # boardPctToday 优先申万行业成分股均值（R91m，与 TOP10 同口径）；
+        # 聚合不可达时降级为东财板块 f3（resolve_board 名称匹配）
+        ind_name = _industry_of(p["hybk"], ind_agg)
+        if ind_name:
+            bpt = round(ind_agg[ind_name]["pct"], 2)
+            bk_code = None
+        else:
+            bk_code, bpt = resolve_board(p["hybk"], board_map)
         bpz = fetch_board_pct_on(bk_code, p["ztDate"]) if bk_code else None
         entries.append({"code": p["code"], "name": p["name"],
                         "sector": p["hybk"] or "其他", "ztDate": p["ztDate"],

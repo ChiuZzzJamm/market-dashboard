@@ -64,6 +64,34 @@ def sanitize(mod):
     return mod, warns
 
 
+ENRICH_FIELDS = ("boardPctToday", "boardPctZt", "bkCode")
+
+
+def _inherit_enrich(mod, old_mod, warns):
+    """R91m：enrichment 字段（板块涨幅/板块代码）为环境依赖数据——
+    本地沙箱取不到东财行情时这些字段是 None，若整体替换会抹掉自动化环境已填的值
+    （线上弹窗「板块今日涨幅/涨停日板块涨幅」回退为「—」）。
+    草稿某标的该字段为 None 且旧数据有值时，继承旧值；同名/前缀匹配板块。"""
+    old_idx = {}
+    for pool in ("confirmed", "watching"):
+        for e in (old_mod or {}).get(pool) or []:
+            if isinstance(e, dict) and e.get("code"):
+                old_idx[str(e["code"])] = e
+    n = 0
+    for pool in ("confirmed", "watching"):
+        for e in mod.get(pool) or []:
+            old = old_idx.get(str(e.get("code") or ""))
+            if not old:
+                continue
+            for k in ENRICH_FIELDS:
+                if e.get(k) is None and old.get(k) is not None:
+                    e[k] = old[k]
+                    n += 1
+    if n:
+        warns.append(f"[INFO] 从旧数据继承 enrichment 字段 {n} 处"
+                     f"（草稿环境取不到东财行情，防止覆盖自动化已填值）")
+
+
 def main():
     ap = argparse.ArgumentParser(description="断板反包模块合并进 data.js")
     ap.add_argument("draft", help="模块草稿 JSON（check_duanban.py --module --out 产出，AI 补概率后）")
@@ -92,6 +120,10 @@ def main():
     i = s.index("{")
     j = s.rindex("}")
     D = json.loads(s[i:j + 1])
+    try:
+        _inherit_enrich(mod, (D.get("duanban") or {}), warns)
+    except Exception as e:
+        print(f"[WARN] enrichment 继承失败（不影响合并）：{e}", file=sys.stderr)
     D["duanban"] = mod
     out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, indent=2) + ";\n"
     with open(data_path, "w", encoding="utf-8") as f:

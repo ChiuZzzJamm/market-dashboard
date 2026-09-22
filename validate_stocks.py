@@ -346,14 +346,22 @@ def check_story_quality(D):
 
 
 def check_top_boards(D):
-    """R91j：duanban.topBoards（近3日板块TOP10）缺失/非数组 → WARN（16:00 自动化职责）。"""
+    """R91j/m：duanban.topBoards（近3日板块TOP10，申万行业口径）缺失/非数组/字段缺失 → WARN。"""
     db = D.get('duanban')
     if not isinstance(db, dict):
         return []
     tb = db.get('topBoards')
     if not isinstance(tb, list):
         return ["duanban.topBoards 缺失或非数组——近3日板块TOP10 模块将不显示，请由 check_duanban.py --module 生成"]
-    return []
+    warns = []
+    for i, b in enumerate(tb):
+        if not isinstance(b, dict):
+            warns.append(f"topBoards[{i}] 非对象")
+            continue
+        for k in ('name', 'pct3', 'pctToday'):
+            if b.get(k) is None:
+                warns.append(f"topBoards[{i}]（{b.get('name') or '?'}）缺 {k}")
+    return warns
 
 
 def reorder_inplace(D):
