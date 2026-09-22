@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609222000"></script>
+<script src="data.js?v=202609222031"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -333,6 +333,7 @@
   .db-refs b { color: var(--accent-deep); }
   .db-ref-p { margin: 5px 0 2px; color: var(--ink); }
   .db-ref-sum { color: var(--ink2); font-size: 11.5px; line-height: 1.65; margin: 2px 0 0 2px; }
+  .db-src-tag { display: inline-block; font-size: 9.5px; font-weight: 700; color: var(--accent-deep); background: var(--accent-soft); border-radius: 4px; padding: 0 4px; margin-left: 2px; vertical-align: middle; }
   .db-kline { position: relative; }
   .db-tip { position: absolute; display: none; transform: translateX(-50%); background: var(--paper); border: 1px solid var(--accent); border-radius: 8px; padding: 6px 10px; font-size: 11px; line-height: 1.6; color: var(--ink); box-shadow: 0 6px 18px rgba(17,17,26,.18); pointer-events: none; z-index: 10; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .db-tip b.up { color: var(--up); }
@@ -881,6 +882,8 @@ function dbChipHtml(e, key, done, showSec) {
     + '口径：' + ({ bull: '利好', bear: '利空', neutral: '中性' }[e.sentiment] || '中性') + '\n'
     + '上涨概率：' + prob + (e.probNote ? '（' + e.probNote + '）' : '') + '\n'
     + '今日：' + fmtPct(e.pct) + '\n'
+    + '板块今日：' + (e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday)) + '\n'
+    + '涨停日板块：' + (e.boardPctZt == null ? '—' : fmtPct(e.boardPctZt)) + '\n'
     + '点击查看K线与利好依据';
   return '<div class="db-chip" data-k="' + escAttr(key) + '" title="' + escAttr(tip) + '">' +
     dbSentBadge(e, 'position:absolute;top:6px;right:7px;') +
@@ -984,16 +987,19 @@ function openDbModal(key) {
   var probCls = e.sentiment === 'bear' ? 'down' : (e.sentiment === 'neutral' ? '' : 'up');
   document.getElementById('db-modal-meta').innerHTML =
     '<div><span class="lab">所属板块：</span>' + esc(e.sector || '') + '　<span class="lab">涨停日：</span>' + esc(e.ztDate || '') + '　<span class="lab">今日：</span><b class="' + (e.pct >= 0 ? 'up' : 'down') + '">' + fmtPct(e.pct) + '</b></div>' +
+    '<div><span class="lab">板块今日涨幅：</span><b class="' + (e.boardPctToday >= 0 ? 'up' : 'down') + '">' + (e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday)) + '</b>　<span class="lab">涨停日板块涨幅：</span><b class="' + (e.boardPctZt >= 0 ? 'up' : 'down') + '">' + (e.boardPctZt == null ? '—' : fmtPct(e.boardPctZt)) + '</b></div>' +
     '<div><span class="lab">形态：</span>' + esc(e.form || '') + '</div>' +
     '<div><span class="lab">上涨概率：</span><b class="' + probCls + '">' + (e.probability !== null && e.probability !== undefined ? e.probability + '%' : '—') + '</b>' + (e.probNote ? '（' + esc(e.probNote) + '）' : '') + '</div>';
   document.getElementById('db-kline').innerHTML = dbKlineSvg(e.kline);
   // R89 依据小作文化：story（AI 消息面解读，非空时优先）或结构化 refs（含新闻摘要）逐段渲染
   function dbRefPara(r) {
     if (typeof r === 'string') return '<div class="db-ref-p">' + esc(r) + '</div>';
-    var kind = r.kind === 'stock' ? '【个股消息】'
+    var isStock = r.kind === 'stock';
+    var kind = isStock ? '【个股消息】'
       : '【板块消息' + (r.kw ? '·' + r.kw : (r.sec ? '·' + r.sec : '')) + '】';
+    var tag = r.srcTag ? ' <span class="db-src-tag">' + esc(r.srcTag) + '</span>' : '';
     var head = ((r.time || '') + ' ' + (r.source || r.src || '')).trim();
-    var h = '<div class="db-ref-p"><b>' + kind + '</b>' + esc(head) + (r.title ? esc('《' + r.title + '》') : '');
+    var h = '<div class="db-ref-p"><b>' + kind + '</b>' + tag + esc(head) + (r.title ? esc('《' + r.title + '》') : '');
     if (r.summary) h += '<div class="db-ref-sum">' + esc(r.summary) + '</div>';
     return h + '</div>';
   }
@@ -1002,7 +1008,9 @@ function openDbModal(key) {
   var story = typeof e.story === 'string' ? e.story.trim() : '';
   var refsHtml = '';
   var label = e.sentiment === 'bear' ? '<b style="color:var(--down)">利空口径：</b>'
-    : (e.sentiment === 'neutral' ? '<b>中性口径：</b>' : '<b>利好依据：</b>');
+    : (e.sentiment === 'neutral' ? '<b>中性口径：</b>'
+       : (e.bullType === 'stock' ? '<b style="color:var(--up)">个股利好依据：</b>'
+          : '<b style="color:var(--up)">板块利好依据：</b>'));
   if (story) {
     // R91h：【个股消息】/【板块消息】等分段强制各占一行（即使 AI 输出为单段也按「【」拆分）
     refsHtml += label + story.split(/\n+/).map(function (p) { return p.split(/(?=【)/); }).reduce(function (a, b) { return a.concat(b); }, []).filter(function (s) { return s && s.trim(); }).map(function (p) { return '<div class="db-ref-p">' + esc(p) + '</div>'; }).join('');

@@ -212,6 +212,88 @@ def fetch_zt_pool(date):
     return None
 
 
+# ---------- R91i: 板块实时涨幅 + 涨停日板块涨幅（东财行业板块，与 hybk 同口径） ----------
+DELAY = "https://push2delay.eastmoney.com/api/qt/clist/get"
+HIS = "https://push2his.eastmoney.com/api/qt/stock/kline/get"
+EM_UT = "fa5c3db4f1ca16c5b6e3b9a3f3ae3dfa"
+
+_board_map_cache = None
+_board_pct_hist_cache = {}
+
+
+def fetch_board_map():
+    """东财行业板块全量（m:90+t:2），返回 {name: {code, pct}}。hybk 取自同一数据源，名称可精确匹配。
+    返回空字典表示抓取失败（本地沙箱可能不可达 push2delay），调用方按 None 处理。"""
+    global _board_map_cache
+    if _board_map_cache is not None:
+        return _board_map_cache
+    m = {}
+    pn = 1
+    while pn <= 12:
+        url = (f"{DELAY}?pn={pn}&pz=500&po=1&np=1&fltt=2&invt=2&fid=f3"
+               f"&fs=m:90%2Bt:2&fields=f12,f14,f3&ut={EM_UT}")
+        j = get_json_curl(url, retries=2, gap=2)
+        rows = (j.get("data") or {}).get("diff") or [] if j else []
+        if not rows:
+            break
+        for r in rows:
+            name = (r.get("f14") or "").strip()
+            code = (r.get("f12") or "").strip()
+            pct = r.get("f3")
+            if name and code:
+                m[name] = {"code": code,
+                           "pct": float(pct) if pct not in (None, "") else None}
+        if len(rows) < 500:
+            break
+        pn += 1
+        time.sleep(0.3)
+    _board_map_cache = m
+    return m
+
+
+def resolve_board(hybk, board_map):
+    """hybk(东财行业板块名) → (bk_code, pct_today) 或 (None, None)。"""
+    if not hybk:
+        return None, None
+    if hybk in board_map:
+        b = board_map[hybk]
+        return b["code"], b["pct"]
+    # 截断名/别名兜底：东财涨停池 hybk 有时比板块列表名短
+    for name, b in board_map.items():
+        if name and hybk and (name.startswith(hybk) or hybk.startswith(name)) and len(hybk) >= 3:
+            return b["code"], b["pct"]
+    return None, None
+
+
+def fetch_board_pct_on(bk_code, date_iso):
+    """板块在 date_iso(涨停日) 当日涨幅%（收盘/前收-1）。失败返回 None。"""
+    if not bk_code:
+        return None
+    hist = _board_pct_hist_cache.get(bk_code)
+    if hist is not None:
+        return hist.get(date_iso)
+    url = (f"{HIS}?secid=90.{bk_code}&fields1=f1,f2,f3&fields2=f51,f53"
+           f"&klt=101&fqt=0&beg=0&end=20500101&ut={EM_UT}")
+    j = get_json_curl(url, retries=2, gap=2)
+    kls = (((j or {}).get("data") or {}).get("klines") or []) if j else []
+    hist = {}
+    prev_close = None
+    for kl in kls:
+        parts = kl.split(",")
+        if len(parts) < 3:
+            continue
+        day = parts[0]
+        try:
+            close = float(parts[1])
+        except Exception:
+            continue
+        if prev_close and prev_close > 0:
+            hist[day] = round((close / prev_close - 1) * 100, 2)
+        prev_close = close
+    _board_pct_hist_cache[bk_code] = hist
+    return hist.get(date_iso)
+
+
 def sina_symbol(code):
     if code.startswith(("60", "68")):
         return "sh" + code
@@ -460,13 +542,14 @@ def collect_sentiment(D):
 
 
 def _fmt_ref(r):
-    """单条线索 → 小作文段落（kind 区分个股/板块消息）。"""
+    """单条线索 → 小作文段落（kind 区分个股/板块消息；srcTag 标注来源）。"""
     kind = "个股消息" if r.get("kind") == "stock" else \
         f"板块消息（{r.get('kw') or r.get('sec') or ''}）"
+    tag = (" " + str(r["srcTag"])) if r.get("srcTag") else ""
     head = " ".join(x for x in (r.get("time"), r.get("source") or r.get("src")) if x)
     title = f"《{r['title']}》" if r.get("title") else ""
     body = r.get("summary") or ""
-    return f"{kind}：{head}{title}" + (f"：{body}" if body else "")
+    return f"{kind}{tag}：{head}{title}" + (f"：{body}" if body else "")
 
 
 def tag_entries(entries, D):
@@ -480,32 +563,95 @@ def tag_entries(entries, D):
     每项附 sentiment / bullRefs / bearRefs（携带命中的真实新闻 title/summary/
     source/time）/ story（由命中的新闻摘要自动拼装的小作文底稿，
     自动化 AI 复核时须补充个股层面消息后改写）。"""
+    def _src_tag(src, kw, hybk, D):
+        """利好/利空依据来源标签：🇨🇳 国内新闻 / 隔夜美股 / 🌍 全球新闻 / 📉板块(板块/个股跌幅)。"""
+        if src == "板块今日跌幅" or str(src or "").startswith("板块"):
+            return "📉板块"
+        if src == "aiPrediction":
+            return "🇨🇳"
+        if src and str(src).startswith("ashare."):
+            return "🇨🇳"
+        if src and str(src).startswith("us."):
+            su = ((D.get("us") or {}).get("sectorsUp") or [])
+
+            def hit(name):
+                if not name:
+                    return False
+                for s in su:
+                    sn = str(s.get("name") or s.get("sector") or "")
+                    if sn == name or (len(name) >= 3 and (sn.startswith(name) or name.startswith(sn))):
+                        try:
+                            return float(s.get("pct") or 0) > 0
+                        except Exception:
+                            return False
+                return False
+            if hit(hybk) or (kw and hit(kw)):
+                return "隔夜美股"
+            return "🌍"
+        return "🇨🇳"
+
     B = collect_sentiment(D)
     out = []
     for e in entries:
         code, hybk = str(e["code"]), str(e.get("hybk") or "")
+        bpt = e.get("boardPctToday")
+        epct = e.get("pct")
+        # 上方压力技术信号（非利好）：双头/套牢盘/压力位/受阻/顶背离
+        tech_bear = bool(re.search(r"双头|套牢|压力|受阻|顶背离|上方", str(e.get("form") or "")))
+        # ---- 利空依据 ----
         bear_refs = []
         for d in B["bear_codes"].get(code) or []:
-            bear_refs.append(dict(d, kind="stock"))
+            nd2 = dict(d, kind="stock"); nd2["srcTag"] = _src_tag(d.get("src"), None, hybk, D)
+            bear_refs.append(nd2)
         for kw, d in B["bear_secs"]:
-            if kw and len(kw) >= 2 and hybk and hybk in kw and \
+            if kw and len(kw) >= 2 and hybk and (hybk in kw or kw in hybk) and \
                     not any(b["title"] == d["title"] for b in bear_refs):
-                bear_refs.append(dict(d, kind="sector", kw=kw))
-        refs = [dict(d, kind="stock") for d in B["bull_codes"].get(code) or []]
+                nd2 = dict(d, kind="sector", kw=kw); nd2["srcTag"] = _src_tag(d.get("src"), kw, hybk, D)
+                bear_refs.append(nd2)
+        # 今日大盘走弱 → 板块/个股跌幅利空（无利好依据时）
+        if not bear_refs and not (B["bull_codes"].get(code) or []):
+            br = None
+            if bpt is not None and bpt <= -1.5:
+                br = {"src": "板块今日跌幅", "sec": hybk,
+                      "title": f"所属板块「{hybk}」今日下跌{bpt:.1f}%",
+                      "summary": "今日大盘走弱，所属板块同步下挫，技术面承压",
+                      "source": "板块实时涨幅", "time": _today_str(), "kind": "sector", "kw": hybk}
+            elif epct is not None and epct <= -2.5:
+                br = {"src": "板块今日跌幅", "sec": hybk,
+                      "title": f"个股今日下跌{epct:.1f}%",
+                      "summary": "随今日大盘走弱收跌，断板反包形态未完成确认，技术面承压",
+                      "source": "个股实时涨幅", "time": _today_str(), "kind": "stock", "kw": hybk}
+            if br:
+                br["srcTag"] = _src_tag("板块今日跌幅", hybk, hybk, D)
+                bear_refs.append(br)
+        # ---- 利好依据 ----
+        refs = []
+        for d in B["bull_codes"].get(code) or []:
+            nd2 = dict(d, kind="stock"); nd2["srcTag"] = _src_tag(d.get("src"), None, hybk, D)
+            refs.append(nd2)
         if not refs:
             kw_hit = next(((kw, d) for kw, d in B["bull_secs"]
-                           if hybk and hybk in kw), None)
+                           if hybk and (hybk in kw or kw in hybk)), None)
             if kw_hit:
-                refs = [dict(kw_hit[1], kind="sector", kw=kw_hit[0])]
+                nd2 = dict(kw_hit[1], kind="sector", kw=kw_hit[0])
+                nd2["srcTag"] = _src_tag(kw_hit[1].get("src"), kw_hit[0], hybk, D)
+                refs = [nd2]
+        bull_type = "stock" if any(r.get("kind") == "stock" for r in refs) else ("sector" if refs else None)
         sent = "bear" if bear_refs else ("bull" if refs else "neutral")
+        # 小作文化
         if bear_refs:
             story = "\n".join(_fmt_ref(r) for r in bear_refs[:3])
         elif refs:
             story = "\n".join(_fmt_ref(r) for r in refs[:3])
         else:
             story = "暂无明确利好/利空消息（板块与个股近1日无点名新闻；自动化 AI 复核时请检索个股公告/财报/大单等补充）"
-        out.append(dict(e, sentiment=sent, bullRefs=refs, bearRefs=bear_refs,
-                        story=story))
+        if tech_bear and sent != "bear":
+            # 上方压力信号：属非利好技术面，作为补充提示写入 story（不污染利好依据）
+            note = "【技术面】形态显示上方套牢盘/双头压力（属上方压力，非个股利好），反弹需放量突破。"
+            if note not in story:
+                story = (story + "\n" + note) if story else note
+        out.append(dict(e, sentiment=sent, bullType=bull_type,
+                        bullRefs=refs, bearRefs=bear_refs, story=story))
     return out
 
 
@@ -514,6 +660,7 @@ def build_module(pairs, D):
     每只附近 60 根日K（前端渲染近 30 根并计算 MA5/10/20/30）与当日涨跌幅；
     sentiment 由 tag_entries 按要闻/AI预测打标；probability 留空由自动化 AI 填写。"""
     entries = []
+    board_map = fetch_board_map()  # 本地不可达时返回 {}，boardPctToday/Zt 为 None
     for p in pairs:
         kl = p["kl"][-60:]
         bars = []
@@ -531,10 +678,13 @@ def build_module(pairs, D):
         if len(kl) >= 2 and float(kl[-2].get("close") or 0) > 0:
             pct = round((float(kl[-1].get("close") or 0) - float(kl[-2].get("close") or 0))
                         / float(kl[-2].get("close")) * 100, 2)
+        bk_code, bpt = resolve_board(p["hybk"], board_map)
+        bpz = fetch_board_pct_on(bk_code, p["ztDate"]) if bk_code else None
         entries.append({"code": p["code"], "name": p["name"],
                         "sector": p["hybk"] or "其他", "ztDate": p["ztDate"],
                         "stage": p["stage_info"]["stage"], "form": p["stage_info"]["form"],
-                        "pct": pct, "probability": None, "probNote": "",
+                        "pct": pct, "boardPctToday": bpt, "boardPctZt": bpz, "bkCode": bk_code,
+                        "probability": None, "probNote": "",
                         "kline": bars})
     tagged = tag_entries(entries, D)
     confirmed = [e for e in tagged if e["stage"] == "全流程达标"]
@@ -679,7 +829,8 @@ def main():
                    "confirmed": [{"code": p["code"], "name": p["name"],
                                   "sector": p["hybk"] or "其他", "ztDate": p["ztDate"],
                                   "stage": p["stage_info"]["stage"],
-                                  "form": p["stage_info"]["form"], "pct": 0,
+                                  "form": p["stage_info"]["form"],                                   "pct": 0, "boardPctToday": None, "boardPctZt": None,
+                                  "bkCode": None, "bullType": None,
                                   "probability": None, "probNote": "",
                                   "sentiment": "neutral",
                                   "bullRefs": [], "bearRefs": [], "story": "", "kline": []}
