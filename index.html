@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609221702"></script>
+<script src="data.js?v=202609221745"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -175,8 +175,8 @@
   .nc-head.bear { color: var(--down); }
   .news-cell { background: var(--accent-soft); border-radius: 14px; border-left: 4px solid var(--up); padding: 12px 14px; display: flex; flex-direction: column; }
   .news-cell.bear { border-left-color: var(--down); }
-  .nc-theme { font-size: 14px; font-weight: 800; margin-bottom: 4px; }
-  .nc-dtl { font-size: 13px; color: var(--ink); line-height: 1.65; margin-bottom: 10px; }
+  .nc-theme { font-size: 14px; font-weight: 800; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nc-dtl { font-size: 13px; color: var(--ink); line-height: 1.65; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; min-height: calc(13px * 1.65 * 3); }
   .nc-dtl b { font-weight: 700; }
   /* 分组间距：顶对齐——分组紧跟摘要排（固定 8px），剩余空间留白在卡片底部，上方不留大空隙 */
   .news-cell .nc-imp { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }

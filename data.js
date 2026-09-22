@@ -2768,7 +2768,7 @@ window.DASHBOARD_DATA = {
         ]
       }
     ],
-    "updatedAt": "2026-09-18 17:47（A股收盘已自动更新：指数/涨跌家数/行业板块TOP5/主力资金(脚本)/10板块reason/要闻/利好利空/outlook/AI验证）",
+    "updatedAt": "2026-09-22（A股收盘已自动更新：指数/涨跌家数/行业板块TOP5/主力资金(脚本)/10板块reason/要闻/利好利空/outlook/AI验证）",
     "allBoards": [
       {
         "code": "BK1599",

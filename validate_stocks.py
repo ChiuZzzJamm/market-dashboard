@@ -17,9 +17,10 @@
 5) macroNews/intlNews/bankViews 每条要闻卡应含 direction 字段（看涨/看跌/中性）；缺失或非法值
    在写回 data.js 时自动补为 中性（前端渲染为中性灰，降级表现与旧版一致），并输出 WARNING 日志，
    但不阻断部署（避免单一装饰字段卡死整轮更新）。bullNews/bearNews 无 direction，不处理。
-6) 五节要闻每条 impacts 分组数应为 3~4（R84，与美股卡多分组结构对齐；非空条目只挂 1~2 组
-   属口径不齐，输出 WARNING 但不阻断部署——分组数依赖当日新闻实况，无法自动补救，由
-   自动化 prompt 硬约束保证；空数组/空要闻列表不检查）。
+6) 五节要闻 impacts 分组数 1~4（R90b B方案：theme 必须与新闻传导链相关、宁少勿凑，允许只挂
+   1~2 组；仅 >4 超上限输出 WARNING 不阻断部署）。另含要闻质量软闸门（R90b）：theme 与
+   title/summary 无关联、组内标的重复凑数（重复>2）、条目内标的复用>3 次、同 sector 跨节
+   重复出现——均 WARNING 不阻断，由自动化 prompt 与 AI 自检负责修正。
 7) duanban 断板反包模块（R87，软闸门）：确认池/观察池全部标的须 60/00 开头沪深主板
    （违规自动剔除 + WARNING）、probability 缺失/非法自动补 50 + WARNING、缺 bullRefs/
    kline 输出 WARNING。模块整体缺失不检查（16:00 自动化职责）。
@@ -159,8 +160,8 @@ def fix_direction_inplace(D):
 
 
 def check_impact_count(D):
-    """五节要闻非空条目的 impacts 分组数应为 3~4（R84 与美股卡结构对齐）。
-    无法自动补救（不能凭空造分组），只输出 WARNING，不阻断部署。"""
+    """五节要闻 impacts 分组数上限检查（R90b B方案：分组数 1~4、宁少勿凑——theme 必须与
+    新闻传导链相关，允许只挂 1~2 组；仅对 >4 超上限输出 WARNING，不阻断部署）。"""
     warns = []
     for mk in ('ashare', 'us'):
         sec = D.get(mk) or {}
@@ -169,11 +170,72 @@ def check_impact_count(D):
                 if not isinstance(nw, dict):
                     continue
                 n_imp = len(nw.get('impacts') or [])
-                if n_imp and not (3 <= n_imp <= 4):
+                if n_imp > 4:
                     warns.append(
                         f"{mk}.{key}[{i}]({(nw.get('sector') or '')[:14]}): impacts 分组数 {n_imp}"
-                        f"（口径要求 3~4 组，与美股卡多分组结构对齐）")
+                        f"（上限 4 组，应精简为实际受影响板块）")
     return warns
+
+
+def _bigrams(s):
+    s = re.sub(r'\s+', '', str(s or ''))
+    return {s[i:i + 2] for i in range(len(s) - 1)} if len(s) >= 2 else {s}
+
+
+def check_news_quality(D):
+    """R90b B/C 方案软闸门（全部 WARN，不阻断部署）：
+    a) theme 相关性：impact theme 与该条 title+summary 无任何二字片段交集 → 可能凑板块；
+    b) 组内重复凑数：同一 impact 组内同 code 出现 >1 次，超额（重复只数）>2 → WARN；
+    c) 条目级复用：同一条要闻内同一标的跨组出现 >3 次 → WARN；
+    d) 跨节同主题重复：同一卡内同一 sector 出现在 ≥2 节 → WARN（美债既看涨又中性类问题）。"""
+    warns = []
+    for mk in ('ashare', 'us'):
+        sec = D.get(mk) or {}
+        sector_secs = {}
+        for key in ('bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews'):
+            for i, nw in enumerate(sec.get(key) or []):
+                if not isinstance(nw, dict):
+                    continue
+                label = f"{mk}.{key}[{i}]({(nw.get('sector') or '')[:14]})"
+                text = str(nw.get('title') or '') + str(nw.get('summary') or '')
+                text_bg = _bigrams(text)
+                entry_cnt = {}
+                for j, imp in enumerate(nw.get('impacts') or []):
+                    if not isinstance(imp, dict):
+                        continue
+                    th = str(imp.get('theme') or '')
+                    if th and not (_bigrams(th) & text_bg):
+                        warns.append(f"{label}.impacts[{j}](theme={th[:12]}): theme 未在 title/summary 传导链出现，疑似凑板块（B口径：宁少勿凑）")
+                    stocks = imp.get('stocks') or []
+                    from collections import Counter
+                    cc = Counter(str(s.get('code')) for s in stocks if isinstance(s, dict))
+                    dup_extra = sum(v - 1 for v in cc.values() if v > 1)
+                    if dup_extra > 2:
+                        dnames = {str((s or {}).get('code')): (s or {}).get('name') for s in stocks if isinstance(s, dict)}
+                        dups = {dnames.get(k, k): v for k, v in cc.items() if v > 1}
+                        warns.append(f"{label}.impacts[{j}]({th[:12]}): 组内标的重复凑数 {dups}（重复 {dup_extra} 只 >2；小板块允许少量复用但须换 note 角度）")
+                    for s in stocks:
+                        if isinstance(s, dict):
+                            entry_cnt[str(s.get('code'))] = entry_cnt.get(str(s.get('code')), 0) + 1
+                over = {k: v for k, v in entry_cnt.items() if v > 3}
+                if over:
+                    warns.append(f"{label}: 同一标的在条目内跨组复用超限 {over}（>3 次，请轮换其他标的）")
+                sector_secs.setdefault(str(nw.get('sector') or ''), set()).add(key)
+        for sv, keys in sector_secs.items():
+            if sv and len(keys) >= 2:
+                warns.append(f"{mk}: 同主题「{sv[:16]}」跨节出现在 {sorted(keys)}（C口径：同一事件只保留一条，方向冲突以最新事件为准）")
+    return warns
+
+
+def check_freshness(D):
+    """ashare.updatedAt 与 tradeDate 日期不一致 → WARN（防止行情数据新鲜但时间戳停留在旧日）。"""
+    a = D.get('ashare') or {}
+    td = str(a.get('tradeDate') or '')
+    ua = str(a.get('updatedAt') or '')
+    m = re.match(r'(\d{4}-\d{2}-\d{2})', ua)
+    if td and m and m.group(1) != td:
+        return [f"ashare.updatedAt 日期({m.group(1)})与 tradeDate({td}) 不一致——行情数据可能已更新但时间戳未刷新，请核对"]
+    return []
 
 
 def reorder_inplace(D):
@@ -262,6 +324,8 @@ def main():
 
     violations = []
     imp_cnt_warns = check_impact_count(D)
+    quality_warns = check_news_quality(D)
+    fresh_warns = check_freshness(D)
 
     for mk in ('ashare', 'us'):
         sec = D.get(mk) or {}
@@ -287,12 +351,18 @@ def main():
     if as_json:
         print(json.dumps({'ok': not violations, 'direction_warnings': dir_warns,
                           'impact_count_warnings': imp_cnt_warns,
+                          'quality_warnings': quality_warns,
+                          'freshness_warnings': fresh_warns,
                           'duanban_warnings': duanban_warns,
                           'violations': violations}, ensure_ascii=False, indent=2))
     for w in dir_warns:
         print("[WARN] direction 自动补救:", w)
     for w in imp_cnt_warns:
         print("[WARN] impacts 分组数:", w)
+    for w in quality_warns:
+        print("[WARN] 要闻质量:", w)
+    for w in fresh_warns:
+        print("[WARN] 时间戳:", w)
     for w in duanban_warns:
         print("[WARN] duanban:", w)
     if violations:
