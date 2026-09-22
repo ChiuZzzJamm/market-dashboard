@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609221932"></script>
+<script src="data.js?v=202609221953"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -894,13 +894,23 @@ function dbPoolHtml(title, cls, sub, list, done, poolKey) {
   var h = '<div class="db-pool ' + cls + '"><h2>' + esc(title) + ' · ' + list.length + ' 只</h2>' +
     '<div class="db-sub">' + esc(sub) + '</div>';
   if (!list.length) return h + '<div class="db-empty">暂无标的（形态核验宁缺毋滥，无达标即如实留空）</div></div>';
-  // 板块分组：板块按组内最高上涨概率降序；组内按上涨概率降序。
+  // 板块分组（R91h 排序口径）：同板块内按上涨概率降序、概率同则利好优先于中性/利空；
+  // 板块之间按组内最高上涨概率降序、概率同则组内利好标的更多的板块排前。
   // R89b 紧凑排版：≥3 只的板块独立成组；1~2 只的小板块合并进末尾「其他板块」，
-  // 连续排满网格不留空位，卡片上加板块小标签标明归属。
+  // 「其他板块」内部同样按 上涨概率→利好 排序（不再按板块名排序），连续排满网格不留空位。
+  var sentRank = function (e) { return e.sentiment === 'bull' ? 0 : (e.sentiment === 'bear' ? 2 : 1); };
+  var stockCmp = function (x, y) {
+    var p = (y.probability || 0) - (x.probability || 0);
+    return p !== 0 ? p : sentRank(x) - sentRank(y);
+  };
   var groups = {};
   list.forEach(function (e) { var s = e.sector || '其他'; (groups[s] = groups[s] || []).push(e); });
   var maxP = function (a) { return Math.max.apply(null, a.map(function (x) { return x.probability || 0; })); };
-  var secKeys = Object.keys(groups).sort(function (a, b) { return maxP(groups[b]) - maxP(groups[a]); });
+  var bullN = function (a) { return a.filter(function (x) { return x.sentiment === 'bull'; }).length; };
+  var secKeys = Object.keys(groups).sort(function (a, b) {
+    var p = maxP(groups[b]) - maxP(groups[a]);
+    return p !== 0 ? p : bullN(groups[b]) - bullN(groups[a]);
+  });
   var renderChips = function (arr, secName) {
     arr.forEach(function (e) {
       var key = poolKey + '|' + e.code;
@@ -997,7 +1007,8 @@ function openDbModal(key) {
   var label = e.sentiment === 'bear' ? '<b style="color:var(--down)">利空口径：</b>'
     : (e.sentiment === 'neutral' ? '<b>中性口径：</b>' : '<b>利好依据：</b>');
   if (story) {
-    refsHtml += label + story.split(/\n+/).map(function (p) { return '<div class="db-ref-p">' + esc(p) + '</div>'; }).join('');
+    // R91h：【个股消息】/【板块消息】等分段强制各占一行（即使 AI 输出为单段也按「【」拆分）
+    refsHtml += label + story.split(/\n+/).map(function (p) { return p.split(/(?=【)/); }).reduce(function (a, b) { return a.concat(b); }, []).filter(function (s) { return s && s.trim(); }).map(function (p) { return '<div class="db-ref-p">' + esc(p) + '</div>'; }).join('');
     var allRefs = [].concat(e.bullRefs || [], e.bearRefs || [])
       .filter(function (r) { return r && typeof r === 'object' && r.title; });
     if (allRefs.length) {
