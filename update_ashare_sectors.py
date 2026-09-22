@@ -10,7 +10,9 @@ A股板块/指数/涨跌家数抓取（零 MCP 依赖，全部 HTTP 直连）：
   - 主力资金流入/流出 TOP3：同接口按 f62 排序（f62 单位=元，换算亿元）
 写入 data.js 的 ashare 字段：tradeDate/status/indices/breadth/sectorsUp/sectorsDown/fundIn/fundOut。
 不触碰 summary/outlook/bullNews/bearNews/fundNote（由自动化 AI 步骤撰写/保留）。
-失败策略：单个数据源失败保留原值，全部板块数据失败时以退出码 1 退出（自动化据此降级）。
+失败策略：单个数据源失败保留原值（并在 updatedAt 诚实注明保留项）；全部东财数据源
+  （涨跌家数/行业板块/主力资金/连板梯队）失败时以退出码 1 退出且不写 data.js（防旧数据
+  伪装当日收盘），并输出 [EM_FAIL] 标记行供自动化 AI 走 WebFetch 云端兜底回填（R91n）。
 """
 import json, re, subprocess, os, sys, time, argparse
 from datetime import datetime, timezone, timedelta
@@ -447,22 +449,39 @@ def main():
     indices, vol = fetch_indices()
     if indices is None:
         print("[warn] 指数获取失败，保留原值")
+    # 东财源失败清单：updatedAt 诚实标注 + [EM_FAIL] 标记供自动化 AI 走 WebFetch 兜底（R91n）
+    em_failed = []
     breadth = fetch_breadth(prev_breadth)
     if breadth is None:
+        em_failed.append("涨跌家数")
         print("[warn] 涨跌家数获取失败，保留原值")
     sectors_up, sectors_down = build_sectors()
     if sectors_up is None:
+        em_failed.append("行业板块")
         print("[warn] 行业板块获取失败，保留原值")
     fund_in, fund_out = build_funds()
     if fund_in is None:
+        em_failed.append("主力资金")
         print("[warn] 主力资金获取失败，保留原值")
 
     # 连板梯队（东财涨停池，含连板数 lbc + 涨停原因 reason；数据驱动，不依赖 AI）
     today_str = datetime.now(TZ8).strftime("%Y%m%d")
     lianban = fetch_zt_ladder(today_str)
+    if lianban is None:
+        em_failed.append("连板梯队")
+        print("[warn] 连板梯队获取失败，保留原值")
 
-    if sectors_up is None and indices is None:
-        print("[error] 所有 A 股数据源均失败，保留原值")
+    # 东财源失败兜底（R91n，修复原 L464 死条件）：
+    # 原判断 `sectors_up is None and indices is None` 因 indices 来自腾讯 gtimg（几乎总
+    # 成功）而永不触发 → 东财全挂时仍照刷 tradeDate/status/updatedAt，把上一交易日旧
+    # 板块数据伪装成当日收盘（freshness 谎报）。现改为：
+    #   - 任一东财源失败：打印 [EM_FAIL] 标记行，自动化 AI 检测后可对失败项走 WebFetch 兜底；
+    #   - 全部 4 项东财源失败：exit 1 且不写 data.js（完整保留既有值，绝不静默清场/谎报当日）。
+    if em_failed:
+        print("[EM_FAIL] " + "/".join(em_failed))
+    if len(em_failed) >= 4:  # 恰好 4 项东财源全失败
+        print("[error] 东财数据源全部失败（涨跌家数/行业板块/主力资金/连板梯队），"
+              "不写 data.js，保留既有值（自动化可对上述项走 WebFetch 兜底）")
         sys.exit(1)
 
     today_md = datetime.now(TZ8).strftime("%m/%d")
@@ -562,8 +581,12 @@ def main():
         a["tradeDate"] = now
         a["status"] = "收盘"
         if updated_parts:
-            D["updatedAt"] = (f"{datetime.now(TZ8).strftime('%Y-%m-%d %H:%M')}"
-                              f"（A股收盘已自动更新：{'/'.join(updated_parts)}）")
+            note = f"（A股收盘已自动更新：{'/'.join(updated_parts)}）"
+            if em_failed:
+                # 诚实标注：失败项沿用上一轮数据，页面读者/自动化 AI 可识别哪些字段是旧的
+                note = (f"（A股收盘已自动更新：{'/'.join(updated_parts)}；"
+                        f"{'/'.join(em_failed)}数据源失败，保留上一轮数据）")
+            D["updatedAt"] = datetime.now(TZ8).strftime('%Y-%m-%d %H:%M') + note
         out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, indent=2) + ";\n"
         open("data.js", "w", encoding="utf-8").write(out)
         # 语法校验：定位 node（与 deploy.sh/run_push.sh/push_notify.py 一致，避免自动化环境
@@ -577,7 +600,10 @@ def main():
                 sys.exit(2)
         except Exception as e:
             print("[warn] 跳过 node --check（node 不可用）：" + str(e))
-        print(f"[info] data.js 已更新（{'/'.join(updated_parts)}）")
+        msg = f"[info] data.js 已更新（{'/'.join(updated_parts)}）"
+        if em_failed:
+            msg += f"；东财源失败保留原值：{'/'.join(em_failed)}"
+        print(msg)
     else:
         print("[dry-run] 指数:", json.dumps(indices, ensure_ascii=False))
         print("[dry-run] 涨跌家数:", json.dumps(breadth, ensure_ascii=False), "|", volume_text)
