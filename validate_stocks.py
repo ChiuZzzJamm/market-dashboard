@@ -17,6 +17,9 @@
 5) macroNews/intlNews/bankViews 每条要闻卡应含 direction 字段（看涨/看跌/中性）；缺失或非法值
    在写回 data.js 时自动补为 中性（前端渲染为中性灰，降级表现与旧版一致），并输出 WARNING 日志，
    但不阻断部署（避免单一装饰字段卡死整轮更新）。bullNews/bearNews 无 direction，不处理。
+6) 五节要闻每条 impacts 分组数应为 3~4（R84，与美股卡多分组结构对齐；非空条目只挂 1~2 组
+   属口径不齐，输出 WARNING 但不阻断部署——分组数依赖当日新闻实况，无法自动补救，由
+   自动化 prompt 硬约束保证；空数组/空要闻列表不检查）。
 
 类别按 note 前缀判定：断板反包→断板；板块龙头/龙头→龙头；相关概念/概念→概念；
 小盘→小盘；其余前缀视为无法识别（报违规）。
@@ -152,6 +155,24 @@ def fix_direction_inplace(D):
     return warns
 
 
+def check_impact_count(D):
+    """五节要闻非空条目的 impacts 分组数应为 3~4（R84 与美股卡结构对齐）。
+    无法自动补救（不能凭空造分组），只输出 WARNING，不阻断部署。"""
+    warns = []
+    for mk in ('ashare', 'us'):
+        sec = D.get(mk) or {}
+        for key in ('bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews'):
+            for i, nw in enumerate(sec.get(key) or []):
+                if not isinstance(nw, dict):
+                    continue
+                n_imp = len(nw.get('impacts') or [])
+                if n_imp and not (3 <= n_imp <= 4):
+                    warns.append(
+                        f"{mk}.{key}[{i}]({(nw.get('sector') or '')[:14]}): impacts 分组数 {n_imp}"
+                        f"（口径要求 3~4 组，与美股卡多分组结构对齐）")
+    return warns
+
+
 def reorder_inplace(D):
     """无破坏性地把所有标的清单重排为 龙头→概念→小盘人气→断板反包（同类内保序）。
     仅调顺序，不改数量与内容；幂等。"""
@@ -193,6 +214,7 @@ def main():
             f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, indent=2) + ';\n')
 
     violations = []
+    imp_cnt_warns = check_impact_count(D)
 
     for mk in ('ashare', 'us'):
         sec = D.get(mk) or {}
@@ -217,9 +239,12 @@ def main():
 
     if as_json:
         print(json.dumps({'ok': not violations, 'direction_warnings': dir_warns,
+                          'impact_count_warnings': imp_cnt_warns,
                           'violations': violations}, ensure_ascii=False, indent=2))
     for w in dir_warns:
         print("[WARN] direction 自动补救:", w)
+    for w in imp_cnt_warns:
+        print("[WARN] impacts 分组数:", w)
     if violations:
         print(f"[FAIL] 共 {len(violations)} 处违规：")
         for v in violations:
