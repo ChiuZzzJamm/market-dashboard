@@ -5394,7 +5394,7 @@ window.DASHBOARD_DATA = {
         "time": "2026-09-22",
         "impacts": [
           {
-            "theme": "计算机设",
+            "theme": "计算机设备",
             "stocks": [
               {
                 "code": "002415",
@@ -5484,7 +5484,7 @@ window.DASHBOARD_DATA = {
             ]
           },
           {
-            "theme": "互联网电",
+            "theme": "互联网电商",
             "stocks": [
               {
                 "code": "603613",
@@ -5517,9 +5517,9 @@ window.DASHBOARD_DATA = {
                 "note": "小盘人气·若羽臣"
               },
               {
-                "code": "002640",
-                "name": "跨境通",
-                "note": "小盘人气·跨境通"
+                "code": "600415",
+                "name": "小商品城",
+                "note": "小盘人气·跨境电商+义乌小商品"
               },
               {
                 "code": "002640",
@@ -7660,7 +7660,7 @@ window.DASHBOARD_DATA = {
         "time": "2026-09-22",
         "impacts": [
           {
-            "theme": "计算机设",
+            "theme": "计算机设备",
             "stocks": [
               {
                 "code": "002415",
@@ -7750,7 +7750,7 @@ window.DASHBOARD_DATA = {
             ]
           },
           {
-            "theme": "互联网电",
+            "theme": "互联网电商",
             "stocks": [
               {
                 "code": "603613",
@@ -7783,9 +7783,9 @@ window.DASHBOARD_DATA = {
                 "note": "小盘人气·若羽臣"
               },
               {
-                "code": "002640",
-                "name": "跨境通",
-                "note": "小盘人气·跨境通"
+                "code": "600415",
+                "name": "小商品城",
+                "note": "小盘人气·跨境电商+义乌小商品"
               },
               {
                 "code": "002640",

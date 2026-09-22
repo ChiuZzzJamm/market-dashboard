@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609221745"></script>
+<script src="data.js?v=202609221814"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -180,7 +180,7 @@
   .nc-dtl b { font-weight: 700; }
   /* 分组间距：顶对齐——分组紧跟摘要排（固定 8px），剩余空间留白在卡片底部，上方不留大空隙 */
   .news-cell .nc-imp { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
-  .nc-imp-theme { font-size: 12.5px; font-weight: 700; color: var(--accent-deep); display: inline-flex; align-items: center; gap: 5px; }
+  .nc-imp-theme { font-size: 12.5px; font-weight: 700; color: var(--accent-deep); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
   .nc-imp-theme::before { content: ''; width: 3px; height: 11px; border-radius: 2px; background: var(--accent); flex: none; }
   .dir-badge { font-size: 11px; font-weight: 700; margin-left: 6px; }
   .persp-tag { font-size: 10px; margin-left: 5px; padding: 1px 6px; }
@@ -403,8 +403,11 @@ function cssVar(n) { return getComputedStyle(document.documentElement).getProper
 function dateTag(tradeDate) { var m = String(tradeDate).match(/(\d{4})-(\d{2})-(\d{2})/); return m ? m[2] + "月" + m[3] + "日" : ""; }
 function formatOutlook(text) {
   if (!text) return '—';
+  // 兼容 object {date, content} 与 string 两种格式
+  if (typeof text === 'object' && text !== null) text = text.content || text.text || '';
+  text = String(text || '');
   // 按「【」标题分段，每段渲染成 <p> 实现网页内换行；微信推送端保持原始连续文本
-  var segs = String(text).split(/(?=【)/).filter(function(s){ return s.trim(); });
+  var segs = text.split(/(?=【)/).filter(function(s){ return s.trim(); });
   if (segs.length <= 1) return '<p style="margin:0 0 10px 0; line-height:1.7;">' + esc(text) + '</p>';
   return segs.map(function(seg){ return '<p style="margin:0 0 10px 0; line-height:1.7;">' + esc(seg.trim()) + '</p>'; }).join('');
 }
