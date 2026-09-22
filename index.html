@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609221040"></script>
+<script src="data.js?v=202609221200"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -239,12 +239,87 @@
   .pano-cell .pc { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .pano-date { font-size: 12.5px; color: var(--ink2); margin-bottom: 10px; }
 
+  /* ===== 断板反包模块（R87） ===== */
+  .hero { position: relative; }
+  .db-entry {
+    position: absolute; top: 24px; right: 28px;
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--paper); color: var(--accent-deep);
+    border: 1.5px solid var(--accent); border-radius: 999px;
+    font-size: 13px; font-weight: 800; letter-spacing: 1px;
+    padding: 7px 16px; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(74,168,224,.18);
+    transition: all .2s ease; font-family: var(--font);
+  }
+  .db-entry:hover { background: var(--accent); color: #fff; transform: translateY(-1px); }
+  .db-entry .db-badge { font-size: 11px; font-weight: 700; background: var(--up); color: #fff; border-radius: 999px; padding: 1px 8px; letter-spacing: 0; }
+  @media (max-width: 700px) { .db-entry { top: 12px; right: 14px; padding: 5px 12px; font-size: 12px; } .db-entry .db-badge { display: none; } }
+
+  /* 独立页面：打开时隐藏看板主体，只显示本模块 */
+  #duanban-view { display: none; }
+  body.db-open .wrap > *:not(#duanban-view) { display: none !important; }
+  body.db-open #duanban-view { display: block; }
+  .db-topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+  .db-back {
+    background: var(--paper); color: var(--accent-deep); border: 1px solid var(--accent);
+    border-radius: 999px; font-size: 13px; font-weight: 700; padding: 7px 18px;
+    cursor: pointer; box-shadow: var(--shadow); font-family: var(--font); transition: all .2s ease;
+  }
+  .db-back:hover { background: var(--accent); color: #fff; }
+  .db-title { font-size: 22px; font-weight: 900; letter-spacing: 2px; }
+  .db-date { font-size: 12px; color: var(--ink2); margin-left: auto; }
+  .db-note { font-size: 12px; color: var(--ink2); background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 10px 16px; margin-bottom: 18px; line-height: 1.7; box-shadow: var(--shadow); }
+  .db-pool { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
+  .db-pool h2 { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 9px; margin: 0 0 4px; }
+  .db-pool h2::before { content: ""; width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .db-pool.p-conf h2::before { background: var(--up); box-shadow: 0 0 0 4px var(--up-soft); }
+  .db-pool.p-watch h2::before { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+  .db-pool .db-sub { font-size: 12px; color: var(--ink2); margin-bottom: 14px; }
+  .db-sec { margin: 16px 0 8px; font-size: 13.5px; font-weight: 800; color: var(--accent-deep); display: flex; align-items: center; gap: 6px; }
+  .db-sec::before { content: ''; width: 3px; height: 12px; border-radius: 2px; background: var(--accent); }
+  .db-sec .db-sec-n { font-size: 11px; color: var(--ink2); font-weight: 600; }
+  .db-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 700px) { .db-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .db-chip {
+    background: #f7fafd; border: 1px solid var(--line); border-radius: 12px;
+    padding: 8px 10px; font-size: 12.5px; cursor: pointer; position: relative;
+    display: flex; flex-direction: column; gap: 1px; min-width: 0;
+    transition: all .15s ease; -webkit-tap-highlight-color: transparent;
+  }
+  .db-chip:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .db-chip .r1 { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
+  .db-chip b { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .db-chip .cd { color: var(--ink2); font-size: 10.5px; white-space: nowrap; }
+  .db-chip .db-prob { margin-left: auto; font-size: 11.5px; font-weight: 800; color: var(--up); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  .db-chip .r2 { display: flex; align-items: center; gap: 5px; min-width: 0; }
+  .db-chip .db-stage { font-size: 10px; font-weight: 700; border-radius: 999px; padding: 1px 7px; flex-shrink: 0; }
+  .db-chip .db-stage.done { background: var(--up-soft); color: var(--up); }
+  .db-chip .db-stage.hold { background: var(--accent-soft); color: var(--accent-deep); }
+  .db-chip .nt { font-size: 10.5px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .db-empty { font-size: 13px; color: var(--ink2); padding: 14px 4px; }
+
+  /* K线弹窗 */
+  #db-modal { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(30,45,60,.45); align-items: center; justify-content: center; padding: 20px; }
+  #db-modal.open { display: flex; }
+  .db-modal-box { background: var(--paper); border-radius: var(--radius); padding: 20px 22px; max-width: 760px; width: 100%; max-height: 92vh; overflow: auto; box-shadow: 0 20px 60px rgba(17,17,26,.25); }
+  .db-modal-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 8px; }
+  .db-modal-head .nm { font-size: 18px; font-weight: 900; }
+  .db-modal-head .cd2 { font-size: 12px; color: var(--ink2); }
+  .db-modal-close { margin-left: auto; background: none; border: 1px solid var(--line); border-radius: 999px; width: 30px; height: 30px; font-size: 15px; cursor: pointer; color: var(--ink2); line-height: 1; }
+  .db-modal-close:hover { border-color: var(--accent); color: var(--accent-deep); }
+  .db-modal-meta { font-size: 12.5px; color: var(--ink); line-height: 1.8; margin-bottom: 10px; }
+  .db-modal-meta .lab { color: var(--ink2); }
+  .db-kline svg { width: 100%; height: auto; display: block; }
+  .db-refs { margin-top: 10px; font-size: 12px; color: var(--ink2); line-height: 1.7; border-top: 1px dashed var(--line); padding-top: 8px; }
+  .db-refs b { color: var(--accent-deep); }
+
   footer.disclaimer { margin-top: 36px; font-size: 12px; color: var(--ink2); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 22px; line-height: 1.7; box-shadow: var(--shadow); }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="hero">
+    <button class="db-entry" id="db-entry" onclick="openDuanban()">断板反包<span class="db-badge" id="db-badge"></span></button>
     <h1>每日市场看板</h1>
     <div class="sub">A 股 · 美股 · 全球产业全景</div>
     <span class="updated" id="updatedAt"></span>
@@ -271,6 +346,25 @@
   <footer class="disclaimer">
     <b>免责声明</b>：以上内容基于公开数据和量化分析，仅供参考，不构成投资建议。市场有风险，投资需谨慎。任何投资决策应结合个人风险承受能力、资金状况和投资目标独立判断，必要时咨询持牌专业机构。过往表现不预示未来收益。
   </footer>
+
+  <div id="duanban-view">
+    <div class="db-topbar">
+      <button class="db-back" onclick="closeDuanban()">← 返回看板</button>
+      <div class="db-title">断板反包</div>
+      <div class="db-date" id="db-date"></div>
+    </div>
+    <div class="db-note" id="db-note"></div>
+    <div id="db-pools"></div>
+  </div>
+</div>
+
+<div id="db-modal" onclick="if(event.target===this)closeDbModal()">
+  <div class="db-modal-box">
+    <div class="db-modal-head" id="db-modal-head"></div>
+    <div class="db-modal-meta" id="db-modal-meta"></div>
+    <div class="db-kline" id="db-kline"></div>
+    <div class="db-refs" id="db-refs"></div>
+  </div>
 </div>
 
 <script>
@@ -724,6 +818,150 @@ function renderLianban(list) {
   return s;
 }
 
+/* ===== 断板反包模块（R87）：双池 + K线弹窗 ===== */
+var DB_INDEX = {};
+function duanbanData() { return window.DASHBOARD_DATA.duanban || null; }
+
+function dbChipHtml(e, key, done) {
+  var stageCls = done ? 'done' : 'hold';
+  var stageTxt = done ? '已确认' : e.stage;
+  var tip = e.name + ' ' + e.code + '（' + (e.sector || '') + '）\n'
+    + (done ? '确认池 · 全流程达标' : '观察池 · ' + e.stage) + '\n'
+    + '形态：' + (e.form || '') + '\n'
+    + '上涨概率：' + (e.probability !== null && e.probability !== undefined ? e.probability + '%' : '—') + (e.probNote ? '（' + e.probNote + '）' : '') + '\n'
+    + '今日：' + fmtPct(e.pct) + '\n'
+    + '点击查看K线与利好依据';
+  return '<div class="db-chip" data-k="' + escAttr(key) + '" title="' + escAttr(tip) + '">' +
+    '<div class="r1"><b>' + esc(e.name) + '</b><span class="cd">' + esc(e.code) + '</span>' +
+    '<span class="db-prob">' + (e.probability !== null && e.probability !== undefined ? e.probability + '%' : '—') + '</span></div>' +
+    '<div class="r2"><span class="db-stage ' + stageCls + '">' + esc(stageTxt) + '</span>' +
+    '<span class="nt">' + esc((e.form || '').replace(/^.*?断板/, '断板')) + '</span></div></div>';
+}
+
+function dbPoolHtml(title, cls, sub, list, done, poolKey) {
+  var h = '<div class="db-pool ' + cls + '"><h2>' + esc(title) + ' · ' + list.length + ' 只</h2>' +
+    '<div class="db-sub">' + esc(sub) + '</div>';
+  if (!list.length) return h + '<div class="db-empty">暂无标的（形态核验宁缺毋滥，无达标即如实留空）</div></div>';
+  // 板块分组：板块按组内最高上涨概率降序；组内按上涨概率降序
+  var groups = {};
+  list.forEach(function (e) { var s = e.sector || '其他'; (groups[s] = groups[s] || []).push(e); });
+  var maxP = function (a) { return Math.max.apply(null, a.map(function (x) { return x.probability || 0; })); };
+  Object.keys(groups).sort(function (a, b) { return maxP(groups[b]) - maxP(groups[a]); })
+    .forEach(function (s) {
+      var arr = groups[s].slice().sort(function (x, y) { return (y.probability || 0) - (x.probability || 0); });
+      h += '<div class="db-sec">' + esc(s) + '<span class="db-sec-n">' + arr.length + ' 只</span></div><div class="db-chips">';
+      arr.forEach(function (e) {
+        var key = poolKey + '|' + e.code;
+        DB_INDEX[key] = e;
+        h += dbChipHtml(e, key, done);
+      });
+      h += '</div>';
+    });
+  return h + '</div>';
+}
+
+function renderDuanban() {
+  DB_INDEX = {};
+  var db = duanbanData();
+  document.getElementById('db-date').textContent = db && db.generatedAt ? '数据生成：' + db.generatedAt + '（每日 16:00 收盘后更新）' : '数据生成：—（待 16:00 自动化首跑）';
+  document.getElementById('db-note').textContent = (db && db.note) || '断板反包形态由脚本确定性核验（东财涨停池 + 腾讯日K，check_duanban.py），全部标的经利好一致性闸门核验：必须有利好要闻/内容/AI预测看涨支撑，板块被看空的标的已剔除。';
+  var conf = (db && db.confirmed) || [], watch = (db && db.watching) || [];
+  var badge = document.getElementById('db-badge');
+  badge.textContent = (conf.length + watch.length) ? ('确认 ' + conf.length + ' · 观察 ' + watch.length) : '';
+  var html = '';
+  html += dbPoolHtml('确认池', 'p-conf', '已走完「涨停 → 放量断板 → 缩量 → 不破T日低点与MA5」全流程', conf, true, 'c');
+  html += dbPoolHtml('观察池', 'p-watch', '形态进行中、只差最后一根确认K线（待企稳 ＞ 待缩量）', watch, false, 'w');
+  document.getElementById('db-pools').innerHTML = html;
+}
+
+function openDuanban() {
+  if (location.hash !== '#duanban') history.pushState(null, '', '#duanban');
+  document.body.classList.add('db-open');
+  window.scrollTo(0, 0);
+  renderDuanban();
+}
+function closeDuanban() {
+  if (location.hash === '#duanban') history.pushState(null, '', location.pathname + location.search);
+  document.body.classList.remove('db-open');
+  closeDbModal();
+}
+window.addEventListener('popstate', function () {
+  var open = location.hash === '#duanban';
+  document.body.classList.toggle('db-open', open);
+  if (open) renderDuanban(); else closeDbModal();
+});
+
+function openDbModal(key) {
+  var e = DB_INDEX[key];
+  if (!e) return;
+  var done = key.indexOf('c|') === 0;
+  document.getElementById('db-modal-head').innerHTML =
+    '<span class="nm">' + esc(e.name) + '</span><span class="cd2">' + esc(e.code) + '</span>' +
+    '<span class="db-stage ' + (done ? 'done' : 'hold') + '" style="font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;' + (done ? 'background:var(--up-soft);color:var(--up)' : 'background:var(--accent-soft);color:var(--accent-deep)') + '">' + (done ? '确认池' : '观察池 · ' + esc(e.stage)) + '</span>' +
+    '<button class="db-modal-close" onclick="closeDbModal()">×</button>';
+  document.getElementById('db-modal-meta').innerHTML =
+    '<div><span class="lab">所属板块：</span>' + esc(e.sector || '') + '　<span class="lab">涨停日：</span>' + esc(e.ztDate || '') + '　<span class="lab">今日：</span><b class="' + (e.pct >= 0 ? 'up' : 'down') + '">' + fmtPct(e.pct) + '</b></div>' +
+    '<div><span class="lab">形态：</span>' + esc(e.form || '') + '</div>' +
+    '<div><span class="lab">上涨概率：</span><b class="up">' + (e.probability !== null && e.probability !== undefined ? e.probability + '%' : '—') + '</b>' + (e.probNote ? '（' + esc(e.probNote) + '）' : '') + '</div>';
+  document.getElementById('db-kline').innerHTML = dbKlineSvg(e.kline);
+  var refs = (e.bullRefs || []).map(function (r) { return '<b>' + esc(r.title || '') + '</b>（' + esc(r.src || '') + '）'; }).join('；');
+  document.getElementById('db-refs').innerHTML =
+    '<b>利好依据（已过一致性闸门）：</b>' + (refs || '—') +
+    '<br>形态核验：check_duanban.py 确定性脚本（东财涨停池 + 腾讯日K）；观察池标的待最后一根确认K线，确认失败即移出。';
+  document.getElementById('db-modal').classList.add('open');
+}
+function closeDbModal() { document.getElementById('db-modal').classList.remove('open'); }
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDbModal(); });
+document.getElementById('db-pools').addEventListener('click', function (ev) {
+  var chip = ev.target ? ev.target.closest('.db-chip') : null;
+  if (chip) openDbModal(chip.getAttribute('data-k'));
+});
+
+function dbKlineSvg(kline) {
+  if (!kline || kline.length < 2) return '<div class="db-empty">暂无K线数据</div>';
+  var W = 680, H = 360, padL = 8, padR = 54, priceTop = 16, priceBot = 236, volTop = 256, volBot = 336;
+  var n = kline.length;
+  var hi = Math.max.apply(null, kline.map(function (b) { return b[3]; }));
+  var lo = Math.min.apply(null, kline.map(function (b) { return b[4]; }));
+  if (hi <= lo) { hi += 1; lo -= 1; }
+  var pad = (hi - lo) * 0.07; hi += pad; lo -= pad;
+  var maxV = Math.max.apply(null, kline.map(function (b) { return b[5]; })) || 1;
+  var step = (W - padL - padR) / n;
+  var bw = Math.min(16, step * 0.62);
+  function y(p) { return priceBot - (p - lo) / (hi - lo) * (priceBot - priceTop); }
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
+  for (var g = 0; g <= 4; g++) {
+    var gv = lo + (hi - lo) * g / 4, gy = y(gv);
+    svg += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (W - padR + 6) + '" y2="' + gy + '" stroke="#e3ecf4" stroke-dasharray="3 3"/>';
+    svg += '<text x="' + (W - padR + 10) + '" y="' + (gy + 4) + '" font-size="10" fill="#5a6e82">' + gv.toFixed(2) + '</text>';
+  }
+  // MA5（窗口内满 5 根起画）
+  var maPath = '';
+  kline.forEach(function (b, i) {
+    if (i < 4) return;
+    var s = 0; for (var j = i - 4; j <= i; j++) s += kline[j][2];
+    maPath += (maPath ? ' L ' : 'M ') + (padL + step * (i + 0.5)).toFixed(1) + ' ' + y(s / 5).toFixed(1);
+  });
+  kline.forEach(function (b, i) {
+    var cx = padL + step * (i + 0.5);
+    var o = b[1], c = b[2], h = b[3], l = b[4], v = b[5];
+    var up = c >= o, col = up ? '#f0435c' : '#0f9d78';
+    svg += '<line x1="' + cx + '" y1="' + y(h) + '" x2="' + cx + '" y2="' + y(l) + '" stroke="' + col + '" stroke-width="1"/>';
+    var ty = y(Math.max(o, c)), by = y(Math.min(o, c));
+    svg += '<rect x="' + (cx - bw / 2) + '" y="' + ty + '" width="' + bw + '" height="' + Math.max(1, by - ty) + '" fill="' + (up ? '#fff' : col) + '" stroke="' + col + '" stroke-width="1.2"/>';
+    var vy = volBot - (v / maxV) * (volBot - volTop);
+    svg += '<rect x="' + (cx - bw / 2) + '" y="' + vy + '" width="' + bw + '" height="' + (volBot - vy) + '" fill="' + col + '" opacity="0.55"/>';
+  });
+  if (maPath) svg += '<path d="' + maPath + '" fill="none" stroke="#4aa8e0" stroke-width="1.4"/>';
+  [0, Math.floor(n / 2), n - 1].forEach(function (i) {
+    var cx = padL + step * (i + 0.5), d = String(kline[i][0] || '').slice(5);
+    svg += '<text x="' + cx + '" y="' + (H - 6) + '" font-size="10" fill="#5a6e82" text-anchor="middle">' + esc(d) + '</text>';
+  });
+  svg += '<text x="' + (W - padR + 10) + '" y="' + (volTop - 4) + '" font-size="9.5" fill="#8aa0b5">成交量</text>';
+  svg += '</svg>';
+  return svg;
+}
+
 function renderOpenOutlook() {
   // 每日开盘前瞻（R72）：顶层 openOutlook 带日期，前端按日期显示、过期自动隐藏
   var D = window.DASHBOARD_DATA;
@@ -788,6 +1026,8 @@ renderOpenOutlook();
   });
 render('ashare');
 renderPano();
+renderDuanban();
+if (location.hash === '#duanban') { document.body.classList.add('db-open'); window.scrollTo(0, 0); }
 </script>
 </body>
 </html>

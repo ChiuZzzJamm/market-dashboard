@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""把断板反包模块草稿合并进 data.js 的 duanban 字段（R87）。
+
+用法：
+  python3 merge_duanban.py duanban_draft.json        # 从草稿文件合并
+  python3 merge_duanban.py duanban_draft.json --check-only  # 只校验不写回
+
+草稿由 check_duanban.py --module --out 生成，自动化 AI 需在合并前补全：
+  - probability（0-100 整数上涨概率，必填）
+  - probNote（≤30字概率依据，建议填写）
+  - 可删除 excluded 复核后认为不应进池的标的；也可把 excluded 中有明确利好
+    语义依据的标的移入 confirmed/watching（须同步补 probability/bullRefs）
+合并时机械校验：全部标的 60/00 开头沪深主板、code/name/sector/form/kline 齐全、
+probability 为 0-100 数值（缺失时补 50 并告警）。写回后自动 node --check。
+"""
+import argparse
+import json
+import re
+import subprocess
+import sys
+
+MAINBOARD = re.compile(r"^(60|00)\d{4}$")
+
+
+def load_json(path):
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def sanitize(mod):
+    """机械校验+补救：返回 (干净模块, 告警列表)。"""
+    warns = []
+    for pool in ("confirmed", "watching"):
+        kept = []
+        for e in mod.get(pool) or []:
+            code = str(e.get("code") or "")
+            if not MAINBOARD.match(code):
+                warns.append(f"[WARN] {pool}.{code} 非 60/00 沪深主板，已剔除")
+                continue
+            for k in ("name", "sector", "form", "stage"):
+                if not e.get(k):
+                    e[k] = "" if k != "sector" else "其他"
+                    warns.append(f"[WARN] {pool}.{code} 缺 {k}，已补默认值")
+            kl = e.get("kline")
+            if not isinstance(kl, list) or not kl:
+                warns.append(f"[WARN] {pool}.{code} 缺 kline（前端无K线图可画）")
+            p = e.get("probability")
+            if not isinstance(p, (int, float)) or not (0 <= p <= 100):
+                e["probability"] = 50
+                warns.append(f"[WARN] {pool}.{code} probability 缺失/非法，已补 50")
+            else:
+                e["probability"] = round(float(p), 1)
+            if not e.get("bullRefs"):
+                warns.append(f"[WARN] {pool}.{code} 无 bullRefs（利好依据为空，请复核）")
+            kept.append(e)
+        mod[pool] = kept
+    mod["excluded"] = mod.get("excluded") or []
+    mod.setdefault("note", "")
+    mod.setdefault("generatedAt", "")
+    return mod, warns
+
+
+def main():
+    ap = argparse.ArgumentParser(description="断板反包模块合并进 data.js")
+    ap.add_argument("draft", help="模块草稿 JSON（check_duanban.py --module --out 产出，AI 补概率后）")
+    ap.add_argument("--data", default=None, help="data.js 路径（默认同目录）")
+    ap.add_argument("--check-only", action="store_true", help="只校验草稿不写回")
+    args = ap.parse_args()
+
+    import os
+    data_path = args.data or os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "data.js")
+    mod, warns = sanitize(load_json(args.draft))
+    for w in warns:
+        print(w, file=sys.stderr)
+    n_ok = len(mod["confirmed"]) + len(mod["watching"])
+    print(f"[merge] 确认池 {len(mod['confirmed'])} 只 + 观察池 {len(mod['watching'])} 只"
+          f"（excluded {len(mod['excluded'])} 只不进池）", file=sys.stderr)
+    if args.check_only:
+        return
+    if n_ok == 0:
+        print("[merge] 双池均为空：写入空模块（前端显示空态），如实反映", file=sys.stderr)
+
+    with open(data_path, encoding="utf-8") as f:
+        s = f.read()
+    i = s.index("{")
+    j = s.rindex("}")
+    D = json.loads(s[i:j + 1])
+    D["duanban"] = mod
+    out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, indent=2) + ";\n"
+    with open(data_path, "w", encoding="utf-8") as f:
+        f.write(out)
+    try:
+        subprocess.run(["/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node",
+                        "--check", data_path], check=True,
+                       capture_output=True, timeout=30)
+        print("[merge] data.js 写回完成，node --check 通过", file=sys.stderr)
+    except Exception:
+        subprocess.run(["node", "--check", data_path], check=True, timeout=30)
+        print("[merge] data.js 写回完成，node --check 通过（系统 node）", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()

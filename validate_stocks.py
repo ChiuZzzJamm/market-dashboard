@@ -20,6 +20,9 @@
 6) 五节要闻每条 impacts 分组数应为 3~4（R84，与美股卡多分组结构对齐；非空条目只挂 1~2 组
    属口径不齐，输出 WARNING 但不阻断部署——分组数依赖当日新闻实况，无法自动补救，由
    自动化 prompt 硬约束保证；空数组/空要闻列表不检查）。
+7) duanban 断板反包模块（R87，软闸门）：确认池/观察池全部标的须 60/00 开头沪深主板
+   （违规自动剔除 + WARNING）、probability 缺失/非法自动补 50 + WARNING、缺 bullRefs/
+   kline 输出 WARNING。模块整体缺失不检查（16:00 自动化职责）。
 
 类别按 note 前缀判定：断板反包→断板；板块龙头/龙头→龙头；相关概念/概念→概念；
 小盘→小盘；其余前缀视为无法识别（报违规）。
@@ -201,14 +204,48 @@ def reorder_inplace(D):
             s['stocks'] = r(s['stocks'])
 
 
+def fix_duanban_inplace(D):
+    """duanban 断板反包模块软闸门（R87）：非主板标的自动剔除、probability 补 50，
+    缺 bullRefs/kline 告警。模块整体缺失不处理（属 16:00 自动化职责）。返回 (改动?, 告警列表)。"""
+    db = D.get('duanban')
+    if not isinstance(db, dict):
+        return False, []
+    warns, changed = [], False
+    for pool in ('confirmed', 'watching'):
+        kept = []
+        for e in (db.get(pool) or []):
+            if not isinstance(e, dict):
+                continue
+            code = str(e.get('code') or '')
+            if board_bad(code):
+                warns.append(f"duanban.{pool}: 非沪深主板标的 {code} {(e.get('name') or '')} → 自动剔除")
+                changed = True
+                continue
+            p = e.get('probability')
+            if not isinstance(p, (int, float)) or not (0 <= p <= 100):
+                e['probability'] = 50
+                warns.append(f"duanban.{pool}: {code} probability 缺失/非法（{p!r}）→ 自动补 50")
+                changed = True
+            if not e.get('bullRefs'):
+                warns.append(f"duanban.{pool}: {code} {(e.get('name') or '')} 无 bullRefs 利好依据（请复核一致性闸门）")
+            if not e.get('kline'):
+                warns.append(f"duanban.{pool}: {code} 无 kline（前端无K线图可画）")
+            kept.append(e)
+        if db.get(pool) != kept:
+            db[pool] = kept
+            changed = True
+    return changed, warns
+
+
 def main():
     as_json = '--json' in sys.argv
     D = load_data()
 
-    # 先自动补救 direction（缺失/非法 → 中性），再无破坏性地按统一顺序重排
-    # （龙头→概念→小盘人气→断板反包）；两者均写回 data.js，但都不阻断部署。
+    # 先自动补救 direction（缺失/非法 → 中性）、duanban 软闸门（剔除非主板/补概率），
+    # 再无破坏性地按统一顺序重排（龙头→概念→小盘人气→断板反包）；均写回但不阻断部署。
     dir_warns = fix_direction_inplace(D)
-    if '--no-fix-order' not in sys.argv:
+    duanban_changed, duanban_warns = fix_duanban_inplace(D)
+    if '--no-fix-order' not in sys.argv or duanban_changed:
         reorder_inplace(D)
         with open('data.js', 'w', encoding='utf-8') as f:
             f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, indent=2) + ';\n')
@@ -240,11 +277,14 @@ def main():
     if as_json:
         print(json.dumps({'ok': not violations, 'direction_warnings': dir_warns,
                           'impact_count_warnings': imp_cnt_warns,
+                          'duanban_warnings': duanban_warns,
                           'violations': violations}, ensure_ascii=False, indent=2))
     for w in dir_warns:
         print("[WARN] direction 自动补救:", w)
     for w in imp_cnt_warns:
         print("[WARN] impacts 分组数:", w)
+    for w in duanban_warns:
+        print("[WARN] duanban:", w)
     if violations:
         print(f"[FAIL] 共 {len(violations)} 处违规：")
         for v in violations:
