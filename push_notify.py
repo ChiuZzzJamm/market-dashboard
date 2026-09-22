@@ -194,8 +194,11 @@ if mode == 'ashare':
     laggards = '  '.join([f"{s.get('name','')}{fmt_pct(s.get('pct'))}" for s in (a.get('sectorsDown') or [])[:5]])
     fi = ' '.join([f"{s.get('name','')}{s.get('value',0):+.1f}亿" for s in (a.get('fundIn') or [])[:3]])
     fo = ' '.join([f"{s.get('name','')}{s.get('value',0):+.1f}亿" for s in (a.get('fundOut') or [])[:3]])
-    # 微信推送保持连续自然段，避免主动换行被截断；data.js 里 outlook 本身无换行，这里做兜底
-    outlook_text = (a.get('outlook','') or '').replace('\n',' ').strip()
+    # 微信推送保持连续自然段，避免主动换行被截断；data.js 里 outlook 为 {date,content} 对象，优先取 content
+    _ol = a.get('outlook') or ''
+    if isinstance(_ol, dict):
+        _ol = _ol.get('content') or _ol.get('text') or ''
+    outlook_text = str(_ol).replace('\n', ' ').strip()
     # A股要闻：合并利好/利空/宏观/国际/投行五组，去重后取 5 条，带 🇨🇳/🌍 图标（修复 B）
     news_parts = collect_news(a, 5)
     # 利好/利空方向（与美股/周末推送一致）
@@ -225,8 +228,11 @@ elif mode == 'us':
     us_date = (us_trade.split('（')[0][5:] if us_trade else '')
     idx0 = (u.get('indices') or [{}])[0]
     title = f"[美股] {us_date} 道指{fmt_pct(idx0.get('changePct'))}"
-    # 微信端保持连续自然段，避免被截断
-    outlook_text = (u.get('outlook','') or '').replace('\n',' ').strip()
+    # 微信端保持连续自然段，避免被截断；outlook 为 {date,content} 对象时取 content
+    _ol = u.get('outlook') or ''
+    if isinstance(_ol, dict):
+        _ol = _ol.get('content') or _ol.get('text') or ''
+    outlook_text = str(_ol).replace('\n', ' ').strip()
     # 利好/利空板块：优先取当日 us.bullish/bearish（若 08:30 任务已生成），否则回退周末消息，格式同周日
     w = D.get('weekendNews') or {}
     bull_src = (u.get('bullish') or w.get('bullish', []))
