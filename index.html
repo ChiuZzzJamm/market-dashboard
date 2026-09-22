@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609221953"></script>
+<script src="data.js?v=202609222000"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -313,8 +313,8 @@
   /* 弹窗左右箭头切换（R88） */
   .db-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--paper); color: var(--accent-deep); font-size: 20px; line-height: 1; cursor: pointer; box-shadow: 0 4px 14px rgba(17,17,26,.18); display: flex; align-items: center; justify-content: center; z-index: 5; transition: all .15s ease; -webkit-tap-highlight-color: transparent; }
   .db-nav:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-50%) scale(1.06); }
-  .db-nav.db-prev { left: 26px; }
-  .db-nav.db-next { right: 26px; }
+  .db-nav.db-prev { left: max(12px, calc(50% - 444px)); }
+  .db-nav.db-next { right: max(12px, calc(50% - 444px)); }
   @media (max-width: 700px) { .db-nav { width: 34px; height: 34px; font-size: 17px; } .db-nav.db-prev { left: 10px; } .db-nav.db-next { right: 10px; } }
 
   /* K线弹窗 */
@@ -556,7 +556,7 @@ function render(market) {
 
   html += '<div class="card"><h2>大盘指数</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + '</div>';
 
-  html += renderNewsCard(d);
+  html += renderNewsCard(d, market);
 
   html += '<div class="card"><h2>大盘趋势研判</h2><div class="outlook">' + formatOutlook(d.outlook) + '</div></div>';
 
@@ -758,7 +758,7 @@ function newsEntryInner(it, showSrc, tag) {
   });
 })();
 
-function renderNewsCard(d) {
+function renderNewsCard(d, market) {
   // A股/美股共用：大标题「全球要闻」，桌面两栏按行配对（同行等高、左右对齐），手机单列组内重排
   if (!d) return '';
   var bn = d.bullNews||[], be = d.bearNews||[];
@@ -789,9 +789,9 @@ function renderNewsCard(d) {
     macro.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true, '宏观·事件') + '</div>'; });
     html += '</div>';
   }
-  // 彭博 / 路透 / WSJ 视角（国际通讯社报道，独立成段）
+  // 视角标题（R91h）：A股页用国内财经媒体视角（卡片来源已切财联社/华尔街见闻/证券时报），美股页保留国际通讯社视角
   if (intl.length) {
-    html += '<div class="wk-section intl"><h4>彭博 / 路透 / WSJ 视角</h4>';
+    html += '<div class="wk-section intl"><h4>' + (market === 'ashare' ? '国内财经媒体视角' : '彭博 / 路透 / WSJ 视角') + '</h4>';
     intl.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true, '中期·海外产业') + '</div>'; });
     html += '</div>';
   }
@@ -921,7 +921,7 @@ function dbPoolHtml(title, cls, sub, list, done, poolKey) {
   };
   var smallMerged = [];
   secKeys.forEach(function (s) {
-    var arr = groups[s].slice().sort(function (x, y) { return (y.probability || 0) - (x.probability || 0); });
+    var arr = groups[s].slice().sort(stockCmp);
     if (arr.length >= 3) {
       h += '<div class="db-sec">' + esc(s) + '<span class="db-sec-n">' + arr.length + ' 只</span></div><div class="db-chips">';
       renderChips(arr, null);
@@ -931,10 +931,7 @@ function dbPoolHtml(title, cls, sub, list, done, poolKey) {
     }
   });
   if (smallMerged.length) {
-    smallMerged.sort(function (a, b) {
-      var sa = a.sector || '其他', sb = b.sector || '其他';
-      return sa !== sb ? sa.localeCompare(sb, 'zh') : (b.probability || 0) - (a.probability || 0);
-    });
+    smallMerged.sort(stockCmp);
     var nSecs = secKeys.filter(function (s) { return groups[s].length < 3; }).length;
     h += '<div class="db-sec">其他板块<span class="db-sec-n">' + smallMerged.length + ' 只 · ' + nSecs + ' 个板块</span></div><div class="db-chips">';
     renderChips(smallMerged, true);
