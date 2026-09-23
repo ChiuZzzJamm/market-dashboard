@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609240235"></script>
+<script src="data.js?v=202609240238"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -149,6 +149,8 @@
   .wk-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
   .wk-head h2 { margin: 0; }
   .wk-head .date { font-size: 12.5px; color: var(--ink2); }
+  /* 卡片 h2 内日期角标（主力资金流向等，R98f） */
+  .card h2 .h2-date { font-size: 12.5px; color: var(--ink2); font-weight: 400; margin-left: 8px; }
   .wk-summary { font-size: 14.5px; margin-bottom: 16px; line-height: 1.7; }
   .wk-section { margin: 22px 0 14px; padding-top: 16px; border-top: 1px solid var(--line); }
   .wk-section h4 { font-size: 14px; font-weight: 700; margin: 0 0 6px 0; color: var(--accent-deep); letter-spacing: 1px; }
@@ -683,7 +685,7 @@ function render(market) {
 
   // 主力资金流向紧贴行业全景上方（2026-09-20 用户要求：挪到行业全景上面）
   if (isA) {
-    html += '<div class="card"><h2>主力资金流向</h2>';
+    html += '<div class="card"><h2>主力资金流向' + (d.tradeDate ? '<span class="h2-date">' + esc(d.tradeDate) + '</span>' : '') + '</h2>';
     if (d.fundNote) html += '<div class="note-line">' + esc(d.fundNote) + '</div>';
     html += '<div id="chart-fund" class="chart-tall"></div></div>';
   }
