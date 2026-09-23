@@ -818,9 +818,16 @@ def tag_entries(entries, D):
                 nd2["srcTag"] = _src_tag(kw_hit[1].get("src"), kw_hit[0], hybk, D)
                 refs = [nd2]
         bull_type = "stock" if any(r.get("kind") == "stock" for r in refs) else ("sector" if refs else None)
-        sent = "bear" if bear_refs else ("bull" if refs else "neutral")
-        # 小作文化
-        if bear_refs:
+        # R91p 加权打标（2026-09-23 用户反馈修复：有研新材 12 条利好被 1 条间接利空
+        # 一票否决）：个股级线索×2、板块级线索×1，bear 加权 > bull 加权才判 bear；
+        # 否则有利好线索判 bull、无线索判 neutral。直接点名的个股级利空（bearNews
+        # impacts stocks / AI预测看空个股）权重高，间接板块利空不再压过压倒性利好。
+        def _w(rs):
+            return sum(2 if r.get("kind") == "stock" else 1 for r in rs)
+        bw, rw = _w(bear_refs), _w(refs)
+        sent = "bear" if bw > rw else ("bull" if rw > bw else "neutral")
+        # 小作文化：按主导方向拼装（bear 主导用利空依据，否则用利好依据）
+        if sent == "bear" and bear_refs:
             story = "\n".join(_fmt_ref(r) for r in bear_refs[:3])
         elif refs:
             story = "\n".join(_fmt_ref(r) for r in refs[:3])
