@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609240047"></script>
+<script src="data.js?v=202609240057"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1040,7 +1040,7 @@ function renderLianban(list) {
   var groups = {};
   lb.forEach(function (s) { var k = s.lbc || 2; (groups[k] = groups[k] || []).push(s); });
   var keys = Object.keys(groups).map(Number).sort(function (a, b) { return b - a; });
-  var s = '<div class="lb-note">连板数取自东财涨停池；板块为东财行业归类，理由由当日 AI 基于真实新闻补充（缺省显示板块）· <b>点击标的查看深度解读</b></div>';
+  var s = '<div class="lb-note">连板数取自同花顺涨停池；板块为同花顺行业归类，理由由当日 AI 基于真实新闻补充（缺省显示板块）· <b>点击标的查看深度解读</b></div>';
   keys.forEach(function (k) {
     var stocks = groups[k];
     s += '<div class="lb-row"><div class="lb-tag">' + esc(k + '连板') + '</div><div class="lb-stocks stock-chips">';
