@@ -40,8 +40,10 @@ import os
 import re
 import subprocess
 import sys
+import threading
 import time
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -425,6 +427,7 @@ def fetch_top_boards(D, top=10, days=3):
         pass
     today = _today_str()
     rows = []
+    his_fail_streak = 0  # R93：push2his 连续失败早退（WAF 封锁时每板块空转重试无意义）
     for bi, b in enumerate(boards):
         if not isinstance(b, dict):
             continue
@@ -462,6 +465,13 @@ def fetch_top_boards(D, top=10, days=3):
                               open(cp, "w", encoding="utf-8"))
                 except Exception:
                     pass
+                his_fail_streak = 0
+            else:
+                his_fail_streak += 1
+                if his_fail_streak >= 3:
+                    print("[warn] push2his 板块K线连续3次失败，判定源不可达，"
+                          "跳过剩余板块（保留既有 topBoards）", file=sys.stderr)
+                    break
             time.sleep(0.25)  # push2his 限频保护
         if not closes or len(closes) < days + 1:
             continue
@@ -986,37 +996,72 @@ def main():
     # 最近涨停优先核验
     cands = sorted(cand.items(), key=lambda kv: max(kv[1]["zt"]), reverse=True)[:args.limit]
 
+    # R93 时间预算（2026-09-23）：自动化环境对脚本有超时限制（此前串行抓 300 只候选
+    # K 线 + 二轮重试常超 6 分钟，16:00 自动化中被 SIGTERM 杀掉、duanban 模块整体跳过）。
+    # 现并行抓取 + 全局时间预算（默认 420s，可用环境变量 DUANBAN_DEADLINE 覆盖）：
+    # 到点后取消剩余任务、跳过二轮重试，保证预算内必出结果（候选按最近涨停优先排序，
+    # 被截断的是最旧的候选，影响最小）。
+    t0 = time.time()
+    try:
+        deadline = float(os.environ.get("DUANBAN_DEADLINE", "420"))
+    except ValueError:
+        deadline = 420.0
+
     results = []   # 确认池记录（--json/文本口径，历史不变）
     pairs = []     # 双池记录（--module 口径：含观察池）
-    failed = []  # K线拉取失败的候选（多为新浪限频），冷却后二轮重试（R70）
+    failed = []  # K线拉取失败的候选（多为新浪限频），预算允许时二轮重试（R70）
+    res_lock = threading.Lock()
 
-    def run_one(code, rec, kl, retry_gap):
+    def run_one(code, rec, kl):
         """对单候选评估：--module 双池入 pairs，确认池同步入 results（历史口径）。"""
         hit = eval_candidate(code, rec, kl)
         if hit:
-            pairs.append(hit)
-            if hit["stage_info"]["pool"] == "confirmed":
-                results.append({"code": hit["code"], "name": hit["name"],
-                                "hybk": hit["hybk"], "ztDate": hit["ztDate"],
-                                "form": hit["stage_info"]["form"]})
-        time.sleep(retry_gap)
+            with res_lock:
+                pairs.append(hit)
+                if hit["stage_info"]["pool"] == "confirmed":
+                    results.append({"code": hit["code"], "name": hit["name"],
+                                    "hybk": hit["hybk"], "ztDate": hit["ztDate"],
+                                    "form": hit["stage_info"]["form"]})
 
-    for code, rec in cands:
+    def kline_worker(item):
+        """K 线抓取工作线程：返回 (code, rec, kl|None)。get_kline 内部含缓存+腾讯主源+新浪备源。"""
+        code, rec = item
         sym = sina_symbol(code)
         if not sym:
-            continue
-        # R72 修复：首轮也走 get_kline（含本地缓存 + 腾讯备用源），不再裸打新浪
-        # —— 限频窗口下首轮即可借缓存/腾讯兜底，省去整轮失败后再走 15s 冷却二轮。
+            return code, rec, None
+        # R72：首轮也走 get_kline（含本地缓存 + 腾讯备用源），不再裸打新浪
         kl = get_kline(code, sym)
-        if not isinstance(kl, list) or not kl:
-            failed.append((code, rec))
-            continue
-        run_one(code, rec, kl, 0.4)  # 新浪限频保护（R70: 0.25→0.4）
+        return code, rec, (kl if isinstance(kl, list) and kl else None)
 
-    # 二轮重试：冷却 15s 后对失败候选重试一次（新浪限频窗口恢复）
-    if failed:
+    n_done = 0
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        futs = [ex.submit(kline_worker, it) for it in cands]
+        for fut in as_completed(futs):
+            code, rec, kl = fut.result()
+            n_done += 1
+            if kl:
+                run_one(code, rec, kl)
+            else:
+                with res_lock:
+                    failed.append((code, rec))
+            if n_done % 60 == 0:
+                print(f"[info] 已核验 {n_done}/{len(cands)} 只候选，用时 {time.time()-t0:.0f}s",
+                      file=sys.stderr)
+            if time.time() - t0 > deadline:
+                left = sum(1 for f in futs if not f.done())
+                for f in futs:
+                    f.cancel()
+                print(f"[warn] 达到时间预算 {deadline:.0f}s，取消剩余 {left} 只候选（最近涨停优先，"
+                      "被截断的为最旧候选）", file=sys.stderr)
+                break
+
+    # 二轮重试：冷却 15s 后对失败候选重试一次（新浪限频窗口恢复）；仅当预算充足（剩余 >25%）
+    if failed and time.time() - t0 < deadline * 0.75:
         time.sleep(15)
-        for code, rec in failed:
+        for code, rec in list(failed):
+            if time.time() - t0 > deadline:
+                print("[warn] 达到时间预算，放弃二轮重试剩余候选", file=sys.stderr)
+                break
             sym = sina_symbol(code)
             if not sym:
                 continue
@@ -1024,7 +1069,8 @@ def main():
             if not isinstance(kl, list) or not kl:
                 print(f"[warn] {code} {rec['name']} K线两次拉取失败，本候选缺失", file=sys.stderr)
                 continue
-            run_one(code, rec, kl, 0.6)
+            run_one(code, rec, kl)
+            time.sleep(0.4)
 
     # R77：标的口径——只保留沪深主板(60/00 开头)，剔除科创板(688/689)、
     # 创业板(300/301/302)与北交所(4/8/92 开头)——用户要求提供标的均非科创/创业板

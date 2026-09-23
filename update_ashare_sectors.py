@@ -368,8 +368,18 @@ def build_sectors():
     up_rows = fetch_boards("f3", 1)    # 按涨跌幅降序 → 领涨
     time.sleep(2)
     down_rows = fetch_boards("f3", 0)  # 升序 → 领跌
-    if not up_rows or not down_rows:
-        return None, None
+    if up_rows and down_rows:
+        r = _build_sectors_em(up_rows, down_rows)
+        # 东财数据不足（ups/downs < 3）时也回退新浪，避免返回 None 触发 em_failed
+        if r[0] is not None and r[1] is not None:
+            return r
+    # ---- R93 新浪备用源（2026-09-23）：东财 push2/push2delay 被 WAF 按 IP 段封锁
+    # （本地+WebFetch 云端均空回复，push2ex 幸存），行业板块/全板块榜改用新浪行业
+    # 板块口径兜底（~90 个细分行业，含板块涨跌幅；成分股 TOP5 走新浪节点接口）。
+    print("[info] 东财 clist 行业板块不可达/不足，改用新浪行业板块备用源")
+    return build_sectors_sina()
+
+def _build_sectors_em(up_rows, down_rows):
     def mk(r, po):
         pct = to_f(r.get("f3"))
         if pct is None:
@@ -392,6 +402,98 @@ def build_sectors():
         if x:
             downs.append(x)
             time.sleep(1)  # 成分股请求间隔，防限流
+    if len(ups) < 3 or len(downs) < 3:
+        return None, None
+    return ups, downs
+
+# ---------- R93: 新浪行业板块备用源（东财 push2 被 WAF 封锁时兜底） ----------
+SINA_BOARD_LIST = "https://vip.stock.finance.sina.com.cn/q/view/newFLJK.php?param=hangye"
+SINA_NODE = ("https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/"
+             "Market_Center.getHQNodeData?page=1&num=40&sort=changepercent&asc={asc}&node={node}")
+SINA_REFERER = "https://finance.sina.com.cn"
+
+def curl_referer(url, timeout=15):
+    r = subprocess.run(["curl", "-s", "--max-time", str(timeout),
+                        "-H", "User-Agent: " + UA, "-H", "Referer: " + SINA_REFERER, url],
+                       capture_output=True, timeout=timeout + 10)
+    return r.stdout or b""
+
+def fetch_sina_boards():
+    """新浪行业板块列表（GBK），返回 {name: {"code": node, "pct": 涨跌幅}}；失败返回 {}。
+    字段: code,name,家数,均价,涨跌额,涨跌幅%,总成交量,总成交额,领涨股code,领涨股pct,..."""
+    raw = curl_referer(SINA_BOARD_LIST).decode("gbk", errors="replace")
+    m = re.search(r"\{[\s\S]*\}", raw)
+    if not m:
+        return {}
+    try:
+        obj = json.loads(m.group(0))
+    except Exception:
+        return {}
+    out = {}
+    for v in obj.values():
+        parts = str(v).split(",")
+        if len(parts) < 6:
+            continue
+        name = parts[1].strip()
+        try:
+            pct = float(parts[5])
+        except (ValueError, IndexError):
+            continue
+        if name:
+            out[name] = {"code": parts[0].strip(), "pct": pct}
+    return out
+
+def fetch_sina_node_tops(node, po):
+    """新浪板块成分股 TOP5（po=1 涨幅前5 / po=0 跌幅前5），口径同 fetch_top5。失败返回 []。"""
+    txt = curl_referer(SINA_NODE.format(asc=0 if po == 1 else 1, node=node))
+    txt = txt.decode("utf-8", errors="replace").strip()
+    try:
+        rows = json.loads(txt)
+    except Exception:
+        return []
+    out = []
+    for r in rows if isinstance(rows, list) else []:
+        try:
+            pct = float(r.get("changepercent"))
+            vol = float(r.get("volume") or 0)
+        except (TypeError, ValueError):
+            continue
+        if vol <= 0 or not r.get("name"):
+            continue
+        if po == 1 and pct < 0:
+            continue
+        if po == 0 and pct > 0:
+            continue
+        entry = {"name": r["name"], "changePct": round(pct, 2)}
+        try:
+            _o, _p = float(r.get("open") or 0), float(r.get("settlement") or 0)
+            if _o > 0 and _p > 0:
+                entry["openPct"] = round((_o / _p - 1) * 100, 2)
+        except Exception:
+            pass
+        out.append(entry)
+        if len(out) >= 5:
+            break
+    return out
+
+def build_sectors_sina():
+    """新浪行业板块口径的领涨/领跌 TOP5（含 tops/openPct）。失败返回 (None, None)。"""
+    boards = fetch_sina_boards()
+    if len(boards) < 10:
+        return None, None
+    ranked = sorted(boards.items(), key=lambda kv: -kv[1]["pct"])
+    sel = [(n, b, 1) for n, b in ranked[:5]] + [(n, b, 0) for n, b in ranked[-5:]]
+    ups, downs = [], []
+    for name, b, po in sel:
+        item = {"name": name, "pct": round(b["pct"], 2)}
+        tops = fetch_sina_node_tops(b["code"], po)
+        if tops:
+            item["tops"] = tops
+            _ops = [t["openPct"] for t in tops if isinstance(t, dict) and "openPct" in t]
+            if len(_ops) >= 2:
+                item["openPct"] = round(sum(_ops) / len(_ops), 2)
+        (ups if po == 1 else downs).append(item)
+        time.sleep(0.3)  # 新浪限频保护
     if len(ups) < 3 or len(downs) < 3:
         return None, None
     return ups, downs
