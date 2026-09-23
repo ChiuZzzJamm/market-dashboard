@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609240203"></script>
+<script src="data.js?v=202609240211"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -588,18 +588,21 @@ function renderReasons(list, tradeDate, isUp) {
   var html = '';
   var tag = dateTag(tradeDate);
   list.forEach(function (s) {
-    if (!s.reason) return;
+    // R98b：兼容无 reason 的板块条目（同花顺/东财行业页直接生成，无 AI 异动原因）
+    var hasReason = !!(s.reason && s.reason.title);
     // 板块名与涨跌幅合并为一枚胶囊：涨=红底白字，跌=绿底白字；无涨跌幅时退回白底胶囊
     var pctHtml = (s.pct !== null && s.pct !== undefined)
       ? '<span class="pct ' + (s.pct >= 0 ? 'u' : 'd') + '">' + esc(s.name) + ' ' + fmtPct(s.pct) + '</span>'
       : '<span class="sec">' + esc(s.name) + '</span>';
     html += '<div class="reason-block ' + (isUp === false ? 'rz-down' : 'rz-up') + '"><div class="reason-head">' +
-      '<span class="date-tag">' + esc(tag) + '异动原因</span>' +
+      (hasReason ? '<span class="date-tag">' + esc(tag) + '异动原因</span>' : '') +
       pctHtml +
-      '<span class="kw">' + esc(s.reason.title) + '</span></div>' +
+      (hasReason ? '<span class="kw">' + esc(s.reason.title) + '</span>' : '') +
+      '</div>' +
       renderTops(s, isUp) +
       ((s.upCount !== null && s.upCount !== undefined) ? '<div class="reason-sub">板块内 涨 <b class="up">' + s.upCount + '</b> 家 / 跌 <b class="down">' + (s.downCount || 0) + '</b> 家' + (s.netInflow !== null && s.netInflow !== undefined ? ' · 主力净流入 <b class="' + (s.netInflow >= 0 ? 'up' : 'down') + '">' + (s.netInflow >= 0 ? '+' : '') + s.netInflow + ' 亿</b>' : '') + '</div>' : '') +
-      '<div class="reason-body"><b class="label">行业原因（' + esc(tag) + '发布）：</b>' + esc(s.reason.detail) + '</div></div>';
+      (hasReason ? '<div class="reason-body"><b class="label">行业原因（' + esc(tag) + '发布）：</b>' + esc(s.reason.detail) + '</div>' : '') +
+      '</div>';
   });
   return html;
 }
@@ -1480,13 +1483,24 @@ function stkFetchKline(code, cb) {
   fetch('https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=' + encodeURIComponent(sym) + ',day,,,60,qfq&_r=' + Date.now())
     .then(function (r) { return r.json(); })
     .then(function (j) {
+      var code0 = j && j.code;
+      if (code0 && code0 !== '0' && code0 !== 0) {
+        console.error('[stkFetchKline] API error for', sym, ':', code0);
+        return cb(null, 'K线接口返回错误（' + code0 + '）');
+      }
       var d = (j && j.data && j.data[sym]) || {};
       var kl = stkParseKline(d.qfqday || d.day);
-      if (!kl) return cb(null, '暂无K线数据');
+      if (!kl) {
+        console.error('[stkFetchKline] empty data for', sym, '; keys:', Object.keys(d));
+        return cb(null, '暂无K线数据');
+      }
       STK_KLINE_CACHE[sym] = kl;
       cb(kl);
     })
-    .catch(function () { cb(null, 'K线获取失败（网络受限）'); });
+    .catch(function (e) {
+      console.error('[stkFetchKline] network error for', sym, ':', e && e.message);
+      cb(null, 'K线获取失败（' + (e && e.message ? e.message : '网络受限') + '）');
+    });
 }
 // 仅知名称（板块领涨TOP等无代码场景）：腾讯 smartbox script 注入反查代码（无 CORS，返回 v_hint 全局变量）
 // 匹配三级降级：全称精确 → 前缀匹配（数据源常给全称如「益诺思生物」，行情简称「益诺思」）→ 去常见后缀二次查询

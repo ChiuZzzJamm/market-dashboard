@@ -601,9 +601,16 @@ def fetch_top_boards(D, top=10, days=3):
         picked = ths[:top]
         # 并行获取各板块 K 线（max_workers=5 防限频）
         def _mk(b):
+            kl = fetch_ths_kline_full(b["code"], days=30)
+            pct3 = None
+            if kl and len(kl) >= 4:
+                try:
+                    pct3 = round((kl[-1][2] / kl[-4][2] - 1) * 100, 2)
+                except Exception:
+                    pass
             return {"code": b["code"], "name": b["name"],
-                    "pct3": None, "pctToday": b["pct"],
-                    "kline": fetch_ths_kline_full(b["code"], days=30)}
+                    "pct3": pct3, "pctToday": b["pct"],
+                    "kline": kl}
         with ThreadPoolExecutor(max_workers=5) as exe:
             return list(exe.map(_mk, picked))
     # ---- 备源：保留既有 topBoards（R91m 防护） ----
