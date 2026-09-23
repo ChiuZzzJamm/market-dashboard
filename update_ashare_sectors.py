@@ -8,6 +8,9 @@ A股板块/指数/涨跌家数抓取（零 MCP 依赖，全部 HTTP 直连）：
     兜底：同花顺不可达时回退东财 push2ex getTopicZDFenBu + 风险警示板(b:BK0511) 补充 ST。
   - 行业板块涨跌 TOP5/BOTTOM5 + 全景：R97f 起主源=同花顺行业一览表（q.10jqka.com.cn/thshy，数字准+字段全：涨跌幅/净流入/涨跌家数/领涨股），
     R98d 起领涨/领跌板块的 tops=同花顺行业详情页成分股 TOP5（desc/asc 各取 5 只，替代一览表单条领涨股），
+    R98h 起一览表分页抓全（90 个行业，原只取第 1 页 50 个）且 allBoards/行业全景富化字段：
+    主力净流入(netInflow)/涨停数(ztCount,详情页降序首页涨幅>=阈值计数)/领涨股(lead,leadPct)/
+    涨跌家数(upCount,downCount)/近5日涨幅(pct5,板块日K close[-1]/close[-6]-1)，
     备源=东财 push2delay clist（fs=m:90+t:2 行业板块，注意 + 必须写成 %2B）/ 新浪行业，全失败保留上一轮(R91m)；
     sectorSource 字段记录实际命中源（ths/em/prev）供前端标注口径。断板池/个股 hybk 仍用申万，不在本脚本改动范围。
   - 主力资金流入/流出 TOP3：R97g 起主源=同花顺行业资金流页（data.10jqka.com.cn/funds/hyzjl，净额(亿)排序）；
@@ -18,7 +21,8 @@ A股板块/指数/涨跌家数抓取（零 MCP 依赖，全部 HTTP 直连）：
   数据源（涨跌家数/行业板块/主力资金/连板梯队）均失败时以退出码 1 退出且不写 data.js（防旧数据
   伪装当日收盘），并输出 [EM_FAIL] 标记行供自动化 AI 走 WebFetch 云端兜底回填（R91n/R97g）。
 """
-import json, re, subprocess, os, sys, time, argparse
+import json, re, subprocess, os, sys, time, argparse, random
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutTimeout
 from datetime import datetime, timezone, timedelta
 from common import find_node
 
@@ -509,13 +513,17 @@ def build_sectors_sina():
 THS_URL = "https://q.10jqka.com.cn/thshy/"
 THS_REFERER = "https://q.10jqka.com.cn/"
 
-def curl_ths(timeout=20):
+def curl_ths_url(url, timeout=20):
+    """通用同花顺页面抓取（R98h）：与 curl_ths 同头，URL 可变。返回 bytes。"""
     r = subprocess.run(["curl", "-s", "--max-time", str(timeout),
                        "-H", "User-Agent: " + UA,
                        "-H", "Referer: " + THS_REFERER,
                        "-H", "Accept-Language: zh-CN,zh;q=0.9",
-                       THS_URL], capture_output=True, timeout=timeout + 10)
+                       url], capture_output=True, timeout=timeout + 10)
     return r.stdout or b""
+
+def curl_ths(timeout=20):
+    return curl_ths_url(THS_URL, timeout=timeout)
 
 def parse_ths_industries(html):
     """解析同花顺行业一览表。返回 [{code,name,pct,netInflow,up,down,lead,leadPct}]；失败/不足返回 []。
@@ -570,7 +578,29 @@ def parse_ths_industries(html):
     return out
 
 def fetch_ths_industries():
-    return parse_ths_industries(curl_ths())
+    """R98h：一览表分页抓全（第1页50个 + 第2页40个 = 90 个同花顺行业，原来只取第1页漏 40 个）。
+    第2页用非 ajax 整页 URL（/thshy/index/page/2/，实测可用；ajax/1/ 会触发反爬跳转）。
+    按 code 去重合并；页数异常时至少保留第 1 页（>=10 个即视为成功）。"""
+    seen, out = set(), []
+    html1 = curl_ths()
+    for x in parse_ths_industries(html1):
+        if x["code"] not in seen:
+            seen.add(x["code"])
+            out.append(x)
+    if len(out) >= 10:
+        for page in range(2, 4):  # 最多抓到第3页防死循环
+            time.sleep(1.0 + random.random())
+            html_p = curl_ths_url(f"https://q.10jqka.com.cn/thshy/index/page/{page}/")
+            rows = parse_ths_industries(html_p)
+            fresh = [x for x in rows if x["code"] not in seen]
+            if not fresh:
+                break
+            for x in fresh:
+                seen.add(x["code"])
+                out.append(x)
+            if len(rows) < 10:  # 不足一页说明已到尾页
+                break
+    return out
 
 def fetch_ths_tops(ths_code, po, timeout=15):
     """同花顺行业详情页成分股 TOP5（R98d）：po=1 领涨（详情页默认按涨跌幅 desc）、
@@ -637,6 +667,109 @@ def enrich_ths_tops(ups, downs, gap=0.8):
             time.sleep(gap)
     print(f"[info] 同花顺成分股 TOP5 拉取：{ok}/{len(jobs)} 个板块成功")
 
+def _zt_threshold(code):
+    """按代码前缀取涨停幅度阈值：主板 10%、创业/科创 20%、北交 30%（R98h）。
+    用于从涨幅近似判定涨停（>=阈值即视为涨停，误差 <=0.1 个百分点）。"""
+    c = str(code or "")
+    if c.startswith(("300", "301", "688", "689")):
+        return 19.9
+    if c.startswith(("43", "82", "83", "87", "88", "92")):
+        return 29.9
+    return 9.9
+
+def fetch_ths_board_stats(ths_code, timeout=15):
+    """R98h：单板块富化 {ztCount, pct5}。
+    ztCount=板块详情页涨跌幅降序首页中涨停家数（涨幅>=该股阈值即计入，降序遇首个低于阈值即停；
+    首页 21 行，涨停股必然在列；极端日单板块 >21 只涨停会低估，属可接受近似）。
+    pct5=近5个交易日累计涨幅（板块日K close[-1]/close[-6]-1；K线不足6根时用首根兜底）。
+    任一失败字段留 None（前端显示 --），绝不抛错。"""
+    res = {"ztCount": None, "pct5": None}
+    if not ths_code:
+        return res
+    # 1) 涨停数：详情页降序首页
+    try:
+        raw = curl_ths_url(
+            f"https://q.10jqka.com.cn/thshy/detail/order/desc/page/1/code/{ths_code}/",
+            timeout=timeout)
+        if len(raw) >= 5000:
+            try:
+                text = raw.decode("utf-8")
+            except UnicodeDecodeError:
+                text = raw.decode("gbk", errors="replace")
+            i = text.find("m-pager-table")
+            if i >= 0:
+                zt = 0
+                for row in re.findall(r"<tr[^>]*>(.*?)</tr>", text[i:i + 12000], re.S):
+                    tds = [re.sub(r"<[^>]+>", "", t).strip()
+                           for t in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)]
+                    if len(tds) < 5 or not re.fullmatch(r"\d{6}", tds[1] or ""):
+                        continue
+                    try:
+                        pct = float(tds[4].replace("%", ""))
+                    except Exception:
+                        continue
+                    if pct >= _zt_threshold(tds[1]):
+                        zt += 1
+                    else:
+                        break  # 降序排列，低于阈值即可停止
+                res["ztCount"] = zt
+    except Exception:
+        pass
+    # 2) 近5日涨幅：板块日K线（d.10jqka CDN，与 check_duanban 板块K线同源）
+    try:
+        r = subprocess.run(["curl", "-s", "--max-time", str(timeout),
+                            "-H", "User-Agent: " + UA,
+                            f"https://d.10jqka.com.cn/v4/line/bk_{ths_code}/01/last.js"],
+                           capture_output=True, timeout=timeout + 10)
+        m = re.search(r"\((\{.*\})\)", (r.stdout or b"").decode("utf-8", errors="replace"))
+        if m:
+            d = json.loads(m.group(1))
+            closes = []
+            for bar in (d.get("data") or "").split(";"):
+                p = bar.split(",")
+                if len(p) >= 5:
+                    try:
+                        closes.append(float(p[4]))
+                    except Exception:
+                        pass
+            if len(closes) >= 6 and closes[-6] > 0:
+                res["pct5"] = round((closes[-1] / closes[-6] - 1) * 100, 2)
+            elif len(closes) >= 2 and closes[0] > 0:
+                res["pct5"] = round((closes[-1] / closes[0] - 1) * 100, 2)
+    except Exception:
+        pass
+    return res
+
+def enrich_boards_full(all_b, deadline=None):
+    """R98h：为 allBoards 全部板块并行补 ztCount/pct5（3 线程 + 全局时间预算）。
+    预算默认 240s（环境变量 THS_ENRICH_DEADLINE 可覆盖），超时未完成板块字段留空。
+    单板块失败留 None 不影响整体；本函数自身不抛错（调用方再兜一层）。"""
+    if not all_b:
+        return
+    if deadline is None:
+        deadline = float(os.environ.get("THS_ENRICH_DEADLINE") or 240)
+    t0 = time.time()
+    targets = [b for b in all_b if b.get("code")]
+    def _job(b):
+        time.sleep(random.uniform(0.1, 0.4))  # 轻微抖动降反爬风险
+        st = fetch_ths_board_stats(b["code"])
+        b["ztCount"] = st["ztCount"]
+        b["pct5"] = st["pct5"]
+    done = 0
+    try:
+        with ThreadPoolExecutor(max_workers=3) as exe:
+            futs = [exe.submit(_job, b) for b in targets]
+            for fut in as_completed(futs, timeout=deadline):
+                try:
+                    fut.result()
+                    done += 1
+                except Exception:
+                    pass
+    except FutTimeout:
+        print(f"[warn] allBoards 富化超时（预算 {deadline}s），未完成板块涨停数/近5日留空")
+    print(f"[info] allBoards 富化（涨停数/近5日）：{done}/{len(targets)} 个板块成功，"
+          f"耗时 {round(time.time() - t0, 1)}s")
+
 def _ths_to_item(x):
     it = {"name": x["name"], "pct": x["pct"], "thsCode": x["code"]}
     if x.get("lead"):
@@ -662,8 +795,14 @@ def build_sectors_unified(prev_up, prev_down, prev_all, ths_list=None):
         # R98d：领涨/领跌板块补齐成分股 TOP5（详情页 desc/asc），失败保留单条领涨股
         enrich_ths_tops(ups, downs)
         all_b = [{"code": x["code"], "name": x["name"], "pct": x["pct"],
-                  "netInflow": x["netInflow"], "upCount": x["up"], "downCount": x["down"]}
+                  "netInflow": x["netInflow"], "upCount": x["up"], "downCount": x["down"],
+                  "lead": x.get("lead"), "leadPct": x.get("leadPct")}
                  for x in ths]
+        # R98h：全板块富化（涨停数 ztCount / 近5日涨幅 pct5），失败字段留空不阻塞主流程
+        try:
+            enrich_boards_full(all_b)
+        except Exception as _e:
+            print(f"[warn] allBoards 富化异常（保留基础字段）：{_e}")
         print(f"[info] 行业板块主源=同花顺（{len(ths)} 个行业）")
         return ups, downs, all_b, "ths"
     # 2) 东财 push2delay 备源（原有逻辑）
@@ -1020,7 +1159,18 @@ def main():
                         for _i in indices
                         if isinstance(_i, dict) and _i.get("changePct") is not None
                     ]
-                _items = [{"name": _b["name"], "pct": _b["pct"]} for _b in all_b if isinstance(_b, dict) and _b.get("name") is not None and isinstance(_b.get("pct"), (int, float))]
+                _items = []
+                for _b in all_b:
+                    if not (isinstance(_b, dict) and _b.get("name") is not None
+                            and isinstance(_b.get("pct"), (int, float))):
+                        continue
+                    _it = {"name": _b["name"], "pct": _b["pct"]}
+                    # R98h：行业全景 A股条目透传富化字段（缺省字段不写，前端条件渲染）
+                    for _k in ("netInflow", "upCount", "downCount",
+                               "lead", "leadPct", "ztCount", "pct5"):
+                        if _b.get(_k) is not None:
+                            _it[_k] = _b[_k]
+                    _items.append(_it)
                 _items.sort(key=lambda x: -x["pct"])
                 ash_m["items"] = _items
         if fund_in is not None:

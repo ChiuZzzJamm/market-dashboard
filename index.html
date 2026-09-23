@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609240242"></script>
+<script src="data.js?v=202609240254"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -295,6 +295,16 @@
   .ps-row .nm { font-weight: 600; }
   .ps-row .pc { font-weight: 800; font-variant-numeric: tabular-nums; }
   .pano-cell .pc { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  /* R98h：A股板块指标行 */
+  .pano-cell.pano-rich { flex-wrap: wrap; }
+  .pano-cell .meta { width: 100%; display: flex; flex-wrap: wrap; align-items: baseline; font-size: 11px; color: var(--ink2); font-variant-numeric: tabular-nums; line-height: 16px; margin-top: 3px; }
+  .pano-cell .meta span { margin-right: 2px; }
+  .pano-cell .meta b { font-weight: 700; color: var(--ink); margin-right: 5px; }
+  .pano-cell .meta b:last-child { margin-right: 0; }
+  .pano-cell .meta b i, .pano-cell .meta i { font-style: normal; font-weight: 700; }
+  .pano-cell .meta b .up, .pano-cell .meta i.up { color: var(--up); }
+  .pano-cell .meta b .down, .pano-cell .meta i.down { color: var(--down); }
+  .pano-cell .meta em { font-style: normal; margin: 0 4px; color: var(--ink2); opacity: .45; }
   .pano-date { font-size: 12.5px; color: var(--ink2); margin-bottom: 10px; }
   .pano-more { grid-column: 1 / -1; text-align: center; padding-top: 6px; }
   .pano-more button { background: var(--paper); color: var(--accent-deep); border: 1px solid var(--accent); border-radius: 999px; font-size: 12.5px; font-weight: 700; padding: 7px 20px; cursor: pointer; font-family: var(--font); transition: all .2s ease; }
@@ -800,15 +810,32 @@ function renderPano() {
     }
   }
   var shown = panoExpanded ? panoItems : panoItems.slice(0, PANO_SHOW_MAX);
+  var isAshareTab = cur.key === 'ashare';
   shown.forEach(function (it) {
     var c = cls(it.pct);
     // 含N个细分：内联小标签紧跟板块名，点击弹出细分板块涨幅明细
     var subTag = (it.subs > 1)
       ? '<span class="subtag" onclick="showPanoSubs(\'' + escAttr(it.name) + '\')" title="点击查看细分板块涨幅">含' + it.subs + '个细分 ▾</span>'
       : '';
-    html += '<div class="pano-cell"><div class="nm">' + esc(it.name) + subTag +
+    // R98h：A股板块指标行（主力净流入/涨停数/领涨股/涨跌家数/近5日涨幅，缺字段条件渲染）
+    var meta = '';
+    if (isAshareTab) {
+      var segs = [];
+      if (typeof it.netInflow === 'number')
+        segs.push('<span>净流</span><b class="' + (it.netInflow >= 0 ? 'up' : 'down') + '">' + (it.netInflow >= 0 ? '+' : '') + it.netInflow.toFixed(2) + '亿</b>');
+      if (it.ztCount != null)
+        segs.push('<span>涨停</span><b class="' + (it.ztCount > 0 ? 'up' : '') + '">' + it.ztCount + '</b>');
+      if (it.lead)
+        segs.push('<span>领涨</span><b>' + esc(it.lead) + (typeof it.leadPct === 'number' ? '<i class="' + (it.leadPct >= 0 ? 'up' : 'down') + '">' + fmtPct(it.leadPct) + '</i>' : '') + '</b>');
+      if (it.upCount != null && it.downCount != null)
+        segs.push('<span>涨/跌</span><b><i class="up">' + it.upCount + '</i>/<i class="down">' + it.downCount + '</i></b>');
+      if (typeof it.pct5 === 'number')
+        segs.push('<span>5日</span><b class="' + (it.pct5 >= 0 ? 'up' : 'down') + '">' + fmtPct(it.pct5) + '</b>');
+      if (segs.length) meta = '<div class="meta">' + segs.join('<em>·</em>') + '</div>';
+    }
+    html += '<div class="pano-cell' + (meta ? ' pano-rich' : '') + '"><div class="nm">' + esc(it.name) + subTag +
       (it.ref ? '<span class="ref">' + esc(it.ref) + '</span>' : '') + '</div>' +
-      '<div class="pc ' + c + '">' + fmtPct(it.pct) + '</div></div>';
+      '<div class="pc ' + c + '">' + fmtPct(it.pct) + '</div>' + meta + '</div>';
   });
   if (panoItems.length > PANO_SHOW_MAX) {
     if (panoExpanded) {

@@ -2363,7 +2363,11 @@ window.DASHBOARD_DATA = {
         "pct": 2.21,
         "netInflow": 4.23,
         "upCount": 12,
-        "downCount": 5
+        "downCount": 5,
+        "lead": "太力科技",
+        "leadPct": 12.79,
+        "ztCount": 0,
+        "pct5": 5.39
       },
       {
         "code": "881174",
@@ -2371,7 +2375,11 @@ window.DASHBOARD_DATA = {
         "pct": 1.53,
         "netInflow": 0.3,
         "upCount": 5,
-        "downCount": 4
+        "downCount": 4,
+        "lead": "亿田智能",
+        "leadPct": 12.13,
+        "ztCount": 0,
+        "pct5": 4.48
       },
       {
         "code": "881270",
@@ -2379,7 +2387,11 @@ window.DASHBOARD_DATA = {
         "pct": 1.5,
         "netInflow": 11.42,
         "upCount": 44,
-        "downCount": 19
+        "downCount": 19,
+        "lead": "澳弘电子",
+        "leadPct": 10.01,
+        "ztCount": 2,
+        "pct5": 4.3
       },
       {
         "code": "881121",
@@ -2387,7 +2399,11 @@ window.DASHBOARD_DATA = {
         "pct": 1.35,
         "netInflow": 0.65,
         "upCount": 121,
-        "downCount": 66
+        "downCount": 66,
+        "lead": "慧智微",
+        "leadPct": 20.03,
+        "ztCount": 1,
+        "pct5": 6.46
       },
       {
         "code": "881172",
@@ -2395,7 +2411,11 @@ window.DASHBOARD_DATA = {
         "pct": 1.31,
         "netInflow": 18.17,
         "upCount": 35,
-        "downCount": 7
+        "downCount": 7,
+        "lead": "同宇新材",
+        "leadPct": 8.65,
+        "ztCount": 0,
+        "pct5": 2.43
       },
       {
         "code": "881142",
@@ -2403,7 +2423,11 @@ window.DASHBOARD_DATA = {
         "pct": 1.3,
         "netInflow": 6.8,
         "upCount": 31,
-        "downCount": 23
+        "downCount": 23,
+        "lead": "欧林生物",
+        "leadPct": 12.99,
+        "ztCount": 0,
+        "pct5": 12.52
       },
       {
         "code": "881123",
@@ -2411,7 +2435,11 @@ window.DASHBOARD_DATA = {
         "pct": 1.27,
         "netInflow": 1.67,
         "upCount": 23,
-        "downCount": 11
+        "downCount": 11,
+        "lead": "富信科技",
+        "leadPct": 16.21,
+        "ztCount": 0,
+        "pct5": 3.77
       },
       {
         "code": "881117",
@@ -2419,7 +2447,11 @@ window.DASHBOARD_DATA = {
         "pct": 0.95,
         "netInflow": 6.63,
         "upCount": 135,
-        "downCount": 114
+        "downCount": 114,
+        "lead": "莱伯泰科",
+        "leadPct": 20,
+        "ztCount": 3,
+        "pct5": 5.1
       },
       {
         "code": "881175",
@@ -2427,7 +2459,11 @@ window.DASHBOARD_DATA = {
         "pct": 0.9,
         "netInflow": 1.12,
         "upCount": 34,
-        "downCount": 21
+        "downCount": 21,
+        "lead": "益诺思",
+        "leadPct": 14.41,
+        "ztCount": 0,
+        "pct5": 11.2
       },
       {
         "code": "881179",
@@ -2435,7 +2471,11 @@ window.DASHBOARD_DATA = {
         "pct": 0.75,
         "netInflow": 1.07,
         "upCount": 23,
-        "downCount": 16
+        "downCount": 16,
+        "lead": "安邦护卫",
+        "leadPct": 10,
+        "ztCount": 1,
+        "pct5": 4.36
       },
       {
         "code": "881144",
@@ -2443,7 +2483,11 @@ window.DASHBOARD_DATA = {
         "pct": 0.64,
         "netInflow": 1.65,
         "upCount": 79,
-        "downCount": 60
+        "downCount": 60,
+        "lead": "浩欧博",
+        "leadPct": 20,
+        "ztCount": 1,
+        "pct5": 7.54
       },
       {
         "code": "881265",
@@ -2451,7 +2495,11 @@ window.DASHBOARD_DATA = {
         "pct": 0.57,
         "netInflow": 3.71,
         "upCount": 44,
-        "downCount": 34
+        "downCount": 34,
+        "lead": "海正生材",
+        "leadPct": 16.38,
+        "ztCount": 0,
+        "pct5": 3.78
       },
       {
         "code": "881282",
@@ -2459,7 +2507,11 @@ window.DASHBOARD_DATA = {
         "pct": 0.4,
         "netInflow": -1.88,
         "upCount": 14,
-        "downCount": 20
+        "downCount": 20,
+        "lead": "爱科赛博",
+        "leadPct": 9.92,
+        "ztCount": 0,
+        "pct5": 3.75
       },
       {
         "code": "881171",
@@ -2467,7 +2519,11 @@ window.DASHBOARD_DATA = {
         "pct": 0.39,
         "netInflow": -1.39,
         "upCount": 50,
-        "downCount": 48
+        "downCount": 48,
+        "lead": "燕麦科技",
+        "leadPct": 8.16,
+        "ztCount": 0,
+        "pct5": 3.92
       },
       {
         "code": "881122",
@@ -2475,7 +2531,11 @@ window.DASHBOARD_DATA = {
         "pct": 0.26,
         "netInflow": -12.33,
         "upCount": 48,
-        "downCount": 58
+        "downCount": 58,
+        "lead": "沃格光电",
+        "leadPct": 10,
+        "ztCount": 2,
+        "pct5": 4.82
       },
       {
         "code": "881264",
@@ -2483,7 +2543,11 @@ window.DASHBOARD_DATA = {
         "pct": 0.26,
         "netInflow": 1.71,
         "upCount": 16,
-        "downCount": 13
+        "downCount": 13,
+        "lead": "汇隆新材",
+        "leadPct": 5.32,
+        "ztCount": 0,
+        "pct5": 2.98
       },
       {
         "code": "881131",
@@ -2491,7 +2555,11 @@ window.DASHBOARD_DATA = {
         "pct": 0.23,
         "netInflow": -1.06,
         "upCount": 14,
-        "downCount": 26
+        "downCount": 26,
+        "lead": "宏昌科技",
+        "leadPct": 12.22,
+        "ztCount": 0,
+        "pct5": 3.81
       },
       {
         "code": "881281",
@@ -2499,7 +2567,11 @@ window.DASHBOARD_DATA = {
         "pct": 0.21,
         "netInflow": 7.95,
         "upCount": 45,
-        "downCount": 60
+        "downCount": 60,
+        "lead": "中一科技",
+        "leadPct": 20,
+        "ztCount": 1,
+        "pct5": 1.02
       },
       {
         "code": "881153",
@@ -2507,7 +2579,11 @@ window.DASHBOARD_DATA = {
         "pct": 0.2,
         "netInflow": -0.73,
         "upCount": 37,
-        "downCount": 44
+        "downCount": 44,
+        "lead": "华远控股",
+        "leadPct": 10.16,
+        "ztCount": 3,
+        "pct5": 7.55
       },
       {
         "code": "881109",
@@ -2515,7 +2591,11 @@ window.DASHBOARD_DATA = {
         "pct": 0.14,
         "netInflow": -3.82,
         "upCount": 80,
-        "downCount": 101
+        "downCount": 101,
+        "lead": "锦华新材",
+        "leadPct": 14.85,
+        "ztCount": 0,
+        "pct5": 4.2
       },
       {
         "code": "881115",
@@ -2523,7 +2603,11 @@ window.DASHBOARD_DATA = {
         "pct": 0.13,
         "netInflow": -14.08,
         "upCount": 36,
-        "downCount": 33
+        "downCount": 33,
+        "lead": "三峡新材",
+        "leadPct": 10.12,
+        "ztCount": 2,
+        "pct5": 2.86
       },
       {
         "code": "881276",
@@ -2531,7 +2615,11 @@ window.DASHBOARD_DATA = {
         "pct": 0.07,
         "netInflow": -6.73,
         "upCount": 24,
-        "downCount": 37
+        "downCount": 37,
+        "lead": "高凌信息",
+        "leadPct": 15.28,
+        "ztCount": 0,
+        "pct5": 2.71
       },
       {
         "code": "881118",
@@ -2539,7 +2627,11 @@ window.DASHBOARD_DATA = {
         "pct": 0.06,
         "netInflow": -6.86,
         "upCount": 100,
-        "downCount": 102
+        "downCount": 102,
+        "lead": "凯达重工",
+        "leadPct": 580.75,
+        "ztCount": 2,
+        "pct5": 4.19
       },
       {
         "code": "881151",
@@ -2547,7 +2639,11 @@ window.DASHBOARD_DATA = {
         "pct": 0.03,
         "netInflow": 0.43,
         "upCount": 6,
-        "downCount": 6
+        "downCount": 6,
+        "lead": "华夏航空",
+        "leadPct": 1.09,
+        "ztCount": 0,
+        "pct5": 1.67
       },
       {
         "code": "881279",
@@ -2555,7 +2651,11 @@ window.DASHBOARD_DATA = {
         "pct": 0.03,
         "netInflow": -11.43,
         "upCount": 33,
-        "downCount": 37
+        "downCount": 37,
+        "lead": "金辰股份",
+        "leadPct": 10.02,
+        "ztCount": 1,
+        "pct5": 3.37
       },
       {
         "code": "881116",
@@ -2563,7 +2663,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.02,
         "netInflow": -1.79,
         "upCount": 53,
-        "downCount": 83
+        "downCount": 83,
+        "lead": "中诚咨询",
+        "leadPct": 14,
+        "ztCount": 0,
+        "pct5": 3.1
       },
       {
         "code": "881126",
@@ -2571,7 +2675,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.04,
         "netInflow": -14.59,
         "upCount": 107,
-        "downCount": 158
+        "downCount": 158,
+        "lead": "盛帮股份",
+        "leadPct": 10.37,
+        "ztCount": 0,
+        "pct5": 4.09
       },
       {
         "code": "881273",
@@ -2579,7 +2687,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.14,
         "netInflow": -4.07,
         "upCount": 8,
-        "downCount": 11
+        "downCount": 11,
+        "lead": "天佑德酒",
+        "leadPct": 3.97,
+        "ztCount": 0,
+        "pct5": 2.36
       },
       {
         "code": "881269",
@@ -2587,7 +2699,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.16,
         "netInflow": -2.23,
         "upCount": 8,
-        "downCount": 20
+        "downCount": 20,
+        "lead": "必得科技",
+        "leadPct": 3.94,
+        "ztCount": 0,
+        "pct5": 2.81
       },
       {
         "code": "881114",
@@ -2595,7 +2711,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.22,
         "netInflow": -1.75,
         "upCount": 14,
-        "downCount": 20
+        "downCount": 20,
+        "lead": "江南新材",
+        "leadPct": 10,
+        "ztCount": 1,
+        "pct5": 2.91
       },
       {
         "code": "881128",
@@ -2603,7 +2723,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.25,
         "netInflow": -0.7,
         "upCount": 12,
-        "downCount": 14
+        "downCount": 14,
+        "lead": "申华控股",
+        "leadPct": 10,
+        "ztCount": 1,
+        "pct5": 2.85
       },
       {
         "code": "881268",
@@ -2611,7 +2735,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.26,
         "netInflow": -5.24,
         "upCount": 12,
-        "downCount": 22
+        "downCount": 22,
+        "lead": "南方路机",
+        "leadPct": 3.12,
+        "ztCount": 0,
+        "pct5": 1.51
       },
       {
         "code": "881130",
@@ -2619,7 +2747,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.28,
         "netInflow": -14.04,
         "upCount": 28,
-        "downCount": 54
+        "downCount": 54,
+        "lead": "安居宝",
+        "leadPct": 11.95,
+        "ztCount": 0,
+        "pct5": 4.11
       },
       {
         "code": "881125",
@@ -2627,7 +2759,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.32,
         "netInflow": -4.7,
         "upCount": 5,
-        "downCount": 16
+        "downCount": 16,
+        "lead": "江淮汽车",
+        "leadPct": 9.99,
+        "ztCount": 1,
+        "pct5": 1.71
       },
       {
         "code": "881160",
@@ -2635,7 +2771,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.36,
         "netInflow": -0.92,
         "upCount": 5,
-        "downCount": 30
+        "downCount": 30,
+        "lead": "大连圣亚",
+        "leadPct": 5.67,
+        "ztCount": 0,
+        "pct5": 2.81
       },
       {
         "code": "881124",
@@ -2643,7 +2783,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.39,
         "netInflow": -27.52,
         "upCount": 30,
-        "downCount": 66
+        "downCount": 66,
+        "lead": "福立旺",
+        "leadPct": 13.06,
+        "ztCount": 0,
+        "pct5": 4.19
       },
       {
         "code": "881155",
@@ -2651,7 +2795,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.43,
         "netInflow": -9.79,
         "upCount": 4,
-        "downCount": 35
+        "downCount": 35,
+        "lead": "齐鲁银行",
+        "leadPct": 0.88,
+        "ztCount": 0,
+        "pct5": -1.08
       },
       {
         "code": "881149",
@@ -2659,7 +2807,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.51,
         "netInflow": -2.13,
         "upCount": 12,
-        "downCount": 20
+        "downCount": 20,
+        "lead": "五洲交通",
+        "leadPct": 1.48,
+        "ztCount": 0,
+        "pct5": -0.42
       },
       {
         "code": "881134",
@@ -2667,7 +2819,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.53,
         "netInflow": 2.64,
         "upCount": 16,
-        "downCount": 49
+        "downCount": 49,
+        "lead": "ST加加",
+        "leadPct": 6.29,
+        "ztCount": 0,
+        "pct5": 2.44
       },
       {
         "code": "881284",
@@ -2675,7 +2831,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.53,
         "netInflow": -0.52,
         "upCount": 14,
-        "downCount": 15
+        "downCount": 15,
+        "lead": "蓝盾光电",
+        "leadPct": 3.61,
+        "ztCount": 0,
+        "pct5": 2.76
       },
       {
         "code": "881181",
@@ -2683,7 +2843,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.55,
         "netInflow": -4.92,
         "upCount": 30,
-        "downCount": 79
+        "downCount": 79,
+        "lead": "金达莱",
+        "leadPct": 7.18,
+        "ztCount": 0,
+        "pct5": 1.79
       },
       {
         "code": "881173",
@@ -2691,7 +2855,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.55,
         "netInflow": -0.86,
         "upCount": 4,
-        "downCount": 21
+        "downCount": 21,
+        "lead": "奥佳华",
+        "leadPct": 10.03,
+        "ztCount": 1,
+        "pct5": 5.45
       },
       {
         "code": "881139",
@@ -2699,7 +2867,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.59,
         "netInflow": -4.13,
         "upCount": 33,
-        "downCount": 65
+        "downCount": 65,
+        "lead": "大亚圣象",
+        "leadPct": 10.02,
+        "ztCount": 1,
+        "pct5": 5.94
       },
       {
         "code": "881266",
@@ -2707,7 +2879,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.6,
         "netInflow": -2.05,
         "upCount": 8,
-        "downCount": 14
+        "downCount": 14,
+        "lead": "科创新源",
+        "leadPct": 4.11,
+        "ztCount": 0,
+        "pct5": 1.59
       },
       {
         "code": "881157",
@@ -2715,7 +2891,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.61,
         "netInflow": -13.99,
         "upCount": 3,
-        "downCount": 43
+        "downCount": 43,
+        "lead": "中金公司",
+        "leadPct": 2.67,
+        "ztCount": 0,
+        "pct5": 1.38
       },
       {
         "code": "881112",
@@ -2723,7 +2903,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.63,
         "netInflow": -2.94,
         "upCount": 9,
-        "downCount": 32
+        "downCount": 32,
+        "lead": "凌钢股份",
+        "leadPct": 4.76,
+        "ztCount": 0,
+        "pct5": -0.12
       },
       {
         "code": "881108",
@@ -2731,7 +2915,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.63,
         "netInflow": -12.02,
         "upCount": 17,
-        "downCount": 41
+        "downCount": 41,
+        "lead": "振华股份",
+        "leadPct": 9.99,
+        "ztCount": 1,
+        "pct5": 1.89
       },
       {
         "code": "881129",
@@ -2739,7 +2927,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.67,
         "netInflow": -49.4,
         "upCount": 27,
-        "downCount": 64
+        "downCount": 64,
+        "lead": "瑞斯康达",
+        "leadPct": 10,
+        "ztCount": 1,
+        "pct5": 2.82
       },
       {
         "code": "881133",
@@ -2747,7 +2939,11 @@ window.DASHBOARD_DATA = {
         "pct": -0.72,
         "netInflow": -4.62,
         "upCount": 14,
-        "downCount": 33
+        "downCount": 33,
+        "lead": "古越龙山",
+        "leadPct": 5,
+        "ztCount": 0,
+        "pct5": 3.75
       },
       {
         "code": "881140",
@@ -2755,7 +2951,491 @@ window.DASHBOARD_DATA = {
         "pct": -0.73,
         "netInflow": -18.11,
         "upCount": 43,
-        "downCount": 112
+        "downCount": 112,
+        "lead": "艾力斯",
+        "leadPct": 9.35,
+        "ztCount": 0,
+        "pct5": 6.38
+      },
+      {
+        "code": "881277",
+        "name": "电机",
+        "pct": -0.76,
+        "netInflow": -2.28,
+        "upCount": 8,
+        "downCount": 18,
+        "lead": "三协电机",
+        "leadPct": 2.48,
+        "ztCount": 0,
+        "pct5": 2.84
+      },
+      {
+        "code": "881178",
+        "name": "教育",
+        "pct": -0.77,
+        "netInflow": -1.64,
+        "upCount": 4,
+        "downCount": 11,
+        "lead": "科德教育",
+        "leadPct": 16.97,
+        "ztCount": 0,
+        "pct5": 5.37
+      },
+      {
+        "code": "881135",
+        "name": "纺织制造",
+        "pct": -0.8,
+        "netInflow": -3.58,
+        "upCount": 9,
+        "downCount": 24,
+        "lead": "华茂股份",
+        "leadPct": 9.93,
+        "ztCount": 1,
+        "pct5": 3.31
+      },
+      {
+        "code": "881168",
+        "name": "工业金属",
+        "pct": -0.81,
+        "netInflow": -25.72,
+        "upCount": 11,
+        "downCount": 43,
+        "lead": "丽岛新材",
+        "leadPct": 10.01,
+        "ztCount": 1,
+        "pct5": -0.29
+      },
+      {
+        "code": "881182",
+        "name": "美容护理",
+        "pct": -0.81,
+        "netInflow": -4.77,
+        "upCount": 10,
+        "downCount": 24,
+        "lead": "锦波生物",
+        "leadPct": 5.9,
+        "ztCount": 0,
+        "pct5": 4.63
+      },
+      {
+        "code": "881169",
+        "name": "贵金属",
+        "pct": -0.84,
+        "netInflow": -11.89,
+        "upCount": 2,
+        "downCount": 11,
+        "lead": "山金国际",
+        "leadPct": 0.33,
+        "ztCount": 0,
+        "pct5": -6.96
+      },
+      {
+        "code": "881137",
+        "name": "造纸",
+        "pct": -0.86,
+        "netInflow": -2.74,
+        "upCount": 6,
+        "downCount": 18,
+        "lead": "宜宾纸业",
+        "leadPct": 2.13,
+        "ztCount": 0,
+        "pct5": 2.53
+      },
+      {
+        "code": "881170",
+        "name": "小金属",
+        "pct": -0.86,
+        "netInflow": -12.05,
+        "upCount": 6,
+        "downCount": 24,
+        "lead": "金钛股份",
+        "leadPct": 5.78,
+        "ztCount": 0,
+        "pct5": 0.32
+      },
+      {
+        "code": "881136",
+        "name": "服装家纺",
+        "pct": -0.9,
+        "netInflow": -6.83,
+        "upCount": 21,
+        "downCount": 51,
+        "lead": "泰慕士",
+        "leadPct": 10.02,
+        "ztCount": 1,
+        "pct5": 3.31
+      },
+      {
+        "code": "881132",
+        "name": "黑色家电",
+        "pct": -0.91,
+        "netInflow": -1.88,
+        "upCount": 1,
+        "downCount": 8,
+        "lead": "高斯贝尔",
+        "leadPct": 1.36,
+        "ztCount": 0,
+        "pct5": 0.15
+      },
+      {
+        "code": "881159",
+        "name": "贸易",
+        "pct": -0.93,
+        "netInflow": -1.19,
+        "upCount": 4,
+        "downCount": 10,
+        "lead": "五矿发展",
+        "leadPct": 2,
+        "ztCount": 0,
+        "pct5": 1.07
+      },
+      {
+        "code": "881280",
+        "name": "风电设备",
+        "pct": -0.96,
+        "netInflow": -3.8,
+        "upCount": 10,
+        "downCount": 21,
+        "lead": "振江股份",
+        "leadPct": 3.55,
+        "ztCount": 0,
+        "pct5": 0.82
+      },
+      {
+        "code": "881138",
+        "name": "包装印刷",
+        "pct": -1.01,
+        "netInflow": -4.97,
+        "upCount": 9,
+        "downCount": 36,
+        "lead": "中锐股份",
+        "leadPct": 1.89,
+        "ztCount": 0,
+        "pct5": 1.73
+      },
+      {
+        "code": "881152",
+        "name": "物流",
+        "pct": -1.03,
+        "netInflow": -2.83,
+        "upCount": 10,
+        "downCount": 40,
+        "lead": "ST海钦",
+        "leadPct": 8.41,
+        "ztCount": 0,
+        "pct5": 2.33
+      },
+      {
+        "code": "881267",
+        "name": "能源金属",
+        "pct": -1.05,
+        "netInflow": -10.47,
+        "upCount": 2,
+        "downCount": 11,
+        "lead": "*ST威领",
+        "leadPct": 6,
+        "ztCount": 0,
+        "pct5": 1.08
+      },
+      {
+        "code": "881180",
+        "name": "石油加工贸易",
+        "pct": -1.08,
+        "netInflow": -0.23,
+        "upCount": 6,
+        "downCount": 20,
+        "lead": "荣盛石化",
+        "leadPct": 3.2,
+        "ztCount": 0,
+        "pct5": 0.91
+      },
+      {
+        "code": "881156",
+        "name": "保险",
+        "pct": -1.12,
+        "netInflow": -5.93,
+        "upCount": 0,
+        "downCount": 5,
+        "lead": "中国人寿",
+        "leadPct": -0.23,
+        "ztCount": 0,
+        "pct5": 1.64
+      },
+      {
+        "code": "881103",
+        "name": "农产品加工",
+        "pct": -1.12,
+        "netInflow": -6.52,
+        "upCount": 8,
+        "downCount": 33,
+        "lead": "保龄宝",
+        "leadPct": 10.06,
+        "ztCount": 1,
+        "pct5": 3.32
+      },
+      {
+        "code": "881263",
+        "name": "农化制品",
+        "pct": -1.18,
+        "netInflow": -12.02,
+        "upCount": 10,
+        "downCount": 50,
+        "lead": "利民股份",
+        "leadPct": 5.01,
+        "ztCount": 0,
+        "pct5": 0.67
+      },
+      {
+        "code": "881278",
+        "name": "电网设备",
+        "pct": -1.21,
+        "netInflow": -27.47,
+        "upCount": 33,
+        "downCount": 105,
+        "lead": "威腾电气",
+        "leadPct": 8.42,
+        "ztCount": 0,
+        "pct5": 0.56
+      },
+      {
+        "code": "881141",
+        "name": "中药",
+        "pct": -1.22,
+        "netInflow": -10.27,
+        "upCount": 9,
+        "downCount": 59,
+        "lead": "ST万邦",
+        "leadPct": 2.25,
+        "ztCount": 0,
+        "pct5": 3
+      },
+      {
+        "code": "881166",
+        "name": "军工装备",
+        "pct": -1.36,
+        "netInflow": -21.81,
+        "upCount": 10,
+        "downCount": 72,
+        "lead": "西部超导",
+        "leadPct": 3.63,
+        "ztCount": 0,
+        "pct5": 0.34
+      },
+      {
+        "code": "881165",
+        "name": "综合",
+        "pct": -1.38,
+        "netInflow": -1.97,
+        "upCount": 2,
+        "downCount": 16,
+        "lead": "上海三毛",
+        "leadPct": 0.92,
+        "ztCount": 0,
+        "pct5": 0.96
+      },
+      {
+        "code": "881272",
+        "name": "软件开发",
+        "pct": -1.45,
+        "netInflow": -32.77,
+        "upCount": 23,
+        "downCount": 114,
+        "lead": "科大国创",
+        "leadPct": 11.91,
+        "ztCount": 0,
+        "pct5": 4.23
+      },
+      {
+        "code": "881146",
+        "name": "燃气",
+        "pct": -1.48,
+        "netInflow": -3.78,
+        "upCount": 3,
+        "downCount": 24,
+        "lead": "德龙汇能",
+        "leadPct": 5.68,
+        "ztCount": 0,
+        "pct5": -0.23
+      },
+      {
+        "code": "881148",
+        "name": "港口航运",
+        "pct": -1.52,
+        "netInflow": -9.25,
+        "upCount": 4,
+        "downCount": 30,
+        "lead": "秦港股份",
+        "leadPct": 0.57,
+        "ztCount": 0,
+        "pct5": -0.78
+      },
+      {
+        "code": "881143",
+        "name": "医药商业",
+        "pct": -1.57,
+        "netInflow": -4.91,
+        "upCount": 4,
+        "downCount": 27,
+        "lead": "ST海王",
+        "leadPct": 2.61,
+        "ztCount": 0,
+        "pct5": 3.07
+      },
+      {
+        "code": "881271",
+        "name": "IT服务",
+        "pct": -1.57,
+        "netInflow": -46.08,
+        "upCount": 20,
+        "downCount": 109,
+        "lead": "南威软件",
+        "leadPct": 9.99,
+        "ztCount": 1,
+        "pct5": 3.08
+      },
+      {
+        "code": "881101",
+        "name": "种植业与林业",
+        "pct": -1.65,
+        "netInflow": -9.26,
+        "upCount": 4,
+        "downCount": 26,
+        "lead": "万向德农",
+        "leadPct": 9.99,
+        "ztCount": 1,
+        "pct5": 4
+      },
+      {
+        "code": "881158",
+        "name": "零售",
+        "pct": -1.67,
+        "netInflow": -19.03,
+        "upCount": 4,
+        "downCount": 66,
+        "lead": "汇通能源",
+        "leadPct": 9.99,
+        "ztCount": 1,
+        "pct5": 2.57
+      },
+      {
+        "code": "881283",
+        "name": "多元金融",
+        "pct": -1.73,
+        "netInflow": -7.19,
+        "upCount": 1,
+        "downCount": 24,
+        "lead": "四川双马",
+        "leadPct": 0.73,
+        "ztCount": 0,
+        "pct5": 0.72
+      },
+      {
+        "code": "881162",
+        "name": "通信服务",
+        "pct": -1.84,
+        "netInflow": -14.06,
+        "upCount": 5,
+        "downCount": 37,
+        "lead": "铜牛信息",
+        "leadPct": 5.2,
+        "ztCount": 0,
+        "pct5": 2.44
+      },
+      {
+        "code": "881102",
+        "name": "养殖业",
+        "pct": -1.9,
+        "netInflow": -7.7,
+        "upCount": 1,
+        "downCount": 35,
+        "lead": "生物股份",
+        "leadPct": 0.26,
+        "ztCount": 0,
+        "pct5": 0.68
+      },
+      {
+        "code": "881145",
+        "name": "电力",
+        "pct": -1.98,
+        "netInflow": -37.17,
+        "upCount": 12,
+        "downCount": 95,
+        "lead": "世茂能源",
+        "leadPct": 5.33,
+        "ztCount": 0,
+        "pct5": -2.85
+      },
+      {
+        "code": "881177",
+        "name": "互联网电商",
+        "pct": -1.99,
+        "netInflow": -6.83,
+        "upCount": 2,
+        "downCount": 18,
+        "lead": "狮头股份",
+        "leadPct": 5.94,
+        "ztCount": 0,
+        "pct5": 5.62
+      },
+      {
+        "code": "881275",
+        "name": "游戏",
+        "pct": -2.4,
+        "netInflow": -12.33,
+        "upCount": 2,
+        "downCount": 21,
+        "lead": "宝通科技",
+        "leadPct": 1.22,
+        "ztCount": 0,
+        "pct5": 0.27
+      },
+      {
+        "code": "881107",
+        "name": "油气开采及服务",
+        "pct": -2.41,
+        "netInflow": -6.87,
+        "upCount": 0,
+        "downCount": 19,
+        "lead": "中海油服",
+        "leadPct": -0.9,
+        "ztCount": 0,
+        "pct5": -2.2
+      },
+      {
+        "code": "881274",
+        "name": "影视院线",
+        "pct": -2.52,
+        "netInflow": -5.76,
+        "upCount": 2,
+        "downCount": 18,
+        "lead": "博纳影业",
+        "leadPct": 4.17,
+        "ztCount": 0,
+        "pct5": 2.72
+      },
+      {
+        "code": "881164",
+        "name": "文化传媒",
+        "pct": -2.7,
+        "netInflow": -45.18,
+        "upCount": 7,
+        "downCount": 76,
+        "lead": "天威视讯",
+        "leadPct": 10.06,
+        "ztCount": 3,
+        "pct5": 4.87
+      },
+      {
+        "code": "881105",
+        "name": "煤炭开采加工",
+        "pct": -2.91,
+        "netInflow": -14.69,
+        "upCount": 1,
+        "downCount": 33,
+        "lead": "新大洲A",
+        "leadPct": 1.51,
+        "ztCount": 0,
+        "pct5": -0.07
       }
     ],
     "macroNews": [
@@ -5836,203 +6516,993 @@ window.DASHBOARD_DATA = {
         "items": [
           {
             "name": "非金属材料",
-            "pct": 2.21
+            "pct": 2.21,
+            "netInflow": 4.23,
+            "upCount": 12,
+            "downCount": 5,
+            "lead": "太力科技",
+            "leadPct": 12.79,
+            "ztCount": 0,
+            "pct5": 5.39
           },
           {
             "name": "厨卫电器",
-            "pct": 1.53
+            "pct": 1.53,
+            "netInflow": 0.3,
+            "upCount": 5,
+            "downCount": 4,
+            "lead": "亿田智能",
+            "leadPct": 12.13,
+            "ztCount": 0,
+            "pct5": 4.48
           },
           {
             "name": "元件",
-            "pct": 1.5
+            "pct": 1.5,
+            "netInflow": 11.42,
+            "upCount": 44,
+            "downCount": 19,
+            "lead": "澳弘电子",
+            "leadPct": 10.01,
+            "ztCount": 2,
+            "pct5": 4.3
           },
           {
             "name": "半导体",
-            "pct": 1.35
+            "pct": 1.35,
+            "netInflow": 0.65,
+            "upCount": 121,
+            "downCount": 66,
+            "lead": "慧智微",
+            "leadPct": 20.03,
+            "ztCount": 1,
+            "pct5": 6.46
           },
           {
             "name": "电子化学品",
-            "pct": 1.31
+            "pct": 1.31,
+            "netInflow": 18.17,
+            "upCount": 35,
+            "downCount": 7,
+            "lead": "同宇新材",
+            "leadPct": 8.65,
+            "ztCount": 0,
+            "pct5": 2.43
           },
           {
             "name": "生物制品",
-            "pct": 1.3
+            "pct": 1.3,
+            "netInflow": 6.8,
+            "upCount": 31,
+            "downCount": 23,
+            "lead": "欧林生物",
+            "leadPct": 12.99,
+            "ztCount": 0,
+            "pct5": 12.52
           },
           {
             "name": "其他电子",
-            "pct": 1.27
+            "pct": 1.27,
+            "netInflow": 1.67,
+            "upCount": 23,
+            "downCount": 11,
+            "lead": "富信科技",
+            "leadPct": 16.21,
+            "ztCount": 0,
+            "pct5": 3.77
           },
           {
             "name": "通用设备",
-            "pct": 0.95
+            "pct": 0.95,
+            "netInflow": 6.63,
+            "upCount": 135,
+            "downCount": 114,
+            "lead": "莱伯泰科",
+            "leadPct": 20,
+            "ztCount": 3,
+            "pct5": 5.1
           },
           {
             "name": "医疗服务",
-            "pct": 0.9
+            "pct": 0.9,
+            "netInflow": 1.12,
+            "upCount": 34,
+            "downCount": 21,
+            "lead": "益诺思",
+            "leadPct": 14.41,
+            "ztCount": 0,
+            "pct5": 11.2
           },
           {
             "name": "其他社会服务",
-            "pct": 0.75
+            "pct": 0.75,
+            "netInflow": 1.07,
+            "upCount": 23,
+            "downCount": 16,
+            "lead": "安邦护卫",
+            "leadPct": 10,
+            "ztCount": 1,
+            "pct5": 4.36
           },
           {
             "name": "医疗器械",
-            "pct": 0.64
+            "pct": 0.64,
+            "netInflow": 1.65,
+            "upCount": 79,
+            "downCount": 60,
+            "lead": "浩欧博",
+            "leadPct": 20,
+            "ztCount": 1,
+            "pct5": 7.54
           },
           {
             "name": "塑料制品",
-            "pct": 0.57
+            "pct": 0.57,
+            "netInflow": 3.71,
+            "upCount": 44,
+            "downCount": 34,
+            "lead": "海正生材",
+            "leadPct": 16.38,
+            "ztCount": 0,
+            "pct5": 3.78
           },
           {
             "name": "其他电源设备",
-            "pct": 0.4
+            "pct": 0.4,
+            "netInflow": -1.88,
+            "upCount": 14,
+            "downCount": 20,
+            "lead": "爱科赛博",
+            "leadPct": 9.92,
+            "ztCount": 0,
+            "pct5": 3.75
           },
           {
             "name": "自动化设备",
-            "pct": 0.39
+            "pct": 0.39,
+            "netInflow": -1.39,
+            "upCount": 50,
+            "downCount": 48,
+            "lead": "燕麦科技",
+            "leadPct": 8.16,
+            "ztCount": 0,
+            "pct5": 3.92
           },
           {
             "name": "光学光电子",
-            "pct": 0.26
+            "pct": 0.26,
+            "netInflow": -12.33,
+            "upCount": 48,
+            "downCount": 58,
+            "lead": "沃格光电",
+            "leadPct": 10,
+            "ztCount": 2,
+            "pct5": 4.82
           },
           {
             "name": "化学纤维",
-            "pct": 0.26
+            "pct": 0.26,
+            "netInflow": 1.71,
+            "upCount": 16,
+            "downCount": 13,
+            "lead": "汇隆新材",
+            "leadPct": 5.32,
+            "ztCount": 0,
+            "pct5": 2.98
           },
           {
             "name": "白色家电",
-            "pct": 0.23
+            "pct": 0.23,
+            "netInflow": -1.06,
+            "upCount": 14,
+            "downCount": 26,
+            "lead": "宏昌科技",
+            "leadPct": 12.22,
+            "ztCount": 0,
+            "pct5": 3.81
           },
           {
             "name": "电池",
-            "pct": 0.21
+            "pct": 0.21,
+            "netInflow": 7.95,
+            "upCount": 45,
+            "downCount": 60,
+            "lead": "中一科技",
+            "leadPct": 20,
+            "ztCount": 1,
+            "pct5": 1.02
           },
           {
             "name": "房地产",
-            "pct": 0.2
+            "pct": 0.2,
+            "netInflow": -0.73,
+            "upCount": 37,
+            "downCount": 44,
+            "lead": "华远控股",
+            "leadPct": 10.16,
+            "ztCount": 3,
+            "pct5": 7.55
           },
           {
             "name": "化学制品",
-            "pct": 0.14
+            "pct": 0.14,
+            "netInflow": -3.82,
+            "upCount": 80,
+            "downCount": 101,
+            "lead": "锦华新材",
+            "leadPct": 14.85,
+            "ztCount": 0,
+            "pct5": 4.2
           },
           {
             "name": "建筑材料",
-            "pct": 0.13
+            "pct": 0.13,
+            "netInflow": -14.08,
+            "upCount": 36,
+            "downCount": 33,
+            "lead": "三峡新材",
+            "leadPct": 10.12,
+            "ztCount": 2,
+            "pct5": 2.86
           },
           {
             "name": "军工电子",
-            "pct": 0.07
+            "pct": 0.07,
+            "netInflow": -6.73,
+            "upCount": 24,
+            "downCount": 37,
+            "lead": "高凌信息",
+            "leadPct": 15.28,
+            "ztCount": 0,
+            "pct5": 2.71
           },
           {
             "name": "专用设备",
-            "pct": 0.06
+            "pct": 0.06,
+            "netInflow": -6.86,
+            "upCount": 100,
+            "downCount": 102,
+            "lead": "凯达重工",
+            "leadPct": 580.75,
+            "ztCount": 2,
+            "pct5": 4.19
           },
           {
             "name": "机场航运",
-            "pct": 0.03
+            "pct": 0.03,
+            "netInflow": 0.43,
+            "upCount": 6,
+            "downCount": 6,
+            "lead": "华夏航空",
+            "leadPct": 1.09,
+            "ztCount": 0,
+            "pct5": 1.67
           },
           {
             "name": "光伏设备",
-            "pct": 0.03
+            "pct": 0.03,
+            "netInflow": -11.43,
+            "upCount": 33,
+            "downCount": 37,
+            "lead": "金辰股份",
+            "leadPct": 10.02,
+            "ztCount": 1,
+            "pct5": 3.37
           },
           {
             "name": "建筑装饰",
-            "pct": -0.02
+            "pct": -0.02,
+            "netInflow": -1.79,
+            "upCount": 53,
+            "downCount": 83,
+            "lead": "中诚咨询",
+            "leadPct": 14,
+            "ztCount": 0,
+            "pct5": 3.1
           },
           {
             "name": "汽车零部件",
-            "pct": -0.04
+            "pct": -0.04,
+            "netInflow": -14.59,
+            "upCount": 107,
+            "downCount": 158,
+            "lead": "盛帮股份",
+            "leadPct": 10.37,
+            "ztCount": 0,
+            "pct5": 4.09
           },
           {
             "name": "白酒",
-            "pct": -0.14
+            "pct": -0.14,
+            "netInflow": -4.07,
+            "upCount": 8,
+            "downCount": 11,
+            "lead": "天佑德酒",
+            "leadPct": 3.97,
+            "ztCount": 0,
+            "pct5": 2.36
           },
           {
             "name": "轨交设备",
-            "pct": -0.16
+            "pct": -0.16,
+            "netInflow": -2.23,
+            "upCount": 8,
+            "downCount": 20,
+            "lead": "必得科技",
+            "leadPct": 3.94,
+            "ztCount": 0,
+            "pct5": 2.81
           },
           {
             "name": "金属新材料",
-            "pct": -0.22
+            "pct": -0.22,
+            "netInflow": -1.75,
+            "upCount": 14,
+            "downCount": 20,
+            "lead": "江南新材",
+            "leadPct": 10,
+            "ztCount": 1,
+            "pct5": 2.91
           },
           {
             "name": "汽车服务及其他",
-            "pct": -0.25
+            "pct": -0.25,
+            "netInflow": -0.7,
+            "upCount": 12,
+            "downCount": 14,
+            "lead": "申华控股",
+            "leadPct": 10,
+            "ztCount": 1,
+            "pct5": 2.85
           },
           {
             "name": "工程机械",
-            "pct": -0.26
+            "pct": -0.26,
+            "netInflow": -5.24,
+            "upCount": 12,
+            "downCount": 22,
+            "lead": "南方路机",
+            "leadPct": 3.12,
+            "ztCount": 0,
+            "pct5": 1.51
           },
           {
             "name": "计算机设备",
-            "pct": -0.28
+            "pct": -0.28,
+            "netInflow": -14.04,
+            "upCount": 28,
+            "downCount": 54,
+            "lead": "安居宝",
+            "leadPct": 11.95,
+            "ztCount": 0,
+            "pct5": 4.11
           },
           {
             "name": "汽车整车",
-            "pct": -0.32
+            "pct": -0.32,
+            "netInflow": -4.7,
+            "upCount": 5,
+            "downCount": 16,
+            "lead": "江淮汽车",
+            "leadPct": 9.99,
+            "ztCount": 1,
+            "pct5": 1.71
           },
           {
             "name": "旅游及酒店",
-            "pct": -0.36
+            "pct": -0.36,
+            "netInflow": -0.92,
+            "upCount": 5,
+            "downCount": 30,
+            "lead": "大连圣亚",
+            "leadPct": 5.67,
+            "ztCount": 0,
+            "pct5": 2.81
           },
           {
             "name": "消费电子",
-            "pct": -0.39
+            "pct": -0.39,
+            "netInflow": -27.52,
+            "upCount": 30,
+            "downCount": 66,
+            "lead": "福立旺",
+            "leadPct": 13.06,
+            "ztCount": 0,
+            "pct5": 4.19
           },
           {
             "name": "银行",
-            "pct": -0.43
+            "pct": -0.43,
+            "netInflow": -9.79,
+            "upCount": 4,
+            "downCount": 35,
+            "lead": "齐鲁银行",
+            "leadPct": 0.88,
+            "ztCount": 0,
+            "pct5": -1.08
           },
           {
             "name": "公路铁路运输",
-            "pct": -0.51
+            "pct": -0.51,
+            "netInflow": -2.13,
+            "upCount": 12,
+            "downCount": 20,
+            "lead": "五洲交通",
+            "leadPct": 1.48,
+            "ztCount": 0,
+            "pct5": -0.42
           },
           {
             "name": "食品加工制造",
-            "pct": -0.53
+            "pct": -0.53,
+            "netInflow": 2.64,
+            "upCount": 16,
+            "downCount": 49,
+            "lead": "ST加加",
+            "leadPct": 6.29,
+            "ztCount": 0,
+            "pct5": 2.44
           },
           {
             "name": "环保设备",
-            "pct": -0.53
+            "pct": -0.53,
+            "netInflow": -0.52,
+            "upCount": 14,
+            "downCount": 15,
+            "lead": "蓝盾光电",
+            "leadPct": 3.61,
+            "ztCount": 0,
+            "pct5": 2.76
           },
           {
             "name": "环境治理",
-            "pct": -0.55
+            "pct": -0.55,
+            "netInflow": -4.92,
+            "upCount": 30,
+            "downCount": 79,
+            "lead": "金达莱",
+            "leadPct": 7.18,
+            "ztCount": 0,
+            "pct5": 1.79
           },
           {
             "name": "小家电",
-            "pct": -0.55
+            "pct": -0.55,
+            "netInflow": -0.86,
+            "upCount": 4,
+            "downCount": 21,
+            "lead": "奥佳华",
+            "leadPct": 10.03,
+            "ztCount": 1,
+            "pct5": 5.45
           },
           {
             "name": "家居用品",
-            "pct": -0.59
+            "pct": -0.59,
+            "netInflow": -4.13,
+            "upCount": 33,
+            "downCount": 65,
+            "lead": "大亚圣象",
+            "leadPct": 10.02,
+            "ztCount": 1,
+            "pct5": 5.94
           },
           {
             "name": "橡胶制品",
-            "pct": -0.6
+            "pct": -0.6,
+            "netInflow": -2.05,
+            "upCount": 8,
+            "downCount": 14,
+            "lead": "科创新源",
+            "leadPct": 4.11,
+            "ztCount": 0,
+            "pct5": 1.59
           },
           {
             "name": "证券",
-            "pct": -0.61
+            "pct": -0.61,
+            "netInflow": -13.99,
+            "upCount": 3,
+            "downCount": 43,
+            "lead": "中金公司",
+            "leadPct": 2.67,
+            "ztCount": 0,
+            "pct5": 1.38
           },
           {
             "name": "钢铁",
-            "pct": -0.63
+            "pct": -0.63,
+            "netInflow": -2.94,
+            "upCount": 9,
+            "downCount": 32,
+            "lead": "凌钢股份",
+            "leadPct": 4.76,
+            "ztCount": 0,
+            "pct5": -0.12
           },
           {
             "name": "化学原料",
-            "pct": -0.63
+            "pct": -0.63,
+            "netInflow": -12.02,
+            "upCount": 17,
+            "downCount": 41,
+            "lead": "振华股份",
+            "leadPct": 9.99,
+            "ztCount": 1,
+            "pct5": 1.89
           },
           {
             "name": "通信设备",
-            "pct": -0.67
+            "pct": -0.67,
+            "netInflow": -49.4,
+            "upCount": 27,
+            "downCount": 64,
+            "lead": "瑞斯康达",
+            "leadPct": 10,
+            "ztCount": 1,
+            "pct5": 2.82
           },
           {
             "name": "饮料制造",
-            "pct": -0.72
+            "pct": -0.72,
+            "netInflow": -4.62,
+            "upCount": 14,
+            "downCount": 33,
+            "lead": "古越龙山",
+            "leadPct": 5,
+            "ztCount": 0,
+            "pct5": 3.75
           },
           {
             "name": "化学制药",
-            "pct": -0.73
+            "pct": -0.73,
+            "netInflow": -18.11,
+            "upCount": 43,
+            "downCount": 112,
+            "lead": "艾力斯",
+            "leadPct": 9.35,
+            "ztCount": 0,
+            "pct5": 6.38
+          },
+          {
+            "name": "电机",
+            "pct": -0.76,
+            "netInflow": -2.28,
+            "upCount": 8,
+            "downCount": 18,
+            "lead": "三协电机",
+            "leadPct": 2.48,
+            "ztCount": 0,
+            "pct5": 2.84
+          },
+          {
+            "name": "教育",
+            "pct": -0.77,
+            "netInflow": -1.64,
+            "upCount": 4,
+            "downCount": 11,
+            "lead": "科德教育",
+            "leadPct": 16.97,
+            "ztCount": 0,
+            "pct5": 5.37
+          },
+          {
+            "name": "纺织制造",
+            "pct": -0.8,
+            "netInflow": -3.58,
+            "upCount": 9,
+            "downCount": 24,
+            "lead": "华茂股份",
+            "leadPct": 9.93,
+            "ztCount": 1,
+            "pct5": 3.31
+          },
+          {
+            "name": "工业金属",
+            "pct": -0.81,
+            "netInflow": -25.72,
+            "upCount": 11,
+            "downCount": 43,
+            "lead": "丽岛新材",
+            "leadPct": 10.01,
+            "ztCount": 1,
+            "pct5": -0.29
+          },
+          {
+            "name": "美容护理",
+            "pct": -0.81,
+            "netInflow": -4.77,
+            "upCount": 10,
+            "downCount": 24,
+            "lead": "锦波生物",
+            "leadPct": 5.9,
+            "ztCount": 0,
+            "pct5": 4.63
+          },
+          {
+            "name": "贵金属",
+            "pct": -0.84,
+            "netInflow": -11.89,
+            "upCount": 2,
+            "downCount": 11,
+            "lead": "山金国际",
+            "leadPct": 0.33,
+            "ztCount": 0,
+            "pct5": -6.96
+          },
+          {
+            "name": "造纸",
+            "pct": -0.86,
+            "netInflow": -2.74,
+            "upCount": 6,
+            "downCount": 18,
+            "lead": "宜宾纸业",
+            "leadPct": 2.13,
+            "ztCount": 0,
+            "pct5": 2.53
+          },
+          {
+            "name": "小金属",
+            "pct": -0.86,
+            "netInflow": -12.05,
+            "upCount": 6,
+            "downCount": 24,
+            "lead": "金钛股份",
+            "leadPct": 5.78,
+            "ztCount": 0,
+            "pct5": 0.32
+          },
+          {
+            "name": "服装家纺",
+            "pct": -0.9,
+            "netInflow": -6.83,
+            "upCount": 21,
+            "downCount": 51,
+            "lead": "泰慕士",
+            "leadPct": 10.02,
+            "ztCount": 1,
+            "pct5": 3.31
+          },
+          {
+            "name": "黑色家电",
+            "pct": -0.91,
+            "netInflow": -1.88,
+            "upCount": 1,
+            "downCount": 8,
+            "lead": "高斯贝尔",
+            "leadPct": 1.36,
+            "ztCount": 0,
+            "pct5": 0.15
+          },
+          {
+            "name": "贸易",
+            "pct": -0.93,
+            "netInflow": -1.19,
+            "upCount": 4,
+            "downCount": 10,
+            "lead": "五矿发展",
+            "leadPct": 2,
+            "ztCount": 0,
+            "pct5": 1.07
+          },
+          {
+            "name": "风电设备",
+            "pct": -0.96,
+            "netInflow": -3.8,
+            "upCount": 10,
+            "downCount": 21,
+            "lead": "振江股份",
+            "leadPct": 3.55,
+            "ztCount": 0,
+            "pct5": 0.82
+          },
+          {
+            "name": "包装印刷",
+            "pct": -1.01,
+            "netInflow": -4.97,
+            "upCount": 9,
+            "downCount": 36,
+            "lead": "中锐股份",
+            "leadPct": 1.89,
+            "ztCount": 0,
+            "pct5": 1.73
+          },
+          {
+            "name": "物流",
+            "pct": -1.03,
+            "netInflow": -2.83,
+            "upCount": 10,
+            "downCount": 40,
+            "lead": "ST海钦",
+            "leadPct": 8.41,
+            "ztCount": 0,
+            "pct5": 2.33
+          },
+          {
+            "name": "能源金属",
+            "pct": -1.05,
+            "netInflow": -10.47,
+            "upCount": 2,
+            "downCount": 11,
+            "lead": "*ST威领",
+            "leadPct": 6,
+            "ztCount": 0,
+            "pct5": 1.08
+          },
+          {
+            "name": "石油加工贸易",
+            "pct": -1.08,
+            "netInflow": -0.23,
+            "upCount": 6,
+            "downCount": 20,
+            "lead": "荣盛石化",
+            "leadPct": 3.2,
+            "ztCount": 0,
+            "pct5": 0.91
+          },
+          {
+            "name": "保险",
+            "pct": -1.12,
+            "netInflow": -5.93,
+            "upCount": 0,
+            "downCount": 5,
+            "lead": "中国人寿",
+            "leadPct": -0.23,
+            "ztCount": 0,
+            "pct5": 1.64
+          },
+          {
+            "name": "农产品加工",
+            "pct": -1.12,
+            "netInflow": -6.52,
+            "upCount": 8,
+            "downCount": 33,
+            "lead": "保龄宝",
+            "leadPct": 10.06,
+            "ztCount": 1,
+            "pct5": 3.32
+          },
+          {
+            "name": "农化制品",
+            "pct": -1.18,
+            "netInflow": -12.02,
+            "upCount": 10,
+            "downCount": 50,
+            "lead": "利民股份",
+            "leadPct": 5.01,
+            "ztCount": 0,
+            "pct5": 0.67
+          },
+          {
+            "name": "电网设备",
+            "pct": -1.21,
+            "netInflow": -27.47,
+            "upCount": 33,
+            "downCount": 105,
+            "lead": "威腾电气",
+            "leadPct": 8.42,
+            "ztCount": 0,
+            "pct5": 0.56
+          },
+          {
+            "name": "中药",
+            "pct": -1.22,
+            "netInflow": -10.27,
+            "upCount": 9,
+            "downCount": 59,
+            "lead": "ST万邦",
+            "leadPct": 2.25,
+            "ztCount": 0,
+            "pct5": 3
+          },
+          {
+            "name": "军工装备",
+            "pct": -1.36,
+            "netInflow": -21.81,
+            "upCount": 10,
+            "downCount": 72,
+            "lead": "西部超导",
+            "leadPct": 3.63,
+            "ztCount": 0,
+            "pct5": 0.34
+          },
+          {
+            "name": "综合",
+            "pct": -1.38,
+            "netInflow": -1.97,
+            "upCount": 2,
+            "downCount": 16,
+            "lead": "上海三毛",
+            "leadPct": 0.92,
+            "ztCount": 0,
+            "pct5": 0.96
+          },
+          {
+            "name": "软件开发",
+            "pct": -1.45,
+            "netInflow": -32.77,
+            "upCount": 23,
+            "downCount": 114,
+            "lead": "科大国创",
+            "leadPct": 11.91,
+            "ztCount": 0,
+            "pct5": 4.23
+          },
+          {
+            "name": "燃气",
+            "pct": -1.48,
+            "netInflow": -3.78,
+            "upCount": 3,
+            "downCount": 24,
+            "lead": "德龙汇能",
+            "leadPct": 5.68,
+            "ztCount": 0,
+            "pct5": -0.23
+          },
+          {
+            "name": "港口航运",
+            "pct": -1.52,
+            "netInflow": -9.25,
+            "upCount": 4,
+            "downCount": 30,
+            "lead": "秦港股份",
+            "leadPct": 0.57,
+            "ztCount": 0,
+            "pct5": -0.78
+          },
+          {
+            "name": "医药商业",
+            "pct": -1.57,
+            "netInflow": -4.91,
+            "upCount": 4,
+            "downCount": 27,
+            "lead": "ST海王",
+            "leadPct": 2.61,
+            "ztCount": 0,
+            "pct5": 3.07
+          },
+          {
+            "name": "IT服务",
+            "pct": -1.57,
+            "netInflow": -46.08,
+            "upCount": 20,
+            "downCount": 109,
+            "lead": "南威软件",
+            "leadPct": 9.99,
+            "ztCount": 1,
+            "pct5": 3.08
+          },
+          {
+            "name": "种植业与林业",
+            "pct": -1.65,
+            "netInflow": -9.26,
+            "upCount": 4,
+            "downCount": 26,
+            "lead": "万向德农",
+            "leadPct": 9.99,
+            "ztCount": 1,
+            "pct5": 4
+          },
+          {
+            "name": "零售",
+            "pct": -1.67,
+            "netInflow": -19.03,
+            "upCount": 4,
+            "downCount": 66,
+            "lead": "汇通能源",
+            "leadPct": 9.99,
+            "ztCount": 1,
+            "pct5": 2.57
+          },
+          {
+            "name": "多元金融",
+            "pct": -1.73,
+            "netInflow": -7.19,
+            "upCount": 1,
+            "downCount": 24,
+            "lead": "四川双马",
+            "leadPct": 0.73,
+            "ztCount": 0,
+            "pct5": 0.72
+          },
+          {
+            "name": "通信服务",
+            "pct": -1.84,
+            "netInflow": -14.06,
+            "upCount": 5,
+            "downCount": 37,
+            "lead": "铜牛信息",
+            "leadPct": 5.2,
+            "ztCount": 0,
+            "pct5": 2.44
+          },
+          {
+            "name": "养殖业",
+            "pct": -1.9,
+            "netInflow": -7.7,
+            "upCount": 1,
+            "downCount": 35,
+            "lead": "生物股份",
+            "leadPct": 0.26,
+            "ztCount": 0,
+            "pct5": 0.68
+          },
+          {
+            "name": "电力",
+            "pct": -1.98,
+            "netInflow": -37.17,
+            "upCount": 12,
+            "downCount": 95,
+            "lead": "世茂能源",
+            "leadPct": 5.33,
+            "ztCount": 0,
+            "pct5": -2.85
+          },
+          {
+            "name": "互联网电商",
+            "pct": -1.99,
+            "netInflow": -6.83,
+            "upCount": 2,
+            "downCount": 18,
+            "lead": "狮头股份",
+            "leadPct": 5.94,
+            "ztCount": 0,
+            "pct5": 5.62
+          },
+          {
+            "name": "游戏",
+            "pct": -2.4,
+            "netInflow": -12.33,
+            "upCount": 2,
+            "downCount": 21,
+            "lead": "宝通科技",
+            "leadPct": 1.22,
+            "ztCount": 0,
+            "pct5": 0.27
+          },
+          {
+            "name": "油气开采及服务",
+            "pct": -2.41,
+            "netInflow": -6.87,
+            "upCount": 0,
+            "downCount": 19,
+            "lead": "中海油服",
+            "leadPct": -0.9,
+            "ztCount": 0,
+            "pct5": -2.2
+          },
+          {
+            "name": "影视院线",
+            "pct": -2.52,
+            "netInflow": -5.76,
+            "upCount": 2,
+            "downCount": 18,
+            "lead": "博纳影业",
+            "leadPct": 4.17,
+            "ztCount": 0,
+            "pct5": 2.72
+          },
+          {
+            "name": "文化传媒",
+            "pct": -2.7,
+            "netInflow": -45.18,
+            "upCount": 7,
+            "downCount": 76,
+            "lead": "天威视讯",
+            "leadPct": 10.06,
+            "ztCount": 3,
+            "pct5": 4.87
+          },
+          {
+            "name": "煤炭开采加工",
+            "pct": -2.91,
+            "netInflow": -14.69,
+            "upCount": 1,
+            "downCount": 33,
+            "lead": "新大洲A",
+            "leadPct": 1.51,
+            "ztCount": 0,
+            "pct5": -0.07
           }
         ]
       },
