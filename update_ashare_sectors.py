@@ -648,7 +648,8 @@ def fetch_ths_tops(ths_code, po, timeout=15):
             continue
         if po == 0 and pct > 0:
             continue
-        out.append({"name": tds[2], "changePct": round(pct, 2)})
+        # R98i：带 code——前端 tops 芯片点击直接拿代码取K线，免 smartbox 反查（峆一药业等冷门名反查会失败）
+        out.append({"name": tds[2], "code": tds[1], "changePct": round(pct, 2)})
         if len(out) >= 5:
             break
     return out

@@ -93,11 +93,12 @@ def collect_stocks(D):
     # 4) 连板天梯（有 code；断板池内嵌不覆盖 lianban 弹窗）
     for lb in (a.get("lianban") or []):
         add_code(lb.get("code"))
-    # 5) 板块领涨/领跌 TOP（只有 name，需反查）
+    # 5) 板块领涨/领跌 TOP（R98d 起带 code 的直接收集；仅 name 的需 smartbox 反查）
     for s in (a.get("sectorsUp") or []) + (a.get("sectorsDown") or []):
         for t in (s.get("tops") or []):
+            add_code(t.get("code"))
             nm = str(t.get("name") or "").strip()
-            if nm:
+            if nm and not t.get("code"):
                 names.add(nm)
     return codes, names
 

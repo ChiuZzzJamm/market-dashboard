@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609240254"></script>
+<script src="data.js?v=202609240306"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -116,7 +116,7 @@
   .ai-summary { font-size: 14.5px; margin-bottom: 16px; }
   .ai-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 860px) { .ai-grid { grid-template-columns: 1fr; } }
-  .ai-item { background: #f7fafd; border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; display: flex; flex-direction: column; }
+  .ai-item { background: var(--accent-soft); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; display: flex; flex-direction: column; }
   .ai-item .row1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
   .ai-item .sec-nm { font-size: 14px; font-weight: 700; }
   .dir-badge { font-size: 11.5px; font-weight: 700; color: #fff; border-radius: 999px; padding: 2px 9px; }
@@ -156,7 +156,7 @@
   .wk-section h4 { font-size: 14px; font-weight: 700; margin: 0 0 6px 0; color: var(--accent-deep); letter-spacing: 1px; }
   .wk-section h4.bull { color: var(--up); }
   .wk-section h4.bear { color: var(--down); }
-  .wk-item { background: #f7fafd; border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; margin-bottom: 10px; }
+  .wk-item { background: var(--accent-soft); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; margin-bottom: 10px; }
   /* R97b：宏观/财经/投行每条要闻左侧竖向色条——红=看涨、绿=看跌、灰=中性 */
   .wk-item.wk-dir-up { border-left: 4px solid var(--up); }
   .wk-item.wk-dir-down { border-left: 4px solid var(--down); }
@@ -578,8 +578,8 @@ function renderTops(s, isUp) {
   var label = isUp ? '板块领涨 TOP' + n : '板块领跌 TOP' + n;
   var bname = s.name || '';
   var chips = arr.slice(0, 5).map(function (it, idx) {
-    var name, pct;
-    if (typeof it === 'object') { name = it.name || ''; pct = it.changePct; }
+    var name, pct, code0 = '';
+    if (typeof it === 'object') { name = it.name || ''; pct = it.changePct; code0 = it.code || ''; }
     else if (typeof it === 'string') {
       var mm = it.match(/^(.*?)[\s]*([+-]?\d+(?:\.\d+)?%?)\s*([^【]*?)(【[^】]*】)?\s*$/);
       if (mm) { name = mm[1].replace(/[：:]\s*$/, ''); pct = parseFloat(mm[2]); var tail = (mm[3] || '').trim(); if (mm[4]) tail += ' ' + mm[4]; if (tail) name = (name ? name + ' ' : '') + tail; }
@@ -592,7 +592,7 @@ function renderTops(s, isUp) {
     var info = name + (pctStr ? ' ' + pctStr : '');
     if (bname) info += ' · ' + bname + (isUp ? ' 领涨第' : ' 领跌第') + (idx + 1) + '位';
     if (op !== null && op !== undefined) info += ' · 今开 ' + (op >= 0 ? '+' : '') + op + '%' + (op > 1 ? '（高开）' : op < -1 ? '（低开）' : '（平开）');
-    return '<span class="tchip" data-stk="|' + escAttr(name) + '|' + escAttr(info) + '" title="' + escAttr(info + '（点击查看K线）') + '"><b>' + esc(name) + '</b>' + (pctStr ? '<span class="tp ' + cls + '">' + pctStr + '</span>' : '') + '<span class="nt">' + esc(info) + '</span></span>';
+    return '<span class="tchip" data-stk="' + escAttr(code0) + '|' + escAttr(name) + '|' + escAttr(info) + '" title="' + escAttr(info + '（点击查看K线）') + '"><b>' + esc(name) + '</b>' + (pctStr ? '<span class="tp ' + cls + '">' + pctStr + '</span>' : '') + '<span class="nt">' + esc(info) + '</span></span>';
   }).join('');
   return '<div class="reason-tops"><span class="tops-h">' + label + '</span>' + chips + '</div>';
 }
@@ -1518,6 +1518,34 @@ function stkParseKline(rows) {
   }
   return out.length > 1 ? out : null;
 }
+// R98i：腾讯 ifzq 网络失败的新浪 JSONP 备源（script 注入无 CORS 问题；日K 为不复权口径，仅作兜底）
+function stkFetchKlineSina(sym, cb) {
+  var cbN = '_sinaKl_' + Date.now();
+  var s = document.createElement('script');
+  var done = false;
+  function finish(kl) {
+    if (done) return;
+    done = true;
+    delete window[cbN];
+    if (s.parentNode) s.parentNode.removeChild(s);
+    cb(kl);
+  }
+  var timer = setTimeout(function () { finish(null); }, 8000);
+  window[cbN] = function (arr) {
+    clearTimeout(timer);
+    var out = [];
+    (arr || []).forEach(function (r) {
+      var o = parseFloat(r.open), c = parseFloat(r.close), h = parseFloat(r.high), l = parseFloat(r.low), v = parseFloat(r.volume);
+      if (isNaN(o) || isNaN(c)) return;
+      var day = String(r.day || '');
+      out.push([day.length > 10 ? day.slice(0, 10) : day, o, c, h, l, v]);
+    });
+    finish(out.length > 1 ? out : null);
+  };
+  s.onerror = function () { clearTimeout(timer); finish(null); };
+  s.src = 'https://quotes.sina.cn/cn/api/jsonp_v2.php/var%20' + cbN + '=/CN_MarketDataService.getKLineData?symbol=' + encodeURIComponent(sym) + '&scale=240&ma=no&datalen=60&_r=' + Date.now();
+  document.body.appendChild(s);
+}
 function stkFetchKline(code, cb) {
   var sym = stkSymbol(code);
   if (!sym) return cb(null, '未识别的证券代码');
@@ -1545,7 +1573,11 @@ function stkFetchKline(code, cb) {
     })
     .catch(function (e) {
       console.error('[stkFetchKline] network error for', sym, ':', e && e.message);
-      cb(null, 'K线获取失败（' + (e && e.message ? e.message : '网络受限') + '）');
+      // R98i：腾讯直连失败 → 新浪 JSONP 备源兜底，仍失败才报错
+      stkFetchKlineSina(sym, function (kl2) {
+        if (kl2) { STK_KLINE_CACHE[sym] = kl2; cb(kl2); }
+        else cb(null, 'K线获取失败（' + (e && e.message ? e.message : '网络受限') + '）');
+      });
     });
 }
 // 仅知名称（板块领涨TOP等无代码场景）：腾讯 smartbox script 注入反查代码（无 CORS，返回 v_hint 全局变量）
