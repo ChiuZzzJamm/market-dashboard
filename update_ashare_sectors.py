@@ -529,6 +529,16 @@ def build_all_boards():
             if not code or not name or pct is None:
                 continue
             out[code] = {"code": code, "name": name, "pct": round(pct, 2)}
+    # R93b 新浪备用源兜底：东财 push2/push2delay 被 WAF 按 IP 段封锁时（本地+CF 反代+WebFetch 云端均不可达），
+    # 行业板块已走新浪口径，这里全板块榜同样回退新浪，避免全景 A股 tab 残留 9/18 旧值。
+    if not out:
+        sb = fetch_sina_boards()
+        if len(sb) >= 10:
+            for name, b in sb.items():
+                if isinstance(b, dict) and b.get("pct") is not None:
+                    cid = b.get("code") or name
+                    out[cid] = {"code": cid, "name": name, "pct": round(b["pct"], 2)}
+            print(f"[info] allBoards 走新浪备用源（{len(out)} 个板块）")
     return list(out.values())
 
 # ---------- 主流程 ----------
@@ -659,6 +669,14 @@ def main():
             a["fundIn"] = fund_in
             a["fundOut"] = fund_out
             updated_parts.append("主力资金")
+            a.pop("fundNote", None)
+        else:
+            # R93b 诚实降级：板块主力资金流（f62）唯一源是东财 push2/push2delay，已被 WAF 按 IP 段封锁；
+            # 已验证新浪/通达信/腾讯/Cloudflare 反代均无法提供板块级资金流字段。保留最近一次成功取值
+            # （2026-09-18）并在卡片上加可见备注，绝不在无数据源时编造或清空。
+            a["fundNote"] = ("板块主力资金流数据源（东财 push2）自 2026-09-18 起受网络层风控，"
+                             "当前新浪/通达信/腾讯/Cloudflare 反代均无法提供该字段，"
+                             "数据沿用最近一次成功取值（2026-09-18），待数据源恢复后自动刷新。")
         if lianban is not None:
             # 空池且已有原值时保留（避免限频 rc:102 空池清空真实数据）；非空或首次则写回
             if lianban or not a.get("lianban"):
