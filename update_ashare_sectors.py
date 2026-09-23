@@ -519,11 +519,18 @@ def parse_ths_industries(html):
     """解析同花顺行业一览表。返回 [{code,name,pct,netInflow,up,down,lead,leadPct}]；失败/不足返回 []。
     列顺序（相对行业名所在列 ni）：ni+1 涨跌幅 / ni+4 净流入(亿) / ni+5 上涨家数 / ni+6 下跌家数
         / ni+8 领涨股 / ni+10 领涨股涨跌幅。涨跌幅做 [-15,15] 合理性校验防列偏移错位。"""
-    text = html.decode("utf-8", errors="replace") if isinstance(html, (bytes, bytearray)) else str(html)
+    if isinstance(html, (bytes, bytearray)):
+        # 同花顺行业页为 GBK 编码，utf-8 直接解会乱码；先试 utf-8 失败回退 gbk
+        try:
+            text = html.decode("utf-8")
+        except UnicodeDecodeError:
+            text = html.decode("gbk", errors="replace")
+    else:
+        text = str(html)
     rows = re.findall(r"<tr[^>]*>(.*?)</tr>", text, re.S)
     out = []
     for row in rows:
-        m = re.search(r'thshy/detail/code/(\d+)/?">([^<]+)</a>', row)
+        m = re.search(r'thshy/detail/code/(\d+)[^>]*>([^<]+)</a>', row)
         if not m:
             continue
         code, name = m.group(1), m.group(2).strip()
