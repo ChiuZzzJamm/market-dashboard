@@ -90,6 +90,12 @@
   /* 板块成分股 TOP 列表：标题 + 每只为红涨绿跌小胶囊（白字） */
   .reason-tops { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 10px; font-size: 12.5px; }
   .reason-tops .tops-h { font-size: 12.5px; color: var(--accent-deep); font-weight: 700; margin-right: 2px; }
+  /* R97f：板块口径来源标签 + 异动副行 */
+  .pano-src { font-size: 12px; color: var(--ink2); margin: 2px 0 8px; }
+  .src-tag { font-size: 12px; font-weight: 500; color: var(--ink2); background: var(--accent-soft); border-radius: 8px; padding: 2px 8px; margin-left: 8px; }
+  .reason-sub { font-size: 12.5px; color: var(--ink2); margin: 4px 0 2px; }
+  .reason-sub b.up { color: var(--up); }
+  .reason-sub b.down { color: var(--down); }
   .reason-tops .tchip { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 3px 9px; font-size: 12px; box-shadow: 0 1px 3px rgba(30,60,110,.06); display: inline-flex; align-items: baseline; gap: 5px; position: relative; cursor: pointer; -webkit-tap-highlight-color: transparent; }
   .reason-tops .tchip .nt { display: none; }
   .reason-tops .tchip.expanded { background: var(--accent-soft); overflow: visible; z-index: 40; }
@@ -429,6 +435,7 @@
     <div class="pano-tabs" id="pano-tabs"></div>
     <div class="pano-idx" id="pano-idx"></div>
     <div class="pano-date" id="pano-date"></div>
+    <div class="pano-src" id="pano-src"></div>
     <div class="pano-grid" id="pano-grid"></div>
   </div>
 
@@ -591,6 +598,7 @@ function renderReasons(list, tradeDate, isUp) {
       pctHtml +
       '<span class="kw">' + esc(s.reason.title) + '</span></div>' +
       renderTops(s, isUp) +
+      ((s.upCount !== null && s.upCount !== undefined) ? '<div class="reason-sub">板块内 涨 <b class="up">' + s.upCount + '</b> 家 / 跌 <b class="down">' + (s.downCount || 0) + '</b> 家' + (s.netInflow !== null && s.netInflow !== undefined ? ' · 主力净流入 <b class="' + (s.netInflow >= 0 ? 'up' : 'down') + '">' + (s.netInflow >= 0 ? '+' : '') + s.netInflow + ' 亿</b>' : '') + '</div>' : '') +
       '<div class="reason-body"><b class="label">行业原因（' + esc(tag) + '发布）：</b>' + esc(s.reason.detail) + '</div></div>';
   });
   return html;
@@ -651,9 +659,11 @@ function render(market) {
 
   html += '<div class="card"><h2>大盘趋势研判</h2><div class="outlook">' + formatOutlook(d.outlook) + '</div></div>';
 
-  html += '<div class="card"><h2>领涨板块</h2>' + renderReasons(d.sectorsUp, d.tradeDate, true) + '</div>';
+  var _ssMap = {'ths': '同花顺行业口径', 'em': '东财行业口径', 'prev': '上一轮数据'};
+  var _ssTag = _ssMap[d.sectorSource] ? ' <span class="src-tag">' + _ssMap[d.sectorSource] + '</span>' : '';
+  html += '<div class="card"><h2>领涨板块' + _ssTag + '</h2>' + renderReasons(d.sectorsUp, d.tradeDate, true) + '</div>';
 
-  html += '<div class="card"><h2>调整 / 领跌板块</h2>' +
+  html += '<div class="card"><h2>调整 / 领跌板块' + _ssTag + '</h2>' +
     (d.sectorNote ? '<div class="src-line">' + esc(d.sectorNote) + '</div>' : '') +
     renderReasons(d.sectorsDown, d.tradeDate, false) + '</div>';
 
@@ -756,6 +766,12 @@ function renderPano() {
     }).join('');
   }
   document.getElementById('pano-date').textContent = '数据时点：' + cur.date;
+  var srcEl = document.getElementById('pano-src');
+  if (srcEl) {
+    var _src = (window.DASHBOARD_DATA.ashare || {}).sectorSource;
+    var _srcMap = { 'ths': '同花顺行业口径', 'em': '东财行业口径', 'prev': '上一轮数据（源暂不可用）' };
+    srcEl.textContent = '板块来源：' + (_srcMap[_src] || '—');
+  }
   var html = '';
   // 行业全景板块按当日涨幅降序排列（无涨幅的置底）
   var panoItems = (cur.items || []).slice().sort(function (a, b) {
@@ -766,8 +782,16 @@ function renderPano() {
     if (pb === null) return -1;
     return pb - pa;
   });
-  // R92：A股细分板块聚合为父级口径（美股/韩股/日经条目本身粗粒度，不处理）
-  if (cur.key === 'ashare') { panoItems = mergePanoItems(panoItems); window._panoMerged = panoItems; }
+  // R92/R97f：A股板块口径处理。同花顺已较细粒度（含非金属材料/厨卫电器/元件等独立行业），
+  // 无需合并罗马数字/其他前缀；东财/新浪细分板块才需聚合成父级口径。
+  if (cur.key === 'ashare') {
+    var _src2 = (window.DASHBOARD_DATA.ashare || {}).sectorSource;
+    if (_src2 === 'ths') {
+      window._panoMerged = panoItems;
+    } else {
+      panoItems = mergePanoItems(panoItems); window._panoMerged = panoItems;
+    }
+  }
   var shown = panoExpanded ? panoItems : panoItems.slice(0, PANO_SHOW_MAX);
   shown.forEach(function (it) {
     var c = cls(it.pct);

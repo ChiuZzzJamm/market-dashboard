@@ -6,7 +6,9 @@ A股板块/指数/涨跌家数抓取（零 MCP 依赖，全部 HTTP 直连）：
   - 涨跌家数：东财 push2ex getTopicZDFenBu（注意：该接口为「涨停板专题」口径，剔除全部 ST 股）
     + 风险警示板(b:BK0511)补充 ST 股涨跌平家数 → 与主流行情 App 的全市场口径一致（实测逐家吻合）；
     涨跌停数：getTopicZTPool（真实涨停池）/ 全市场快照收盘封板计算（跌停，含 ST）
-  - 行业板块涨跌 TOP5/BOTTOM5：东财 push2delay clist（fs=m:90+t:2 行业板块，注意 + 必须写成 %2B）
+  - 行业板块涨跌 TOP5/BOTTOM5 + 全景：R97f 起主源=同花顺行业一览表（q.10jqka.com.cn/thshy，数字准+字段全：涨跌幅/净流入/涨跌家数/领涨股），
+    备源=东财 push2delay clist（fs=m:90+t:2 行业板块，注意 + 必须写成 %2B）/ 新浪行业，全失败保留上一轮(R91m)；
+    sectorSource 字段记录实际命中源（ths/em/prev）供前端标注口径。断板池/个股 hybk 仍用申万，不在本脚本改动范围。
   - 主力资金流入/流出 TOP3：同接口按 f62 排序（f62 单位=元，换算亿元）
 写入 data.js 的 ashare 字段：tradeDate/status/indices/breadth/sectorsUp/sectorsDown/fundIn/fundOut。
 不触碰 summary/outlook/bullNews/bearNews/fundNote（由自动化 AI 步骤撰写/保留）。
@@ -498,6 +500,118 @@ def build_sectors_sina():
         return None, None
     return ups, downs
 
+# ---------- R97f 方案A：同花顺行业板块（主源，数字准+字段全；云端可达，HTML 解析） ----------
+# 用户选定方案 A：全景/异动/TOP 用同花顺行业口径（涨跌幅+净流入+涨跌家数+领涨股），
+# 断板池/个股保持申万。多源兜底：同花顺(主) → 东财 push2delay(备) → 新浪(备) → 保留上一轮(R91m)。
+# 注意：沙箱出口 IP 被同花顺 Nginx forbidden，故本地跑会落备源；云端自动化 IP 通常可达。
+THS_URL = "https://q.10jqka.com.cn/thshy/"
+THS_REFERER = "https://q.10jqka.com.cn/"
+
+def curl_ths(timeout=20):
+    r = subprocess.run(["curl", "-s", "--max-time", str(timeout),
+                       "-H", "User-Agent: " + UA,
+                       "-H", "Referer: " + THS_REFERER,
+                       "-H", "Accept-Language: zh-CN,zh;q=0.9",
+                       THS_URL], capture_output=True, timeout=timeout + 10)
+    return r.stdout or b""
+
+def parse_ths_industries(html):
+    """解析同花顺行业一览表。返回 [{code,name,pct,netInflow,up,down,lead,leadPct}]；失败/不足返回 []。
+    列顺序（相对行业名所在列 ni）：ni+1 涨跌幅 / ni+4 净流入(亿) / ni+5 上涨家数 / ni+6 下跌家数
+        / ni+8 领涨股 / ni+10 领涨股涨跌幅。涨跌幅做 [-15,15] 合理性校验防列偏移错位。"""
+    text = html.decode("utf-8", errors="replace") if isinstance(html, (bytes, bytearray)) else str(html)
+    rows = re.findall(r"<tr[^>]*>(.*?)</tr>", text, re.S)
+    out = []
+    for row in rows:
+        m = re.search(r'thshy/detail/code/(\d+)/?">([^<]+)</a>', row)
+        if not m:
+            continue
+        code, name = m.group(1), m.group(2).strip()
+        if not name:
+            continue
+        tds = re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)
+        tds = [re.sub(r"<[^>]+>", "", t).strip() for t in tds]
+        ni = None
+        for i, t in enumerate(tds):
+            if t == name:
+                ni = i
+                break
+        if ni is None or ni + 10 >= len(tds):
+            continue
+        def num(s):
+            s = s.replace("%", "").replace("亿", "").replace("万", "").replace(",", "")
+            try:
+                return float(s)
+            except Exception:
+                return None
+        pct = num(tds[ni + 1])
+        if pct is None or pct < -15 or pct > 15:
+            continue
+        def i2(s):
+            v = num(s)
+            return int(v) if v is not None else None
+        out.append({
+            "code": code, "name": name, "pct": round(pct, 2),
+            "netInflow": num(tds[ni + 4]),
+            "up": i2(tds[ni + 5]),
+            "down": i2(tds[ni + 6]),
+            "lead": (tds[ni + 8] if ni + 8 < len(tds) else None),
+            "leadPct": num(tds[ni + 10]),
+        })
+    return out
+
+def fetch_ths_industries():
+    return parse_ths_industries(curl_ths())
+
+def _ths_to_item(x):
+    it = {"name": x["name"], "pct": x["pct"]}
+    if x.get("lead"):
+        it["tops"] = [{"name": x["lead"], "changePct": x["leadPct"] if x["leadPct"] is not None else 0}]
+    if x.get("netInflow") is not None:
+        it["netInflow"] = x["netInflow"]
+    if x.get("up") is not None:
+        it["upCount"] = x["up"]
+    if x.get("down") is not None:
+        it["downCount"] = x["down"]
+    return it
+
+def build_sectors_unified(prev_up, prev_down, prev_all):
+    """行业板块统一构建：同花顺(主)→东财push2delay(备)→新浪(备)→保留上一轮(R91m)。
+    返回 (sectorsUp, sectorsDown, allBoards, source)；source∈{ths,em,prev}。"""
+    # 1) 同花顺主源
+    ths = fetch_ths_industries()
+    if len(ths) >= 10:
+        ranked = sorted(ths, key=lambda x: -x["pct"])
+        ups = [_ths_to_item(x) for x in ranked[:5]]
+        downs = [_ths_to_item(x) for x in sorted(ths, key=lambda x: x["pct"])[:5]]
+        all_b = [{"code": x["code"], "name": x["name"], "pct": x["pct"],
+                  "netInflow": x["netInflow"], "upCount": x["up"], "downCount": x["down"]}
+                 for x in ths]
+        print(f"[info] 行业板块主源=同花顺（{len(ths)} 个行业）")
+        return ups, downs, all_b, "ths"
+    # 2) 东财 push2delay 备源（原有逻辑）
+    print("[info] 同花顺不可达/不足，回退东财 push2delay 行业板块")
+    up_rows = fetch_boards("f3", 1)
+    time.sleep(1)
+    down_rows = fetch_boards("f3", 0)
+    if up_rows and down_rows:
+        r = _build_sectors_em(up_rows, down_rows)
+        if r[0] is not None and r[1] is not None:
+            all_b = build_all_boards()
+            if all_b:
+                return r[0], r[1], all_b, "em"
+    # 3) 新浪备源
+    r2 = build_sectors_sina()
+    if r2[0] is not None and r2[1] is not None:
+        sb = fetch_sina_boards()
+        all_b = [{"code": (b.get("code") or n), "name": n, "pct": round(b["pct"], 2)}
+                 for n, b in sb.items() if isinstance(b, dict) and b.get("pct") is not None][:120]
+        print(f"[info] 行业板块回退新浪口径（{len(all_b)} 个板块）")
+        return r2[0], r2[1], all_b, "em"
+    # 4) 保留上一轮（R91m）
+    print("[warn] 行业板块全部源失败，保留上一轮数据")
+    return (prev_up or []), (prev_down or []), (prev_all or []), "prev"
+
 def build_funds():
     in_rows = fetch_boards("f62", 1)
     time.sleep(2)
@@ -567,10 +681,14 @@ def main():
     if breadth is None:
         em_failed.append("涨跌家数")
         print("[warn] 涨跌家数获取失败，保留原值")
-    sectors_up, sectors_down = build_sectors()
-    if sectors_up is None:
+    # R97f 方案A：行业板块统一构建（同花顺主源 → 东财push2delay备 → 新浪备 → 保留上一轮）
+    prev_sec_up = (D.get("ashare") or {}).get("sectorsUp")
+    prev_sec_down = (D.get("ashare") or {}).get("sectorsDown")
+    prev_all = (D.get("ashare") or {}).get("allBoards")
+    sectors_up, sectors_down, all_boards, sector_src = build_sectors_unified(prev_sec_up, prev_sec_down, prev_all)
+    if sector_src == "prev":
         em_failed.append("行业板块")
-        print("[warn] 行业板块获取失败，保留原值")
+        print("[warn] 行业板块全部源失败，保留上一轮值")
     fund_in, fund_out = build_funds()
     if fund_in is None:
         em_failed.append("主力资金")
@@ -636,9 +754,10 @@ def main():
                     print(f"[info] 保留当日板块 reason {len(old_reason)} 条")
             a["sectorsUp"] = sectors_up
             a["sectorsDown"] = sectors_down
+            a["sectorSource"] = sector_src
             updated_parts.append("行业板块TOP5")
-            # 全板块涨幅榜（约前120个板块，供 16:00 AI 预测验证按板块名匹配实际涨跌幅；不参与页面展示）
-            all_b = build_all_boards()
+            # 全板块涨幅榜（同花顺/东财push2delay/新浪，供 16:00 AI 预测验证按板块名匹配实际涨跌幅；不参与页面展示）
+            all_b = all_boards
             if all_b:
                 a["allBoards"] = all_b
                 # 行业全景 A股 tab：全板块涨幅同步到 panorama.markets（前端 A股 tab 板块网格）。
