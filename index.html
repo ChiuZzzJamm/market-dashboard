@@ -1569,34 +1569,62 @@ function openStkModal(code, name, note) {
 }
 function stkClose() { document.getElementById('stk-modal').classList.remove('open'); }
 
+function buildOpenOutlookHtml(o, title) {
+  var html = '<div class="wk-card"><div class="wk-head"><h2>' + title + '</h2><span class="date">' + esc(o.date || '') + '</span></div>' +
+    '<div class="wk-outlook">' + formatOutlook(o.content) + '</div>';
+  if (o.source) html += '<div class="wk-src">来源：' + esc(o.source) + '</div>';
+  html += '</div>';
+  return html;
+}
+
 function renderOpenOutlook() {
-  // 每日开盘前瞻（R72）：顶层 openOutlook 带日期，前端按日期显示、过期自动隐藏
+  // 每日开盘前瞻（R72）：顶层 openOutlook 带日期，前端按日期显示、过期自动隐藏。
+  // R97g 后续修复：开盘前瞻由 08:30 自动化生成（date=当日），但每天 0:00–08:30
+  // 当日前瞻尚未生成、openOutlook.date 仍停在昨日时，原逻辑会判定"过期"直接隐藏，
+  // 偏偏盘前正是用户最想看前瞻的时刻。故放宽隐藏阈值：≤3 天内的缓冲版仍显示并标注真实日期。
   var D = window.DASHBOARD_DATA;
   var o = D.openOutlook;
   var box = document.getElementById('weekend-news');
   if (!o || !box) return;
   var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+  var fmt = function (dt) { return dt.getFullYear() + '-' + pad(dt.getMonth() + 1) + '-' + pad(dt.getDate()); };
   var now = new Date();
   var day = now.getDay();
+  var isWeekend = (day === 0 || day === 6);
+  // target：应当匹配的日期（工作日=今天；周末=下周一）
   var target;
-  if (day >= 1 && day <= 5) {
-    // 周一至周五：显示当日开盘前瞻
-    target = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+  if (!isWeekend) {
+    target = fmt(now);
   } else {
-    // 周六/周日：显示下周一（周末前瞻）
     var diff = (8 - day) % 7; if (diff === 0) diff = 1;
     var nm = new Date(now); nm.setDate(now.getDate() + diff);
-    target = nm.getFullYear() + '-' + pad(nm.getMonth() + 1) + '-' + pad(nm.getDate());
+    target = fmt(nm);
   }
-  if (o.date !== target) { box.innerHTML = ''; box.style.display = 'none'; return; }
-  var title = (day >= 1 && day <= 5)
-    ? ('开盘前瞻 · ' + target) : ('周末开盘前瞻 · ' + target);
-  var html = '<div class="wk-card"><div class="wk-head"><h2>' + title + '</h2><span class="date">' + esc(o.date || '') + '</span></div>' +
-    '<div class="wk-outlook">' + formatOutlook(o.content) + '</div>';
-  if (o.source) html += '<div class="wk-src">来源：' + esc(o.source) + '</div>';
-  html += '</div>';
-  box.innerHTML = html;
-  box.style.display = '';
+  // 1) 日期精确匹配：正常显示
+  if (o.date === target) {
+    var title = isWeekend ? ('周末开盘前瞻 · ' + target) : ('开盘前瞻 · ' + target);
+    box.innerHTML = buildOpenOutlookHtml(o, title);
+    box.style.display = '';
+    return;
+  }
+  // 2) 缓冲期：o.date 不等于 target，但距今天 ≤3 天 → 仍显示并标注真实日期（避免盘前空白）
+  var od = new Date(o.date.replace(/-/g, '/'));
+  var diffDays = Math.floor((now - od) / 86400000);
+  if (!isNaN(od.getTime()) && diffDays >= 0 && diffDays <= 3) {
+    var sub;
+    if (!isWeekend) {
+      var genLabel = (day <= 4) ? '今日 08:30' : '周一 08:30';
+      sub = '开盘前瞻 · ' + esc(o.date) + '（昨日版，' + genLabel + '前瞻待生成）';
+    } else {
+      sub = '周末开盘前瞻 · ' + esc(o.date) + '（周五版 · 周一盘前参考）';
+    }
+    box.innerHTML = buildOpenOutlookHtml(o, sub);
+    box.style.display = '';
+    return;
+  }
+  // 3) 真正过期（>3 天未更新）：隐藏
+  box.innerHTML = '';
+  box.style.display = 'none';
 }
 
 document.getElementById('updatedAt').textContent = '数据更新：' + window.DASHBOARD_DATA.updatedAt;
