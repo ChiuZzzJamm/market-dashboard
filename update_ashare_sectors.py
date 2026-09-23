@@ -84,7 +84,8 @@ def fetch_indices():
         if m.group(1) == VOL_CODE:
             continue
         name = dict(INDEX_CODES).get(m.group(1), p[1])
-        it = {"name": name, "point": point, "changePct": pct}
+        # R98j：code=腾讯 sym（sh000001 等），供 embed_klines 收集指数K线/前端点击弹窗
+        it = {"name": name, "code": m.group(1), "point": point, "changePct": pct}
         try:
             # 开盘涨跌幅：今开(p[5])/昨收(p[4])-1，供盘面叙事区分高开/低开与高走/低走
             _prev, _open = float(p[4]), float(p[5])
@@ -952,9 +953,23 @@ def fetch_ths_funds():
     outs = data[:3]
     return ins, outs
 
-def build_breadth_ths(ths_list=None, prev_breadth=None):
+def fetch_dt_count(date):
+    """R98j：东财跌停池家数（getTopicDTPool 的 tc 字段；剔除 ST，与涨停池同口径）。
+    同花顺无公开跌停接口，此为跌停数主源；失败返回 None。"""
+    d = get_json(f"{EX}/getTopicDTPool?ut={UT_ZT}&dpt=wz.ztzt&Pageindex=0&pagesize=600&sort=fund%3Aasc&date={date}")
+    if not d:
+        return None
+    try:
+        tc = (d.get("data") or {}).get("tc")
+        return int(tc) if tc is not None else None
+    except Exception:
+        return None
+
+
+def build_breadth_ths(ths_list=None, prev_breadth=None, date=None, notes=None):
     """同花顺口径涨跌家数：行业页 up/down 家数求和（含 ST，与东财剔除 ST 口径不同）。
-    涨停数=同花顺涨停池 total；跌停数=同花顺无源，沿用上一轮（prev）。flat 同花顺不提供→沿用上一轮。
+    R98j：涨停数=同花顺涨停池 total（失败→东财涨停池 tc 兜底）；
+    跌停数=东财跌停池 tc（同花顺无源；东财也失败才沿用上一轮）。
     返回 dict 或 None。"""
     if ths_list is None:
         ths_list = fetch_ths_industries()
@@ -964,12 +979,25 @@ def build_breadth_ths(ths_list=None, prev_breadth=None):
     down = sum(x["down"] for x in ths_list if isinstance(x.get("down"), int))
     if up <= 0 and down <= 0:
         return None
-    lu_items, lu_total = fetch_ths_limit_up()
-    b = {"up": up, "down": down}
+    if date is None:
+        date = datetime.now(TZ8).strftime("%Y%m%d")
+    lu_items, lu_total = fetch_ths_limit_up(date)
     if lu_items is not None and lu_total is not None:
-        b["limitUp"] = lu_total
+        b = {"up": up, "down": down, "limitUp": lu_total}
+    else:
+        pool = fetch_zt_pool_raw(date)  # 东财涨停池兜底
+        b = {"up": up, "down": down}
+        if pool is not None:
+            b["limitUp"] = len(pool)
+        if notes is not None and pool is not None:
+            notes.append("涨停数为东财涨停池口径(同花顺涨停池失败)")
+    dt = fetch_dt_count(date)
+    if dt is not None:
+        b["limitDown"] = dt
+    elif notes is not None:
+        notes.append("跌停数沿用上一轮(同花顺无跌停接口/东财跌停池失败)")
     ld = (prev_breadth or {}).get("limitDown")
-    if ld is not None:
+    if b.get("limitDown") is None and ld is not None:
         b["limitDown"] = ld
     pf = (prev_breadth or {}).get("flat")
     if isinstance(pf, int):
@@ -1044,17 +1072,16 @@ def main():
     # 仅当同花顺+东财全部失败才记为 failed（保留上一轮）。
     em_failed = []
     notes_extra = []
+    today_str = datetime.now(TZ8).strftime("%Y%m%d")
     # 同花顺行业页只取一次，板块/涨跌家数共用（避免重复请求、限频）
     ths_ind = fetch_ths_industries()
     # ---- 涨跌家数：同花顺(行业页 up/down 求和) 主源 → 东财 push2ex 兜底 ----
-    breadth = build_breadth_ths(ths_ind, prev_breadth)
+    breadth = build_breadth_ths(ths_ind, prev_breadth, date=today_str, notes=notes_extra)
     if breadth is None:
         breadth = fetch_breadth(prev_breadth)  # 东财兜底
     if breadth is None:
         em_failed.append("涨跌家数")
         print("[warn] 涨跌家数获取失败（同花顺+东财均失败），保留原值")
-    elif breadth.get("limitDown") is not None:
-        notes_extra.append("跌停数沿用上一轮(同花顺无跌停接口)")
     # R97f 方案A：行业板块统一构建（同花顺主源 → 东财push2delay备 → 新浪备 → 保留上一轮）
     prev_sec_up = (D.get("ashare") or {}).get("sectorsUp")
     prev_sec_down = (D.get("ashare") or {}).get("sectorsDown")
@@ -1072,7 +1099,6 @@ def main():
         print("[warn] 主力资金获取失败，保留原值")
 
     # 连板梯队：同花顺涨停池(主) → 东财涨停池(兜底)，含连板数 lbc + 题材 reason_type
-    today_str = datetime.now(TZ8).strftime("%Y%m%d")
     lianban = fetch_ths_lianban(today_str)
     if lianban is None:
         lianban = fetch_zt_ladder(today_str)  # 东财兜底

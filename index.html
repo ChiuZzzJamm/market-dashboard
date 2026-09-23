@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609240306"></script>
+<script src="data.js?v=202609240316"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -528,12 +528,16 @@ function formatOutlook(text) {
   return segs.map(function(seg){ return '<p style="margin:0 0 10px 0; line-height:1.7;">' + esc(seg.trim()) + '</p>'; }).join('');
 }
 
+// R98j：指数点击看K线——sym 优先取脚本生成的 code 字段，历史数据按名称映射兜底
+var IDX_SYM = { '上证指数': 'sh000001', '深证成指': 'sz399001', '创业板指': 'sz399006', '科创50': 'sh000688', '上证50': 'sh000016' };
 function renderIndexCards(indices) {
   indices = indices || [];
   var html = '<div class="idx-grid">';
   indices.forEach(function (d) {
     var c = cls(d.changePct);
-    html += '<div class="idx"><div class="nm">' + esc(d.name) + '</div>' +
+    var sym = String(d.code || IDX_SYM[d.name] || '').trim();
+    var t0 = sym ? ' data-stk="' + escAttr(sym + '|' + (d.name || '') + '|指数日K') + '" style="cursor:pointer" title="点击查看K线"' : '';
+    html += '<div class="idx"' + t0 + '><div class="nm">' + esc(d.name) + '</div>' +
       '<div class="pt ' + c + '">' + (d.point === null || d.point === undefined ? "—" : d.point.toLocaleString("zh-CN", { minimumFractionDigits: 2 })) + '</div>' +
       '<div class="pc ' + c + '">' + fmtPct(d.changePct) + '</div>' +
       (d.note ? '<div class="nt">' + esc(d.note) + '</div>' : '') + '</div>';
@@ -684,7 +688,8 @@ function render(market) {
     (d.sectorNote ? '<div class="src-line">' + esc(d.sectorNote) + '</div>' : '') +
     renderReasons(d.sectorsDown, d.tradeDate, false) + '</div>';
 
-  if (d.themePicks && d.themePicks.length) {
+  // R98j：题材掘金仅 A股页展示（美股页模块已按用户要求下线）
+  if (isA && d.themePicks && d.themePicks.length) {
     html += '<div class="card"><h2>题材掘金 · 个股事件驱动</h2>' + renderThemePicks(d.themePicks, d.tradeDate) + '</div>';
   }
 
@@ -1047,10 +1052,11 @@ function renderThemePicks(list, tradeDate) {
     if (sts.length) {
       s += '<div class="stock-chips">';
       sts.forEach(function (st) {
-        // R97c：chg 规范为带符号百分比（如 +2.65%），修复此前裸数字「· 2.65」的展示 bug
+        // R97c：chg 规范为带符号百分比；R98j：兼容 AI 写回的 "+2.37%" 字符串（strip % 后解析，防双 %% bug）
         var parts = [];
         if (st.note) parts.push(st.note);
-        if (st.chg !== undefined && st.chg !== null && st.chg !== '') parts.push((st.chg > 0 ? '+' : '') + st.chg + '%');
+        var chgN = (typeof st.chg === 'number') ? st.chg : parseFloat(String(st.chg == null ? '' : st.chg).replace('%', ''));
+        if (!isNaN(chgN)) parts.push((chgN > 0 ? '+' : '') + chgN.toFixed(2) + '%');
         var note = parts.join(' · ');
         var title = (st.name || '') + ' ' + (st.code || '') + (note ? ' · ' + note : '') + '（点击查看K线）';
         s += '<span class="stock-chip" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (note || '')) + '" title="' + escAttr(title) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + (note ? '<span class="nt">' + esc(note) + '</span>' : '') + '</span>';
@@ -1502,6 +1508,7 @@ function stkGlobalKline(code) {
   var KL = (window.DASHBOARD_DATA || {}).stkKlines;
   if (!KL) return null;
   var c = String(code || '').trim();
+  if (KL[c]) return KL[c]; // R98j：带前缀键优先（指数 sh000001/sz399001 等，与个股 6 位码不冲突）
   if (/^\d{6}$/.test(c)) return KL[c] || null;
   var m = c.match(/(?:sh|sz)?(\d{6})/i);
   return (m && KL[m[1]]) || null;
@@ -1793,7 +1800,7 @@ renderOpenOutlook();
     });
   }
   document.addEventListener('click', function (e) {
-    var chip = e.target.closest ? e.target.closest('.stock-chip, .tchip') : null;
+    var chip = e.target.closest ? e.target.closest('.stock-chip, .tchip, .idx[data-stk]') : null;
     if (!chip) { closeChips(); return; }
     // R94：连板芯片走 lbShow（弹窗内已含K线），不弹文字浮层
     if (chip.classList.contains('lb-click')) { closeChips(); return; }
@@ -1804,7 +1811,7 @@ renderOpenOutlook();
       var sp = String(stk).split('|');
       // R94b：箭头仅在同一内容分组内切换——取芯片最近的分组容器（要闻影响组/题材条目/AI板块/板块TOP）内的全部标的
       STK_GRP = null; STK_IDX = 0;
-      var gbox = chip.closest ? chip.closest('.stock-chips, .nc-stocks, .reason-tops') : null;
+      var gbox = chip.closest ? chip.closest('.stock-chips, .nc-stocks, .reason-tops, .idx-grid') : null;
       if (gbox) {
         var gchips = gbox.querySelectorAll('[data-stk]');
         if (gchips.length > 1) {

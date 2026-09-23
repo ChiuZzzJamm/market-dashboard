@@ -29,6 +29,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 IFZQ_URL = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={sym},day,,,60,qfq"
 SMARTBOX_URL = "https://smartbox.gtimg.cn/s3/?v=2&q={q}&t=all"
+# R98j：腾讯 ifzq 被 WAF 拦截/失败时的新浪 JSON 备源（日K 不复权，兜底；指数/个股通用）
+SINA_URL = ("https://quotes.sina.cn/cn/api/json_v2.php/CN_MarketDataService.getKLineData"
+            "?symbol={sym}&scale=240&ma=no&datalen=60")
+# R98j：大盘指数 sym（前端点击指数看K线；指数键带 sh/sz 前缀，与个股 6 位键不冲突）
+INDEX_SYMS = {"上证指数": "sh000001", "深证成指": "sz399001", "创业板指": "sz399006",
+              "科创50": "sh000688", "上证50": "sh000016"}
 
 BASE = __file__.rsplit("/", 1)[0] or "."
 
@@ -63,8 +69,9 @@ def is_ashare_code(code):
 
 
 def collect_stocks(D):
-    """返回 (codes:set[str], names:set[str])。codes=6位纯数字；names=待反查的领涨股名。"""
-    codes, names = set(), set()
+    """返回 (codes:set[str], names:set[str], syms:set[str])。
+    codes=6位纯数字个股；names=待反查的领涨股名；syms=带前缀指数键（sh000001 等）。"""
+    codes, names, syms = set(), set(), set()
 
     def add_code(c):
         c = str(c or "").strip()
@@ -100,7 +107,14 @@ def collect_stocks(D):
             nm = str(t.get("name") or "").strip()
             if nm and not t.get("code"):
                 names.add(nm)
-    return codes, names
+    # 6) 大盘指数（R98j：指数点击看K线；code 字段优先，历史数据按名称映射兜底）
+    for idx in (a.get("indices") or []):
+        sym = str(idx.get("code") or "").strip().lower()
+        if not re.fullmatch(r"(sh|sz)\d{6}", sym):
+            sym = INDEX_SYMS.get(str(idx.get("name") or "").strip(), "")
+        if sym:
+            syms.add(sym)
+    return codes, names, syms
 
 
 def resolve_names(names, deadline):
@@ -131,19 +145,9 @@ def resolve_names(names, deadline):
     return out
 
 
-def fetch_kline(code, timeout=15):
-    sym = ("sh" if code.startswith("6") else "sz") + code
-    raw = curl_text(IFZQ_URL.format(sym=sym), timeout=timeout)
-    if not raw:
-        return None
-    try:
-        j = json.loads(raw)
-    except Exception:
-        return None
-    d = (j.get("data") or {}).get(sym) or {}
-    rows = d.get("qfqday") or d.get("day") or []
+def _parse_ifzq_rows(rows):
     out = []
-    for r in rows:
+    for r in rows or []:
         if not isinstance(r, list) or len(r) < 6:
             continue
         try:
@@ -154,6 +158,47 @@ def fetch_kline(code, timeout=15):
     return out if len(out) > 1 else None
 
 
+def _parse_sina(raw):
+    try:
+        arr = json.loads(raw)
+    except Exception:
+        return None
+    if not isinstance(arr, list):
+        return None
+    out = []
+    for r in arr:
+        try:
+            out.append([str(r.get("day", ""))[:10], float(r["open"]), float(r["close"]),
+                        float(r["high"]), float(r["low"]), float(r.get("volume") or 0)])
+        except Exception:
+            continue
+    return out if len(out) > 1 else None
+
+
+def fetch_kline(code, timeout=15):
+    """code 可为 6 位个股代码（自动补 sh/sz）或带前缀指数 sym（sh000001 等）。
+    腾讯 ifzq 主源（空回复/WAF 跳转页视为失败）→ 新浪 JSON 备源。"""
+    code = str(code or "").strip()
+    if re.fullmatch(r"\d{6}", code):
+        sym = ("sh" if code.startswith("6") else "sz") + code
+    elif re.fullmatch(r"(sh|sz)\d{6}", code.lower()):
+        sym = code.lower()
+    else:
+        return None
+    raw = curl_text(IFZQ_URL.format(sym=sym), timeout=timeout)
+    out = None
+    try:
+        j = json.loads(raw) if raw else None
+        d = (j.get("data") or {}).get(sym) or {}
+        out = _parse_ifzq_rows(d.get("qfqday") or d.get("day") or [])
+    except Exception:
+        out = None
+    if out:
+        return out
+    # R98j：ifzq 失败（含 WAF 501 跳转页，json 解析必失败）→ 新浪备源兜底
+    return _parse_sina(curl_text(SINA_URL.format(sym=sym), timeout=timeout))
+
+
 def main():
     deadline = time.time() + 240
     if "--deadline" in sys.argv:
@@ -162,8 +207,8 @@ def main():
         except Exception:
             pass
     D = load_data()
-    codes, names = collect_stocks(D)
-    print(f"[info] 待内嵌：{len(codes)} 只代码标的 + {len(names)} 个待反查名称")
+    codes, names, syms = collect_stocks(D)
+    print(f"[info] 待内嵌：{len(codes)} 只代码标的 + {len(names)} 个待反查名称 + {len(syms)} 个指数")
 
     # 名称反查（串行，smartbox 轻量）
     name_map = resolve_names(names, deadline)
@@ -181,7 +226,7 @@ def main():
         return c, fetch_kline(c)
 
     with ThreadPoolExecutor(max_workers=6) as exe:
-        futs = {exe.submit(work, c): c for c in sorted(codes)}
+        futs = {exe.submit(work, c): c for c in sorted(codes) + sorted(syms)}
         for fu in as_completed(futs):
             if time.time() > deadline:
                 for f in futs:
