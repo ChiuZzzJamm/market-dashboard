@@ -68,6 +68,25 @@ def build_panorama_line(panorama):
         return '🌏 日韩：' + ' | '.join(pieces)
     return '🌏 日韩：详见网页'
 
+def build_lianban_line(a):
+    """生成 🔥 连板 推送行；按连板高度降序取前 N 只；数据缺失返回 None（调用方跳过）"""
+    items = (a.get('lianban') or []) if isinstance(a, dict) else []
+    if not items:
+        return None
+    try:
+        items = sorted(items, key=lambda x: (x.get('lbc', 0) or 0, x.get('pct', 0) or 0), reverse=True)
+    except Exception:
+        pass
+    pieces = []
+    for it in items[:6]:
+        name = it.get('name', '')
+        lbc = it.get('lbc', 0) or 0
+        if name and lbc:
+            pieces.append(f"{name}{lbc}板")
+    if not pieces:
+        return None
+    return '🔥 连板：' + ' / '.join(pieces)
+
 def fmt_ai_line(ap, label):
     """AI 预测紧凑摘要：每板块「板块名方向(置信度)」，一行带过（微信不宜展开 6×8 明细）。
     ap 缺失或 sectors 为空返回 None，调用方跳过该段。"""
@@ -199,25 +218,20 @@ if mode == 'ashare':
     if isinstance(_ol, dict):
         _ol = _ol.get('content') or _ol.get('text') or ''
     outlook_text = str(_ol).replace('\n', ' ').strip()
-    # A股要闻：合并利好/利空/宏观/国际/投行五组，去重后取 5 条，带 🇨🇳/🌍 图标（修复 B）
-    news_parts = collect_news(a, 5)
     # 利好/利空方向（与美股/周末推送一致）
     bullish_lines = [fmt_bullish(t, i+1) for i, t in enumerate((a.get('bullish') or [])[:3])]
     bearish_lines = [fmt_bearish(t, i+1) for i, t in enumerate((a.get('bearish') or [])[:3])]
+    lianban_line = build_lianban_line(a)
     desp_parts = [
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
-        f"📊 A股：{a.get('summary','')}",
+        f"💡 研判：{outlook_text}" if outlook_text else '',
+        f"💰 资金：流入 {fi} | 流出 {fo}",
         f"📈 领涨：{leaders}",
         f"📉 领跌：{laggards}",
-        f"💰 资金：流入 {fi} | 流出 {fo}",
-        build_panorama_line(D.get('panorama')),
-        f"📰 要闻：{'  '.join(news_parts)}" if news_parts else '📰 要闻：详见网页',
-        f"💡 研判：{outlook_text}" if outlook_text else '',
     ]
-    if bullish_lines:
-        desp_parts.append("✅ 利好：\n" + '\n'.join(bullish_lines))
-    if bearish_lines:
-        desp_parts.append("⚠️ 利空：\n" + '\n'.join(bearish_lines))
+    if lianban_line:
+        desp_parts.append(lianban_line)
+    desp_parts.append(build_panorama_line(D.get('panorama')))
     desp = '\n\n'.join(desp_parts)
 
 elif mode == 'us':
@@ -233,6 +247,9 @@ elif mode == 'us':
     if isinstance(_ol, dict):
         _ol = _ol.get('content') or _ol.get('text') or ''
     outlook_text = str(_ol).replace('\n', ' ').strip()
+    # 开盘前瞻（R72 起为顶层 openOutlook.content，带日期；微信端连续自然段）
+    _oo = D.get('openOutlook') or {}
+    open_outlook_text = str(_oo.get('content') or '').replace('\n', ' ').strip()
     # 利好/利空板块：优先取当日 us.bullish/bearish（若 08:30 任务已生成），否则回退周末消息，格式同周日
     w = D.get('weekendNews') or {}
     bull_src = (u.get('bullish') or w.get('bullish', []))
@@ -244,9 +261,8 @@ elif mode == 'us':
     parts = [
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
         f"📊 美股：{u.get('summary','')}",
-        f"📰 要闻：{'  '.join(news_parts)}" if news_parts else '📰 要闻：详见网页',
+        f"📈 前瞻：{open_outlook_text}" if open_outlook_text else '',
         build_panorama_line(D.get('panorama')),
-        f"💡 研判：{outlook_text}" if outlook_text else '',
     ]
     # 当日 AI 预测（08:30 任务已写入顶层 aiPrediction）：紧凑一行，与 prompt 口径一致
     ai_line = fmt_ai_line(D.get('aiPrediction'), '今日AI预测')
@@ -313,12 +329,12 @@ elif mode == 'weekend':
     _oo = D.get('openOutlook') or {}
     monday_outlook = (_oo.get('content') or '').replace('\n', ' ').strip()
 
-    # 顺序：美股 → 要闻 → 周一研判 → AI预测（周一板块） → 利好 → 利空
+    # 顺序：美股 → 开盘前瞻 → 要闻 → AI预测（周一板块） → 利好 → 利空
     parts = [
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
         f"📊 美股：{us_line}",
+        f"📈 前瞻：{monday_outlook}" if monday_outlook else '',
         f"📰 要闻：\n{weekend_news}",
-        f"💡 周一研判：{monday_outlook}",
     ]
     ai_line = fmt_ai_line(D.get('aiPrediction'), '周一AI预测')
     if ai_line:
