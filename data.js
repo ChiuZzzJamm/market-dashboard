@@ -1,5 +1,5 @@
 window.DASHBOARD_DATA = {
-  "updatedAt": "2026-09-23 18:48（A股收盘已自动更新：涨跌家数/行业板块TOP5/连板梯队；主力资金数据源失败，保留上一轮数据）",
+  "updatedAt": "2026-09-23 23:58（A股收盘已自动更新：指数/涨跌家数/行业板块TOP5/连板梯队；主力资金数据源失败，保留上一轮数据）",
   "aiPrediction": {
     "date": "2026-09-23",
     "indexLine": "道指 -0.36%、纳指 +0.45%、标普500 平收(0.00%)、费半 +2.40%",
@@ -400,334 +400,141 @@ window.DASHBOARD_DATA = {
       "down": 3422,
       "flat": 91,
       "limitUp": 51,
-      "limitDown": 3
+      "limitDown": 3,
+      "volumeText": "成交约 1.76 万亿"
     },
     "sectorsUp": [
       {
-        "name": "研究和试验发展",
-        "pct": 4.04,
+        "name": "非金属材料",
+        "pct": 2.21,
         "tops": [
           {
-            "name": "益诺思生物",
-            "changePct": 14.41,
-            "openPct": 0.52
-          },
-          {
-            "name": "奥浦迈生物",
-            "changePct": 12.69,
-            "openPct": 0.16
-          },
-          {
-            "name": "和元生物",
-            "changePct": 10.71,
-            "openPct": -0.13
-          },
-          {
-            "name": "义翘神州",
-            "changePct": 10.12,
-            "openPct": 4.6
-          },
-          {
-            "name": "皓元医药",
-            "changePct": 9.84,
-            "openPct": 1.81
+            "name": "太力科技",
+            "changePct": 12.79
           }
         ],
-        "openPct": 1.39,
-        "reason": {
-          "title": "CRO与研发外包逆市走强",
-          "detail": "创新药研发服务需求回暖，叠加海外订单预期改善，CRO/CDMO企业集体拉升；板块成为弱势行情中少数亮点，资金偏好明显转向确定性赛道，机构加仓意愿同步回升，短线热度延续。"
-        }
+        "netInflow": 4.23,
+        "upCount": 12,
+        "downCount": 5
       },
       {
-        "name": "科技推广和应用服务业",
-        "pct": 2.9,
-        "tops": [
-          {
-            "name": "南华生物",
-            "changePct": 5.37,
-            "openPct": 0
-          }
-        ],
-        "reason": {
-          "title": "科技推广服务局部活跃",
-          "detail": "科技服务类个股在政策催化下小幅走高，板块整体呈现结构性机会；但成交温和、持续性仍待观察，资金以试探性布局为主，尚未形成明确主线，短线参与宜控仓，等待放量确认。"
-        }
-      },
-      {
-        "name": "石油加工、炼焦和核燃料加工业",
-        "pct": 1.91,
-        "tops": [
-          {
-            "name": "恒林股份",
-            "changePct": 4.58,
-            "openPct": -0.53
-          },
-          {
-            "name": "好莱客",
-            "changePct": 2.66,
-            "openPct": 0.89
-          },
-          {
-            "name": "索菲亚",
-            "changePct": 1.06,
-            "openPct": 0
-          },
-          {
-            "name": "永艺股份",
-            "changePct": 0.29,
-            "openPct": -0.19
-          }
-        ],
-        "openPct": 0.04,
-        "reason": {
-          "title": "家居链驱动板块异常收涨",
-          "detail": "该板块成分以家居消费类个股为主，恒林股份、索菲亚等强势领涨，炼化主线相对平淡；指数呈家居链驱动的异常结构，属新浪兜底口径下的分类特征，真实行业涨跌需待东财源恢复后校正。"
-        }
-      },
-      {
-        "name": "化学纤维制造业",
-        "pct": 1.55,
-        "tops": [
-          {
-            "name": "海正生物材料",
-            "changePct": 16.38,
-            "openPct": 1.72
-          },
-          {
-            "name": "汇隆新材",
-            "changePct": 5.32,
-            "openPct": 1.92
-          },
-          {
-            "name": "恒逸石化",
-            "changePct": 3.45,
-            "openPct": 0.54
-          },
-          {
-            "name": "荣盛石化",
-            "changePct": 3.2,
-            "openPct": 0.53
-          },
-          {
-            "name": "*ST京化",
-            "changePct": 2.16,
-            "openPct": 0.52
-          }
-        ],
-        "openPct": 1.05,
-        "reason": {
-          "title": "化纤受涨价预期带动",
-          "detail": "涤纶、氨纶等化纤品种受原料涨价与供需改善预期推动，板块龙头集体走高并逆市收红，成为制造业中少数活跃分支，资金关注度提升，关注下游补库节奏带来的二次机会，板块弹性可期。"
-        }
-      },
-      {
-        "name": "医药制造业",
+        "name": "厨卫电器",
         "pct": 1.53,
         "tops": [
           {
-            "name": "浩欧博生物",
-            "changePct": 20,
-            "openPct": -0.69
-          },
-          {
-            "name": "欧林生物",
-            "changePct": 12.99,
-            "openPct": -0.07
-          },
-          {
-            "name": "济民健康",
-            "changePct": 9.96,
-            "openPct": -0.62
-          },
-          {
-            "name": "艾力斯医药科技",
-            "changePct": 9.35,
-            "openPct": -0.3
-          },
-          {
-            "name": "北陆药业",
-            "changePct": 8.77,
-            "openPct": 0
+            "name": "亿田智能",
+            "changePct": 12.13
           }
         ],
-        "openPct": -0.34,
-        "reason": {
-          "title": "医药制造逆市领涨",
-          "detail": "生物制药、疫苗及创新药概念逆市活跃，资金在弱势中回流防御性医药赛道；板块全天领涨，CRO与疫苗方向个股表现突出，避险属性凸显，中期看创新药出海仍是核心主线。"
-        }
+        "netInflow": 0.3,
+        "upCount": 5,
+        "downCount": 4
+      },
+      {
+        "name": "元件",
+        "pct": 1.5,
+        "tops": [
+          {
+            "name": "澳弘电子",
+            "changePct": 10.01
+          }
+        ],
+        "netInflow": 11.42,
+        "upCount": 44,
+        "downCount": 19
+      },
+      {
+        "name": "半导体",
+        "pct": 1.35,
+        "tops": [
+          {
+            "name": "慧智微",
+            "changePct": 20.03
+          }
+        ],
+        "netInflow": 0.65,
+        "upCount": 121,
+        "downCount": 66
+      },
+      {
+        "name": "电子化学品",
+        "pct": 1.31,
+        "tops": [
+          {
+            "name": "同宇新材",
+            "changePct": 8.65
+          }
+        ],
+        "netInflow": 18.17,
+        "upCount": 35,
+        "downCount": 7
       }
     ],
     "sectorsDown": [
       {
-        "name": "广播、电视、电影和影视录音制作业",
-        "pct": -2.89,
+        "name": "化学制药",
+        "pct": -0.73,
         "tops": [
           {
-            "name": "中视传媒",
-            "changePct": -10.02,
-            "openPct": -4.09
-          },
-          {
-            "name": "欢瑞世纪",
-            "changePct": -5.8,
-            "openPct": -1.86
-          },
-          {
-            "name": "北京文化",
-            "changePct": -4.66,
-            "openPct": -0.49
-          },
-          {
-            "name": "上海电影",
-            "changePct": -4.5,
-            "openPct": -1.66
-          },
-          {
-            "name": "华智数媒",
-            "changePct": -4.26,
-            "openPct": -0.59
+            "name": "艾力斯",
+            "changePct": 9.35
           }
         ],
-        "openPct": -1.74,
-        "reason": {
-          "title": "影视传媒集体回调",
-          "detail": "前日强势的影视传媒今日获利回吐，中视传媒、北京文化、上海电影等领跌；叠加AI应用概念退潮与资金切换，板块位居今日调整前列，短线承压，关注假期档期前资金回流可能。"
-        }
+        "netInflow": -18.11,
+        "upCount": 43,
+        "downCount": 112
       },
       {
-        "name": "其他制造业",
-        "pct": -3,
+        "name": "饮料制造",
+        "pct": -0.72,
         "tops": [
           {
-            "name": "云煤能源",
-            "changePct": -9.91,
-            "openPct": -2.96
-          },
-          {
-            "name": "百花医药",
-            "changePct": -8.15,
-            "openPct": -3.66
-          },
-          {
-            "name": "宝泰隆",
-            "changePct": -4.32,
-            "openPct": 0
-          },
-          {
-            "name": "美锦能源",
-            "changePct": -4.09,
-            "openPct": -0.54
-          },
-          {
-            "name": "山西焦化",
-            "changePct": -3.38,
-            "openPct": -0.52
+            "name": "古越龙山",
+            "changePct": 5
           }
         ],
-        "openPct": -1.54,
-        "reason": {
-          "title": "能源类个股拖累走低",
-          "detail": "板块内焦炭、能源类个股大幅下挫，宝泰隆、美锦能源等领跌；制造链条整体承压，结构上看能源分支是主要拖累项，短线情绪转弱，等待能源价格企稳后的修复契机，跌势有望收敛。"
-        }
+        "netInflow": -4.62,
+        "upCount": 14,
+        "downCount": 33
       },
       {
-        "name": "装卸搬运和运输代理业",
-        "pct": -3.43,
+        "name": "通信设备",
+        "pct": -0.67,
         "tops": [
           {
-            "name": "三羊马",
-            "changePct": -10.01,
-            "openPct": -3
-          },
-          {
-            "name": "华光源海",
-            "changePct": -4.68,
-            "openPct": 0
-          },
-          {
-            "name": "安通控股",
-            "changePct": -1.97,
-            "openPct": 0
-          },
-          {
-            "name": "飞力达",
-            "changePct": -1.77,
-            "openPct": -0.16
-          },
-          {
-            "name": "华贸物流",
-            "changePct": -1.5,
-            "openPct": -0.38
+            "name": "瑞斯康达",
+            "changePct": 10
           }
         ],
-        "openPct": -0.71,
-        "reason": {
-          "title": "物流板块整体走弱",
-          "detail": "三羊马、华贸物流等物流标的集体下挫，板块受弱势行情与资金撤离拖累；运输代理分支位居跌幅前列，短线情绪偏冷、量能萎缩，关注后续稳增长政策对货运的拉动，板块或有修复。"
-        }
+        "netInflow": -49.4,
+        "upCount": 27,
+        "downCount": 64
       },
       {
-        "name": "橡胶和塑料制品业",
-        "pct": -3.54,
+        "name": "钢铁",
+        "pct": -0.63,
         "tops": [
           {
-            "name": "C中塑",
-            "changePct": -34.53,
-            "openPct": -21.48
-          },
-          {
-            "name": "XD朗博科技",
-            "changePct": -5.2,
-            "openPct": 0.17
-          },
-          {
-            "name": "王子新材",
-            "changePct": -5.03,
-            "openPct": -0.4
-          },
-          {
-            "name": "珠海中富",
-            "changePct": -3.56,
-            "openPct": 0
-          },
-          {
-            "name": "华峰超纤",
-            "changePct": -3.5,
-            "openPct": -0.44
+            "name": "凌钢股份",
+            "changePct": 4.76
           }
         ],
-        "openPct": -4.43,
-        "reason": {
-          "title": "橡胶塑料领跌",
-          "detail": "新股上市首日大幅波动，叠加王子新材等个股下挫，橡胶塑料板块整体承压；居今日调整幅度前列，资金避险情绪浓厚、赚钱效应缺失，静待情绪修复后的超跌反弹窗口，逢低关注。"
-        }
+        "netInflow": -2.94,
+        "upCount": 9,
+        "downCount": 32
       },
       {
-        "name": "林业",
-        "pct": -4.29,
+        "name": "化学原料",
+        "pct": -0.63,
         "tops": [
           {
-            "name": "平潭发展",
-            "changePct": -7.21,
-            "openPct": -1.28
-          },
-          {
-            "name": "福建金森",
-            "changePct": -3.92,
-            "openPct": 0.18
-          },
-          {
-            "name": "交投生态",
-            "changePct": -1.06,
-            "openPct": 0.61
+            "name": "振华股份",
+            "changePct": 9.99
           }
         ],
-        "openPct": -0.16,
-        "reason": {
-          "title": "林业跌幅居前",
-          "detail": "林业及生态园林个股集体下挫，平潭发展、福建金森领跌；板块受弱势盘面与题材退潮双重拖累，位居今日跌幅榜首，短线未现企稳信号，关注林业碳汇等政策催化时点，逢低布局。"
-        }
+        "netInflow": -12.02,
+        "upCount": 17,
+        "downCount": 41
       }
     ],
     "fundIn": [
@@ -758,7 +565,7 @@ window.DASHBOARD_DATA = {
         "value": -28.87
       }
     ],
-    "fundNote": "板块主力资金流（行业维度，单位：亿元）数据源：通达信 tdx MCP「行业资金流入/行业资金流出/主力净额」全量聚合，取数日 2026-09-23（收盘）。东财 push2 自 2026-09-18 起受网络层风控不可达，已改用 tdx 聚合回填。",
+    "fundNote": "板块主力资金流数据源（东财 push2）自 2026-09-18 起受网络层风控，当前新浪/通达信/腾讯/Cloudflare 反代均无法提供该字段，数据沿用最近一次成功取值（2026-09-18），待数据源恢复后自动刷新。",
     "bullNews": [
       {
         "sector": "中美关系",
@@ -2347,424 +2154,404 @@ window.DASHBOARD_DATA = {
     "updatedAt": "2026-09-23 17:51（A股收盘已更新：指数/涨跌家数/行业板块TOP5/连板梯队/10板块reason/要闻/利好利空/outlook/AI验证；断板反包模块已重新生成(确认池113/观察池38)；主力资金数据源失败保留上一轮数据；板块榜/全景主力资金待东财恢复后回填）",
     "allBoards": [
       {
-        "code": "hangye_ZA01",
-        "name": "农业",
-        "pct": -0.6
+        "code": "881167",
+        "name": "非金属材料",
+        "pct": 2.21,
+        "netInflow": 4.23,
+        "upCount": 12,
+        "downCount": 5
+      },
+      {
+        "code": "881174",
+        "name": "厨卫电器",
+        "pct": 1.53,
+        "netInflow": 0.3,
+        "upCount": 5,
+        "downCount": 4
+      },
+      {
+        "code": "881270",
+        "name": "元件",
+        "pct": 1.5,
+        "netInflow": 11.42,
+        "upCount": 44,
+        "downCount": 19
+      },
+      {
+        "code": "881121",
+        "name": "半导体",
+        "pct": 1.35,
+        "netInflow": 0.65,
+        "upCount": 121,
+        "downCount": 66
+      },
+      {
+        "code": "881172",
+        "name": "电子化学品",
+        "pct": 1.31,
+        "netInflow": 18.17,
+        "upCount": 35,
+        "downCount": 7
+      },
+      {
+        "code": "881142",
+        "name": "生物制品",
+        "pct": 1.3,
+        "netInflow": 6.8,
+        "upCount": 31,
+        "downCount": 23
+      },
+      {
+        "code": "881123",
+        "name": "其他电子",
+        "pct": 1.27,
+        "netInflow": 1.67,
+        "upCount": 23,
+        "downCount": 11
+      },
+      {
+        "code": "881117",
+        "name": "通用设备",
+        "pct": 0.95,
+        "netInflow": 6.63,
+        "upCount": 135,
+        "downCount": 114
+      },
+      {
+        "code": "881175",
+        "name": "医疗服务",
+        "pct": 0.9,
+        "netInflow": 1.12,
+        "upCount": 34,
+        "downCount": 21
+      },
+      {
+        "code": "881179",
+        "name": "其他社会服务",
+        "pct": 0.75,
+        "netInflow": 1.07,
+        "upCount": 23,
+        "downCount": 16
+      },
+      {
+        "code": "881144",
+        "name": "医疗器械",
+        "pct": 0.64,
+        "netInflow": 1.65,
+        "upCount": 79,
+        "downCount": 60
+      },
+      {
+        "code": "881265",
+        "name": "塑料制品",
+        "pct": 0.57,
+        "netInflow": 3.71,
+        "upCount": 44,
+        "downCount": 34
+      },
+      {
+        "code": "881282",
+        "name": "其他电源设备",
+        "pct": 0.4,
+        "netInflow": -1.88,
+        "upCount": 14,
+        "downCount": 20
       },
       {
-        "code": "hangye_ZA02",
-        "name": "林业",
-        "pct": -4.29
+        "code": "881171",
+        "name": "自动化设备",
+        "pct": 0.39,
+        "netInflow": -1.39,
+        "upCount": 50,
+        "downCount": 48
       },
       {
-        "code": "hangye_ZA03",
-        "name": "畜牧业",
-        "pct": -0.22
+        "code": "881122",
+        "name": "光学光电子",
+        "pct": 0.26,
+        "netInflow": -12.33,
+        "upCount": 48,
+        "downCount": 58
       },
       {
-        "code": "hangye_ZA04",
-        "name": "渔业",
-        "pct": -2.79
+        "code": "881264",
+        "name": "化学纤维",
+        "pct": 0.26,
+        "netInflow": 1.71,
+        "upCount": 16,
+        "downCount": 13
       },
       {
-        "code": "hangye_ZA05",
-        "name": "农、林、牧、渔服务业",
-        "pct": -2.43
+        "code": "881131",
+        "name": "白色家电",
+        "pct": 0.23,
+        "netInflow": -1.06,
+        "upCount": 14,
+        "downCount": 26
       },
       {
-        "code": "hangye_ZB06",
-        "name": "煤炭开采和洗选业",
-        "pct": -1.69
+        "code": "881281",
+        "name": "电池",
+        "pct": 0.21,
+        "netInflow": 7.95,
+        "upCount": 45,
+        "downCount": 60
       },
       {
-        "code": "hangye_ZB07",
-        "name": "石油和天然气开采业",
-        "pct": -0.61
+        "code": "881153",
+        "name": "房地产",
+        "pct": 0.2,
+        "netInflow": -0.73,
+        "upCount": 37,
+        "downCount": 44
       },
       {
-        "code": "hangye_ZB08",
-        "name": "黑色金属矿采选业",
-        "pct": -2.36
+        "code": "881109",
+        "name": "化学制品",
+        "pct": 0.14,
+        "netInflow": -3.82,
+        "upCount": 80,
+        "downCount": 101
       },
       {
-        "code": "hangye_ZB09",
-        "name": "有色金属矿采选业",
-        "pct": -0.97
+        "code": "881115",
+        "name": "建筑材料",
+        "pct": 0.13,
+        "netInflow": -14.08,
+        "upCount": 36,
+        "downCount": 33
       },
       {
-        "code": "hangye_ZB10",
-        "name": "非金属矿采选业",
-        "pct": -0.23
+        "code": "881276",
+        "name": "军工电子",
+        "pct": 0.07,
+        "netInflow": -6.73,
+        "upCount": 24,
+        "downCount": 37
       },
       {
-        "code": "hangye_ZB11",
-        "name": "开采辅助活动",
-        "pct": -1.48
+        "code": "881118",
+        "name": "专用设备",
+        "pct": 0.06,
+        "netInflow": -6.86,
+        "upCount": 100,
+        "downCount": 102
       },
       {
-        "code": "hangye_ZC13",
-        "name": "农副食品加工业",
-        "pct": -1.3
+        "code": "881151",
+        "name": "机场航运",
+        "pct": 0.03,
+        "netInflow": 0.43,
+        "upCount": 6,
+        "downCount": 6
       },
       {
-        "code": "hangye_ZC14",
-        "name": "食品制造业",
-        "pct": -0.77
+        "code": "881279",
+        "name": "光伏设备",
+        "pct": 0.03,
+        "netInflow": -11.43,
+        "upCount": 33,
+        "downCount": 37
       },
       {
-        "code": "hangye_ZC15",
-        "name": "酒、饮料和精制茶制造业",
-        "pct": -0.14
+        "code": "881116",
+        "name": "建筑装饰",
+        "pct": -0.02,
+        "netInflow": -1.79,
+        "upCount": 53,
+        "downCount": 83
       },
       {
-        "code": "hangye_ZC17",
-        "name": "纺织业",
-        "pct": -0.09
+        "code": "881126",
+        "name": "汽车零部件",
+        "pct": -0.04,
+        "netInflow": -14.59,
+        "upCount": 107,
+        "downCount": 158
       },
       {
-        "code": "hangye_ZC18",
-        "name": "纺织服装、服饰业",
-        "pct": -0.12
+        "code": "881273",
+        "name": "白酒",
+        "pct": -0.14,
+        "netInflow": -4.07,
+        "upCount": 8,
+        "downCount": 11
       },
       {
-        "code": "hangye_ZC19",
-        "name": "皮革、毛皮、羽毛及其制品和制鞋业",
-        "pct": -0.41
+        "code": "881269",
+        "name": "轨交设备",
+        "pct": -0.16,
+        "netInflow": -2.23,
+        "upCount": 8,
+        "downCount": 20
       },
       {
-        "code": "hangye_ZC20",
-        "name": "木材加工和木、竹、藤、棕、草制品业",
-        "pct": -0.18
+        "code": "881114",
+        "name": "金属新材料",
+        "pct": -0.22,
+        "netInflow": -1.75,
+        "upCount": 14,
+        "downCount": 20
       },
       {
-        "code": "hangye_ZC21",
-        "name": "家具制造业",
-        "pct": -2.07
+        "code": "881128",
+        "name": "汽车服务及其他",
+        "pct": -0.25,
+        "netInflow": -0.7,
+        "upCount": 12,
+        "downCount": 14
       },
       {
-        "code": "hangye_ZC22",
-        "name": "造纸和纸制品业",
-        "pct": -0.56
+        "code": "881268",
+        "name": "工程机械",
+        "pct": -0.26,
+        "netInflow": -5.24,
+        "upCount": 12,
+        "downCount": 22
       },
       {
-        "code": "hangye_ZC23",
-        "name": "印刷和记录媒介复制业",
-        "pct": -0.58
+        "code": "881130",
+        "name": "计算机设备",
+        "pct": -0.28,
+        "netInflow": -14.04,
+        "upCount": 28,
+        "downCount": 54
       },
       {
-        "code": "hangye_ZC24",
-        "name": "文教、工美、体育和娱乐用品制造业",
-        "pct": -1.93
+        "code": "881125",
+        "name": "汽车整车",
+        "pct": -0.32,
+        "netInflow": -4.7,
+        "upCount": 5,
+        "downCount": 16
       },
       {
-        "code": "hangye_ZC25",
-        "name": "石油加工、炼焦和核燃料加工业",
-        "pct": 1.91
+        "code": "881160",
+        "name": "旅游及酒店",
+        "pct": -0.36,
+        "netInflow": -0.92,
+        "upCount": 5,
+        "downCount": 30
       },
       {
-        "code": "hangye_ZC26",
-        "name": "化学原料和化学制品制造业",
-        "pct": 0.5
+        "code": "881124",
+        "name": "消费电子",
+        "pct": -0.39,
+        "netInflow": -27.52,
+        "upCount": 30,
+        "downCount": 66
       },
       {
-        "code": "hangye_ZC27",
-        "name": "医药制造业",
-        "pct": 1.53
+        "code": "881155",
+        "name": "银行",
+        "pct": -0.43,
+        "netInflow": -9.79,
+        "upCount": 4,
+        "downCount": 35
       },
       {
-        "code": "hangye_ZC28",
-        "name": "化学纤维制造业",
-        "pct": 1.55
-      },
-      {
-        "code": "hangye_ZC29",
-        "name": "橡胶和塑料制品业",
-        "pct": -3.54
-      },
-      {
-        "code": "hangye_ZC30",
-        "name": "非金属矿物制品业",
-        "pct": 0.92
-      },
-      {
-        "code": "hangye_ZC31",
-        "name": "黑色金属冶炼和压延加工业",
-        "pct": -1.42
-      },
-      {
-        "code": "hangye_ZC32",
-        "name": "有色金属冶炼和压延加工业",
-        "pct": 0.31
-      },
-      {
-        "code": "hangye_ZC33",
-        "name": "金属制品业",
-        "pct": 0.29
-      },
-      {
-        "code": "hangye_ZC34",
-        "name": "通用设备制造业",
-        "pct": 0.22
-      },
-      {
-        "code": "hangye_ZC35",
-        "name": "专用设备制造业",
-        "pct": -2.28
-      },
-      {
-        "code": "hangye_ZC36",
-        "name": "汽车制造业",
-        "pct": 0.31
-      },
-      {
-        "code": "hangye_ZC37",
-        "name": "铁路、船舶、航空航天和其他运输设备制造业",
-        "pct": -1.62
-      },
-      {
-        "code": "hangye_ZC38",
-        "name": "电气机械和器材制造业",
-        "pct": 0.05
-      },
-      {
-        "code": "hangye_ZC39",
-        "name": "计算机、通信和其他电子设备制造业",
-        "pct": 1.05
-      },
-      {
-        "code": "hangye_ZC40",
-        "name": "仪器仪表制造业",
-        "pct": 0.85
-      },
-      {
-        "code": "hangye_ZC41",
-        "name": "其他制造业",
-        "pct": -3
-      },
-      {
-        "code": "hangye_ZC42",
-        "name": "废弃资源综合利用业",
-        "pct": -1.36
-      },
-      {
-        "code": "hangye_ZC43",
-        "name": "金属制品、机械和设备修理业",
-        "pct": 0.42
-      },
-      {
-        "code": "hangye_ZD44",
-        "name": "电力、热力生产和供应业",
-        "pct": -2.01
-      },
-      {
-        "code": "hangye_ZD45",
-        "name": "燃气生产和供应业",
-        "pct": -1.58
-      },
-      {
-        "code": "hangye_ZD46",
-        "name": "水的生产和供应业",
-        "pct": -0.18
-      },
-      {
-        "code": "hangye_ZE47",
-        "name": "房屋建筑业",
-        "pct": -0.99
-      },
-      {
-        "code": "hangye_ZE48",
-        "name": "土木工程建筑业",
-        "pct": -0.38
-      },
-      {
-        "code": "hangye_ZE49",
-        "name": "建筑安装业",
-        "pct": 0.08
-      },
-      {
-        "code": "hangye_ZE50",
-        "name": "建筑装饰和其他建筑业",
-        "pct": -0.24
-      },
-      {
-        "code": "hangye_ZF51",
-        "name": "批发业",
-        "pct": -0.14
-      },
-      {
-        "code": "hangye_ZF52",
-        "name": "零售业",
-        "pct": -2.11
-      },
-      {
-        "code": "hangye_ZG53",
-        "name": "铁路运输业",
-        "pct": -0.48
-      },
-      {
-        "code": "hangye_ZG54",
-        "name": "道路运输业",
-        "pct": -1.26
-      },
-      {
-        "code": "hangye_ZG55",
-        "name": "水上运输业",
-        "pct": -1.63
-      },
-      {
-        "code": "hangye_ZG56",
-        "name": "航空运输业",
-        "pct": 0.14
-      },
-      {
-        "code": "hangye_ZG58",
-        "name": "装卸搬运和运输代理业",
-        "pct": -3.43
-      },
-      {
-        "code": "hangye_ZG59",
-        "name": "仓储业",
-        "pct": -1.9
-      },
-      {
-        "code": "hangye_ZG60",
-        "name": "邮政业",
-        "pct": 0.04
-      },
-      {
-        "code": "hangye_ZH61",
-        "name": "住宿业",
-        "pct": -0.85
-      },
-      {
-        "code": "hangye_ZH62",
-        "name": "餐饮业",
-        "pct": -0.26
-      },
-      {
-        "code": "hangye_ZI63",
-        "name": "电信、广播电视和卫星传输服务",
-        "pct": -1.3
-      },
-      {
-        "code": "hangye_ZI64",
-        "name": "互联网和相关服务",
-        "pct": -2.19
-      },
-      {
-        "code": "hangye_ZI65",
-        "name": "软件和信息技术服务业",
-        "pct": -0.38
-      },
-      {
-        "code": "hangye_ZJ66",
-        "name": "货币金融服务",
-        "pct": -0.44
-      },
-      {
-        "code": "hangye_ZJ67",
-        "name": "资本市场服务",
-        "pct": -0.53
-      },
-      {
-        "code": "hangye_ZJ68",
-        "name": "保险业",
-        "pct": -1.1
-      },
-      {
-        "code": "hangye_ZJ69",
-        "name": "其他金融业",
-        "pct": -0.76
-      },
-      {
-        "code": "hangye_ZK70",
-        "name": "房地产业",
-        "pct": 0.88
-      },
-      {
-        "code": "hangye_ZL71",
-        "name": "租赁业",
-        "pct": -1.02
-      },
-      {
-        "code": "hangye_ZL72",
-        "name": "商务服务业",
-        "pct": -0.19
-      },
-      {
-        "code": "hangye_ZM73",
-        "name": "研究和试验发展",
-        "pct": 4.04
-      },
-      {
-        "code": "hangye_ZM74",
-        "name": "专业技术服务业",
-        "pct": 0.6
-      },
-      {
-        "code": "hangye_ZM75",
-        "name": "科技推广和应用服务业",
-        "pct": 2.9
-      },
-      {
-        "code": "hangye_ZN76",
-        "name": "水利管理业",
-        "pct": -1.53
-      },
-      {
-        "code": "hangye_ZN77",
-        "name": "生态保护和环境治理业",
-        "pct": 0.77
-      },
-      {
-        "code": "hangye_ZN78",
-        "name": "公共设施管理业",
-        "pct": 0.44
-      },
-      {
-        "code": "hangye_ZO80",
-        "name": "机动车、电子产品和日用产品修理业",
-        "pct": 0.88
-      },
-      {
-        "code": "hangye_ZP82",
-        "name": "教育",
-        "pct": -0.52
-      },
-      {
-        "code": "hangye_ZQ83",
-        "name": "卫生",
-        "pct": -0.7
-      },
-      {
-        "code": "hangye_ZQ84",
-        "name": "社会工作",
-        "pct": 0
-      },
-      {
-        "code": "hangye_ZR85",
-        "name": "新闻和出版业",
-        "pct": -2.81
-      },
-      {
-        "code": "hangye_ZR86",
-        "name": "广播、电视、电影和影视录音制作业",
-        "pct": -2.89
-      },
-      {
-        "code": "hangye_ZR87",
-        "name": "文化艺术业",
-        "pct": -1.34
-      },
-      {
-        "code": "hangye_ZR88",
-        "name": "体育",
-        "pct": -1.49
-      },
-      {
-        "code": "hangye_ZS90",
-        "name": "综合",
-        "pct": -0.51
+        "code": "881149",
+        "name": "公路铁路运输",
+        "pct": -0.51,
+        "netInflow": -2.13,
+        "upCount": 12,
+        "downCount": 20
+      },
+      {
+        "code": "881134",
+        "name": "食品加工制造",
+        "pct": -0.53,
+        "netInflow": 2.64,
+        "upCount": 16,
+        "downCount": 49
+      },
+      {
+        "code": "881284",
+        "name": "环保设备",
+        "pct": -0.53,
+        "netInflow": -0.52,
+        "upCount": 14,
+        "downCount": 15
+      },
+      {
+        "code": "881181",
+        "name": "环境治理",
+        "pct": -0.55,
+        "netInflow": -4.92,
+        "upCount": 30,
+        "downCount": 79
+      },
+      {
+        "code": "881173",
+        "name": "小家电",
+        "pct": -0.55,
+        "netInflow": -0.86,
+        "upCount": 4,
+        "downCount": 21
+      },
+      {
+        "code": "881139",
+        "name": "家居用品",
+        "pct": -0.59,
+        "netInflow": -4.13,
+        "upCount": 33,
+        "downCount": 65
+      },
+      {
+        "code": "881266",
+        "name": "橡胶制品",
+        "pct": -0.6,
+        "netInflow": -2.05,
+        "upCount": 8,
+        "downCount": 14
+      },
+      {
+        "code": "881157",
+        "name": "证券",
+        "pct": -0.61,
+        "netInflow": -13.99,
+        "upCount": 3,
+        "downCount": 43
+      },
+      {
+        "code": "881112",
+        "name": "钢铁",
+        "pct": -0.63,
+        "netInflow": -2.94,
+        "upCount": 9,
+        "downCount": 32
+      },
+      {
+        "code": "881108",
+        "name": "化学原料",
+        "pct": -0.63,
+        "netInflow": -12.02,
+        "upCount": 17,
+        "downCount": 41
+      },
+      {
+        "code": "881129",
+        "name": "通信设备",
+        "pct": -0.67,
+        "netInflow": -49.4,
+        "upCount": 27,
+        "downCount": 64
+      },
+      {
+        "code": "881133",
+        "name": "饮料制造",
+        "pct": -0.72,
+        "netInflow": -4.62,
+        "upCount": 14,
+        "downCount": 33
+      },
+      {
+        "code": "881140",
+        "name": "化学制药",
+        "pct": -0.73,
+        "netInflow": -18.11,
+        "upCount": 43,
+        "downCount": 112
       }
     ],
     "macroNews": [
@@ -3506,7 +3293,8 @@ window.DASHBOARD_DATA = {
           }
         ]
       }
-    ]
+    ],
+    "sectorSource": "ths"
   },
   "us": {
     "tradeDate": "2026-09-22（美东）",
@@ -5822,361 +5610,225 @@ window.DASHBOARD_DATA = {
         "indices": [
           {
             "name": "上证指数",
-            "changePct": 0.06
+            "changePct": -0.39
           },
           {
             "name": "深证成指",
-            "changePct": -0.05
+            "changePct": -0.64
           },
           {
             "name": "创业板指",
-            "changePct": 0.01
+            "changePct": -0.6
           },
           {
             "name": "科创50",
-            "changePct": 0.46
+            "changePct": -0.25
           },
           {
             "name": "上证50",
-            "changePct": 0.43
+            "changePct": -0.53
           }
         ],
         "items": [
           {
-            "name": "研究和试验发展",
-            "pct": 4.04
+            "name": "非金属材料",
+            "pct": 2.21
           },
           {
-            "name": "科技推广和应用服务业",
-            "pct": 2.9
-          },
-          {
-            "name": "石油加工、炼焦和核燃料加工业",
-            "pct": 1.91
-          },
-          {
-            "name": "化学纤维制造业",
-            "pct": 1.55
-          },
-          {
-            "name": "医药制造业",
+            "name": "厨卫电器",
             "pct": 1.53
           },
           {
-            "name": "计算机、通信和其他电子设备制造业",
-            "pct": 1.05
+            "name": "元件",
+            "pct": 1.5
           },
           {
-            "name": "非金属矿物制品业",
-            "pct": 0.92
+            "name": "半导体",
+            "pct": 1.35
           },
           {
-            "name": "房地产业",
-            "pct": 0.88
+            "name": "电子化学品",
+            "pct": 1.31
           },
           {
-            "name": "机动车、电子产品和日用产品修理业",
-            "pct": 0.88
+            "name": "生物制品",
+            "pct": 1.3
           },
           {
-            "name": "仪器仪表制造业",
-            "pct": 0.85
+            "name": "其他电子",
+            "pct": 1.27
           },
           {
-            "name": "生态保护和环境治理业",
-            "pct": 0.77
+            "name": "通用设备",
+            "pct": 0.95
           },
           {
-            "name": "专业技术服务业",
-            "pct": 0.6
+            "name": "医疗服务",
+            "pct": 0.9
           },
           {
-            "name": "化学原料和化学制品制造业",
-            "pct": 0.5
+            "name": "其他社会服务",
+            "pct": 0.75
           },
           {
-            "name": "公共设施管理业",
-            "pct": 0.44
+            "name": "医疗器械",
+            "pct": 0.64
           },
           {
-            "name": "金属制品、机械和设备修理业",
-            "pct": 0.42
+            "name": "塑料制品",
+            "pct": 0.57
           },
           {
-            "name": "有色金属冶炼和压延加工业",
-            "pct": 0.31
+            "name": "其他电源设备",
+            "pct": 0.4
           },
           {
-            "name": "汽车制造业",
-            "pct": 0.31
+            "name": "自动化设备",
+            "pct": 0.39
           },
           {
-            "name": "金属制品业",
-            "pct": 0.29
+            "name": "光学光电子",
+            "pct": 0.26
           },
           {
-            "name": "通用设备制造业",
-            "pct": 0.22
+            "name": "化学纤维",
+            "pct": 0.26
           },
           {
-            "name": "航空运输业",
+            "name": "白色家电",
+            "pct": 0.23
+          },
+          {
+            "name": "电池",
+            "pct": 0.21
+          },
+          {
+            "name": "房地产",
+            "pct": 0.2
+          },
+          {
+            "name": "化学制品",
             "pct": 0.14
           },
           {
-            "name": "建筑安装业",
-            "pct": 0.08
+            "name": "建筑材料",
+            "pct": 0.13
           },
           {
-            "name": "电气机械和器材制造业",
-            "pct": 0.05
+            "name": "军工电子",
+            "pct": 0.07
           },
           {
-            "name": "邮政业",
-            "pct": 0.04
+            "name": "专用设备",
+            "pct": 0.06
           },
           {
-            "name": "社会工作",
-            "pct": 0
+            "name": "机场航运",
+            "pct": 0.03
           },
           {
-            "name": "纺织业",
-            "pct": -0.09
+            "name": "光伏设备",
+            "pct": 0.03
           },
           {
-            "name": "纺织服装、服饰业",
-            "pct": -0.12
+            "name": "建筑装饰",
+            "pct": -0.02
           },
           {
-            "name": "酒、饮料和精制茶制造业",
+            "name": "汽车零部件",
+            "pct": -0.04
+          },
+          {
+            "name": "白酒",
             "pct": -0.14
           },
           {
-            "name": "批发业",
-            "pct": -0.14
+            "name": "轨交设备",
+            "pct": -0.16
           },
           {
-            "name": "木材加工和木、竹、藤、棕、草制品业",
-            "pct": -0.18
-          },
-          {
-            "name": "水的生产和供应业",
-            "pct": -0.18
-          },
-          {
-            "name": "商务服务业",
-            "pct": -0.19
-          },
-          {
-            "name": "畜牧业",
+            "name": "金属新材料",
             "pct": -0.22
           },
           {
-            "name": "非金属矿采选业",
-            "pct": -0.23
+            "name": "汽车服务及其他",
+            "pct": -0.25
           },
           {
-            "name": "建筑装饰和其他建筑业",
-            "pct": -0.24
-          },
-          {
-            "name": "餐饮业",
+            "name": "工程机械",
             "pct": -0.26
           },
           {
-            "name": "土木工程建筑业",
-            "pct": -0.38
+            "name": "计算机设备",
+            "pct": -0.28
           },
           {
-            "name": "软件和信息技术服务业",
-            "pct": -0.38
+            "name": "汽车整车",
+            "pct": -0.32
           },
           {
-            "name": "皮革、毛皮、羽毛及其制品和制鞋业",
-            "pct": -0.41
+            "name": "旅游及酒店",
+            "pct": -0.36
           },
           {
-            "name": "货币金融服务",
-            "pct": -0.44
+            "name": "消费电子",
+            "pct": -0.39
           },
           {
-            "name": "铁路运输业",
-            "pct": -0.48
+            "name": "银行",
+            "pct": -0.43
           },
           {
-            "name": "综合",
+            "name": "公路铁路运输",
             "pct": -0.51
           },
           {
-            "name": "教育",
-            "pct": -0.52
-          },
-          {
-            "name": "资本市场服务",
+            "name": "食品加工制造",
             "pct": -0.53
           },
           {
-            "name": "造纸和纸制品业",
-            "pct": -0.56
+            "name": "环保设备",
+            "pct": -0.53
           },
           {
-            "name": "印刷和记录媒介复制业",
-            "pct": -0.58
+            "name": "环境治理",
+            "pct": -0.55
           },
           {
-            "name": "农业",
+            "name": "小家电",
+            "pct": -0.55
+          },
+          {
+            "name": "家居用品",
+            "pct": -0.59
+          },
+          {
+            "name": "橡胶制品",
             "pct": -0.6
           },
           {
-            "name": "石油和天然气开采业",
+            "name": "证券",
             "pct": -0.61
           },
           {
-            "name": "卫生",
-            "pct": -0.7
+            "name": "钢铁",
+            "pct": -0.63
           },
           {
-            "name": "其他金融业",
-            "pct": -0.76
+            "name": "化学原料",
+            "pct": -0.63
           },
           {
-            "name": "食品制造业",
-            "pct": -0.77
+            "name": "通信设备",
+            "pct": -0.67
           },
           {
-            "name": "住宿业",
-            "pct": -0.85
+            "name": "饮料制造",
+            "pct": -0.72
           },
           {
-            "name": "有色金属矿采选业",
-            "pct": -0.97
-          },
-          {
-            "name": "房屋建筑业",
-            "pct": -0.99
-          },
-          {
-            "name": "租赁业",
-            "pct": -1.02
-          },
-          {
-            "name": "保险业",
-            "pct": -1.1
-          },
-          {
-            "name": "道路运输业",
-            "pct": -1.26
-          },
-          {
-            "name": "农副食品加工业",
-            "pct": -1.3
-          },
-          {
-            "name": "电信、广播电视和卫星传输服务",
-            "pct": -1.3
-          },
-          {
-            "name": "文化艺术业",
-            "pct": -1.34
-          },
-          {
-            "name": "废弃资源综合利用业",
-            "pct": -1.36
-          },
-          {
-            "name": "黑色金属冶炼和压延加工业",
-            "pct": -1.42
-          },
-          {
-            "name": "开采辅助活动",
-            "pct": -1.48
-          },
-          {
-            "name": "体育",
-            "pct": -1.49
-          },
-          {
-            "name": "水利管理业",
-            "pct": -1.53
-          },
-          {
-            "name": "燃气生产和供应业",
-            "pct": -1.58
-          },
-          {
-            "name": "铁路、船舶、航空航天和其他运输设备制造业",
-            "pct": -1.62
-          },
-          {
-            "name": "水上运输业",
-            "pct": -1.63
-          },
-          {
-            "name": "煤炭开采和洗选业",
-            "pct": -1.69
-          },
-          {
-            "name": "仓储业",
-            "pct": -1.9
-          },
-          {
-            "name": "文教、工美、体育和娱乐用品制造业",
-            "pct": -1.93
-          },
-          {
-            "name": "电力、热力生产和供应业",
-            "pct": -2.01
-          },
-          {
-            "name": "家具制造业",
-            "pct": -2.07
-          },
-          {
-            "name": "零售业",
-            "pct": -2.11
-          },
-          {
-            "name": "互联网和相关服务",
-            "pct": -2.19
-          },
-          {
-            "name": "专用设备制造业",
-            "pct": -2.28
-          },
-          {
-            "name": "黑色金属矿采选业",
-            "pct": -2.36
-          },
-          {
-            "name": "农、林、牧、渔服务业",
-            "pct": -2.43
-          },
-          {
-            "name": "渔业",
-            "pct": -2.79
-          },
-          {
-            "name": "新闻和出版业",
-            "pct": -2.81
-          },
-          {
-            "name": "广播、电视、电影和影视录音制作业",
-            "pct": -2.89
-          },
-          {
-            "name": "其他制造业",
-            "pct": -3
-          },
-          {
-            "name": "装卸搬运和运输代理业",
-            "pct": -3.43
-          },
-          {
-            "name": "橡胶和塑料制品业",
-            "pct": -3.54
-          },
-          {
-            "name": "林业",
-            "pct": -4.29
+            "name": "化学制药",
+            "pct": -0.73
           }
         ]
       },
