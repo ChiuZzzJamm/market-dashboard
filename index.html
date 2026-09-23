@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609232202"></script>
+<script src="data.js?v=202609232237"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -189,6 +189,13 @@
   .dir-badge.up { color: var(--up); }
   .dir-badge.down { color: var(--down); }
   .dir-badge.flat { color: var(--ink2); }
+  /* R97：方向徽标填充色（红底看涨/绿底看跌/灰底中性）+ 发布时间徽标 */
+  .dir-flat { background: #9aa4af; }
+  .nc-theme .dir-badge.dir-up { background: var(--up); color: #fff; }
+  .nc-theme .dir-badge.dir-down { background: var(--down); color: #fff; }
+  .nc-theme .dir-badge.dir-flat { background: #9aa4af; color: #fff; }
+  .nc-time { font-size: 10.5px; font-weight: 600; color: var(--ink2); background: rgba(0,0,0,.05); border-radius: 999px; padding: 1.5px 8px; margin-left: 6px; white-space: nowrap; }
+  .nc-time.today { color: #fff; background: var(--accent-deep); }
   .nc-stocks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: 6px; }
   .news-cell.bull .stock-chip { border-color: #f2c4ca; }
   .news-cell.bear .stock-chip { border-color: #b9e2d8; }
@@ -399,14 +406,16 @@
     <div class="schedule-note">自动更新：A股 周一至五 16:00 收盘后 · 美股 周一至五 08:30 隔夜收盘（含AI预测与A股映射） · 周日 23:00 全球要闻 + 周一开盘预判</div>
   </div>
 
-  <div id="ai-prediction"></div>
   <div id="weekend-news"></div>
+  <div id="ai-prediction"></div>
 
   <div class="tabbar">
     <div class="tab active" id="tab-a" onclick="switchTab('ashare')">A 股</div>
     <div class="tab" id="tab-u" onclick="switchTab('us')">美 股</div>
   </div>
   <div id="content"></div>
+
+  <div id="news-slot"></div>
 
   <div class="card" id="pano-card">
     <h2>行业全景 · 美股 / 韩股 / 日经</h2>
@@ -575,7 +584,7 @@ function renderReasons(list, tradeDate, isUp) {
       pctHtml +
       '<span class="kw">' + esc(s.reason.title) + '</span></div>' +
       renderTops(s, isUp) +
-      '<div class="reason-body"><b class="label">行业原因：</b>' + esc(s.reason.detail) + '</div></div>';
+      '<div class="reason-body"><b class="label">行业原因（' + esc(tag) + '发布）：</b>' + esc(s.reason.detail) + '</div></div>';
   });
   return html;
 }
@@ -633,8 +642,6 @@ function render(market) {
 
   html += '<div class="card"><h2>大盘指数</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + '</div>';
 
-  html += renderNewsCard(d, market);
-
   html += '<div class="card"><h2>大盘趋势研判</h2><div class="outlook">' + formatOutlook(d.outlook) + '</div></div>';
 
   html += '<div class="card"><h2>领涨板块</h2>' + renderReasons(d.sectorsUp, d.tradeDate, true) + '</div>';
@@ -644,7 +651,7 @@ function render(market) {
     renderReasons(d.sectorsDown, d.tradeDate, false) + '</div>';
 
   if (d.themePicks && d.themePicks.length) {
-    html += '<div class="card"><h2>题材掘金 · 个股事件驱动</h2>' + renderThemePicks(d.themePicks) + '</div>';
+    html += '<div class="card"><h2>题材掘金 · 个股事件驱动</h2>' + renderThemePicks(d.themePicks, d.tradeDate) + '</div>';
   }
 
   if (isA && d.lianban && d.lianban.length) {
@@ -662,6 +669,10 @@ function render(market) {
   }
 
   document.getElementById('content').innerHTML = html;
+
+  // R97：全球要闻（含宏观/财经/投行）独立渲染到 #news-slot——紧贴行业全景上方（2026-09-23 用户要求）
+  var newsBox = document.getElementById('news-slot');
+  if (newsBox) newsBox.innerHTML = renderNewsCard(d, market);
 
   if (isA) {
     var fIn = d.fundIn || [], fOut = d.fundOut || [];
@@ -861,15 +872,28 @@ function newsTag(item) {
   return '🌐';
 }
 
-function newsEntryInner(it, showSrc, tag) {
-  // 单条要闻内部内容：板块标签 + 标题简述 + 各板块成分股（8 只四类标的）；全球要闻卡与周末卡共用
+function shortDate(t) {
+  // 2026-09-23 → 9/23（新闻发布时间展示用）
+  var m = String(t || '').match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  return m ? (parseInt(m[2], 10)) + '/' + (parseInt(m[3], 10)) : String(t || '');
+}
+
+function newsEntryInner(it, showSrc, tag, tradeDate) {
+  // 单条要闻内部内容：板块标签 + 发布时间 + 方向徽标 + 标题简述 + 各板块成分股（8 只四类标的）；全球要闻卡与周末卡共用
   var dirBadge = '';
   if (it.direction) {
-    var dc = it.direction === '看涨' ? 'up' : (it.direction === '看跌' ? 'down' : 'flat');
-    dirBadge = '<span class="dir-badge ' + dc + '">' + esc(it.direction) + '</span>';
+    // R97：红底看涨 / 绿底看跌 / 灰底中性（填充色胶囊，与 AI 预测方向徽标同款）
+    var dcl = it.direction === '看涨' ? 'dir-up' : (it.direction === '看跌' ? 'dir-down' : 'dir-flat');
+    dirBadge = '<span class="dir-badge ' + dcl + '">' + esc(it.direction) + '</span>';
+  }
+  // R97：发布时间——板块名与方向徽标之间，当日新闻标「今日」，让用户一眼区分当天/前几天的新闻
+  var timeHtml = '';
+  if (it.time) {
+    var isToday = tradeDate && String(it.time).slice(0, 10) === String(tradeDate).slice(0, 10);
+    timeHtml = '<span class="nc-time' + (isToday ? ' today' : '') + '">' + (isToday ? '今日 ' : '') + shortDate(it.time) + '</span>';
   }
   var perspTag = tag ? '<span class="persp-tag">' + esc(tag) + '</span>' : '';
-  var s = '<div class="nc-theme">' + esc(it.sector || '') + dirBadge + perspTag + '</div>';
+  var s = '<div class="nc-theme">' + esc(it.sector || '') + timeHtml + dirBadge + perspTag + '</div>';
   var dtlFull = (it.title || '') + ' — ' + (it.summary || '');
   s += '<div class="nc-dtl" title="' + escAttr(dtlFull) + '"><b>' + esc(it.title || '') + '</b> — ' + esc(it.summary || '') + '</div>';
   (it.impacts || []).forEach(function (im) {
@@ -902,7 +926,7 @@ function renderNewsCard(d, market) {
   var macro = d.macroNews||[];
   if (!bn.length && !be.length && !intl.length && !bank.length && !macro.length) return '';
   var itemHtml = function (it, dir) {
-    return '<div class="news-cell ' + dir + '">' + newsEntryInner(it, false, '短线·盘面') + '</div>';
+    return '<div class="news-cell ' + dir + '">' + newsEntryInner(it, false, '短线·盘面', d.tradeDate) + '</div>';
   };
   // 桌面：第 i 行 = 利好第 i 条 + 利空第 i 条（网格同行等高，左右始终对齐）
   // 手机(≤700px)：单列 + order 重排为 利好标题→利好条目→利空标题→利空条目
@@ -922,19 +946,19 @@ function renderNewsCard(d, market) {
   // 宏观（央行 / 通胀 / 大宗 / 美债 / 汇率）——顺序（R68 定稿）：宏观 → 彭博/路透/WSJ → 投行观点
   if (macro.length) {
     html += '<div class="wk-section macro"><h4>宏观 · 央行 / 通胀 / 大宗 / 美债</h4>';
-    macro.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true, '宏观·事件') + '</div>'; });
+    macro.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true, '宏观·事件', d.tradeDate) + '</div>'; });
     html += '</div>';
   }
   // 视角标题（R91h）：A股页用国内财经媒体视角（卡片来源已切财联社/华尔街见闻/证券时报），美股页保留国际通讯社视角
   if (intl.length) {
     html += '<div class="wk-section intl"><h4>' + (market === 'ashare' ? '国内财经媒体视角' : '彭博社 / 路透社 / 华尔街日报 视角') + '</h4>';
-    intl.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true, '中期·海外产业') + '</div>'; });
+    intl.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true, '中期·海外产业', d.tradeDate) + '</div>'; });
     html += '</div>';
   }
   // 投行观点（高盛 / 大摩 / 中金 / 中信等研报级观点）
   if (bank.length) {
     html += '<div class="wk-section bank"><h4>投行观点</h4>';
-    bank.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true, '机构·观点') + '</div>'; });
+    bank.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true, '机构·观点', d.tradeDate) + '</div>'; });
     html += '</div>';
   }
   if (d.source) html += '<div class="wk-src">来源：' + esc(d.source) + '</div>';
@@ -945,12 +969,14 @@ function renderNewsCard(d, market) {
 /* 题材掘金 · 个股事件驱动（方案C：在板块级复盘之外补充个股级事件归因）
    结构：themePicks = [{event, logic, stocks:[{code,name,note,chg}], why}]
    复用 .stock-chips / .stock-chip（悬停title + 点击chip-pop浮层） */
-function renderThemePicks(list) {
+function renderThemePicks(list, tradeDate) {
   if (!list || !list.length) return '';
   var s = '';
   list.forEach(function (it) {
     s += '<div class="tp-item">';
-    if (it.event) s += '<div class="tp-event">⚡ ' + esc(it.event) + '</div>';
+    // R97：事件行兼容 us 的 theme 字段；行尾标注发布日期，让用户知道是当天还是前几天的内容
+    var ev = it.event || it.theme || '';
+    if (ev) s += '<div class="tp-event">⚡ ' + esc(ev) + (tradeDate ? '<span class="nc-time">' + esc(shortDate(tradeDate)) + ' 发布</span>' : '') + '</div>';
     if (it.logic) s += '<div class="tp-logic">逻辑传导：' + esc(it.logic) + '</div>';
     var sts = it.stocks || [];
     if (sts.length) {

@@ -1,0 +1,1645 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - button "断板反包 确认 113 · 观察 38" [ref=e4] [cursor=pointer]:
+      - text: 断板反包
+      - generic [ref=e5]: 确认 113 · 观察 38
+    - heading "每日市场看板" [level=1] [ref=e6]
+    - generic [ref=e7]: A 股 · 美股 · 全球产业全景
+    - generic [ref=e8]: 数据更新：2026-09-23 18:48（A股收盘已自动更新：涨跌家数/行业板块TOP5/连板梯队；主力资金数据源失败，保留上一轮数据）
+    - generic [ref=e9]: 自动更新：A股 周一至五 16:00 收盘后 · 美股 周一至五 08:30 隔夜收盘（含AI预测与A股映射） · 周日 23:00 全球要闻 + 周一开盘预判
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - heading "开盘前瞻 · 2026-09-23" [level=2] [ref=e13]
+      - generic [ref=e14]: 2026-09-23
+    - generic [ref=e15]:
+      - paragraph [ref=e16]: 【消息面】隔夜美股存储链领涨、费半SOXX+2.40%，MU+5.00%、WDC+3.67%、SNDK+6.82%驱动A股半导体设备与先进封装，利好北方华创、长电科技；AI数据中心拉动光模块与通信设备，利好中兴通讯、光迅科技。国内端：算力用电激增带动电网特高压招标预期，利好特变电工、中国西电；Robotaxi商业化加速零部件出海，利好福耀玻璃、德赛西威。利空端：油价较前期破百回落约4%、中东缓和压制油气开采与炼化贸易，利空中国石油、岳阳兴长；强美元令黄金珠宝走弱，利空老凤祥、周大生。
+      - paragraph [ref=e17]: 【政策面】9月LPR连续16个月不变、5年期3.5%，降准预期升温利好券商与地产链；国常会推进新型工业化与算力网络，利好工业母机与算力硬件。证监会强化异常交易监管为高位连板情绪降温，利空纯题材高位股。
+      - paragraph [ref=e18]: 【外围映射】隔夜美股分化：道指-0.36%、纳指+0.45%、标普500平收(0.00%)，费半+2.40%一枝独秀，直接映射A股半导体设备、CPO光模块与算力硬件高开；但道指小跌与标普平收反映广基风险偏好谨慎，对指数权重拉动有限。强美元与10Y美债约5%高位压制黄金与高估值AI应用，利空贵金属与纯估值驱动标的。
+      - paragraph [ref=e19]: 【板块轮动】主线锁定半导体设备材料、通信设备/光模块、电网设备与特高压；次线汽车零部出海、光学光电/消费电子接力。低位轮动看电力与智能电网。油气、贵金属因外围回落短线承压，回避高位油气珠宝票。
+      - paragraph [ref=e20]: 【风险与避险】回避油气、贵金属高位票与4板以上连板情绪股（监管升温）；10Y美债有效破5%或地缘突发为最大变量。仓位6—7成，不追一致板，分歧低吸为主。
+      - paragraph [ref=e21]: 【结论】周三大概率结构性高开、指数震荡：半导体与光模块高开确定性高，利好指数权重与科技情绪；成交站稳2万亿则反弹发酵，否则维持箱体。量能确认前控仓，回调视为低吸窗口，关注3850—3950区间。
+    - generic [ref=e22]: 来源：综合财联社/证券时报/路透社/彭博社/华尔街日报及公开公告（截至2026-09-23 08:30）
+  - generic [ref=e24]:
+    - heading "AI 预测分析" [level=2] [ref=e26]
+    - generic [ref=e27]: 道指 -0.36%、纳指 +0.45%、标普500 平收(0.00%)、费半 +2.40%。通过隔夜美股各板块涨跌推导今日 A 股强弱方向：隔夜美股分化：道指-0.36%、纳指+0.45%、标普500平收，费半SOXX+2.40%一枝独秀、存储链(MU+5.00%/WDC+3.67%/SNDK+6.82%)领涨。A股今日呈结构性偏强：半导体设备材料、通信设备/光模块、电网设备与特高压受外围直接映射高开确定性高；汽车零部出海、光学光电接力。油价回落约4%与强美元令油气、贵金属承压，指数层面缺乏广基合力，以板块轮动与仓位管控为主。
+    - generic [ref=e28]:
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - generic [ref=e31]: 半导体设备材料（国产替代）
+          - generic [ref=e32]: 预计走强
+          - generic [ref=e33]: 置信度 高
+        - generic [ref=e34]: 隔夜驱动：费半SOXX +2.40%、MU +5.00%、WDC +3.67%、SNDK +6.82%
+        - generic [ref=e35]: 映射逻辑：隔夜存储链领涨、费半SOXX+2.40%，算力周期重估CPU/GPU与HBM需求；长鑫G5量产与设备交期拉长，国产半导体设备/先进封装/封测订单能见度延至2027年，板块龙头与材料小盘同步受益，断板反包图形股缩量站稳MA5。
+        - generic [ref=e36]:
+          - generic "北方华创 002371 · 板块龙头·半导体设备龙头·订单饱满（点击查看K线）" [ref=e37] [cursor=pointer]:
+            - text: 北方华创002371
+            - generic [ref=e38]: 板块龙头·半导体设备龙头·订单饱满
+          - generic "长电科技 600584 · 板块龙头·封测龙头·先进封装满产（点击查看K线）" [ref=e39] [cursor=pointer]:
+            - text: 长电科技600584
+            - generic [ref=e40]: 板块龙头·封测龙头·先进封装满产
+          - generic "通富微电 002156 · 相关概念·AMD核心封测·HBM（点击查看K线）" [ref=e41] [cursor=pointer]:
+            - text: 通富微电002156
+            - generic [ref=e42]: 相关概念·AMD核心封测·HBM
+          - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e43] [cursor=pointer]:
+            - text: 康强电子002119
+            - generic [ref=e44]: 小盘人气·封装材料·换手活跃
+          - generic "先导基电 600641 · 断板反包·09/17涨停→次1.3倍量断板→2日缩量·站稳MA5（点击查看K线）" [ref=e45] [cursor=pointer]:
+            - text: 先导基电600641
+            - generic [ref=e46]: 断板反包·09/17涨停→次1.3倍量断板→2日缩量·站稳MA5
+          - generic "华天科技 002185 · 断板反包·09/18涨停→次1.6倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e47] [cursor=pointer]:
+            - text: 华天科技002185
+            - generic [ref=e48]: 断板反包·09/18涨停→次1.6倍量断板→1日缩量·站稳MA5
+          - generic "有研新材 600206 · 断板反包·09/16涨停→次1.8倍量断板→3日缩量·站稳MA5（点击查看K线）" [ref=e49] [cursor=pointer]:
+            - text: 有研新材600206
+            - generic [ref=e50]: 断板反包·09/16涨停→次1.8倍量断板→3日缩量·站稳MA5
+          - generic "立昂微 605358 · 断板反包·09/16涨停→次1.2倍量断板→3日缩量·站稳MA5（点击查看K线）" [ref=e51] [cursor=pointer]:
+            - text: 立昂微605358
+            - generic [ref=e52]: 断板反包·09/16涨停→次1.2倍量断板→3日缩量·站稳MA5
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - generic [ref=e55]: 通信设备/光模块（CPO）
+          - generic [ref=e56]: 预计走强
+          - generic [ref=e57]: 置信度 高
+        - generic [ref=e58]: 隔夜驱动：AI数据中心Capex上调、应用光电/Coherent大涨
+        - generic [ref=e59]: 映射逻辑：AI数据中心800G/1.6T光模块需求爆发，北美云厂Capex上调拉动光芯片与通信设备；中兴通讯、光迅科技等设备商订单饱满，断板反包股缩量企稳，板块资金承接强。
+        - generic [ref=e60]:
+          - generic "中兴通讯 000063 · 板块龙头·通信设备龙头·订单饱满（点击查看K线）" [ref=e61] [cursor=pointer]:
+            - text: 中兴通讯000063
+            - generic [ref=e62]: 板块龙头·通信设备龙头·订单饱满
+          - generic "烽火通信 600498 · 板块龙头·光通信主设备（点击查看K线）" [ref=e63] [cursor=pointer]:
+            - text: 烽火通信600498
+            - generic [ref=e64]: 板块龙头·光通信主设备
+          - generic "武汉凡谷 002194 · 相关概念·射频天线·5.5G（点击查看K线）" [ref=e65] [cursor=pointer]:
+            - text: 武汉凡谷002194
+            - generic [ref=e66]: 相关概念·射频天线·5.5G
+          - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e67] [cursor=pointer]:
+            - text: 国脉科技002093
+            - generic [ref=e68]: 小盘人气·通信服务·活跃
+          - generic "光迅科技 002281 · 断板反包·09/16涨停→次1.4倍量断板→3日缩量·站稳MA5（点击查看K线）" [ref=e69] [cursor=pointer]:
+            - text: 光迅科技002281
+            - generic [ref=e70]: 断板反包·09/16涨停→次1.4倍量断板→3日缩量·站稳MA5
+          - generic "永鼎股份 600105 · 断板反包·09/16涨停→次1.5倍量断板→3日缩量·站稳MA5（点击查看K线）" [ref=e71] [cursor=pointer]:
+            - text: 永鼎股份600105
+            - generic [ref=e72]: 断板反包·09/16涨停→次1.5倍量断板→3日缩量·站稳MA5
+          - generic "华脉科技 603042 · 断板反包·09/16涨停→次3.5倍量断板→3日缩量·站稳MA5（点击查看K线）" [ref=e73] [cursor=pointer]:
+            - text: 华脉科技603042
+            - generic [ref=e74]: 断板反包·09/16涨停→次3.5倍量断板→3日缩量·站稳MA5
+          - generic "共进股份 603118 · 断板反包·09/18涨停→次1.4倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e75] [cursor=pointer]:
+            - text: 共进股份603118
+            - generic [ref=e76]: 断板反包·09/18涨停→次1.4倍量断板→1日缩量·站稳MA5
+      - generic [ref=e77]:
+        - generic [ref=e78]:
+          - generic [ref=e79]: 电网设备与特高压
+          - generic [ref=e80]: 预计走强
+          - generic [ref=e81]: 置信度 中
+        - generic [ref=e82]: 隔夜驱动：算力用电激增、电网投资加码
+        - generic [ref=e83]: 映射逻辑：AI算力集群用电激增带动特高压与配电网投资，国网/南网招标提速；特变电工、中国西电变压器与开关订单饱满，断板反包线缆/设备股缩量站MA5，板块趋势延续。
+        - generic [ref=e84]:
+          - generic "特变电工 600089 · 板块龙头·变压器特高压龙头（点击查看K线）" [ref=e85] [cursor=pointer]:
+            - text: 特变电工600089
+            - generic [ref=e86]: 板块龙头·变压器特高压龙头
+          - generic "中国西电 601179 · 相关概念·特高压开关（点击查看K线）" [ref=e87] [cursor=pointer]:
+            - text: 中国西电601179
+            - generic [ref=e88]: 相关概念·特高压开关
+          - generic "汉缆股份 002498 · 小盘人气·线缆·活跃（点击查看K线）" [ref=e89] [cursor=pointer]:
+            - text: 汉缆股份002498
+            - generic [ref=e90]: 小盘人气·线缆·活跃
+          - generic "中电鑫龙 002298 · 断板反包·09/18涨停→次2.7倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e91] [cursor=pointer]:
+            - text: 中电鑫龙002298
+            - generic [ref=e92]: 断板反包·09/18涨停→次2.7倍量断板→1日缩量·站稳MA5
+          - generic "太阳电缆 002300 · 断板反包·09/18涨停→次1.8倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e93] [cursor=pointer]:
+            - text: 太阳电缆002300
+            - generic [ref=e94]: 断板反包·09/18涨停→次1.8倍量断板→1日缩量·站稳MA5
+          - generic "中超控股 002471 · 断板反包·09/18涨停→次1.6倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e95] [cursor=pointer]:
+            - text: 中超控股002471
+            - generic [ref=e96]: 断板反包·09/18涨停→次1.6倍量断板→1日缩量·站稳MA5
+          - generic "精达股份 600577 · 断板反包·09/18涨停→次1.2倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e97] [cursor=pointer]:
+            - text: 精达股份600577
+            - generic [ref=e98]: 断板反包·09/18涨停→次1.2倍量断板→1日缩量·站稳MA5
+          - generic "新宏泰 603016 · 断板反包·09/18涨停→次1.7倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e99] [cursor=pointer]:
+            - text: 新宏泰603016
+            - generic [ref=e100]: 断板反包·09/18涨停→次1.7倍量断板→1日缩量·站稳MA5
+      - generic [ref=e101]:
+        - generic [ref=e102]:
+          - generic [ref=e103]: 汽车零部出海
+          - generic [ref=e104]: 预计偏强
+          - generic [ref=e105]: 置信度 中
+        - generic [ref=e106]: 隔夜驱动：Robotaxi商业化、出口链景气
+        - generic [ref=e107]: 映射逻辑：Robotaxi商业化加速与海外车型放量拉动汽车电子与零部件出海，福耀玻璃全球份额稳固、德赛西威域控渗透提升；断板反包零部件股缩量企稳，估值修复可期。
+        - generic [ref=e108]:
+          - generic "福耀玻璃 600660 · 板块龙头·汽车玻璃全球龙头（点击查看K线）" [ref=e109] [cursor=pointer]:
+            - text: 福耀玻璃600660
+            - generic [ref=e110]: 板块龙头·汽车玻璃全球龙头
+          - generic "德赛西威 002920 · 相关概念·智能座舱域控（点击查看K线）" [ref=e111] [cursor=pointer]:
+            - text: 德赛西威002920
+            - generic [ref=e112]: 相关概念·智能座舱域控
+          - generic "万里扬 002434 · 小盘人气·变速器·活跃（点击查看K线）" [ref=e113] [cursor=pointer]:
+            - text: 万里扬002434
+            - generic [ref=e114]: 小盘人气·变速器·活跃
+          - generic "山子高科 000981 · 断板反包·09/17涨停→次1.2倍量断板→2日缩量·站稳MA5（点击查看K线）" [ref=e115] [cursor=pointer]:
+            - text: 山子高科000981
+            - generic [ref=e116]: 断板反包·09/17涨停→次1.2倍量断板→2日缩量·站稳MA5
+          - generic "海安集团 001233 · 断板反包·09/18涨停→次2.5倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e117] [cursor=pointer]:
+            - text: 海安集团001233
+            - generic [ref=e118]: 断板反包·09/18涨停→次2.5倍量断板→1日缩量·站稳MA5
+          - generic "天海电子 001365 · 断板反包·09/17涨停→次2.3倍量断板→2日缩量·站稳MA5（点击查看K线）" [ref=e119] [cursor=pointer]:
+            - text: 天海电子001365
+            - generic [ref=e120]: 断板反包·09/17涨停→次2.3倍量断板→2日缩量·站稳MA5
+          - generic "祥鑫科技 002965 · 断板反包·09/18涨停→次2.3倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e121] [cursor=pointer]:
+            - text: 祥鑫科技002965
+            - generic [ref=e122]: 断板反包·09/18涨停→次2.3倍量断板→1日缩量·站稳MA5
+          - generic "北特科技 603009 · 断板反包·09/17涨停→次1.3倍量断板→2日缩量·站稳MA5（点击查看K线）" [ref=e123] [cursor=pointer]:
+            - text: 北特科技603009
+            - generic [ref=e124]: 断板反包·09/17涨停→次1.3倍量断板→2日缩量·站稳MA5
+      - generic [ref=e125]:
+        - generic [ref=e126]:
+          - generic [ref=e127]: 光学光电/消费电子
+          - generic [ref=e128]: 预计偏强
+          - generic [ref=e129]: 置信度 中
+        - generic [ref=e130]: 隔夜驱动：AI终端换机、光学创新
+        - generic [ref=e131]: 映射逻辑：AI手机/PC换机周期与光学创新(潜望、微棱镜)共振，水晶光电、欧菲光模组订单回暖；联创电子车载光学放量，断板反包光学股缩量站MA5，板块低位轮动。
+        - generic [ref=e132]:
+          - generic "水晶光电 002273 · 板块龙头·光学薄膜·潜望（点击查看K线）" [ref=e133] [cursor=pointer]:
+            - text: 水晶光电002273
+            - generic [ref=e134]: 板块龙头·光学薄膜·潜望
+          - generic "欧菲光 002456 · 板块龙头·光学模组（点击查看K线）" [ref=e135] [cursor=pointer]:
+            - text: 欧菲光002456
+            - generic [ref=e136]: 板块龙头·光学模组
+          - generic "联创电子 002036 · 相关概念·车载光学（点击查看K线）" [ref=e137] [cursor=pointer]:
+            - text: 联创电子002036
+            - generic [ref=e138]: 相关概念·车载光学
+          - generic "联创光电 600363 · 相关概念·光电·LED（点击查看K线）" [ref=e139] [cursor=pointer]:
+            - text: 联创光电600363
+            - generic [ref=e140]: 相关概念·光电·LED
+          - generic "国星光电 002449 · 小盘人气·LED封装（点击查看K线）" [ref=e141] [cursor=pointer]:
+            - text: 国星光电002449
+            - generic [ref=e142]: 小盘人气·LED封装
+          - generic "华塑控股 000509 · 断板反包·09/18涨停→次1.4倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e143] [cursor=pointer]:
+            - text: 华塑控股000509
+            - generic [ref=e144]: 断板反包·09/18涨停→次1.4倍量断板→1日缩量·站稳MA5
+          - generic "惠科股份 001399 · 断板反包·09/18涨停→次1.5倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e145] [cursor=pointer]:
+            - text: 惠科股份001399
+            - generic [ref=e146]: 断板反包·09/18涨停→次1.5倍量断板→1日缩量·站稳MA5
+          - generic "实益达 002137 · 断板反包·09/16涨停→次2.1倍量断板→3日缩量·站稳MA5（点击查看K线）" [ref=e147] [cursor=pointer]:
+            - text: 实益达002137
+            - generic [ref=e148]: 断板反包·09/16涨停→次2.1倍量断板→3日缩量·站稳MA5
+      - generic [ref=e149]:
+        - generic [ref=e150]:
+          - generic [ref=e151]: 贵金属/油气承压
+          - generic [ref=e152]: 预计承压
+          - generic [ref=e153]: 置信度 中
+        - generic [ref=e154]: 隔夜驱动：油价回落约4%、强美元黄金走弱
+        - generic [ref=e155]: 映射逻辑：布伦特从破百回落约4%、中东缓和压制风险溢价，油气开采与炼化贸易盈利预期下修；强美元令黄金珠宝避险降温，老凤祥等终端动销走弱，板块短线承压整理。
+        - generic [ref=e156]:
+          - generic "老凤祥 600612 · 板块龙头·黄金珠宝（点击查看K线）" [ref=e157] [cursor=pointer]:
+            - text: 老凤祥600612
+            - generic [ref=e158]: 板块龙头·黄金珠宝
+          - generic "中国石油 601857 · 板块龙头·油气开采（点击查看K线）" [ref=e159] [cursor=pointer]:
+            - text: 中国石油601857
+            - generic [ref=e160]: 板块龙头·油气开采
+          - generic "潮宏基 002345 · 相关概念·黄金珠宝（点击查看K线）" [ref=e161] [cursor=pointer]:
+            - text: 潮宏基002345
+            - generic [ref=e162]: 相关概念·黄金珠宝
+          - generic "中国石化 600028 · 相关概念·炼化一体化（点击查看K线）" [ref=e163] [cursor=pointer]:
+            - text: 中国石化600028
+            - generic [ref=e164]: 相关概念·炼化一体化
+          - generic "萃华珠宝 002731 · 小盘人气·黄金珠宝（点击查看K线）" [ref=e165] [cursor=pointer]:
+            - text: 萃华珠宝002731
+            - generic [ref=e166]: 小盘人气·黄金珠宝
+          - generic "大庆华科 000985 · 小盘人气·石化小盘（点击查看K线）" [ref=e167] [cursor=pointer]:
+            - text: 大庆华科000985
+            - generic [ref=e168]: 小盘人气·石化小盘
+          - generic "国际实业 000159 · 小盘人气·油品贸易（点击查看K线）" [ref=e169] [cursor=pointer]:
+            - text: 国际实业000159
+            - generic [ref=e170]: 小盘人气·油品贸易
+          - generic "莱绅通灵 603900 · 断板反包·09/16涨停→次1.2倍量断板→3日缩量·站稳MA5（点击查看K线）" [ref=e171] [cursor=pointer]:
+            - text: 莱绅通灵603900
+            - generic [ref=e172]: 断板反包·09/16涨停→次1.2倍量断板→3日缩量·站稳MA5
+    - generic [ref=e173]: 标的筛选口径：每个板块 8 只 A 股，按「2 只板块龙头 + 2 只相关概念股 + 2 只游资/机构偏好小盘人气股（涨停基因好）+ 2 只断板反包图形股（1-5 日前涨停、次日放量倍量、随后缩量回调）」搭配，已排除科创板（688 开头）及北交所。10Y美债有效破5%或地缘突发为最大回撤变量；回避油气、贵金属高位票与4板以上连板情绪股；强美元压制外资风险偏好，指数缺乏广基合力时以仓位管控(6—7成)与分歧低吸为主。
+    - generic [ref=e174]:
+      - generic [ref=e175]: 📊 预测验证：8项预测5项命中：半导体设备材料✓ 通信设备/光模块✗ 电网设备与特高压✗ 汽车零部出海✓ 光学光电/消费电子✓ 贵金属/黄金✓ 油气开采/炼化贸易✓ 券商/非银金融✓
+      - generic [ref=e176]:
+        - generic [ref=e177]: · 半导体设备材料（国产替代）：预测「走强」→ 实际 +1.5% → 命中
+        - generic [ref=e178]: · 通信设备/光模块（CPO）：预测「走强」→ 实际 -0.5% → 未命中
+        - generic [ref=e179]: · 电网设备与特高压：预测「走强」→ 实际 -0.8% → 未命中
+        - generic [ref=e180]: · 汽车零部出海：预测「偏强」→ 实际 +0.3% → 命中
+        - generic [ref=e181]: · 光学光电/消费电子：预测「偏强」→ 实际 +1.2% → 命中
+        - generic [ref=e182]: · 贵金属/黄金：预测「承压」→ 实际 -1.5% → 命中
+        - generic [ref=e183]: · 油气开采/炼化贸易：预测「承压」→ 实际 -2% → 命中
+        - generic [ref=e184]: · 券商/非银金融：预测「承压」→ 实际 -1% → 命中
+  - generic [ref=e185]:
+    - generic [ref=e186] [cursor=pointer]: A 股
+    - generic [ref=e187] [cursor=pointer]: 美 股
+  - generic [ref=e188]:
+    - generic [ref=e189]:
+      - generic [ref=e190]: 2026-09-23 · 收盘
+      - generic [ref=e191]: 9月23日A股三大指数震荡收跌，上证-0.39%、深证-0.64%、创业板-0.60%，成交1.76万亿缩量3706亿，涨跌比1843:3422。玻璃基板/PCB产业链、半导体材料设备、CRO医药逆势走强；AI应用传媒游戏、数字货币、电力电网、煤炭化工、油气黄金集体弱势。习近平访美开启中美经贸磋商，央行定调适度宽松，阿里云栖大会发布真武V900芯片。高位股分歧加大，炸板率30%，建议中低仓位过节。
+    - generic [ref=e192]:
+      - heading "大盘指数" [level=2] [ref=e193]
+      - generic [ref=e194]:
+        - generic [ref=e195]:
+          - generic [ref=e196]: 上证指数
+          - generic [ref=e197]: 3,936.52
+          - generic [ref=e198]: "-0.39%"
+        - generic [ref=e199]:
+          - generic [ref=e200]: 深证成指
+          - generic [ref=e201]: 13,636.07
+          - generic [ref=e202]: "-0.64%"
+        - generic [ref=e203]:
+          - generic [ref=e204]: 创业板指
+          - generic [ref=e205]: 3,379.61
+          - generic [ref=e206]: "-0.60%"
+        - generic [ref=e207]:
+          - generic [ref=e208]: 科创50
+          - generic [ref=e209]: 1,660.85
+          - generic [ref=e210]: "-0.25%"
+        - generic [ref=e211]:
+          - generic [ref=e212]: 上证50
+          - generic [ref=e213]: 2,883.77
+          - generic [ref=e214]: "-0.53%"
+      - generic [ref=e216]:
+        - generic [ref=e217]: 上涨 1843 家
+        - generic [ref=e218]: 下跌 3422 家
+        - generic [ref=e219]: 平盘 91 家
+        - generic [ref=e220]: 涨停 51 家
+        - generic [ref=e221]: 跌停 3 家
+    - generic [ref=e222]:
+      - heading "大盘趋势研判" [level=2] [ref=e223]
+      - generic [ref=e224]:
+        - paragraph [ref=e225]: 【A股盘面】今日三大指数全天震荡走低集体收跌，上证跌0.39%报3936.52点（开盘-0.02%近似平开），深证跌0.64%（开盘+0.14%），创业板跌0.60%（开盘+0.37%）。量能明显萎缩至1.76万亿，较昨日缩量3706亿。上涨1843家，下跌3422家，涨跌中位数-0.61%。盘面上玻璃基板/PCB产业链、半导体材料设备、CRO/医药概念逆势走强；AI应用（传媒/游戏/AI营销）、数字货币、电力/电网设备、煤炭化工、油气、黄金、商业航天等概念集体弱势。
+        - paragraph [ref=e226]: 【资金与结构】主力资金全天净流出，大单资金出逃明显，小单资金接盘。结构上资金从AI应用/传媒高位题材撤退，转向半导体/PCB等硬件方向，但半导体午后也现分化。机构加医药、减周期路径清晰，龙虎榜中医药股占净买入前十6席，科达制造遭机构净卖出5.49亿。高位股分歧加大，炸板率30%，晋级率21.4%。
+        - paragraph [ref=e227]: 【AI预测】8项预测5项命中：半导体设备材料✓（康强电子涨停，板块走强）、光学光电/消费电子✓、汽车零部出海✓、贵金属/黄金✓（领跌）、油气开采/炼化贸易✓（领跌）；未命中3项：通信设备/光模块✗（午后走弱，中际旭创净流出）、电网设备与特高压✗（板块下行）。后续关注半导体能否持续放量，以及通信设备能否止跌。
+        - paragraph [ref=e228]: 【板块轮动与机会】低位轮动特征明显：①PCB/玻璃基板（康宁涨价+京东方投资计划，产业链全线走强）；②半导体材料设备（真武V900+长鑫G5+海光CPU1000，国产算力突破）；③CRO/医药（创新药审批改善，临床CRO需求复苏）；④房地产（贴息政策传闻，午后回落但连板股维持）。回避高位AI应用/传媒退潮风险。
+        - paragraph [ref=e229]: 【风险与避险】外部变量：美联储鹰派+10Y美债5%高位压制高估值成长；习近平访美期间消息密度极高，重大事件落地前后不追高。内部风险：节前效应+成交缩量3700亿，资金避险情绪上升；高位股炸板率30%逼近风险阈值，若明日升至35%需果断降仓。建议仓位4.5-5.5成，现金≥4成，不追高、不满仓、等冰点。
+    - generic [ref=e230]:
+      - heading "领涨板块" [level=2] [ref=e231]
+      - generic [ref=e232]:
+        - generic [ref=e233]:
+          - generic [ref=e234]: 09月23日异动原因
+          - generic [ref=e235]: 研究和试验发展 +4.04%
+          - generic [ref=e236]: CRO与研发外包逆市走强
+        - generic [ref=e237]:
+          - generic [ref=e238]: 板块领涨 TOP5
+          - generic "益诺思生物 +14.41% · 研究和试验发展 领涨第1位 · 今开 +0.52%（平开）（点击查看K线）" [ref=e239] [cursor=pointer]:
+            - generic [ref=e240]: 益诺思生物
+            - generic [ref=e241]: +14.41%
+          - generic "奥浦迈生物 +12.69% · 研究和试验发展 领涨第2位 · 今开 +0.16%（平开）（点击查看K线）" [ref=e242] [cursor=pointer]:
+            - generic [ref=e243]: 奥浦迈生物
+            - generic [ref=e244]: +12.69%
+          - generic "和元生物 +10.71% · 研究和试验发展 领涨第3位 · 今开 -0.13%（平开）（点击查看K线）" [ref=e245] [cursor=pointer]:
+            - generic [ref=e246]: 和元生物
+            - generic [ref=e247]: +10.71%
+          - generic "义翘神州 +10.12% · 研究和试验发展 领涨第4位 · 今开 +4.6%（高开）（点击查看K线）" [ref=e248] [cursor=pointer]:
+            - generic [ref=e249]: 义翘神州
+            - generic [ref=e250]: +10.12%
+          - generic "皓元医药 +9.84% · 研究和试验发展 领涨第5位 · 今开 +1.81%（高开）（点击查看K线）" [ref=e251] [cursor=pointer]:
+            - generic [ref=e252]: 皓元医药
+            - generic [ref=e253]: +9.84%
+        - generic [ref=e254]:
+          - generic [ref=e255]: 行业原因（09月23日发布）：
+          - text: 创新药研发服务需求回暖，叠加海外订单预期改善，CRO/CDMO企业集体拉升；板块成为弱势行情中少数亮点，资金偏好明显转向确定性赛道，机构加仓意愿同步回升，短线热度延续。
+      - generic [ref=e256]:
+        - generic [ref=e257]:
+          - generic [ref=e258]: 09月23日异动原因
+          - generic [ref=e259]: 科技推广和应用服务业 +2.90%
+          - generic [ref=e260]: 科技推广服务局部活跃
+        - generic [ref=e261]:
+          - generic [ref=e262]: 板块领涨 TOP1
+          - generic "南华生物 +5.37% · 科技推广和应用服务业 领涨第1位 · 今开 +0%（平开）（点击查看K线）" [ref=e263] [cursor=pointer]:
+            - generic [ref=e264]: 南华生物
+            - generic [ref=e265]: +5.37%
+        - generic [ref=e266]:
+          - generic [ref=e267]: 行业原因（09月23日发布）：
+          - text: 科技服务类个股在政策催化下小幅走高，板块整体呈现结构性机会；但成交温和、持续性仍待观察，资金以试探性布局为主，尚未形成明确主线，短线参与宜控仓，等待放量确认。
+      - generic [ref=e268]:
+        - generic [ref=e269]:
+          - generic [ref=e270]: 09月23日异动原因
+          - generic [ref=e271]: 石油加工、炼焦和核燃料加工业 +1.91%
+          - generic [ref=e272]: 家居链驱动板块异常收涨
+        - generic [ref=e273]:
+          - generic [ref=e274]: 板块领涨 TOP4
+          - generic "恒林股份 +4.58% · 石油加工、炼焦和核燃料加工业 领涨第1位 · 今开 -0.53%（平开）（点击查看K线）" [ref=e275] [cursor=pointer]:
+            - generic [ref=e276]: 恒林股份
+            - generic [ref=e277]: +4.58%
+          - generic "好莱客 +2.66% · 石油加工、炼焦和核燃料加工业 领涨第2位 · 今开 +0.89%（平开）（点击查看K线）" [ref=e278] [cursor=pointer]:
+            - generic [ref=e279]: 好莱客
+            - generic [ref=e280]: +2.66%
+          - generic "索菲亚 +1.06% · 石油加工、炼焦和核燃料加工业 领涨第3位 · 今开 +0%（平开）（点击查看K线）" [ref=e281] [cursor=pointer]:
+            - generic [ref=e282]: 索菲亚
+            - generic [ref=e283]: +1.06%
+          - generic "永艺股份 +0.29% · 石油加工、炼焦和核燃料加工业 领涨第4位 · 今开 -0.19%（平开）（点击查看K线）" [ref=e284] [cursor=pointer]:
+            - generic [ref=e285]: 永艺股份
+            - generic [ref=e286]: +0.29%
+        - generic [ref=e287]:
+          - generic [ref=e288]: 行业原因（09月23日发布）：
+          - text: 该板块成分以家居消费类个股为主，恒林股份、索菲亚等强势领涨，炼化主线相对平淡；指数呈家居链驱动的异常结构，属新浪兜底口径下的分类特征，真实行业涨跌需待东财源恢复后校正。
+      - generic [ref=e289]:
+        - generic [ref=e290]:
+          - generic [ref=e291]: 09月23日异动原因
+          - generic [ref=e292]: 化学纤维制造业 +1.55%
+          - generic [ref=e293]: 化纤受涨价预期带动
+        - generic [ref=e294]:
+          - generic [ref=e295]: 板块领涨 TOP5
+          - generic "海正生物材料 +16.38% · 化学纤维制造业 领涨第1位 · 今开 +1.72%（高开）（点击查看K线）" [ref=e296] [cursor=pointer]:
+            - generic [ref=e297]: 海正生物材料
+            - generic [ref=e298]: +16.38%
+          - generic "汇隆新材 +5.32% · 化学纤维制造业 领涨第2位 · 今开 +1.92%（高开）（点击查看K线）" [ref=e299] [cursor=pointer]:
+            - generic [ref=e300]: 汇隆新材
+            - generic [ref=e301]: +5.32%
+          - generic "恒逸石化 +3.45% · 化学纤维制造业 领涨第3位 · 今开 +0.54%（平开）（点击查看K线）" [ref=e302] [cursor=pointer]:
+            - generic [ref=e303]: 恒逸石化
+            - generic [ref=e304]: +3.45%
+          - generic "荣盛石化 +3.2% · 化学纤维制造业 领涨第4位 · 今开 +0.53%（平开）（点击查看K线）" [ref=e305] [cursor=pointer]:
+            - generic [ref=e306]: 荣盛石化
+            - generic [ref=e307]: +3.2%
+          - generic "*ST京化 +2.16% · 化学纤维制造业 领涨第5位 · 今开 +0.52%（平开）（点击查看K线）" [ref=e308] [cursor=pointer]:
+            - generic [ref=e309]: "*ST京化"
+            - generic [ref=e310]: +2.16%
+        - generic [ref=e311]:
+          - generic [ref=e312]: 行业原因（09月23日发布）：
+          - text: 涤纶、氨纶等化纤品种受原料涨价与供需改善预期推动，板块龙头集体走高并逆市收红，成为制造业中少数活跃分支，资金关注度提升，关注下游补库节奏带来的二次机会，板块弹性可期。
+      - generic [ref=e313]:
+        - generic [ref=e314]:
+          - generic [ref=e315]: 09月23日异动原因
+          - generic [ref=e316]: 医药制造业 +1.53%
+          - generic [ref=e317]: 医药制造逆市领涨
+        - generic [ref=e318]:
+          - generic [ref=e319]: 板块领涨 TOP5
+          - generic "浩欧博生物 +20% · 医药制造业 领涨第1位 · 今开 -0.69%（平开）（点击查看K线）" [ref=e320] [cursor=pointer]:
+            - generic [ref=e321]: 浩欧博生物
+            - generic [ref=e322]: +20%
+          - generic "欧林生物 +12.99% · 医药制造业 领涨第2位 · 今开 -0.07%（平开）（点击查看K线）" [ref=e323] [cursor=pointer]:
+            - generic [ref=e324]: 欧林生物
+            - generic [ref=e325]: +12.99%
+          - generic "济民健康 +9.96% · 医药制造业 领涨第3位 · 今开 -0.62%（平开）（点击查看K线）" [ref=e326] [cursor=pointer]:
+            - generic [ref=e327]: 济民健康
+            - generic [ref=e328]: +9.96%
+          - generic "艾力斯医药科技 +9.35% · 医药制造业 领涨第4位 · 今开 -0.3%（平开）（点击查看K线）" [ref=e329] [cursor=pointer]:
+            - generic [ref=e330]: 艾力斯医药科技
+            - generic [ref=e331]: +9.35%
+          - generic "北陆药业 +8.77% · 医药制造业 领涨第5位 · 今开 +0%（平开）（点击查看K线）" [ref=e332] [cursor=pointer]:
+            - generic [ref=e333]: 北陆药业
+            - generic [ref=e334]: +8.77%
+        - generic [ref=e335]:
+          - generic [ref=e336]: 行业原因（09月23日发布）：
+          - text: 生物制药、疫苗及创新药概念逆市活跃，资金在弱势中回流防御性医药赛道；板块全天领涨，CRO与疫苗方向个股表现突出，避险属性凸显，中期看创新药出海仍是核心主线。
+    - generic [ref=e337]:
+      - heading "调整 / 领跌板块" [level=2] [ref=e338]
+      - generic [ref=e339]:
+        - generic [ref=e340]:
+          - generic [ref=e341]: 09月23日异动原因
+          - generic [ref=e342]: 广播、电视、电影和影视录音制作业 -2.89%
+          - generic [ref=e343]: 影视传媒集体回调
+        - generic [ref=e344]:
+          - generic [ref=e345]: 板块领跌 TOP5
+          - generic "中视传媒 -10.02% · 广播、电视、电影和影视录音制作业 领跌第1位 · 今开 -4.09%（低开）（点击查看K线）" [ref=e346] [cursor=pointer]:
+            - generic [ref=e347]: 中视传媒
+            - generic [ref=e348]: "-10.02%"
+          - generic "欢瑞世纪 -5.8% · 广播、电视、电影和影视录音制作业 领跌第2位 · 今开 -1.86%（低开）（点击查看K线）" [ref=e349] [cursor=pointer]:
+            - generic [ref=e350]: 欢瑞世纪
+            - generic [ref=e351]: "-5.8%"
+          - generic "北京文化 -4.66% · 广播、电视、电影和影视录音制作业 领跌第3位 · 今开 -0.49%（平开）（点击查看K线）" [ref=e352] [cursor=pointer]:
+            - generic [ref=e353]: 北京文化
+            - generic [ref=e354]: "-4.66%"
+          - generic "上海电影 -4.5% · 广播、电视、电影和影视录音制作业 领跌第4位 · 今开 -1.66%（低开）（点击查看K线）" [ref=e355] [cursor=pointer]:
+            - generic [ref=e356]: 上海电影
+            - generic [ref=e357]: "-4.5%"
+          - generic "华智数媒 -4.26% · 广播、电视、电影和影视录音制作业 领跌第5位 · 今开 -0.59%（平开）（点击查看K线）" [ref=e358] [cursor=pointer]:
+            - generic [ref=e359]: 华智数媒
+            - generic [ref=e360]: "-4.26%"
+        - generic [ref=e361]:
+          - generic [ref=e362]: 行业原因（09月23日发布）：
+          - text: 前日强势的影视传媒今日获利回吐，中视传媒、北京文化、上海电影等领跌；叠加AI应用概念退潮与资金切换，板块位居今日调整前列，短线承压，关注假期档期前资金回流可能。
+      - generic [ref=e363]:
+        - generic [ref=e364]:
+          - generic [ref=e365]: 09月23日异动原因
+          - generic [ref=e366]: 其他制造业 -3.00%
+          - generic [ref=e367]: 能源类个股拖累走低
+        - generic [ref=e368]:
+          - generic [ref=e369]: 板块领跌 TOP5
+          - generic "云煤能源 -9.91% · 其他制造业 领跌第1位 · 今开 -2.96%（低开）（点击查看K线）" [ref=e370] [cursor=pointer]:
+            - generic [ref=e371]: 云煤能源
+            - generic [ref=e372]: "-9.91%"
+          - generic "百花医药 -8.15% · 其他制造业 领跌第2位 · 今开 -3.66%（低开）（点击查看K线）" [ref=e373] [cursor=pointer]:
+            - generic [ref=e374]: 百花医药
+            - generic [ref=e375]: "-8.15%"
+          - generic "宝泰隆 -4.32% · 其他制造业 领跌第3位 · 今开 +0%（平开）（点击查看K线）" [ref=e376] [cursor=pointer]:
+            - generic [ref=e377]: 宝泰隆
+            - generic [ref=e378]: "-4.32%"
+          - generic "美锦能源 -4.09% · 其他制造业 领跌第4位 · 今开 -0.54%（平开）（点击查看K线）" [ref=e379] [cursor=pointer]:
+            - generic [ref=e380]: 美锦能源
+            - generic [ref=e381]: "-4.09%"
+          - generic "山西焦化 -3.38% · 其他制造业 领跌第5位 · 今开 -0.52%（平开）（点击查看K线）" [ref=e382] [cursor=pointer]:
+            - generic [ref=e383]: 山西焦化
+            - generic [ref=e384]: "-3.38%"
+        - generic [ref=e385]:
+          - generic [ref=e386]: 行业原因（09月23日发布）：
+          - text: 板块内焦炭、能源类个股大幅下挫，宝泰隆、美锦能源等领跌；制造链条整体承压，结构上看能源分支是主要拖累项，短线情绪转弱，等待能源价格企稳后的修复契机，跌势有望收敛。
+      - generic [ref=e387]:
+        - generic [ref=e388]:
+          - generic [ref=e389]: 09月23日异动原因
+          - generic [ref=e390]: 装卸搬运和运输代理业 -3.43%
+          - generic [ref=e391]: 物流板块整体走弱
+        - generic [ref=e392]:
+          - generic [ref=e393]: 板块领跌 TOP5
+          - generic "三羊马 -10.01% · 装卸搬运和运输代理业 领跌第1位 · 今开 -3%（低开）（点击查看K线）" [ref=e394] [cursor=pointer]:
+            - generic [ref=e395]: 三羊马
+            - generic [ref=e396]: "-10.01%"
+          - generic "华光源海 -4.68% · 装卸搬运和运输代理业 领跌第2位 · 今开 +0%（平开）（点击查看K线）" [ref=e397] [cursor=pointer]:
+            - generic [ref=e398]: 华光源海
+            - generic [ref=e399]: "-4.68%"
+          - generic "安通控股 -1.97% · 装卸搬运和运输代理业 领跌第3位 · 今开 +0%（平开）（点击查看K线）" [ref=e400] [cursor=pointer]:
+            - generic [ref=e401]: 安通控股
+            - generic [ref=e402]: "-1.97%"
+          - generic "飞力达 -1.77% · 装卸搬运和运输代理业 领跌第4位 · 今开 -0.16%（平开）（点击查看K线）" [ref=e403] [cursor=pointer]:
+            - generic [ref=e404]: 飞力达
+            - generic [ref=e405]: "-1.77%"
+          - generic "华贸物流 -1.5% · 装卸搬运和运输代理业 领跌第5位 · 今开 -0.38%（平开）（点击查看K线）" [ref=e406] [cursor=pointer]:
+            - generic [ref=e407]: 华贸物流
+            - generic [ref=e408]: "-1.5%"
+        - generic [ref=e409]:
+          - generic [ref=e410]: 行业原因（09月23日发布）：
+          - text: 三羊马、华贸物流等物流标的集体下挫，板块受弱势行情与资金撤离拖累；运输代理分支位居跌幅前列，短线情绪偏冷、量能萎缩，关注后续稳增长政策对货运的拉动，板块或有修复。
+      - generic [ref=e411]:
+        - generic [ref=e412]:
+          - generic [ref=e413]: 09月23日异动原因
+          - generic [ref=e414]: 橡胶和塑料制品业 -3.54%
+          - generic [ref=e415]: 橡胶塑料领跌
+        - generic [ref=e416]:
+          - generic [ref=e417]: 板块领跌 TOP5
+          - generic "C中塑 -34.53% · 橡胶和塑料制品业 领跌第1位 · 今开 -21.48%（低开）（点击查看K线）" [ref=e418] [cursor=pointer]:
+            - generic [ref=e419]: C中塑
+            - generic [ref=e420]: "-34.53%"
+          - generic "XD朗博科技 -5.2% · 橡胶和塑料制品业 领跌第2位 · 今开 +0.17%（平开）（点击查看K线）" [ref=e421] [cursor=pointer]:
+            - generic [ref=e422]: XD朗博科技
+            - generic [ref=e423]: "-5.2%"
+          - generic "王子新材 -5.03% · 橡胶和塑料制品业 领跌第3位 · 今开 -0.4%（平开）（点击查看K线）" [ref=e424] [cursor=pointer]:
+            - generic [ref=e425]: 王子新材
+            - generic [ref=e426]: "-5.03%"
+          - generic "珠海中富 -3.56% · 橡胶和塑料制品业 领跌第4位 · 今开 +0%（平开）（点击查看K线）" [ref=e427] [cursor=pointer]:
+            - generic [ref=e428]: 珠海中富
+            - generic [ref=e429]: "-3.56%"
+          - generic "华峰超纤 -3.5% · 橡胶和塑料制品业 领跌第5位 · 今开 -0.44%（平开）（点击查看K线）" [ref=e430] [cursor=pointer]:
+            - generic [ref=e431]: 华峰超纤
+            - generic [ref=e432]: "-3.5%"
+        - generic [ref=e433]:
+          - generic [ref=e434]: 行业原因（09月23日发布）：
+          - text: 新股上市首日大幅波动，叠加王子新材等个股下挫，橡胶塑料板块整体承压；居今日调整幅度前列，资金避险情绪浓厚、赚钱效应缺失，静待情绪修复后的超跌反弹窗口，逢低关注。
+      - generic [ref=e435]:
+        - generic [ref=e436]:
+          - generic [ref=e437]: 09月23日异动原因
+          - generic [ref=e438]: 林业 -4.29%
+          - generic [ref=e439]: 林业跌幅居前
+        - generic [ref=e440]:
+          - generic [ref=e441]: 板块领跌 TOP3
+          - generic "平潭发展 -7.21% · 林业 领跌第1位 · 今开 -1.28%（低开）（点击查看K线）" [ref=e442] [cursor=pointer]:
+            - generic [ref=e443]: 平潭发展
+            - generic [ref=e444]: "-7.21%"
+          - generic "福建金森 -3.92% · 林业 领跌第2位 · 今开 +0.18%（平开）（点击查看K线）" [ref=e445] [cursor=pointer]:
+            - generic [ref=e446]: 福建金森
+            - generic [ref=e447]: "-3.92%"
+          - generic "交投生态 -1.06% · 林业 领跌第3位 · 今开 +0.61%（平开）（点击查看K线）" [ref=e448] [cursor=pointer]:
+            - generic [ref=e449]: 交投生态
+            - generic [ref=e450]: "-1.06%"
+        - generic [ref=e451]:
+          - generic [ref=e452]: 行业原因（09月23日发布）：
+          - text: 林业及生态园林个股集体下挫，平潭发展、福建金森领跌；板块受弱势盘面与题材退潮双重拖累，位居今日跌幅榜首，短线未现企稳信号，关注林业碳汇等政策催化时点，逢低布局。
+    - generic [ref=e453]:
+      - heading "题材掘金 · 个股事件驱动" [level=2] [ref=e454]
+      - generic [ref=e455]:
+        - generic [ref=e456]: ⚡ 康宁玻璃基板涨价叠加京东方高世代产线投资，PCB/玻璃基板产业链全线走强9/23 发布
+        - generic [ref=e457]: 逻辑传导：事件层：康宁上调玻璃基板报价、京东方披露新产线投资计划；一级传导：面板与IC载板成本中枢上移，国产替代提速；二级传导：PCB/IC载板厂商订单能见度提升、稼动率回升；三级传导：主力回流硬件链，沪电、深南等龙头获资金加仓；四级传导：板块情绪扩散至设备与材料，趋势行情可期。
+        - generic [ref=e458]:
+          - generic "沪电股份 002463 · PCB龙头·IC载板·订单饱满 · +2.37%（点击查看K线）" [ref=e459] [cursor=pointer]:
+            - text: 沪电股份002463
+            - generic [ref=e460]: PCB龙头·IC载板·订单饱满 · +2.37%
+          - generic "深南电路 002916 · IC载板·封测·高阶产能 · +3.69%（点击查看K线）" [ref=e461] [cursor=pointer]:
+            - text: 深南电路002916
+            - generic [ref=e462]: IC载板·封测·高阶产能 · +3.69%
+          - generic "生益科技 600183 · 覆铜板·基材·龙头 · +0.08%（点击查看K线）" [ref=e463] [cursor=pointer]:
+            - text: 生益科技600183
+            - generic [ref=e464]: 覆铜板·基材·龙头 · +0.08%
+        - generic [ref=e465]: 玻璃基板涨价+京东方投资双催化，PCB/载板供需改善，龙头订单饱满，板块逆势领涨具持续性。
+      - generic [ref=e466]:
+        - generic [ref=e467]: ⚡ 真武V900、长鑫G5、海光CPU1000密集量产，国产算力突破拉动半导体材料设备链9/23 发布
+        - generic [ref=e468]: 逻辑传导：事件层：阿里真武V900算力达前代3倍，长鑫G5内存、海光CPU1000相继量产；一级传导：国产芯片自主可控逻辑强化；二级传导：晶圆厂扩产带动设备材料订单放量；三级传导：光刻刻蚀封测环节国产替代加速；四级传导：主力回流半导体硬件，材料设备成AI算力衍生确定性主线。
+        - generic [ref=e469]:
+          - generic "北方华创 002371 · 设备龙头·订单饱满 · -0.71%（点击查看K线）" [ref=e470] [cursor=pointer]:
+            - text: 北方华创002371
+            - generic [ref=e471]: 设备龙头·订单饱满 · -0.71%
+          - generic "长电科技 600584 · 封测龙头·先进封装 · -0.58%（点击查看K线）" [ref=e472] [cursor=pointer]:
+            - text: 长电科技600584
+            - generic [ref=e473]: 封测龙头·先进封装 · -0.58%
+          - generic "华天科技 002185 · 封测·先进封装 · +0.49%（点击查看K线）" [ref=e474] [cursor=pointer]:
+            - text: 华天科技002185
+            - generic [ref=e475]: 封测·先进封装 · +0.49%
+        - generic [ref=e476]: 国产算力芯片突破打开设备材料长坡厚雪空间，虽日内大票震荡，国产替代主线趋势未改。
+      - generic [ref=e477]:
+        - generic [ref=e478]: ⚡ 创新药审批节奏改善、临床CRO需求复苏，CRO/医药概念逆势走强9/23 发布
+        - generic [ref=e479]: 逻辑传导：事件层：创新药审评审批提速，临床需求回暖；一级传导：药企研发投入预期回升；二级传导：临床CRO订单与产能利用率改善；三级传导：医疗服务板块估值修复；四级传导：机构加仓医药，龙虎榜医药占净买前十6席，资金路径清晰。
+        - generic [ref=e480]:
+          - generic "药明康德 603259 · CXO龙头·全球布局 · +0.06%（点击查看K线）" [ref=e481] [cursor=pointer]:
+            - text: 药明康德603259
+            - generic [ref=e482]: CXO龙头·全球布局 · +0.06%
+          - generic "昭衍新药 603127 · 临床前CRO·安评 · +3.58%（点击查看K线）" [ref=e483] [cursor=pointer]:
+            - text: 昭衍新药603127
+            - generic [ref=e484]: 临床前CRO·安评 · +3.58%
+          - generic "凯莱英 002821 · CDMO·小分子 · +0.19%（点击查看K线）" [ref=e485] [cursor=pointer]:
+            - text: 凯莱英002821
+            - generic [ref=e486]: CDMO·小分子 · +0.19%
+        - generic [ref=e487]: 审批改善+需求复苏双击，CRO板块估值与业绩预期同步修复，机构加仓路径明确。
+      - generic [ref=e488]:
+        - generic [ref=e489]: ⚡ 房地产贴息政策传闻发酵，地产链午后异动、连板股维持强势9/23 发布
+        - generic [ref=e490]: 逻辑传导：事件层：市场流传存量房贷贴息/购房补贴政策预期；一级传导：购房成本下行预期改善；二级传导：地产销售与竣工链情绪修复；三级传导：银行资产质量担忧缓和；四级传导：资金博弈政策催化，连板股维持但板块冲高回落，待落地。
+        - generic [ref=e491]:
+          - generic "万科A 000002 · 龙头·困境反转 · +2.89%（点击查看K线）" [ref=e492] [cursor=pointer]:
+            - text: 万科A000002
+            - generic [ref=e493]: 龙头·困境反转 · +2.89%
+          - generic "保利发展 600048 · 央企·稳健经营 · -0.70%（点击查看K线）" [ref=e494] [cursor=pointer]:
+            - text: 保利发展600048
+            - generic [ref=e495]: 央企·稳健经营 · -0.70%
+          - generic "招商蛇口 001979 · 央企·湾区资源 · -0.28%（点击查看K线）" [ref=e496] [cursor=pointer]:
+            - text: 招商蛇口001979
+            - generic [ref=e497]: 央企·湾区资源 · -0.28%
+        - generic [ref=e498]: 贴息预期驱动估值修复脉冲，连板股显示资金博弈政策，板块冲高回落，宜等实质落地。
+    - generic [ref=e499]:
+      - heading "🔥 连板梯队" [level=2] [ref=e500]
+      - generic [ref=e501]: 连板数取自东财涨停池；板块为东财行业归类，理由由当日 AI 基于真实新闻补充（缺省显示板块）· 点击标的查看深度解读
+      - generic [ref=e502]:
+        - generic [ref=e503]: 4连板
+        - generic [ref=e504]:
+          - generic "大亚圣象 000910 · 家居用品 ｜ 家居用品·MLCC粉体验证+华瓷带动（点击查看深度解读）" [ref=e505] [cursor=pointer]:
+            - text: 大亚圣象000910+10.0%
+            - generic [ref=e506]: 家居用品·MLCC粉体验证+华瓷带动
+          - generic "新华文轩 601811 · 出版 ｜ 出版·十五五规划+收购财联社（点击查看深度解读）" [ref=e507] [cursor=pointer]:
+            - text: 新华文轩601811+10.0%
+            - generic [ref=e508]: 出版·十五五规划+收购财联社
+      - generic [ref=e509]:
+        - generic [ref=e510]: 3连板
+        - generic [ref=e511]:
+          - generic "华远控股 600743 · 房地产服 ｜ 房地产·全国性贴息政策传闻（点击查看深度解读）" [ref=e512] [cursor=pointer]:
+            - text: 华远控股600743+10.2%
+            - generic [ref=e513]: 房地产·全国性贴息政策传闻
+          - generic "华丽家族 600503 · 房地产开 ｜ 房地产·上海地产+华字辈（点击查看深度解读）" [ref=e514] [cursor=pointer]:
+            - text: 华丽家族600503+10.1%
+            - generic [ref=e515]: 房地产·上海地产+华字辈
+          - generic "奥佳华 002614 · 其他家电 ｜ 其他家电·华字辈+健康消费（点击查看深度解读）" [ref=e516] [cursor=pointer]:
+            - text: 奥佳华002614+10.0%
+            - generic [ref=e517]: 其他家电·华字辈+健康消费
+          - generic "泰慕士 001234 · 服装家纺 ｜ 服装家纺·华字辈+三羊开泰（点击查看深度解读）" [ref=e518] [cursor=pointer]:
+            - text: 泰慕士001234+10.0%
+            - generic [ref=e519]: 服装家纺·华字辈+三羊开泰
+          - generic "南威软件 603636 · IT服务Ⅱ ｜ IT服务·AI智能体+算力中心投产（点击查看深度解读）" [ref=e520] [cursor=pointer]:
+            - text: 南威软件603636+10.0%
+            - generic [ref=e521]: IT服务·AI智能体+算力中心投产
+          - generic "我爱我家 000560 · 房地产服 ｜ 房地产服务·上海二手房回暖+控股股东变更（点击查看深度解读）" [ref=e522] [cursor=pointer]:
+            - text: 我爱我家000560+10.0%
+            - generic [ref=e523]: 房地产服务·上海二手房回暖+控股股东变更
+          - generic "新华传媒 600825 · 出版 ｜ 出版传媒·收购财联社+上海国资（点击查看深度解读）" [ref=e524] [cursor=pointer]:
+            - text: 新华传媒600825+10.0%
+            - generic [ref=e525]: 出版传媒·收购财联社+上海国资
+      - generic [ref=e526]:
+        - generic [ref=e527]: 2连板
+        - generic [ref=e528]:
+          - generic "天威视讯 002238 · 电视广播 ｜ 电视广播·广电5G+深圳国资（点击查看深度解读）" [ref=e529] [cursor=pointer]:
+            - text: 天威视讯002238+10.1%
+            - generic [ref=e530]: 电视广播·广电5G+深圳国资
+          - generic "澳弘电子 605058 · 元件 ｜ 元件·PCB涨价+9天7板（点击查看深度解读）" [ref=e531] [cursor=pointer]:
+            - text: 澳弘电子605058+10.0%
+            - generic [ref=e532]: 元件·PCB涨价+9天7板
+          - generic "江淮汽车 600418 · 商用车 ｜ 商用车·华为引望+订单驱动（点击查看深度解读）" [ref=e533] [cursor=pointer]:
+            - text: 江淮汽车600418+10.0%
+            - generic [ref=e534]: 商用车·华为引望+订单驱动
+      - generic [ref=e535]: 首板 39 只（当日首次涨停）
+    - generic [ref=e536]:
+      - heading "主力资金流向" [level=2] [ref=e537]
+      - generic [ref=e538]: 板块主力资金流（行业维度，单位：亿元）数据源：通达信 tdx MCP「行业资金流入/行业资金流出/主力净额」全量聚合，取数日 2026-09-23（收盘）。东财 push2 自 2026-09-18 起受网络层风控不可达，已改用 tdx 聚合回填。
+  - generic [ref=e543]:
+    - generic [ref=e544]:
+      - heading "全球要闻" [level=2] [ref=e545]
+      - generic [ref=e546]: 2026-09-23
+    - generic [ref=e547]:
+      - generic [ref=e548]: 利好方向
+      - generic [ref=e549]: 利空方向
+      - generic [ref=e550]:
+        - generic [ref=e551]: 中美关系今日 9/23短线·盘面
+        - generic "习近平主席访美开启中美经贸磋商 — 国家主席习近平9月23日至25日对美国进行国事访问，国务院副总理何立峰同期在美举行经贸磋商。美财长贝森特称中美或设立AI通报机制，特朗普表示与伊朗代表团会晤富有成效。若释放关税/科技缓和信号，将对出口链和人民币资产情绪形成正向提振（短期利好出口制造/跨境电商，长期利好科技合作与资本开放）。" [ref=e552] [cursor=pointer]
+        - generic [ref=e553]:
+          - generic [ref=e554]: 出口制造
+          - generic [ref=e555]:
+            - generic "中国交建 601800 · 板块龙头·基建出海·订单饱满（点击查看K线）" [ref=e556] [cursor=pointer]:
+              - text: 中国交建601800
+              - generic [ref=e557]: 板块龙头·基建出海·订单饱满
+            - generic "徐工机械 000425 · 板块龙头·工程机械·出海加速（点击查看K线）" [ref=e558] [cursor=pointer]:
+              - text: 徐工机械000425
+              - generic [ref=e559]: 板块龙头·工程机械·出海加速
+            - generic "苏美达 600710 · 相关概念·供应链·进出口（点击查看K线）" [ref=e560] [cursor=pointer]:
+              - text: 苏美达600710
+              - generic [ref=e561]: 相关概念·供应链·进出口
+            - generic "中化国际 600500 · 相关概念·化工贸易·出海（点击查看K线）" [ref=e562] [cursor=pointer]:
+              - text: 中化国际600500
+              - generic [ref=e563]: 相关概念·化工贸易·出海
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e564] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e565]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e566] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e567]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e568] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e569]: 小盘人气·电子制造·活跃
+            - generic "远望谷 002161 · 小盘人气·RFID·物联网（点击查看K线）" [ref=e570] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e571]: 小盘人气·RFID·物联网
+        - generic [ref=e572]:
+          - generic [ref=e573]: 跨境电商
+          - generic [ref=e574]:
+            - generic "跨境通 002640 · 板块龙头·跨境电商·业务修复（点击查看K线）" [ref=e575] [cursor=pointer]:
+              - text: 跨境通002640
+              - generic [ref=e576]: 板块龙头·跨境电商·业务修复
+            - generic "五矿发展 600058 · 板块龙头·贸易物流·央企（点击查看K线）" [ref=e577] [cursor=pointer]:
+              - text: 五矿发展600058
+              - generic [ref=e578]: 板块龙头·贸易物流·央企
+            - generic "生意宝 002095 · 相关概念·B2B电商·数据要素（点击查看K线）" [ref=e579] [cursor=pointer]:
+              - text: 生意宝002095
+              - generic [ref=e580]: 相关概念·B2B电商·数据要素
+            - generic "小商品城 600415 · 相关概念·义乌市场·跨境支付（点击查看K线）" [ref=e581] [cursor=pointer]:
+              - text: 小商品城600415
+              - generic [ref=e582]: 相关概念·义乌市场·跨境支付
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e583] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e584]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e585] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e586]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e587] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e588]: 小盘人气·电子制造·活跃
+            - generic "远望谷 002161 · 小盘人气·RFID·物联网（点击查看K线）" [ref=e589] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e590]: 小盘人气·RFID·物联网
+      - generic [ref=e591]:
+        - generic [ref=e592]: 美联储今日 9/23短线·盘面
+        - generic "美联储官员密集放鹰年内或继续加息 — 美联储9月16日加息25bp至3.75%-4.00%后，官员密集放鹰——古尔斯比警告不能再将供给冲击看穿，穆萨勒姆主张加息提前且逐步，卡什卡利警示通胀跨部门扩散。年内进一步紧缩预期强化，10Y美债收益率约5%高位（短期利空高估值科技/半导体，资金成本上升压制PE；长期利好银行息差扩大）。" [ref=e593] [cursor=pointer]
+        - generic [ref=e594]:
+          - generic [ref=e595]: 高估值科技
+          - generic [ref=e596]:
+            - generic "北方华创 002371 · 板块龙头·半导体设备龙头·订单饱满（点击查看K线）" [ref=e597] [cursor=pointer]:
+              - text: 北方华创002371
+              - generic [ref=e598]: 板块龙头·半导体设备龙头·订单饱满
+            - generic "长电科技 600584 · 板块龙头·封测龙头·先进封装满产（点击查看K线）" [ref=e599] [cursor=pointer]:
+              - text: 长电科技600584
+              - generic [ref=e600]: 板块龙头·封测龙头·先进封装满产
+            - generic "通富微电 002156 · 相关概念·AMD核心封测·HBM（点击查看K线）" [ref=e601] [cursor=pointer]:
+              - text: 通富微电002156
+              - generic [ref=e602]: 相关概念·AMD核心封测·HBM
+            - generic "康强电子 002119 · 相关概念·封装材料·换手活跃（点击查看K线）" [ref=e603] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e604]: 相关概念·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e605] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e606]: 小盘人气·通信服务·活跃
+            - generic "先导基电 600641 · 断板反包·09/17涨停→次1.3倍量断板→3日缩量·站稳MA5（点击查看K线）" [ref=e607] [cursor=pointer]:
+              - text: 先导基电600641
+              - generic [ref=e608]: 断板反包·09/17涨停→次1.3倍量断板→3日缩量·站稳MA5
+            - generic "诚邦股份 603316 · 断板反包·09/21涨停→次2.9倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e609] [cursor=pointer]:
+              - text: 诚邦股份603316
+              - generic [ref=e610]: 断板反包·09/21涨停→次2.9倍量断板→1日缩量·站稳MA5
+            - generic "华天科技 002185 · 断板反包·09/18涨停→次1.6倍量断板→2日缩量·站稳MA5（点击查看K线）" [ref=e611] [cursor=pointer]:
+              - text: 华天科技002185
+              - generic [ref=e612]: 断板反包·09/18涨停→次1.6倍量断板→2日缩量·站稳MA5
+        - generic [ref=e613]:
+          - generic [ref=e614]: 黄金
+          - generic [ref=e615]:
+            - generic "山东黄金 600547 · 板块龙头·黄金龙头·矿产储备（点击查看K线）" [ref=e616] [cursor=pointer]:
+              - text: 山东黄金600547
+              - generic [ref=e617]: 板块龙头·黄金龙头·矿产储备
+            - generic "紫金矿业 601899 · 板块龙头·有色龙头·铜金双轮（点击查看K线）" [ref=e618] [cursor=pointer]:
+              - text: 紫金矿业601899
+              - generic [ref=e619]: 板块龙头·有色龙头·铜金双轮
+            - generic "中金黄金 600489 · 相关概念·黄金·央企背景（点击查看K线）" [ref=e620] [cursor=pointer]:
+              - text: 中金黄金600489
+              - generic [ref=e621]: 相关概念·黄金·央企背景
+            - generic "湖南黄金 002155 · 相关概念·黄金锑·小金属（点击查看K线）" [ref=e622] [cursor=pointer]:
+              - text: 湖南黄金002155
+              - generic [ref=e623]: 相关概念·黄金锑·小金属
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e624] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e625]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e626] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e627]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e628] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e629]: 小盘人气·电子制造·活跃
+            - generic "华阳新材 600281 · 断板反包·09/21涨停→次1.3倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e630] [cursor=pointer]:
+              - text: 华阳新材600281
+              - generic [ref=e631]: 断板反包·09/21涨停→次1.3倍量断板→1日缩量·站稳MA5
+      - generic [ref=e632]:
+        - generic [ref=e633]: 国产算力今日 9/23短线·盘面
+        - generic "阿里云栖大会发布真武V900芯片 — 阿里云栖大会发布平头哥真武V900芯片，算力较前代M890提升3倍，目标2032年阿里云全球数据中心规模超20GW。长鑫科技官宣第五代DRAM(G5)量产，海光发布首款端侧算力芯片CPU1000系列。国产算力链迎来里程碑式突破（短期利好国产芯片/服务器，长期利好AI算力自主可控）。" [ref=e634] [cursor=pointer]
+        - generic [ref=e635]:
+          - generic [ref=e636]: 半导体设备
+          - generic [ref=e637]:
+            - generic "长电科技 600584 · 板块龙头·封测龙头·先进封装满产（点击查看K线）" [ref=e638] [cursor=pointer]:
+              - text: 长电科技600584
+              - generic [ref=e639]: 板块龙头·封测龙头·先进封装满产
+            - generic "北方华创 002371 · 板块龙头·半导体设备龙头·订单饱满（点击查看K线）" [ref=e640] [cursor=pointer]:
+              - text: 北方华创002371
+              - generic [ref=e641]: 板块龙头·半导体设备龙头·订单饱满
+            - generic "通富微电 002156 · 相关概念·AMD核心封测·HBM（点击查看K线）" [ref=e642] [cursor=pointer]:
+              - text: 通富微电002156
+              - generic [ref=e643]: 相关概念·AMD核心封测·HBM
+            - generic "康强电子 002119 · 相关概念·封装材料·换手活跃（点击查看K线）" [ref=e644] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e645]: 相关概念·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e646] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e647]: 小盘人气·通信服务·活跃
+            - generic "先导基电 600641 · 断板反包·09/17涨停→次1.3倍量断板→3日缩量·站稳MA5（点击查看K线）" [ref=e648] [cursor=pointer]:
+              - text: 先导基电600641
+              - generic [ref=e649]: 断板反包·09/17涨停→次1.3倍量断板→3日缩量·站稳MA5
+            - generic "诚邦股份 603316 · 断板反包·09/21涨停→次2.9倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e650] [cursor=pointer]:
+              - text: 诚邦股份603316
+              - generic [ref=e651]: 断板反包·09/21涨停→次2.9倍量断板→1日缩量·站稳MA5
+            - generic "华天科技 002185 · 断板反包·09/18涨停→次1.6倍量断板→2日缩量·站稳MA5（点击查看K线）" [ref=e652] [cursor=pointer]:
+              - text: 华天科技002185
+              - generic [ref=e653]: 断板反包·09/18涨停→次1.6倍量断板→2日缩量·站稳MA5
+        - generic [ref=e654]:
+          - generic [ref=e655]: 国产芯片
+          - generic [ref=e656]:
+            - generic "中兴通讯 000063 · 板块龙头·通信设备龙头·订单饱满（点击查看K线）" [ref=e657] [cursor=pointer]:
+              - text: 中兴通讯000063
+              - generic [ref=e658]: 板块龙头·通信设备龙头·订单饱满
+            - generic "烽火通信 600498 · 板块龙头·光通信主设备（点击查看K线）" [ref=e659] [cursor=pointer]:
+              - text: 烽火通信600498
+              - generic [ref=e660]: 板块龙头·光通信主设备
+            - generic "南天信息 000948 · 相关概念·金融设备·信创（点击查看K线）" [ref=e661] [cursor=pointer]:
+              - text: 南天信息000948
+              - generic [ref=e662]: 相关概念·金融设备·信创
+            - generic "浪潮软件 600756 · 相关概念·软件·政务云（点击查看K线）" [ref=e663] [cursor=pointer]:
+              - text: 浪潮软件600756
+              - generic [ref=e664]: 相关概念·软件·政务云
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e665] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e666]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e667] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e668]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e669] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e670]: 小盘人气·电子制造·活跃
+            - generic "远望谷 002161 · 小盘人气·RFID·物联网（点击查看K线）" [ref=e671] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e672]: 小盘人气·RFID·物联网
+      - generic [ref=e673]:
+        - generic [ref=e674]: 油气今日 9/23短线·盘面
+        - generic "油价五连跌美伊会谈取得进展 — 美伊在纽约会谈约3小时且富有成效，伊朗提出若美方解除封锁将于7日内重开霍尔木兹海峡；沙特东西输油管道重启、延布港恢复原油出口，地缘溢价持续回落。WTI大跌约2.4%至89.5美元/桶，布油-1.5%至94.7美元，连续第五日下跌（短期利空油气开采/油服/油运，长期利好航空/化工成本端）。" [ref=e675] [cursor=pointer]
+        - generic [ref=e676]:
+          - generic [ref=e677]: 油气开采
+          - generic [ref=e678]:
+            - generic "中国石油 601857 · 板块龙头·油气龙头·一体化优势（点击查看K线）" [ref=e679] [cursor=pointer]:
+              - text: 中国石油601857
+              - generic [ref=e680]: 板块龙头·油气龙头·一体化优势
+            - generic "中国石化 600028 · 板块龙头·炼化龙头·分红稳定（点击查看K线）" [ref=e681] [cursor=pointer]:
+              - text: 中国石化600028
+              - generic [ref=e682]: 板块龙头·炼化龙头·分红稳定
+            - generic "中国海油 600938 · 相关概念·海上油气·成本优势（点击查看K线）" [ref=e683] [cursor=pointer]:
+              - text: 中国海油600938
+              - generic [ref=e684]: 相关概念·海上油气·成本优势
+            - generic "中海油服 601808 · 相关概念·油服·海上钻井（点击查看K线）" [ref=e685] [cursor=pointer]:
+              - text: 中海油服601808
+              - generic [ref=e686]: 相关概念·油服·海上钻井
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e687] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e688]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e689] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e690]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e691] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e692]: 小盘人气·电子制造·活跃
+            - generic "和顺石油 603353 · 断板反包·09/18涨停→次1.9倍量断板→2日缩量·站稳MA5（点击查看K线）" [ref=e693] [cursor=pointer]:
+              - text: 和顺石油603353
+              - generic [ref=e694]: 断板反包·09/18涨停→次1.9倍量断板→2日缩量·站稳MA5
+        - generic [ref=e695]:
+          - generic [ref=e696]: 油运
+          - generic [ref=e697]:
+            - generic "招商轮船 601872 · 板块龙头·航运龙头·油运干散（点击查看K线）" [ref=e698] [cursor=pointer]:
+              - text: 招商轮船601872
+              - generic [ref=e699]: 板块龙头·航运龙头·油运干散
+            - generic "中远海能 600026 · 板块龙头·油运·央企背景（点击查看K线）" [ref=e700] [cursor=pointer]:
+              - text: 中远海能600026
+              - generic [ref=e701]: 板块龙头·油运·央企背景
+            - generic "中远海特 600428 · 相关概念·特种航运·风电运输（点击查看K线）" [ref=e702] [cursor=pointer]:
+              - text: 中远海特600428
+              - generic [ref=e703]: 相关概念·特种航运·风电运输
+            - generic "宁波海运 600798 · 相关概念·航运·浙江省能源（点击查看K线）" [ref=e704] [cursor=pointer]:
+              - text: 宁波海运600798
+              - generic [ref=e705]: 相关概念·航运·浙江省能源
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e706] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e707]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e708] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e709]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e710] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e711]: 小盘人气·电子制造·活跃
+            - generic "远望谷 002161 · 小盘人气·RFID·物联网（点击查看K线）" [ref=e712] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e713]: 小盘人气·RFID·物联网
+      - generic [ref=e714]:
+        - generic [ref=e715]: 轻工纺织今日 9/23短线·盘面
+        - generic "轻工纺织十五五规划出台目标2030年营收30万亿 — 工信部等三部门发布《轻工纺织产业发展\"十五五\"规划》，力争到2030年规模以上企业营业收入突破30万亿元，加快智能化绿色化转型，推动人工智能赋能。规划提出实施\"纺织+\"行动，利好纺织制造与智能家居产业链（短期利好纺织制造/家居用品，长期利好智能制造升级）。" [ref=e716] [cursor=pointer]
+        - generic [ref=e717]:
+          - generic [ref=e718]: 纺织制造
+          - generic [ref=e719]:
+            - generic "航民股份 600987 · 板块龙头·印染龙头·稳健经营（点击查看K线）" [ref=e720] [cursor=pointer]:
+              - text: 航民股份600987
+              - generic [ref=e721]: 板块龙头·印染龙头·稳健经营
+            - generic "百隆东方 601339 · 板块龙头·色纺纱·出口（点击查看K线）" [ref=e722] [cursor=pointer]:
+              - text: 百隆东方601339
+              - generic [ref=e723]: 板块龙头·色纺纱·出口
+            - generic "华孚时尚 002042 · 相关概念·色纺纱·新疆棉（点击查看K线）" [ref=e724] [cursor=pointer]:
+              - text: 华孚时尚002042
+              - generic [ref=e725]: 相关概念·色纺纱·新疆棉
+            - generic "台华新材 603055 · 相关概念·锦纶·功能性面料（点击查看K线）" [ref=e726] [cursor=pointer]:
+              - text: 台华新材603055
+              - generic [ref=e727]: 相关概念·锦纶·功能性面料
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e728] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e729]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e730] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e731]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e732] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e733]: 小盘人气·电子制造·活跃
+            - generic "远望谷 002161 · 小盘人气·RFID·物联网（点击查看K线）" [ref=e734] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e735]: 小盘人气·RFID·物联网
+        - generic [ref=e736]:
+          - generic [ref=e737]: 家居用品
+          - generic [ref=e738]:
+            - generic "江山欧派 603208 · 板块龙头·木门龙头·工程渠道（点击查看K线）" [ref=e739] [cursor=pointer]:
+              - text: 江山欧派603208
+              - generic [ref=e740]: 板块龙头·木门龙头·工程渠道
+            - generic "志邦家居 603801 · 板块龙头·定制家居·整家战略（点击查看K线）" [ref=e741] [cursor=pointer]:
+              - text: 志邦家居603801
+              - generic [ref=e742]: 板块龙头·定制家居·整家战略
+            - generic "索菲亚 002572 · 相关概念·定制衣柜·整家定制（点击查看K线）" [ref=e743] [cursor=pointer]:
+              - text: 索菲亚002572
+              - generic [ref=e744]: 相关概念·定制衣柜·整家定制
+            - generic "顾家家居 603816 · 相关概念·软体家居·出口增长（点击查看K线）" [ref=e745] [cursor=pointer]:
+              - text: 顾家家居603816
+              - generic [ref=e746]: 相关概念·软体家居·出口增长
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e747] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e748]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e749] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e750]: 小盘人气·通信服务·活跃
+            - generic "海鸥住工 002084 · 断板反包·09/21涨停→次1.5倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e751] [cursor=pointer]:
+              - text: 海鸥住工002084
+              - generic [ref=e752]: 断板反包·09/21涨停→次1.5倍量断板→1日缩量·站稳MA5
+            - generic "双枪科技 001211 · 断板反包·09/18涨停→次1.6倍量断板→2日缩量·站稳MA5（点击查看K线）" [ref=e753] [cursor=pointer]:
+              - text: 双枪科技001211
+              - generic [ref=e754]: 断板反包·09/18涨停→次1.6倍量断板→2日缩量·站稳MA5
+      - generic [ref=e755]:
+        - generic [ref=e756]: AI应用今日 9/23短线·盘面
+        - generic "AI应用概念全线下挫传媒游戏领跌 — AI漫剧、AI营销、AI影视、传媒、游戏等AI应用概念全线下挫，龙版传媒、中视传媒、华媒控股跌停。数字货币、跨境支付、互联网金融概念集体下行，楚天龙跌停。资金从高位题材撤退转向防御性板块，高位股分歧加大（短期利空AI应用/传媒/游戏，高位题材退潮风险）。" [ref=e757] [cursor=pointer]
+        - generic [ref=e758]:
+          - generic [ref=e759]: 传媒
+          - generic [ref=e760]:
+            - generic "中视传媒 600088 · 板块龙头·传媒·央视资源（点击查看K线）" [ref=e761] [cursor=pointer]:
+              - text: 中视传媒600088
+              - generic [ref=e762]: 板块龙头·传媒·央视资源
+            - generic "新华传媒 600825 · 板块龙头·出版传媒·上海国资（点击查看K线）" [ref=e763] [cursor=pointer]:
+              - text: 新华传媒600825
+              - generic [ref=e764]: 板块龙头·出版传媒·上海国资
+            - generic "华媒控股 000607 · 相关概念·传媒·杭州日报（点击查看K线）" [ref=e765] [cursor=pointer]:
+              - text: 华媒控股000607
+              - generic [ref=e766]: 相关概念·传媒·杭州日报
+            - generic "中国出版 601949 · 相关概念·出版·央企背景（点击查看K线）" [ref=e767] [cursor=pointer]:
+              - text: 中国出版601949
+              - generic [ref=e768]: 相关概念·出版·央企背景
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e769] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e770]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e771] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e772]: 小盘人气·电子制造·活跃
+            - generic "远望谷 002161 · 小盘人气·RFID·物联网（点击查看K线）" [ref=e773] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e774]: 小盘人气·RFID·物联网
+            - generic "海洋王 002724 · 小盘人气·照明设备·军工（点击查看K线）" [ref=e775] [cursor=pointer]:
+              - text: 海洋王002724
+              - generic [ref=e776]: 小盘人气·照明设备·军工
+        - generic [ref=e777]:
+          - generic [ref=e778]: 游戏
+          - generic [ref=e779]:
+            - generic "世纪华通 002602 · 板块龙头·游戏·腾讯合作（点击查看K线）" [ref=e780] [cursor=pointer]:
+              - text: 世纪华通002602
+              - generic [ref=e781]: 板块龙头·游戏·腾讯合作
+            - generic "三七互娱 002555 · 板块龙头·游戏龙头·出海（点击查看K线）" [ref=e782] [cursor=pointer]:
+              - text: 三七互娱002555
+              - generic [ref=e783]: 板块龙头·游戏龙头·出海
+            - generic "恺英网络 002517 · 相关概念·游戏·传奇品类（点击查看K线）" [ref=e784] [cursor=pointer]:
+              - text: 恺英网络002517
+              - generic [ref=e785]: 相关概念·游戏·传奇品类
+            - generic "姚记科技 002605 · 相关概念·扑克·游戏双主业（点击查看K线）" [ref=e786] [cursor=pointer]:
+              - text: 姚记科技002605
+              - generic [ref=e787]: 相关概念·扑克·游戏双主业
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e788] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e789]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e790] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e791]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e792] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e793]: 小盘人气·电子制造·活跃
+            - generic "远望谷 002161 · 小盘人气·RFID·物联网（点击查看K线）" [ref=e794] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e795]: 小盘人气·RFID·物联网
+      - generic [ref=e796]:
+        - generic [ref=e797]: 海洋经济今日 9/23短线·盘面
+        - generic "海洋经济十五五目标2030年生产总值破13万亿 — \"十五五\"期间我国将加强海洋开发利用保护，预计到2030年全国海洋生产总值突破13万亿元，海洋生物医药产业增加值突破1300亿元，海上风电装机容量翻一番达1亿千瓦。海洋经济战略地位提升（短期利好海上风电/海洋工程，长期利好海洋资源开发）。" [ref=e798] [cursor=pointer]
+        - generic [ref=e799]:
+          - generic [ref=e800]: 海上风电
+          - generic [ref=e801]:
+            - generic "明阳智能 601615 · 板块龙头·风机龙头·海上风电（点击查看K线）" [ref=e802] [cursor=pointer]:
+              - text: 明阳智能601615
+              - generic [ref=e803]: 板块龙头·风机龙头·海上风电
+            - generic "东方电气 600875 · 板块龙头·电力设备·水电风电（点击查看K线）" [ref=e804] [cursor=pointer]:
+              - text: 东方电气600875
+              - generic [ref=e805]: 板块龙头·电力设备·水电风电
+            - generic "时代新材 600458 · 相关概念·风电叶片·轨道交通（点击查看K线）" [ref=e806] [cursor=pointer]:
+              - text: 时代新材600458
+              - generic [ref=e807]: 相关概念·风电叶片·轨道交通
+            - generic "中国电建 601669 · 相关概念·海上工程·央企（点击查看K线）" [ref=e808] [cursor=pointer]:
+              - text: 中国电建601669
+              - generic [ref=e809]: 相关概念·海上工程·央企
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e810] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e811]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e812] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e813]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e814] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e815]: 小盘人气·电子制造·活跃
+            - generic "远望谷 002161 · 小盘人气·RFID·物联网（点击查看K线）" [ref=e816] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e817]: 小盘人气·RFID·物联网
+        - generic [ref=e818]:
+          - generic [ref=e819]: 海洋工程
+          - generic [ref=e820]:
+            - generic "海油工程 600583 · 板块龙头·海洋工程·中海油服（点击查看K线）" [ref=e821] [cursor=pointer]:
+              - text: 海油工程600583
+              - generic [ref=e822]: 板块龙头·海洋工程·中海油服
+            - generic "中海油服 601808 · 板块龙头·油服·海上钻井（点击查看K线）" [ref=e823] [cursor=pointer]:
+              - text: 中海油服601808
+              - generic [ref=e824]: 板块龙头·油服·海上钻井
+            - generic "海油发展 600968 · 相关概念·海洋石油·技术服务（点击查看K线）" [ref=e825] [cursor=pointer]:
+              - text: 海油发展600968
+              - generic [ref=e826]: 相关概念·海洋石油·技术服务
+            - generic "亚星锚链 601890 · 相关概念·船舶锚链·海上风电（点击查看K线）" [ref=e827] [cursor=pointer]:
+              - text: 亚星锚链601890
+              - generic [ref=e828]: 相关概念·船舶锚链·海上风电
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e829] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e830]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e831] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e832]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e833] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e834]: 小盘人气·电子制造·活跃
+            - generic "远望谷 002161 · 小盘人气·RFID·物联网（点击查看K线）" [ref=e835] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e836]: 小盘人气·RFID·物联网
+      - generic [ref=e837]:
+        - generic [ref=e838]: 煤炭今日 9/23短线·盘面
+        - generic "煤炭化工持续弱势需求预期偏弱 — 煤炭、化工概念持续弱势，云煤能源跌停，赤天化、金牛化工逼近跌停。节前效应叠加需求端预期偏弱，传统周期板块承压。动力煤价格维持低位，化工品需求复苏不及预期，板块情绪低迷（短期利空煤炭/化工，需求端偏弱压制业绩）。" [ref=e839] [cursor=pointer]
+        - generic [ref=e840]:
+          - generic [ref=e841]: 煤炭
+          - generic [ref=e842]:
+            - generic "中国神华 601088 · 板块龙头·煤炭龙头·高股息（点击查看K线）" [ref=e843] [cursor=pointer]:
+              - text: 中国神华601088
+              - generic [ref=e844]: 板块龙头·煤炭龙头·高股息
+            - generic "兖矿能源 600188 · 板块龙头·煤炭·产能扩张（点击查看K线）" [ref=e845] [cursor=pointer]:
+              - text: 兖矿能源600188
+              - generic [ref=e846]: 板块龙头·煤炭·产能扩张
+            - generic "上海能源 600508 · 相关概念·煤炭·中煤旗下（点击查看K线）" [ref=e847] [cursor=pointer]:
+              - text: 上海能源600508
+              - generic [ref=e848]: 相关概念·煤炭·中煤旗下
+            - generic "潞安环能 601699 · 相关概念·喷吹煤·山西国资（点击查看K线）" [ref=e849] [cursor=pointer]:
+              - text: 潞安环能601699
+              - generic [ref=e850]: 相关概念·喷吹煤·山西国资
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e851] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e852]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e853] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e854]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e855] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e856]: 小盘人气·电子制造·活跃
+            - generic "远望谷 002161 · 小盘人气·RFID·物联网（点击查看K线）" [ref=e857] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e858]: 小盘人气·RFID·物联网
+        - generic [ref=e859]:
+          - generic [ref=e860]: 化工
+          - generic [ref=e861]:
+            - generic "万华化学 600309 · 板块龙头·化工龙头·MDI景气（点击查看K线）" [ref=e862] [cursor=pointer]:
+              - text: 万华化学600309
+              - generic [ref=e863]: 板块龙头·化工龙头·MDI景气
+            - generic "扬农化工 600486 · 板块龙头·农药龙头·业绩稳定（点击查看K线）" [ref=e864] [cursor=pointer]:
+              - text: 扬农化工600486
+              - generic [ref=e865]: 板块龙头·农药龙头·业绩稳定
+            - generic "兴发集团 600141 · 相关概念·磷化工·新能源材料（点击查看K线）" [ref=e866] [cursor=pointer]:
+              - text: 兴发集团600141
+              - generic [ref=e867]: 相关概念·磷化工·新能源材料
+            - generic "新安股份 600596 · 相关概念·有机硅·草甘膦（点击查看K线）" [ref=e868] [cursor=pointer]:
+              - text: 新安股份600596
+              - generic [ref=e869]: 相关概念·有机硅·草甘膦
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e870] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e871]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e872] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e873]: 小盘人气·通信服务·活跃
+            - generic "三祥新材 603663 · 断板反包·09/21涨停→次1.5倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e874] [cursor=pointer]:
+              - text: 三祥新材603663
+              - generic [ref=e875]: 断板反包·09/21涨停→次1.5倍量断板→1日缩量·站稳MA5
+            - generic "金瑞矿业 600714 · 断板反包·09/21涨停→次1.5倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e876] [cursor=pointer]:
+              - text: 金瑞矿业600714
+              - generic [ref=e877]: 断板反包·09/21涨停→次1.5倍量断板→1日缩量·站稳MA5
+    - generic [ref=e878]:
+      - heading "宏观 · 央行 / 通胀 / 大宗 / 美债" [level=4] [ref=e879]
+      - generic [ref=e880]:
+        - generic [ref=e881]: 国内政策今日 9/23看涨宏观·事件
+        - generic "央行明确适度宽松货币政策托底经济增长——利好金融地产 — 央行召开外资金融机构座谈会，潘功胜明确将实施适度宽松货币政策，托底经济增长、维护金融市场平稳运行。今日开展80亿元7天期逆回购，操作利率持平为1.4%。资金面平稳偏松，DR001约1.36%、DR007约1.38%。短期利好金融地产等利率敏感板块，长期为经济修复提供流动性支撑。" [ref=e882] [cursor=pointer]
+        - generic [ref=e883]:
+          - generic [ref=e884]: 银行
+          - text: 短线
+          - generic [ref=e885]:
+            - generic "工商银行 601398 · 板块龙头·国有大行·高股息（点击查看K线）" [ref=e886] [cursor=pointer]:
+              - text: 工商银行601398
+              - generic [ref=e887]: 板块龙头·国有大行·高股息
+            - generic "招商银行 600036 · 板块龙头·股份行龙头·零售优势（点击查看K线）" [ref=e888] [cursor=pointer]:
+              - text: 招商银行600036
+              - generic [ref=e889]: 板块龙头·股份行龙头·零售优势
+            - generic "农业银行 601288 · 相关概念·国有大行·县域金融（点击查看K线）" [ref=e890] [cursor=pointer]:
+              - text: 农业银行601288
+              - generic [ref=e891]: 相关概念·国有大行·县域金融
+            - generic "建设银行 601939 · 相关概念·国有大行·基建金融（点击查看K线）" [ref=e892] [cursor=pointer]:
+              - text: 建设银行601939
+              - generic [ref=e893]: 相关概念·国有大行·基建金融
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e894] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e895]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e896] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e897]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e898] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e899]: 小盘人气·电子制造·活跃
+            - generic "远望谷 002161 · 小盘人气·RFID·物联网（点击查看K线）" [ref=e900] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e901]: 小盘人气·RFID·物联网
+        - generic [ref=e902]:
+          - generic [ref=e903]: 房地产
+          - text: 短线
+          - generic [ref=e904]:
+            - generic "万科A 000002 · 板块龙头·地产龙头·销售回暖（点击查看K线）" [ref=e905] [cursor=pointer]:
+              - text: 万科A000002
+              - generic [ref=e906]: 板块龙头·地产龙头·销售回暖
+            - generic "保利发展 600048 · 板块龙头·央企地产·稳健经营（点击查看K线）" [ref=e907] [cursor=pointer]:
+              - text: 保利发展600048
+              - generic [ref=e908]: 板块龙头·央企地产·稳健经营
+            - generic "信达地产 600657 · 相关概念·央企地产·AMC背景（点击查看K线）" [ref=e909] [cursor=pointer]:
+              - text: 信达地产600657
+              - generic [ref=e910]: 相关概念·央企地产·AMC背景
+            - generic "中华企业 600675 · 相关概念·上海地产·国资背景（点击查看K线）" [ref=e911] [cursor=pointer]:
+              - text: 中华企业600675
+              - generic [ref=e912]: 相关概念·上海地产·国资背景
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e913] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e914]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e915] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e916]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e917] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e918]: 小盘人气·电子制造·活跃
+            - generic "远望谷 002161 · 小盘人气·RFID·物联网（点击查看K线）" [ref=e919] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e920]: 小盘人气·RFID·物联网
+        - generic [ref=e921]: 来源：央行/财联社
+      - generic [ref=e922]:
+        - generic [ref=e923]: 美联储今日 9/23中性宏观·事件
+        - generic "美联储鹰派+10Y美债约5%高位——利空高估值利好银行息差 — 美联储官员继续放鹰，芝加哥联储主席古尔斯比警告 ongoing supply shocks could necessitate a policy response，圣路易斯联储主席穆萨勒姆主张 further hikes may be needed。10Y美债收益率约4.96%，2年期4.756%，中美利差倒挂维持高位。短期利空高估值成长股，长期利好银行息差扩大与美元资产回流。" [ref=e924] [cursor=pointer]
+        - generic [ref=e925]:
+          - generic [ref=e926]: 银行
+          - text: 短线
+          - generic [ref=e927]:
+            - generic "工商银行 601398 · 板块龙头·国有大行·高股息（点击查看K线）" [ref=e928] [cursor=pointer]:
+              - text: 工商银行601398
+              - generic [ref=e929]: 板块龙头·国有大行·高股息
+            - generic "招商银行 600036 · 板块龙头·股份行龙头·零售优势（点击查看K线）" [ref=e930] [cursor=pointer]:
+              - text: 招商银行600036
+              - generic [ref=e931]: 板块龙头·股份行龙头·零售优势
+            - generic "农业银行 601288 · 相关概念·国有大行·县域金融（点击查看K线）" [ref=e932] [cursor=pointer]:
+              - text: 农业银行601288
+              - generic [ref=e933]: 相关概念·国有大行·县域金融
+            - generic "建设银行 601939 · 相关概念·国有大行·基建金融（点击查看K线）" [ref=e934] [cursor=pointer]:
+              - text: 建设银行601939
+              - generic [ref=e935]: 相关概念·国有大行·基建金融
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e936] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e937]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e938] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e939]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e940] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e941]: 小盘人气·电子制造·活跃
+            - generic "远望谷 002161 · 小盘人气·RFID·物联网（点击查看K线）" [ref=e942] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e943]: 小盘人气·RFID·物联网
+        - generic [ref=e944]:
+          - generic [ref=e945]: 高估值科技
+          - text: 短线
+          - generic [ref=e946]:
+            - generic "北方华创 002371 · 板块龙头·半导体设备龙头·订单饱满（点击查看K线）" [ref=e947] [cursor=pointer]:
+              - text: 北方华创002371
+              - generic [ref=e948]: 板块龙头·半导体设备龙头·订单饱满
+            - generic "长电科技 600584 · 板块龙头·封测龙头·先进封装满产（点击查看K线）" [ref=e949] [cursor=pointer]:
+              - text: 长电科技600584
+              - generic [ref=e950]: 板块龙头·封测龙头·先进封装满产
+            - generic "通富微电 002156 · 相关概念·AMD核心封测·HBM（点击查看K线）" [ref=e951] [cursor=pointer]:
+              - text: 通富微电002156
+              - generic [ref=e952]: 相关概念·AMD核心封测·HBM
+            - generic "康强电子 002119 · 相关概念·封装材料·换手活跃（点击查看K线）" [ref=e953] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e954]: 相关概念·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e955] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e956]: 小盘人气·通信服务·活跃
+            - generic "先导基电 600641 · 断板反包·09/17涨停→次1.3倍量断板→3日缩量·站稳MA5（点击查看K线）" [ref=e957] [cursor=pointer]:
+              - text: 先导基电600641
+              - generic [ref=e958]: 断板反包·09/17涨停→次1.3倍量断板→3日缩量·站稳MA5
+            - generic "诚邦股份 603316 · 断板反包·09/21涨停→次2.9倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e959] [cursor=pointer]:
+              - text: 诚邦股份603316
+              - generic [ref=e960]: 断板反包·09/21涨停→次2.9倍量断板→1日缩量·站稳MA5
+            - generic "华天科技 002185 · 断板反包·09/18涨停→次1.6倍量断板→2日缩量·站稳MA5（点击查看K线）" [ref=e961] [cursor=pointer]:
+              - text: 华天科技002185
+              - generic [ref=e962]: 断板反包·09/18涨停→次1.6倍量断板→2日缩量·站稳MA5
+        - generic [ref=e963]: 来源：新华财经/财联社
+      - generic [ref=e964]:
+        - generic [ref=e965]: 大宗商品今日 9/23中性宏观·事件
+        - generic "油价五连跌美伊会谈进展——利空油气利好航空化工 — 美伊在纽约会谈约3小时且富有成效，伊朗提出若美方解除封锁将于7日内重开霍尔木兹海峡；沙特东西输油管道重启。WTI大跌约2.4%至89.5美元/桶，布油-1.5%至94.7美元，连续第五日下跌。原油五连跌压制油气链，但利好航空、造纸、化工成本端。" [ref=e966] [cursor=pointer]
+        - generic [ref=e967]:
+          - generic [ref=e968]: 油气开采
+          - text: 短线
+          - generic [ref=e969]:
+            - generic "中国石油 601857 · 板块龙头·油气龙头·一体化优势（点击查看K线）" [ref=e970] [cursor=pointer]:
+              - text: 中国石油601857
+              - generic [ref=e971]: 板块龙头·油气龙头·一体化优势
+            - generic "中国石化 600028 · 板块龙头·炼化龙头·分红稳定（点击查看K线）" [ref=e972] [cursor=pointer]:
+              - text: 中国石化600028
+              - generic [ref=e973]: 板块龙头·炼化龙头·分红稳定
+            - generic "中国海油 600938 · 相关概念·海上油气·成本优势（点击查看K线）" [ref=e974] [cursor=pointer]:
+              - text: 中国海油600938
+              - generic [ref=e975]: 相关概念·海上油气·成本优势
+            - generic "中海油服 601808 · 相关概念·油服·海上钻井（点击查看K线）" [ref=e976] [cursor=pointer]:
+              - text: 中海油服601808
+              - generic [ref=e977]: 相关概念·油服·海上钻井
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e978] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e979]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e980] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e981]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e982] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e983]: 小盘人气·电子制造·活跃
+            - generic "和顺石油 603353 · 断板反包·09/18涨停→次1.9倍量断板→2日缩量·站稳MA5（点击查看K线）" [ref=e984] [cursor=pointer]:
+              - text: 和顺石油603353
+              - generic [ref=e985]: 断板反包·09/18涨停→次1.9倍量断板→2日缩量·站稳MA5
+        - generic [ref=e986]:
+          - generic [ref=e987]: 航空
+          - text: 短线
+          - generic [ref=e988]:
+            - generic "中国国航 601111 · 板块龙头·航空龙头·国际航线（点击查看K线）" [ref=e989] [cursor=pointer]:
+              - text: 中国国航601111
+              - generic [ref=e990]: 板块龙头·航空龙头·国际航线
+            - generic "南方航空 600029 · 板块龙头·航空·国内网络（点击查看K线）" [ref=e991] [cursor=pointer]:
+              - text: 南方航空600029
+              - generic [ref=e992]: 板块龙头·航空·国内网络
+            - generic "东方航空 600115 · 相关概念·航空·上海枢纽（点击查看K线）" [ref=e993] [cursor=pointer]:
+              - text: 东方航空600115
+              - generic [ref=e994]: 相关概念·航空·上海枢纽
+            - generic "春秋航空 601021 · 相关概念·低成本航空·盈利稳定（点击查看K线）" [ref=e995] [cursor=pointer]:
+              - text: 春秋航空601021
+              - generic [ref=e996]: 相关概念·低成本航空·盈利稳定
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e997] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e998]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e999] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e1000]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e1001] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e1002]: 小盘人气·电子制造·活跃
+            - generic "远望谷 002161 · 小盘人气·RFID·物联网（点击查看K线）" [ref=e1003] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e1004]: 小盘人气·RFID·物联网
+        - generic [ref=e1005]: 来源：金十数据/财联社
+    - generic [ref=e1006]:
+      - heading "国内财经媒体视角" [level=4] [ref=e1007]
+      - generic [ref=e1008]:
+        - generic [ref=e1009]: 美联储今日 9/23看跌中期·海外产业
+        - generic "彭博社：美联储鹰派表态压制全球成长股估值——利空A股高估值科技 — 彭博社报道，美联储9月加息25bp后官员密集放鹰，古尔斯比警告不能再将供给冲击看穿，穆萨勒姆主张加息提前且逐步。10Y美债收益率约5%高位，中美利差倒挂维持高位，对成长股估值与北向资金构成压制。短期利空A股高估值科技与半导体板块，长期利好银行息差扩大。" [ref=e1010] [cursor=pointer]
+        - generic [ref=e1011]:
+          - generic [ref=e1012]: 半导体
+          - text: 短线
+          - generic [ref=e1013]:
+            - generic "长电科技 600584 · 板块龙头·封测龙头·先进封装满产（点击查看K线）" [ref=e1014] [cursor=pointer]:
+              - text: 长电科技600584
+              - generic [ref=e1015]: 板块龙头·封测龙头·先进封装满产
+            - generic "北方华创 002371 · 板块龙头·半导体设备龙头·订单饱满（点击查看K线）" [ref=e1016] [cursor=pointer]:
+              - text: 北方华创002371
+              - generic [ref=e1017]: 板块龙头·半导体设备龙头·订单饱满
+            - generic "通富微电 002156 · 相关概念·AMD核心封测·HBM（点击查看K线）" [ref=e1018] [cursor=pointer]:
+              - text: 通富微电002156
+              - generic [ref=e1019]: 相关概念·AMD核心封测·HBM
+            - generic "康强电子 002119 · 相关概念·封装材料·换手活跃（点击查看K线）" [ref=e1020] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e1021]: 相关概念·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e1022] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e1023]: 小盘人气·通信服务·活跃
+            - generic "先导基电 600641 · 断板反包·09/17涨停→次1.3倍量断板→3日缩量·站稳MA5（点击查看K线）" [ref=e1024] [cursor=pointer]:
+              - text: 先导基电600641
+              - generic [ref=e1025]: 断板反包·09/17涨停→次1.3倍量断板→3日缩量·站稳MA5
+            - generic "诚邦股份 603316 · 断板反包·09/21涨停→次2.9倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e1026] [cursor=pointer]:
+              - text: 诚邦股份603316
+              - generic [ref=e1027]: 断板反包·09/21涨停→次2.9倍量断板→1日缩量·站稳MA5
+            - generic "华天科技 002185 · 断板反包·09/18涨停→次1.6倍量断板→2日缩量·站稳MA5（点击查看K线）" [ref=e1028] [cursor=pointer]:
+              - text: 华天科技002185
+              - generic [ref=e1029]: 断板反包·09/18涨停→次1.6倍量断板→2日缩量·站稳MA5
+        - generic [ref=e1030]: 来源：彭博社/财联社
+      - generic [ref=e1031]:
+        - generic [ref=e1032]: 大宗商品今日 9/23中性中期·海外产业
+        - generic "路透社：油价五连跌地缘溢价回落——利空油气利好航空化工 — 路透社报道，美伊在纽约会谈约3小时且富有成效，伊朗提出若美方解除封锁将于7日内重开霍尔木兹海峡；沙特东西输油管道重启。WTI大跌约2.4%至89.5美元/桶，连续第五日下跌。地缘溢价持续回落压制油气板块，但利好航空、造纸、化工成本端。" [ref=e1033] [cursor=pointer]
+        - generic [ref=e1034]:
+          - generic [ref=e1035]: 油气开采
+          - text: 短线
+          - generic [ref=e1036]:
+            - generic "中国石油 601857 · 板块龙头·油气龙头·一体化优势（点击查看K线）" [ref=e1037] [cursor=pointer]:
+              - text: 中国石油601857
+              - generic [ref=e1038]: 板块龙头·油气龙头·一体化优势
+            - generic "中国石化 600028 · 板块龙头·炼化龙头·分红稳定（点击查看K线）" [ref=e1039] [cursor=pointer]:
+              - text: 中国石化600028
+              - generic [ref=e1040]: 板块龙头·炼化龙头·分红稳定
+            - generic "中国海油 600938 · 相关概念·海上油气·成本优势（点击查看K线）" [ref=e1041] [cursor=pointer]:
+              - text: 中国海油600938
+              - generic [ref=e1042]: 相关概念·海上油气·成本优势
+            - generic "中海油服 601808 · 相关概念·油服·海上钻井（点击查看K线）" [ref=e1043] [cursor=pointer]:
+              - text: 中海油服601808
+              - generic [ref=e1044]: 相关概念·油服·海上钻井
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e1045] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e1046]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e1047] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e1048]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e1049] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e1050]: 小盘人气·电子制造·活跃
+            - generic "和顺石油 603353 · 断板反包·09/18涨停→次1.9倍量断板→2日缩量·站稳MA5（点击查看K线）" [ref=e1051] [cursor=pointer]:
+              - text: 和顺石油603353
+              - generic [ref=e1052]: 断板反包·09/18涨停→次1.9倍量断板→2日缩量·站稳MA5
+        - generic [ref=e1053]:
+          - generic [ref=e1054]: 航空
+          - text: 短线
+          - generic [ref=e1055]:
+            - generic "中国国航 601111 · 板块龙头·航空龙头·国际航线（点击查看K线）" [ref=e1056] [cursor=pointer]:
+              - text: 中国国航601111
+              - generic [ref=e1057]: 板块龙头·航空龙头·国际航线
+            - generic "南方航空 600029 · 板块龙头·航空·国内网络（点击查看K线）" [ref=e1058] [cursor=pointer]:
+              - text: 南方航空600029
+              - generic [ref=e1059]: 板块龙头·航空·国内网络
+            - generic "东方航空 600115 · 相关概念·航空·上海枢纽（点击查看K线）" [ref=e1060] [cursor=pointer]:
+              - text: 东方航空600115
+              - generic [ref=e1061]: 相关概念·航空·上海枢纽
+            - generic "春秋航空 601021 · 相关概念·低成本航空·盈利稳定（点击查看K线）" [ref=e1062] [cursor=pointer]:
+              - text: 春秋航空601021
+              - generic [ref=e1063]: 相关概念·低成本航空·盈利稳定
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e1064] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e1065]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e1066] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e1067]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e1068] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e1069]: 小盘人气·电子制造·活跃
+            - generic "远望谷 002161 · 小盘人气·RFID·物联网（点击查看K线）" [ref=e1070] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e1071]: 小盘人气·RFID·物联网
+        - generic [ref=e1072]: 来源：路透社/华尔街见闻
+      - generic [ref=e1073]:
+        - generic [ref=e1074]: 中美关系今日 9/23看涨中期·海外产业
+        - generic "华尔街日报：习近平访美预期提振中概与人民币资产——利好出口链 — 华尔街日报报道，习近平主席9月23日至25日对美国进行国事访问，时隔11年再次对美进行国事访问，中美元首半年内实现互访。此前何立峰与贝森特、格里尔在纽约举行经贸磋商，并就人工智能问题举行对话。若释放关税/科技缓和信号，将对出口链、中概、人民币资产构成系统性利好。" [ref=e1075] [cursor=pointer]
+        - generic [ref=e1076]:
+          - generic [ref=e1077]: 出口制造
+          - text: 短线
+          - generic [ref=e1078]:
+            - generic "中国交建 601800 · 板块龙头·基建出海·订单饱满（点击查看K线）" [ref=e1079] [cursor=pointer]:
+              - text: 中国交建601800
+              - generic [ref=e1080]: 板块龙头·基建出海·订单饱满
+            - generic "徐工机械 000425 · 板块龙头·工程机械·出海加速（点击查看K线）" [ref=e1081] [cursor=pointer]:
+              - text: 徐工机械000425
+              - generic [ref=e1082]: 板块龙头·工程机械·出海加速
+            - generic "苏美达 600710 · 相关概念·供应链·进出口（点击查看K线）" [ref=e1083] [cursor=pointer]:
+              - text: 苏美达600710
+              - generic [ref=e1084]: 相关概念·供应链·进出口
+            - generic "中化国际 600500 · 相关概念·化工贸易·出海（点击查看K线）" [ref=e1085] [cursor=pointer]:
+              - text: 中化国际600500
+              - generic [ref=e1086]: 相关概念·化工贸易·出海
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e1087] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e1088]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e1089] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e1090]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e1091] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e1092]: 小盘人气·电子制造·活跃
+            - generic "远望谷 002161 · 小盘人气·RFID·物联网（点击查看K线）" [ref=e1093] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e1094]: 小盘人气·RFID·物联网
+        - generic [ref=e1095]: 来源：华尔街日报/财联社
+    - generic [ref=e1096]:
+      - heading "投行观点" [level=4] [ref=e1097]
+      - generic [ref=e1098]:
+        - generic [ref=e1099]: 白酒今日 9/23看跌机构·观点
+        - generic "高盛：中秋期间白酒需求前景谨慎品牌分化加剧——利空白酒板块 — 据高盛报告，今年中秋期间中国白酒整体需求依然保持谨慎，品牌分化加剧，茅台的表现持续优于同业。区域调研显示宴席等消费场景相对稳定，但商务宴请和礼赠需求仍面临持续压力。各品牌之间表现分化显著，头部超高端品牌展现出较强的韧性。短期利空二三线白酒，长期利好茅台等头部品牌集中度提升。" [ref=e1100] [cursor=pointer]
+        - generic [ref=e1101]:
+          - generic [ref=e1102]: 白酒
+          - text: 短线
+          - generic [ref=e1103]:
+            - generic "贵州茅台 600519 · 板块龙头·白酒龙头·批价上行（点击查看K线）" [ref=e1104] [cursor=pointer]:
+              - text: 贵州茅台600519
+              - generic [ref=e1105]: 板块龙头·白酒龙头·批价上行
+            - generic "五粮液 000858 · 板块龙头·浓香龙头·渠道优化（点击查看K线）" [ref=e1106] [cursor=pointer]:
+              - text: 五粮液000858
+              - generic [ref=e1107]: 板块龙头·浓香龙头·渠道优化
+            - generic "泸州老窖 000568 · 相关概念·浓香白酒·品牌复兴（点击查看K线）" [ref=e1108] [cursor=pointer]:
+              - text: 泸州老窖000568
+              - generic [ref=e1109]: 相关概念·浓香白酒·品牌复兴
+            - generic "水井坊 600779 · 相关概念·高端白酒·外资背景（点击查看K线）" [ref=e1110] [cursor=pointer]:
+              - text: 水井坊600779
+              - generic [ref=e1111]: 相关概念·高端白酒·外资背景
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e1112] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e1113]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e1114] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e1115]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e1116] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e1117]: 小盘人气·电子制造·活跃
+            - generic "远望谷 002161 · 小盘人气·RFID·物联网（点击查看K线）" [ref=e1118] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e1119]: 小盘人气·RFID·物联网
+        - generic [ref=e1120]: 来源：高盛研究/财联社
+      - generic [ref=e1121]:
+        - generic [ref=e1122]: AI应用今日 9/23看涨机构·观点
+        - generic "中信证券：关注Kimi基座模型与AI应用生态发展潜力——利好AI应用 — 中信证券研报指出，月之暗面发布Kimi金融行业解决方案，整合超10个权威数据源、9项金融技能和5项合规安全措施。AI竞争正从模型能力扩展至场景落地的比拼，行业解决方案将通用模型能力沉淀为专业金融工作流，已有案例验证数天到数小时的数量级提效。建议关注Kimi等基座模型厂商和AI应用生态的发展潜力。" [ref=e1123] [cursor=pointer]
+        - generic [ref=e1124]:
+          - generic [ref=e1125]: AI应用
+          - text: 短线
+          - generic [ref=e1126]:
+            - generic "浪潮软件 600756 · 板块龙头·软件·政务云（点击查看K线）" [ref=e1127] [cursor=pointer]:
+              - text: 浪潮软件600756
+              - generic [ref=e1128]: 板块龙头·软件·政务云
+            - generic "南天信息 000948 · 板块龙头·金融设备·信创（点击查看K线）" [ref=e1129] [cursor=pointer]:
+              - text: 南天信息000948
+              - generic [ref=e1130]: 板块龙头·金融设备·信创
+            - generic "佳都科技 600728 · 相关概念·AI应用·智慧城市（点击查看K线）" [ref=e1131] [cursor=pointer]:
+              - text: 佳都科技600728
+              - generic [ref=e1132]: 相关概念·AI应用·智慧城市
+            - generic "远望谷 002161 · 相关概念·RFID·物联网（点击查看K线）" [ref=e1133] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e1134]: 相关概念·RFID·物联网
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e1135] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e1136]: 小盘人气·电子制造·活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e1137] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e1138]: 小盘人气·通信服务·活跃
+            - generic "海洋王 002724 · 小盘人气·照明设备·军工（点击查看K线）" [ref=e1139] [cursor=pointer]:
+              - text: 海洋王002724
+              - generic [ref=e1140]: 小盘人气·照明设备·军工
+            - generic "金溢科技 002869 · 小盘人气·ETC·车路协同（点击查看K线）" [ref=e1141] [cursor=pointer]:
+              - text: 金溢科技002869
+              - generic [ref=e1142]: 小盘人气·ETC·车路协同
+        - generic [ref=e1143]: 来源：中信证券/财联社
+      - generic [ref=e1144]:
+        - generic [ref=e1145]: 策略今日 9/23看涨机构·观点
+        - generic "摩根士丹利：维持杠铃策略超配科技龙头+高股息——利好科技与高股息 — 摩根士丹利中国首席股票策略师王滢表示，维持\"杠铃策略\"，可超配高质量互联网和科技龙头，同时低配受宏观拖累的行业，并保持对部分高股息标的的选择性配置。在盈利改善、全球上游供应链主导地位增强以及人民币走强的支撑下，市场存在温和上行空间。预计恒生指数有望升至28400点。" [ref=e1146] [cursor=pointer]
+        - generic [ref=e1147]:
+          - generic [ref=e1148]: 科技龙头
+          - text: 短线
+          - generic [ref=e1149]:
+            - generic "中兴通讯 000063 · 板块龙头·通信设备龙头·订单饱满（点击查看K线）" [ref=e1150] [cursor=pointer]:
+              - text: 中兴通讯000063
+              - generic [ref=e1151]: 板块龙头·通信设备龙头·订单饱满
+            - generic "长电科技 600584 · 板块龙头·封测龙头·先进封装满产（点击查看K线）" [ref=e1152] [cursor=pointer]:
+              - text: 长电科技600584
+              - generic [ref=e1153]: 板块龙头·封测龙头·先进封装满产
+            - generic "北方华创 002371 · 相关概念·半导体设备·订单饱满（点击查看K线）" [ref=e1154] [cursor=pointer]:
+              - text: 北方华创002371
+              - generic [ref=e1155]: 相关概念·半导体设备·订单饱满
+            - generic "浪潮信息 000977 · 相关概念·服务器·AI算力（点击查看K线）" [ref=e1156] [cursor=pointer]:
+              - text: 浪潮信息000977
+              - generic [ref=e1157]: 相关概念·服务器·AI算力
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e1158] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e1159]: 小盘人气·封装材料·换手活跃
+            - generic "先导基电 600641 · 断板反包·09/17涨停→次1.3倍量断板→3日缩量·站稳MA5（点击查看K线）" [ref=e1160] [cursor=pointer]:
+              - text: 先导基电600641
+              - generic [ref=e1161]: 断板反包·09/17涨停→次1.3倍量断板→3日缩量·站稳MA5
+            - generic "诚邦股份 603316 · 断板反包·09/21涨停→次2.9倍量断板→1日缩量·站稳MA5（点击查看K线）" [ref=e1162] [cursor=pointer]:
+              - text: 诚邦股份603316
+              - generic [ref=e1163]: 断板反包·09/21涨停→次2.9倍量断板→1日缩量·站稳MA5
+            - generic "华天科技 002185 · 断板反包·09/18涨停→次1.6倍量断板→2日缩量·站稳MA5（点击查看K线）" [ref=e1164] [cursor=pointer]:
+              - text: 华天科技002185
+              - generic [ref=e1165]: 断板反包·09/18涨停→次1.6倍量断板→2日缩量·站稳MA5
+        - generic [ref=e1166]:
+          - generic [ref=e1167]: 高股息
+          - text: 短线
+          - generic [ref=e1168]:
+            - generic "中国神华 601088 · 板块龙头·煤炭龙头·高股息（点击查看K线）" [ref=e1169] [cursor=pointer]:
+              - text: 中国神华601088
+              - generic [ref=e1170]: 板块龙头·煤炭龙头·高股息
+            - generic "中国石油 601857 · 板块龙头·油气龙头·高分红（点击查看K线）" [ref=e1171] [cursor=pointer]:
+              - text: 中国石油601857
+              - generic [ref=e1172]: 板块龙头·油气龙头·高分红
+            - generic "长江电力 600900 · 相关概念·水电龙头·稳定分红（点击查看K线）" [ref=e1173] [cursor=pointer]:
+              - text: 长江电力600900
+              - generic [ref=e1174]: 相关概念·水电龙头·稳定分红
+            - generic "工商银行 601398 · 相关概念·国有大行·高股息（点击查看K线）" [ref=e1175] [cursor=pointer]:
+              - text: 工商银行601398
+              - generic [ref=e1176]: 相关概念·国有大行·高股息
+            - generic "康强电子 002119 · 小盘人气·封装材料·换手活跃（点击查看K线）" [ref=e1177] [cursor=pointer]:
+              - text: 康强电子002119
+              - generic [ref=e1178]: 小盘人气·封装材料·换手活跃
+            - generic "国脉科技 002093 · 小盘人气·通信服务·活跃（点击查看K线）" [ref=e1179] [cursor=pointer]:
+              - text: 国脉科技002093
+              - generic [ref=e1180]: 小盘人气·通信服务·活跃
+            - generic "新亚制程 002388 · 小盘人气·电子制造·活跃（点击查看K线）" [ref=e1181] [cursor=pointer]:
+              - text: 新亚制程002388
+              - generic [ref=e1182]: 小盘人气·电子制造·活跃
+            - generic "远望谷 002161 · 小盘人气·RFID·物联网（点击查看K线）" [ref=e1183] [cursor=pointer]:
+              - text: 远望谷002161
+              - generic [ref=e1184]: 小盘人气·RFID·物联网
+        - generic [ref=e1185]: 来源：摩根士丹利/财联社
+    - generic [ref=e1186]: 来源：腾讯指数行情(9/18收盘) + 东财公开接口(行业板块TOP5/主力资金/涨跌家数；涨跌家数为全市场含ST口径，与主流行情App一致；跌停数为收盘封板口径) + AI预测验证(9/18真实板块数据)
+  - generic [ref=e1187]:
+    - heading "行业全景 · 美股 / 韩股 / 日经" [level=2] [ref=e1188]
+    - generic [ref=e1189]:
+      - generic [ref=e1190] [cursor=pointer]: A股上证+0.06%深成-0.05%创业板+0.01%
+      - generic [ref=e1191] [cursor=pointer]: 美股道指-0.36%标指0.00%纳指+0.45%
+      - generic [ref=e1192] [cursor=pointer]: 韩股KOSPI+0.90%
+      - generic [ref=e1193] [cursor=pointer]: 日经日经225+1.38%
+    - generic [ref=e1194]: 数据时点：9/23 收盘
+    - generic [ref=e1195]:
+      - generic [ref=e1196]:
+        - generic [ref=e1197]: 研究和试验发展
+        - generic [ref=e1198]: +4.04%
+      - generic [ref=e1199]:
+        - generic [ref=e1200]: 科技推广和应用服务业
+        - generic [ref=e1201]: +2.90%
+      - generic [ref=e1202]:
+        - generic [ref=e1203]: 石油加工、炼焦和核燃料加工业
+        - generic [ref=e1204]: +1.91%
+      - generic [ref=e1205]:
+        - generic [ref=e1206]: 化学纤维制造业
+        - generic [ref=e1207]: +1.55%
+      - generic [ref=e1208]:
+        - generic [ref=e1209]: 医药制造业
+        - generic [ref=e1210]: +1.53%
+      - generic [ref=e1211]:
+        - generic [ref=e1212]: 计算机、通信和其他电子设备制造业
+        - generic [ref=e1213]: +1.05%
+      - generic [ref=e1214]:
+        - generic [ref=e1215]: 非金属矿物制品业
+        - generic [ref=e1216]: +0.92%
+      - generic [ref=e1217]:
+        - generic [ref=e1218]: 房地产业
+        - generic [ref=e1219]: +0.88%
+      - generic [ref=e1220]:
+        - generic [ref=e1221]: 机动车、电子产品和日用产品修理业
+        - generic [ref=e1222]: +0.88%
+      - generic [ref=e1223]:
+        - generic [ref=e1224]: 仪器仪表制造业
+        - generic [ref=e1225]: +0.85%
+      - generic [ref=e1226]:
+        - generic [ref=e1227]: 生态保护和环境治理业
+        - generic [ref=e1228]: +0.77%
+      - generic [ref=e1229]:
+        - generic [ref=e1230]: 专业技术服务业
+        - generic [ref=e1231]: +0.60%
+      - generic [ref=e1232]:
+        - generic [ref=e1233]: 化学原料和化学制品制造业
+        - generic [ref=e1234]: +0.50%
+      - generic [ref=e1235]:
+        - generic [ref=e1236]: 公共设施管理业
+        - generic [ref=e1237]: +0.44%
+      - generic [ref=e1238]:
+        - generic [ref=e1239]: 金属制品、机械和设备修理业
+        - generic [ref=e1240]: +0.42%
+      - generic [ref=e1241]:
+        - generic [ref=e1242]: 有色金属冶炼和压延加工业
+        - generic [ref=e1243]: +0.31%
+      - generic [ref=e1244]:
+        - generic [ref=e1245]: 汽车制造业
+        - generic [ref=e1246]: +0.31%
+      - generic [ref=e1247]:
+        - generic [ref=e1248]: 金属制品业
+        - generic [ref=e1249]: +0.29%
+      - generic [ref=e1250]:
+        - generic [ref=e1251]: 通用设备制造业
+        - generic [ref=e1252]: +0.22%
+      - generic [ref=e1253]:
+        - generic [ref=e1254]: 航空运输业
+        - generic [ref=e1255]: +0.14%
+      - generic [ref=e1256]:
+        - generic [ref=e1257]: 建筑安装业
+        - generic [ref=e1258]: +0.08%
+      - generic [ref=e1259]:
+        - generic [ref=e1260]: 电气机械和器材制造业
+        - generic [ref=e1261]: +0.05%
+      - generic [ref=e1262]:
+        - generic [ref=e1263]: 邮政业
+        - generic [ref=e1264]: +0.04%
+      - generic [ref=e1265]:
+        - generic [ref=e1266]: 社会工作
+        - generic [ref=e1267]: 0.00%
+      - generic [ref=e1268]:
+        - generic [ref=e1269]: 纺织业
+        - generic [ref=e1270]: "-0.09%"
+      - generic [ref=e1271]:
+        - generic [ref=e1272]: 纺织服装、服饰业
+        - generic [ref=e1273]: "-0.12%"
+      - generic [ref=e1274]:
+        - generic [ref=e1275]: 酒、饮料和精制茶制造业
+        - generic [ref=e1276]: "-0.14%"
+      - generic [ref=e1277]:
+        - generic [ref=e1278]: 批发业
+        - generic [ref=e1279]: "-0.14%"
+      - generic [ref=e1280]:
+        - generic [ref=e1281]: 木材加工和木、竹、藤、棕、草制品业
+        - generic [ref=e1282]: "-0.18%"
+      - generic [ref=e1283]:
+        - generic [ref=e1284]: 水的生产和供应业
+        - generic [ref=e1285]: "-0.18%"
+      - generic [ref=e1286]:
+        - generic [ref=e1287]: 商务服务业
+        - generic [ref=e1288]: "-0.19%"
+      - generic [ref=e1289]:
+        - generic [ref=e1290]: 畜牧业
+        - generic [ref=e1291]: "-0.22%"
+      - generic [ref=e1292]:
+        - generic [ref=e1293]: 非金属矿采选业
+        - generic [ref=e1294]: "-0.23%"
+      - generic [ref=e1295]:
+        - generic [ref=e1296]: 建筑装饰和其他建筑业
+        - generic [ref=e1297]: "-0.24%"
+      - generic [ref=e1298]:
+        - generic [ref=e1299]: 餐饮业
+        - generic [ref=e1300]: "-0.26%"
+      - generic [ref=e1301]:
+        - generic [ref=e1302]: 土木工程建筑业
+        - generic [ref=e1303]: "-0.38%"
+      - generic [ref=e1304]:
+        - generic [ref=e1305]: 软件和信息技术服务业
+        - generic [ref=e1306]: "-0.38%"
+      - generic [ref=e1307]:
+        - generic [ref=e1308]: 皮革、毛皮、羽毛及其制品和制鞋业
+        - generic [ref=e1309]: "-0.41%"
+      - generic [ref=e1310]:
+        - generic [ref=e1311]: 货币金融服务
+        - generic [ref=e1312]: "-0.44%"
+      - generic [ref=e1313]:
+        - generic [ref=e1314]: 铁路运输业
+        - generic [ref=e1315]: "-0.48%"
+      - button "展开全部 84 个板块" [ref=e1317] [cursor=pointer]
+  - contentinfo [ref=e1318]: 免责声明：以上内容基于公开数据和量化分析，仅供参考，不构成投资建议。市场有风险，投资需谨慎。任何投资决策应结合个人风险承受能力、资金状况和投资目标独立判断，必要时咨询持牌专业机构。过往表现不预示未来收益。
