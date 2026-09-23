@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609240238"></script>
+<script src="data.js?v=202609240242"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -489,6 +489,8 @@
 <div id="stk-modal" onclick="if(event.target===this)stkClose()">
   <button class="db-nav db-prev" id="stk-prev" onclick="stkStep(-1)" title="同组上一个标的（←）" style="display:none">←</button>
   <button class="db-nav db-next" id="stk-next" onclick="stkStep(1)" title="同组下一个标的（→）" style="display:none">→</button>
+  <button class="db-nav db-prev" id="tb-prev" onclick="tbStep(-1)" title="上一个板块（←）" style="display:none">←</button>
+  <button class="db-nav db-next" id="tb-next" onclick="tbStep(1)" title="下一个板块（→）" style="display:none">→</button>
   <div class="stk-modal-box">
     <div class="db-modal-head" id="stk-modal-head"></div>
     <div class="db-modal-meta" id="stk-modal-meta"></div>
@@ -1215,6 +1217,8 @@ function renderDuanban() {
   // R98: 近3个交易日涨幅居前板块 TOP10（确认池上方）——同花顺行业口径
   var tb = (db && db.topBoards) || [];
   window._TB_KL = {};
+  // R98g：TOP10 有序名单（按 pct3 降序），供板块K线弹窗左右箭头快速切换
+  window._TB_LIST = [];
   if (tb.length) {
     var hasPct3 = tb[0] && tb[0].pct3 != null;
     html += '<div class="db-pool" style="padding-bottom:14px;"><h2>📈 近3个交易日涨幅居前板块 TOP10</h2>' +
@@ -1224,7 +1228,7 @@ function renderDuanban() {
       var p3cell = b.pct3 != null ? '<div class="db-tb-p3 ' + (up3 ? 'up' : 'down') + '">' + (up3 ? '+' : '') + b.pct3.toFixed(2) + '%</div>' : '';
       // R98e：K线存注册表、onclick 只传板块名（内联 JSON 的双引号会截断 HTML 属性导致点击失效）
       var hasKl = b.kline && b.kline.length > 1;
-      if (hasKl) window._TB_KL[b.name] = b.kline;
+      if (hasKl) { window._TB_KL[b.name] = b.kline; window._TB_LIST.push(b.name); }
       var clickAttr = hasKl ? ' onclick="openBoardKlineByName(\'' + esc(b.name) + '\')"' : '';
       var cursorStyle = hasKl ? ' style="cursor:pointer;"' : '';
       html += '<div class="db-tb-cell"' + cursorStyle + clickAttr + '><div class="db-tb-rank"><b>' + (i + 1) + '</b>' +
@@ -1331,7 +1335,7 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
     var d = e.key === 'ArrowLeft' ? -1 : 1;
     if (document.getElementById('lb-modal').classList.contains('open')) { lbStep(d); e.preventDefault(); return; }
-    if (document.getElementById('stk-modal').classList.contains('open')) { stkStep(d); e.preventDefault(); return; }
+    if (document.getElementById('stk-modal').classList.contains('open')) { if (TB_OPEN) tbStep(d); else stkStep(d); e.preventDefault(); return; }
   }
   if (!DB_CURR) return;
   if (e.key === 'ArrowLeft') dbStep(-1);
@@ -1567,6 +1571,7 @@ function stkStep(delta) {
 function openStkModal(code, name, note) {
   code = (code || '').trim();
   name = (name || '').trim();
+  TB_OPEN = false; tbShowArrows(); // R98g：标的模式隐藏板块箭头
   var nav = STK_GRP && STK_GRP.length > 1;
   document.getElementById('stk-prev').style.display = nav ? 'flex' : 'none';
   document.getElementById('stk-next').style.display = nav ? 'flex' : 'none';
@@ -1612,17 +1617,37 @@ function openStkModal(code, name, note) {
   }
   render(null, null);
 }
-function stkClose() { document.getElementById('stk-modal').classList.remove('open'); }
+function stkClose() { TB_OPEN = false; document.getElementById('stk-modal').classList.remove('open'); }
 // R98b：板块 TOP10 点击看K线（数据已预加载在后端，无需再fetch）
 // R98e：K线从 _TB_KL 注册表按板块名取（onclick 内联 JSON 双引号会截断 HTML 属性，已废弃）
+// R98g：左右箭头在 TOP10 内快速切换（与标的K线弹窗同款 .db-nav），键盘 ←/→ 同样路由
+var TB_OPEN = false, TB_IDX = 0;
+function tbShowArrows() {
+  var nav = TB_OPEN && window._TB_LIST && window._TB_LIST.length > 1;
+  document.getElementById('tb-prev').style.display = nav ? 'flex' : 'none';
+  document.getElementById('tb-next').style.display = nav ? 'flex' : 'none';
+}
+function tbStep(delta) {
+  if (!TB_OPEN || !window._TB_LIST || window._TB_LIST.length < 2) return;
+  TB_IDX = (TB_IDX + delta + window._TB_LIST.length) % window._TB_LIST.length;
+  var nm = window._TB_LIST[TB_IDX];
+  openBoardKlineByName(nm);
+}
 function openBoardKlineByName(name) {
+  var list = window._TB_LIST || [];
+  var i = list.indexOf(name);
+  if (i >= 0) TB_IDX = i; else { list = Object.keys(window._TB_KL || {}); i = list.indexOf(name); TB_IDX = i >= 0 ? i : 0; }
   openBoardKline(name, (window._TB_KL || {})[name]);
 }
 function openBoardKline(name, kline) {
   if (!kline || kline.length < 2) return;
+  TB_OPEN = true;
+  var list = window._TB_LIST || [];
+  var nav = list.length > 1;
   document.getElementById('stk-modal-head').innerHTML =
     '<span class="nm">' + esc(name || '') + '</span>' +
     '<span class="cd2">同花顺行业板块</span>' +
+    (nav ? '<span class="cd2">' + (TB_IDX + 1) + '/' + list.length + '</span>' : '') +
     '<button class="db-modal-close" onclick="stkClose()">×</button>';
   document.getElementById('stk-modal-meta').innerHTML =
     '<span class="lab">日K线（近30根）· 点击K线柱查看当日涨幅与成交量</span>';
@@ -1630,6 +1655,7 @@ function openBoardKline(name, kline) {
   document.getElementById('stk-modal').classList.add('open');
   document.getElementById('stk-prev').style.display = 'none';
   document.getElementById('stk-next').style.display = 'none';
+  tbShowArrows();
 }
 
 function buildOpenOutlookHtml(o, title) {

@@ -590,29 +590,35 @@ def _industry_of(hybk, agg):
 
 
 def fetch_top_boards(D, top=10, days=3):
-    """近 N 个交易日涨幅居前板块 TOP10（**同花顺行业口径**，R98）。
-    主源：THS thshy 行业页面（50个同花顺大类行业，按当日涨幅排序）；
+    """近 N 个交易日涨幅居前板块 TOP10（**同花顺行业口径**，R98；R98g 改按 pct3 选取+排序）。
+    主源：THS thshy 行业页面（50个同花顺大类行业）；对**全部**行业取 K 线计算
+    近 N 日累计涨幅 pct3=(close[-1]/close[-N-1]-1)*100，按 pct3 降序取 TOP10——
+    （R98 旧逻辑按当日涨幅选取排序、pct3 仅附带计算，导致榜内顺序与标题「近3日累计」不符）。
     备源：保留既有 topBoards（R91m 防护）。全部失败返回 []（前端隐藏模块）。
     每个板块附带近30根日K线（kline字段），供前端弹窗展示。"""
-    # ---- 主源：同花顺行业页面（当日涨幅） ----
+    # ---- 主源：同花顺行业页面（当日涨幅，仅作行业清单与代码来源） ----
     ths = fetch_ths_industries()
     if len(ths) >= 10:
-        ths.sort(key=lambda x: -x["pct"])
-        picked = ths[:top]
-        # 并行获取各板块 K 线（max_workers=5 防限频）
+        # 全量取 K 线算 pct3（50 个行业 × max_workers=5，数秒内完成）
         def _mk(b):
             kl = fetch_ths_kline_full(b["code"], days=30)
             pct3 = None
-            if kl and len(kl) >= 4:
+            if kl and len(kl) >= days + 1:
                 try:
-                    pct3 = round((kl[-1][2] / kl[-4][2] - 1) * 100, 2)
+                    pct3 = round((kl[-1][2] / kl[-(days + 1)][2] - 1) * 100, 2)
                 except Exception:
                     pass
             return {"code": b["code"], "name": b["name"],
                     "pct3": pct3, "pctToday": b["pct"],
                     "kline": kl}
         with ThreadPoolExecutor(max_workers=5) as exe:
-            return list(exe.map(_mk, picked))
+            ranked = list(exe.map(_mk, ths))
+        # 按 pct3 降序选取 TOP10（pct3 缺失者排尾部兜底补位）
+        ranked.sort(key=lambda x: (x["pct3"] is None, -(x["pct3"] or -1e9)))
+        picked = [x for x in ranked if x["pct3"] is not None][:top]
+        if len(picked) < top:  # K线缺失的板块补位（保底凑满，pct3=None 前端不显示近3日值）
+            picked += [x for x in ranked if x["pct3"] is None][:top - len(picked)]
+        return picked
     # ---- 备源：保留既有 topBoards（R91m 防护） ----
     old = (D.get("duanban") or {}).get("topBoards") if isinstance(D, dict) else None
     if old:
