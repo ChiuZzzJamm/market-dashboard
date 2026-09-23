@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609240418"></script>
+<script src="data.js?v=202609240424"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -312,19 +312,24 @@
 
   /* ===== 断板反包入口（R98k：悬浮红色圆形，可拖拽到任意位置，位置记忆） ===== */
   .hero { position: relative; }
-  .db-entry {
+  .db-entry, .db-entry-in {
     position: fixed; right: 20px; bottom: 110px;
     width: 46px; height: 46px; border-radius: 50%;
     background: var(--up); border: none; padding: 0;
     box-shadow: 0 6px 16px rgba(224,49,79,.38);
     cursor: grab; z-index: 1200; touch-action: none; user-select: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; line-height: 1; color: #fff;
     transition: transform .15s ease, box-shadow .2s ease;
   }
-  .db-entry:hover { box-shadow: 0 8px 22px rgba(224,49,79,.5); }
-  .db-entry:active { cursor: grabbing; transform: scale(.92); }
+  .db-entry-in { cursor: pointer; }
+  .db-entry:hover, .db-entry-in:hover { box-shadow: 0 8px 22px rgba(224,49,79,.5); }
+  .db-entry:active, .db-entry-in:active { cursor: grabbing; transform: scale(.92); }
   .db-entry .db-badge { display: none; }
   body.db-open .db-entry { display: none; }
-  @media (max-width: 700px) { .db-entry { width: 40px; height: 40px; right: 14px; bottom: 92px; } }
+  .db-entry-in { display: none; }
+  body.db-open .db-entry-in { display: flex; }
+  @media (max-width: 700px) { .db-entry, .db-entry-in { width: 40px; height: 40px; right: 14px; bottom: 92px; font-size: 19px; } }
 
   /* 独立页面：打开时隐藏看板主体，只显示本模块 */
   #duanban-view { display: none; }
@@ -424,7 +429,7 @@
 <body>
 <div class="wrap">
   <div class="hero">
-    <button class="db-entry" id="db-entry" title="断板反包（点击进入 · 可拖动到任意位置）" aria-label="断板反包"><span class="db-badge" id="db-badge"></span></button>
+    <button class="db-entry" id="db-entry" title="断板反包（点击进入 · 可拖动到任意位置）" aria-label="断板反包"><span class="db-emoji">💰</span><span class="db-badge" id="db-badge"></span></button>
     <h1>每日市场看板</h1>
     <div class="sub">A 股 · 美股 · 全球产业全景</div>
     <span class="updated" id="updatedAt"></span>
@@ -461,6 +466,7 @@
       <div class="db-title">断板反包</div>
       <div class="db-date" id="db-date"></div>
     </div>
+    <button class="db-entry-in" id="db-entry-in" title="返回刚刚浏览的页面（再点红色圆形进入断板反包）" onclick="closeDuanban()">💰</button>
     <div class="db-note" id="db-note"></div>
     <div id="db-pools"></div>
   </div>
@@ -1302,11 +1308,12 @@ function openDuanban() {
   if (location.hash !== '#duanban') history.pushState(null, '', '#duanban');
   window._dbScrollY = window.scrollY; // R98k：记住进入前浏览位置，退出时还原
   document.body.classList.add('db-open');
-  window.scrollTo(0, 0);
+  window.scrollTo(0, window._dbViewScrollY || 0); // R98l：还原断板页上次浏览位置（再进入回到刚刚看的部分）
   renderDuanban();
 }
 function closeDuanban() {
   if (location.hash === '#duanban') history.pushState(null, '', location.pathname + location.search);
+  window._dbViewScrollY = window.scrollY; // R98l：记录断板页浏览位置，下次再进入还原
   document.body.classList.remove('db-open');
   closeDbModal();
   window.scrollTo(0, window._dbScrollY || 0); // 返回刚刚浏览的界面位置
