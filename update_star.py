@@ -9,6 +9,9 @@
   3. 个股当日实时涨幅+集合竞价高低开批量快照（腾讯 gtimg，一次批量）；
   4. 确定性筛选全部非利空「上涨概率最大」标的写入 duanban.star（不限数量，R98l）：
      利空(excluded) → 评分 = probability + 板块热度加成(开盘涨幅前8行业 +6) + 个股当日涨幅微调；
+  4b. 并额外纳入【早盘强势板块领涨股】（R98n，不限确认池）：当某同花顺行业开盘涨幅居前(>1.2%)
+     或主力资金净流入居前，用 fetch_ths_tops 拉其领涨成分股（仅沪深主板 60/00），与池内标的
+     合并按评分降序写入；picks 每项带 src（'pool' 默认 / 'board' 板块动量）。
   5. marketLine / sentiment 写模板句，pushText 留空——由自动化 AI 复核改写为深度分析。
 
 只写 duanban.star（含 generatedAt 不动），其余字段一律不动；东财被 WAF 不影响（同花顺/腾讯源）。
@@ -21,6 +24,7 @@ import re
 import subprocess
 import sys
 from datetime import datetime
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import update_ashare_sectors as uas  # noqa: E402  （复用 curl/UA/同花顺解析）
@@ -97,6 +101,45 @@ def fetch_stock_quotes(codes):
     return quotes
 
 
+def fetch_strong_board_leaders(sectors, fund_in, max_boards=4):
+    """早盘强势板块领涨成分股（R98n）：从同花顺行业里挑强势板块，拉其领涨股作板块动量候选。
+    强势判定：同花顺行业涨幅居前(>1.2%) 或 主力净流入居前。仅取沪深主板(60/00)领涨股。
+    返回 [{code,name,sector,boardPct,changePct}]；任一源失败返回 []（不阻塞主流程）。"""
+    if not sectors:
+        return []
+    strong = [s for s in sorted(sectors, key=lambda x: -x["pct"])[:6] if s["pct"] > 1.2]
+    fund_names = {str(f.get("name") or "") for f in (fund_in or [])[:5]}
+    for s in sectors:
+        if str(s["name"]) in fund_names and s not in strong:
+            strong.append(s)
+    seen = set(); boards = []
+    for s in strong:
+        if s["name"] in seen:
+            continue
+        seen.add(s["name"]); boards.append(s)
+    boards = boards[:max_boards]
+    leads = []
+    for b in boards:
+        try:
+            tops = uas.fetch_ths_tops(b["code"], 1)  # 领涨成分股 TOP
+        except Exception:
+            continue
+        if not tops:
+            continue
+        cnt = 0
+        for t in tops:
+            code = str(t.get("code") or "")
+            if not code.startswith(("60", "00")):  # 仅沪深主板，遵循项目标的池约束
+                continue
+            leads.append({"code": code, "name": t.get("name"), "sector": b["name"],
+                          "boardPct": b["pct"], "changePct": t.get("changePct")})
+            cnt += 1
+            if cnt >= 2:
+                break
+        time.sleep(0.4)
+    return leads
+
+
 def build_star(D):
     db = D.get("duanban") or {}
     pools = []
@@ -114,7 +157,8 @@ def build_star(D):
     sectors = []
     for x in ths:
         try:
-            sectors.append({"name": x.get("name") or "", "pct": round(float(x.get("pct") or 0), 2)})
+            sectors.append({"name": x.get("name") or "", "code": x.get("code") or "",
+                            "pct": round(float(x.get("pct") or 0), 2)})
         except Exception:
             continue
     sectors = [s for s in sectors if s["name"]]
@@ -127,6 +171,16 @@ def build_star(D):
 
     # ---- 个股快照（当日实时涨幅） ----
     quotes = fetch_stock_quotes([str(e.get("code")) for e in pools])
+
+    # ---- 板块动量候选：早盘强势板块领涨股（R98n，不限确认池） ----
+    board_leads = fetch_strong_board_leaders(sectors, fund_in)
+    pool_codes = {str(e.get("code")) for e in pools}
+    seen_bl = set(); extra_codes = []
+    for bl in board_leads:
+        if bl["code"] in pool_codes or bl["code"] in seen_bl:
+            continue
+        seen_bl.add(bl["code"]); extra_codes.append(bl["code"])
+    extra_q = fetch_stock_quotes(extra_codes) if extra_codes else {}
 
     # ---- 确定性筛选：利空剔除，评分 = probability + 板块热度 + 个股涨幅微调 ----
     def _hot(sec):
@@ -152,19 +206,40 @@ def build_star(D):
         score = round(p + _hot(sec) + live_adj, 1)
         cand.append({"code": str(e.get("code")), "name": e.get("name"),
                      "sector": sec, "sentiment": sent, "probability": round(p, 1),
-                     "pctLive": live, "openPct": open_pct, "score": score})
+                     "pctLive": live, "openPct": open_pct, "score": score, "src": "pool"})
+
+    # 板块动量标的并入候选（强势板块领涨股，src='board'）
+    for bl in board_leads:
+        code = bl["code"]
+        if code not in seen_bl:
+            continue
+        q = extra_q.get(code) or {}
+        live = q.get("pct"); open_pct = q.get("openPct")
+        bp = bl.get("boardPct") or 0
+        prob = max(15, min(88, round(56 + bp * 1.2 + max(0.0, open_pct or 0) + max(0.0, live or 0) * 0.5)))
+        live_adj = max(-3.0, min(3.0, (live or 0) / 2.0))
+        board_bonus = 8.0 if bp >= 2 else 5.0
+        score = round(prob + board_bonus + live_adj, 1)
+        note = f"{bl['sector']}·板块强势·竞价{(open_pct or 0):+.1f}%·现涨{(live or 0):+.1f}%"
+        cand.append({"code": code, "name": bl["name"], "sector": bl["sector"],
+                     "sentiment": "bull", "probability": prob, "pctLive": live,
+                     "openPct": open_pct, "score": score, "src": "board", "note": note})
+
     cand.sort(key=lambda x: (-x["score"], -x["probability"]))
     picks = []
-    for c in cand:  # R98l：不限数量，全部非利空候选按评分降序入选
-        sent_cn = {"bull": "利好", "neutral": "中性"}.get(c["sentiment"], c["sentiment"])
-        note = f"{c['sector']}·{sent_cn}·基线{c['probability']:.0f}%"
-        if c.get("openPct") is not None:
-            note += f"·竞价{c['openPct']:+.1f}%"
-        if c.get("pctLive") is not None:
-            note += f"·现涨{c['pctLive']:+.1f}%"
+    for c in cand:  # R98l/R98n：不限数量，全部非利空候选（含板块动量）按评分降序入选
+        if c.get("note"):
+            note = c["note"]
+        else:
+            sent_cn = {"bull": "利好", "neutral": "中性"}.get(c["sentiment"], c["sentiment"])
+            note = f"{c['sector']}·{sent_cn}·基线{c['probability']:.0f}%"
+            if c.get("openPct") is not None:
+                note += f"·竞价{c['openPct']:+.1f}%"
+            if c.get("pctLive") is not None:
+                note += f"·现涨{c['pctLive']:+.1f}%"
         picks.append({"code": c["code"], "name": c["name"], "sector": c["sector"],
                       "sentiment": c["sentiment"], "probability": c["probability"],
-                      "note": note})
+                      "note": note, "src": c.get("src", "pool")})
 
     # ---- 文案模板（AI 复核改写 sentiment/pushText） ----
     now = datetime.now()
@@ -196,7 +271,7 @@ def build_star(D):
         "sentiment": sentiment,
         "picks": picks,
         "pushText": "",
-        "generatedBy": "update_star.py 确定性筛选（R98l）+ 自动化 AI 复核",
+        "generatedBy": "update_star.py 确定性筛选（R98n：池内概率 + 板块动量领涨股）+ 自动化 AI 复核",
     }
     return star, None
 

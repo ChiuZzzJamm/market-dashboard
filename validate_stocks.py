@@ -347,7 +347,9 @@ def check_story_quality(D):
 
 def check_star_module(D):
     """R98k 软闸门：① 双池上涨概率全池拉平（如全为 50%）→ 疑似未校准 WARN；
-    ② duanban.star（10:00 开盘精选）picks 须在双池内、code 合法、数量不限（≥1，R98l）。"""
+    ② duanban.star（10:00 开盘精选）picks 数量不限（≥1，R98l）；
+       picks 允许两类：a) 双池内标的；b) src='board' 的板块动量标的（早盘真实强势板块领涨股，R98n，允许池外）。
+       纯池外且无 src='board'/无板块依据的标的 → WARN。"""
     db = D.get('duanban')
     if not isinstance(db, dict):
         return []
@@ -371,7 +373,12 @@ def check_star_module(D):
                     continue
                 c = str(p.get('code') or '')
                 if c and c not in pool_codes:
-                    warns.append(f"duanban.star.picks {c} {p.get('name')} 不在断板反包双池内（精选只能从池内筛）")
+                    # R98n：允许 src='board' 的板块动量标的（早盘真实强势板块领涨股，可池外入选）
+                    if (p.get('src') == 'board'
+                            and str(p.get('name') or '').strip()
+                            and str(p.get('sector') or '').strip()):
+                        continue
+                    warns.append(f"duanban.star.picks {c} {p.get('name')} 不在断板反包双池内且非板块动量标的（精选只能从池内或强势板块筛）")
             if not str(star.get('pushText') or '').strip():
                 warns.append("duanban.star.pushText 为空（微信推送深度分析缺失，10:00 自动化 AI 须补写）")
     return warns

@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609240424"></script>
+<script src="data.js?v=202609240432"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -310,26 +310,26 @@
   .pano-more button { background: var(--paper); color: var(--accent-deep); border: 1px solid var(--accent); border-radius: 999px; font-size: 12.5px; font-weight: 700; padding: 7px 20px; cursor: pointer; font-family: var(--font); transition: all .2s ease; }
   .pano-more button:hover { background: var(--accent); color: #fff; }
 
-  /* ===== 断板反包入口（R98k：悬浮红色圆形，可拖拽到任意位置，位置记忆） ===== */
+  /* ===== 断板反包入口（R98m：悬浮 💰 图标，无圆圈底，可拖拽到任意位置，位置记忆） ===== */
   .hero { position: relative; }
   .db-entry, .db-entry-in {
     position: fixed; right: 20px; bottom: 110px;
     width: 46px; height: 46px; border-radius: 50%;
-    background: var(--up); border: none; padding: 0;
-    box-shadow: 0 6px 16px rgba(224,49,79,.38);
+    background: transparent; border: none; padding: 0;
+    box-shadow: none;
     cursor: grab; z-index: 1200; touch-action: none; user-select: none;
     display: flex; align-items: center; justify-content: center;
-    font-size: 22px; line-height: 1; color: #fff;
-    transition: transform .15s ease, box-shadow .2s ease;
+    font-size: 30px; line-height: 1;
+    transition: transform .15s ease;
   }
   .db-entry-in { cursor: pointer; }
-  .db-entry:hover, .db-entry-in:hover { box-shadow: 0 8px 22px rgba(224,49,79,.5); }
+  .db-entry:hover, .db-entry-in:hover { transform: scale(1.1); }
   .db-entry:active, .db-entry-in:active { cursor: grabbing; transform: scale(.92); }
   .db-entry .db-badge { display: none; }
   body.db-open .db-entry { display: none; }
   .db-entry-in { display: none; }
   body.db-open .db-entry-in { display: flex; }
-  @media (max-width: 700px) { .db-entry, .db-entry-in { width: 40px; height: 40px; right: 14px; bottom: 92px; font-size: 19px; } }
+  @media (max-width: 700px) { .db-entry, .db-entry-in { width: 42px; height: 42px; right: 14px; bottom: 92px; font-size: 26px; } }
 
   /* 独立页面：打开时隐藏看板主体，只显示本模块 */
   #duanban-view { display: none; }
@@ -466,7 +466,7 @@
       <div class="db-title">断板反包</div>
       <div class="db-date" id="db-date"></div>
     </div>
-    <button class="db-entry-in" id="db-entry-in" title="返回刚刚浏览的页面（再点红色圆形进入断板反包）" onclick="closeDuanban()">💰</button>
+    <button class="db-entry-in" id="db-entry-in" title="返回刚刚浏览的页面（再点 💰 图标进入断板反包）" onclick="closeDuanban()">💰</button>
     <div class="db-note" id="db-note"></div>
     <div id="db-pools"></div>
   </div>
@@ -1283,7 +1283,7 @@ function renderDuanban() {
   var st = db && db.star;
   if (st && st.picks && st.picks.length) {
     html += '<div class="db-pool" style="padding-bottom:14px;"><h2>🌟</h2>' +
-      '<div class="db-sub">开盘半小时精选 · ' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 10:00 更新，盘前情绪 × 池内概率筛选）</div>' +
+      '<div class="db-sub">开盘半小时精选 · ' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 10:00 更新：池内概率 × 早盘板块/资金/竞价情绪，强势板块领涨股亦入选）</div>' +
       (st.marketLine ? '<div style="font-size:13px;line-height:1.7;margin:6px 0 2px;">' + esc(st.marketLine) + '</div>' : '') +
       (st.sentiment ? '<div style="font-size:12.5px;color:var(--ink2);line-height:1.7;margin:2px 0 10px;">' + esc(st.sentiment) + '</div>' : '') +
       '<div class="db-chips star-chips">';
@@ -1291,8 +1291,10 @@ function renderDuanban() {
     st.picks.forEach(function (p, i) {
       if (String(p.code || '').length === 6) { window._STAR_LIST.push(String(p.code)); }
       var sCls = p.sentiment === 'bull' ? 'up' : (p.sentiment === 'bear' ? 'down' : '');
+      var boardTag = p.src === 'board'
+        ? '<span style="font-size:10px;font-weight:700;color:#fff;background:var(--accent);border-radius:999px;padding:1px 7px;margin-left:2px;">板块</span>' : '';
       html += '<div class="stock-chip" data-stk="' + escAttr(String(p.code || '') + '|' + String(p.name || '') + '|开盘精选') + '" style="cursor:pointer">' +
-        '<b>' + esc(String(p.name || '')) + '</b><span>' + esc(String(p.code || '')) + '</span>' +
+        '<b>' + esc(String(p.name || '')) + '</b>' + boardTag + '<span>' + esc(String(p.code || '')) + '</span>' +
         '<span class="' + sCls + '" style="font-weight:800;font-size:12px;">' + (p.probability != null ? p.probability + '%' : '') + '</span>' +
         (p.note ? '<span style="font-size:11px;color:var(--ink2);">' + esc(String(p.note)) + '</span>' : '') +
         '</div>';
