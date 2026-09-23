@@ -7,6 +7,7 @@ A股板块/指数/涨跌家数抓取（零 MCP 依赖，全部 HTTP 直连）：
     涨停数=同花顺涨停池 total；跌停数=同花顺无公开源，沿用上一轮（东财 push2delay 快照作兜底）。
     兜底：同花顺不可达时回退东财 push2ex getTopicZDFenBu + 风险警示板(b:BK0511) 补充 ST。
   - 行业板块涨跌 TOP5/BOTTOM5 + 全景：R97f 起主源=同花顺行业一览表（q.10jqka.com.cn/thshy，数字准+字段全：涨跌幅/净流入/涨跌家数/领涨股），
+    R98d 起领涨/领跌板块的 tops=同花顺行业详情页成分股 TOP5（desc/asc 各取 5 只，替代一览表单条领涨股），
     备源=东财 push2delay clist（fs=m:90+t:2 行业板块，注意 + 必须写成 %2B）/ 新浪行业，全失败保留上一轮(R91m)；
     sectorSource 字段记录实际命中源（ths/em/prev）供前端标注口径。断板池/个股 hybk 仍用申万，不在本脚本改动范围。
   - 主力资金流入/流出 TOP3：R97g 起主源=同花顺行业资金流页（data.10jqka.com.cn/funds/hyzjl，净额(亿)排序）；
@@ -571,8 +572,73 @@ def parse_ths_industries(html):
 def fetch_ths_industries():
     return parse_ths_industries(curl_ths())
 
+def fetch_ths_tops(ths_code, po, timeout=15):
+    """同花顺行业详情页成分股 TOP5（R98d）：po=1 领涨（详情页默认按涨跌幅 desc）、
+    po=0 领跌（/order/asc/）。解析 m-pager-table 行（列：0序号 1代码 2名称 3现价 4涨跌幅）。
+    反爬跳转页约 412 字节，用长度阈值过滤。失败返回 []（调用方回退单条领涨股）。
+    注意：成分股含创业板/北交所（如实展示板块构成，非四类标的池，不受 60/00 硬约束）。"""
+    if not ths_code:
+        return []
+    url = (f"https://q.10jqka.com.cn/thshy/detail/order/asc/page/1/code/{ths_code}/"
+           if po == 0 else
+           f"https://q.10jqka.com.cn/thshy/detail/code/{ths_code}/")
+    try:
+        r = subprocess.run(["curl", "-s", "--max-time", str(timeout),
+                            "-H", "User-Agent: " + UA,
+                            "-H", "Referer: " + THS_REFERER,
+                            "-H", "Accept-Language: zh-CN,zh;q=0.9",
+                            url], capture_output=True, timeout=timeout + 10)
+        raw = r.stdout or b""
+    except Exception:
+        return []
+    if len(raw) < 5000:
+        return []
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        text = raw.decode("gbk", errors="replace")
+    i = text.find("m-pager-table")
+    if i < 0:
+        return []
+    rows = re.findall(r"<tr[^>]*>(.*?)</tr>", text[i:i + 12000], re.S)
+    out = []
+    for row in rows:
+        tds = [re.sub(r"<[^>]+>", "", t).strip()
+               for t in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)]
+        if len(tds) < 5 or not re.fullmatch(r"\d{6}", tds[1] or ""):
+            continue
+        try:
+            pct = float(tds[4].replace("%", ""))
+        except Exception:
+            continue
+        if not tds[2]:
+            continue
+        # 同向过滤：领涨页只取涨幅>=0、领跌页只取跌幅<=0，避免混入反向股
+        if po == 1 and pct < 0:
+            continue
+        if po == 0 and pct > 0:
+            continue
+        out.append({"name": tds[2], "changePct": round(pct, 2)})
+        if len(out) >= 5:
+            break
+    return out
+
+def enrich_ths_tops(ups, downs, gap=0.8):
+    """为同花顺口径的领涨/领跌板块逐个拉取成分股 TOP5（R98d）。
+    成功则覆盖单条领涨股 tops；失败保留原 tops（单条领涨股），不阻塞。"""
+    jobs = [(u, 1) for u in (ups or [])] + [(d, 0) for d in (downs or [])]
+    ok = 0
+    for idx, (it, po) in enumerate(jobs):
+        t5 = fetch_ths_tops(it.get("thsCode"), po)
+        if t5:
+            it["tops"] = t5
+            ok += 1
+        if idx < len(jobs) - 1:
+            time.sleep(gap)
+    print(f"[info] 同花顺成分股 TOP5 拉取：{ok}/{len(jobs)} 个板块成功")
+
 def _ths_to_item(x):
-    it = {"name": x["name"], "pct": x["pct"]}
+    it = {"name": x["name"], "pct": x["pct"], "thsCode": x["code"]}
     if x.get("lead"):
         it["tops"] = [{"name": x["lead"], "changePct": x["leadPct"] if x["leadPct"] is not None else 0}]
     if x.get("netInflow") is not None:
@@ -593,6 +659,8 @@ def build_sectors_unified(prev_up, prev_down, prev_all, ths_list=None):
         ranked = sorted(ths, key=lambda x: -x["pct"])
         ups = [_ths_to_item(x) for x in ranked[:5]]
         downs = [_ths_to_item(x) for x in sorted(ths, key=lambda x: x["pct"])[:5]]
+        # R98d：领涨/领跌板块补齐成分股 TOP5（详情页 desc/asc），失败保留单条领涨股
+        enrich_ths_tops(ups, downs)
         all_b = [{"code": x["code"], "name": x["name"], "pct": x["pct"],
                   "netInflow": x["netInflow"], "upCount": x["up"], "downCount": x["down"]}
                  for x in ths]

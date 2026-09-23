@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609240223"></script>
+<script src="data.js?v=202609240235"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1212,6 +1212,7 @@ function renderDuanban() {
   var html = '';
   // R98: 近3个交易日涨幅居前板块 TOP10（确认池上方）——同花顺行业口径
   var tb = (db && db.topBoards) || [];
+  window._TB_KL = {};
   if (tb.length) {
     var hasPct3 = tb[0] && tb[0].pct3 != null;
     html += '<div class="db-pool" style="padding-bottom:14px;"><h2>📈 近3个交易日涨幅居前板块 TOP10</h2>' +
@@ -1219,13 +1220,14 @@ function renderDuanban() {
     tb.forEach(function (b, i) {
       var up3 = b.pct3 != null ? b.pct3 >= 0 : null, up1 = b.pctToday >= 0;
       var p3cell = b.pct3 != null ? '<div class="db-tb-p3 ' + (up3 ? 'up' : 'down') + '">' + (up3 ? '+' : '') + b.pct3.toFixed(2) + '%</div>' : '';
+      // R98e：K线存注册表、onclick 只传板块名（内联 JSON 的双引号会截断 HTML 属性导致点击失效）
       var hasKl = b.kline && b.kline.length > 1;
-      var clickAttr = hasKl ? ' onclick="openBoardKline(\'' + esc(b.name) + '\',' + JSON.stringify(b.kline) + ')"' : '';
+      if (hasKl) window._TB_KL[b.name] = b.kline;
+      var clickAttr = hasKl ? ' onclick="openBoardKlineByName(\'' + esc(b.name) + '\')"' : '';
       var cursorStyle = hasKl ? ' style="cursor:pointer;"' : '';
       html += '<div class="db-tb-cell"' + cursorStyle + clickAttr + '><div class="db-tb-rank"><b>' + (i + 1) + '</b>' +
         '<span class="db-tb-nm">' + esc(b.name) + '</span></div>' + p3cell +
         '<div class="db-tb-today">今日 <b class="' + (up1 ? 'up' : 'down') + '">' + (up1 ? '+' : '') + b.pctToday.toFixed(2) + '%</b></div>' +
-        (hasKl ? '<div class="db-tb-today" style="color:var(--accent-deep);">点击查看K线</div>' : '') +
         '</div>';
     });
     html += '</div></div>';
@@ -1610,6 +1612,10 @@ function openStkModal(code, name, note) {
 }
 function stkClose() { document.getElementById('stk-modal').classList.remove('open'); }
 // R98b：板块 TOP10 点击看K线（数据已预加载在后端，无需再fetch）
+// R98e：K线从 _TB_KL 注册表按板块名取（onclick 内联 JSON 双引号会截断 HTML 属性，已废弃）
+function openBoardKlineByName(name) {
+  openBoardKline(name, (window._TB_KL || {})[name]);
+}
 function openBoardKline(name, kline) {
   if (!kline || kline.length < 2) return;
   document.getElementById('stk-modal-head').innerHTML =
