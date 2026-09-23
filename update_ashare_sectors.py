@@ -3,18 +3,19 @@
 """
 A股板块/指数/涨跌家数抓取（零 MCP 依赖，全部 HTTP 直连）：
   - 指数+成交额：腾讯 gtimg（sh000001/sz399001/sz399006/sh000688/sh000016，另取 sz399106 算两市成交额）
-  - 涨跌家数：东财 push2ex getTopicZDFenBu（注意：该接口为「涨停板专题」口径，剔除全部 ST 股）
-    + 风险警示板(b:BK0511)补充 ST 股涨跌平家数 → 与主流行情 App 的全市场口径一致（实测逐家吻合）；
-    涨跌停数：getTopicZTPool（真实涨停池）/ 全市场快照收盘封板计算（跌停，含 ST）
+  - 涨跌家数：R97g 起主源=同花顺行业一览表（q.10jqka.com.cn/thshy，行业 up/down 家数求和，含 ST 口径）；
+    涨停数=同花顺涨停池 total；跌停数=同花顺无公开源，沿用上一轮（东财 push2delay 快照作兜底）。
+    兜底：同花顺不可达时回退东财 push2ex getTopicZDFenBu + 风险警示板(b:BK0511) 补充 ST。
   - 行业板块涨跌 TOP5/BOTTOM5 + 全景：R97f 起主源=同花顺行业一览表（q.10jqka.com.cn/thshy，数字准+字段全：涨跌幅/净流入/涨跌家数/领涨股），
     备源=东财 push2delay clist（fs=m:90+t:2 行业板块，注意 + 必须写成 %2B）/ 新浪行业，全失败保留上一轮(R91m)；
     sectorSource 字段记录实际命中源（ths/em/prev）供前端标注口径。断板池/个股 hybk 仍用申万，不在本脚本改动范围。
-  - 主力资金流入/流出 TOP3：同接口按 f62 排序（f62 单位=元，换算亿元）
+  - 主力资金流入/流出 TOP3：R97g 起主源=同花顺行业资金流页（data.10jqka.com.cn/funds/hyzjl，净额(亿)排序）；
+    兜底：同花顺不可达时回退东财 push2 clist 按 f62 排序（f62 单位=元，换算亿元）。
 写入 data.js 的 ashare 字段：tradeDate/status/indices/breadth/sectorsUp/sectorsDown/fundIn/fundOut。
 不触碰 summary/outlook/bullNews/bearNews/fundNote（由自动化 AI 步骤撰写/保留）。
-失败策略：单个数据源失败保留原值（并在 updatedAt 诚实注明保留项）；全部东财数据源
-  （涨跌家数/行业板块/主力资金/连板梯队）失败时以退出码 1 退出且不写 data.js（防旧数据
-  伪装当日收盘），并输出 [EM_FAIL] 标记行供自动化 AI 走 WebFetch 云端兜底回填（R91n）。
+失败策略：单个数据源失败保留原值（并在 updatedAt 诚实注明保留项）；全部主源(同花顺)+兜底(东财)
+  数据源（涨跌家数/行业板块/主力资金/连板梯队）均失败时以退出码 1 退出且不写 data.js（防旧数据
+  伪装当日收盘），并输出 [EM_FAIL] 标记行供自动化 AI 走 WebFetch 云端兜底回填（R91n/R97g）。
 """
 import json, re, subprocess, os, sys, time, argparse
 from datetime import datetime, timezone, timedelta
@@ -582,11 +583,12 @@ def _ths_to_item(x):
         it["downCount"] = x["down"]
     return it
 
-def build_sectors_unified(prev_up, prev_down, prev_all):
+def build_sectors_unified(prev_up, prev_down, prev_all, ths_list=None):
     """行业板块统一构建：同花顺(主)→东财push2delay(备)→新浪(备)→保留上一轮(R91m)。
-    返回 (sectorsUp, sectorsDown, allBoards, source)；source∈{ths,em,prev}。"""
+    返回 (sectorsUp, sectorsDown, allBoards, source)；source∈{ths,em,prev}。
+    ths_list: 可选预取的同花顺行业列表（避免重复请求）。"""
     # 1) 同花顺主源
-    ths = fetch_ths_industries()
+    ths = ths_list if ths_list is not None else fetch_ths_industries()
     if len(ths) >= 10:
         ranked = sorted(ths, key=lambda x: -x["pct"])
         ups = [_ths_to_item(x) for x in ranked[:5]]
@@ -618,6 +620,153 @@ def build_sectors_unified(prev_up, prev_down, prev_all):
     # 4) 保留上一轮（R91m）
     print("[warn] 行业板块全部源失败，保留上一轮数据")
     return (prev_up or []), (prev_down or []), (prev_all or []), "prev"
+
+# ---------- R97g: 同花顺涨停池/连板/资金流（替代东财，除断板池 topBoards 外全换同花顺） ----------
+THS_DATACENTER_REFERER = "https://data.10jqka.com.cn/datacenterph/limitup/limtupInfo.html"
+THS_LIMITUP_API = "https://data.10jqka.com.cn/dataapi/limit_up/limit_up_pool"
+THS_FUND_URL = "https://data.10jqka.com.cn/funds/hyzjl/"
+THS_FUND_REFERER = "https://data.10jqka.com.cn/"
+
+def curl_ths_json(url, timeout=20):
+    r = subprocess.run(["curl", "-s", "--max-time", str(timeout),
+                       "-H", "User-Agent: " + UA,
+                       "-H", "Referer: " + THS_DATACENTER_REFERER, url],
+                      capture_output=True, timeout=timeout + 10)
+    try:
+        return json.loads((r.stdout or b"").decode("utf-8", errors="replace"))
+    except Exception:
+        return None
+
+def curl_ths_html(url, referer, timeout=20):
+    r = subprocess.run(["curl", "-s", "--max-time", str(timeout),
+                       "-H", "User-Agent: " + UA,
+                       "-H", "Referer: " + referer, url],
+                      capture_output=True, timeout=timeout + 10)
+    raw = r.stdout or b""
+    try:
+        return raw.decode("gbk", errors="replace")
+    except Exception:
+        return raw.decode("utf-8", errors="replace")
+
+def _ths_lbc_of(item):
+    """从 high_days_value 解连板板数：高 16 位=涨停板数（65537=首板,196611=3天3板,458761=9天7板）。"""
+    v = item.get("high_days_value") or 0
+    try:
+        lbc = (int(v) >> 16) & 0xFFFF
+    except Exception:
+        lbc = 0
+    if lbc <= 0:  # 兜底：从 high_days 文本解析
+        s = str(item.get("high_days") or "")
+        m = re.search(r"(\d+)\s*连板", s)
+        if m:
+            lbc = int(m.group(1))
+        elif "首板" in s:
+            lbc = 1
+        else:
+            lbc = 1
+    return lbc
+
+def fetch_ths_limit_up(date=None):
+    """同花顺涨停池 JSON。返回 (items, total)；失败返回 (None, None)。
+    items: [{code,name,pct,lbc,reason,high_days,open_num,limit_up_type,hybk}]。"""
+    if date is None:
+        date = datetime.now(TZ8).strftime("%Y%m%d")
+    d = curl_ths_json(f"{THS_LIMITUP_API}?page=1&limit=200&field=199112,10,9001,330323,330324,330325,9002,330329,133971"
+                      f"&filter=HS,GEM2STAR&order_field=330324&order_type=0&date={date}")
+    if not d or d.get("status_code") not in (0, None) or not (d.get("data") or {}).get("info"):
+        return None, None
+    info = d["data"]["info"]
+    total = ((d.get("data") or {}).get("page") or {}).get("total", len(info))
+    out = []
+    for it in info:
+        code = str(it.get("code") or "")
+        if not code:
+            continue
+        pct = it.get("change_rate")
+        try:
+            pct = float(pct) if pct not in (None, "") else 0
+        except Exception:
+            pct = 0
+        out.append({
+            "code": code,
+            "name": str(it.get("name") or ""),
+            "pct": pct,
+            "lbc": _ths_lbc_of(it),
+            "reason": str(it.get("reason_type") or "").strip(),
+            "high_days": str(it.get("high_days") or ""),
+            "open_num": it.get("open_num"),
+            "limit_up_type": str(it.get("limit_up_type") or ""),
+            "hybk": None,
+        })
+    return out, total
+
+def fetch_ths_lianban(date=None):
+    """连板梯队：同花顺涨停池中 lbc>=2 的标的，按 lbc 降序、pct 降序。失败返回 None。"""
+    items, _ = fetch_ths_limit_up(date)
+    if items is None:
+        return None
+    lb = [x for x in items if (x.get("lbc") or 1) >= 2]
+    lb.sort(key=lambda x: (-(x["lbc"] or 1), -fpct_of(x)))
+    return lb
+
+def fetch_ths_funds():
+    """同花顺行业资金流（hyzjl，GBK 服务端渲染）。返回 (fundIn, fundOut) 各 TOP3 [{name,value}]；失败 (None,None)。
+    列序：序号(0)/行业(1)/行业指数(2)/涨跌幅(3)/流入(4)/流出(5)/净额(6)/公司家数(7)/领涨股(8)/领涨股涨跌幅(9)/当前价(10)；
+    净额(亿)=列6=主力净流入。"""
+    html = curl_ths_html(THS_FUND_URL, THS_FUND_REFERER)
+    if not html:
+        return None, None
+    rows = re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S)
+    data = []
+    for row in rows:
+        cells = [re.sub(r"<[^>]+>", "", c).strip() for c in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)]
+        if len(cells) < 7:
+            continue
+        name = cells[1]
+        if not name or not re.search(r"[\u4e00-\u9fa5]", name):
+            continue
+        def _f(s):
+            s = s.replace("%", "").replace("亿", "").replace(",", "").strip()
+            try:
+                return float(s)
+            except Exception:
+                return None
+        net = _f(cells[6])
+        if net is None:
+            continue
+        pct = _f(cells[3])
+        data.append({"name": name, "value": round(net, 2), "pct": pct})
+    if len(data) < 5:
+        return None, None
+    data.sort(key=lambda x: -x["value"])
+    ins = data[:3]
+    data.sort(key=lambda x: x["value"])
+    outs = data[:3]
+    return ins, outs
+
+def build_breadth_ths(ths_list=None, prev_breadth=None):
+    """同花顺口径涨跌家数：行业页 up/down 家数求和（含 ST，与东财剔除 ST 口径不同）。
+    涨停数=同花顺涨停池 total；跌停数=同花顺无源，沿用上一轮（prev）。flat 同花顺不提供→沿用上一轮。
+    返回 dict 或 None。"""
+    if ths_list is None:
+        ths_list = fetch_ths_industries()
+    if not ths_list or len(ths_list) < 10:
+        return None
+    up = sum(x["up"] for x in ths_list if isinstance(x.get("up"), int))
+    down = sum(x["down"] for x in ths_list if isinstance(x.get("down"), int))
+    if up <= 0 and down <= 0:
+        return None
+    lu_items, lu_total = fetch_ths_limit_up()
+    b = {"up": up, "down": down}
+    if lu_items is not None and lu_total is not None:
+        b["limitUp"] = lu_total
+    ld = (prev_breadth or {}).get("limitDown")
+    if ld is not None:
+        b["limitDown"] = ld
+    pf = (prev_breadth or {}).get("flat")
+    if isinstance(pf, int):
+        b["flat"] = pf
+    return b
 
 def build_funds():
     in_rows = fetch_boards("f62", 1)
@@ -682,28 +831,43 @@ def main():
     indices, vol = fetch_indices()
     if indices is None:
         print("[warn] 指数获取失败，保留原值")
-    # 东财源失败清单：updatedAt 诚实标注 + [EM_FAIL] 标记供自动化 AI 走 WebFetch 兜底（R91n）
+    # 失败清单：updatedAt 诚实标注 + [EM_FAIL] 标记供自动化 AI 走 WebFetch 兜底（R91n/R97g）。
+    # R97g 起涨跌家数/连板/主力资金主源=同花顺，东财 push2ex/push2 作兜底；
+    # 仅当同花顺+东财全部失败才记为 failed（保留上一轮）。
     em_failed = []
-    breadth = fetch_breadth(prev_breadth)
+    notes_extra = []
+    # 同花顺行业页只取一次，板块/涨跌家数共用（避免重复请求、限频）
+    ths_ind = fetch_ths_industries()
+    # ---- 涨跌家数：同花顺(行业页 up/down 求和) 主源 → 东财 push2ex 兜底 ----
+    breadth = build_breadth_ths(ths_ind, prev_breadth)
+    if breadth is None:
+        breadth = fetch_breadth(prev_breadth)  # 东财兜底
     if breadth is None:
         em_failed.append("涨跌家数")
-        print("[warn] 涨跌家数获取失败，保留原值")
+        print("[warn] 涨跌家数获取失败（同花顺+东财均失败），保留原值")
+    elif breadth.get("limitDown") is not None:
+        notes_extra.append("跌停数沿用上一轮(同花顺无跌停接口)")
     # R97f 方案A：行业板块统一构建（同花顺主源 → 东财push2delay备 → 新浪备 → 保留上一轮）
     prev_sec_up = (D.get("ashare") or {}).get("sectorsUp")
     prev_sec_down = (D.get("ashare") or {}).get("sectorsDown")
     prev_all = (D.get("ashare") or {}).get("allBoards")
-    sectors_up, sectors_down, all_boards, sector_src = build_sectors_unified(prev_sec_up, prev_sec_down, prev_all)
+    sectors_up, sectors_down, all_boards, sector_src = build_sectors_unified(prev_sec_up, prev_sec_down, prev_all, ths_ind)
     if sector_src == "prev":
         em_failed.append("行业板块")
         print("[warn] 行业板块全部源失败，保留上一轮值")
-    fund_in, fund_out = build_funds()
+    # ---- 主力资金：同花顺行业资金流(hyzjl) 主源 → 东财 push2 f62 兜底 ----
+    fund_in, fund_out = fetch_ths_funds()
+    if fund_in is None:
+        fund_in, fund_out = build_funds()  # 东财兜底
     if fund_in is None:
         em_failed.append("主力资金")
         print("[warn] 主力资金获取失败，保留原值")
 
-    # 连板梯队（东财涨停池，含连板数 lbc + 涨停原因 reason；数据驱动，不依赖 AI）
+    # 连板梯队：同花顺涨停池(主) → 东财涨停池(兜底)，含连板数 lbc + 题材 reason_type
     today_str = datetime.now(TZ8).strftime("%Y%m%d")
-    lianban = fetch_zt_ladder(today_str)
+    lianban = fetch_ths_lianban(today_str)
+    if lianban is None:
+        lianban = fetch_zt_ladder(today_str)  # 东财兜底
     if lianban is None:
         em_failed.append("连板梯队")
         print("[warn] 连板梯队获取失败，保留原值")
@@ -837,6 +1001,8 @@ def main():
                 # 诚实标注：失败项沿用上一轮数据，页面读者/自动化 AI 可识别哪些字段是旧的
                 note = (f"（A股收盘已自动更新：{'/'.join(updated_parts)}；"
                         f"{'/'.join(em_failed)}数据源失败，保留上一轮数据）")
+            if notes_extra:
+                note += "；" + "/".join(notes_extra)
             D["updatedAt"] = datetime.now(TZ8).strftime('%Y-%m-%d %H:%M') + note
         out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, indent=2) + ";\n"
         open("data.js", "w", encoding="utf-8").write(out)
