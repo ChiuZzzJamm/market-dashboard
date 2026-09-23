@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609240211"></script>
+<script src="data.js?v=202609240223"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1462,6 +1462,15 @@ function stkEmbeddedKline(code) {
   }
   return null;
 }
+// R98c: 全局内嵌 K 线（embed_klines.py 写入 data.js 顶层 stkKlines，覆盖要闻股/题材掘金/AI预测/板块领涨/连板天梯）
+function stkGlobalKline(code) {
+  var KL = (window.DASHBOARD_DATA || {}).stkKlines;
+  if (!KL) return null;
+  var c = String(code || '').trim();
+  if (/^\d{6}$/.test(c)) return KL[c] || null;
+  var m = c.match(/(?:sh|sz)?(\d{6})/i);
+  return (m && KL[m[1]]) || null;
+}
 function stkParseKline(rows) {
   if (!rows || !rows.length) return null;
   var out = [];
@@ -1480,6 +1489,8 @@ function stkFetchKline(code, cb) {
   if (STK_KLINE_CACHE[sym]) return cb(STK_KLINE_CACHE[sym]);
   var emb = stkEmbeddedKline(String(code).trim());
   if (emb) { STK_KLINE_CACHE[sym] = emb; return cb(emb); }
+  var gkl = stkGlobalKline(String(code).trim());
+  if (gkl) { STK_KLINE_CACHE[sym] = gkl; return cb(gkl); }
   fetch('https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=' + encodeURIComponent(sym) + ',day,,,60,qfq&_r=' + Date.now())
     .then(function (r) { return r.json(); })
     .then(function (j) {
@@ -1574,6 +1585,16 @@ function openStkModal(code, name, note) {
   }
   if (code) { stkFetchKline(code, render); return; }
   if (name) {
+    // R98c: 名称 → 代码映射已由 embed_klines.py 内嵌（板块领涨TOP 等无 code 标的），命中则免 smartbox 反查
+    var mapped = ((window.DASHBOARD_DATA || {}).stkKlineNames || {})[name];
+    if (mapped) {
+      var hd0 = document.getElementById('stk-modal-head');
+      var cd0 = hd0.querySelector('.cd2');
+      if (!cd0) { cd0 = document.createElement('span'); cd0.className = 'cd2'; hd0.insertBefore(cd0, hd0.querySelector('.db-modal-close')); }
+      cd0.textContent = mapped;
+      stkFetchKline(mapped, render);
+      return;
+    }
     stkResolveByName(name, function (fullCode, nm) {
       if (done) return;
       if (!fullCode) { render(null, '未找到该标的的证券代码，无法获取K线'); return; }
