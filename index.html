@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609231336"></script>
+<script src="data.js?v=202609231345"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -255,6 +255,19 @@
   .pano-cell { display: flex; justify-content: space-between; align-items: center; background: var(--accent-soft); border-radius: 12px; padding: 9px 14px; }
   .pano-cell .nm { font-size: 13.5px; font-weight: 600; }
   .pano-cell .nm .ref { display: block; font-size: 11px; color: var(--ink2); font-weight: 400; }
+  .pano-cell .nm .subtag { display: inline-block; font-size: 11px; font-weight: 600; color: var(--accent-deep); background: var(--paper); border: 1px solid var(--accent); border-radius: 999px; padding: 0 7px; margin-left: 6px; vertical-align: 1px; cursor: pointer; line-height: 16px; transition: all .15s ease; }
+  .pano-cell .nm .subtag:hover { background: var(--accent); color: #fff; }
+  #ps-modal { display: none; position: fixed; inset: 0; z-index: 210; background: rgba(30,45,60,.45); align-items: center; justify-content: center; padding: 20px; }
+  #ps-modal.open { display: flex; }
+  .ps-modal-box { background: var(--paper); border-radius: var(--radius); padding: 16px 20px; max-width: 420px; width: 100%; max-height: 80vh; overflow: auto; box-shadow: 0 20px 60px rgba(17,17,26,.25); }
+  .ps-modal-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 10px; padding-bottom: 9px; border-bottom: 1px dashed var(--line); }
+  .ps-modal-head .nm { font-size: 16px; font-weight: 900; }
+  .ps-modal-head .cnt { font-size: 12px; color: var(--ink2); }
+  .ps-modal-head .db-modal-close { margin-left: auto; }
+  .ps-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; border-radius: 9px; font-size: 13px; }
+  .ps-row:nth-child(odd) { background: var(--accent-soft); }
+  .ps-row .nm { font-weight: 600; }
+  .ps-row .pc { font-weight: 800; font-variant-numeric: tabular-nums; }
   .pano-cell .pc { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .pano-date { font-size: 12.5px; color: var(--ink2); margin-bottom: 10px; }
   .pano-more { grid-column: 1 / -1; text-align: center; padding-top: 6px; }
@@ -430,6 +443,13 @@
     <div class="lb-modal-head" id="lb-modal-head"></div>
     <div class="lb-modal-meta" id="lb-modal-meta"></div>
     <div class="lb-story" id="lb-modal-body"></div>
+  </div>
+</div>
+
+<div id="ps-modal" onclick="if(event.target===this)psClose()">
+  <div class="ps-modal-box">
+    <div class="ps-modal-head" id="ps-modal-head"></div>
+    <div id="ps-modal-body"></div>
   </div>
 </div>
 
@@ -655,8 +675,9 @@ function mergePanoItems(items) {
   (items || []).forEach(function (it) {
     var key = normPanoName(it && it.name);
     if (!key) return;
-    if (!merged[key]) { merged[key] = { name: key, pct: null, subs: 0 }; order.push(key); }
+    if (!merged[key]) { merged[key] = { name: key, pct: null, subs: 0, subsList: [] }; order.push(key); }
     merged[key].subs++;
+    if (it && it.name) merged[key].subsList.push({ name: String(it.name), pct: (typeof it.pct === 'number') ? it.pct : null });
     if (merged[key].pct === null && typeof it.pct === 'number') merged[key].pct = it.pct;
   });
   return order.map(function (k) { return merged[k]; });
@@ -710,12 +731,15 @@ function renderPano() {
     return pb - pa;
   });
   // R92：A股细分板块聚合为父级口径（美股/韩股/日经条目本身粗粒度，不处理）
-  if (cur.key === 'ashare') panoItems = mergePanoItems(panoItems);
+  if (cur.key === 'ashare') { panoItems = mergePanoItems(panoItems); window._panoMerged = panoItems; }
   var shown = panoExpanded ? panoItems : panoItems.slice(0, PANO_SHOW_MAX);
   shown.forEach(function (it) {
     var c = cls(it.pct);
-    html += '<div class="pano-cell"><div class="nm">' + esc(it.name) +
-      (it.subs > 1 ? '<span class="ref">含' + it.subs + '个细分</span>' : '') +
+    // 含N个细分：内联小标签紧跟板块名，点击弹出细分板块涨幅明细
+    var subTag = (it.subs > 1)
+      ? '<span class="subtag" onclick="showPanoSubs(\'' + escAttr(it.name) + '\')" title="点击查看细分板块涨幅">含' + it.subs + '个细分 ▾</span>'
+      : '';
+    html += '<div class="pano-cell"><div class="nm">' + esc(it.name) + subTag +
       (it.ref ? '<span class="ref">' + esc(it.ref) + '</span>' : '') + '</div>' +
       '<div class="pc ' + c + '">' + fmtPct(it.pct) + '</div></div>';
   });
@@ -729,6 +753,28 @@ function renderPano() {
   document.getElementById('pano-grid').innerHTML = html;
 }
 function switchPano(key) { panoCurrent = key; panoExpanded = false; renderPano(); }
+
+/* 行业全景：细分板块涨幅明细弹窗（R92） */
+function showPanoSubs(name) {
+  var list = null;
+  ((window._panoMerged) || []).forEach(function (it) { if (it.name === name && it.subsList) list = it.subsList; });
+  if (!list || !list.length) return;
+  var sorted = list.slice().sort(function (a, b) {
+    var pa = (typeof a.pct === 'number') ? a.pct : -Infinity;
+    var pb = (typeof b.pct === 'number') ? b.pct : -Infinity;
+    return pb - pa;
+  });
+  var rows = sorted.map(function (s) {
+    var c = cls(s.pct);
+    return '<div class="ps-row"><span class="nm">' + esc(s.name) + '</span><span class="pc ' + c + '">' + fmtPct(s.pct) + '</span></div>';
+  }).join('');
+  document.getElementById('ps-modal-head').innerHTML = '<span class="nm">' + esc(name) + '</span>' +
+    '<span class="cnt">含 ' + list.length + ' 个细分板块</span>' +
+    '<button class="db-modal-close" onclick="psClose()">×</button>';
+  document.getElementById('ps-modal-body').innerHTML = rows;
+  document.getElementById('ps-modal').classList.add('open');
+}
+function psClose() { document.getElementById('ps-modal').classList.remove('open'); }
 
 /* AI 预测分析 */
 function renderAiPrediction() {
@@ -1173,7 +1219,7 @@ function dbStep(delta) {
   openDbModal(DB_ORDER[i]);
 }
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape') { closeDbModal(); lbClose(); }
+  if (e.key === 'Escape') { closeDbModal(); lbClose(); psClose(); }
   if (!DB_CURR) return;
   if (e.key === 'ArrowLeft') dbStep(-1);
   if (e.key === 'ArrowRight') dbStep(1);
