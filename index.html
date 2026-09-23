@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609240057"></script>
+<script src="data.js?v=202609240135"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1202,21 +1202,22 @@ function renderDuanban() {
   DB_INDEX = {}; DB_ORDER = [];
   var db = duanbanData();
   document.getElementById('db-date').textContent = db && db.generatedAt ? '数据生成：' + db.generatedAt + '（每日 16:00 收盘后更新 · 次日 07:30 隔夜复核）' : '数据生成：—（待 16:00 自动化首跑）';
-  document.getElementById('db-note').textContent = (db && db.note) || '断板反包形态由脚本确定性核验（东财涨停池 + 腾讯日K，check_duanban.py）。每只标的按当日要闻/AI预测自动标注口径：利好（红）/利空（绿）/中性（灰）；口径与上涨概率由自动化 AI 复核校准（16:00 收盘后生成，次日 07:30 结合隔夜美股与全球要闻复核）。';
+  document.getElementById('db-note').textContent = (db && db.note) || '断板反包形态由脚本确定性核验（涨停池 + 腾讯日K，check_duanban.py）；板块涨幅与 TOP10 榜采用同花顺行业口径（R98）。每只标的按当日要闻/AI预测自动标注口径：利好（红）/利空（绿）/中性（灰）；口径与上涨概率由自动化 AI 复核校准（16:00 收盘后生成，次日 07:30 结合隔夜美股与全球要闻复核）。';
   var conf = (db && db.confirmed) || [], watch = (db && db.watching) || [];
   var badge = document.getElementById('db-badge');
   badge.textContent = (conf.length + watch.length) ? ('确认 ' + conf.length + ' · 观察 ' + watch.length) : '';
   var html = '';
-  // R91j: 近3个交易日涨幅居前板块 TOP10（确认池上方）
+  // R98: 近3个交易日涨幅居前板块 TOP10（确认池上方）——同花顺行业口径
   var tb = (db && db.topBoards) || [];
   if (tb.length) {
+    var hasPct3 = tb[0] && tb[0].pct3 != null;
     html += '<div class="db-pool" style="padding-bottom:14px;"><h2>📈 近3个交易日涨幅居前板块 TOP10</h2>' +
-      '<div class="db-sub">申万行业口径（与断板个股板块同源） · 3个交易日累计涨幅 · 今日=当日涨幅（每日 16:00 随断板反包更新）</div><div class="db-tb">';
+      '<div class="db-sub">同花顺行业口径 · ' + (hasPct3 ? '3个交易日累计涨幅 · ' : '') + '今日=当日涨幅（每日 16:00 随断板反包更新）</div><div class="db-tb">';
     tb.forEach(function (b, i) {
-      var up3 = b.pct3 >= 0, up1 = b.pctToday >= 0;
+      var up3 = b.pct3 != null ? b.pct3 >= 0 : null, up1 = b.pctToday >= 0;
+      var p3cell = b.pct3 != null ? '<div class="db-tb-p3 ' + (up3 ? 'up' : 'down') + '">' + (up3 ? '+' : '') + b.pct3.toFixed(2) + '%</div>' : '';
       html += '<div class="db-tb-cell"><div class="db-tb-rank"><b>' + (i + 1) + '</b>' +
-        '<span class="db-tb-nm">' + esc(b.name) + '</span></div>' +
-        '<div class="db-tb-p3 ' + (up3 ? 'up' : 'down') + '">' + (up3 ? '+' : '') + b.pct3.toFixed(2) + '%</div>' +
+        '<span class="db-tb-nm">' + esc(b.name) + '</span></div>' + p3cell +
         '<div class="db-tb-today">今日 <b class="' + (up1 ? 'up' : 'down') + '">' + (up1 ? '+' : '') + b.pctToday.toFixed(2) + '%</b></div></div>';
     });
     html += '</div></div>';
@@ -1302,7 +1303,7 @@ function openDbModal(key) {
   }
   document.getElementById('db-refs').innerHTML =
     refsHtml +
-    '<br>形态核验：check_duanban.py 确定性脚本（东财涨停池 + 腾讯日K）；观察池标的待最后一根确认K线，确认失败即移出。';
+    '<br>形态核验：check_duanban.py 确定性脚本（涨停池 + 腾讯日K）；板块涨幅与 TOP10 榜采用同花顺行业口径（R98）。观察池标的待最后一根确认K线，确认失败即移出。';
   document.getElementById('db-modal').classList.add('open');
 }
 function closeDbModal() { DB_CURR = null; document.getElementById('db-modal').classList.remove('open'); }

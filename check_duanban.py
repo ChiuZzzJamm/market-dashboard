@@ -8,20 +8,22 @@
   → 收盘不破 T 日低点、不破 5 日线（MA5，容差 1%）
 
 数据源（零 MCP，纯 HTTP）：
-  - 东财 push2ex getTopicZTPool 涨停池（含 hybk 行业板块字段，date=YYYYMMDD 无横线）
+  - 涨停池：东财 push2ex getTopicZTPool（含 hybk 申万行业字段，date=YYYYMMDD 无横线）
   - K 线：腾讯 ifzq fqkline 为主源（web.ifzq.gtimg.cn，独立域名、限频少），
     新浪 CN_MarketData.getKLineData 为备用源（限频时兜底），均 scale=240 日线
+  - 板块数据（R98）：同花顺 thshy 行业页面（50个大类行业）+ v4/line 历史K线；
+    申万→同花顺行业映射失败时回退东财/申万口径
 
 用法：
   python3 check_duanban.py                    # 核验最近 5 个交易日，文本输出
   python3 check_duanban.py --days 5 --limit 80 --json
 
 输出：
-  按东财行业板块(hybk)分组的达标候选；每只含 code/name/hybk/ztDate/form。
+  按行业板块分组的达标候选；每只含 code/name/sector/ztDate/form。
   form 示例: "9/15涨停→次2.1倍量断板→2日缩量·站稳MA5"
   退出码：恒为 0；无达标时输出空列表（调用方如实写「断板反包(替代)」，禁凑数）。
 
---module 模式（断板反包独立模块数据源，R87 新增）：
+--module 模式（断板反包独立模块数据源，R87 新增，R98 板块口径升级）：
   输出 {confirmed(确认池), watching(观察池), excluded} 结构：
   - 确认池：走完「涨停→放量断板→缩量→不破T日低点与MA5」全流程；
   - 观察池：形态进行中、只差最后一根确认K线：
@@ -219,8 +221,159 @@ DELAY = "https://push2delay.eastmoney.com/api/qt/clist/get"
 HIS = "https://push2his.eastmoney.com/api/qt/stock/kline/get"
 EM_UT = "fa5c3db4f1ca16c5b6e3b9a3f3ae3dfa"
 
+# ---------- R98: 同花顺行业板块口径（断板池板块相关数据） ----------
+THS_INDUSTRY_URL = "https://q.10jqka.com.cn/thshy/"
+THS_KLINE_REFERER = "https://stockpage.10jqka.com.cn/"
+
 _board_map_cache = None
 _board_pct_hist_cache = {}
+_THS_BOARD_CACHE = None
+_THS_KLINE_CACHE = {}
+
+
+def curl_ths_text(url, timeout=20):
+    r = subprocess.run(["curl", "-s", "--max-time", str(timeout),
+                       "-H", "User-Agent: " + UA, url],
+                      capture_output=True, timeout=timeout + 10)
+    return (r.stdout or b"")
+
+
+def parse_ths_industries(html):
+    """解析同花顺行业一览表。返回 [{code,name,pct}]；失败/不足返回 []。
+    移植自 update_ashare_sectors.py（R97g）。"""
+    if isinstance(html, (bytes, bytearray)):
+        try:
+            text = html.decode("utf-8")
+        except UnicodeDecodeError:
+            text = html.decode("gbk", errors="replace")
+    else:
+        text = str(html)
+    rows = re.findall(r"<tr[^>]*>(.*?)</tr>", text, re.S)
+    out = []
+    for row in rows:
+        m = re.search(r'thshy/detail/code/(\d+)[^>]*>([^<]+)</a>', row)
+        if not m:
+            continue
+        code, name = m.group(1), m.group(2).strip()
+        if not name:
+            continue
+        tds = re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)
+        tds = [re.sub(r"<[^>]+>", "", t).strip() for t in tds]
+        ni = None
+        for i, t in enumerate(tds):
+            if t == name:
+                ni = i
+                break
+        if ni is None or ni + 1 >= len(tds):
+            continue
+        def _num(s):
+            s = s.replace("%", "").replace("亿", "").replace("万", "").replace(",", "")
+            try:
+                return float(s)
+            except Exception:
+                return None
+        pct = _num(tds[ni + 1])
+        if pct is None or pct < -15 or pct > 15:
+            continue
+        out.append({"code": code, "name": name, "pct": round(pct, 2)})
+    return out
+
+
+def fetch_ths_industries():
+    raw = curl_ths_text(THS_INDUSTRY_URL, timeout=20)
+    return parse_ths_industries(raw)
+
+
+def fetch_ths_board_map():
+    """同花顺行业板块 {name: {code, pct}}。"""
+    global _THS_BOARD_CACHE
+    if _THS_BOARD_CACHE is not None:
+        return _THS_BOARD_CACHE
+    ths = fetch_ths_industries()
+    _THS_BOARD_CACHE = {b["name"]: b for b in ths}
+    return _THS_BOARD_CACHE
+
+
+def fetch_ths_board_pct_on(ths_code, date_iso):
+    """同花顺行业板块在 date_iso(涨停日) 当日涨幅%。失败返回 None。"""
+    if not ths_code:
+        return None
+    cache_key = f"{ths_code}_{date_iso}"
+    if cache_key in _THS_KLINE_CACHE:
+        return _THS_KLINE_CACHE[cache_key]
+    url = f"https://d.10jqka.com.cn/v4/line/bk_{ths_code}/01/last.js"
+    raw = curl_text(url, timeout=15)
+    if not raw.strip():
+        return None
+    m = re.search(r'\((\{.*\})\)', raw)
+    if not m:
+        return None
+    try:
+        d = json.loads(m.group(1))
+    except Exception:
+        return None
+    data = d.get("data", "")
+    bars = data.split(";")
+    hist = {}
+    prev_close = None
+    for bar in bars:
+        parts = bar.split(",")
+        if len(parts) < 5:
+            continue
+        day = parts[0]
+        try:
+            close = float(parts[4])
+        except Exception:
+            continue
+        if prev_close and prev_close > 0:
+            hist[day] = round((close / prev_close - 1) * 100, 2)
+        prev_close = close
+    _THS_KLINE_CACHE[ths_code] = hist
+    return hist.get(date_iso.replace("-", ""))
+
+
+def match_ths_industry(hybk, ths_names):
+    """申万行业名 → 同花顺行业名（前缀匹配+特殊映射）。失败返回 None。"""
+    if not hybk or not ths_names:
+        return None
+    clean = re.sub(r'[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]$', '', hybk)
+    if clean in ths_names:
+        return clean
+    if hybk in ths_names:
+        return hybk
+    SPECIAL = {
+        "证券Ⅱ": "证券", "装修装饰Ⅱ": "建筑装饰", "其他电子Ⅱ": "其他电子",
+        "军工电子Ⅱ": "军工电子", "商用车": "汽车整车", "休闲食品": "食品加工制造",
+        "旅游及景区": "旅游及酒店", "风电设备": "光伏设备", "电机Ⅱ": "通用设备",
+        "装修建材": "建筑材料", "塑料": "塑料制品", "家居用品": "家居用品",
+        "化学制药": "化学制药", "汽车零部件": "汽车零部件", "化学制品": "化学制品",
+        "通用设备": "通用设备", "医疗服务": "医疗服务", "计算机设备": "计算机设备",
+        "软件开发": "计算机设备", "专用设备": "专用设备", "化学原料": "化学原料",
+        "光伏设备": "光伏设备", "半导体": "半导体", "消费电子": "消费电子",
+        "光学光电子": "光学光电子", "医疗器械": "医疗器械", "电池": "电池",
+        "白酒": "白酒", "小家电": "小家电", "通信设备": "通信设备", "钢铁": "钢铁",
+        "证券": "证券", "汽车整车": "汽车整车", "银行": "银行",
+        "建筑装饰": "建筑装饰", "房地产": "房地产", "元件": "元件",
+        "生物制品": "生物制品", "自动化设备": "自动化设备", "环境治理": "环境治理",
+        "橡胶制品": "橡胶制品", "机场航运": "机场航运", "环保设备": "环保设备",
+        "公路铁路运输": "公路铁路运输", "食品加工制造": "食品加工制造",
+        "小金属": "金属新材料", "工业金属": "金属新材料", "金属新材料": "金属新材料",
+        "轨交设备": "轨交设备", "工程机械": "工程机械",
+        "汽车服务及其他": "汽车服务及其他", "非金属材料": "非金属材料",
+        "厨卫电器": "厨卫电器", "电子化学品": "电子化学品", "其他电子": "其他电子",
+        "其他社会服务": "其他社会服务", "塑料制品": "塑料制品",
+        "其他电源设备": "其他电源设备", "化学纤维": "化学纤维",
+        "白色家电": "白色家电", "建筑材料": "建筑材料", "军工电子": "军工电子",
+        "旅游及酒店": "旅游及酒店", "饮料制造": "饮料制造",
+    }
+    if clean in SPECIAL and SPECIAL[clean] in ths_names:
+        return SPECIAL[clean]
+    if hybk in SPECIAL and SPECIAL[hybk] in ths_names:
+        return SPECIAL[hybk]
+    for name in ths_names:
+        if len(clean) >= 2 and (name.startswith(clean) or clean.startswith(name)):
+            return name
+    return None
 
 
 def fetch_board_map():
@@ -397,103 +550,20 @@ def _industry_of(hybk, agg):
 
 
 def fetch_top_boards(D, top=10, days=3):
-    """近 N 个交易日涨幅居前板块 TOP10（**申万行业口径**，R91m 定稿——与断板反包
-    个股 sector/hybk 同源同层级，全市场个股按 f100 聚合等权平均）。
-    主源：clist 全量个股聚合（自动化环境可达）；备源：东财行业板块 clist f109；
-    末级备源：data.js allBoards + push2his 日K。全部失败返回 []（前端隐藏模块）。"""
-    # ---- 主源：全市场个股按申万行业（f100）聚合 ----
-    agg = _stock_clist_agg()
-    if agg:
-        rows = [{"code": "", "name": k,
-                 "pct3": round(v["pct3"], 2), "pctToday": round(v["pct"], 2)}
-                for k, v in agg.items() if v["n"] >= 5]
-        rows.sort(key=lambda r: r["pct3"], reverse=True)
-        return rows[:top]
-    # ---- 备源：东财行业板块 clist（东财细分口径，仅作降级） ----
-    m = _board_clist_all()
-    if m:
-        rows = [{"code": v["code"], "name": k, "pct3": round(v["pct3"], 2),
-                 "pctToday": round(v["pct"], 2)}
-                for k, v in m.items()]
-        rows.sort(key=lambda r: r["pct3"], reverse=True)
-        return rows[:top]
-    # ---- 末级备源：allBoards + push2his 日K ----
-    boards = ((D.get("ashare") or {}).get("allBoards") or [])
-    if not isinstance(boards, list) or not boards:
-        return []
-    try:
-        os.makedirs(BOARD_KLINE_CACHE, exist_ok=True)
-    except Exception:
-        pass
-    today = _today_str()
-    rows = []
-    his_fail_streak = 0  # R93：push2his 连续失败早退（WAF 封锁时每板块空转重试无意义）
-    for bi, b in enumerate(boards):
-        if not isinstance(b, dict):
-            continue
-        bk = str(b.get("code") or "")
-        name = str(b.get("name") or "").strip()
-        if not bk.startswith("BK") or not name:
-            continue
-        closes = None
-        cp = os.path.join(BOARD_KLINE_CACHE, bk + ".json")
-        if os.path.exists(cp):
-            try:
-                c = json.load(open(cp, encoding="utf-8"))
-                if c.get("lastDay") == today and isinstance(c.get("closes"), list) \
-                        and len(c["closes"]) >= days + 2:
-                    closes = c["closes"]
-            except Exception:
-                pass
-        if closes is None:
-            host = HIS_HOSTS[bi % len(HIS_HOSTS)]  # 轮询镜像，分散限频
-            url = (f"{host}/api/qt/stock/kline/get?secid=90.{bk}&fields1=f1,f2,f3"
-                   f"&fields2=f51,f53&klt=101&fqt=1&beg=0&end=20500101&ut={EM_UT}")
-            j = get_json_curl(url, retries=1, gap=1)
-            kls = (((j or {}).get("data") or {}).get("klines") or []) if j else []
-            closes = []
-            for kl in kls:
-                parts = kl.split(",")
-                if len(parts) >= 2:
-                    try:
-                        closes.append((parts[0], float(parts[1])))
-                    except Exception:
-                        continue
-            if closes:
-                try:
-                    json.dump({"lastDay": closes[-1][0], "closes": closes},
-                              open(cp, "w", encoding="utf-8"))
-                except Exception:
-                    pass
-                his_fail_streak = 0
-            else:
-                his_fail_streak += 1
-                if his_fail_streak >= 3:
-                    print("[warn] push2his 板块K线连续3次失败，判定源不可达，"
-                          "跳过剩余板块（保留既有 topBoards）", file=sys.stderr)
-                    break
-            time.sleep(0.25)  # push2his 限频保护
-        if not closes or len(closes) < days + 1:
-            continue
-        if closes[-1][0] < today:  # K线未含最新交易日（停牌/失败），跳过
-            continue
-        base = closes[-(days + 1)][1]
-        last = closes[-1][1]
-        prev = closes[-2][1]
-        if not base or not prev:
-            continue
-        pct3 = round((last / base - 1) * 100, 2)
-        pct_today = round((last / prev - 1) * 100, 2)
-        rows.append({"code": bk, "name": name, "pct3": pct3, "pctToday": pct_today})
-    rows.sort(key=lambda r: r["pct3"], reverse=True)
-    if rows:
-        return rows[:top]
-    # 终极兜底：东财全量聚合/行业 clist/push2his 均不可达（本地沙箱封锁东财域名）。
-    # 保留 data.js 既有 duanban.topBoards（最近一次成功写入的申万口径 TOP10），
-    # 避免自动化空跑把已部署的板块榜清成空（前端弹窗 TOP10 消失）。R91m 防护。
+    """近 N 个交易日涨幅居前板块 TOP10（**同花顺行业口径**，R98）。
+    主源：THS thshy 行业页面（50个同花顺大类行业，按当日涨幅排序）；
+    备源：保留既有 topBoards（R91m 防护）。全部失败返回 []（前端隐藏模块）。"""
+    # ---- 主源：同花顺行业页面（当日涨幅） ----
+    ths = fetch_ths_industries()
+    if len(ths) >= 10:
+        ths.sort(key=lambda x: -x["pct"])
+        return [{"code": b["code"], "name": b["name"],
+                 "pct3": None, "pctToday": b["pct"]}
+                for b in ths[:top]]
+    # ---- 备源：保留既有 topBoards（R91m 防护） ----
     old = (D.get("duanban") or {}).get("topBoards") if isinstance(D, dict) else None
     if old:
-        print("[warn] 板块榜全源不可达，保留既有 topBoards %d 条" % len(old), file=sys.stderr)
+        print("[warn] THS 板块榜不可达，保留既有 topBoards %d 条" % len(old), file=sys.stderr)
         return old
     return []
 
@@ -853,8 +923,12 @@ def build_module(pairs, D):
     每只附近 60 根日K（前端渲染近 30 根并计算 MA5/10/20/30）与当日涨跌幅；
     sentiment 由 tag_entries 按要闻/AI预测打标；probability 留空由自动化 AI 填写。"""
     entries = []
-    board_map = fetch_board_map()  # 本地不可达时返回 {}，boardPctToday/Zt 为 None
-    ind_agg = _stock_clist_agg()   # 申万行业口径聚合（主源），失败为 None
+    # R98: 同花顺行业口径优先（topBoards/boardPctToday/boardPctZt）
+    ths_map = fetch_ths_board_map()  # {THS行业名: {code,pct}}
+    ths_names = set(ths_map.keys())
+    # 东财/申万兜底（THS 匹配失败时使用）
+    board_map = fetch_board_map()
+    ind_agg = _stock_clist_agg()
     for p in pairs:
         kl = p["kl"][-60:]
         bars = []
@@ -872,17 +946,27 @@ def build_module(pairs, D):
         if len(kl) >= 2 and float(kl[-2].get("close") or 0) > 0:
             pct = round((float(kl[-1].get("close") or 0) - float(kl[-2].get("close") or 0))
                         / float(kl[-2].get("close")) * 100, 2)
-        # boardPctToday 优先申万行业成分股均值（R91m，与 TOP10 同口径）；
-        # 聚合不可达时降级为东财板块 f3（resolve_board 名称匹配）
-        ind_name = _industry_of(p["hybk"], ind_agg)
-        if ind_name:
-            bpt = round(ind_agg[ind_name]["pct"], 2)
-            bk_code = None
+        # R98: 优先同花顺行业口径
+        ths_name = match_ths_industry(p["hybk"], ths_names)
+        if ths_name:
+            bpt = round(ths_map[ths_name]["pct"], 2)
+            ths_code = ths_map[ths_name]["code"]
+            bpz = fetch_ths_board_pct_on(ths_code, p["ztDate"])
+            sector = ths_name
+            bk_code = ths_code
         else:
-            bk_code, bpt = resolve_board(p["hybk"], board_map)
-        bpz = fetch_board_pct_on(bk_code, p["ztDate"]) if bk_code else None
+            # 回退东财/申万口径（R91m 兜底）
+            ind_name = _industry_of(p["hybk"], ind_agg)
+            if ind_name:
+                bpt = round(ind_agg[ind_name]["pct"], 2)
+                bk_code = None
+                bpz = None
+            else:
+                bk_code, bpt = resolve_board(p["hybk"], board_map)
+                bpz = fetch_board_pct_on(bk_code, p["ztDate"]) if bk_code else None
+            sector = p["hybk"] or "其他"
         entries.append({"code": p["code"], "name": p["name"],
-                        "sector": p["hybk"] or "其他", "ztDate": p["ztDate"],
+                        "sector": sector, "ztDate": p["ztDate"],
                         "stage": p["stage_info"]["stage"], "form": p["stage_info"]["form"],
                         "pct": pct, "boardPctToday": bpt, "boardPctZt": bpz, "bkCode": bk_code,
                         "probability": None, "probNote": "",
