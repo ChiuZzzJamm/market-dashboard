@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609240432"></script>
+<script src="data.js?v=202609240435"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -319,7 +319,7 @@
     box-shadow: none;
     cursor: grab; z-index: 1200; touch-action: none; user-select: none;
     display: flex; align-items: center; justify-content: center;
-    font-size: 30px; line-height: 1;
+    font-size: 42px; line-height: 1;
     transition: transform .15s ease;
   }
   .db-entry-in { cursor: pointer; }
@@ -329,21 +329,16 @@
   body.db-open .db-entry { display: none; }
   .db-entry-in { display: none; }
   body.db-open .db-entry-in { display: flex; }
-  @media (max-width: 700px) { .db-entry, .db-entry-in { width: 42px; height: 42px; right: 14px; bottom: 92px; font-size: 26px; } }
+  @media (max-width: 700px) { .db-entry, .db-entry-in { width: 42px; height: 42px; right: 14px; bottom: 92px; font-size: 36px; } }
 
   /* 独立页面：打开时隐藏看板主体，只显示本模块 */
   #duanban-view { display: none; }
   body.db-open .wrap > *:not(#duanban-view) { display: none !important; }
   body.db-open #duanban-view { display: block; }
-  .db-topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
-  .db-back {
-    background: var(--paper); color: var(--accent-deep); border: 1px solid var(--accent);
-    border-radius: 999px; font-size: 13px; font-weight: 700; padding: 7px 18px;
-    cursor: pointer; box-shadow: var(--shadow); font-family: var(--font); transition: all .2s ease;
-  }
-  .db-back:hover { background: var(--accent); color: #fff; }
+  .db-topbar { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; position: relative; }
   .db-title { font-size: 22px; font-weight: 900; letter-spacing: 2px; }
-  .db-date { font-size: 12px; color: var(--ink2); margin-left: auto; }
+  .db-date { font-size: 12px; color: var(--ink2); position: absolute; right: 0; }
+  @media (max-width: 700px) { .db-date { position: static; width: 100%; text-align: center; } }
   .db-note { font-size: 12px; color: var(--ink2); background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 10px 16px; margin-bottom: 18px; line-height: 1.7; box-shadow: var(--shadow); }
   .db-pool { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
   .db-pool h2 { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 9px; margin: 0 0 4px; }
@@ -462,7 +457,6 @@
 
   <div id="duanban-view">
     <div class="db-topbar">
-      <button class="db-back" onclick="closeDuanban()">← 返回看板</button>
       <div class="db-title">断板反包</div>
       <div class="db-date" id="db-date"></div>
     </div>
