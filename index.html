@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609232152"></script>
+<script src="data.js?v=202609232202"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -443,6 +443,8 @@
 </div>
 
 <div id="lb-modal" onclick="if(event.target===this)lbClose()">
+  <button class="db-nav db-prev" onclick="lbStep(-1)" title="上一个连板标的（←）">←</button>
+  <button class="db-nav db-next" onclick="lbStep(1)" title="下一个连板标的（→）">→</button>
   <div class="lb-modal-box">
     <div class="lb-modal-head" id="lb-modal-head"></div>
     <div class="lb-modal-meta" id="lb-modal-meta"></div>
@@ -458,8 +460,10 @@
   </div>
 </div>
 
-<!-- 通用标的K线弹窗：页面所有成分股/标的点击均可查看日K，点击K线柱看当日涨幅 -->
+<!-- 通用标的K线弹窗：页面所有成分股/标的点击均可查看日K，点击K线柱看当日涨幅；左右箭头仅在同一内容分组内切换（R94b） -->
 <div id="stk-modal" onclick="if(event.target===this)stkClose()">
+  <button class="db-nav db-prev" id="stk-prev" onclick="stkStep(-1)" title="同组上一个标的（←）" style="display:none">←</button>
+  <button class="db-nav db-next" id="stk-next" onclick="stkStep(1)" title="同组下一个标的（→）" style="display:none">→</button>
   <div class="stk-modal-box">
     <div class="db-modal-head" id="stk-modal-head"></div>
     <div class="db-modal-meta" id="stk-modal-meta"></div>
@@ -1009,9 +1013,17 @@ function lbStoryHtml(st) {
     return '<p>' + esc(t) + '</p>';
   }).join('');
 }
+var LB_CUR = 0;
+function lbStep(delta) {
+  if (!LB_LIST || LB_LIST.length < 2) return;
+  LB_CUR = (LB_CUR + delta + LB_LIST.length) % LB_LIST.length;
+  lbShow(LB_CUR);
+}
 function lbShow(idx) {
   var st = LB_LIST[idx];
   if (!st) return;
+  LB_CUR = idx;
+  var lbNav = LB_LIST.length > 1;
   var pct = (typeof st.pct === 'number') ? fmtPct(st.pct) : '—';
   var fundStr = '';
   if (st.fund !== null && st.fund !== undefined && st.fund !== '') {
@@ -1020,6 +1032,7 @@ function lbShow(idx) {
   }
   var head = '<span class="nm">' + esc(st.name || '') + '</span>' +
     '<span class="cd2">' + esc(st.code || '') + '</span>' +
+    (lbNav ? '<span class="cd2">' + (idx + 1) + '/' + LB_LIST.length + '</span>' : '') +
     '<span class="lb-lbc">' + esc((st.lbc || 1) + ' 连板') + '</span>' +
     '<span class="rt" style="font-size:15px;">' + pct + '</span>' +
     '<button class="db-modal-close" onclick="lbClose()">×</button>';
@@ -1239,7 +1252,13 @@ function dbStep(delta) {
   openDbModal(DB_ORDER[i]);
 }
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape') { closeDbModal(); lbClose(); psClose(); stkClose(); }
+  if (e.key === 'Escape') { closeDbModal(); lbClose(); psClose(); stkClose(); return; }
+  // R94b：←/→ 路由到当前打开的弹窗（连板 → 通用标的 → 断板），各自限制在同组/同池内切换
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    var d = e.key === 'ArrowLeft' ? -1 : 1;
+    if (document.getElementById('lb-modal').classList.contains('open')) { lbStep(d); e.preventDefault(); return; }
+    if (document.getElementById('stk-modal').classList.contains('open')) { stkStep(d); e.preventDefault(); return; }
+  }
   if (!DB_CURR) return;
   if (e.key === 'ArrowLeft') dbStep(-1);
   if (e.key === 'ArrowRight') dbStep(1);
@@ -1441,12 +1460,24 @@ function stkResolveByName(name, cb) {
     cb(null);
   });
 }
+// R94b：同组箭头切换——STK_GRP 为点击芯片所在内容分组（同一影响组/同一题材/同一板块TOP等）的标的列表
+var STK_GRP = null, STK_IDX = 0;
+function stkStep(delta) {
+  if (!STK_GRP || STK_GRP.length < 2) return;
+  STK_IDX = (STK_IDX + delta + STK_GRP.length) % STK_GRP.length;
+  var it = STK_GRP[STK_IDX];
+  openStkModal(it.c, it.n, it.t);
+}
 function openStkModal(code, name, note) {
   code = (code || '').trim();
   name = (name || '').trim();
+  var nav = STK_GRP && STK_GRP.length > 1;
+  document.getElementById('stk-prev').style.display = nav ? 'flex' : 'none';
+  document.getElementById('stk-next').style.display = nav ? 'flex' : 'none';
   document.getElementById('stk-modal-head').innerHTML =
     '<span class="nm">' + esc(name || '') + '</span>' +
     (code ? '<span class="cd2">' + esc(code) + '</span>' : '') +
+    (nav ? '<span class="cd2">' + (STK_IDX + 1) + '/' + STK_GRP.length + '</span>' : '') +
     '<button class="db-modal-close" onclick="stkClose()">×</button>';
   document.getElementById('stk-modal-meta').innerHTML =
     (note ? esc(note) + '<br>' : '') +
@@ -1527,6 +1558,20 @@ renderOpenOutlook();
     if (stk !== null && stk !== undefined) {
       closeChips();
       var sp = String(stk).split('|');
+      // R94b：箭头仅在同一内容分组内切换——取芯片最近的分组容器（要闻影响组/题材条目/AI板块/板块TOP）内的全部标的
+      STK_GRP = null; STK_IDX = 0;
+      var gbox = chip.closest ? chip.closest('.stock-chips, .nc-stocks, .reason-tops') : null;
+      if (gbox) {
+        var gchips = gbox.querySelectorAll('[data-stk]');
+        if (gchips.length > 1) {
+          STK_GRP = [];
+          for (var gi = 0; gi < gchips.length; gi++) {
+            var gp = String(gchips[gi].getAttribute('data-stk')).split('|');
+            STK_GRP.push({ c: gp[0] || '', n: gp[1] || '', t: gp[2] || '' });
+            if (gchips[gi] === chip) STK_IDX = gi;
+          }
+        }
+      }
       openStkModal(sp[0] || '', sp[1] || '', sp[2] || '');
       return;
     }
