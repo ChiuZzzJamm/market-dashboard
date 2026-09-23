@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609232237"></script>
+<script src="data.js?v=202609232244"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -147,6 +147,10 @@
   .wk-section h4.bull { color: var(--up); }
   .wk-section h4.bear { color: var(--down); }
   .wk-item { background: #f7fafd; border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; margin-bottom: 10px; }
+  /* R97b：宏观/财经/投行每条要闻左侧竖向色条——红=看涨、绿=看跌、灰=中性 */
+  .wk-item.wk-dir-up { border-left: 4px solid var(--up); }
+  .wk-item.wk-dir-down { border-left: 4px solid var(--down); }
+  .wk-item.wk-dir-flat { border-left: 4px solid #9aa4af; }
   .wk-item .thm { font-size: 13.5px; font-weight: 700; margin-bottom: 3px; }
   .wk-item .dtl { font-size: 12.5px; color: var(--ink2); line-height: 1.6; }
   .wk-stock-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
@@ -946,19 +950,19 @@ function renderNewsCard(d, market) {
   // 宏观（央行 / 通胀 / 大宗 / 美债 / 汇率）——顺序（R68 定稿）：宏观 → 彭博/路透/WSJ → 投行观点
   if (macro.length) {
     html += '<div class="wk-section macro"><h4>宏观 · 央行 / 通胀 / 大宗 / 美债</h4>';
-    macro.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true, '宏观·事件', d.tradeDate) + '</div>'; });
+    macro.forEach(function (it) { html += '<div class="wk-item wk-dir-' + (it.direction === '看涨' ? 'up' : (it.direction === '看跌' ? 'down' : 'flat')) + '">' + newsEntryInner(it, true, '宏观·事件', d.tradeDate) + '</div>'; });
     html += '</div>';
   }
   // 视角标题（R91h）：A股页用国内财经媒体视角（卡片来源已切财联社/华尔街见闻/证券时报），美股页保留国际通讯社视角
   if (intl.length) {
     html += '<div class="wk-section intl"><h4>' + (market === 'ashare' ? '国内财经媒体视角' : '彭博社 / 路透社 / 华尔街日报 视角') + '</h4>';
-    intl.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true, '中期·海外产业', d.tradeDate) + '</div>'; });
+    intl.forEach(function (it) { html += '<div class="wk-item wk-dir-' + (it.direction === '看涨' ? 'up' : (it.direction === '看跌' ? 'down' : 'flat')) + '">' + newsEntryInner(it, true, '中期·海外产业', d.tradeDate) + '</div>'; });
     html += '</div>';
   }
   // 投行观点（高盛 / 大摩 / 中金 / 中信等研报级观点）
   if (bank.length) {
     html += '<div class="wk-section bank"><h4>投行观点</h4>';
-    bank.forEach(function (it) { html += '<div class="wk-item">' + newsEntryInner(it, true, '机构·观点', d.tradeDate) + '</div>'; });
+    bank.forEach(function (it) { html += '<div class="wk-item wk-dir-' + (it.direction === '看涨' ? 'up' : (it.direction === '看跌' ? 'down' : 'flat')) + '">' + newsEntryInner(it, true, '机构·观点', d.tradeDate) + '</div>'; });
     html += '</div>';
   }
   if (d.source) html += '<div class="wk-src">来源：' + esc(d.source) + '</div>';
