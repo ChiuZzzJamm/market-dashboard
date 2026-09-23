@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609230902"></script>
+<script src="data.js?v=202609231336"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -211,6 +211,23 @@
   .lb-stocks { flex: 1 1 auto; }
   .stock-chip .rt { font-size: 11px; font-weight: 700; color: var(--up); margin-left: 3px; }
   .lb-foot { font-size: 12px; color: var(--ink2); margin-top: 9px; }
+  /* 连板梯队：可点击芯片 + 深度解读弹窗（R92） */
+  .stock-chip.lb-click { cursor: pointer; border: 1px solid transparent; transition: all .15s ease; -webkit-tap-highlight-color: transparent; }
+  .stock-chip.lb-click:hover { border-color: var(--accent); background: var(--accent-soft); }
+  #lb-modal { display: none; position: fixed; inset: 0; z-index: 210; background: rgba(30,45,60,.45); align-items: center; justify-content: center; padding: 20px; }
+  #lb-modal.open { display: flex; }
+  .lb-modal-box { background: var(--paper); border-radius: var(--radius); padding: 20px 22px; max-width: 680px; width: 100%; max-height: 88vh; overflow: auto; box-shadow: 0 20px 60px rgba(17,17,26,.25); }
+  .lb-modal-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 8px; }
+  .lb-modal-head .nm { font-size: 18px; font-weight: 900; }
+  .lb-modal-head .cd2 { font-size: 12px; color: var(--ink2); }
+  .lb-modal-head .lb-lbc { font-size: 12px; font-weight: 800; color: #fff; background: var(--up); border-radius: 999px; padding: 2px 10px; }
+  .lb-modal-head .rt { font-weight: 800; color: var(--up); margin-left: auto; }
+  .lb-modal-head .db-modal-close { margin-left: 0; }
+  .lb-modal-meta { font-size: 12.5px; color: var(--ink); line-height: 1.8; margin-bottom: 10px; border-bottom: 1px dashed var(--line); padding-bottom: 9px; }
+  .lb-modal-meta .lab { color: var(--ink2); }
+  .lb-story p { margin: 0 0 10px; line-height: 1.78; font-size: 13.5px; }
+  .lb-story p:last-child { margin-bottom: 0; }
+  .lb-story b.h { color: var(--accent-deep); }
   .wk-outlook { background: var(--accent-soft); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 13.5px; margin-top: 10px; }
   .wk-src { font-size: 11.5px; color: var(--ink2); margin-top: 8px; }
 
@@ -240,6 +257,9 @@
   .pano-cell .nm .ref { display: block; font-size: 11px; color: var(--ink2); font-weight: 400; }
   .pano-cell .pc { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .pano-date { font-size: 12.5px; color: var(--ink2); margin-bottom: 10px; }
+  .pano-more { grid-column: 1 / -1; text-align: center; padding-top: 6px; }
+  .pano-more button { background: var(--paper); color: var(--accent-deep); border: 1px solid var(--accent); border-radius: 999px; font-size: 12.5px; font-weight: 700; padding: 7px 20px; cursor: pointer; font-family: var(--font); transition: all .2s ease; }
+  .pano-more button:hover { background: var(--accent); color: #fff; }
 
   /* ===== 断板反包模块（R87） ===== */
   .hero { position: relative; }
@@ -402,6 +422,14 @@
     <div class="db-modal-meta" id="db-modal-meta"></div>
     <div class="db-kline" id="db-kline"></div>
     <div class="db-refs" id="db-refs"></div>
+  </div>
+</div>
+
+<div id="lb-modal" onclick="if(event.target===this)lbClose()">
+  <div class="lb-modal-box">
+    <div class="lb-modal-head" id="lb-modal-head"></div>
+    <div class="lb-modal-meta" id="lb-modal-meta"></div>
+    <div class="lb-story" id="lb-modal-body"></div>
   </div>
 </div>
 
@@ -611,6 +639,28 @@ function render(market) {
 
 /* 行业全景（沿用原版：市场 tab + 板块网格） */
 var panoCurrent = 'ashare';
+var panoExpanded = false;
+var PANO_SHOW_MAX = 40;
+// R92 粒度降噪：东财细分板块（约120个，含「其他家电Ⅱ/Ⅲ」等多级细分）合并为父级口径——
+// 去掉尾部层级罗马数字（Ⅰ/Ⅱ/Ⅲ…）与「其他」前缀后同名合并，取组内最高涨幅代表，并标注细分数。
+function normPanoName(n) {
+  var s = String(n || '').trim();
+  s = s.replace(/[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]$/, '');
+  s = s.replace(/([\u4e00-\u9fa5])(III|II|IV|V|I)$/, '$1');
+  if (s.indexOf('其他') === 0 && s.length >= 3) s = s.slice(2);
+  return s;
+}
+function mergePanoItems(items) {
+  var merged = {}, order = [];
+  (items || []).forEach(function (it) {
+    var key = normPanoName(it && it.name);
+    if (!key) return;
+    if (!merged[key]) { merged[key] = { name: key, pct: null, subs: 0 }; order.push(key); }
+    merged[key].subs++;
+    if (merged[key].pct === null && typeof it.pct === 'number') merged[key].pct = it.pct;
+  });
+  return order.map(function (k) { return merged[k]; });
+}
 function renderPano() {
   var pano = window.DASHBOARD_DATA.panorama;
   if (!pano || !pano.markets) { document.getElementById('pano-card').style.display = 'none'; return; }
@@ -659,15 +709,26 @@ function renderPano() {
     if (pb === null) return -1;
     return pb - pa;
   });
-  panoItems.forEach(function (it) {
+  // R92：A股细分板块聚合为父级口径（美股/韩股/日经条目本身粗粒度，不处理）
+  if (cur.key === 'ashare') panoItems = mergePanoItems(panoItems);
+  var shown = panoExpanded ? panoItems : panoItems.slice(0, PANO_SHOW_MAX);
+  shown.forEach(function (it) {
     var c = cls(it.pct);
     html += '<div class="pano-cell"><div class="nm">' + esc(it.name) +
+      (it.subs > 1 ? '<span class="ref">含' + it.subs + '个细分</span>' : '') +
       (it.ref ? '<span class="ref">' + esc(it.ref) + '</span>' : '') + '</div>' +
       '<div class="pc ' + c + '">' + fmtPct(it.pct) + '</div></div>';
   });
+  if (panoItems.length > PANO_SHOW_MAX) {
+    if (panoExpanded) {
+      html += '<div class="pano-more"><button onclick="panoExpanded=false;renderPano()">收起，只看前 ' + PANO_SHOW_MAX + ' 个板块</button></div>';
+    } else {
+      html += '<div class="pano-more"><button onclick="panoExpanded=true;renderPano()">展开全部 ' + panoItems.length + ' 个板块</button></div>';
+    }
+  }
   document.getElementById('pano-grid').innerHTML = html;
 }
-function switchPano(key) { panoCurrent = key; renderPano(); }
+function switchPano(key) { panoCurrent = key; panoExpanded = false; renderPano(); }
 
 /* AI 预测分析 */
 function renderAiPrediction() {
@@ -843,30 +904,74 @@ function renderThemePicks(list) {
   return s;
 }
 
+var LB_LIST = [];
 function renderLianban(list) {
   if (!list || !list.length) return '';
   // 连板（lbc>=2）作为梯队展示；首板仅统计数量（避免卡片过长）
   var lb = list.filter(function (s) { return (s.lbc || 1) >= 2; });
   var firstCount = list.length - lb.length;
   if (!lb.length) return '';
+  LB_LIST = lb;
   var groups = {};
   lb.forEach(function (s) { var k = s.lbc || 2; (groups[k] = groups[k] || []).push(s); });
   var keys = Object.keys(groups).map(Number).sort(function (a, b) { return b - a; });
-  var s = '<div class="lb-note">连板数取自东财涨停池；板块为东财行业归类，理由由当日 AI 基于真实新闻补充（缺省显示板块）</div>';
+  var s = '<div class="lb-note">连板数取自东财涨停池；板块为东财行业归类，理由由当日 AI 基于真实新闻补充（缺省显示板块）· <b>点击标的查看深度解读</b></div>';
   keys.forEach(function (k) {
     var stocks = groups[k];
     s += '<div class="lb-row"><div class="lb-tag">' + esc(k + '连板') + '</div><div class="lb-stocks stock-chips">';
     stocks.forEach(function (st) {
+      var idx = LB_LIST.indexOf(st);
       var pct = (typeof st.pct === 'number') ? (st.pct > 0 ? '+' : '') + st.pct.toFixed(1) + '%' : '';
       var ctx = st.reason || st.hybk || '';
-      var title = (st.name || '') + ' ' + (st.code || '') + (st.hybk ? ' · ' + st.hybk : '') + (st.reason ? ' ｜ ' + st.reason : '');
-      s += '<span class="stock-chip" title="' + escAttr(title) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + (pct ? '<span class="rt">' + pct + '</span>' : '') + (ctx ? '<span class="nt">' + esc(ctx) + '</span>' : '') + '</span>';
+      var title = (st.name || '') + ' ' + (st.code || '') + (st.hybk ? ' · ' + st.hybk : '') + (st.reason ? ' ｜ ' + st.reason : '') + '（点击查看深度解读）';
+      s += '<span class="stock-chip lb-click" title="' + escAttr(title) + '" onclick="lbShow(' + idx + ')"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + (pct ? '<span class="rt">' + pct + '</span>' : '') + (ctx ? '<span class="nt">' + esc(ctx) + '</span>' : '') + '</span>';
     });
     s += '</div></div>';
   });
   if (firstCount > 0) s += '<div class="lb-foot">首板 ' + firstCount + ' 只（当日首次涨停）</div>';
   return s;
 }
+
+/* ===== 连板深度解读弹窗（R92） ===== */
+function lbStoryHtml(st) {
+  var story = String(st.story || '').trim();
+  if (!story) {
+    var fallback = st.reason || st.hybk || '';
+    return '<p>' + esc(fallback ? '当日连板驱动：' + fallback + '。' : '') + '深度解读生成中（每日 16:00 收盘后自动化补全）。</p>';
+  }
+  // 按「【」小标题分段（与大盘研判 formatOutlook 同款规则），段内【标题】加粗高亮
+  var segs = story.split(/(?=【)/).filter(function (x) { return x.trim(); });
+  if (segs.length <= 1) return '<p>' + esc(story) + '</p>';
+  return segs.map(function (seg) {
+    var t = seg.trim();
+    var m = t.match(/^【([^】]+)】([\s\S]*)$/);
+    if (m) return '<p><b class="h">【' + esc(m[1]) + '】</b>' + esc(m[2]) + '</p>';
+    return '<p>' + esc(t) + '</p>';
+  }).join('');
+}
+function lbShow(idx) {
+  var st = LB_LIST[idx];
+  if (!st) return;
+  var pct = (typeof st.pct === 'number') ? fmtPct(st.pct) : '—';
+  var fundStr = '';
+  if (st.fund !== null && st.fund !== undefined && st.fund !== '') {
+    var f = Number(st.fund);
+    if (!isNaN(f)) fundStr = f >= 1e8 ? (f / 1e8).toFixed(2) + ' 亿' : Math.round(f / 1e4) + ' 万';
+  }
+  var head = '<span class="nm">' + esc(st.name || '') + '</span>' +
+    '<span class="cd2">' + esc(st.code || '') + '</span>' +
+    '<span class="lb-lbc">' + esc((st.lbc || 1) + ' 连板') + '</span>' +
+    '<span class="rt" style="font-size:15px;">' + pct + '</span>' +
+    '<button class="db-modal-close" onclick="lbClose()">×</button>';
+  var meta = '<span class="lab">板块：</span>' + esc(st.hybk || '—') +
+    (fundStr ? '　<span class="lab">封单资金：</span>' + fundStr : '') +
+    (st.reason ? '<br><span class="lab">涨停原因：</span>' + esc(st.reason) : '');
+  document.getElementById('lb-modal-head').innerHTML = head;
+  document.getElementById('lb-modal-meta').innerHTML = meta;
+  document.getElementById('lb-modal-body').innerHTML = lbStoryHtml(st);
+  document.getElementById('lb-modal').classList.add('open');
+}
+function lbClose() { document.getElementById('lb-modal').classList.remove('open'); }
 
 /* ===== 断板反包模块（R87）：双池 + K线弹窗 ===== */
 var DB_INDEX = {};
@@ -1068,7 +1173,7 @@ function dbStep(delta) {
   openDbModal(DB_ORDER[i]);
 }
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape') closeDbModal();
+  if (e.key === 'Escape') { closeDbModal(); lbClose(); }
   if (!DB_CURR) return;
   if (e.key === 'ArrowLeft') dbStep(-1);
   if (e.key === 'ArrowRight') dbStep(1);

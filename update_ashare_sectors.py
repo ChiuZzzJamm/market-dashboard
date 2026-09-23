@@ -560,20 +560,25 @@ def main():
         if lianban is not None:
             # 空池且已有原值时保留（避免限频 rc:102 空池清空真实数据）；非空或首次则写回
             if lianban or not a.get("lianban"):
-                # 同日 reason 保留：16:00 自动化由 AI 为连板标的补异动原因，本脚本若同日重跑
-                # 会重建 lianban（脚本侧 reason 恒为空），把刚补的理由洗掉——与板块 reason 同类防护。
-                # 仅当已有数据同为今日（tradeDate 相同）时按 code 保留 reason；跨日不保留
-                # （昨日理由不挂今日涨停池，跨日理由由 16:00 AI 重新补全）。
+                # 同日 reason/story 保留：16:00 自动化由 AI 为连板标的补异动原因（reason）
+                # 与深度解读（story），本脚本若同日重跑会重建 lianban（脚本侧 reason/story 恒为空），
+                # 把刚补的内容洗掉——与板块 reason 同类防护。
+                # 仅当已有数据同为今日（tradeDate 相同）时按 code 保留；跨日不保留
+                # （昨日理由不挂今日涨停池，跨日由 16:00 AI 重新补全）。
                 if a.get("tradeDate") == now:
                     old_reason = {}
                     for s in (a.get("lianban") or []):
-                        if isinstance(s, dict) and s.get("code") and s.get("reason"):
-                            old_reason[s["code"]] = s["reason"]
+                        if isinstance(s, dict) and s.get("code") and (s.get("reason") or s.get("story")):
+                            old_reason[s["code"]] = s
                     for s in lianban:
                         if isinstance(s, dict) and s.get("code") in old_reason:
-                            s["reason"] = old_reason[s["code"]]
+                            old = old_reason[s["code"]]
+                            if old.get("reason"):
+                                s["reason"] = old["reason"]
+                            if old.get("story"):
+                                s["story"] = old["story"]
                     if old_reason:
-                        print(f"[info] 保留当日连板 reason {len(old_reason)} 条")
+                        print(f"[info] 保留当日连板 reason/story {len(old_reason)} 条")
                 a["lianban"] = lianban
                 updated_parts.append("连板梯队")
             else:
