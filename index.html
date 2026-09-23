@@ -1577,6 +1577,13 @@ function buildOpenOutlookHtml(o, title) {
   return html;
 }
 
+// 按日期字符串(YYYY-MM-DD)生成「周X开盘前瞻 · YYYY-MM-DD」标题（周几取数据所属日，非今天）
+function wkTitle(dateStr) {
+  var WD = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+  var d = new Date(String(dateStr || '').replace(/-/g, '/'));
+  var w = isNaN(d.getTime()) ? '' : WD[d.getDay()];
+  return w + '开盘前瞻 · ' + dateStr;
+}
 function renderOpenOutlook() {
   // 每日开盘前瞻（R72）：顶层 openOutlook 带日期，前端按日期显示、过期自动隐藏。
   // R97g 后续修复：开盘前瞻由 08:30 自动化生成（date=当日），但每天 0:00–08:30
@@ -1602,7 +1609,7 @@ function renderOpenOutlook() {
   }
   // 1) 日期精确匹配：正常显示
   if (o.date === target) {
-    var title = isWeekend ? ('周末开盘前瞻 · ' + target) : ('开盘前瞻 · ' + target);
+    var title = wkTitle(o.date);
     box.innerHTML = buildOpenOutlookHtml(o, title);
     box.style.display = '';
     return;
@@ -1614,9 +1621,9 @@ function renderOpenOutlook() {
     var sub;
     if (!isWeekend) {
       var genLabel = (day <= 4) ? '今日 08:30' : '周一 08:30';
-      sub = '开盘前瞻 · ' + esc(o.date) + '（昨日版，' + genLabel + '前瞻待生成）';
+      sub = wkTitle(o.date) + '（昨日版，' + genLabel + '前瞻待生成）';
     } else {
-      sub = '周末开盘前瞻 · ' + esc(o.date) + '（周五版 · 周一盘前参考）';
+      sub = wkTitle(o.date) + '（周五版 · 周一盘前参考）';
     }
     box.innerHTML = buildOpenOutlookHtml(o, sub);
     box.style.display = '';
