@@ -332,6 +332,46 @@ def fetch_ths_board_pct_on(ths_code, date_iso):
     return hist.get(date_iso.replace("-", ""))
 
 
+def fetch_ths_kline_full(ths_code, days=30):
+    """获取同花顺行业板块近 N 根日K线。
+    返回 [[date(YYYY-MM-DD), open, close, high, low, volume], ...] 或 None。"""
+    if not ths_code:
+        return None
+    url = f"https://d.10jqka.com.cn/v4/line/bk_{ths_code}/01/last.js"
+    raw = curl_text(url, timeout=15)
+    if not raw.strip():
+        return None
+    m = re.search(r'\((\{.*\})\)', raw)
+    if not m:
+        return None
+    try:
+        d = json.loads(m.group(1))
+    except Exception:
+        return None
+    data = d.get("data", "")
+    bars = data.split(";")
+    out = []
+    for bar in bars:
+        parts = bar.split(",")
+        if len(parts) < 6:
+            continue
+        day = parts[0]
+        if len(day) == 8:
+            day = f"{day[:4]}-{day[4:6]}-{day[6:]}"
+        try:
+            o = float(parts[1])
+            h = float(parts[2])
+            l = float(parts[3])
+            c = float(parts[4])
+            v = float(parts[5])
+        except Exception:
+            continue
+        out.append([day, o, c, h, l, v])
+    if len(out) < 2:
+        return None
+    return out[-days:] if len(out) > days else out
+
+
 def match_ths_industry(hybk, ths_names):
     """申万行业名 → 同花顺行业名（前缀匹配+特殊映射）。失败返回 None。"""
     if not hybk or not ths_names:
@@ -552,14 +592,20 @@ def _industry_of(hybk, agg):
 def fetch_top_boards(D, top=10, days=3):
     """近 N 个交易日涨幅居前板块 TOP10（**同花顺行业口径**，R98）。
     主源：THS thshy 行业页面（50个同花顺大类行业，按当日涨幅排序）；
-    备源：保留既有 topBoards（R91m 防护）。全部失败返回 []（前端隐藏模块）。"""
+    备源：保留既有 topBoards（R91m 防护）。全部失败返回 []（前端隐藏模块）。
+    每个板块附带近30根日K线（kline字段），供前端弹窗展示。"""
     # ---- 主源：同花顺行业页面（当日涨幅） ----
     ths = fetch_ths_industries()
     if len(ths) >= 10:
         ths.sort(key=lambda x: -x["pct"])
-        return [{"code": b["code"], "name": b["name"],
-                 "pct3": None, "pctToday": b["pct"]}
-                for b in ths[:top]]
+        picked = ths[:top]
+        # 并行获取各板块 K 线（max_workers=5 防限频）
+        def _mk(b):
+            return {"code": b["code"], "name": b["name"],
+                    "pct3": None, "pctToday": b["pct"],
+                    "kline": fetch_ths_kline_full(b["code"], days=30)}
+        with ThreadPoolExecutor(max_workers=5) as exe:
+            return list(exe.map(_mk, picked))
     # ---- 备源：保留既有 topBoards（R91m 防护） ----
     old = (D.get("duanban") or {}).get("topBoards") if isinstance(D, dict) else None
     if old:
