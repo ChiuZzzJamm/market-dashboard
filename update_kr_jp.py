@@ -353,8 +353,8 @@ def main():
 
     indices, stocks = collect()
     if not indices and not stocks:
-        print('[error] 所有数据源均失败，保留 panorama.kr/jp 原值')
-        sys.exit(1)
+        print('[warn] 所有数据源均失败，保留 panorama.kr/jp 原值')
+        sys.exit(0)
     if not validate(indices, stocks, label):
         print('[info] 校验未通过，保留原值')
         sys.exit(0)
