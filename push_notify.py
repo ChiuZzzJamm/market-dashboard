@@ -345,6 +345,31 @@ elif mode == 'weekend':
         parts.append("⚠️ 利空：\n" + '\n'.join(bearish_lines))
     desp = '\n\n'.join(parts)
 
+elif mode == 'star':
+    # R98k：🌟 开盘半小时精选推送（每日 10:00 自动化）。板块/资金情绪 + 深度分析
+    # （pushText 仅推送不上页面）+ 精选标的清单。
+    db = D.get('duanban') or {}
+    st = db.get('star') or {}
+    picks = st.get('picks') or []
+    if not picks:
+        print('[warn] duanban.star 缺失/为空，跳过推送'); sys.exit(0)
+    _d = str(st.get('date') or '')
+    title = f"[断板反包🌟] {_d[5:].replace('-','/')} 开盘半小时精选"
+    stars_line = '  '.join(
+        f"{p.get('name','')}{p.get('probability') if p.get('probability') is not None else ''}"
+        + ('%' if p.get('probability') is not None else '')
+        for p in picks[:8])
+    desp_parts = [
+        '🌐 https://chiuzzzjamm.github.io/market-dashboard',
+        '📊 ' + (st.get('marketLine') or ''),
+        '💡 ' + (st.get('sentiment') or ''),
+        f"🌟 精选（{len(picks)} 只）：{stars_line}",
+    ]
+    pt = str(st.get('pushText') or '').strip()
+    if pt:
+        desp_parts.append('📖 深度分析：' + pt.replace('\n', ' '))
+    desp = '\n\n'.join(desp_parts)
+
 else:
     print('unknown mode'); sys.exit(1)
 

@@ -19,6 +19,7 @@ import json
 import re
 import subprocess
 import sys
+from datetime import datetime
 
 MAINBOARD = re.compile(r"^(60|00)\d{4}$")
 
@@ -47,8 +48,13 @@ def sanitize(mod):
                 warns.append(f"[WARN] {pool}.{code} 缺 kline（前端无K线图可画）")
             p = e.get("probability")
             if not isinstance(p, (int, float)) or not (0 <= p <= 100):
-                e["probability"] = 50
-                warns.append(f"[WARN] {pool}.{code} probability 缺失/非法，已补 50")
+                # R98k：不再一律补 50（曾致全池 50%）——按情绪补确定性基线
+                _d = {"bull": 69, "neutral": 50, "bear": 31}.get(
+                    e.get("sentiment") or "neutral", 50)
+                e["probability"] = _d
+                if not str(e.get("probNote") or "").strip():
+                    e["probNote"] = "脚本补基线（原值缺失，AI 可校准）"
+                warns.append(f"[WARN] {pool}.{code} probability 缺失/非法，已按情绪补基线 {_d}")
             else:
                 e["probability"] = round(float(p), 1)
             if not isinstance(e.get("story"), str):
@@ -124,6 +130,16 @@ def main():
         _inherit_enrich(mod, (D.get("duanban") or {}), warns)
     except Exception as e:
         print(f"[WARN] enrichment 继承失败（不影响合并）：{e}", file=sys.stderr)
+    # R98k：保留当日 🌟 开盘半小时精选（10:00 自动化产物，16:00 重建 duanban 时
+    # 不得洗掉）；跨日（次日 10:00 前）自然失效丢弃。
+    old_star = (D.get("duanban") or {}).get("star")
+    if old_star and not mod.get("star"):
+        if str(old_star.get("date") or "") == datetime.now().strftime("%Y-%m-%d"):
+            mod["star"] = old_star
+            print("[merge] 保留当日 🌟 开盘精选模块", file=sys.stderr)
+        else:
+            print(f"[merge] 丢弃非当日 🌟 模块（{old_star.get('date')}），待 10:00 自动化重建",
+                  file=sys.stderr)
     D["duanban"] = mod
     out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, indent=2) + ";\n"
     with open(data_path, "w", encoding="utf-8") as f:

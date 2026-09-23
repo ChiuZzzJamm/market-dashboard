@@ -54,9 +54,17 @@ def main():
                 changed.append((pool, old.get("code"), old.get("name"),
                                 old_sent, new_sent, rw, bw))
             else:
-                # 情绪未变：保留 AI 已校准的 probability/probNote
-                new["probability"] = old.get("probability")
-                new["probNote"] = old.get("probNote")
+                # 情绪未变：AI 已校准过（probNote 非空）→ 保留；未校准（如 merge
+                # 旧兜底的全 50、probNote 空）→ 保留 tag_entries 新算的确定性基线
+                # 并按池微调（确认池 +4 / 观察池 -2，与 build_module 口径一致）。
+                if old.get("probability") is not None and str(old.get("probNote") or "").strip():
+                    new["probability"] = old.get("probability")
+                    new["probNote"] = old.get("probNote")
+                else:
+                    p = max(15, min(88, round((new.get("probability") or 50)
+                                              + (4 if pool == "confirmed" else -2))))
+                    new["probability"] = p
+                    new["probNote"] = (new.get("probNote") or "") + "（补算）"
         db[pool] = retagged
     db["generatedAt"] = datetime.now().strftime("%Y-%m-%d %H:%M")
     db["note"] = db.get("note") or ""

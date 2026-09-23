@@ -345,6 +345,38 @@ def check_story_quality(D):
     return warns
 
 
+def check_star_module(D):
+    """R98k 软闸门：① 双池上涨概率全池拉平（如全为 50%）→ 疑似未校准 WARN；
+    ② duanban.star（10:00 开盘精选）picks 须在双池内、code 合法、数量 5~8。"""
+    db = D.get('duanban')
+    if not isinstance(db, dict):
+        return []
+    warns = []
+    entries = [e for pool in ('confirmed', 'watching') for e in (db.get(pool) or [])
+               if isinstance(e, dict)]
+    probs = [e.get('probability') for e in entries if isinstance(e.get('probability'), (int, float))]
+    if len(probs) >= 8 and len(set(probs)) == 1:
+        warns.append(f"断板反包上涨概率全部为 {probs[0]}%——疑似未校准拉平（R98k：脚本基线按情绪分布，AI 校准严禁全池统一）")
+    star = db.get('star')
+    if star is not None:
+        if not isinstance(star, dict):
+            warns.append("duanban.star 非对象（应为 {date,time,marketLine,sentiment,picks,pushText}）")
+        else:
+            pool_codes = {str(e.get('code')) for e in entries}
+            picks = star.get('picks') or []
+            if not isinstance(picks, list) or not (1 <= len(picks) <= 12):
+                warns.append("duanban.star.picks 缺失或数量异常（预期 5~8 只）")
+            for p in picks:
+                if not isinstance(p, dict):
+                    continue
+                c = str(p.get('code') or '')
+                if c and c not in pool_codes:
+                    warns.append(f"duanban.star.picks {c} {p.get('name')} 不在断板反包双池内（精选只能从池内筛）")
+            if not str(star.get('pushText') or '').strip():
+                warns.append("duanban.star.pushText 为空（微信推送深度分析缺失，10:00 自动化 AI 须补写）")
+    return warns
+
+
 def check_top_boards(D):
     """R91j/m：duanban.topBoards（近3日板块TOP10，申万行业口径）缺失/非数组/字段缺失 → WARN。"""
     db = D.get('duanban')
@@ -457,6 +489,7 @@ def main():
     lb_warns = check_lianban_notes(D)
     tb_warns = check_top_boards(D)
     st_warns = check_story_quality(D)
+    star_warns = check_star_module(D)
 
     for mk in ('ashare', 'us'):
         sec = D.get(mk) or {}
@@ -489,6 +522,7 @@ def main():
                           'lianban_warnings': lb_warns,
                           'top_boards_warnings': tb_warns,
                           'story_warnings': st_warns,
+                          'star_warnings': star_warns,
                           'duanban_warnings': duanban_warns,
                           'violations': violations}, ensure_ascii=False, indent=2))
     for w in dir_warns:
@@ -511,6 +545,8 @@ def main():
         print("[WARN] 板块TOP10:", w)
     for w in st_warns:
         print("[WARN] story质量:", w)
+    for w in star_warns:
+        print("[WARN] 🌟开盘精选:", w)
     if violations:
         print(f"[FAIL] 共 {len(violations)} 处违规：")
         for v in violations:

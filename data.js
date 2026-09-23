@@ -8437,7 +8437,7 @@ window.DASHBOARD_DATA = {
     "source": "综合财联社/证券时报/路透社/彭博社/华尔街日报及公开公告（截至2026-09-23 08:30）"
   },
   "duanban": {
-    "generatedAt": "2026-09-24 01:42",
+    "generatedAt": "2026-09-24 04:04",
     "note": "确认池=走完「涨停→放量断板→缩量→不破T日低点与MA5」全流程；观察池=形态进行中、只差最后一根确认K线（待企稳＞待缩量）。每只标的按当日要闻/AI预测自动标注口径：利好（有利好新闻依据且未被看空）/利空（被利空新闻或AI预测看空点名）/中性（暂无明确新闻依据）；利好/利空只看新闻内容，当日涨跌与走势形态不作为依据（R91j）。口径与 probability 由自动化 AI 复核校准。",
     "topBoards": [
       {
@@ -10933,8 +10933,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.96,
         "boardPctZt": 1.7,
         "bkCode": "BK0546",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -11434,8 +11434,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.95,
         "boardPctZt": 2.1,
         "bkCode": "881117",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -11935,8 +11935,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.24,
         "boardPctZt": 5.06,
         "bkCode": "BK1261",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -12436,8 +12436,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 1.5,
         "boardPctZt": -2.29,
         "bkCode": "881270",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -12937,8 +12937,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 1.35,
         "boardPctZt": -0.24,
         "bkCode": "881121",
-        "probability": 50,
-        "probNote": "",
+        "probability": 82,
+        "probNote": "脚本基线：利好加权14/利空加权10（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -13560,8 +13560,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 1.35,
         "boardPctZt": 0.23,
         "bkCode": "881121",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -14103,8 +14103,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 1.5,
         "boardPctZt": 2.4,
         "bkCode": "881270",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -14604,8 +14604,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.34,
         "boardPctZt": 2.68,
         "bkCode": "BK1042",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -15105,8 +15105,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.63,
         "boardPctZt": 2.45,
         "bkCode": "881108",
-        "probability": 50,
-        "probNote": "",
+        "probability": 32,
+        "probNote": "脚本基线：利空加权2/利好加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -15617,8 +15617,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -16118,8 +16118,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.75,
         "boardPctZt": 2.98,
         "bkCode": "BK0482",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -16619,8 +16619,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.57,
         "boardPctZt": 2.14,
         "bkCode": "881265",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -17120,8 +17120,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.73,
         "boardPctZt": 4.67,
         "bkCode": "881140",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -17621,8 +17621,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.28,
         "boardPctZt": 1.76,
         "bkCode": "881130",
-        "probability": 50,
-        "probNote": "",
+        "probability": 76,
+        "probNote": "脚本基线：利好加权2/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -18133,8 +18133,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.22,
         "boardPctZt": 1.77,
         "bkCode": "881114",
-        "probability": 50,
-        "probNote": "",
+        "probability": 32,
+        "probNote": "脚本基线：利空加权2/利好加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -18645,8 +18645,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.59,
         "boardPctZt": 2.48,
         "bkCode": "881139",
-        "probability": 50,
-        "probNote": "",
+        "probability": 76,
+        "probNote": "脚本基线：利好加权2/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-06-25",
@@ -19157,8 +19157,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.26,
         "boardPctZt": 1.96,
         "bkCode": "881122",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -19658,8 +19658,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.06,
         "boardPctZt": 1.5,
         "bkCode": "881118",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -20159,8 +20159,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.75,
         "boardPctZt": 2.98,
         "bkCode": "BK0482",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -20660,8 +20660,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.16,
         "boardPctZt": 3.22,
         "bkCode": "BK1040",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -21161,8 +21161,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -21684,8 +21684,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 1.27,
         "boardPctZt": 1.46,
         "bkCode": "881123",
-        "probability": 50,
-        "probNote": "",
+        "probability": 82,
+        "probNote": "脚本基线：利好加权16/利空加权10（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -22317,8 +22317,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.95,
         "boardPctZt": 1.73,
         "bkCode": "881117",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -22818,8 +22818,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.63,
         "boardPctZt": 2.45,
         "bkCode": "881108",
-        "probability": 50,
-        "probNote": "",
+        "probability": 32,
+        "probNote": "脚本基线：利空加权2/利好加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -23330,8 +23330,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.73,
         "boardPctZt": 4.67,
         "bkCode": "881140",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -23831,8 +23831,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -24332,8 +24332,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -24833,8 +24833,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.64,
         "boardPctZt": 3.43,
         "bkCode": "881144",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -25334,8 +25334,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.64,
         "boardPctZt": 3.43,
         "bkCode": "881144",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -25835,8 +25835,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.73,
         "boardPctZt": 4.67,
         "bkCode": "881140",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -26336,8 +26336,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.95,
         "boardPctZt": 1.73,
         "bkCode": "881117",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -26837,8 +26837,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.73,
         "boardPctZt": 4.67,
         "bkCode": "881140",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -27338,8 +27338,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.26,
         "boardPctZt": 1.96,
         "bkCode": "881122",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -27839,8 +27839,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.51,
         "boardPctZt": 2.04,
         "bkCode": "BK1279",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -28340,8 +28340,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -28841,8 +28841,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -29342,8 +29342,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.14,
         "boardPctZt": 2.47,
         "bkCode": "881109",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -29843,8 +29843,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.73,
         "boardPctZt": 4.67,
         "bkCode": "881140",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -30344,8 +30344,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 76,
+        "probNote": "脚本基线：利好加权2/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -30856,8 +30856,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -31357,8 +31357,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -31858,8 +31858,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.08,
         "boardPctZt": 0.99,
         "bkCode": "BK1265",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -32359,8 +32359,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.68,
         "boardPctZt": 2,
         "bkCode": "BK0457",
-        "probability": 50,
-        "probNote": "",
+        "probability": 82,
+        "probNote": "脚本基线：利好加权4/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -32881,8 +32881,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.04,
         "boardPctZt": 1.16,
         "bkCode": "881126",
-        "probability": 50,
-        "probNote": "",
+        "probability": 76,
+        "probNote": "脚本基线：利好加权4/利空加权2（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -33414,8 +33414,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.14,
         "boardPctZt": 1.3,
         "bkCode": "881109",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -33915,8 +33915,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 1.72,
         "boardPctZt": 1.9,
         "bkCode": "BK1238",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -34416,8 +34416,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.29,
         "boardPctZt": 0.97,
         "bkCode": "BK1274",
-        "probability": 50,
-        "probNote": "",
+        "probability": 26,
+        "probNote": "脚本基线：利空加权10/利好加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -34968,8 +34968,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 1.27,
         "boardPctZt": 3.07,
         "bkCode": "881123",
-        "probability": 50,
-        "probNote": "",
+        "probability": 82,
+        "probNote": "脚本基线：利好加权16/利空加权8（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -35591,8 +35591,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.26,
         "boardPctZt": 1.74,
         "bkCode": "881122",
-        "probability": 50,
-        "probNote": "",
+        "probability": 82,
+        "probNote": "脚本基线：利好加权4/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -36113,8 +36113,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.36,
         "boardPctZt": 1.52,
         "bkCode": "BK0725",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-01",
@@ -36614,8 +36614,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -1.96,
         "boardPctZt": 1.28,
         "bkCode": "BK1272",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -37115,8 +37115,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.04,
         "boardPctZt": 1.16,
         "bkCode": "881126",
-        "probability": 50,
-        "probNote": "",
+        "probability": 76,
+        "probNote": "脚本基线：利好加权4/利空加权2（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -37648,8 +37648,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.75,
         "boardPctZt": 1.77,
         "bkCode": "BK0482",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -38149,8 +38149,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.9,
         "boardPctZt": 2.54,
         "bkCode": "881175",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -38650,8 +38650,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 1.35,
         "boardPctZt": 4.31,
         "bkCode": "881121",
-        "probability": 50,
-        "probNote": "",
+        "probability": 82,
+        "probNote": "脚本基线：利好加权14/利空加权10（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -39273,8 +39273,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.17,
         "boardPctZt": 1.65,
         "bkCode": "BK1225",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -39774,8 +39774,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 1.29,
         "boardPctZt": 1.97,
         "bkCode": "BK1266",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -40275,8 +40275,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.03,
         "boardPctZt": 2.91,
         "bkCode": "881279",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -40776,8 +40776,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.59,
         "boardPctZt": 2.37,
         "bkCode": "881139",
-        "probability": 50,
-        "probNote": "",
+        "probability": 76,
+        "probNote": "脚本基线：利好加权2/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -41288,8 +41288,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.03,
         "boardPctZt": 2.91,
         "bkCode": "881279",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -41789,8 +41789,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.26,
         "boardPctZt": 1.74,
         "bkCode": "881122",
-        "probability": 50,
-        "probNote": "",
+        "probability": 82,
+        "probNote": "脚本基线：利好加权4/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -42311,8 +42311,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.75,
         "boardPctZt": 1.77,
         "bkCode": "BK0482",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -42812,8 +42812,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.55,
         "boardPctZt": 1.13,
         "bkCode": "881173",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-01",
@@ -43313,8 +43313,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.13,
         "boardPctZt": 0.79,
         "bkCode": "881115",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -43814,8 +43814,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.67,
         "boardPctZt": 2.35,
         "bkCode": "881129",
-        "probability": 50,
-        "probNote": "",
+        "probability": 82,
+        "probNote": "脚本基线：利好加权6/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -44346,8 +44346,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.61,
         "boardPctZt": 1.36,
         "bkCode": "881157",
-        "probability": 50,
-        "probNote": "",
+        "probability": 32,
+        "probNote": "脚本基线：利空加权2/利好加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -44858,8 +44858,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.68,
         "boardPctZt": 2,
         "bkCode": "BK0457",
-        "probability": 50,
-        "probNote": "",
+        "probability": 82,
+        "probNote": "脚本基线：利好加权4/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -45380,8 +45380,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.68,
         "boardPctZt": 2,
         "bkCode": "BK0457",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -45881,8 +45881,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.68,
         "boardPctZt": 2,
         "bkCode": "BK0457",
-        "probability": 50,
-        "probNote": "",
+        "probability": 82,
+        "probNote": "脚本基线：利好加权4/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -46403,8 +46403,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.95,
         "boardPctZt": 2.1,
         "bkCode": "881117",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -46904,8 +46904,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0,
         "boardPctZt": 0.9,
         "bkCode": "BK0539",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -47405,8 +47405,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.57,
         "boardPctZt": -0.33,
         "bkCode": "881265",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -47906,8 +47906,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.32,
         "boardPctZt": 2.04,
         "bkCode": "881125",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -48407,8 +48407,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.25,
         "boardPctZt": 1.26,
         "bkCode": "881128",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -48908,8 +48908,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.04,
         "boardPctZt": 1.28,
         "bkCode": "881126",
-        "probability": 50,
-        "probNote": "",
+        "probability": 76,
+        "probNote": "脚本基线：利好加权4/利空加权2（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -49441,8 +49441,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.24,
         "boardPctZt": 5.06,
         "bkCode": "BK1261",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -49942,8 +49942,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.39,
         "boardPctZt": 0.49,
         "bkCode": "881171",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -50443,8 +50443,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.04,
         "boardPctZt": 1.28,
         "bkCode": "881126",
-        "probability": 50,
-        "probNote": "",
+        "probability": 76,
+        "probNote": "脚本基线：利好加权4/利空加权2（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -50976,8 +50976,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.39,
         "boardPctZt": 0.42,
         "bkCode": "881124",
-        "probability": 50,
-        "probNote": "",
+        "probability": 82,
+        "probNote": "脚本基线：利好加权4/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -51498,8 +51498,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.04,
         "boardPctZt": 1.28,
         "bkCode": "881126",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -51999,8 +51999,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.04,
         "boardPctZt": 1.28,
         "bkCode": "881126",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -52500,8 +52500,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.72,
         "boardPctZt": -1.69,
         "bkCode": "BK0428",
-        "probability": 50,
-        "probNote": "",
+        "probability": 76,
+        "probNote": "脚本基线：利好加权2/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -53012,8 +53012,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.6,
         "boardPctZt": 3.16,
         "bkCode": "881266",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -53513,8 +53513,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.72,
         "boardPctZt": 0.49,
         "bkCode": "BK0428",
-        "probability": 50,
-        "probNote": "",
+        "probability": 76,
+        "probNote": "脚本基线：利好加权2/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -54025,8 +54025,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.07,
         "boardPctZt": 2.42,
         "bkCode": "881276",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -54526,8 +54526,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.57,
         "boardPctZt": 2.44,
         "bkCode": "881265",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -55027,8 +55027,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.14,
         "boardPctZt": 1.96,
         "bkCode": "881109",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -55528,8 +55528,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 1.27,
         "boardPctZt": 4.01,
         "bkCode": "881123",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -56029,8 +56029,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.26,
         "boardPctZt": 3.53,
         "bkCode": "881122",
-        "probability": 50,
-        "probNote": "",
+        "probability": 82,
+        "probNote": "脚本基线：利好加权4/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -56551,8 +56551,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.67,
         "boardPctZt": 3.42,
         "bkCode": "881129",
-        "probability": 50,
-        "probNote": "",
+        "probability": 82,
+        "probNote": "脚本基线：利好加权6/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -57083,8 +57083,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 1.35,
         "boardPctZt": 4.79,
         "bkCode": "881121",
-        "probability": 50,
-        "probNote": "",
+        "probability": 82,
+        "probNote": "脚本基线：利好加权10/利空加权6（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -57666,8 +57666,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.59,
         "boardPctZt": 1.73,
         "bkCode": "BK0738",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -58167,8 +58167,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.4,
         "boardPctZt": 1.8,
         "bkCode": "BK1267",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -58668,8 +58668,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.06,
         "boardPctZt": 5.97,
         "bkCode": "BK1255",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -59169,8 +59169,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.67,
         "boardPctZt": 3.42,
         "bkCode": "881129",
-        "probability": 50,
-        "probNote": "",
+        "probability": 82,
+        "probNote": "脚本基线：利好加权6/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -59701,8 +59701,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.13,
         "boardPctZt": 1.22,
         "bkCode": "881115",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -60202,8 +60202,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.21,
         "boardPctZt": 1.54,
         "bkCode": "881281",
-        "probability": 50,
-        "probNote": "",
+        "probability": 54,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -60705,8 +60705,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.67,
         "boardPctZt": 1.77,
         "bkCode": "881129",
-        "probability": 50,
-        "probNote": "",
+        "probability": 76,
+        "probNote": "脚本基线：利好加权6/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -61237,8 +61237,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.68,
         "boardPctZt": 2,
         "bkCode": "BK0457",
-        "probability": 50,
-        "probNote": "",
+        "probability": 76,
+        "probNote": "脚本基线：利好加权4/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -61759,8 +61759,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.68,
         "boardPctZt": 2,
         "bkCode": "BK0457",
-        "probability": 50,
-        "probNote": "",
+        "probability": 76,
+        "probNote": "脚本基线：利好加权4/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -62281,8 +62281,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.04,
         "boardPctZt": 1.28,
         "bkCode": "881126",
-        "probability": 50,
-        "probNote": "",
+        "probability": 70,
+        "probNote": "脚本基线：利好加权4/利空加权2（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -62814,8 +62814,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 1.69,
         "boardPctZt": 2.34,
         "bkCode": "BK1268",
-        "probability": 50,
-        "probNote": "",
+        "probability": 70,
+        "probNote": "脚本基线：利好加权2/利空加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -63326,8 +63326,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.38,
         "boardPctZt": 2.47,
         "bkCode": "BK1259",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -63827,8 +63827,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.9,
         "boardPctZt": 5.1,
         "bkCode": "881175",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -64328,8 +64328,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.95,
         "boardPctZt": 2.1,
         "bkCode": "881117",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -64829,8 +64829,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.21,
         "boardPctZt": 1.84,
         "bkCode": "881281",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -65330,8 +65330,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.68,
         "boardPctZt": null,
         "bkCode": "BK0457",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -65831,8 +65831,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -1.8,
         "boardPctZt": 1.14,
         "bkCode": "BK0450",
-        "probability": 50,
-        "probNote": "",
+        "probability": 26,
+        "probNote": "脚本基线：利空加权2/利好加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -66343,8 +66343,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.26,
         "boardPctZt": -0.05,
         "bkCode": "881122",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -66844,8 +66844,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -67345,8 +67345,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -67846,8 +67846,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.73,
         "boardPctZt": 0.53,
         "bkCode": "881140",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -68347,8 +68347,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.14,
         "boardPctZt": 0.21,
         "bkCode": "881109",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -68848,8 +68848,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.39,
         "boardPctZt": 0.24,
         "bkCode": "881171",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -69349,8 +69349,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -69850,8 +69850,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -70351,8 +70351,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.59,
         "boardPctZt": 0.97,
         "bkCode": "881139",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -70852,8 +70852,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -71353,8 +71353,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.57,
         "boardPctZt": -0.46,
         "bkCode": "881265",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-06-24",
@@ -71854,8 +71854,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -72355,8 +72355,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.59,
         "boardPctZt": 0.97,
         "bkCode": "881139",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -72856,8 +72856,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.59,
         "boardPctZt": 0.97,
         "bkCode": "881139",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-06-22",
@@ -73357,8 +73357,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -73858,8 +73858,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.67,
         "boardPctZt": -0.64,
         "bkCode": "881129",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -74359,8 +74359,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -74860,8 +74860,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.06,
         "boardPctZt": -0.32,
         "bkCode": "881118",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -75361,8 +75361,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -75862,8 +75862,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.04,
         "boardPctZt": -0.07,
         "bkCode": "881126",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -76363,8 +76363,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.55,
         "boardPctZt": 0.3,
         "bkCode": "881181",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -76864,8 +76864,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": -0.26,
         "boardPctZt": -0.1,
         "bkCode": "881268",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -77365,8 +77365,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 1.5,
         "boardPctZt": 1.28,
         "bkCode": "881270",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -77866,8 +77866,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -78367,8 +78367,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": 0.57,
         "boardPctZt": -0.46,
         "bkCode": "881265",
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -78868,8 +78868,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 48,
+        "probNote": "脚本基线：近1日无明确方向新闻（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",
@@ -79369,8 +79369,8 @@ window.DASHBOARD_DATA = {
         "boardPctToday": null,
         "boardPctZt": null,
         "bkCode": null,
-        "probability": 50,
-        "probNote": "",
+        "probability": 26,
+        "probNote": "脚本基线：利空加权2/利好加权0（AI 可校准）（补算）",
         "kline": [
           [
             "2026-07-02",

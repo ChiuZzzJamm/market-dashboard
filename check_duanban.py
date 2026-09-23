@@ -885,6 +885,25 @@ def _fmt_ref(r):
     return f"{kind}{tag}：{head}{title}" + (f"：{body}" if body else "")
 
 
+def baseline_prob(sent, rw, bw):
+    """R98k：确定性上涨概率基线（修复「全池 50%」——merge 曾对 AI 未填概率一律补 50）。
+    利好 69~78（利好加权净胜越多越高）、利空 22~31、中性 50。
+    自动化 AI 复核时可 ±10 校准，但严禁全池拉平。"""
+    if sent == "bull":
+        return min(80, 66 + min(max(rw - bw, 1), 4) * 3)
+    if sent == "bear":
+        return max(22, 34 - min(max(bw - rw, 1), 4) * 3)
+    return 50
+
+
+def baseline_note(sent, rw, bw):
+    if sent == "bull":
+        return f"脚本基线：利好加权{rw}/利空加权{bw}（AI 可校准）"
+    if sent == "bear":
+        return f"脚本基线：利空加权{bw}/利好加权{rw}（AI 可校准）"
+    return "脚本基线：近1日无明确方向新闻（AI 可校准）"
+
+
 def tag_entries(entries, D):
     """R88 口径打标 + R89 依据小作文化（--module 口径，取代 R87 硬排除闸门）；
     R91j 修订：利好/利空判定只依据新闻内容——
@@ -972,8 +991,12 @@ def tag_entries(entries, D):
             story = "\n".join(_fmt_ref(r) for r in refs[:3])
         else:
             story = "暂无明确利好/利空消息（板块与个股近1日无点名新闻；自动化 AI 复核时请检索个股公告/财报/大单等补充）"
+        # R98k：概率不再留空待 AI（AI 曾全填 50 / merge 曾补 50）——先给确定性基线，
+        # AI 复核仍可 ±10 校准，但 probNote 已非空，retag 不会重算覆盖。
         out.append(dict(e, sentiment=sent, bullType=bull_type,
-                        bullRefs=refs, bearRefs=bear_refs, story=story))
+                        bullRefs=refs, bearRefs=bear_refs, story=story,
+                        probability=baseline_prob(sent, rw, bw),
+                        probNote=baseline_note(sent, rw, bw)))
     return out
 
 
@@ -1033,6 +1056,11 @@ def build_module(pairs, D):
     tagged = tag_entries(entries, D)
     confirmed = [e for e in tagged if e["stage"] == "全流程达标"]
     watching = [e for e in tagged if e["stage"] != "全流程达标"]
+    # R98k：池级微调——确认池走完全流程形态更完整 +4；观察池仍在形成中 -2
+    for e in confirmed:
+        e["probability"] = max(15, min(88, round((e.get("probability") or 50) + 4)))
+    for e in watching:
+        e["probability"] = max(15, min(88, round((e.get("probability") or 50) - 2)))
     # 观察池内更接近确认的（待企稳）排前，同阶段利空靠后
     watching.sort(key=lambda e: (0 if e["stage"] == "待企稳" else 1,
                                  {"bull": 0, "neutral": 1, "bear": 2}[e["sentiment"]]))

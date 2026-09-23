@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609240316"></script>
+<script src="data.js?v=202609240408"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -310,21 +310,21 @@
   .pano-more button { background: var(--paper); color: var(--accent-deep); border: 1px solid var(--accent); border-radius: 999px; font-size: 12.5px; font-weight: 700; padding: 7px 20px; cursor: pointer; font-family: var(--font); transition: all .2s ease; }
   .pano-more button:hover { background: var(--accent); color: #fff; }
 
-  /* ===== 断板反包模块（R87） ===== */
+  /* ===== 断板反包入口（R98k：悬浮红色圆形，可拖拽到任意位置，位置记忆） ===== */
   .hero { position: relative; }
   .db-entry {
-    position: absolute; top: 24px; right: 28px;
-    display: inline-flex; align-items: center; gap: 7px;
-    background: var(--paper); color: var(--accent-deep);
-    border: 1.5px solid var(--accent); border-radius: 999px;
-    font-size: 13px; font-weight: 800; letter-spacing: 1px;
-    padding: 7px 16px; cursor: pointer;
-    box-shadow: 0 4px 12px rgba(74,168,224,.18);
-    transition: all .2s ease; font-family: var(--font);
+    position: fixed; right: 20px; bottom: 110px;
+    width: 46px; height: 46px; border-radius: 50%;
+    background: var(--up); border: none; padding: 0;
+    box-shadow: 0 6px 16px rgba(224,49,79,.38);
+    cursor: grab; z-index: 1200; touch-action: none; user-select: none;
+    transition: transform .15s ease, box-shadow .2s ease;
   }
-  .db-entry:hover { background: var(--accent); color: #fff; transform: translateY(-1px); }
-  .db-entry .db-badge { font-size: 11px; font-weight: 700; background: var(--up); color: #fff; border-radius: 999px; padding: 1px 8px; letter-spacing: 0; }
-  @media (max-width: 700px) { .db-entry { top: 12px; right: 14px; padding: 5px 12px; font-size: 12px; } .db-entry .db-badge { display: none; } }
+  .db-entry:hover { box-shadow: 0 8px 22px rgba(224,49,79,.5); }
+  .db-entry:active { cursor: grabbing; transform: scale(.92); }
+  .db-entry .db-badge { display: none; }
+  body.db-open .db-entry { display: none; }
+  @media (max-width: 700px) { .db-entry { width: 40px; height: 40px; right: 14px; bottom: 92px; } }
 
   /* 独立页面：打开时隐藏看板主体，只显示本模块 */
   #duanban-view { display: none; }
@@ -424,7 +424,7 @@
 <body>
 <div class="wrap">
   <div class="hero">
-    <button class="db-entry" id="db-entry" onclick="openDuanban()">断板反包<span class="db-badge" id="db-badge"></span></button>
+    <button class="db-entry" id="db-entry" title="断板反包（点击进入 · 可拖动到任意位置）" aria-label="断板反包"><span class="db-badge" id="db-badge"></span></button>
     <h1>每日市场看板</h1>
     <div class="sub">A 股 · 美股 · 全球产业全景</div>
     <span class="updated" id="updatedAt"></span>
@@ -1242,10 +1242,12 @@ function renderDuanban() {
   DB_INDEX = {}; DB_ORDER = [];
   var db = duanbanData();
   document.getElementById('db-date').textContent = db && db.generatedAt ? '数据生成：' + db.generatedAt + '（每日 16:00 收盘后更新 · 次日 07:30 隔夜复核）' : '数据生成：—（待 16:00 自动化首跑）';
-  document.getElementById('db-note').textContent = (db && db.note) || '断板反包形态由脚本确定性核验（涨停池 + 腾讯日K，check_duanban.py）；板块涨幅与 TOP10 榜采用同花顺行业口径（R98）。每只标的按当日要闻/AI预测自动标注口径：利好（红）/利空（绿）/中性（灰）；口径与上涨概率由自动化 AI 复核校准（16:00 收盘后生成，次日 07:30 结合隔夜美股与全球要闻复核）。';
+  document.getElementById('db-note').textContent = (db && db.note) || '断板反包形态由脚本确定性核验（涨停池 + 腾讯日K，check_duanban.py）；板块涨幅与 TOP10 榜采用同花顺行业口径（R98）。每只标的按当日要闻/AI预测自动标注口径：利好（红）/利空（绿）/中性（灰）；上涨概率=脚本确定性基线（情绪+线索加权，R98k）+自动化 AI 复核校准（16:00 生成，次日 07:30 复核）。';
   var conf = (db && db.confirmed) || [], watch = (db && db.watching) || [];
   var badge = document.getElementById('db-badge');
   badge.textContent = (conf.length + watch.length) ? ('确认 ' + conf.length + ' · 观察 ' + watch.length) : '';
+  var dbEntryBtn = document.getElementById('db-entry');
+  if (dbEntryBtn) dbEntryBtn.title = '断板反包（点击进入 · 可拖动）确认 ' + conf.length + ' · 观察 ' + watch.length;
   var html = '';
   // R98: 近3个交易日涨幅居前板块 TOP10（确认池上方）——同花顺行业口径
   var tb = (db && db.topBoards) || [];
@@ -1271,6 +1273,26 @@ function renderDuanban() {
     });
     html += '</div></div>';
   }
+  // R98k：🌟 开盘半小时精选（每日 10:00 自动化写入 duanban.star），置于确认池上方
+  var st = db && db.star;
+  if (st && st.picks && st.picks.length) {
+    html += '<div class="db-pool" style="padding-bottom:14px;"><h2>🌟</h2>' +
+      '<div class="db-sub">开盘半小时精选 · ' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 10:00 更新，盘前情绪 × 池内概率筛选）</div>' +
+      (st.marketLine ? '<div style="font-size:13px;line-height:1.7;margin:6px 0 2px;">' + esc(st.marketLine) + '</div>' : '') +
+      (st.sentiment ? '<div style="font-size:12.5px;color:var(--ink2);line-height:1.7;margin:2px 0 10px;">' + esc(st.sentiment) + '</div>' : '') +
+      '<div class="db-chips star-chips">';
+    window._STAR_LIST = [];
+    st.picks.forEach(function (p, i) {
+      if (String(p.code || '').length === 6) { window._STAR_LIST.push(String(p.code)); }
+      var sCls = p.sentiment === 'bull' ? 'up' : (p.sentiment === 'bear' ? 'down' : '');
+      html += '<div class="stock-chip" data-stk="' + escAttr(String(p.code || '') + '|' + String(p.name || '') + '|开盘精选') + '" style="cursor:pointer">' +
+        '<b>' + esc(String(p.name || '')) + '</b><span>' + esc(String(p.code || '')) + '</span>' +
+        '<span class="' + sCls + '" style="font-weight:800;font-size:12px;">' + (p.probability != null ? p.probability + '%' : '') + '</span>' +
+        (p.note ? '<span style="font-size:11px;color:var(--ink2);">' + esc(String(p.note)) + '</span>' : '') +
+        '</div>';
+    });
+    html += '</div></div>';
+  }
   html += dbPoolHtml('确认池', 'p-conf', '已走完「涨停 → 放量断板 → 缩量 → 不破T日低点与MA5」全流程', conf, true, 'c');
   html += dbPoolHtml('观察池', 'p-watch', '形态进行中、只差最后一根确认K线（待企稳 ＞ 待缩量）', watch, false, 'w');
   document.getElementById('db-pools').innerHTML = html;
@@ -1278,6 +1300,7 @@ function renderDuanban() {
 
 function openDuanban() {
   if (location.hash !== '#duanban') history.pushState(null, '', '#duanban');
+  window._dbScrollY = window.scrollY; // R98k：记住进入前浏览位置，退出时还原
   document.body.classList.add('db-open');
   window.scrollTo(0, 0);
   renderDuanban();
@@ -1286,12 +1309,66 @@ function closeDuanban() {
   if (location.hash === '#duanban') history.pushState(null, '', location.pathname + location.search);
   document.body.classList.remove('db-open');
   closeDbModal();
+  window.scrollTo(0, window._dbScrollY || 0); // 返回刚刚浏览的界面位置
 }
 window.addEventListener('popstate', function () {
   var open = location.hash === '#duanban';
   document.body.classList.toggle('db-open', open);
   if (open) renderDuanban(); else closeDbModal();
 });
+/* R98k：悬浮球拖拽（>6px 位移判定为拖动，否则视为点击进入）+ 位置记忆 */
+(function () {
+  var b = document.getElementById('db-entry');
+  if (!b) return;
+  var POS_KEY = 'dbFloatPos', sx = null, sy = 0, ox = 0, oy = 0, moved = false;
+  function clamp(l, t) {
+    var w = b.offsetWidth || 46, h = b.offsetHeight || 46;
+    return [Math.max(6, Math.min(l, window.innerWidth - w - 6)),
+            Math.max(6, Math.min(t, window.innerHeight - h - 6))];
+  }
+  function place(l, t, save) {
+    var c = clamp(l, t);
+    b.style.left = c[0] + 'px'; b.style.top = c[1] + 'px';
+    b.style.right = 'auto'; b.style.bottom = 'auto';
+    if (save) { try { localStorage.setItem(POS_KEY, JSON.stringify({
+      lf: c[0] / window.innerWidth, tf: c[1] / window.innerHeight })); } catch (e) {} }
+  }
+  function applySaved() {
+    try {
+      var p = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
+      if (p && isFinite(p.lf) && isFinite(p.tf)) place(p.lf * window.innerWidth, p.tf * window.innerHeight, false);
+    } catch (e) {}
+  }
+  applySaved();
+  window.addEventListener('resize', applySaved);
+  b.addEventListener('pointerdown', function (e) {
+    sx = e.clientX; sy = e.clientY;
+    var r = b.getBoundingClientRect(); ox = r.left; oy = r.top; moved = false;
+    try { b.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+  });
+  b.addEventListener('pointermove', function (e) {
+    if (sx === null) return;
+    var dx = e.clientX - sx, dy = e.clientY - sy;
+    if (!moved && Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+    moved = true;
+    place(ox + dx, oy + dy, false);
+  });
+  b.addEventListener('pointerup', function () {
+    if (sx === null) return;
+    sx = null;
+    if (moved) {
+      var r = b.getBoundingClientRect();
+      place(r.left, r.top, true);
+    } else {
+      openDuanban();
+    }
+  });
+  b.addEventListener('pointercancel', function () { sx = null; });
+  b.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDuanban(); }
+  });
+})();
 
 function openDbModal(key) {
   var e = DB_INDEX[key];
@@ -1811,7 +1888,7 @@ renderOpenOutlook();
       var sp = String(stk).split('|');
       // R94b：箭头仅在同一内容分组内切换——取芯片最近的分组容器（要闻影响组/题材条目/AI板块/板块TOP）内的全部标的
       STK_GRP = null; STK_IDX = 0;
-      var gbox = chip.closest ? chip.closest('.stock-chips, .nc-stocks, .reason-tops, .idx-grid') : null;
+      var gbox = chip.closest ? chip.closest('.stock-chips, .nc-stocks, .reason-tops, .idx-grid, .star-chips') : null;
       if (gbox) {
         var gchips = gbox.querySelectorAll('[data-stk]');
         if (gchips.length > 1) {
