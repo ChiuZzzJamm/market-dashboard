@@ -347,7 +347,7 @@ def check_story_quality(D):
 
 def check_star_module(D):
     """R98k 软闸门：① 双池上涨概率全池拉平（如全为 50%）→ 疑似未校准 WARN；
-    ② duanban.star（10:00 开盘精选）picks 须在双池内、code 合法、数量 5~8。"""
+    ② duanban.star（10:00 开盘精选）picks 须在双池内、code 合法、数量不限（≥1，R98l）。"""
     db = D.get('duanban')
     if not isinstance(db, dict):
         return []
@@ -364,8 +364,8 @@ def check_star_module(D):
         else:
             pool_codes = {str(e.get('code')) for e in entries}
             picks = star.get('picks') or []
-            if not isinstance(picks, list) or not (1 <= len(picks) <= 12):
-                warns.append("duanban.star.picks 缺失或数量异常（预期 5~8 只）")
+            if not isinstance(picks, list) or len(picks) < 1:
+                warns.append("duanban.star.picks 缺失或为空（至少 1 只，数量不限——R98l）")
             for p in picks:
                 if not isinstance(p, dict):
                     continue

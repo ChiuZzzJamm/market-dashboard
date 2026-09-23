@@ -6,8 +6,8 @@
   1. 读 data.js 断板反包双池（07:30 复核后的 confirmed/watching，sentiment/probability 已校准）；
   2. 抓开盘半小时盘面：指数涨跌+成交额（腾讯 gtimg，本机可达）、
      同花顺行业涨跌幅（fetch_ths_industries）、行业主力资金净额（fetch_ths_funds）；
-  3. 个股当日实时涨幅批量快照（腾讯 gtimg，一次批量）；
-  4. 确定性筛选 6~8 只「上涨概率最大」标的写入 duanban.star：
+  3. 个股当日实时涨幅+集合竞价高低开批量快照（腾讯 gtimg，一次批量）；
+  4. 确定性筛选全部非利空「上涨概率最大」标的写入 duanban.star（不限数量，R98l）：
      利空(excluded) → 评分 = probability + 板块热度加成(开盘涨幅前8行业 +6) + 个股当日涨幅微调；
   5. marketLine / sentiment 写模板句，pushText 留空——由自动化 AI 复核改写为深度分析。
 
@@ -54,15 +54,22 @@ def fetch_open_indices():
         try:
             cur, prev = float(f[3]), float(f[4])
             pct = round((cur - prev) / prev * 100, 2) if prev else 0.0
+            open_pct = None
+            try:
+                op = float(f[5])
+                open_pct = round((op - prev) / prev * 100, 2) if prev and op > 0 else None
+            except Exception:
+                pass
             amt_yi = round(float(f[37]) / 10000, 0)  # gtimg 成交额单位万元 → 亿
-            out.append({"name": IDX_NAMES.get(sym, f[1]), "pct": pct, "amount": amt_yi})
+            out.append({"name": IDX_NAMES.get(sym, f[1]), "pct": pct,
+                        "openPct": open_pct, "amount": amt_yi})
         except Exception:
             continue
     return out
 
 
 def fetch_stock_quotes(codes):
-    """批量腾讯 gtimg 个股快照 → {code: pct}；失败 {}。"""
+    """批量腾讯 gtimg 个股快照 → {code: {pct, openPct}}；失败 {}。"""
     quotes = {}
     for i in range(0, len(codes), 60):
         batch = codes[i:i + 60]
@@ -78,7 +85,13 @@ def fetch_stock_quotes(codes):
             f = m.group(2).split("~")
             if len(f) > 32:
                 try:
-                    quotes[m.group(1)] = round(float(f[32]), 2)  # 32=涨跌幅%
+                    d = {"pct": round(float(f[32]), 2)}  # 32=涨跌幅%
+                    try:
+                        prev, op = float(f[4]), float(f[5])
+                        d["openPct"] = round((op - prev) / prev * 100, 2) if prev and op > 0 else None
+                    except Exception:
+                        d["openPct"] = None
+                    quotes[m.group(1)] = d
                 except Exception:
                     continue
     return quotes
@@ -132,17 +145,21 @@ def build_star(D):
         except Exception:
             p = 50.0
         sec = str(e.get("sector") or "")
-        live = quotes.get(str(e.get("code")))
+        q = quotes.get(str(e.get("code"))) or {}
+        live = q.get("pct")
+        open_pct = q.get("openPct")
         live_adj = max(-3.0, min(3.0, (live or 0) / 2.0))  # 开盘半小时涨幅微调 ±3
         score = round(p + _hot(sec) + live_adj, 1)
         cand.append({"code": str(e.get("code")), "name": e.get("name"),
                      "sector": sec, "sentiment": sent, "probability": round(p, 1),
-                     "pctLive": live, "score": score})
+                     "pctLive": live, "openPct": open_pct, "score": score})
     cand.sort(key=lambda x: (-x["score"], -x["probability"]))
     picks = []
-    for c in cand[:8]:
+    for c in cand:  # R98l：不限数量，全部非利空候选按评分降序入选
         sent_cn = {"bull": "利好", "neutral": "中性"}.get(c["sentiment"], c["sentiment"])
         note = f"{c['sector']}·{sent_cn}·基线{c['probability']:.0f}%"
+        if c.get("openPct") is not None:
+            note += f"·竞价{c['openPct']:+.1f}%"
         if c.get("pctLive") is not None:
             note += f"·现涨{c['pctLive']:+.1f}%"
         picks.append({"code": c["code"], "name": c["name"], "sector": c["sector"],
@@ -152,7 +169,9 @@ def build_star(D):
     # ---- 文案模板（AI 复核改写 sentiment/pushText） ----
     now = datetime.now()
     market_line = "，".join(
-        f"{x['name']}{x['pct']:+.2f}%" for x in idx) if idx else "指数快照获取失败"
+        (f"{x['name']}{x['pct']:+.2f}%（竞价{x['openPct']:+.2f}%）"
+         if x.get("openPct") is not None else f"{x['name']}{x['pct']:+.2f}%")
+        for x in idx) if idx else "指数快照获取失败"
     if idx:
         total_amt = sum(x.get("amount") or 0 for x in idx)
         market_line += f"，半小时两市成交约 {total_amt:.0f} 亿"
@@ -160,8 +179,14 @@ def build_star(D):
     bot3 = "、".join(f"{s['name']}{s['pct']:+.2f}%" for s in sectors[-3:]) or "—"
     fi_txt = "、".join(f"{x['name']}{x['value']:+.1f}亿" for x in (fund_in or [])) or "—"
     fo_txt = "、".join(f"{x['name']}{x['value']:+.1f}亿" for x in (fund_out or [])) or "—"
+    opens = [c["openPct"] for c in cand if c.get("openPct") is not None]
+    open_up = sum(1 for o in opens if o > 0)
+    open_dn = sum(1 for o in opens if o < 0)
+    auction_line = (f"集合竞价：池内候选高开 {open_up} 家 / 低开 {open_dn} 家"
+                    if opens else "集合竞价：池内个股竞价快照缺失")
     sentiment = (f"开盘半小时板块情绪：领涨 {top3}；领跌 {bot3}。"
                  f"资金情绪：主力净流入前列 {fi_txt}；净流出前列 {fo_txt}。"
+                 f"{auction_line}。"
                  "（AI 复核：请改写为完整开盘情绪判断与对断板反包标的的影响分析）")
 
     star = {
@@ -171,7 +196,7 @@ def build_star(D):
         "sentiment": sentiment,
         "picks": picks,
         "pushText": "",
-        "generatedBy": "update_star.py 确定性筛选（R98k）+ 自动化 AI 复核",
+        "generatedBy": "update_star.py 确定性筛选（R98l）+ 自动化 AI 复核",
     }
     return star, None
 
