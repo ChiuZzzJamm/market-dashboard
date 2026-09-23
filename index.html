@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609232053"></script>
+<script src="data.js?v=202609232124"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -264,6 +264,10 @@
   .ps-modal-head .nm { font-size: 16px; font-weight: 900; }
   .ps-modal-head .cnt { font-size: 12px; color: var(--ink2); }
   .ps-modal-head .db-modal-close { margin-left: auto; }
+  /* 通用标的K线弹窗（叠于 db/lb 弹窗之上） */
+  #stk-modal { display: none; position: fixed; inset: 0; z-index: 230; background: rgba(30,45,60,.45); align-items: center; justify-content: center; padding: 20px; }
+  #stk-modal.open { display: flex; }
+  .stk-modal-box { background: var(--paper); border-radius: var(--radius); padding: 20px 22px; max-width: 760px; width: 100%; max-height: 92vh; overflow: auto; box-shadow: 0 20px 60px rgba(17,17,26,.25); }
   .ps-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; border-radius: 9px; font-size: 13px; }
   .ps-row:nth-child(odd) { background: var(--accent-soft); }
   .ps-row .nm { font-weight: 600; }
@@ -442,6 +446,7 @@
   <div class="lb-modal-box">
     <div class="lb-modal-head" id="lb-modal-head"></div>
     <div class="lb-modal-meta" id="lb-modal-meta"></div>
+    <div class="db-kline" id="lb-kline"></div>
     <div class="lb-story" id="lb-modal-body"></div>
   </div>
 </div>
@@ -450,6 +455,15 @@
   <div class="ps-modal-box">
     <div class="ps-modal-head" id="ps-modal-head"></div>
     <div id="ps-modal-body"></div>
+  </div>
+</div>
+
+<!-- 通用标的K线弹窗：页面所有成分股/标的点击均可查看日K，点击K线柱看当日涨幅 -->
+<div id="stk-modal" onclick="if(event.target===this)stkClose()">
+  <div class="stk-modal-box">
+    <div class="db-modal-head" id="stk-modal-head"></div>
+    <div class="db-modal-meta" id="stk-modal-meta"></div>
+    <div class="db-kline" id="stk-kline"></div>
   </div>
 </div>
 
@@ -537,7 +551,7 @@ function renderTops(s, isUp) {
     var info = name + (pctStr ? ' ' + pctStr : '');
     if (bname) info += ' · ' + bname + (isUp ? ' 领涨第' : ' 领跌第') + (idx + 1) + '位';
     if (op !== null && op !== undefined) info += ' · 今开 ' + (op >= 0 ? '+' : '') + op + '%' + (op > 1 ? '（高开）' : op < -1 ? '（低开）' : '（平开）');
-    return '<span class="tchip" title="' + escAttr(info) + '"><b>' + esc(name) + '</b>' + (pctStr ? '<span class="tp ' + cls + '">' + pctStr + '</span>' : '') + '<span class="nt">' + esc(info) + '</span></span>';
+    return '<span class="tchip" data-stk="|' + escAttr(name) + '|' + escAttr(info) + '" title="' + escAttr(info + '（点击查看K线）') + '"><b>' + esc(name) + '</b>' + (pctStr ? '<span class="tp ' + cls + '">' + pctStr + '</span>' : '') + '<span class="nt">' + esc(info) + '</span></span>';
   }).join('');
   return '<div class="reason-tops"><span class="tops-h">' + label + '</span>' + chips + '</div>';
 }
@@ -799,7 +813,7 @@ function renderAiPrediction() {
     if (s.stocks && s.stocks.length) {
       html += '<div class="stock-chips">';
       s.stocks.forEach(function (st) {
-        html += '<span class="stock-chip" title="' + escAttr(st.name + ' ' + st.code + (st.note ? ' · ' + st.note : '')) + '"><b>' + esc(st.name) + '</b><span class="cd">' + esc(st.code) + '</span>' +
+        html += '<span class="stock-chip" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (st.note || '')) + '" title="' + escAttr(st.name + ' ' + st.code + (st.note ? ' · ' + st.note : '') + '（点击查看K线）') + '"><b>' + esc(st.name) + '</b><span class="cd">' + esc(st.code) + '</span>' +
           (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
       });
       html += '</div>';
@@ -860,7 +874,7 @@ function newsEntryInner(it, showSrc, tag) {
     s += '<div class="nc-imp">' + (impTheme ? '<span class="nc-imp-theme">' + esc(impTheme) + '</span>' : '') + (im.horizon ? '<span class="nc-imp-hz">' + esc(im.horizon) + '</span>' : '');
     s += '<div class="nc-stocks">';
     im.stocks.forEach(function (st) {
-      s += '<span class="stock-chip" title="' + escAttr((st.name || '') + ' ' + (st.code || '') + (st.note ? ' · ' + st.note : '')) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
+      s += '<span class="stock-chip" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (st.note || '')) + '" title="' + escAttr((st.name || '') + ' ' + (st.code || '') + (st.note ? ' · ' + st.note : '')) + '（点击查看K线）"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
     });
     s += '</div></div>';
   });
@@ -939,8 +953,8 @@ function renderThemePicks(list) {
       s += '<div class="stock-chips">';
       sts.forEach(function (st) {
         var note = (st.note || '') + (st.chg ? ' · ' + st.chg : '');
-        var title = (st.name || '') + ' ' + (st.code || '') + (note ? ' · ' + note : '');
-        s += '<span class="stock-chip" title="' + escAttr(title) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + (note ? '<span class="nt">' + esc(note) + '</span>' : '') + '</span>';
+        var title = (st.name || '') + ' ' + (st.code || '') + (note ? ' · ' + note : '') + '（点击查看K线）';
+        s += '<span class="stock-chip" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (note || '')) + '" title="' + escAttr(title) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + (note ? '<span class="nt">' + esc(note) + '</span>' : '') + '</span>';
       });
       s += '</div>';
     }
@@ -1014,6 +1028,12 @@ function lbShow(idx) {
     (st.reason ? '<br><span class="lab">涨停原因：</span>' + esc(st.reason) : '');
   document.getElementById('lb-modal-head').innerHTML = head;
   document.getElementById('lb-modal-meta').innerHTML = meta;
+  // R94：连板弹窗内嵌日K线（与断板弹窗同款渲染与点击浮层）
+  var lkbox = document.getElementById('lb-kline');
+  lkbox.innerHTML = '<div class="db-empty">K线加载中…</div>';
+  stkFetchKline(st.code, function (kl, err) {
+    lkbox.innerHTML = (kl && kl.length > 1) ? dbKlineSvg(kl) : '<div class="db-empty">' + esc(err || '暂无K线数据') + '</div>';
+  });
   document.getElementById('lb-modal-body').innerHTML = lbStoryHtml(st);
   document.getElementById('lb-modal').classList.add('open');
 }
@@ -1219,7 +1239,7 @@ function dbStep(delta) {
   openDbModal(DB_ORDER[i]);
 }
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape') { closeDbModal(); lbClose(); psClose(); }
+  if (e.key === 'Escape') { closeDbModal(); lbClose(); psClose(); stkClose(); }
   if (!DB_CURR) return;
   if (e.key === 'ArrowLeft') dbStep(-1);
   if (e.key === 'ArrowRight') dbStep(1);
@@ -1229,28 +1249,34 @@ document.getElementById('db-pools').addEventListener('click', function (ev) {
   if (chip) openDbModal(chip.getAttribute('data-k'));
 });
 // R89：点击K线红/绿柱显示收盘涨幅浮层（再点同柱或空白处关闭）
-document.getElementById('db-kline').addEventListener('click', function (ev) {
-  var box = document.getElementById('db-kline');
-  var tip = box.querySelector('.db-tip');
-  var bar = ev.target && ev.target.classList && ev.target.classList.contains('db-bar') ? ev.target : null;
-  if (!bar) { if (tip) tip.style.display = 'none'; return; }
-  var day = bar.getAttribute('data-day');
-  if (tip && tip.dataset.day === day) { tip.style.display = 'none'; tip.dataset.day = ''; return; }
-  if (!tip) { tip = document.createElement('div'); tip.className = 'db-tip'; box.appendChild(tip); }
-  var pct = parseFloat(bar.getAttribute('data-pct')) || 0;
-  var v = parseInt(bar.getAttribute('data-v'), 10) || 0;
-  var vTxt = v >= 1e8 ? (v / 1e8).toFixed(2) + '亿' : (v >= 1e4 ? (v / 1e4).toFixed(1) + '万' : String(v));
-  tip.innerHTML = esc(day) + '　收盘 <b>' + esc(bar.getAttribute('data-c')) + '</b><br>较前收 <b class="' +
-    (pct >= 0 ? 'up' : 'down') + '">' + (pct > 0 ? '+' : '') + pct.toFixed(2) + '%</b>　量 ' + vTxt;
-  var svgEl = box.querySelector('svg');
-  var scale = svgEl ? (svgEl.clientWidth / 680) : 1;
-  var left = parseFloat(bar.getAttribute('data-cx')) * scale;
-  left = Math.min(Math.max(left, 80), Math.max(80, box.clientWidth - 80));
-  tip.style.left = left + 'px';
-  tip.style.top = '26px';
-  tip.style.display = 'block';
-  tip.dataset.day = day;
-});
+// R94：抽成共享函数，断板弹窗(db-kline)/连板弹窗(lb-kline)/通用标的弹窗(stk-kline)三处复用
+function attachKlineTip(box) {
+  if (!box) return;
+  box.addEventListener('click', function (ev) {
+    var tip = box.querySelector('.db-tip');
+    var bar = ev.target && ev.target.classList && ev.target.classList.contains('db-bar') ? ev.target : null;
+    if (!bar) { if (tip) tip.style.display = 'none'; return; }
+    var day = bar.getAttribute('data-day');
+    if (tip && tip.dataset.day === day) { tip.style.display = 'none'; tip.dataset.day = ''; return; }
+    if (!tip) { tip = document.createElement('div'); tip.className = 'db-tip'; box.appendChild(tip); }
+    var pct = parseFloat(bar.getAttribute('data-pct')) || 0;
+    var v = parseInt(bar.getAttribute('data-v'), 10) || 0;
+    var vTxt = v >= 1e8 ? (v / 1e8).toFixed(2) + '亿' : (v >= 1e4 ? (v / 1e4).toFixed(1) + '万' : String(v));
+    tip.innerHTML = esc(day) + '　收盘 <b>' + esc(bar.getAttribute('data-c')) + '</b><br>较前收 <b class="' +
+      (pct >= 0 ? 'up' : 'down') + '">' + (pct > 0 ? '+' : '') + pct.toFixed(2) + '%</b>　量 ' + vTxt;
+    var svgEl = box.querySelector('svg');
+    var scale = svgEl ? (svgEl.clientWidth / 680) : 1;
+    var left = parseFloat(bar.getAttribute('data-cx')) * scale;
+    left = Math.min(Math.max(left, 80), Math.max(80, box.clientWidth - 80));
+    tip.style.left = left + 'px';
+    tip.style.top = '26px';
+    tip.style.display = 'block';
+    tip.dataset.day = day;
+  });
+}
+attachKlineTip(document.getElementById('db-kline'));
+attachKlineTip(document.getElementById('lb-kline'));
+attachKlineTip(document.getElementById('stk-kline'));
 
 function dbKlineSvg(kline) {
   if (!kline || kline.length < 2) return '<div class="db-empty">暂无K线数据</div>';
@@ -1327,6 +1353,130 @@ function dbKlineSvg(kline) {
   return svg;
 }
 
+/* ===== 通用标的K线（R94）：全站成分股/标的点击看日K，点击K线柱看当日涨幅 =====
+   数据源优先级：① 断板双池内嵌 kline（离线秒开）→ ② 本地缓存 → ③ 腾讯 ifzq fqkline
+   （该接口带 access-control-allow-origin:*，浏览器可直连 fetch）。 */
+var STK_KLINE_CACHE = {};
+function stkSymbol(code) {
+  if (!code) return '';
+  code = String(code).trim();
+  if (/^\d{6}$/.test(code)) return (code.charAt(0) === '6' ? 'sh' : 'sz') + code;
+  if (/^(sh|sz|bj|us|hk)/i.test(code) || code.indexOf('.') >= 0) return code.toLowerCase();
+  return '';
+}
+function stkEmbeddedKline(code) {
+  if (!code || !DB_INDEX) return null;
+  var keys = Object.keys(DB_INDEX);
+  for (var i = 0; i < keys.length; i++) {
+    var e = DB_INDEX[keys[i]];
+    if (e && e.code === code && e.kline && e.kline.length > 1) return e.kline;
+  }
+  return null;
+}
+function stkParseKline(rows) {
+  if (!rows || !rows.length) return null;
+  var out = [];
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    if (!r || r.length < 6) continue;
+    var o = parseFloat(r[1]), c = parseFloat(r[2]), h = parseFloat(r[3]), l = parseFloat(r[4]), v = parseFloat(r[5]);
+    if (isNaN(o) || isNaN(c)) continue;
+    out.push([String(r[0] || ''), o, c, h, l, v]);
+  }
+  return out.length > 1 ? out : null;
+}
+function stkFetchKline(code, cb) {
+  var sym = stkSymbol(code);
+  if (!sym) return cb(null, '未识别的证券代码');
+  if (STK_KLINE_CACHE[sym]) return cb(STK_KLINE_CACHE[sym]);
+  var emb = stkEmbeddedKline(String(code).trim());
+  if (emb) { STK_KLINE_CACHE[sym] = emb; return cb(emb); }
+  fetch('https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=' + encodeURIComponent(sym) + ',day,,,60,qfq&_r=' + Date.now())
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      var d = (j && j.data && j.data[sym]) || {};
+      var kl = stkParseKline(d.qfqday || d.day);
+      if (!kl) return cb(null, '暂无K线数据');
+      STK_KLINE_CACHE[sym] = kl;
+      cb(kl);
+    })
+    .catch(function () { cb(null, 'K线获取失败（网络受限）'); });
+}
+// 仅知名称（板块领涨TOP等无代码场景）：腾讯 smartbox script 注入反查代码（无 CORS，返回 v_hint 全局变量）
+// 匹配三级降级：全称精确 → 前缀匹配（数据源常给全称如「益诺思生物」，行情简称「益诺思」）→ 去常见后缀二次查询
+function stkResolveByName(name, cb) {
+  function pick(h) {
+    if (!h || h === 'N' || h === '"N"') return null;
+    var recs = String(h).replace(/^"+|"+$/g, '').split('^');
+    var exact = null, partial = null;
+    for (var i = 0; i < recs.length; i++) {
+      var p = recs[i].split('~');
+      if (p.length < 3) continue;
+      if (p[2] === name) { exact = p; break; }
+      if (!partial && (name.indexOf(p[2]) === 0 || p[2].indexOf(name) === 0)) partial = p;
+    }
+    var hit = exact || partial;
+    return hit ? [hit[0] + hit[1], hit[2]] : null;
+  }
+  function attempt(q, done) {
+    var old = document.getElementById('stk-resolve-script');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+    window.v_hint = null;
+    var s = document.createElement('script');
+    s.id = 'stk-resolve-script';
+    s.src = 'https://smartbox.gtimg.cn/s3/?v=2&q=' + encodeURIComponent(q) + '&t=all&_r=' + Date.now();
+    s.onload = function () {
+      var h = window.v_hint;
+      window.v_hint = null;
+      var r = pick(h);
+      done(r ? r[0] : null, r ? r[1] : null);
+    };
+    s.onerror = function () { done(null); };
+    document.body.appendChild(s);
+  }
+  attempt(name, function (code, nm) {
+    if (code) return cb(code, nm);
+    var short = String(name).replace(/(生物|股份|科技|集团|电子|机械|传媒|药业|重工|环境|能源|材料|控制|智能|数据|网络|信息|电力|医药)$/, '');
+    if (short && short !== name && short.length >= 2) return attempt(short, cb);
+    cb(null);
+  });
+}
+function openStkModal(code, name, note) {
+  code = (code || '').trim();
+  name = (name || '').trim();
+  document.getElementById('stk-modal-head').innerHTML =
+    '<span class="nm">' + esc(name || '') + '</span>' +
+    (code ? '<span class="cd2">' + esc(code) + '</span>' : '') +
+    '<button class="db-modal-close" onclick="stkClose()">×</button>';
+  document.getElementById('stk-modal-meta').innerHTML =
+    (note ? esc(note) + '<br>' : '') +
+    '<span class="lab">日K线（前复权 · 近30根）· 点击K线柱查看当日涨幅与成交量</span>';
+  var box = document.getElementById('stk-kline');
+  box.innerHTML = '<div class="db-empty">K线加载中…</div>';
+  document.getElementById('stk-modal').classList.add('open');
+  var done = false;
+  function render(kl, err) {
+    if (done) return;
+    done = true;
+    box.innerHTML = (kl && kl.length > 1) ? dbKlineSvg(kl) : '<div class="db-empty">' + esc(err || '暂无K线数据') + '</div>';
+  }
+  if (code) { stkFetchKline(code, render); return; }
+  if (name) {
+    stkResolveByName(name, function (fullCode, nm) {
+      if (done) return;
+      if (!fullCode) { render(null, '未找到该标的的证券代码，无法获取K线'); return; }
+      var hd = document.getElementById('stk-modal-head');
+      var cdSpan = hd.querySelector('.cd2');
+      if (!cdSpan) { cdSpan = document.createElement('span'); cdSpan.className = 'cd2'; hd.insertBefore(cdSpan, hd.querySelector('.db-modal-close')); }
+      cdSpan.textContent = fullCode;
+      stkFetchKline(fullCode, render);
+    });
+    return;
+  }
+  render(null, null);
+}
+function stkClose() { document.getElementById('stk-modal').classList.remove('open'); }
+
 function renderOpenOutlook() {
   // 每日开盘前瞻（R72）：顶层 openOutlook 带日期，前端按日期显示、过期自动隐藏
   var D = window.DASHBOARD_DATA;
@@ -1370,6 +1520,16 @@ renderOpenOutlook();
   document.addEventListener('click', function (e) {
     var chip = e.target.closest ? e.target.closest('.stock-chip, .tchip') : null;
     if (!chip) { closeChips(); return; }
+    // R94：连板芯片走 lbShow（弹窗内已含K线），不弹文字浮层
+    if (chip.classList.contains('lb-click')) { closeChips(); return; }
+    // R94：带 data-stk 的成分股/标的芯片点击 → 通用K线弹窗（code|name|note，无 code 时按名称反查）
+    var stk = chip.getAttribute('data-stk');
+    if (stk !== null && stk !== undefined) {
+      closeChips();
+      var sp = String(stk).split('|');
+      openStkModal(sp[0] || '', sp[1] || '', sp[2] || '');
+      return;
+    }
     var wasOpen = chip.classList.contains('expanded');
     closeChips();
     if (!wasOpen) {
