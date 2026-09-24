@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609241240"></script>
+<script src="data.js?v=202609241249"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -310,43 +310,44 @@
   .pano-more button { background: var(--paper); color: var(--accent-deep); border: 1px solid var(--accent); border-radius: 999px; font-size: 12.5px; font-weight: 700; padding: 7px 20px; cursor: pointer; font-family: var(--font); transition: all .2s ease; }
   .pano-more button:hover { background: var(--accent); color: #fff; }
 
-  /* ===== 断板反包入口（R99f：悬浮 💰 固定在切换图标正下方，成组垂直居中；拖拽功能已取消） ===== */
+  /* ===== 悬浮图标组（R99g：🐼/💰 合并为一个整体 #float-group，整组可拖拽+位置记忆，右侧贴近页面内容右缘、垂直居中） ===== */
   .hero { position: relative; }
   :root { --float-x: max(12px, calc((100vw - 1080px) / 2 - 60px)); }
-  .db-entry, .db-entry-in {
-    position: fixed; right: var(--float-x); top: calc(50% + 7px);
+  .float-group {
+    position: fixed; right: var(--float-x); top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    z-index: 1190; cursor: grab; touch-action: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .float-group:active { cursor: grabbing; }
+  .mkt-toggle, .db-entry {
     width: 46px; height: 46px; border-radius: 50%;
-    background: transparent; border: none; padding: 0;
-    box-shadow: none;
-    cursor: pointer; z-index: 1200; touch-action: manipulation; user-select: none;
+    background: transparent; border: none; padding: 0; box-shadow: none;
+    cursor: pointer; touch-action: none; user-select: none;
     display: flex; align-items: center; justify-content: center;
     font-size: 42px; line-height: 1;
     transition: transform .15s ease;
   }
-  .db-entry:hover, .db-entry-in:hover { transform: scale(1.1); }
-  .db-entry:active, .db-entry-in:active { transform: scale(.92); }
+  .mkt-toggle:hover, .db-entry:hover { transform: scale(1.1); }
+  .mkt-toggle:active, .db-entry:active { transform: scale(.92); }
   .db-entry .db-badge { display: none; }
-  body.db-open .db-entry { display: none; }
-  .db-entry-in { display: none; }
-  body.db-open .db-entry-in { display: flex; }
-
-  /* R99f：A股/美股切换悬浮图标（右侧贴近页面内容右缘、成组垂直居中；🐼=当前在A股看板，🦅=当前在美股看板；💰 在其正下方，两者共享同一中轴线） */
-  .mkt-toggle {
-    position: fixed; right: var(--float-x); top: calc(50% - 53px);
+  /* 断板反包页内的返回 💰：默认位置与组内 💰 一致，拖拽组时由 JS 实时同步坐标 */
+  .db-entry-in {
+    position: fixed; right: var(--float-x); top: calc(50% + 7px);
     width: 46px; height: 46px; border-radius: 50%;
     background: transparent; border: none; padding: 0; box-shadow: none;
-    cursor: pointer; z-index: 1190; touch-action: manipulation; user-select: none;
-    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 1200; touch-action: manipulation; user-select: none;
+    display: none; align-items: center; justify-content: center;
     font-size: 42px; line-height: 1;
-    transition: transform .15s ease; -webkit-tap-highlight-color: transparent;
+    transition: transform .15s ease;
   }
-  .mkt-toggle:hover { transform: scale(1.1); }
-  .mkt-toggle:active { transform: scale(.92); }
+  .db-entry-in:hover { transform: scale(1.1); }
+  .db-entry-in:active { transform: scale(.92); }
+  body.db-open .db-entry-in { display: flex; }
   @media (max-width: 700px) {
     :root { --float-x: 10px; }
-    .db-entry, .db-entry-in, .mkt-toggle { width: 42px; height: 42px; font-size: 36px; }
-    .mkt-toggle { top: calc(50% - 48px); }
-    .db-entry, .db-entry-in { top: calc(50% + 6px); }
+    .float-group { gap: 12px; }
+    .mkt-toggle, .db-entry, .db-entry-in { width: 42px; height: 42px; font-size: 36px; }
   }
   /* R99e：断板反包手机端不显示股票代码（窄屏下被挤没，无信息量） */
   @media (max-width: 700px) { #duanban-view .db-chip .cd { display: none; } }
@@ -448,9 +449,11 @@
 </head>
 <body>
 <div class="wrap">
-  <button class="mkt-toggle" id="mkt-toggle" title="切换到美股看板" aria-label="切换A股/美股看板" onclick="switchTab(currentMarket==='ashare'?'us':'ashare')">🐼</button>
-  <div class="hero">
+  <div class="float-group" id="float-group" title="整组可拖动到任意位置">
+    <button class="mkt-toggle" id="mkt-toggle" title="切换到美股看板" aria-label="切换A股/美股看板" onclick="switchTab(currentMarket==='ashare'?'us':'ashare')">🐼</button>
     <button class="db-entry" id="db-entry" title="断板反包（点击进入）" aria-label="断板反包"><span class="db-emoji">💰</span><span class="db-badge" id="db-badge"></span></button>
+  </div>
+  <div class="hero">
     <h1>每日市场看板</h1>
     <div class="sub">A 股 · 美股 · 全球产业全景</div>
     <span class="updated" id="updatedAt"></span>
@@ -686,8 +689,14 @@ function barOption(names, values, unit) {
   };
 }
 
-/* R99e：A股/美股各自记忆浏览位置——切换前存当前页 scrollY，渲染后恢复目标页上次位置（首次为顶部） */
+/* R99e→R99g：A股/美股各自记忆浏览位置（sessionStorage 持久化，重进页面不丢）；
+   切换后定位下限=tab 区顶部（用户要求：从 tab/内容区开始，而不是页首 hero），有更深的记忆位置则恢复 */
 var mktScroll = { ashare: 0, us: 0 };
+try {
+  var _ms = JSON.parse(sessionStorage.getItem('mktScroll') || 'null');
+  if (_ms && typeof _ms.ashare === 'number' && typeof _ms.us === 'number') mktScroll = _ms;
+} catch (e) {}
+function saveMktScroll() { try { sessionStorage.setItem('mktScroll', JSON.stringify(mktScroll)); } catch (e) {} }
 function syncMktToggle() {
   var t = document.getElementById('mkt-toggle');
   if (!t) return;
@@ -698,13 +707,19 @@ function syncMktToggle() {
 function switchTab(market) {
   if (currentMarket !== market) {
     mktScroll[currentMarket] = window.scrollY || document.documentElement.scrollTop || 0;
+    saveMktScroll();
   }
   document.getElementById('tab-a').classList.toggle('active', market === 'ashare');
   document.getElementById('tab-u').classList.toggle('active', market === 'us');
   currentMarket = market;
   render(market);
   syncMktToggle();
-  window.scrollTo(0, mktScroll[market] || 0);
+  var tabEl = document.querySelector('.tabbar');
+  var tabTop = tabEl ? tabEl.getBoundingClientRect().top + (window.scrollY || document.documentElement.scrollTop || 0) - 12 : 0;
+  var target = Math.max(mktScroll[market] || 0, tabTop);
+  mktScroll[market] = target;
+  saveMktScroll();
+  window.scrollTo(0, target);
 }
 
 /* R99e：板块卡 h2 灰色更新时间角标（A股=数据交易日；美股=tradeDate，自带「（美东）」后缀） */
@@ -1379,13 +1394,67 @@ window.addEventListener('popstate', function () {
   document.body.classList.toggle('db-open', open);
   if (open) renderDuanban(); else closeDbModal();
 });
-/* R99f：💰 拖拽功能取消（用户要求），图标固定于切换图标正下方成组显示，仅保留点击进入/返回 */
+/* R99g：🐼/💰 悬浮组合并为一个整体，整组可拖拽（>6px 位移判定为拖动，否则视为点击）+ 位置记忆（floatGroupPos）；
+   断板反包页内返回 💰(#db-entry-in) 与组内 💰 位置实时同步（组顶 + 组高 - 46） */
 (function () {
   var de = document.getElementById('db-entry');
   var dei = document.getElementById('db-entry-in');
   if (de) de.addEventListener('click', function () { openDuanban(); });
   if (dei) dei.addEventListener('click', function () { closeDuanban(); });
-  try { localStorage.removeItem('dbFloatPos'); } catch (e) {} // 清理历史拖拽位置记忆
+  try { localStorage.removeItem('dbFloatPos'); } catch (e) {} // 清理更早版本的位置键
+  var g = document.getElementById('float-group');
+  if (!g) return;
+  var POS_KEY = 'floatGroupPos', sx = null, sy = 0, ox = 0, oy = 0, moved = false;
+  function rect() { return g.getBoundingClientRect(); }
+  function place(l, t, save) {
+    var r = rect(), w = r.width || 46, h = r.height || 106;
+    l = Math.max(6, Math.min(l, window.innerWidth - w - 6));
+    t = Math.max(6, Math.min(t, window.innerHeight - h - 6));
+    g.style.left = l + 'px'; g.style.top = t + 'px';
+    g.style.right = 'auto'; g.style.bottom = 'auto'; g.style.transform = 'none';
+    if (dei) {
+      dei.style.left = l + 'px'; dei.style.top = (t + h - 46) + 'px';
+      dei.style.right = 'auto'; dei.style.bottom = 'auto';
+    }
+    if (save) {
+      try { localStorage.setItem(POS_KEY, JSON.stringify({ lf: l / window.innerWidth, tf: t / window.innerHeight })); } catch (e) {}
+    }
+  }
+  function applySaved() {
+    try {
+      var p = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
+      if (p && isFinite(p.lf) && isFinite(p.tf)) place(p.lf * window.innerWidth, p.tf * window.innerHeight, false);
+    } catch (e) {}
+  }
+  function onMove(e) {
+    if (sx === null) return;
+    var dx = e.clientX - sx, dy = e.clientY - sy;
+    if (!moved && Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+    moved = true;
+    place(ox + dx, oy + dy, false);
+  }
+  function onUp() {
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onUp);
+    if (sx === null) return;
+    sx = null;
+    if (moved) place(rect().left, rect().top, true);
+  }
+  g.addEventListener('pointerdown', function (e) {
+    if (e.button) return;
+    sx = e.clientX; sy = e.clientY;
+    var r = rect(); ox = r.left; oy = r.top; moved = false;
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+  });
+  // 拖拽结束后拦截随后派发的 click，避免误触 🐼/💰
+  g.addEventListener('click', function (e) {
+    if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; }
+  }, true);
+  window.addEventListener('resize', applySaved);
+  applySaved();
 })();
 
 function openDbModal(key) {
