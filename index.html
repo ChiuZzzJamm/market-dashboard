@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609242011"></script>
+<script src="data.js?v=202609242017"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -150,9 +150,9 @@
   .dd-cand { margin: 1px 0; }
   .dd-tag { display: inline-block; font-weight: 700; color: var(--accent-deep); margin-right: 4px; }
   .dd-elim { color: var(--ink2); font-size: 11.5px; }
-  .dd-main { margin-top: 4px; font-weight: 600; }
-  .dd-conf { font-weight: 400; font-size: 11px; color: var(--accent-deep); border: 1px solid var(--line); background: var(--paper); border-radius: 999px; padding: 0 7px; margin-left: 4px; white-space: nowrap; }
-  .dd-counter { display: block; margin-top: 2px; color: #b06a2c; font-weight: 400; font-size: 11.5px; }
+  .dd-main { font-weight: 600; }
+  .dd-main .conf-badge { margin-left: 6px; vertical-align: 1px; }
+  .dd-counter { display: block; margin-top: 3px; margin-bottom: 4px; color: #b06a2c; font-weight: 400; font-size: 11.5px; }
 
   /* ===== 全球要闻 / 周末 ===== */
   .wk-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 26px; margin-bottom: 20px; box-shadow: var(--shadow); }
@@ -956,20 +956,21 @@ function psClose() { document.getElementById('ps-modal').classList.remove('open'
 function renderDeduce(dd) {
   if (!dd) return '';
   var h = '<div class="dd-box">';
-  var cands = dd.cands || [];
-  cands.forEach(function (c, idx) {
+  /* 主推+反证在前（R99n：置于候选上方），确信度徽章复用 AI 预测 .conf-badge 三级配色 */
+  if (dd.main) {
+    var cf = String(dd.conf || '');
+    var cfCls = cf.indexOf('高') >= 0 ? 'conf-high' : (cf.indexOf('中') >= 0 ? 'conf-mid' : 'conf-low');
+    h += '<div class="dd-main">主推' + esc(dd.main) +
+      (cf ? '<span class="conf-badge ' + cfCls + '">' + esc(cf) + '</span>' : '') + '</div>';
+    if (dd.counter) h += '<div class="dd-counter">反证：' + esc(dd.counter) + '</div>';
+  } else if (dd.counter) {
+    h += '<div class="dd-counter">反证：' + esc(dd.counter) + '</div>';
+  }
+  (dd.cands || []).forEach(function (c, idx) {
     h += '<div class="dd-cand">▸ 候选' + String.fromCharCode(65 + idx) + '｜' + esc(c.tag || '') +
       '：' + esc(c.text || '') +
       (c.eliminate ? ' <span class="dd-elim">（淘汰：' + esc(c.eliminate) + '）</span>' : '') + '</div>';
   });
-  if (dd.main) {
-    h += '<div class="dd-main">主推' + esc(dd.main) +
-      (dd.conf ? '<span class="dd-conf">' + esc(dd.conf) + '</span>' : '');
-    if (dd.counter) h += '<span class="dd-counter">反证：' + esc(dd.counter) + '</span>';
-    h += '</div>';
-  } else if (dd.counter) {
-    h += '<div class="dd-counter">反证：' + esc(dd.counter) + '</div>';
-  }
   h += '</div>';
   return h;
 }
