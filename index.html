@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609241918"></script>
+<script src="data.js?v=202609241958"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -145,28 +145,14 @@
   .ai-verify .v-detail .miss { color: var(--down); font-weight: 700; }
   .ai-verify .v-note { display: block; font-weight: 400; font-size: 11.5px; color: var(--ink-soft, #6b7a8d); margin-top: 1px; }
 
-  /* ===== 策略引擎（fin-strategy-engine） ===== */
-  .st-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 26px; margin-bottom: 20px; box-shadow: var(--shadow); }
-  .st-tag { font-size: 12px; font-weight: 600; color: var(--accent-deep); background: var(--accent-soft); border: 1px solid var(--line); border-radius: 999px; padding: 1.5px 9px; margin-left: 6px; }
-  .st-summary { font-size: 14px; margin: 4px 0 14px; line-height: 1.7; }
-  .st-sec { margin-top: 16px; }
-  .st-sec h4 { font-size: 13.5px; font-weight: 700; margin: 0 0 8px; color: var(--accent-deep); letter-spacing: .5px; }
-  .st-reason { margin-bottom: 10px; background: var(--accent-soft); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
-  .st-reason > b { font-size: 13.5px; }
-  .st-cand { font-size: 12.5px; margin-top: 4px; line-height: 1.6; }
-  .st-elim { color: var(--ink2); }
-  .st-counter { color: #b06a2c; font-size: 12px; }
-  .st-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-  .st-table th, .st-table td { border-bottom: 1px solid var(--line); padding: 7px 8px; text-align: left; vertical-align: top; }
-  .st-table th { color: var(--ink2); font-weight: 600; }
-  .st-table td.st-p { font-weight: 700; white-space: nowrap; }
-  .st-lg { color: var(--ink); }
-  .st-code { font-size: 10.5px; color: var(--ink2); margin-left: 4px; }
-  .st-table tr.st-bull td:first-child { border-left: 3px solid var(--up); }
-  .st-table tr.st-bear td:first-child { border-left: 3px solid var(--down); }
-  .st-table tr.st-flat td:first-child { border-left: 3px solid #9aa4af; }
-  .st-disc { font-size: 13px; line-height: 1.8; }
-  .st-risk { margin-top: 6px; font-size: 12px; color: var(--ink2); }
+  /* ===== 推演块（fin-strategy-engine 三候选推演，内嵌题材掘金/要闻/预测等模块条目，R99m） ===== */
+  .dd-box { margin: 8px 0 2px; background: var(--accent-soft); border: 1px dashed var(--line); border-radius: 12px; padding: 9px 13px; font-size: 12.5px; line-height: 1.75; }
+  .dd-cand { margin: 1px 0; }
+  .dd-tag { display: inline-block; font-weight: 700; color: var(--accent-deep); margin-right: 4px; }
+  .dd-elim { color: var(--ink2); font-size: 11.5px; }
+  .dd-main { margin-top: 4px; font-weight: 600; }
+  .dd-conf { font-weight: 400; font-size: 11px; color: var(--accent-deep); border: 1px solid var(--line); background: var(--paper); border-radius: 999px; padding: 0 7px; margin-left: 4px; white-space: nowrap; }
+  .dd-counter { display: block; margin-top: 2px; color: #b06a2c; font-weight: 400; font-size: 11.5px; }
 
   /* ===== 全球要闻 / 周末 ===== */
   .wk-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 26px; margin-bottom: 20px; box-shadow: var(--shadow); }
@@ -794,8 +780,6 @@ function render(market) {
     html += '<div id="chart-fund" class="chart-tall"></div></div>';
   }
 
-  html += renderStrategyHtml();
-
   document.getElementById('content').innerHTML = html;
 
   // R97：全球要闻（含宏观/财经/投行）独立渲染到 #news-slot——紧贴行业全景上方（2026-09-23 用户要求）
@@ -964,80 +948,33 @@ function showPanoSubs(name) {
 }
 function psClose() { document.getElementById('ps-modal').classList.remove('open'); }
 
-/* AI 预测分析 */
-function confCN(c) {
-  var m = {'high':'高确信','medium':'中等确信','speculative':'推测','intuition':'直觉'};
-  return m[c] || (c || '');
-}
-
-function renderStrategyHtml() {
-  var S = window.DASHBOARD_DATA.strategy || {};
-  // 选优：nextday > preopen > weekly（按 type 优先级，保证 A股/美股页都展示最新可用的一份）
-  var order = ['nextday', 'preopen', 'weekly'];
-  var typeLabel = {'nextday':'次日关注清单', 'preopen':'盘前校准', 'weekly':'下周关注'};
-  var pick = null, pickType = null;
-  for (var i = 0; i < order.length; i++) {
-    if (S[order[i]]) { pick = S[order[i]]; pickType = order[i]; break; }
-  }
-  if (!pick) return '';
-  var date = pick.date || pick.generatedAt || '';
-  var h = '<div class="card st-card"><h2>🧭 策略引擎' +
-    (date ? '<span class="h2-date">' + esc(date) + '</span>' : '') +
-    ' <span class="st-tag">' + (typeLabel[pickType] || '') + '</span></h2>';
-  if (pick.summary) h += '<div class="st-summary">' + esc(pick.summary) + '</div>';
-  // 一、三候选推演
-  if (pick.reasoning && pick.reasoning.length) {
-    h += '<div class="st-sec"><h4>三候选推演</h4>';
-    pick.reasoning.forEach(function (r) {
-      h += '<div class="st-reason"><b>' + esc(r.theme || '') + '</b>';
-      (r.candidates || []).forEach(function (c) {
-        if (c.id === 'C' || c.confidence) {
-          h += '<div class="st-cand">· 主推演[' + confCN(c.confidence) + ']：' + esc(c.logic || '');
-          if (c.counter) h += ' <span class="st-counter">反证：' + esc(c.counter) + '</span>';
-          h += '</div>';
-        } else {
-          h += '<div class="st-cand st-elim">· 候选' + esc(c.id || '') + '：' + esc(c.logic || '') +
-            ' <span class="st-counter">淘汰：' + esc(c.eliminate || '') + '</span></div>';
-        }
-      });
-      h += '</div>';
-    });
+/* fin-strategy-engine 三候选推演块（R99m：内嵌题材掘金/要闻/预测等模块条目，不再单独成卡）
+   入参 dd 形如：
+   { cands:[{tag:'事件驱动',text:'…',eliminate:'…'},{tag:'情绪驱动',text:'…',eliminate:'…'}],
+     main:'…', conf:'推测', counter:'…' }
+   缺失字段自动跳过，保证向后兼容（老数据无 deduce 不报错） */
+function renderDeduce(dd) {
+  if (!dd) return '';
+  var h = '<div class="dd-box">';
+  var cands = dd.cands || [];
+  cands.forEach(function (c, idx) {
+    h += '<div class="dd-cand">▸ 候选' + String.fromCharCode(65 + idx) + '｜' + esc(c.tag || '') +
+      '：' + esc(c.text || '') +
+      (c.eliminate ? ' <span class="dd-elim">（淘汰：' + esc(c.eliminate) + '）</span>' : '') + '</div>';
+  });
+  if (dd.main) {
+    h += '<div class="dd-main">主推' + esc(dd.main) +
+      (dd.conf ? '<span class="dd-conf">' + esc(dd.conf) + '</span>' : '');
+    if (dd.counter) h += '<span class="dd-counter">反证：' + esc(dd.counter) + '</span>';
     h += '</div>';
-  }
-  // 二、关注清单
-  if (pick.watchlist && pick.watchlist.length) {
-    h += '<div class="st-sec"><h4>关注清单</h4><table class="st-table"><thead><tr><th>标的/板块</th><th>逻辑</th><th>概率</th><th>确信度</th><th>反证</th></tr></thead><tbody>';
-    pick.watchlist.forEach(function (w) {
-      var tagcls = w.tag === 'bull' ? 'st-bull' : (w.tag === 'bear' ? 'st-bear' : 'st-flat');
-      var p = w.probability;
-      var pstr = (p == null) ? '—' : ((typeof p === 'number' && p <= 1) ? (p * 100).toFixed(0) + '%' : p + '%');
-      h += '<tr class="' + tagcls + '"><td>' + esc(w.name || '') +
-        (w.code ? '<span class="st-code">' + esc(w.code) + '</span>' : '') + '</td>' +
-        '<td class="st-lg">' + esc(w.logic || '') + '</td>' +
-        '<td class="st-p">' + pstr + '</td>' +
-        '<td>' + confCN(w.confidence) + '</td>' +
-        '<td class="st-lg">' + esc(w.counter || '') + '</td></tr>';
-    });
-    h += '</tbody></table></div>';
-  }
-  // 三、仓位纪律
-  var pd = pick.position_discipline || {};
-  if (pd && (pd.total_cap_limit || pd.stop_loss || pd.risk_note || pd.tiers || pd.triggers)) {
-    h += '<div class="st-sec"><h4>仓位纪律</h4><div class="st-disc">';
-    if (pd.total_cap_limit != null) h += '<div>总仓位上限：<b>' + esc(pd.total_cap_limit) + '%</b>' + (pd.basis ? '（依据：' + esc(pd.basis) + '）' : '') + '</div>';
-    if (pd.tiers) h += '<div>分档：' + esc(typeof pd.tiers === 'string' ? pd.tiers : JSON.stringify(pd.tiers)) + '</div>';
-    if (pd.triggers) {
-      var t = pd.triggers;
-      var tstr = (typeof t === 'string') ? t : ((t.trigger || '') + (t.stop_loss ? ' → 止损：' + t.stop_loss : ''));
-      h += '<div>触发/止损：' + esc(tstr) + '</div>';
-    }
-    if (pd.risk_note) h += '<div class="st-risk">' + esc(pd.risk_note) + '</div>';
-    h += '</div></div>';
+  } else if (dd.counter) {
+    h += '<div class="dd-counter">反证：' + esc(dd.counter) + '</div>';
   }
   h += '</div>';
   return h;
 }
 
+/* AI 预测分析 */
 function renderAiPrediction() {
   var p = window.DASHBOARD_DATA.aiPrediction;
   var box = document.getElementById('ai-prediction');
@@ -1056,7 +993,8 @@ function renderAiPrediction() {
       '<span class="conf-badge ' + confCls + '">置信度 ' + esc(s.confidence) + '</span>' +
       '</div>' +
       '<div class="drv">隔夜驱动：' + esc(s.usDriver) + '</div>' +
-      '<div class="lgc">映射逻辑：' + esc(s.logic) + '</div>';
+      '<div class="lgc">映射逻辑：' + esc(s.logic) + '</div>' +
+      (s.deduce ? renderDeduce(s.deduce) : (s.counter ? '<div class="dd-box"><div class="dd-counter">反证：' + esc(s.counter) + '</div></div>' : ''));
     if (s.stocks && s.stocks.length) {
       html += '<div class="stock-chips">';
       s.stocks.forEach(function (st) {
@@ -1142,6 +1080,7 @@ function newsEntryInner(it, showSrc, tag, tradeDate) {
     });
     s += '</div></div>';
   });
+  if (it.deduce) s += renderDeduce(it.deduce);
   if (showSrc && it.source) s += '<div class="nc-src">来源：' + esc(it.source) + '</div>';
   return s;
 }
@@ -1218,6 +1157,7 @@ function renderThemePicks(list, tradeDate) {
     var ev = it.event || it.theme || '';
     if (ev) s += '<div class="tp-event">⚡ ' + esc(ev) + (tradeDate ? '<span class="nc-time">' + esc(shortDate(tradeDate)) + ' 发布</span>' : '') + '</div>';
     if (it.logic) s += '<div class="tp-logic">逻辑传导：' + esc(it.logic) + '</div>';
+    if (it.deduce) s += renderDeduce(it.deduce);
     var sts = it.stocks || [];
     if (sts.length) {
       s += '<div class="stock-chips">';

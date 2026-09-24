@@ -89,10 +89,12 @@ def build_lianban_line(a):
 
 def fmt_ai_line(ap, label):
     """AI 预测紧凑摘要：每板块「板块名方向(置信度)」，一行带过（微信不宜展开 6×8 明细）。
+    若板块带 counter / deduce（fin-strategy-engine 内嵌推演），追加「↘反证/推演」附注。
     ap 缺失或 sectors 为空返回 None，调用方跳过该段。"""
     if not ap or not ap.get('sectors'):
         return None
     items = []
+    notes = []
     for s in ap['sectors'][:6]:
         sec = (s.get('sector') or '').strip()
         if not sec:
@@ -100,44 +102,44 @@ def fmt_ai_line(ap, label):
         d = (s.get('direction') or '').strip()
         c = (s.get('confidence') or '').strip()
         items.append(f"{sec}{d}({c})" if c else f"{sec}{d}")
+        if s.get('counter'):
+            notes.append(f"{sec}:{str(s['counter'])[:20]}")
+        elif s.get('deduce') and s['deduce'].get('main'):
+            notes.append(f"{sec}:{str(s['deduce']['main'])[:20]}")
     if not items:
         return None
-    return f"🎯 {label}：{'｜'.join(items)}"
+    base = f"🎯 {label}：{'｜'.join(items)}"
+    if notes:
+        base += '\n↘' + '；'.join(notes)
+    return base
 
-def conf_cn(c):
-    return {'high':'高确信','medium':'中等确信','speculative':'推测','intuition':'直觉'}.get(c, c or '')
+# fin-strategy-engine 的三候选推演已并入各模块内容（题材掘金/要闻/AI预测），
+# 微信推送不再单独成段，相关字段随原模块段一并送达。
 
-def fmt_strategy(strat, label):
-    """把 fin-strategy-engine 产出的 strategy JSON 转为微信推送文本。字段缺失/为空返回 None（调用方跳过）。"""
-    if not strat:
-        return None
+def fmt_deduce_brief(dd, max_main=26, max_counter=22):
+    """把 deduce 压成微信友好的一行：主推（确信度）反证。无 deduce 返回空串。"""
+    if not dd or not isinstance(dd, dict):
+        return ''
     parts = []
-    wl = strat.get('watchlist') or []
-    if wl:
-        lines = []
-        for w in wl[:5]:
-            name = (w.get('name') or '').strip()
-            if not name:
-                continue
-            p = w.get('probability')
-            if isinstance(p, (int, float)):
-                pstr = f"{p*100:.0f}%" if p <= 1 else f"{p:.0f}%"
-            elif p is not None:
-                pstr = str(p)
-            else:
-                pstr = ''
-            lines.append(f"{name} {pstr}{conf_cn(w.get('confidence'))}".rstrip())
-        if lines:
-            parts.append("关注：" + '｜'.join(lines))
-    pd = strat.get('position_discipline') or {}
-    cap = pd.get('total_cap_limit')
-    if cap is not None:
-        parts.append(f"仓位上限：{cap}%")
-    if pd.get('risk_note'):
-        parts.append(pd['risk_note'])
-    if not parts:
-        return None
-    return f"🧭 策略（{label}）：\n" + '\n'.join(parts)
+    if dd.get('main'):
+        m = str(dd['main'])[:max_main]
+        if dd.get('conf'):
+            m += '（' + str(dd['conf']) + '）'
+        parts.append('推演：' + m)
+    if dd.get('counter'):
+        parts.append('反证：' + str(dd['counter'])[:max_counter])
+    return ' '.join(parts)
+
+def fmt_theme_pick(it, idx):
+    """题材掘金单条：事件 + 内嵌推演（deduce）。无 deduce 时只出事件，保持旧排版。"""
+    ev = (it.get('event') or it.get('theme') or '').strip()
+    if len(ev) > 38:
+        ev = ev[:38] + '…'
+    line = f"{idx}. {ev}"
+    db = fmt_deduce_brief(it.get('deduce'))
+    if db:
+        line += '\n   ' + db
+    return line
 
 def fmt_bullish(t, idx):
     """利好板块：保留括号内板块说明 + 核心受益股"""
@@ -153,8 +155,13 @@ def fmt_bullish(t, idx):
     elif len(theme) > 34:
         theme = theme[:34] + '…'
     stocks = ' '.join([s.get('name','') for s in t.get('stocks',[])[:3]])
+    db = fmt_deduce_brief(t.get('deduce'))
+    if stocks and db:
+        return f"{idx}. {theme}｜{stocks[:28]}\n   {db}"
     if stocks:
         return f"{idx}. {theme}｜{stocks[:28]}"
+    if db:
+        return f"{idx}. {theme}\n   {db}"
     return f"{idx}. {theme}"
 
 def fmt_bearish(t, idx):
@@ -170,6 +177,9 @@ def fmt_bearish(t, idx):
         theme = f"{before}（{inner}）"
     elif len(theme) > 42:
         theme = theme[:42] + '…'
+    db = fmt_deduce_brief(t.get('deduce'))
+    if db:
+        return f"{idx}. {theme}\n   {db}"
     return f"{idx}. {theme}"
 
 # 国内/国际要闻识别关键词（用于给要闻打 🇨🇳/🌍 图标；面向新闻 title/summary 文本，比 weekend 模式的 theme 关键词更宽）
@@ -267,9 +277,11 @@ if mode == 'ashare':
     if lianban_line:
         desp_parts.append(lianban_line)
     desp_parts.append(build_panorama_line(D.get('panorama')))
-    _st = fmt_strategy(D.get('strategy', {}).get('nextday'), '次日')
-    if _st:
-        desp_parts.append(_st)
+    # 题材掘金（fin-strategy-engine 内嵌推演）：与网页同口径，deduce 随模块一并送达
+    _tp = (a.get('themePicks') or [])
+    if _tp:
+        _tp_lines = [fmt_theme_pick(t, i + 1) for i, t in enumerate(_tp[:5])]
+        desp_parts.append("🔥 题材掘金：\n" + '\n'.join(_tp_lines))
     desp = '\n\n'.join(desp_parts)
 
 elif mode == 'us':
@@ -310,9 +322,6 @@ elif mode == 'us':
         parts.append("✅ 利好：\n" + '\n'.join(bullish_lines))
     if bearish_lines:
         parts.append("⚠️ 利空：\n" + '\n'.join(bearish_lines))
-    _st = fmt_strategy(D.get('strategy', {}).get('preopen'), '盘前')
-    if _st:
-        parts.append(_st)
     desp = '\n\n'.join(parts)
 
 elif mode == 'weekend':
@@ -362,7 +371,8 @@ elif mode == 'weekend':
     # 利好/利空：映射 bullNews/bearNews → fmt_bullish/fmt_bearish 所需 {theme, stocks}
     def news_to_theme(it):
         return {'theme': f"{(it.get('sector') or '').strip()}（{(it.get('title') or '').strip()}）",
-                'stocks': ((it.get('impacts') or [{}])[0].get('stocks') or [])}
+                'stocks': ((it.get('impacts') or [{}])[0].get('stocks') or []),
+                'deduce': it.get('deduce')}
     bullish_lines = [fmt_bullish(news_to_theme(t), i+1) for i, t in enumerate((src.get('bullNews') or [])[:3])]
     bearish_lines = [fmt_bearish(news_to_theme(t), i+1) for i, t in enumerate((src.get('bearNews') or [])[:3])]
 
@@ -384,9 +394,6 @@ elif mode == 'weekend':
         parts.append("✅ 利好：\n" + '\n'.join(bullish_lines))
     if bearish_lines:
         parts.append("⚠️ 利空：\n" + '\n'.join(bearish_lines))
-    _st = fmt_strategy(D.get('strategy', {}).get('weekly'), '周度')
-    if _st:
-        parts.append(_st)
     desp = '\n\n'.join(parts)
 
 elif mode == 'star':
