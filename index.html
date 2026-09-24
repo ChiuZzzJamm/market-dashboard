@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609241111"></script>
+<script src="data.js?v=202609241116"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1697,7 +1697,11 @@ function stkFetchKline(code, cb) {
       var kl = stkParseKline(d.qfqday || d.day);
       if (!kl) {
         console.error('[stkFetchKline] empty data for', sym, '; keys:', Object.keys(d));
-        return cb(null, '暂无K线数据');
+        // R99：解析为空（如北交所标的腾讯只回当日 1 根）也降级新浪备源，而非直接报错
+        return stkFetchKlineSina(sym, function (kl2) {
+          if (kl2) { STK_KLINE_CACHE[sym] = kl2; cb(kl2); }
+          else cb(null, '暂无K线数据');
+        });
       }
       STK_KLINE_CACHE[sym] = kl;
       cb(kl);
