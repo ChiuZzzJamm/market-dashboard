@@ -104,6 +104,41 @@ def fmt_ai_line(ap, label):
         return None
     return f"🎯 {label}：{'｜'.join(items)}"
 
+def conf_cn(c):
+    return {'high':'高确信','medium':'中等确信','speculative':'推测','intuition':'直觉'}.get(c, c or '')
+
+def fmt_strategy(strat, label):
+    """把 fin-strategy-engine 产出的 strategy JSON 转为微信推送文本。字段缺失/为空返回 None（调用方跳过）。"""
+    if not strat:
+        return None
+    parts = []
+    wl = strat.get('watchlist') or []
+    if wl:
+        lines = []
+        for w in wl[:5]:
+            name = (w.get('name') or '').strip()
+            if not name:
+                continue
+            p = w.get('probability')
+            if isinstance(p, (int, float)):
+                pstr = f"{p*100:.0f}%" if p <= 1 else f"{p:.0f}%"
+            elif p is not None:
+                pstr = str(p)
+            else:
+                pstr = ''
+            lines.append(f"{name} {pstr}{conf_cn(w.get('confidence'))}".rstrip())
+        if lines:
+            parts.append("关注：" + '｜'.join(lines))
+    pd = strat.get('position_discipline') or {}
+    cap = pd.get('total_cap_limit')
+    if cap is not None:
+        parts.append(f"仓位上限：{cap}%")
+    if pd.get('risk_note'):
+        parts.append(pd['risk_note'])
+    if not parts:
+        return None
+    return f"🧭 策略（{label}）：\n" + '\n'.join(parts)
+
 def fmt_bullish(t, idx):
     """利好板块：保留括号内板块说明 + 核心受益股"""
     theme = t.get('theme','').strip()
@@ -232,6 +267,9 @@ if mode == 'ashare':
     if lianban_line:
         desp_parts.append(lianban_line)
     desp_parts.append(build_panorama_line(D.get('panorama')))
+    _st = fmt_strategy(D.get('strategy', {}).get('nextday'), '次日')
+    if _st:
+        desp_parts.append(_st)
     desp = '\n\n'.join(desp_parts)
 
 elif mode == 'us':
@@ -272,6 +310,9 @@ elif mode == 'us':
         parts.append("✅ 利好：\n" + '\n'.join(bullish_lines))
     if bearish_lines:
         parts.append("⚠️ 利空：\n" + '\n'.join(bearish_lines))
+    _st = fmt_strategy(D.get('strategy', {}).get('preopen'), '盘前')
+    if _st:
+        parts.append(_st)
     desp = '\n\n'.join(parts)
 
 elif mode == 'weekend':
@@ -343,6 +384,9 @@ elif mode == 'weekend':
         parts.append("✅ 利好：\n" + '\n'.join(bullish_lines))
     if bearish_lines:
         parts.append("⚠️ 利空：\n" + '\n'.join(bearish_lines))
+    _st = fmt_strategy(D.get('strategy', {}).get('weekly'), '周度')
+    if _st:
+        parts.append(_st)
     desp = '\n\n'.join(parts)
 
 elif mode == 'star':
