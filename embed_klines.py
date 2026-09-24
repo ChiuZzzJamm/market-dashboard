@@ -60,7 +60,7 @@ def load_data():
 
 
 def save_data(D):
-    out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, indent=2) + ";\n"
+    out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ";\n"
     open(f"{BASE}/data.js", "w", encoding="utf-8").write(out)
 
 

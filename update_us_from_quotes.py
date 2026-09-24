@@ -468,7 +468,7 @@ if trade_iso != "未知日期":
             D['updatedAt'] = f"{_now_bj.strftime('%Y-%m-%d %H:%M')}（美股休市/行情过期，保留上一交易日数据）"
             if not ARGS.dry_run:
                 with open('data.js', 'w', encoding='utf-8') as f:
-                    f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, indent=2) + ';\n')
+                    f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';\n')
             print('us market closed/stale, kept previous us data')
             raise SystemExit(0)
     except Exception:
@@ -558,4 +558,4 @@ if ARGS.dry_run:
     }, ensure_ascii=False, indent=2))
 else:
     with open('data.js', 'w', encoding='utf-8') as f:
-        f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, indent=2) + ';\n')
+        f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';\n')

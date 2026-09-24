@@ -1309,7 +1309,7 @@ def main():
             if notes_extra:
                 note += "；" + "/".join(notes_extra)
             D["updatedAt"] = datetime.now(TZ8).strftime('%Y-%m-%d %H:%M') + note
-        out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, indent=2) + ";\n"
+        out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ";\n"
         open("data.js", "w", encoding="utf-8").write(out)
         # 语法校验：定位 node（与 deploy.sh/run_push.sh/push_notify.py 一致，避免自动化环境
         # PATH 缺失 node 而崩溃）。node 实在不可用时跳过校验（json.dumps 已保证结构有效），

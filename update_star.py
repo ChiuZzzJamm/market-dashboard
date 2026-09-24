@@ -281,7 +281,7 @@ def main():
         return
     s, D = load_data(data_path)
     D.setdefault("duanban", {})["star"] = star
-    out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, indent=2) + ";\n"
+    out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ";\n"
     with open(data_path, "w", encoding="utf-8") as f:
         f.write(out)
     subprocess.run([NODE, "--check", data_path], check=True, timeout=30)

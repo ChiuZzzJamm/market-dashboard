@@ -141,7 +141,7 @@ def main():
             print(f"[merge] 丢弃非当日 🌟 模块（{old_star.get('date')}），待 9:45 开盘精选自动化重建",
                   file=sys.stderr)
     D["duanban"] = mod
-    out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, indent=2) + ";\n"
+    out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ";\n"
     with open(data_path, "w", encoding="utf-8") as f:
         f.write(out)
     try:

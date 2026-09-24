@@ -68,7 +68,7 @@ def main():
         db[pool] = retagged
     db["generatedAt"] = datetime.now().strftime("%Y-%m-%d %H:%M")
     db["note"] = db.get("note") or ""
-    out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, indent=2) + ";\n"
+    out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ";\n"
     with open(data_path, "w", encoding="utf-8") as f:
         f.write(out)
     print(f"[info] 重打标完成：{len(changed)} 只改判")

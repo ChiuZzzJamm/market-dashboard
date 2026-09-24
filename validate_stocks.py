@@ -485,7 +485,7 @@ def main():
     if '--no-fix-order' not in sys.argv or duanban_changed:
         reorder_inplace(D)
         with open('data.js', 'w', encoding='utf-8') as f:
-            f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, indent=2) + ';\n')
+            f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';\n')
 
     violations = []
     imp_cnt_warns = check_impact_count(D)
