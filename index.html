@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609241216"></script>
+<script src="data.js?v=202609241235"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -150,7 +150,7 @@
   .wk-head h2 { margin: 0; }
   .wk-head .date { font-size: 12.5px; color: var(--ink2); }
   /* 卡片 h2 内日期角标（主力资金流向等，R98f；R99e 扩展到 AI 预测卡） */
-  .card h2 .h2-date, .ai-card h2 .h2-date { font-size: 12.5px; color: var(--ink2); font-weight: 400; margin-left: 8px; }
+  .card h2 .h2-date, .ai-card h2 .h2-date, .wk-card h2 .h2-date { font-size: 12.5px; color: var(--ink2); font-weight: 400; margin-left: 8px; }
   .wk-summary { font-size: 14.5px; margin-bottom: 16px; line-height: 1.7; }
   .wk-section { margin: 22px 0 14px; padding-top: 16px; border-top: 1px solid var(--line); }
   .wk-section h4 { font-size: 14px; font-weight: 700; margin: 0 0 6px 0; color: var(--accent-deep); letter-spacing: 1px; }
@@ -310,30 +310,29 @@
   .pano-more button { background: var(--paper); color: var(--accent-deep); border: 1px solid var(--accent); border-radius: 999px; font-size: 12.5px; font-weight: 700; padding: 7px 20px; cursor: pointer; font-family: var(--font); transition: all .2s ease; }
   .pano-more button:hover { background: var(--accent); color: #fff; }
 
-  /* ===== 断板反包入口（R98m：悬浮 💰 图标，无圆圈底，可拖拽到任意位置，位置记忆） ===== */
+  /* ===== 断板反包入口（R99f：悬浮 💰 固定在切换图标正下方，成组垂直居中；拖拽功能已取消） ===== */
   .hero { position: relative; }
+  :root { --float-x: max(12px, calc((100vw - 1080px) / 2 - 60px)); }
   .db-entry, .db-entry-in {
-    position: fixed; right: 20px; bottom: 110px;
+    position: fixed; left: var(--float-x); top: calc(50% + 7px);
     width: 46px; height: 46px; border-radius: 50%;
     background: transparent; border: none; padding: 0;
     box-shadow: none;
-    cursor: grab; z-index: 1200; touch-action: none; user-select: none;
+    cursor: pointer; z-index: 1200; touch-action: manipulation; user-select: none;
     display: flex; align-items: center; justify-content: center;
     font-size: 42px; line-height: 1;
     transition: transform .15s ease;
   }
-  .db-entry-in { cursor: pointer; }
   .db-entry:hover, .db-entry-in:hover { transform: scale(1.1); }
-  .db-entry:active, .db-entry-in:active { cursor: grabbing; transform: scale(.92); }
+  .db-entry:active, .db-entry-in:active { transform: scale(.92); }
   .db-entry .db-badge { display: none; }
   body.db-open .db-entry { display: none; }
   .db-entry-in { display: none; }
   body.db-open .db-entry-in { display: flex; }
-  @media (max-width: 700px) { .db-entry, .db-entry-in { width: 42px; height: 42px; right: 14px; bottom: 92px; font-size: 36px; } }
 
-  /* R99e：A股/美股切换悬浮图标（右侧垂直居中固定，与 💰 同列上下分布；点击切换看板并各自记忆浏览位置） */
+  /* R99f：A股/美股切换悬浮图标（移到页面内容左缘旁、成组垂直居中；🐼=当前在A股看板，🦅=当前在美股看板；💰 在其正下方，两者共享同一中轴线） */
   .mkt-toggle {
-    position: fixed; right: 20px; top: 50%; transform: translateY(-50%);
+    position: fixed; left: var(--float-x); top: calc(50% - 53px);
     width: 46px; height: 46px; border-radius: 50%;
     background: transparent; border: none; padding: 0; box-shadow: none;
     cursor: pointer; z-index: 1190; touch-action: manipulation; user-select: none;
@@ -341,9 +340,14 @@
     font-size: 42px; line-height: 1;
     transition: transform .15s ease; -webkit-tap-highlight-color: transparent;
   }
-  .mkt-toggle:hover { transform: translateY(-50%) scale(1.1); }
-  .mkt-toggle:active { transform: translateY(-50%) scale(.92); }
-  @media (max-width: 700px) { .mkt-toggle { width: 42px; height: 42px; right: 14px; font-size: 36px; } }
+  .mkt-toggle:hover { transform: scale(1.1); }
+  .mkt-toggle:active { transform: scale(.92); }
+  @media (max-width: 700px) {
+    :root { --float-x: 10px; }
+    .db-entry, .db-entry-in, .mkt-toggle { width: 42px; height: 42px; font-size: 36px; }
+    .mkt-toggle { top: calc(50% - 48px); }
+    .db-entry, .db-entry-in { top: calc(50% + 6px); }
+  }
   /* R99e：断板反包手机端不显示股票代码（窄屏下被挤没，无信息量） */
   @media (max-width: 700px) { #duanban-view .db-chip .cd { display: none; } }
 
@@ -444,9 +448,9 @@
 </head>
 <body>
 <div class="wrap">
-  <button class="mkt-toggle" id="mkt-toggle" title="切换到美股看板" aria-label="切换A股/美股看板" onclick="switchTab(currentMarket==='ashare'?'us':'ashare')">🦅</button>
+  <button class="mkt-toggle" id="mkt-toggle" title="切换到美股看板" aria-label="切换A股/美股看板" onclick="switchTab(currentMarket==='ashare'?'us':'ashare')">🐼</button>
   <div class="hero">
-    <button class="db-entry" id="db-entry" title="断板反包（点击进入 · 可拖动到任意位置）" aria-label="断板反包"><span class="db-emoji">💰</span><span class="db-badge" id="db-badge"></span></button>
+    <button class="db-entry" id="db-entry" title="断板反包（点击进入）" aria-label="断板反包"><span class="db-emoji">💰</span><span class="db-badge" id="db-badge"></span></button>
     <h1>每日市场看板</h1>
     <div class="sub">A 股 · 美股 · 全球产业全景</div>
     <span class="updated" id="updatedAt"></span>
@@ -482,7 +486,7 @@
       <div class="db-title">断板反包</div>
       <div class="db-date" id="db-date"></div>
     </div>
-    <button class="db-entry-in" id="db-entry-in" title="返回刚刚浏览的页面（可拖动，位置与主页面 💰 同步）">💰</button>
+    <button class="db-entry-in" id="db-entry-in" title="返回刚刚浏览的页面">💰</button>
     <div class="db-note" id="db-note"></div>
     <div id="db-pools"></div>
   </div>
@@ -687,8 +691,8 @@ var mktScroll = { ashare: 0, us: 0 };
 function syncMktToggle() {
   var t = document.getElementById('mkt-toggle');
   if (!t) return;
-  // 图标显示「点击后要去的市场」：A股页显示 🦅（去美股），美股页显示 🐼（回A股）
-  t.textContent = currentMarket === 'ashare' ? '🦅' : '🐼';
+  // 图标显示「当前所在市场」：A股页显示 🐼，美股页显示 🦅（R99f）
+  t.textContent = currentMarket === 'ashare' ? '🐼' : '🦅';
   t.title = currentMarket === 'ashare' ? '切换到美股看板' : '切换到A股看板';
 }
 function switchTab(market) {
@@ -1375,70 +1379,13 @@ window.addEventListener('popstate', function () {
   document.body.classList.toggle('db-open', open);
   if (open) renderDuanban(); else closeDbModal();
 });
-/* R98k：悬浮球拖拽（>6px 位移判定为拖动，否则视为点击）+ 位置记忆
-   R98p：主页面 💰(#db-entry) 与断板反包页 💰(#db-entry-in) 共享同一位置——
-   两者同一时刻只显示一个，拖动任意一个、另一个同步到相同坐标，localStorage 单键记忆 */
+/* R99f：💰 拖拽功能取消（用户要求），图标固定于切换图标正下方成组显示，仅保留点击进入/返回 */
 (function () {
-  var btns = [];
-  ['db-entry', 'db-entry-in'].forEach(function (id) {
-    var b = document.getElementById(id);
-    if (b) btns.push(b);
-  });
-  if (!btns.length) return;
-  var POS_KEY = 'dbFloatPos', sx = null, sy = 0, ox = 0, oy = 0, moved = false, cur = null;
-  function clamp(l, t) {
-    var ref = cur || btns[0];
-    var w = ref.offsetWidth || 46, h = ref.offsetHeight || 46;
-    return [Math.max(6, Math.min(l, window.innerWidth - w - 6)),
-            Math.max(6, Math.min(t, window.innerHeight - h - 6))];
-  }
-  function place(l, t, save) {
-    var c = clamp(l, t);
-    btns.forEach(function (b) {
-      b.style.left = c[0] + 'px'; b.style.top = c[1] + 'px';
-      b.style.right = 'auto'; b.style.bottom = 'auto';
-    });
-    if (save) { try { localStorage.setItem(POS_KEY, JSON.stringify({
-      lf: c[0] / window.innerWidth, tf: c[1] / window.innerHeight })); } catch (e) {} }
-  }
-  function applySaved() {
-    try {
-      var p = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
-      if (p && isFinite(p.lf) && isFinite(p.tf)) place(p.lf * window.innerWidth, p.tf * window.innerHeight, false);
-    } catch (e) {}
-  }
-  function act(b) { if (b.id === 'db-entry-in') closeDuanban(); else openDuanban(); }
-  btns.forEach(function (b) {
-    b.addEventListener('pointerdown', function (e) {
-      cur = b; sx = e.clientX; sy = e.clientY;
-      var r = b.getBoundingClientRect(); ox = r.left; oy = r.top; moved = false;
-      try { b.setPointerCapture(e.pointerId); } catch (err) {}
-      e.preventDefault();
-    });
-    b.addEventListener('pointermove', function (e) {
-      if (sx === null) return;
-      var dx = e.clientX - sx, dy = e.clientY - sy;
-      if (!moved && Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
-      moved = true;
-      place(ox + dx, oy + dy, false);
-    });
-    b.addEventListener('pointerup', function () {
-      if (sx === null) return;
-      sx = null;
-      if (moved) {
-        var r = b.getBoundingClientRect();
-        place(r.left, r.top, true);
-      } else {
-        act(b);
-      }
-    });
-    b.addEventListener('pointercancel', function () { sx = null; });
-    b.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(b); }
-    });
-  });
-  applySaved();
-  window.addEventListener('resize', applySaved);
+  var de = document.getElementById('db-entry');
+  var dei = document.getElementById('db-entry-in');
+  if (de) de.addEventListener('click', function () { openDuanban(); });
+  if (dei) dei.addEventListener('click', function () { closeDuanban(); });
+  try { localStorage.removeItem('dbFloatPos'); } catch (e) {} // 清理历史拖拽位置记忆
 })();
 
 function openDbModal(key) {
@@ -1893,7 +1840,9 @@ function openBoardKline(name, kline) {
 }
 
 function buildOpenOutlookHtml(o, title) {
-  var html = '<div class="wk-card"><div class="wk-head"><h2>' + title + '</h2></div>' +
+  // R99f：标题补回灰色角标日期（与其他模块 h2Date 同款式）
+  var html = '<div class="wk-card"><div class="wk-head"><h2>' + title +
+    (o.date ? ' <span class="h2-date">' + esc(o.date) + '</span>' : '') + '</h2></div>' +
     '<div class="wk-outlook">' + formatOutlook(o.content) + '</div>';
   if (o.source) html += '<div class="wk-src">来源：' + esc(o.source) + '</div>';
   html += '</div>';
