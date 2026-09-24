@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609241116"></script>
+<script src="data.js?v=202609241132"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1295,9 +1295,9 @@ function renderDuanban() {
       return ra - rb;
     });
     html += '<div class="db-pool p-star"><h2>🌟 开盘精选 · ' + starPicks.length + ' 只</h2>' +
-      '<div class="db-sub">' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：断板反包池内标的，按上涨概率降序；弹窗与确认池一致）</div>' +
-      (st.marketLine ? '<div style="font-size:13px;line-height:1.7;margin:6px 0 2px;">' + esc(st.marketLine) + '</div>' : '') +
-      (st.sentiment ? '<div style="font-size:12.5px;color:var(--ink2);line-height:1.7;margin:2px 0 10px;">' + esc(st.sentiment) + '</div>' : '') +
+      '<div class="db-sub">' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：仅收录开盘后板块情绪正向+主力资金净流入正向板块挂钩的池内标的，按上涨概率降序；弹窗与确认池一致）</div>' +
+      // R99c：页面只放深度分析（pushText），指数/情绪/集合竞价等均在其中，不再单列 marketLine/sentiment
+      (st.pushText ? '<div style="font-size:12.5px;color:var(--ink2);line-height:1.8;margin:6px 0 10px;white-space:pre-line;">' + esc(st.pushText) + '</div>' : '') +
       '<div class="db-chips">';
     window._STAR_LIST = [];
     starPicks.forEach(function (p) {

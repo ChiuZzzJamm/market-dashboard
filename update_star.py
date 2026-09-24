@@ -7,9 +7,10 @@
   2. 抓开盘半小时盘面：指数涨跌+成交额（腾讯 gtimg，本机可达）、
      同花顺行业涨跌幅（fetch_ths_industries）、行业主力资金净额（fetch_ths_funds）；
   3. 个股当日实时涨幅批量快照（腾讯 gtimg，一次批量）；
-  4. 确定性筛选全部非利空池内标的写入 duanban.star（不限数量）：
-     利空(excluded)剔除 → **按上涨概率降序**（R99：概率同则利好优先于中性）；
-  4b. R99：不再纳入【早盘强势板块领涨股】等池外候选——开盘精选只放断板反包池内标的；
+  4. 确定性筛选「板块挂钩」标的写入 duanban.star（R99b）：
+     合格板块 = 开盘涨幅>0（板块情绪正向）且 主力净流入>0（资金正向）的板块；
+     精选 = 池内非利空标的、其板块与合格板块匹配（互含模糊匹配），按上涨概率降序；
+     无合格板块则 picks 为空（宁缺勿滥），绝不放板块不挂钩的标的；
   5. marketLine / sentiment 写模板句（R99：只写开盘后板块情绪与资金情绪，不再含集合竞价），
      pushText 留空——由自动化 AI 复核改写为「📖 分析」。
 
@@ -171,30 +172,59 @@ def build_star(D):
     # ---- 个股快照（当日实时涨幅） ----
     quotes = fetch_stock_quotes([str(e.get("code")) for e in pools])
 
-    # ---- R99：确定性筛选（仅池内标的）——利空剔除，按上涨概率降序（概率同则利好优先） ----
+    # ---- R99b：确定性筛选——仅「板块情绪正向 + 主力净流入正向」板块挂钩的池内标的 ----
+    # 合格板块：涨幅>0 且 主力净流入>0；池内板块与合格板块名互含即视为挂钩。
+    board_fund = {}
+    if fund_in:
+        for f in fund_in:
+            try:
+                board_fund[str(f.get("name") or "")] = float(f.get("value") or 0)
+            except Exception:
+                continue
+    good_boards = []  # [(name, pct, fund亿)]
+    for s in sectors:
+        if s["pct"] <= 0:
+            continue  # 板块情绪须正向
+        fv = None
+        for bn, bv in board_fund.items():
+            if bn and (bn in s["name"] or s["name"] in bn):
+                fv = bv
+                break
+        if fv is None or fv <= 0:
+            continue  # 资金须净流入正向
+        good_boards.append((s["name"], s["pct"], fv))
+
+    def _linked(sec):
+        for n, _, _ in good_boards:
+            if n and sec and (n in sec or sec in n):
+                return True
+        return False
+
     sent_rank = {"bull": 0, "neutral": 1, "bear": 2}
     cand = []
     for e in pools:
         sent = e.get("sentiment") or "neutral"
         if sent == "bear":
             continue  # 利空标的不进精选
+        sec = str(e.get("sector") or "")
+        if not _linked(sec):
+            continue  # R99b：板块不挂钩的不进精选
         try:
             p = float(e.get("probability") or 50)
         except Exception:
             p = 50.0
-        sec = str(e.get("sector") or "")
         q = quotes.get(str(e.get("code"))) or {}
-        live = q.get("pct")
-        open_pct = q.get("openPct")
         cand.append({"code": str(e.get("code")), "name": e.get("name"),
                      "sector": sec, "sentiment": sent, "probability": round(p, 1),
-                     "pctLive": live, "openPct": open_pct})
+                     "pctLive": q.get("pct"), "openPct": q.get("openPct")})
 
     cand.sort(key=lambda x: (-x["probability"], sent_rank.get(x["sentiment"], 1)))
     picks = []
-    for c in cand:  # R99：不限数量，全部非利空池内标的按上涨概率降序入选
+    for c in cand:  # 按上涨概率降序（概率同则利好优先）
         sent_cn = {"bull": "利好", "neutral": "中性"}.get(c["sentiment"], c["sentiment"])
         note = f"{c['sector']}·{sent_cn}·基线{c['probability']:.0f}%"
+        if c.get("openPct") is not None:
+            note += f"·竞价{c['openPct']:+.1f}%"
         if c.get("pctLive") is not None:
             note += f"·现涨{c['pctLive']:+.1f}%"
         picks.append({"code": c["code"], "name": c["name"], "sector": c["sector"],
@@ -214,9 +244,10 @@ def build_star(D):
     bot3 = "、".join(f"{s['name']}{s['pct']:+.2f}%" for s in sectors[-3:]) or "—"
     fi_txt = "、".join(f"{x['name']}{x['value']:+.1f}亿" for x in (fund_in or [])) or "—"
     fo_txt = "、".join(f"{x['name']}{x['value']:+.1f}亿" for x in (fund_out or [])) or "—"
-    # R99：只写开盘后板块情绪与资金情绪，不再含集合竞价
+    # R99b：只写开盘后板块情绪与资金情绪（集合竞价强弱关系由 AI 写入 pushText）
     sentiment = (f"开盘板块情绪：领涨 {top3}；领跌 {bot3}。"
                  f"资金情绪：主力净流入前列 {fi_txt}；净流出前列 {fo_txt}。"
+                 f"合格板块（涨+净流入双正向）：{'、'.join(n for n, _, _ in good_boards) or '无'}。"
                  "（AI 复核：请改写为完整开盘情绪判断与对断板反包标的的影响分析）")
 
     star = {
@@ -226,7 +257,7 @@ def build_star(D):
         "sentiment": sentiment,
         "picks": picks,
         "pushText": "",
-        "generatedBy": "update_star.py 确定性筛选（R99：仅池内标的、按上涨概率降序）+ 自动化 AI 复核",
+        "generatedBy": "update_star.py 确定性筛选（R99b：板块情绪正向+资金净流入正向挂钩的池内标的，按上涨概率降序）+ 自动化 AI 复核",
     }
     return star, None
 
