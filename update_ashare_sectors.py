@@ -830,6 +830,61 @@ def build_sectors_unified(prev_up, prev_down, prev_all, ths_list=None):
     print("[warn] 行业板块全部源失败，保留上一轮数据")
     return (prev_up or []), (prev_down or []), (prev_all or []), "prev"
 
+
+# ---------- R99h: 板块异动胶囊内嵌板块日K线（同花顺行业口径，供前端弹窗直读） ----------
+def fetch_ths_board_kline(ths_code, days=30):
+    """同花顺行业板块近 N 根日K线（与 check_duanban.fetch_ths_kline_full 同源）。
+    返回 [[date, open, close, high, low, volume], ...] 或 None。失败不阻塞主流程。"""
+    if not ths_code:
+        return None
+    url = f"https://d.10jqka.com.cn/v4/line/bk_{ths_code}/01/last.js"
+    try:
+        r = subprocess.run(["curl", "-s", "--max-time", "15",
+                            "-H", "User-Agent: Mozilla/5.0", url],
+                           capture_output=True, timeout=25)
+        raw = (r.stdout or b"").decode("utf-8", errors="replace")
+    except Exception:
+        return None
+    m = re.search(r"\((\{.*\})\)", raw)
+    if not m:
+        return None
+    try:
+        d = json.loads(m.group(1))
+    except Exception:
+        return None
+    bars = str(d.get("data") or "").split(";")
+    out = []
+    for bar in bars:
+        parts = bar.split(",")
+        if len(parts) < 6:
+            continue
+        day = parts[0]
+        if len(day) == 8:
+            day = f"{day[:4]}-{day[4:6]}-{day[6:]}"
+        try:
+            out.append([day, float(parts[1]), float(parts[4]),
+                        float(parts[2]), float(parts[3]), float(parts[5])])
+        except Exception:
+            continue
+    if len(out) < 2:
+        return None
+    return out[-days:]
+
+
+def attach_sector_klines(sectors_up, sectors_down):
+    """给 sectorsUp/sectorsDown 各条目附 kline（30根日K），失败留空（前端 JSONP 兜底）。
+    幂等：已有 kline 的条目跳过。"""
+    items = [s for s in (sectors_up or []) + (sectors_down or [])
+             if isinstance(s, dict) and s.get("thsCode") and not s.get("kline")]
+    ok = 0
+    for s in items:
+        kl = fetch_ths_board_kline(s["thsCode"])
+        if kl:
+            s["kline"] = kl
+            ok += 1
+        time.sleep(0.2)
+    print(f"[info] 板块K线内嵌 {ok}/{len(items)} 条")
+
 # ---------- R97g: 同花顺涨停池/连板/资金流（替代东财，除断板池 topBoards 外全换同花顺） ----------
 THS_DATACENTER_REFERER = "https://data.10jqka.com.cn/datacenterph/limitup/limtupInfo.html"
 THS_LIMITUP_API = "https://data.10jqka.com.cn/dataapi/limit_up/limit_up_pool"
@@ -1090,6 +1145,11 @@ def main():
     if sector_src == "prev":
         em_failed.append("行业板块")
         print("[warn] 行业板块全部源失败，保留上一轮值")
+    # R99h：板块异动胶囊内嵌板块日K线（同花顺源，失败留空由前端 JSONP 兜底，不影响主流程/东财闸门）
+    try:
+        attach_sector_klines(sectors_up, sectors_down)
+    except Exception as _e:
+        print(f"[warn] 板块K线内嵌异常（跳过）：{_e}")
     # ---- 主力资金：同花顺行业资金流(hyzjl) 主源 → 东财 push2 f62 兜底 ----
     fund_in, fund_out = fetch_ths_funds()
     if fund_in is None:

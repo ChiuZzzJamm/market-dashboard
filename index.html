@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609241249"></script>
+<script src="data.js?v=202609241303"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -638,9 +638,13 @@ function renderReasons(list, tradeDate, isUp) {
     // R98b：兼容无 reason 的板块条目（同花顺/东财行业页直接生成，无 AI 异动原因）
     var hasReason = !!(s.reason && s.reason.title);
     // 板块名与涨跌幅合并为一枚胶囊：涨=红底白字，跌=绿底白字；无涨跌幅时退回白底胶囊
+    // R99h：板块胶囊点击看板块日K（同花顺行业口径，与断板页 TOP10 板块K线同款弹窗）；
+    // 有 thsCode 才可点；脚本内嵌的 s.kline（16:00 update_ashare_sectors 附带）注册进 _SEC_KL 供弹窗直读
+    var klAttr = s.thsCode ? ' onclick="openSectorKline(\'' + esc(s.name) + '\',\'' + esc(s.thsCode) + '\')" title="点击查看板块日K线" style="cursor:pointer"' : '';
+    if (s.kline && s.thsCode) { window._SEC_KL = window._SEC_KL || {}; window._SEC_KL[s.thsCode] = s.kline; }
     var pctHtml = (s.pct !== null && s.pct !== undefined)
-      ? '<span class="pct ' + (s.pct >= 0 ? 'u' : 'd') + '">' + esc(s.name) + ' ' + fmtPct(s.pct) + '</span>'
-      : '<span class="sec">' + esc(s.name) + '</span>';
+      ? '<span class="pct ' + (s.pct >= 0 ? 'u' : 'd') + '"' + klAttr + '>' + esc(s.name) + ' ' + fmtPct(s.pct) + '</span>'
+      : '<span class="sec"' + klAttr + '>' + esc(s.name) + '</span>';
     html += '<div class="reason-block ' + (isUp === false ? 'rz-down' : 'rz-up') + '"><div class="reason-head">' +
       (hasReason ? '<span class="date-tag">' + esc(tag) + '异动原因</span>' : '') +
       pctHtml +
@@ -1871,14 +1875,14 @@ function stkClose() { TB_OPEN = false; document.getElementById('stk-modal').clas
 // R98b：板块 TOP10 点击看K线（数据已预加载在后端，无需再fetch）
 // R98e：K线从 _TB_KL 注册表按板块名取（onclick 内联 JSON 双引号会截断 HTML 属性，已废弃）
 // R98g：左右箭头在 TOP10 内快速切换（与标的K线弹窗同款 .db-nav），键盘 ←/→ 同样路由
-var TB_OPEN = false, TB_IDX = 0;
+var TB_OPEN = false, TB_IDX = 0, TB_NAV_OFF = false; // R99h：TB_NAV_OFF=板块异动胶囊弹窗（无 TOP10 箭头/键盘路由）
 function tbShowArrows() {
-  var nav = TB_OPEN && window._TB_LIST && window._TB_LIST.length > 1;
+  var nav = TB_OPEN && !TB_NAV_OFF && window._TB_LIST && window._TB_LIST.length > 1;
   document.getElementById('tb-prev').style.display = nav ? 'flex' : 'none';
   document.getElementById('tb-next').style.display = nav ? 'flex' : 'none';
 }
 function tbStep(delta) {
-  if (!TB_OPEN || !window._TB_LIST || window._TB_LIST.length < 2) return;
+  if (!TB_OPEN || TB_NAV_OFF || !window._TB_LIST || window._TB_LIST.length < 2) return;
   TB_IDX = (TB_IDX + delta + window._TB_LIST.length) % window._TB_LIST.length;
   var nm = window._TB_LIST[TB_IDX];
   openBoardKlineByName(nm);
@@ -1892,6 +1896,7 @@ function openBoardKlineByName(name) {
 function openBoardKline(name, kline) {
   if (!kline || kline.length < 2) return;
   TB_OPEN = true;
+  TB_NAV_OFF = false; // R99h：TOP10 板块弹窗恢复箭头/键盘路由
   var list = window._TB_LIST || [];
   var nav = list.length > 1;
   document.getElementById('stk-modal-head').innerHTML =
@@ -1906,6 +1911,88 @@ function openBoardKline(name, kline) {
   document.getElementById('stk-prev').style.display = 'none';
   document.getElementById('stk-next').style.display = 'none';
   tbShowArrows();
+}
+
+/* ===== R99h：A股页板块异动胶囊点击看板块日K（同花顺行业口径） =====
+   数据两级来源：① 16:00 update_ashare_sectors 内嵌 s.kline（renderReasons 已注册进 _SEC_KL）；
+   ② 无内嵌时前端 JSONP 实时拉 d.10jqka.com.cn/v4/line/bk_<thsCode>/01/last.js。
+   回调名为 URL 固定值（quotebridge_v4_line_bk_<code>_01_last），用 defineProperty 拦截
+   全局赋值（R98q 新浪同款手法）；script 标签加载不受 CORS 限制，referrerPolicy=no-referrer。 */
+var _SEC_KL_FAIL = {};
+function thsBoardKlineJsonp(thsCode, cb) {
+  var cbName = 'quotebridge_v4_line_bk_' + thsCode + '_01_last';
+  var s = document.createElement('script');
+  var done = false;
+  var timer = setTimeout(function () { finish(null); }, 9000);
+  function finish(d) {
+    if (done) return;
+    done = true;
+    clearTimeout(timer);
+    try { delete window[cbName]; } catch (e) { try { window[cbName] = undefined; } catch (e2) {} }
+    if (s.parentNode) s.parentNode.removeChild(s);
+    cb(d);
+  }
+  try {
+    Object.defineProperty(window, cbName, { configurable: true,
+      get: function () { return function (d) { finish(d); }; },
+      set: function (f) { finish(typeof f === 'function' ? f : null); }
+    });
+  } catch (e) { window[cbName] = function (d) { finish(d); }; }
+  s.src = 'https://d.10jqka.com.cn/v4/line/bk_' + encodeURIComponent(thsCode) + '/01/last.js';
+  s.referrerPolicy = 'no-referrer';
+  s.onerror = function () { finish(null); };
+  document.head.appendChild(s);
+}
+function thsParseKline(d) {
+  try {
+    var bars = String((d || {}).data || '').split(';'), out = [];
+    bars.forEach(function (bar) {
+      var p = bar.split(',');
+      if (p.length < 6) return;
+      var day = p[0];
+      if (day.length === 8) day = day.slice(0, 4) + '-' + day.slice(4, 6) + '-' + day.slice(6);
+      var o = parseFloat(p[1]), h = parseFloat(p[2]), l = parseFloat(p[3]), c = parseFloat(p[4]), v = parseFloat(p[5]);
+      if (isNaN(o) || isNaN(c) || isNaN(h) || isNaN(l)) return;
+      out.push([day, o, c, h, l, v]);
+    });
+    return out.length > 1 ? out.slice(-30) : null;
+  } catch (e) { return null; }
+}
+function openSectorKline(name, thsCode) {
+  if (!thsCode) return;
+  TB_OPEN = true;
+  TB_NAV_OFF = true; // 板块异动胶囊弹窗无 TOP10 箭头/键盘路由（R99h）
+  document.getElementById('stk-modal-head').innerHTML =
+    '<span class="nm">' + esc(name || '') + '</span>' +
+    '<span class="cd2">同花顺行业板块</span>' +
+    '<button class="db-modal-close" onclick="stkClose()">×</button>';
+  document.getElementById('stk-modal-meta').innerHTML =
+    '<span class="lab">日K线（近30根）· 点击K线柱查看当日涨幅与成交量</span>';
+  document.getElementById('stk-kline').innerHTML = '<div class="db-empty">K线加载中…</div>';
+  document.getElementById('stk-modal').classList.add('open');
+  document.getElementById('stk-prev').style.display = 'none';
+  document.getElementById('stk-next').style.display = 'none';
+  tbShowArrows();
+  var kl = (window._SEC_KL || {})[thsCode];
+  if (kl && kl.length > 1) {
+    document.getElementById('stk-kline').innerHTML = dbKlineSvg(kl);
+    return;
+  }
+  if (_SEC_KL_FAIL[thsCode]) {
+    document.getElementById('stk-kline').innerHTML = '<div class="db-empty">板块K线获取失败，请稍后重试</div>';
+    return;
+  }
+  thsBoardKlineJsonp(thsCode, function (d) {
+    var kl2 = thsParseKline(d);
+    if (kl2) {
+      window._SEC_KL = window._SEC_KL || {};
+      window._SEC_KL[thsCode] = kl2;
+      document.getElementById('stk-kline').innerHTML = dbKlineSvg(kl2);
+    } else {
+      _SEC_KL_FAIL[thsCode] = true;
+      document.getElementById('stk-kline').innerHTML = '<div class="db-empty">板块K线获取失败，请稍后重试</div>';
+    }
+  });
 }
 
 function buildOpenOutlookHtml(o, title) {
