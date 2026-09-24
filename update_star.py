@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""🌟 开盘半小时精选（R98k，每日 10:00 自动化调用）。
+"""🌟 开盘精选（R98k→R99，每日 9:45 自动化调用）。
 
 职责（脚本自包含、AI 只复核不改结构）：
   1. 读 data.js 断板反包双池（07:30 复核后的 confirmed/watching，sentiment/probability 已校准）；
   2. 抓开盘半小时盘面：指数涨跌+成交额（腾讯 gtimg，本机可达）、
      同花顺行业涨跌幅（fetch_ths_industries）、行业主力资金净额（fetch_ths_funds）；
-  3. 个股当日实时涨幅+集合竞价高低开批量快照（腾讯 gtimg，一次批量）；
-  4. 确定性筛选全部非利空「上涨概率最大」标的写入 duanban.star（不限数量，R98l）：
-     利空(excluded) → 评分 = probability + 板块热度加成(开盘涨幅前8行业 +6) + 个股当日涨幅微调；
-  4b. 并额外纳入【早盘强势板块领涨股】（R98n，不限确认池）：当某同花顺行业开盘涨幅居前(>1.2%)
-     或主力资金净流入居前，用 fetch_ths_tops 拉其领涨成分股（仅沪深主板 60/00），与池内标的
-     合并按评分降序写入；picks 每项带 src（'pool' 默认 / 'board' 板块动量）。
-  5. marketLine / sentiment 写模板句，pushText 留空——由自动化 AI 复核改写为深度分析。
+  3. 个股当日实时涨幅批量快照（腾讯 gtimg，一次批量）；
+  4. 确定性筛选全部非利空池内标的写入 duanban.star（不限数量）：
+     利空(excluded)剔除 → **按上涨概率降序**（R99：概率同则利好优先于中性）；
+  4b. R99：不再纳入【早盘强势板块领涨股】等池外候选——开盘精选只放断板反包池内标的；
+  5. marketLine / sentiment 写模板句（R99：只写开盘后板块情绪与资金情绪，不再含集合竞价），
+     pushText 留空——由自动化 AI 复核改写为「📖 分析」。
 
 只写 duanban.star（含 generatedAt 不动），其余字段一律不动；东财被 WAF 不影响（同花顺/腾讯源）。
 用法：python3 update_star.py [--dry]
@@ -172,23 +171,8 @@ def build_star(D):
     # ---- 个股快照（当日实时涨幅） ----
     quotes = fetch_stock_quotes([str(e.get("code")) for e in pools])
 
-    # ---- 板块动量候选：早盘强势板块领涨股（R98n，不限确认池） ----
-    board_leads = fetch_strong_board_leaders(sectors, fund_in)
-    pool_codes = {str(e.get("code")) for e in pools}
-    seen_bl = set(); extra_codes = []
-    for bl in board_leads:
-        if bl["code"] in pool_codes or bl["code"] in seen_bl:
-            continue
-        seen_bl.add(bl["code"]); extra_codes.append(bl["code"])
-    extra_q = fetch_stock_quotes(extra_codes) if extra_codes else {}
-
-    # ---- 确定性筛选：利空剔除，评分 = probability + 板块热度 + 个股涨幅微调 ----
-    def _hot(sec):
-        for h in hot_secs:
-            if h and sec and (h in sec or sec in h):
-                return 6.0
-        return 0.0
-
+    # ---- R99：确定性筛选（仅池内标的）——利空剔除，按上涨概率降序（概率同则利好优先） ----
+    sent_rank = {"bull": 0, "neutral": 1, "bear": 2}
     cand = []
     for e in pools:
         sent = e.get("sentiment") or "neutral"
@@ -202,44 +186,20 @@ def build_star(D):
         q = quotes.get(str(e.get("code"))) or {}
         live = q.get("pct")
         open_pct = q.get("openPct")
-        live_adj = max(-3.0, min(3.0, (live or 0) / 2.0))  # 开盘半小时涨幅微调 ±3
-        score = round(p + _hot(sec) + live_adj, 1)
         cand.append({"code": str(e.get("code")), "name": e.get("name"),
                      "sector": sec, "sentiment": sent, "probability": round(p, 1),
-                     "pctLive": live, "openPct": open_pct, "score": score, "src": "pool"})
+                     "pctLive": live, "openPct": open_pct})
 
-    # 板块动量标的并入候选（强势板块领涨股，src='board'）
-    for bl in board_leads:
-        code = bl["code"]
-        if code not in seen_bl:
-            continue
-        q = extra_q.get(code) or {}
-        live = q.get("pct"); open_pct = q.get("openPct")
-        bp = bl.get("boardPct") or 0
-        prob = max(15, min(88, round(56 + bp * 1.2 + max(0.0, open_pct or 0) + max(0.0, live or 0) * 0.5)))
-        live_adj = max(-3.0, min(3.0, (live or 0) / 2.0))
-        board_bonus = 8.0 if bp >= 2 else 5.0
-        score = round(prob + board_bonus + live_adj, 1)
-        note = f"{bl['sector']}·板块强势·竞价{(open_pct or 0):+.1f}%·现涨{(live or 0):+.1f}%"
-        cand.append({"code": code, "name": bl["name"], "sector": bl["sector"],
-                     "sentiment": "bull", "probability": prob, "pctLive": live,
-                     "openPct": open_pct, "score": score, "src": "board", "note": note})
-
-    cand.sort(key=lambda x: (-x["score"], -x["probability"]))
+    cand.sort(key=lambda x: (-x["probability"], sent_rank.get(x["sentiment"], 1)))
     picks = []
-    for c in cand:  # R98l/R98n：不限数量，全部非利空候选（含板块动量）按评分降序入选
-        if c.get("note"):
-            note = c["note"]
-        else:
-            sent_cn = {"bull": "利好", "neutral": "中性"}.get(c["sentiment"], c["sentiment"])
-            note = f"{c['sector']}·{sent_cn}·基线{c['probability']:.0f}%"
-            if c.get("openPct") is not None:
-                note += f"·竞价{c['openPct']:+.1f}%"
-            if c.get("pctLive") is not None:
-                note += f"·现涨{c['pctLive']:+.1f}%"
+    for c in cand:  # R99：不限数量，全部非利空池内标的按上涨概率降序入选
+        sent_cn = {"bull": "利好", "neutral": "中性"}.get(c["sentiment"], c["sentiment"])
+        note = f"{c['sector']}·{sent_cn}·基线{c['probability']:.0f}%"
+        if c.get("pctLive") is not None:
+            note += f"·现涨{c['pctLive']:+.1f}%"
         picks.append({"code": c["code"], "name": c["name"], "sector": c["sector"],
                       "sentiment": c["sentiment"], "probability": c["probability"],
-                      "note": note, "src": c.get("src", "pool")})
+                      "note": note, "src": "pool"})
 
     # ---- 文案模板（AI 复核改写 sentiment/pushText） ----
     now = datetime.now()
@@ -254,14 +214,9 @@ def build_star(D):
     bot3 = "、".join(f"{s['name']}{s['pct']:+.2f}%" for s in sectors[-3:]) or "—"
     fi_txt = "、".join(f"{x['name']}{x['value']:+.1f}亿" for x in (fund_in or [])) or "—"
     fo_txt = "、".join(f"{x['name']}{x['value']:+.1f}亿" for x in (fund_out or [])) or "—"
-    opens = [c["openPct"] for c in cand if c.get("openPct") is not None]
-    open_up = sum(1 for o in opens if o > 0)
-    open_dn = sum(1 for o in opens if o < 0)
-    auction_line = (f"集合竞价：池内候选高开 {open_up} 家 / 低开 {open_dn} 家"
-                    if opens else "集合竞价：池内个股竞价快照缺失")
-    sentiment = (f"开盘半小时板块情绪：领涨 {top3}；领跌 {bot3}。"
+    # R99：只写开盘后板块情绪与资金情绪，不再含集合竞价
+    sentiment = (f"开盘板块情绪：领涨 {top3}；领跌 {bot3}。"
                  f"资金情绪：主力净流入前列 {fi_txt}；净流出前列 {fo_txt}。"
-                 f"{auction_line}。"
                  "（AI 复核：请改写为完整开盘情绪判断与对断板反包标的的影响分析）")
 
     star = {
@@ -271,7 +226,7 @@ def build_star(D):
         "sentiment": sentiment,
         "picks": picks,
         "pushText": "",
-        "generatedBy": "update_star.py 确定性筛选（R98n：池内概率 + 板块动量领涨股）+ 自动化 AI 复核",
+        "generatedBy": "update_star.py 确定性筛选（R99：仅池内标的、按上涨概率降序）+ 自动化 AI 复核",
     }
     return star, None
 

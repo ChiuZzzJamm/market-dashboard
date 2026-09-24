@@ -79207,17 +79207,8 @@ window.DASHBOARD_DATA = {
       "date": "2026-09-24",
       "time": "10:13",
       "marketLine": "上证指数-0.46%（竞价-0.28%），深证成指-1.09%（竞价-0.45%），创业板指-1.03%（竞价-0.38%），半小时两市成交约 8377 亿",
-      "sentiment": "三大指数低开（沪-0.28%/深-0.45%/创-0.38%）延续下行，半小时沪-0.46%、深-1.09%、创-1.03%，成交8377亿偏弱。池内高开35/低开84，抛压主导。风电+3.29%、纺织+1.80%领涨，贵金属-3.36%、元件-2.60%领跌；银行+17.8亿、风电+7.2亿净流入，光学/化学净流出。映射：风电/纺织/煤炭/厨卫确认，华孚时尚反包升；贵金属、元件、地产、消费受压。",
+      "sentiment": "三大指数低开延续下行，开盘半小时沪-0.46%、深-1.09%、创-1.03%，两市成交8377亿偏弱。板块情绪：风电设备+3.29%、纺织制造+1.80%、厨卫电器+1.71%领涨，贵金属-3.36%、元件-2.60%、房地产-2.16%领跌。资金情绪：银行+17.8亿（避险）、风电设备+7.2亿、汽车零部件+6.6亿净流入前列；光学光电子-6.3亿、化学制品-5.6亿、文化传媒-5.1亿净流出。映射：风电/纺织/煤炭/厨卫获情绪确认，贵金属、元件、地产、泛消费受压。",
       "picks": [
-        {
-          "code": "000850",
-          "name": "华茂股份",
-          "sector": "纺织制造",
-          "sentiment": "bull",
-          "probability": 73,
-          "note": "纺织制造·板块强势·竞价+10.1%·现涨+10.1%",
-          "src": "board"
-        },
         {
           "code": "002298",
           "name": "中电鑫龙",
@@ -79264,15 +79255,6 @@ window.DASHBOARD_DATA = {
           "src": "pool"
         },
         {
-          "code": "601218",
-          "name": "吉鑫科技",
-          "sector": "风电设备",
-          "sentiment": "bull",
-          "probability": 65,
-          "note": "风电设备·板块强势·竞价-1.4%·现涨+10.0%",
-          "src": "board"
-        },
-        {
           "code": "002042",
           "name": "华孚时尚",
           "sector": "纺织制造",
@@ -79282,24 +79264,6 @@ window.DASHBOARD_DATA = {
           "src": "pool"
         },
         {
-          "code": "603248",
-          "name": "锡华科技",
-          "sector": "风电设备",
-          "sentiment": "bull",
-          "probability": 63,
-          "note": "风电设备·板块强势·竞价-3.2%·现涨+7.0%",
-          "src": "board"
-        },
-        {
-          "code": "600156",
-          "name": "华升股份",
-          "sector": "纺织制造",
-          "sentiment": "bull",
-          "probability": 64,
-          "note": "纺织制造·板块强势·竞价+1.1%·现涨+10.0%",
-          "src": "board"
-        },
-        {
           "code": "002869",
           "name": "金溢科技",
           "sector": "计算机设备",
@@ -79307,15 +79271,6 @@ window.DASHBOARD_DATA = {
           "probability": 70,
           "note": "计算机设备·利好·基线70%·竞价-0.2%·现涨+2.5%",
           "src": "pool"
-        },
-        {
-          "code": "600792",
-          "name": "云煤能源",
-          "sector": "煤炭开采加工",
-          "sentiment": "bull",
-          "probability": 63,
-          "note": "煤炭开采加工·板块强势·竞价-1.5%·现涨+10.0%",
-          "src": "board"
         },
         {
           "code": "002640",
@@ -79363,33 +79318,6 @@ window.DASHBOARD_DATA = {
           "src": "pool"
         },
         {
-          "code": "002035",
-          "name": "华帝股份",
-          "sector": "厨卫电器",
-          "sentiment": "bull",
-          "probability": 61,
-          "note": "厨卫电器·板块强势·竞价-0.6%·现涨+5.3%",
-          "src": "board"
-        },
-        {
-          "code": "600758",
-          "name": "辽宁能源",
-          "sector": "煤炭开采加工",
-          "sentiment": "bull",
-          "probability": 61,
-          "note": "煤炭开采加工·板块强势·竞价+1.1%·现涨+5.1%",
-          "src": "board"
-        },
-        {
-          "code": "002677",
-          "name": "浙江美大",
-          "sector": "厨卫电器",
-          "sentiment": "bull",
-          "probability": 61,
-          "note": "厨卫电器·板块强势·竞价-0.8%·现涨+5.1%",
-          "src": "board"
-        },
-        {
           "code": "603353",
           "name": "和顺石油",
           "sector": "炼化及贸",
@@ -79405,15 +79333,6 @@ window.DASHBOARD_DATA = {
           "sentiment": "neutral",
           "probability": 52,
           "note": "小家电·中性·基线52%·竞价-0.4%·现涨+3.0%",
-          "src": "pool"
-        },
-        {
-          "code": "600403",
-          "name": "大有能源",
-          "sector": "煤炭开采",
-          "sentiment": "neutral",
-          "probability": 50,
-          "note": "煤炭开采·中性·基线50%·竞价-0.4%·现涨+2.2%",
           "src": "pool"
         },
         {
@@ -79498,57 +79417,12 @@ window.DASHBOARD_DATA = {
           "src": "pool"
         },
         {
-          "code": "002383",
-          "name": "合众思壮",
-          "sector": "军工电子",
-          "sentiment": "neutral",
-          "probability": 48,
-          "note": "军工电子·中性·基线48%·竞价-2.5%·现涨-1.3%",
-          "src": "pool"
-        },
-        {
           "code": "600992",
           "name": "贵绳股份",
           "sector": "通用设备",
           "sentiment": "neutral",
           "probability": 52,
           "note": "通用设备·中性·基线52%·竞价+0.0%·现涨+2.4%",
-          "src": "pool"
-        },
-        {
-          "code": "002321",
-          "name": "华英农业",
-          "sector": "养殖业",
-          "sentiment": "neutral",
-          "probability": 50,
-          "note": "养殖业·中性·基线50%·竞价+2.4%·现涨+10.2%",
-          "src": "pool"
-        },
-        {
-          "code": "002622",
-          "name": "皓宸医疗",
-          "sector": "医疗服务",
-          "sentiment": "neutral",
-          "probability": 50,
-          "note": "医疗服务·中性·基线50%·竞价+1.2%·现涨+10.1%",
-          "src": "pool"
-        },
-        {
-          "code": "603230",
-          "name": "内蒙新华",
-          "sector": "出版",
-          "sentiment": "neutral",
-          "probability": 50,
-          "note": "出版·中性·基线50%·竞价+1.2%·现涨+8.8%",
-          "src": "pool"
-        },
-        {
-          "code": "600815",
-          "name": "厦工股份",
-          "sector": "工程机械",
-          "sentiment": "neutral",
-          "probability": 50,
-          "note": "工程机械·中性·基线50%·竞价-1.9%·现涨+9.9%",
           "src": "pool"
         },
         {
@@ -79732,30 +79606,12 @@ window.DASHBOARD_DATA = {
           "src": "pool"
         },
         {
-          "code": "603903",
-          "name": "中持股份",
-          "sector": "环境治理",
-          "sentiment": "neutral",
-          "probability": 50,
-          "note": "环境治理·中性·基线50%·竞价-1.5%·现涨+3.6%",
-          "src": "pool"
-        },
-        {
           "code": "000670",
           "name": "盈方微",
           "sector": "其他电子",
           "sentiment": "neutral",
           "probability": 52,
           "note": "其他电子·中性·基线52%·竞价-1.2%·现涨-0.5%",
-          "src": "pool"
-        },
-        {
-          "code": "002301",
-          "name": "齐心集团",
-          "sector": "文娱用品",
-          "sentiment": "neutral",
-          "probability": 50,
-          "note": "文娱用品·中性·基线50%·竞价+0.1%·现涨+3.3%",
           "src": "pool"
         },
         {
@@ -79858,15 +79714,6 @@ window.DASHBOARD_DATA = {
           "src": "pool"
         },
         {
-          "code": "603580",
-          "name": "艾艾精工",
-          "sector": "塑料制品",
-          "sentiment": "neutral",
-          "probability": 50,
-          "note": "塑料制品·中性·基线50%·竞价+2.0%·现涨+3.1%",
-          "src": "pool"
-        },
-        {
           "code": "002963",
           "name": "豪尔赛",
           "sector": "装修装饰",
@@ -79891,15 +79738,6 @@ window.DASHBOARD_DATA = {
           "sentiment": "neutral",
           "probability": 52,
           "note": "多元金融·中性·基线52%·竞价-0.2%·现涨-1.2%",
-          "src": "pool"
-        },
-        {
-          "code": "603216",
-          "name": "梦天家居",
-          "sector": "家居用品",
-          "sentiment": "neutral",
-          "probability": 50,
-          "note": "家居用品·中性·基线50%·竞价+2.1%·现涨+2.8%",
           "src": "pool"
         },
         {
@@ -79993,15 +79831,6 @@ window.DASHBOARD_DATA = {
           "src": "pool"
         },
         {
-          "code": "001260",
-          "name": "坤泰股份",
-          "sector": "汽车零部件",
-          "sentiment": "neutral",
-          "probability": 50,
-          "note": "汽车零部件·中性·基线50%·竞价-1.0%·现涨+2.3%",
-          "src": "pool"
-        },
-        {
           "code": "002137",
           "name": "实益达",
           "sector": "光学光电子",
@@ -80056,15 +79885,6 @@ window.DASHBOARD_DATA = {
           "src": "pool"
         },
         {
-          "code": "600847",
-          "name": "万里股份",
-          "sector": "电池",
-          "sentiment": "neutral",
-          "probability": 50,
-          "note": "电池·中性·基线50%·竞价+0.2%·现涨+1.4%",
-          "src": "pool"
-        },
-        {
           "code": "002755",
           "name": "奥赛康",
           "sector": "化学制药",
@@ -80098,6 +79918,105 @@ window.DASHBOARD_DATA = {
           "sentiment": "neutral",
           "probability": 52,
           "note": "化学制药·中性·基线52%·竞价-1.9%·现涨-4.2%",
+          "src": "pool"
+        },
+        {
+          "code": "600403",
+          "name": "大有能源",
+          "sector": "煤炭开采",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "煤炭开采·中性·基线50%·竞价-0.4%·现涨+2.2%",
+          "src": "pool"
+        },
+        {
+          "code": "002321",
+          "name": "华英农业",
+          "sector": "养殖业",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "养殖业·中性·基线50%·竞价+2.4%·现涨+10.2%",
+          "src": "pool"
+        },
+        {
+          "code": "002622",
+          "name": "皓宸医疗",
+          "sector": "医疗服务",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "医疗服务·中性·基线50%·竞价+1.2%·现涨+10.1%",
+          "src": "pool"
+        },
+        {
+          "code": "603230",
+          "name": "内蒙新华",
+          "sector": "出版",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "出版·中性·基线50%·竞价+1.2%·现涨+8.8%",
+          "src": "pool"
+        },
+        {
+          "code": "600815",
+          "name": "厦工股份",
+          "sector": "工程机械",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "工程机械·中性·基线50%·竞价-1.9%·现涨+9.9%",
+          "src": "pool"
+        },
+        {
+          "code": "603903",
+          "name": "中持股份",
+          "sector": "环境治理",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "环境治理·中性·基线50%·竞价-1.5%·现涨+3.6%",
+          "src": "pool"
+        },
+        {
+          "code": "002301",
+          "name": "齐心集团",
+          "sector": "文娱用品",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "文娱用品·中性·基线50%·竞价+0.1%·现涨+3.3%",
+          "src": "pool"
+        },
+        {
+          "code": "603580",
+          "name": "艾艾精工",
+          "sector": "塑料制品",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "塑料制品·中性·基线50%·竞价+2.0%·现涨+3.1%",
+          "src": "pool"
+        },
+        {
+          "code": "603216",
+          "name": "梦天家居",
+          "sector": "家居用品",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "家居用品·中性·基线50%·竞价+2.1%·现涨+2.8%",
+          "src": "pool"
+        },
+        {
+          "code": "001260",
+          "name": "坤泰股份",
+          "sector": "汽车零部件",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "汽车零部件·中性·基线50%·竞价-1.0%·现涨+2.3%",
+          "src": "pool"
+        },
+        {
+          "code": "600847",
+          "name": "万里股份",
+          "sector": "电池",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "电池·中性·基线50%·竞价+0.2%·现涨+1.4%",
           "src": "pool"
         },
         {
@@ -80143,24 +80062,6 @@ window.DASHBOARD_DATA = {
           "sentiment": "neutral",
           "probability": 50,
           "note": "家居用品·中性·基线50%·竞价-0.4%·现涨-1.7%",
-          "src": "pool"
-        },
-        {
-          "code": "605058",
-          "name": "澳弘电子",
-          "sector": "元件",
-          "sentiment": "neutral",
-          "probability": 48,
-          "note": "元件·中性·基线48%·竞价-1.0%·现涨+2.2%",
-          "src": "pool"
-        },
-        {
-          "code": "002471",
-          "name": "中超控股",
-          "sector": "电网设备",
-          "sentiment": "neutral",
-          "probability": 48,
-          "note": "电网设备·中性·基线48%·竞价+0.2%·现涨+2.2%",
           "src": "pool"
         },
         {
@@ -80236,21 +80137,48 @@ window.DASHBOARD_DATA = {
           "src": "pool"
         },
         {
-          "code": "600343",
-          "name": "航天动力",
-          "sector": "通用设备",
-          "sentiment": "neutral",
-          "probability": 48,
-          "note": "通用设备·中性·基线48%·竞价+0.1%·现涨-0.4%",
-          "src": "pool"
-        },
-        {
           "code": "000676",
           "name": "智度股份",
           "sector": "广告营销",
           "sentiment": "neutral",
           "probability": 50,
           "note": "广告营销·中性·基线50%·竞价-1.5%·现涨-4.5%",
+          "src": "pool"
+        },
+        {
+          "code": "002383",
+          "name": "合众思壮",
+          "sector": "军工电子",
+          "sentiment": "neutral",
+          "probability": 48,
+          "note": "军工电子·中性·基线48%·竞价-2.5%·现涨-1.3%",
+          "src": "pool"
+        },
+        {
+          "code": "605058",
+          "name": "澳弘电子",
+          "sector": "元件",
+          "sentiment": "neutral",
+          "probability": 48,
+          "note": "元件·中性·基线48%·竞价-1.0%·现涨+2.2%",
+          "src": "pool"
+        },
+        {
+          "code": "002471",
+          "name": "中超控股",
+          "sector": "电网设备",
+          "sentiment": "neutral",
+          "probability": 48,
+          "note": "电网设备·中性·基线48%·竞价+0.2%·现涨+2.2%",
+          "src": "pool"
+        },
+        {
+          "code": "600343",
+          "name": "航天动力",
+          "sector": "通用设备",
+          "sentiment": "neutral",
+          "probability": 48,
+          "note": "通用设备·中性·基线48%·竞价+0.1%·现涨-0.4%",
           "src": "pool"
         },
         {
@@ -80299,8 +80227,8 @@ window.DASHBOARD_DATA = {
           "src": "pool"
         }
       ],
-      "pushText": "【板块集合竞价】三大指数集体低开，上证竞价-0.28%、深证-0.45%、创业板-0.38%，池内候选高开仅35家、低开84家，竞价呈明显抛压。开盘半小时指数未收复反而扩大跌幅（上证-0.46%、深证-1.09%、创业板-1.03%），显示竞价资金以兑现为主、未延续做多。\n【板块情绪与资金】领涨风电设备+3.29%、纺织制造+1.80%、厨卫电器+1.71%；领跌贵金属-3.36%、元件-2.60%、房地产-2.16%。主力净流入前列银行+17.8亿（避险）、风电设备+7.2亿、汽车零部件+6.6亿；净流出光学光电子-6.3亿、化学制品-5.6亿、文化传媒-5.1亿。两市半小时成交约8377亿，量能充沛但结构分化明显。\n【板块推演】风电设备板块走强+资金净流入+吉鑫科技涨停领涨，题材与资金共振，日内有望维持强势，但半日已涨3%需防冲高回落；纺织制造华茂/华升股份双双涨停，强势确认但须盯封单防开板；煤炭云煤能源/辽宁能源领涨，避险+周期共振可延续；贵金属-3.36%、元件-2.60%、地产-2.16%弱势，继续回避。\n【断板反包映射】风电、纺织、煤炭、厨卫早盘强势获情绪确认，吉鑫科技/锡华科技、华孚时尚、海鸥住工、电网利好（中电鑫龙等）反包/上涨概率提升；贵金属、元件、地产及泛消费相关标的受压制。操作上：情绪偏弱、竞价抛压，勿追高，等放量确认再上车；强势板块前排可低吸，断板反包优先选与早盘强势板块重叠者。",
-      "generatedBy": "update_star.py 确定性筛选（R98n：池内概率 + 板块动量领涨股）+ 自动化 AI 复核"
+      "pushText": "【板块情绪与资金】领涨风电设备+3.29%、纺织制造+1.80%、厨卫电器+1.71%；领跌贵金属-3.36%、元件-2.60%、房地产-2.16%。主力净流入前列银行+17.8亿（避险）、风电设备+7.2亿、汽车零部件+6.6亿；净流出光学光电子-6.3亿、化学制品-5.6亿、文化传媒-5.1亿。两市半小时成交约8377亿，量能充沛但结构分化明显。\n【板块推演】风电设备板块走强+资金净流入+吉鑫科技涨停领涨，题材与资金共振，日内有望维持强势，但半日已涨3%需防冲高回落；纺织制造华茂/华升股份双双涨停，强势确认但须盯封单防开板；煤炭云煤能源/辽宁能源领涨，避险+周期共振可延续；贵金属-3.36%、元件-2.60%、地产-2.16%弱势，继续回避。\n【断板反包映射】风电、纺织、煤炭、厨卫早盘强势获情绪确认，吉鑫科技/锡华科技、华孚时尚、海鸥住工、电网利好（中电鑫龙等）反包/上涨概率提升；贵金属、元件、地产及泛消费相关标的受压制。操作上：情绪偏弱、抛压主导，勿追高，等放量确认再上车；强势板块前排可低吸，断板反包优先选与早盘强势板块重叠者。",
+      "generatedBy": "update_star.py 确定性筛选（R99：仅池内标的、按上涨概率降序）+ 自动化 AI 复核"
     }
   },
   "stkKlines": {

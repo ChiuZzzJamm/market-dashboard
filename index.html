@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609241046"></script>
+<script src="data.js?v=202609241111"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -345,6 +345,11 @@
   .db-pool h2::before { content: ""; width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
   .db-pool.p-conf h2::before { background: var(--up); box-shadow: 0 0 0 4px var(--up-soft); }
   .db-pool.p-watch h2::before { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+  /* R99：🌟 开盘精选——复用确认池卡片样式，金色系区分 */
+  .db-pool.p-star h2::before { background: #e8a013; box-shadow: 0 0 0 4px rgba(232,160,19,.16); }
+  .db-pool.p-star .db-chip { border-color: rgba(232,160,19,.4); }
+  .db-pool.p-star .db-chip:hover { border-color: #e8a013; background: rgba(255,248,228,.9); }
+  .db-pool.p-star .db-stage.hold { background: rgba(232,160,19,.14); color: #a86f0e; }
   .db-pool .db-sub { font-size: 12px; color: var(--ink2); margin-bottom: 14px; }
   /* R91j: 近3日涨幅居前板块 TOP10 */
   .db-tb { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
@@ -1273,25 +1278,36 @@ function renderDuanban() {
     });
     html += '</div></div>';
   }
-  // R98k：🌟 开盘半小时精选（每日 10:00 自动化写入 duanban.star），置于确认池上方
+  // R99：🌟 开盘精选（每日 9:45 自动化写入 duanban.star），置于确认池上方。
+  // 仅保留断板反包池内标的（R99 剔除板块动量等池外候选），按上涨概率降序；卡片复用确认池 db-chip 样式、
+  // 金色「精选」徽标区分；点击弹窗 1:1 复用确认池/观察池标的弹窗（openDbModal）。
   var st = db && db.star;
   if (st && st.picks && st.picks.length) {
-    html += '<div class="db-pool" style="padding-bottom:14px;"><h2>🌟</h2>' +
-      '<div class="db-sub">开盘半小时精选 · ' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 10:00 更新：池内概率 × 早盘板块/资金/竞价情绪，强势板块领涨股亦入选）</div>' +
+    var poolByCode = {};
+    conf.concat(watch).forEach(function (e) { poolByCode[String(e.code)] = e; });
+    var starPicks = st.picks.filter(function (p) { return poolByCode[String(p.code)]; });
+    starPicks.sort(function (a, b) {
+      var ea = poolByCode[String(a.code)], eb = poolByCode[String(b.code)];
+      var pa = (ea.probability == null) ? -1 : ea.probability, pb = (eb.probability == null) ? -1 : eb.probability;
+      if (pb !== pa) return pb - pa;
+      var ra = ea.sentiment === 'bull' ? 0 : (ea.sentiment === 'bear' ? 2 : 1);
+      var rb = eb.sentiment === 'bull' ? 0 : (eb.sentiment === 'bear' ? 2 : 1);
+      return ra - rb;
+    });
+    html += '<div class="db-pool p-star"><h2>🌟 开盘精选 · ' + starPicks.length + ' 只</h2>' +
+      '<div class="db-sub">' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：断板反包池内标的，按上涨概率降序；弹窗与确认池一致）</div>' +
       (st.marketLine ? '<div style="font-size:13px;line-height:1.7;margin:6px 0 2px;">' + esc(st.marketLine) + '</div>' : '') +
       (st.sentiment ? '<div style="font-size:12.5px;color:var(--ink2);line-height:1.7;margin:2px 0 10px;">' + esc(st.sentiment) + '</div>' : '') +
-      '<div class="db-chips star-chips">';
+      '<div class="db-chips">';
     window._STAR_LIST = [];
-    st.picks.forEach(function (p, i) {
+    starPicks.forEach(function (p) {
+      var e = poolByCode[String(p.code)];
+      var key = 's|' + String(p.code);
+      var e2 = Object.assign({}, e, { stage: '精选' });
+      DB_INDEX[key] = e2;
+      DB_ORDER.push(key);
       if (String(p.code || '').length === 6) { window._STAR_LIST.push(String(p.code)); }
-      var sCls = p.sentiment === 'bull' ? 'up' : (p.sentiment === 'bear' ? 'down' : '');
-      var boardTag = p.src === 'board'
-        ? '<span style="font-size:10px;font-weight:700;color:#fff;background:var(--accent);border-radius:999px;padding:1px 7px;margin-left:2px;">板块</span>' : '';
-      html += '<div class="stock-chip" data-stk="' + escAttr(String(p.code || '') + '|' + String(p.name || '') + '|开盘精选') + '" style="cursor:pointer">' +
-        '<b>' + esc(String(p.name || '')) + '</b>' + boardTag + '<span>' + esc(String(p.code || '')) + '</span>' +
-        '<span class="' + sCls + '" style="font-weight:800;font-size:12px;">' + (p.probability != null ? p.probability + '%' : '') + '</span>' +
-        (p.note ? '<span style="font-size:11px;color:var(--ink2);">' + esc(String(p.note)) + '</span>' : '') +
-        '</div>';
+      html += dbChipHtml(e2, key, false, true);
     });
     html += '</div></div>';
   }
@@ -1390,9 +1406,10 @@ function openDbModal(key) {
   if (!e) return;
   DB_CURR = key;
   var done = key.indexOf('c|') === 0;
+  var isStar = key.indexOf('s|') === 0; // R99：开盘精选入口进入，徽标与确认池/观察池区分
   document.getElementById('db-modal-head').innerHTML =
     '<span class="nm">' + esc(e.name) + '</span><span class="cd2">' + esc(e.code) + '</span>' +
-    '<span class="db-stage ' + (done ? 'done' : 'hold') + '" style="font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;' + (done ? 'background:var(--up-soft);color:var(--up)' : 'background:var(--accent-soft);color:var(--accent-deep)') + '">' + (done ? '确认池' : '观察池 · ' + esc(e.stage)) + '</span>' +
+    '<span class="db-stage ' + (done ? 'done' : 'hold') + '" style="font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;' + (done ? 'background:var(--up-soft);color:var(--up)' : 'background:var(--accent-soft);color:var(--accent-deep)') + '">' + (done ? '确认池' : (isStar ? '🌟 开盘精选' : '观察池 · ' + esc(e.stage))) + '</span>' +
     dbSentBadge(e, 'font-size:11px;padding:2px 9px;') +
     '<button class="db-modal-close" onclick="closeDbModal()">×</button>';
   var probCls = e.sentiment === 'bear' ? 'down' : (e.sentiment === 'neutral' ? '' : 'up');
@@ -1582,7 +1599,13 @@ var STK_KLINE_CACHE = {};
 function stkSymbol(code) {
   if (!code) return '';
   code = String(code).trim();
-  if (/^\d{6}$/.test(code)) return (code.charAt(0) === '6' ? 'sh' : 'sz') + code;
+  if (/^\d{6}$/.test(code)) {
+    // R99：北交所代码（920xxx 新段 + 43/83/87/88 老段、4/8 开头）须用 bj 前缀，否则腾讯/新浪都查不到（异动模块 K线失败根因）
+    var c0 = code.charAt(0);
+    if (c0 === '6') return 'sh' + code;
+    if (c0 === '4' || c0 === '8' || code.slice(0, 2) === '92') return 'bj' + code;
+    return 'sz' + code;
+  }
   if (/^(sh|sz|bj|us|hk)/i.test(code) || code.indexOf('.') >= 0) return code.toLowerCase();
   return '';
 }
