@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609241310"></script>
+<script src="data.js?v=202609241314"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1019,14 +1019,9 @@ function newsEntryInner(it, showSrc, tag, tradeDate) {
     var dcl = it.direction === '看涨' ? 'dir-up' : (it.direction === '看跌' ? 'dir-down' : 'dir-flat');
     dirBadge = '<span class="dir-badge ' + dcl + '">' + esc(it.direction) + '</span>';
   }
-  // R97：发布时间——板块名与方向徽标之间，当日新闻标「今日」，让用户一眼区分当天/前几天的新闻
-  var timeHtml = '';
-  if (it.time) {
-    var isToday = tradeDate && String(it.time).slice(0, 10) === String(tradeDate).slice(0, 10);
-    timeHtml = '<span class="nc-time' + (isToday ? ' today' : '') + '">' + (isToday ? '今日 ' : '') + shortDate(it.time) + '</span>';
-  }
+  // R99i：日期徽章（nc-time）按用户要求整体移除——全球要闻/周末卡不再显示「今日 9/23」/「9/23」徽章
   var perspTag = tag ? '<span class="persp-tag">' + esc(tag) + '</span>' : '';
-  var s = '<div class="nc-theme">' + esc(it.sector || '') + timeHtml + dirBadge + perspTag + '</div>';
+  var s = '<div class="nc-theme">' + esc(it.sector || '') + dirBadge + perspTag + '</div>';
   var dtlFull = (it.title || '') + ' — ' + (it.summary || '');
   s += '<div class="nc-dtl" title="' + escAttr(dtlFull) + '"><b>' + esc(it.title || '') + '</b> — ' + esc(it.summary || '') + '</div>';
   (it.impacts || []).forEach(function (im) {
