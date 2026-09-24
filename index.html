@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609241308"></script>
+<script src="data.js?v=202609241310"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -451,7 +451,7 @@
 <div class="wrap">
   <div class="float-group" id="float-group" title="整组可拖动到任意位置">
     <button class="mkt-toggle" id="mkt-toggle" title="切换到美股看板" aria-label="切换A股/美股看板" onclick="switchTab(currentMarket==='ashare'?'us':'ashare')">🐼</button>
-    <button class="db-entry" id="db-entry" title="断板反包（点击进入）" aria-label="断板反包"><span class="db-emoji">💰</span><span class="db-badge" id="db-badge"></span></button>
+    <button class="db-entry" id="db-entry" title="点击进入断板反包看板" aria-label="断板反包"><span class="db-emoji">💰</span><span class="db-badge" id="db-badge"></span></button>
   </div>
   <div class="hero">
     <h1>每日市场看板</h1>
@@ -489,7 +489,7 @@
       <div class="db-title">断板反包</div>
       <div class="db-date" id="db-date"></div>
     </div>
-    <button class="db-entry-in" id="db-entry-in" title="返回刚刚浏览的页面">💰</button>
+    <button class="db-entry-in" id="db-entry-in" title="点击返回每日市场看板">💰</button>
     <div class="db-note" id="db-note"></div>
     <div id="db-pools"></div>
   </div>
@@ -1314,7 +1314,7 @@ function renderDuanban() {
   var badge = document.getElementById('db-badge');
   badge.textContent = (conf.length + watch.length) ? ('确认 ' + conf.length + ' · 观察 ' + watch.length) : '';
   var dbEntryBtn = document.getElementById('db-entry');
-  if (dbEntryBtn) dbEntryBtn.title = '断板反包（点击进入 · 可拖动）确认 ' + conf.length + ' · 观察 ' + watch.length;
+  if (dbEntryBtn) dbEntryBtn.title = '点击进入断板反包看板 · 确认 ' + conf.length + ' · 观察 ' + watch.length;
   var html = '';
   // R98: 近3个交易日涨幅居前板块 TOP10（确认池上方）——同花顺行业口径
   var tb = (db && db.topBoards) || [];
