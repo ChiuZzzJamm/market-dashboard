@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609241824"></script>
+<script src="data.js?v=202609241844"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -143,6 +143,7 @@
   .ai-verify .v-detail { font-size: 12px; line-height: 1.7; }
   .ai-verify .v-detail .hit { color: var(--up); font-weight: 700; }
   .ai-verify .v-detail .miss { color: var(--down); font-weight: 700; }
+  .ai-verify .v-note { display: block; font-weight: 400; font-size: 11.5px; color: var(--ink-soft, #6b7a8d); margin-top: 1px; }
 
   /* ===== 全球要闻 / 周末 ===== */
   .wk-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 26px; margin-bottom: 20px; box-shadow: var(--shadow); }
@@ -969,19 +970,28 @@ function renderAiPrediction() {
     html += '</div>';
   });
   html += '</div><div class="ai-foot">标的筛选口径：每个板块 8 只 A 股，按「2 只板块龙头 + 2 只相关概念股 + 2 只游资/机构偏好小盘人气股（涨停基因好）+ 2 只断板反包图形股（1-5 日前涨停、次日放量倍量、随后缩量回调）」搭配，已排除科创板（688 开头）及北交所。<br>' + esc(p.riskNote) + '</div>';
-  if (p.verification && (p.verification.summary || (p.verification.details && p.verification.details.length))) {
+  if (p.verification) {
+    var vHtml = '';
+    if (typeof p.verification === 'string') {
+      // R99j 兼容：自动化偶发把 verification 写成整段字符串（而非 {summary,details} 对象）
+      var vs = String(p.verification).trim();
+      if (vs) vHtml = '<div class="ai-verify"><div class="v-title">📊 预测验证</div><div class="v-detail"><div class="hit">' + esc(vs) + '</div></div></div>';
+    } else {
     var v = p.verification;
-    var vHtml = '<div class="ai-verify"><div class="v-title">📊 预测验证：' + esc(v.summary || '') + '</div>';
-    if (v.details && v.details.length) {
-      vHtml += '<div class="v-detail">';
-      v.details.forEach(function(d) {
-        var r = String(d.result);
-        var vcls = r.indexOf('未命中') !== -1 ? 'miss' : (r.indexOf('命中') !== -1 ? 'hit' : 'miss');
-        vHtml += '<div class="' + vcls + '">· ' + esc(d.sector) + '：预测「' + esc(d.predicted) + '」→ 实际 ' + (d.actualPct === null || d.actualPct === undefined ? '—' : (d.actualPct >= 0 ? '+' : '') + d.actualPct + '%') + ' → ' + esc(d.result) + '</div>';
-      });
+    if (v.summary || (v.details && v.details.length)) {
+      vHtml = '<div class="ai-verify"><div class="v-title">📊 预测验证：' + esc(v.summary || '') + '</div>';
+      if (v.details && v.details.length) {
+        vHtml += '<div class="v-detail">';
+        v.details.forEach(function(d) {
+          var r = String(d.result || '');
+          var vcls = (r.indexOf('未命中') !== -1 || r.indexOf('未兑现') !== -1) ? 'miss' : ((r.indexOf('命中') !== -1 || r.indexOf('兑现') !== -1) ? 'hit' : 'miss');
+          vHtml += '<div class="' + vcls + '">· ' + esc(d.sector) + '：预测「' + esc(d.predicted) + '」→ 实际 ' + (d.actualPct === null || d.actualPct === undefined ? '—' : (d.actualPct >= 0 ? '+' : '') + d.actualPct + '%') + ' → ' + esc(d.result) + (d.note ? '<span class="v-note">' + esc(d.note) + '</span>' : '') + '</div>';
+        });
+        vHtml += '</div>';
+      }
       vHtml += '</div>';
     }
-    vHtml += '</div>';
+    }
     html += vHtml;
   }
   html += '</div>';
