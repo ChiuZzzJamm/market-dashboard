@@ -11,7 +11,7 @@ window.DASHBOARD_DATA = {
         "direction": "走强",
         "confidence": "高",
         "usDriver": "AI算力用电激增+特高压建设加速；隔夜美股电力/公用事业相对抗跌",
-        "logic": "AI数据中心用电需求爆发拉动特高压与变压器订单，电网设备景气上行；板块内断板反包图形股缩量站稳MA5，反包动能积聚。",
+        "logic": "AI数据中心用电需求爆发叠加特高压建设加速，变压器/开关柜订单饱满，国网南网招标提速支撑板块景气延续；隔夜美股电力与公用事业相对抗跌形成正向佐证；板块内断板反包电缆/设备股缩量站稳MA5、趋势延续，回调可沿均线分批低吸，龙头与材料小盘同步受益。",
         "stocks": [
           {
             "code": "600089",
@@ -60,7 +60,7 @@ window.DASHBOARD_DATA = {
         "direction": "偏强",
         "confidence": "中",
         "usDriver": "费半-1.23%但国产替代逻辑强化；美光遭做空扰动存储链",
-        "logic": "美光遭做空压制存储估值，但半导体设备材料国产替代加速、自主可控主线强化；断板反包股蓄势待发。",
+        "logic": "美光遭海外知名做空机构点名引发存储周期见顶担忧，短期压制存储链估值；但设备交期拉长、先进封装/封测订单能见度延至2027年，国产替代与自主可控主线加速，设备材料环节订单饱满对冲情绪扰动；断板反包图形股蓄势待发，情绪修复观察存储现货价格信号。",
         "stocks": [
           {
             "code": "600460",
@@ -109,7 +109,7 @@ window.DASHBOARD_DATA = {
         "direction": "承压",
         "confidence": "中",
         "usDriver": "纳指-1.13%止步四连涨，高位光模块估值回撤",
-        "logic": "纳指回调压制高位光模块估值，板块技术性承压；部分断板反包图形股缩量待收复MA5，博弈超跌反抽。",
+        "logic": "纳指-1.13%止步四连涨，高位光模块估值回撤压力集中释放；北美云厂800G/1.6T需求逻辑未变，但短期技术性承压、超跌反抽盈亏比一般；板块内断板反包图形股缩量待收复MA5，先看企稳信号再回补，不抢左侧反弹，断板反包股缩量企稳为先行指标。",
         "stocks": [
           {
             "code": "600498",
@@ -158,7 +158,7 @@ window.DASHBOARD_DATA = {
         "direction": "承压",
         "confidence": "中",
         "usDriver": "美股新能源/光伏-4.74%领跌，供给过剩未解",
-        "logic": "美股光伏链重挫、供给过剩格局未改，A股光伏延续下修；断板反包股博弈超跌轮动。",
+        "logic": "美股新能源/光伏链-4.74%领跌，叠加行业供给过剩格局未改，A股光伏延续下修；硅料/组件价格未见反转信号前以防守为主，业绩下修风险未出清；板块内断板反包股仅作超跌轮动博弈，仓位宜轻、严格止损，右侧信号出现前不重仓参与。",
         "stocks": [
           {
             "code": "600438",
@@ -207,7 +207,7 @@ window.DASHBOARD_DATA = {
         "direction": "走强",
         "confidence": "高",
         "usDriver": "布伦特+3.86%破103美元、WTI 92.16，霍尔木兹风险溢价",
-        "logic": "伊朗拒重开霍尔木兹海峡推升供给溢价，油气开采与油服直接受益，上游资本开支预期上修。",
+        "logic": "布伦特突破103美元(+3.86%)、WTI 92.16，伊朗拒绝重开霍尔木兹海峡谈判推升供给溢价，油气开采与油服直接受益、上游资本开支预期上修；隔夜美股石油板块+1.76%领涨形成共振；板块龙头+油服工程+小盘人气梯度完整，沿5日线持股为主。",
         "stocks": [
           {
             "code": "601857",
@@ -256,7 +256,7 @@ window.DASHBOARD_DATA = {
         "direction": "走强",
         "confidence": "中",
         "usDriver": "地缘博弈升温+商业航天分化，军工订单预期强化",
-        "logic": "地缘风险升温提振军工装备订单预期，航发/沈飞中军企稳，小盘人气股活跃。",
+        "logic": "地缘博弈升温+军贸出口回暖，军工装备订单预期强化；商业航天美股-5.08%大幅分化，A股映射侧重传统军工装备而非商业航天标的；航发/沈飞中军企稳、小盘人气股活跃度高，断板反包股沿均线观察，事件驱动属性强、注意节奏与追高风险。",
         "stocks": [
           {
             "code": "600893",
@@ -7934,7 +7934,7 @@ window.DASHBOARD_DATA = {
             "ref": "HD现代重工-2.06%、三星重工-2.45%（2只均值）"
           }
         ],
-        "date": "9/23 收盘"
+        "date": "9/23 收盘 · 今日休市（中秋）"
       },
       {
         "key": "jp",
@@ -8007,8 +8007,8 @@ window.DASHBOARD_DATA = {
   },
   "openOutlook": {
     "date": "2026-09-24",
-    "content": "【消息面】9/23国际油价大涨(布伦特破103、WTI 92.16)，伊朗拒重开霍尔木兹海峡推升供给溢价，利好油气开采、油服及上游资本开支链；同时美光遭做空引发半导体存储链担忧，利空A股半导体映射。【政策面】加息预期升温(概率升至90%+)，银行息差改善逻辑强化，利好大金融；但强美元与美债收益率上行压制风险偏好，利空高估值成长。【外围映射】隔夜美股三大指数齐跌(道指-0.68%、纳指-1.13%、标普-0.75%、费半-1.23%)，纳指止步四连涨，今日A股开盘承压但结构性分化，油气/电网/军工或逆势走强，光模块/光伏/黄金跟跌。【板块轮动】主线看油气、电网设备、军工事件驱动；低位轮动关注银行(息差改善)、机器人制造升级；回避高位光模块与纯概念光伏。【风险与避险】高位光模块、光伏、黄金珠宝短期承压，建议仓位6-7成，避险可配银行/油气红利与军工防御，规避追高。【结论】今日A股大概率低开分化、沪指围绕3800点区间震荡；确认条件为早盘成交放量(首小时≥2500亿)且油气/电网主线持续，则可看高一线，否则以防守轮动为主。",
-    "source": "路透社/财联社/彭博社/华尔街日报"
+    "content": "【消息面】隔夜国际油价大涨——布伦特站上103美元(+3.86%)、WTI 92.16美元，伊朗拒绝重启霍尔木兹海峡谈判推升供给溢价，油服与上游勘探资本开支预期上修，直接利好A股油气开采、油服工程与油运板块；美债10Y收益率盘中突破5.11%（2007年以来最高），PMI 58.4超预期强劲强化加息押注（10月加息概率约66%），全球成长股估值承压；存储链现分化信号——美光遭海外知名做空机构点名并警告存储周期见顶，但AI数据中心存储需求仍旺，A股半导体设备与存储映射短期情绪扰动、中期国产替代逻辑未变。【政策面】国内9月LPR连续16个月按兵不动（5年期3.5%），降准降息预期后移但四季度稳增长窗口仍在；国常会推进新型工业化与算力网络建设，算力电力协同铺设特高压与配网投资主线，利好工业母机与算力硬件；证监会强化异常交易监管为高位连板情绪降温，打板资金或向低位业绩确定性方向切换，规避纯题材高位股。【外围映射】隔夜美股三大指数齐跌——道指-0.68%、纳指-1.13%止步四连涨、标普-0.75%、费半-1.23%；商业航天-5.08%、新能源/光伏-4.74%、黄金-3.9%领跌，石油+1.76%、军工+0.69%逆势收红。今日A股开盘承压但结构性分化：油气、电网设备、军工、高股息银行相对占优；光模块、光伏、黄金珠宝、锂电跟跌低开。韩国今日中秋休市，外资参照系缺失，开盘定价更多由内资主导，量能信号权重上调。【板块轮动】主线一：油气产业链（石油龙头+油服工程+天然气），油价突破103后的涨价传导，沿5日线持股；主线二：电网设备与特高压，AI算力用电激增+特高压建设加速双击，订单能见度最清晰；主线三：军工，地缘溢价+军贸回暖，中军企稳小盘活跃。低位轮动关注银行（加息预期下息差改善）与机器人（制造升级）；回避高位光模块（估值回撤未止）、纯概念光伏（供给过剩未解）与黄金珠宝（金价-3.9%回落）。【风险与避险】最大变量为10Y美债有效站上5%后的持续性——若本周继续上行，全球高估值资产二次承压，A股科技成长难有趋势行情；次高变量为油价冲高对中下游成本端的挤压。仓位建议6-7成，不追高、分批低吸；避险配置银行/油气红利与军工防御，规避高位连板情绪股（监管升温）。【结论】今日A股大概率低开分化、沪指围绕3800点一线震荡；确认条件为首小时成交≥2500亿元且油气/电网主线延续，则可看高一线、上探3850—3950区间；否则以防守轮动为主，回踩3750附近视量为低吸窗口，破位则降至5成以下防守。",
+    "source": "综合财联社/证券时报/路透社/彭博社/华尔街日报及公开公告（截至2026-09-24 10:00）"
   },
   "duanban": {
     "generatedAt": "2026-09-24 09:57",
@@ -79202,7 +79202,1160 @@ window.DASHBOARD_DATA = {
         "story": "个股消息 🇨🇳：2026-09-23 财联社/腾讯新闻《AI应用概念全线下挫传媒游戏领跌》：AI漫剧、AI营销、AI影视、传媒、游戏等AI应用概念全线下挫，龙版传媒、中视传媒、华媒控股跌停。数字货币、跨境支付、互联网金融概念集体下行，楚天龙跌停。资金从高位题材撤退转向防御性板块，高位股分歧加大（短期利空AI应用/传媒/游戏，高位题材退潮风险）。"
       }
     ],
-    "excluded": []
+    "excluded": [],
+    "star": {
+      "date": "2026-09-24",
+      "time": "10:13",
+      "marketLine": "上证指数-0.46%（竞价-0.28%），深证成指-1.09%（竞价-0.45%），创业板指-1.03%（竞价-0.38%），半小时两市成交约 8377 亿",
+      "sentiment": "开盘半小时板块情绪：领涨 风电设备+3.29%、纺织制造+1.80%、厨卫电器+1.71%；领跌 房地产-2.16%、元件-2.60%、贵金属-3.36%。资金情绪：主力净流入前列 银行+17.8亿、风电设备+7.2亿、汽车零部件+6.6亿；净流出前列 光学光电子-6.3亿、化学制品-5.6亿、文化传媒-5.1亿。集合竞价：池内候选高开 35 家 / 低开 84 家。（AI 复核：请改写为完整开盘情绪判断与对断板反包标的的影响分析）",
+      "picks": [
+        {
+          "code": "000850",
+          "name": "华茂股份",
+          "sector": "纺织制造",
+          "sentiment": "bull",
+          "probability": 73,
+          "note": "纺织制造·板块强势·竞价+10.1%·现涨+10.1%",
+          "src": "board"
+        },
+        {
+          "code": "002298",
+          "name": "中电鑫龙",
+          "sector": "电网设备",
+          "sentiment": "bull",
+          "probability": 80,
+          "note": "电网设备·利好·基线80%·竞价+0.0%·现涨+0.8%",
+          "src": "pool"
+        },
+        {
+          "code": "603016",
+          "name": "新宏泰",
+          "sector": "电网设备",
+          "sentiment": "bull",
+          "probability": 80,
+          "note": "电网设备·利好·基线80%·竞价+0.0%·现涨-0.3%",
+          "src": "pool"
+        },
+        {
+          "code": "605196",
+          "name": "华通线缆",
+          "sector": "电网设备",
+          "sentiment": "bull",
+          "probability": 80,
+          "note": "电网设备·利好·基线80%·竞价-0.5%·现涨-2.5%",
+          "src": "pool"
+        },
+        {
+          "code": "600577",
+          "name": "精达股份",
+          "sector": "电网设备",
+          "sentiment": "bull",
+          "probability": 80,
+          "note": "电网设备·利好·基线80%·竞价+0.0%·现涨-2.4%",
+          "src": "pool"
+        },
+        {
+          "code": "002980",
+          "name": "华盛昌",
+          "sector": "电网设备",
+          "sentiment": "bull",
+          "probability": 80,
+          "note": "电网设备·利好·基线80%·竞价-1.5%·现涨-3.9%",
+          "src": "pool"
+        },
+        {
+          "code": "601218",
+          "name": "吉鑫科技",
+          "sector": "风电设备",
+          "sentiment": "bull",
+          "probability": 65,
+          "note": "风电设备·板块强势·竞价-1.4%·现涨+10.0%",
+          "src": "board"
+        },
+        {
+          "code": "002042",
+          "name": "华孚时尚",
+          "sector": "纺织制造",
+          "sentiment": "bull",
+          "probability": 70,
+          "note": "纺织制造·利好·基线70%·竞价-1.0%·现涨-0.5%",
+          "src": "pool"
+        },
+        {
+          "code": "603248",
+          "name": "锡华科技",
+          "sector": "风电设备",
+          "sentiment": "bull",
+          "probability": 63,
+          "note": "风电设备·板块强势·竞价-3.2%·现涨+7.0%",
+          "src": "board"
+        },
+        {
+          "code": "600156",
+          "name": "华升股份",
+          "sector": "纺织制造",
+          "sentiment": "bull",
+          "probability": 64,
+          "note": "纺织制造·板块强势·竞价+1.1%·现涨+10.0%",
+          "src": "board"
+        },
+        {
+          "code": "002869",
+          "name": "金溢科技",
+          "sector": "计算机设备",
+          "sentiment": "bull",
+          "probability": 70,
+          "note": "计算机设备·利好·基线70%·竞价-0.2%·现涨+2.5%",
+          "src": "pool"
+        },
+        {
+          "code": "600792",
+          "name": "云煤能源",
+          "sector": "煤炭开采加工",
+          "sentiment": "bull",
+          "probability": 63,
+          "note": "煤炭开采加工·板块强势·竞价-1.5%·现涨+10.0%",
+          "src": "board"
+        },
+        {
+          "code": "002640",
+          "name": "跨境通",
+          "sector": "互联网电",
+          "sentiment": "bull",
+          "probability": 70,
+          "note": "互联网电·利好·基线70%·竞价+0.6%·现涨+0.6%",
+          "src": "pool"
+        },
+        {
+          "code": "002388",
+          "name": "新亚制程",
+          "sector": "其他电子",
+          "sentiment": "bull",
+          "probability": 70,
+          "note": "其他电子·利好·基线70%·竞价-2.3%·现涨+0.5%",
+          "src": "pool"
+        },
+        {
+          "code": "002084",
+          "name": "海鸥住工",
+          "sector": "家居用品",
+          "sentiment": "bull",
+          "probability": 70,
+          "note": "家居用品·利好·基线70%·竞价+1.2%·现涨+0.0%",
+          "src": "pool"
+        },
+        {
+          "code": "001211",
+          "name": "双枪科技",
+          "sector": "家居用品",
+          "sentiment": "bull",
+          "probability": 70,
+          "note": "家居用品·利好·基线70%·竞价-0.7%·现涨-0.5%",
+          "src": "pool"
+        },
+        {
+          "code": "002161",
+          "name": "远 望 谷",
+          "sector": "其他电子",
+          "sentiment": "bull",
+          "probability": 70,
+          "note": "其他电子·利好·基线70%·竞价-1.0%·现涨-1.8%",
+          "src": "pool"
+        },
+        {
+          "code": "002035",
+          "name": "华帝股份",
+          "sector": "厨卫电器",
+          "sentiment": "bull",
+          "probability": 61,
+          "note": "厨卫电器·板块强势·竞价-0.6%·现涨+5.3%",
+          "src": "board"
+        },
+        {
+          "code": "600758",
+          "name": "辽宁能源",
+          "sector": "煤炭开采加工",
+          "sentiment": "bull",
+          "probability": 61,
+          "note": "煤炭开采加工·板块强势·竞价+1.1%·现涨+5.1%",
+          "src": "board"
+        },
+        {
+          "code": "002677",
+          "name": "浙江美大",
+          "sector": "厨卫电器",
+          "sentiment": "bull",
+          "probability": 61,
+          "note": "厨卫电器·板块强势·竞价-0.8%·现涨+5.1%",
+          "src": "board"
+        },
+        {
+          "code": "603353",
+          "name": "和顺石油",
+          "sector": "炼化及贸",
+          "sentiment": "bull",
+          "probability": 70,
+          "note": "炼化及贸·利好·基线70%·竞价-1.8%·现涨-3.2%",
+          "src": "pool"
+        },
+        {
+          "code": "002005",
+          "name": "德豪润达",
+          "sector": "小家电",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "小家电·中性·基线52%·竞价-0.4%·现涨+3.0%",
+          "src": "pool"
+        },
+        {
+          "code": "600403",
+          "name": "大有能源",
+          "sector": "煤炭开采",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "煤炭开采·中性·基线50%·竞价-0.4%·现涨+2.2%",
+          "src": "pool"
+        },
+        {
+          "code": "002849",
+          "name": "威星智能",
+          "sector": "通用设备",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "通用设备·中性·基线52%·竞价-0.0%·现涨+6.7%",
+          "src": "pool"
+        },
+        {
+          "code": "600293",
+          "name": "三峡新材",
+          "sector": "玻璃玻纤",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "玻璃玻纤·中性·基线52%·竞价+0.5%·现涨+5.7%",
+          "src": "pool"
+        },
+        {
+          "code": "601579",
+          "name": "会稽山",
+          "sector": "非白酒",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "非白酒·中性·基线52%·竞价+2.4%·现涨+5.4%",
+          "src": "pool"
+        },
+        {
+          "code": "002836",
+          "name": "新宏泽",
+          "sector": "包装印刷",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "包装印刷·中性·基线52%·竞价-3.0%·现涨+5.5%",
+          "src": "pool"
+        },
+        {
+          "code": "600699",
+          "name": "均胜电子",
+          "sector": "汽车零部件",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "汽车零部件·中性·基线52%·竞价-0.1%·现涨+5.2%",
+          "src": "pool"
+        },
+        {
+          "code": "000920",
+          "name": "沃顿科技",
+          "sector": "塑料制品",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "塑料制品·中性·基线52%·竞价+0.1%·现涨+4.3%",
+          "src": "pool"
+        },
+        {
+          "code": "001373",
+          "name": "翔腾新材",
+          "sector": "光学光电子",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "光学光电子·中性·基线52%·竞价-0.5%·现涨+3.5%",
+          "src": "pool"
+        },
+        {
+          "code": "002022",
+          "name": "科华生物",
+          "sector": "医疗器械",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "医疗器械·中性·基线52%·竞价+0.0%·现涨+3.0%",
+          "src": "pool"
+        },
+        {
+          "code": "600371",
+          "name": "万向德农",
+          "sector": "种植业",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "种植业·中性·基线52%·竞价+4.6%·现涨+2.9%",
+          "src": "pool"
+        },
+        {
+          "code": "002383",
+          "name": "合众思壮",
+          "sector": "军工电子",
+          "sentiment": "neutral",
+          "probability": 48,
+          "note": "军工电子·中性·基线48%·竞价-2.5%·现涨-1.3%",
+          "src": "pool"
+        },
+        {
+          "code": "600992",
+          "name": "贵绳股份",
+          "sector": "通用设备",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "通用设备·中性·基线52%·竞价+0.0%·现涨+2.4%",
+          "src": "pool"
+        },
+        {
+          "code": "002321",
+          "name": "华英农业",
+          "sector": "养殖业",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "养殖业·中性·基线50%·竞价+2.4%·现涨+10.2%",
+          "src": "pool"
+        },
+        {
+          "code": "002622",
+          "name": "皓宸医疗",
+          "sector": "医疗服务",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "医疗服务·中性·基线50%·竞价+1.2%·现涨+10.1%",
+          "src": "pool"
+        },
+        {
+          "code": "603230",
+          "name": "内蒙新华",
+          "sector": "出版",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "出版·中性·基线50%·竞价+1.2%·现涨+8.8%",
+          "src": "pool"
+        },
+        {
+          "code": "600815",
+          "name": "厦工股份",
+          "sector": "工程机械",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "工程机械·中性·基线50%·竞价-1.9%·现涨+9.9%",
+          "src": "pool"
+        },
+        {
+          "code": "002724",
+          "name": "海洋王",
+          "sector": "照明设备",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "照明设备·中性·基线52%·竞价-0.4%·现涨+1.8%",
+          "src": "pool"
+        },
+        {
+          "code": "603819",
+          "name": "神力股份",
+          "sector": "通用设备",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "通用设备·中性·基线52%·竞价-1.1%·现涨+1.7%",
+          "src": "pool"
+        },
+        {
+          "code": "600127",
+          "name": "金健米业",
+          "sector": "农产品加",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "农产品加·中性·基线52%·竞价-0.1%·现涨+1.3%",
+          "src": "pool"
+        },
+        {
+          "code": "600135",
+          "name": "乐凯胶片",
+          "sector": "塑料制品",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "塑料制品·中性·基线52%·竞价-0.7%·现涨+1.4%",
+          "src": "pool"
+        },
+        {
+          "code": "000020",
+          "name": "深华发Ａ",
+          "sector": "光学光电子",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "光学光电子·中性·基线52%·竞价+1.0%·现涨+0.9%",
+          "src": "pool"
+        },
+        {
+          "code": "605566",
+          "name": "福莱蒽特",
+          "sector": "化学制品",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "化学制品·中性·基线52%·竞价-1.0%·现涨+0.7%",
+          "src": "pool"
+        },
+        {
+          "code": "600587",
+          "name": "新华医疗",
+          "sector": "医疗器械",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "医疗器械·中性·基线52%·竞价-0.1%·现涨+0.5%",
+          "src": "pool"
+        },
+        {
+          "code": "603120",
+          "name": "肯特催化",
+          "sector": "化学制品",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "化学制品·中性·基线52%·竞价-0.6%·现涨+0.7%",
+          "src": "pool"
+        },
+        {
+          "code": "002068",
+          "name": "黑猫股份",
+          "sector": "橡胶制品",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "橡胶制品·中性·基线52%·竞价-0.6%·现涨+0.6%",
+          "src": "pool"
+        },
+        {
+          "code": "603122",
+          "name": "合富中国",
+          "sector": "医疗服务",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "医疗服务·中性·基线52%·竞价+1.1%·现涨+0.4%",
+          "src": "pool"
+        },
+        {
+          "code": "600822",
+          "name": "上海物贸",
+          "sector": "汽车服务及其他",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "汽车服务及其他·中性·基线52%·竞价-0.2%·现涨+0.3%",
+          "src": "pool"
+        },
+        {
+          "code": "603009",
+          "name": "北特科技",
+          "sector": "汽车零部件",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "汽车零部件·中性·基线52%·竞价+0.7%·现涨+0.3%",
+          "src": "pool"
+        },
+        {
+          "code": "001238",
+          "name": "浙江正特",
+          "sector": "文娱用品",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "文娱用品·中性·基线52%·竞价+0.0%·现涨+0.0%",
+          "src": "pool"
+        },
+        {
+          "code": "000410",
+          "name": "沈阳机床",
+          "sector": "通用设备",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "通用设备·中性·基线52%·竞价-0.2%·现涨+0.0%",
+          "src": "pool"
+        },
+        {
+          "code": "002679",
+          "name": "福建金森",
+          "sector": "林业Ⅱ",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "林业Ⅱ·中性·基线52%·竞价-0.6%·现涨-0.1%",
+          "src": "pool"
+        },
+        {
+          "code": "605378",
+          "name": "野马电池",
+          "sector": "电池",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "电池·中性·基线52%·竞价-0.1%·现涨+0.1%",
+          "src": "pool"
+        },
+        {
+          "code": "001233",
+          "name": "海安集团",
+          "sector": "汽车零部件",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "汽车零部件·中性·基线52%·竞价-0.0%·现涨-0.2%",
+          "src": "pool"
+        },
+        {
+          "code": "000055",
+          "name": "方大集团",
+          "sector": "建筑材料",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "建筑材料·中性·基线52%·竞价-0.5%·现涨-0.3%",
+          "src": "pool"
+        },
+        {
+          "code": "603001",
+          "name": "奥康国际",
+          "sector": "服装家纺",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "服装家纺·中性·基线52%·竞价-1.0%·现涨-0.4%",
+          "src": "pool"
+        },
+        {
+          "code": "001365",
+          "name": "天海电子",
+          "sector": "汽车零部件",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "汽车零部件·中性·基线52%·竞价-0.7%·现涨-0.3%",
+          "src": "pool"
+        },
+        {
+          "code": "603903",
+          "name": "中持股份",
+          "sector": "环境治理",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "环境治理·中性·基线50%·竞价-1.5%·现涨+3.6%",
+          "src": "pool"
+        },
+        {
+          "code": "000670",
+          "name": "盈方微",
+          "sector": "其他电子",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "其他电子·中性·基线52%·竞价-1.2%·现涨-0.5%",
+          "src": "pool"
+        },
+        {
+          "code": "002301",
+          "name": "齐心集团",
+          "sector": "文娱用品",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "文娱用品·中性·基线50%·竞价+0.1%·现涨+3.3%",
+          "src": "pool"
+        },
+        {
+          "code": "002589",
+          "name": "瑞康医药",
+          "sector": "医药商业",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "医药商业·中性·基线52%·竞价+1.8%·现涨-0.9%",
+          "src": "pool"
+        },
+        {
+          "code": "603138",
+          "name": "海量数据",
+          "sector": "IT服务Ⅱ",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "IT服务Ⅱ·中性·基线52%·竞价+0.3%·现涨-0.9%",
+          "src": "pool"
+        },
+        {
+          "code": "000509",
+          "name": "华塑控股",
+          "sector": "光学光电子",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "光学光电子·中性·基线52%·竞价+0.3%·现涨-0.8%",
+          "src": "pool"
+        },
+        {
+          "code": "600354",
+          "name": "敦煌种业",
+          "sector": "种植业",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "种植业·中性·基线52%·竞价+0.1%·现涨-0.9%",
+          "src": "pool"
+        },
+        {
+          "code": "605288",
+          "name": "凯迪股份",
+          "sector": "自动化设备",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "自动化设备·中性·基线52%·竞价+1.3%·现涨-0.8%",
+          "src": "pool"
+        },
+        {
+          "code": "603155",
+          "name": "新亚强",
+          "sector": "化学制品",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "化学制品·中性·基线52%·竞价-1.0%·现涨-0.8%",
+          "src": "pool"
+        },
+        {
+          "code": "002349",
+          "name": "精华制药",
+          "sector": "中药Ⅱ",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "中药Ⅱ·中性·基线52%·竞价+0.1%·现涨-0.9%",
+          "src": "pool"
+        },
+        {
+          "code": "600812",
+          "name": "华北制药",
+          "sector": "化学制药",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "化学制药·中性·基线52%·竞价-0.2%·现涨-1.0%",
+          "src": "pool"
+        },
+        {
+          "code": "002900",
+          "name": "哈三联",
+          "sector": "化学制药",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "化学制药·中性·基线52%·竞价-0.3%·现涨-0.9%",
+          "src": "pool"
+        },
+        {
+          "code": "605188",
+          "name": "国光连锁",
+          "sector": "一般零售",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "一般零售·中性·基线52%·竞价+0.2%·现涨-0.9%",
+          "src": "pool"
+        },
+        {
+          "code": "600881",
+          "name": "亚泰集团",
+          "sector": "综合Ⅱ",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "综合Ⅱ·中性·基线52%·竞价-0.5%·现涨-1.1%",
+          "src": "pool"
+        },
+        {
+          "code": "603580",
+          "name": "艾艾精工",
+          "sector": "塑料制品",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "塑料制品·中性·基线50%·竞价+2.0%·现涨+3.1%",
+          "src": "pool"
+        },
+        {
+          "code": "002963",
+          "name": "豪尔赛",
+          "sector": "装修装饰",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "装修装饰·中性·基线52%·竞价+0.4%·现涨-1.3%",
+          "src": "pool"
+        },
+        {
+          "code": "002713",
+          "name": "东易日盛",
+          "sector": "装修装饰",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "装修装饰·中性·基线52%·竞价+0.0%·现涨-1.3%",
+          "src": "pool"
+        },
+        {
+          "code": "002961",
+          "name": "瑞达期货",
+          "sector": "多元金融",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "多元金融·中性·基线52%·竞价-0.2%·现涨-1.2%",
+          "src": "pool"
+        },
+        {
+          "code": "603216",
+          "name": "梦天家居",
+          "sector": "家居用品",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "家居用品·中性·基线50%·竞价+2.1%·现涨+2.8%",
+          "src": "pool"
+        },
+        {
+          "code": "603289",
+          "name": "泰瑞机器",
+          "sector": "专用设备",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "专用设备·中性·基线52%·竞价-1.2%·现涨-1.4%",
+          "src": "pool"
+        },
+        {
+          "code": "003041",
+          "name": "真爱美家",
+          "sector": "服装家纺",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "服装家纺·中性·基线52%·竞价-0.2%·现涨-1.4%",
+          "src": "pool"
+        },
+        {
+          "code": "600103",
+          "name": "青山纸业",
+          "sector": "造纸",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "造纸·中性·基线52%·竞价-0.3%·现涨-1.4%",
+          "src": "pool"
+        },
+        {
+          "code": "600785",
+          "name": "新华百货",
+          "sector": "一般零售",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "一般零售·中性·基线52%·竞价+0.6%·现涨-1.6%",
+          "src": "pool"
+        },
+        {
+          "code": "603151",
+          "name": "邦基科技",
+          "sector": "饲料",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "饲料·中性·基线52%·竞价+0.1%·现涨-1.6%",
+          "src": "pool"
+        },
+        {
+          "code": "001212",
+          "name": "中旗新材",
+          "sector": "建筑材料",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "建筑材料·中性·基线52%·竞价-0.4%·现涨-1.6%",
+          "src": "pool"
+        },
+        {
+          "code": "000566",
+          "name": "海南海药",
+          "sector": "化学制药",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "化学制药·中性·基线52%·竞价-0.8%·现涨-1.9%",
+          "src": "pool"
+        },
+        {
+          "code": "603402",
+          "name": "陕西旅游",
+          "sector": "旅游及景",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "旅游及景·中性·基线52%·竞价-0.3%·现涨-1.8%",
+          "src": "pool"
+        },
+        {
+          "code": "001399",
+          "name": "惠科股份",
+          "sector": "光学光电子",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "光学光电子·中性·基线52%·竞价-1.3%·现涨-1.9%",
+          "src": "pool"
+        },
+        {
+          "code": "600621",
+          "name": "华鑫股份",
+          "sector": "证券",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "证券·中性·基线52%·竞价-1.6%·现涨-1.8%",
+          "src": "pool"
+        },
+        {
+          "code": "001260",
+          "name": "坤泰股份",
+          "sector": "汽车零部件",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "汽车零部件·中性·基线50%·竞价-1.0%·现涨+2.3%",
+          "src": "pool"
+        },
+        {
+          "code": "002137",
+          "name": "实益达",
+          "sector": "光学光电子",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "光学光电子·中性·基线52%·竞价+0.2%·现涨-1.9%",
+          "src": "pool"
+        },
+        {
+          "code": "603093",
+          "name": "南华期货",
+          "sector": "多元金融",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "多元金融·中性·基线52%·竞价-0.7%·现涨-2.1%",
+          "src": "pool"
+        },
+        {
+          "code": "002965",
+          "name": "祥鑫科技",
+          "sector": "汽车零部件",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "汽车零部件·中性·基线52%·竞价-0.7%·现涨-2.4%",
+          "src": "pool"
+        },
+        {
+          "code": "600838",
+          "name": "上海九百",
+          "sector": "一般零售",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "一般零售·中性·基线52%·竞价+0.3%·现涨-2.3%",
+          "src": "pool"
+        },
+        {
+          "code": "000868",
+          "name": "安凯客车",
+          "sector": "汽车整车",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "汽车整车·中性·基线52%·竞价-1.7%·现涨-2.4%",
+          "src": "pool"
+        },
+        {
+          "code": "002655",
+          "name": "共达电声",
+          "sector": "消费电子",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "消费电子·中性·基线52%·竞价-1.2%·现涨-2.5%",
+          "src": "pool"
+        },
+        {
+          "code": "600847",
+          "name": "万里股份",
+          "sector": "电池",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "电池·中性·基线50%·竞价+0.2%·现涨+1.4%",
+          "src": "pool"
+        },
+        {
+          "code": "002755",
+          "name": "奥赛康",
+          "sector": "化学制药",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "化学制药·中性·基线52%·竞价-0.5%·现涨-3.0%",
+          "src": "pool"
+        },
+        {
+          "code": "002585",
+          "name": "双星新材",
+          "sector": "塑料制品",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "塑料制品·中性·基线52%·竞价-2.0%·现涨-3.4%",
+          "src": "pool"
+        },
+        {
+          "code": "000532",
+          "name": "华金资本",
+          "sector": "多元金融",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "多元金融·中性·基线52%·竞价-3.3%·现涨-3.9%",
+          "src": "pool"
+        },
+        {
+          "code": "600613",
+          "name": "神奇制药",
+          "sector": "化学制药",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "化学制药·中性·基线52%·竞价-1.9%·现涨-4.2%",
+          "src": "pool"
+        },
+        {
+          "code": "605218",
+          "name": "伟时电子",
+          "sector": "光学光电子",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "光学光电子·中性·基线50%·竞价-1.5%·现涨-0.4%",
+          "src": "pool"
+        },
+        {
+          "code": "603020",
+          "name": "爱普股份",
+          "sector": "化学制品",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "化学制品·中性·基线50%·竞价-1.0%·现涨-0.8%",
+          "src": "pool"
+        },
+        {
+          "code": "002467",
+          "name": "二六三",
+          "sector": "通信服务",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "通信服务·中性·基线50%·竞价-0.8%·现涨-1.0%",
+          "src": "pool"
+        },
+        {
+          "code": "002768",
+          "name": "国恩股份",
+          "sector": "塑料制品",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "塑料制品·中性·基线50%·竞价-2.0%·现涨-1.6%",
+          "src": "pool"
+        },
+        {
+          "code": "603221",
+          "name": "爱丽家居",
+          "sector": "家居用品",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "家居用品·中性·基线50%·竞价-0.4%·现涨-1.7%",
+          "src": "pool"
+        },
+        {
+          "code": "605058",
+          "name": "澳弘电子",
+          "sector": "元件",
+          "sentiment": "neutral",
+          "probability": 48,
+          "note": "元件·中性·基线48%·竞价-1.0%·现涨+2.2%",
+          "src": "pool"
+        },
+        {
+          "code": "002471",
+          "name": "中超控股",
+          "sector": "电网设备",
+          "sentiment": "neutral",
+          "probability": 48,
+          "note": "电网设备·中性·基线48%·竞价+0.2%·现涨+2.2%",
+          "src": "pool"
+        },
+        {
+          "code": "601086",
+          "name": "国芳集团",
+          "sector": "一般零售",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "一般零售·中性·基线52%·竞价+1.1%·现涨-7.2%",
+          "src": "pool"
+        },
+        {
+          "code": "605088",
+          "name": "冠盛股份",
+          "sector": "汽车零部件",
+          "sentiment": "neutral",
+          "probability": 52,
+          "note": "汽车零部件·中性·基线52%·竞价-3.1%·现涨-6.3%",
+          "src": "pool"
+        },
+        {
+          "code": "001322",
+          "name": "箭牌家居",
+          "sector": "家居用品",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "家居用品·中性·基线50%·竞价-1.3%·现涨-1.9%",
+          "src": "pool"
+        },
+        {
+          "code": "000981",
+          "name": "山子高科",
+          "sector": "汽车零部件",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "汽车零部件·中性·基线50%·竞价-1.8%·现涨-2.1%",
+          "src": "pool"
+        },
+        {
+          "code": "603598",
+          "name": "引力传媒",
+          "sector": "广告营销",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "广告营销·中性·基线50%·竞价-0.3%·现涨-3.2%",
+          "src": "pool"
+        },
+        {
+          "code": "002757",
+          "name": "南兴股份",
+          "sector": "专用设备",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "专用设备·中性·基线50%·竞价-1.4%·现涨-3.2%",
+          "src": "pool"
+        },
+        {
+          "code": "600479",
+          "name": "千金药业",
+          "sector": "中药Ⅱ",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "中药Ⅱ·中性·基线50%·竞价-1.4%·现涨-3.2%",
+          "src": "pool"
+        },
+        {
+          "code": "002303",
+          "name": "美盈森",
+          "sector": "包装印刷",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "包装印刷·中性·基线50%·竞价-1.2%·现涨-3.6%",
+          "src": "pool"
+        },
+        {
+          "code": "001266",
+          "name": "宏英智能",
+          "sector": "自动化设备",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "自动化设备·中性·基线50%·竞价-1.0%·现涨-3.5%",
+          "src": "pool"
+        },
+        {
+          "code": "001268",
+          "name": "联合精密",
+          "sector": "家电零部",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "家电零部·中性·基线50%·竞价+1.6%·现涨-4.2%",
+          "src": "pool"
+        },
+        {
+          "code": "600343",
+          "name": "航天动力",
+          "sector": "通用设备",
+          "sentiment": "neutral",
+          "probability": 48,
+          "note": "通用设备·中性·基线48%·竞价+0.1%·现涨-0.4%",
+          "src": "pool"
+        },
+        {
+          "code": "000676",
+          "name": "智度股份",
+          "sector": "广告营销",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "广告营销·中性·基线50%·竞价-1.5%·现涨-4.5%",
+          "src": "pool"
+        },
+        {
+          "code": "605178",
+          "name": "时空科技",
+          "sector": "专业工程",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "专业工程·中性·基线50%·竞价-0.5%·现涨-5.0%",
+          "src": "pool"
+        },
+        {
+          "code": "002339",
+          "name": "积成电子",
+          "sector": "电网设备",
+          "sentiment": "neutral",
+          "probability": 48,
+          "note": "电网设备·中性·基线48%·竞价-0.9%·现涨-1.5%",
+          "src": "pool"
+        },
+        {
+          "code": "002300",
+          "name": "太阳电缆",
+          "sector": "电网设备",
+          "sentiment": "neutral",
+          "probability": 48,
+          "note": "电网设备·中性·基线48%·竞价-0.8%·现涨-1.9%",
+          "src": "pool"
+        },
+        {
+          "code": "600664",
+          "name": "哈药股份",
+          "sector": "化学制药",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "化学制药·中性·基线50%·竞价-4.3%·现涨-8.3%",
+          "src": "pool"
+        },
+        {
+          "code": "605179",
+          "name": "一鸣食品",
+          "sector": "饮料乳品",
+          "sentiment": "neutral",
+          "probability": 50,
+          "note": "饮料乳品·中性·基线50%·竞价-4.5%·现涨-8.8%",
+          "src": "pool"
+        },
+        {
+          "code": "002617",
+          "name": "露笑科技",
+          "sector": "电力",
+          "sentiment": "neutral",
+          "probability": 48,
+          "note": "电力·中性·基线48%·竞价-1.6%·现涨-2.2%",
+          "src": "pool"
+        },
+        {
+          "code": "605258",
+          "name": "协和电子",
+          "sector": "元件",
+          "sentiment": "neutral",
+          "probability": 48,
+          "note": "元件·中性·基线48%·竞价+0.0%·现涨-4.4%",
+          "src": "pool"
+        },
+        {
+          "code": "605162",
+          "name": "新中港",
+          "sector": "电力",
+          "sentiment": "neutral",
+          "probability": 48,
+          "note": "电力·中性·基线48%·竞价-3.3%·现涨-4.6%",
+          "src": "pool"
+        },
+        {
+          "code": "001389",
+          "name": "广合科技",
+          "sector": "元件",
+          "sentiment": "neutral",
+          "probability": 48,
+          "note": "元件·中性·基线48%·竞价-1.8%·现涨-5.3%",
+          "src": "pool"
+        }
+      ],
+      "pushText": "",
+      "generatedBy": "update_star.py 确定性筛选（R98n：池内概率 + 板块动量领涨股）+ 自动化 AI 复核"
+    }
   },
   "stkKlines": {
     "300086": [
@@ -79689,10 +80842,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         5.46,
-        5.5,
+        5.4,
         5.55,
-        5.45,
-        46245
+        5.29,
+        144657
       ]
     ],
     "300110": [
@@ -80179,10 +81332,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         3.61,
-        3.57,
+        3.47,
         3.68,
-        3.51,
-        639897
+        3.34,
+        1526568
       ]
     ],
     "300285": [
@@ -80669,10 +81822,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         73.91,
-        71.02,
+        72.11,
         75.4,
         70.73,
-        545769
+        875685
       ]
     ],
     "300684": [
@@ -81159,10 +82312,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         119.41,
-        120.76,
+        120,
         123.19,
         118.5,
-        61675
+        105419
       ]
     ],
     "300852": [
@@ -81649,10 +82802,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         79.69,
-        76.64,
+        74.78,
         80.1,
-        76.07,
-        27108
+        74.5,
+        59318
       ]
     ],
     "300894": [
@@ -82139,10 +83292,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         10.45,
-        10.37,
+        10.42,
         10.48,
-        10.36,
-        4091
+        10.31,
+        11036
       ]
     ],
     "300911": [
@@ -82629,10 +83782,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         35.88,
-        34.3,
-        36.14,
+        36.07,
+        36.29,
         34.07,
-        31201
+        61271
       ]
     ],
     "300927": [
@@ -83119,10 +84272,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         27.12,
-        27.91,
+        27.28,
         28.08,
         27.08,
-        16490
+        31821
       ]
     ],
     "300931": [
@@ -83609,10 +84762,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         19.01,
-        17.66,
+        16.64,
         19.2,
-        17.6,
-        83122
+        16.6,
+        218369
       ]
     ],
     "300997": [
@@ -84099,10 +85252,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         15.51,
-        15.59,
+        15.57,
         15.75,
-        15.43,
-        12748
+        15.38,
+        29780
       ]
     ],
     "301071": [
@@ -84589,10 +85742,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         70.5,
-        69.6,
-        71.35,
+        69.96,
+        71.66,
         69.11,
-        27024
+        71828
       ]
     ],
     "301132": [
@@ -85079,10 +86232,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         74,
-        72.31,
+        71.6,
         75.9,
-        72.01,
-        44923
+        71.6,
+        79254
       ]
     ],
     "301150": [
@@ -85569,10 +86722,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         50.91,
-        47.11,
+        46.68,
         51.5,
         46.5,
-        172064
+        271369
       ]
     ],
     "301369": [
@@ -86059,10 +87212,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         153.4,
-        143,
-        153.4,
+        153.28,
+        155.36,
         141.24,
-        17260
+        38500
       ]
     ],
     "301595": [
@@ -86549,10 +87702,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         50.22,
-        49.29,
-        50.22,
-        49.2,
-        5762
+        50.25,
+        50.42,
+        49,
+        11594
       ]
     ],
     "301630": [
@@ -87039,10 +88192,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         219.6,
-        217.43,
+        218.3,
         225,
         214.55,
-        5186
+        11609
       ]
     ],
     "301678": [
@@ -87529,10 +88682,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         56.65,
-        55.4,
+        55.7,
         58.47,
         54.27,
-        48436
+        72909
       ]
     ],
     "600026": [
@@ -88019,10 +89172,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         21.25,
-        21.45,
-        21.48,
+        21.47,
+        21.63,
         21.05,
-        98871
+        257367
       ]
     ],
     "600028": [
@@ -88509,10 +89662,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         5.3,
-        5.32,
-        5.33,
+        5.34,
+        5.35,
         5.28,
-        171497
+        478673
       ]
     ],
     "600029": [
@@ -88999,10 +90152,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         4.95,
-        4.91,
-        4.95,
         4.9,
-        85763
+        4.95,
+        4.88,
+        207545
       ]
     ],
     "600036": [
@@ -89489,10 +90642,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         40.6,
-        41.01,
-        41.03,
+        41.06,
+        41.14,
         40.58,
-        75726
+        201225
       ]
     ],
     "600048": [
@@ -89979,10 +91132,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         5.64,
-        5.61,
+        5.6,
         5.69,
-        5.56,
-        462662
+        5.52,
+        1149797
       ]
     ],
     "600058": [
@@ -90469,10 +91622,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         9.2,
-        9.02,
+        8.98,
         9.24,
-        9.02,
-        25938
+        8.94,
+        51261
       ]
     ],
     "600059": [
@@ -91441,10 +92594,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         13.25,
-        13.37,
+        13.13,
         13.61,
-        13.19,
-        51545
+        13.05,
+        117947
       ]
     ],
     "600089": [
@@ -91931,10 +93084,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         18,
-        17.85,
+        17.71,
         18.01,
-        17.85,
-        81390
+        17.7,
+        273915
       ]
     ],
     "600105": [
@@ -92421,10 +93574,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         44.51,
-        43.67,
+        43.12,
         44.75,
-        43.51,
-        131730
+        43.01,
+        328483
       ]
     ],
     "600115": [
@@ -92911,10 +94064,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         3.43,
-        3.4,
-        3.44,
         3.39,
-        348770
+        3.44,
+        3.38,
+        636476
       ]
     ],
     "600126": [
@@ -93401,10 +94554,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         6.13,
-        6.13,
+        6.1,
         6.16,
-        6.11,
-        42927
+        6.1,
+        84397
       ]
     ],
     "600141": [
@@ -93891,10 +95044,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         28.54,
-        28.34,
+        28.22,
         28.58,
-        28.31,
-        19260
+        28.21,
+        54795
       ]
     ],
     "600183": [
@@ -94381,10 +95534,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         142.6,
-        140.02,
+        137.94,
         142.6,
-        139.73,
-        82875
+        137.6,
+        227596
       ]
     ],
     "600188": [
@@ -94871,10 +96024,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         19.85,
-        20.05,
-        20.06,
+        19.86,
+        20.08,
         19.8,
-        48070
+        95303
       ]
     ],
     "600206": [
@@ -95361,10 +96514,500 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         50.81,
-        50.08,
+        50.1,
         51.27,
         49.8,
-        115223
+        224904
+      ]
+    ],
+    "600207": [
+      [
+        "2026-07-02",
+        5.71,
+        5.45,
+        5.73,
+        5.41,
+        385204
+      ],
+      [
+        "2026-07-03",
+        5.4,
+        5.03,
+        5.44,
+        5.02,
+        443508
+      ],
+      [
+        "2026-07-06",
+        5.08,
+        4.79,
+        5.08,
+        4.78,
+        305066
+      ],
+      [
+        "2026-07-07",
+        4.76,
+        4.59,
+        4.79,
+        4.56,
+        222141
+      ],
+      [
+        "2026-07-08",
+        4.58,
+        4.52,
+        4.63,
+        4.45,
+        213745
+      ],
+      [
+        "2026-07-09",
+        4.47,
+        4.58,
+        4.6,
+        4.37,
+        212151
+      ],
+      [
+        "2026-07-10",
+        4.59,
+        4.61,
+        4.77,
+        4.53,
+        218578
+      ],
+      [
+        "2026-07-13",
+        4.56,
+        4.21,
+        4.58,
+        4.18,
+        258295
+      ],
+      [
+        "2026-07-14",
+        4.23,
+        4.34,
+        4.37,
+        4.17,
+        228222
+      ],
+      [
+        "2026-07-15",
+        4.36,
+        4.31,
+        4.42,
+        4.26,
+        180615
+      ],
+      [
+        "2026-07-16",
+        4.29,
+        4.27,
+        4.36,
+        4.2,
+        131718
+      ],
+      [
+        "2026-07-17",
+        4.2,
+        4.07,
+        4.34,
+        4.02,
+        190856
+      ],
+      [
+        "2026-07-20",
+        4.08,
+        3.88,
+        4.16,
+        3.85,
+        230007
+      ],
+      [
+        "2026-07-21",
+        3.94,
+        3.96,
+        3.98,
+        3.56,
+        308340
+      ],
+      [
+        "2026-07-22",
+        3.93,
+        3.91,
+        4.03,
+        3.88,
+        218106
+      ],
+      [
+        "2026-07-23",
+        3.86,
+        4.08,
+        4.09,
+        3.86,
+        217857
+      ],
+      [
+        "2026-07-24",
+        4.05,
+        3.91,
+        4.07,
+        3.86,
+        176787
+      ],
+      [
+        "2026-07-27",
+        3.91,
+        4.1,
+        4.1,
+        3.91,
+        201133
+      ],
+      [
+        "2026-07-28",
+        4.05,
+        4.08,
+        4.18,
+        4.04,
+        168743
+      ],
+      [
+        "2026-07-29",
+        4.06,
+        4.15,
+        4.16,
+        3.99,
+        189877
+      ],
+      [
+        "2026-07-30",
+        4.15,
+        4.05,
+        4.2,
+        4.03,
+        195985
+      ],
+      [
+        "2026-07-31",
+        4.09,
+        4.12,
+        4.22,
+        4.07,
+        187851
+      ],
+      [
+        "2026-08-03",
+        4.16,
+        4.29,
+        4.3,
+        4.12,
+        197135
+      ],
+      [
+        "2026-08-04",
+        4.34,
+        4.35,
+        4.4,
+        4.25,
+        164934
+      ],
+      [
+        "2026-08-05",
+        4.36,
+        4.42,
+        4.44,
+        4.33,
+        165900
+      ],
+      [
+        "2026-08-06",
+        4.43,
+        4.41,
+        4.43,
+        4.3,
+        144420
+      ],
+      [
+        "2026-08-07",
+        4.39,
+        4.45,
+        4.45,
+        4.33,
+        153328
+      ],
+      [
+        "2026-08-10",
+        4.46,
+        4.49,
+        4.5,
+        4.37,
+        146647
+      ],
+      [
+        "2026-08-11",
+        4.5,
+        4.48,
+        4.51,
+        4.4,
+        144083
+      ],
+      [
+        "2026-08-12",
+        4.52,
+        4.57,
+        4.59,
+        4.46,
+        168097
+      ],
+      [
+        "2026-08-13",
+        4.59,
+        4.44,
+        4.6,
+        4.43,
+        178688
+      ],
+      [
+        "2026-08-14",
+        4.48,
+        4.45,
+        4.48,
+        4.36,
+        154304
+      ],
+      [
+        "2026-08-17",
+        4.48,
+        4.51,
+        4.53,
+        4.37,
+        159893
+      ],
+      [
+        "2026-08-18",
+        4.54,
+        4.48,
+        4.57,
+        4.44,
+        139940
+      ],
+      [
+        "2026-08-19",
+        4.46,
+        4.25,
+        4.46,
+        4.21,
+        170916
+      ],
+      [
+        "2026-08-20",
+        4.29,
+        4.29,
+        4.33,
+        4.23,
+        109301
+      ],
+      [
+        "2026-08-21",
+        4.3,
+        4.36,
+        4.38,
+        4.21,
+        128329
+      ],
+      [
+        "2026-08-24",
+        4.38,
+        4.31,
+        4.44,
+        4.26,
+        149637
+      ],
+      [
+        "2026-08-25",
+        4.34,
+        4.41,
+        4.43,
+        4.26,
+        149018
+      ],
+      [
+        "2026-08-26",
+        4.41,
+        4.46,
+        4.5,
+        4.35,
+        155353
+      ],
+      [
+        "2026-08-27",
+        4.45,
+        4.44,
+        4.46,
+        4.37,
+        120913
+      ],
+      [
+        "2026-08-28",
+        4.44,
+        4.46,
+        4.49,
+        4.4,
+        115974
+      ],
+      [
+        "2026-08-31",
+        4.44,
+        4.44,
+        4.45,
+        4.37,
+        100814
+      ],
+      [
+        "2026-09-01",
+        4.45,
+        4.48,
+        4.51,
+        4.42,
+        122474
+      ],
+      [
+        "2026-09-02",
+        4.46,
+        4.5,
+        4.52,
+        4.41,
+        144401
+      ],
+      [
+        "2026-09-03",
+        4.54,
+        4.41,
+        4.55,
+        4.38,
+        140074
+      ],
+      [
+        "2026-09-04",
+        4.41,
+        4.41,
+        4.52,
+        4.37,
+        162259
+      ],
+      [
+        "2026-09-07",
+        4.4,
+        4.49,
+        4.5,
+        4.39,
+        111038
+      ],
+      [
+        "2026-09-08",
+        4.5,
+        4.54,
+        4.56,
+        4.45,
+        124193
+      ],
+      [
+        "2026-09-09",
+        4.52,
+        4.52,
+        4.55,
+        4.49,
+        104872
+      ],
+      [
+        "2026-09-10",
+        4.51,
+        4.49,
+        4.59,
+        4.44,
+        140337
+      ],
+      [
+        "2026-09-11",
+        4.48,
+        4.94,
+        4.94,
+        4.47,
+        247751
+      ],
+      [
+        "2026-09-14",
+        5.08,
+        5.1,
+        5.35,
+        4.98,
+        960133
+      ],
+      [
+        "2026-09-15",
+        5.04,
+        4.83,
+        5.08,
+        4.8,
+        616745
+      ],
+      [
+        "2026-09-16",
+        4.83,
+        4.87,
+        5.01,
+        4.76,
+        424162
+      ],
+      [
+        "2026-09-17",
+        4.87,
+        4.78,
+        4.88,
+        4.7,
+        363864
+      ],
+      [
+        "2026-09-18",
+        4.8,
+        4.82,
+        4.85,
+        4.75,
+        312154
+      ],
+      [
+        "2026-09-21",
+        4.83,
+        4.93,
+        4.95,
+        4.77,
+        380836
+      ],
+      [
+        "2026-09-22",
+        4.91,
+        4.86,
+        4.97,
+        4.82,
+        284253
+      ],
+      [
+        "2026-09-23",
+        4.82,
+        4.94,
+        5.18,
+        4.77,
+        588219
+      ],
+      [
+        "2026-09-24",
+        4.77,
+        5.08,
+        5.15,
+        4.7,
+        395264
       ]
     ],
     "600230": [
@@ -95851,10 +97494,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         15,
-        15,
+        14.7,
         15.27,
-        14.71,
-        162886
+        14.61,
+        263277
       ]
     ],
     "600231": [
@@ -96823,10 +98466,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         4.07,
-        4.1,
-        4.11,
+        4.08,
+        4.12,
         4.05,
-        9390
+        18411
       ]
     ],
     "600281": [
@@ -97313,10 +98956,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         4.63,
-        4.68,
+        4.66,
         4.8,
         4.63,
-        38983
+        74729
       ]
     ],
     "600293": [
@@ -97803,10 +99446,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         3.72,
-        3.93,
+        3.86,
         4.06,
         3.6,
-        1261197
+        1833245
       ]
     ],
     "600309": [
@@ -98293,10 +99936,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         71.21,
-        70.73,
+        69.82,
         71.28,
-        70.24,
-        37590
+        69.81,
+        123082
       ]
     ],
     "600363": [
@@ -99273,10 +100916,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         18.08,
-        17.26,
+        17.41,
         18.5,
         16.58,
-        376703
+        570774
       ]
     ],
     "600415": [
@@ -99763,10 +101406,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         11.02,
-        11.06,
+        10.96,
         11.09,
         10.8,
-        194800
+        298247
       ]
     ],
     "600418": [
@@ -100256,7 +101899,7 @@ window.DASHBOARD_DATA = {
         23.65,
         24.04,
         23.01,
-        566677
+        982168
       ]
     ],
     "600428": [
@@ -100743,10 +102386,990 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         11.15,
-        11.34,
+        11.18,
         11.39,
         11.13,
-        38752
+        74044
+      ]
+    ],
+    "600435": [
+      [
+        "2026-07-02",
+        11.2,
+        11.09,
+        11.43,
+        11.05,
+        192830
+      ],
+      [
+        "2026-07-03",
+        11.2,
+        11.44,
+        11.55,
+        11.15,
+        258572
+      ],
+      [
+        "2026-07-06",
+        11.49,
+        11.14,
+        11.55,
+        11.11,
+        207549
+      ],
+      [
+        "2026-07-07",
+        11.15,
+        10.85,
+        11.24,
+        10.8,
+        160199
+      ],
+      [
+        "2026-07-08",
+        10.83,
+        10.66,
+        10.89,
+        10.62,
+        145576
+      ],
+      [
+        "2026-07-09",
+        10.67,
+        10.77,
+        10.8,
+        10.42,
+        154531
+      ],
+      [
+        "2026-07-10",
+        10.74,
+        11.39,
+        11.83,
+        10.67,
+        470198
+      ],
+      [
+        "2026-07-13",
+        11.13,
+        10.35,
+        11.13,
+        10.35,
+        423594
+      ],
+      [
+        "2026-07-14",
+        10.3,
+        10.08,
+        10.35,
+        9.85,
+        261898
+      ],
+      [
+        "2026-07-15",
+        10.08,
+        10.09,
+        10.26,
+        9.94,
+        174493
+      ],
+      [
+        "2026-07-16",
+        10,
+        10.07,
+        10.12,
+        9.96,
+        117193
+      ],
+      [
+        "2026-07-17",
+        10.02,
+        9.73,
+        10.12,
+        9.71,
+        191647
+      ],
+      [
+        "2026-07-20",
+        9.77,
+        9.86,
+        9.93,
+        9.55,
+        182909
+      ],
+      [
+        "2026-07-21",
+        9.87,
+        10.01,
+        10.03,
+        9.82,
+        181696
+      ],
+      [
+        "2026-07-22",
+        10,
+        9.97,
+        10.04,
+        9.91,
+        129850
+      ],
+      [
+        "2026-07-23",
+        9.98,
+        10.39,
+        10.44,
+        9.95,
+        249004
+      ],
+      [
+        "2026-07-24",
+        10.31,
+        10.33,
+        10.77,
+        10.31,
+        309811
+      ],
+      [
+        "2026-07-27",
+        10.22,
+        10.4,
+        10.51,
+        10.09,
+        212131
+      ],
+      [
+        "2026-07-28",
+        10.33,
+        10.22,
+        10.43,
+        10.1,
+        181521
+      ],
+      [
+        "2026-07-29",
+        10.22,
+        10.59,
+        10.65,
+        10.21,
+        236902
+      ],
+      [
+        "2026-07-30",
+        10.56,
+        10.57,
+        10.71,
+        10.47,
+        171022
+      ],
+      [
+        "2026-07-31",
+        10.6,
+        10.6,
+        10.7,
+        10.51,
+        211184
+      ],
+      [
+        "2026-08-03",
+        10.59,
+        10.83,
+        10.85,
+        10.53,
+        180803
+      ],
+      [
+        "2026-08-04",
+        10.87,
+        10.76,
+        10.92,
+        10.72,
+        159154
+      ],
+      [
+        "2026-08-05",
+        10.77,
+        10.77,
+        10.83,
+        10.7,
+        178849
+      ],
+      [
+        "2026-08-06",
+        10.72,
+        10.66,
+        10.79,
+        10.56,
+        153605
+      ],
+      [
+        "2026-08-07",
+        10.63,
+        10.52,
+        10.65,
+        10.37,
+        200206
+      ],
+      [
+        "2026-08-10",
+        10.54,
+        10.88,
+        10.89,
+        10.5,
+        259786
+      ],
+      [
+        "2026-08-11",
+        10.79,
+        10.66,
+        10.79,
+        10.55,
+        187249
+      ],
+      [
+        "2026-08-12",
+        10.61,
+        10.66,
+        10.69,
+        10.56,
+        122240
+      ],
+      [
+        "2026-08-13",
+        10.7,
+        10.61,
+        10.88,
+        10.57,
+        227133
+      ],
+      [
+        "2026-08-14",
+        10.62,
+        10.8,
+        11.23,
+        10.55,
+        436553
+      ],
+      [
+        "2026-08-17",
+        10.92,
+        11.24,
+        11.86,
+        10.91,
+        638891
+      ],
+      [
+        "2026-08-18",
+        11.15,
+        11.17,
+        11.4,
+        10.9,
+        350913
+      ],
+      [
+        "2026-08-19",
+        11.12,
+        10.73,
+        11.21,
+        10.72,
+        331927
+      ],
+      [
+        "2026-08-20",
+        10.78,
+        10.6,
+        10.9,
+        10.56,
+        184543
+      ],
+      [
+        "2026-08-21",
+        10.54,
+        10.49,
+        10.54,
+        10.31,
+        204134
+      ],
+      [
+        "2026-08-24",
+        10.46,
+        10.32,
+        10.53,
+        10.16,
+        134128
+      ],
+      [
+        "2026-08-25",
+        10.29,
+        10.55,
+        10.68,
+        10.29,
+        151020
+      ],
+      [
+        "2026-08-26",
+        10.5,
+        10.43,
+        10.52,
+        10.33,
+        135579
+      ],
+      [
+        "2026-08-27",
+        10.36,
+        10.55,
+        10.6,
+        10.34,
+        139575
+      ],
+      [
+        "2026-08-28",
+        10.51,
+        10.72,
+        10.9,
+        10.51,
+        167211
+      ],
+      [
+        "2026-08-31",
+        10.71,
+        10.85,
+        10.87,
+        10.58,
+        167082
+      ],
+      [
+        "2026-09-01",
+        10.8,
+        11.11,
+        11.38,
+        10.77,
+        301782
+      ],
+      [
+        "2026-09-02",
+        11.08,
+        11.62,
+        11.7,
+        11.03,
+        704188
+      ],
+      [
+        "2026-09-03",
+        11.51,
+        11.61,
+        11.95,
+        11.38,
+        532510
+      ],
+      [
+        "2026-09-04",
+        11.66,
+        11.59,
+        11.85,
+        11.51,
+        357426
+      ],
+      [
+        "2026-09-07",
+        11.51,
+        11.35,
+        11.57,
+        11.27,
+        266388
+      ],
+      [
+        "2026-09-08",
+        11.38,
+        11.8,
+        11.84,
+        11.3,
+        335365
+      ],
+      [
+        "2026-09-09",
+        11.76,
+        11.94,
+        12.11,
+        11.68,
+        353311
+      ],
+      [
+        "2026-09-10",
+        11.94,
+        11.77,
+        12,
+        11.74,
+        186759
+      ],
+      [
+        "2026-09-11",
+        11.82,
+        11.94,
+        12.06,
+        11.61,
+        360006
+      ],
+      [
+        "2026-09-14",
+        11.85,
+        11.4,
+        12.05,
+        11.37,
+        302428
+      ],
+      [
+        "2026-09-15",
+        11.41,
+        11.23,
+        11.42,
+        11.21,
+        170339
+      ],
+      [
+        "2026-09-16",
+        11.2,
+        11.24,
+        11.35,
+        11.05,
+        179331
+      ],
+      [
+        "2026-09-17",
+        11.19,
+        11.14,
+        11.39,
+        11.11,
+        107545
+      ],
+      [
+        "2026-09-18",
+        11.19,
+        11.41,
+        11.46,
+        11.11,
+        174192
+      ],
+      [
+        "2026-09-21",
+        11.43,
+        11.93,
+        12.05,
+        11.37,
+        356321
+      ],
+      [
+        "2026-09-22",
+        11.9,
+        11.68,
+        12,
+        11.65,
+        184724
+      ],
+      [
+        "2026-09-23",
+        11.69,
+        11.32,
+        11.72,
+        11.31,
+        159138
+      ],
+      [
+        "2026-09-24",
+        11.39,
+        11.26,
+        11.39,
+        11.24,
+        42788
+      ]
+    ],
+    "600438": [
+      [
+        "2026-07-02",
+        12.38,
+        12.09,
+        12.59,
+        12.06,
+        631506
+      ],
+      [
+        "2026-07-03",
+        12.1,
+        11.8,
+        12.17,
+        11.69,
+        657898
+      ],
+      [
+        "2026-07-06",
+        11.8,
+        11.64,
+        12.02,
+        11.61,
+        564464
+      ],
+      [
+        "2026-07-07",
+        11.66,
+        11.45,
+        11.74,
+        11.41,
+        445889
+      ],
+      [
+        "2026-07-08",
+        11.5,
+        11.12,
+        11.61,
+        11.11,
+        481130
+      ],
+      [
+        "2026-07-09",
+        11.12,
+        11.09,
+        11.2,
+        10.85,
+        511604
+      ],
+      [
+        "2026-07-10",
+        11.19,
+        11.36,
+        11.68,
+        11.11,
+        752587
+      ],
+      [
+        "2026-07-13",
+        11.31,
+        10.68,
+        11.33,
+        10.67,
+        634911
+      ],
+      [
+        "2026-07-14",
+        10.71,
+        10.68,
+        10.78,
+        10.52,
+        411767
+      ],
+      [
+        "2026-07-15",
+        10.56,
+        10.8,
+        11,
+        10.51,
+        548819
+      ],
+      [
+        "2026-07-16",
+        10.75,
+        10.72,
+        10.92,
+        10.61,
+        389664
+      ],
+      [
+        "2026-07-17",
+        10.72,
+        10.48,
+        10.85,
+        10.42,
+        546482
+      ],
+      [
+        "2026-07-20",
+        10.44,
+        10.6,
+        10.67,
+        10.32,
+        514603
+      ],
+      [
+        "2026-07-21",
+        10.61,
+        10.72,
+        10.74,
+        10.52,
+        541482
+      ],
+      [
+        "2026-07-22",
+        10.66,
+        11.09,
+        11.14,
+        10.56,
+        697746
+      ],
+      [
+        "2026-07-23",
+        11,
+        11.6,
+        11.64,
+        10.98,
+        707025
+      ],
+      [
+        "2026-07-24",
+        11.5,
+        11.14,
+        11.62,
+        11.12,
+        411900
+      ],
+      [
+        "2026-07-27",
+        11.15,
+        11.17,
+        11.24,
+        11.08,
+        431352
+      ],
+      [
+        "2026-07-28",
+        11.05,
+        11.19,
+        11.31,
+        11.01,
+        333625
+      ],
+      [
+        "2026-07-29",
+        11.15,
+        11.54,
+        11.64,
+        11.13,
+        649759
+      ],
+      [
+        "2026-07-30",
+        11.42,
+        11.69,
+        12.19,
+        11.41,
+        748918
+      ],
+      [
+        "2026-07-31",
+        11.56,
+        11.68,
+        11.79,
+        11.52,
+        477541
+      ],
+      [
+        "2026-08-03",
+        11.9,
+        12.85,
+        12.85,
+        11.9,
+        1245658
+      ],
+      [
+        "2026-08-04",
+        12.97,
+        12.84,
+        13,
+        12.68,
+        1063265
+      ],
+      [
+        "2026-08-05",
+        12.82,
+        12.79,
+        12.98,
+        12.45,
+        787552
+      ],
+      [
+        "2026-08-06",
+        12.6,
+        12.31,
+        12.76,
+        12.12,
+        853263
+      ],
+      [
+        "2026-08-07",
+        12.92,
+        13.08,
+        13.4,
+        12.65,
+        1519962
+      ],
+      [
+        "2026-08-10",
+        12.88,
+        12.71,
+        13,
+        12.65,
+        904077
+      ],
+      [
+        "2026-08-11",
+        12.6,
+        12.84,
+        13.05,
+        12.5,
+        709863
+      ],
+      [
+        "2026-08-12",
+        12.74,
+        13.49,
+        13.65,
+        12.7,
+        1305087
+      ],
+      [
+        "2026-08-13",
+        13.4,
+        12.89,
+        13.45,
+        12.86,
+        1040588
+      ],
+      [
+        "2026-08-14",
+        12.83,
+        12.8,
+        13,
+        12.67,
+        552371
+      ],
+      [
+        "2026-08-17",
+        13.1,
+        12.91,
+        13.26,
+        12.86,
+        637271
+      ],
+      [
+        "2026-08-18",
+        12.8,
+        12.78,
+        12.99,
+        12.66,
+        518618
+      ],
+      [
+        "2026-08-19",
+        12.61,
+        12.3,
+        12.69,
+        12.27,
+        489817
+      ],
+      [
+        "2026-08-20",
+        12.32,
+        12.32,
+        12.45,
+        12.24,
+        301269
+      ],
+      [
+        "2026-08-21",
+        12.3,
+        12.43,
+        12.63,
+        12.26,
+        458634
+      ],
+      [
+        "2026-08-24",
+        12.26,
+        12.12,
+        12.55,
+        11.99,
+        417501
+      ],
+      [
+        "2026-08-25",
+        12.04,
+        12.01,
+        12.12,
+        11.9,
+        293908
+      ],
+      [
+        "2026-08-26",
+        12,
+        12.01,
+        12.19,
+        12,
+        299209
+      ],
+      [
+        "2026-08-27",
+        11.95,
+        11.9,
+        11.96,
+        11.69,
+        353361
+      ],
+      [
+        "2026-08-28",
+        11.84,
+        11.96,
+        12.03,
+        11.82,
+        336148
+      ],
+      [
+        "2026-08-31",
+        11.75,
+        11.59,
+        11.84,
+        11.45,
+        432369
+      ],
+      [
+        "2026-09-01",
+        11.58,
+        11.82,
+        11.93,
+        11.5,
+        396468
+      ],
+      [
+        "2026-09-02",
+        11.73,
+        11.36,
+        11.79,
+        11.35,
+        388315
+      ],
+      [
+        "2026-09-03",
+        11.42,
+        11.28,
+        11.49,
+        11.23,
+        211525
+      ],
+      [
+        "2026-09-04",
+        11.34,
+        11.39,
+        11.58,
+        11.32,
+        351965
+      ],
+      [
+        "2026-09-07",
+        11.36,
+        11.67,
+        11.69,
+        11.33,
+        342086
+      ],
+      [
+        "2026-09-08",
+        11.64,
+        11.86,
+        11.97,
+        11.63,
+        431569
+      ],
+      [
+        "2026-09-09",
+        11.87,
+        11.71,
+        12.11,
+        11.67,
+        309496
+      ],
+      [
+        "2026-09-10",
+        11.65,
+        11.5,
+        11.7,
+        11.49,
+        222102
+      ],
+      [
+        "2026-09-11",
+        11.43,
+        11.05,
+        11.45,
+        10.98,
+        388929
+      ],
+      [
+        "2026-09-14",
+        11.02,
+        11.27,
+        11.4,
+        10.97,
+        310701
+      ],
+      [
+        "2026-09-15",
+        11.24,
+        11.15,
+        11.37,
+        11.12,
+        216301
+      ],
+      [
+        "2026-09-16",
+        11.14,
+        11.21,
+        11.29,
+        10.97,
+        186429
+      ],
+      [
+        "2026-09-17",
+        11.14,
+        11.09,
+        11.21,
+        11.05,
+        184459
+      ],
+      [
+        "2026-09-18",
+        11.19,
+        11.35,
+        11.38,
+        11.14,
+        291615
+      ],
+      [
+        "2026-09-21",
+        11.32,
+        11.59,
+        11.61,
+        11.3,
+        272844
+      ],
+      [
+        "2026-09-22",
+        11.6,
+        11.72,
+        11.84,
+        11.6,
+        335295
+      ],
+      [
+        "2026-09-23",
+        11.72,
+        11.58,
+        11.82,
+        11.55,
+        255720
+      ],
+      [
+        "2026-09-24",
+        11.54,
+        11.33,
+        11.57,
+        11.31,
+        106758
       ]
     ],
     "600458": [
@@ -101236,7 +103859,497 @@ window.DASHBOARD_DATA = {
         11.2,
         11.3,
         11.14,
-        13538
+        33957
+      ]
+    ],
+    "600460": [
+      [
+        "2026-07-02",
+        49.92,
+        50.42,
+        53.4,
+        47.76,
+        1600826
+      ],
+      [
+        "2026-07-03",
+        49.9,
+        47.17,
+        50.81,
+        47.12,
+        1352837
+      ],
+      [
+        "2026-07-06",
+        47.9,
+        46.54,
+        48.49,
+        45.2,
+        1140828
+      ],
+      [
+        "2026-07-07",
+        45.83,
+        47.21,
+        48.41,
+        45.62,
+        1086236
+      ],
+      [
+        "2026-07-08",
+        47.22,
+        46.13,
+        48.55,
+        43.69,
+        1105137
+      ],
+      [
+        "2026-07-09",
+        47,
+        48.32,
+        48.38,
+        45.38,
+        1487720
+      ],
+      [
+        "2026-07-10",
+        48.81,
+        44.43,
+        49.88,
+        44.24,
+        1857332
+      ],
+      [
+        "2026-07-13",
+        43.7,
+        41.85,
+        45.71,
+        41.5,
+        1244445
+      ],
+      [
+        "2026-07-14",
+        41.42,
+        41.72,
+        42.2,
+        39.25,
+        1019230
+      ],
+      [
+        "2026-07-15",
+        41.92,
+        38.49,
+        42.14,
+        38.41,
+        964898
+      ],
+      [
+        "2026-07-16",
+        37.76,
+        36.14,
+        38.8,
+        35.8,
+        944532
+      ],
+      [
+        "2026-07-17",
+        36.02,
+        33.11,
+        36.13,
+        32.77,
+        973000
+      ],
+      [
+        "2026-07-20",
+        33.78,
+        29.88,
+        33.99,
+        29.8,
+        1108127
+      ],
+      [
+        "2026-07-21",
+        30.48,
+        32.87,
+        32.87,
+        27.85,
+        1345327
+      ],
+      [
+        "2026-07-22",
+        32.87,
+        33.19,
+        35.16,
+        32.86,
+        1518276
+      ],
+      [
+        "2026-07-23",
+        33.72,
+        32.22,
+        33.8,
+        31.74,
+        876436
+      ],
+      [
+        "2026-07-24",
+        31.55,
+        31.57,
+        32.71,
+        31.1,
+        704608
+      ],
+      [
+        "2026-07-27",
+        31.3,
+        32.33,
+        32.33,
+        30.62,
+        684116
+      ],
+      [
+        "2026-07-28",
+        31.4,
+        30.17,
+        32.28,
+        29.9,
+        722424
+      ],
+      [
+        "2026-07-29",
+        30.19,
+        29.9,
+        30.48,
+        28.44,
+        886091
+      ],
+      [
+        "2026-07-30",
+        29.51,
+        27.77,
+        29.8,
+        27.42,
+        964574
+      ],
+      [
+        "2026-07-31",
+        29.6,
+        28.26,
+        29.8,
+        28.21,
+        1077183
+      ],
+      [
+        "2026-08-03",
+        27.9,
+        27.45,
+        28.28,
+        27.39,
+        802317
+      ],
+      [
+        "2026-08-04",
+        27.7,
+        29.12,
+        29.36,
+        27.61,
+        994920
+      ],
+      [
+        "2026-08-05",
+        29,
+        30.62,
+        30.96,
+        28.98,
+        1148286
+      ],
+      [
+        "2026-08-06",
+        29.9,
+        31.16,
+        31.7,
+        29.8,
+        1022784
+      ],
+      [
+        "2026-08-07",
+        31.1,
+        32.55,
+        32.62,
+        30.9,
+        1078342
+      ],
+      [
+        "2026-08-10",
+        32.55,
+        32.17,
+        32.98,
+        31.36,
+        809581
+      ],
+      [
+        "2026-08-11",
+        31.81,
+        32.05,
+        33.05,
+        31.8,
+        723556
+      ],
+      [
+        "2026-08-12",
+        32.05,
+        32.85,
+        33.17,
+        31.97,
+        695906
+      ],
+      [
+        "2026-08-13",
+        33.39,
+        32.28,
+        33.92,
+        32.19,
+        914841
+      ],
+      [
+        "2026-08-14",
+        32.71,
+        32.75,
+        32.93,
+        31.98,
+        656533
+      ],
+      [
+        "2026-08-17",
+        32.75,
+        34.05,
+        34.1,
+        32.62,
+        821119
+      ],
+      [
+        "2026-08-18",
+        34.13,
+        34.88,
+        35.42,
+        33.75,
+        1205892
+      ],
+      [
+        "2026-08-19",
+        33.59,
+        34.49,
+        36.6,
+        33.58,
+        2019166
+      ],
+      [
+        "2026-08-20",
+        34.49,
+        32.63,
+        34.77,
+        32.17,
+        1558757
+      ],
+      [
+        "2026-08-21",
+        32.22,
+        35.89,
+        35.89,
+        32.22,
+        771005
+      ],
+      [
+        "2026-08-24",
+        36.25,
+        35.56,
+        37.43,
+        34.67,
+        2603891
+      ],
+      [
+        "2026-08-25",
+        34.18,
+        34.32,
+        35.16,
+        33.05,
+        1746952
+      ],
+      [
+        "2026-08-26",
+        34.32,
+        33.07,
+        34.32,
+        32.53,
+        1410235
+      ],
+      [
+        "2026-08-27",
+        33.19,
+        34.88,
+        34.99,
+        32.75,
+        1549049
+      ],
+      [
+        "2026-08-28",
+        34.3,
+        34.17,
+        35.62,
+        34.15,
+        1265618
+      ],
+      [
+        "2026-08-31",
+        32.88,
+        34.16,
+        34.33,
+        32.76,
+        1052591
+      ],
+      [
+        "2026-09-01",
+        34,
+        32.35,
+        34.05,
+        32.35,
+        1096380
+      ],
+      [
+        "2026-09-02",
+        31.51,
+        31,
+        31.67,
+        30.86,
+        888394
+      ],
+      [
+        "2026-09-03",
+        31.4,
+        31.23,
+        31.53,
+        30.87,
+        648544
+      ],
+      [
+        "2026-09-04",
+        31.42,
+        30.34,
+        31.76,
+        30.01,
+        752301
+      ],
+      [
+        "2026-09-07",
+        30.76,
+        30.96,
+        31.21,
+        30.44,
+        577484
+      ],
+      [
+        "2026-09-08",
+        30.8,
+        30.36,
+        31.09,
+        30.3,
+        625481
+      ],
+      [
+        "2026-09-09",
+        30.57,
+        30.27,
+        31.03,
+        30.08,
+        482561
+      ],
+      [
+        "2026-09-10",
+        30,
+        30.24,
+        30.63,
+        29.8,
+        445553
+      ],
+      [
+        "2026-09-11",
+        29.75,
+        30.07,
+        30.17,
+        29,
+        616405
+      ],
+      [
+        "2026-09-14",
+        29.65,
+        29.85,
+        30.2,
+        29.31,
+        373474
+      ],
+      [
+        "2026-09-15",
+        29.51,
+        30.04,
+        30.46,
+        29.51,
+        461589
+      ],
+      [
+        "2026-09-16",
+        30,
+        31.34,
+        31.46,
+        29.82,
+        898402
+      ],
+      [
+        "2026-09-17",
+        31,
+        31.99,
+        32.68,
+        31,
+        991117
+      ],
+      [
+        "2026-09-18",
+        32.5,
+        32.77,
+        33.3,
+        31.77,
+        1111261
+      ],
+      [
+        "2026-09-21",
+        33.13,
+        33.27,
+        34,
+        32.91,
+        1019942
+      ],
+      [
+        "2026-09-22",
+        33.85,
+        33.4,
+        34.47,
+        33.21,
+        951527
+      ],
+      [
+        "2026-09-23",
+        33.53,
+        33.67,
+        33.89,
+        32.9,
+        682969
+      ],
+      [
+        "2026-09-24",
+        33.35,
+        32.97,
+        33.58,
+        32.88,
+        210440
       ]
     ],
     "600486": [
@@ -101723,10 +104836,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         52.35,
-        52.4,
+        52.31,
         52.7,
         52.06,
-        2759
+        6630
       ]
     ],
     "600489": [
@@ -102213,10 +105326,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         22.93,
-        22.8,
+        22.54,
         23.05,
-        22.69,
-        119104
+        22.45,
+        288262
       ]
     ],
     "600498": [
@@ -102703,10 +105816,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         42.19,
-        41.81,
+        41.6,
         42.5,
-        41.67,
-        69134
+        41.51,
+        164561
       ]
     ],
     "600500": [
@@ -103193,10 +106306,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         5.74,
-        5.66,
+        5.67,
         5.78,
         5.65,
-        222130
+        379692
       ]
     ],
     "600503": [
@@ -103686,7 +106799,7 @@ window.DASHBOARD_DATA = {
         2.65,
         2.76,
         2.65,
-        1113842
+        1681203
       ]
     ],
     "600508": [
@@ -104173,10 +107286,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         10.71,
-        10.9,
+        10.89,
         10.95,
         10.69,
-        23977
+        53767
       ]
     ],
     "600519": [
@@ -104663,10 +107776,500 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         1250.01,
-        1244.18,
+        1238.66,
         1256.13,
-        1243.34,
-        4003
+        1238,
+        10629
+      ]
+    ],
+    "600537": [
+      [
+        "2026-07-02",
+        2.57,
+        2.75,
+        2.75,
+        2.57,
+        320633
+      ],
+      [
+        "2026-07-03",
+        2.69,
+        2.74,
+        2.77,
+        2.62,
+        269313
+      ],
+      [
+        "2026-07-06",
+        2.71,
+        2.69,
+        2.77,
+        2.58,
+        252637
+      ],
+      [
+        "2026-07-07",
+        2.63,
+        2.59,
+        2.69,
+        2.57,
+        147399
+      ],
+      [
+        "2026-07-08",
+        2.57,
+        2.6,
+        2.63,
+        2.47,
+        210139
+      ],
+      [
+        "2026-07-09",
+        2.57,
+        2.54,
+        2.61,
+        2.51,
+        149705
+      ],
+      [
+        "2026-07-10",
+        2.5,
+        2.57,
+        2.62,
+        2.5,
+        147127
+      ],
+      [
+        "2026-07-13",
+        2.55,
+        2.45,
+        2.56,
+        2.4,
+        176377
+      ],
+      [
+        "2026-07-14",
+        2.46,
+        2.43,
+        2.46,
+        2.37,
+        123583
+      ],
+      [
+        "2026-07-15",
+        2.41,
+        2.42,
+        2.46,
+        2.38,
+        113875
+      ],
+      [
+        "2026-07-16",
+        2.4,
+        2.4,
+        2.44,
+        2.37,
+        115649
+      ],
+      [
+        "2026-07-17",
+        2.4,
+        2.32,
+        2.41,
+        2.29,
+        199085
+      ],
+      [
+        "2026-07-20",
+        2.33,
+        2.18,
+        2.36,
+        2.1,
+        242772
+      ],
+      [
+        "2026-07-21",
+        2.11,
+        2.09,
+        2.12,
+        1.96,
+        328399
+      ],
+      [
+        "2026-07-22",
+        2.05,
+        2.14,
+        2.2,
+        2.03,
+        174080
+      ],
+      [
+        "2026-07-23",
+        2.14,
+        2.19,
+        2.2,
+        2.09,
+        164000
+      ],
+      [
+        "2026-07-24",
+        2.14,
+        2.15,
+        2.19,
+        2.12,
+        112934
+      ],
+      [
+        "2026-07-27",
+        2.14,
+        2.15,
+        2.17,
+        2.11,
+        153659
+      ],
+      [
+        "2026-07-28",
+        2.13,
+        2.16,
+        2.18,
+        2.11,
+        135292
+      ],
+      [
+        "2026-07-29",
+        2.15,
+        2.24,
+        2.3,
+        2.14,
+        212817
+      ],
+      [
+        "2026-07-30",
+        2.24,
+        2.15,
+        2.27,
+        2.15,
+        154921
+      ],
+      [
+        "2026-07-31",
+        2.15,
+        2.22,
+        2.24,
+        2.15,
+        149581
+      ],
+      [
+        "2026-08-03",
+        2.24,
+        2.32,
+        2.33,
+        2.2,
+        178998
+      ],
+      [
+        "2026-08-04",
+        2.32,
+        2.34,
+        2.34,
+        2.29,
+        124250
+      ],
+      [
+        "2026-08-05",
+        2.28,
+        2.31,
+        2.33,
+        2.28,
+        136763
+      ],
+      [
+        "2026-08-06",
+        2.32,
+        2.23,
+        2.33,
+        2.16,
+        277005
+      ],
+      [
+        "2026-08-07",
+        2.21,
+        2.19,
+        2.24,
+        2.16,
+        171331
+      ],
+      [
+        "2026-08-10",
+        2.18,
+        2.21,
+        2.24,
+        2.13,
+        168826
+      ],
+      [
+        "2026-08-11",
+        2.2,
+        2.26,
+        2.28,
+        2.17,
+        235681
+      ],
+      [
+        "2026-08-12",
+        2.26,
+        2.29,
+        2.3,
+        2.23,
+        186689
+      ],
+      [
+        "2026-08-13",
+        2.29,
+        2.23,
+        2.3,
+        2.22,
+        160206
+      ],
+      [
+        "2026-08-14",
+        2.23,
+        2.22,
+        2.28,
+        2.21,
+        159772
+      ],
+      [
+        "2026-08-17",
+        2.22,
+        2.23,
+        2.25,
+        2.18,
+        168666
+      ],
+      [
+        "2026-08-18",
+        2.23,
+        2.19,
+        2.23,
+        2.16,
+        198013
+      ],
+      [
+        "2026-08-19",
+        2.16,
+        2.07,
+        2.17,
+        2.07,
+        225472
+      ],
+      [
+        "2026-08-20",
+        2.09,
+        2.11,
+        2.12,
+        2.07,
+        157166
+      ],
+      [
+        "2026-08-21",
+        2.1,
+        2.13,
+        2.14,
+        2.07,
+        150677
+      ],
+      [
+        "2026-08-24",
+        2.13,
+        2.1,
+        2.16,
+        2.06,
+        241309
+      ],
+      [
+        "2026-08-25",
+        2.08,
+        2.1,
+        2.12,
+        2.07,
+        183550
+      ],
+      [
+        "2026-08-26",
+        2.09,
+        2.13,
+        2.15,
+        2.09,
+        225440
+      ],
+      [
+        "2026-08-27",
+        2.13,
+        2.16,
+        2.18,
+        2.12,
+        206610
+      ],
+      [
+        "2026-08-28",
+        2.14,
+        2.17,
+        2.17,
+        2.14,
+        148462
+      ],
+      [
+        "2026-08-31",
+        2.15,
+        2.13,
+        2.15,
+        2.1,
+        160441
+      ],
+      [
+        "2026-09-01",
+        2.14,
+        2.16,
+        2.16,
+        2.13,
+        125669
+      ],
+      [
+        "2026-09-02",
+        2.14,
+        2.18,
+        2.22,
+        2.13,
+        242993
+      ],
+      [
+        "2026-09-03",
+        2.17,
+        2.14,
+        2.19,
+        2.13,
+        179042
+      ],
+      [
+        "2026-09-04",
+        2.15,
+        2.15,
+        2.16,
+        2.13,
+        187196
+      ],
+      [
+        "2026-09-07",
+        2.14,
+        2.18,
+        2.2,
+        2.12,
+        200125
+      ],
+      [
+        "2026-09-08",
+        2.18,
+        2.22,
+        2.27,
+        2.18,
+        297248
+      ],
+      [
+        "2026-09-09",
+        2.21,
+        2.18,
+        2.24,
+        2.17,
+        189984
+      ],
+      [
+        "2026-09-10",
+        2.17,
+        2.23,
+        2.25,
+        2.14,
+        253318
+      ],
+      [
+        "2026-09-11",
+        2.21,
+        2.19,
+        2.24,
+        2.16,
+        223913
+      ],
+      [
+        "2026-09-14",
+        2.18,
+        2.15,
+        2.19,
+        2.13,
+        212192
+      ],
+      [
+        "2026-09-15",
+        2.15,
+        2.1,
+        2.15,
+        2.1,
+        165936
+      ],
+      [
+        "2026-09-16",
+        2.09,
+        2.11,
+        2.12,
+        2.07,
+        152324
+      ],
+      [
+        "2026-09-17",
+        2.1,
+        2.08,
+        2.11,
+        2.07,
+        138855
+      ],
+      [
+        "2026-09-18",
+        2.08,
+        2.11,
+        2.12,
+        2.08,
+        140351
+      ],
+      [
+        "2026-09-21",
+        2.1,
+        2.12,
+        2.13,
+        2.09,
+        180634
+      ],
+      [
+        "2026-09-22",
+        2.18,
+        2.23,
+        2.33,
+        2.15,
+        674721
+      ],
+      [
+        "2026-09-23",
+        2.22,
+        2.19,
+        2.31,
+        2.18,
+        474404
+      ],
+      [
+        "2026-09-24",
+        2.17,
+        2.19,
+        2.23,
+        2.17,
+        133327
       ]
     ],
     "600547": [
@@ -105153,10 +108756,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         30.37,
-        29.93,
+        29.52,
         30.5,
-        29.92,
-        154159
+        29.33,
+        377332
       ]
     ],
     "600577": [
@@ -105646,7 +109249,7 @@ window.DASHBOARD_DATA = {
         8.69,
         8.92,
         8.67,
-        146060
+        257655
       ]
     ],
     "600583": [
@@ -106133,10 +109736,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         6.39,
-        6.44,
-        6.48,
+        6.42,
+        6.49,
         6.37,
-        63266
+        131222
       ]
     ],
     "600584": [
@@ -106623,10 +110226,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         70.98,
-        69.93,
+        69.71,
         70.98,
         69.57,
-        127934
+        230440
       ]
     ],
     "600596": [
@@ -107113,10 +110716,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         11.72,
-        11.54,
+        11.5,
         11.8,
-        11.53,
-        81652
+        11.48,
+        185144
       ]
     ],
     "600605": [
@@ -107603,10 +111206,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         31.05,
-        30.85,
+        30.87,
         31.66,
-        30.73,
-        39131
+        30.6,
+        71610
       ]
     ],
     "600610": [
@@ -108093,10 +111696,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         7.53,
-        7.62,
+        7.53,
         7.64,
-        7.5,
-        31691
+        7.47,
+        87096
       ]
     ],
     "600612": [
@@ -109073,10 +112676,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         8.5,
-        8.56,
+        8.36,
         8.76,
-        8.42,
-        161183
+        8.22,
+        425204
       ]
     ],
     "600641": [
@@ -109563,10 +113166,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         47.99,
-        51.93,
-        52.28,
+        52.1,
+        52.58,
         47.68,
-        445978
+        966436
       ]
     ],
     "600653": [
@@ -110055,8 +113658,8 @@ window.DASHBOARD_DATA = {
         1.81,
         1.76,
         1.83,
-        1.75,
-        338559
+        1.73,
+        631843
       ]
     ],
     "600657": [
@@ -110543,10 +114146,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         3.13,
-        3.13,
+        3.09,
         3.2,
-        3.1,
-        169483
+        3.04,
+        353647
       ]
     ],
     "600660": [
@@ -111523,10 +115126,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         2.53,
-        2.5,
+        2.45,
         2.66,
-        2.47,
-        742050
+        2.44,
+        1036217
       ]
     ],
     "600710": [
@@ -112013,10 +115616,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         11.35,
-        11.45,
+        11.38,
         11.55,
         11.27,
-        14791
+        25948
       ]
     ],
     "600714": [
@@ -112503,10 +116106,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         19.15,
-        18.73,
+        18.74,
         19.27,
         18.46,
-        65403
+        107383
       ]
     ],
     "600722": [
@@ -112993,10 +116596,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         15.81,
-        15.95,
+        15.38,
         16.2,
-        15.5,
-        186458
+        15.12,
+        481872
       ]
     ],
     "600728": [
@@ -113486,7 +117089,7 @@ window.DASHBOARD_DATA = {
         4.46,
         4.49,
         4.44,
-        19908
+        46739
       ]
     ],
     "600743": [
@@ -113973,10 +117576,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         2.88,
-        2.58,
+        2.59,
         2.9,
         2.54,
-        1296379
+        1853448
       ]
     ],
     "600746": [
@@ -114463,10 +118066,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         6.82,
-        6.96,
+        6.91,
         6.98,
         6.8,
-        23053
+        38554
       ]
     ],
     "600756": [
@@ -114953,10 +118556,500 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         13.71,
-        13.75,
+        13.81,
         13.85,
         13.71,
-        5201
+        12436
+      ]
+    ],
+    "600760": [
+      [
+        "2026-07-02",
+        41.08,
+        40.78,
+        41.68,
+        40.78,
+        155595
+      ],
+      [
+        "2026-07-03",
+        40.78,
+        41.63,
+        41.75,
+        40.76,
+        201855
+      ],
+      [
+        "2026-07-06",
+        41.63,
+        40.83,
+        41.89,
+        40.81,
+        141528
+      ],
+      [
+        "2026-07-07",
+        40.83,
+        40.39,
+        40.93,
+        40.01,
+        126289
+      ],
+      [
+        "2026-07-08",
+        40.39,
+        39.81,
+        40.39,
+        39.81,
+        88662
+      ],
+      [
+        "2026-07-09",
+        39.75,
+        39.75,
+        39.95,
+        39.06,
+        126896
+      ],
+      [
+        "2026-07-10",
+        39.53,
+        40.35,
+        41.35,
+        39.25,
+        226864
+      ],
+      [
+        "2026-07-13",
+        40.2,
+        39.12,
+        40.2,
+        38.91,
+        174510
+      ],
+      [
+        "2026-07-14",
+        38.99,
+        38.86,
+        39.06,
+        38.38,
+        111232
+      ],
+      [
+        "2026-07-15",
+        38.33,
+        39.79,
+        40.15,
+        38,
+        207919
+      ],
+      [
+        "2026-07-16",
+        39.61,
+        39.95,
+        40.09,
+        39.5,
+        122113
+      ],
+      [
+        "2026-07-17",
+        39.8,
+        40.21,
+        40.73,
+        39.66,
+        203060
+      ],
+      [
+        "2026-07-20",
+        40.59,
+        41.99,
+        42.27,
+        40.5,
+        292275
+      ],
+      [
+        "2026-07-21",
+        42.56,
+        42.12,
+        42.98,
+        41.8,
+        255593
+      ],
+      [
+        "2026-07-22",
+        41.92,
+        42.74,
+        42.95,
+        41.6,
+        179482
+      ],
+      [
+        "2026-07-23",
+        42.74,
+        43.34,
+        43.6,
+        42.3,
+        186178
+      ],
+      [
+        "2026-07-24",
+        43.8,
+        43.3,
+        43.99,
+        42.94,
+        200487
+      ],
+      [
+        "2026-07-27",
+        43.7,
+        43.27,
+        43.8,
+        42.76,
+        135066
+      ],
+      [
+        "2026-07-28",
+        43.2,
+        43.46,
+        43.46,
+        42.44,
+        163347
+      ],
+      [
+        "2026-07-29",
+        43.8,
+        43.85,
+        44.16,
+        43.35,
+        161195
+      ],
+      [
+        "2026-07-30",
+        43.5,
+        44.11,
+        44.44,
+        43.45,
+        138073
+      ],
+      [
+        "2026-07-31",
+        43.68,
+        43.44,
+        43.99,
+        43.4,
+        147566
+      ],
+      [
+        "2026-08-03",
+        43.3,
+        43.35,
+        43.59,
+        43,
+        113025
+      ],
+      [
+        "2026-08-04",
+        43.35,
+        43.06,
+        43.65,
+        42.94,
+        115215
+      ],
+      [
+        "2026-08-05",
+        43.05,
+        42.52,
+        43.15,
+        42.4,
+        163100
+      ],
+      [
+        "2026-08-06",
+        42.5,
+        42.65,
+        42.88,
+        42.19,
+        128815
+      ],
+      [
+        "2026-08-07",
+        42.5,
+        42.56,
+        43,
+        42.03,
+        126205
+      ],
+      [
+        "2026-08-10",
+        42.57,
+        45.1,
+        45.37,
+        42.42,
+        330713
+      ],
+      [
+        "2026-08-11",
+        44.55,
+        44.5,
+        45.12,
+        43.9,
+        239126
+      ],
+      [
+        "2026-08-12",
+        44.3,
+        44.16,
+        44.8,
+        44.12,
+        97538
+      ],
+      [
+        "2026-08-13",
+        44.22,
+        44.36,
+        45.53,
+        43.92,
+        229759
+      ],
+      [
+        "2026-08-14",
+        44.19,
+        44.43,
+        45.49,
+        44.16,
+        191926
+      ],
+      [
+        "2026-08-17",
+        44.39,
+        44.51,
+        44.7,
+        43.78,
+        125067
+      ],
+      [
+        "2026-08-18",
+        44.3,
+        43.94,
+        44.41,
+        43.7,
+        115854
+      ],
+      [
+        "2026-08-19",
+        44,
+        43.53,
+        44.15,
+        42.85,
+        157642
+      ],
+      [
+        "2026-08-20",
+        43.28,
+        43.5,
+        43.82,
+        43.2,
+        85363
+      ],
+      [
+        "2026-08-21",
+        43.5,
+        44.05,
+        44.46,
+        43.28,
+        126690
+      ],
+      [
+        "2026-08-24",
+        44.11,
+        45.06,
+        45.39,
+        43.9,
+        191869
+      ],
+      [
+        "2026-08-25",
+        45,
+        44.32,
+        45.04,
+        44.32,
+        111161
+      ],
+      [
+        "2026-08-26",
+        44.21,
+        44.87,
+        45.24,
+        44.09,
+        120634
+      ],
+      [
+        "2026-08-27",
+        44.63,
+        45.13,
+        45.88,
+        44.49,
+        154559
+      ],
+      [
+        "2026-08-28",
+        44.91,
+        46.52,
+        46.78,
+        44.9,
+        319971
+      ],
+      [
+        "2026-08-31",
+        46.4,
+        46.92,
+        47.05,
+        46.16,
+        189471
+      ],
+      [
+        "2026-09-01",
+        46.7,
+        47.63,
+        47.83,
+        46.69,
+        186744
+      ],
+      [
+        "2026-09-02",
+        47.64,
+        48.1,
+        49.52,
+        47.32,
+        338485
+      ],
+      [
+        "2026-09-03",
+        48,
+        48.02,
+        48.47,
+        47.27,
+        170522
+      ],
+      [
+        "2026-09-04",
+        47.9,
+        48.26,
+        48.8,
+        47.8,
+        178463
+      ],
+      [
+        "2026-09-07",
+        48.15,
+        47.11,
+        48.15,
+        46.88,
+        174839
+      ],
+      [
+        "2026-09-08",
+        47.35,
+        48.11,
+        48.18,
+        47.12,
+        146796
+      ],
+      [
+        "2026-09-09",
+        48.1,
+        48.91,
+        49.55,
+        47.8,
+        212547
+      ],
+      [
+        "2026-09-10",
+        48.7,
+        48.6,
+        49.38,
+        48.57,
+        137165
+      ],
+      [
+        "2026-09-11",
+        48.58,
+        48.02,
+        48.9,
+        47.63,
+        147660
+      ],
+      [
+        "2026-09-14",
+        47.9,
+        45.5,
+        48.25,
+        45.43,
+        274321
+      ],
+      [
+        "2026-09-15",
+        45.48,
+        44.8,
+        45.77,
+        44.76,
+        127797
+      ],
+      [
+        "2026-09-16",
+        44.71,
+        44.37,
+        44.99,
+        43.83,
+        153078
+      ],
+      [
+        "2026-09-17",
+        44.34,
+        44,
+        44.66,
+        43.77,
+        95746
+      ],
+      [
+        "2026-09-18",
+        44.05,
+        43.9,
+        44.37,
+        43.74,
+        127550
+      ],
+      [
+        "2026-09-21",
+        43.9,
+        45,
+        45.69,
+        43.75,
+        155865
+      ],
+      [
+        "2026-09-22",
+        45,
+        44.71,
+        45.33,
+        44.25,
+        104288
+      ],
+      [
+        "2026-09-23",
+        44.71,
+        44.08,
+        44.73,
+        44.01,
+        83148
+      ],
+      [
+        "2026-09-24",
+        44,
+        43.51,
+        44.08,
+        43.5,
+        36431
       ]
     ],
     "600776": [
@@ -115443,10 +119536,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         13.04,
-        13.05,
+        13.1,
         13.37,
         13.01,
-        40237
+        70235
       ]
     ],
     "600779": [
@@ -115933,10 +120026,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         26.61,
-        26.53,
+        26.38,
         26.86,
-        26.51,
-        3114
+        26.32,
+        7753
       ]
     ],
     "600798": [
@@ -116423,10 +120516,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         3.35,
-        3.37,
         3.38,
+        3.39,
         3.33,
-        23415
+        69861
       ]
     ],
     "600802": [
@@ -116913,10 +121006,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         5.8,
-        5.8,
+        5.66,
         5.92,
-        5.61,
-        139047
+        5.55,
+        250007
       ]
     ],
     "600825": [
@@ -117406,7 +121499,7 @@ window.DASHBOARD_DATA = {
         7.77,
         7.77,
         7.77,
-        34510
+        48592
       ]
     ],
     "600843": [
@@ -117893,10 +121986,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         7.2,
-        7.43,
-        7.55,
+        8.37,
+        8.37,
         7.2,
-        149388
+        479322
       ]
     ],
     "600844": [
@@ -118383,10 +122476,500 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         3.33,
-        3.32,
+        3.3,
         3.34,
-        3.29,
-        37424
+        3.28,
+        85645
+      ]
+    ],
+    "600855": [
+      [
+        "2026-07-02",
+        14.29,
+        14,
+        14.58,
+        13.94,
+        106083
+      ],
+      [
+        "2026-07-03",
+        13.96,
+        14.56,
+        14.73,
+        13.96,
+        167495
+      ],
+      [
+        "2026-07-06",
+        14.62,
+        13.68,
+        14.68,
+        13.68,
+        139814
+      ],
+      [
+        "2026-07-07",
+        13.7,
+        13.05,
+        13.74,
+        13.01,
+        96725
+      ],
+      [
+        "2026-07-08",
+        13.04,
+        12.68,
+        13.11,
+        12.66,
+        84480
+      ],
+      [
+        "2026-07-09",
+        12.65,
+        13.01,
+        13.09,
+        12.38,
+        105388
+      ],
+      [
+        "2026-07-10",
+        13,
+        13.82,
+        14.31,
+        12.73,
+        267342
+      ],
+      [
+        "2026-07-13",
+        13.73,
+        12.44,
+        13.73,
+        12.44,
+        182133
+      ],
+      [
+        "2026-07-14",
+        12.27,
+        11.93,
+        12.38,
+        11.49,
+        141539
+      ],
+      [
+        "2026-07-15",
+        11.77,
+        11.8,
+        12.18,
+        11.73,
+        96079
+      ],
+      [
+        "2026-07-16",
+        11.71,
+        11.78,
+        12.04,
+        11.58,
+        70338
+      ],
+      [
+        "2026-07-17",
+        11.71,
+        11.22,
+        11.73,
+        11.11,
+        97751
+      ],
+      [
+        "2026-07-20",
+        11.29,
+        11.24,
+        11.62,
+        10.86,
+        98144
+      ],
+      [
+        "2026-07-21",
+        11.23,
+        11.3,
+        11.35,
+        10.56,
+        106528
+      ],
+      [
+        "2026-07-22",
+        11.3,
+        11.16,
+        11.46,
+        11.11,
+        77245
+      ],
+      [
+        "2026-07-23",
+        11.16,
+        11.6,
+        11.68,
+        11.15,
+        97804
+      ],
+      [
+        "2026-07-24",
+        11.53,
+        11.39,
+        11.72,
+        11.36,
+        67239
+      ],
+      [
+        "2026-07-27",
+        11.34,
+        11.78,
+        11.87,
+        11.19,
+        77074
+      ],
+      [
+        "2026-07-28",
+        11.76,
+        11.97,
+        12.09,
+        11.63,
+        84155
+      ],
+      [
+        "2026-07-29",
+        11.95,
+        12.22,
+        12.25,
+        11.91,
+        85541
+      ],
+      [
+        "2026-07-30",
+        12.14,
+        11.97,
+        12.31,
+        11.92,
+        77660
+      ],
+      [
+        "2026-07-31",
+        12.08,
+        12.17,
+        12.33,
+        12.08,
+        69285
+      ],
+      [
+        "2026-08-03",
+        12.17,
+        12.55,
+        12.58,
+        12.15,
+        70480
+      ],
+      [
+        "2026-08-04",
+        12.56,
+        12.56,
+        12.63,
+        12.47,
+        60804
+      ],
+      [
+        "2026-08-05",
+        12.58,
+        12.68,
+        12.75,
+        12.57,
+        63804
+      ],
+      [
+        "2026-08-06",
+        12.61,
+        12.71,
+        12.89,
+        12.52,
+        63955
+      ],
+      [
+        "2026-08-07",
+        12.66,
+        12.81,
+        12.83,
+        12.42,
+        65313
+      ],
+      [
+        "2026-08-10",
+        12.82,
+        13.03,
+        13.05,
+        12.52,
+        86043
+      ],
+      [
+        "2026-08-11",
+        12.8,
+        12.66,
+        12.8,
+        12.51,
+        71476
+      ],
+      [
+        "2026-08-12",
+        12.67,
+        12.84,
+        12.88,
+        12.6,
+        58578
+      ],
+      [
+        "2026-08-13",
+        12.89,
+        12.74,
+        13.06,
+        12.74,
+        75955
+      ],
+      [
+        "2026-08-14",
+        12.81,
+        12.68,
+        12.82,
+        12.56,
+        47211
+      ],
+      [
+        "2026-08-17",
+        12.77,
+        12.95,
+        12.98,
+        12.6,
+        55122
+      ],
+      [
+        "2026-08-18",
+        12.99,
+        12.75,
+        12.99,
+        12.55,
+        61413
+      ],
+      [
+        "2026-08-19",
+        12.84,
+        11.95,
+        12.85,
+        11.93,
+        98767
+      ],
+      [
+        "2026-08-20",
+        12.06,
+        11.92,
+        12.12,
+        11.85,
+        52792
+      ],
+      [
+        "2026-08-21",
+        11.86,
+        11.92,
+        12.01,
+        11.72,
+        46700
+      ],
+      [
+        "2026-08-24",
+        11.91,
+        11.79,
+        12.08,
+        11.63,
+        52494
+      ],
+      [
+        "2026-08-25",
+        11.68,
+        12.03,
+        12.12,
+        11.64,
+        61360
+      ],
+      [
+        "2026-08-26",
+        12.18,
+        12.06,
+        12.2,
+        11.9,
+        43568
+      ],
+      [
+        "2026-08-27",
+        12.05,
+        12.2,
+        12.2,
+        11.96,
+        45607
+      ],
+      [
+        "2026-08-28",
+        12.23,
+        12.28,
+        12.39,
+        12.17,
+        44414
+      ],
+      [
+        "2026-08-31",
+        12.11,
+        12.45,
+        12.45,
+        12.07,
+        48603
+      ],
+      [
+        "2026-09-01",
+        12.47,
+        12.66,
+        12.82,
+        12.38,
+        71026
+      ],
+      [
+        "2026-09-02",
+        12.56,
+        12.91,
+        13.03,
+        12.56,
+        113673
+      ],
+      [
+        "2026-09-03",
+        12.91,
+        12.9,
+        13,
+        12.77,
+        94083
+      ],
+      [
+        "2026-09-04",
+        12.99,
+        13.02,
+        13.28,
+        12.85,
+        107730
+      ],
+      [
+        "2026-09-07",
+        13,
+        12.77,
+        13.06,
+        12.73,
+        59942
+      ],
+      [
+        "2026-09-08",
+        12.77,
+        13.5,
+        14.05,
+        12.74,
+        247386
+      ],
+      [
+        "2026-09-09",
+        13.47,
+        13.89,
+        14.5,
+        13.17,
+        330519
+      ],
+      [
+        "2026-09-10",
+        13.7,
+        13.75,
+        13.94,
+        13.69,
+        177477
+      ],
+      [
+        "2026-09-11",
+        13.73,
+        13.91,
+        14.15,
+        13.7,
+        221841
+      ],
+      [
+        "2026-09-14",
+        13.81,
+        13.53,
+        13.95,
+        13.31,
+        165625
+      ],
+      [
+        "2026-09-15",
+        13.53,
+        13.23,
+        13.57,
+        13.15,
+        106412
+      ],
+      [
+        "2026-09-16",
+        13.38,
+        13.18,
+        13.38,
+        12.76,
+        99986
+      ],
+      [
+        "2026-09-17",
+        13.11,
+        13.08,
+        13.35,
+        12.86,
+        79939
+      ],
+      [
+        "2026-09-18",
+        13.09,
+        13.28,
+        13.6,
+        13.09,
+        101172
+      ],
+      [
+        "2026-09-21",
+        13.26,
+        13.42,
+        13.54,
+        13.16,
+        84360
+      ],
+      [
+        "2026-09-22",
+        13.4,
+        13.15,
+        13.5,
+        13.1,
+        75155
+      ],
+      [
+        "2026-09-23",
+        13.1,
+        12.86,
+        13.18,
+        12.86,
+        61870
+      ],
+      [
+        "2026-09-24",
+        12.86,
+        12.96,
+        13.03,
+        12.78,
+        25755
       ]
     ],
     "600875": [
@@ -118873,10 +123456,500 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         23.72,
-        23.79,
+        23.73,
         23.95,
-        23.68,
-        21753
+        23.66,
+        60495
+      ]
+    ],
+    "600893": [
+      [
+        "2026-07-02",
+        37.4,
+        37.06,
+        38.29,
+        36.92,
+        297395
+      ],
+      [
+        "2026-07-03",
+        37.3,
+        39.31,
+        39.69,
+        37.2,
+        516943
+      ],
+      [
+        "2026-07-06",
+        39.35,
+        38.7,
+        40.23,
+        38.37,
+        311084
+      ],
+      [
+        "2026-07-07",
+        38.5,
+        37.17,
+        39.07,
+        37.08,
+        306549
+      ],
+      [
+        "2026-07-08",
+        37.2,
+        35.45,
+        37.33,
+        35.45,
+        355497
+      ],
+      [
+        "2026-07-09",
+        35.2,
+        35.75,
+        35.88,
+        34.44,
+        353661
+      ],
+      [
+        "2026-07-10",
+        35.7,
+        35.77,
+        37.61,
+        35.25,
+        538131
+      ],
+      [
+        "2026-07-13",
+        35.76,
+        33.13,
+        35.76,
+        33,
+        530748
+      ],
+      [
+        "2026-07-14",
+        32.9,
+        32.82,
+        33.11,
+        31.86,
+        363891
+      ],
+      [
+        "2026-07-15",
+        33.4,
+        33.7,
+        35.17,
+        33.38,
+        520665
+      ],
+      [
+        "2026-07-16",
+        33.43,
+        33.4,
+        34.53,
+        33.3,
+        321439
+      ],
+      [
+        "2026-07-17",
+        33.25,
+        32.33,
+        33.56,
+        32.17,
+        319007
+      ],
+      [
+        "2026-07-20",
+        32.78,
+        33.15,
+        33.86,
+        32.3,
+        404408
+      ],
+      [
+        "2026-07-21",
+        33.17,
+        33.79,
+        33.83,
+        32.81,
+        381670
+      ],
+      [
+        "2026-07-22",
+        33.51,
+        33.92,
+        34.72,
+        33.15,
+        291560
+      ],
+      [
+        "2026-07-23",
+        33.95,
+        35.6,
+        35.73,
+        33.95,
+        408918
+      ],
+      [
+        "2026-07-24",
+        35.23,
+        34.6,
+        35.82,
+        34.56,
+        273265
+      ],
+      [
+        "2026-07-27",
+        34.52,
+        35.15,
+        35.19,
+        34.4,
+        216896
+      ],
+      [
+        "2026-07-28",
+        34.8,
+        34.58,
+        35.13,
+        34.4,
+        181689
+      ],
+      [
+        "2026-07-29",
+        34.55,
+        35.76,
+        35.98,
+        34.41,
+        325825
+      ],
+      [
+        "2026-07-30",
+        35.47,
+        35.13,
+        35.81,
+        34.87,
+        269602
+      ],
+      [
+        "2026-07-31",
+        35.11,
+        34.72,
+        35.3,
+        34.45,
+        361266
+      ],
+      [
+        "2026-08-03",
+        34.59,
+        35.98,
+        36.08,
+        34.52,
+        363654
+      ],
+      [
+        "2026-08-04",
+        35.96,
+        35.68,
+        36.36,
+        35.55,
+        316543
+      ],
+      [
+        "2026-08-05",
+        35.79,
+        35.7,
+        35.9,
+        35.32,
+        338873
+      ],
+      [
+        "2026-08-06",
+        35.58,
+        35.91,
+        36.09,
+        34.95,
+        381280
+      ],
+      [
+        "2026-08-07",
+        35.75,
+        35.97,
+        35.99,
+        35.23,
+        258653
+      ],
+      [
+        "2026-08-10",
+        35.98,
+        36.9,
+        36.98,
+        35.73,
+        364013
+      ],
+      [
+        "2026-08-11",
+        36.4,
+        36.2,
+        36.83,
+        35.89,
+        300332
+      ],
+      [
+        "2026-08-12",
+        36.15,
+        36.69,
+        36.81,
+        36.01,
+        251594
+      ],
+      [
+        "2026-08-13",
+        36.61,
+        36.27,
+        37.42,
+        36.27,
+        280818
+      ],
+      [
+        "2026-08-14",
+        36.16,
+        36.88,
+        37.65,
+        36.16,
+        367087
+      ],
+      [
+        "2026-08-17",
+        36.88,
+        37.6,
+        37.8,
+        36.8,
+        264931
+      ],
+      [
+        "2026-08-18",
+        37.39,
+        37.01,
+        37.79,
+        36.7,
+        277979
+      ],
+      [
+        "2026-08-19",
+        37.04,
+        35.57,
+        37.2,
+        35.55,
+        342766
+      ],
+      [
+        "2026-08-20",
+        35.75,
+        35.78,
+        36.47,
+        35.5,
+        204245
+      ],
+      [
+        "2026-08-21",
+        35.51,
+        36.32,
+        36.55,
+        35.33,
+        172284
+      ],
+      [
+        "2026-08-24",
+        36.32,
+        36.6,
+        37.5,
+        36.11,
+        275928
+      ],
+      [
+        "2026-08-25",
+        36.25,
+        36.28,
+        36.57,
+        35.5,
+        239276
+      ],
+      [
+        "2026-08-26",
+        36.24,
+        36.7,
+        37.28,
+        36.11,
+        234271
+      ],
+      [
+        "2026-08-27",
+        36.72,
+        37.6,
+        37.69,
+        36.35,
+        296637
+      ],
+      [
+        "2026-08-28",
+        37.7,
+        37.9,
+        38.33,
+        37.4,
+        309256
+      ],
+      [
+        "2026-08-31",
+        37.92,
+        38.66,
+        38.98,
+        37.8,
+        314800
+      ],
+      [
+        "2026-09-01",
+        38.44,
+        38.51,
+        39.04,
+        38.25,
+        265092
+      ],
+      [
+        "2026-09-02",
+        38.35,
+        38.83,
+        39.39,
+        38.15,
+        386408
+      ],
+      [
+        "2026-09-03",
+        38.73,
+        39.16,
+        39.48,
+        38.63,
+        273401
+      ],
+      [
+        "2026-09-04",
+        39.29,
+        40.04,
+        40.87,
+        38.96,
+        445091
+      ],
+      [
+        "2026-09-07",
+        40.1,
+        38.98,
+        40.11,
+        38.7,
+        352255
+      ],
+      [
+        "2026-09-08",
+        38.8,
+        41.25,
+        41.56,
+        38.7,
+        564388
+      ],
+      [
+        "2026-09-09",
+        40.88,
+        41.37,
+        42.3,
+        40.88,
+        485221
+      ],
+      [
+        "2026-09-10",
+        40.9,
+        41.71,
+        42.44,
+        40.51,
+        359935
+      ],
+      [
+        "2026-09-11",
+        41.2,
+        41.61,
+        42,
+        40.61,
+        352132
+      ],
+      [
+        "2026-09-14",
+        41.2,
+        40.18,
+        41.75,
+        39.95,
+        351594
+      ],
+      [
+        "2026-09-15",
+        40.19,
+        39.58,
+        40.83,
+        39.5,
+        326931
+      ],
+      [
+        "2026-09-16",
+        39.56,
+        39.7,
+        39.96,
+        39.19,
+        245475
+      ],
+      [
+        "2026-09-17",
+        39.5,
+        39.37,
+        40.18,
+        39.2,
+        199222
+      ],
+      [
+        "2026-09-18",
+        39.51,
+        39.19,
+        39.82,
+        38.97,
+        222177
+      ],
+      [
+        "2026-09-21",
+        39.2,
+        40.53,
+        41.48,
+        38.88,
+        349437
+      ],
+      [
+        "2026-09-22",
+        40.28,
+        39.65,
+        40.98,
+        39.2,
+        344736
+      ],
+      [
+        "2026-09-23",
+        39.65,
+        39.56,
+        39.99,
+        38.8,
+        219515
+      ],
+      [
+        "2026-09-24",
+        39.31,
+        38.97,
+        39.55,
+        38.94,
+        54002
       ]
     ],
     "600900": [
@@ -119363,10 +124436,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         28.1,
-        28.17,
-        28.18,
-        28.08,
-        91018
+        28.27,
+        28.27,
+        28.06,
+        282215
       ]
     ],
     "600938": [
@@ -119853,10 +124926,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         32.34,
-        32.57,
-        32.64,
+        32.58,
+        32.67,
         32.32,
-        44044
+        98462
       ]
     ],
     "600962": [
@@ -120343,10 +125416,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         26.15,
-        26.42,
+        26.24,
         26.68,
         26.15,
-        6279
+        12530
       ]
     ],
     "600968": [
@@ -120834,9 +125907,9 @@ window.DASHBOARD_DATA = {
         "2026-09-24",
         3.87,
         3.89,
-        3.9,
+        3.91,
         3.84,
-        54366
+        128688
       ]
     ],
     "600987": [
@@ -121326,7 +126399,497 @@ window.DASHBOARD_DATA = {
         6.34,
         6.36,
         6.3,
-        4682
+        9349
+      ]
+    ],
+    "601012": [
+      [
+        "2026-07-02",
+        13.01,
+        12.78,
+        13.21,
+        12.76,
+        1541651
+      ],
+      [
+        "2026-07-03",
+        12.8,
+        12.55,
+        12.85,
+        12.53,
+        1245429
+      ],
+      [
+        "2026-07-06",
+        12.5,
+        12.35,
+        12.63,
+        12.34,
+        988767
+      ],
+      [
+        "2026-07-07",
+        12.36,
+        12.21,
+        12.42,
+        12.21,
+        859203
+      ],
+      [
+        "2026-07-08",
+        12.15,
+        11.74,
+        12.19,
+        11.73,
+        1239336
+      ],
+      [
+        "2026-07-09",
+        11.7,
+        11.83,
+        11.85,
+        11.51,
+        1033902
+      ],
+      [
+        "2026-07-10",
+        11.89,
+        12.11,
+        12.42,
+        11.8,
+        1376751
+      ],
+      [
+        "2026-07-13",
+        12.14,
+        11.63,
+        12.14,
+        11.62,
+        1051808
+      ],
+      [
+        "2026-07-14",
+        11.62,
+        11.73,
+        11.73,
+        11.45,
+        792765
+      ],
+      [
+        "2026-07-15",
+        11.55,
+        12,
+        12.18,
+        11.41,
+        1480984
+      ],
+      [
+        "2026-07-16",
+        11.88,
+        11.86,
+        12.02,
+        11.8,
+        936401
+      ],
+      [
+        "2026-07-17",
+        11.81,
+        11.75,
+        11.98,
+        11.7,
+        1034578
+      ],
+      [
+        "2026-07-20",
+        11.75,
+        12,
+        12.03,
+        11.7,
+        1231704
+      ],
+      [
+        "2026-07-21",
+        12.14,
+        11.93,
+        12.14,
+        11.8,
+        1048630
+      ],
+      [
+        "2026-07-22",
+        11.87,
+        12.57,
+        12.69,
+        11.8,
+        2499703
+      ],
+      [
+        "2026-07-23",
+        12.6,
+        12.8,
+        12.82,
+        12.45,
+        1411502
+      ],
+      [
+        "2026-07-24",
+        12.82,
+        12.42,
+        12.82,
+        12.38,
+        1044716
+      ],
+      [
+        "2026-07-27",
+        12.69,
+        12.64,
+        12.69,
+        12.37,
+        856526
+      ],
+      [
+        "2026-07-28",
+        12.52,
+        12.68,
+        12.75,
+        12.49,
+        771746
+      ],
+      [
+        "2026-07-29",
+        12.86,
+        12.81,
+        13.06,
+        12.51,
+        1468053
+      ],
+      [
+        "2026-07-30",
+        12.7,
+        13.02,
+        13.28,
+        12.69,
+        1534032
+      ],
+      [
+        "2026-07-31",
+        12.88,
+        12.99,
+        13.09,
+        12.85,
+        943520
+      ],
+      [
+        "2026-08-03",
+        13,
+        13.28,
+        13.37,
+        12.98,
+        1477367
+      ],
+      [
+        "2026-08-04",
+        13.18,
+        13.07,
+        13.24,
+        13.04,
+        1104881
+      ],
+      [
+        "2026-08-05",
+        13.05,
+        12.97,
+        13.09,
+        12.86,
+        1116056
+      ],
+      [
+        "2026-08-06",
+        12.87,
+        12.74,
+        12.97,
+        12.64,
+        1085497
+      ],
+      [
+        "2026-08-07",
+        12.75,
+        12.93,
+        13.18,
+        12.75,
+        1475549
+      ],
+      [
+        "2026-08-10",
+        12.87,
+        12.94,
+        13.06,
+        12.82,
+        775235
+      ],
+      [
+        "2026-08-11",
+        12.94,
+        12.79,
+        12.99,
+        12.78,
+        797428
+      ],
+      [
+        "2026-08-12",
+        12.79,
+        13.14,
+        13.18,
+        12.71,
+        1381615
+      ],
+      [
+        "2026-08-13",
+        13.05,
+        12.7,
+        13.12,
+        12.68,
+        1313257
+      ],
+      [
+        "2026-08-14",
+        12.72,
+        12.65,
+        12.8,
+        12.56,
+        776622
+      ],
+      [
+        "2026-08-17",
+        12.75,
+        12.83,
+        12.9,
+        12.66,
+        770030
+      ],
+      [
+        "2026-08-18",
+        12.78,
+        12.84,
+        12.94,
+        12.67,
+        774085
+      ],
+      [
+        "2026-08-19",
+        12.75,
+        12.45,
+        12.77,
+        12.35,
+        985160
+      ],
+      [
+        "2026-08-20",
+        12.45,
+        12.41,
+        12.6,
+        12.36,
+        544122
+      ],
+      [
+        "2026-08-21",
+        12.36,
+        12.42,
+        12.58,
+        12.33,
+        544476
+      ],
+      [
+        "2026-08-24",
+        12.4,
+        12.15,
+        12.53,
+        12.13,
+        614089
+      ],
+      [
+        "2026-08-25",
+        12.09,
+        12.17,
+        12.19,
+        12.02,
+        466846
+      ],
+      [
+        "2026-08-26",
+        12.18,
+        12.28,
+        12.4,
+        12.17,
+        566889
+      ],
+      [
+        "2026-08-27",
+        12.21,
+        12.15,
+        12.24,
+        11.96,
+        707543
+      ],
+      [
+        "2026-08-28",
+        12.1,
+        12.43,
+        12.47,
+        12.09,
+        872055
+      ],
+      [
+        "2026-08-31",
+        12.29,
+        12.07,
+        12.34,
+        11.93,
+        1186217
+      ],
+      [
+        "2026-09-01",
+        12.04,
+        12.07,
+        12.14,
+        11.98,
+        716279
+      ],
+      [
+        "2026-09-02",
+        12.03,
+        11.75,
+        12.04,
+        11.75,
+        816532
+      ],
+      [
+        "2026-09-03",
+        11.76,
+        11.7,
+        11.83,
+        11.68,
+        503513
+      ],
+      [
+        "2026-09-04",
+        11.68,
+        11.77,
+        11.92,
+        11.68,
+        706947
+      ],
+      [
+        "2026-09-07",
+        11.8,
+        11.88,
+        11.91,
+        11.69,
+        519102
+      ],
+      [
+        "2026-09-08",
+        11.86,
+        11.88,
+        11.99,
+        11.83,
+        560147
+      ],
+      [
+        "2026-09-09",
+        11.9,
+        11.83,
+        11.94,
+        11.78,
+        418029
+      ],
+      [
+        "2026-09-10",
+        11.8,
+        11.7,
+        11.8,
+        11.68,
+        402225
+      ],
+      [
+        "2026-09-11",
+        11.64,
+        11.32,
+        11.64,
+        11.27,
+        851657
+      ],
+      [
+        "2026-09-14",
+        11.3,
+        11.33,
+        11.37,
+        11.17,
+        440612
+      ],
+      [
+        "2026-09-15",
+        11.28,
+        11.08,
+        11.35,
+        11.06,
+        594805
+      ],
+      [
+        "2026-09-16",
+        11.01,
+        11,
+        11.07,
+        10.88,
+        733608
+      ],
+      [
+        "2026-09-17",
+        10.93,
+        10.99,
+        11.03,
+        10.89,
+        521705
+      ],
+      [
+        "2026-09-18",
+        11.06,
+        11.23,
+        11.24,
+        11.04,
+        749066
+      ],
+      [
+        "2026-09-21",
+        11.2,
+        11.36,
+        11.4,
+        11.18,
+        632967
+      ],
+      [
+        "2026-09-22",
+        11.39,
+        11.38,
+        11.49,
+        11.35,
+        670084
+      ],
+      [
+        "2026-09-23",
+        11.38,
+        11.41,
+        11.56,
+        11.32,
+        627390
+      ],
+      [
+        "2026-09-24",
+        11.4,
+        11.18,
+        11.41,
+        11.17,
+        288670
       ]
     ],
     "601021": [
@@ -121813,10 +127376,500 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         41.3,
-        41.07,
+        40.68,
         41.44,
-        41.07,
-        10407
+        40.66,
+        28432
+      ]
+    ],
+    "601026": [
+      [
+        "2026-07-02",
+        14.87,
+        14.7,
+        15.08,
+        14.69,
+        32837
+      ],
+      [
+        "2026-07-03",
+        14.82,
+        14.91,
+        15.14,
+        14.7,
+        32435
+      ],
+      [
+        "2026-07-06",
+        14.89,
+        14.44,
+        15.12,
+        14.41,
+        42661
+      ],
+      [
+        "2026-07-07",
+        14.45,
+        13.83,
+        14.5,
+        13.8,
+        34089
+      ],
+      [
+        "2026-07-08",
+        13.92,
+        13.55,
+        13.92,
+        13.48,
+        26477
+      ],
+      [
+        "2026-07-09",
+        13.42,
+        13.82,
+        14.05,
+        13.19,
+        54431
+      ],
+      [
+        "2026-07-10",
+        13.7,
+        13.94,
+        14.18,
+        13.61,
+        36026
+      ],
+      [
+        "2026-07-13",
+        13.94,
+        13.31,
+        14.01,
+        13.28,
+        31429
+      ],
+      [
+        "2026-07-14",
+        13.47,
+        13.6,
+        13.65,
+        13.21,
+        26986
+      ],
+      [
+        "2026-07-15",
+        13.5,
+        13.76,
+        13.82,
+        13.5,
+        21489
+      ],
+      [
+        "2026-07-16",
+        13.79,
+        13.72,
+        14.04,
+        13.58,
+        26817
+      ],
+      [
+        "2026-07-17",
+        13.72,
+        13.22,
+        13.88,
+        13.19,
+        34441
+      ],
+      [
+        "2026-07-20",
+        13.44,
+        14.54,
+        14.54,
+        13.29,
+        114561
+      ],
+      [
+        "2026-07-21",
+        15.11,
+        14.7,
+        15.57,
+        14.51,
+        141111
+      ],
+      [
+        "2026-07-22",
+        14.33,
+        14.48,
+        14.64,
+        14.2,
+        76065
+      ],
+      [
+        "2026-07-23",
+        14.61,
+        15.4,
+        15.48,
+        14.33,
+        112907
+      ],
+      [
+        "2026-07-24",
+        14.9,
+        14.64,
+        15.28,
+        14.63,
+        74587
+      ],
+      [
+        "2026-07-27",
+        14.54,
+        15.15,
+        15.73,
+        14.54,
+        74786
+      ],
+      [
+        "2026-07-28",
+        15.09,
+        15.09,
+        15.22,
+        14.93,
+        49299
+      ],
+      [
+        "2026-07-29",
+        15.05,
+        15.13,
+        15.25,
+        14.85,
+        54106
+      ],
+      [
+        "2026-07-30",
+        15,
+        15.16,
+        15.28,
+        14.93,
+        49031
+      ],
+      [
+        "2026-07-31",
+        15.16,
+        14.98,
+        15.4,
+        14.94,
+        63381
+      ],
+      [
+        "2026-08-03",
+        14.91,
+        15.36,
+        15.36,
+        14.8,
+        56859
+      ],
+      [
+        "2026-08-04",
+        15.26,
+        15.16,
+        15.33,
+        15.11,
+        43979
+      ],
+      [
+        "2026-08-05",
+        15.15,
+        15.34,
+        15.52,
+        15.07,
+        63761
+      ],
+      [
+        "2026-08-06",
+        15.19,
+        15.02,
+        15.24,
+        14.85,
+        53206
+      ],
+      [
+        "2026-08-07",
+        15.06,
+        14.96,
+        15.06,
+        14.74,
+        36868
+      ],
+      [
+        "2026-08-10",
+        15.07,
+        15.24,
+        15.27,
+        14.78,
+        41971
+      ],
+      [
+        "2026-08-11",
+        15.24,
+        15.32,
+        15.48,
+        15.02,
+        45823
+      ],
+      [
+        "2026-08-12",
+        15.22,
+        15.12,
+        15.38,
+        15.08,
+        34891
+      ],
+      [
+        "2026-08-13",
+        15.18,
+        16.63,
+        16.63,
+        15.11,
+        133830
+      ],
+      [
+        "2026-08-14",
+        17,
+        17.35,
+        17.95,
+        16.69,
+        255702
+      ],
+      [
+        "2026-08-17",
+        17,
+        16.73,
+        17.16,
+        16.5,
+        155853
+      ],
+      [
+        "2026-08-18",
+        16.62,
+        16.37,
+        16.92,
+        16.19,
+        108613
+      ],
+      [
+        "2026-08-19",
+        16,
+        16.01,
+        16.85,
+        15.96,
+        103769
+      ],
+      [
+        "2026-08-20",
+        16.14,
+        16.33,
+        16.76,
+        16.1,
+        99989
+      ],
+      [
+        "2026-08-21",
+        16.05,
+        15.6,
+        16.11,
+        15.43,
+        83686
+      ],
+      [
+        "2026-08-24",
+        15.56,
+        15.48,
+        15.79,
+        15.27,
+        55867
+      ],
+      [
+        "2026-08-25",
+        15.4,
+        15.59,
+        15.59,
+        15.22,
+        37973
+      ],
+      [
+        "2026-08-26",
+        15.5,
+        15.48,
+        15.54,
+        15.35,
+        40458
+      ],
+      [
+        "2026-08-27",
+        15.37,
+        15.58,
+        15.58,
+        15.17,
+        51210
+      ],
+      [
+        "2026-08-28",
+        15.5,
+        15.56,
+        15.65,
+        15.43,
+        37682
+      ],
+      [
+        "2026-08-31",
+        15.5,
+        15.7,
+        15.7,
+        15.45,
+        38980
+      ],
+      [
+        "2026-09-01",
+        15.78,
+        15.73,
+        15.8,
+        15.52,
+        42253
+      ],
+      [
+        "2026-09-02",
+        15.7,
+        15.25,
+        15.7,
+        15.18,
+        44365
+      ],
+      [
+        "2026-09-03",
+        15.4,
+        14.77,
+        15.4,
+        14.64,
+        62288
+      ],
+      [
+        "2026-09-04",
+        14.76,
+        14.78,
+        15.09,
+        14.68,
+        41123
+      ],
+      [
+        "2026-09-07",
+        14.72,
+        14.75,
+        14.85,
+        14.68,
+        22585
+      ],
+      [
+        "2026-09-08",
+        14.82,
+        14.75,
+        14.85,
+        14.68,
+        21354
+      ],
+      [
+        "2026-09-09",
+        14.85,
+        14.44,
+        14.85,
+        14.43,
+        32305
+      ],
+      [
+        "2026-09-10",
+        14.41,
+        14.31,
+        14.44,
+        14.21,
+        20789
+      ],
+      [
+        "2026-09-11",
+        14.21,
+        14.16,
+        14.31,
+        14.01,
+        24599
+      ],
+      [
+        "2026-09-14",
+        14.08,
+        14.21,
+        14.25,
+        14.04,
+        15070
+      ],
+      [
+        "2026-09-15",
+        14.21,
+        14.41,
+        14.46,
+        14.11,
+        28263
+      ],
+      [
+        "2026-09-16",
+        14.4,
+        14.38,
+        14.47,
+        14.18,
+        26585
+      ],
+      [
+        "2026-09-17",
+        14.29,
+        14.5,
+        14.6,
+        14.05,
+        43492
+      ],
+      [
+        "2026-09-18",
+        14.48,
+        15.95,
+        15.95,
+        14.32,
+        114460
+      ],
+      [
+        "2026-09-21",
+        15.83,
+        15.6,
+        15.95,
+        15.41,
+        130114
+      ],
+      [
+        "2026-09-22",
+        15.58,
+        15.43,
+        15.66,
+        15.29,
+        64619
+      ],
+      [
+        "2026-09-23",
+        15.4,
+        15.35,
+        15.49,
+        15.3,
+        45040
+      ],
+      [
+        "2026-09-24",
+        15.25,
+        15.46,
+        15.55,
+        15.21,
+        22325
       ]
     ],
     "601088": [
@@ -122303,10 +128356,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         47.34,
-        47.91,
-        47.92,
+        47.88,
+        48.1,
         47.15,
-        29512
+        86004
       ]
     ],
     "601111": [
@@ -122793,10 +128846,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         5.93,
-        5.88,
-        5.93,
         5.87,
-        116876
+        5.93,
+        5.85,
+        243874
       ]
     ],
     "601123": [
@@ -122939,10 +128992,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         17.74,
-        17.97,
-        17.98,
+        17.82,
+        18.07,
         17.52,
-        43111
+        98318
       ]
     ],
     "601179": [
@@ -123919,10 +129972,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         6.83,
-        6.88,
-        6.89,
+        6.91,
+        6.92,
         6.81,
-        512113
+        1324628
       ]
     ],
     "601339": [
@@ -124409,10 +130462,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         7.25,
-        7.31,
-        7.32,
+        7.43,
+        7.43,
         7.18,
-        14291
+        45404
       ]
     ],
     "601398": [
@@ -124899,10 +130952,500 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         8.1,
-        8.16,
-        8.17,
+        8.19,
+        8.19,
         8.09,
-        481193
+        1156407
+      ]
+    ],
+    "601567": [
+      [
+        "2026-07-02",
+        14.45,
+        14.3,
+        14.8,
+        14.28,
+        178708
+      ],
+      [
+        "2026-07-03",
+        14.42,
+        14.63,
+        14.83,
+        14.35,
+        191196
+      ],
+      [
+        "2026-07-06",
+        14.64,
+        14.42,
+        15.05,
+        14.4,
+        165130
+      ],
+      [
+        "2026-07-07",
+        14.43,
+        13.95,
+        14.5,
+        13.88,
+        170077
+      ],
+      [
+        "2026-07-08",
+        13.9,
+        13.8,
+        14.09,
+        13.7,
+        141338
+      ],
+      [
+        "2026-07-09",
+        13.81,
+        13.5,
+        13.86,
+        13.21,
+        179255
+      ],
+      [
+        "2026-07-10",
+        13.39,
+        13.95,
+        14.23,
+        13.35,
+        182589
+      ],
+      [
+        "2026-07-13",
+        13.7,
+        13.53,
+        13.88,
+        13.33,
+        193700
+      ],
+      [
+        "2026-07-14",
+        13.53,
+        13.49,
+        13.53,
+        13.17,
+        145372
+      ],
+      [
+        "2026-07-15",
+        13.48,
+        13.83,
+        14.04,
+        13.37,
+        157474
+      ],
+      [
+        "2026-07-16",
+        13.72,
+        14.14,
+        14.49,
+        13.58,
+        192616
+      ],
+      [
+        "2026-07-17",
+        14.29,
+        13.93,
+        14.37,
+        13.83,
+        193978
+      ],
+      [
+        "2026-07-20",
+        13.96,
+        14.24,
+        14.35,
+        13.81,
+        217772
+      ],
+      [
+        "2026-07-21",
+        14.2,
+        14.55,
+        15.17,
+        14.15,
+        342775
+      ],
+      [
+        "2026-07-22",
+        14.48,
+        14.94,
+        14.96,
+        14.27,
+        228476
+      ],
+      [
+        "2026-07-23",
+        14.87,
+        15.44,
+        15.49,
+        14.65,
+        287179
+      ],
+      [
+        "2026-07-24",
+        15.44,
+        15,
+        15.68,
+        14.96,
+        232993
+      ],
+      [
+        "2026-07-27",
+        14.94,
+        15.13,
+        15.44,
+        14.9,
+        162536
+      ],
+      [
+        "2026-07-28",
+        15.05,
+        15.17,
+        15.19,
+        14.81,
+        125871
+      ],
+      [
+        "2026-07-29",
+        15.29,
+        16.12,
+        16.2,
+        15.13,
+        328393
+      ],
+      [
+        "2026-07-30",
+        15.95,
+        17,
+        17.15,
+        15.94,
+        394694
+      ],
+      [
+        "2026-07-31",
+        16.5,
+        16.57,
+        16.77,
+        16.2,
+        339519
+      ],
+      [
+        "2026-08-03",
+        16.78,
+        16.67,
+        16.82,
+        16.22,
+        214841
+      ],
+      [
+        "2026-08-04",
+        16.72,
+        16.17,
+        16.8,
+        16.13,
+        325352
+      ],
+      [
+        "2026-08-05",
+        16.15,
+        16.19,
+        16.3,
+        15.92,
+        225738
+      ],
+      [
+        "2026-08-06",
+        16.16,
+        16.12,
+        16.22,
+        15.83,
+        191936
+      ],
+      [
+        "2026-08-07",
+        16.11,
+        15.88,
+        16.35,
+        15.77,
+        215030
+      ],
+      [
+        "2026-08-10",
+        15.88,
+        16.01,
+        16.16,
+        15.81,
+        132879
+      ],
+      [
+        "2026-08-11",
+        16,
+        15.75,
+        16,
+        15.71,
+        112236
+      ],
+      [
+        "2026-08-12",
+        15.75,
+        15.85,
+        16.16,
+        15.68,
+        145015
+      ],
+      [
+        "2026-08-13",
+        15.84,
+        15.68,
+        15.96,
+        15.67,
+        131759
+      ],
+      [
+        "2026-08-14",
+        15.65,
+        15.28,
+        15.7,
+        15.21,
+        137736
+      ],
+      [
+        "2026-08-17",
+        15.21,
+        15.51,
+        15.53,
+        15.12,
+        111566
+      ],
+      [
+        "2026-08-18",
+        15.32,
+        15.22,
+        15.68,
+        15.15,
+        106377
+      ],
+      [
+        "2026-08-19",
+        15.18,
+        15.12,
+        15.56,
+        15.06,
+        144577
+      ],
+      [
+        "2026-08-20",
+        15.11,
+        15.09,
+        15.56,
+        15.01,
+        138326
+      ],
+      [
+        "2026-08-21",
+        15.03,
+        14.84,
+        15.06,
+        14.76,
+        78933
+      ],
+      [
+        "2026-08-24",
+        14.8,
+        14.39,
+        14.88,
+        14.34,
+        133340
+      ],
+      [
+        "2026-08-25",
+        14.35,
+        14.56,
+        14.68,
+        14.3,
+        115130
+      ],
+      [
+        "2026-08-26",
+        14.5,
+        14.89,
+        14.9,
+        14.45,
+        94985
+      ],
+      [
+        "2026-08-27",
+        14.83,
+        14.68,
+        14.84,
+        14.41,
+        125375
+      ],
+      [
+        "2026-08-28",
+        14.55,
+        14.8,
+        14.87,
+        14.55,
+        86270
+      ],
+      [
+        "2026-08-31",
+        14.65,
+        14.19,
+        14.72,
+        14.11,
+        271737
+      ],
+      [
+        "2026-09-01",
+        14.2,
+        14.29,
+        14.31,
+        13.96,
+        127326
+      ],
+      [
+        "2026-09-02",
+        14.21,
+        14.02,
+        14.22,
+        13.93,
+        103789
+      ],
+      [
+        "2026-09-03",
+        14.04,
+        13.46,
+        14.12,
+        13.34,
+        267523
+      ],
+      [
+        "2026-09-04",
+        13.54,
+        13.39,
+        13.7,
+        13.36,
+        202171
+      ],
+      [
+        "2026-09-07",
+        13.4,
+        13.47,
+        13.5,
+        13.26,
+        212248
+      ],
+      [
+        "2026-09-08",
+        13.47,
+        13.54,
+        13.61,
+        13.33,
+        113447
+      ],
+      [
+        "2026-09-09",
+        13.5,
+        13.47,
+        13.61,
+        13.42,
+        104663
+      ],
+      [
+        "2026-09-10",
+        13.43,
+        13.37,
+        13.51,
+        13.21,
+        108859
+      ],
+      [
+        "2026-09-11",
+        13.31,
+        12.88,
+        13.31,
+        12.85,
+        174483
+      ],
+      [
+        "2026-09-14",
+        12.88,
+        14.17,
+        14.17,
+        12.83,
+        350915
+      ],
+      [
+        "2026-09-15",
+        14.38,
+        14.34,
+        14.49,
+        13.78,
+        402936
+      ],
+      [
+        "2026-09-16",
+        14.23,
+        14.3,
+        14.55,
+        13.99,
+        272560
+      ],
+      [
+        "2026-09-17",
+        14.11,
+        14.21,
+        14.46,
+        14.1,
+        184429
+      ],
+      [
+        "2026-09-18",
+        14.29,
+        14.27,
+        14.47,
+        14.12,
+        193593
+      ],
+      [
+        "2026-09-21",
+        14.26,
+        14.58,
+        14.75,
+        14.14,
+        244281
+      ],
+      [
+        "2026-09-22",
+        14.58,
+        14.6,
+        14.85,
+        14.47,
+        218471
+      ],
+      [
+        "2026-09-23",
+        14.6,
+        14.77,
+        14.92,
+        14.47,
+        207640
+      ],
+      [
+        "2026-09-24",
+        16.25,
+        16.25,
+        16.25,
+        16.25,
+        98761
       ]
     ],
     "601615": [
@@ -125389,10 +131932,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         9.71,
-        9.69,
-        9.79,
+        9.77,
+        9.82,
         9.63,
-        41579
+        146901
       ]
     ],
     "601669": [
@@ -125879,10 +132422,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         4.58,
-        4.57,
-        4.58,
         4.56,
-        64992
+        4.58,
+        4.54,
+        249652
       ]
     ],
     "601699": [
@@ -126369,10 +132912,500 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         15.39,
-        15.45,
-        15.47,
-        15.31,
-        20983
+        15.46,
+        15.5,
+        15.28,
+        61034
+      ]
+    ],
+    "601798": [
+      [
+        "2026-07-02",
+        7.18,
+        7.26,
+        7.49,
+        7.15,
+        128003
+      ],
+      [
+        "2026-07-03",
+        7.24,
+        7.4,
+        7.52,
+        7.24,
+        116388
+      ],
+      [
+        "2026-07-06",
+        7.39,
+        7.17,
+        7.47,
+        7.16,
+        93932
+      ],
+      [
+        "2026-07-07",
+        7.12,
+        7.02,
+        7.22,
+        6.96,
+        84338
+      ],
+      [
+        "2026-07-08",
+        7.01,
+        6.87,
+        7.08,
+        6.78,
+        66650
+      ],
+      [
+        "2026-07-09",
+        6.85,
+        6.83,
+        6.97,
+        6.62,
+        73796
+      ],
+      [
+        "2026-07-10",
+        6.83,
+        6.94,
+        7.11,
+        6.73,
+        75229
+      ],
+      [
+        "2026-07-13",
+        7,
+        6.78,
+        7.1,
+        6.76,
+        68999
+      ],
+      [
+        "2026-07-14",
+        6.79,
+        7.04,
+        7.04,
+        6.79,
+        87920
+      ],
+      [
+        "2026-07-15",
+        7.06,
+        7.07,
+        7.2,
+        6.98,
+        70275
+      ],
+      [
+        "2026-07-16",
+        7.04,
+        7.17,
+        7.25,
+        6.98,
+        66867
+      ],
+      [
+        "2026-07-17",
+        7.14,
+        6.93,
+        7.26,
+        6.81,
+        85522
+      ],
+      [
+        "2026-07-20",
+        7.06,
+        7.07,
+        7.27,
+        6.95,
+        99679
+      ],
+      [
+        "2026-07-21",
+        7.06,
+        6.85,
+        7.06,
+        6.55,
+        113207
+      ],
+      [
+        "2026-07-22",
+        6.84,
+        6.75,
+        6.9,
+        6.73,
+        48962
+      ],
+      [
+        "2026-07-23",
+        6.76,
+        7.07,
+        7.08,
+        6.76,
+        82073
+      ],
+      [
+        "2026-07-24",
+        7.03,
+        7.07,
+        7.18,
+        6.9,
+        68629
+      ],
+      [
+        "2026-07-27",
+        7.07,
+        7.31,
+        7.35,
+        7.07,
+        64859
+      ],
+      [
+        "2026-07-28",
+        7.24,
+        7.33,
+        7.46,
+        7.24,
+        67303
+      ],
+      [
+        "2026-07-29",
+        7.32,
+        7.47,
+        7.5,
+        7.3,
+        66576
+      ],
+      [
+        "2026-07-30",
+        7.41,
+        7.38,
+        7.67,
+        7.33,
+        73947
+      ],
+      [
+        "2026-07-31",
+        7.52,
+        7.51,
+        7.55,
+        7.43,
+        57922
+      ],
+      [
+        "2026-08-03",
+        7.51,
+        7.59,
+        7.61,
+        7.44,
+        51695
+      ],
+      [
+        "2026-08-04",
+        7.6,
+        7.58,
+        7.72,
+        7.54,
+        63294
+      ],
+      [
+        "2026-08-05",
+        7.59,
+        7.52,
+        7.6,
+        7.45,
+        66916
+      ],
+      [
+        "2026-08-06",
+        7.52,
+        7.53,
+        7.59,
+        7.43,
+        56241
+      ],
+      [
+        "2026-08-07",
+        7.53,
+        7.57,
+        7.6,
+        7.4,
+        51586
+      ],
+      [
+        "2026-08-10",
+        7.55,
+        7.66,
+        7.68,
+        7.48,
+        57155
+      ],
+      [
+        "2026-08-11",
+        7.67,
+        7.64,
+        7.73,
+        7.55,
+        46871
+      ],
+      [
+        "2026-08-12",
+        7.65,
+        7.69,
+        7.74,
+        7.63,
+        39457
+      ],
+      [
+        "2026-08-13",
+        7.68,
+        7.54,
+        7.69,
+        7.54,
+        36471
+      ],
+      [
+        "2026-08-14",
+        7.55,
+        7.54,
+        7.61,
+        7.47,
+        35609
+      ],
+      [
+        "2026-08-17",
+        7.62,
+        7.78,
+        7.78,
+        7.54,
+        48308
+      ],
+      [
+        "2026-08-18",
+        7.8,
+        7.8,
+        7.87,
+        7.71,
+        52889
+      ],
+      [
+        "2026-08-19",
+        7.8,
+        7.52,
+        7.8,
+        7.46,
+        60401
+      ],
+      [
+        "2026-08-20",
+        7.52,
+        7.6,
+        7.69,
+        7.52,
+        41621
+      ],
+      [
+        "2026-08-21",
+        7.56,
+        7.73,
+        7.75,
+        7.51,
+        41156
+      ],
+      [
+        "2026-08-24",
+        7.66,
+        7.67,
+        7.78,
+        7.56,
+        49711
+      ],
+      [
+        "2026-08-25",
+        7.58,
+        7.83,
+        7.85,
+        7.58,
+        50627
+      ],
+      [
+        "2026-08-26",
+        7.85,
+        7.86,
+        7.96,
+        7.76,
+        47127
+      ],
+      [
+        "2026-08-27",
+        7.82,
+        7.84,
+        7.9,
+        7.78,
+        44181
+      ],
+      [
+        "2026-08-28",
+        7.84,
+        7.83,
+        7.88,
+        7.77,
+        73999
+      ],
+      [
+        "2026-08-31",
+        7.78,
+        7.88,
+        7.92,
+        7.75,
+        59813
+      ],
+      [
+        "2026-09-01",
+        7.85,
+        7.89,
+        7.95,
+        7.83,
+        48648
+      ],
+      [
+        "2026-09-02",
+        7.91,
+        7.82,
+        7.94,
+        7.81,
+        45242
+      ],
+      [
+        "2026-09-03",
+        7.81,
+        7.68,
+        7.95,
+        7.64,
+        56039
+      ],
+      [
+        "2026-09-04",
+        7.7,
+        7.79,
+        7.93,
+        7.69,
+        60604
+      ],
+      [
+        "2026-09-07",
+        7.77,
+        7.71,
+        7.85,
+        7.7,
+        46910
+      ],
+      [
+        "2026-09-08",
+        7.67,
+        7.8,
+        7.82,
+        7.65,
+        45284
+      ],
+      [
+        "2026-09-09",
+        7.83,
+        7.84,
+        7.9,
+        7.74,
+        47040
+      ],
+      [
+        "2026-09-10",
+        7.89,
+        7.74,
+        7.89,
+        7.71,
+        41167
+      ],
+      [
+        "2026-09-11",
+        7.71,
+        7.63,
+        7.88,
+        7.59,
+        69360
+      ],
+      [
+        "2026-09-14",
+        7.64,
+        7.6,
+        7.7,
+        7.54,
+        34163
+      ],
+      [
+        "2026-09-15",
+        7.59,
+        7.38,
+        7.62,
+        7.38,
+        38444
+      ],
+      [
+        "2026-09-16",
+        7.37,
+        7.45,
+        7.48,
+        7.31,
+        34367
+      ],
+      [
+        "2026-09-17",
+        7.41,
+        7.45,
+        7.48,
+        7.26,
+        38455
+      ],
+      [
+        "2026-09-18",
+        7.43,
+        7.45,
+        7.52,
+        7.41,
+        35535
+      ],
+      [
+        "2026-09-21",
+        7.46,
+        7.64,
+        7.64,
+        7.41,
+        31781
+      ],
+      [
+        "2026-09-22",
+        7.65,
+        7.59,
+        7.67,
+        7.54,
+        31355
+      ],
+      [
+        "2026-09-23",
+        7.55,
+        7.55,
+        7.61,
+        7.53,
+        25533
+      ],
+      [
+        "2026-09-24",
+        7.52,
+        7.63,
+        7.73,
+        7.46,
+        18015
       ]
     ],
     "601800": [
@@ -126861,8 +133894,8 @@ window.DASHBOARD_DATA = {
         5.85,
         5.83,
         5.86,
-        5.82,
-        29344
+        5.8,
+        81556
       ]
     ],
     "601808": [
@@ -127349,10 +134382,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         12.13,
-        12.21,
-        12.24,
+        12.23,
+        12.26,
         12.12,
-        15946
+        36095
       ]
     ],
     "601811": [
@@ -127842,7 +134875,7 @@ window.DASHBOARD_DATA = {
         20.35,
         20.35,
         19.93,
-        109657
+        113959
       ]
     ],
     "601857": [
@@ -128329,10 +135362,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         10.69,
-        10.79,
+        10.81,
         10.81,
         10.68,
-        106535
+        277678
       ]
     ],
     "601872": [
@@ -128819,10 +135852,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         20.98,
-        21.2,
-        21.29,
+        21.18,
+        21.35,
         20.78,
-        244238
+        506530
       ]
     ],
     "601890": [
@@ -129309,10 +136342,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         9.3,
-        9.36,
         9.42,
+        9.53,
         9.26,
-        50107
+        143340
       ]
     ],
     "601899": [
@@ -129799,10 +136832,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         30.99,
-        30.78,
+        30.46,
         31.02,
-        30.72,
-        239000
+        30.26,
+        813313
       ]
     ],
     "601939": [
@@ -130289,10 +137322,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         10.83,
-        10.91,
-        10.91,
+        10.96,
+        10.96,
         10.81,
-        202662
+        468878
       ]
     ],
     "601949": [
@@ -130779,10 +137812,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         5.96,
-        6.02,
+        5.9,
         6.13,
         5.82,
-        270311
+        468645
       ]
     ],
     "601969": [
@@ -131271,8 +138304,8 @@ window.DASHBOARD_DATA = {
         9.08,
         9.08,
         9.16,
-        9.02,
-        20055
+        8.99,
+        45795
       ]
     ],
     "603009": [
@@ -132249,10 +139282,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         32.7,
-        32.9,
+        32.47,
         33.2,
         32.41,
-        7081
+        13345
       ]
     ],
     "603042": [
@@ -132739,10 +139772,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         16.96,
-        17.14,
-        17.33,
+        18.18,
+        18.4,
         16.96,
-        57847
+        244075
       ]
     ],
     "603055": [
@@ -133232,7 +140265,7 @@ window.DASHBOARD_DATA = {
         9.29,
         9.33,
         9.18,
-        5031
+        11475
       ]
     ],
     "603067": [
@@ -133719,10 +140752,500 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         40,
-        40.5,
-        41.23,
+        41.5,
+        42.8,
         39.79,
-        158395
+        392676
+      ]
+    ],
+    "603097": [
+      [
+        "2026-07-02",
+        19.043,
+        18.571,
+        20.093,
+        18.543,
+        30335
+      ],
+      [
+        "2026-07-03",
+        18.16,
+        18.67,
+        18.98,
+        18.16,
+        23001
+      ],
+      [
+        "2026-07-06",
+        19.11,
+        18.38,
+        19.45,
+        18.2,
+        33002
+      ],
+      [
+        "2026-07-07",
+        18.61,
+        17.59,
+        18.86,
+        17.37,
+        25771
+      ],
+      [
+        "2026-07-08",
+        18,
+        16.85,
+        18,
+        16.81,
+        18108
+      ],
+      [
+        "2026-07-09",
+        17.33,
+        16.64,
+        17.33,
+        16,
+        18434
+      ],
+      [
+        "2026-07-10",
+        16.65,
+        16.75,
+        17.22,
+        16.3,
+        21835
+      ],
+      [
+        "2026-07-13",
+        16.81,
+        15.88,
+        16.9,
+        15.7,
+        24955
+      ],
+      [
+        "2026-07-14",
+        15.86,
+        16.1,
+        16.1,
+        15.38,
+        17516
+      ],
+      [
+        "2026-07-15",
+        15.65,
+        15.82,
+        16.28,
+        15.52,
+        19885
+      ],
+      [
+        "2026-07-16",
+        16.23,
+        15.8,
+        16.23,
+        15.52,
+        31473
+      ],
+      [
+        "2026-07-17",
+        16.03,
+        14.81,
+        16.14,
+        14.79,
+        33470
+      ],
+      [
+        "2026-07-20",
+        14.73,
+        14.64,
+        15.47,
+        13.5,
+        60418
+      ],
+      [
+        "2026-07-21",
+        14.1,
+        14.64,
+        14.64,
+        13.18,
+        66220
+      ],
+      [
+        "2026-07-22",
+        14.19,
+        14.62,
+        14.97,
+        14.01,
+        35674
+      ],
+      [
+        "2026-07-23",
+        14.63,
+        15.45,
+        15.48,
+        14.41,
+        40108
+      ],
+      [
+        "2026-07-24",
+        15.26,
+        15.35,
+        15.54,
+        14.76,
+        33924
+      ],
+      [
+        "2026-07-27",
+        15.35,
+        16.89,
+        16.89,
+        15.35,
+        88036
+      ],
+      [
+        "2026-07-28",
+        16.6,
+        17.37,
+        17.9,
+        16.31,
+        102530
+      ],
+      [
+        "2026-07-29",
+        17.11,
+        17.73,
+        18.01,
+        16.89,
+        67966
+      ],
+      [
+        "2026-07-30",
+        17.5,
+        17.75,
+        17.92,
+        17.47,
+        49962
+      ],
+      [
+        "2026-07-31",
+        17.96,
+        18.1,
+        18.57,
+        17.6,
+        48294
+      ],
+      [
+        "2026-08-03",
+        18.15,
+        18.77,
+        18.77,
+        18.15,
+        36092
+      ],
+      [
+        "2026-08-04",
+        18.89,
+        19.79,
+        19.9,
+        18.51,
+        52702
+      ],
+      [
+        "2026-08-05",
+        19.8,
+        20.55,
+        20.57,
+        19.79,
+        46202
+      ],
+      [
+        "2026-08-06",
+        20.33,
+        21,
+        21.07,
+        20.18,
+        57378
+      ],
+      [
+        "2026-08-07",
+        21,
+        21.07,
+        21.43,
+        20.8,
+        51226
+      ],
+      [
+        "2026-08-10",
+        21.21,
+        21.47,
+        21.47,
+        20.76,
+        41457
+      ],
+      [
+        "2026-08-11",
+        21.5,
+        20.99,
+        21.53,
+        20.71,
+        36855
+      ],
+      [
+        "2026-08-12",
+        21,
+        21.4,
+        21.58,
+        20.78,
+        34636
+      ],
+      [
+        "2026-08-13",
+        21.58,
+        20.58,
+        21.8,
+        20.43,
+        49486
+      ],
+      [
+        "2026-08-14",
+        20.52,
+        19.99,
+        20.66,
+        19.7,
+        36678
+      ],
+      [
+        "2026-08-17",
+        19.98,
+        20.2,
+        20.25,
+        19.51,
+        26345
+      ],
+      [
+        "2026-08-18",
+        19.83,
+        20.08,
+        20.62,
+        19.83,
+        21342
+      ],
+      [
+        "2026-08-19",
+        19.88,
+        18.79,
+        19.88,
+        18.79,
+        24785
+      ],
+      [
+        "2026-08-20",
+        18.87,
+        18.48,
+        19.19,
+        18.43,
+        17342
+      ],
+      [
+        "2026-08-21",
+        18.44,
+        19.62,
+        19.84,
+        18.13,
+        37237
+      ],
+      [
+        "2026-08-24",
+        19.53,
+        19.27,
+        19.64,
+        18.5,
+        30418
+      ],
+      [
+        "2026-08-25",
+        19.01,
+        18.98,
+        19.25,
+        18.8,
+        18453
+      ],
+      [
+        "2026-08-26",
+        19.27,
+        19.55,
+        19.81,
+        18.93,
+        22299
+      ],
+      [
+        "2026-08-27",
+        19,
+        19.21,
+        19.43,
+        18.92,
+        18369
+      ],
+      [
+        "2026-08-28",
+        19.01,
+        18.91,
+        19.28,
+        18.91,
+        15025
+      ],
+      [
+        "2026-08-31",
+        18.8,
+        19.3,
+        19.44,
+        18.6,
+        18562
+      ],
+      [
+        "2026-09-01",
+        19.6,
+        19.7,
+        19.83,
+        19.2,
+        18192
+      ],
+      [
+        "2026-09-02",
+        19.79,
+        19.44,
+        19.79,
+        19.16,
+        13055
+      ],
+      [
+        "2026-09-03",
+        19.84,
+        19.25,
+        19.86,
+        19.1,
+        13514
+      ],
+      [
+        "2026-09-04",
+        19.25,
+        19,
+        19.73,
+        18.82,
+        18290
+      ],
+      [
+        "2026-09-07",
+        19.19,
+        19.21,
+        19.37,
+        18.92,
+        15915
+      ],
+      [
+        "2026-09-08",
+        19.39,
+        19.21,
+        19.39,
+        18.99,
+        9492
+      ],
+      [
+        "2026-09-09",
+        19.21,
+        19.32,
+        19.52,
+        19.11,
+        15194
+      ],
+      [
+        "2026-09-10",
+        19.4,
+        18.95,
+        19.4,
+        18.62,
+        16060
+      ],
+      [
+        "2026-09-11",
+        18.9,
+        18.4,
+        18.9,
+        18.2,
+        11916
+      ],
+      [
+        "2026-09-14",
+        18.64,
+        18.46,
+        19.32,
+        18.45,
+        27119
+      ],
+      [
+        "2026-09-15",
+        18.35,
+        18.65,
+        18.88,
+        18.3,
+        17568
+      ],
+      [
+        "2026-09-16",
+        18.65,
+        18.44,
+        18.73,
+        18.35,
+        11949
+      ],
+      [
+        "2026-09-17",
+        18.3,
+        18.28,
+        18.53,
+        18.1,
+        10077
+      ],
+      [
+        "2026-09-18",
+        18.6,
+        18.5,
+        18.6,
+        18.28,
+        12827
+      ],
+      [
+        "2026-09-21",
+        18.5,
+        18.5,
+        18.6,
+        18.3,
+        10812
+      ],
+      [
+        "2026-09-22",
+        18.6,
+        18.44,
+        18.72,
+        18.38,
+        12218
+      ],
+      [
+        "2026-09-23",
+        18.43,
+        18.55,
+        18.61,
+        18.24,
+        13531
+      ],
+      [
+        "2026-09-24",
+        18.56,
+        18.55,
+        18.69,
+        18.31,
+        4337
       ]
     ],
     "603118": [
@@ -134209,10 +141732,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         17.98,
-        18.17,
+        18.01,
         18.5,
         17.94,
-        155589
+        289775
       ]
     ],
     "603124": [
@@ -134699,10 +142222,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         144.23,
-        134.03,
+        135.85,
         144.97,
-        132.99,
-        30283
+        132.25,
+        58240
       ]
     ],
     "603127": [
@@ -135189,10 +142712,500 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         48.95,
-        48.95,
+        47.68,
         49.72,
-        47.88,
-        130402
+        47.27,
+        257668
+      ]
+    ],
+    "603131": [
+      [
+        "2026-07-02",
+        18.59,
+        18.08,
+        18.92,
+        18.08,
+        147108
+      ],
+      [
+        "2026-07-03",
+        18.25,
+        18.9,
+        19.15,
+        18.1,
+        166793
+      ],
+      [
+        "2026-07-06",
+        19.08,
+        17.71,
+        19.08,
+        17.7,
+        137488
+      ],
+      [
+        "2026-07-07",
+        17.5,
+        17.25,
+        18.12,
+        17.15,
+        95047
+      ],
+      [
+        "2026-07-08",
+        17.25,
+        16.36,
+        17.59,
+        16.36,
+        91533
+      ],
+      [
+        "2026-07-09",
+        16.32,
+        16.69,
+        16.75,
+        15.87,
+        89531
+      ],
+      [
+        "2026-07-10",
+        16.6,
+        18.34,
+        18.36,
+        16.5,
+        275393
+      ],
+      [
+        "2026-07-13",
+        17.8,
+        16.51,
+        17.88,
+        16.51,
+        183650
+      ],
+      [
+        "2026-07-14",
+        15.95,
+        15.05,
+        15.96,
+        14.86,
+        180828
+      ],
+      [
+        "2026-07-15",
+        14.86,
+        14.87,
+        15.48,
+        14.75,
+        125636
+      ],
+      [
+        "2026-07-16",
+        14.87,
+        14.87,
+        15.2,
+        14.5,
+        87969
+      ],
+      [
+        "2026-07-17",
+        14.87,
+        14.05,
+        14.88,
+        13.85,
+        101640
+      ],
+      [
+        "2026-07-20",
+        14.17,
+        13.7,
+        14.33,
+        13.25,
+        101732
+      ],
+      [
+        "2026-07-21",
+        13.65,
+        13.79,
+        13.82,
+        12.69,
+        111287
+      ],
+      [
+        "2026-07-22",
+        13.6,
+        13.68,
+        13.97,
+        13.5,
+        60676
+      ],
+      [
+        "2026-07-23",
+        13.59,
+        14.1,
+        14.1,
+        13.58,
+        62963
+      ],
+      [
+        "2026-07-24",
+        14,
+        13.57,
+        14.07,
+        13.57,
+        45638
+      ],
+      [
+        "2026-07-27",
+        13.54,
+        13.91,
+        14,
+        13.44,
+        42475
+      ],
+      [
+        "2026-07-28",
+        13.77,
+        14.02,
+        14.18,
+        13.7,
+        47326
+      ],
+      [
+        "2026-07-29",
+        13.99,
+        14.25,
+        14.28,
+        13.84,
+        53942
+      ],
+      [
+        "2026-07-30",
+        14.17,
+        13.99,
+        14.39,
+        13.93,
+        51738
+      ],
+      [
+        "2026-07-31",
+        14.24,
+        14.36,
+        14.51,
+        14.17,
+        68076
+      ],
+      [
+        "2026-08-03",
+        14.36,
+        14.84,
+        14.86,
+        14.3,
+        67515
+      ],
+      [
+        "2026-08-04",
+        14.89,
+        15.12,
+        15.19,
+        14.75,
+        64975
+      ],
+      [
+        "2026-08-05",
+        15.12,
+        15.36,
+        15.42,
+        15.05,
+        61530
+      ],
+      [
+        "2026-08-06",
+        15.15,
+        15.55,
+        15.69,
+        15.12,
+        75902
+      ],
+      [
+        "2026-08-07",
+        15.55,
+        15.81,
+        15.83,
+        15.2,
+        72329
+      ],
+      [
+        "2026-08-10",
+        15.88,
+        15.99,
+        16.05,
+        15.42,
+        63127
+      ],
+      [
+        "2026-08-11",
+        15.45,
+        15.6,
+        15.78,
+        15.3,
+        65413
+      ],
+      [
+        "2026-08-12",
+        15.64,
+        15.89,
+        16.01,
+        15.58,
+        54272
+      ],
+      [
+        "2026-08-13",
+        16,
+        15.46,
+        16.04,
+        15.44,
+        61671
+      ],
+      [
+        "2026-08-14",
+        15.46,
+        15.52,
+        15.64,
+        15.25,
+        54015
+      ],
+      [
+        "2026-08-17",
+        15.64,
+        15.76,
+        15.82,
+        15.41,
+        50427
+      ],
+      [
+        "2026-08-18",
+        15.85,
+        15.67,
+        15.85,
+        15.44,
+        50545
+      ],
+      [
+        "2026-08-19",
+        16.3,
+        14.4,
+        16.3,
+        14.37,
+        165141
+      ],
+      [
+        "2026-08-20",
+        14.73,
+        14.45,
+        14.76,
+        14.36,
+        72185
+      ],
+      [
+        "2026-08-21",
+        14.3,
+        14.47,
+        14.57,
+        14.16,
+        45324
+      ],
+      [
+        "2026-08-24",
+        14.37,
+        14.16,
+        14.58,
+        13.97,
+        51831
+      ],
+      [
+        "2026-08-25",
+        14.03,
+        14.46,
+        14.57,
+        13.82,
+        53598
+      ],
+      [
+        "2026-08-26",
+        14.66,
+        14.35,
+        14.66,
+        14.23,
+        43217
+      ],
+      [
+        "2026-08-27",
+        14.28,
+        14.54,
+        14.58,
+        14.27,
+        43560
+      ],
+      [
+        "2026-08-28",
+        14.49,
+        14.68,
+        14.91,
+        14.47,
+        59031
+      ],
+      [
+        "2026-08-31",
+        14.61,
+        14.79,
+        14.82,
+        14.51,
+        46460
+      ],
+      [
+        "2026-09-01",
+        14.78,
+        14.69,
+        14.78,
+        14.51,
+        44641
+      ],
+      [
+        "2026-09-02",
+        14.55,
+        14.63,
+        14.72,
+        14.49,
+        37103
+      ],
+      [
+        "2026-09-03",
+        14.72,
+        14.63,
+        14.77,
+        14.54,
+        33548
+      ],
+      [
+        "2026-09-04",
+        14.7,
+        14.55,
+        14.86,
+        14.45,
+        56046
+      ],
+      [
+        "2026-09-07",
+        14.52,
+        14.42,
+        14.62,
+        14.37,
+        40462
+      ],
+      [
+        "2026-09-08",
+        14.42,
+        14.42,
+        14.59,
+        14.31,
+        35631
+      ],
+      [
+        "2026-09-09",
+        14.54,
+        14.35,
+        14.54,
+        14.29,
+        40772
+      ],
+      [
+        "2026-09-10",
+        14.17,
+        14.16,
+        14.36,
+        14.12,
+        37750
+      ],
+      [
+        "2026-09-11",
+        14.09,
+        13.91,
+        14.14,
+        13.67,
+        59111
+      ],
+      [
+        "2026-09-14",
+        13.97,
+        13.78,
+        13.98,
+        13.67,
+        43686
+      ],
+      [
+        "2026-09-15",
+        13.71,
+        13.4,
+        13.77,
+        13.39,
+        49329
+      ],
+      [
+        "2026-09-16",
+        13.46,
+        13.8,
+        14.33,
+        13.4,
+        112531
+      ],
+      [
+        "2026-09-17",
+        13.66,
+        13.49,
+        13.95,
+        13.42,
+        73960
+      ],
+      [
+        "2026-09-18",
+        13.55,
+        13.89,
+        13.99,
+        13.55,
+        72384
+      ],
+      [
+        "2026-09-21",
+        13.96,
+        14.03,
+        14.16,
+        13.9,
+        57890
+      ],
+      [
+        "2026-09-22",
+        14.09,
+        13.96,
+        14.21,
+        13.92,
+        57783
+      ],
+      [
+        "2026-09-23",
+        13.99,
+        13.95,
+        14.08,
+        13.86,
+        38726
+      ],
+      [
+        "2026-09-24",
+        13.92,
+        14.17,
+        14.25,
+        13.83,
+        35502
       ]
     ],
     "603208": [
@@ -135679,10 +143692,500 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         11.33,
-        11.37,
+        11.4,
         11.46,
         11.12,
-        3350
+        6941
+      ]
+    ],
+    "603212": [
+      [
+        "2026-07-02",
+        13.4,
+        12.78,
+        13.4,
+        12.78,
+        266360
+      ],
+      [
+        "2026-07-03",
+        12.9,
+        12.43,
+        12.9,
+        12.41,
+        154886
+      ],
+      [
+        "2026-07-06",
+        12.54,
+        11.73,
+        12.77,
+        11.71,
+        171699
+      ],
+      [
+        "2026-07-07",
+        11.8,
+        11.59,
+        12.1,
+        11.4,
+        140558
+      ],
+      [
+        "2026-07-08",
+        11.49,
+        11.13,
+        11.68,
+        11.12,
+        124061
+      ],
+      [
+        "2026-07-09",
+        11.15,
+        10.94,
+        11.59,
+        10.68,
+        160033
+      ],
+      [
+        "2026-07-10",
+        10.92,
+        11.52,
+        12.03,
+        10.88,
+        284545
+      ],
+      [
+        "2026-07-13",
+        11.53,
+        10.9,
+        11.56,
+        10.9,
+        171263
+      ],
+      [
+        "2026-07-14",
+        10.92,
+        10.92,
+        11.14,
+        10.56,
+        117294
+      ],
+      [
+        "2026-07-15",
+        10.92,
+        10.9,
+        11.25,
+        10.82,
+        109790
+      ],
+      [
+        "2026-07-16",
+        10.71,
+        10.63,
+        10.95,
+        10.6,
+        107305
+      ],
+      [
+        "2026-07-17",
+        10.5,
+        10.21,
+        10.55,
+        10.07,
+        125567
+      ],
+      [
+        "2026-07-20",
+        10.2,
+        9.51,
+        10.35,
+        9.32,
+        159500
+      ],
+      [
+        "2026-07-21",
+        9.51,
+        9.7,
+        9.85,
+        9.02,
+        156028
+      ],
+      [
+        "2026-07-22",
+        9.68,
+        9.51,
+        9.8,
+        9.47,
+        97413
+      ],
+      [
+        "2026-07-23",
+        9.51,
+        10.46,
+        10.46,
+        9.51,
+        167351
+      ],
+      [
+        "2026-07-24",
+        10.35,
+        10.2,
+        10.7,
+        10.16,
+        170519
+      ],
+      [
+        "2026-07-27",
+        10.29,
+        10.41,
+        10.43,
+        10.13,
+        111364
+      ],
+      [
+        "2026-07-28",
+        10.5,
+        10.36,
+        10.6,
+        10.34,
+        89509
+      ],
+      [
+        "2026-07-29",
+        10.4,
+        10.62,
+        10.66,
+        10.15,
+        116356
+      ],
+      [
+        "2026-07-30",
+        10.89,
+        10.7,
+        10.93,
+        10.57,
+        147575
+      ],
+      [
+        "2026-07-31",
+        10.68,
+        10.75,
+        10.88,
+        10.68,
+        120850
+      ],
+      [
+        "2026-08-03",
+        10.65,
+        10.94,
+        11.03,
+        10.63,
+        122961
+      ],
+      [
+        "2026-08-04",
+        11,
+        11.02,
+        11.22,
+        10.87,
+        107151
+      ],
+      [
+        "2026-08-05",
+        11.03,
+        11.22,
+        11.33,
+        10.96,
+        118536
+      ],
+      [
+        "2026-08-06",
+        11.1,
+        11.21,
+        11.38,
+        11.03,
+        101477
+      ],
+      [
+        "2026-08-07",
+        11.21,
+        11.45,
+        11.51,
+        11.09,
+        111328
+      ],
+      [
+        "2026-08-10",
+        11.5,
+        11.54,
+        11.55,
+        11.25,
+        80853
+      ],
+      [
+        "2026-08-11",
+        11.42,
+        11.76,
+        11.95,
+        11.41,
+        134492
+      ],
+      [
+        "2026-08-12",
+        11.67,
+        11.92,
+        11.99,
+        11.62,
+        125281
+      ],
+      [
+        "2026-08-13",
+        12.04,
+        11.58,
+        12.07,
+        11.57,
+        125102
+      ],
+      [
+        "2026-08-14",
+        11.6,
+        11.65,
+        11.84,
+        11.45,
+        107702
+      ],
+      [
+        "2026-08-17",
+        11.66,
+        11.98,
+        11.99,
+        11.59,
+        99197
+      ],
+      [
+        "2026-08-18",
+        11.92,
+        11.92,
+        12.16,
+        11.83,
+        69323
+      ],
+      [
+        "2026-08-19",
+        11.83,
+        11.49,
+        11.83,
+        11.45,
+        99837
+      ],
+      [
+        "2026-08-20",
+        11.61,
+        11.43,
+        11.65,
+        11.38,
+        59465
+      ],
+      [
+        "2026-08-21",
+        11.38,
+        11.51,
+        11.59,
+        11.28,
+        48835
+      ],
+      [
+        "2026-08-24",
+        11.57,
+        11.58,
+        11.9,
+        11.42,
+        72011
+      ],
+      [
+        "2026-08-25",
+        11.55,
+        11.66,
+        11.72,
+        11.36,
+        63617
+      ],
+      [
+        "2026-08-26",
+        11.72,
+        11.68,
+        12.03,
+        11.66,
+        66489
+      ],
+      [
+        "2026-08-27",
+        11.6,
+        11.72,
+        11.78,
+        11.5,
+        62331
+      ],
+      [
+        "2026-08-28",
+        11.75,
+        11.8,
+        12,
+        11.68,
+        83489
+      ],
+      [
+        "2026-08-31",
+        11.7,
+        11.62,
+        11.7,
+        11.4,
+        84722
+      ],
+      [
+        "2026-09-01",
+        11.62,
+        11.54,
+        11.68,
+        11.45,
+        59301
+      ],
+      [
+        "2026-09-02",
+        11.43,
+        11.25,
+        11.44,
+        11,
+        66335
+      ],
+      [
+        "2026-09-03",
+        11.39,
+        11.13,
+        11.43,
+        11.08,
+        60464
+      ],
+      [
+        "2026-09-04",
+        11.13,
+        11.15,
+        11.43,
+        11.08,
+        80827
+      ],
+      [
+        "2026-09-07",
+        11.15,
+        11.16,
+        11.27,
+        11.1,
+        56552
+      ],
+      [
+        "2026-09-08",
+        11.16,
+        11.7,
+        11.85,
+        11.12,
+        142562
+      ],
+      [
+        "2026-09-09",
+        11.7,
+        11.65,
+        11.99,
+        11.61,
+        81433
+      ],
+      [
+        "2026-09-10",
+        11.52,
+        11.81,
+        11.89,
+        11.47,
+        75521
+      ],
+      [
+        "2026-09-11",
+        11.73,
+        11.41,
+        11.73,
+        11.18,
+        93864
+      ],
+      [
+        "2026-09-14",
+        11.4,
+        11.46,
+        11.6,
+        11.26,
+        61837
+      ],
+      [
+        "2026-09-15",
+        11.34,
+        11.3,
+        11.58,
+        11.28,
+        51912
+      ],
+      [
+        "2026-09-16",
+        11.3,
+        11.51,
+        11.55,
+        11.19,
+        60983
+      ],
+      [
+        "2026-09-17",
+        11.6,
+        11.32,
+        11.6,
+        11.22,
+        52373
+      ],
+      [
+        "2026-09-18",
+        11.36,
+        11.82,
+        11.83,
+        11.36,
+        100797
+      ],
+      [
+        "2026-09-21",
+        11.94,
+        12.17,
+        12.32,
+        11.82,
+        136494
+      ],
+      [
+        "2026-09-22",
+        12.3,
+        11.94,
+        12.3,
+        11.86,
+        109030
+      ],
+      [
+        "2026-09-23",
+        11.89,
+        11.85,
+        12.09,
+        11.82,
+        76013
+      ],
+      [
+        "2026-09-24",
+        11.79,
+        11.75,
+        11.84,
+        11.69,
+        20798
       ]
     ],
     "603222": [
@@ -136169,10 +144672,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         8.94,
-        8.78,
+        8.49,
         8.98,
-        8.55,
-        209606
+        8.47,
+        337602
       ]
     ],
     "603259": [
@@ -136659,10 +145162,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         166.8,
-        167.37,
+        164.52,
         168.57,
-        165.8,
-        32376
+        164.05,
+        114601
       ]
     ],
     "603316": [
@@ -137149,10 +145652,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         16.9,
-        16.55,
+        16.5,
         16.99,
-        16.51,
-        75857
+        16.42,
+        144610
       ]
     ],
     "603328": [
@@ -137639,10 +146142,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         15.2,
-        14.55,
+        14.43,
         15.29,
-        14.44,
-        201814
+        14.4,
+        384292
       ]
     ],
     "603353": [
@@ -138129,10 +146632,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         45.4,
-        43.6,
-        45.4,
+        45.35,
+        45.67,
         43,
-        34728
+        59226
       ]
     ],
     "603373": [
@@ -138619,10 +147122,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         48.25,
-        49.48,
-        49.79,
+        51.1,
+        51.25,
         48.01,
-        12099
+        28732
       ]
     ],
     "603396": [
@@ -139112,7 +147615,7 @@ window.DASHBOARD_DATA = {
         35.64,
         35.64,
         32.77,
-        98413
+        103673
       ]
     ],
     "603421": [
@@ -139599,10 +148102,500 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         6.48,
-        6.42,
+        6.49,
         6.52,
-        6.38,
-        29787
+        6.34,
+        88807
+      ]
+    ],
+    "603501": [
+      [
+        "2026-07-02",
+        94.45,
+        101.27,
+        105.98,
+        92.5,
+        732519
+      ],
+      [
+        "2026-07-03",
+        100.18,
+        102.3,
+        105.2,
+        98.8,
+        440216
+      ],
+      [
+        "2026-07-06",
+        103.21,
+        97,
+        103.7,
+        96.88,
+        349788
+      ],
+      [
+        "2026-07-07",
+        96.32,
+        99.46,
+        102.8,
+        95.5,
+        346302
+      ],
+      [
+        "2026-07-08",
+        99.85,
+        100.95,
+        103.48,
+        97.01,
+        341509
+      ],
+      [
+        "2026-07-09",
+        102.15,
+        107.14,
+        107.75,
+        99.44,
+        474716
+      ],
+      [
+        "2026-07-10",
+        105.94,
+        103.21,
+        109.8,
+        103.2,
+        448600
+      ],
+      [
+        "2026-07-13",
+        103.21,
+        102.49,
+        107.53,
+        101,
+        347833
+      ],
+      [
+        "2026-07-14",
+        101,
+        106.15,
+        106.52,
+        98.35,
+        399286
+      ],
+      [
+        "2026-07-15",
+        109.58,
+        111.12,
+        112.3,
+        105.58,
+        655992
+      ],
+      [
+        "2026-07-16",
+        108.08,
+        109.85,
+        113.77,
+        108,
+        455227
+      ],
+      [
+        "2026-07-17",
+        109.03,
+        104.12,
+        112.48,
+        103.33,
+        480888
+      ],
+      [
+        "2026-07-20",
+        106,
+        101.16,
+        106.99,
+        97.99,
+        431610
+      ],
+      [
+        "2026-07-21",
+        104,
+        102.42,
+        104,
+        98.24,
+        341276
+      ],
+      [
+        "2026-07-22",
+        101.66,
+        101.98,
+        106.64,
+        100.6,
+        304762
+      ],
+      [
+        "2026-07-23",
+        103.5,
+        96.66,
+        103.5,
+        96.08,
+        292032
+      ],
+      [
+        "2026-07-24",
+        95.3,
+        96.9,
+        99.65,
+        95.08,
+        208590
+      ],
+      [
+        "2026-07-27",
+        98,
+        95.31,
+        98.58,
+        92.92,
+        199163
+      ],
+      [
+        "2026-07-28",
+        93.98,
+        91.8,
+        95.75,
+        90.63,
+        199059
+      ],
+      [
+        "2026-07-29",
+        94.46,
+        91.69,
+        94.46,
+        90.83,
+        188338
+      ],
+      [
+        "2026-07-30",
+        91.67,
+        88.5,
+        91.68,
+        86.86,
+        262063
+      ],
+      [
+        "2026-07-31",
+        90.5,
+        88.7,
+        91.87,
+        88.7,
+        263396
+      ],
+      [
+        "2026-08-03",
+        87.66,
+        88.22,
+        89.22,
+        87.02,
+        161641
+      ],
+      [
+        "2026-08-04",
+        88.68,
+        87.95,
+        88.88,
+        87.01,
+        229979
+      ],
+      [
+        "2026-08-05",
+        88.8,
+        90.83,
+        91.69,
+        88.13,
+        283238
+      ],
+      [
+        "2026-08-06",
+        89.81,
+        89.65,
+        90.25,
+        88.44,
+        248381
+      ],
+      [
+        "2026-08-07",
+        89.49,
+        89.76,
+        90.15,
+        88.41,
+        175050
+      ],
+      [
+        "2026-08-10",
+        90.09,
+        89.14,
+        90.1,
+        88.08,
+        165863
+      ],
+      [
+        "2026-08-11",
+        89,
+        93.26,
+        94.89,
+        88.68,
+        410880
+      ],
+      [
+        "2026-08-12",
+        92.71,
+        91.52,
+        93.6,
+        91.25,
+        191363
+      ],
+      [
+        "2026-08-13",
+        91.9,
+        90.02,
+        92.51,
+        90,
+        198887
+      ],
+      [
+        "2026-08-14",
+        90.45,
+        91.08,
+        91.12,
+        89.73,
+        124974
+      ],
+      [
+        "2026-08-17",
+        91.2,
+        92.14,
+        92.17,
+        90.74,
+        151553
+      ],
+      [
+        "2026-08-18",
+        91.66,
+        90.54,
+        92.15,
+        90.02,
+        182036
+      ],
+      [
+        "2026-08-19",
+        89.05,
+        86.9,
+        89.5,
+        86.59,
+        232689
+      ],
+      [
+        "2026-08-20",
+        87,
+        85.99,
+        87.35,
+        85.98,
+        138599
+      ],
+      [
+        "2026-08-21",
+        85.44,
+        85.82,
+        86.61,
+        85.01,
+        105796
+      ],
+      [
+        "2026-08-24",
+        85.83,
+        82.5,
+        85.85,
+        82.25,
+        191646
+      ],
+      [
+        "2026-08-25",
+        80.9,
+        85.55,
+        85.98,
+        80.1,
+        226671
+      ],
+      [
+        "2026-08-26",
+        85.02,
+        84,
+        85.45,
+        83.93,
+        122142
+      ],
+      [
+        "2026-08-27",
+        84.29,
+        84.54,
+        84.94,
+        83.3,
+        129072
+      ],
+      [
+        "2026-08-28",
+        84.33,
+        82,
+        85,
+        81.76,
+        197759
+      ],
+      [
+        "2026-08-31",
+        81,
+        83.27,
+        83.27,
+        80.71,
+        110466
+      ],
+      [
+        "2026-09-01",
+        82.77,
+        82.85,
+        83.38,
+        82.58,
+        71860
+      ],
+      [
+        "2026-09-02",
+        82.18,
+        80.61,
+        82.39,
+        80.38,
+        131579
+      ],
+      [
+        "2026-09-03",
+        81.01,
+        79.3,
+        81.25,
+        78.7,
+        142104
+      ],
+      [
+        "2026-09-04",
+        79.89,
+        80.25,
+        82.25,
+        79.85,
+        185333
+      ],
+      [
+        "2026-09-07",
+        81,
+        81.08,
+        81.74,
+        79.8,
+        181091
+      ],
+      [
+        "2026-09-08",
+        81,
+        80.47,
+        81.7,
+        79.39,
+        166152
+      ],
+      [
+        "2026-09-09",
+        80.22,
+        80.01,
+        80.87,
+        79.7,
+        120539
+      ],
+      [
+        "2026-09-10",
+        79.5,
+        78.93,
+        79.67,
+        78.85,
+        91541
+      ],
+      [
+        "2026-09-11",
+        78.28,
+        76.88,
+        78.28,
+        76.1,
+        191097
+      ],
+      [
+        "2026-09-14",
+        76.15,
+        77.91,
+        78.25,
+        75.85,
+        96513
+      ],
+      [
+        "2026-09-15",
+        77.38,
+        77.52,
+        78.78,
+        77.38,
+        70647
+      ],
+      [
+        "2026-09-16",
+        77.43,
+        78.4,
+        78.65,
+        76.82,
+        93841
+      ],
+      [
+        "2026-09-17",
+        77.9,
+        78.62,
+        79.15,
+        77.84,
+        90811
+      ],
+      [
+        "2026-09-18",
+        79.17,
+        81.27,
+        81.78,
+        79.17,
+        167465
+      ],
+      [
+        "2026-09-21",
+        81.36,
+        80.78,
+        82.25,
+        80.38,
+        107450
+      ],
+      [
+        "2026-09-22",
+        81.55,
+        82.88,
+        83.86,
+        81.38,
+        214904
+      ],
+      [
+        "2026-09-23",
+        82.89,
+        82.77,
+        83.22,
+        82.05,
+        78915
+      ],
+      [
+        "2026-09-24",
+        82.33,
+        82.01,
+        82.68,
+        81.86,
+        24747
       ]
     ],
     "603636": [
@@ -140089,10 +149082,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         8.21,
-        8.17,
+        7.93,
         8.55,
-        8.03,
-        365686
+        7.93,
+        550763
       ]
     ],
     "603663": [
@@ -140579,10 +149572,990 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         46.63,
-        46.4,
-        46.99,
-        46.06,
-        27366
+        46.79,
+        47.09,
+        46.01,
+        68007
+      ]
+    ],
+    "603703": [
+      [
+        "2026-07-02",
+        10.61,
+        10.86,
+        11.59,
+        10.51,
+        223272
+      ],
+      [
+        "2026-07-03",
+        10.92,
+        11.05,
+        11.15,
+        10.76,
+        150038
+      ],
+      [
+        "2026-07-06",
+        11.04,
+        10.25,
+        11.08,
+        10.23,
+        170971
+      ],
+      [
+        "2026-07-07",
+        10.26,
+        9.95,
+        10.46,
+        9.92,
+        110235
+      ],
+      [
+        "2026-07-08",
+        9.94,
+        9.76,
+        10.16,
+        9.72,
+        83384
+      ],
+      [
+        "2026-07-09",
+        9.76,
+        9.93,
+        9.94,
+        9.43,
+        86402
+      ],
+      [
+        "2026-07-10",
+        10.1,
+        10.15,
+        10.58,
+        10.02,
+        153069
+      ],
+      [
+        "2026-07-13",
+        10.19,
+        9.32,
+        10.24,
+        9.29,
+        130843
+      ],
+      [
+        "2026-07-14",
+        9.35,
+        9.32,
+        9.4,
+        8.99,
+        95201
+      ],
+      [
+        "2026-07-15",
+        9.22,
+        9.05,
+        9.33,
+        9,
+        86063
+      ],
+      [
+        "2026-07-16",
+        9.02,
+        8.97,
+        9.24,
+        8.88,
+        90960
+      ],
+      [
+        "2026-07-17",
+        8.9,
+        8.4,
+        8.98,
+        8.33,
+        121297
+      ],
+      [
+        "2026-07-20",
+        8.4,
+        7.89,
+        8.55,
+        7.75,
+        131290
+      ],
+      [
+        "2026-07-21",
+        7.99,
+        8.07,
+        8.22,
+        7.31,
+        136810
+      ],
+      [
+        "2026-07-22",
+        7.93,
+        8.3,
+        8.76,
+        7.9,
+        207316
+      ],
+      [
+        "2026-07-23",
+        8.32,
+        8.38,
+        8.47,
+        8.17,
+        100245
+      ],
+      [
+        "2026-07-24",
+        8.3,
+        8.17,
+        8.37,
+        8.07,
+        59677
+      ],
+      [
+        "2026-07-27",
+        8.08,
+        8.57,
+        8.61,
+        8.08,
+        88198
+      ],
+      [
+        "2026-07-28",
+        8.43,
+        8.53,
+        8.79,
+        8.43,
+        106265
+      ],
+      [
+        "2026-07-29",
+        8.59,
+        8.6,
+        8.64,
+        8.36,
+        97880
+      ],
+      [
+        "2026-07-30",
+        8.5,
+        8.44,
+        8.67,
+        8.37,
+        70692
+      ],
+      [
+        "2026-07-31",
+        8.57,
+        8.55,
+        8.74,
+        8.55,
+        81082
+      ],
+      [
+        "2026-08-03",
+        8.5,
+        8.88,
+        8.88,
+        8.49,
+        72244
+      ],
+      [
+        "2026-08-04",
+        8.88,
+        9.01,
+        9.06,
+        8.82,
+        80376
+      ],
+      [
+        "2026-08-05",
+        9.02,
+        9.11,
+        9.19,
+        9,
+        82375
+      ],
+      [
+        "2026-08-06",
+        9.1,
+        9.23,
+        9.32,
+        9.02,
+        73233
+      ],
+      [
+        "2026-08-07",
+        9.24,
+        9.27,
+        9.3,
+        9.03,
+        72928
+      ],
+      [
+        "2026-08-10",
+        9.29,
+        9.37,
+        9.37,
+        9.1,
+        66823
+      ],
+      [
+        "2026-08-11",
+        9.3,
+        9.27,
+        9.41,
+        9.17,
+        53814
+      ],
+      [
+        "2026-08-12",
+        9.34,
+        9.49,
+        9.56,
+        9.24,
+        64155
+      ],
+      [
+        "2026-08-13",
+        9.53,
+        9.43,
+        9.7,
+        9.4,
+        84238
+      ],
+      [
+        "2026-08-14",
+        9.53,
+        9.75,
+        10.15,
+        9.43,
+        191924
+      ],
+      [
+        "2026-08-17",
+        10.05,
+        10.73,
+        10.73,
+        9.78,
+        250163
+      ],
+      [
+        "2026-08-18",
+        10.7,
+        10.19,
+        10.87,
+        10.08,
+        320090
+      ],
+      [
+        "2026-08-19",
+        10.31,
+        9.38,
+        10.49,
+        9.33,
+        243510
+      ],
+      [
+        "2026-08-20",
+        9.52,
+        9.66,
+        9.96,
+        9.21,
+        206449
+      ],
+      [
+        "2026-08-21",
+        9.67,
+        9.67,
+        9.87,
+        9.48,
+        110755
+      ],
+      [
+        "2026-08-24",
+        9.49,
+        9.62,
+        9.8,
+        9.41,
+        115500
+      ],
+      [
+        "2026-08-25",
+        9.5,
+        10.06,
+        10.12,
+        9.45,
+        187926
+      ],
+      [
+        "2026-08-26",
+        9.96,
+        9.98,
+        10.28,
+        9.89,
+        140500
+      ],
+      [
+        "2026-08-27",
+        9.95,
+        10.16,
+        10.25,
+        9.87,
+        120807
+      ],
+      [
+        "2026-08-28",
+        10.18,
+        10.23,
+        10.37,
+        10,
+        90147
+      ],
+      [
+        "2026-08-31",
+        10.09,
+        10.31,
+        10.32,
+        10.05,
+        72779
+      ],
+      [
+        "2026-09-01",
+        10.36,
+        10.5,
+        10.54,
+        10.22,
+        99581
+      ],
+      [
+        "2026-09-02",
+        10.41,
+        10.64,
+        10.69,
+        10.37,
+        109772
+      ],
+      [
+        "2026-09-03",
+        10.66,
+        10.35,
+        10.68,
+        10.25,
+        103993
+      ],
+      [
+        "2026-09-04",
+        10.38,
+        10.21,
+        10.52,
+        10.15,
+        98158
+      ],
+      [
+        "2026-09-07",
+        10.17,
+        10.32,
+        10.35,
+        10.15,
+        77838
+      ],
+      [
+        "2026-09-08",
+        10.26,
+        10.24,
+        10.43,
+        10.14,
+        127642
+      ],
+      [
+        "2026-09-09",
+        10.2,
+        10.39,
+        10.71,
+        10.2,
+        142084
+      ],
+      [
+        "2026-09-10",
+        10.26,
+        10.15,
+        10.35,
+        10.12,
+        101130
+      ],
+      [
+        "2026-09-11",
+        10.01,
+        10.05,
+        10.33,
+        9.97,
+        108953
+      ],
+      [
+        "2026-09-14",
+        9.98,
+        9.98,
+        10.14,
+        9.93,
+        103859
+      ],
+      [
+        "2026-09-15",
+        9.92,
+        9.7,
+        9.99,
+        9.66,
+        85619
+      ],
+      [
+        "2026-09-16",
+        9.68,
+        10.35,
+        10.4,
+        9.6,
+        186073
+      ],
+      [
+        "2026-09-17",
+        10.25,
+        10.11,
+        10.54,
+        10.06,
+        113365
+      ],
+      [
+        "2026-09-18",
+        10.24,
+        10.24,
+        10.49,
+        10.18,
+        118546
+      ],
+      [
+        "2026-09-21",
+        10.26,
+        10.88,
+        11.25,
+        10.26,
+        237446
+      ],
+      [
+        "2026-09-22",
+        10.88,
+        10.59,
+        11.06,
+        10.5,
+        202942
+      ],
+      [
+        "2026-09-23",
+        10.59,
+        10.43,
+        10.88,
+        10.41,
+        130546
+      ],
+      [
+        "2026-09-24",
+        10.36,
+        10.39,
+        10.45,
+        10.29,
+        33186
+      ]
+    ],
+    "603727": [
+      [
+        "2026-07-02",
+        16.8,
+        16.72,
+        17.38,
+        16.57,
+        39616
+      ],
+      [
+        "2026-07-03",
+        16.98,
+        16.97,
+        17.45,
+        16.73,
+        43339
+      ],
+      [
+        "2026-07-06",
+        16.97,
+        16.82,
+        17.49,
+        16.58,
+        36201
+      ],
+      [
+        "2026-07-07",
+        16.72,
+        15.71,
+        16.81,
+        15.33,
+        68190
+      ],
+      [
+        "2026-07-08",
+        16,
+        15.62,
+        16.15,
+        15.44,
+        34436
+      ],
+      [
+        "2026-07-09",
+        16,
+        16.05,
+        16.26,
+        15.57,
+        48759
+      ],
+      [
+        "2026-07-10",
+        16.06,
+        16.31,
+        16.7,
+        15.7,
+        41480
+      ],
+      [
+        "2026-07-13",
+        16.43,
+        15.72,
+        16.6,
+        15.61,
+        37199
+      ],
+      [
+        "2026-07-14",
+        16.02,
+        15.55,
+        16.27,
+        15.2,
+        61240
+      ],
+      [
+        "2026-07-15",
+        15.08,
+        15.84,
+        15.91,
+        14.67,
+        64870
+      ],
+      [
+        "2026-07-16",
+        15.64,
+        15.33,
+        16.1,
+        15.2,
+        36168
+      ],
+      [
+        "2026-07-17",
+        15.19,
+        15.09,
+        15.51,
+        14.44,
+        60675
+      ],
+      [
+        "2026-07-20",
+        14.97,
+        16.6,
+        16.6,
+        14.97,
+        35690
+      ],
+      [
+        "2026-07-21",
+        16.6,
+        16.2,
+        16.6,
+        14.95,
+        104842
+      ],
+      [
+        "2026-07-22",
+        16.2,
+        15.85,
+        17.39,
+        15.5,
+        90344
+      ],
+      [
+        "2026-07-23",
+        15.66,
+        17.44,
+        17.44,
+        15.66,
+        91545
+      ],
+      [
+        "2026-07-24",
+        18.02,
+        16.35,
+        18.29,
+        16.13,
+        116970
+      ],
+      [
+        "2026-07-27",
+        15.45,
+        16.79,
+        16.95,
+        15.02,
+        89179
+      ],
+      [
+        "2026-07-28",
+        17.12,
+        16.88,
+        17.29,
+        16.66,
+        54766
+      ],
+      [
+        "2026-07-29",
+        17.28,
+        17.96,
+        18.53,
+        17.02,
+        80024
+      ],
+      [
+        "2026-07-30",
+        17.68,
+        17.67,
+        18.59,
+        17.59,
+        67133
+      ],
+      [
+        "2026-07-31",
+        17.67,
+        17.89,
+        18.08,
+        17.29,
+        52186
+      ],
+      [
+        "2026-08-03",
+        17.55,
+        17.8,
+        17.94,
+        17.41,
+        36862
+      ],
+      [
+        "2026-08-04",
+        17.91,
+        18.15,
+        18.15,
+        17.59,
+        32959
+      ],
+      [
+        "2026-08-05",
+        17.96,
+        18.15,
+        18.18,
+        17.7,
+        31322
+      ],
+      [
+        "2026-08-06",
+        18.07,
+        17.92,
+        18.47,
+        17.68,
+        36308
+      ],
+      [
+        "2026-08-07",
+        17.95,
+        18.26,
+        18.67,
+        17.74,
+        40003
+      ],
+      [
+        "2026-08-10",
+        18.18,
+        19.21,
+        19.48,
+        18.18,
+        52757
+      ],
+      [
+        "2026-08-11",
+        19.54,
+        18.98,
+        19.58,
+        18.8,
+        31488
+      ],
+      [
+        "2026-08-12",
+        18.9,
+        18.87,
+        19.3,
+        18.55,
+        30181
+      ],
+      [
+        "2026-08-13",
+        18.82,
+        18.43,
+        18.85,
+        18.36,
+        27532
+      ],
+      [
+        "2026-08-14",
+        18.32,
+        18.18,
+        18.42,
+        17.92,
+        23530
+      ],
+      [
+        "2026-08-17",
+        18,
+        18.33,
+        18.38,
+        17.9,
+        23219
+      ],
+      [
+        "2026-08-18",
+        18.42,
+        18.9,
+        19,
+        18.24,
+        33183
+      ],
+      [
+        "2026-08-19",
+        18.73,
+        18.3,
+        19.14,
+        18.3,
+        29509
+      ],
+      [
+        "2026-08-20",
+        18.3,
+        18.42,
+        18.88,
+        18.27,
+        25701
+      ],
+      [
+        "2026-08-21",
+        18.3,
+        18.63,
+        18.68,
+        18.12,
+        21491
+      ],
+      [
+        "2026-08-24",
+        18.4,
+        17.85,
+        18.77,
+        17.58,
+        38186
+      ],
+      [
+        "2026-08-25",
+        17.51,
+        18.27,
+        18.5,
+        17.51,
+        28582
+      ],
+      [
+        "2026-08-26",
+        18,
+        18.18,
+        18.3,
+        17.86,
+        19393
+      ],
+      [
+        "2026-08-27",
+        18.12,
+        18.49,
+        18.59,
+        17.98,
+        18502
+      ],
+      [
+        "2026-08-28",
+        18.53,
+        18.52,
+        18.96,
+        18.44,
+        18623
+      ],
+      [
+        "2026-08-31",
+        18.54,
+        18.13,
+        18.93,
+        17.91,
+        37095
+      ],
+      [
+        "2026-09-01",
+        18.22,
+        18.4,
+        18.71,
+        18.02,
+        28444
+      ],
+      [
+        "2026-09-02",
+        18.77,
+        17.5,
+        18.88,
+        17.5,
+        45507
+      ],
+      [
+        "2026-09-03",
+        17.36,
+        17.44,
+        17.87,
+        17.36,
+        26282
+      ],
+      [
+        "2026-09-04",
+        17.27,
+        18.17,
+        18.35,
+        17.27,
+        46508
+      ],
+      [
+        "2026-09-07",
+        18.17,
+        17.73,
+        18.18,
+        17.48,
+        32864
+      ],
+      [
+        "2026-09-08",
+        17.53,
+        18.27,
+        18.27,
+        17.53,
+        18898
+      ],
+      [
+        "2026-09-09",
+        18.45,
+        18.15,
+        18.45,
+        17.95,
+        22210
+      ],
+      [
+        "2026-09-10",
+        18.09,
+        17.63,
+        18.35,
+        17.63,
+        18946
+      ],
+      [
+        "2026-09-11",
+        18.05,
+        17.07,
+        18.07,
+        16.9,
+        28445
+      ],
+      [
+        "2026-09-14",
+        17,
+        17.1,
+        17.3,
+        16.94,
+        18226
+      ],
+      [
+        "2026-09-15",
+        17.11,
+        17.42,
+        17.91,
+        16.85,
+        26343
+      ],
+      [
+        "2026-09-16",
+        17.79,
+        17.34,
+        18.02,
+        17.1,
+        23531
+      ],
+      [
+        "2026-09-17",
+        17.21,
+        17.02,
+        17.27,
+        16.69,
+        20577
+      ],
+      [
+        "2026-09-18",
+        17.02,
+        17.6,
+        18.02,
+        16.93,
+        29131
+      ],
+      [
+        "2026-09-21",
+        17.78,
+        18.7,
+        19.36,
+        17.61,
+        60049
+      ],
+      [
+        "2026-09-22",
+        18.61,
+        18.62,
+        19,
+        18.35,
+        39411
+      ],
+      [
+        "2026-09-23",
+        18.73,
+        18.23,
+        18.73,
+        17.95,
+        30994
+      ],
+      [
+        "2026-09-24",
+        18.26,
+        18.44,
+        18.8,
+        18.26,
+        10449
       ]
     ],
     "603773": [
@@ -141069,10 +151042,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         103.01,
-        98.94,
+        100.1,
         103.99,
         97.54,
-        141342
+        237591
       ]
     ],
     "603801": [
@@ -141559,10 +151532,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         6.16,
-        6.29,
+        6.24,
         6.33,
         6.16,
-        16020
+        40008
       ]
     ],
     "603803": [
@@ -142049,10 +152022,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         13.17,
-        12.49,
+        12.46,
         13.22,
-        12.4,
-        205686
+        12.35,
+        321934
       ]
     ],
     "603816": [
@@ -142539,10 +152512,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         22.47,
-        22.5,
+        22.47,
         22.68,
         22.28,
-        7277
+        16815
       ]
     ],
     "603826": [
@@ -143029,10 +153002,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         16.88,
-        16.89,
-        17.04,
+        17.43,
+        17.6,
         16.63,
-        45353
+        134565
       ]
     ],
     "603900": [
@@ -144009,10 +153982,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         13,
-        12.7,
+        12.56,
         13.25,
-        12.51,
-        76264
+        12.44,
+        113493
       ]
     ],
     "603949": [
@@ -144502,7 +154475,7 @@ window.DASHBOARD_DATA = {
         16.9,
         16.9,
         16.57,
-        37310
+        39659
       ]
     ],
     "603991": [
@@ -144989,10 +154962,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         188.38,
-        176.45,
+        177.57,
         188.9,
         172.56,
-        18516
+        33124
       ]
     ],
     "605058": [
@@ -145479,10 +155452,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         58,
-        58.32,
-        58.8,
+        59.76,
+        60.45,
         56.7,
-        51033
+        121826
       ]
     ],
     "605179": [
@@ -145969,10 +155942,500 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         25.88,
-        25.05,
+        24.8,
         26.39,
-        24.9,
-        107794
+        24.5,
+        178059
+      ]
+    ],
+    "605196": [
+      [
+        "2026-07-02",
+        26.41,
+        25.78,
+        26.82,
+        25.67,
+        142567
+      ],
+      [
+        "2026-07-03",
+        26.16,
+        26.5,
+        27.25,
+        25.7,
+        165378
+      ],
+      [
+        "2026-07-06",
+        27.2,
+        29.15,
+        29.15,
+        26.6,
+        68618
+      ],
+      [
+        "2026-07-07",
+        29.4,
+        26.24,
+        29.89,
+        26.24,
+        218722
+      ],
+      [
+        "2026-07-08",
+        25.58,
+        23.63,
+        25.69,
+        23.62,
+        413975
+      ],
+      [
+        "2026-07-09",
+        24.11,
+        23.44,
+        25.05,
+        22.65,
+        306702
+      ],
+      [
+        "2026-07-10",
+        23.87,
+        24.32,
+        25.05,
+        22.9,
+        207255
+      ],
+      [
+        "2026-07-13",
+        24.23,
+        22.96,
+        24.67,
+        22.8,
+        139440
+      ],
+      [
+        "2026-07-14",
+        22.96,
+        25.26,
+        25.26,
+        22.71,
+        266983
+      ],
+      [
+        "2026-07-15",
+        24.85,
+        24.92,
+        25.77,
+        24.74,
+        350739
+      ],
+      [
+        "2026-07-16",
+        25.16,
+        24.53,
+        25.58,
+        24.28,
+        236509
+      ],
+      [
+        "2026-07-17",
+        24.45,
+        23.54,
+        24.61,
+        23.24,
+        224748
+      ],
+      [
+        "2026-07-20",
+        23.69,
+        25.6,
+        25.8,
+        23.41,
+        423358
+      ],
+      [
+        "2026-07-21",
+        25.53,
+        26.94,
+        26.97,
+        24.86,
+        328829
+      ],
+      [
+        "2026-07-22",
+        26.8,
+        29.63,
+        29.63,
+        26.3,
+        262146
+      ],
+      [
+        "2026-07-23",
+        29.64,
+        30.13,
+        30.68,
+        28.45,
+        403924
+      ],
+      [
+        "2026-07-24",
+        28.95,
+        29.62,
+        30.2,
+        27.88,
+        282017
+      ],
+      [
+        "2026-07-27",
+        29.46,
+        30.3,
+        30.85,
+        28.71,
+        274419
+      ],
+      [
+        "2026-07-28",
+        30.5,
+        31.03,
+        32.47,
+        30.05,
+        342966
+      ],
+      [
+        "2026-07-29",
+        30.87,
+        32.82,
+        33.7,
+        29.95,
+        338220
+      ],
+      [
+        "2026-07-30",
+        32,
+        31.66,
+        33.77,
+        31.53,
+        292810
+      ],
+      [
+        "2026-07-31",
+        30.5,
+        32.69,
+        33.66,
+        30.5,
+        271025
+      ],
+      [
+        "2026-08-03",
+        33,
+        32.26,
+        34.58,
+        32.05,
+        236589
+      ],
+      [
+        "2026-08-04",
+        32.2,
+        32.44,
+        32.8,
+        31.55,
+        176338
+      ],
+      [
+        "2026-08-05",
+        32.25,
+        32.8,
+        33.25,
+        31.85,
+        162552
+      ],
+      [
+        "2026-08-06",
+        32.84,
+        33.61,
+        33.84,
+        32.67,
+        192804
+      ],
+      [
+        "2026-08-07",
+        33.28,
+        33.88,
+        34.55,
+        32.9,
+        196986
+      ],
+      [
+        "2026-08-10",
+        33.9,
+        34.3,
+        34.94,
+        33.9,
+        156855
+      ],
+      [
+        "2026-08-11",
+        34.4,
+        35.75,
+        37.27,
+        34.4,
+        267805
+      ],
+      [
+        "2026-08-12",
+        35.68,
+        35.5,
+        37.1,
+        35.3,
+        194217
+      ],
+      [
+        "2026-08-13",
+        35.14,
+        34.52,
+        36,
+        34.35,
+        192267
+      ],
+      [
+        "2026-08-14",
+        34.51,
+        35.07,
+        35.89,
+        33.88,
+        146857
+      ],
+      [
+        "2026-08-17",
+        35,
+        35.96,
+        36.04,
+        34.73,
+        114014
+      ],
+      [
+        "2026-08-18",
+        35.97,
+        35.91,
+        36.49,
+        35.42,
+        97873
+      ],
+      [
+        "2026-08-19",
+        35.5,
+        34.5,
+        36.1,
+        34.27,
+        110194
+      ],
+      [
+        "2026-08-20",
+        34.51,
+        34.1,
+        35.6,
+        33.75,
+        127046
+      ],
+      [
+        "2026-08-21",
+        34.47,
+        35.2,
+        35.38,
+        33.88,
+        108387
+      ],
+      [
+        "2026-08-24",
+        35.36,
+        34.15,
+        35.58,
+        33.7,
+        102525
+      ],
+      [
+        "2026-08-25",
+        34.2,
+        33.8,
+        34.2,
+        32.75,
+        114805
+      ],
+      [
+        "2026-08-26",
+        34,
+        33.57,
+        34.1,
+        32.28,
+        113526
+      ],
+      [
+        "2026-08-27",
+        34,
+        35.4,
+        35.69,
+        33.03,
+        145753
+      ],
+      [
+        "2026-08-28",
+        35.46,
+        36.32,
+        37.12,
+        35.2,
+        139052
+      ],
+      [
+        "2026-08-31",
+        35.96,
+        35.08,
+        36.11,
+        34.57,
+        109332
+      ],
+      [
+        "2026-09-01",
+        35.41,
+        34.51,
+        35.88,
+        34,
+        114452
+      ],
+      [
+        "2026-09-02",
+        34.22,
+        34.15,
+        34.39,
+        32.71,
+        87903
+      ],
+      [
+        "2026-09-03",
+        34.15,
+        35.13,
+        35.5,
+        34.03,
+        101911
+      ],
+      [
+        "2026-09-04",
+        35.13,
+        34.41,
+        35.46,
+        34.2,
+        61596
+      ],
+      [
+        "2026-09-07",
+        34.5,
+        34.51,
+        34.9,
+        34.05,
+        67384
+      ],
+      [
+        "2026-09-08",
+        34.8,
+        35.95,
+        36.17,
+        34.55,
+        108701
+      ],
+      [
+        "2026-09-09",
+        36.05,
+        36.14,
+        36.69,
+        35.55,
+        75924
+      ],
+      [
+        "2026-09-10",
+        36.08,
+        36.04,
+        36.88,
+        35.75,
+        81501
+      ],
+      [
+        "2026-09-11",
+        35.75,
+        34.17,
+        35.75,
+        33.66,
+        118042
+      ],
+      [
+        "2026-09-14",
+        33.76,
+        32.14,
+        34.07,
+        31.8,
+        172967
+      ],
+      [
+        "2026-09-15",
+        32.16,
+        31.13,
+        32.4,
+        29.3,
+        238678
+      ],
+      [
+        "2026-09-16",
+        31.19,
+        30.87,
+        31.69,
+        29.1,
+        191560
+      ],
+      [
+        "2026-09-17",
+        30.58,
+        30.89,
+        31.38,
+        30.51,
+        91169
+      ],
+      [
+        "2026-09-18",
+        31,
+        31.47,
+        31.55,
+        30.75,
+        72125
+      ],
+      [
+        "2026-09-21",
+        31.81,
+        34.62,
+        34.62,
+        31.5,
+        179871
+      ],
+      [
+        "2026-09-22",
+        34.62,
+        35.51,
+        36.27,
+        33.48,
+        283664
+      ],
+      [
+        "2026-09-23",
+        35.5,
+        36.73,
+        36.87,
+        35,
+        166257
+      ],
+      [
+        "2026-09-24",
+        36.55,
+        35.84,
+        36.68,
+        35.75,
+        37190
       ]
     ],
     "605358": [
@@ -146949,10 +157412,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         53,
-        55.59,
-        55.85,
+        54.59,
+        57.15,
         52,
-        1562741
+        3418950
       ]
     ],
     "688337": [
@@ -147439,10 +157902,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         58,
-        55.5,
-        58.15,
+        57.82,
+        59.79,
         54.66,
-        4958165
+        11767102
       ]
     ],
     "688359": [
@@ -147929,10 +158392,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         114.78,
-        112.85,
-        114.78,
+        113.34,
+        115.49,
         111.3,
-        642370
+        1285692
       ]
     ],
     "688512": [
@@ -148419,10 +158882,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         17,
-        17.62,
-        17.85,
+        17.86,
+        18.12,
         16.7,
-        18136467
+        36319653
       ]
     ],
     "688578": [
@@ -149391,10 +159854,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         129,
-        125.79,
+        126.97,
         129.59,
         124.28,
-        1367760
+        2742368
       ]
     ],
     "688628": [
@@ -149881,10 +160344,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         111.87,
-        109.87,
+        114.7,
         116.38,
         107.3,
-        3798639
+        7620132
       ]
     ],
     "688656": [
@@ -150371,10 +160834,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         139,
-        139.49,
+        135.37,
         144.88,
-        137.89,
-        439349
+        134.6,
+        832714
       ]
     ],
     "000063": [
@@ -150861,10 +161324,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         32.15,
-        32.1,
+        31.98,
         32.28,
-        32.05,
-        55158
+        31.93,
+        185264
       ]
     ],
     "000159": [
@@ -151841,10 +162304,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         3.89,
-        3.76,
-        3.93,
         3.73,
-        2044472
+        3.93,
+        3.67,
+        4220805
       ]
     ],
     "000560": [
@@ -152331,10 +162794,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         3.87,
-        3.88,
+        3.79,
         4.1,
-        3.78,
-        2829866
+        3.73,
+        4454425
       ]
     ],
     "000425": [
@@ -152821,10 +163284,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         7.21,
-        7.25,
+        7.19,
         7.29,
-        7.18,
-        146578
+        7.16,
+        393214
       ]
     ],
     "000509": [
@@ -153801,10 +164264,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         71.69,
-        71.56,
+        71.11,
         72.16,
-        71.56,
-        12557
+        71.01,
+        36854
       ]
     ],
     "000607": [
@@ -154291,10 +164754,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         4.2,
-        4.18,
+        4.09,
         4.3,
-        4.1,
-        410430
+        4.04,
+        715942
       ]
     ],
     "000850": [
@@ -154784,7 +165247,7 @@ window.DASHBOARD_DATA = {
         5.12,
         5.12,
         5.12,
-        93194
+        111503
       ]
     ],
     "000948": [
@@ -155271,10 +165734,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         13.37,
-        13.27,
+        13.21,
         13.4,
-        13.23,
-        6743
+        13.17,
+        21825
       ]
     ],
     "000858": [
@@ -155761,10 +166224,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         70.1,
-        69.98,
+        69.78,
         70.26,
-        69.94,
-        20506
+        69.62,
+        58713
       ]
     ],
     "000910": [
@@ -156251,10 +166714,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         8.34,
-        7.79,
+        8.04,
         8.34,
         7.43,
-        529859
+        766114
       ]
     ],
     "000977": [
@@ -156741,10 +167204,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         70.85,
-        70.82,
+        70.45,
         71.38,
-        70.7,
-        38326
+        70.35,
+        99855
       ]
     ],
     "000981": [
@@ -157724,7 +168187,7 @@ window.DASHBOARD_DATA = {
         35.4,
         35.4,
         35.4,
-        18679
+        20032
       ]
     ],
     "001211": [
@@ -158211,10 +168674,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         25.88,
-        26.3,
+        25.99,
         26.55,
         25.87,
-        10955
+        20370
       ]
     ],
     "001233": [
@@ -161151,10 +171614,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         7.18,
-        7.24,
-        7.34,
         7.16,
-        168096
+        7.34,
+        7.08,
+        428670
       ]
     ],
     "002084": [
@@ -161641,10 +172104,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         6.55,
-        6.49,
+        6.41,
         6.89,
-        6.48,
-        365727
+        6.23,
+        622250
       ]
     ],
     "002042": [
@@ -162131,10 +172594,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         3.86,
-        3.89,
         3.93,
-        3.85,
-        93412
+        3.94,
+        3.84,
+        222411
       ]
     ],
     "002093": [
@@ -162621,10 +173084,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         7.51,
-        7.61,
-        7.67,
+        7.64,
+        7.68,
         7.46,
-        40811
+        107379
       ]
     ],
     "002095": [
@@ -163111,10 +173574,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         16.19,
-        15.86,
+        15.85,
         16.33,
-        15.8,
-        33188
+        15.73,
+        49159
       ]
     ],
     "002119": [
@@ -163601,10 +174064,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         28.52,
-        28.45,
+        28.27,
         29.61,
-        28.09,
-        720448
+        28.01,
+        937786
       ]
     ],
     "002137": [
@@ -164581,10 +175044,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         62.49,
-        61.93,
+        61.74,
         62.8,
-        61.66,
-        94736
+        61.44,
+        204463
       ]
     ],
     "002155": [
@@ -165071,10 +175534,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         24.44,
-        24.18,
+        23.98,
         24.5,
-        24.18,
-        86254
+        23.91,
+        203062
       ]
     ],
     "002161": [
@@ -165563,8 +176026,8 @@ window.DASHBOARD_DATA = {
         6.67,
         6.62,
         6.73,
-        6.6,
-        58042
+        6.59,
+        105902
       ]
     ],
     "002185": [
@@ -166051,10 +176514,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         18.03,
-        17.85,
+        17.71,
         18.17,
-        17.77,
-        509971
+        17.68,
+        1050192
       ]
     ],
     "002194": [
@@ -167034,7 +177497,7 @@ window.DASHBOARD_DATA = {
         8.43,
         8.43,
         8.06,
-        318520
+        391277
       ]
     ],
     "002273": [
@@ -168011,10 +178474,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         189.09,
-        186.81,
+        186.31,
         189.49,
         185.85,
-        33419
+        70383
       ]
     ],
     "002286": [
@@ -168501,10 +178964,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         8.54,
-        8.69,
-        8.81,
+        8.78,
+        8.88,
         8.4,
-        115453
+        244251
       ]
     ],
     "002300": [
@@ -169481,10 +179944,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         8.62,
-        8.62,
-        8.69,
+        8.67,
+        8.72,
         8.56,
-        66133
+        159006
       ]
     ],
     "002371": [
@@ -169971,10 +180434,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         663.16,
-        659.66,
+        657.96,
         665,
-        658.09,
-        6270
+        656,
+        12761
       ]
     ],
     "002345": [
@@ -170951,10 +181414,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         7.78,
-        7.81,
-        7.99,
+        7.98,
+        8.08,
         7.68,
-        173788
+        295913
       ]
     ],
     "002426": [
@@ -171441,10 +181904,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         2.95,
-        2.88,
-        2.97,
         2.85,
-        1300519
+        2.97,
+        2.84,
+        2073223
       ]
     ],
     "002449": [
@@ -173401,10 +183864,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         126.61,
-        126.72,
+        124.91,
         128,
-        126.12,
-        64078
+        124.58,
+        161242
       ]
     ],
     "002471": [
@@ -174871,10 +185334,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         19.49,
-        18.61,
+        18.63,
         19.66,
-        18.6,
-        43986
+        18.48,
+        100169
       ]
     ],
     "002517": [
@@ -175361,10 +185824,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         16.41,
-        16.46,
+        16.33,
         16.55,
-        16.29,
-        35474
+        16.28,
+        94614
       ]
     ],
     "002572": [
@@ -175851,10 +186314,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         7.55,
-        7.62,
-        7.7,
         7.54,
-        18099
+        7.7,
+        7.51,
+        41904
       ]
     ],
     "002555": [
@@ -176341,10 +186804,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         17.37,
-        17.44,
+        17.4,
         17.49,
         17.32,
-        20338
+        40965
       ]
     ],
     "002602": [
@@ -176831,10 +187294,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         14.21,
-        14.3,
+        14.2,
         14.37,
         14.12,
-        89898
+        183642
       ]
     ],
     "002605": [
@@ -177321,10 +187784,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         16.66,
-        16.62,
+        16.57,
         16.7,
-        16.56,
-        2517
+        16.5,
+        8269
       ]
     ],
     "002633": [
@@ -177811,10 +188274,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         15.72,
-        15.16,
+        15.26,
         15.72,
         15,
-        29873
+        54264
       ]
     ],
     "002614": [
@@ -178304,7 +188767,7 @@ window.DASHBOARD_DATA = {
         8.33,
         8.33,
         7.5,
-        521154
+        542402
       ]
     ],
     "002635": [
@@ -178791,10 +189254,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         16.68,
-        15.92,
+        16.08,
         16.68,
         15.85,
-        158813
+        323366
       ]
     ],
     "002640": [
@@ -179281,10 +189744,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         3.53,
-        3.59,
-        3.8,
         3.53,
-        978287
+        3.8,
+        3.45,
+        1616683
       ]
     ],
     "002638": [
@@ -179771,10 +190234,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         4.72,
-        4.89,
-        4.93,
+        4.88,
+        4.94,
         4.64,
-        245395
+        476657
       ]
     ],
     "002724": [
@@ -180261,10 +190724,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         7.14,
-        7.33,
+        7.39,
         7.66,
         7.07,
-        147543
+        285807
       ]
     ],
     "002731": [
@@ -181233,10 +191696,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         188.08,
-        186.49,
+        183.33,
         188.98,
-        185.21,
-        9261
+        182.31,
+        35091
       ]
     ],
     "002819": [
@@ -181726,7 +192189,7 @@ window.DASHBOARD_DATA = {
         26.66,
         26.66,
         25.86,
-        165245
+        176707
       ]
     ],
     "002849": [
@@ -182213,10 +192676,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         22.99,
-        23.59,
-        23.96,
+        24.88,
+        25.18,
         22.35,
-        154840
+        311115
       ]
     ],
     "002869": [
@@ -182703,10 +193166,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         16.74,
-        16.89,
-        16.99,
+        17.21,
+        17.25,
         16.61,
-        11657
+        26344
       ]
     ],
     "002909": [
@@ -183196,7 +193659,7 @@ window.DASHBOARD_DATA = {
         8.29,
         8.29,
         7.67,
-        581795
+        733032
       ]
     ],
     "002916": [
@@ -183683,10 +194146,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         414.77,
-        405.89,
+        399.75,
         415.92,
-        403,
-        11946
+        399.19,
+        29136
       ]
     ],
     "002937": [
@@ -184173,10 +194636,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         29.83,
-        29.21,
-        30.21,
+        30.36,
+        30.81,
         28.88,
-        45238
+        127114
       ]
     ],
     "002920": [
@@ -185153,10 +195616,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         17.29,
-        18,
-        18,
+        18.67,
+        19.27,
         16.99,
-        100269
+        225053
       ]
     ],
     "002965": [
@@ -186133,10 +196596,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         27.31,
-        26.37,
+        26.09,
         27.53,
-        26.35,
-        43733
+        26,
+        82009
       ]
     ],
     "000756": [
@@ -186623,10 +197086,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         14.29,
-        14.81,
+        14.27,
         15,
-        14.1,
-        277878
+        13.9,
+        464760
       ]
     ],
     "000823": [
@@ -187113,10 +197576,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         26.1,
-        25.27,
+        25.16,
         26.62,
-        25,
-        470097
+        24.76,
+        867911
       ]
     ],
     "001203": [
@@ -187603,10 +198066,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         23.35,
-        23.36,
-        23.58,
+        23.49,
+        23.66,
         23.17,
-        10894
+        28913
       ]
     ],
     "002035": [
@@ -188093,10 +198556,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         4.65,
-        4.78,
-        4.86,
+        4.89,
+        5.05,
         4.62,
-        103322
+        335789
       ]
     ],
     "002104": [
@@ -188583,10 +199046,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         10.85,
-        10.7,
+        10.63,
         10.9,
-        10.67,
-        86899
+        10.55,
+        198207
       ]
     ],
     "002443": [
@@ -189073,10 +199536,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         13.34,
-        12.92,
+        13.13,
         13.42,
         12.72,
-        123923
+        235845
       ]
     ],
     "002543": [
@@ -189563,10 +200026,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         7.24,
-        7.3,
-        7.36,
+        7.33,
+        7.4,
         7.19,
-        24675
+        54242
       ]
     ],
     "002792": [
@@ -190053,10 +200516,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         33.35,
-        33.29,
-        33.88,
+        33.51,
+        33.96,
         33.11,
-        36037
+        106629
       ]
     ],
     "002677": [
@@ -190543,10 +201006,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         6.25,
-        6.53,
-        6.63,
+        6.57,
+        6.68,
         6.25,
-        52041
+        97979
       ]
     ],
     "003040": [
@@ -191033,10 +201496,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         14.9,
-        14.72,
+        14.68,
         15.18,
-        14.71,
-        183765
+        14.51,
+        342090
       ]
     ],
     "sh000001": [
@@ -191523,10 +201986,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         3925.32,
-        3924.64,
+        3918.48,
         3930.5,
-        3921.03,
-        88768780
+        3916.95,
+        195317071
       ]
     ],
     "sz399001": [
@@ -192013,10 +202476,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         13575.07,
-        13534.33,
+        13474.7,
         13577.86,
-        13519.25,
-        113059757
+        13473.21,
+        238959008
       ]
     ],
     "sz399006": [
@@ -192503,10 +202966,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         3366.89,
-        3354.66,
-        3370.34,
-        3348.08,
-        28135201
+        3342.34,
+        3371.61,
+        3339.29,
+        62747091
       ]
     ],
     "sh000688": [
@@ -192993,10 +203456,10 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         1652.69,
-        1644.05,
+        1643.25,
         1652.69,
-        1638.62,
-        1087630
+        1636.65,
+        2453046
       ]
     ],
     "sh000016": [
@@ -193483,10 +203946,5400 @@ window.DASHBOARD_DATA = {
       [
         "2026-09-24",
         2874.14,
-        2868.69,
+        2861.3,
         2874.14,
-        2867.4,
-        5006554
+        2856.71,
+        13339884
+      ]
+    ],
+    "001270": [
+      [
+        "2026-07-02",
+        156,
+        148.47,
+        163.79,
+        148.03,
+        137002
+      ],
+      [
+        "2026-07-03",
+        150.84,
+        163.32,
+        163.32,
+        150.84,
+        46416
+      ],
+      [
+        "2026-07-06",
+        177,
+        159.39,
+        179.65,
+        158,
+        242284
+      ],
+      [
+        "2026-07-07",
+        160.33,
+        165.6,
+        172.88,
+        158.88,
+        192935
+      ],
+      [
+        "2026-07-08",
+        163.25,
+        151.33,
+        167.8,
+        151.33,
+        172204
+      ],
+      [
+        "2026-07-09",
+        155.9,
+        164.22,
+        166.46,
+        146.85,
+        160670
+      ],
+      [
+        "2026-07-10",
+        161.27,
+        166.3,
+        180.64,
+        158.2,
+        226139
+      ],
+      [
+        "2026-07-13",
+        165.11,
+        149.67,
+        165.11,
+        149.67,
+        179943
+      ],
+      [
+        "2026-07-14",
+        141,
+        134.7,
+        144.07,
+        134.7,
+        88952
+      ],
+      [
+        "2026-07-15",
+        128,
+        121.61,
+        131.8,
+        121.5,
+        161902
+      ],
+      [
+        "2026-07-16",
+        119,
+        122.16,
+        128.87,
+        118.27,
+        122544
+      ],
+      [
+        "2026-07-17",
+        120,
+        109.94,
+        121.15,
+        109.94,
+        72924
+      ],
+      [
+        "2026-07-20",
+        105.21,
+        98.95,
+        108.11,
+        98.95,
+        125660
+      ],
+      [
+        "2026-07-21",
+        98.95,
+        102,
+        103,
+        89.06,
+        167847
+      ],
+      [
+        "2026-07-22",
+        102,
+        100.11,
+        106.96,
+        99.15,
+        122209
+      ],
+      [
+        "2026-07-23",
+        99.98,
+        102.25,
+        106.22,
+        99.1,
+        104528
+      ],
+      [
+        "2026-07-24",
+        101.1,
+        96.67,
+        102.69,
+        96.5,
+        85588
+      ],
+      [
+        "2026-07-27",
+        96.5,
+        102,
+        102,
+        96.48,
+        93041
+      ],
+      [
+        "2026-07-28",
+        101.03,
+        95.99,
+        102.8,
+        95.01,
+        78786
+      ],
+      [
+        "2026-07-29",
+        98,
+        95.22,
+        98.17,
+        91.66,
+        77776
+      ],
+      [
+        "2026-07-30",
+        95.12,
+        88.05,
+        96.88,
+        87.88,
+        85539
+      ],
+      [
+        "2026-07-31",
+        92.5,
+        92.56,
+        96.66,
+        92.5,
+        97105
+      ],
+      [
+        "2026-08-03",
+        91.95,
+        99.9,
+        101.82,
+        91.95,
+        132527
+      ],
+      [
+        "2026-08-04",
+        102.03,
+        106.17,
+        106.88,
+        102.03,
+        123104
+      ],
+      [
+        "2026-08-05",
+        106.17,
+        114.42,
+        116.79,
+        105.67,
+        130298
+      ],
+      [
+        "2026-08-06",
+        112,
+        116.2,
+        118.86,
+        111.73,
+        110021
+      ],
+      [
+        "2026-08-07",
+        117.25,
+        118.38,
+        118.88,
+        114.38,
+        96968
+      ],
+      [
+        "2026-08-10",
+        120,
+        118,
+        120.5,
+        113.49,
+        91964
+      ],
+      [
+        "2026-08-11",
+        112,
+        111.77,
+        114.3,
+        110.01,
+        105016
+      ],
+      [
+        "2026-08-12",
+        111.69,
+        114.63,
+        115.65,
+        110.44,
+        68374
+      ],
+      [
+        "2026-08-13",
+        116.52,
+        114,
+        118.77,
+        114,
+        63657
+      ],
+      [
+        "2026-08-14",
+        115.01,
+        117.8,
+        118.64,
+        114.14,
+        66937
+      ],
+      [
+        "2026-08-17",
+        119.72,
+        120.85,
+        121,
+        117.8,
+        75500
+      ],
+      [
+        "2026-08-18",
+        120.6,
+        119.55,
+        121.1,
+        118.37,
+        64030
+      ],
+      [
+        "2026-08-19",
+        123.68,
+        109.48,
+        125.63,
+        108,
+        186427
+      ],
+      [
+        "2026-08-20",
+        110.63,
+        100.16,
+        110.64,
+        99.56,
+        128846
+      ],
+      [
+        "2026-08-21",
+        100.19,
+        103.9,
+        107.68,
+        99.08,
+        94983
+      ],
+      [
+        "2026-08-24",
+        101.98,
+        98.5,
+        102.96,
+        97.18,
+        75145
+      ],
+      [
+        "2026-08-25",
+        97.83,
+        100,
+        101.25,
+        96.58,
+        54304
+      ],
+      [
+        "2026-08-26",
+        102.01,
+        100.5,
+        102.58,
+        98.02,
+        50858
+      ],
+      [
+        "2026-08-27",
+        100.5,
+        102.96,
+        103.32,
+        99.3,
+        53243
+      ],
+      [
+        "2026-08-28",
+        103.34,
+        99.7,
+        103.5,
+        99.5,
+        59686
+      ],
+      [
+        "2026-08-31",
+        97,
+        101.9,
+        103.89,
+        97,
+        59546
+      ],
+      [
+        "2026-09-01",
+        102,
+        99.79,
+        102.11,
+        99.26,
+        37507
+      ],
+      [
+        "2026-09-02",
+        98.01,
+        98.52,
+        101.37,
+        97.61,
+        41684
+      ],
+      [
+        "2026-09-03",
+        98.99,
+        97.99,
+        99.82,
+        97.51,
+        33799
+      ],
+      [
+        "2026-09-04",
+        99.5,
+        96.11,
+        100.4,
+        95.2,
+        50414
+      ],
+      [
+        "2026-09-07",
+        96.23,
+        96.76,
+        97.7,
+        95.56,
+        38624
+      ],
+      [
+        "2026-09-08",
+        96.83,
+        97.35,
+        100.66,
+        96.44,
+        58628
+      ],
+      [
+        "2026-09-09",
+        97.35,
+        97.02,
+        99.2,
+        96.33,
+        45218
+      ],
+      [
+        "2026-09-10",
+        96.45,
+        97.23,
+        98.45,
+        95.12,
+        44147
+      ],
+      [
+        "2026-09-11",
+        95.5,
+        96.28,
+        97.55,
+        93.65,
+        49393
+      ],
+      [
+        "2026-09-14",
+        95,
+        97.91,
+        98.66,
+        94.9,
+        39809
+      ],
+      [
+        "2026-09-15",
+        98.02,
+        98.36,
+        99.6,
+        97.13,
+        43410
+      ],
+      [
+        "2026-09-16",
+        98.69,
+        100.22,
+        101.31,
+        98.06,
+        59257
+      ],
+      [
+        "2026-09-17",
+        99.3,
+        97.54,
+        101.2,
+        97,
+        56102
+      ],
+      [
+        "2026-09-18",
+        99.05,
+        101.01,
+        101.18,
+        99.05,
+        69110
+      ],
+      [
+        "2026-09-21",
+        103,
+        100.22,
+        103.49,
+        99.1,
+        54147
+      ],
+      [
+        "2026-09-22",
+        101.19,
+        99.99,
+        102.26,
+        99.2,
+        52386
+      ],
+      [
+        "2026-09-23",
+        100,
+        99.19,
+        100.18,
+        97.72,
+        33601
+      ],
+      [
+        "2026-09-24",
+        99.3,
+        100.39,
+        101.49,
+        99.09,
+        29058
+      ]
+    ],
+    "002079": [
+      [
+        "2026-07-02",
+        14.2,
+        14.49,
+        15.2,
+        13.78,
+        694011
+      ],
+      [
+        "2026-07-03",
+        14.32,
+        14.08,
+        14.58,
+        13.85,
+        497674
+      ],
+      [
+        "2026-07-06",
+        14.28,
+        13.85,
+        14.37,
+        13.54,
+        421731
+      ],
+      [
+        "2026-07-07",
+        13.72,
+        14.36,
+        14.6,
+        13.56,
+        673818
+      ],
+      [
+        "2026-07-08",
+        14.29,
+        13.19,
+        14.38,
+        13.05,
+        750194
+      ],
+      [
+        "2026-07-09",
+        13.26,
+        13.81,
+        13.86,
+        13,
+        522213
+      ],
+      [
+        "2026-07-10",
+        13.81,
+        13.6,
+        14.83,
+        13.6,
+        615036
+      ],
+      [
+        "2026-07-13",
+        13.46,
+        12.91,
+        14,
+        12.8,
+        538934
+      ],
+      [
+        "2026-07-14",
+        12.31,
+        11.62,
+        12.56,
+        11.62,
+        694991
+      ],
+      [
+        "2026-07-15",
+        11.51,
+        10.85,
+        11.76,
+        10.65,
+        869832
+      ],
+      [
+        "2026-07-16",
+        10.69,
+        10.21,
+        10.86,
+        10.09,
+        613225
+      ],
+      [
+        "2026-07-17",
+        10.18,
+        9.23,
+        10.25,
+        9.19,
+        685173
+      ],
+      [
+        "2026-07-20",
+        9.58,
+        8.48,
+        9.7,
+        8.33,
+        781516
+      ],
+      [
+        "2026-07-21",
+        8.61,
+        9.08,
+        9.08,
+        7.95,
+        793634
+      ],
+      [
+        "2026-07-22",
+        8.88,
+        8.81,
+        9.15,
+        8.73,
+        548305
+      ],
+      [
+        "2026-07-23",
+        8.78,
+        8.8,
+        8.87,
+        8.66,
+        372192
+      ],
+      [
+        "2026-07-24",
+        8.66,
+        8.53,
+        8.81,
+        8.49,
+        314818
+      ],
+      [
+        "2026-07-27",
+        8.68,
+        9.03,
+        9.18,
+        8.65,
+        561916
+      ],
+      [
+        "2026-07-28",
+        8.99,
+        8.91,
+        9.21,
+        8.86,
+        445071
+      ],
+      [
+        "2026-07-29",
+        8.93,
+        9.01,
+        9.12,
+        8.58,
+        481908
+      ],
+      [
+        "2026-07-30",
+        9,
+        8.72,
+        9,
+        8.68,
+        431161
+      ],
+      [
+        "2026-07-31",
+        9.02,
+        8.87,
+        9.11,
+        8.85,
+        531102
+      ],
+      [
+        "2026-08-03",
+        8.83,
+        8.97,
+        9.01,
+        8.79,
+        395802
+      ],
+      [
+        "2026-08-04",
+        9.02,
+        9.29,
+        9.36,
+        9.02,
+        505712
+      ],
+      [
+        "2026-08-05",
+        9.26,
+        9.52,
+        9.63,
+        9.23,
+        511927
+      ],
+      [
+        "2026-08-06",
+        9.44,
+        9.57,
+        9.67,
+        9.35,
+        437158
+      ],
+      [
+        "2026-08-07",
+        9.55,
+        9.71,
+        9.78,
+        9.41,
+        438998
+      ],
+      [
+        "2026-08-10",
+        9.73,
+        9.67,
+        9.76,
+        9.54,
+        321177
+      ],
+      [
+        "2026-08-11",
+        9.56,
+        9.58,
+        9.77,
+        9.54,
+        240859
+      ],
+      [
+        "2026-08-12",
+        9.56,
+        9.75,
+        9.78,
+        9.55,
+        270282
+      ],
+      [
+        "2026-08-13",
+        9.79,
+        9.53,
+        9.85,
+        9.51,
+        284747
+      ],
+      [
+        "2026-08-14",
+        9.59,
+        9.67,
+        9.68,
+        9.47,
+        222472
+      ],
+      [
+        "2026-08-17",
+        9.67,
+        10.13,
+        10.14,
+        9.62,
+        365934
+      ],
+      [
+        "2026-08-18",
+        10.1,
+        10.08,
+        10.21,
+        9.88,
+        311508
+      ],
+      [
+        "2026-08-19",
+        9.89,
+        9.48,
+        9.98,
+        9.43,
+        345593
+      ],
+      [
+        "2026-08-20",
+        9.6,
+        9.54,
+        9.7,
+        9.48,
+        197869
+      ],
+      [
+        "2026-08-21",
+        9.48,
+        9.58,
+        9.62,
+        9.37,
+        177425
+      ],
+      [
+        "2026-08-24",
+        9.51,
+        9.38,
+        9.63,
+        9.2,
+        219806
+      ],
+      [
+        "2026-08-25",
+        9.23,
+        9.37,
+        9.42,
+        8.99,
+        256935
+      ],
+      [
+        "2026-08-26",
+        9.35,
+        9.25,
+        9.37,
+        9.12,
+        250785
+      ],
+      [
+        "2026-08-27",
+        9.21,
+        9.46,
+        9.46,
+        9.19,
+        267512
+      ],
+      [
+        "2026-08-28",
+        9.4,
+        9.35,
+        9.52,
+        9.34,
+        247983
+      ],
+      [
+        "2026-08-31",
+        9.18,
+        9.41,
+        9.41,
+        9.14,
+        194474
+      ],
+      [
+        "2026-09-01",
+        9.39,
+        9.25,
+        9.41,
+        9.2,
+        221567
+      ],
+      [
+        "2026-09-02",
+        9.16,
+        9.1,
+        9.19,
+        9.05,
+        178567
+      ],
+      [
+        "2026-09-03",
+        9.14,
+        9.03,
+        9.21,
+        8.96,
+        217499
+      ],
+      [
+        "2026-09-04",
+        9.1,
+        8.9,
+        9.18,
+        8.82,
+        271363
+      ],
+      [
+        "2026-09-07",
+        8.94,
+        8.95,
+        8.99,
+        8.88,
+        158909
+      ],
+      [
+        "2026-09-08",
+        8.96,
+        8.94,
+        9.03,
+        8.88,
+        205085
+      ],
+      [
+        "2026-09-09",
+        8.95,
+        9,
+        9.04,
+        8.94,
+        221366
+      ],
+      [
+        "2026-09-10",
+        8.94,
+        8.94,
+        9.03,
+        8.86,
+        153471
+      ],
+      [
+        "2026-09-11",
+        8.81,
+        8.82,
+        8.87,
+        8.62,
+        214134
+      ],
+      [
+        "2026-09-14",
+        8.75,
+        8.84,
+        8.91,
+        8.73,
+        118840
+      ],
+      [
+        "2026-09-15",
+        8.82,
+        8.86,
+        8.95,
+        8.79,
+        137424
+      ],
+      [
+        "2026-09-16",
+        8.86,
+        9.14,
+        9.15,
+        8.8,
+        258745
+      ],
+      [
+        "2026-09-17",
+        9.11,
+        8.99,
+        9.18,
+        8.95,
+        208276
+      ],
+      [
+        "2026-09-18",
+        9.14,
+        9.18,
+        9.24,
+        9.06,
+        278788
+      ],
+      [
+        "2026-09-21",
+        9.25,
+        9.18,
+        9.26,
+        9.11,
+        237103
+      ],
+      [
+        "2026-09-22",
+        9.26,
+        9.06,
+        9.3,
+        9.03,
+        257371
+      ],
+      [
+        "2026-09-23",
+        9.06,
+        9.08,
+        9.14,
+        9,
+        177624
+      ],
+      [
+        "2026-09-24",
+        9.08,
+        8.99,
+        9.13,
+        8.99,
+        58805
+      ]
+    ],
+    "002025": [
+      [
+        "2026-07-02",
+        77.87,
+        82.97,
+        87.67,
+        76.95,
+        376085
+      ],
+      [
+        "2026-07-03",
+        84.62,
+        83.57,
+        90.56,
+        83.21,
+        316390
+      ],
+      [
+        "2026-07-06",
+        86.1,
+        91.94,
+        91.94,
+        83.2,
+        288224
+      ],
+      [
+        "2026-07-07",
+        93.59,
+        90.02,
+        93.74,
+        87.07,
+        365134
+      ],
+      [
+        "2026-07-08",
+        93.37,
+        86.17,
+        95.75,
+        85.95,
+        370641
+      ],
+      [
+        "2026-07-09",
+        86.41,
+        83.63,
+        87.85,
+        77.87,
+        405437
+      ],
+      [
+        "2026-07-10",
+        83.5,
+        79.16,
+        88.71,
+        79.16,
+        495203
+      ],
+      [
+        "2026-07-13",
+        78.18,
+        75.87,
+        81.27,
+        74.36,
+        347077
+      ],
+      [
+        "2026-07-14",
+        75.87,
+        74.24,
+        78.3,
+        70.71,
+        278996
+      ],
+      [
+        "2026-07-15",
+        73.79,
+        70.23,
+        74.46,
+        69.89,
+        164477
+      ],
+      [
+        "2026-07-16",
+        69.28,
+        71.95,
+        75.23,
+        68.88,
+        224985
+      ],
+      [
+        "2026-07-17",
+        71.63,
+        64.76,
+        72,
+        64.76,
+        222576
+      ],
+      [
+        "2026-07-20",
+        67.18,
+        63.58,
+        69.01,
+        61.7,
+        219007
+      ],
+      [
+        "2026-07-21",
+        64.5,
+        66.98,
+        67.16,
+        58.46,
+        229406
+      ],
+      [
+        "2026-07-22",
+        65.11,
+        69.55,
+        73.25,
+        65,
+        289819
+      ],
+      [
+        "2026-07-23",
+        69.55,
+        66.14,
+        72.5,
+        65.4,
+        206597
+      ],
+      [
+        "2026-07-24",
+        64.05,
+        65.9,
+        68.74,
+        64.05,
+        144216
+      ],
+      [
+        "2026-07-27",
+        65.9,
+        67.73,
+        68,
+        63.89,
+        151786
+      ],
+      [
+        "2026-07-28",
+        66.79,
+        61.62,
+        67.7,
+        61.18,
+        155838
+      ],
+      [
+        "2026-07-29",
+        62,
+        61.08,
+        62.99,
+        58.3,
+        148114
+      ],
+      [
+        "2026-07-30",
+        61,
+        57.16,
+        61.35,
+        54.97,
+        191144
+      ],
+      [
+        "2026-07-31",
+        59.96,
+        61.37,
+        62.77,
+        59.2,
+        200753
+      ],
+      [
+        "2026-08-03",
+        63.99,
+        61.39,
+        64.92,
+        60.66,
+        171567
+      ],
+      [
+        "2026-08-04",
+        63.5,
+        63.47,
+        64.68,
+        62.2,
+        156475
+      ],
+      [
+        "2026-08-05",
+        63,
+        66.33,
+        67.42,
+        62.56,
+        201808
+      ],
+      [
+        "2026-08-06",
+        64,
+        65.51,
+        66.9,
+        63.71,
+        180358
+      ],
+      [
+        "2026-08-07",
+        65.25,
+        65.77,
+        66.48,
+        63.84,
+        161482
+      ],
+      [
+        "2026-08-10",
+        66.2,
+        64.28,
+        66.55,
+        62.81,
+        152849
+      ],
+      [
+        "2026-08-11",
+        62.82,
+        64.05,
+        65.47,
+        61.8,
+        133066
+      ],
+      [
+        "2026-08-12",
+        63.81,
+        64.49,
+        66.53,
+        63.81,
+        114854
+      ],
+      [
+        "2026-08-13",
+        65.6,
+        64.96,
+        66.88,
+        64.76,
+        161100
+      ],
+      [
+        "2026-08-14",
+        65.01,
+        64.22,
+        67.48,
+        63.56,
+        121416
+      ],
+      [
+        "2026-08-17",
+        64.11,
+        65.16,
+        65.5,
+        63.61,
+        128686
+      ],
+      [
+        "2026-08-18",
+        65.38,
+        71.68,
+        71.68,
+        64.35,
+        291436
+      ],
+      [
+        "2026-08-19",
+        71.26,
+        64.51,
+        71.5,
+        64.51,
+        372781
+      ],
+      [
+        "2026-08-20",
+        63.62,
+        60.78,
+        64.5,
+        60.1,
+        248996
+      ],
+      [
+        "2026-08-21",
+        60.29,
+        62.67,
+        63.59,
+        59.31,
+        165410
+      ],
+      [
+        "2026-08-24",
+        63.89,
+        59.37,
+        64.37,
+        57.7,
+        161401
+      ],
+      [
+        "2026-08-25",
+        58.59,
+        60.67,
+        61.5,
+        57.88,
+        110257
+      ],
+      [
+        "2026-08-26",
+        60.78,
+        60.52,
+        61.81,
+        60.27,
+        76612
+      ],
+      [
+        "2026-08-27",
+        61.74,
+        62.81,
+        63,
+        60.52,
+        144384
+      ],
+      [
+        "2026-08-28",
+        62.1,
+        62.35,
+        63.78,
+        62.1,
+        102015
+      ],
+      [
+        "2026-08-31",
+        61.5,
+        65.51,
+        66.66,
+        61.18,
+        171557
+      ],
+      [
+        "2026-09-01",
+        65.49,
+        66.8,
+        67.37,
+        64.63,
+        177308
+      ],
+      [
+        "2026-09-02",
+        66.59,
+        66.42,
+        67.4,
+        64.8,
+        120935
+      ],
+      [
+        "2026-09-03",
+        66.9,
+        66.77,
+        67.24,
+        65.1,
+        82220
+      ],
+      [
+        "2026-09-04",
+        67.03,
+        64.18,
+        67.57,
+        63.76,
+        110776
+      ],
+      [
+        "2026-09-07",
+        64.99,
+        67.4,
+        68.2,
+        63,
+        139630
+      ],
+      [
+        "2026-09-08",
+        66.95,
+        65.57,
+        67.13,
+        65.31,
+        90544
+      ],
+      [
+        "2026-09-09",
+        65.88,
+        64.2,
+        66.94,
+        63.69,
+        109102
+      ],
+      [
+        "2026-09-10",
+        63.51,
+        63.4,
+        65.05,
+        63.1,
+        72237
+      ],
+      [
+        "2026-09-11",
+        62.55,
+        63.01,
+        63.88,
+        60.3,
+        111996
+      ],
+      [
+        "2026-09-14",
+        62.39,
+        65.3,
+        65.75,
+        62,
+        96703
+      ],
+      [
+        "2026-09-15",
+        64.58,
+        68.78,
+        70.28,
+        64.57,
+        212104
+      ],
+      [
+        "2026-09-16",
+        68.82,
+        70.36,
+        70.72,
+        67.68,
+        149498
+      ],
+      [
+        "2026-09-17",
+        71.22,
+        73.16,
+        76.37,
+        70.5,
+        222616
+      ],
+      [
+        "2026-09-18",
+        74.1,
+        74.2,
+        75.54,
+        72.69,
+        178700
+      ],
+      [
+        "2026-09-21",
+        74,
+        74.23,
+        75.7,
+        73.5,
+        102631
+      ],
+      [
+        "2026-09-22",
+        75,
+        73.2,
+        78,
+        72.97,
+        119756
+      ],
+      [
+        "2026-09-23",
+        73.37,
+        72.29,
+        74.25,
+        72.2,
+        74071
+      ],
+      [
+        "2026-09-24",
+        71.72,
+        71.39,
+        72.29,
+        70.55,
+        23611
+      ]
+    ],
+    "002207": [
+      [
+        "2026-07-02",
+        6.96,
+        6.7,
+        7.06,
+        6.7,
+        202304
+      ],
+      [
+        "2026-07-03",
+        6.58,
+        6.8,
+        6.85,
+        6.5,
+        128698
+      ],
+      [
+        "2026-07-06",
+        6.71,
+        6.12,
+        6.93,
+        6.12,
+        199571
+      ],
+      [
+        "2026-07-07",
+        6.07,
+        5.56,
+        6.28,
+        5.51,
+        197689
+      ],
+      [
+        "2026-07-08",
+        5.79,
+        6.03,
+        6.12,
+        5.58,
+        186555
+      ],
+      [
+        "2026-07-09",
+        6,
+        5.88,
+        6.48,
+        5.84,
+        236072
+      ],
+      [
+        "2026-07-10",
+        5.7,
+        6.05,
+        6.19,
+        5.63,
+        148947
+      ],
+      [
+        "2026-07-13",
+        6.18,
+        6,
+        6.25,
+        5.92,
+        129900
+      ],
+      [
+        "2026-07-14",
+        6.15,
+        6.26,
+        6.3,
+        6.06,
+        142651
+      ],
+      [
+        "2026-07-15",
+        5.99,
+        5.87,
+        6.15,
+        5.8,
+        168044
+      ],
+      [
+        "2026-07-16",
+        5.8,
+        5.68,
+        5.93,
+        5.56,
+        139893
+      ],
+      [
+        "2026-07-17",
+        5.73,
+        5.48,
+        5.84,
+        5.41,
+        123099
+      ],
+      [
+        "2026-07-20",
+        5.58,
+        5.11,
+        5.75,
+        4.93,
+        198345
+      ],
+      [
+        "2026-07-21",
+        4.97,
+        4.78,
+        5,
+        4.6,
+        199249
+      ],
+      [
+        "2026-07-22",
+        4.75,
+        4.88,
+        5.02,
+        4.75,
+        125537
+      ],
+      [
+        "2026-07-23",
+        4.91,
+        5.37,
+        5.37,
+        4.89,
+        159892
+      ],
+      [
+        "2026-07-24",
+        5.53,
+        5.27,
+        5.72,
+        5.24,
+        215496
+      ],
+      [
+        "2026-07-27",
+        5.16,
+        5.33,
+        5.4,
+        4.95,
+        150149
+      ],
+      [
+        "2026-07-28",
+        5.28,
+        5.31,
+        5.56,
+        5.24,
+        115499
+      ],
+      [
+        "2026-07-29",
+        5.4,
+        5.66,
+        5.69,
+        5.4,
+        140541
+      ],
+      [
+        "2026-07-30",
+        5.71,
+        5.58,
+        5.8,
+        5.45,
+        154775
+      ],
+      [
+        "2026-07-31",
+        5.42,
+        5.84,
+        6.05,
+        5.41,
+        160168
+      ],
+      [
+        "2026-08-03",
+        5.79,
+        6,
+        6.03,
+        5.72,
+        126182
+      ],
+      [
+        "2026-08-04",
+        5.97,
+        5.88,
+        6.04,
+        5.84,
+        116277
+      ],
+      [
+        "2026-08-05",
+        5.8,
+        5.98,
+        5.99,
+        5.73,
+        123437
+      ],
+      [
+        "2026-08-06",
+        5.92,
+        6.01,
+        6.08,
+        5.85,
+        88392
+      ],
+      [
+        "2026-08-07",
+        6.08,
+        5.89,
+        6.11,
+        5.83,
+        111533
+      ],
+      [
+        "2026-08-10",
+        5.88,
+        6.11,
+        6.11,
+        5.75,
+        124803
+      ],
+      [
+        "2026-08-11",
+        6.14,
+        6.29,
+        6.3,
+        6.07,
+        119638
+      ],
+      [
+        "2026-08-12",
+        6.23,
+        6.13,
+        6.23,
+        6.06,
+        99623
+      ],
+      [
+        "2026-08-13",
+        6.06,
+        5.94,
+        6.06,
+        5.93,
+        94183
+      ],
+      [
+        "2026-08-14",
+        5.93,
+        5.99,
+        6.04,
+        5.83,
+        68116
+      ],
+      [
+        "2026-08-17",
+        5.94,
+        6.05,
+        6.07,
+        5.86,
+        52824
+      ],
+      [
+        "2026-08-18",
+        6.08,
+        5.88,
+        6.15,
+        5.86,
+        99582
+      ],
+      [
+        "2026-08-19",
+        5.81,
+        5.65,
+        5.87,
+        5.64,
+        83368
+      ],
+      [
+        "2026-08-20",
+        5.64,
+        5.65,
+        5.71,
+        5.59,
+        54942
+      ],
+      [
+        "2026-08-21",
+        5.63,
+        5.75,
+        5.83,
+        5.55,
+        59024
+      ],
+      [
+        "2026-08-24",
+        5.7,
+        5.6,
+        5.7,
+        5.53,
+        54364
+      ],
+      [
+        "2026-08-25",
+        5.55,
+        5.75,
+        5.76,
+        5.52,
+        53510
+      ],
+      [
+        "2026-08-26",
+        5.69,
+        5.8,
+        5.86,
+        5.62,
+        72631
+      ],
+      [
+        "2026-08-27",
+        5.79,
+        5.77,
+        5.8,
+        5.72,
+        47760
+      ],
+      [
+        "2026-08-28",
+        5.72,
+        5.85,
+        5.88,
+        5.72,
+        55839
+      ],
+      [
+        "2026-08-31",
+        5.89,
+        6.05,
+        6.1,
+        5.77,
+        86205
+      ],
+      [
+        "2026-09-01",
+        6.06,
+        6.1,
+        6.14,
+        6,
+        76567
+      ],
+      [
+        "2026-09-02",
+        6.22,
+        6,
+        6.32,
+        5.95,
+        142724
+      ],
+      [
+        "2026-09-03",
+        5.91,
+        5.88,
+        6,
+        5.87,
+        85818
+      ],
+      [
+        "2026-09-04",
+        5.86,
+        5.9,
+        6.01,
+        5.85,
+        71029
+      ],
+      [
+        "2026-09-07",
+        5.89,
+        5.91,
+        5.95,
+        5.86,
+        47617
+      ],
+      [
+        "2026-09-08",
+        5.89,
+        6.1,
+        6.11,
+        5.86,
+        116740
+      ],
+      [
+        "2026-09-09",
+        6.07,
+        5.92,
+        6.08,
+        5.89,
+        97357
+      ],
+      [
+        "2026-09-10",
+        5.94,
+        5.9,
+        6.02,
+        5.86,
+        84314
+      ],
+      [
+        "2026-09-11",
+        5.95,
+        5.7,
+        5.99,
+        5.59,
+        128091
+      ],
+      [
+        "2026-09-14",
+        5.75,
+        5.61,
+        5.78,
+        5.58,
+        72944
+      ],
+      [
+        "2026-09-15",
+        5.62,
+        5.39,
+        5.62,
+        5.37,
+        76978
+      ],
+      [
+        "2026-09-16",
+        5.44,
+        5.54,
+        5.56,
+        5.39,
+        56276
+      ],
+      [
+        "2026-09-17",
+        5.5,
+        5.63,
+        5.66,
+        5.41,
+        56882
+      ],
+      [
+        "2026-09-18",
+        5.59,
+        5.62,
+        5.62,
+        5.54,
+        49297
+      ],
+      [
+        "2026-09-21",
+        5.6,
+        5.62,
+        5.67,
+        5.52,
+        52446
+      ],
+      [
+        "2026-09-22",
+        5.61,
+        5.55,
+        5.63,
+        5.54,
+        46930
+      ],
+      [
+        "2026-09-23",
+        5.53,
+        5.45,
+        5.54,
+        5.4,
+        39796
+      ],
+      [
+        "2026-09-24",
+        5.4,
+        5.44,
+        5.46,
+        5.4,
+        7924
+      ]
+    ],
+    "002179": [
+      [
+        "2026-07-02",
+        43.38,
+        44.11,
+        45.67,
+        42.01,
+        595319
+      ],
+      [
+        "2026-07-03",
+        43.7,
+        42.35,
+        44.44,
+        42.1,
+        464258
+      ],
+      [
+        "2026-07-06",
+        42.8,
+        43.79,
+        45.19,
+        41.33,
+        570005
+      ],
+      [
+        "2026-07-07",
+        43.5,
+        43.16,
+        44.33,
+        42.75,
+        385335
+      ],
+      [
+        "2026-07-08",
+        43.27,
+        41.22,
+        44.32,
+        41.22,
+        469225
+      ],
+      [
+        "2026-07-09",
+        41.29,
+        40.13,
+        41.69,
+        38.7,
+        614042
+      ],
+      [
+        "2026-07-10",
+        40.6,
+        39.1,
+        41.6,
+        39,
+        627803
+      ],
+      [
+        "2026-07-13",
+        39,
+        35.23,
+        39,
+        35.19,
+        737263
+      ],
+      [
+        "2026-07-14",
+        35.19,
+        35.86,
+        35.86,
+        34.04,
+        498804
+      ],
+      [
+        "2026-07-15",
+        36.5,
+        34.92,
+        36.84,
+        34.74,
+        353562
+      ],
+      [
+        "2026-07-16",
+        34.4,
+        34.01,
+        35.03,
+        33.8,
+        360386
+      ],
+      [
+        "2026-07-17",
+        33.9,
+        32.7,
+        34.23,
+        32.5,
+        351736
+      ],
+      [
+        "2026-07-20",
+        33.5,
+        32.27,
+        33.68,
+        31.88,
+        386609
+      ],
+      [
+        "2026-07-21",
+        32.41,
+        34.07,
+        34.15,
+        31.9,
+        440662
+      ],
+      [
+        "2026-07-22",
+        33.87,
+        34.31,
+        34.83,
+        33.67,
+        360285
+      ],
+      [
+        "2026-07-23",
+        34.31,
+        34.1,
+        34.4,
+        33.73,
+        212790
+      ],
+      [
+        "2026-07-24",
+        33.78,
+        33.33,
+        33.99,
+        33.3,
+        166884
+      ],
+      [
+        "2026-07-27",
+        33.52,
+        34.08,
+        34.1,
+        33.34,
+        222312
+      ],
+      [
+        "2026-07-28",
+        33.57,
+        32.91,
+        33.74,
+        32.85,
+        221696
+      ],
+      [
+        "2026-07-29",
+        32.91,
+        33.67,
+        33.69,
+        32.72,
+        230486
+      ],
+      [
+        "2026-07-30",
+        33.33,
+        33.38,
+        33.82,
+        32.85,
+        264538
+      ],
+      [
+        "2026-07-31",
+        34.43,
+        34.04,
+        34.58,
+        33.85,
+        295631
+      ],
+      [
+        "2026-08-03",
+        33.7,
+        34.07,
+        34.16,
+        33.68,
+        161428
+      ],
+      [
+        "2026-08-04",
+        34.09,
+        34.41,
+        34.6,
+        34.08,
+        262213
+      ],
+      [
+        "2026-08-05",
+        34.05,
+        34.75,
+        35.22,
+        33.94,
+        372296
+      ],
+      [
+        "2026-08-06",
+        34.45,
+        34.67,
+        34.88,
+        33.9,
+        312659
+      ],
+      [
+        "2026-08-07",
+        34.61,
+        35.46,
+        35.74,
+        34.35,
+        354191
+      ],
+      [
+        "2026-08-10",
+        35.46,
+        35.5,
+        35.99,
+        35.03,
+        223831
+      ],
+      [
+        "2026-08-11",
+        35.16,
+        35.18,
+        35.51,
+        34.8,
+        174363
+      ],
+      [
+        "2026-08-12",
+        35.06,
+        35.48,
+        35.76,
+        34.95,
+        149385
+      ],
+      [
+        "2026-08-13",
+        35.78,
+        35.47,
+        36.28,
+        35.41,
+        248913
+      ],
+      [
+        "2026-08-14",
+        35.85,
+        36.08,
+        37.24,
+        35.6,
+        276529
+      ],
+      [
+        "2026-08-17",
+        36.01,
+        35.82,
+        36.02,
+        35.12,
+        275109
+      ],
+      [
+        "2026-08-18",
+        35.62,
+        35.71,
+        36.03,
+        35.14,
+        215460
+      ],
+      [
+        "2026-08-19",
+        35.42,
+        34.38,
+        35.58,
+        34.35,
+        264365
+      ],
+      [
+        "2026-08-20",
+        34.74,
+        34.19,
+        34.78,
+        34.05,
+        153563
+      ],
+      [
+        "2026-08-21",
+        34.03,
+        34.42,
+        34.6,
+        33.88,
+        127635
+      ],
+      [
+        "2026-08-24",
+        34.5,
+        33.01,
+        34.99,
+        32.7,
+        309207
+      ],
+      [
+        "2026-08-25",
+        32.87,
+        33.37,
+        33.92,
+        32.37,
+        215202
+      ],
+      [
+        "2026-08-26",
+        33.48,
+        33.37,
+        33.68,
+        33.25,
+        149315
+      ],
+      [
+        "2026-08-27",
+        34.99,
+        35.5,
+        35.66,
+        34.25,
+        453075
+      ],
+      [
+        "2026-08-28",
+        35.31,
+        35.18,
+        35.78,
+        35.1,
+        203470
+      ],
+      [
+        "2026-08-31",
+        34.92,
+        35.25,
+        35.3,
+        34.56,
+        166358
+      ],
+      [
+        "2026-09-01",
+        35.24,
+        34.9,
+        35.24,
+        34.81,
+        139304
+      ],
+      [
+        "2026-09-02",
+        34.56,
+        34.32,
+        34.66,
+        34,
+        174741
+      ],
+      [
+        "2026-09-03",
+        34.51,
+        34.64,
+        34.78,
+        34.23,
+        119264
+      ],
+      [
+        "2026-09-04",
+        34.78,
+        34.22,
+        34.88,
+        34.07,
+        159745
+      ],
+      [
+        "2026-09-07",
+        34.25,
+        34.15,
+        34.39,
+        33.89,
+        153386
+      ],
+      [
+        "2026-09-08",
+        34.14,
+        34.01,
+        34.3,
+        33.96,
+        108644
+      ],
+      [
+        "2026-09-09",
+        34.05,
+        34.6,
+        34.74,
+        33.97,
+        177281
+      ],
+      [
+        "2026-09-10",
+        34.4,
+        34.83,
+        35.05,
+        34.17,
+        180627
+      ],
+      [
+        "2026-09-11",
+        34.52,
+        35.22,
+        36.08,
+        34.48,
+        288232
+      ],
+      [
+        "2026-09-14",
+        35.19,
+        34.18,
+        35.25,
+        34,
+        228751
+      ],
+      [
+        "2026-09-15",
+        34.01,
+        34.68,
+        35.15,
+        34,
+        195066
+      ],
+      [
+        "2026-09-16",
+        34.68,
+        34.84,
+        35.08,
+        34.35,
+        166723
+      ],
+      [
+        "2026-09-17",
+        34.69,
+        34.78,
+        35.44,
+        34.6,
+        147751
+      ],
+      [
+        "2026-09-18",
+        35,
+        35.52,
+        35.59,
+        34.99,
+        284974
+      ],
+      [
+        "2026-09-21",
+        35.52,
+        35.63,
+        36.08,
+        35.31,
+        204119
+      ],
+      [
+        "2026-09-22",
+        36,
+        35.18,
+        36.25,
+        35.11,
+        167461
+      ],
+      [
+        "2026-09-23",
+        35.18,
+        34.77,
+        35.22,
+        34.75,
+        133625
+      ],
+      [
+        "2026-09-24",
+        34.6,
+        34.57,
+        34.87,
+        34.51,
+        36589
+      ]
+    ],
+    "002313": [
+      [
+        "2026-07-02",
+        7.95,
+        7.65,
+        7.95,
+        7.56,
+        220387
+      ],
+      [
+        "2026-07-03",
+        7.59,
+        8.12,
+        8.4,
+        7.58,
+        287233
+      ],
+      [
+        "2026-07-06",
+        7.91,
+        7.77,
+        8.12,
+        7.59,
+        185182
+      ],
+      [
+        "2026-07-07",
+        7.67,
+        7.54,
+        7.82,
+        7.49,
+        93661
+      ],
+      [
+        "2026-07-08",
+        7.54,
+        7.68,
+        7.75,
+        7.47,
+        109126
+      ],
+      [
+        "2026-07-09",
+        7.6,
+        7.78,
+        7.84,
+        7.47,
+        111670
+      ],
+      [
+        "2026-07-10",
+        7.71,
+        8.03,
+        8.28,
+        7.6,
+        168918
+      ],
+      [
+        "2026-07-13",
+        8,
+        7.54,
+        8.09,
+        7.49,
+        126079
+      ],
+      [
+        "2026-07-14",
+        7.54,
+        7.83,
+        7.84,
+        7.46,
+        129074
+      ],
+      [
+        "2026-07-15",
+        7.73,
+        7.94,
+        8.04,
+        7.7,
+        119058
+      ],
+      [
+        "2026-07-16",
+        8.08,
+        8.07,
+        8.25,
+        7.88,
+        187078
+      ],
+      [
+        "2026-07-17",
+        7.86,
+        7.78,
+        8.13,
+        7.65,
+        161549
+      ],
+      [
+        "2026-07-20",
+        7.96,
+        7.58,
+        8.03,
+        7.48,
+        144668
+      ],
+      [
+        "2026-07-21",
+        7.5,
+        7.45,
+        7.6,
+        6.82,
+        202342
+      ],
+      [
+        "2026-07-22",
+        7.38,
+        7.45,
+        7.65,
+        7.3,
+        104852
+      ],
+      [
+        "2026-07-23",
+        7.36,
+        7.53,
+        7.62,
+        7.33,
+        91598
+      ],
+      [
+        "2026-07-24",
+        7.45,
+        7.38,
+        7.53,
+        7.37,
+        65476
+      ],
+      [
+        "2026-07-27",
+        7.35,
+        7.65,
+        7.65,
+        7.31,
+        74035
+      ],
+      [
+        "2026-07-28",
+        7.55,
+        7.76,
+        7.87,
+        7.55,
+        75150
+      ],
+      [
+        "2026-07-29",
+        7.76,
+        7.88,
+        7.95,
+        7.66,
+        74708
+      ],
+      [
+        "2026-07-30",
+        7.8,
+        7.65,
+        8,
+        7.61,
+        88530
+      ],
+      [
+        "2026-07-31",
+        7.83,
+        7.94,
+        8,
+        7.8,
+        90677
+      ],
+      [
+        "2026-08-03",
+        7.94,
+        8.04,
+        8.05,
+        7.88,
+        66192
+      ],
+      [
+        "2026-08-04",
+        8.04,
+        8.1,
+        8.19,
+        8,
+        66045
+      ],
+      [
+        "2026-08-05",
+        8.05,
+        8.18,
+        8.35,
+        8.05,
+        99633
+      ],
+      [
+        "2026-08-06",
+        8.12,
+        8.41,
+        8.41,
+        8.12,
+        106328
+      ],
+      [
+        "2026-08-07",
+        8.44,
+        8.2,
+        8.45,
+        8.08,
+        91095
+      ],
+      [
+        "2026-08-10",
+        8.2,
+        8.34,
+        8.34,
+        8.05,
+        64847
+      ],
+      [
+        "2026-08-11",
+        8.27,
+        8.33,
+        8.39,
+        8.2,
+        42956
+      ],
+      [
+        "2026-08-12",
+        8.34,
+        8.57,
+        8.68,
+        8.31,
+        89425
+      ],
+      [
+        "2026-08-13",
+        8.66,
+        8.59,
+        8.97,
+        8.59,
+        134323
+      ],
+      [
+        "2026-08-14",
+        8.59,
+        8.66,
+        8.76,
+        8.51,
+        81964
+      ],
+      [
+        "2026-08-17",
+        8.6,
+        8.6,
+        8.66,
+        8.4,
+        84247
+      ],
+      [
+        "2026-08-18",
+        8.69,
+        8.42,
+        8.69,
+        8.37,
+        67688
+      ],
+      [
+        "2026-08-19",
+        8.32,
+        7.98,
+        8.32,
+        7.96,
+        60167
+      ],
+      [
+        "2026-08-20",
+        8,
+        8.78,
+        8.78,
+        7.91,
+        209608
+      ],
+      [
+        "2026-08-21",
+        8.55,
+        8.84,
+        9.2,
+        8.55,
+        414980
+      ],
+      [
+        "2026-08-24",
+        8.73,
+        8.75,
+        8.99,
+        8.64,
+        242442
+      ],
+      [
+        "2026-08-25",
+        8.8,
+        8.7,
+        8.86,
+        8.53,
+        150510
+      ],
+      [
+        "2026-08-26",
+        8.7,
+        8.66,
+        8.74,
+        8.57,
+        112945
+      ],
+      [
+        "2026-08-27",
+        8.58,
+        8.62,
+        8.67,
+        8.43,
+        123931
+      ],
+      [
+        "2026-08-28",
+        8.62,
+        8.44,
+        8.64,
+        8.4,
+        123627
+      ],
+      [
+        "2026-08-31",
+        8.34,
+        8.78,
+        8.87,
+        8.28,
+        182278
+      ],
+      [
+        "2026-09-01",
+        8.77,
+        8.91,
+        8.92,
+        8.74,
+        159327
+      ],
+      [
+        "2026-09-02",
+        8.8,
+        8.85,
+        9,
+        8.79,
+        71754
+      ],
+      [
+        "2026-09-03",
+        8.85,
+        8.67,
+        9.04,
+        8.65,
+        74150
+      ],
+      [
+        "2026-09-04",
+        8.68,
+        8.59,
+        8.76,
+        8.49,
+        68592
+      ],
+      [
+        "2026-09-07",
+        8.59,
+        8.64,
+        8.73,
+        8.56,
+        59769
+      ],
+      [
+        "2026-09-08",
+        8.59,
+        8.73,
+        8.83,
+        8.59,
+        64659
+      ],
+      [
+        "2026-09-09",
+        8.75,
+        8.66,
+        8.91,
+        8.65,
+        63689
+      ],
+      [
+        "2026-09-10",
+        8.6,
+        8.51,
+        8.66,
+        8.49,
+        52645
+      ],
+      [
+        "2026-09-11",
+        8.46,
+        8.46,
+        8.64,
+        8.4,
+        71276
+      ],
+      [
+        "2026-09-14",
+        8.41,
+        8.33,
+        8.46,
+        8.29,
+        55450
+      ],
+      [
+        "2026-09-15",
+        8.33,
+        8.09,
+        8.37,
+        8.05,
+        56258
+      ],
+      [
+        "2026-09-16",
+        8.09,
+        8.33,
+        8.35,
+        8,
+        55337
+      ],
+      [
+        "2026-09-17",
+        8.33,
+        8.24,
+        8.35,
+        8.1,
+        42253
+      ],
+      [
+        "2026-09-18",
+        8.33,
+        8.3,
+        8.41,
+        8.26,
+        43227
+      ],
+      [
+        "2026-09-21",
+        8.35,
+        8.45,
+        8.45,
+        8.3,
+        49820
+      ],
+      [
+        "2026-09-22",
+        8.48,
+        9.3,
+        9.3,
+        8.41,
+        181420
+      ],
+      [
+        "2026-09-23",
+        9.67,
+        9.31,
+        9.98,
+        9.17,
+        595573
+      ],
+      [
+        "2026-09-24",
+        9.1,
+        9.13,
+        9.21,
+        8.93,
+        203800
+      ]
+    ],
+    "002554": [
+      [
+        "2026-07-02",
+        3.07,
+        3.04,
+        3.13,
+        3.03,
+        237020
+      ],
+      [
+        "2026-07-03",
+        3.03,
+        3.09,
+        3.12,
+        3,
+        218134
+      ],
+      [
+        "2026-07-06",
+        3.08,
+        3.08,
+        3.15,
+        3.06,
+        277836
+      ],
+      [
+        "2026-07-07",
+        3.07,
+        2.92,
+        3.08,
+        2.9,
+        346912
+      ],
+      [
+        "2026-07-08",
+        2.94,
+        2.94,
+        3,
+        2.93,
+        177383
+      ],
+      [
+        "2026-07-09",
+        2.99,
+        2.96,
+        3.02,
+        2.92,
+        250305
+      ],
+      [
+        "2026-07-10",
+        2.93,
+        3.02,
+        3.07,
+        2.86,
+        398917
+      ],
+      [
+        "2026-07-13",
+        3,
+        2.85,
+        3.05,
+        2.84,
+        332506
+      ],
+      [
+        "2026-07-14",
+        2.87,
+        2.95,
+        2.95,
+        2.86,
+        250468
+      ],
+      [
+        "2026-07-15",
+        2.9,
+        2.91,
+        3,
+        2.87,
+        235120
+      ],
+      [
+        "2026-07-16",
+        2.9,
+        2.85,
+        2.9,
+        2.82,
+        204637
+      ],
+      [
+        "2026-07-17",
+        2.86,
+        2.76,
+        2.91,
+        2.74,
+        250908
+      ],
+      [
+        "2026-07-20",
+        2.79,
+        2.82,
+        2.9,
+        2.78,
+        337730
+      ],
+      [
+        "2026-07-21",
+        2.79,
+        2.74,
+        2.79,
+        2.67,
+        287732
+      ],
+      [
+        "2026-07-22",
+        2.75,
+        2.77,
+        2.81,
+        2.73,
+        182586
+      ],
+      [
+        "2026-07-23",
+        2.76,
+        2.9,
+        2.9,
+        2.76,
+        352626
+      ],
+      [
+        "2026-07-24",
+        2.91,
+        2.76,
+        2.94,
+        2.76,
+        294065
+      ],
+      [
+        "2026-07-27",
+        2.72,
+        2.78,
+        2.78,
+        2.67,
+        144131
+      ],
+      [
+        "2026-07-28",
+        2.76,
+        2.78,
+        2.8,
+        2.74,
+        115926
+      ],
+      [
+        "2026-07-29",
+        2.8,
+        2.81,
+        2.84,
+        2.78,
+        173099
+      ],
+      [
+        "2026-07-30",
+        2.81,
+        2.78,
+        2.87,
+        2.74,
+        225357
+      ],
+      [
+        "2026-07-31",
+        2.77,
+        2.81,
+        2.81,
+        2.74,
+        166399
+      ],
+      [
+        "2026-08-03",
+        2.8,
+        2.86,
+        2.86,
+        2.79,
+        185131
+      ],
+      [
+        "2026-08-04",
+        2.87,
+        2.87,
+        2.88,
+        2.83,
+        110401
+      ],
+      [
+        "2026-08-05",
+        2.84,
+        2.86,
+        2.87,
+        2.83,
+        134501
+      ],
+      [
+        "2026-08-06",
+        2.85,
+        2.86,
+        2.89,
+        2.82,
+        148949
+      ],
+      [
+        "2026-08-07",
+        2.86,
+        2.82,
+        2.88,
+        2.79,
+        167358
+      ],
+      [
+        "2026-08-10",
+        2.82,
+        2.88,
+        2.88,
+        2.82,
+        217623
+      ],
+      [
+        "2026-08-11",
+        2.92,
+        2.92,
+        2.94,
+        2.86,
+        197442
+      ],
+      [
+        "2026-08-12",
+        2.91,
+        2.91,
+        2.92,
+        2.87,
+        144364
+      ],
+      [
+        "2026-08-13",
+        2.91,
+        2.85,
+        2.91,
+        2.85,
+        163445
+      ],
+      [
+        "2026-08-14",
+        2.85,
+        2.82,
+        2.87,
+        2.8,
+        182394
+      ],
+      [
+        "2026-08-17",
+        2.81,
+        2.84,
+        2.86,
+        2.79,
+        140862
+      ],
+      [
+        "2026-08-18",
+        2.88,
+        2.9,
+        2.92,
+        2.86,
+        263367
+      ],
+      [
+        "2026-08-19",
+        2.88,
+        2.8,
+        2.92,
+        2.78,
+        209440
+      ],
+      [
+        "2026-08-20",
+        2.8,
+        2.82,
+        2.86,
+        2.79,
+        122623
+      ],
+      [
+        "2026-08-21",
+        2.83,
+        2.88,
+        2.9,
+        2.79,
+        254031
+      ],
+      [
+        "2026-08-24",
+        2.89,
+        2.9,
+        2.92,
+        2.84,
+        164904
+      ],
+      [
+        "2026-08-25",
+        2.88,
+        2.97,
+        3,
+        2.87,
+        274162
+      ],
+      [
+        "2026-08-26",
+        2.97,
+        2.96,
+        2.98,
+        2.92,
+        182778
+      ],
+      [
+        "2026-08-27",
+        2.95,
+        2.94,
+        2.98,
+        2.93,
+        140924
+      ],
+      [
+        "2026-08-28",
+        2.96,
+        2.99,
+        3,
+        2.94,
+        170038
+      ],
+      [
+        "2026-08-31",
+        2.98,
+        2.94,
+        3.02,
+        2.92,
+        170485
+      ],
+      [
+        "2026-09-01",
+        2.96,
+        2.99,
+        3.02,
+        2.95,
+        162757
+      ],
+      [
+        "2026-09-02",
+        3.11,
+        2.97,
+        3.14,
+        2.95,
+        462008
+      ],
+      [
+        "2026-09-03",
+        2.97,
+        2.87,
+        2.99,
+        2.85,
+        381890
+      ],
+      [
+        "2026-09-04",
+        2.88,
+        2.88,
+        2.92,
+        2.86,
+        224397
+      ],
+      [
+        "2026-09-07",
+        2.88,
+        2.89,
+        2.91,
+        2.86,
+        126042
+      ],
+      [
+        "2026-09-08",
+        2.89,
+        3.01,
+        3.02,
+        2.88,
+        366713
+      ],
+      [
+        "2026-09-09",
+        3.02,
+        2.98,
+        3.04,
+        2.97,
+        305774
+      ],
+      [
+        "2026-09-10",
+        3.02,
+        2.97,
+        3.03,
+        2.96,
+        258299
+      ],
+      [
+        "2026-09-11",
+        3.02,
+        2.86,
+        3.03,
+        2.85,
+        441394
+      ],
+      [
+        "2026-09-14",
+        2.89,
+        2.85,
+        2.92,
+        2.82,
+        195169
+      ],
+      [
+        "2026-09-15",
+        2.85,
+        2.78,
+        2.86,
+        2.77,
+        215507
+      ],
+      [
+        "2026-09-16",
+        2.79,
+        2.81,
+        2.83,
+        2.75,
+        161876
+      ],
+      [
+        "2026-09-17",
+        2.8,
+        2.76,
+        2.81,
+        2.71,
+        193104
+      ],
+      [
+        "2026-09-18",
+        2.77,
+        2.77,
+        2.79,
+        2.74,
+        148912
+      ],
+      [
+        "2026-09-21",
+        2.77,
+        2.84,
+        2.84,
+        2.75,
+        197110
+      ],
+      [
+        "2026-09-22",
+        2.85,
+        2.82,
+        2.85,
+        2.79,
+        131339
+      ],
+      [
+        "2026-09-23",
+        2.8,
+        2.77,
+        2.83,
+        2.76,
+        163372
+      ],
+      [
+        "2026-09-24",
+        2.79,
+        2.78,
+        2.8,
+        2.76,
+        48006
+      ]
+    ],
+    "002623": [
+      [
+        "2026-07-02",
+        15.65,
+        15.59,
+        16.34,
+        15.45,
+        47970
+      ],
+      [
+        "2026-07-03",
+        16.02,
+        17.15,
+        17.15,
+        15.38,
+        93089
+      ],
+      [
+        "2026-07-06",
+        16.7,
+        16.76,
+        17.2,
+        16.18,
+        131143
+      ],
+      [
+        "2026-07-07",
+        16.68,
+        15.83,
+        16.86,
+        15.79,
+        68369
+      ],
+      [
+        "2026-07-08",
+        15.98,
+        14.89,
+        16.08,
+        14.89,
+        50371
+      ],
+      [
+        "2026-07-09",
+        14.95,
+        14.75,
+        15.69,
+        14.34,
+        67447
+      ],
+      [
+        "2026-07-10",
+        14.89,
+        16.23,
+        16.23,
+        14.75,
+        55792
+      ],
+      [
+        "2026-07-13",
+        15.62,
+        14.89,
+        16.23,
+        14.8,
+        95000
+      ],
+      [
+        "2026-07-14",
+        15.15,
+        14.67,
+        15.15,
+        14.26,
+        57123
+      ],
+      [
+        "2026-07-15",
+        14.54,
+        14.73,
+        14.99,
+        14.35,
+        50828
+      ],
+      [
+        "2026-07-16",
+        14.8,
+        14.65,
+        15.18,
+        14.37,
+        52263
+      ],
+      [
+        "2026-07-17",
+        14.64,
+        13.92,
+        14.8,
+        13.86,
+        59869
+      ],
+      [
+        "2026-07-20",
+        13.92,
+        13.25,
+        14.3,
+        12.93,
+        73930
+      ],
+      [
+        "2026-07-21",
+        13.45,
+        13.4,
+        13.45,
+        12.52,
+        61225
+      ],
+      [
+        "2026-07-22",
+        13.35,
+        13.42,
+        13.64,
+        13.2,
+        42780
+      ],
+      [
+        "2026-07-23",
+        13.46,
+        14.17,
+        14.2,
+        13.46,
+        56425
+      ],
+      [
+        "2026-07-24",
+        14.05,
+        13.82,
+        14.05,
+        13.75,
+        32558
+      ],
+      [
+        "2026-07-27",
+        13.96,
+        14.34,
+        14.36,
+        13.75,
+        38059
+      ],
+      [
+        "2026-07-28",
+        14.25,
+        14.46,
+        14.71,
+        14,
+        32047
+      ],
+      [
+        "2026-07-29",
+        14.74,
+        14.73,
+        14.86,
+        14.37,
+        37835
+      ],
+      [
+        "2026-07-30",
+        14.62,
+        14.55,
+        15.01,
+        14.51,
+        33500
+      ],
+      [
+        "2026-07-31",
+        14.8,
+        14.86,
+        15.26,
+        14.61,
+        64316
+      ],
+      [
+        "2026-08-03",
+        15.16,
+        16,
+        16.35,
+        14.97,
+        116215
+      ],
+      [
+        "2026-08-04",
+        15.84,
+        16.22,
+        16.46,
+        15.8,
+        97811
+      ],
+      [
+        "2026-08-05",
+        16.22,
+        16,
+        16.25,
+        15.91,
+        55797
+      ],
+      [
+        "2026-08-06",
+        16,
+        15.93,
+        16.05,
+        15.58,
+        37046
+      ],
+      [
+        "2026-08-07",
+        15.86,
+        15.68,
+        15.98,
+        15.57,
+        34509
+      ],
+      [
+        "2026-08-10",
+        15.73,
+        16.87,
+        16.99,
+        15.51,
+        74401
+      ],
+      [
+        "2026-08-11",
+        16.98,
+        16.9,
+        17.2,
+        16.48,
+        51937
+      ],
+      [
+        "2026-08-12",
+        16.75,
+        16.9,
+        17.12,
+        16.75,
+        31278
+      ],
+      [
+        "2026-08-13",
+        16.98,
+        16.3,
+        16.99,
+        16.2,
+        51986
+      ],
+      [
+        "2026-08-14",
+        16.3,
+        15.92,
+        16.3,
+        15.78,
+        32895
+      ],
+      [
+        "2026-08-17",
+        15.93,
+        15.97,
+        16.03,
+        15.74,
+        27064
+      ],
+      [
+        "2026-08-18",
+        15.97,
+        15.88,
+        16.02,
+        15.67,
+        32090
+      ],
+      [
+        "2026-08-19",
+        15.74,
+        15.03,
+        15.88,
+        15,
+        37857
+      ],
+      [
+        "2026-08-20",
+        15.23,
+        15.31,
+        15.42,
+        15.07,
+        25414
+      ],
+      [
+        "2026-08-21",
+        15.3,
+        15.38,
+        15.42,
+        15,
+        25048
+      ],
+      [
+        "2026-08-24",
+        15.49,
+        15.5,
+        15.79,
+        15.2,
+        24846
+      ],
+      [
+        "2026-08-25",
+        15.51,
+        15.78,
+        15.82,
+        15.27,
+        24982
+      ],
+      [
+        "2026-08-26",
+        15.96,
+        15.98,
+        16.14,
+        15.7,
+        29553
+      ],
+      [
+        "2026-08-27",
+        15.96,
+        15.98,
+        15.98,
+        15.73,
+        21645
+      ],
+      [
+        "2026-08-28",
+        16,
+        16.16,
+        16.29,
+        15.89,
+        32222
+      ],
+      [
+        "2026-08-31",
+        15.88,
+        15.88,
+        16,
+        15.62,
+        26941
+      ],
+      [
+        "2026-09-01",
+        16.13,
+        15.88,
+        16.15,
+        15.84,
+        26144
+      ],
+      [
+        "2026-09-02",
+        15.8,
+        15.76,
+        15.96,
+        15.47,
+        27017
+      ],
+      [
+        "2026-09-03",
+        15.79,
+        15.54,
+        16.06,
+        15.46,
+        24478
+      ],
+      [
+        "2026-09-04",
+        15.61,
+        15.48,
+        15.83,
+        15.29,
+        30562
+      ],
+      [
+        "2026-09-07",
+        15.5,
+        16,
+        16.11,
+        15.35,
+        34324
+      ],
+      [
+        "2026-09-08",
+        16.02,
+        16.35,
+        16.37,
+        15.96,
+        32199
+      ],
+      [
+        "2026-09-09",
+        16.37,
+        16.13,
+        16.51,
+        16.02,
+        47823
+      ],
+      [
+        "2026-09-10",
+        16,
+        16.49,
+        16.73,
+        15.72,
+        47567
+      ],
+      [
+        "2026-09-11",
+        16.34,
+        16.1,
+        16.36,
+        15.8,
+        39495
+      ],
+      [
+        "2026-09-14",
+        16.04,
+        16.05,
+        16.1,
+        15.75,
+        34160
+      ],
+      [
+        "2026-09-15",
+        15.97,
+        16.18,
+        16.45,
+        15.66,
+        42450
+      ],
+      [
+        "2026-09-16",
+        16.16,
+        16.76,
+        16.96,
+        15.85,
+        144124
+      ],
+      [
+        "2026-09-17",
+        16.65,
+        16.84,
+        17.36,
+        16.16,
+        111155
+      ],
+      [
+        "2026-09-18",
+        16.88,
+        18.52,
+        18.52,
+        16.88,
+        173543
+      ],
+      [
+        "2026-09-21",
+        18.68,
+        19.83,
+        20.37,
+        18.66,
+        290696
+      ],
+      [
+        "2026-09-22",
+        19.79,
+        19.34,
+        19.87,
+        18.7,
+        238465
+      ],
+      [
+        "2026-09-23",
+        19.68,
+        18.72,
+        20.17,
+        18.72,
+        137890
+      ],
+      [
+        "2026-09-24",
+        18.71,
+        19.14,
+        19.5,
+        18.31,
+        75551
+      ]
+    ],
+    "002902": [
+      [
+        "2026-07-02",
+        29.12,
+        27.75,
+        29.93,
+        27.66,
+        210919
+      ],
+      [
+        "2026-07-03",
+        28.24,
+        27.68,
+        28.72,
+        27.62,
+        157641
+      ],
+      [
+        "2026-07-06",
+        27.85,
+        26.8,
+        28.28,
+        26.32,
+        138591
+      ],
+      [
+        "2026-07-07",
+        26.56,
+        25.49,
+        26.8,
+        25.16,
+        133438
+      ],
+      [
+        "2026-07-08",
+        25.49,
+        24.98,
+        25.75,
+        24.16,
+        140657
+      ],
+      [
+        "2026-07-09",
+        25.1,
+        26.31,
+        26.66,
+        23.73,
+        221222
+      ],
+      [
+        "2026-07-10",
+        26.95,
+        27.42,
+        28.94,
+        26.67,
+        338131
+      ],
+      [
+        "2026-07-13",
+        26.63,
+        25.37,
+        27.76,
+        25.3,
+        223486
+      ],
+      [
+        "2026-07-14",
+        25.71,
+        26,
+        26.3,
+        24.67,
+        157019
+      ],
+      [
+        "2026-07-15",
+        26.42,
+        25.4,
+        26.48,
+        25.18,
+        139636
+      ],
+      [
+        "2026-07-16",
+        24.85,
+        24.46,
+        25.85,
+        24.31,
+        119648
+      ],
+      [
+        "2026-07-17",
+        24.12,
+        22.14,
+        24.25,
+        22.01,
+        159171
+      ],
+      [
+        "2026-07-20",
+        22.7,
+        20.54,
+        22.84,
+        20.02,
+        175117
+      ],
+      [
+        "2026-07-21",
+        20.55,
+        21.73,
+        21.78,
+        18.49,
+        206768
+      ],
+      [
+        "2026-07-22",
+        21.33,
+        21.79,
+        22.53,
+        21.29,
+        158351
+      ],
+      [
+        "2026-07-23",
+        21.79,
+        22.08,
+        22.64,
+        21.78,
+        109344
+      ],
+      [
+        "2026-07-24",
+        21.64,
+        21.93,
+        22.73,
+        21.5,
+        132010
+      ],
+      [
+        "2026-07-27",
+        21.88,
+        22.44,
+        22.46,
+        21.6,
+        109591
+      ],
+      [
+        "2026-07-28",
+        22.13,
+        21.47,
+        22.55,
+        21.37,
+        105238
+      ],
+      [
+        "2026-07-29",
+        21.33,
+        21.27,
+        21.55,
+        20.49,
+        112267
+      ],
+      [
+        "2026-07-30",
+        21.3,
+        19.85,
+        21.3,
+        19.75,
+        122953
+      ],
+      [
+        "2026-07-31",
+        20.84,
+        20.8,
+        21.76,
+        20.77,
+        145325
+      ],
+      [
+        "2026-08-03",
+        20.8,
+        22.88,
+        22.88,
+        20.51,
+        203549
+      ],
+      [
+        "2026-08-04",
+        24.24,
+        23.27,
+        24.38,
+        22.08,
+        394237
+      ],
+      [
+        "2026-08-05",
+        22.25,
+        23.63,
+        23.79,
+        22.25,
+        416920
+      ],
+      [
+        "2026-08-06",
+        23,
+        24.07,
+        24.38,
+        23,
+        302070
+      ],
+      [
+        "2026-08-07",
+        24.14,
+        24.52,
+        24.55,
+        23.64,
+        265023
+      ],
+      [
+        "2026-08-10",
+        24.63,
+        24.18,
+        25.1,
+        23.7,
+        180079
+      ],
+      [
+        "2026-08-11",
+        24.08,
+        24.26,
+        24.54,
+        23.79,
+        133959
+      ],
+      [
+        "2026-08-12",
+        24.21,
+        25.18,
+        25.43,
+        24.16,
+        167884
+      ],
+      [
+        "2026-08-13",
+        25.58,
+        24.82,
+        25.75,
+        24.82,
+        161458
+      ],
+      [
+        "2026-08-14",
+        25,
+        25.59,
+        25.63,
+        24.77,
+        155820
+      ],
+      [
+        "2026-08-17",
+        25.51,
+        26.23,
+        26.23,
+        25.5,
+        142020
+      ],
+      [
+        "2026-08-18",
+        26.05,
+        26.14,
+        26.63,
+        25.57,
+        127860
+      ],
+      [
+        "2026-08-19",
+        25.4,
+        24.14,
+        25.98,
+        24.04,
+        123732
+      ],
+      [
+        "2026-08-20",
+        24.59,
+        24.89,
+        25.36,
+        24.03,
+        115994
+      ],
+      [
+        "2026-08-21",
+        24.75,
+        24.76,
+        25.24,
+        24.29,
+        81001
+      ],
+      [
+        "2026-08-24",
+        24.7,
+        24.04,
+        24.86,
+        23.32,
+        91583
+      ],
+      [
+        "2026-08-25",
+        23.91,
+        24.45,
+        24.69,
+        23.35,
+        77524
+      ],
+      [
+        "2026-08-26",
+        24.75,
+        24.28,
+        24.75,
+        23.71,
+        68366
+      ],
+      [
+        "2026-08-27",
+        24.32,
+        25.57,
+        25.96,
+        24.32,
+        165354
+      ],
+      [
+        "2026-08-28",
+        25.28,
+        27.33,
+        28.13,
+        25.2,
+        350990
+      ],
+      [
+        "2026-08-31",
+        26.67,
+        27.19,
+        27.7,
+        26.5,
+        352192
+      ],
+      [
+        "2026-09-01",
+        27.01,
+        26.66,
+        27.19,
+        26.52,
+        168578
+      ],
+      [
+        "2026-09-02",
+        26.14,
+        26.04,
+        26.58,
+        25.97,
+        107315
+      ],
+      [
+        "2026-09-03",
+        26.59,
+        25.68,
+        26.66,
+        25.48,
+        91360
+      ],
+      [
+        "2026-09-04",
+        25.84,
+        24.71,
+        26.35,
+        24.44,
+        114692
+      ],
+      [
+        "2026-09-07",
+        25,
+        27.18,
+        27.18,
+        24.99,
+        174074
+      ],
+      [
+        "2026-09-08",
+        27.17,
+        26.91,
+        27.59,
+        26.73,
+        212596
+      ],
+      [
+        "2026-09-09",
+        27.35,
+        26.92,
+        27.59,
+        26.56,
+        157686
+      ],
+      [
+        "2026-09-10",
+        26.7,
+        28.05,
+        28.82,
+        26.4,
+        313797
+      ],
+      [
+        "2026-09-11",
+        27.4,
+        30.86,
+        30.86,
+        27.18,
+        347551
+      ],
+      [
+        "2026-09-14",
+        29.91,
+        29.92,
+        30.76,
+        29.18,
+        472657
+      ],
+      [
+        "2026-09-15",
+        30.09,
+        29.22,
+        30.28,
+        29.1,
+        263323
+      ],
+      [
+        "2026-09-16",
+        29.46,
+        29.79,
+        29.99,
+        28.74,
+        343895
+      ],
+      [
+        "2026-09-17",
+        29.45,
+        29.16,
+        30.1,
+        28.96,
+        254464
+      ],
+      [
+        "2026-09-18",
+        30.02,
+        31.2,
+        32.08,
+        29.67,
+        656530
+      ],
+      [
+        "2026-09-21",
+        30.6,
+        30.2,
+        30.8,
+        29.88,
+        479503
+      ],
+      [
+        "2026-09-22",
+        30.5,
+        29.18,
+        30.63,
+        29.07,
+        303398
+      ],
+      [
+        "2026-09-23",
+        29.01,
+        28.83,
+        29.47,
+        28.56,
+        207857
+      ],
+      [
+        "2026-09-24",
+        28.51,
+        28.3,
+        28.7,
+        28.21,
+        62382
+      ]
+    ],
+    "002980": [
+      [
+        "2026-07-02",
+        105.67,
+        101.77,
+        107.58,
+        101,
+        65771
+      ],
+      [
+        "2026-07-03",
+        100.99,
+        105.73,
+        111.95,
+        100,
+        117292
+      ],
+      [
+        "2026-07-06",
+        105.8,
+        111.04,
+        116.3,
+        104,
+        167858
+      ],
+      [
+        "2026-07-07",
+        107.1,
+        101.3,
+        111.48,
+        99.94,
+        117452
+      ],
+      [
+        "2026-07-08",
+        103.98,
+        97.1,
+        104.67,
+        95.32,
+        83759
+      ],
+      [
+        "2026-07-09",
+        100.09,
+        98.54,
+        102,
+        92.21,
+        92706
+      ],
+      [
+        "2026-07-10",
+        99.69,
+        96.43,
+        105.37,
+        96.3,
+        86654
+      ],
+      [
+        "2026-07-13",
+        96.4,
+        86.79,
+        98.2,
+        86.79,
+        80422
+      ],
+      [
+        "2026-07-14",
+        86.66,
+        92.85,
+        93.06,
+        85.1,
+        79538
+      ],
+      [
+        "2026-07-15",
+        102.14,
+        102.14,
+        102.14,
+        101.45,
+        50710
+      ],
+      [
+        "2026-07-16",
+        98.9,
+        107.37,
+        112.35,
+        98,
+        181730
+      ],
+      [
+        "2026-07-17",
+        106.3,
+        96.63,
+        107.5,
+        96.63,
+        114939
+      ],
+      [
+        "2026-07-20",
+        93.57,
+        86.97,
+        97.87,
+        86.97,
+        127749
+      ],
+      [
+        "2026-07-21",
+        88.36,
+        92.4,
+        92.45,
+        78.27,
+        125554
+      ],
+      [
+        "2026-07-22",
+        91.08,
+        87.48,
+        94.12,
+        86.23,
+        103333
+      ],
+      [
+        "2026-07-23",
+        87.74,
+        84.59,
+        90.89,
+        83.5,
+        79436
+      ],
+      [
+        "2026-07-24",
+        83.07,
+        81.9,
+        85.3,
+        80.23,
+        59485
+      ],
+      [
+        "2026-07-27",
+        82,
+        84.5,
+        85,
+        79.6,
+        59556
+      ],
+      [
+        "2026-07-28",
+        80.97,
+        76.05,
+        83.82,
+        76.05,
+        73669
+      ],
+      [
+        "2026-07-29",
+        75.13,
+        70.59,
+        75.4,
+        68.46,
+        128486
+      ],
+      [
+        "2026-07-30",
+        70.92,
+        63.53,
+        71.16,
+        63.53,
+        78248
+      ],
+      [
+        "2026-07-31",
+        68.7,
+        66.26,
+        69.8,
+        66.23,
+        101412
+      ],
+      [
+        "2026-08-03",
+        65.07,
+        62.93,
+        66.66,
+        62.06,
+        83758
+      ],
+      [
+        "2026-08-04",
+        65.01,
+        69.22,
+        69.22,
+        63.2,
+        51963
+      ],
+      [
+        "2026-08-05",
+        68.57,
+        76.14,
+        76.14,
+        67.06,
+        131624
+      ],
+      [
+        "2026-08-06",
+        75.63,
+        79.03,
+        80.55,
+        74,
+        109091
+      ],
+      [
+        "2026-08-07",
+        79.71,
+        82.79,
+        83.75,
+        78.3,
+        89798
+      ],
+      [
+        "2026-08-10",
+        83.04,
+        84.52,
+        86.13,
+        81.4,
+        80686
+      ],
+      [
+        "2026-08-11",
+        83.26,
+        84.1,
+        85.3,
+        80.73,
+        54578
+      ],
+      [
+        "2026-08-12",
+        84.11,
+        87.35,
+        90,
+        83.55,
+        71788
+      ],
+      [
+        "2026-08-13",
+        88.88,
+        90.21,
+        94.29,
+        87.88,
+        101923
+      ],
+      [
+        "2026-08-14",
+        90.58,
+        95.08,
+        99.23,
+        90.58,
+        140247
+      ],
+      [
+        "2026-08-17",
+        95.15,
+        100.2,
+        100.56,
+        91.55,
+        125149
+      ],
+      [
+        "2026-08-18",
+        102,
+        105.26,
+        107.5,
+        102,
+        130736
+      ],
+      [
+        "2026-08-19",
+        101.2,
+        94.73,
+        102.88,
+        94.73,
+        106251
+      ],
+      [
+        "2026-08-20",
+        97.99,
+        97.99,
+        101,
+        93,
+        100896
+      ],
+      [
+        "2026-08-21",
+        98.03,
+        98.44,
+        107.79,
+        97.41,
+        183010
+      ],
+      [
+        "2026-08-24",
+        103.02,
+        93.98,
+        103.05,
+        91.05,
+        140167
+      ],
+      [
+        "2026-08-25",
+        91.68,
+        94.52,
+        96.9,
+        90.85,
+        86204
+      ],
+      [
+        "2026-08-26",
+        98.38,
+        92.77,
+        98.7,
+        91.28,
+        84024
+      ],
+      [
+        "2026-08-27",
+        94.8,
+        102.05,
+        102.05,
+        94.09,
+        111938
+      ],
+      [
+        "2026-08-28",
+        104.01,
+        100.89,
+        106.45,
+        100.63,
+        107849
+      ],
+      [
+        "2026-08-31",
+        99.88,
+        101.3,
+        103.38,
+        98.31,
+        81763
+      ],
+      [
+        "2026-09-01",
+        101.5,
+        99.97,
+        102,
+        96.57,
+        79369
+      ],
+      [
+        "2026-09-02",
+        98.39,
+        96.96,
+        99.15,
+        96.23,
+        53544
+      ],
+      [
+        "2026-09-03",
+        100,
+        106.66,
+        106.66,
+        99.25,
+        148611
+      ],
+      [
+        "2026-09-04",
+        114.53,
+        107.36,
+        117.33,
+        106.56,
+        178643
+      ],
+      [
+        "2026-09-07",
+        110.04,
+        118.1,
+        118.1,
+        107.56,
+        112061
+      ],
+      [
+        "2026-09-08",
+        124.88,
+        129.91,
+        129.91,
+        121.5,
+        178356
+      ],
+      [
+        "2026-09-09",
+        132.5,
+        134.32,
+        137.37,
+        128.08,
+        170904
+      ],
+      [
+        "2026-09-10",
+        134,
+        132.91,
+        134.99,
+        129.52,
+        96860
+      ],
+      [
+        "2026-09-11",
+        131.7,
+        127.2,
+        132.45,
+        122.99,
+        114372
+      ],
+      [
+        "2026-09-14",
+        124.84,
+        123.48,
+        126.7,
+        119.56,
+        102165
+      ],
+      [
+        "2026-09-15",
+        123.57,
+        117.9,
+        124.49,
+        117.5,
+        95816
+      ],
+      [
+        "2026-09-16",
+        117.93,
+        119.54,
+        122.38,
+        115,
+        98714
+      ],
+      [
+        "2026-09-17",
+        119.56,
+        116.39,
+        122.21,
+        115.77,
+        94333
+      ],
+      [
+        "2026-09-18",
+        118.07,
+        128.03,
+        128.03,
+        114.73,
+        162208
+      ],
+      [
+        "2026-09-21",
+        128.38,
+        118.45,
+        128.57,
+        116.31,
+        183402
+      ],
+      [
+        "2026-09-22",
+        117.55,
+        113.1,
+        118.44,
+        112.26,
+        149101
+      ],
+      [
+        "2026-09-23",
+        115.36,
+        116.05,
+        118.6,
+        112.08,
+        123284
+      ],
+      [
+        "2026-09-24",
+        114.34,
+        110.98,
+        115.69,
+        110,
+        36612
+      ]
+    ],
+    "003022": [
+      [
+        "2026-07-02",
+        24.5,
+        24.23,
+        25.24,
+        23.58,
+        203513
+      ],
+      [
+        "2026-07-03",
+        24.23,
+        23.13,
+        24.4,
+        23.1,
+        218667
+      ],
+      [
+        "2026-07-06",
+        23.14,
+        22.22,
+        23.48,
+        22.2,
+        202860
+      ],
+      [
+        "2026-07-07",
+        23.58,
+        23.15,
+        24.25,
+        23.04,
+        367364
+      ],
+      [
+        "2026-07-08",
+        22.94,
+        21.33,
+        22.96,
+        21.29,
+        298453
+      ],
+      [
+        "2026-07-09",
+        21.33,
+        21.66,
+        21.74,
+        20.5,
+        224161
+      ],
+      [
+        "2026-07-10",
+        21.73,
+        20.79,
+        21.74,
+        20.77,
+        204390
+      ],
+      [
+        "2026-07-13",
+        20.64,
+        19.32,
+        20.74,
+        19.27,
+        201856
+      ],
+      [
+        "2026-07-14",
+        19.65,
+        19.89,
+        19.97,
+        19.28,
+        141562
+      ],
+      [
+        "2026-07-15",
+        19.95,
+        19.73,
+        20.29,
+        19.62,
+        129095
+      ],
+      [
+        "2026-07-16",
+        19.6,
+        19.11,
+        19.69,
+        19.04,
+        126229
+      ],
+      [
+        "2026-07-17",
+        19.05,
+        18.35,
+        19.29,
+        18.33,
+        136025
+      ],
+      [
+        "2026-07-20",
+        18.42,
+        17.64,
+        18.8,
+        17.35,
+        155546
+      ],
+      [
+        "2026-07-21",
+        17.64,
+        18.64,
+        18.64,
+        17.61,
+        168378
+      ],
+      [
+        "2026-07-22",
+        18.46,
+        18.28,
+        18.66,
+        18.23,
+        117627
+      ],
+      [
+        "2026-07-23",
+        18.29,
+        18.86,
+        18.91,
+        18.2,
+        127340
+      ],
+      [
+        "2026-07-24",
+        18.68,
+        18.33,
+        18.79,
+        18.28,
+        93727
+      ],
+      [
+        "2026-07-27",
+        18.33,
+        18.94,
+        18.95,
+        18.24,
+        108164
+      ],
+      [
+        "2026-07-28",
+        18.72,
+        18.6,
+        19.1,
+        18.48,
+        103518
+      ],
+      [
+        "2026-07-29",
+        18.55,
+        18.95,
+        19.05,
+        18.2,
+        113848
+      ],
+      [
+        "2026-07-30",
+        18.84,
+        18.73,
+        19.01,
+        18.45,
+        99449
+      ],
+      [
+        "2026-07-31",
+        19.1,
+        18.77,
+        19.31,
+        18.74,
+        133066
+      ],
+      [
+        "2026-08-03",
+        18.69,
+        19.24,
+        19.45,
+        18.62,
+        144129
+      ],
+      [
+        "2026-08-04",
+        19.3,
+        19.7,
+        19.84,
+        19.23,
+        104455
+      ],
+      [
+        "2026-08-05",
+        19.65,
+        19.83,
+        19.98,
+        19.55,
+        104133
+      ],
+      [
+        "2026-08-06",
+        19.76,
+        19.9,
+        19.97,
+        19.65,
+        108505
+      ],
+      [
+        "2026-08-07",
+        20,
+        20.22,
+        20.37,
+        19.77,
+        107061
+      ],
+      [
+        "2026-08-10",
+        20.23,
+        20.59,
+        20.67,
+        20.02,
+        111316
+      ],
+      [
+        "2026-08-11",
+        20.6,
+        20.41,
+        20.7,
+        20.35,
+        76201
+      ],
+      [
+        "2026-08-12",
+        20.41,
+        20.64,
+        20.69,
+        20.31,
+        74757
+      ],
+      [
+        "2026-08-13",
+        20.57,
+        20.25,
+        20.8,
+        20.25,
+        85345
+      ],
+      [
+        "2026-08-14",
+        20.33,
+        20.38,
+        20.5,
+        20.15,
+        76245
+      ],
+      [
+        "2026-08-17",
+        20.38,
+        20.84,
+        20.88,
+        20.21,
+        104830
+      ],
+      [
+        "2026-08-18",
+        21,
+        20.89,
+        21.25,
+        20.74,
+        111499
+      ],
+      [
+        "2026-08-19",
+        20.73,
+        20.7,
+        21.11,
+        20.6,
+        135926
+      ],
+      [
+        "2026-08-20",
+        20.86,
+        20.26,
+        20.92,
+        20.22,
+        109800
+      ],
+      [
+        "2026-08-21",
+        20.12,
+        20.11,
+        20.29,
+        19.9,
+        77945
+      ],
+      [
+        "2026-08-24",
+        20.2,
+        20.25,
+        20.42,
+        19.95,
+        86631
+      ],
+      [
+        "2026-08-25",
+        20.04,
+        19.8,
+        20.18,
+        19.6,
+        86688
+      ],
+      [
+        "2026-08-26",
+        19.77,
+        19.83,
+        20.12,
+        19.72,
+        60412
+      ],
+      [
+        "2026-08-27",
+        19.8,
+        20.05,
+        20.05,
+        19.62,
+        68173
+      ],
+      [
+        "2026-08-28",
+        19.93,
+        20.09,
+        20.24,
+        19.88,
+        69504
+      ],
+      [
+        "2026-08-31",
+        19.87,
+        20.12,
+        20.15,
+        19.74,
+        69901
+      ],
+      [
+        "2026-09-01",
+        20.11,
+        19.94,
+        20.17,
+        19.78,
+        81768
+      ],
+      [
+        "2026-09-02",
+        19.8,
+        19.41,
+        19.85,
+        19.39,
+        80500
+      ],
+      [
+        "2026-09-03",
+        19.51,
+        19.54,
+        19.62,
+        19.38,
+        53424
+      ],
+      [
+        "2026-09-04",
+        19.57,
+        19.31,
+        19.98,
+        19.21,
+        70151
+      ],
+      [
+        "2026-09-07",
+        19.25,
+        19.4,
+        19.56,
+        19.22,
+        57778
+      ],
+      [
+        "2026-09-08",
+        19.33,
+        19.55,
+        19.63,
+        19.3,
+        51233
+      ],
+      [
+        "2026-09-09",
+        19.52,
+        19.63,
+        19.78,
+        19.45,
+        46038
+      ],
+      [
+        "2026-09-10",
+        19.5,
+        19.36,
+        19.63,
+        19.31,
+        44050
+      ],
+      [
+        "2026-09-11",
+        19.22,
+        19.03,
+        19.26,
+        18.61,
+        59007
+      ],
+      [
+        "2026-09-14",
+        18.85,
+        19.18,
+        19.36,
+        18.75,
+        54016
+      ],
+      [
+        "2026-09-15",
+        19.11,
+        19.07,
+        19.32,
+        19.02,
+        44583
+      ],
+      [
+        "2026-09-16",
+        19.09,
+        19.93,
+        19.96,
+        19,
+        86725
+      ],
+      [
+        "2026-09-17",
+        19.75,
+        19.74,
+        20.22,
+        19.65,
+        113175
+      ],
+      [
+        "2026-09-18",
+        19.83,
+        19.69,
+        20.17,
+        19.56,
+        88187
+      ],
+      [
+        "2026-09-21",
+        19.63,
+        19.72,
+        19.78,
+        19.44,
+        84160
+      ],
+      [
+        "2026-09-22",
+        19.74,
+        19.41,
+        19.92,
+        19.37,
+        72858
+      ],
+      [
+        "2026-09-23",
+        19.41,
+        19.47,
+        19.59,
+        19.22,
+        56893
+      ],
+      [
+        "2026-09-24",
+        19.39,
+        19.58,
+        20.18,
+        19.31,
+        46561
       ]
     ]
   },

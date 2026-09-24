@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609240959"></script>
+<script src="data.js?v=202609241021"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -460,7 +460,7 @@
       <div class="db-title">断板反包</div>
       <div class="db-date" id="db-date"></div>
     </div>
-    <button class="db-entry-in" id="db-entry-in" title="返回刚刚浏览的页面（再点 💰 图标进入断板反包）" onclick="closeDuanban()">💰</button>
+    <button class="db-entry-in" id="db-entry-in" title="返回刚刚浏览的页面（可拖动，位置与主页面 💰 同步）">💰</button>
     <div class="db-note" id="db-note"></div>
     <div id="db-pools"></div>
   </div>
@@ -1319,20 +1319,29 @@ window.addEventListener('popstate', function () {
   document.body.classList.toggle('db-open', open);
   if (open) renderDuanban(); else closeDbModal();
 });
-/* R98k：悬浮球拖拽（>6px 位移判定为拖动，否则视为点击进入）+ 位置记忆 */
+/* R98k：悬浮球拖拽（>6px 位移判定为拖动，否则视为点击）+ 位置记忆
+   R98p：主页面 💰(#db-entry) 与断板反包页 💰(#db-entry-in) 共享同一位置——
+   两者同一时刻只显示一个，拖动任意一个、另一个同步到相同坐标，localStorage 单键记忆 */
 (function () {
-  var b = document.getElementById('db-entry');
-  if (!b) return;
-  var POS_KEY = 'dbFloatPos', sx = null, sy = 0, ox = 0, oy = 0, moved = false;
+  var btns = [];
+  ['db-entry', 'db-entry-in'].forEach(function (id) {
+    var b = document.getElementById(id);
+    if (b) btns.push(b);
+  });
+  if (!btns.length) return;
+  var POS_KEY = 'dbFloatPos', sx = null, sy = 0, ox = 0, oy = 0, moved = false, cur = null;
   function clamp(l, t) {
-    var w = b.offsetWidth || 46, h = b.offsetHeight || 46;
+    var ref = cur || btns[0];
+    var w = ref.offsetWidth || 46, h = ref.offsetHeight || 46;
     return [Math.max(6, Math.min(l, window.innerWidth - w - 6)),
             Math.max(6, Math.min(t, window.innerHeight - h - 6))];
   }
   function place(l, t, save) {
     var c = clamp(l, t);
-    b.style.left = c[0] + 'px'; b.style.top = c[1] + 'px';
-    b.style.right = 'auto'; b.style.bottom = 'auto';
+    btns.forEach(function (b) {
+      b.style.left = c[0] + 'px'; b.style.top = c[1] + 'px';
+      b.style.right = 'auto'; b.style.bottom = 'auto';
+    });
     if (save) { try { localStorage.setItem(POS_KEY, JSON.stringify({
       lf: c[0] / window.innerWidth, tf: c[1] / window.innerHeight })); } catch (e) {} }
   }
@@ -1342,35 +1351,38 @@ window.addEventListener('popstate', function () {
       if (p && isFinite(p.lf) && isFinite(p.tf)) place(p.lf * window.innerWidth, p.tf * window.innerHeight, false);
     } catch (e) {}
   }
+  function act(b) { if (b.id === 'db-entry-in') closeDuanban(); else openDuanban(); }
+  btns.forEach(function (b) {
+    b.addEventListener('pointerdown', function (e) {
+      cur = b; sx = e.clientX; sy = e.clientY;
+      var r = b.getBoundingClientRect(); ox = r.left; oy = r.top; moved = false;
+      try { b.setPointerCapture(e.pointerId); } catch (err) {}
+      e.preventDefault();
+    });
+    b.addEventListener('pointermove', function (e) {
+      if (sx === null) return;
+      var dx = e.clientX - sx, dy = e.clientY - sy;
+      if (!moved && Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+      moved = true;
+      place(ox + dx, oy + dy, false);
+    });
+    b.addEventListener('pointerup', function () {
+      if (sx === null) return;
+      sx = null;
+      if (moved) {
+        var r = b.getBoundingClientRect();
+        place(r.left, r.top, true);
+      } else {
+        act(b);
+      }
+    });
+    b.addEventListener('pointercancel', function () { sx = null; });
+    b.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(b); }
+    });
+  });
   applySaved();
   window.addEventListener('resize', applySaved);
-  b.addEventListener('pointerdown', function (e) {
-    sx = e.clientX; sy = e.clientY;
-    var r = b.getBoundingClientRect(); ox = r.left; oy = r.top; moved = false;
-    try { b.setPointerCapture(e.pointerId); } catch (err) {}
-    e.preventDefault();
-  });
-  b.addEventListener('pointermove', function (e) {
-    if (sx === null) return;
-    var dx = e.clientX - sx, dy = e.clientY - sy;
-    if (!moved && Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
-    moved = true;
-    place(ox + dx, oy + dy, false);
-  });
-  b.addEventListener('pointerup', function () {
-    if (sx === null) return;
-    sx = null;
-    if (moved) {
-      var r = b.getBoundingClientRect();
-      place(r.left, r.top, true);
-    } else {
-      openDuanban();
-    }
-  });
-  b.addEventListener('pointercancel', function () { sx = null; });
-  b.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDuanban(); }
-  });
 })();
 
 function openDbModal(key) {
@@ -1618,7 +1630,7 @@ function stkFetchKlineSina(sym, cb) {
     cb(kl);
   }
   var timer = setTimeout(function () { finish(null); }, 8000);
-  window[cbN] = function (arr) {
+  var onData = function (arr) {
     clearTimeout(timer);
     var out = [];
     (arr || []).forEach(function (r) {
@@ -1629,6 +1641,15 @@ function stkFetchKlineSina(sym, cb) {
     });
     finish(out.length > 1 ? out : null);
   };
+  // R98q 修复：新浪 jsonp_v2.php 的「var 回调名=」响应是全局赋值，会直接覆盖 window 上预注册的回调函数，
+  // 导致数据无人处理、兜底必失败。改用 defineProperty 同时拦截「赋值」与「函数调用」两种回调形态。
+  try {
+    Object.defineProperty(window, cbN, {
+      configurable: true,
+      get: function () { return onData; },
+      set: function (v) { onData(v); }
+    });
+  } catch (err) { window[cbN] = onData; }
   s.onerror = function () { clearTimeout(timer); finish(null); };
   s.src = 'https://quotes.sina.cn/cn/api/jsonp_v2.php/var%20' + cbN + '=/CN_MarketDataService.getKLineData?symbol=' + encodeURIComponent(sym) + '&scale=240&ma=no&datalen=60&_r=' + Date.now();
   document.body.appendChild(s);
