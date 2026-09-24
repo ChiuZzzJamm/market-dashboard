@@ -8,7 +8,9 @@
   → 收盘不破 T 日低点、不破 5 日线（MA5，容差 1%）
 
 数据源（零 MCP，纯 HTTP）：
-  - 涨停池：东财 push2ex getTopicZTPool（含 hybk 申万行业字段，date=YYYYMMDD 无横线）
+  - 涨停池：同花顺 limit_up_pool 为主源（data.10jqka.com.cn/dataapi/limit_up/limit_up_pool，
+    date=YYYYMMDD 无横线）；失败回退东财 push2ex getTopicZTPool。
+    同花顺涨停池无申万 hybk 字段，hybk 由东财涨停池 best-effort 映射补充（不影响主源成败）。
   - K 线：腾讯 ifzq fqkline 为主源（web.ifzq.gtimg.cn，独立域名、限频少），
     新浪 CN_MarketData.getKLineData 为备用源（限频时兜底），均 scale=240 日线
   - 板块数据（R98）：同花顺 thshy 行业页面（50个大类行业）+ v4/line 历史K线；
@@ -203,8 +205,86 @@ def recent_trade_dates(n):
     return out
 
 
-def fetch_zt_pool(date):
-    """返回涨停池列表 [{c,n,hybk,...}]。区分失败与空池：失败返回 None（限频/网络），
+# ---------- R99i: 涨停池（主源=同花顺 limit_up_pool，兜底=东财 push2ex） ----------
+THS_LIMITUP_API = "https://data.10jqka.com.cn/dataapi/limit_up/limit_up_pool"
+
+# 同花顺 limit_up_pool 历史日期用 YYYYMMDD（无横线）；内容含 code/name/change_rate/
+# high_days(连板描述)/reason_type，但不含申万 hybk，hybk 由东财涨停池 best-effort 补。
+THS_LIMITUP_FIELDS = "199112,10,9001,330323,330324,330325,9002,330329,133971"
+
+
+def curl_ths_json(url, timeout=15):
+    """同花顺 JSON 接口：curl + Referer，失败返回 None。"""
+    r = subprocess.run(["curl", "-s", "--max-time", str(timeout),
+                       "-H", "User-Agent: " + UA,
+                       "-H", "Referer: https://data.10jqka.com.cn/",
+                       url], capture_output=True, timeout=timeout + 10)
+    out = r.stdout or b""
+    if isinstance(out, (bytes, bytearray)):
+        try:
+            out = out.decode("utf-8")
+        except UnicodeDecodeError:
+            out = out.decode("gbk", errors="replace")
+    if not isinstance(out, str) or not out.strip():
+        return None
+    try:
+        return json.loads(out)
+    except Exception:
+        return None
+
+
+def _ths_lbc_of(it):
+    """连板天数：从 high_days（如 '3天3板'）提取首日数字；'首板'→1。"""
+    hd = str(it.get("high_days") or "")
+    for pat in (r"(\d+)\s*天", r"(\d+)\s*连板"):
+        m = re.search(pat, hd)
+        if m:
+            return int(m.group(1))
+    return 1
+
+
+def fetch_ths_zt_pool(date):
+    """同花顺涨停池（主源）。成功返回 [{c,n,hybk,lbc,reason,pct}]（hybk 初始为空），
+    失败（限频/网络/空响应）返回 None。limit 上限 200，分页拉全。"""
+    out = []
+    seen = 0
+    for page in range(1, 10):
+        d = curl_ths_json(
+            f"{THS_LIMITUP_API}?page={page}&limit=200&field={THS_LIMITUP_FIELDS}"
+            f"&filter=HS,GEM2STAR&order_field=330324&order_type=0&date={date}")
+        if not d or d.get("status_code") not in (0, None) \
+                or not (d.get("data") or {}).get("info"):
+            # 首页就失败 → 主源失败；后续页为空视为拉完
+            if page == 1:
+                return None
+            break
+        info = d["data"]["info"]
+        for it in info:
+            code = str(it.get("code") or "")
+            if not re.fullmatch(r"\d{6}", code):
+                continue
+            pct = it.get("change_rate")
+            try:
+                pct = float(pct) if pct not in (None, "") else None
+            except Exception:
+                pct = None
+            out.append({
+                "c": code,
+                "n": str(it.get("name") or code),
+                "hybk": "",  # 同花顺无申万行业字段，下方由东财 best-effort 补充
+                "lbc": _ths_lbc_of(it),
+                "reason": str(it.get("reason_type") or ""),
+                "pct": pct,
+            })
+        seen += len(info)
+        total = ((d.get("data") or {}).get("page") or {}).get("total")
+        if not total or seen >= int(total):
+            break
+    return out
+
+
+def fetch_zt_pool_em(date):
+    """东财 push2ex 涨停池（兜底 / hybk 映射用）。失败返回 None（限频/网络），
     空池返回 []（节假日等）。失败自动重试 2 次（退避 3s/6s）。"""
     for attempt in range(3):
         j = get_json_curl(f"{EX}/getTopicZTPool?ut={UT_ZT}&dpt=wz.ztzt"
@@ -214,6 +294,39 @@ def fetch_zt_pool(date):
         if attempt < 2:
             time.sleep(3 * (attempt + 1))
     return None
+
+
+def _em_hybk_map(date):
+    """东财涨停池 -> {code: hybk(申万)} 映射（best-effort，失败返回 {}）。"""
+    pool = fetch_zt_pool_em(date)
+    if not pool:
+        return {}
+    m = {}
+    for p in pool:
+        code = str(p.get("c") or "")
+        if code:
+            m[code] = p.get("hybk") or ""
+    return m
+
+
+def fetch_zt_pool(date):
+    """涨停池：主源=同花顺 limit_up_pool；失败回退东财 push2ex（含 hybk）。
+    同花顺无申万 hybk，主源成功时也 best-effort 用东财映射补 hybk（失败不影响主源）。
+    区分失败与空池：失败返回 None，空池返回 []。"""
+    items = fetch_ths_zt_pool(date)
+    if items is None:
+        # 主源失败 → 回退东财整池（自带 hybk）
+        return fetch_zt_pool_em(date)
+    # 主源成功：补充 hybk 映射（best-effort）
+    try:
+        hmap = _em_hybk_map(date)
+    except Exception:
+        hmap = {}
+    if hmap:
+        for it in items:
+            if not it.get("hybk"):
+                it["hybk"] = hmap.get(it["c"], "")
+    return items
 
 
 # ---------- R91i: 板块实时涨幅 + 涨停日板块涨幅（东财行业板块，与 hybk 同口径） ----------
@@ -1129,11 +1242,11 @@ def main():
                                          "zt": []})
             if d not in rec["zt"]:
                 rec["zt"].append(d)
-        time.sleep(0.4)  # push2ex 限频保护
+        time.sleep(0.4)  # 同花顺/东财 限频保护
     if not valid_dates or not cand:
         if args.module:
             if any_fetch_failed:
-                # 东财涨停池全源拉取失败（本地沙箱封锁东财域名）：保留既有 duanban 模块，
+                # 涨停池（同花顺+东财）全源拉取失败：保留既有 duanban 模块，
                 # 避免把已部署的确认池/观察池/topBoards 清成空（R91m 防护）。
                 # 仅在「网络失败」时触发；若涨停池真实为空（非失败）仍按原逻辑写空模块。
                 try:
@@ -1141,7 +1254,7 @@ def main():
                         os.path.dirname(os.path.abspath(__file__)), "data.js")).get("duanban") or {}
                     if old_mod.get("confirmed") or old_mod.get("watching") or old_mod.get("topBoards"):
                         old_mod.setdefault("generatedAt", "")
-                        old_mod.setdefault("note", "东财涨停池不可达，保留既有模块")
+                        old_mod.setdefault("note", "涨停池（同花顺+东财）不可达，保留既有模块")
                         print("[warn] 涨停池全源不可达，保留既有 duanban 模块"
                               "（确认池 %d / 观察池 %d）"
                               % (len(old_mod.get("confirmed") or []),
