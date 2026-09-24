@@ -281,7 +281,7 @@ if mode == 'ashare':
     _tp = (a.get('themePicks') or [])
     if _tp:
         _tp_lines = [fmt_theme_pick(t, i + 1) for i, t in enumerate(_tp[:5])]
-        desp_parts.append("🔥 题材掘金：\n" + '\n'.join(_tp_lines))
+        desp_parts.append("🧩 题材掘金：\n" + '\n'.join(_tp_lines))
     desp = '\n\n'.join(desp_parts)
 
 elif mode == 'us':
