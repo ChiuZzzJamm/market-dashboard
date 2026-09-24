@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609241149"></script>
+<script src="data.js?v=202609241216"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -149,8 +149,8 @@
   .wk-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
   .wk-head h2 { margin: 0; }
   .wk-head .date { font-size: 12.5px; color: var(--ink2); }
-  /* 卡片 h2 内日期角标（主力资金流向等，R98f） */
-  .card h2 .h2-date { font-size: 12.5px; color: var(--ink2); font-weight: 400; margin-left: 8px; }
+  /* 卡片 h2 内日期角标（主力资金流向等，R98f；R99e 扩展到 AI 预测卡） */
+  .card h2 .h2-date, .ai-card h2 .h2-date { font-size: 12.5px; color: var(--ink2); font-weight: 400; margin-left: 8px; }
   .wk-summary { font-size: 14.5px; margin-bottom: 16px; line-height: 1.7; }
   .wk-section { margin: 22px 0 14px; padding-top: 16px; border-top: 1px solid var(--line); }
   .wk-section h4 { font-size: 14px; font-weight: 700; margin: 0 0 6px 0; color: var(--accent-deep); letter-spacing: 1px; }
@@ -331,6 +331,22 @@
   body.db-open .db-entry-in { display: flex; }
   @media (max-width: 700px) { .db-entry, .db-entry-in { width: 42px; height: 42px; right: 14px; bottom: 92px; font-size: 36px; } }
 
+  /* R99e：A股/美股切换悬浮图标（右侧垂直居中固定，与 💰 同列上下分布；点击切换看板并各自记忆浏览位置） */
+  .mkt-toggle {
+    position: fixed; right: 20px; top: 50%; transform: translateY(-50%);
+    width: 46px; height: 46px; border-radius: 50%;
+    background: transparent; border: none; padding: 0; box-shadow: none;
+    cursor: pointer; z-index: 1190; touch-action: manipulation; user-select: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 42px; line-height: 1;
+    transition: transform .15s ease; -webkit-tap-highlight-color: transparent;
+  }
+  .mkt-toggle:hover { transform: translateY(-50%) scale(1.1); }
+  .mkt-toggle:active { transform: translateY(-50%) scale(.92); }
+  @media (max-width: 700px) { .mkt-toggle { width: 42px; height: 42px; right: 14px; font-size: 36px; } }
+  /* R99e：断板反包手机端不显示股票代码（窄屏下被挤没，无信息量） */
+  @media (max-width: 700px) { #duanban-view .db-chip .cd { display: none; } }
+
   /* 独立页面：打开时隐藏看板主体，只显示本模块 */
   #duanban-view { display: none; }
   body.db-open .wrap > *:not(#duanban-view) { display: none !important; }
@@ -428,6 +444,7 @@
 </head>
 <body>
 <div class="wrap">
+  <button class="mkt-toggle" id="mkt-toggle" title="切换到美股看板" aria-label="切换A股/美股看板" onclick="switchTab(currentMarket==='ashare'?'us':'ashare')">🦅</button>
   <div class="hero">
     <button class="db-entry" id="db-entry" title="断板反包（点击进入 · 可拖动到任意位置）" aria-label="断板反包"><span class="db-emoji">💰</span><span class="db-badge" id="db-badge"></span></button>
     <h1>每日市场看板</h1>
@@ -665,11 +682,30 @@ function barOption(names, values, unit) {
   };
 }
 
+/* R99e：A股/美股各自记忆浏览位置——切换前存当前页 scrollY，渲染后恢复目标页上次位置（首次为顶部） */
+var mktScroll = { ashare: 0, us: 0 };
+function syncMktToggle() {
+  var t = document.getElementById('mkt-toggle');
+  if (!t) return;
+  // 图标显示「点击后要去的市场」：A股页显示 🦅（去美股），美股页显示 🐼（回A股）
+  t.textContent = currentMarket === 'ashare' ? '🦅' : '🐼';
+  t.title = currentMarket === 'ashare' ? '切换到美股看板' : '切换到A股看板';
+}
 function switchTab(market) {
+  if (currentMarket !== market) {
+    mktScroll[currentMarket] = window.scrollY || document.documentElement.scrollTop || 0;
+  }
   document.getElementById('tab-a').classList.toggle('active', market === 'ashare');
   document.getElementById('tab-u').classList.toggle('active', market === 'us');
   currentMarket = market;
   render(market);
+  syncMktToggle();
+  window.scrollTo(0, mktScroll[market] || 0);
+}
+
+/* R99e：板块卡 h2 灰色更新时间角标（A股=数据交易日；美股=tradeDate，自带「（美东）」后缀） */
+function h2Date(d) {
+  return (d && d.tradeDate) ? ' <span class="h2-date">' + esc(d.tradeDate) + '</span>' : '';
 }
 
 function render(market) {
@@ -681,27 +717,27 @@ function render(market) {
   var html = '';
   html += '<div class="card"><div class="status-line">' + esc(d.tradeDate) + ' · ' + esc(d.status) + '</div><div class="summary">' + esc(d.summary) + '</div></div>';
 
-  html += '<div class="card"><h2>大盘指数</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + '</div>';
+  html += '<div class="card"><h2>大盘指数' + h2Date(d) + '</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + '</div>';
 
-  html += '<div class="card"><h2>大盘趋势研判</h2><div class="outlook">' + formatOutlook(d.outlook) + '</div></div>';
+  html += '<div class="card"><h2>大盘趋势研判' + h2Date(d) + '</h2><div class="outlook">' + formatOutlook(d.outlook) + '</div></div>';
 
   var _ssMap = {'ths': '同花顺行业口径', 'em': '东财行业口径', 'prev': '上一轮数据'};
   var _ssTag = _ssMap[d.sectorSource] ? ' <span class="src-tag">' + _ssMap[d.sectorSource] + '</span>' : '';
-  html += '<div class="card"><h2>领涨板块' + _ssTag + '</h2>' + renderReasons(d.sectorsUp, d.tradeDate, true) + '</div>';
+  html += '<div class="card"><h2>领涨板块' + _ssTag + h2Date(d) + '</h2>' + renderReasons(d.sectorsUp, d.tradeDate, true) + '</div>';
 
-  html += '<div class="card"><h2>调整 / 领跌板块' + _ssTag + '</h2>' +
+  html += '<div class="card"><h2>调整 / 领跌板块' + _ssTag + h2Date(d) + '</h2>' +
     (d.sectorNote ? '<div class="src-line">' + esc(d.sectorNote) + '</div>' : '') +
     renderReasons(d.sectorsDown, d.tradeDate, false) + '</div>';
 
   // R98j：题材掘金仅 A股页展示（美股页模块已按用户要求下线）
   if (isA && d.themePicks && d.themePicks.length) {
-    html += '<div class="card"><h2>题材掘金 · 个股事件驱动</h2>' + renderThemePicks(d.themePicks, d.tradeDate) + '</div>';
+    html += '<div class="card"><h2>题材掘金 · 个股事件驱动' + h2Date(d) + '</h2>' + renderThemePicks(d.themePicks, d.tradeDate) + '</div>';
   }
 
   if (isA && d.lianban && d.lianban.length) {
     var lbHtml = renderLianban(d.lianban);
     if (lbHtml) {
-      html += '<div class="card"><h2>🔥 连板梯队</h2>' + lbHtml + '</div>';
+      html += '<div class="card"><h2>🔥 连板梯队' + h2Date(d) + '</h2>' + lbHtml + '</div>';
     }
   }
 
@@ -886,7 +922,7 @@ function renderAiPrediction() {
   var box = document.getElementById('ai-prediction');
   if (!p) { box.style.display = 'none'; return; }
   p.sectors = p.sectors || [];
-  var html = '<div class="ai-card"><div class="ai-head"><h2>AI 预测分析</h2></div>' +
+  var html = '<div class="ai-card"><div class="ai-head"><h2>AI 预测分析' + (p.date ? '<span class="h2-date">' + esc(p.date) + '</span>' : '') + '</h2></div>' +
     '<div class="ai-summary">' + (p.indexLine ? esc(p.indexLine) + '。' : '') + '通过隔夜美股各板块涨跌推导今日 A 股强弱方向：' + esc(p.summary) + '</div>' +
     '<div class="ai-grid">';
   p.sectors.forEach(function (s) {
@@ -1857,19 +1893,19 @@ function openBoardKline(name, kline) {
 }
 
 function buildOpenOutlookHtml(o, title) {
-  var html = '<div class="wk-card"><div class="wk-head"><h2>' + title + '</h2><span class="date">' + esc(o.date || '') + '</span></div>' +
+  var html = '<div class="wk-card"><div class="wk-head"><h2>' + title + '</h2></div>' +
     '<div class="wk-outlook">' + formatOutlook(o.content) + '</div>';
   if (o.source) html += '<div class="wk-src">来源：' + esc(o.source) + '</div>';
   html += '</div>';
   return html;
 }
 
-// 按日期字符串(YYYY-MM-DD)生成「周X开盘前瞻 · YYYY-MM-DD」标题（周几取数据所属日，非今天）
+// R99e：标题只保留「周X开盘前瞻」，日期不再重复显示（用户要求删除原 h2 内日期与灰色角标两处重复）
 function wkTitle(dateStr) {
   var WD = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
   var d = new Date(String(dateStr || '').replace(/-/g, '/'));
   var w = isNaN(d.getTime()) ? '' : WD[d.getDay()];
-  return w + '开盘前瞻 · ' + dateStr;
+  return w + '开盘前瞻';
 }
 function renderOpenOutlook() {
   // 每日开盘前瞻（R72）：顶层 openOutlook 带日期，前端按日期显示、过期自动隐藏。
@@ -1908,9 +1944,9 @@ function renderOpenOutlook() {
     var sub;
     if (!isWeekend) {
       var genLabel = (day <= 4) ? '今日 08:30' : '周一 08:30';
-      sub = wkTitle(o.date) + '（昨日版，' + genLabel + '前瞻待生成）';
+      sub = wkTitle(o.date) + '（' + esc(o.date) + ' 昨日版，' + genLabel + '前瞻待生成）';
     } else {
-      sub = wkTitle(o.date) + '（周五版 · 周一盘前参考）';
+      sub = wkTitle(o.date) + '（' + esc(o.date) + ' 周五版 · 周一盘前参考）';
     }
     box.innerHTML = buildOpenOutlookHtml(o, sub);
     box.style.display = '';
@@ -1922,6 +1958,7 @@ function renderOpenOutlook() {
 }
 
 document.getElementById('updatedAt').textContent = '数据更新：' + window.DASHBOARD_DATA.updatedAt;
+syncMktToggle();
 renderAiPrediction();
 renderOpenOutlook();
 
