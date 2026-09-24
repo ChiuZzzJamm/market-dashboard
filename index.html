@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609241235"></script>
+<script src="data.js?v=202609241240"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -314,7 +314,7 @@
   .hero { position: relative; }
   :root { --float-x: max(12px, calc((100vw - 1080px) / 2 - 60px)); }
   .db-entry, .db-entry-in {
-    position: fixed; left: var(--float-x); top: calc(50% + 7px);
+    position: fixed; right: var(--float-x); top: calc(50% + 7px);
     width: 46px; height: 46px; border-radius: 50%;
     background: transparent; border: none; padding: 0;
     box-shadow: none;
@@ -330,9 +330,9 @@
   .db-entry-in { display: none; }
   body.db-open .db-entry-in { display: flex; }
 
-  /* R99f：A股/美股切换悬浮图标（移到页面内容左缘旁、成组垂直居中；🐼=当前在A股看板，🦅=当前在美股看板；💰 在其正下方，两者共享同一中轴线） */
+  /* R99f：A股/美股切换悬浮图标（右侧贴近页面内容右缘、成组垂直居中；🐼=当前在A股看板，🦅=当前在美股看板；💰 在其正下方，两者共享同一中轴线） */
   .mkt-toggle {
-    position: fixed; left: var(--float-x); top: calc(50% - 53px);
+    position: fixed; right: var(--float-x); top: calc(50% - 53px);
     width: 46px; height: 46px; border-radius: 50%;
     background: transparent; border: none; padding: 0; box-shadow: none;
     cursor: pointer; z-index: 1190; touch-action: manipulation; user-select: none;
