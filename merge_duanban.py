@@ -138,7 +138,7 @@ def main():
             mod["star"] = old_star
             print("[merge] 保留当日 🌟 开盘精选模块", file=sys.stderr)
         else:
-            print(f"[merge] 丢弃非当日 🌟 模块（{old_star.get('date')}），待 10:00 自动化重建",
+            print(f"[merge] 丢弃非当日 🌟 模块（{old_star.get('date')}），待 9:45 开盘精选自动化重建",
                   file=sys.stderr)
     D["duanban"] = mod
     out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, indent=2) + ";\n"

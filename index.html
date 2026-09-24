@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609241132"></script>
+<script src="data.js?v=202609241149"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -997,8 +997,12 @@ function renderNewsCard(d, market) {
   // A股/美股共用：大标题「全球要闻」，桌面两栏按行配对（同行等高、左右对齐），手机单列组内重排
   if (!d) return '';
   var bn = d.bullNews||[], be = d.bearNews||[];
-  var intl = d.intlNews||[], bank = d.bankViews||[];
-  var macro = d.macroNews||[];
+  // R99d：宏观/财经/投行三栏按方向排序——看涨靠前、中性居中、看跌靠后（稳定排序，同向保持原序）
+  function dirRank(d){ return d === '看涨' ? 0 : (d === '看跌' ? 2 : 1); }
+  function dirSort(a, b){ return dirRank(a.direction) - dirRank(b.direction); }
+  var intl = (d.intlNews||[]).slice().sort(dirSort);
+  var bank = (d.bankViews||[]).slice().sort(dirSort);
+  var macro = (d.macroNews||[]).slice().sort(dirSort);
   if (!bn.length && !be.length && !intl.length && !bank.length && !macro.length) return '';
   var itemHtml = function (it, dir) {
     return '<div class="news-cell ' + dir + '">' + newsEntryInner(it, false, '短线·盘面', d.tradeDate) + '</div>';

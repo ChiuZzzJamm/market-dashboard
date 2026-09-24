@@ -172,7 +172,7 @@ def build_star(D):
     # ---- 个股快照（当日实时涨幅） ----
     quotes = fetch_stock_quotes([str(e.get("code")) for e in pools])
 
-    # ---- R99b：确定性筛选——仅「板块情绪正向 + 主力净流入正向」板块挂钩的池内标的 ----
+    # ---- R99c：确定性筛选——仅「板块情绪正向 + 主力净流入正向」板块挂钩的池内标的 ----
     # 合格板块：涨幅>0 且 主力净流入>0；池内板块与合格板块名互含即视为挂钩。
     board_fund = {}
     if fund_in:
@@ -244,7 +244,7 @@ def build_star(D):
     bot3 = "、".join(f"{s['name']}{s['pct']:+.2f}%" for s in sectors[-3:]) or "—"
     fi_txt = "、".join(f"{x['name']}{x['value']:+.1f}亿" for x in (fund_in or [])) or "—"
     fo_txt = "、".join(f"{x['name']}{x['value']:+.1f}亿" for x in (fund_out or [])) or "—"
-    # R99b：只写开盘后板块情绪与资金情绪（集合竞价强弱关系由 AI 写入 pushText）
+    # R99c：只写开盘后板块情绪与资金情绪（集合竞价强弱关系由 AI 写入 pushText）
     sentiment = (f"开盘板块情绪：领涨 {top3}；领跌 {bot3}。"
                  f"资金情绪：主力净流入前列 {fi_txt}；净流出前列 {fo_txt}。"
                  f"合格板块（涨+净流入双正向）：{'、'.join(n for n, _, _ in good_boards) or '无'}。"
@@ -257,7 +257,7 @@ def build_star(D):
         "sentiment": sentiment,
         "picks": picks,
         "pushText": "",
-        "generatedBy": "update_star.py 确定性筛选（R99b：板块情绪正向+资金净流入正向挂钩的池内标的，按上涨概率降序）+ 自动化 AI 复核",
+        "generatedBy": "update_star.py 确定性筛选（R99c：板块情绪正向+资金净流入正向挂钩的池内标的，按上涨概率降序）+ 自动化 AI 复核",
     }
     return star, None
 
