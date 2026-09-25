@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609251958"></script>
+<script src="data.js?v=202609252023"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -662,6 +662,7 @@ function renderReasons(list, tradeDate, isUp) {
       renderTops(s, isUp) +
       ((s.upCount !== null && s.upCount !== undefined) ? '<div class="reason-sub">板块内 涨 <b class="up">' + s.upCount + '</b> 家 / 跌 <b class="down">' + (s.downCount || 0) + '</b> 家' + (s.netInflow !== null && s.netInflow !== undefined ? ' · 主力净流入 <b class="' + (s.netInflow >= 0 ? 'up' : 'down') + '">' + (s.netInflow >= 0 ? '+' : '') + s.netInflow + ' 亿</b>' : '') + '</div>' : '') +
       (hasReason ? '<div class="reason-body"><b class="label">行业原因（' + esc(tag) + '发布）：</b>' + esc(s.reason.detail) + '</div>' : '') +
+      (s.deduce ? renderDeduce(s.deduce) : '') +
       '</div>';
   });
   return html;
@@ -953,20 +954,27 @@ function psClose() { document.getElementById('ps-modal').classList.remove('open'
    { cands:[{tag:'事件驱动',text:'…',eliminate:'…'},{tag:'情绪驱动',text:'…',eliminate:'…'}],
      main:'…', conf:'推测', counter:'…' }
    缺失字段自动跳过，保证向后兼容（老数据无 deduce 不报错） */
+/* R99o：AI 生成值偶发自带「主推：/反证：」前缀，统一剥掉防重复；全空 deduce 返回空串不渲染 */
+function _ddClean(t) {
+  return String(t || '').trim().replace(/^主推[:：]\s*/, '').replace(/^反证[:：]\s*/, '').trim();
+}
 function renderDeduce(dd) {
   if (!dd) return '';
+  var main = _ddClean(dd.main), counter = _ddClean(dd.counter);
+  var cands = (dd.cands || []).filter(function (c) { return c && ((c.text || '').trim() || (c.tag || '').trim()); });
+  if (!main && !counter && !cands.length) return '';
   var h = '<div class="dd-box">';
   /* 主推+反证在前（R99n：置于候选上方），确信度徽章复用 AI 预测 .conf-badge 三级配色 */
-  if (dd.main) {
+  if (main) {
     var cf = String(dd.conf || '');
     var cfCls = cf.indexOf('高') >= 0 ? 'conf-high' : (cf.indexOf('中') >= 0 ? 'conf-mid' : 'conf-low');
-    h += '<div class="dd-main">主推' + esc(dd.main) +
+    h += '<div class="dd-main">主推' + esc(main) +
       (cf ? '<span class="conf-badge ' + cfCls + '">' + esc(cf) + '</span>' : '') + '</div>';
-    if (dd.counter) h += '<div class="dd-counter">反证：' + esc(dd.counter) + '</div>';
-  } else if (dd.counter) {
-    h += '<div class="dd-counter">反证：' + esc(dd.counter) + '</div>';
+    if (counter) h += '<div class="dd-counter">反证：' + esc(counter) + '</div>';
+  } else if (counter) {
+    h += '<div class="dd-counter">反证：' + esc(counter) + '</div>';
   }
-  (dd.cands || []).forEach(function (c, idx) {
+  cands.forEach(function (c, idx) {
     h += '<div class="dd-cand">▸ 候选' + String.fromCharCode(65 + idx) + '｜' + esc(c.tag || '') +
       '：' + esc(c.text || '') +
       (c.eliminate ? ' <span class="dd-elim">（淘汰：' + esc(c.eliminate) + '）</span>' : '') + '</div>';
