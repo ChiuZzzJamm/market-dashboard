@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609261657"></script>
+<script src="data.js?v=202609261702"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1030,7 +1030,7 @@ function renderDeduce(dd, hideBadge) {
   var h = '<div class="dd-box">';
   /* 主推+反证在前（R99n：置于候选上方），确信度徽章复用 AI 预测 .conf-badge 三级配色 */
   if (main) {
-    h += '<div class="dd-main">主推' + esc(main) + (hideBadge ? '' : deduceConfBadge(dd)) + '</div>';
+    h += '<div class="dd-main">主推：' + esc(main) + (hideBadge ? '' : deduceConfBadge(dd)) + '</div>';
     if (counter) h += '<div class="dd-counter">反证：' + esc(counter) + '</div>';
   } else if (counter) {
     h += '<div class="dd-counter">反证：' + esc(counter) + '</div>';
