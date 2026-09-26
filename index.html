@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609261702"></script>
+<script src="data.js?v=202609270213"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -347,13 +347,13 @@
     position: fixed; right: var(--float-x); top: calc(50% + 7px);
     width: 46px; height: 46px; border-radius: 50%;
     background: transparent; border: none; padding: 0; box-shadow: none;
-    cursor: pointer; z-index: 1200; touch-action: manipulation; user-select: none;
+    cursor: grab; z-index: 1200; touch-action: none; user-select: none;
     display: none; align-items: center; justify-content: center;
     font-size: 42px; line-height: 1;
     transition: transform .15s ease;
   }
   .db-entry-in:hover { transform: scale(1.1); }
-  .db-entry-in:active { transform: scale(.92); }
+  .db-entry-in:active { transform: scale(.92); cursor: grabbing; }
   body.db-open .db-entry-in { display: flex; }
   @media (max-width: 700px) {
     :root { --float-x: 10px; }
@@ -1623,13 +1623,17 @@ window.addEventListener('popstate', function () {
   var g = document.getElementById('float-group');
   if (!g) return;
   var POS_KEY = 'floatGroupPos', sx = null, sy = 0, ox = 0, oy = 0, moved = false;
+  var lastH = 0, lastPos = null; // R100c：断板页组隐藏（rect 全 0），用最后已知组高/位置兜底
   function rect() { return g.getBoundingClientRect(); }
+  function trackH() { var r = rect(); if (r.height) lastH = r.height; }
+  function grpH() { return lastH || rect().height || (window.innerWidth <= 700 ? 96 : 106); }
   function place(l, t, save) {
-    var r = rect(), w = r.width || 46, h = r.height || 106;
+    var r = rect(), w = r.width || 46, h = grpH();
     l = Math.max(6, Math.min(l, window.innerWidth - w - 6));
     t = Math.max(6, Math.min(t, window.innerHeight - h - 6));
     g.style.left = l + 'px'; g.style.top = t + 'px';
     g.style.right = 'auto'; g.style.bottom = 'auto'; g.style.transform = 'none';
+    lastPos = { l: l, t: t };
     if (dei) {
       dei.style.left = l + 'px'; dei.style.top = (t + h - 46) + 'px';
       dei.style.right = 'auto'; dei.style.bottom = 'auto';
@@ -1639,6 +1643,7 @@ window.addEventListener('popstate', function () {
     }
   }
   function applySaved() {
+    trackH();
     try {
       var p = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
       if (p && isFinite(p.lf) && isFinite(p.tf)) place(p.lf * window.innerWidth, p.tf * window.innerHeight, false);
@@ -1657,20 +1662,28 @@ window.addEventListener('popstate', function () {
     window.removeEventListener('pointercancel', onUp);
     if (sx === null) return;
     sx = null;
-    if (moved) place(rect().left, rect().top, true);
+    if (moved && lastPos) place(lastPos.l, lastPos.t, true); // 组隐藏时 rect() 为 0，用内存位置保存
   }
-  g.addEventListener('pointerdown', function (e) {
-    if (e.button) return;
-    sx = e.clientX; sy = e.clientY;
-    var r = rect(); ox = r.left; oy = r.top; moved = false;
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-    window.addEventListener('pointercancel', onUp);
-  });
-  // 拖拽结束后拦截随后派发的 click，避免误触 🐼/💰
-  g.addEventListener('click', function (e) {
-    if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; }
-  }, true);
+  // R100c：g（🐼+💰 整组）与 dei（断板页返回💰）共用同一套拖拽；拖 dei 时换算为组左上角坐标，两页共享 floatGroupPos
+  function bindDrag(el) {
+    if (!el) return;
+    el.addEventListener('pointerdown', function (e) {
+      if (e.button) return;
+      sx = e.clientX; sy = e.clientY;
+      var r = el.getBoundingClientRect();
+      ox = r.left; oy = r.top - (el === dei ? grpH() - 46 : 0);
+      moved = false; trackH();
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
+    });
+    // 拖拽结束后拦截随后派发的 click，避免误触 🐼/💰
+    el.addEventListener('click', function (e) {
+      if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; }
+    }, true);
+  }
+  bindDrag(g);
+  bindDrag(dei);
   window.addEventListener('resize', applySaved);
   applySaved();
 })();
