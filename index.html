@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609261637"></script>
+<script src="data.js?v=202609261657"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -151,7 +151,8 @@
   .dd-tag { display: inline-block; font-weight: 700; color: var(--accent-deep); margin-right: 4px; }
   .dd-elim { color: var(--ink2); font-size: 11.5px; }
   .dd-main { font-weight: 600; }
-  .dd-main .conf-badge { margin-left: 6px; vertical-align: 1px; }
+  /* R100c：确信度徽章挪至利好/利空卡标题行（nc-theme），主推行不再内嵌 */
+  .nc-theme .conf-badge { margin-left: 4px; vertical-align: 1px; }
   .dd-counter { display: block; margin-top: 3px; margin-bottom: 4px; color: #b06a2c; font-weight: 400; font-size: 11.5px; }
 
   /* ===== 全球要闻 / 周末 ===== */
@@ -1013,7 +1014,15 @@ function psClose() { document.getElementById('ps-modal').classList.remove('open'
 function _ddClean(t) {
   return String(t || '').trim().replace(/^主推[:：]\s*/, '').replace(/^反证[:：]\s*/, '').trim();
 }
-function renderDeduce(dd) {
+/* R100c：确信度徽章抽成独立函数——主推行不再内嵌徽章；利好/利空卡挪到标题行（nc-theme），
+   异动板块/题材掘金保持原位（hideBadge 传 true 即隐藏） */
+function deduceConfBadge(dd) {
+  if (!dd || !dd.conf) return '';
+  var cf = String(dd.conf);
+  var cls = cf.indexOf('高') >= 0 ? 'conf-high' : (cf.indexOf('中') >= 0 ? 'conf-mid' : 'conf-low');
+  return '<span class="conf-badge ' + cls + '">' + esc(cf) + '</span>';
+}
+function renderDeduce(dd, hideBadge) {
   if (!dd) return '';
   var main = _ddClean(dd.main), counter = _ddClean(dd.counter);
   var cands = (dd.cands || []).filter(function (c) { return c && ((c.text || '').trim() || (c.tag || '').trim()); });
@@ -1021,10 +1030,7 @@ function renderDeduce(dd) {
   var h = '<div class="dd-box">';
   /* 主推+反证在前（R99n：置于候选上方），确信度徽章复用 AI 预测 .conf-badge 三级配色 */
   if (main) {
-    var cf = String(dd.conf || '');
-    var cfCls = cf.indexOf('高') >= 0 ? 'conf-high' : (cf.indexOf('中') >= 0 ? 'conf-mid' : 'conf-low');
-    h += '<div class="dd-main">主推' + esc(main) +
-      (cf ? '<span class="conf-badge ' + cfCls + '">' + esc(cf) + '</span>' : '') + '</div>';
+    h += '<div class="dd-main">主推' + esc(main) + (hideBadge ? '' : deduceConfBadge(dd)) + '</div>';
     if (counter) h += '<div class="dd-counter">反证：' + esc(counter) + '</div>';
   } else if (counter) {
     h += '<div class="dd-counter">反证：' + esc(counter) + '</div>';
@@ -1064,7 +1070,7 @@ function renderAiPrediction() {
       '</div>' +
       '<div class="drv">隔夜驱动：' + esc(s.usDriver) + '</div>' +
       '<div class="lgc">映射逻辑：' + esc(s.logic) + '</div>' +
-      (s.deduce ? renderDeduce(s.deduce) : (s.counter ? '<div class="dd-box"><div class="dd-counter">反证：' + esc(s.counter) + '</div></div>' : ''));
+      (s.deduce ? renderDeduce(s.deduce, true) : (s.counter ? '<div class="dd-box"><div class="dd-counter">反证：' + esc(s.counter) + '</div></div>' : ''));
     if (s.stocks && s.stocks.length) {
       html += '<div class="stock-chips">';
       s.stocks.forEach(function (st) {
@@ -1137,7 +1143,9 @@ function newsEntryInner(it, showSrc, tag, tradeDate) {
   }
   // R99i：日期徽章（nc-time）按用户要求整体移除——全球要闻/周末卡不再显示「今日 9/23」/「9/23」徽章
   var perspTag = tag ? '<span class="persp-tag">' + esc(tag) + '</span>' : '';
-  var s = '<div class="nc-theme">' + esc(it.sector || '') + dirBadge + perspTag + '</div>';
+  // R100c：利好/利空卡（短线·盘面）把确信度徽章从主推行挪到标题行；宏观/国际/投行条目徽章整体移除
+  var confHead = (tag === '短线·盘面') ? deduceConfBadge(it.deduce) : '';
+  var s = '<div class="nc-theme">' + esc(it.sector || '') + dirBadge + perspTag + confHead + '</div>';
   var dtlFull = (it.title || '') + ' — ' + (it.summary || '');
   s += '<div class="nc-dtl" title="' + escAttr(dtlFull) + '"><b>' + esc(it.title || '') + '</b> — ' + esc(it.summary || '') + '</div>';
   (it.impacts || []).forEach(function (im) {
@@ -1150,7 +1158,7 @@ function newsEntryInner(it, showSrc, tag, tradeDate) {
     });
     s += '</div></div>';
   });
-  if (it.deduce) s += renderDeduce(it.deduce);
+  if (it.deduce) s += renderDeduce(it.deduce, true); // R100c：徽章已挪至标题行（利好/利空）或移除（宏观/国际/投行）
   if (showSrc && it.source) s += '<div class="nc-src">来源：' + esc(it.source) + '</div>';
   return s;
 }
