@@ -474,6 +474,73 @@ def fix_duanban_inplace(D):
     return changed, warns
 
 
+def check_selection_modules(D):
+    """2026-09-26 选股扩展模块（谐波/吸筹/量化/必带数据）结构校验。
+
+    软闸门：仅 WARN 不阻断部署（与质量类一致）。这些模块由新脚本在 16:00 流水线生成，
+    缺失时不报（流水线未跑不代表坏）；存在时校验关键字段与主板约束。
+    """
+    warns = []
+    MAIN = re.compile(r'^(60|00)\d{4}$')
+
+    h = D.get('harmonic')
+    if h is not None:
+        if not isinstance(h, dict):
+            warns.append("harmonic 应为对象")
+        else:
+            for pool in ('confirmPool', 'watchPool'):
+                arr = h.get(pool)
+                if arr is None:
+                    continue
+                if not isinstance(arr, list):
+                    warns.append(f"harmonic.{pool} 非数组"); continue
+                for i, it in enumerate(arr):
+                    if not isinstance(it, dict):
+                        warns.append(f"harmonic.{pool}[{i}] 非对象"); continue
+                    c = str(it.get('code') or '')
+                    if not MAIN.match(c):
+                        warns.append(f"harmonic.{pool}[{i}] code {c} 非 60/00 沪深主板")
+                    for fld in ('pattern', 'stage', 'prz', 'stop', 'target1', 'target2', 'points', 'ratios'):
+                        if fld not in it:
+                            warns.append(f"harmonic.{pool}[{i}] 缺字段 {fld}")
+
+    a = D.get('accumulation')
+    if a is not None:
+        if not isinstance(a, dict):
+            warns.append("accumulation 应为对象")
+        else:
+            for i, it in enumerate(a.get('scored') or []):
+                if not isinstance(it, dict):
+                    warns.append(f"accumulation.scored[{i}] 非对象"); continue
+                c = str(it.get('code') or '')
+                if not MAIN.match(c):
+                    warns.append(f"accumulation.scored[{i}] code {c} 非 60/00 沪深主板")
+                if 'score' not in it or 'grade' not in it:
+                    warns.append(f"accumulation.scored[{i}] 缺 score/grade")
+
+    p = D.get('powerScreen')
+    if p is not None:
+        if not isinstance(p, dict):
+            warns.append("powerScreen 应为对象")
+        else:
+            for i, it in enumerate(p.get('passed') or []):
+                if not isinstance(it, dict):
+                    warns.append(f"powerScreen.passed[{i}] 非对象"); continue
+                c = str(it.get('code') or '')
+                if not MAIN.match(c):
+                    warns.append(f"powerScreen.passed[{i}] code {c} 非 60/00 沪深主板")
+                if 'score' not in it:
+                    warns.append(f"powerScreen.passed[{i}] 缺 score")
+
+    cl = D.get('macroChecklist')
+    if cl is not None:
+        if not isinstance(cl, dict):
+            warns.append("macroChecklist 应为对象")
+        elif not isinstance(cl.get('items'), list):
+            warns.append("macroChecklist.items 非数组")
+    return warns
+
+
 def main():
     as_json = '--json' in sys.argv
     D = load_data()
@@ -497,6 +564,7 @@ def main():
     tb_warns = check_top_boards(D)
     st_warns = check_story_quality(D)
     star_warns = check_star_module(D)
+    sel_warns = check_selection_modules(D)
 
     for mk in ('ashare', 'us'):
         sec = D.get(mk) or {}
@@ -554,6 +622,8 @@ def main():
         print("[WARN] story质量:", w)
     for w in star_warns:
         print("[WARN] 🌟开盘精选:", w)
+    for w in sel_warns:
+        print("[WARN] 选股扩展模块:", w)
     if violations:
         print(f"[FAIL] 共 {len(violations)} 处违规：")
         for v in violations:

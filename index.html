@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609252023"></script>
+<script src="data.js?v=202609261542"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -455,6 +455,53 @@
   .db-tip b.down { color: var(--down); }
 
   footer.disclaimer { margin-top: 36px; font-size: 12px; color: var(--ink2); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 22px; line-height: 1.7; box-shadow: var(--shadow); }
+
+  /* ===== 选股扩展模块（谐波/吸筹/量化/必带数据，2026-09-26） ===== */
+  .hz-badge { display:inline-block; font-size:9.5px; font-weight:700; color:#7a4d00; background:#fff3d6; border:1px solid #f0c36d; border-radius:4px; padding:0 5px; margin-left:4px; vertical-align:middle; }
+  .hz-pool { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; margin-top:8px; }
+  .hz-card { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:var(--paper); cursor:pointer; transition:.15s; }
+  .hz-card:hover { border-color:var(--accent); box-shadow:0 4px 14px rgba(17,17,26,.10); }
+  .hz-card .hz-top { display:flex; align-items:center; gap:6px; }
+  .hz-card .hz-nm { font-weight:800; }
+  .hz-card .hz-cd { font-size:11px; color:var(--ink2); }
+  .hz-card .hz-pat { font-size:11px; color:var(--accent-deep); font-weight:700; margin-left:auto; }
+  .hz-card .hz-note { font-size:11px; color:var(--ink); margin-top:5px; line-height:1.55; }
+  .hz-stage { font-size:9.5px; font-weight:700; border-radius:999px; padding:0 6px; }
+  .hz-stage.confirm { color:#0f9d78; background:#e3f7ef; }
+  .hz-stage.watch { color:#c47d00; background:#fff4dc; }
+  .hz-meta { font-size:10.5px; color:var(--ink2); margin-top:6px; font-variant-numeric:tabular-nums; }
+
+  .acc-card, .pw-card { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:var(--paper); }
+  .acc-grid, .pw-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px; margin-top:8px; }
+  .acc-grd { font-size:9.5px; font-weight:700; border-radius:999px; padding:0 6px; }
+  .acc-grd.strong { color:#0f9d78; background:#e3f7ef; }
+  .acc-grd.watch { color:#c47d00; background:#fff4dc; }
+  .acc-feat { display:flex; flex-wrap:wrap; gap:3px; margin-top:5px; }
+  .acc-feat span { font-size:9.5px; color:var(--ink2); border:1px solid var(--line); border-radius:4px; padding:0 4px; }
+  .acc-feat span.on { color:var(--accent-deep); border-color:var(--accent); background:var(--accent-soft); }
+  .pw-gate { display:flex; flex-wrap:wrap; gap:3px; margin-top:5px; }
+  .pw-gate span { font-size:9px; font-weight:700; border-radius:4px; padding:0 4px; }
+  .pw-gate span.pass { color:#0f9d78; background:#e3f7ef; }
+  .pw-gate span.fail { color:#a33; background:#fdeaea; }
+
+  .cl-table { width:100%; border-collapse:collapse; margin-top:8px; font-size:12px; }
+  .cl-table th, .cl-table td { text-align:left; padding:5px 8px; border-bottom:1px solid var(--line); }
+  .cl-table th { color:var(--ink2); font-weight:600; }
+  .cl-ok { color:#0f9d78; font-weight:700; }
+  .cl-miss { color:#c0392b; font-weight:700; }
+  .cl-env { color:var(--ink2); }
+  .cl-grp { display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }
+  .cl-derive { border:1px solid var(--line); border-radius:10px; padding:8px 12px; min-width:150px; }
+  .cl-derive b { color:var(--accent-deep); }
+
+  .hz-info { margin-top:8px; border:1px dashed var(--accent); border-radius:10px; padding:8px 12px; font-size:12px; line-height:1.7; background:var(--accent-soft); }
+  .hz-info .hz-row { display:flex; flex-wrap:wrap; gap:10px 18px; }
+  .hz-info .hz-k { color:var(--ink2); }
+  .hz-info .hz-v { font-weight:700; font-variant-numeric:tabular-nums; }
+  .hz-legend { font-size:10px; }
+  .hz-legend i { font-style:normal; font-weight:700; }
+  .hz-sub { font-size:12px; font-weight:700; color:var(--ink2); margin:10px 0 2px; }
+  .ai-harmonic { font-size:12.5px; font-weight:700; color:#7a4d00; background:#fff3d6; border:1px solid #f0c36d; border-radius:8px; padding:6px 10px; margin:8px 0; }
 </style>
 </head>
 <body>
@@ -774,6 +821,14 @@ function render(market) {
     }
   }
 
+  // 选股扩展模块（谐波 / 吸筹 / 量化 / 必带数据，2026-09-26）：仅在 A 股页展示，数据缺失时整模块隐藏
+  if (isA) {
+    var _hz = renderHarmonic(); if (_hz) html += _hz;
+    var _acc = renderAccumulation(); if (_acc) html += _acc;
+    var _pw = renderPowerScreen(); if (_pw) html += _pw;
+    var _cl = renderChecklist(); if (_cl) html += _cl;
+  }
+
   // 主力资金流向紧贴行业全景上方（2026-09-20 用户要求：挪到行业全景上面）
   if (isA) {
     html += '<div class="card"><h2>主力资金流向' + (d.tradeDate ? '<span class="h2-date">' + esc(d.tradeDate) + '</span>' : '') + '</h2>';
@@ -989,8 +1044,14 @@ function renderAiPrediction() {
   var box = document.getElementById('ai-prediction');
   if (!p) { box.style.display = 'none'; return; }
   p.sectors = p.sectors || [];
+  // R99p：AI 预测板块内命中谐波形态 PRZ 的标的数 → 「谐波共振 N」横幅
+  var _hzSet = (window.DASHBOARD_DATA.harmonic && window.DASHBOARD_DATA.harmonic.tags) ? window.DASHBOARD_DATA.harmonic.tags : {};
+  var _hzCount = 0;
+  p.sectors.forEach(function (s) { (s.stocks || []).forEach(function (st) { if (st.code && _hzSet[st.code]) _hzCount++; }); });
+  var _hzBanner = _hzCount ? '<div class="ai-harmonic">🎵 谐波共振：' + _hzCount + ' 只标的命中谐波形态 PRZ（详见「谐波形态」模块）</div>' : '';
   var html = '<div class="ai-card"><div class="ai-head"><h2>AI 预测分析' + (p.date ? '<span class="h2-date">' + esc(p.date) + '</span>' : '') + '</h2></div>' +
     '<div class="ai-summary">' + (p.indexLine ? esc(p.indexLine) + '。' : '') + '通过隔夜美股各板块涨跌推导今日 A 股强弱方向：' + esc(p.summary) + '</div>' +
+    _hzBanner +
     '<div class="ai-grid">';
   p.sectors.forEach(function (s) {
     var isUp = String(s.direction || '').indexOf('承压') === -1;
@@ -1178,7 +1239,10 @@ function renderThemePicks(list, tradeDate) {
         if (!isNaN(chgN)) parts.push((chgN > 0 ? '+' : '') + chgN.toFixed(2) + '%');
         var note = parts.join(' · ');
         var title = (st.name || '') + ' ' + (st.code || '') + (note ? ' · ' + note : '') + '（点击查看K线）';
-        s += '<span class="stock-chip" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (note || '')) + '" title="' + escAttr(title) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + (note ? '<span class="nt">' + esc(note) + '</span>' : '') + '</span>';
+        // R99p：命中谐波形态 PRZ 的标的在题材掘金打「谐波✓」徽标（与独立谐波模块交叉）
+        var hzTag = (st.code && window.DASHBOARD_DATA.harmonic && window.DASHBOARD_DATA.harmonic.tags) ? window.DASHBOARD_DATA.harmonic.tags[st.code] : null;
+        var hzBadge = hzTag ? '<span class="hz-badge">谐波·' + esc(hzTag) + '</span>' : '';
+        s += '<span class="stock-chip" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (note || '')) + '" title="' + escAttr(title) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + (note ? '<span class="nt">' + esc(note) + '</span>' : '') + hzBadge + '</span>';
       });
       s += '</div>';
     }
@@ -1186,6 +1250,97 @@ function renderThemePicks(list, tradeDate) {
     s += '</div>';
   });
   return s;
+}
+
+/* ===== 选股扩展模块渲染（2026-09-26 · 谐波 / 吸筹 / 量化 / 必带数据） ===== */
+function findHarmonic(code) {
+  var h = window.DASHBOARD_DATA.harmonic;
+  if (!h) return null;
+  var pools = (h.confirmPool || []).concat(h.watchPool || []);
+  for (var i = 0; i < pools.length; i++) { if (pools[i].code === code) return pools[i]; }
+  return null;
+}
+
+function renderHarmonic() {
+  var h = window.DASHBOARD_DATA.harmonic;
+  if (!h || !h.confirmPool || !h.watchPool) return '';
+  var c = h.confirmPool || [], w = h.watchPool || [];
+  if (!c.length && !w.length) return '';
+  var card = function (it) {
+    var st = it.stage === '确认' ? 'confirm' : 'watch';
+    var meta = 'PRZ ' + it.prz[0] + '~' + it.prz[1] + ' · 止损 ' + it.stop + ' · T1 ' + it.target1 + ' · T2 ' + it.target2;
+    if (it.accResonance) meta += ' · 吸筹共振' + it.accResonance;
+    return '<div class="hz-card" onclick="openStkModal(\'' + it.code + '\',\'' + escAttr(it.name) + '\',\'\')">' +
+      '<div class="hz-top"><span class="hz-nm">' + esc(it.name || it.code) + '</span><span class="hz-cd">' + esc(it.code) + '</span>' +
+      '<span class="hz-stage ' + st + '">' + esc(it.stage) + '</span><span class="hz-pat">' + esc(it.pattern) + '</span></div>' +
+      (it.story ? '<div class="hz-note">' + esc(it.story) + '</div>' : '') +
+      '<div class="hz-meta">' + meta + '</div></div>';
+  };
+  var html = '<div class="card"><h2>🎵 谐波形态（重型技术面）' + (h.tradeDate ? ' <span class="h2-date">' + esc(h.tradeDate) + '</span>' : '') + '</h2>';
+  if (c.length) html += '<div class="hz-sub">确认池</div><div class="hz-pool">' + c.map(card).join('') + '</div>';
+  if (w.length) html += '<div class="hz-sub">观察池</div><div class="hz-pool">' + w.map(card).join('') + '</div>';
+  if (h.summary) html += '<div class="note-line">' + esc(h.summary) + '</div>';
+  html += '</div>';
+  return html;
+}
+
+function renderAccumulation() {
+  var a = window.DASHBOARD_DATA.accumulation;
+  if (!a || !a.scored || !a.scored.length) return '';
+  var items = a.scored.slice(0, 20).map(function (it) {
+    var gd = it.grade === '强' ? 'strong' : 'watch';
+    var feats = '';
+    if (it.features) {
+      [['f1', '试盘'], ['f2', '止跌'], ['f3', '横盘'], ['f4', '缩量'], ['f5', '缩量板'], ['f6', '流动']].forEach(function (f) {
+        feats += '<span class="' + (it.features[f[0]] ? 'on' : '') + '">' + f[1] + (it.features[f[0]] ? ('·' + it.features[f[0]]) : '') + '</span>';
+      });
+    }
+    return '<div class="acc-card" onclick="openStkModal(\'' + it.code + '\',\'' + escAttr(it.name) + '\',\'\')">' +
+      '<div class="hz-top"><span class="hz-nm">' + esc(it.name || it.code) + '</span><span class="hz-cd">' + esc(it.code) + '</span>' +
+      '<span class="acc-grd ' + gd + '">' + esc(it.grade) + ' ' + it.score + '</span></div>' +
+      (it.note ? '<div class="hz-note">' + esc(it.note) + '</div>' : '') +
+      '<div class="acc-feat">' + feats + '</div></div>';
+  }).join('');
+  return '<div class="card"><h2>🧲 主力吸筹打分（六特征）' + (a.tradeDate ? ' <span class="h2-date">' + esc(a.tradeDate) + '</span>' : '') + '</h2>' +
+    '<div class="acc-grid">' + items + '</div>' + (a.summary ? '<div class="note-line">' + esc(a.summary) + '</div>' : '') + '</div>';
+}
+
+function renderPowerScreen() {
+  var p = window.DASHBOARD_DATA.powerScreen;
+  if (!p || !p.passed || !p.passed.length) return '';
+  var items = p.passed.slice(0, 30).map(function (it) {
+    var gates = (it.reasons || '').split(';').filter(Boolean).map(function (g) { return '<span class="pass">' + esc(g) + '</span>'; }).join('');
+    var badges = (it.harmonic ? '<span class="hz-badge">谐波·' + esc(it.harmonic) + '</span>' : '') + (it.acc ? '<span class="hz-badge">吸筹</span>' : '');
+    return '<div class="pw-card" onclick="openStkModal(\'' + it.code + '\',\'' + escAttr(it.name) + '\',\'\')">' +
+      '<div class="hz-top"><span class="hz-nm">' + esc(it.name || it.code) + '</span><span class="hz-cd">' + esc(it.code) + '</span>' +
+      '<span class="acc-grd strong">' + it.score + '分</span>' + badges + '</div>' +
+      '<div class="hz-meta">涨幅 ' + it.pct + '% · 量比 ' + it.volRatio + ' · RSI ' + it.rsi + '</div>' +
+      '<div class="pw-gate">' + gates + '</div></div>';
+  }).join('');
+  return '<div class="card"><h2>⚡ 量化强势筛选（日线九门）' + (p.tradeDate ? ' <span class="h2-date">' + esc(p.tradeDate) + '</span>' : '') + '</h2>' +
+    '<div class="pw-grid">' + items + '</div>' + (p.summary ? '<div class="note-line">' + esc(p.summary) + '</div>' : '') + '</div>';
+}
+
+function renderChecklist() {
+  var c = window.DASHBOARD_DATA.macroChecklist;
+  if (!c || !c.items || !c.items.length) return '';
+  var row = function (it) {
+    var okcls = it.ok ? 'cl-ok' : (it.grade === 'env' ? 'cl-env' : 'cl-miss');
+    var mark = it.ok ? '✓' : (it.grade === 'env' ? '—' : '✗');
+    var val = (it.value === null || it.value === undefined) ? '—' : String(it.value);
+    return '<tr><td>' + esc(it.name) + '</td><td class="' + okcls + '">' + mark + '</td><td>' + esc(val) + '</td><td class="cl-env">' + esc(it.source || '') + '</td></tr>';
+  };
+  var derives = '<div class="cl-grp">' +
+    '<div class="cl-derive"><b>汇率强弱</b><br>' + esc((c.fxStrength || {}).label || '—') + '</div>' +
+    '<div class="cl-derive"><b>做空信号</b><br>' + esc((c.shortSignal || {}).label || '—') + '</div>' +
+    '<div class="cl-derive"><b>席位打分</b><br>' + esc((c.capitaScore || {}).label || '—') + '</div></div>';
+  var missing = '';
+  if (c.missingCore && c.missingCore.length) missing += '<div class="note-line cl-miss">缺失核心项：' + esc(c.missingCore.join('、')) + '</div>';
+  if (c.missingEnv && c.missingEnv.length) missing += '<div class="note-line cl-env">缺失环境项：' + esc(c.missingEnv.join('、')) + '</div>';
+  return '<div class="card"><h2>📋 必带数据清单（分级）' + (c.tradeDate ? ' <span class="h2-date">' + esc(c.tradeDate) + '</span>' : '') + '</h2>' +
+    '<table class="cl-table"><thead><tr><th>数据项</th><th>状态</th><th>数值</th><th>来源</th></tr></thead><tbody>' +
+    c.items.map(row).join('') + '</tbody></table>' + derives + missing +
+    (c.narrative ? '<div class="note-line">' + esc(c.narrative) + '</div>' : '') + '</div>';
 }
 
 var LB_LIST = [];
@@ -1628,7 +1783,7 @@ attachKlineTip(document.getElementById('db-kline'));
 attachKlineTip(document.getElementById('lb-kline'));
 attachKlineTip(document.getElementById('stk-kline'));
 
-function dbKlineSvg(kline) {
+function dbKlineSvg(kline, hz) {
   if (!kline || kline.length < 2) return '<div class="db-empty">暂无K线数据</div>';
   // R88：数据含近 60 根（供均线计算），只渲染近 30 根；均线基于全量序列计算
   var view = kline.slice(-30);
@@ -1649,6 +1804,12 @@ function dbKlineSvg(kline) {
       if (v !== null) { hi = Math.max(hi, v); lo = Math.min(lo, v); }
     }
   });
+  // R99p：谐波形态叠加层——先把 PRZ/止损/目标位纳入价格区间，保证线条在可视范围内
+  if (hz && hz.prz) {
+    [hz.prz[0], hz.prz[1], hz.stop, hz.target1, hz.target2].forEach(function (p) {
+      if (typeof p === 'number') { if (p > hi) hi = p; if (p < lo) lo = p; }
+    });
+  }
   if (hi <= lo) { hi += 1; lo -= 1; }
   var pad = (hi - lo) * 0.07; hi += pad; lo -= pad;
   var maxV = Math.max.apply(null, view.map(function (b) { return b[5]; })) || 1;
@@ -1699,6 +1860,20 @@ function dbKlineSvg(kline) {
     svg += '<text x="' + cx + '" y="' + (H - 6) + '" font-size="10" fill="#5a6e82" text-anchor="middle">' + esc(d) + '</text>';
   });
   svg += '<text x="' + (W - padR + 10) + '" y="' + (volTop - 4) + '" font-size="9.5" fill="#8aa0b5">成交量</text>';
+  // R99p：谐波形态叠加层（绿=PRZ区间 / 红=止损 / 蓝=目标位），覆盖在真实日K之上
+  if (hz && hz.prz) {
+    var pY = function (p) { return (typeof p === 'number') ? y(p) : null; };
+    var przLo = pY(hz.prz[0]), przHi = pY(hz.prz[1]);
+    if (przLo != null) {
+      var bandY = Math.min(przLo, przHi), bandH = Math.abs(przHi - przLo);
+      svg += '<rect x="' + padL + '" y="' + bandY + '" width="' + (W - padL - padR + 6) + '" height="' + bandH + '" fill="rgba(15,157,120,.10)"/>';
+      svg += '<line x1="' + padL + '" y1="' + przLo + '" x2="' + (W - padR + 6) + '" y2="' + przLo + '" stroke="#0f9d78" stroke-width="1" stroke-dasharray="4 3"/>';
+      svg += '<line x1="' + padL + '" y1="' + przHi + '" x2="' + (W - padR + 6) + '" y2="' + przHi + '" stroke="#0f9d78" stroke-width="1" stroke-dasharray="4 3"/>';
+      var sy = pY(hz.stop); if (sy != null) svg += '<line x1="' + padL + '" y1="' + sy + '" x2="' + (W - padR + 6) + '" y2="' + sy + '" stroke="#c0392b" stroke-width="1" stroke-dasharray="4 3"/>';
+      var t1 = pY(hz.target1); if (t1 != null) svg += '<line x1="' + padL + '" y1="' + t1 + '" x2="' + (W - padR + 6) + '" y2="' + t1 + '" stroke="#2f6fdb" stroke-width="1" stroke-dasharray="4 3"/>';
+      var t2 = pY(hz.target2); if (t2 != null) svg += '<line x1="' + padL + '" y1="' + t2 + '" x2="' + (W - padR + 6) + '" y2="' + t2 + '" stroke="#2f6fdb" stroke-width="1" stroke-dasharray="4 3"/>';
+    }
+  }
   svg += '</svg>';
   return svg;
 }
@@ -1885,9 +2060,20 @@ function openStkModal(code, name, note) {
     (code ? '<span class="cd2">' + esc(code) + '</span>' : '') +
     (nav ? '<span class="cd2">' + (STK_IDX + 1) + '/' + STK_GRP.length + '</span>' : '') +
     '<button class="db-modal-close" onclick="stkClose()">×</button>';
+  // R99p：若打开的标的是谐波形态池内标的，弹窗内嵌 PRZ/止损/双目标信息面板
+  var hz = findHarmonic(code);
+  var hzPanel = '';
+  if (hz) {
+    var _r = hz.ratios || {};
+    hzPanel = '<div class="hz-info">🎵 ' + esc(hz.pattern) + '（' + esc(hz.stage) + '） PRZ <span class="hz-v">' + hz.prz[0] + '~' + hz.prz[1] +
+      '</span> · 止损 <span class="hz-v">' + hz.stop + '</span> · T1 <span class="hz-v">' + hz.target1 + '</span> · T2 <span class="hz-v">' + hz.target2 + '</span>' +
+      (_r.AB ? ' · 比率 AB=' + _r.AB + ' BC=' + _r.BC + ' CD=' + _r.CD : '') +
+      (hz.accResonance ? ' · 吸筹共振' + hz.accResonance : '') +
+      '<div class="hz-legend"><i style="color:#0f9d78">━绿</i> PRZ区间 · <i style="color:#c0392b">━红</i> 止损 · <i style="color:#2f6fdb">━蓝</i> 目标位</div></div>';
+  }
   document.getElementById('stk-modal-meta').innerHTML =
     (note ? esc(note) + '<br>' : '') +
-    '<span class="lab">日K线（前复权 · 近30根）· 点击K线柱查看当日涨幅与成交量</span>';
+    '<span class="lab">日K线（前复权 · 近30根）· 点击K线柱查看当日涨幅与成交量</span>' + hzPanel;
   var box = document.getElementById('stk-kline');
   box.innerHTML = '<div class="db-empty">K线加载中…</div>';
   document.getElementById('stk-modal').classList.add('open');
@@ -1895,7 +2081,7 @@ function openStkModal(code, name, note) {
   function render(kl, err) {
     if (done) return;
     done = true;
-    box.innerHTML = (kl && kl.length > 1) ? dbKlineSvg(kl) : '<div class="db-empty">' + esc(err || '暂无K线数据') + '</div>';
+    box.innerHTML = (kl && kl.length > 1) ? dbKlineSvg(kl, hz) : '<div class="db-empty">' + esc(err || '暂无K线数据') + '</div>';
   }
   if (code) { stkFetchKline(code, render); return; }
   if (name) {
