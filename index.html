@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609281457"></script>
+<script src="data.js?v=202609281633"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -515,8 +515,9 @@
   .stk-tag { font-size:10px; line-height:1; margin-left:2px; flex-shrink:0; }
   /* R100n：🌟👀💡❗️ 角标下线，改为「边框弧形着色」——断板红/谐波橙/九门青/吸筹紫，
      命中多个指标时渐变叠加在同一圈边框弧上；不占布局空间（仅描边） */
-  .tk-chip { border-color: transparent !important; background: linear-gradient(#fff,#fff) padding-box, var(--tk-grad, none) border-box; }
-  .tk-chip.expanded { background: linear-gradient(var(--accent-soft),var(--accent-soft)) padding-box, var(--tk-grad, none) border-box; }
+  /* R100o：background 加 !important 压过 .reason-tops .tchip（0,2,0）等高优先级背景 */
+  .tk-chip { border-color: transparent !important; background: linear-gradient(#fff,#fff) padding-box, var(--tk-grad, none) border-box !important; }
+  .tk-chip.expanded { background: linear-gradient(var(--accent-soft),var(--accent-soft)) padding-box, var(--tk-grad, none) border-box !important; }
   /* R100n：通用标的板块小胶囊（A股/美股页所有标的胶囊必须显示所属板块） */
   .chip-sec { font-size:9px; font-weight:700; color:var(--accent-deep); background:var(--accent-soft); border-radius:4px; padding:0.5px 4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:64px; flex-shrink:0; }
   .tchip .chip-sec { max-width:56px; }
@@ -722,7 +723,13 @@ function stkTechTags(code) {
   if (T.acc[code]) out.push('acc');
   return out;
 }
-/* 返回胶囊元素的属性串：命中技术池 → tk-chip 类 + --tk-grad 渐变描边（单色实心/多色渐变弧）+ title 图例 */
+/* R100o：弧色修复——原实现返回 class="tk-chip" 拼在 class="stock-chip" 后形成重复 class 属性，
+   HTML 解析器只认第一个，导致 .tk-chip 弧色样式从未生效。拆为 class 片段 + 属性串两函数，
+   调用点改为 class="stock-chip' + stkTechCls(code) + '"' 内联拼接。 */
+function stkTechCls(code) {
+  return stkTechTags(code).length ? ' tk-chip' : '';
+}
+/* 返回胶囊元素的属性串：命中技术池 → --tk-grad 渐变描边（单色实心/多色渐变弧）+ title 图例 */
 function stkTechAttr(code, baseTitle) {
   var tags = stkTechTags(code);
   if (!tags.length) return baseTitle ? ' title="' + escAttr(baseTitle) + '"' : '';
@@ -731,7 +738,7 @@ function stkTechAttr(code, baseTitle) {
   if (stops.length === 1) grad = stops[0] + ' ' + stops[0];
   else grad = stops.map(function (c, i) { return c + ' ' + (i / stops.length * 100).toFixed(1) + '% ' + ((i + 1) / stops.length * 100).toFixed(1) + '%'; }).join(', ');
   var tip = (baseTitle ? baseTitle + '\n' : '') + '【' + tags.map(function (t) { return ({ db: '断板反包', hz: '谐波形态', pw: '日线九门', acc: '主力吸筹' })[t]; }).join(' · ') + '】\n' + TK_LEGEND;
-  return ' class="tk-chip" style="--tk-grad:linear-gradient(135deg,' + grad + ')" title="' + escAttr(tip) + '"';
+  return ' style="--tk-grad:linear-gradient(135deg,' + grad + ')" title="' + escAttr(tip) + '"';
 }
 /* R100n：全站 code→板块 映射（断板双池/谐波池/开盘精选/连板梯队/领涨领跌TOP成分股） */
 function stkSecOf(code) {
@@ -761,6 +768,11 @@ function stkSecOf(code) {
 function stkSecPill(code, forceSec) {
   var sec = forceSec || stkSecOf(code);
   return sec ? '<span class="chip-sec" title="所属板块：' + escAttr(sec) + '">' + esc(sec) + '</span>' : '';
+}
+/* R100o：弹窗标题行板块徽章（代码 与 数量/池标签 之间），替代弹窗内「所属板块：」文字行 */
+function stkSecBadge(code) {
+  var sec = stkSectorOf(code);
+  return sec ? '<span class="chip-sec" style="font-size:11px;max-width:120px;padding:1px 8px" title="所属板块：' + escAttr(sec) + '">' + esc(sec) + '</span>' : '';
 }
 
 function renderTops(s, isUp) {
@@ -799,8 +811,10 @@ function renderTops(s, isUp) {
     if (bname) info += ' · ' + bname + (isUp ? ' 领涨第' : ' 领跌第') + (idx + 1) + '位';
     if (op !== null && op !== undefined) info += ' · 今开 ' + (op >= 0 ? '+' : '') + op + '%' + (op > 1 ? '（高开）' : op < -1 ? '（低开）' : '（平开）');
     // R100n：技术池边框描边 + 所属板块胶囊（板块TOP成分股的板块=所在行业板块名）
+    // R100o：弧色 class 并入 class 属性（重复 class 属性会被浏览器忽略导致弧色失效）
+    var _hits = stkTechTags(code0).length > 0;
     var _attr = stkTechAttr(code0, info + '（点击查看K线）');
-    if (_attr) return '<span class="tchip"' + _attr + ' data-stk="' + escAttr(code0) + '|' + escAttr(name) + '|' + escAttr(info) + '"><b>' + esc(name) + '</b>' + stkSecPill(code0, bname) + (pctStr ? '<span class="tp ' + cls + '">' + pctStr + '</span>' : '') + '<span class="nt">' + esc(info) + '</span></span>';
+    if (_hits) return '<span class="tchip tk-chip"' + _attr + ' data-stk="' + escAttr(code0) + '|' + escAttr(name) + '|' + escAttr(info) + '"><b>' + esc(name) + '</b>' + stkSecPill(code0, bname) + (pctStr ? '<span class="tp ' + cls + '">' + pctStr + '</span>' : '') + '<span class="nt">' + esc(info) + '</span></span>';
     return '<span class="tchip" data-stk="' + escAttr(code0) + '|' + escAttr(name) + '|' + escAttr(info) + '" title="' + escAttr(info + '（点击查看K线）') + '"><b>' + esc(name) + '</b>' + stkSecPill(code0, bname) + (pctStr ? '<span class="tp ' + cls + '">' + pctStr + '</span>' : '') + '<span class="nt">' + esc(info) + '</span></span>';
   }).join('');
   return '<div class="reason-tops"><span class="tops-h">' + label + '</span>' + chips + '</div>';
@@ -1188,7 +1202,7 @@ function renderAiPrediction() {
       s.stocks.forEach(function (st) {
         // R100n：技术池边框描边（修复 R100m 漏给 AI 预测候选打标的问题）+ 所属板块胶囊
         var _t1 = st.name + ' ' + st.code + (st.note ? ' · ' + st.note : '') + '（点击查看K线）';
-        html += '<span class="stock-chip"' + stkTechAttr(st.code, _t1) + ' data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (st.note || '')) + '" title="' + escAttr(_t1) + '"><b>' + esc(st.name) + '</b><span class="cd">' + esc(st.code) + '</span>' + stkSecPill(st.code) +
+        html += '<span class="stock-chip' + stkTechCls(st.code) + '"' + stkTechAttr(st.code, _t1) + ' data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (st.note || '')) + '" title="' + escAttr(_t1) + '"><b>' + esc(st.name) + '</b><span class="cd">' + esc(st.code) + '</span>' + stkSecPill(st.code) +
           (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
       });
       html += '</div>';
@@ -1270,7 +1284,7 @@ function newsEntryInner(it, showSrc, tag, tradeDate) {
     im.stocks.forEach(function (st) {
       // R100n：技术池边框描边 + 所属板块胶囊
       var _t0 = (st.name || '') + ' ' + (st.code || '') + (st.note ? ' · ' + st.note : '') + '（点击查看K线）';
-      s += '<span class="stock-chip"' + stkTechAttr(st.code, _t0) + ' data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (st.note || '')) + '" title="' + escAttr(_t0) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + stkSecPill(st.code) + (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
+      s += '<span class="stock-chip' + stkTechCls(st.code) + '"' + stkTechAttr(st.code, _t0) + ' data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (st.note || '')) + '" title="' + escAttr(_t0) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + stkSecPill(st.code) + (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
     });
     s += '</div></div>';
   });
@@ -1367,7 +1381,7 @@ function renderThemePicks(list, tradeDate) {
         var hzTag = (st.code && window.DASHBOARD_DATA.harmonic && window.DASHBOARD_DATA.harmonic.tags) ? window.DASHBOARD_DATA.harmonic.tags[st.code] : null;
         var hzBadge = hzTag ? '<span class="hz-badge">谐波·' + esc(hzTag) + '</span>' : '';
         // R100n：emoji 角标改技术池边框描边 + 所属板块胶囊
-        s += '<span class="stock-chip"' + stkTechAttr(st.code, title) + ' data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (note || '')) + '" title="' + escAttr(title) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + hzBadge + stkSecPill(st.code) + (note ? '<span class="nt">' + esc(note) + '</span>' : '') + '</span>';
+        s += '<span class="stock-chip' + stkTechCls(st.code) + '"' + stkTechAttr(st.code, title) + ' data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (note || '')) + '" title="' + escAttr(title) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + hzBadge + stkSecPill(st.code) + (note ? '<span class="nt">' + esc(note) + '</span>' : '') + '</span>';
       });
       s += '</div>';
     }
@@ -1620,7 +1634,7 @@ function renderLianban(list) {
       var ctx = st.reason || st.hybk || '';
       var title = (st.name || '') + ' ' + (st.code || '') + (st.hybk ? ' · ' + st.hybk : '') + (st.reason ? ' ｜ ' + st.reason : '') + '（点击查看深度解读）';
       // R100n：技术池边框描边 + 所属板块胶囊
-      s += '<span class="stock-chip lb-click"' + stkTechAttr(st.code, title) + ' title="' + escAttr(title) + '" onclick="lbShow(' + idx + ')"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + stkSecPill(st.code) + (pct ? '<span class="rt">' + pct + '</span>' : '') + (ctx ? '<span class="nt">' + esc(ctx) + '</span>' : '') + '</span>';
+      s += '<span class="stock-chip lb-click' + stkTechCls(st.code) + '"' + stkTechAttr(st.code, title) + ' title="' + escAttr(title) + '" onclick="lbShow(' + idx + ')"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + stkSecPill(st.code) + (pct ? '<span class="rt">' + pct + '</span>' : '') + (ctx ? '<span class="nt">' + esc(ctx) + '</span>' : '') + '</span>';
     });
     s += '</div></div>';
   });
@@ -2041,12 +2055,13 @@ function openDbModal(key) {
   var isStar = key.indexOf('s|') === 0; // R99：开盘精选入口进入，徽标与确认池/观察池区分
   document.getElementById('db-modal-head').innerHTML =
     '<span class="nm">' + esc(e.name) + '</span><span class="cd2">' + esc(e.code) + '</span>' +
+    stkSecBadge(e.code) + // R100o：板块徽章挪到代码与确认池/观察池标签之间
     '<span class="db-stage ' + (done ? 'done' : 'hold') + '" style="font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;' + (done ? 'background:var(--up-soft);color:var(--up)' : 'background:var(--accent-soft);color:var(--accent-deep)') + '">' + (done ? '确认池' : (isStar ? '🌟 开盘精选' : '观察池 · ' + esc(e.stage))) + '</span>' +
     dbSentBadge(e, 'font-size:11px;padding:2px 9px;') +
     '<button class="db-modal-close" onclick="closeDbModal()">×</button>';
   var probCls = e.sentiment === 'bear' ? 'down' : (e.sentiment === 'neutral' ? '' : 'up');
   document.getElementById('db-modal-meta').innerHTML =
-    '<div><span class="lab">所属板块：</span>' + esc(e.sector || '') + '　<span class="lab">涨停日：</span>' + esc(e.ztDate || '') + '　<span class="lab">今日：</span><b class="' + (e.pct >= 0 ? 'up' : 'down') + '">' + fmtPct(e.pct) + '</b></div>' +
+    '<div><span class="lab">涨停日：</span>' + esc(e.ztDate || '') + '　<span class="lab">今日：</span><b class="' + (e.pct >= 0 ? 'up' : 'down') + '">' + fmtPct(e.pct) + '</b></div>' +
     '<div><span class="lab">涨停日板块涨幅：</span><b class="' + (e.boardPctZt >= 0 ? 'up' : 'down') + '">' + (e.boardPctZt == null ? '—' : fmtPct(e.boardPctZt)) + '</b>　<span class="lab">今日板块涨幅：</span><b class="' + (e.boardPctToday >= 0 ? 'up' : 'down') + '">' + (e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday)) + '</b></div>' +
     '<div><span class="lab">形态：</span>' + esc(e.form || '') + '</div>' +
     '<div><span class="lab">上涨概率：</span><b class="' + probCls + '">' + (e.probability !== null && e.probability !== undefined ? e.probability + '%' : '—') + '</b></div>';
@@ -2455,6 +2470,7 @@ function openStkModal(code, name, note) {
   document.getElementById('stk-modal-head').innerHTML =
     '<span class="nm">' + esc(name || '') + '</span>' +
     (code ? '<span class="cd2">' + esc(code) + '</span>' : '') +
+    stkSecBadge(code) + // R100o：板块徽章挪到代码与数量(n/N)之间
     (nav ? '<span class="cd2">' + (STK_IDX + 1) + '/' + STK_GRP.length + '</span>' : '') +
     (hz ? '<span class="hz-mini" title="谐波形态示意：红折线=X-A-B-C-D 五点结构 · 绿带=PRZ 潜在反转区 · 红虚线=止损 · 蓝虚线=T1/T2 目标位">' + hzMiniSvg(hz) + '</span>' : '') +
     '<button class="db-modal-close" onclick="stkClose()">×</button>';
@@ -2467,9 +2483,7 @@ function openStkModal(code, name, note) {
       (hz.accResonance ? ' · 吸筹共振' + hz.accResonance : '') +
       '<div class="hz-legend"><i style="color:#0f9d78">━绿</i> PRZ区间 · <i style="color:#c0392b">━红</i> 止损 · <i style="color:#2f6fdb">━蓝</i> 目标位</div></div>';
   }
-  var _sec = stkSectorOf(code); // R100l：弹窗标题下方显示所属板块（红框位）
   document.getElementById('stk-modal-meta').innerHTML =
-    (_sec ? '<div style="margin-bottom:2px;"><span class="lab">所属板块：</span>' + esc(_sec) + '</div>' : '') +
     (note ? esc(note) + '<br>' : '') +
     '<span class="lab">日K线（前复权 · 近30根）· 点击K线柱查看当日涨幅与成交量</span>' + hzPanel;
   var box = document.getElementById('stk-kline');
@@ -2491,6 +2505,7 @@ function openStkModal(code, name, note) {
       var cd0 = hd0.querySelector('.cd2');
       if (!cd0) { cd0 = document.createElement('span'); cd0.className = 'cd2'; hd0.insertBefore(cd0, hd0.querySelector('.db-modal-close')); }
       cd0.textContent = mapped;
+      cd0.insertAdjacentHTML('afterend', stkSecBadge(mapped)); // R100o：反查回填后补板块徽章
       stkFetchKline(mapped, render);
       return;
     }
@@ -2501,6 +2516,7 @@ function openStkModal(code, name, note) {
       var cdSpan = hd.querySelector('.cd2');
       if (!cdSpan) { cdSpan = document.createElement('span'); cdSpan.className = 'cd2'; hd.insertBefore(cdSpan, hd.querySelector('.db-modal-close')); }
       cdSpan.textContent = fullCode;
+      cdSpan.insertAdjacentHTML('afterend', stkSecBadge(fullCode)); // R100o：反查回填后补板块徽章
       stkFetchKline(fullCode, render);
     });
     return;
