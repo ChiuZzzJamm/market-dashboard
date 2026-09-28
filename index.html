@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609282004"></script>
+<script src="data.js?v=202609282015"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1652,6 +1652,7 @@ function renderAccumulation() {
     // R100j：卡片美化——头部（名称+代码｜评级徽章右对齐）+ 评分进度条 + ✓/✕ 特征胶囊
     return '<div class="acc-card" onclick="openGrpModal(window.DASHBOARD_DATA.accumulation.scored,' + idx + ')">' +
       '<div class="acc-head"><span class="acc-id"><b>' + esc(nm || it.code) + '</b>' + (nm ? '<span class="cd">' + esc(it.code) + '</span>' : '') + '</span>' +
+      sentBadgeHtml(it.code) + // R100z4c：代码后加 利好/中性/利空 徽章（参考断板/谐波卡片）
       '<span class="acc-grd ' + gd + '">' + esc(it.grade) + ' ' + it.score + '分</span></div>' +
       '<div class="acc-bar"><i style="width:' + Math.max(4, Math.min(100, it.score || 0)) + '%"></i></div>' +
       (it.note ? '<div class="hz-note">' + esc(it.note) + '</div>' : '') +
@@ -1666,7 +1667,8 @@ function renderPowerScreen() {
   if (!p || !p.passed || !p.passed.length) return '';
   var items = p.passed.slice(0, 30).map(function (it, idx) {
     var gates = (it.reasons || '').split(';').filter(Boolean).map(function (g) { return '<span class="pass">' + esc(g) + '</span>'; }).join('');
-    var badges = (it.harmonic ? '<span class="hz-badge">谐波·' + esc(it.harmonic) + '</span>' : '') + (it.acc ? '<span class="hz-badge">吸筹</span>' : '');
+    // R100z4c：谐波徽标去掉，改位利好/中性/利空徽章（吸筹徽章保留其后）
+    var badges = sentBadgeHtml(it.code) + (it.acc ? '<span class="hz-badge">吸筹</span>' : '');
     // R100g：名称缺失只展示代码一次
     var nm = (it.name && it.name !== it.code) ? it.name : '';
     return '<div class="pw-card" onclick="openGrpModal(window.DASHBOARD_DATA.powerScreen.passed,' + idx + ')">' +
@@ -2579,7 +2581,8 @@ function openStkModal(code, name, note) {
     (code ? '<span class="cd2">' + esc(code) + '</span>' : '') +
     (nav ? '<span class="cd2">' + (STK_IDX + 1) + '/' + STK_GRP.length + '</span>' : '') + // R100s：数量紧跟代码
     '<button class="db-modal-close" onclick="stkClose()">×</button>' +
-    '<div class="m-badge-row">' + stkSecBadge(code) + stkTechBadgeHtml(code) + stkPoolBadge(code) + // R100t：池归属并入技术徽章
+    '<div class="m-badge-row">' + stkSecBadge(code) + stkTechBadgeHtml(code) + stkPoolBadge(code) +
+    (stkTechMeta(code) ? sentBadgeHtml(code) : '') + // R100z4c：九门/谐波/吸筹标的徽标行末尾加 利好/中性/利空（非技术池标的不显示）
     '</div>' +
     (hz ? '<div class="hz-strip">' + hzSideHtml(hz) + hzMiniWrap(hz) + '</div>' : ''); // R100z4：谐波参数+迷你图独立成行，参数贴左填满消除空档
   document.getElementById('stk-modal-meta').innerHTML =
@@ -2604,7 +2607,7 @@ function openStkModal(code, name, note) {
       if (!cd0) { cd0 = document.createElement('span'); cd0.className = 'cd2'; hd0.insertBefore(cd0, hd0.querySelector('.db-modal-close')); }
       cd0.textContent = mapped;
       var row0 = hd0.querySelector('.m-badge-row'); // R100s：反查回填后补第二行徽标（板块+技术+池归属）
-      if (row0) row0.innerHTML = stkSecBadge(mapped) + stkTechBadgeHtml(mapped) + stkPoolBadge(mapped);
+      if (row0) row0.innerHTML = stkSecBadge(mapped) + stkTechBadgeHtml(mapped) + stkPoolBadge(mapped) + (stkTechMeta(mapped) ? sentBadgeHtml(mapped) : '');
       stkFetchKline(mapped, render);
       return;
     }
@@ -2616,7 +2619,7 @@ function openStkModal(code, name, note) {
       if (!cdSpan) { cdSpan = document.createElement('span'); cdSpan.className = 'cd2'; hd.insertBefore(cdSpan, hd.querySelector('.db-modal-close')); }
       cdSpan.textContent = fullCode;
       var row1 = hd.querySelector('.m-badge-row'); // R100s：反查回填后补第二行徽标（板块+技术+池归属）
-      if (row1) row1.innerHTML = stkSecBadge(fullCode) + stkTechBadgeHtml(fullCode) + stkPoolBadge(fullCode);
+      if (row1) row1.innerHTML = stkSecBadge(fullCode) + stkTechBadgeHtml(fullCode) + stkPoolBadge(fullCode) + (stkTechMeta(fullCode) ? sentBadgeHtml(fullCode) : '');
       stkFetchKline(fullCode, render);
     });
     return;
