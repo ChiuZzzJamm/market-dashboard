@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609282049"></script>
+<script src="data.js?v=202609282128"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -447,9 +447,7 @@
   .db-modal-close { margin-left: auto; background: none; border: 1px solid var(--line); border-radius: 999px; width: 30px; height: 30px; font-size: 15px; cursor: pointer; color: var(--ink2); line-height: 1; }
   .db-modal-close:hover { border-color: var(--accent); color: var(--accent-deep); }
   /* R100j：弹窗恢复右上角迷你谐波示意图（用户反馈完整教学大图不直观，R100i 大图下线） */
-  .hz-mini { margin-left: auto; flex-shrink: 0; line-height: 0; border: 1px dashed var(--line); border-radius: 8px; padding: 2px; background: var(--paper); }
-  /* R100t：迷你谐波图挪到第二行徽标区右侧——× 回第一行右上角，消除第二行上方大空档 */
-  @media (max-width: 760px) { .hz-mini { display: none; } }
+  .hz-mini { margin-left: auto; flex-shrink: 0; line-height: 0; border: 1px dashed var(--line); border-radius: 8px; padding: 2px; background: var(--paper); }  /* R100t：迷你谐波图挪到第二行徽标区右侧——× 回第一行右上角，消除第二行上方大空档；R100z4f：手机端不再隐藏（hz-strip 行参数文本 flex:1 自动让位） */
   /* R100j：🧰 工具箱三个子页入口——横着的椭圆形嵌入对应文字（原竖长条椭圆改横向） */
   .db-subnav { display: flex; justify-content: center; align-items: center; gap: 14px; margin: 0 0 16px; flex-wrap: wrap; }
   .db-subtab { padding: 10px 24px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--paper); font-size: 13.5px; font-weight: 800; color: var(--ink2); cursor: pointer; font-family: var(--font); box-shadow: var(--shadow); transition: all .18s ease; letter-spacing: 1px; }
@@ -488,8 +486,8 @@
   .hz-pool { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; margin-top:8px; }
   .hz-card { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:var(--paper); cursor:pointer; transition:.15s; }
   .hz-card:hover { border-color:var(--accent); box-shadow:0 4px 14px rgba(17,17,26,.10); }
-  .hz-card .hz-top { display:flex; align-items:center; gap:6px; }
-  .hz-card .hz-nm { font-weight:800; }
+  .hz-card .hz-top { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }  /* R100z4f：允许折行，名称不再被压缩竖排 */
+  .hz-card .hz-nm { font-weight:800; white-space:nowrap; }  /* R100z4f：名称禁逐字竖排 */
   .hz-card .hz-cd { font-size:11px; color:var(--ink2); }
   .hz-card .hz-pat { font-size:11px; color:var(--accent-deep); font-weight:700; margin-left:auto; }
   .hz-card .hz-note { font-size:11px; color:var(--ink); margin-top:5px; line-height:1.55; }
@@ -1394,8 +1392,10 @@ function renderThemePicks(list, tradeDate) {
       s += '<div class="stock-chips">';
       sts.forEach(function (st) {
         // R97c：chg 规范为带符号百分比；R98j：兼容 AI 写回的 "+2.37%" 字符串（strip % 后解析，防双 %% bug）
+        // R100z4f：note 剥离 AI 写入的行情字样尾巴（·今日涨停 / ·涨X% / ·跌X%）——涨跌一律由 chg 字段承载，防「国有大行·涨1.39% · +1.39%」重复与虚构涨停文案
+        var ntRaw = String(st.note || '').replace(/·(今日)?(涨停|[涨跌][0-9.]+%)/g, '').replace(/^·|·$/g, '').trim();
         var parts = [];
-        if (st.note) parts.push(st.note);
+        if (ntRaw) parts.push(ntRaw);
         var chgN = (typeof st.chg === 'number') ? st.chg : parseFloat(String(st.chg == null ? '' : st.chg).replace('%', ''));
         if (!isNaN(chgN)) parts.push((chgN > 0 ? '+' : '') + chgN.toFixed(2) + '%');
         var note = parts.join(' · ');

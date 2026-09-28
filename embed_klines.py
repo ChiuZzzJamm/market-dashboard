@@ -272,6 +272,13 @@ def main():
             if old_map:
                 D["sectorMap"] = old_map
             print("[warn] 时间预算不足，跳过 sectorMap 刷新（保留既有值）")
+        # R100z4f：池内缺名回填 + themePicks 行情字段校准（确定性脚本，失败不阻塞不清场）
+        try:
+            import fix_pools_meta
+            _rn, _cf, _nc = fix_pools_meta.patch(D)
+            print(f"[info] fix_pools_meta：补名 {_rn} 只 / themePicks chg 校准 {_cf} 条 / note 净化 {_nc} 条")
+        except Exception as _exc:
+            print(f"[warn] fix_pools_meta 异常（{_exc}），跳过（保留原值不清场）")
         save_data(D)
         print(f"[info] stkKlines 内嵌完成：成功 {ok} 只 / 失败 {len(fail)} 只 / 总计 {len(kl)} 只，名称映射 {len(kl_names)} 条")
         if fail:

@@ -277,11 +277,7 @@ if mode == 'ashare':
     if lianban_line:
         desp_parts.append(lianban_line)
     desp_parts.append(build_panorama_line(D.get('panorama')))
-    # 题材掘金（fin-strategy-engine 内嵌推演）：与网页同口径，deduce 随模块一并送达
-    _tp = (a.get('themePicks') or [])
-    if _tp:
-        _tp_lines = [fmt_theme_pick(t, i + 1) for i, t in enumerate(_tp[:5])]
-        desp_parts.append("🧩 题材掘金：\n" + '\n'.join(_tp_lines))
+    # R100z4f：16:00 推送定稿清单=💡研判/💰资金/📈领涨/📉领跌/🔥连板/🌏日韩，删除「🧩 题材掘金」独立段（页面模块与 deduce 内嵌保留）
     desp = '\n\n'.join(desp_parts)
 
 elif mode == 'us':
