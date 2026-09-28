@@ -60,6 +60,22 @@ def sanitize(mod):
             if not isinstance(e.get("story"), str):
                 e["story"] = ""
                 warns.append(f"[WARN] {pool}.{code} story 缺失/非法，已补空串")
+            else:
+                # R100z3 治本：story 段落标记归一化——AI 偶发把旗标/emoji 写进【个股消息🌍】
+                # 等括号内（前端靠段首【个股消息】识别加粗与旗标，括号内杂质会导致渲染为黑字）。
+                # 机械净化：【】内仅保留 个股消息/板块消息(+·关键词)，剥除 emoji/旗标/多余空白。
+                _s0 = e["story"]
+
+                def _norm_marker(m):
+                    inner = re.sub(
+                        r"[\U0001F000-\U0001FAFF\u2600-\u27BF\uFE0F\s]+", "", m.group(2))
+                    return "【" + m.group(1) + inner + "】"
+
+                _s1 = re.sub(r"【(个股消息|板块消息)([^】]*)】", _norm_marker, _s0)
+                if _s1 != _s0:
+                    e["story"] = _s1
+                    warns.append(
+                        f"[INFO] {pool}.{code} story 段落标记已归一化（【】内剥除旗标/emoji，R100z3）")
             if not e.get("bullRefs"):
                 warns.append(f"[WARN] {pool}.{code} 无 bullRefs（利好依据为空，请复核）")
             kept.append(e)
