@@ -253,6 +253,11 @@ def main():
 
     D = common.load_dashboard_data(BASE)
     names = K.collect_pool_names(D)  # R100g：池内 code→name（stkKlineNames 缺名兜底）
+    # R100m：fullScan 候选名并入（全市场标的简称）
+    fs = D.get('fullScan') or {}
+    if fs.get('date') == datetime.date.today().strftime('%Y-%m-%d') and isinstance(fs.get('names'), dict):
+        for c, nm in fs['names'].items():
+            names.setdefault(str(c), nm)
     codes = K.collect_pool_codes(D)
     # 扩展：断板池 code 一并纳入扫描
     for pool in ('confirmed', 'watching'):
@@ -260,6 +265,13 @@ def main():
             c = str(e.get('code') or '')
             if c.startswith(('60', '00')) and c not in codes:
                 codes.append(c)
+    # R100m：全量扫候选并入扫描域（fullScan.date==今日 才生效；缺失/过期自动退回池内域，不清场）
+    if fs.get('date') == datetime.date.today().strftime('%Y-%m-%d') and fs.get('candidates'):
+        fs_codes = [str(c) for c in fs['candidates'] if str(c).startswith(('60', '00'))]
+        codes = sorted(set(codes) | set(fs_codes))
+        print(f"[ACC] 全量扫候选并入：+{len(fs_codes)} 只（扫描域 {len(codes)} 只）")
+    else:
+        print('[ACC] fullScan 缺失/非今日，退回池内扫描域')
     codes = sorted(set(codes))
     print(f"[ACC] 扫描域 {len(codes)} 只（优先内嵌 stkKlines）")
 

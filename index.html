@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609281319"></script>
+<script src="data.js?v=202609281409"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -487,7 +487,7 @@
   .hz-card .hz-pat { font-size:11px; color:var(--accent-deep); font-weight:700; margin-left:auto; }
   .hz-card .hz-note { font-size:11px; color:var(--ink); margin-top:5px; line-height:1.55; }
   .hz-stage { font-size:9.5px; font-weight:700; border-radius:999px; padding:0 6px; }
-  .hz-stage.confirm { color:#0f9d78; background:#e3f7ef; }
+  .hz-stage.confirm { color:#c0392b; background:#fdeaea; }
   .hz-stage.watch { color:#c47d00; background:#fff4dc; }
   .hz-meta { font-size:10.5px; color:var(--ink2); margin-top:6px; font-variant-numeric:tabular-nums; }
 
@@ -507,6 +507,12 @@
   .acc-grd.watch { color:#8a5800; background:#ffe9c2; border:1px solid #f0c36d; }
   .acc-bar { height:4px; border-radius:999px; background:rgba(17,17,26,.07); margin-top:8px; overflow:hidden; }
   .acc-bar i { display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,#f5a26b,var(--accent)); }
+  /* R100m：九门评分徽章——红色、与代码同行平行（与吸筹评级徽章 acc-grd 区分） */
+  .pw-grd { font-size:10.5px; font-weight:800; border-radius:999px; padding:1px 8px; flex-shrink:0; font-variant-numeric:tabular-nums; color:#fff; background:linear-gradient(135deg,#e35d5d,#c0392b); }
+  .pw-card .hz-top { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .pw-card .hz-top .pw-grd { margin-left:2px; }
+  /* R100m：全站标的池角标（谐波🌟/吸筹👀/九门💡/断板❗️），可叠加 */
+  .stk-tag { font-size:10px; line-height:1; margin-left:2px; flex-shrink:0; }
   .acc-card .hz-note { font-size:11px; color:var(--ink2); margin-top:7px; line-height:1.6; }
   .acc-feat { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }
   .acc-feat span { font-size:9.5px; color:var(--ink2); border:1px solid var(--line); border-radius:999px; padding:1px 7px; opacity:.55; }
@@ -573,9 +579,12 @@
     <button class="db-entry-in" id="db-entry-in" title="点击返回每日市场看板">🧰</button>
     <!-- R100k：子页菜单已移入各子页内容流（断板页位于开盘精选与确认池说明之间；谐波/九门页位于页首） -->
 
+    <!-- R100m：TOP10 + 开盘精选固定区——切换谐波/九门/吸筹子页时保持显示（用户要求固定不动） -->
+    <div id="db-fixed"></div>
     <div id="db-pools" class="db-subpage"></div>
     <div id="db-hz" class="db-subpage" style="display:none;"></div>
     <div id="db-pw" class="db-subpage" style="display:none;"></div>
+    <div id="db-acc" class="db-subpage" style="display:none;"></div>
   </div>
 </div>
 
@@ -674,6 +683,31 @@ function renderBreadth(b) {
 
 // 板块成分股 TOP 列表：A股 tops 含成分股 TOP5（涨前5/跌前5），美股 tops 含代表标的（1-2只）。
 // 兼容旧数据：仅有 leader 字段时按旧规则归一化。
+/* R100m：全站标的池角标——谐波🌟 / 吸筹👀 / 九门💡 / 断板反包❗️（命中多个则叠加展示）。
+   A股/美股页所有标的胶囊共用；美股代码非 6 位数字，天然不命中。 */
+function stkTagsBadge(code) {
+  code = String(code || '');
+  if (!/^\d{6}$/.test(code)) return '';
+  var T = window._STK_TAGS;
+  if (!T) {
+    T = { hz: {}, acc: {}, pw: {}, db: {} };
+    var D = window.DASHBOARD_DATA || {};
+    var hz = D.harmonic || {};
+    ((hz.confirmPool || []).concat(hz.watchPool || [])).forEach(function (x) { if (x && x.code) T.hz[String(x.code)] = 1; });
+    ((D.accumulation || {}).scored || []).forEach(function (x) { if (x && x.code) T.acc[String(x.code)] = 1; });
+    ((D.powerScreen || {}).passed || []).forEach(function (x) { if (x && x.code) T.pw[String(x.code)] = 1; });
+    var db = D.duanban || {};
+    (db.confirmed || []).concat(db.watching || []).forEach(function (x) { if (x && x.code) T.db[String(x.code)] = 1; });
+    window._STK_TAGS = T;
+  }
+  var s = '';
+  if (T.hz[code]) s += '<span class="stk-tag" title="谐波形态标的">🌟</span>';
+  if (T.acc[code]) s += '<span class="stk-tag" title="主力吸筹标的">👀</span>';
+  if (T.pw[code]) s += '<span class="stk-tag" title="日线九门标的">💡</span>';
+  if (T.db[code]) s += '<span class="stk-tag" title="断板反包标的">❗️</span>';
+  return s;
+}
+
 function renderTops(s, isUp) {
   var arr = s.tops || null;
   if (!arr || !arr.length) {
@@ -709,7 +743,7 @@ function renderTops(s, isUp) {
     var info = name + (pctStr ? ' ' + pctStr : '');
     if (bname) info += ' · ' + bname + (isUp ? ' 领涨第' : ' 领跌第') + (idx + 1) + '位';
     if (op !== null && op !== undefined) info += ' · 今开 ' + (op >= 0 ? '+' : '') + op + '%' + (op > 1 ? '（高开）' : op < -1 ? '（低开）' : '（平开）');
-    return '<span class="tchip" data-stk="' + escAttr(code0) + '|' + escAttr(name) + '|' + escAttr(info) + '" title="' + escAttr(info + '（点击查看K线）') + '"><b>' + esc(name) + '</b>' + (pctStr ? '<span class="tp ' + cls + '">' + pctStr + '</span>' : '') + '<span class="nt">' + esc(info) + '</span></span>';
+    return '<span class="tchip" data-stk="' + escAttr(code0) + '|' + escAttr(name) + '|' + escAttr(info) + '" title="' + escAttr(info + '（点击查看K线）') + '"><b>' + esc(name) + '</b>' + (pctStr ? '<span class="tp ' + cls + '">' + pctStr + '</span>' : '') + '<span class="nt">' + esc(info) + '</span>' + stkTagsBadge(code0) + '</span>';
   }).join('');
   return '<div class="reason-tops"><span class="tops-h">' + label + '</span>' + chips + '</div>';
 }
@@ -848,11 +882,8 @@ function render(market) {
     }
   }
 
-  // 选股扩展模块（吸筹，2026-09-26）：仅在 A 股页展示，数据缺失时整模块隐藏
-  // R100h：量化九门移到谐波模块下面；必带数据清单模块已整体下线（2026-09-28 用户要求）
-  if (isA) {
-    var _acc = renderAccumulation(); if (_acc) html += _acc;
-  }
+  // R100m：主力吸筹已移至「🧰 技术看板」第 4 子页（db-acc），主页面不再渲染（用户 2026-09-28 要求）。
+  // 谐波形态 / 量化九门此前已移入子页（R100i），子页渲染见 renderDuanban()。
 
   // 主力资金流向紧贴行业全景上方（2026-09-20 用户要求：挪到行业全景上面）
   if (isA) {
@@ -1273,7 +1304,7 @@ function renderThemePicks(list, tradeDate) {
         // R99p：命中谐波形态 PRZ 的标的在题材掘金打「谐波✓」徽标（与独立谐波模块交叉）
         var hzTag = (st.code && window.DASHBOARD_DATA.harmonic && window.DASHBOARD_DATA.harmonic.tags) ? window.DASHBOARD_DATA.harmonic.tags[st.code] : null;
         var hzBadge = hzTag ? '<span class="hz-badge">谐波·' + esc(hzTag) + '</span>' : '';
-        s += '<span class="stock-chip" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (note || '')) + '" title="' + escAttr(title) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + hzBadge + (note ? '<span class="nt">' + esc(note) + '</span>' : '') + '</span>';
+        s += '<span class="stock-chip" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (note || '')) + '" title="' + escAttr(title) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + hzBadge + stkTagsBadge(st.code) + (note ? '<span class="nt">' + esc(note) + '</span>' : '') + '</span>';
       });
       s += '</div>';
     }
@@ -1431,7 +1462,7 @@ function renderPowerScreen() {
     var nm = (it.name && it.name !== it.code) ? it.name : '';
     return '<div class="pw-card" onclick="openGrpModal(window.DASHBOARD_DATA.powerScreen.passed,' + idx + ')">' +
       '<div class="hz-top"><span class="hz-nm">' + esc(nm || it.code) + '</span>' + (nm ? '<span class="hz-cd">' + esc(it.code) + '</span>' : '') +
-      '<span class="acc-grd strong">' + it.score + '分</span>' + badges + '</div>' +
+      '<span class="pw-grd">' + it.score + '分</span>' + badges + '</div>' +
       '<div class="hz-meta">涨幅 ' + it.pct + '% · 量比 ' + it.volRatio + ' · RSI ' + it.rsi + '</div>' +
       '<div class="pw-gate">' + gates + '</div></div>';
   }).join('');
@@ -1463,7 +1494,7 @@ function renderLianban(list) {
       var pct = (typeof st.pct === 'number') ? (st.pct > 0 ? '+' : '') + st.pct.toFixed(1) + '%' : '';
       var ctx = st.reason || st.hybk || '';
       var title = (st.name || '') + ' ' + (st.code || '') + (st.hybk ? ' · ' + st.hybk : '') + (st.reason ? ' ｜ ' + st.reason : '') + '（点击查看深度解读）';
-      s += '<span class="stock-chip lb-click" title="' + escAttr(title) + '" onclick="lbShow(' + idx + ')"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + (pct ? '<span class="rt">' + pct + '</span>' : '') + (ctx ? '<span class="nt">' + esc(ctx) + '</span>' : '') + '</span>';
+      s += '<span class="stock-chip lb-click" title="' + escAttr(title) + '" onclick="lbShow(' + idx + ')"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + stkTagsBadge(st.code) + (pct ? '<span class="rt">' + pct + '</span>' : '') + (ctx ? '<span class="nt">' + esc(ctx) + '</span>' : '') + '</span>';
     });
     s += '</div></div>';
   });
@@ -1624,6 +1655,8 @@ function renderDuanban() {
   var dbEntryBtn = document.getElementById('db-entry');
   if (dbEntryBtn) dbEntryBtn.title = '点击进入技术看板（断板反包/谐波/九门）· 确认 ' + conf.length + ' · 观察 ' + watch.length;
   var html = '';
+  // R100m：TOP10 与 开盘精选 写入 #db-fixed 固定区——切换子页时保持显示
+  var fixed = '';
   // R98: 近3个交易日涨幅居前板块 TOP10（确认池上方）——同花顺行业口径
   var tb = (db && db.topBoards) || [];
   window._TB_KL = {};
@@ -1631,7 +1664,7 @@ function renderDuanban() {
   window._TB_LIST = [];
   if (tb.length) {
     var hasPct3 = tb[0] && tb[0].pct3 != null;
-    html += '<div class="db-pool" style="padding-bottom:14px;"><h2>📈 近3个交易日涨幅居前板块 TOP10</h2>' +
+    fixed += '<div class="db-pool" style="padding-bottom:14px;"><h2>📈 近3个交易日涨幅居前板块 TOP10</h2>' +
       '<div class="db-sub">同花顺行业口径 · ' + (hasPct3 ? '3个交易日累计涨幅 · ' : '') + '今日=当日涨幅（每日 16:00 随断板反包更新）</div><div class="db-tb">';
     tb.forEach(function (b, i) {
       var up3 = b.pct3 != null ? b.pct3 >= 0 : null, up1 = b.pctToday >= 0;
@@ -1646,7 +1679,7 @@ function renderDuanban() {
         '<div class="db-tb-today">今日 <b class="' + (up1 ? 'up' : 'down') + '">' + (up1 ? '+' : '') + b.pctToday.toFixed(2) + '%</b></div>' +
         '</div>';
     });
-    html += '</div></div>';
+    fixed += '</div></div>';
   }
   // R99：🌟 开盘精选（每日 9:45 自动化写入 duanban.star），置于确认池上方。
   // 仅保留断板反包池内标的（R99 剔除板块动量等池外候选），按上涨概率降序；卡片复用确认池 db-chip 样式、
@@ -1662,8 +1695,11 @@ function renderDuanban() {
   if (st && st.date === _tdStr && st.picks && st.picks.length) {
     var poolByCode = {};
     conf.concat(watch).forEach(function (e) { poolByCode[String(e.code)] = e; });
-    var starPicks = st.picks.filter(function (p) { return poolByCode[String(p.code)]; });
-    starPicks.sort(function (a, b) {
+    // R100m：精选候选扩展至四池——断板池标的带概率，技术池（谐波/九门/吸筹）标的带 src 来源标记、
+    // 无概率排断板池之后；前端对池外标的构造最小弹窗条目（K线由 stkFetchKline 网络兜底）。
+    var starPool = st.picks.filter(function (p) { return poolByCode[String(p.code)]; });
+    var starTech = st.picks.filter(function (p) { return !poolByCode[String(p.code)] && String(p.code || '').length === 6; });
+    starPool.sort(function (a, b) {
       var ea = poolByCode[String(a.code)], eb = poolByCode[String(b.code)];
       var pa = (ea.probability == null) ? -1 : ea.probability, pb = (eb.probability == null) ? -1 : eb.probability;
       if (pb !== pa) return pb - pa;
@@ -1671,23 +1707,35 @@ function renderDuanban() {
       var rb = eb.sentiment === 'bull' ? 0 : (eb.sentiment === 'bear' ? 2 : 1);
       return ra - rb;
     });
-    html += '<div class="db-pool p-star"><h2>🌟 开盘精选 · ' + starPicks.length + ' 只</h2>' +
-      '<div class="db-sub">' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：仅收录开盘后板块情绪正向+主力资金净流入正向板块挂钩的池内标的，按上涨概率降序；弹窗与确认池一致）</div>' +
+    starTech.sort(function (a, b) { return (b.score || b.probability || 0) - (a.score || a.probability || 0); });
+    var starPicks = starPool.concat(starTech);
+    fixed += '<div class="db-pool p-star"><h2>🌟 开盘精选 · ' + starPicks.length + ' 只</h2>' +
+      '<div class="db-sub">' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：断板池按「板块情绪正向+主力净流入正向」挂钩+上涨概率降序，并可从谐波/九门/吸筹池直接取标的；弹窗与池内一致）</div>' +
       // R99c：页面只放深度分析（pushText），指数/情绪/集合竞价等均在其中，不再单列 marketLine/sentiment
       (st.pushText ? '<div style="font-size:12.5px;color:var(--ink2);line-height:1.8;margin:6px 0 10px;white-space:pre-line;">' + esc(st.pushText) + '</div>' : '') +
       '<div class="db-chips">';
     window._STAR_LIST = [];
     starPicks.forEach(function (p) {
-      var e = poolByCode[String(p.code)];
-      var key = 's|' + String(p.code);
-      var e2 = Object.assign({}, e, { stage: '精选' });
+      var code = String(p.code);
+      var e = poolByCode[code];
+      var key = 's|' + code;
+      var e2;
+      if (e) {
+        e2 = Object.assign({}, e, { stage: '精选' });
+      } else {
+        e2 = { code: code, name: p.name || '', sector: p.sector || '', stage: '精选',
+               sentiment: p.sentiment || 'neutral', probability: p.probability,
+               form: ({ hz: '谐波形态', pw: '日线九门', acc: '主力吸筹' }[p.src] || '技术池候选'), note: p.note || '' };
+      }
       DB_INDEX[key] = e2;
       DB_ORDER.push(key);
-      if (String(p.code || '').length === 6) { window._STAR_LIST.push(String(p.code)); }
-      html += dbChipHtml(e2, key, false, true);
+      if (code.length === 6) { window._STAR_LIST.push(code); }
+      fixed += dbChipHtml(e2, key, false, true);
     });
-    html += '</div></div>';
+    fixed += '</div></div>';
   }
+  // R100m：固定区（TOP10 + 开盘精选）写入独立容器——切换子页时保持显示
+  document.getElementById('db-fixed').innerHTML = fixed;
   // R100k：子页菜单移到内容流——断板页位于「开盘精选」与确认池说明之间（用户指定红框位置）
   html += subnavHtml();
   // R100j：断板页口径说明置于确认池上方（TOP10 与 开盘精选 保持置顶不动）
@@ -1704,6 +1752,9 @@ function renderDuanban() {
   if (hzWrap) hzWrap.innerHTML = subnavHtml() + (renderHarmonic() || '<div class="db-empty">暂无谐波形态数据</div>');
   var pwWrap = document.getElementById('db-pw');
   if (pwWrap) pwWrap.innerHTML = subnavHtml() + (renderPowerScreen() || '<div class="db-empty">暂无量化九门数据</div>');
+  // R100m：主力吸筹成为第 4 个子页（主页面模块同步移除）
+  var accWrap = document.getElementById('db-acc');
+  if (accWrap) accWrap.innerHTML = subnavHtml() + (renderAccumulation() || '<div class="db-empty">暂无主力吸筹数据</div>');
 
   switchSubTab('db'); // 默认进入断板反包页
 }
@@ -1737,7 +1788,8 @@ function subnavHtml() {
   var tabs = [
     { k: 'db', t: '断板反包' },
     { k: 'hz', t: '谐波形态' },
-    { k: 'pw', t: '日线九门' }
+    { k: 'pw', t: '日线九门' },
+    { k: 'acc', t: '主力吸筹' }
   ];
   return '<div class="db-subnav">' + tabs.map(function (x) {
     return '<div class="db-subtab' + (x.k === currentSubTab ? ' on' : '') + '" data-k="' + x.k + '" onclick="switchSubTab(\'' + x.k + '\')">' + x.t + '</div>';
@@ -1745,7 +1797,7 @@ function subnavHtml() {
 }
 function switchSubTab(k) {
   currentSubTab = k;
-  var map = { db: 'db-pools', hz: 'db-hz', pw: 'db-pw' };
+  var map = { db: 'db-pools', hz: 'db-hz', pw: 'db-pw', acc: 'db-acc' };
   Object.keys(map).forEach(function (m) {
     var el = document.getElementById(map[m]);
     if (el) el.style.display = (m === k) ? 'block' : 'none';

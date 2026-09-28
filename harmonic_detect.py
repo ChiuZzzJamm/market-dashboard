@@ -469,8 +469,20 @@ def main():
 
     D = common.load_dashboard_data(BASE)
     names = K.collect_pool_names(D)  # R100g：池内 code→name（stkKlineNames 缺名兜底）
+    # R100m：fullScan 候选名并入（全市场标的简称）
+    fs = D.get('fullScan') or {}
+    if fs.get('date') == datetime.date.today().strftime('%Y-%m-%d') and isinstance(fs.get('names'), dict):
+        for c, nm in fs['names'].items():
+            names.setdefault(str(c), nm)
     sec_map = _collect_sectors(D)    # R100l：池内 code→sector（断板池真实行业优先）
     codes = K.collect_pool_codes(D)
+    # R100m：全量扫候选并入扫描域（fullScan.date==今日 才生效；缺失/过期自动退回池内域，不清场）
+    if fs.get('date') == datetime.date.today().strftime('%Y-%m-%d') and fs.get('candidates'):
+        fs_codes = [str(c) for c in fs['candidates'] if str(c).startswith(('60', '00'))]
+        codes = sorted(set(codes) | set(fs_codes))
+        print(f"[HARMONIC] 全量扫候选并入：+{len(fs_codes)} 只（扫描域 {len(codes)} 只）")
+    else:
+        print('[HARMONIC] fullScan 缺失/非今日，退回池内扫描域')
     print(f"[HARMONIC] 标的池 {len(codes)} 只，抓取 {days} 日 K 线（预算 {K.DEADLINE_S:.0f}s）")
     t0 = time.time()
     kl = K.get_klines_bulk(codes, days=days, workers=8)

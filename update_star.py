@@ -145,8 +145,43 @@ def build_star(D):
     pools = []
     for pool in ("confirmed", "watching"):
         pools.extend(db.get(pool) or [])
-    if not pools:
-        return None, "断板反包双池为空"
+
+    # ---- R100m（需求7）：技术池候选——直接从 谐波/九门/吸筹 池取标的（前一日 16:00 结果） ----
+    # 这些标的无 sentiment/probability（neutral 兜底），按池内得分排序，取头部，宁缺勿滥。
+    tech = []
+    seen_tech = set()
+    hz = D.get("harmonic") or {}
+    for it in (hz.get("confirmPool") or [])[:6] + (hz.get("watchPool") or [])[:6]:
+        c = str(it.get("code") or "")
+        if c.startswith(("60", "00")) and c not in seen_tech:
+            seen_tech.add(c)
+            tech.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
+                         "src": "hz", "label": f"谐波{it.get('pattern') or ''}",
+                         "score": 65 if it.get("stage") == "确认" else 55})
+    pw = D.get("powerScreen") or {}
+    for it in (pw.get("passed") or [])[:10]:
+        c = str(it.get("code") or "")
+        if c.startswith(("60", "00")) and c not in seen_tech:
+            seen_tech.add(c)
+            tech.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
+                         "src": "pw", "label": f"九门{it.get('score') or ''}分",
+                         "score": int(it.get("score") or 0) * 10})  # 统一量纲：9分=90
+    acc = D.get("accumulation") or {}
+    for it in (acc.get("scored") or []):
+        try:
+            sc = int(it.get("score") or 0)
+        except Exception:
+            continue
+        c = str(it.get("code") or "")
+        if sc >= 60 and c.startswith(("60", "00")) and c not in seen_tech:
+            seen_tech.add(c)
+            tech.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
+                         "src": "acc", "label": f"吸筹{sc}分", "score": sc})
+    tech.sort(key=lambda x: -x["score"])
+    tech = tech[:8]
+
+    if not pools and not tech:
+        return None, "断板反包双池与技术池（谐波/九门/吸筹）均为空"
 
     # ---- 盘面：指数 / 行业涨幅 / 资金 ----
     idx = fetch_open_indices()
@@ -169,8 +204,8 @@ def build_star(D):
     except Exception:
         fund_in, fund_out = None, None
 
-    # ---- 个股快照（当日实时涨幅） ----
-    quotes = fetch_stock_quotes([str(e.get("code")) for e in pools])
+    # ---- 个股快照（当日实时涨幅）：断板池 + 技术池一并快照 ----
+    quotes = fetch_stock_quotes([str(e.get("code")) for e in pools] + [t["code"] for t in tech])
 
     # ---- R99c：确定性筛选——仅「板块情绪正向 + 主力净流入正向」板块挂钩的池内标的 ----
     # 合格板块：涨幅>0 且 主力净流入>0；池内板块与合格板块名互含即视为挂钩。
@@ -231,6 +266,26 @@ def build_star(D):
                       "sentiment": c["sentiment"], "probability": c["probability"],
                       "note": note, "src": "pool"})
 
+    # ---- R100m（需求7）：技术池候选并入精选（排在断板池之后）——开盘现价深跌(<-2%)的剔除，宁缺勿滥 ----
+    pool_codes = {p["code"] for p in picks}
+    for t in tech:
+        if t["code"] in pool_codes or len(picks) >= 12:
+            continue
+        q = quotes.get(t["code"]) or {}
+        live = q.get("pct")
+        if live is not None and live < -2.0:
+            continue  # 开盘深跌的形态标的暂不进精选
+        if live is not None and live >= 9.5:
+            continue  # 开盘即涨停（买不进），推荐无意义
+        note = f"{t['label']}·前日16:00筛选"
+        if q.get("openPct") is not None:
+            note += f"·竞价{q['openPct']:+.1f}%"
+        if live is not None:
+            note += f"·现涨{live:+.1f}%"
+        picks.append({"code": t["code"], "name": t["name"], "sector": t["sector"],
+                      "sentiment": "neutral", "probability": None,
+                      "note": note, "src": t["src"]})
+
     # ---- 文案模板（AI 复核改写 sentiment/pushText） ----
     now = datetime.now()
     market_line = "，".join(
@@ -257,7 +312,7 @@ def build_star(D):
         "sentiment": sentiment,
         "picks": picks,
         "pushText": "",
-        "generatedBy": "update_star.py 确定性筛选（R99c：板块情绪正向+资金净流入正向挂钩的池内标的，按上涨概率降序）+ 自动化 AI 复核",
+        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波/九门/吸筹池直接取标的）+ 自动化 AI 复核",
     }
     return star, None
 
