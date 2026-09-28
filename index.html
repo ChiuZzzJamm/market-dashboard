@@ -571,7 +571,8 @@
       <div class="db-date" id="db-date"></div>
     </div>
     <button class="db-entry-in" id="db-entry-in" title="点击返回每日市场看板">🧰</button>
-    <div class="db-subnav" id="db-subnav"></div>
+    <!-- R100k：子页菜单已移入各子页内容流（断板页位于开盘精选与确认池说明之间；谐波/九门页位于页首） -->
+
     <div id="db-pools" class="db-subpage"></div>
     <div id="db-hz" class="db-subpage" style="display:none;"></div>
     <div id="db-pw" class="db-subpage" style="display:none;"></div>
@@ -1673,6 +1674,8 @@ function renderDuanban() {
     });
     html += '</div></div>';
   }
+  // R100k：子页菜单移到内容流——断板页位于「开盘精选」与确认池说明之间（用户指定红框位置）
+  html += subnavHtml();
   // R100j：断板页口径说明置于确认池上方（TOP10 与 开盘精选 保持置顶不动）
   html += '<div class="db-note">' + esc(_dbNote) + '</div>';
   html += dbPoolHtml('确认池', 'p-conf', '已走完「涨停 → 放量断板 → 缩量 → 不破T日低点与MA5」全流程', conf, true, 'c');
@@ -1682,12 +1685,12 @@ function renderDuanban() {
   document.getElementById('db-pools').innerHTML = html;
 
   // R100i：🧰 工具箱另两个子页——谐波形态 / 日线九门（从主页面挪入，见 index 渲染段注释）
+  // R100k：子页菜单嵌入页首（空数据态也保留菜单，避免困在子页无法返回）
   var hzWrap = document.getElementById('db-hz');
-  if (hzWrap) hzWrap.innerHTML = renderHarmonic() || '<div class="db-empty">暂无谐波形态数据</div>';
+  if (hzWrap) hzWrap.innerHTML = subnavHtml() + (renderHarmonic() || '<div class="db-empty">暂无谐波形态数据</div>');
   var pwWrap = document.getElementById('db-pw');
-  if (pwWrap) pwWrap.innerHTML = renderPowerScreen() || '<div class="db-empty">暂无量化九门数据</div>';
+  if (pwWrap) pwWrap.innerHTML = subnavHtml() + (renderPowerScreen() || '<div class="db-empty">暂无量化九门数据</div>');
 
-  buildSubnav();
   switchSubTab('db'); // 默认进入断板反包页
 }
 
@@ -1713,19 +1716,18 @@ function dbFailHtml(failPool, kind) {
     '<div class="db-chips">' + items + '</div></div>';
 }
 
-/* R100i：🧰 工具箱三个子页切换（断板反包 / 谐波形态 / 日线九门），竖长条椭圆形文字入口 */
+/* R100k：子页菜单改为字符串渲染（可嵌入各子页内容流任意位置）；switchSubTab 经 querySelectorAll
+   同步所有实例的 .on 高亮。断板页位置=开盘精选与确认池说明之间；谐波/九门页位置=页首。 */
 var currentSubTab = 'db';
-function buildSubnav() {
-  var nav = document.getElementById('db-subnav');
-  if (!nav) return;
+function subnavHtml() {
   var tabs = [
     { k: 'db', t: '断板反包' },
     { k: 'hz', t: '谐波形态' },
     { k: 'pw', t: '日线九门' }
   ];
-  nav.innerHTML = tabs.map(function (x) {
+  return '<div class="db-subnav">' + tabs.map(function (x) {
     return '<div class="db-subtab' + (x.k === currentSubTab ? ' on' : '') + '" data-k="' + x.k + '" onclick="switchSubTab(\'' + x.k + '\')">' + x.t + '</div>';
-  }).join('');
+  }).join('') + '</div>';
 }
 function switchSubTab(k) {
   currentSubTab = k;
