@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609281026"></script>
+<script src="data.js?v=202609281056"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -822,9 +822,8 @@ function render(market) {
     }
   }
 
-  // 选股扩展模块（谐波 / 吸筹 / 量化 / 必带数据，2026-09-26）：仅在 A 股页展示，数据缺失时整模块隐藏
+  // 选股扩展模块（吸筹 / 量化 / 必带数据，2026-09-26）：仅在 A 股页展示，数据缺失时整模块隐藏
   if (isA) {
-    var _hz = renderHarmonic(); if (_hz) html += _hz;
     var _acc = renderAccumulation(); if (_acc) html += _acc;
     var _pw = renderPowerScreen(); if (_pw) html += _pw;
     var _cl = renderChecklist(); if (_cl) html += _cl;
@@ -835,6 +834,11 @@ function render(market) {
     html += '<div class="card"><h2>主力资金流向' + (d.tradeDate ? '<span class="h2-date">' + esc(d.tradeDate) + '</span>' : '') + '</h2>';
     if (d.fundNote) html += '<div class="note-line">' + esc(d.fundNote) + '</div>';
     html += '<div id="chart-fund" class="chart-tall"></div></div>';
+  }
+
+  // R100f：谐波形态移到主力资金模块下面（2026-09-28 用户要求）
+  if (isA) {
+    var _hz = renderHarmonic(); if (_hz) html += _hz;
   }
 
   document.getElementById('content').innerHTML = html;
@@ -1050,14 +1054,9 @@ function renderAiPrediction() {
   var box = document.getElementById('ai-prediction');
   if (!p) { box.style.display = 'none'; return; }
   p.sectors = p.sectors || [];
-  // R99p：AI 预测板块内命中谐波形态 PRZ 的标的数 → 「谐波共振 N」横幅
-  var _hzSet = (window.DASHBOARD_DATA.harmonic && window.DASHBOARD_DATA.harmonic.tags) ? window.DASHBOARD_DATA.harmonic.tags : {};
-  var _hzCount = 0;
-  p.sectors.forEach(function (s) { (s.stocks || []).forEach(function (st) { if (st.code && _hzSet[st.code]) _hzCount++; }); });
-  var _hzBanner = _hzCount ? '<div class="ai-harmonic">🎵 谐波共振：' + _hzCount + ' 只标的命中谐波形态 PRZ（详见「谐波形态」模块）</div>' : '';
+  // R100f：「谐波共振」横幅已按用户要求移除（2026-09-28），谐波交叉徽标保留在谐波模块内
   var html = '<div class="ai-card"><div class="ai-head"><h2>AI 预测分析' + (p.date ? '<span class="h2-date">' + esc(p.date) + '</span>' : '') + '</h2></div>' +
     '<div class="ai-summary">' + (p.indexLine ? esc(p.indexLine) + '。' : '') + '通过隔夜美股各板块涨跌推导今日 A 股强弱方向：' + esc(p.summary) + '</div>' +
-    _hzBanner +
     '<div class="ai-grid">';
   p.sectors.forEach(function (s) {
     var isUp = String(s.direction || '').indexOf('承压') === -1;
@@ -1250,7 +1249,7 @@ function renderThemePicks(list, tradeDate) {
         // R99p：命中谐波形态 PRZ 的标的在题材掘金打「谐波✓」徽标（与独立谐波模块交叉）
         var hzTag = (st.code && window.DASHBOARD_DATA.harmonic && window.DASHBOARD_DATA.harmonic.tags) ? window.DASHBOARD_DATA.harmonic.tags[st.code] : null;
         var hzBadge = hzTag ? '<span class="hz-badge">谐波·' + esc(hzTag) + '</span>' : '';
-        s += '<span class="stock-chip" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (note || '')) + '" title="' + escAttr(title) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + (note ? '<span class="nt">' + esc(note) + '</span>' : '') + hzBadge + '</span>';
+        s += '<span class="stock-chip" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (note || '')) + '" title="' + escAttr(title) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + hzBadge + (note ? '<span class="nt">' + esc(note) + '</span>' : '') + '</span>';
       });
       s += '</div>';
     }
@@ -1269,6 +1268,18 @@ function findHarmonic(code) {
   return null;
 }
 
+// R100f：谐波卡片专用弹窗入口——弹窗组固定为谐波池（确认池+观察池），
+// 左右箭头在池内循环切换，每只标的都带谐波信息条与 PRZ/止损/目标叠加层
+function openHzModal(code, name) {
+  var h = window.DASHBOARD_DATA.harmonic;
+  var pools = ((h && h.confirmPool) || []).concat((h && h.watchPool) || []);
+  STK_GRP = pools.map(function (x) { return { c: x.code, n: x.name || x.code, t: '' }; });
+  var i = -1;
+  for (var k = 0; k < pools.length; k++) { if (pools[k].code === code) { i = k; break; } }
+  STK_IDX = i >= 0 ? i : 0;
+  openStkModal(code, name || code, '');
+}
+
 function renderHarmonic() {
   var h = window.DASHBOARD_DATA.harmonic;
   if (!h || !h.confirmPool || !h.watchPool) return '';
@@ -1278,7 +1289,7 @@ function renderHarmonic() {
     var st = it.stage === '确认' ? 'confirm' : 'watch';
     var meta = 'PRZ ' + it.prz[0] + '~' + it.prz[1] + ' · 止损 ' + it.stop + ' · T1 ' + it.target1 + ' · T2 ' + it.target2;
     if (it.accResonance) meta += ' · 吸筹共振' + it.accResonance;
-    return '<div class="hz-card" onclick="openStkModal(\'' + it.code + '\',\'' + escAttr(it.name) + '\',\'\')">' +
+    return '<div class="hz-card" onclick="openHzModal(\'' + it.code + '\',\'' + escAttr(it.name || it.code) + '\')">' +
       '<div class="hz-top"><span class="hz-nm">' + esc(it.name || it.code) + '</span><span class="hz-cd">' + esc(it.code) + '</span>' +
       '<span class="hz-stage ' + st + '">' + esc(it.stage) + '</span><span class="hz-pat">' + esc(it.pattern) + '</span></div>' +
       (it.story ? '<div class="hz-note">' + esc(it.story) + '</div>' : '') +

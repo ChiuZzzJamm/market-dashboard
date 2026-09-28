@@ -144,6 +144,7 @@ def match_patterns(X, A, B, C, D):
             if not ok:
                 continue
             r['AB'], r['BC'] = round(rB, 3), round(rC, 3)
+            r['CD'] = round(abs(D - C) / max(abs(B - A), 1e-9), 3)
             cands.append((name, d_proj, r))
         elif name == 'Cypher':
             # C 为 B 后延伸高（须高于 X），D 回撤 0.786 XC
@@ -288,6 +289,11 @@ def scan_bars(bars, pct=0.05):
             bull = bars[-1]['close'] >= bars[-1]['open']
             stage = '确认' if (touched and bull and last_close >= prz_lo * 0.995) else '观察'
             dist = round((prz_hi - last_close) / last_close * 100, 2)
+            # 有效性闸门（2026-09-28）：价格已涨过 PRZ 上沿 3% 以上（D 结构走完失效，
+            # 如 601869 几月前 Crab D=71.98 而现价 402），或距 PRZ 仍差 8% 以上（D 远未
+            # 到位），一律作废——防陈旧形态混入观察池导致 PRZ 与现价严重脱节
+            if dist > 8 or dist < -3:
+                continue
             out.append({
                 'pattern': name,
                 'points': {'X': round(X2, 2), 'A': round(A2, 2), 'B': round(B2, 2),
@@ -421,11 +427,16 @@ def main():
     }
 
     old = D.get('harmonic')
-    if not confirm and not watch and old:
-        # 本轮无检出：保留旧池，仅刷新时间戳并标注
-        print('[HARMONIC] 本轮无检出，保留既有池（R91n 不清场）')
-        old['note'] = (old.get('note') or '') + f"｜{today} 本轮无新检出"
+    n_ok = sum(1 for v in kl.values() if v)
+    fetch_ok = len(codes) > 0 and n_ok >= len(codes) * 0.8
+    if not confirm and not watch and old and not fetch_ok:
+        # 数据故障（大面积抓取失败）：保留旧池（R91n 不清场）
+        print(f'[HARMONIC] 抓取异常 {n_ok}/{len(codes)}，保留既有池（R91n）')
+        old['note'] = (old.get('note') or '') + f"｜{today} 抓取异常保留旧池"
         new_field = old
+    elif not confirm and not watch and old and fetch_ok:
+        # 抓取正常但有效性闸门后无检出：旧池形态已失效（如价格涨离 PRZ），写空不误导
+        print(f'[HARMONIC] 抓取正常 {n_ok}/{len(codes)} 但无有效形态，写空结构')
     if not confirm and not watch and not old:
         print('[HARMONIC] 无检出且无旧值，写空结构')
     D['harmonic'] = new_field
