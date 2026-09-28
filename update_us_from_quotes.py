@@ -125,7 +125,8 @@ US_SECTORS = [
         {"code": "usCRM", "name": "CRM"}]},
     {"name": "商业航天", "constituents": [
         {"code": "usRKLB", "name": "RKLB"}, {"code": "usLUNR", "name": "LUNR"},
-        {"code": "usASTS", "name": "ASTS"}, {"code": "usSPCE", "name": "SPCE"}]},
+        {"code": "usASTS", "name": "ASTS"}, {"code": "usSPCE", "name": "SPCE"},
+        {"code": "usSPCX", "name": "SPCX"}]},
     {"name": "机器人", "constituents": [
         {"code": "usROK", "name": "ROK"}, {"code": "usISRG", "name": "ISRG"},
         {"code": "usTER", "name": "TER"}, {"code": "usZBRA", "name": "ZBRA"}]},
