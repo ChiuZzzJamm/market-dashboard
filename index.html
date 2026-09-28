@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609281842"></script>
+<script src="data.js?v=202609281847"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -120,11 +120,11 @@
   .ai-item .row1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
   .ai-item .sec-nm { font-size: 14px; font-weight: 700; }
   .dir-badge { font-size: 11.5px; font-weight: 700; color: #fff; border-radius: 999px; padding: 2px 9px; }
-  .persp-tag { font-size: 10.5px; font-weight: 600; color: var(--ink2); border: 1px solid var(--line, #d8dee6); border-radius: 999px; padding: 1.5px 8px; margin-left: 6px; white-space: nowrap; vertical-align: middle; }
+  .persp-tag { font-size: 10.5px; font-weight: 600; color: var(--ink2); border: 1px solid var(--line, #d8dee6); border-radius: 999px; padding: 1.5px 8px; margin-left: 6px; white-space: nowrap; line-height: 1.45; }
   .dir-up { background: var(--up); }
   .dir-down { background: var(--down); }
   /* 置信度：低→浅蓝，中→中蓝，高→深蓝 */
-  .conf-badge { font-size: 11px; border-radius: 999px; padding: 2px 9px; font-weight: 700; margin-left: 6px; vertical-align: middle; }
+  .conf-badge { font-size: 11px; border-radius: 999px; padding: 2px 9px; font-weight: 700; margin-left: 6px; line-height: 1.45; }
   .conf-low { background: #dcebfa; color: #4a90d9; }
   .conf-mid { background: #85b9ea; color: #fff; }
   .conf-high { background: #2b6cb0; color: #fff; }
@@ -152,7 +152,7 @@
   .dd-elim { color: var(--ink2); font-size: 11.5px; }
   .dd-main { font-weight: 600; }
   /* R100c：确信度徽章挪至利好/利空卡标题行（nc-theme），主推行不再内嵌 */
-  .nc-theme .conf-badge { margin-left: 6px; vertical-align: middle; }
+  .nc-theme .conf-badge { margin-left: 6px; }
   .dd-counter { display: block; margin-top: 3px; margin-bottom: 4px; color: #b06a2c; font-weight: 400; font-size: 11.5px; }
 
   /* ===== 全球要闻 / 周末 ===== */
@@ -209,7 +209,7 @@
   .news-cell .nc-imp { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
   .nc-imp-theme { font-size: 12.5px; font-weight: 700; color: var(--accent-deep); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
   .nc-imp-theme::before { content: ''; width: 3px; height: 11px; border-radius: 2px; background: var(--accent); flex: none; }
-  .dir-badge { font-size: 11px; font-weight: 700; margin-left: 6px; vertical-align: middle; }
+  .dir-badge { font-size: 11px; font-weight: 700; margin-left: 6px; line-height: 1.45; }
   .persp-tag { font-size: 10px; margin-left: 5px; padding: 1px 6px; }
   .dir-badge.up { color: var(--up); }
   .dir-badge.down { color: var(--down); }
@@ -219,7 +219,7 @@
   .nc-theme .dir-badge.dir-up { background: var(--up); color: #fff; }
   .nc-theme .dir-badge.dir-down { background: var(--down); color: #fff; }
   .nc-theme .dir-badge.dir-flat { background: #9aa4af; color: #fff; }
-  .nc-time { font-size: 10.5px; font-weight: 600; color: var(--ink2); background: rgba(0,0,0,.05); border-radius: 999px; padding: 1.5px 8px; margin-left: 6px; white-space: nowrap; vertical-align: middle; }
+  .nc-time { font-size: 10.5px; font-weight: 600; color: var(--ink2); background: rgba(0,0,0,.05); border-radius: 999px; padding: 1.5px 8px; margin-left: 6px; white-space: nowrap; line-height: 1.45; }
   .nc-time.today { color: #fff; background: var(--accent-deep); }
   .nc-stocks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: 6px; }
   .news-cell.bull .stock-chip { border-color: #f2c4ca; }
@@ -468,7 +468,7 @@
   .db-refs b { color: var(--accent-deep); }
   .db-ref-p { margin: 5px 0 2px; color: var(--ink); }
   .db-ref-sum { color: var(--ink2); font-size: 11.5px; line-height: 1.65; margin: 2px 0 0 2px; }
-  .db-src-tag { display: inline-block; font-size: 9.5px; font-weight: 700; color: var(--accent-deep); background: var(--accent-soft); border-radius: 4px; padding: 0 4px; margin-left: 2px; vertical-align: middle; }
+  .db-src-tag { display: inline-block; font-size: 9.5px; font-weight: 700; color: var(--accent-deep); background: var(--accent-soft); border-radius: 4px; padding: 0 4px; margin-left: 2px; line-height: 1.6; }
   .db-kline { position: relative; }
   .db-tip { position: absolute; display: none; transform: translateX(-50%); background: var(--paper); border: 1px solid var(--accent); border-radius: 8px; padding: 6px 10px; font-size: 11px; line-height: 1.6; color: var(--ink); box-shadow: 0 6px 18px rgba(17,17,26,.18); pointer-events: none; z-index: 10; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .db-tip b.up { color: var(--up); }
