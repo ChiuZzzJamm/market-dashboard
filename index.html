@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609282156"></script>
+<script src="data.js?v=202609282202"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -374,7 +374,7 @@
   .db-title { font-size: 22px; font-weight: 900; letter-spacing: 2px; }
   .db-date { font-size: 12px; color: var(--ink2); position: absolute; right: 0; }
   @media (max-width: 700px) { .db-date { position: static; width: 100%; text-align: center; } }
-  .db-note { font-size: 12px; color: var(--ink2); background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 10px 16px; margin-bottom: 18px; line-height: 1.7; box-shadow: var(--shadow); }
+  .db-note { font-size: 12px; font-weight: 700; color: var(--ink2); margin: 0 0 14px; line-height: 1.7; }  /* R100z4i：去背景/边框/阴影，样式对齐谐波子页说明（hz-sub 朴素文字） */
   .db-pool { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
   .db-pool h2 { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 9px; margin: 0 0 4px; }
   .db-pool h2::before { content: ""; width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
@@ -1665,7 +1665,7 @@ function renderHarmonic() {
       '<div class="hz-meta">' + meta + '</div></div>';
   };
   // R100l：三池样式对齐断板反包页——.db-pool 圆点标题容器（确认池红点 / 观察池蓝点 / 失效池灰点 dbFailHtml）
-  var html = '<div class="hz-sub" style="margin:0 0 14px;" title="PRZ=Potential Reversal Zone 潜在反转区（D 点预期企稳/反转的价格区间）；T1/T2=第一/第二目标位（D + 0.382/0.618 × CD 腿高度）；止损=形态结构失效位，跌破视为形态作废">🎵 谐波形态（重型技术面）' + (h.tradeDate ? ' <span class="h2-date">' + esc(h.tradeDate) + '</span>' : '') + ' · 术语：PRZ=潜在反转区（D 点落地区间）· T1/T2=反弹目标位（D+0.382/0.618×CD）· 止损=形态失效位</div>';
+  var html = '<div class="hz-sub" style="margin:0 0 14px;" title="PRZ=Potential Reversal Zone 潜在反转区（D 点预期企稳/反转的价格区间）；T1/T2=第一/第二目标位（D + 0.382/0.618 × CD 腿高度）；止损=形态结构失效位，跌破视为形态作废">谐波形态（重型技术面）' + (h.tradeDate ? ' <span class="h2-date">' + esc(h.tradeDate) + '</span>' : '') + ' · 术语：PRZ=潜在反转区（D 点落地区间）· T1/T2=反弹目标位（D+0.382/0.618×CD）· 止损=形态失效位</div>';
   if (c.length) html += '<div class="db-pool p-conf"><h2>确认池 · ' + c.length + ' 只</h2><div class="db-sub">D 点已触及 PRZ 且现企稳确认 · 按距 PRZ 距离升序（越近越靠前）</div><div class="hz-pool">' + c.map(card).join('') + '</div></div>';
   else html += '<div class="db-pool p-conf"><h2>确认池 · 0 只</h2><div class="db-empty">暂无标的（形态核验宁缺毋滥，无达标即如实留空）</div></div>';
   if (w.length) html += '<div class="db-pool p-watch"><h2>观察池 · ' + w.length + ' 只</h2><div class="db-sub">D 点行进中、距 PRZ ≤8%，待触及反转区确认</div><div class="hz-pool">' + w.map(card).join('') + '</div></div>';
@@ -1699,7 +1699,9 @@ function renderAccumulation() {
       (it.note ? '<div class="hz-note">' + esc(it.note) + '</div>' : '') +
       '<div class="acc-feat">' + feats + '</div></div>';
   }).join('');
-  return '<div class="card"><h2>🧲 主力吸筹' + (a.tradeDate ? ' <span class="h2-date">' + esc(a.tradeDate) + '</span>' : '') + '</h2>' +
+  // R100z4i：新增子页口径说明（与谐波/九门同款位置与样式：子页导航下方、hz-sub 朴素文字、悬停详解）
+  var accDef = '<div class="hz-sub" style="margin:0 0 14px;" title="主力吸筹=六特征打分模型（日线收盘口径，accumulation_score.py）。F1 试盘=低位冲高后缩量回落（20分）；F2 止跌=缩量下杀后拉回过半（15分）；F3 横盘=二次试盘+横盘收窄±6%（20分）；F4 缩量=再度缩量下杀不破前低（15分）；F5 缩量板=底部涨停后缩量整理（20分）；F6 流动=日均成交额≥2亿+涨停史/回撤热度（10分）。总分=六特征合计（满分100），评级=强/观察；流动性不足（日均成交额<2亿）一票否决不入池。">吸筹口径：六特征打分 F1试盘·F2止跌·F3横盘·F4缩量·F5缩量板·F6流动（合计100分）｜评级=总分定级（强/观察）｜日均成交额<2亿不入池</div>';
+  return accDef + '<div class="card"><h2>🧲 主力吸筹' + (a.tradeDate ? ' <span class="h2-date">' + esc(a.tradeDate) + '</span>' : '') + '</h2>' +
     '<div class="acc-grid">' + items + '</div>' + (a.summary ? '<div class="note-line">' + esc(a.summary) + '</div>' : '') + '</div>';
 }
 
@@ -1718,9 +1720,9 @@ function renderPowerScreen() {
       '<div class="hz-meta">涨幅 ' + it.pct + '% · 量比 ' + it.volRatio + ' · RSI ' + it.rsi + '</div>' +
       '<div class="pw-gate">' + gates + '</div></div>';
   }).join('');
-  var gateDef = '<div class="hz-sub" title="九门=9 道量化硬阈值（日线收盘口径）。硬门禁（必过 5 道）：G1 当日涨幅≥3% · G2 放量≥1.5×5日均量 · G4 站上MA20 · G5 非ST主板 · G7 当日振幅≤15%。质量门（过≥3 道）：G3 价处20日区间上1/3 · G6 近5日无长上影出货 · G8 波动率适中(ATR14/收盘∈[2%,8%]) · G9 RSI14∈[40,80]。打分=通过阈值数(0-9分)；入选=硬门禁全过 且 质量门≥3道。">📐 九门口径：硬门禁 G1涨幅≥3%·G2放量1.5×·G4站MA20·G5非ST·G7振幅≤15%（必过）｜质量门 G3位置·G6无出货·G8波动·G9RSI（过≥3）｜打分=过门数(0-9分)</div>';
-  return '<div class="card"><h2>⚡ 日线九门' + (p.tradeDate ? ' <span class="h2-date">' + esc(p.tradeDate) + '</span>' : '') + '</h2>' +
-    gateDef +
+  // R100z4i：口径说明挪出 card（子页导航下方、谐波说明同款位置），去 📐 emoji、无背景（hz-sub 朴素样式）
+  var gateDef = '<div class="hz-sub" style="margin:0 0 14px;" title="九门=9 道量化硬阈值（日线收盘口径）。硬门禁（必过 5 道）：G1 当日涨幅≥3% · G2 放量≥1.5×5日均量 · G4 站上MA20 · G5 非ST主板 · G7 当日振幅≤15%。质量门（过≥3 道）：G3 价处20日区间上1/3 · G6 近5日无长上影出货 · G8 波动率适中(ATR14/收盘∈[2%,8%]) · G9 RSI14∈[40,80]。打分=通过阈值数(0-9分)；入选=硬门禁全过 且 质量门≥3道。">九门口径：硬门禁 G1涨幅≥3%·G2放量1.5×·G4站MA20·G5非ST·G7振幅≤15%（必过）｜质量门 G3位置·G6无出货·G8波动·G9RSI（过≥3）｜打分=过门数(0-9分)</div>';
+  return gateDef + '<div class="card"><h2>⚡ 日线九门' + (p.tradeDate ? ' <span class="h2-date">' + esc(p.tradeDate) + '</span>' : '') + '</h2>' +
     '<div class="pw-grid">' + items + '</div>' + (p.summary ? '<div class="note-line">' + esc(p.summary) + '</div>' : '') + '</div>';
 }
 
