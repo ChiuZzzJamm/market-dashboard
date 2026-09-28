@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609282202"></script>
+<script src="data.js?v=202609282204"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1665,7 +1665,7 @@ function renderHarmonic() {
       '<div class="hz-meta">' + meta + '</div></div>';
   };
   // R100l：三池样式对齐断板反包页——.db-pool 圆点标题容器（确认池红点 / 观察池蓝点 / 失效池灰点 dbFailHtml）
-  var html = '<div class="hz-sub" style="margin:0 0 14px;" title="PRZ=Potential Reversal Zone 潜在反转区（D 点预期企稳/反转的价格区间）；T1/T2=第一/第二目标位（D + 0.382/0.618 × CD 腿高度）；止损=形态结构失效位，跌破视为形态作废">谐波形态（重型技术面）' + (h.tradeDate ? ' <span class="h2-date">' + esc(h.tradeDate) + '</span>' : '') + ' · 术语：PRZ=潜在反转区（D 点落地区间）· T1/T2=反弹目标位（D+0.382/0.618×CD）· 止损=形态失效位</div>';
+  var html = '<div class="hz-sub" style="margin:0 0 14px;" title="PRZ=Potential Reversal Zone 潜在反转区（D 点预期企稳/反转的价格区间）；T1/T2=第一/第二目标位（D + 0.382/0.618 × CD 腿高度）；止损=形态结构失效位，跌破视为形态作废">谐波形态（重型技术面） · 术语：PRZ=潜在反转区（D 点落地区间）· T1/T2=反弹目标位（D+0.382/0.618×CD）· 止损=形态失效位</div>';
   if (c.length) html += '<div class="db-pool p-conf"><h2>确认池 · ' + c.length + ' 只</h2><div class="db-sub">D 点已触及 PRZ 且现企稳确认 · 按距 PRZ 距离升序（越近越靠前）</div><div class="hz-pool">' + c.map(card).join('') + '</div></div>';
   else html += '<div class="db-pool p-conf"><h2>确认池 · 0 只</h2><div class="db-empty">暂无标的（形态核验宁缺毋滥，无达标即如实留空）</div></div>';
   if (w.length) html += '<div class="db-pool p-watch"><h2>观察池 · ' + w.length + ' 只</h2><div class="db-sub">D 点行进中、距 PRZ ≤8%，待触及反转区确认</div><div class="hz-pool">' + w.map(card).join('') + '</div></div>';
