@@ -442,12 +442,13 @@
   .db-modal-head .cd2 { font-size: 12px; color: var(--ink2); }
   .db-modal-close { margin-left: auto; background: none; border: 1px solid var(--line); border-radius: 999px; width: 30px; height: 30px; font-size: 15px; cursor: pointer; color: var(--ink2); line-height: 1; }
   .db-modal-close:hover { border-color: var(--accent); color: var(--accent-deep); }
-  /* R100i：弹窗内完整谐波教学示意图（替代原右上角迷你图） */
-  .hz-diagram { margin: 4px 0 8px; border: 1px dashed var(--line); border-radius: 10px; padding: 8px 10px 4px; background: var(--paper); }
-  .hz-diagram svg { width: 100%; height: auto; display: block; }
-  /* R100i：🧰 工具箱三个子页入口——竖长条椭圆形嵌入对应文字 */
-  .db-subnav { display: flex; justify-content: center; align-items: flex-start; gap: 14px; margin: 0 0 16px; flex-wrap: wrap; }
-  .db-subtab { writing-mode: vertical-rl; letter-spacing: 5px; padding: 16px 9px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--paper); font-size: 13px; font-weight: 800; color: var(--ink2); cursor: pointer; font-family: var(--font); box-shadow: var(--shadow); transition: all .18s ease; }
+  /* R100j：弹窗恢复右上角迷你谐波示意图（用户反馈完整教学大图不直观，R100i 大图下线） */
+  .hz-mini { margin-left: auto; flex-shrink: 0; line-height: 0; border: 1px dashed var(--line); border-radius: 8px; padding: 2px; background: var(--paper); }
+  .hz-mini ~ .db-modal-close { margin-left: 0; }
+  @media (max-width: 760px) { .hz-mini { display: none; } }
+  /* R100j：🧰 工具箱三个子页入口——横着的椭圆形嵌入对应文字（原竖长条椭圆改横向） */
+  .db-subnav { display: flex; justify-content: center; align-items: center; gap: 14px; margin: 0 0 16px; flex-wrap: wrap; }
+  .db-subtab { padding: 10px 24px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--paper); font-size: 13.5px; font-weight: 800; color: var(--ink2); cursor: pointer; font-family: var(--font); box-shadow: var(--shadow); transition: all .18s ease; letter-spacing: 1px; }
   .db-subtab:hover { border-color: var(--accent); color: var(--accent-deep); transform: translateY(-2px); }
   .db-subtab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
   /* R100i：失败池（断板反包 / 谐波形态）——破位或超期失效归档，5 个交易日后清理 */
@@ -490,14 +491,26 @@
   .hz-stage.watch { color:#c47d00; background:#fff4dc; }
   .hz-meta { font-size:10.5px; color:var(--ink2); margin-top:6px; font-variant-numeric:tabular-nums; }
 
-  .acc-card, .pw-card { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:var(--paper); }
-  .acc-grid, .pw-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px; margin-top:8px; }
-  .acc-grd { font-size:9.5px; font-weight:700; border-radius:999px; padding:0 6px; }
-  .acc-grd.strong { color:#0f9d78; background:#e3f7ef; }
-  .acc-grd.watch { color:#c47d00; background:#fff4dc; }
-  .acc-feat { display:flex; flex-wrap:wrap; gap:3px; margin-top:5px; }
-  .acc-feat span { font-size:9.5px; color:var(--ink2); border:1px solid var(--line); border-radius:4px; padding:0 4px; }
-  .acc-feat span.on { color:var(--accent-deep); border-color:var(--accent); background:var(--accent-soft); }
+  .pw-card { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:var(--paper); }
+  .pw-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px; margin-top:8px; }
+  /* R100j：主力吸筹卡片美化——左侧强调条 + 评分进度条 + 特征胶囊（通过亮/未过灰） */
+  .acc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:12px; margin-top:10px; }
+  .acc-card { position:relative; border:1px solid var(--line); border-radius:12px; padding:12px 14px 11px 17px; background:linear-gradient(180deg,#fff,var(--paper)); cursor:pointer; transition:.18s; overflow:hidden; }
+  .acc-card::before { content:''; position:absolute; left:0; top:12px; bottom:12px; width:3.5px; border-radius:0 4px 4px 0; background:linear-gradient(180deg,var(--accent),#f5a26b); opacity:.85; }
+  .acc-card:hover { border-color:var(--accent); box-shadow:0 6px 16px rgba(17,17,26,.10); transform:translateY(-2px); }
+  .acc-head { display:flex; align-items:center; gap:6px; }
+  .acc-head .acc-id { display:flex; align-items:baseline; gap:6px; min-width:0; }
+  .acc-head .acc-id b { font-weight:800; }
+  .acc-head .cd { font-size:11px; color:var(--ink2); }
+  .acc-grd { font-size:10.5px; font-weight:800; border-radius:999px; padding:1px 8px; margin-left:auto; flex-shrink:0; font-variant-numeric:tabular-nums; }
+  .acc-grd.strong { color:#fff; background:linear-gradient(135deg,#0f9d78,#0bb578); }
+  .acc-grd.watch { color:#8a5800; background:#ffe9c2; border:1px solid #f0c36d; }
+  .acc-bar { height:4px; border-radius:999px; background:rgba(17,17,26,.07); margin-top:8px; overflow:hidden; }
+  .acc-bar i { display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,#f5a26b,var(--accent)); }
+  .acc-card .hz-note { font-size:11px; color:var(--ink2); margin-top:7px; line-height:1.6; }
+  .acc-feat { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }
+  .acc-feat span { font-size:9.5px; color:var(--ink2); border:1px solid var(--line); border-radius:999px; padding:1px 7px; opacity:.55; }
+  .acc-feat span.on { color:var(--accent-deep); border-color:var(--accent); background:var(--accent-soft); font-weight:700; opacity:1; }
   .pw-gate { display:flex; flex-wrap:wrap; gap:3px; margin-top:5px; }
   .pw-gate span { font-size:9px; font-weight:700; border-radius:4px; padding:0 4px; }
   .pw-gate span.pass { color:#0f9d78; background:#e3f7ef; }
@@ -554,12 +567,11 @@
 
   <div id="duanban-view">
     <div class="db-topbar">
-      <div class="db-title">断板反包</div>
+      <div class="db-title">技术看板</div>
       <div class="db-date" id="db-date"></div>
     </div>
     <button class="db-entry-in" id="db-entry-in" title="点击返回每日市场看板">🧰</button>
     <div class="db-subnav" id="db-subnav"></div>
-    <div class="db-note" id="db-note"></div>
     <div id="db-pools" class="db-subpage"></div>
     <div id="db-hz" class="db-subpage" style="display:none;"></div>
     <div id="db-pw" class="db-subpage" style="display:none;"></div>
@@ -1337,49 +1349,7 @@ function openGrpModal(list, idx) {
   openStkModal(it.code, (it.name && it.name !== it.code) ? it.name : it.code, '');
 }
 
-/* R100i：弹窗完整谐波教学示意图——X-A-B-C-D 五点折线（红）+ PRZ 绿色反转区带
-   + 止损红虚线 + T1/T2 蓝虚线目标位 + D 后看涨箭头。数据取 harmonic.points/prz/stop/targets。 */
-function hzFullSvg(hz) {
-  try {
-    var p = hz && hz.points;
-    if (!p || !hz.prz || hz.prz.length < 2) return '';
-    var pts = [['X', p.X], ['A', p.A], ['B', p.B], ['C', p.C], ['D', p.D]];
-    var vals = pts.map(function (q) { return q[1]; });
-    vals.push(hz.prz[0], hz.prz[1], hz.stop, hz.target1, hz.target2);
-    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
-    var pad = (hi - lo) * 0.12 || 1;
-    lo -= pad; hi += pad;
-    var W = 560, H = 250, padL = 40, padR = 96, padT = 18, padB = 30;
-    var iw = W - padL - padR, ih = H - padT - padB;
-    function X_(i) { return padL + iw * (i / 4); }
-    function Y_(v) { return padT + ih * (1 - (v - lo) / (hi - lo)); }
-    var dpath = pts.map(function (q, i) { return (i ? 'L' : 'M') + X_(i).toFixed(1) + ' ' + Y_(q[1]).toFixed(1); }).join(' ');
-    var dx = X_(4);
-    var przY1 = Y_(hz.prz[1]), przY2 = Y_(hz.prz[0]);
-    var stopY = Y_(hz.stop), t1Y = Y_(hz.target1), t2Y = Y_(hz.target2);
-    var labels = pts.map(function (q) {
-      var i = pts.indexOf(q);
-      return '<text x="' + (X_(i) - 4).toFixed(1) + '" y="' + (Y_(q[1]) - 8).toFixed(1) + '" font-size="12" font-weight="700" fill="#333">' + q[0] + '</text>';
-    }).join('');
-    var rightX = (W - padR).toFixed(1);
-    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">' +
-      '<rect x="' + dx.toFixed(1) + '" y="' + przY1.toFixed(1) + '" width="' + (W - padR - dx).toFixed(1) + '" height="' + (przY2 - przY1).toFixed(1) + '" fill="rgba(15,157,120,0.16)" stroke="#0f9d78" stroke-dasharray="4 3" stroke-width="1"/>' +
-      '<text x="' + (W - padR + 6).toFixed(1) + '" y="' + ((przY1 + przY2) / 2).toFixed(1) + '" font-size="11" fill="#0f9d78" font-weight="700">PRZ</text>' +
-      '<line x1="' + padL + '" y1="' + stopY.toFixed(1) + '" x2="' + rightX + '" y2="' + stopY.toFixed(1) + '" stroke="#c0392b" stroke-width="1.4" stroke-dasharray="6 3"/>' +
-      '<text x="' + (W - padR + 6).toFixed(1) + '" y="' + (stopY + 4).toFixed(1) + '" font-size="11" fill="#c0392b" font-weight="700">止损</text>' +
-      '<line x1="' + dx.toFixed(1) + '" y1="' + t1Y.toFixed(1) + '" x2="' + rightX + '" y2="' + t1Y.toFixed(1) + '" stroke="#2f6fdb" stroke-width="1.2" stroke-dasharray="5 3"/>' +
-      '<text x="' + (W - padR + 6).toFixed(1) + '" y="' + (t1Y + 4).toFixed(1) + '" font-size="11" fill="#2f6fdb">T1</text>' +
-      '<line x1="' + dx.toFixed(1) + '" y1="' + t2Y.toFixed(1) + '" x2="' + rightX + '" y2="' + t2Y.toFixed(1) + '" stroke="#2f6fdb" stroke-width="1.2" stroke-dasharray="5 3"/>' +
-      '<text x="' + (W - padR + 6).toFixed(1) + '" y="' + (t2Y + 4).toFixed(1) + '" font-size="11" fill="#2f6fdb">T2</text>' +
-      '<path d="' + dpath + '" fill="none" stroke="#c0392b" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>' +
-      '<circle cx="' + dx.toFixed(1) + '" cy="' + Y_(p.D).toFixed(1) + '" r="4" fill="#c0392b"/>' +
-      '<path d="M' + dx.toFixed(1) + ' ' + Y_(p.D).toFixed(1) + ' Q' + (dx + 34).toFixed(1) + ' ' + (Y_(p.D) - 30).toFixed(1) + ' ' + dx.toFixed(1) + ' ' + t1Y.toFixed(1) + '" fill="none" stroke="#0f9d78" stroke-width="2" marker-end="url(#hzarrow)"/>' +
-      labels +
-      '<defs><marker id="hzarrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#0f9d78"/></marker></defs>' +
-      '</svg>';
-    return svg;
-  } catch (e) { return ''; }
-}
+/* R100j：R100i 的弹窗完整谐波教学大图（hzFullSvg）已按用户反馈下线——迷你图 hzMiniSvg 回归弹窗头部右上角 */
 
 function renderHarmonic() {
   var h = window.DASHBOARD_DATA.harmonic;
@@ -1418,14 +1388,17 @@ function renderAccumulation() {
     var feats = '';
     if (it.features) {
       [['f1', '试盘'], ['f2', '止跌'], ['f3', '横盘'], ['f4', '缩量'], ['f5', '缩量板'], ['f6', '流动']].forEach(function (f) {
-        feats += '<span class="' + (it.features[f[0]] ? 'on' : '') + '">' + f[1] + (it.features[f[0]] ? ('·' + it.features[f[0]]) : '') + '</span>';
+        var v = it.features[f[0]];
+        feats += '<span class="' + (v ? 'on' : 'off') + '">' + (v ? '✓ ' : '✕ ') + f[1] + (v ? ('·' + v) : '') + '</span>';
       });
     }
     // R100g：名称缺失只展示代码一次
     var nm = (it.name && it.name !== it.code) ? it.name : '';
+    // R100j：卡片美化——头部（名称+代码｜评级徽章右对齐）+ 评分进度条 + ✓/✕ 特征胶囊
     return '<div class="acc-card" onclick="openGrpModal(window.DASHBOARD_DATA.accumulation.scored,' + idx + ')">' +
-      '<div class="hz-top"><span class="hz-nm">' + esc(nm || it.code) + '</span>' + (nm ? '<span class="hz-cd">' + esc(it.code) + '</span>' : '') +
-      '<span class="acc-grd ' + gd + '">' + esc(it.grade) + ' ' + it.score + '</span></div>' +
+      '<div class="acc-head"><span class="acc-id"><b>' + esc(nm || it.code) + '</b>' + (nm ? '<span class="cd">' + esc(it.code) + '</span>' : '') + '</span>' +
+      '<span class="acc-grd ' + gd + '">' + esc(it.grade) + ' ' + it.score + '分</span></div>' +
+      '<div class="acc-bar"><i style="width:' + Math.max(4, Math.min(100, it.score || 0)) + '%"></i></div>' +
       (it.note ? '<div class="hz-note">' + esc(it.note) + '</div>' : '') +
       '<div class="acc-feat">' + feats + '</div></div>';
   }).join('');
@@ -1628,12 +1601,13 @@ function renderDuanban() {
   DB_INDEX = {}; DB_ORDER = [];
   var db = duanbanData();
   document.getElementById('db-date').textContent = db && db.generatedAt ? '数据生成：' + db.generatedAt + '（每日 16:00 收盘后更新 · 次日 07:30 隔夜复核）' : '数据生成：—（待 16:00 自动化首跑）';
-  document.getElementById('db-note').textContent = (db && db.note) || '断板反包形态由脚本确定性核验（涨停池 + 腾讯日K，check_duanban.py）；板块涨幅与 TOP10 榜采用同花顺行业口径（R98）。每只标的按当日要闻/AI预测自动标注口径：利好（红）/利空（绿）/中性（灰）；上涨概率=脚本确定性基线（情绪+线索加权，R98k）+自动化 AI 复核校准（16:00 生成，次日 07:30 复核）。';
+  // R100j：说明随子页切换——断板页口径说明从顶部静态位挪到确认池上方（原 #db-note 已删除）
+  var _dbNote = (db && db.note) || '断板反包形态由脚本确定性核验（涨停池 + 腾讯日K，check_duanban.py）；板块涨幅与 TOP10 榜采用同花顺行业口径（R98）。每只标的按当日要闻/AI预测自动标注口径：利好（红）/利空（绿）/中性（灰）；上涨概率=脚本确定性基线（情绪+线索加权，R98k）+自动化 AI 复核校准（16:00 生成，次日 07:30 复核）。';
   var conf = (db && db.confirmed) || [], watch = (db && db.watching) || [];
   var badge = document.getElementById('db-badge');
   badge.textContent = (conf.length + watch.length) ? ('确认 ' + conf.length + ' · 观察 ' + watch.length) : '';
   var dbEntryBtn = document.getElementById('db-entry');
-  if (dbEntryBtn) dbEntryBtn.title = '点击进入断板反包看板 · 确认 ' + conf.length + ' · 观察 ' + watch.length;
+  if (dbEntryBtn) dbEntryBtn.title = '点击进入技术看板（断板反包/谐波/九门）· 确认 ' + conf.length + ' · 观察 ' + watch.length;
   var html = '';
   // R98: 近3个交易日涨幅居前板块 TOP10（确认池上方）——同花顺行业口径
   var tb = (db && db.topBoards) || [];
@@ -1699,6 +1673,8 @@ function renderDuanban() {
     });
     html += '</div></div>';
   }
+  // R100j：断板页口径说明置于确认池上方（TOP10 与 开盘精选 保持置顶不动）
+  html += '<div class="db-note">' + esc(_dbNote) + '</div>';
   html += dbPoolHtml('确认池', 'p-conf', '已走完「涨停 → 放量断板 → 缩量 → 不破T日低点与MA5」全流程', conf, true, 'c');
   html += dbPoolHtml('观察池', 'p-watch', '形态进行中、只差最后一根确认K线（待企稳 ＞ 待缩量）', watch, false, 'w');
   // R100i：断板反包失败池（破位 / 超期失效归档，5 交易日后自动清理）
@@ -2250,21 +2226,21 @@ function openStkModal(code, name, note) {
   // R99p：若打开的标的是谐波形态池内标的，弹窗内嵌 PRZ/止损/双目标信息面板
   // R100g：hz 查找前移——头部右上角同步挂迷你谐波示意图
   var hz = findHarmonic(code);
+  // R100j：迷你谐波图回归弹窗头部右上角（用户反馈 R100i 完整教学大图不直观）
   document.getElementById('stk-modal-head').innerHTML =
     '<span class="nm">' + esc(name || '') + '</span>' +
     (code ? '<span class="cd2">' + esc(code) + '</span>' : '') +
     (nav ? '<span class="cd2">' + (STK_IDX + 1) + '/' + STK_GRP.length + '</span>' : '') +
+    (hz ? '<span class="hz-mini" title="谐波形态示意：红折线=X-A-B-C-D 五点结构 · 绿带=PRZ 潜在反转区 · 红虚线=止损 · 蓝虚线=T1/T2 目标位">' + hzMiniSvg(hz) + '</span>' : '') +
     '<button class="db-modal-close" onclick="stkClose()">×</button>';
   var hzPanel = '';
   if (hz) {
     var _r = hz.ratios || {};
-    var full = hzFullSvg(hz);
     hzPanel = '<div class="hz-info" title="PRZ=Potential Reversal Zone 潜在反转区（D 点预期企稳/反转的价格区间）；T1/T2=第一/第二目标位（D + 0.382/0.618 × CD 腿高度）；止损=形态结构失效位，跌破视为形态作废">🎵 ' + esc(hz.pattern) + '（' + esc(hz.stage) + '） PRZ <span class="hz-v">' + hz.prz[0] + '~' + hz.prz[1] +
       '</span> · 止损 <span class="hz-v">' + hz.stop + '</span> · T1 <span class="hz-v">' + hz.target1 + '</span> · T2 <span class="hz-v">' + hz.target2 + '</span>' +
       (_r.AB ? ' · 比率 AB=' + _r.AB + ' BC=' + _r.BC + ' CD=' + _r.CD : '') +
       (hz.accResonance ? ' · 吸筹共振' + hz.accResonance : '') +
-      '<div class="hz-legend"><i style="color:#0f9d78">━绿</i> PRZ区间 · <i style="color:#c0392b">━红</i> 止损 · <i style="color:#2f6fdb">━蓝</i> 目标位</div></div>' +
-      (full ? '<div class="hz-diagram">' + full + '</div>' : '');
+      '<div class="hz-legend"><i style="color:#0f9d78">━绿</i> PRZ区间 · <i style="color:#c0392b">━红</i> 止损 · <i style="color:#2f6fdb">━蓝</i> 目标位</div></div>';
   }
   document.getElementById('stk-modal-meta').innerHTML =
     (note ? esc(note) + '<br>' : '') +
