@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609281958"></script>
+<script src="data.js?v=202609282004"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1587,7 +1587,7 @@ function hzMiniWrap(hz) {
 function hzSideHtml(hz) {
   if (!hz) return '';
   var _r = hz.ratios || {};
-  return '<span class="hz-side">谐波·' + esc(hz.pattern) + '（' + esc(hz.stage) + '） PRZ <span class="hz-v">' + hz.prz[0] + '~' + hz.prz[1] +
+  return '<span class="hz-side">谐波·' + esc(hz.pattern) + '（' + esc(hz.stage) + '）：PRZ <span class="hz-v">' + hz.prz[0] + '~' + hz.prz[1] + // R100z4b：（确认/观察）后加全角冒号
     '</span> · 止损 <span class="hz-v">' + hz.stop + '</span> · T1 <span class="hz-v">' + hz.target1 + '</span> · T2 <span class="hz-v">' + hz.target2 + '</span>' +
     (_r.AB ? ' · 比率 AB=' + esc(_r.AB) + ' BC=' + esc(_r.BC) + ' CD=' + esc(_r.CD) : '') +
     (hz.accResonance ? ' · 吸筹共振' + esc(hz.accResonance) : '') +
@@ -1825,7 +1825,7 @@ function dbChipHtml(e, key, done, showSec) {
     '<div class="r1"><b>' + esc(e.name) + '</b><span class="cd">' + esc(e.code) + '</span>' + secPill + sentBadgeHtml(e.code) + '</div>' + // R100z4：板块徽标挪到代码后
     // R100s：卡片「已确认/待企稳/待缩量」阶段徽标删除（池归属由所在分组标题承载，弹窗内另有池徽章）
     '<div class="r2"><span class="db-prob2 ' + (e.sentiment === 'bear' ? 'down' : (e.sentiment === 'bull' ? 'up' : '')) + '">' + prob + '</span>' +
-    '<span class="nt">' + esc((e.form || '').replace(/^.*?断板/, '断板')) + '</span></div></div>';
+    '<span class="nt">' + esc((e.form || '').replace(/^.*?断板/, '断板').replace(/·/g, '：')) + '</span></div></div>'; // R100z4b：形态分隔点改全角冒号
 }
 
 function dbPoolHtml(title, cls, sub, list, done, poolKey) {
@@ -2164,7 +2164,7 @@ function openDbModal(key) {
   document.getElementById('db-modal-meta').innerHTML =
     '<div><span class="lab">涨停日：</span>' + esc(e.ztDate || '') + '　<span class="lab">今日：</span><b class="' + (e.pct >= 0 ? 'up' : 'down') + '">' + fmtPct(e.pct) + '</b></div>' +
     '<div><span class="lab">涨停日板块涨幅：</span><b class="' + (e.boardPctZt >= 0 ? 'up' : 'down') + '">' + (e.boardPctZt == null ? '—' : fmtPct(e.boardPctZt)) + '</b>　<span class="lab">今日板块涨幅：</span><b class="' + (e.boardPctToday >= 0 ? 'up' : 'down') + '">' + (e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday)) + '</b></div>' +
-    '<div><span class="lab">形态：</span>' + esc(e.form || '') + '</div>' +
+    '<div><span class="lab">形态：</span>' + esc((e.form || '').replace(/·/g, '：')) + '</div>' + // R100z4b：形态分隔点改全角冒号
     '<div><span class="lab">上涨概率：</span><b class="' + probCls + '">' + (e.probability !== null && e.probability !== undefined ? e.probability + '%' : '—') + '</b></div>' +
     techMetaLines(String(e.code)); // R100z3：对应技术面（九门/吸筹）纯文本行，命中才渲染
   document.getElementById('db-kline').innerHTML = dbKlineSvg(e.kline);
