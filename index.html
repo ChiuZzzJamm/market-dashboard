@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609281919"></script>
+<script src="data.js?v=202609281927"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1489,8 +1489,7 @@ function stkNewsHtml(code) {
   });
   var h = '';
   if (hzIt && hzIt.story) h += '<div class="db-ref-p"><b>【谐波形态】</b>' + esc(hzIt.story) + '</div>';
-  if (accIt && accIt.note) h += '<div class="db-ref-p"><b>【主力吸筹】</b>' + esc(accIt.note) + '</div>';
-  if (pwIt && pwIt.reasons) h += '<div class="db-ref-p"><b>【日线九门】</b>通过门：' + esc(String(pwIt.reasons).split(';').filter(Boolean).join(' · ')) + '</div>';
+  // R100z：【日线九门】【主力吸筹】两块上移到 K 线上方（openStkModal techPanel），消息面区不再重复展示
   if (e || hits.length) {
     // R100z：参考断板反包判定方式——按条数定综合口径，只显示占优口径的消息
     // （利好条数 > 利空条数 → 利好口径；利空多 → 利空口径；持平/无 → 中性，断板标的持平时可被 AI 判定改判）。
@@ -2554,9 +2553,16 @@ function openStkModal(code, name, note) {
       (hz.accResonance ? ' · 吸筹共振' + hz.accResonance : '') +
       '<div class="hz-legend"><i style="color:#0f9d78">━绿</i> PRZ区间 · <i style="color:#c0392b">━红</i> 止损 · <i style="color:#2f6fdb">━蓝</i> 目标位</div></div>';
   }
+  // R100z：九门/吸筹技术面块从消息面区上移到 K 线上方（与谐波信息条同款 hz-info 容器、同位置）
+  var Dq = window.DASHBOARD_DATA || {};
+  var pwTop = null, accTop = null;
+  ((Dq.powerScreen || {}).passed || []).forEach(function (x) { if (!pwTop && x && String(x.code) === code) pwTop = x; });
+  ((Dq.accumulation || {}).scored || []).forEach(function (x) { if (!accTop && x && String(x.code) === code) accTop = x; });
+  var techPanel = '';
+  if (pwTop && pwTop.reasons) techPanel += '<div class="hz-info">🔢 日线九门 · 通过门：' + esc(String(pwTop.reasons).split(';').filter(Boolean).join(' · ')) + '</div>';
+  if (accTop && accTop.note) techPanel += '<div class="hz-info">💰 主力吸筹 · ' + esc(accTop.note) + '</div>';
   document.getElementById('stk-modal-meta').innerHTML =
-    (note ? esc(note) + '<br>' : '') +
-    '<span class="lab">日K线（前复权 · 近30根）· 点击K线柱查看当日涨幅与成交量</span>' + hzPanel;
+    (note ? esc(note) + '<br>' : '') + hzPanel + techPanel;
   var box = document.getElementById('stk-kline');
   box.innerHTML = '<div class="db-empty">K线加载中…</div>';
   document.getElementById('stk-news').innerHTML = stkNewsHtml(code); // R100n：个股消息面（利好/利空/中性，参考断板反包）
