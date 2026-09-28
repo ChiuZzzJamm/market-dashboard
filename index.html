@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609281912"></script>
+<script src="data.js?v=202609281919"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1471,14 +1471,14 @@ function stkNewsHtml(code) {
     groups[dir].push('<div class="db-ref-p"><b>' + kind + ' ' + flag + '：</b>' + esc(head) + esc('《' + r.title + '》') +
       (r.summary ? '<div class="db-ref-sum">' + esc(r.summary) + '</div>' : '') + '</div>');
   }
+  var storyParas = [];
   if (e) {
     (e.bullRefs || []).forEach(function (r) { refItem(r, 'bull'); });
     (e.bearRefs || []).forEach(function (r) { refItem(r, 'bear'); });
     var story = typeof e.story === 'string' ? e.story.trim() : '';
     if (story) {
-      var g0 = e.sentiment === 'bear' ? 'bear' : (e.sentiment === 'neutral' ? 'neutral' : 'bull');
       story.split(/\n+/).map(function (p) { return p.split(/(?=【)/); }).reduce(function (a, b) { return a.concat(b); }, []).filter(function (s2) { return s2 && s2.trim(); }).forEach(function (p) {
-        groups[g0].push('<div class="db-ref-p">' + esc(p).replace(/^【(个股|板块)消息】/, '<b>个股消息 ' + flagOf(p) + '：</b>') + '</div>');
+        storyParas.push('<div class="db-ref-p">' + esc(p).replace(/^【(个股|板块)消息】/, '<b>个股消息 ' + flagOf(p) + '：</b>') + '</div>');
       });
     }
   }
@@ -1492,11 +1492,15 @@ function stkNewsHtml(code) {
   if (accIt && accIt.note) h += '<div class="db-ref-p"><b>【主力吸筹】</b>' + esc(accIt.note) + '</div>';
   if (pwIt && pwIt.reasons) h += '<div class="db-ref-p"><b>【日线九门】</b>通过门：' + esc(String(pwIt.reasons).split(';').filter(Boolean).join(' · ')) + '</div>';
   if (e || hits.length) {
-    [['bull', '利好口径', 'var(--up)'], ['bear', '利空口径', 'var(--down)'], ['neutral', '中性口径', 'var(--ink2)']].forEach(function (gd) {
-      var items = groups[gd[0]];
-      h += '<div class="db-ref-p" style="margin-top:6px;"><b style="color:' + gd[2] + '">' + gd[1] + '：</b></div>';
-      h += items.length ? items.join('') : '<div class="db-ref-sum">暂无</div>';
-    });
+    // R100z：参考断板反包判定方式——按条数定综合口径，只显示占优口径的消息
+    // （利好条数 > 利空条数 → 利好口径；利空多 → 利空口径；持平/无 → 中性，断板标的持平时可被 AI 判定改判）。
+    var nB = groups.bull.length, nE2 = groups.bear.length;
+    var win = nB > nE2 ? 'bull' : (nE2 > nB ? 'bear' : (e && e.sentiment === 'bear' ? 'bear' : (e && e.sentiment === 'bull' ? 'bull' : 'neutral')));
+    var winMeta = { bull: ['利好口径', 'var(--up)'], bear: ['利空口径', 'var(--down)'], neutral: ['中性口径', 'var(--ink2)'] }[win];
+    h += '<div class="db-ref-p" style="margin-top:6px;"><b style="color:' + winMeta[1] + '">' + winMeta[0] + '：</b>' +
+      (nB + nE2 > 0 ? '<span class="db-ref-sum" style="display:inline;">（判定依据：利好 ' + nB + ' 条 · 利空 ' + nE2 + ' 条）</span>' : '') + '</div>';
+    var winItems = storyParas.concat(groups[win]);
+    h += winItems.length ? winItems.join('') : '<div class="db-ref-sum">暂无明确利好/利空消息（按当日要闻与 AI 写回自动更新）</div>';
   }
   if (e) {
     var allRefs = [].concat(e.bullRefs || [], e.bearRefs || []).filter(function (r) { return r && typeof r === 'object' && r.title; });
