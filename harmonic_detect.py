@@ -429,8 +429,29 @@ def _compute_fail_pool(prev_pools, today_codes, cur_info, today):
             dist = cur.get('distToPrzPct')
             reason = '形态失效（距 PRZ ' + (str(dist) + '%' if dist is not None else '') + '，价格已远离反转区或结构走坏）'
         fails.append({'code': code, 'name': info.get('name', ''), 'pattern': info.get('pattern', ''),
+                      'sector': info.get('sector', ''),
                       'reason': reason, 'entryDate': today})
     return fails
+
+
+def _collect_sectors(D):
+    """R100l：code→板块 映射——断板反包双池 sector（真实行业，东财涨停池口径）优先，
+    aiPrediction 板块归属兜底（AI 点名的板块名，仅作参考展示）。"""
+    sec = {}
+    db = D.get('duanban') or {}
+    for key in ('confirmed', 'watching'):
+        for e in db.get(key) or []:
+            c = str(e.get('code') or '')
+            s = e.get('sector')
+            if c and s:
+                sec.setdefault(c, s)
+    for sct in ((D.get('aiPrediction') or {}).get('sectors') or []):
+        nm = sct.get('sector')
+        for st in sct.get('stocks') or []:
+            c = str(st.get('code') or '')
+            if c and nm:
+                sec.setdefault(c, nm)
+    return sec
 
 
 # ---------------- 主流程 ----------------
@@ -448,6 +469,7 @@ def main():
 
     D = common.load_dashboard_data(BASE)
     names = K.collect_pool_names(D)  # R100g：池内 code→name（stkKlineNames 缺名兜底）
+    sec_map = _collect_sectors(D)    # R100l：池内 code→sector（断板池真实行业优先）
     codes = K.collect_pool_codes(D)
     print(f"[HARMONIC] 标的池 {len(codes)} 只，抓取 {days} 日 K 线（预算 {K.DEADLINE_S:.0f}s）")
     t0 = time.time()
@@ -476,7 +498,8 @@ def main():
         # 取简称：优先 stkKlineNames / duanban
         nm = names.get(c) or (D.get('stkKlineNames') or {}).get(c) or ''
         item = {
-            'code': c, 'name': nm, 'pattern': r['pattern'],
+            'code': c, 'name': nm, 'sector': sec_map.get(c, ''),
+            'pattern': r['pattern'],
             'stage': r['stage'], 'points': r['points'], 'ratios': r['ratios'],
             'prz': r['prz'], 'stop': r['stop'], 'target1': r['target1'],
             'target2': r['target2'], 'distToPrzPct': r['distToPrzPct'],
@@ -515,6 +538,7 @@ def main():
     cur_pools = {}
     for it in confirm + watch:
         cur_pools[it['code']] = {'name': it['name'], 'pattern': it['pattern'],
+                                 'sector': it.get('sector', ''),
                                  'stop': it.get('stop'), 'prz': it.get('prz')}
     _save_state({'pools': cur_pools if fetch_ok else prev_pools, 'failPool': failPool})
 

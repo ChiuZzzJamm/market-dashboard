@@ -1291,6 +1291,18 @@ function findHarmonic(code) {
   for (var i = 0; i < pools.length; i++) { if (pools[i].code === code) return pools[i]; }
   return null;
 }
+// R100l：弹窗所属板块——谐波池 sector 优先（harmonic_detect.py 写入），断板反包双池兜底
+function stkSectorOf(code) {
+  if (!code) return '';
+  var hz = findHarmonic(code);
+  if (hz && hz.sector) return hz.sector;
+  var db = (window.DASHBOARD_DATA || {}).duanban || {};
+  var pools = (db.confirmed || []).concat(db.watching || []);
+  for (var i = 0; i < pools.length; i++) {
+    if (String(pools[i].code) === String(code) && pools[i].sector) return pools[i].sector;
+  }
+  return '';
+}
 
 /* R100g：弹窗右上角谐波迷你示意图——X-A-B-C-D 五点结构折线 + PRZ 绿带
    + 止损红虚线 + T1/T2 蓝虚线。数据直接取 harmonic.points/prz/stop/targets。 */
@@ -1363,21 +1375,23 @@ function renderHarmonic() {
     if (it.accResonance) meta += ' · 吸筹共振' + it.accResonance;
     // R100g：名称缺失时只展示代码一次（禁 name/code 拼成 600613600613 双重渲染）
     var nm = (it.name && it.name !== it.code) ? it.name : '';
+    // R100l：板块胶囊对齐断板反包卡片（数据来自 harmonic_detect.py 写入的 sector 字段）
+    var secPill = it.sector ? '<span class="db-sec-pill">' + esc(it.sector) + '</span>' : '';
     return '<div class="hz-card" onclick="openHzModal(\'' + it.code + '\',\'' + escAttr(nm || it.code) + '\')">' +
-      '<div class="hz-top"><span class="hz-nm">' + esc(nm || it.code) + '</span>' + (nm ? '<span class="hz-cd">' + esc(it.code) + '</span>' : '') +
+      '<div class="hz-top"><span class="hz-nm">' + esc(nm || it.code) + '</span>' + (nm ? '<span class="hz-cd">' + esc(it.code) + '</span>' : '') + secPill +
       '<span class="hz-stage ' + st + '">' + esc(it.stage) + '</span><span class="hz-pat">' + esc(it.pattern) + '</span></div>' +
       (it.story ? '<div class="hz-note">' + esc(it.story) + '</div>' : '') +
       '<div class="hz-meta">' + meta + '</div></div>';
   };
-  var html = '<div class="card"><h2>🎵 谐波形态（重型技术面）' + (h.tradeDate ? ' <span class="h2-date">' + esc(h.tradeDate) + '</span>' : '') + '</h2>';
-  // R100g：术语说明（PRZ/T1/T2 高频疑问，悬停有详解）
-  html += '<div class="hz-sub" title="PRZ=Potential Reversal Zone 潜在反转区（D 点预期企稳/反转的价格区间）；T1/T2=第一/第二目标位（D + 0.382/0.618 × CD 腿高度）；止损=形态结构失效位，跌破视为形态作废">术语：PRZ=潜在反转区（D 点落地区间）· T1/T2=反弹目标位（D+0.382/0.618×CD）· 止损=形态失效位</div>';
-  if (c.length) html += '<div class="hz-sub">确认池</div><div class="hz-pool">' + c.map(card).join('') + '</div>';
-  if (w.length) html += '<div class="hz-sub">观察池</div><div class="hz-pool">' + w.map(card).join('') + '</div>';
+  // R100l：三池样式对齐断板反包页——.db-pool 圆点标题容器（确认池红点 / 观察池蓝点 / 失效池灰点 dbFailHtml）
+  var html = '<div class="hz-sub" style="margin:0 0 14px;" title="PRZ=Potential Reversal Zone 潜在反转区（D 点预期企稳/反转的价格区间）；T1/T2=第一/第二目标位（D + 0.382/0.618 × CD 腿高度）；止损=形态结构失效位，跌破视为形态作废">🎵 谐波形态（重型技术面）' + (h.tradeDate ? ' <span class="h2-date">' + esc(h.tradeDate) + '</span>' : '') + ' · 术语：PRZ=潜在反转区（D 点落地区间）· T1/T2=反弹目标位（D+0.382/0.618×CD）· 止损=形态失效位</div>';
+  if (c.length) html += '<div class="db-pool p-conf"><h2>确认池 · ' + c.length + ' 只</h2><div class="db-sub">D 点已触及 PRZ 且现企稳确认 · 按距 PRZ 距离升序（越近越靠前）</div><div class="hz-pool">' + c.map(card).join('') + '</div></div>';
+  else html += '<div class="db-pool p-conf"><h2>确认池 · 0 只</h2><div class="db-empty">暂无标的（形态核验宁缺毋滥，无达标即如实留空）</div></div>';
+  if (w.length) html += '<div class="db-pool p-watch"><h2>观察池 · ' + w.length + ' 只</h2><div class="db-sub">D 点行进中、距 PRZ ≤8%，待触及反转区确认</div><div class="hz-pool">' + w.map(card).join('') + '</div></div>';
+  else html += '<div class="db-pool p-watch"><h2>观察池 · 0 只</h2><div class="db-empty">暂无标的（形态核验宁缺毋滥，无达标即如实留空）</div></div>';
   if (h.summary) html += '<div class="note-line">' + esc(h.summary) + '</div>';
-  // R100i：谐波形态失败池（D 点破位 / 形态失效归档，5 交易日后自动清理）
+  // R100i：谐波形态失败池（D 点破位 / 形态失效归档，5 交易日后自动清理）——样式与断板页失效池同款
   html += dbFailHtml(h.failPool, 'harmonic');
-  html += '</div>';
   return html;
 }
 
@@ -2244,7 +2258,9 @@ function openStkModal(code, name, note) {
       (hz.accResonance ? ' · 吸筹共振' + hz.accResonance : '') +
       '<div class="hz-legend"><i style="color:#0f9d78">━绿</i> PRZ区间 · <i style="color:#c0392b">━红</i> 止损 · <i style="color:#2f6fdb">━蓝</i> 目标位</div></div>';
   }
+  var _sec = stkSectorOf(code); // R100l：弹窗标题下方显示所属板块（红框位）
   document.getElementById('stk-modal-meta').innerHTML =
+    (_sec ? '<div style="margin-bottom:2px;"><span class="lab">所属板块：</span>' + esc(_sec) + '</div>' : '') +
     (note ? esc(note) + '<br>' : '') +
     '<span class="lab">日K线（前复权 · 近30根）· 点击K线柱查看当日涨幅与成交量</span>' + hzPanel;
   var box = document.getElementById('stk-kline');
