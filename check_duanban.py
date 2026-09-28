@@ -1103,7 +1103,7 @@ def tag_entries(entries, D):
         elif refs:
             story = "\n".join(_fmt_ref(r) for r in refs[:3])
         else:
-            story = "暂无明确利好/利空消息（板块与个股近1日无点名新闻；自动化 AI 复核时请检索个股公告/财报/大单等补充）"
+            story = "暂无明确利好/利空消息（按当日要闻与 AI 写回自动更新）"
         # R98k：概率不再留空待 AI（AI 曾全填 50 / merge 曾补 50）——先给确定性基线，
         # AI 复核仍可 ±10 校准，但 probNote 已非空，retag 不会重算覆盖。
         out.append(dict(e, sentiment=sent, bullType=bull_type,

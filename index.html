@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609282148"></script>
+<script src="data.js?v=202609282156"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1443,29 +1443,46 @@ function stkSectorOf(code) {
    ③ 技术池自带说明（谐波 story / 吸筹 note / 九门 reasons）。
    三者可同时出现；完全无信息则不渲染（宁缺勿滥）。 */
 // R100z4g：小作文段落统一渲染器——「个股消息/板块消息 + 旗标：」蓝色加粗（.db-refs b），全站弹窗共用。
-// 旗标规则：段落带真实旗标 🇨🇳/🌍（脚本拼装或结构化 refs，有真实新闻来源）→ 原样保留；
-// 【个股消息】/【板块消息】括号式段落（AI 写回小作文，16:00/07:30 prompt 约束括号内不带旗标）→ 标 🤖。
+// 旗标规则（R100z4h 修订）：
+// ① 占位段落（「暂无明确利好/利空消息…」）→ 灰色朴素文案（db-ref-sum），无旗标无加粗；
+// ② 段落显式带 🇨🇳/🌍/隔夜美股（脚本 _fmt_ref 拼装）→ 原样保留（隔夜美股→🌍）；
+// ③ 【】括号式段落：正文以「日期 来源《标题》」引用真实新闻 → 按来源判 🇨🇳/🌍（AI 复核改写会剥旗标但保留引用）；
+//    纯叙述（无新闻引用）→ 🤖（AI 写回小作文）。
+function dbStoryIsIntlSrc(src) {
+  return /彭博|路透|华尔街日报|WSJ|CNBC|纽约时报|金融时报|美联储|隔夜|美股|全球|海外|外盘/.test(String(src || ''));
+}
 function dbStoryParaHtml(p) {
   var s = String(p || '').trim();
   if (!s) return '';
-  var kind = '', kw = '', flag = '';
+  var newsFlag = function (body) {
+    var nm = String(body || '').match(/^\s*(?:\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}月\d{1,2}日)\s+([^《》：:]{2,25})\s*《/);
+    return nm ? (dbStoryIsIntlSrc(nm[1]) ? '🌍' : '🇨🇳') : '';
+  };
   var m = s.match(/^【\s*(个股消息|板块消息)\s*([^】]*)】\s*/);
   if (m) {
-    kind = m[1];
-    var inner = String(m[2] || '');
+    var kind = m[1];
+    var inner = String(m[2] || '').replace(/[（）]/g, '').trim();
     var fm = inner.match(/🇨🇳|🌍/);
-    flag = fm ? fm[0] : '🤖'; // AI 写回小作文：括号内无真实旗标 → 🤖
-    kw = inner.replace(/🇨🇳|🌍/g, '').replace(/^[·:：\s]+|[·:：\s]+$/g, '');
-    s = s.slice(m[0].length);
-  } else {
-    var m2 = s.match(/^(个股消息|板块消息)(?:（([^）]*)）)?\s*(🇨🇳|🌍)?\s*：/);
-    if (!m2) return '<div class="db-ref-p">' + esc(s) + '</div>';
-    kind = m2[1];
-    kw = m2[2] || '';
-    flag = m2[3] || '🤖';
-    s = s.slice(m2[0].length);
+    var flag = fm ? fm[0] : '';
+    if (fm) inner = inner.replace(/🇨🇳|🌍/g, '').trim();
+    var kw = inner.replace(/^[·:：\s]+|[·:：\s]+$/g, '');
+    var body = s.slice(m[0].length);
+    if (/^暂无明确利好\/利空/.test(body.trim())) {
+      return '<div class="db-ref-sum">暂无明确利好/利空消息（按当日要闻与 AI 写回自动更新）</div>';
+    }
+    if (!flag) flag = newsFlag(body) || '🤖';
+    return '<div class="db-ref-p"><b>' + esc(kind) + (kw ? '·' + esc(kw) : '') + ' ' + flag + '：</b>' + esc(body) + '</div>';
   }
-  return '<div class="db-ref-p"><b>' + esc(kind) + (kw ? '·' + esc(kw) : '') + ' ' + flag + '：</b>' + esc(s) + '</div>';
+  var m2 = s.match(/^(个股消息|板块消息)(?:（([^）]*)）)?\s*(🇨🇳|🌍|隔夜美股)?\s*：/);
+  if (!m2) return '<div class="db-ref-p">' + esc(s) + '</div>';
+  var body2 = s.slice(m2[0].length);
+  if (/^暂无明确利好\/利空/.test(body2.trim())) {
+    return '<div class="db-ref-sum">暂无明确利好/利空消息（按当日要闻与 AI 写回自动更新）</div>';
+  }
+  var t = m2[3];
+  if (t === '隔夜美股') t = '🌍';
+  if (!t) t = newsFlag(body2) || '🤖';
+  return '<div class="db-ref-p"><b>' + esc(m2[1]) + (m2[2] ? '·' + esc(m2[2]) : '') + ' ' + t + '：</b>' + esc(body2) + '</div>';
 }
 function stkNewsHtml(code) {
   code = String(code || '').trim();
