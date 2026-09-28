@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609282128"></script>
+<script src="data.js?v=202609282148"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1442,6 +1442,31 @@ function stkSectorOf(code) {
       方向加权打标：看涨=利好、看跌=利空，同 retag_duanban 思路）；
    ③ 技术池自带说明（谐波 story / 吸筹 note / 九门 reasons）。
    三者可同时出现；完全无信息则不渲染（宁缺勿滥）。 */
+// R100z4g：小作文段落统一渲染器——「个股消息/板块消息 + 旗标：」蓝色加粗（.db-refs b），全站弹窗共用。
+// 旗标规则：段落带真实旗标 🇨🇳/🌍（脚本拼装或结构化 refs，有真实新闻来源）→ 原样保留；
+// 【个股消息】/【板块消息】括号式段落（AI 写回小作文，16:00/07:30 prompt 约束括号内不带旗标）→ 标 🤖。
+function dbStoryParaHtml(p) {
+  var s = String(p || '').trim();
+  if (!s) return '';
+  var kind = '', kw = '', flag = '';
+  var m = s.match(/^【\s*(个股消息|板块消息)\s*([^】]*)】\s*/);
+  if (m) {
+    kind = m[1];
+    var inner = String(m[2] || '');
+    var fm = inner.match(/🇨🇳|🌍/);
+    flag = fm ? fm[0] : '🤖'; // AI 写回小作文：括号内无真实旗标 → 🤖
+    kw = inner.replace(/🇨🇳|🌍/g, '').replace(/^[·:：\s]+|[·:：\s]+$/g, '');
+    s = s.slice(m[0].length);
+  } else {
+    var m2 = s.match(/^(个股消息|板块消息)(?:（([^）]*)）)?\s*(🇨🇳|🌍)?\s*：/);
+    if (!m2) return '<div class="db-ref-p">' + esc(s) + '</div>';
+    kind = m2[1];
+    kw = m2[2] || '';
+    flag = m2[3] || '🤖';
+    s = s.slice(m2[0].length);
+  }
+  return '<div class="db-ref-p"><b>' + esc(kind) + (kw ? '·' + esc(kw) : '') + ' ' + flag + '：</b>' + esc(s) + '</div>';
+}
 function stkNewsHtml(code) {
   code = String(code || '').trim();
   if (!/^\d{6}$/.test(code)) return '';
@@ -1467,7 +1492,6 @@ function stkNewsHtml(code) {
   if (!e && !hits.length && !hzIt && !accIt && !pwIt) return '';
   // R100y：与断板反包弹窗同款「三口径」分组——利好口径/利空口径/中性口径，
   // 组内条目统一「个股消息 🇨🇳：」/「个股消息 🌍：」格式（🇨🇳=国内，🌍=隔夜/国际）。
-  var flagOf = function (t) { return /美股|隔夜|全球|海外|美联储|CNBC|彭博|路透|华尔街日报|外盘/.test(String(t || '')) ? '🌍' : '🇨🇳'; };
   var groups = { bull: [], bear: [], neutral: [] };
   function refItem(r, dir) {
     if (!r || typeof r !== 'object' || !r.title) return;
@@ -1485,7 +1509,7 @@ function stkNewsHtml(code) {
     var story = typeof e.story === 'string' ? e.story.trim() : '';
     if (story) {
       story.split(/\n+/).map(function (p) { return p.split(/(?=【)/); }).reduce(function (a, b) { return a.concat(b); }, []).filter(function (s2) { return s2 && s2.trim(); }).forEach(function (p) {
-        storyParas.push('<div class="db-ref-p">' + esc(p).replace(/^【(个股|板块)消息[^】]*】/, '<b>个股消息 ' + flagOf(p) + '：</b>') + '</div>'); // R100z3：正则放宽（容忍旗标/备注写在【】内的格式偏差），配合 16:00 prompt 治本约束
+        storyParas.push(dbStoryParaHtml(p)); // R100z4g：统一渲染器（AI 小作文 → 🤖 旗标，脚本段落保留 🇨🇳/🌍）
       });
     }
   }
@@ -2171,14 +2195,15 @@ function openDbModal(key) {
     techMetaLines(String(e.code)); // R100z3：对应技术面（九门/吸筹）纯文本行，命中才渲染
   document.getElementById('db-kline').innerHTML = dbKlineSvg(e.kline);
   // R89 依据小作文化：story（AI 消息面解读，非空时优先）或结构化 refs（含新闻摘要）逐段渲染
+  // R100z4g：段落统一走 dbStoryParaHtml / 真实旗标映射——「个股消息 🇨🇳：」蓝色加粗，AI 小作文标 🤖
   function dbRefPara(r) {
-    if (typeof r === 'string') return '<div class="db-ref-p">' + esc(r) + '</div>';
+    if (typeof r === 'string') return dbStoryParaHtml(r);
     var isStock = r.kind === 'stock';
-    var kind = isStock ? '【个股消息】'
-      : '【板块消息' + (r.kw ? '·' + r.kw : (r.sec ? '·' + r.sec : '')) + '】';
-    var tag = r.srcTag ? ' <span class="db-src-tag">' + esc(r.srcTag) + '</span>' : '';
+    var kw = isStock ? '' : (r.kw || r.sec || '');
+    var tag = String(r.srcTag || '');
+    var flag = (tag.indexOf('🌍') >= 0 || tag.indexOf('美股') >= 0 || tag.indexOf('全球') >= 0) ? '🌍' : '🇨🇳';
     var head = ((r.time || '') + ' ' + (r.source || r.src || '')).trim();
-    var h = '<div class="db-ref-p"><b>' + kind + '</b>' + tag + esc(head) + (r.title ? esc('《' + r.title + '》') : '');
+    var h = '<div class="db-ref-p"><b>' + (isStock ? '个股消息' : '板块消息' + (kw ? '·' + esc(kw) : '')) + ' ' + flag + '：</b>' + esc(head) + (r.title ? esc('《' + r.title + '》') : '');
     if (r.summary) h += '<div class="db-ref-sum">' + esc(r.summary) + '</div>';
     return h + '</div>';
   }
@@ -2191,7 +2216,8 @@ function openDbModal(key) {
        : '<b style="color:var(--up)">利好口径：</b>'); // R100y：口径标题统一（原「个股/板块利好依据」）
   if (story) {
     // R91h：【个股消息】/【板块消息】等分段强制各占一行（即使 AI 输出为单段也按「【」拆分）
-    refsHtml += label + story.split(/\n+/).map(function (p) { return p.split(/(?=【)/); }).reduce(function (a, b) { return a.concat(b); }, []).filter(function (s) { return s && s.trim(); }).map(function (p) { return '<div class="db-ref-p">' + esc(p) + '</div>'; }).join('');
+    // R100z4g：统一走 dbStoryParaHtml——AI 小作文段落标 🤖 旗标、蓝色加粗（修复黑细体不一致）
+    refsHtml += label + story.split(/\n+/).map(function (p) { return p.split(/(?=【)/); }).reduce(function (a, b) { return a.concat(b); }, []).filter(function (s) { return s && s.trim(); }).map(function (p) { return dbStoryParaHtml(p); }).join('');
     var allRefs = [].concat(e.bullRefs || [], e.bearRefs || [])
       .filter(function (r) { return r && typeof r === 'object' && r.title; });
     if (allRefs.length) {
