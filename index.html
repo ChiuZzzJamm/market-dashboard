@@ -442,11 +442,24 @@
   .db-modal-head .cd2 { font-size: 12px; color: var(--ink2); }
   .db-modal-close { margin-left: auto; background: none; border: 1px solid var(--line); border-radius: 999px; width: 30px; height: 30px; font-size: 15px; cursor: pointer; color: var(--ink2); line-height: 1; }
   .db-modal-close:hover { border-color: var(--accent); color: var(--accent-deep); }
-  /* R100g：弹窗右上角谐波迷你图（五点结构+PRZ带），贴关闭按钮左侧；窄屏隐藏 */
-  .db-modal-head .hz-mini { margin-left: auto; }
-  .db-modal-head .hz-mini ~ .db-modal-close { margin-left: 0; }
-  .hz-mini svg { display: block; }
-  @media (max-width: 760px) { .db-modal-head .hz-mini { display: none; } }
+  /* R100i：弹窗内完整谐波教学示意图（替代原右上角迷你图） */
+  .hz-diagram { margin: 4px 0 8px; border: 1px dashed var(--line); border-radius: 10px; padding: 8px 10px 4px; background: var(--paper); }
+  .hz-diagram svg { width: 100%; height: auto; display: block; }
+  /* R100i：🧰 工具箱三个子页入口——竖长条椭圆形嵌入对应文字 */
+  .db-subnav { display: flex; justify-content: center; align-items: flex-start; gap: 14px; margin: 0 0 16px; flex-wrap: wrap; }
+  .db-subtab { writing-mode: vertical-rl; letter-spacing: 5px; padding: 16px 9px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--paper); font-size: 13px; font-weight: 800; color: var(--ink2); cursor: pointer; font-family: var(--font); box-shadow: var(--shadow); transition: all .18s ease; }
+  .db-subtab:hover { border-color: var(--accent); color: var(--accent-deep); transform: translateY(-2px); }
+  .db-subtab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  /* R100i：失败池（断板反包 / 谐波形态）——破位或超期失效归档，5 个交易日后清理 */
+  .db-pool.p-fail h2::before { background: #98a2b3; box-shadow: 0 0 0 4px rgba(152,162,179,.18); }
+  .fail-chip { border: 1px dashed var(--line); border-radius: 10px; padding: 8px 10px; background: var(--paper); cursor: pointer; transition: .15s; }
+  .fail-chip:hover { border-color: #98a2b3; }
+  .fail-chip .r1 { display: flex; align-items: center; gap: 6px; }
+  .fail-chip .r1 b { font-weight: 800; }
+  .fail-chip .cd { font-size: 11px; color: var(--ink2); }
+  .fail-chip .fr { font-size: 11px; color: #a33; margin-top: 4px; line-height: 1.5; }
+  .fail-chip .fd { font-size: 10px; color: var(--ink2); margin-top: 2px; }
+  .hz-card.fail { opacity: .85; border-style: dashed; }
   .db-modal-meta { font-size: 12.5px; color: var(--ink); line-height: 1.8; margin-bottom: 10px; }
   .db-modal-meta .lab { color: var(--ink2); }
   .db-kline svg { width: 100%; height: auto; display: block; }
@@ -506,7 +519,7 @@
 <div class="wrap">
   <div class="float-group" id="float-group" title="整组可拖动到任意位置">
     <button class="mkt-toggle" id="mkt-toggle" title="切换到美股看板" aria-label="切换A股/美股看板" onclick="switchTab(currentMarket==='ashare'?'us':'ashare')">🐼</button>
-    <button class="db-entry" id="db-entry" title="点击进入断板反包看板" aria-label="断板反包"><span class="db-emoji">💰</span><span class="db-badge" id="db-badge"></span></button>
+    <button class="db-entry" id="db-entry" title="点击进入策略工具箱（断板反包 / 谐波形态 / 日线九门）" aria-label="策略工具箱"><span class="db-emoji">🧰</span><span class="db-badge" id="db-badge"></span></button>
   </div>
   <div class="hero">
     <h1>每日市场看板</h1>
@@ -544,9 +557,12 @@
       <div class="db-title">断板反包</div>
       <div class="db-date" id="db-date"></div>
     </div>
-    <button class="db-entry-in" id="db-entry-in" title="点击返回每日市场看板">💰</button>
+    <button class="db-entry-in" id="db-entry-in" title="点击返回每日市场看板">🧰</button>
+    <div class="db-subnav" id="db-subnav"></div>
     <div class="db-note" id="db-note"></div>
-    <div id="db-pools"></div>
+    <div id="db-pools" class="db-subpage"></div>
+    <div id="db-hz" class="db-subpage" style="display:none;"></div>
+    <div id="db-pw" class="db-subpage" style="display:none;"></div>
   </div>
 </div>
 
@@ -832,15 +848,9 @@ function render(market) {
     html += '<div id="chart-fund" class="chart-tall"></div></div>';
   }
 
-  // R100f：谐波形态移到主力资金模块下面（2026-09-28 用户要求）
-  if (isA) {
-    var _hz = renderHarmonic(); if (_hz) html += _hz;
-  }
-
-  // R100h：量化九门紧随谐波模块之后（2026-09-28 用户要求）
-  if (isA) {
-    var _pw = renderPowerScreen(); if (_pw) html += _pw;
-  }
+  // R100i：谐波形态 / 量化九门（日线九门）已移至「🧰 工具箱」断板反包页内的独立子页，
+  // 主页面不再重复渲染（用户在 2026-09-28 要求"主页面里的谐波和九门都挪进对应板块"）。
+  // 子页渲染见 renderDuanban() 内 db-hz / db-pw 容器。
 
   document.getElementById('content').innerHTML = html;
 
@@ -1327,6 +1337,50 @@ function openGrpModal(list, idx) {
   openStkModal(it.code, (it.name && it.name !== it.code) ? it.name : it.code, '');
 }
 
+/* R100i：弹窗完整谐波教学示意图——X-A-B-C-D 五点折线（红）+ PRZ 绿色反转区带
+   + 止损红虚线 + T1/T2 蓝虚线目标位 + D 后看涨箭头。数据取 harmonic.points/prz/stop/targets。 */
+function hzFullSvg(hz) {
+  try {
+    var p = hz && hz.points;
+    if (!p || !hz.prz || hz.prz.length < 2) return '';
+    var pts = [['X', p.X], ['A', p.A], ['B', p.B], ['C', p.C], ['D', p.D]];
+    var vals = pts.map(function (q) { return q[1]; });
+    vals.push(hz.prz[0], hz.prz[1], hz.stop, hz.target1, hz.target2);
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    var pad = (hi - lo) * 0.12 || 1;
+    lo -= pad; hi += pad;
+    var W = 560, H = 250, padL = 40, padR = 96, padT = 18, padB = 30;
+    var iw = W - padL - padR, ih = H - padT - padB;
+    function X_(i) { return padL + iw * (i / 4); }
+    function Y_(v) { return padT + ih * (1 - (v - lo) / (hi - lo)); }
+    var dpath = pts.map(function (q, i) { return (i ? 'L' : 'M') + X_(i).toFixed(1) + ' ' + Y_(q[1]).toFixed(1); }).join(' ');
+    var dx = X_(4);
+    var przY1 = Y_(hz.prz[1]), przY2 = Y_(hz.prz[0]);
+    var stopY = Y_(hz.stop), t1Y = Y_(hz.target1), t2Y = Y_(hz.target2);
+    var labels = pts.map(function (q) {
+      var i = pts.indexOf(q);
+      return '<text x="' + (X_(i) - 4).toFixed(1) + '" y="' + (Y_(q[1]) - 8).toFixed(1) + '" font-size="12" font-weight="700" fill="#333">' + q[0] + '</text>';
+    }).join('');
+    var rightX = (W - padR).toFixed(1);
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect x="' + dx.toFixed(1) + '" y="' + przY1.toFixed(1) + '" width="' + (W - padR - dx).toFixed(1) + '" height="' + (przY2 - przY1).toFixed(1) + '" fill="rgba(15,157,120,0.16)" stroke="#0f9d78" stroke-dasharray="4 3" stroke-width="1"/>' +
+      '<text x="' + (W - padR + 6).toFixed(1) + '" y="' + ((przY1 + przY2) / 2).toFixed(1) + '" font-size="11" fill="#0f9d78" font-weight="700">PRZ</text>' +
+      '<line x1="' + padL + '" y1="' + stopY.toFixed(1) + '" x2="' + rightX + '" y2="' + stopY.toFixed(1) + '" stroke="#c0392b" stroke-width="1.4" stroke-dasharray="6 3"/>' +
+      '<text x="' + (W - padR + 6).toFixed(1) + '" y="' + (stopY + 4).toFixed(1) + '" font-size="11" fill="#c0392b" font-weight="700">止损</text>' +
+      '<line x1="' + dx.toFixed(1) + '" y1="' + t1Y.toFixed(1) + '" x2="' + rightX + '" y2="' + t1Y.toFixed(1) + '" stroke="#2f6fdb" stroke-width="1.2" stroke-dasharray="5 3"/>' +
+      '<text x="' + (W - padR + 6).toFixed(1) + '" y="' + (t1Y + 4).toFixed(1) + '" font-size="11" fill="#2f6fdb">T1</text>' +
+      '<line x1="' + dx.toFixed(1) + '" y1="' + t2Y.toFixed(1) + '" x2="' + rightX + '" y2="' + t2Y.toFixed(1) + '" stroke="#2f6fdb" stroke-width="1.2" stroke-dasharray="5 3"/>' +
+      '<text x="' + (W - padR + 6).toFixed(1) + '" y="' + (t2Y + 4).toFixed(1) + '" font-size="11" fill="#2f6fdb">T2</text>' +
+      '<path d="' + dpath + '" fill="none" stroke="#c0392b" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>' +
+      '<circle cx="' + dx.toFixed(1) + '" cy="' + Y_(p.D).toFixed(1) + '" r="4" fill="#c0392b"/>' +
+      '<path d="M' + dx.toFixed(1) + ' ' + Y_(p.D).toFixed(1) + ' Q' + (dx + 34).toFixed(1) + ' ' + (Y_(p.D) - 30).toFixed(1) + ' ' + dx.toFixed(1) + ' ' + t1Y.toFixed(1) + '" fill="none" stroke="#0f9d78" stroke-width="2" marker-end="url(#hzarrow)"/>' +
+      labels +
+      '<defs><marker id="hzarrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#0f9d78"/></marker></defs>' +
+      '</svg>';
+    return svg;
+  } catch (e) { return ''; }
+}
+
 function renderHarmonic() {
   var h = window.DASHBOARD_DATA.harmonic;
   if (!h || !h.confirmPool || !h.watchPool) return '';
@@ -1350,6 +1404,8 @@ function renderHarmonic() {
   if (c.length) html += '<div class="hz-sub">确认池</div><div class="hz-pool">' + c.map(card).join('') + '</div>';
   if (w.length) html += '<div class="hz-sub">观察池</div><div class="hz-pool">' + w.map(card).join('') + '</div>';
   if (h.summary) html += '<div class="note-line">' + esc(h.summary) + '</div>';
+  // R100i：谐波形态失败池（D 点破位 / 形态失效归档，5 交易日后自动清理）
+  html += dbFailHtml(h.failPool, 'harmonic');
   html += '</div>';
   return html;
 }
@@ -1391,7 +1447,9 @@ function renderPowerScreen() {
       '<div class="hz-meta">涨幅 ' + it.pct + '% · 量比 ' + it.volRatio + ' · RSI ' + it.rsi + '</div>' +
       '<div class="pw-gate">' + gates + '</div></div>';
   }).join('');
+  var gateDef = '<div class="hz-sub" title="九门=9 道量化硬阈值（日线收盘口径）。硬门禁（必过 5 道）：G1 当日涨幅≥3% · G2 放量≥1.5×5日均量 · G4 站上MA20 · G5 非ST主板 · G7 当日振幅≤15%。质量门（过≥3 道）：G3 价处20日区间上1/3 · G6 近5日无长上影出货 · G8 波动率适中(ATR14/收盘∈[2%,8%]) · G9 RSI14∈[40,80]。打分=通过阈值数(0-9分)；入选=硬门禁全过 且 质量门≥3道。">📐 九门口径：硬门禁 G1涨幅≥3%·G2放量1.5×·G4站MA20·G5非ST·G7振幅≤15%（必过）｜质量门 G3位置·G6无出货·G8波动·G9RSI（过≥3）｜打分=过门数(0-9分)</div>';
   return '<div class="card"><h2>⚡ 量化强势筛选（日线九门）' + (p.tradeDate ? ' <span class="h2-date">' + esc(p.tradeDate) + '</span>' : '') + '</h2>' +
+    gateDef +
     '<div class="pw-grid">' + items + '</div>' + (p.summary ? '<div class="note-line">' + esc(p.summary) + '</div>' : '') + '</div>';
 }
 
@@ -1643,7 +1701,67 @@ function renderDuanban() {
   }
   html += dbPoolHtml('确认池', 'p-conf', '已走完「涨停 → 放量断板 → 缩量 → 不破T日低点与MA5」全流程', conf, true, 'c');
   html += dbPoolHtml('观察池', 'p-watch', '形态进行中、只差最后一根确认K线（待企稳 ＞ 待缩量）', watch, false, 'w');
+  // R100i：断板反包失败池（破位 / 超期失效归档，5 交易日后自动清理）
+  html += dbFailHtml(db && db.failPool, 'duanban');
   document.getElementById('db-pools').innerHTML = html;
+
+  // R100i：🧰 工具箱另两个子页——谐波形态 / 日线九门（从主页面挪入，见 index 渲染段注释）
+  var hzWrap = document.getElementById('db-hz');
+  if (hzWrap) hzWrap.innerHTML = renderHarmonic() || '<div class="db-empty">暂无谐波形态数据</div>';
+  var pwWrap = document.getElementById('db-pw');
+  if (pwWrap) pwWrap.innerHTML = renderPowerScreen() || '<div class="db-empty">暂无量化九门数据</div>';
+
+  buildSubnav();
+  switchSubTab('db'); // 默认进入断板反包页
+}
+
+/* R100i：失败池（断板反包 / 谐波形态）——原符合形态但破位或超期失效的标的归档，5 交易日后自动清理。
+   failPool: [{code,name,pattern,form,reason,entryDate}]；点击看该标的 K 线。 */
+function dbFailHtml(failPool, kind) {
+  failPool = failPool || [];
+  if (!failPool.length) {
+    return '<div class="db-pool p-fail"><h2>失效归档池 · 0 只</h2>' +
+      '<div class="db-empty">暂无失效标的（形态破位或超期失效的标的会落入此池，5 个交易日后自动清理）</div></div>';
+  }
+  var items = failPool.map(function (e) {
+    var nm = (e.name && e.name !== e.code) ? e.name : '';
+    var click = e.code ? (' onclick="openStkModal(\'' + e.code + '\',\'' + escAttr(nm || e.code) + '\')"') : '';
+    var pat = e.pattern ? ('<span class="hz-pat">' + esc(e.pattern) + '</span>') : '';
+    return '<div class="fail-chip"' + click + '>' +
+      '<div class="r1"><b>' + esc(nm || e.code) + '</b>' + (nm ? '<span class="cd">' + esc(e.code) + '</span>' : '') + pat + '</div>' +
+      '<div class="fr">' + esc(e.reason || '形态失效') + '</div>' +
+      '<div class="fd">归档：' + esc(e.entryDate || '—') + '（5 交易日内保留）</div></div>';
+  }).join('');
+  return '<div class="db-pool p-fail"><h2>失效归档池 · ' + failPool.length + ' 只</h2>' +
+    '<div class="db-sub">原符合' + (kind === 'harmonic' ? '谐波' : '断板反包') + '形态、因破位或超期失效而归因失败；5 个交易日后自动清理</div>' +
+    '<div class="db-chips">' + items + '</div></div>';
+}
+
+/* R100i：🧰 工具箱三个子页切换（断板反包 / 谐波形态 / 日线九门），竖长条椭圆形文字入口 */
+var currentSubTab = 'db';
+function buildSubnav() {
+  var nav = document.getElementById('db-subnav');
+  if (!nav) return;
+  var tabs = [
+    { k: 'db', t: '断板反包' },
+    { k: 'hz', t: '谐波形态' },
+    { k: 'pw', t: '日线九门' }
+  ];
+  nav.innerHTML = tabs.map(function (x) {
+    return '<div class="db-subtab' + (x.k === currentSubTab ? ' on' : '') + '" data-k="' + x.k + '" onclick="switchSubTab(\'' + x.k + '\')">' + x.t + '</div>';
+  }).join('');
+}
+function switchSubTab(k) {
+  currentSubTab = k;
+  var map = { db: 'db-pools', hz: 'db-hz', pw: 'db-pw' };
+  Object.keys(map).forEach(function (m) {
+    var el = document.getElementById(map[m]);
+    if (el) el.style.display = (m === k) ? 'block' : 'none';
+  });
+  var tabs = document.querySelectorAll('.db-subtab');
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].classList.toggle('on', tabs[i].getAttribute('data-k') === k);
+  }
 }
 
 function openDuanban() {
@@ -2136,16 +2254,17 @@ function openStkModal(code, name, note) {
     '<span class="nm">' + esc(name || '') + '</span>' +
     (code ? '<span class="cd2">' + esc(code) + '</span>' : '') +
     (nav ? '<span class="cd2">' + (STK_IDX + 1) + '/' + STK_GRP.length + '</span>' : '') +
-    (hz ? '<span class="hz-mini" title="谐波形态示意：X-A-B-C-D 五点结构（红折线）+ PRZ 反转区（绿带）+ 止损（红虚线）+ T1/T2 目标位（蓝虚线）">' + hzMiniSvg(hz) + '</span>' : '') +
     '<button class="db-modal-close" onclick="stkClose()">×</button>';
   var hzPanel = '';
   if (hz) {
     var _r = hz.ratios || {};
+    var full = hzFullSvg(hz);
     hzPanel = '<div class="hz-info" title="PRZ=Potential Reversal Zone 潜在反转区（D 点预期企稳/反转的价格区间）；T1/T2=第一/第二目标位（D + 0.382/0.618 × CD 腿高度）；止损=形态结构失效位，跌破视为形态作废">🎵 ' + esc(hz.pattern) + '（' + esc(hz.stage) + '） PRZ <span class="hz-v">' + hz.prz[0] + '~' + hz.prz[1] +
       '</span> · 止损 <span class="hz-v">' + hz.stop + '</span> · T1 <span class="hz-v">' + hz.target1 + '</span> · T2 <span class="hz-v">' + hz.target2 + '</span>' +
       (_r.AB ? ' · 比率 AB=' + _r.AB + ' BC=' + _r.BC + ' CD=' + _r.CD : '') +
       (hz.accResonance ? ' · 吸筹共振' + hz.accResonance : '') +
-      '<div class="hz-legend"><i style="color:#0f9d78">━绿</i> PRZ区间 · <i style="color:#c0392b">━红</i> 止损 · <i style="color:#2f6fdb">━蓝</i> 目标位</div></div>';
+      '<div class="hz-legend"><i style="color:#0f9d78">━绿</i> PRZ区间 · <i style="color:#c0392b">━红</i> 止损 · <i style="color:#2f6fdb">━蓝</i> 目标位</div></div>' +
+      (full ? '<div class="hz-diagram">' + full + '</div>' : '');
   }
   document.getElementById('stk-modal-meta').innerHTML =
     (note ? esc(note) + '<br>' : '') +

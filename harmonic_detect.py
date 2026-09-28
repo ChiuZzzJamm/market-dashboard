@@ -361,6 +361,78 @@ def self_test():
     return ok == 7
 
 
+# ---------------- 失败池（R100i）：破位 / 形态失效归档，5 交易日后自动清理 ----------------
+
+STATE_FILE = os.path.join(BASE, '.harmonic_state.json')
+
+
+def _trading_days_between(d0, d1):
+    """工作日（≈交易日）数量（含端点），用于 5 交易日清理闸门。d0/d1='YYYY-MM-DD'。"""
+    a = datetime.date.fromisoformat(d0)
+    b = datetime.date.fromisoformat(d1)
+    if b < a:
+        a, b = b, a
+    n = 0
+    cur = a
+    one = datetime.timedelta(days=1)
+    while cur <= b:
+        if cur.weekday() < 5:  # 0=周一 .. 4=周五
+            n += 1
+        cur += one
+    return n
+
+
+def _load_state():
+    try:
+        with open(STATE_FILE, encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _save_state(st):
+    try:
+        with open(STATE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(st, f, ensure_ascii=False)
+    except Exception:
+        pass
+
+
+def _clean_fail(fp, today):
+    """保留 5 个交易日内的失效归档；超期清理。"""
+    if not fp:
+        return []
+    out = []
+    for f in fp:
+        ed = f.get('entryDate')
+        try:
+            if ed and _trading_days_between(ed, today) > 5:
+                continue
+        except Exception:
+            pass
+        out.append(f)
+    return out
+
+
+def _compute_fail_pool(prev_pools, today_codes, cur_info, today):
+    """prev_pools 中已不在今日池的标的 → 归因失败入池。"""
+    fails = []
+    for code, info in prev_pools.items():
+        if code in today_codes:
+            continue
+        cur = cur_info.get(code)
+        if cur is None:
+            reason = '形态失效（不再符合谐波几何，价格已远离反转区）'
+        elif cur.get('dead'):
+            reason = '跌破止损位（' + str(info.get('stop')) + '），形态破位失效'
+        else:
+            dist = cur.get('distToPrzPct')
+            reason = '形态失效（距 PRZ ' + (str(dist) + '%' if dist is not None else '') + '，价格已远离反转区或结构走坏）'
+        fails.append({'code': code, 'name': info.get('name', ''), 'pattern': info.get('pattern', ''),
+                      'reason': reason, 'entryDate': today})
+    return fails
+
+
 # ---------------- 主流程 ----------------
 
 def main():
@@ -391,14 +463,16 @@ def main():
             acc[it['code']] = it.get('hitCount', 0)
 
     confirm, watch = [], []
+    cur_info = {}
     for c in codes:
         bars = kl.get(c)
         if not bars:
+            cur_info[c] = None
             continue
         r = scan_bars(bars)
+        cur_info[c] = r
         if not r or r.get('dead'):
             continue
-        name = None
         # 取简称：优先 stkKlineNames / duanban
         nm = names.get(c) or (D.get('stkKlineNames') or {}).get(c) or ''
         item = {
@@ -421,6 +495,29 @@ def main():
     tags = {}
     for it in pool_c + pool_w:
         tags[it['code']] = it['pattern']
+
+    old = D.get('harmonic')
+    n_ok = sum(1 for v in kl.values() if v)
+    fetch_ok = len(codes) > 0 and n_ok >= len(codes) * 0.8
+
+    # R100i：失败池——原在池内、今日滑出的标的归因失败归档，5 交易日后清理。
+    # 仅在抓取正常（fetch_ok）且确有数据/旧池时计算新失败，避免抓取故障时误判全池失效。
+    today_codes = set([it['code'] for it in confirm] + [it['code'] for it in watch])
+    prev_state = _load_state()
+    prev_pools = prev_state.get('pools', {})
+    carried = _clean_fail(prev_state.get('failPool', []), today)
+    new_fails = []
+    if fetch_ok and (confirm or watch or prev_pools):
+        new_fails = _compute_fail_pool(prev_pools, today_codes, cur_info, today)
+    carried_codes = set(f.get('code') for f in carried)
+    failPool = carried + [f for f in new_fails if f['code'] not in carried_codes]
+    # 保存状态供下次比对（抓取失败时保留 prev_pools，保证后续仍能识别滑出）
+    cur_pools = {}
+    for it in confirm + watch:
+        cur_pools[it['code']] = {'name': it['name'], 'pattern': it['pattern'],
+                                 'stop': it.get('stop'), 'prz': it.get('prz')}
+    _save_state({'pools': cur_pools if fetch_ok else prev_pools, 'failPool': failPool})
+
     new_field = {
         'updatedAt': f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}（谐波形态 {today} 收盘 数据已自动更新）",
         'tradeDate': today,
@@ -428,15 +525,14 @@ def main():
         'watchPool': pool_w,
         'summary': '',
         'tags': tags,
+        'failPool': failPool,
     }
 
-    old = D.get('harmonic')
-    n_ok = sum(1 for v in kl.values() if v)
-    fetch_ok = len(codes) > 0 and n_ok >= len(codes) * 0.8
     if not confirm and not watch and old and not fetch_ok:
-        # 数据故障（大面积抓取失败）：保留旧池（R91n 不清场）
+        # 数据故障（大面积抓取失败）：保留旧池（R91n 不清场），失败池仅做 5 交易日清理
         print(f'[HARMONIC] 抓取异常 {n_ok}/{len(codes)}，保留既有池（R91n）')
         old['note'] = (old.get('note') or '') + f"｜{today} 抓取异常保留旧池"
+        old['failPool'] = _clean_fail(old.get('failPool', []), today)
         new_field = old
     elif not confirm and not watch and old and fetch_ok:
         # 抓取正常但有效性闸门后无检出：旧池形态已失效（如价格涨离 PRZ），写空不误导

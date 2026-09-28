@@ -26,3 +26,7 @@ market-dashboard.zip
 
 # K 线抓取缓存（harmonic_detect/accumulation 脚本生成，TTL 20h，不应进仓库）
 .kline_cache/
+
+# 失败池状态文件（harmonic_detect / check_duanban 生成，运行时状态，不应进仓库）
+.harmonic_state.json
+.duanban_state.json

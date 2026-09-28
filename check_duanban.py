@@ -1206,6 +1206,56 @@ def eval_candidate(code, rec, kl):
     return best
 
 
+# ---------------- 失败池（R100i）：破位 / 形态失效归档，5 交易日后自动清理 ----------------
+_DUANBAN_STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.duanban_state.json')
+
+
+def _trading_days_between(d0, d1):
+    a = datetime.strptime(d0, '%Y-%m-%d').date()
+    b = datetime.strptime(d1, '%Y-%m-%d').date()
+    if b < a:
+        a, b = b, a
+    n = 0
+    cur = a
+    one = datetime.timedelta(days=1)
+    while cur <= b:
+        if cur.weekday() < 5:
+            n += 1
+        cur += one
+    return n
+
+
+def _load_duanban_state():
+    try:
+        with open(_DUANBAN_STATE_FILE, encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _save_duanban_state(st):
+    try:
+        with open(_DUANBAN_STATE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(st, f, ensure_ascii=False)
+    except Exception:
+        pass
+
+
+def _clean_duanban_fail(fp, today):
+    if not fp:
+        return []
+    out = []
+    for f in fp:
+        ed = f.get('entryDate')
+        try:
+            if ed and _trading_days_between(ed, today) > 5:
+                continue
+        except Exception:
+            pass
+        out.append(f)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description="断板反包形态真实核验")
     ap.add_argument("--days", type=int, default=5, help="回看交易日数（默认5）")
@@ -1259,6 +1309,7 @@ def main():
                               "（确认池 %d / 观察池 %d）"
                               % (len(old_mod.get("confirmed") or []),
                                  len(old_mod.get("watching") or [])), file=sys.stderr)
+                        old_mod['failPool'] = _clean_duanban_fail(old_mod.get('failPool', []), datetime.now().strftime('%Y-%m-%d'))
                         print(json.dumps(old_mod, ensure_ascii=False, indent=1))
                         return
                 except Exception as e:
@@ -1394,6 +1445,38 @@ def main():
                                 for p in pairs if p["stage_info"]["pool"] != "confirmed"]}
         else:
             mod = build_module(pairs, D)
+        # R100i：断板反包失败池——原在池内、今日滑出的标的归因失败归档，5 交易日后清理
+        today_str = datetime.now().strftime('%Y-%m-%d')
+        try:
+            prev_ds = _load_duanban_state()
+        except Exception:
+            prev_ds = {}
+        prev_pools = prev_ds.get('pools', {})
+        prev_codes = set(prev_pools.keys())
+        cur_codes = set(str(e.get('code') or '') for e in (mod.get('confirmed') or []) + (mod.get('watching') or []))
+        cand_codes = set(str(c) for c in cand.keys())
+        failed_codes = set(str(c) for c, _ in failed)
+        new_fails = []
+        for code in prev_codes - cur_codes:
+            info = prev_pools.get(code, {})
+            if code in failed_codes:
+                reason = 'K线获取失败，形态校验缺失，暂归失效'
+            elif code in cand_codes:
+                reason = '形态失效（不再符合涨停→放量断板→缩量→企稳结构）'
+            else:
+                reason = '超过观察窗口，形态失效'
+            new_fails.append({'code': code, 'name': info.get('name', ''),
+                              'sector': info.get('sector', ''), 'form': info.get('form', ''),
+                              'reason': reason, 'entryDate': today_str})
+        carried = _clean_duanban_fail(prev_ds.get('failPool', []), today_str)
+        carried_codes = set(f.get('code') for f in carried)
+        failPool = carried + [f for f in new_fails if f['code'] not in carried_codes]
+        cur_pools = {str(e.get('code') or ''): {'name': e.get('name', ''), 'sector': e.get('sector', ''),
+                                                 'form': e.get('form', '')}
+                     for e in (mod.get('confirmed') or []) + (mod.get('watching') or [])}
+        _save_duanban_state({'pools': cur_pools, 'failPool': failPool})
+        mod['failPool'] = failPool
+
         out = json.dumps(mod, ensure_ascii=False, indent=1)
         if args.out:
             with open(args.out, "w", encoding="utf-8") as f:
