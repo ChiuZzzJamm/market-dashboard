@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609281853"></script>
+<script src="data.js?v=202609281856"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -200,10 +200,13 @@
   .nc-head.bear { color: var(--down); }
   .news-cell { background: var(--accent-soft); border-radius: 14px; border-left: 4px solid var(--up); padding: 12px 14px; display: flex; flex-direction: column; }
   .news-cell.bear { border-left-color: var(--down); }
-  .nc-theme { font-size: 14px; font-weight: 800; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nc-theme { font-size: 14px; font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; min-width: 0; }
+  .nc-theme .nc-tt { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .nc-dtl { font-size: 13px; color: var(--ink); line-height: 1.65; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; min-height: calc(13px * 1.65 * 3); cursor: pointer; }
   .nc-dtl.expanded { display: block; -webkit-line-clamp: unset; overflow: visible; min-height: 0; }
   .nc-dtl b { font-weight: 700; }
+  .nc-imp { display: flex; flex-wrap: wrap; align-items: center; } /* R100x：传导链行 flex 垂直居中（主题+期距徽章+个股网格） */
+  .nc-imp .nc-stocks { width: 100%; }
   .nc-imp-hz { font-size: 11px; font-weight: 600; color: var(--ink2); background: var(--line); border-radius: 8px; padding: 1px 7px; flex: none; line-height: 1.5; margin-left: 6px; }
   /* 分组间距：顶对齐——分组紧跟摘要排（固定 8px），剩余空间留白在卡片底部，上方不留大空隙 */
   .news-cell .nc-imp { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
@@ -233,7 +236,7 @@
   .tp-item { background: var(--accent-soft); border-radius: 12px; padding: 11px 13px; margin-bottom: 10px; border-left: 4px solid var(--up); }
   .tp-item.tp-down { border-left-color: var(--down); }
   .tp-item:last-child { margin-bottom: 0; }
-  .tp-event { font-size: 13.5px; font-weight: 800; color: var(--accent-deep); margin-bottom: 5px; line-height: 1.5; }
+  .tp-event { font-size: 13.5px; font-weight: 800; color: var(--accent-deep); margin-bottom: 5px; line-height: 1.5; display: flex; align-items: center; flex-wrap: wrap; } /* R100x：事件行 flex 垂直居中 */
   .tp-logic { font-size: 12.5px; color: var(--ink); line-height: 1.65; margin-bottom: 9px; }
   .tp-why { font-size: 12px; color: var(--ink2); line-height: 1.65; margin-top: 9px; padding-top: 9px; border-top: 1px dashed var(--line); }
   /* 连板梯队 */
@@ -1285,7 +1288,7 @@ function newsEntryInner(it, showSrc, tag, tradeDate) {
   var perspTag = tag ? '<span class="persp-tag">' + esc(tag) + '</span>' : '';
   // R100c：利好/利空卡（短线·盘面）把确信度徽章从主推行挪到标题行；宏观/国际/投行条目徽章整体移除
   var confHead = (tag === '短线·盘面') ? deduceConfBadge(it.deduce) : '';
-  var s = '<div class="nc-theme">' + esc(it.sector || '') + dirBadge + perspTag + confHead + '</div>';
+  var s = '<div class="nc-theme"><span class="nc-tt">' + esc(it.sector || '') + '</span>' + dirBadge + perspTag + confHead + '</div>'; // R100x：标题包 nc-tt 保留省略号，整行 flex 垂直居中
   var dtlFull = (it.title || '') + ' — ' + (it.summary || '');
   s += '<div class="nc-dtl" title="' + escAttr(dtlFull) + '"><b>' + esc(it.title || '') + '</b> — ' + esc(it.summary || '') + '</div>';
   (it.impacts || []).forEach(function (im) {
