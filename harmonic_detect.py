@@ -415,14 +415,17 @@ def main():
     watch.sort(key=lambda x: x['distToPrzPct'])
 
     today = datetime.date.today().strftime('%Y-%m-%d')
+    # R100h：tags 必须与截断后的池一致（此前用全量 confirm+watch，池截断 12/20 后
+    # 被截掉的标的"量化卡有谐波徽标、弹窗无图像无提示"——findHarmonic 在池内找不到）
+    pool_c, pool_w = confirm[:12], watch[:20]
     tags = {}
-    for it in confirm + watch:
+    for it in pool_c + pool_w:
         tags[it['code']] = it['pattern']
     new_field = {
         'updatedAt': f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}（谐波形态 {today} 收盘 数据已自动更新）",
         'tradeDate': today,
-        'confirmPool': confirm[:12],
-        'watchPool': watch[:20],
+        'confirmPool': pool_c,
+        'watchPool': pool_w,
         'summary': '',
         'tags': tags,
     }

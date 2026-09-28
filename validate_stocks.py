@@ -532,12 +532,7 @@ def check_selection_modules(D):
                 if 'score' not in it:
                     warns.append(f"powerScreen.passed[{i}] 缺 score")
 
-    cl = D.get('macroChecklist')
-    if cl is not None:
-        if not isinstance(cl, dict):
-            warns.append("macroChecklist 应为对象")
-        elif not isinstance(cl.get('items'), list):
-            warns.append("macroChecklist.items 非数组")
+    # R100h：macroChecklist 校验已随必带数据清单模块下线删除
     return warns
 
 

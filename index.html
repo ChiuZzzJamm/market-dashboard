@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609281124"></script>
+<script src="data.js?v=202609281153"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -490,15 +490,7 @@
   .pw-gate span.pass { color:#0f9d78; background:#e3f7ef; }
   .pw-gate span.fail { color:#a33; background:#fdeaea; }
 
-  .cl-table { width:100%; border-collapse:collapse; margin-top:8px; font-size:12px; }
-  .cl-table th, .cl-table td { text-align:left; padding:5px 8px; border-bottom:1px solid var(--line); }
-  .cl-table th { color:var(--ink2); font-weight:600; }
-  .cl-ok { color:#0f9d78; font-weight:700; }
-  .cl-miss { color:#c0392b; font-weight:700; }
-  .cl-env { color:var(--ink2); }
-  .cl-grp { display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }
-  .cl-derive { border:1px solid var(--line); border-radius:10px; padding:8px 12px; min-width:150px; }
-  .cl-derive b { color:var(--accent-deep); }
+  /* R100h：清单 .cl-* 样式已随必带数据清单模块下线删除 */
 
   .hz-info { margin-top:8px; border:1px dashed var(--accent); border-radius:10px; padding:8px 12px; font-size:12px; line-height:1.7; background:var(--accent-soft); }
   .hz-info .hz-row { display:flex; flex-wrap:wrap; gap:10px 18px; }
@@ -827,11 +819,10 @@ function render(market) {
     }
   }
 
-  // 选股扩展模块（吸筹 / 量化 / 必带数据，2026-09-26）：仅在 A 股页展示，数据缺失时整模块隐藏
+  // 选股扩展模块（吸筹，2026-09-26）：仅在 A 股页展示，数据缺失时整模块隐藏
+  // R100h：量化九门移到谐波模块下面；必带数据清单模块已整体下线（2026-09-28 用户要求）
   if (isA) {
     var _acc = renderAccumulation(); if (_acc) html += _acc;
-    var _pw = renderPowerScreen(); if (_pw) html += _pw;
-    var _cl = renderChecklist(); if (_cl) html += _cl;
   }
 
   // 主力资金流向紧贴行业全景上方（2026-09-20 用户要求：挪到行业全景上面）
@@ -844,6 +835,11 @@ function render(market) {
   // R100f：谐波形态移到主力资金模块下面（2026-09-28 用户要求）
   if (isA) {
     var _hz = renderHarmonic(); if (_hz) html += _hz;
+  }
+
+  // R100h：量化九门紧随谐波模块之后（2026-09-28 用户要求）
+  if (isA) {
+    var _pw = renderPowerScreen(); if (_pw) html += _pw;
   }
 
   document.getElementById('content').innerHTML = html;
@@ -1322,6 +1318,14 @@ function openHzModal(code, name) {
   STK_IDX = i >= 0 ? i : 0;
   openStkModal(code, name || code, '');
 }
+// R100h：吸筹/量化九门卡片固定本组导航——此前直接 openStkModal，STK_GRP 残留上一组导致箭头跳出本模块
+function openGrpModal(list, idx) {
+  if (!list || !list[idx]) return;
+  STK_GRP = list.map(function (x) { return { c: x.code, n: (x.name && x.name !== x.code) ? x.name : x.code, t: '' }; });
+  STK_IDX = idx;
+  var it = list[idx];
+  openStkModal(it.code, (it.name && it.name !== it.code) ? it.name : it.code, '');
+}
 
 function renderHarmonic() {
   var h = window.DASHBOARD_DATA.harmonic;
@@ -1353,7 +1357,7 @@ function renderHarmonic() {
 function renderAccumulation() {
   var a = window.DASHBOARD_DATA.accumulation;
   if (!a || !a.scored || !a.scored.length) return '';
-  var items = a.scored.slice(0, 20).map(function (it) {
+  var items = a.scored.slice(0, 20).map(function (it, idx) {
     var gd = it.grade === '强' ? 'strong' : 'watch';
     var feats = '';
     if (it.features) {
@@ -1363,7 +1367,7 @@ function renderAccumulation() {
     }
     // R100g：名称缺失只展示代码一次
     var nm = (it.name && it.name !== it.code) ? it.name : '';
-    return '<div class="acc-card" onclick="openStkModal(\'' + it.code + '\',\'' + escAttr(nm || it.code) + '\',\'\')">' +
+    return '<div class="acc-card" onclick="openGrpModal(window.DASHBOARD_DATA.accumulation.scored,' + idx + ')">' +
       '<div class="hz-top"><span class="hz-nm">' + esc(nm || it.code) + '</span>' + (nm ? '<span class="hz-cd">' + esc(it.code) + '</span>' : '') +
       '<span class="acc-grd ' + gd + '">' + esc(it.grade) + ' ' + it.score + '</span></div>' +
       (it.note ? '<div class="hz-note">' + esc(it.note) + '</div>' : '') +
@@ -1376,12 +1380,12 @@ function renderAccumulation() {
 function renderPowerScreen() {
   var p = window.DASHBOARD_DATA.powerScreen;
   if (!p || !p.passed || !p.passed.length) return '';
-  var items = p.passed.slice(0, 30).map(function (it) {
+  var items = p.passed.slice(0, 30).map(function (it, idx) {
     var gates = (it.reasons || '').split(';').filter(Boolean).map(function (g) { return '<span class="pass">' + esc(g) + '</span>'; }).join('');
     var badges = (it.harmonic ? '<span class="hz-badge">谐波·' + esc(it.harmonic) + '</span>' : '') + (it.acc ? '<span class="hz-badge">吸筹</span>' : '');
     // R100g：名称缺失只展示代码一次
     var nm = (it.name && it.name !== it.code) ? it.name : '';
-    return '<div class="pw-card" onclick="openStkModal(\'' + it.code + '\',\'' + escAttr(nm || it.code) + '\',\'\')">' +
+    return '<div class="pw-card" onclick="openGrpModal(window.DASHBOARD_DATA.powerScreen.passed,' + idx + ')">' +
       '<div class="hz-top"><span class="hz-nm">' + esc(nm || it.code) + '</span>' + (nm ? '<span class="hz-cd">' + esc(it.code) + '</span>' : '') +
       '<span class="acc-grd strong">' + it.score + '分</span>' + badges + '</div>' +
       '<div class="hz-meta">涨幅 ' + it.pct + '% · 量比 ' + it.volRatio + ' · RSI ' + it.rsi + '</div>' +
@@ -1391,30 +1395,7 @@ function renderPowerScreen() {
     '<div class="pw-grid">' + items + '</div>' + (p.summary ? '<div class="note-line">' + esc(p.summary) + '</div>' : '') + '</div>';
 }
 
-function renderChecklist() {
-  var c = window.DASHBOARD_DATA.macroChecklist;
-  if (!c || !c.items || !c.items.length) return '';
-  var row = function (it) {
-    // R100g：value 为对象（东财原始 JSON 误存）按缺失显示，禁渲染 [object Object]
-    var bad = it.value !== null && it.value !== undefined && typeof it.value === 'object';
-    var okv = it.ok && !bad;
-    var okcls = okv ? 'cl-ok' : (it.grade === 'env' ? 'cl-env' : 'cl-miss');
-    var mark = okv ? '✓' : (it.grade === 'env' ? '—' : '✗');
-    var val = bad ? '—' : ((it.value === null || it.value === undefined) ? '—' : String(it.value));
-    return '<tr><td>' + esc(it.name) + '</td><td class="' + okcls + '">' + mark + '</td><td>' + esc(val) + '</td><td class="cl-env">' + esc(it.source || '') + '</td></tr>';
-  };
-  var derives = '<div class="cl-grp">' +
-    '<div class="cl-derive"><b>汇率强弱</b><br>' + esc((c.fxStrength || {}).label || '—') + '</div>' +
-    '<div class="cl-derive"><b>做空信号</b><br>' + esc((c.shortSignal || {}).label || '—') + '</div>' +
-    '<div class="cl-derive"><b>席位打分</b><br>' + esc((c.capitaScore || {}).label || '—') + '</div></div>';
-  var missing = '';
-  if (c.missingCore && c.missingCore.length) missing += '<div class="note-line cl-miss">缺失核心项：' + esc(c.missingCore.join('、')) + '</div>';
-  if (c.missingEnv && c.missingEnv.length) missing += '<div class="note-line cl-env">缺失环境项：' + esc(c.missingEnv.join('、')) + '</div>';
-  return '<div class="card"><h2>📋 必带数据清单（分级）' + (c.tradeDate ? ' <span class="h2-date">' + esc(c.tradeDate) + '</span>' : '') + '</h2>' +
-    '<table class="cl-table"><thead><tr><th>数据项</th><th>状态</th><th>数值</th><th>来源</th></tr></thead><tbody>' +
-    c.items.map(row).join('') + '</tbody></table>' + derives + missing +
-    (c.narrative ? '<div class="note-line">' + esc(c.narrative) + '</div>' : '') + '</div>';
-}
+// R100h：必带数据清单（renderChecklist）已整体下线（2026-09-28 用户要求），data_checklist.py 同步删除
 
 var LB_LIST = [];
 function renderLianban(list) {
