@@ -450,23 +450,9 @@ def _compute_fail_pool(prev_pools, today_codes, cur_info, today):
 
 
 def _collect_sectors(D):
-    """R100l：code→板块 映射——断板反包双池 sector（真实行业，东财涨停池口径）优先，
-    aiPrediction 板块归属兜底（AI 点名的板块名，仅作参考展示）。"""
-    sec = {}
-    db = D.get('duanban') or {}
-    for key in ('confirmed', 'watching'):
-        for e in db.get(key) or []:
-            c = str(e.get('code') or '')
-            s = e.get('sector')
-            if c and s:
-                sec.setdefault(c, s)
-    for sct in ((D.get('aiPrediction') or {}).get('sectors') or []):
-        nm = sct.get('sector')
-        for st in sct.get('stocks') or []:
-            c = str(st.get('code') or '')
-            if c and nm:
-                sec.setdefault(c, nm)
-    return sec
+    """R100q：改走 kline_cache.collect_sectors 共享映射（断板池/精选/谐波/连板/板块TOP/
+    AI预测 站内字段优先 + 新浪行业全量兜底），弹窗板块徽章全覆盖。保留壳兼容旧调用。"""
+    return K.collect_sectors(D)
 
 
 # ---------------- 主流程 ----------------

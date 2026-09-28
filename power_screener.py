@@ -155,6 +155,7 @@ def main():
 
     D = common.load_dashboard_data(BASE)
     names = K.collect_pool_names(D)  # R100g：池内 code→name（stkKlineNames 缺名兜底）
+    sec_map = K.collect_sectors(D)   # R100q：code→行业（弹窗板块徽章全覆盖，新浪兜底）
     codes = K.collect_pool_codes(D)
     # 扩展扫描域：断板池 code + stkKlines 内 60/00 标的
     for pool in ('confirmed', 'watching'):
@@ -182,7 +183,7 @@ def main():
         r = screen_one(bars, nm)
         if not r['passed']:
             continue
-        item = {'code': c, 'name': nm, 'score': r['score'], 'pct': r['pct'],
+        item = {'code': c, 'name': nm, 'sector': sec_map.get(c, ''), 'score': r['score'], 'pct': r['pct'],
                 'volRatio': r['volRatio'], 'rsi': r['rsi'], 'lastClose': round(bars[-1]['close'], 2),
                 'reasons': r['reason'], 'story': '', 'deduce': None}
         if c in htags:

@@ -253,6 +253,7 @@ def main():
 
     D = common.load_dashboard_data(BASE)
     names = K.collect_pool_names(D)  # R100g：池内 code→name（stkKlineNames 缺名兜底）
+    sec_map = K.collect_sectors(D)   # R100q：code→行业（弹窗板块徽章全覆盖，新浪兜底）
     # R100m：fullScan 候选名并入（全市场标的简称）
     fs = D.get('fullScan') or {}
     if fs.get('date') == datetime.date.today().strftime('%Y-%m-%d') and isinstance(fs.get('names'), dict):
@@ -284,7 +285,7 @@ def main():
         r = score_one(bars, nm)
         if r['score'] < MIN_SCORE:
             continue
-        scored.append({'code': c, 'name': nm, 'score': r['score'],
+        scored.append({'code': c, 'name': nm, 'sector': sec_map.get(c, ''), 'score': r['score'],
                        'grade': r['grade'], 'features': r['features'],
                        'hitCount': r['hitCount'], 'note': r['note'],
                        'story': '', 'deduce': None})

@@ -250,3 +250,132 @@ def get_bars(code, D, days=320):
         if bars:
             return bars[-days:] if days else bars
     return get_kline(code, days=days)
+
+
+# ---------------- R100q：code→行业板块 共享映射（弹窗板块徽章全覆盖） ----------------
+
+INDUSTRY_CACHE = os.path.join(CACHE_DIR, 'industry_map.json')
+
+
+def sina_industry_map(max_nodes=999, node_deadline=None):
+    """R100q：新浪行业分类全量 code→行业名 映射。
+
+    源：newSinaHy.php（节点列表，GBK）+ Market_Center.getHQNodeData（成分，JSON/ASCII）。
+    本机沙箱封锁东财 push2，新浪行业快照是唯一可全量覆盖任意 A 股代码的行业源。
+    缓存 .kline_cache/industry_map.json（当日有效）；任一环节失败返回 {}（调用方
+    退回站内字段映射，不清场）。"""
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        today = time.strftime('%Y-%m-%d')
+        if os.path.exists(INDUSTRY_CACHE):
+            try:
+                with open(INDUSTRY_CACHE, encoding='utf-8') as f:
+                    cj = json.load(f)
+                if cj.get('date') == today and isinstance(cj.get('map'), dict) and cj['map']:
+                    return cj['map']
+            except Exception:
+                pass
+
+        import subprocess
+        def _gbk_curl(url, timeout=15):
+            cmd = ['curl', '-s', '--max-time', str(timeout),
+                   '-H', 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', url]
+            p = subprocess.run(cmd, capture_output=True, timeout=timeout + 5)
+            if not p or p.returncode != 0 or not p.stdout.strip():
+                return None
+            return p.stdout.decode('gbk', errors='replace')
+
+        raw = _gbk_curl('http://vip.stock.finance.sina.com.cn/q/view/newSinaHy.php')
+        if not raw or 'sinaindustry' not in raw:
+            return {}
+        import re as _re
+        nodes = _re.findall(r'"(new_[A-Za-z0-9]+)"\s*:', raw)
+        nodes = sorted(set(nodes))[:max_nodes]
+        if not nodes:
+            return {}
+        t0 = time.time()
+        out = {}
+        completed = True
+        for node in nodes:
+            if node_deadline is not None and time.time() - t0 > node_deadline:
+                completed = False  # R100q：超时截断 → 部分结果只本次可用，不写当日缓存
+                break
+            page = 1
+            while True:
+                url = ('http://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/'
+                       'Market_Center.getHQNodeData?page=%d&num=100&node=%s&sort=amount&asc=0'
+                       % (page, node))
+                txt = _gbk_curl(url)
+                arr = None
+                if txt:
+                    try:
+                        arr = json.loads(txt)
+                    except Exception:
+                        arr = None
+                if not isinstance(arr, list) or not arr:
+                    break
+                for r in arr:
+                    c = str((r or {}).get('code') or '')
+                    if len(c) == 6 and c.isdigit():
+                        out.setdefault(c, node)
+                if len(arr) < 100 or page >= 30:
+                    break
+                page += 1
+                time.sleep(0.12)
+        if not out:
+            return {}
+        # 节点 id → 行业名（从 newSinaHy.php 原文解析，GBK 已解码）
+        nm = {}
+        for m in _re.finditer(r'"(new_[A-Za-z0-9]+)"\s*:\s*"\1,([^,]+),', raw):
+            nm[m.group(1)] = m.group(2).strip()
+        code_map = {c: nm.get(nd, nd) for c, nd in out.items()}
+        if completed:  # 只有完整跑完全部节点才写当日缓存（部分结果不缓存，避免覆盖残缺）
+            try:
+                with open(INDUSTRY_CACHE, 'w', encoding='utf-8') as f:
+                    json.dump({'date': today, 'count': len(code_map), 'map': code_map},
+                              f, ensure_ascii=False)
+            except Exception:
+                pass
+        return code_map
+    except Exception:
+        return {}
+
+
+def collect_sectors(D, use_sina=True, node_deadline=180):
+    """R100q：code→行业 映射（供 harmonic/power/accumulation 三脚本写 sector 字段，
+    与前端 stkSecOf 同口径）。优先级：站内真实字段（断板池/精选/谐波池/连板 hybk/
+    板块TOP成分/AI预测成分/已有池 sector）→ 新浪行业全量兜底。失败只降级不清场。"""
+    sec = {}
+
+    def put(c, s):
+        c, s = str(c or ''), str(s or '').strip()
+        if len(c) == 6 and c.isdigit() and s and s != c:
+            sec.setdefault(c, s)
+
+    db = (D or {}).get('duanban') or {}
+    for key in ('confirmed', 'watching'):
+        for e in db.get(key) or []:
+            put(e.get('code'), e.get('sector'))
+    for e in (db.get('star') or {}).get('picks') or []:
+        put(e.get('code'), e.get('sector'))
+    hz = (D or {}).get('harmonic') or {}
+    for e in (hz.get('confirmPool') or []) + (hz.get('watchPool') or []):
+        put(e.get('code'), e.get('sector'))
+    A = (D or {}).get('ashare') or {}
+    for e in A.get('lianban') or []:
+        put(e.get('code'), e.get('hybk'))
+    for s in (A.get('sectorsUp') or []) + (A.get('sectorsDown') or []):
+        for t in s.get('tops') or []:
+            put(t.get('code'), s.get('name'))
+    for sct in ((D or {}).get('aiPrediction') or {}).get('sectors') or []:
+        for st in sct.get('stocks') or []:
+            put(st.get('code'), sct.get('sector'))
+    for key, field in (('powerScreen', 'passed'), ('accumulation', 'scored')):
+        for e in ((D or {}).get(key) or {}).get(field) or []:
+            put(e.get('code'), e.get('sector'))
+
+    if use_sina:
+        sm = sina_industry_map(node_deadline=node_deadline)
+        for c, s in sm.items():
+            put(c, s)
+    return sec
