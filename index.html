@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609282019"></script>
+<script src="data.js?v=202609282024"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1658,7 +1658,7 @@ function renderAccumulation() {
       (it.note ? '<div class="hz-note">' + esc(it.note) + '</div>' : '') +
       '<div class="acc-feat">' + feats + '</div></div>';
   }).join('');
-  return '<div class="card"><h2>🧲 主力吸筹打分（六特征）' + (a.tradeDate ? ' <span class="h2-date">' + esc(a.tradeDate) + '</span>' : '') + '</h2>' +
+  return '<div class="card"><h2>🧲 主力吸筹' + (a.tradeDate ? ' <span class="h2-date">' + esc(a.tradeDate) + '</span>' : '') + '</h2>' +
     '<div class="acc-grid">' + items + '</div>' + (a.summary ? '<div class="note-line">' + esc(a.summary) + '</div>' : '') + '</div>';
 }
 
@@ -1678,7 +1678,7 @@ function renderPowerScreen() {
       '<div class="pw-gate">' + gates + '</div></div>';
   }).join('');
   var gateDef = '<div class="hz-sub" title="九门=9 道量化硬阈值（日线收盘口径）。硬门禁（必过 5 道）：G1 当日涨幅≥3% · G2 放量≥1.5×5日均量 · G4 站上MA20 · G5 非ST主板 · G7 当日振幅≤15%。质量门（过≥3 道）：G3 价处20日区间上1/3 · G6 近5日无长上影出货 · G8 波动率适中(ATR14/收盘∈[2%,8%]) · G9 RSI14∈[40,80]。打分=通过阈值数(0-9分)；入选=硬门禁全过 且 质量门≥3道。">📐 九门口径：硬门禁 G1涨幅≥3%·G2放量1.5×·G4站MA20·G5非ST·G7振幅≤15%（必过）｜质量门 G3位置·G6无出货·G8波动·G9RSI（过≥3）｜打分=过门数(0-9分)</div>';
-  return '<div class="card"><h2>⚡ 量化强势筛选（日线九门）' + (p.tradeDate ? ' <span class="h2-date">' + esc(p.tradeDate) + '</span>' : '') + '</h2>' +
+  return '<div class="card"><h2>⚡ 日线九门' + (p.tradeDate ? ' <span class="h2-date">' + esc(p.tradeDate) + '</span>' : '') + '</h2>' +
     gateDef +
     '<div class="pw-grid">' + items + '</div>' + (p.summary ? '<div class="note-line">' + esc(p.summary) + '</div>' : '') + '</div>';
 }
@@ -1827,7 +1827,7 @@ function dbChipHtml(e, key, done, showSec) {
     '<div class="r1"><b>' + esc(e.name) + '</b><span class="cd">' + esc(e.code) + '</span>' + secPill + sentBadgeHtml(e.code) + '</div>' + // R100z4：板块徽标挪到代码后
     // R100s：卡片「已确认/待企稳/待缩量」阶段徽标删除（池归属由所在分组标题承载，弹窗内另有池徽章）
     '<div class="r2"><span class="db-prob2 ' + (e.sentiment === 'bear' ? 'down' : (e.sentiment === 'bull' ? 'up' : '')) + '">' + prob + '</span>' +
-    '<span class="nt">' + esc((e.form || '').replace(/^.*?断板/, '断板').replace(/·/g, '：')) + '</span></div></div>'; // R100z4b：形态分隔点改全角冒号
+    '<span class="nt">' + esc((e.form || '').replace(/^.*?断板/, '断板').replace(/·/, '：')) + '</span></div></div>'; // R100z4e：仅首个 ·→：（断板反包：…·…），后续分隔保留 ·
 }
 
 function dbPoolHtml(title, cls, sub, list, done, poolKey) {
@@ -2166,7 +2166,7 @@ function openDbModal(key) {
   document.getElementById('db-modal-meta').innerHTML =
     '<div><span class="lab">涨停日：</span>' + esc(e.ztDate || '') + '　<span class="lab">今日：</span><b class="' + (e.pct >= 0 ? 'up' : 'down') + '">' + fmtPct(e.pct) + '</b></div>' +
     '<div><span class="lab">涨停日板块涨幅：</span><b class="' + (e.boardPctZt >= 0 ? 'up' : 'down') + '">' + (e.boardPctZt == null ? '—' : fmtPct(e.boardPctZt)) + '</b>　<span class="lab">今日板块涨幅：</span><b class="' + (e.boardPctToday >= 0 ? 'up' : 'down') + '">' + (e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday)) + '</b></div>' +
-    '<div><span class="lab">形态：</span>' + esc((e.form || '').replace(/·/g, '：')) + '</div>' + // R100z4b：形态分隔点改全角冒号
+    '<div><span class="lab">形态：</span>' + esc((e.form || '').replace(/·/, '：')) + '</div>' + // R100z4e：仅首个 ·→：
     '<div><span class="lab">上涨概率：</span><b class="' + probCls + '">' + (e.probability !== null && e.probability !== undefined ? e.probability + '%' : '—') + '</b></div>' +
     techMetaLines(String(e.code)); // R100z3：对应技术面（九门/吸筹）纯文本行，命中才渲染
   document.getElementById('db-kline').innerHTML = dbKlineSvg(e.kline);
@@ -2568,7 +2568,7 @@ function stkStep(delta) {
 function openStkModal(code, name, note) {
   code = (code || '').trim();
   name = (name || '').trim();
-  note = String(note || '').trim().replace(/·/g, '：'); // R100z4d：形态分隔点 ·→：（弹窗 meta 形态行，与卡片/断板弹窗同口径）
+  note = String(note || '').trim().replace(/·/, '：'); // R100z4e：仅首个 ·→：（与卡片/断板弹窗同口径）
   TB_OPEN = false; tbShowArrows(); // R98g：标的模式隐藏板块箭头
   var nav = STK_GRP && STK_GRP.length > 1;
   document.getElementById('stk-prev').style.display = nav ? 'flex' : 'none';
