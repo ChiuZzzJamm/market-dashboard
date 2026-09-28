@@ -249,6 +249,29 @@ def main():
     else:
         D["stkKlines"] = kl
         D["stkKlineNames"] = kl_names
+        # R100v2：全局行业映射 sectorMap（顶层新字段）——题材掘金/全球要闻等不在池内的
+        # 标的也能出板块徽章。防清场：仅新增/覆盖条目，抓取失败/超时保留既有映射；
+        # 时间预算不足（<110s 剩余）直接跳过不抓。
+        old_map = D.get("sectorMap") if isinstance(D.get("sectorMap"), dict) else {}
+        if time.time() < deadline - 110:
+            try:
+                import kline_cache as K
+                sm = K.collect_sectors(D, use_sina=True, node_deadline=90)
+                if sm:
+                    D["sectorMap"] = {**old_map, **sm}
+                    print(f"[info] sectorMap 更新：{len(sm)} 条（既有 {len(old_map)} 条保留合并）")
+                else:
+                    if old_map:
+                        D["sectorMap"] = old_map
+                    print("[warn] 行业映射抓取失败，保留既有 sectorMap（不清场）")
+            except Exception as exc:
+                if old_map:
+                    D["sectorMap"] = old_map
+                print(f"[warn] sectorMap 生成异常（{exc}），保留既有值")
+        else:
+            if old_map:
+                D["sectorMap"] = old_map
+            print("[warn] 时间预算不足，跳过 sectorMap 刷新（保留既有值）")
         save_data(D)
         print(f"[info] stkKlines 内嵌完成：成功 {ok} 只 / 失败 {len(fail)} 只 / 总计 {len(kl)} 只，名称映射 {len(kl_names)} 条")
         if fail:

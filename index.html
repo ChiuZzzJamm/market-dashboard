@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609281847"></script>
+<script src="data.js?v=202609281853"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -718,6 +718,10 @@ function stkSecOf(code) {
     });
     ((D.powerScreen || {}).passed || []).forEach(function (x) { if (x && x.code && x.sector && !M[String(x.code)]) M[String(x.code)] = x.sector; });
     ((D.accumulation || {}).scored || []).forEach(function (x) { if (x && x.code && x.sector && !M[String(x.code)]) M[String(x.code)] = x.sector; });
+    /* R100v2：全局行业映射兜底（embed_klines.py 写入的顶层 sectorMap，新浪行业全量）——
+       题材掘金/全球要闻等不在任何池内的标的也能出板块徽章 */
+    var sm = D.sectorMap;
+    if (sm) { for (var c in sm) { if (!M[c] && sm[c]) M[c] = sm[c]; } }
     window._SEC_MAP = M;
   }
   return M[code] || '';
@@ -1691,8 +1695,8 @@ function lbShow(idx) {
     '<span class="rt" style="font-size:15px;">' + pct + '</span>' +
     '<button class="db-modal-close" onclick="lbClose()">×</button>' +
     '<div class="m-badge-row">' + stkSecBadge(st.code) + stkTechBadgeHtml(st.code) + stkPoolBadge(st.code) + '</div>'; // R100s：徽标统一第二行，池徽章最后
-  var meta = '<span class="lab">板块：</span>' + esc(st.hybk || stkSecOf(st.code) || '—') +
-    (fundStr ? '　<span class="lab">封单资金：</span>' + fundStr : '') +
+  var meta = // R100v2：板块行删除（徽标第二行已承载），仅留封单资金/涨停原因
+    (fundStr ? '<span class="lab">封单资金：</span>' + fundStr : '') +
     (st.reason ? '<br><span class="lab">涨停原因：</span>' + esc(st.reason) : '');
   document.getElementById('lb-modal-head').innerHTML = head;
   document.getElementById('lb-modal-meta').innerHTML = meta;
