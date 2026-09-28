@@ -48,6 +48,16 @@ def atr14(bars):
 MIN_GAP = 3  # 相邻枢轴最小间隔（bar），防单根长阳/长阴引发的假震荡
 
 
+def _day_at(bars, idx):
+    """枢轴 idx → 交易日（YYYY-MM-DD），用于前端 K 线图标注 X/A/B/C/D 落点。"""
+    try:
+        if isinstance(idx, int) and 0 <= idx < len(bars):
+            return bars[idx].get('day')
+    except Exception:
+        pass
+    return None
+
+
 def _append_pivot(piv, idx, price, typ):
     """强制 H/L 交替：同型枢轴出现时保留更极值者。"""
     if piv and piv[-1][2] == typ:
@@ -235,42 +245,44 @@ def scan_bars(bars, pct=0.05):
         if not (p1[2] == 'H' and p2[2] == 'L' and p3[2] == 'H'):
             continue
         X, A, B = p1[1], p2[1], p3[1]
+        xi, ai, bi = p1[0], p2[0], p3[0]
         if X - A <= 0:
             continue
         tried = []
 
-        # 解释 1/2：存在 C 枢轴（L）
+        # 解释 1/2：存在 C 枢轴（L）——元组尾附各枢轴 bar idx，供前端 K 线定位 X/A/B/C/D
         if i + 3 < len(piv) and piv[i+3][2] == 'L':
-            C = piv[i+3][1]
+            C = piv[i+3][1]; ci = piv[i+3][0]
             if i + 4 < len(piv):
-                D, _ = piv[i+4][1], piv[i+4][0]
+                D, di = piv[i+4][1], piv[i+4][0]
+                tried.append((X, A, B, C, D, xi, ai, bi, ci, di))
+                # Shark 解释：C=p4，D=p5（若与解释 1 的 D 不同）
+                if piv[i+4][2] == 'H':
+                    tried.append((X, A, B, C, piv[i+4][1], xi, ai, bi, ci, piv[i+4][0]))
             else:
-                D, _ = _run_high(bars, piv[i+3][0])
-            if D:
-                tried.append((X, A, B, C, D))
-            # Shark 解释：C=p4，D=p5（若与解释 1 的 D 不同）
-            if i + 4 < len(piv) and piv[i+4][2] == 'H':
-                tried.append((X, A, B, C, piv[i+4][1]))
-        # 解释 3：延伸族（B 后低点跌破 A，C 为途中点）
-        run_lo, _ = _run_low(bars, p3[0])
+                D, di = _run_high(bars, piv[i+3][0])
+                if D:
+                    tried.append((X, A, B, C, D, xi, ai, bi, ci, di))
+        # 解释 3：延伸族（B 后低点跌破 A，C 为途中点，无真实 C 枢轴 → ci=None）
+        run_lo, run_lo_i = _run_low(bars, p3[0])
         if run_lo is not None and run_lo < A:
             C_nom = B - 0.5 * (B - A)
-            tried.append((X, A, B, C_nom, run_lo))
+            tried.append((X, A, B, C_nom, run_lo, xi, ai, bi, None, run_lo_i))
         # 解释 4：Cypher（p3 高于 X，B 名义派生）
         if B > X and p3[0] + 1 < len(bars):
-            Cq = B
-            Dq, _ = _run_low(bars, p3[0])
+            Cq = B; cqi = bi
+            Dq, dqi = _run_low(bars, p3[0])
             if Dq:
                 k = 1.272
                 Bq = (Cq + k * A) / (1 + k)
                 rBq = (Bq - A) / (X - A)
                 if 0.382 - TOL <= rBq <= 0.618 + TOL:
-                    tried.append(('CYPHER', X, A, Bq, Cq, Dq))
+                    tried.append(('CYPHER', X, A, Bq, Cq, Dq, xi, ai, bi, cqi, dqi))
         for t in tried:
-            if len(t) == 6:
-                _, X2, A2, B2, C2, D2 = t
+            if len(t) == 11:
+                _, X2, A2, B2, C2, D2, xi2, ai2, bi2, ci2, di2 = t
             else:
-                X2, A2, B2, C2, D2 = t
+                X2, A2, B2, C2, D2, xi2, ai2, bi2, ci2, di2 = t
             m = match_patterns(X2, A2, B2, C2, D2)
             if not m:
                 continue
@@ -298,6 +310,9 @@ def scan_bars(bars, pct=0.05):
                 'pattern': name,
                 'points': {'X': round(X2, 2), 'A': round(A2, 2), 'B': round(B2, 2),
                            'C': round(C2, 2), 'D': round(D2, 2)},
+                'pointDays': {'X': _day_at(bars, xi2), 'A': _day_at(bars, ai2),
+                              'B': _day_at(bars, bi2), 'C': _day_at(bars, ci2),
+                              'D': _day_at(bars, di2)},
                 'ratios': ratios, 'prz': [round(prz_lo, 2), round(prz_hi, 2)],
                 'stop': round(stop, 2), 'target1': round(t1, 2), 'target2': round(t2, 2),
                 'stage': stage, 'distToPrzPct': dist,
@@ -512,7 +527,8 @@ def main():
         item = {
             'code': c, 'name': nm, 'sector': sec_map.get(c, ''),
             'pattern': r['pattern'],
-            'stage': r['stage'], 'points': r['points'], 'ratios': r['ratios'],
+            'stage': r['stage'], 'points': r['points'], 'pointDays': r.get('pointDays', {}),
+            'ratios': r['ratios'],
             'prz': r['prz'], 'stop': r['stop'], 'target1': r['target1'],
             'target2': r['target2'], 'distToPrzPct': r['distToPrzPct'],
             'accResonance': int(acc.get(c, 0)),
