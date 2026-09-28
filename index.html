@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609281821"></script>
+<script src="data.js?v=202609281834"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -96,7 +96,7 @@
   .reason-sub { font-size: 12.5px; color: var(--ink2); margin: 4px 0 2px; }
   .reason-sub b.up { color: var(--up); }
   .reason-sub b.down { color: var(--down); }
-  .reason-tops .tchip { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 3px 9px; font-size: 12px; box-shadow: 0 1px 3px rgba(30,60,110,.06); display: inline-flex; align-items: baseline; gap: 5px; position: relative; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .reason-tops .tchip { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 3px 9px; font-size: 12px; box-shadow: 0 1px 3px rgba(30,60,110,.06); display: inline-flex; align-items: center; gap: 5px; position: relative; cursor: pointer; -webkit-tap-highlight-color: transparent; }
   .reason-tops .tchip .nt { display: none; }
   .reason-tops .tchip.expanded { background: var(--accent-soft); overflow: visible; z-index: 40; }
   .reason-tops .tchip b { font-weight: 700; color: var(--ink); white-space: nowrap; }
@@ -412,7 +412,7 @@
   .db-chip .db-prob { margin-left: auto; font-size: 11.5px; font-weight: 800; color: var(--up); font-variant-numeric: tabular-nums; flex-shrink: 0; }
   .db-chip .r2 { display: flex; align-items: center; gap: 5px; min-width: 0; }
   .db-chip .nt { font-size: 10.5px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-  .db-chip .db-prob2 { margin-left: auto; font-size: 11px; font-weight: 800; color: var(--ink2); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  .db-chip .db-prob2 { font-size: 11px; font-weight: 800; color: var(--ink2); font-variant-numeric: tabular-nums; flex-shrink: 0; }
   .db-chip .db-prob2.up { color: var(--up); }
   .db-chip .db-prob2.down { color: var(--down); }
   /* 口径三色标签（R88）：利好=红 / 利空=绿 / 中性=灰（R100r 统一徽标几何：圆角4px、字号11、内边距1px 7px，与全站徽标一致） */
@@ -436,7 +436,7 @@
   .db-modal-box { background: var(--paper); border-radius: var(--radius); padding: 20px 22px; max-width: 760px; width: 100%; max-height: 92vh; overflow: auto; box-shadow: 0 20px 60px rgba(17,17,26,.25); }
   .db-modal-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 8px; }
   /* R100s：弹窗徽标统一第二行——占满整行的徽标容器（板块/技术/利好利空/池归属） */
-  .m-badge-row { flex-basis: 100%; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .m-badge-row { flex-basis: 100%; display: flex; align-items: flex-start; gap: 6px; flex-wrap: wrap; }
   .m-badge-row:empty { display: none; }
   .db-modal-head .nm { font-size: 18px; font-weight: 900; }
   .db-modal-head .cd2 { font-size: 12px; color: var(--ink2); }
@@ -444,8 +444,8 @@
   .db-modal-close:hover { border-color: var(--accent); color: var(--accent-deep); }
   /* R100j：弹窗恢复右上角迷你谐波示意图（用户反馈完整教学大图不直观，R100i 大图下线） */
   .hz-mini { margin-left: auto; flex-shrink: 0; line-height: 0; border: 1px dashed var(--line); border-radius: 8px; padding: 2px; background: var(--paper); }
-  .hz-mini ~ .db-modal-close { margin-left: 0; }
-  @media (max-width: 760px) { .hz-mini { display: none; } .hz-mini ~ .db-modal-close { margin-left: auto; } }
+  /* R100t：迷你谐波图挪到第二行徽标区右侧——× 回第一行右上角，消除第二行上方大空档 */
+  @media (max-width: 760px) { .hz-mini { display: none; } }
   /* R100j：🧰 工具箱三个子页入口——横着的椭圆形嵌入对应文字（原竖长条椭圆改横向） */
   .db-subnav { display: flex; justify-content: center; align-items: center; gap: 14px; margin: 0 0 16px; flex-wrap: wrap; }
   .db-subtab { padding: 10px 24px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--paper); font-size: 13.5px; font-weight: 800; color: var(--ink2); cursor: pointer; font-family: var(--font); box-shadow: var(--shadow); transition: all .18s ease; letter-spacing: 1px; }
@@ -479,8 +479,8 @@
   /* ===== 选股扩展模块（谐波/吸筹/量化/必带数据，2026-09-26） ===== */
   .hz-badge { display:inline-block; font-size:11px; font-weight:700; color:#7a4d00; background:#fff3d6; border:1px solid #f0c36d; border-radius:4px; padding:1px 7px; line-height:1.5; white-space:nowrap; flex-shrink:0; vertical-align:middle; margin-left:4px; }
   /* R100q：技术池标的金框（参考开盘精选金框色，底色不变）——A股/美股页所有标的胶囊共用 */
-  .gold-ring { border-color: #e8a013 !important; box-shadow: 0 0 0 2px rgba(232,160,19,.55), 0 0 6px rgba(232,160,19,.35) !important; }
-  .gold-ring:hover { border-color: #d18f00 !important; box-shadow: 0 0 0 2.5px rgba(232,160,19,.7), 0 0 9px rgba(232,160,19,.5) !important; }
+  .gold-ring { border-color: #e8a013 !important; box-shadow: 0 0 0 1.5px rgba(232,160,19,.5), 0 0 4px rgba(232,160,19,.3) !important; }
+  .gold-ring:hover { border-color: #d18f00 !important; box-shadow: 0 0 0 2px rgba(232,160,19,.65), 0 0 6px rgba(232,160,19,.4) !important; }
   .hz-pool { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; margin-top:8px; }
   .hz-card { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:var(--paper); cursor:pointer; transition:.15s; }
   .hz-card:hover { border-color:var(--accent); box-shadow:0 4px 14px rgba(17,17,26,.10); }
@@ -728,8 +728,8 @@ function stkSecBadge(code) {
   return sec ? '<span class="chip-sec" style="font-size:11px;max-width:120px;padding:1px 7px;border-radius:4px;margin-left:4px" title="所属板块：' + escAttr(sec) + '">' + esc(sec) + '</span>' : '';
 }
 
-/* R100q：技术池归属（断板/谐波/九门/吸筹）——供弹窗技术徽章 + 主页标的金框共用。
-   谐波带形态名（pattern），确认池/观察池都在内。美股代码非 6 位数字天然不命中。 */
+/* R100q：技术池归属（断板/谐波/九门/吸筹）——供弹窗技术徽章 + 主页金框共用。
+   R100t：池归属并入技术徽章（断板反包·确认池 / 谐波·XX·确认池 单枚徽标），美股代码非 6 位数字天然不命中。 */
 function stkTechMeta(code) {
   code = String(code || '');
   if (!/^\d{6}$/.test(code)) return null;
@@ -738,56 +738,53 @@ function stkTechMeta(code) {
     T = { db: {}, hz: {}, pw: {}, acc: {} };
     var D = window.DASHBOARD_DATA || {};
     var db = D.duanban || {};
-    (db.confirmed || []).concat(db.watching || []).forEach(function (x) { if (x && x.code) T.db[String(x.code)] = 1; });
+    (db.confirmed || []).forEach(function (x) { if (x && x.code) T.db[String(x.code)] = '确认池'; });
+    (db.watching || []).forEach(function (x) { if (x && x.code && !T.db[String(x.code)]) T.db[String(x.code)] = '观察池'; });
     var hz = D.harmonic || {};
-    ((hz.confirmPool || []).concat(hz.watchPool || [])).forEach(function (x) { if (x && x.code) T.hz[String(x.code)] = x.pattern || '谐波'; });
+    (hz.confirmPool || []).forEach(function (x) { if (x && x.code) T.hz[String(x.code)] = { p: x.pattern || '谐波', pool: '确认池' }; });
+    (hz.watchPool || []).forEach(function (x) { if (x && x.code && !T.hz[String(x.code)]) T.hz[String(x.code)] = { p: x.pattern || '谐波', pool: '观察池' }; });
     ((D.powerScreen || {}).passed || []).forEach(function (x) { if (x && x.code) T.pw[String(x.code)] = 1; });
     ((D.accumulation || {}).scored || []).forEach(function (x) { if (x && x.code) T.acc[String(x.code)] = 1; });
     window._TECH_MAP = T;
   }
   var out = [];
-  if (T.db[code]) out.push({ k: 'db', label: '断板反包' });
-  if (T.hz[code]) out.push({ k: 'hz', label: '谐波·' + T.hz[code] });
+  if (T.db[code]) out.push({ k: 'db', label: '断板反包', pool: T.db[code] });
+  if (T.hz[code]) out.push({ k: 'hz', label: '谐波·' + T.hz[code].p, pool: T.hz[code].pool });
   if (T.pw[code]) out.push({ k: 'pw', label: '日线九门' });
   if (T.acc[code]) out.push({ k: 'acc', label: '主力吸筹' });
   return out.length ? out : null;
 }
-/* 弹窗标题行技术徽章（板块徽章之后），样式复用题材掘金「谐波·XX」黄色 hz-badge */
-function stkTechBadgeHtml(code) {
+/* 弹窗第二行技术徽章（板块徽章之后）。R100t：确认池/观察池并入对应技术徽章文案——
+   谐波命中池 → 单枚金色徽标（谐波·AB=CD · 确认池）；断板命中池 → 断板反包 · 确认池（黄标）。
+   noPoolMerge=true（断板弹窗用）时不合并，池归属由弹窗末尾专属徽章承载，避免重复。 */
+function stkTechBadgeHtml(code, noPoolMerge) {
   var tags = stkTechMeta(code);
   if (!tags) return '';
-  var tip = '技术面归属：' + tags.map(function (t) { return t.label; }).join(' · ');
   return tags.map(function (t) {
-    return '<span class="hz-badge" style="font-size:10.5px;margin-left:0" title="' + escAttr(tip) + '">' + esc(t.label) + '</span>';
+    var merge = !noPoolMerge && t.pool;
+    var label = t.label + (merge ? ' · ' + t.pool : '');
+    var tip = '技术面归属：' + tags.map(function (x) { return x.label + (x.pool ? '（' + x.pool + '）' : ''); }).join(' · ');
+    var style = (t.k === 'hz' && merge) ? 'font-size:10.5px;margin-left:0;background:rgba(232,160,19,.14);color:#a86f0e' : 'font-size:10.5px;margin-left:0';
+    return '<span class="hz-badge" style="' + style + '" title="' + escAttr(tip) + '">' + esc(label) + '</span>';
   }).join('');
 }
 /* 主页标的金框（命中任一技术池 → class="gold-ring"，底色不变，参考开盘精选金框色） */
 function stkGoldCls(code) {
   return stkTechMeta(code) ? ' gold-ring' : '';
 }
-/* R100s：弹窗第二行末尾的池归属徽章——断板确认池(红)/观察池(橙) 优先，其次谐波池，再次开盘精选(金) */
+/* R100s→R100t：独立池徽章仅保留开盘精选（断板/谐波池已并入技术徽章文案） */
 function stkPoolBadge(code) {
   code = String(code || '');
   if (!/^\d{6}$/.test(code)) return '';
-  var P = window._POOL_MAP;
+  var P = window._STAR_POOL;
   if (!P) {
     P = {};
-    var D = window.DASHBOARD_DATA || {};
-    var db = D.duanban || {};
-    (db.confirmed || []).forEach(function (x) { if (x && x.code) P[String(x.code)] = ['确认池', 'done']; });
-    (db.watching || []).forEach(function (x) { if (x && x.code && !P[String(x.code)]) P[String(x.code)] = ['观察池', 'hold']; });
-    var hz = D.harmonic || {};
-    (hz.confirmPool || []).forEach(function (x) { if (x && x.code && !P[String(x.code)]) P[String(x.code)] = ['确认池', 'done']; });
-    (hz.watchPool || []).forEach(function (x) { if (x && x.code && !P[String(x.code)]) P[String(x.code)] = ['观察池', 'hold']; });
-    ((db.star || {}).picks || []).forEach(function (x) { if (x && x.code && !P[String(x.code)]) P[String(x.code)] = ['开盘精选', 'star']; });
-    window._POOL_MAP = P;
+    var db = (window.DASHBOARD_DATA || {}).duanban || {};
+    ((db.star || {}).picks || []).forEach(function (x) { if (x && x.code) P[String(x.code)] = 1; });
+    window._STAR_POOL = P;
   }
-  var m = P[code];
-  if (!m) return '';
-  var bg = m[1] === 'done' ? 'background:var(--up-soft);color:var(--up)'
-    : (m[1] === 'star' ? 'background:rgba(232,160,19,.14);color:#a86f0e'
-       : 'background:var(--accent-soft);color:var(--accent-deep)');
-  return '<span style="font-size:11px;font-weight:700;border-radius:4px;padding:1px 7px;' + bg + '">' + esc(m[0]) + '</span>';
+  if (!P[code]) return '';
+  return '<span style="font-size:11px;font-weight:700;border-radius:4px;padding:1px 7px;background:rgba(232,160,19,.14);color:#a86f0e">开盘精选</span>';
 }
 
 function renderTops(s, isUp) {
@@ -1374,7 +1371,7 @@ function renderThemePicks(list, tradeDate) {
     s += '<div class="tp-item' + (it.direction === '看跌' ? ' tp-down' : '') + '">';
     // R97：事件行兼容 us 的 theme 字段；行尾标注发布日期，让用户知道是当天还是前几天的内容
     var ev = it.event || it.theme || '';
-    if (ev) s += '<div class="tp-event">⚡ ' + esc(ev) + (tradeDate ? '<span class="nc-time">' + esc(shortDate(tradeDate)) + ' 发布</span>' : '') + '</div>';
+    if (ev) s += '<div class="tp-event">⚡ ' + esc(ev) + (tradeDate ? ' <span class="nc-time">' + esc(shortDate(tradeDate)) + ' 发布</span>' : '') + '</div>'; // R100t：徽标前补空格
     if (it.logic) s += '<div class="tp-logic">逻辑传导：' + esc(it.logic) + '</div>';
     if (it.deduce) s += renderDeduce(it.deduce);
     var sts = it.stocks || [];
@@ -2094,7 +2091,7 @@ function openDbModal(key) {
     '<button class="db-modal-close" onclick="closeDbModal()">×</button>' +
     '<div class="m-badge-row">' + // R100s：徽标统一第二行；确认池/观察池徽章放最后（中性/利好利空之后）
     stkSecBadge(e.code) +
-    stkTechBadgeHtml(e.code) +
+    stkTechBadgeHtml(e.code, true) + // R100t：断板弹窗不合并池文案，由末尾专属池徽章承载，避免「确认池」重复
     dbSentBadge(e, 'font-size:11px;padding:1px 7px;border-radius:4px;') +
     '<span class="db-stage ' + (done ? 'done' : 'hold') + '" style="font-size:11px;font-weight:700;border-radius:4px;padding:1px 7px;' + (done ? 'background:var(--up-soft);color:var(--up)' : 'background:var(--accent-soft);color:var(--accent-deep)') + '">' + (done ? '确认池' : ('观察池 · ' + esc(e.stage))) + '</span>' +
     '</div>';
@@ -2515,10 +2512,11 @@ function openStkModal(code, name, note) {
   document.getElementById('stk-modal-head').innerHTML =
     '<span class="nm">' + esc(name || '') + '</span>' +
     (code ? '<span class="cd2">' + esc(code) + '</span>' : '') +
-    (nav ? '<span class="cd2">' + (STK_IDX + 1) + '/' + STK_GRP.length + '</span>' : '') + // R100s：数量紧跟代码（大叉旁不再堆叠）
-    (hz ? '<span class="hz-mini" title="谐波形态示意：红折线=X-A-B-C-D 五点结构 · 绿带=PRZ 潜在反转区 · 红虚线=止损 · 蓝虚线=T1/T2 目标位">' + hzMiniSvg(hz) + '</span>' : '') +
+    (nav ? '<span class="cd2">' + (STK_IDX + 1) + '/' + STK_GRP.length + '</span>' : '') + // R100s：数量紧跟代码
     '<button class="db-modal-close" onclick="stkClose()">×</button>' +
-    '<div class="m-badge-row">' + stkSecBadge(code) + stkTechBadgeHtml(code) + stkPoolBadge(code) + '</div>'; // R100s：徽标统一第二行，确认池/观察池徽章最后
+    '<div class="m-badge-row">' + stkSecBadge(code) + stkTechBadgeHtml(code) + stkPoolBadge(code) + // R100t：池归属并入技术徽章
+    (hz ? '<span class="hz-mini" title="谐波形态示意：红折线=X-A-B-C-D 五点结构 · 绿带=PRZ 潜在反转区 · 红虚线=止损 · 蓝虚线=T1/T2 目标位">' + hzMiniSvg(hz) + '</span>' : '') + // R100t：迷你谐波图挪第二行右侧，× 不再被挤到小图旁
+    '</div>';
   var hzPanel = '';
   if (hz) {
     var _r = hz.ratios || {};
