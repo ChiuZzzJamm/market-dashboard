@@ -23,3 +23,6 @@ __pycache__/
 market-dashboard.zip
 *.bak
 .playwright-cli/
+
+# K 线抓取缓存（harmonic_detect/accumulation 脚本生成，TTL 20h，不应进仓库）
+.kline_cache/
