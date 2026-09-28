@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609280958"></script>
+<script src="data.js?v=202609281019"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1558,8 +1558,15 @@ function renderDuanban() {
   // R99：🌟 开盘精选（每日 9:45 自动化写入 duanban.star），置于确认池上方。
   // 仅保留断板反包池内标的（R99 剔除板块动量等池外候选），按上涨概率降序；卡片复用确认池 db-chip 样式、
   // 金色「精选」徽标区分；点击弹窗 1:1 复用确认池/观察池标的弹窗（openDbModal）。
+  // R100e：🌟 开盘精选展示闸门——仅当 star.date == 本地今日 才渲染。
+  // 依据：9:45 自动化唯一写入当日 star；16:00 经 merge_duanban 仅保留「date==今日」的 star（展示）；
+  // 07:30/08:30/周日22:00 流水线不写 star，但历史上会把前一交易日的 star 原样带出 data.js。
+  // 页面此前只看 st.picks.length，导致陈旧 star 在「不更新不展示」的时段被错误展示。
+  // 加日期闸门后：非今日的 star 一律隐藏；今日的 star（9:45 写入 / 16:00 保留）正常展示。
   var st = db && db.star;
-  if (st && st.picks && st.picks.length) {
+  var _td = new Date();
+  var _tdStr = _td.getFullYear() + '-' + String(_td.getMonth() + 1).padStart(2, '0') + '-' + String(_td.getDate()).padStart(2, '0');
+  if (st && st.date === _tdStr && st.picks && st.picks.length) {
     var poolByCode = {};
     conf.concat(watch).forEach(function (e) { poolByCode[String(e.code)] = e; });
     var starPicks = st.picks.filter(function (p) { return poolByCode[String(p.code)]; });
