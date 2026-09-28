@@ -200,6 +200,32 @@ def collect_pool_codes(D):
     return sorted(c for c in codes if c.startswith('60') or c.startswith('00'))
 
 
+def collect_pool_names(D):
+    """从 data.js 收集 code→name 映射（R100g：与 collect_pool_codes 同 walk 域，
+    供 accumulation/power/harmonic 脚本补简称——stkKlineNames 缺名时不再渲染成
+    「600613600613」双重代码）。"""
+    names = {}
+
+    def walk(o):
+        if not o or isinstance(o, (str, int, float, bool)):
+            return
+        if isinstance(o, dict):
+            c = o.get('code')
+            if isinstance(c, str) and len(c) == 6 and c.isdigit():
+                nm = o.get('name')
+                if isinstance(nm, str) and nm and nm != c:
+                    names.setdefault(c, nm)
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+
+    for k in ('ashare', 'aiPrediction', 'duanban'):
+        walk(D.get(k))
+    return names
+
+
 def _kline_arr_to_dicts(arr):
     """把 [[day,o,c,h,l,v], ...] 转成 {day,open,close,high,low,volume} 列表。"""
     out = []

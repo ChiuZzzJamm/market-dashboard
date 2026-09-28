@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609281056"></script>
+<script src="data.js?v=202609281124"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -442,6 +442,11 @@
   .db-modal-head .cd2 { font-size: 12px; color: var(--ink2); }
   .db-modal-close { margin-left: auto; background: none; border: 1px solid var(--line); border-radius: 999px; width: 30px; height: 30px; font-size: 15px; cursor: pointer; color: var(--ink2); line-height: 1; }
   .db-modal-close:hover { border-color: var(--accent); color: var(--accent-deep); }
+  /* R100g：弹窗右上角谐波迷你图（五点结构+PRZ带），贴关闭按钮左侧；窄屏隐藏 */
+  .db-modal-head .hz-mini { margin-left: auto; }
+  .db-modal-head .hz-mini ~ .db-modal-close { margin-left: 0; }
+  .hz-mini svg { display: block; }
+  @media (max-width: 760px) { .db-modal-head .hz-mini { display: none; } }
   .db-modal-meta { font-size: 12.5px; color: var(--ink); line-height: 1.8; margin-bottom: 10px; }
   .db-modal-meta .lab { color: var(--ink2); }
   .db-kline svg { width: 100%; height: auto; display: block; }
@@ -1268,6 +1273,44 @@ function findHarmonic(code) {
   return null;
 }
 
+/* R100g：弹窗右上角谐波迷你示意图——X-A-B-C-D 五点结构折线 + PRZ 绿带
+   + 止损红虚线 + T1/T2 蓝虚线。数据直接取 harmonic.points/prz/stop/targets。 */
+function hzMiniSvg(hz) {
+  try {
+    var p = hz && hz.points;
+    if (!p || !hz.prz) return '';
+    var pts = [['X', p.X], ['A', p.A], ['B', p.B], ['C', p.C], ['D', p.D]];
+    var vals = pts.map(function (q) { return q[1]; })
+      .concat([hz.prz[0], hz.prz[1], hz.stop, hz.target1, hz.target2]);
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    var rng = (hi - lo) || 1;
+    var W = 250, H = 104, padL = 14, padR = 28, padT = 12, padB = 14;
+    var span = W - padL - padR;
+    var xs = [padL, padL + span * 0.25, padL + span * 0.5, padL + span * 0.75, W - padR];
+    function y(v) { return padT + (hi - v) / rng * (H - padT - padB); }
+    function f(n) { return n.toFixed(1); }
+    var s = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">';
+    // PRZ 带（绿）
+    var py0 = y(hz.prz[0]), py1 = y(hz.prz[1]);
+    s += '<rect x="' + padL + '" y="' + f(Math.min(py0, py1)) + '" width="' + span + '" height="' + f(Math.max(2.5, Math.abs(py0 - py1))) + '" fill="rgba(15,157,120,.15)" stroke="#0f9d78" stroke-width="1" stroke-dasharray="3 2"/>';
+    // 止损（红）/ T1 T2（蓝）虚线
+    [[hz.stop, '#c0392b'], [hz.target1, '#2f6fdb'], [hz.target2, '#2f6fdb']].forEach(function (L) {
+      s += '<line x1="' + padL + '" y1="' + f(y(L[0])) + '" x2="' + (W - padR) + '" y2="' + f(y(L[0])) + '" stroke="' + L[1] + '" stroke-width="1" stroke-dasharray="4 3" opacity=".55"/>';
+    });
+    // 五点结构折线
+    var poly = pts.map(function (q, i2) { return f(xs[i2]) + ',' + f(y(q[1])); }).join(' ');
+    s += '<polyline points="' + poly + '" fill="none" stroke="#f0435c" stroke-width="2" stroke-linejoin="round"/>';
+    pts.forEach(function (q, i3) {
+      var anchor = i3 === 4 ? 'start' : 'middle';
+      var lx = i3 === 4 ? xs[i3] + 7 : xs[i3];
+      s += '<circle cx="' + f(xs[i3]) + '" cy="' + f(y(q[1])) + '" r="3" fill="#fff" stroke="#f0435c" stroke-width="2"/>' +
+        '<text x="' + f(lx) + '" y="' + f(y(q[1]) - 6) + '" font-size="9" font-weight="700" fill="var(--ink2)" text-anchor="' + anchor + '">' + q[0] + '</text>';
+    });
+    s += '</svg>';
+    return s;
+  } catch (e) { return ''; }
+}
+
 // R100f：谐波卡片专用弹窗入口——弹窗组固定为谐波池（确认池+观察池），
 // 左右箭头在池内循环切换，每只标的都带谐波信息条与 PRZ/止损/目标叠加层
 function openHzModal(code, name) {
@@ -1289,13 +1332,17 @@ function renderHarmonic() {
     var st = it.stage === '确认' ? 'confirm' : 'watch';
     var meta = 'PRZ ' + it.prz[0] + '~' + it.prz[1] + ' · 止损 ' + it.stop + ' · T1 ' + it.target1 + ' · T2 ' + it.target2;
     if (it.accResonance) meta += ' · 吸筹共振' + it.accResonance;
-    return '<div class="hz-card" onclick="openHzModal(\'' + it.code + '\',\'' + escAttr(it.name || it.code) + '\')">' +
-      '<div class="hz-top"><span class="hz-nm">' + esc(it.name || it.code) + '</span><span class="hz-cd">' + esc(it.code) + '</span>' +
+    // R100g：名称缺失时只展示代码一次（禁 name/code 拼成 600613600613 双重渲染）
+    var nm = (it.name && it.name !== it.code) ? it.name : '';
+    return '<div class="hz-card" onclick="openHzModal(\'' + it.code + '\',\'' + escAttr(nm || it.code) + '\')">' +
+      '<div class="hz-top"><span class="hz-nm">' + esc(nm || it.code) + '</span>' + (nm ? '<span class="hz-cd">' + esc(it.code) + '</span>' : '') +
       '<span class="hz-stage ' + st + '">' + esc(it.stage) + '</span><span class="hz-pat">' + esc(it.pattern) + '</span></div>' +
       (it.story ? '<div class="hz-note">' + esc(it.story) + '</div>' : '') +
       '<div class="hz-meta">' + meta + '</div></div>';
   };
   var html = '<div class="card"><h2>🎵 谐波形态（重型技术面）' + (h.tradeDate ? ' <span class="h2-date">' + esc(h.tradeDate) + '</span>' : '') + '</h2>';
+  // R100g：术语说明（PRZ/T1/T2 高频疑问，悬停有详解）
+  html += '<div class="hz-sub" title="PRZ=Potential Reversal Zone 潜在反转区（D 点预期企稳/反转的价格区间）；T1/T2=第一/第二目标位（D + 0.382/0.618 × CD 腿高度）；止损=形态结构失效位，跌破视为形态作废">术语：PRZ=潜在反转区（D 点落地区间）· T1/T2=反弹目标位（D+0.382/0.618×CD）· 止损=形态失效位</div>';
   if (c.length) html += '<div class="hz-sub">确认池</div><div class="hz-pool">' + c.map(card).join('') + '</div>';
   if (w.length) html += '<div class="hz-sub">观察池</div><div class="hz-pool">' + w.map(card).join('') + '</div>';
   if (h.summary) html += '<div class="note-line">' + esc(h.summary) + '</div>';
@@ -1314,8 +1361,10 @@ function renderAccumulation() {
         feats += '<span class="' + (it.features[f[0]] ? 'on' : '') + '">' + f[1] + (it.features[f[0]] ? ('·' + it.features[f[0]]) : '') + '</span>';
       });
     }
-    return '<div class="acc-card" onclick="openStkModal(\'' + it.code + '\',\'' + escAttr(it.name) + '\',\'\')">' +
-      '<div class="hz-top"><span class="hz-nm">' + esc(it.name || it.code) + '</span><span class="hz-cd">' + esc(it.code) + '</span>' +
+    // R100g：名称缺失只展示代码一次
+    var nm = (it.name && it.name !== it.code) ? it.name : '';
+    return '<div class="acc-card" onclick="openStkModal(\'' + it.code + '\',\'' + escAttr(nm || it.code) + '\',\'\')">' +
+      '<div class="hz-top"><span class="hz-nm">' + esc(nm || it.code) + '</span>' + (nm ? '<span class="hz-cd">' + esc(it.code) + '</span>' : '') +
       '<span class="acc-grd ' + gd + '">' + esc(it.grade) + ' ' + it.score + '</span></div>' +
       (it.note ? '<div class="hz-note">' + esc(it.note) + '</div>' : '') +
       '<div class="acc-feat">' + feats + '</div></div>';
@@ -1330,8 +1379,10 @@ function renderPowerScreen() {
   var items = p.passed.slice(0, 30).map(function (it) {
     var gates = (it.reasons || '').split(';').filter(Boolean).map(function (g) { return '<span class="pass">' + esc(g) + '</span>'; }).join('');
     var badges = (it.harmonic ? '<span class="hz-badge">谐波·' + esc(it.harmonic) + '</span>' : '') + (it.acc ? '<span class="hz-badge">吸筹</span>' : '');
-    return '<div class="pw-card" onclick="openStkModal(\'' + it.code + '\',\'' + escAttr(it.name) + '\',\'\')">' +
-      '<div class="hz-top"><span class="hz-nm">' + esc(it.name || it.code) + '</span><span class="hz-cd">' + esc(it.code) + '</span>' +
+    // R100g：名称缺失只展示代码一次
+    var nm = (it.name && it.name !== it.code) ? it.name : '';
+    return '<div class="pw-card" onclick="openStkModal(\'' + it.code + '\',\'' + escAttr(nm || it.code) + '\',\'\')">' +
+      '<div class="hz-top"><span class="hz-nm">' + esc(nm || it.code) + '</span>' + (nm ? '<span class="hz-cd">' + esc(it.code) + '</span>' : '') +
       '<span class="acc-grd strong">' + it.score + '分</span>' + badges + '</div>' +
       '<div class="hz-meta">涨幅 ' + it.pct + '% · 量比 ' + it.volRatio + ' · RSI ' + it.rsi + '</div>' +
       '<div class="pw-gate">' + gates + '</div></div>';
@@ -1344,9 +1395,12 @@ function renderChecklist() {
   var c = window.DASHBOARD_DATA.macroChecklist;
   if (!c || !c.items || !c.items.length) return '';
   var row = function (it) {
-    var okcls = it.ok ? 'cl-ok' : (it.grade === 'env' ? 'cl-env' : 'cl-miss');
-    var mark = it.ok ? '✓' : (it.grade === 'env' ? '—' : '✗');
-    var val = (it.value === null || it.value === undefined) ? '—' : String(it.value);
+    // R100g：value 为对象（东财原始 JSON 误存）按缺失显示，禁渲染 [object Object]
+    var bad = it.value !== null && it.value !== undefined && typeof it.value === 'object';
+    var okv = it.ok && !bad;
+    var okcls = okv ? 'cl-ok' : (it.grade === 'env' ? 'cl-env' : 'cl-miss');
+    var mark = okv ? '✓' : (it.grade === 'env' ? '—' : '✗');
+    var val = bad ? '—' : ((it.value === null || it.value === undefined) ? '—' : String(it.value));
     return '<tr><td>' + esc(it.name) + '</td><td class="' + okcls + '">' + mark + '</td><td>' + esc(val) + '</td><td class="cl-env">' + esc(it.source || '') + '</td></tr>';
   };
   var derives = '<div class="cl-grp">' +
@@ -2094,17 +2148,19 @@ function openStkModal(code, name, note) {
   var nav = STK_GRP && STK_GRP.length > 1;
   document.getElementById('stk-prev').style.display = nav ? 'flex' : 'none';
   document.getElementById('stk-next').style.display = nav ? 'flex' : 'none';
+  // R99p：若打开的标的是谐波形态池内标的，弹窗内嵌 PRZ/止损/双目标信息面板
+  // R100g：hz 查找前移——头部右上角同步挂迷你谐波示意图
+  var hz = findHarmonic(code);
   document.getElementById('stk-modal-head').innerHTML =
     '<span class="nm">' + esc(name || '') + '</span>' +
     (code ? '<span class="cd2">' + esc(code) + '</span>' : '') +
     (nav ? '<span class="cd2">' + (STK_IDX + 1) + '/' + STK_GRP.length + '</span>' : '') +
+    (hz ? '<span class="hz-mini" title="谐波形态示意：X-A-B-C-D 五点结构（红折线）+ PRZ 反转区（绿带）+ 止损（红虚线）+ T1/T2 目标位（蓝虚线）">' + hzMiniSvg(hz) + '</span>' : '') +
     '<button class="db-modal-close" onclick="stkClose()">×</button>';
-  // R99p：若打开的标的是谐波形态池内标的，弹窗内嵌 PRZ/止损/双目标信息面板
-  var hz = findHarmonic(code);
   var hzPanel = '';
   if (hz) {
     var _r = hz.ratios || {};
-    hzPanel = '<div class="hz-info">🎵 ' + esc(hz.pattern) + '（' + esc(hz.stage) + '） PRZ <span class="hz-v">' + hz.prz[0] + '~' + hz.prz[1] +
+    hzPanel = '<div class="hz-info" title="PRZ=Potential Reversal Zone 潜在反转区（D 点预期企稳/反转的价格区间）；T1/T2=第一/第二目标位（D + 0.382/0.618 × CD 腿高度）；止损=形态结构失效位，跌破视为形态作废">🎵 ' + esc(hz.pattern) + '（' + esc(hz.stage) + '） PRZ <span class="hz-v">' + hz.prz[0] + '~' + hz.prz[1] +
       '</span> · 止损 <span class="hz-v">' + hz.stop + '</span> · T1 <span class="hz-v">' + hz.target1 + '</span> · T2 <span class="hz-v">' + hz.target2 + '</span>' +
       (_r.AB ? ' · 比率 AB=' + _r.AB + ' BC=' + _r.BC + ' CD=' + _r.CD : '') +
       (hz.accResonance ? ' · 吸筹共振' + hz.accResonance : '') +

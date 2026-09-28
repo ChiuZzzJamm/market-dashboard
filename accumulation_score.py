@@ -252,6 +252,7 @@ def main():
     dry = '--dry-run' in args
 
     D = common.load_dashboard_data(BASE)
+    names = K.collect_pool_names(D)  # R100g：池内 code→name（stkKlineNames 缺名兜底）
     codes = K.collect_pool_codes(D)
     # 扩展：断板池 code 一并纳入扫描
     for pool in ('confirmed', 'watching'):
@@ -267,7 +268,7 @@ def main():
         bars = K.get_bars(c, D)
         if not bars or len(bars) < 60:
             continue
-        nm = (D.get('stkKlineNames') or {}).get(c) or ''
+        nm = names.get(c) or (D.get('stkKlineNames') or {}).get(c) or ''
         r = score_one(bars, nm)
         if r['score'] < MIN_SCORE:
             continue

@@ -375,6 +375,7 @@ def main():
         days = int(args[args.index('--days') + 1])
 
     D = common.load_dashboard_data(BASE)
+    names = K.collect_pool_names(D)  # R100g：池内 code→name（stkKlineNames 缺名兜底）
     codes = K.collect_pool_codes(D)
     print(f"[HARMONIC] 标的池 {len(codes)} 只，抓取 {days} 日 K 线（预算 {K.DEADLINE_S:.0f}s）")
     t0 = time.time()
@@ -399,7 +400,7 @@ def main():
             continue
         name = None
         # 取简称：优先 stkKlineNames / duanban
-        nm = (D.get('stkKlineNames') or {}).get(c) or ''
+        nm = names.get(c) or (D.get('stkKlineNames') or {}).get(c) or ''
         item = {
             'code': c, 'name': nm, 'pattern': r['pattern'],
             'stage': r['stage'], 'points': r['points'], 'ratios': r['ratios'],

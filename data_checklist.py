@@ -98,6 +98,41 @@ def fetch_eastmoney_json(url):
         return None
 
 
+def _em_scalar(key, j):
+    """R100g：东财响应粗提取标量（best-effort）。
+    提不出一律返回 None → 走缺失降级；严禁把原始 dict 存进 value
+    （前端会渲染成 [object Object] 假✓）。datacenter 系字段口径未核实前宁缺勿滥。"""
+    if not isinstance(j, dict):
+        return None
+    try:
+        # push2 clist 类：data.diff[].f62（单位：元 → 亿）
+        d = j.get('data')
+        if isinstance(d, dict):
+            diff = d.get('diff')
+            if isinstance(diff, list) and diff and isinstance(diff[0], dict):
+                v = diff[0].get('f62')
+                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                    return round(v / 1e8, 2)
+            return None
+        # datacenter 类：result.data[0]，按已知字段名优先
+        r = j.get('result')
+        if isinstance(r, dict) and isinstance(r.get('data'), list) and r['data'] \
+                and isinstance(r['data'][0], dict):
+            row = r['data'][0]
+            pref = {'marginShort': ('RQYE', 'RZRQYE'),
+                    'indexFuturesShort': ('SHORT_POSITION', 'SHORT_VOL', 'POSITION'),
+                    'blockTradePressure': ('AMOUNT', 'DEAL_AMOUNT'),
+                    'shareholder': ('HOLDNUM_RATE', 'HOLD_NUM_CHANGE')}.get(key, ())
+            for kk in pref:
+                v = row.get(kk)
+                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                    return round(v / 1e8, 2) if abs(v) >= 1e6 else round(v, 2)
+            return None  # 字段口径未核实，宁缺勿滥（防错值误导）
+        return None
+    except Exception:
+        return None
+
+
 # ---------------- 构建清单 ----------------
 def _chg_pct(cur, prev):
     if cur is None or prev in (None, 0):
@@ -291,7 +326,9 @@ def _fetch_all(D):
     }.items():
         j = fetch_eastmoney_json(url)
         if j is not None:
-            raw[key] = j  # 原始结构，LLM/前端按需取数
+            sv = _em_scalar(key, j)  # R100g：标量提取，提不出存 None 走降级
+            if sv is not None:
+                raw[key] = sv
 
     # 腾讯/新浪行情
     tq = fetch_tencent_quote(['sh000001', 'sz399006', 'sh000300', 'sz399300', 'sh000016'])
