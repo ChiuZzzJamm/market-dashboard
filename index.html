@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609290956"></script>
+<script src="data.js?v=202609291005"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -466,6 +466,8 @@
   .db-modal-meta { font-size: 12.5px; color: var(--ink); line-height: 1.8; margin-bottom: 10px; }
   .db-modal-meta .lab { color: var(--ink2); }
   .db-kline svg { width: 100%; height: auto; display: block; }
+  .dbk-chart { width: 100%; height: 340px; }
+  #db-kline, #lb-kline, #stk-kline { position: relative; min-height: 340px; }
   .db-refs { margin-top: 10px; font-size: 12px; color: var(--ink2); line-height: 1.7; border-top: 1px dashed var(--line); padding-top: 8px; }
   .db-refs b { color: var(--accent-deep); }
   .db-ref-p { margin: 5px 0 2px; color: var(--ink); }
@@ -2318,126 +2320,159 @@ attachKlineTip(document.getElementById('db-kline'));
 attachKlineTip(document.getElementById('lb-kline'));
 attachKlineTip(document.getElementById('stk-kline'));
 
-function dbKlineSvg(kline, hz) {
-  if (!kline || kline.length < 2) return '<div class="db-empty">暂无K线数据</div>';
-  // R88：数据含近 60 根（供均线计算），只渲染近 30 根；均线基于全量序列计算
-  var view = kline.slice(-30);
-  var off = kline.length - view.length;
-  var W = 680, H = 360, padL = 8, padR = 54, priceTop = 20, priceBot = 236, volTop = 256, volBot = 336;
-  var n = view.length;
-  function maAt(gi, p) {
-    if (gi < p - 1) return null;
-    var s = 0; for (var j = gi - p + 1; j <= gi; j++) s += kline[j][2];
-    return s / p;
+/* ===== ECharts 蜡烛图（R100z4m）：替代原 SVG，支持 60 日数据 + 滚轮缩放/拖拽平移 ===== */
+var DBK_CHARTS = [];
+var _dbk_seq = 0;
+var _dbk_resize_bound = false;
+function _dbk_cleanup() {
+  for (var i = DBK_CHARTS.length - 1; i >= 0; i--) {
+    try { if (!DBK_CHARTS[i].getDom().isConnected) { DBK_CHARTS[i].dispose(); DBK_CHARTS.splice(i, 1); } }
+    catch (e) { try { DBK_CHARTS.splice(i, 1); } catch (e2) {} }
   }
-  var MAS = [[5, '#4aa8e0', 'MA5'], [10, '#f5a623', 'MA10'], [20, '#9b59b6', 'MA20'], [30, '#16a085', 'MA30']];
-  var hi = -Infinity, lo = Infinity;
-  view.forEach(function (b) { hi = Math.max(hi, b[3]); lo = Math.min(lo, b[4]); });
-  MAS.forEach(function (m) {
-    for (var i = 0; i < n; i++) {
-      var v = maAt(off + i, m[0]);
-      if (v !== null) { hi = Math.max(hi, v); lo = Math.min(lo, v); }
-    }
-  });
-  // R99p：谐波形态叠加层——先把 PRZ/止损/目标位纳入价格区间，保证线条在可视范围内
-  if (hz && hz.prz) {
-    [hz.prz[0], hz.prz[1], hz.stop, hz.target1, hz.target2].forEach(function (p) {
-      if (typeof p === 'number') { if (p > hi) hi = p; if (p < lo) lo = p; }
-    });
+}
+function _dbk_volfmt(v) {
+  if (v >= 1e8) return (v / 1e8).toFixed(2) + '亿';
+  if (v >= 1e4) return (v / 1e4).toFixed(1) + '万';
+  return String(v);
+}
+function _dbk_ma(n, kl) {
+  var r = [];
+  for (var i = 0; i < kl.length; i++) {
+    if (i < n - 1) { r.push('-'); continue; }
+    var s = 0; for (var j = i - n + 1; j <= i; j++) s += kl[j][2];
+    r.push(+(s / n).toFixed(2));
   }
-  // R100n：X/A/B/C/D 五点价格同样纳入价区，保证 ABCD 参考线落在可视范围内
-  if (hz && hz.points) {
+  return r;
+}
+function _dbk_stage(hz) {
+  if (!hz) return '';
+  return hz.stage === '确认' ? 'D段（确认·企稳）' : 'D段（观察·运行中）';
+}
+function _dbk_markline(hz) {
+  if (!hz) return undefined;
+  var data = [];
+  if (hz.prz) {
+    data.push({ yAxis: hz.prz[0], lineStyle: { color: '#0f9d78', type: 'dashed' }, label: { formatter: 'PRZ', color: '#0f9d78', position: 'insideEndTop' } });
+    data.push({ yAxis: hz.prz[1], lineStyle: { color: '#0f9d78', type: 'dashed' } });
+  }
+  if (typeof hz.stop === 'number') data.push({ yAxis: hz.stop, lineStyle: { color: '#c0392b', type: 'dashed' }, label: { formatter: '止损', color: '#c0392b', position: 'insideEndTop' } });
+  if (typeof hz.target1 === 'number') data.push({ yAxis: hz.target1, lineStyle: { color: '#2f6fdb', type: 'dashed' }, label: { formatter: 'T1', color: '#2f6fdb', position: 'insideEndBottom' } });
+  if (typeof hz.target2 === 'number') data.push({ yAxis: hz.target2, lineStyle: { color: '#2f6fdb', type: 'dashed' }, label: { formatter: 'T2', color: '#2f6fdb', position: 'insideEndBottom' } });
+  if (hz.points) {
+    var pm = { X: '#7f8c8d', A: '#2f6fdb', B: '#9b59b6', C: '#e8862c', D: '#f0435c' };
     ['X', 'A', 'B', 'C', 'D'].forEach(function (k) {
       var pv = hz.points[k];
-      if (typeof pv === 'number') { if (pv > hi) hi = pv; if (pv < lo) lo = pv; }
+      if (typeof pv === 'number') data.push({ yAxis: pv, lineStyle: { color: pm[k], type: 'dotted', width: 1 }, label: { formatter: k, color: pm[k], position: 'insideEndTop' } });
     });
   }
-  if (hi <= lo) { hi += 1; lo -= 1; }
-  var pad = (hi - lo) * 0.07; hi += pad; lo -= pad;
-  var maxV = Math.max.apply(null, view.map(function (b) { return b[5]; })) || 1;
-  var step = (W - padL - padR) / n;
-  var bw = Math.min(16, step * 0.62);
-  function y(p) { return priceBot - (p - lo) / (hi - lo) * (priceBot - priceTop); }
-  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
-  for (var g = 0; g <= 4; g++) {
-    var gv = lo + (hi - lo) * g / 4, gy = y(gv);
-    svg += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (W - padR + 6) + '" y2="' + gy + '" stroke="#e3ecf4" stroke-dasharray="3 3"/>';
-    svg += '<text x="' + (W - padR + 10) + '" y="' + (gy + 4) + '" font-size="10" fill="#5a6e82">' + gv.toFixed(2) + '</text>';
-  }
-  // 均线（图例 + 折线）
-  var legend = '';
-  MAS.forEach(function (m, mi) {
-    legend += '<tspan fill="' + m[1] + '" font-weight="700">' + m[2] + '</tspan>' + (mi < 3 ? '<tspan fill="#8aa0b5">  </tspan>' : '');
-    var path = '';
-    for (var i = 0; i < n; i++) {
-      var v = maAt(off + i, m[0]);
-      if (v === null) continue;
-      path += (path ? ' L ' : 'M ') + (padL + step * (i + 0.5)).toFixed(1) + ' ' + y(v).toFixed(1);
-    }
-    if (path) svg += '<path d="' + path + '" fill="none" stroke="' + m[1] + '" stroke-width="1.2" opacity="0.9"/>';
+  if (!data.length) return undefined;
+  return { silent: true, symbol: 'none', lineStyle: { width: 1 }, data: data };
+}
+function _dbk_markpoint(hz) {
+  if (!hz || !hz.points || !hz.pointDays) return undefined;
+  var pm = { X: '#7f8c8d', A: '#2f6fdb', B: '#9b59b6', C: '#e8862c', D: '#f0435c' };
+  var pts = [];
+  ['X', 'A', 'B', 'C', 'D'].forEach(function (k) {
+    var pv = hz.points[k], day = hz.pointDays[k];
+    if (typeof pv === 'number' && day) pts.push({ name: k, coord: [day, pv], itemStyle: { color: pm[k] }, symbolSize: 8, label: { show: false } });
   });
-  svg += '<text x="' + (padL + 4) + '" y="12" font-size="10">' + legend + '</text>';
-  view.forEach(function (b, i) {
-    var cx = padL + step * (i + 0.5);
-    var o = b[1], c = b[2], h = b[3], l = b[4], v = b[5];
-    var up = c >= o, col = up ? '#f0435c' : '#0f9d78';
-    svg += '<line x1="' + cx + '" y1="' + y(h) + '" x2="' + cx + '" y2="' + y(l) + '" stroke="' + col + '" stroke-width="1"/>';
-    var ty = y(Math.max(o, c)), by = y(Math.min(o, c));
-    svg += '<rect x="' + (cx - bw / 2) + '" y="' + ty + '" width="' + bw + '" height="' + Math.max(1, by - ty) + '" fill="' + (up ? '#fff' : col) + '" stroke="' + col + '" stroke-width="1.2"/>';
-    var vy = volBot - (v / maxV) * (volBot - volTop);
-    svg += '<rect x="' + (cx - bw / 2) + '" y="' + vy + '" width="' + bw + '" height="' + (volBot - vy) + '" fill="' + col + '" opacity="0.55"/>';
-  });
-  // R89：每根K线加透明命中区，点击显示收盘涨幅浮层
-  view.forEach(function (b, i) {
-    var cx = padL + step * (i + 0.5);
-    var prevC = i > 0 ? view[i - 1][2] : (off > 0 ? kline[off - 1][2] : b[2]);
-    var p = prevC > 0 ? (b[2] - prevC) / prevC * 100 : 0;
-    svg += '<rect class="db-bar" data-day="' + esc(String(b[0] || '')) + '" data-c="' + b[2].toFixed(2) +
-      '" data-pct="' + p.toFixed(2) + '" data-v="' + b[5] + '" data-cx="' + (padL + step * (i + 0.5)).toFixed(1) +
-      '" x="' + (cx - step / 2).toFixed(1) + '" y="' + priceTop + '" width="' + step.toFixed(2) +
-      '" height="' + (volBot - priceTop) + '" fill="transparent" style="cursor:pointer"/>';
-  });
-  [0, Math.floor(n / 2), n - 1].forEach(function (i) {
-    var cx = padL + step * (i + 0.5), d = String(view[i][0] || '').slice(5);
-    svg += '<text x="' + cx + '" y="' + (H - 6) + '" font-size="10" fill="#5a6e82" text-anchor="middle">' + esc(d) + '</text>';
-  });
-  svg += '<text x="' + (W - padR + 10) + '" y="' + (volTop - 4) + '" font-size="9.5" fill="#8aa0b5">成交量</text>';
-  // R99p：谐波形态叠加层（绿=PRZ区间 / 红=止损 / 蓝=目标位），覆盖在真实日K之上
-  if (hz && hz.prz) {
-    var pY = function (p) { return (typeof p === 'number') ? y(p) : null; };
-    var przLo = pY(hz.prz[0]), przHi = pY(hz.prz[1]);
-    if (przLo != null) {
-      var bandY = Math.min(przLo, przHi), bandH = Math.abs(przHi - przLo);
-      svg += '<rect x="' + padL + '" y="' + bandY + '" width="' + (W - padL - padR + 6) + '" height="' + bandH + '" fill="rgba(15,157,120,.10)"/>';
-      svg += '<line x1="' + padL + '" y1="' + przLo + '" x2="' + (W - padR + 6) + '" y2="' + przLo + '" stroke="#0f9d78" stroke-width="1" stroke-dasharray="4 3"/>';
-      svg += '<line x1="' + padL + '" y1="' + przHi + '" x2="' + (W - padR + 6) + '" y2="' + przHi + '" stroke="#0f9d78" stroke-width="1" stroke-dasharray="4 3"/>';
-      var sy = pY(hz.stop); if (sy != null) svg += '<line x1="' + padL + '" y1="' + sy + '" x2="' + (W - padR + 6) + '" y2="' + sy + '" stroke="#c0392b" stroke-width="1" stroke-dasharray="4 3"/>';
-      var t1 = pY(hz.target1); if (t1 != null) svg += '<line x1="' + padL + '" y1="' + t1 + '" x2="' + (W - padR + 6) + '" y2="' + t1 + '" stroke="#2f6fdb" stroke-width="1" stroke-dasharray="4 3"/>';
-      var t2 = pY(hz.target2); if (t2 != null) svg += '<line x1="' + padL + '" y1="' + t2 + '" x2="' + (W - padR + 6) + '" y2="' + t2 + '" stroke="#2f6fdb" stroke-width="1" stroke-dasharray="4 3"/>';
+  if (!pts.length) return undefined;
+  return { symbol: 'circle', symbolSize: 8, data: pts };
+}
+function _dbk_option(kl, hz) {
+  var UP = '#f0435c', DOWN = '#0f9d78';
+  var dates = kl.map(function (b) { return b[0]; });
+  var candle = kl.map(function (b) { return [b[1], b[2], b[4], b[3]]; }); // open,close,low,high
+  var vol = kl.map(function (b) { return { value: b[5], itemStyle: { color: b[2] >= b[1] ? UP : DOWN } }; });
+  var ma5 = _dbk_ma(5, kl), ma10 = _dbk_ma(10, kl), ma20 = _dbk_ma(20, kl), ma30 = _dbk_ma(30, kl);
+  var startPct = Math.max(0, (kl.length - 30) / kl.length * 100);
+  var stg = _dbk_stage(hz);
+  return {
+    animation: false,
+    grid: [
+      { left: '9%', right: '4%', top: stg ? '8%' : '4%', height: '60%' },
+      { left: '9%', right: '4%', top: '72%', height: '18%' }
+    ],
+    title: stg ? { text: '● ' + stg, left: '9%', top: '0.5%', textStyle: { color: '#f0435c', fontSize: 11, fontWeight: 700 } } : undefined,
+    xAxis: [
+      { type: 'category', data: dates, gridIndex: 0, boundaryGap: true, axisLabel: { show: false }, axisLine: { lineStyle: { color: '#c7d3e0' } }, axisTick: { show: false } },
+      { type: 'category', data: dates, gridIndex: 1, boundaryGap: true, axisLabel: { color: '#5a6e82', fontSize: 10 }, axisLine: { lineStyle: { color: '#c7d3e0' } } }
+    ],
+    yAxis: [
+      { scale: true, gridIndex: 0, position: 'right', axisLabel: { color: '#5a6e82', fontSize: 10 }, splitLine: { lineStyle: { color: '#eef3f8' } }, axisLine: { show: false } },
+      { scale: true, gridIndex: 1, position: 'right', axisLabel: { color: '#5a6e82', fontSize: 9, formatter: function (v) { return _dbk_volfmt(v); } }, splitLine: { show: false }, axisLine: { show: false } }
+    ],
+    dataZoom: [
+      { type: 'inside', xAxisIndex: [0, 1], start: startPct, end: 100, zoomLock: false, throttle: 50 },
+      { type: 'slider', xAxisIndex: [0, 1], start: startPct, end: 100, bottom: 0, height: 14, borderColor: '#c7d3e0', fillerColor: 'rgba(74,168,224,0.15)', handleSize: '60%', textStyle: { color: '#5a6e82' } }
+    ],
+    tooltip: {
+      trigger: 'axis', axisPointer: { type: 'cross', lineStyle: { color: '#aab6c4' } },
+      backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#c7d3e0', borderWidth: 1, textStyle: { color: '#2b3a4b', fontSize: 11 },
+      formatter: function (params) {
+        var day = params[0] ? params[0].axisValue : '';
+        var c = null, v = null;
+        params.forEach(function (p) { if (p.seriesType === 'candlestick') c = p; if (p.seriesName === '成交量') v = p; });
+        var out = ['<b>' + day + '</b>'];
+        if (c && c.data) {
+          var d = c.data, o = d[0], cl = d[1], h = d[3], l = d[2];
+          var pct = o > 0 ? (cl - o) / o * 100 : 0;
+          out.push('开 ' + o.toFixed(2) + '　收 ' + cl.toFixed(2));
+          out.push('高 ' + h.toFixed(2) + '　低 ' + l.toFixed(2));
+          out.push('涨跌幅 <b style="color:' + (pct >= 0 ? UP : DOWN) + '">' + (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%</b>');
+        }
+        if (v && v.data != null) { var vv = (v.data && v.data.value != null) ? v.data.value : v.data; out.push('成交量 ' + _dbk_volfmt(vv)); }
+        return out.join('<br>');
       }
-  }
-  // R100n：谐波 ABCD 阶段叠加层——把 X-A-B-C-D 五点价格标成水平参考线（带字母标签），
-  // 命中对应交易日则在当日K线柱上叠加圆点；顶部显示当前所处阶段（D 段=观察/确认）。
-  if (hz && hz.points) {
-    var pDays = (hz.pointDays || {});
-    var pMeta = { X: { c: '#7f8c8d', lab: 'X' }, A: { c: '#2f6fdb', lab: 'A' }, B: { c: '#9b59b6', lab: 'B' }, C: { c: '#e8862c', lab: 'C' }, D: { c: '#f0435c', lab: 'D' } };
-    Object.keys(pMeta).forEach(function (k) {
-      var pv = hz.points[k];
-      if (typeof pv !== 'number') return;
-      var py = y(pv);
-      if (py < priceTop - 2 || py > priceBot + 2) return; // 超出可视价区不画
-      svg += '<line x1="' + padL + '" y1="' + py + '" x2="' + (W - padR + 6) + '" y2="' + py + '" stroke="' + pMeta[k].c + '" stroke-width="1" stroke-dasharray="2 3" opacity="0.55"/>';
-      var cxm = null;
-      for (var mi = 0; mi < n; mi++) { if (String(view[mi][0]) === String(pDays[k] || '')) { cxm = padL + step * (mi + 0.5); break; } }
-      if (cxm !== null) svg += '<circle cx="' + cxm + '" cy="' + py + '" r="4" fill="' + pMeta[k].c + '" stroke="#fff" stroke-width="1.5"/>';
-      svg += '<text x="' + (W - padR + 4) + '" y="' + (py + 3) + '" font-size="9.5" font-weight="700" fill="' + pMeta[k].c + '" text-anchor="end">' + pMeta[k].lab + '</text>';
+    },
+    axisPointer: { link: [{ xAxisIndex: 'all' }] },
+    series: [
+      {
+        name: 'K线', type: 'candlestick', data: candle, xAxisIndex: 0, yAxisIndex: 0,
+        itemStyle: { color: UP, color0: DOWN, borderColor: UP, borderColor0: DOWN },
+        markArea: (hz && hz.prz) ? { silent: true, itemStyle: { color: 'rgba(15,157,120,0.10)' }, data: [[{ yAxis: hz.prz[0] }, { yAxis: hz.prz[1] }]] } : undefined,
+        markLine: _dbk_markline(hz),
+        markPoint: _dbk_markpoint(hz)
+      },
+      { name: 'MA5', type: 'line', data: ma5, xAxisIndex: 0, yAxisIndex: 0, smooth: true, showSymbol: false, lineStyle: { width: 1, color: '#4aa8e0' } },
+      { name: 'MA10', type: 'line', data: ma10, xAxisIndex: 0, yAxisIndex: 0, smooth: true, showSymbol: false, lineStyle: { width: 1, color: '#f5a623' } },
+      { name: 'MA20', type: 'line', data: ma20, xAxisIndex: 0, yAxisIndex: 0, smooth: true, showSymbol: false, lineStyle: { width: 1, color: '#9b59b6' } },
+      { name: 'MA30', type: 'line', data: ma30, xAxisIndex: 0, yAxisIndex: 0, smooth: true, showSymbol: false, lineStyle: { width: 1, color: '#16a085' } },
+      { name: '成交量', type: 'bar', data: vol, xAxisIndex: 1, yAxisIndex: 1, barWidth: '60%' }
+    ]
+  };
+}
+function _ensureEcharts(cb) {
+  if (typeof echarts !== 'undefined') return cb();
+  var s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js';
+  s.onload = function () { cb(); };
+  s.onerror = function () { cb(); };
+  document.head.appendChild(s);
+}
+function dbKlineSvg(kline, hz) {
+  if (!kline || kline.length < 2) return '<div class="db-empty">暂无K线数据</div>';
+  _dbk_seq++;
+  var id = 'dbk-chart-' + _dbk_seq;
+  _dbk_cleanup();
+  if (!_dbk_resize_bound) {
+    _dbk_resize_bound = true;
+    window.addEventListener('resize', function () {
+      DBK_CHARTS.forEach(function (c) { try { if (c.getDom().isConnected) c.resize(); } catch (e) {} });
     });
-    var _stg = hz.stage === '确认' ? '确认（企稳）' : '观察（D段运行中）';
-    svg += '<rect x="' + padL + '" y="' + (priceTop + 1) + '" width="158" height="15" fill="rgba(255,255,255,.78)" rx="3"/>';
-    svg += '<text x="' + (padL + 5) + '" y="' + (priceTop + 12) + '" font-size="10.5" font-weight="700" fill="#f0435c">● 当前阶段：D 段（' + esc(_stg) + '）</text>';
   }
-  svg += '</svg>';
-  return svg;
+  _ensureEcharts(function () {
+    if (typeof echarts === 'undefined') return;
+    setTimeout(function () {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var chart = echarts.init(el);
+      chart.setOption(_dbk_option(kline, hz));
+      DBK_CHARTS.push(chart);
+      setTimeout(function () { try { chart.resize(); } catch (e) {} }, 40);
+    }, 0);
+  });
+  return '<div id="' + id + '" class="dbk-chart"></div>';
 }
 
 /* ===== 通用标的K线（R94）：全站成分股/标的点击看日K，点击K线柱看当日涨幅 =====
@@ -2706,7 +2741,7 @@ function openBoardKline(name, kline) {
     (nav ? '<span class="cd2">' + (TB_IDX + 1) + '/' + list.length + '</span>' : '') +
     '<button class="db-modal-close" onclick="stkClose()">×</button>';
   document.getElementById('stk-modal-meta').innerHTML =
-    '<span class="lab">日K线（近30根）· 点击K线柱查看当日涨幅与成交量</span>';
+    '<span class="lab">日K线 · 滚轮缩放查看（默认近30根，可拉至全量）</span>';
   document.getElementById('stk-kline').innerHTML = dbKlineSvg(kline);
   document.getElementById('stk-news').innerHTML = ''; // R100n：板块弹窗无个股消息面，清掉残留
   document.getElementById('stk-modal').classList.add('open');
@@ -2769,7 +2804,7 @@ function openSectorKline(name, thsCode) {
     '<span class="cd2">同花顺行业板块</span>' +
     '<button class="db-modal-close" onclick="stkClose()">×</button>';
   document.getElementById('stk-modal-meta').innerHTML =
-    '<span class="lab">日K线（近30根）· 点击K线柱查看当日涨幅与成交量</span>';
+    '<span class="lab">日K线 · 滚轮缩放查看（默认近30根，可拉至全量）</span>';
   document.getElementById('stk-kline').innerHTML = '<div class="db-empty">K线加载中…</div>';
   document.getElementById('stk-news').innerHTML = ''; // R100n：板块弹窗无个股消息面，清掉残留
   document.getElementById('stk-modal').classList.add('open');
