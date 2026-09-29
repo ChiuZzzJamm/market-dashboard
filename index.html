@@ -2672,11 +2672,27 @@ function _dbk_startVal(kl, hz) {
   }
   return startVal;
 }
+// R100z6g：确定性初始窗口——渲染前物理裁切数据（不再依赖 dataZoom startValue/dispatchAction，
+// iOS Safari 上两者均被忽略、真机实证全量塞屏）。谐波图=最早形态点前10根缓冲 至 末尾（≥60根）；
+// 普通图=最后60根。dataZoom 仍可放大细看，代价是切片之前的历史不可见（弹窗主用途=形态+近期走势）。
+function _dbk_slice(kl, hz) {
+  if (!hz || !hz.pointDays) return kl.slice(-60);
+  var dates = kl.map(function (b) { return b[0]; });
+  var minIx = kl.length - 1;
+  ['X', 'A', 'B', 'C', 'D'].forEach(function (k) {
+    var day = hz.pointDays[k];
+    var ix = day ? dates.indexOf(day) : -1;
+    if (ix >= 0 && ix < minIx) minIx = ix;
+  });
+  var from = Math.max(0, Math.min(minIx - 10, kl.length - 60));
+  return kl.slice(from);
+}
 function dbKlineSvg(kline, hz) {
   if (!kline || kline.length < 2) return '<div class="db-empty">暂无K线数据</div>';
+  var view = _dbk_slice(kline, hz); // R100z6g：渲染前裁切，初始视图=数据全量，任何设备不可能错位
+  if (view.length < 2) view = kline;
   _dbk_seq++;
   var id = 'dbk-chart-' + _dbk_seq;
-  var _sv = _dbk_startVal(kline, hz); // R100z6e：初始窗口起点（setOption 与 dispatchAction 兜底共用）
   _dbk_cleanup();
   if (!_dbk_resize_bound) {
     _dbk_resize_bound = true;
@@ -2690,21 +2706,15 @@ function dbKlineSvg(kline, hz) {
       var el = document.getElementById(id);
       if (!el) return;
       var chart = echarts.init(el);
-      chart.setOption(_dbk_option(kline, hz));
+      chart.setOption(_dbk_option(view, hz)); // R100z6g：渲染裁切后窗口（不再传 startValue）
       // R100z4w：谐波连线为 graphic 像素层——初始绘制 + 缩放时重算像素位置（resize 由全局 resize 监听统一触发 c._dbkHzRef）
       if (hz) {
-        _dbk_hzGraphic(chart, kline, hz);
-        chart.on('dataZoom', function () { try { _dbk_hzGraphic(chart, kline, hz); } catch (e) {} });
-        chart._dbkHzRef = function () { _dbk_hzGraphic(chart, kline, hz); };
+        _dbk_hzGraphic(chart, view, hz);
+        chart.on('dataZoom', function () { try { _dbk_hzGraphic(chart, view, hz); } catch (e) {} });
+        chart._dbkHzRef = function () { _dbk_hzGraphic(chart, view, hz); };
       }
       DBK_CHARTS.push(chart);
-      // R100z6e：移动端弹窗容器尺寸未就绪时 echarts.init 捕获 0 尺寸，dataZoom 的 startValue
-      // 会被解析回退为全量（真机 iOS 截图实证：谐波 320 根全塞进屏幕、连线挤右）。resize 落定后
-      // 用 dispatchAction 强制再落一次初始窗口（对 inside+slider 全生效），随后重算连线像素。
-      setTimeout(function () {
-        try { chart.resize(); } catch (e) {}
-        try { chart.dispatchAction({ type: 'dataZoom', startValue: _sv, endValue: kline.length - 1 }); } catch (e) {}
-      }, 60);
+      setTimeout(function () { try { chart.resize(); if (hz) _dbk_hzGraphic(chart, view, hz); } catch (e) {} }, 60);
     }, 0);
   });
   return '<div id="' + id + '" class="dbk-chart"></div>';
