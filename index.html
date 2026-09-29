@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609291005"></script>
+<script src="data.js?v=202609291021"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -2411,15 +2411,20 @@ function _dbk_option(kl, hz) {
       backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#c7d3e0', borderWidth: 1, textStyle: { color: '#2b3a4b', fontSize: 11 },
       formatter: function (params) {
         var day = params[0] ? params[0].axisValue : '';
-        var c = null, v = null;
-        params.forEach(function (p) { if (p.seriesType === 'candlestick') c = p; if (p.seriesName === '成交量') v = p; });
+        var v = null;
+        params.forEach(function (p) { if (p.seriesName === '成交量') v = p; });
         var out = ['<b>' + day + '</b>'];
-        if (c && c.data) {
-          var d = c.data, o = d[0], cl = d[1], h = d[3], l = d[2];
-          var pct = o > 0 ? (cl - o) / o * 100 : 0;
-          out.push('开 ' + o.toFixed(2) + '　收 ' + cl.toFixed(2));
-          out.push('高 ' + h.toFixed(2) + '　低 ' + l.toFixed(2));
-          out.push('涨跌幅 <b style="color:' + (pct >= 0 ? UP : DOWN) + '">' + (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%</b>');
+        // R100z4n：axis 触发时 candlestick 的 p.data 是 [索引,open,close,low,high] 五元组（旧实现按四元组解析出「开 57.00」假数据），
+        // 改为按日期回查原始 kl 取 OHLC；涨幅=收盘 vs 前收（与旧 SVG「当日涨幅」同口径）
+        var idx = -1;
+        for (var i = 0; i < kl.length; i++) { if (kl[i][0] === day) { idx = i; break; } }
+        if (idx >= 0) {
+          var b = kl[idx];
+          var prev = idx > 0 ? kl[idx - 1][2] : b[1];
+          var pct = prev > 0 ? (b[2] - prev) / prev * 100 : 0;
+          out.push('开 ' + b[1].toFixed(2) + '　收 ' + b[2].toFixed(2));
+          out.push('高 ' + b[3].toFixed(2) + '　低 ' + b[4].toFixed(2));
+          out.push('涨幅 <b style="color:' + (pct >= 0 ? UP : DOWN) + '">' + (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%</b>');
         }
         if (v && v.data != null) { var vv = (v.data && v.data.value != null) ? v.data.value : v.data; out.push('成交量 ' + _dbk_volfmt(vv)); }
         return out.join('<br>');
@@ -2524,7 +2529,7 @@ function stkParseKline(rows) {
   return out.length > 1 ? out : null;
 }
 // R98i：腾讯 ifzq 网络失败的新浪 JSONP 备源（script 注入无 CORS 问题；日K 为不复权口径，仅作兜底）
-function stkFetchKlineSina(sym, cb) {
+function stkFetchKlineSina(sym, cb, dlen) {
   var cbN = '_sinaKl_' + Date.now();
   var s = document.createElement('script');
   var done = false;
@@ -2557,7 +2562,7 @@ function stkFetchKlineSina(sym, cb) {
     });
   } catch (err) { window[cbN] = onData; }
   s.onerror = function () { clearTimeout(timer); finish(null); };
-  s.src = 'https://quotes.sina.cn/cn/api/jsonp_v2.php/var%20' + cbN + '=/CN_MarketDataService.getKLineData?symbol=' + encodeURIComponent(sym) + '&scale=240&ma=no&datalen=60&_r=' + Date.now();
+  s.src = 'https://quotes.sina.cn/cn/api/jsonp_v2.php/var%20' + cbN + '=/CN_MarketDataService.getKLineData?symbol=' + encodeURIComponent(sym) + '&scale=240&ma=no&datalen=' + (dlen || 60) + '&_r=' + Date.now();
   document.body.appendChild(s);
 }
 function stkFetchKline(code, cb) {
@@ -2597,6 +2602,43 @@ function stkFetchKline(code, cb) {
         else cb(null, 'K线获取失败（' + (e && e.message ? e.message : '网络受限') + '）');
       });
     });
+}
+// R100z4n：谐波形态点可能落在 60 根窗口之外（harmonic_detect.py 用 320 天历史检测，X/A/B 常在数月前），
+// 按需拉 320 根长窗 K 线重渲染；独立缓存键（不覆盖 60 根短窗缓存）
+function stkFetchKlineLong(code, cb) {
+  var sym = stkSymbol(code);
+  if (!sym) return cb(null);
+  var ck = sym + '|L';
+  if (STK_KLINE_CACHE[ck]) return cb(STK_KLINE_CACHE[ck]);
+  fetch('https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=' + encodeURIComponent(sym) + ',day,,,320,qfq&_r=' + Date.now())
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      var d = (j && j.data && j.data[sym]) || {};
+      var kl = stkParseKline(d.qfqday || d.day);
+      if (!kl) return stkFetchKlineSina(sym, function (kl2) {
+        if (kl2) STK_KLINE_CACHE[ck] = kl2;
+        cb(kl2);
+      }, 320);
+      STK_KLINE_CACHE[ck] = kl;
+      cb(kl);
+    })
+    .catch(function () {
+      stkFetchKlineSina(sym, function (kl2) {
+        if (kl2) STK_KLINE_CACHE[ck] = kl2;
+        cb(kl2);
+      }, 320);
+    });
+}
+// 判断谐波点日期是否有落在当前 K 线轴之外（早于窗口起点/晚于终点/轴内缺失，如陈旧内嵌缺最新交易日）
+function hzNeedsLong(kl, hz) {
+  if (!hz || !hz.pointDays || !kl || kl.length < 2) return false;
+  var seen = {};
+  kl.forEach(function (b) { seen[b[0]] = 1; });
+  for (var k in hz.pointDays) {
+    var d = hz.pointDays[k];
+    if (d && !seen[d]) return true;
+  }
+  return false;
 }
 // 仅知名称（板块领涨TOP等无代码场景）：腾讯 smartbox script 注入反查代码（无 CORS，返回 v_hint 全局变量）
 // 匹配三级降级：全称精确 → 前缀匹配（数据源常给全称如「益诺思生物」，行情简称「益诺思」）→ 去常见后缀二次查询
@@ -2675,6 +2717,15 @@ function openStkModal(code, name, note) {
   var done = false;
   function render(kl, err) {
     if (done) return;
+    if (kl && kl.length > 1 && hzNeedsLong(kl, hz)) {
+      // R100z4n：谐波 XABCD 点在当前窗口外 → 拉 320 根长窗重渲染（失败/未变长则回退当前 kl）
+      done = true;
+      stkFetchKlineLong(code, function (klL) {
+        var use = (klL && klL.length > kl.length) ? klL : kl;
+        box.innerHTML = dbKlineSvg(use, hz);
+      });
+      return;
+    }
     done = true;
     box.innerHTML = (kl && kl.length > 1) ? dbKlineSvg(kl, hz) : '<div class="db-empty">' + esc(err || '暂无K线数据') + '</div>';
   }
