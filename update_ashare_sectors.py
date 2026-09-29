@@ -965,11 +965,31 @@ def fetch_ths_limit_up(date=None):
     return out, total
 
 def fetch_ths_lianban(date=None):
-    """连板梯队：同花顺涨停池中 lbc>=2 的标的，按 lbc 降序、pct 降序。失败返回 None。"""
+    """连板梯队：同花顺涨停池中 lbc>=2 的标的，按 lbc 降序、pct 降序。失败返回 None。
+    R100z5e：THS high_days_value 高16位是「X天Y板」的**累计板数**而非连板数，断续板会虚高
+    （实证：澳弘电子 2026-09-29 12天8板 → 旧解码 lbc=8，真实连板=1——9/28 跌停断档、
+    当日首板）。用东财涨停池 lbc（标准连板数）按 code 覆写后**重过滤 lbc>=2 + 重排序**；
+    东财池失败（None）时保留 THS 解码值并在日志打 [warn]（此时断续板仍可能虚标）。"""
     items, _ = fetch_ths_limit_up(date)
     if items is None:
         return None
     lb = [x for x in items if (x.get("lbc") or 1) >= 2]
+    em_pool = fetch_zt_pool_raw(date)
+    em_map = {}
+    if em_pool:
+        for p in em_pool:
+            try:
+                em_map[str(p.get("c"))] = int(p.get("lbc") or 1)
+            except Exception:
+                continue
+    if em_map:
+        for x in lb:
+            c = str(x.get("code") or "")
+            if c in em_map:
+                x["lbc"] = em_map[c]
+    elif em_pool is None:
+        print("[warn] 东财涨停池不可达，连板数保留THS「X天Y板」累计板数解码（断续板可能虚标）")
+    lb = [x for x in lb if (x.get("lbc") or 1) >= 2]
     lb.sort(key=lambda x: (-(x["lbc"] or 1), -fpct_of(x)))
     return lb
 

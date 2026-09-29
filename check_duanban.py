@@ -393,8 +393,30 @@ def parse_ths_industries(html):
 
 
 def fetch_ths_industries():
-    raw = curl_ths_text(THS_INDUSTRY_URL, timeout=20)
-    return parse_ths_industries(raw)
+    """R100z5d：一览表分页抓全（第1页50个 + 第2页40个 = 90 个同花顺行业）。
+    与 update_ashare_sectors.R98h 对齐——旧版只取第 1 页漏 40 个行业（电力/通用设备/
+    房地产开发等在第 2 页），导致池内匹配失败回退东财（沙箱被 WAF 拦）→
+    boardPctToday/boardPctZt 双 None。第2页用非 ajax 整页 URL（ajax/1/ 触发反爬跳转）。
+    按 code 去重合并；第 1 页失败（<10 个）时原样返回，避免半空表误匹配。"""
+    import time as _time
+    import random as _random
+    seen, out = set(), []
+    for page in range(1, 4):  # 最多抓到第3页防死循环
+        html = curl_ths_text(f"https://q.10jqka.com.cn/thshy/index/page/{page}/" if page > 1
+                             else THS_INDUSTRY_URL, timeout=20)
+        rows = parse_ths_industries(html)
+        fresh = [x for x in rows if x["code"] not in seen]
+        if page == 1 and len(out) + len(fresh) < 10:
+            return out + fresh  # 第1页异常，宁缺勿滥（调用方走东财兜底）
+        if not fresh:
+            break
+        for x in fresh:
+            seen.add(x["code"])
+            out.append(x)
+        if len(rows) < 10:  # 不足一页说明已到尾页
+            break
+        _time.sleep(1.0 + _random.random())
+    return out
 
 
 def fetch_ths_board_map():
@@ -495,6 +517,11 @@ def match_ths_industry(hybk, ths_names):
     if hybk in ths_names:
         return hybk
     SPECIAL = {
+        # R100z5d：同花顺行业一览表分页修复后（90 行业抓全）仍存在的命名差异映射
+        "林业Ⅱ": "种植业与林业", "航运港口": "港口航运", "饮料乳品": "饮料制造",
+        "煤炭开采": "煤炭开采加工", "一般零售": "零售", "装修装饰": "建筑装饰",
+        "水泥": "建筑材料", "基础建设": "建筑装饰", "饲料": "养殖业",
+        "出版": "文化传媒", "广告营销": "文化传媒",
         "证券Ⅱ": "证券", "装修装饰Ⅱ": "建筑装饰", "其他电子Ⅱ": "其他电子",
         "军工电子Ⅱ": "军工电子", "商用车": "汽车整车", "休闲食品": "食品加工制造",
         "旅游及景区": "旅游及酒店", "风电设备": "光伏设备", "电机Ⅱ": "通用设备",
