@@ -442,7 +442,11 @@ def _clean_fail(fp, today):
 
 
 def _compute_fail_pool(prev_pools, today_codes, cur_info, today):
-    """prev_pools 中已不在今日池的标的 → 归因失败入池。"""
+    """prev_pools 中已不在今日池的标的 → 归因失败入池。
+
+    R100z4x：归档时快照「失效前」完整几何（failHz），前端失效池弹窗据此重放
+    XABCD 连线与 PRZ 参数（ points/pointDays 由 cur_pools 全量留存后才有，
+    历史条目由 backfill_failhz.py 一次性回补，缺失时前端自然降级为纯K线）。"""
     fails = []
     for code, info in prev_pools.items():
         if code in today_codes:
@@ -455,9 +459,14 @@ def _compute_fail_pool(prev_pools, today_codes, cur_info, today):
         else:
             dist = cur.get('distToPrzPct')
             reason = '形态失效（距 PRZ ' + (str(dist) + '%' if dist is not None else '') + '，价格已远离反转区或结构走坏）'
-        fails.append({'code': code, 'name': info.get('name', ''), 'pattern': info.get('pattern', ''),
-                      'sector': info.get('sector', ''),
-                      'reason': reason, 'entryDate': today})
+        f = {'code': code, 'name': info.get('name', ''), 'pattern': info.get('pattern', ''),
+             'sector': info.get('sector', ''),
+             'reason': reason, 'entryDate': today}
+        # R100z4x：failHz 快照——只在几何字段齐全时写入（宁缺勿滥，前端按 prz 存在性守卫）
+        if info.get('points') and info.get('pointDays') and info.get('prz'):
+            f['failHz'] = {k: info.get(k) for k in (
+                'stage', 'points', 'pointDays', 'ratios', 'prz', 'stop', 'target1', 'target2')}
+        fails.append(f)
     return fails
 
 
@@ -571,12 +580,28 @@ def main():
         new_fails = _compute_fail_pool(prev_pools, today_codes, cur_info, today)
     carried_codes = set(f.get('code') for f in carried)
     failPool = carried + [f for f in new_fails if f['code'] not in carried_codes]
+    # R100z4x：failHz 跨运行保留——把既有 data.js harmonic.failPool 的 failHz 按 code 合并回
+    # carried/new 条目（backfill_failhz.py 一次性回补的失效前几何不会被下次抓取覆盖冲掉）；
+    # 新失败项若已有快照（来自 prev_pools 几何）则不覆盖。
+    if old and old.get('failPool'):
+        _hz_by_code = {}
+        for _f in old['failPool']:
+            if _f.get('code') and isinstance(_f.get('failHz'), dict) and _f['failHz'].get('prz'):
+                _hz_by_code[str(_f['code'])] = _f['failHz']
+        for _f in failPool:
+            if str(_f.get('code')) in _hz_by_code and not (
+                    isinstance(_f.get('failHz'), dict) and _f['failHz'].get('prz')):
+                _f['failHz'] = _hz_by_code[str(_f['code'])]
     # 保存状态供下次比对（抓取失败时保留 prev_pools，保证后续仍能识别滑出）
+    # R100z4x：cur_pools 全量留存几何字段——标的滑出池时 _compute_fail_pool 才能快照失效前形态
     cur_pools = {}
     for it in confirm + watch:
         cur_pools[it['code']] = {'name': it['name'], 'pattern': it['pattern'],
                                  'sector': it.get('sector', ''),
-                                 'stop': it.get('stop'), 'prz': it.get('prz')}
+                                 'stop': it.get('stop'), 'prz': it.get('prz'),
+                                 'stage': it.get('stage'), 'points': it.get('points'),
+                                 'pointDays': it.get('pointDays'), 'ratios': it.get('ratios'),
+                                 'target1': it.get('target1'), 'target2': it.get('target2')}
     _save_state({'pools': cur_pools if fetch_ok else prev_pools, 'failPool': failPool})
 
     new_field = {
