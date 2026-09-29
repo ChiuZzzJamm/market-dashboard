@@ -4,6 +4,13 @@
 import subprocess, json, sys, urllib.request, time, os, re
 from common import find_node, load_dashboard_data
 
+# R100z6 防护：本脚本为模块级流程脚本（无 main 函数），被 import 会直接执行微信推送
+# （2026-09-29 排查时 import 冒烟测试误触发过一次重复推送）。自动化一律以命令行调用，
+# 若出现本提示说明有工具在 import 本脚本——请改用 subprocess 调用。
+if __name__ != "__main__":
+    sys.stderr.write("[guard] push_notify.py 仅支持命令行运行，禁止 import（防误触发推送）\n")
+    sys.exit(1)
+
 BASE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(BASE)
 

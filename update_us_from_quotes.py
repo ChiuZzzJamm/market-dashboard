@@ -5,9 +5,16 @@
 成分股 TOP 直接展示真实个股（不再用 ETF 充当板块或成分股）。指数参考（道指/纳指/标普/SOXX/金龙）
 单独抓取，不混入板块。行情优先用 /tmp 预取文件，缺失成分股/指数时代码自动实时抓取兜底（零新增依赖）。
 """
-import json, re, os, argparse
+import json, re, os, sys, argparse
 from datetime import datetime, timezone, timedelta
 from common import load_dashboard_data, http_get
+
+# R100z6 防护：本脚本为模块级流程脚本（无 main 函数），被 import 会直接抓行情并写回
+# data.js（2026-09-29 排查时 import 冒烟测试曾误触发覆盖 updatedAt）。自动化一律以
+# 命令行调用；若出现本提示说明有工具在 import 本脚本——请改用 subprocess 调用。
+if __name__ != "__main__":
+    sys.stderr.write("[guard] update_us_from_quotes.py 仅支持命令行运行，禁止 import（防误写 data.js）\n")
+    sys.exit(1)
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(BASE)
