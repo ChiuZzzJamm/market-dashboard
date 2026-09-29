@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609291818"></script>
+<script src="data.js?v=202609291835"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -2157,13 +2157,14 @@ function renderDuanban() {
   switchSubTab(['db', 'hz', 'pw', 'acc'].indexOf(_savedTab) >= 0 ? _savedTab : 'db');
 }
 
-/* R100i：失败池（断板反包 / 谐波形态）——原符合形态但破位或超期失效的标的归档，5 交易日后自动清理。
+/* R100i：失败池（断板反包 / 谐波形态）——原符合形态但破位或超期失效的标的归档。
+   R100z5a：只保留最新一轮归档（=最近一个交易日失效的标的），不再累计历史。
    failPool: [{code,name,pattern,form,reason,entryDate}]；点击看该标的 K 线。 */
 function dbFailHtml(failPool, kind) {
   failPool = failPool || [];
   if (!failPool.length) {
     return '<div class="db-pool p-fail"><h2>失效归档池 · 0 只</h2>' +
-      '<div class="db-empty">暂无失效标的（形态破位或超期失效的标的会落入此池，5 个交易日后自动清理）</div></div>';
+      '<div class="db-empty">暂无失效标的（最近一个交易日失效的标的才会落入此池，次日自动滚出）</div></div>';
   }
   var items = failPool.map(function (e, i) {
     var nm = (e.name && e.name !== e.code) ? e.name : '';
@@ -2173,10 +2174,10 @@ function dbFailHtml(failPool, kind) {
     return '<div class="fail-chip"' + click + '>' +
       '<div class="r1"><b>' + esc(nm || e.code) + '</b>' + (nm ? '<span class="cd">' + esc(e.code) + '</span>' : '') + sec + '</div>' +
       '<div class="fr">' + esc(e.reason || '形态失效') + '</div>' +
-      '<div class="fd">' + (fday ? '失效 ' + esc(fday) + ' · 归档 ' + esc(e.entryDate || '—') : '归档：' + esc(e.entryDate || '—') + '（5 交易日内保留）') + '</div></div>';
+      '<div class="fd">' + (fday ? '失效 ' + esc(fday) + ' · 归档 ' + esc(e.entryDate || '—') : '归档：' + esc(e.entryDate || '—')) + '</div></div>';
   }).join('');
   return '<div class="db-pool p-fail"><h2>失效归档池 · ' + failPool.length + ' 只</h2>' +
-    '<div class="db-sub">原符合' + (kind === 'harmonic' ? '谐波' : '断板反包') + '形态、因破位或超期失效而归因失败；5 个交易日后自动清理</div>' +
+    '<div class="db-sub">原符合' + (kind === 'harmonic' ? '谐波' : '断板反包') + '形态、因破位或超期失效而归因失败；仅保留最近一个交易日失效的标的</div>' +
     '<div class="db-chips">' + items + '</div></div>';
 }
 

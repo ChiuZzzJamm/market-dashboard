@@ -91,11 +91,20 @@ def main():
                 fail_day, fail_kind = bars[j]['day'], 'over'
                 break
         e['failHz']['failDay'] = fail_day
-        # R100z4z：按真实失效原因重写 reason——旧文案统一「价格已远离反转区」，对
-        # D 超龄归档（友升股份/新华保险价格仍在 PRZ 附近）属误导；failDay=None
-        # 意味着几何至今仍过全部价格闸门，唯一不满足的就是 D 点 30 个交易日时效。
+        # R100z4z/R100z5a：按真实失效原因重写 reason。
+        # failDay=None 意味着几何至今仍过全部价格闸门——若 D 点很新（≤30 个交易日）
+        # 则属误归档（运行间检测噪声，如宝新能源 D=09-24 却被告超龄），标记后由清理逻辑剔除。
         if fail_day is None:
-            e['reason'] = 'D 点距今超 30 个交易日，形态超龄归档（价格未破止损、仍在反转区附近，保守起见不再跟踪）'
+            d_day = str(((r.get('pointDays') or {}).get('D') or ''))[:10]
+            d_age = None
+            try:
+                d_age = (datetime.date.today() - datetime.datetime.strptime(d_day, '%Y-%m-%d').date()).days
+            except Exception:
+                d_age = None
+            if d_age is not None and d_age * 5 / 7 > 30:
+                e['reason'] = 'D 点距今超 30 个交易日，形态超龄归档（价格未破止损、仍在反转区附近，保守起见不再跟踪）'
+            else:
+                e['reason'] = '误归档（形态仍有效，检测噪声）'
         elif fail_kind == 'dead':
             e['reason'] = '跌破止损位（' + str(r.get('stop')) + '），形态破位失效'
         elif fail_kind == 'away':
@@ -103,7 +112,7 @@ def main():
         elif fail_kind == 'over':
             e['reason'] = '价格已越过 PRZ 上沿 3% 以上，D 段走完'
         else:
-            e['reason'] = '形态失效（不再符合谐波几何）'
+            e['reason'] = str(fail_day) + ' K 线击穿 C-D 结构，XABCD 摆动不再符合谐波几何'
         hit += 1
 
     print(f"[BACKFILL] 回补完成：成功 {hit}，跳过 {miss}")

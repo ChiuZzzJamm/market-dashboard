@@ -426,7 +426,7 @@ def _save_state(st):
 
 
 def _clean_fail(fp, today):
-    """保留 5 个交易日内的失效归档；超期清理。"""
+    """抓取异常日的兜底保留（正常轮次失效池整体替换，只留最新一轮归档）；超期清理。"""
     if not fp:
         return []
     out = []
@@ -441,21 +441,26 @@ def _clean_fail(fp, today):
     return out
 
 
-def _compute_fail_pool(prev_pools, today_codes, cur_info, today):
+def _compute_fail_pool(prev_pools, today_codes, cur_info, today, bars_map=None):
     """prev_pools 中已不在今日池的标的 → 归因失败入池。
 
     R100z4x：归档时快照「失效前」完整几何（failHz），前端失效池弹窗据此重放
     XABCD 连线与 PRZ 参数（ points/pointDays 由 cur_pools 全量留存后才有，
-    历史条目由 backfill_failhz.py 一次性回补，缺失时前端自然降级为纯K线）。"""
+    历史条目由 backfill_failhz.py 一次性回补，缺失时前端自然降级为纯K线）。
+    R100z5a：误归档防护——滑出池但重扫同形态几何仍有效（运行间检测噪声，如
+    宝新能源 D 点仅 2 个交易日却被告超龄），直接跳过不归档。"""
     fails = []
     for code, info in prev_pools.items():
         if code in today_codes:
             continue
         cur = cur_info.get(code)
         if cur is None:
-            # R100z4z：区分「D 超龄归档」与「价格失效」——D 点日期距今（日历日 ×5/7 近似
-            # 交易日）超 30 个交易日，且该标的未被价格闸门当场击穿（cur=None 仅因时效被剔），
-            # 文案不能再写「价格已远离反转区」（友升股份/新华保险价格仍在 PRZ 附近属误导）。
+            # R100z5a：重扫复核——几何仍有效（同形态、未破位、过价格闸门）属检测噪声，不归档
+            _b = (bars_map or {}).get(code)
+            _rr = scan_bars(_b) if _b and len(_b) >= 40 else None
+            if (_rr and not _rr.get('dead') and _rr.get('points') and _rr.get('prz')
+                    and _rr.get('pattern') == info.get('pattern')):
+                continue
             d_day = ((info.get('pointDays') or {}).get('D') or '')[:10]
             d_age = None
             try:
@@ -465,12 +470,12 @@ def _compute_fail_pool(prev_pools, today_codes, cur_info, today):
             if d_age is not None and d_age * 5 / 7 > 30:
                 reason = 'D 点距今超 30 个交易日，形态超龄归档（价格未破止损、仍在反转区附近，保守起见不再跟踪）'
             else:
-                reason = '形态失效（不再符合谐波几何，价格已远离反转区）'
+                reason = '形态失效（最新 K 线使 XABCD 摆动结构不再成立，不再符合谐波几何）'
         elif cur.get('dead'):
             reason = '跌破止损位（' + str(info.get('stop')) + '），形态破位失效'
         else:
             dist = cur.get('distToPrzPct')
-            reason = '形态失效（距 PRZ ' + (str(dist) + '%' if dist is not None else '') + '，价格已远离反转区或结构走坏）'
+            reason = '价格远离反转区（距 PRZ ' + (str(dist) + '%' if dist is not None else '') + '，D 结构走完失效）'
         f = {'code': code, 'name': info.get('name', ''), 'pattern': info.get('pattern', ''),
              'sector': info.get('sector', ''),
              'reason': reason, 'entryDate': today}
@@ -478,6 +483,11 @@ def _compute_fail_pool(prev_pools, today_codes, cur_info, today):
         if info.get('points') and info.get('pointDays') and info.get('prz'):
             f['failHz'] = {k: info.get(k) for k in (
                 'stage', 'points', 'pointDays', 'ratios', 'prz', 'stop', 'target1', 'target2')}
+            # R100z5a：归档轮次即失效轮次——failDay=失效日（当日收盘 K 线），asOf=前一日
+            _b = (bars_map or {}).get(code)
+            if _b and len(_b) >= 2:
+                f['failHz']['failDay'] = _b[-1]['day']
+                f['failHz']['asOf'] = _b[-2]['day']
         fails.append(f)
     return fails
 
@@ -581,7 +591,9 @@ def main():
     n_ok = sum(1 for v in kl.values() if v)
     fetch_ok = len(codes) > 0 and n_ok >= len(codes) * 0.8
 
-    # R100i：失败池——原在池内、今日滑出的标的归因失败归档，5 交易日后清理。
+    # R100i：失败池——原在池内、今日滑出的标的归因失败归档。
+    # R100z5a：失效池只保留最新一轮归档（=最近一个交易日失效的标的，用户拍板），
+    # 不再累计携带 5 个交易日的历史归档；抓取异常日沿用旧池兜底（R91m 防清场）。
     # 仅在抓取正常（fetch_ok）且确有数据/旧池时计算新失败，避免抓取故障时误判全池失效。
     today_codes = set([it['code'] for it in confirm] + [it['code'] for it in watch])
     prev_state = _load_state()
@@ -589,9 +601,8 @@ def main():
     carried = _clean_fail(prev_state.get('failPool', []), today)
     new_fails = []
     if fetch_ok and (confirm or watch or prev_pools):
-        new_fails = _compute_fail_pool(prev_pools, today_codes, cur_info, today)
-    carried_codes = set(f.get('code') for f in carried)
-    failPool = carried + [f for f in new_fails if f['code'] not in carried_codes]
+        new_fails = _compute_fail_pool(prev_pools, today_codes, cur_info, today, kl)
+    failPool = new_fails if fetch_ok else carried
     # R100z4x：failHz 跨运行保留——把既有 data.js harmonic.failPool 的 failHz 按 code 合并回
     # carried/new 条目（backfill_failhz.py 一次性回补的失效前几何不会被下次抓取覆盖冲掉）；
     # 新失败项若已有快照（来自 prev_pools 几何）则不覆盖。
