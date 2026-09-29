@@ -263,11 +263,18 @@ def scan_bars(bars, pct=0.05):
                 D, di = _run_high(bars, piv[i+3][0])
                 if D:
                     tried.append((X, A, B, C, D, xi, ai, bi, ci, di))
-        # 解释 3：延伸族（B 后低点跌破 A，C 为途中点，无真实 C 枢轴 → ci=None）
+        # 解释 3：延伸族（B 后低点跌破 A，C 为途中点，无真实 C 枢轴 → 名义价 0.5AB）
         run_lo, run_lo_i = _run_low(bars, p3[0])
         if run_lo is not None and run_lo < A:
             C_nom = B - 0.5 * (B - A)
-            tried.append((X, A, B, C_nom, run_lo, xi, ai, bi, None, run_lo_i))
+            # R100z4q：名义 C 补真实日期——B 后第一根 low 触及 C_nom 的 bar
+            # （run_lo < A < C_nom，穿越 bar 必然存在），前端 K 线连线才有 C 顶点
+            ci_nom = None
+            for j in range(bi + 1, run_lo_i + 1):
+                if bars[j]['low'] <= C_nom:
+                    ci_nom = j
+                    break
+            tried.append((X, A, B, C_nom, run_lo, xi, ai, bi, ci_nom, run_lo_i))
         # 解释 4：Cypher（p3 高于 X，B 名义派生）
         if B > X and p3[0] + 1 < len(bars):
             Cq = B; cqi = bi
@@ -305,6 +312,11 @@ def scan_bars(bars, pct=0.05):
             # 如 601869 几月前 Crab D=71.98 而现价 402），或距 PRZ 仍差 8% 以上（D 远未
             # 到位），一律作废——防陈旧形态混入观察池导致 PRZ 与现价严重脱节
             if dist > 8 or dist < -3:
+                continue
+            # R100z4q：D 点时效闸门——D 距今超 30 个交易日的形态一律作废。
+            # 此前只看价格距离（600593 D=2026-01、002005 D=2025-07 现价恰在 PRZ 附近徘徊
+            # 照样过闸），但「D段确认·企稳」的反转窗口早已关闭，陈旧图形不应留在日度池
+            if not isinstance(di, int) or (len(bars) - 1 - di) > 30:
                 continue
             out.append({
                 'pattern': name,
@@ -497,6 +509,16 @@ def main():
         if isinstance(it, dict) and it.get('code'):
             acc[it['code']] = it.get('hitCount', 0)
 
+    # R100z4q：旧池 AI 叙事保留表——盘中/中途重跑本脚本会把 story/deduce 清空，
+    # 直到下一次自动化 AI 补写；同 code 同 pattern 的条目直接继承旧叙事
+    _old_map = {}
+    _oldh = D.get('harmonic') or {}
+    for _k in ('confirmPool', 'watchPool'):
+        for _it in (_oldh.get(_k) or []):
+            if isinstance(_it, dict) and _it.get('code'):
+                _old_map[str(_it['code']) + '|' + str(_it.get('pattern') or '')] = (
+                    _it.get('story') or '', _it.get('deduce'))
+
     confirm, watch = [], []
     cur_info = {}
     for c in codes:
@@ -510,6 +532,7 @@ def main():
             continue
         # 取简称：优先 stkKlineNames / duanban
         nm = names.get(c) or (D.get('stkKlineNames') or {}).get(c) or ''
+        _sd = _old_map.get(str(c) + '|' + str(r['pattern'])) or ('', None)
         item = {
             'code': c, 'name': nm, 'sector': sec_map.get(c, ''),
             'pattern': r['pattern'],
@@ -519,7 +542,7 @@ def main():
             'target2': r['target2'], 'distToPrzPct': r['distToPrzPct'],
             'accResonance': int(acc.get(c, 0)),
             'lastClose': round(bars[-1]['close'], 2), 'lastDay': bars[-1]['day'],
-            'story': '', 'deduce': None,
+            'story': _sd[0], 'deduce': _sd[1],
         }
         (confirm if r['stage'] == '确认' else watch).append(item)
     confirm.sort(key=lambda x: x['distToPrzPct'])

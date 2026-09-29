@@ -2373,13 +2373,16 @@ function _dbk_markline(hz) {
 }
 function _dbk_markpoint(hz) {
   if (!hz || !hz.points || !hz.pointDays) return undefined;
-  var pm = { X: '#7f8c8d', A: '#2f6fdb', B: '#9b59b6', C: '#e8862c', D: '#f0435c' };
   var pts = [];
   ['X', 'A', 'B', 'C', 'D'].forEach(function (k) {
     var pv = hz.points[k], day = hz.pointDays[k];
     if (typeof pv === 'number' && day) {
-      var isD = (k === 'D'); // 实际 D：实心红点 + 白边放大，与「D投影」虚线对照
-      pts.push({ name: k, coord: [day, pv], itemStyle: { color: pm[k], borderColor: isD ? '#fff' : 'transparent', borderWidth: isD ? 2 : 0 }, symbolSize: isD ? 12 : 8, label: { show: false } });
+      // R100z4q：样式与迷你图统一——X/A/B/C 白底红边空心圆+红字字母标签；D 实际=实心红点（用户拍板）
+      var isD = (k === 'D');
+      pts.push({ name: k, coord: [day, pv], symbol: 'circle', symbolSize: isD ? 11 : 7,
+        itemStyle: isD ? { color: '#f0435c', borderColor: '#fff', borderWidth: 2 }
+                       : { color: '#fff', borderColor: '#f0435c', borderWidth: 2 },
+        label: { show: true, formatter: k, color: '#f0435c', fontSize: 10, fontWeight: 700, position: 'top', distance: 4 } });
     }
   });
   if (!pts.length) return undefined;
