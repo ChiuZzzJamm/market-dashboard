@@ -7,7 +7,7 @@
 validate 之前运行，把所有 A股标的的日 K 线一次性抓取并写入 data.js 顶层：
 
   stkKlines     : {"600519": [[date,open,close,high,low,volume], ...], ...}  # 分级根数日K
-                  # R100z6d：谐波池(confirmPool/watchPool) 320 根长窗，其余标的 120 根
+                  # R100z6f：全量统一 120 根
   stkKlineNames : {"贵州茅台": "600519", ...}   # 板块领涨TOP 等无 code 条目的名称反查
 
 数据源：
@@ -28,14 +28,15 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-# R100z6d：分级根数 —— 谐波池 320 根长窗（X/A 点常在数月前），其余标的 120 根（用户定稿）
+# R100z6f：全量统一 120 根（用户拍板：谐波池也 120；当前 24 只形态点均在 120 窗口内，
+#         弹窗 hzNeedsLong 为 false 不触发长窗拉取。若未来形态点超出 120 窗口，弹窗走网络 320 兜底）
 IFZQ_URL = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={sym},day,,,{n},qfq"
 SMARTBOX_URL = "https://smartbox.gtimg.cn/s3/?v=2&q={q}&t=all"
 # R98j：腾讯 ifzq 被 WAF 拦截/失败时的新浪 JSON 备源（日K 不复权，兜底；指数/个股通用）
 SINA_URL = ("https://quotes.sina.cn/cn/api/json_v2.php/CN_MarketDataService.getKLineData"
             "?symbol={sym}&scale=240&ma=no&datalen={n}")
 BARS_DEFAULT = 120
-BARS_HARMONIC = 320
+BARS_HARMONIC = 120  # R100z6f：与 DEFAULT 统一（保留分流结构便于日后调整）
 # R98j：大盘指数 sym（前端点击指数看K线；指数键带 sh/sz 前缀，与个股 6 位键不冲突）
 INDEX_SYMS = {"上证指数": "sh000001", "深证成指": "sz399001", "创业板指": "sz399006",
               "科创50": "sh000688", "上证50": "sh000016"}
