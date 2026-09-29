@@ -1508,7 +1508,19 @@ function stkNewsHtml(code) {
       });
     });
   });
-  if (!e && !hits.length && !hzIt && !accIt && !pwIt) return '';
+  // R100z4s：板块异动（领涨/领跌）TOP 成分股 → 挂所属板块的 reason+deduce；
+  // AI 预测板块成分股 → 挂 direction/confidence/logic+deduce。此前这两类标的弹窗消息区全空白。
+  var secHit = null;
+  ((D.ashare || {}).sectorsUp || []).concat((D.ashare || {}).sectorsDown || []).forEach(function (s) {
+    if (secHit || !s || !s.tops) return;
+    for (var i = 0; i < s.tops.length; i++) { if (String((s.tops[i] || {}).code) === code) { secHit = s; break; } }
+  });
+  var aiHit = null;
+  ((D.aiPrediction || {}).sectors || []).forEach(function (s) {
+    if (aiHit || !s || !s.stocks) return;
+    for (var i = 0; i < s.stocks.length; i++) { if (String((s.stocks[i] || {}).code) === code) { aiHit = s; break; } }
+  });
+  if (!e && !hits.length && !hzIt && !accIt && !pwIt && !secHit && !aiHit) return '';
   // R100y：与断板反包弹窗同款「三口径」分组——利好口径/利空口径/中性口径，
   // 组内条目统一「个股消息 🇨🇳：」/「个股消息 🌍：」格式（🇨🇳=国内，🌍=隔夜/国际）。
   var groups = { bull: [], bear: [], neutral: [] };
@@ -1556,7 +1568,25 @@ function stkNewsHtml(code) {
     if (allRefs.length) h += '<div class="db-ref-sum" style="margin-top:4px;">来源：' + esc(allRefs.map(function (r) { return '《' + r.title + '》' + (r.source || r.src || ''); }).join('；')) + '</div>';
     h += '<div class="db-ref-sum" style="margin-top:4px;">形态核验：check_duanban.py 确定性脚本（涨停池 + 腾讯日K）；观察池标的待最后一根确认K线，确认失败即移出。</div>';
   }
-  if (!e && !hits.length) h += '<div class="db-ref-sum">暂无明确利好/利空消息（按当日要闻与 AI 写回自动更新）</div>';
+  if (secHit) {
+    // R100z4s：reason 实际为 {title, detail} 对象（兼容旧字符串形态）
+    var _rs = secHit.reason;
+    var _rt = (_rs && typeof _rs === 'object') ? (_rs.title || '') : String(_rs || '');
+    var _rd = (_rs && typeof _rs === 'object') ? (_rs.detail || '') : '';
+    h += '<div class="db-ref-p" style="margin-top:6px;"><b>异动板块 · ' + esc(secHit.name || '') +
+      (secHit.pct != null ? '（今日 ' + (secHit.pct > 0 ? '+' : '') + secHit.pct + '%）' : '') + '：</b>' +
+      (_rt ? '<div class="db-ref-sum">' + esc(_rt) + (_rd ? '：' + esc(_rd) : '') + '</div>' : '') + '</div>';
+    if (secHit.deduce) h += renderDeduce(secHit.deduce, true);
+  }
+  if (aiHit) {
+    h += '<div class="db-ref-p" style="margin-top:6px;"><b>AI 预测 · ' + esc(aiHit.sector || '') + '：</b>' +
+      '<div class="db-ref-sum">预计' + esc(aiHit.direction || '') + ' · 置信度 ' + esc(aiHit.confidence || '') + '</div>' +
+      (aiHit.usDriver ? '<div class="db-ref-sum">隔夜驱动：' + esc(aiHit.usDriver) + '</div>' : '') +
+      (aiHit.logic ? '<div class="db-ref-sum">映射逻辑：' + esc(aiHit.logic) + '</div>' : '') + '</div>';
+    if (aiHit.deduce) h += renderDeduce(aiHit.deduce, true);
+    else if (aiHit.counter) h += '<div class="dd-box"><div class="dd-counter">反证：' + esc(_ddClean(aiHit.counter)) + '</div></div>';
+  }
+  if (!e && !hits.length && !secHit && !aiHit) h += '<div class="db-ref-sum">暂无明确利好/利空消息（按当日要闻与 AI 写回自动更新）</div>';
   return h;
 }
 
@@ -2371,37 +2401,32 @@ function _dbk_markline(hz) {
   if (!data.length) return undefined;
   return { silent: true, symbol: 'none', lineStyle: { width: 1 }, data: data };
 }
-function _dbk_markpoint(hz) {
-  if (!hz || !hz.points || !hz.pointDays) return undefined;
-  var pts = [];
-  ['X', 'A', 'B', 'C', 'D'].forEach(function (k) {
-    var pv = hz.points[k], day = hz.pointDays[k];
-    if (typeof pv === 'number' && day) {
-      // R100z4q：样式与迷你图统一——X/A/B/C 白底红边空心圆+红字字母标签；D 实际=实心红点（用户拍板）
-      var isD = (k === 'D');
-      pts.push({ name: k, coord: [day, pv], symbol: 'circle', symbolSize: isD ? 11 : 7,
-        itemStyle: isD ? { color: '#f0435c', borderColor: '#fff', borderWidth: 2 }
-                       : { color: '#fff', borderColor: '#f0435c', borderWidth: 2 },
-        label: { show: true, formatter: k, color: '#f0435c', fontSize: 10, fontWeight: 700, position: 'top', distance: 4 } });
-    }
-  });
-  if (!pts.length) return undefined;
-  return { symbol: 'circle', symbolSize: 8, data: pts };
-}
-// R100z4p：谐波 X→A→B→C→D 红色连线（仅谐波池弹窗，hz 非空时注入）。无日期的点（C 常缺）跳过该顶点，由水平虚线保留其价位。
+// R100z4s：谐波 X→A→B→C→D 红色连线（仅谐波池弹窗，hz 非空时注入）。
+// 点直接作为 line series 数据项（per-point itemStyle/label）——原 markPoint 在 dataZoom
+// 窗口外不渲染，挪进 series 后配合 clip:false 即可「一直渲染」（用户要求，R100z4s）。
+// 无日期的点（延伸族名义 C 兜底）跳过该顶点，由水平虚线保留其价位。
 function _dbk_hzline(hz, dates) {
   if (!hz || !hz.points || !hz.pointDays) return null;
   var seq = ['X', 'A', 'B', 'C', 'D'];
   var data = [];
   for (var i = 0; i < seq.length; i++) {
     var k = seq[i], pv = hz.points[k], day = hz.pointDays[k];
-    if (typeof pv === 'number' && day && dates.indexOf(day) >= 0) data.push([day, pv]);
+    if (typeof pv !== 'number' || !day || dates.indexOf(day) < 0) continue;
+    var isD = (k === 'D'); // D 实际=实心红点，X/A/B/C=白底红边空心圆（与迷你图统一，R100z4q）
+    data.push({
+      value: [day, pv], name: k,
+      itemStyle: isD ? { color: '#f0435c', borderColor: '#fff', borderWidth: 2 }
+                     : { color: '#fff', borderColor: '#f0435c', borderWidth: 2 },
+      label: { show: true, formatter: k, color: '#f0435c', fontSize: 10, fontWeight: 700, position: 'top', distance: 4 }
+    });
   }
-  if (data.length < 2) return null;
+  if (!data.length) return null;
   return {
     name: '谐波结构', type: 'line', xAxisIndex: 0, yAxisIndex: 0,
-    data: data, showSymbol: false, symbol: 'none',
+    data: data, showSymbol: true, symbol: 'circle',
+    symbolSize: function (v, p) { return (p && p.data && p.data.name === 'D') ? 11 : 7; },
     lineStyle: { color: '#f0435c', width: 2, type: 'solid' },
+    clip: false, // R100z4s：超出 dataZoom 窗口/网格边界也一直渲染，不截断
     z: 6, silent: true, tooltip: { show: false }, animation: false
   };
 }
@@ -2412,6 +2437,20 @@ function _dbk_option(kl, hz) {
   var vol = kl.map(function (b) { return { value: b[5], itemStyle: { color: b[2] >= b[1] ? UP : DOWN } }; });
   var ma5 = _dbk_ma(5, kl), ma10 = _dbk_ma(10, kl), ma20 = _dbk_ma(20, kl), ma30 = _dbk_ma(30, kl);
   var startPct = Math.max(0, (kl.length - 30) / kl.length * 100);
+  // R100z4s：含谐波时自动把窗口起点扩到最早谐波点之前——默认近30根会把 X/A 甩出窗外
+  if (hz && hz.pointDays) {
+    var _minIdx = -1;
+    ['X', 'A', 'B', 'C', 'D'].forEach(function (k) {
+      var day = hz.pointDays[k];
+      if (!day) return;
+      var ix = dates.indexOf(day);
+      if (ix >= 0 && (_minIdx < 0 || ix < _minIdx)) _minIdx = ix;
+    });
+    if (_minIdx >= 0) {
+      var _st = Math.max(0, _minIdx - 2) / kl.length * 100;
+      if (_st < startPct) startPct = _st;
+    }
+  }
   var stg = _dbk_stage(hz);
   return {
     animation: false,
@@ -2463,8 +2502,7 @@ function _dbk_option(kl, hz) {
         name: 'K线', type: 'candlestick', data: candle, xAxisIndex: 0, yAxisIndex: 0,
         itemStyle: { color: UP, color0: DOWN, borderColor: UP, borderColor0: DOWN },
         markArea: (hz && hz.prz) ? { silent: true, itemStyle: { color: 'rgba(15,157,120,0.10)' }, data: [[{ yAxis: hz.prz[0] }, { yAxis: hz.prz[1] }]] } : undefined,
-        markLine: _dbk_markline(hz),
-        markPoint: _dbk_markpoint(hz)
+        markLine: _dbk_markline(hz)
       },
       { name: 'MA5', type: 'line', data: ma5, xAxisIndex: 0, yAxisIndex: 0, smooth: true, showSymbol: false, lineStyle: { width: 1, color: '#4aa8e0' } },
       { name: 'MA10', type: 'line', data: ma10, xAxisIndex: 0, yAxisIndex: 0, smooth: true, showSymbol: false, lineStyle: { width: 1, color: '#f5a623' } },
