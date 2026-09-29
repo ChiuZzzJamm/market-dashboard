@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609291805"></script>
+<script src="data.js?v=202609291818"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -463,7 +463,6 @@
   .fail-chip .cd { font-size: 11px; color: var(--ink2); }
   .fail-chip .fr { font-size: 11px; color: #a33; margin-top: 4px; line-height: 1.5; }
   .fail-chip .fd { font-size: 10px; color: var(--ink2); margin-top: 2px; }
-  .fail-chip .hz-pat { font-size: 9.5px; font-weight: 600; color: var(--ink2); margin-left: auto; } /* R100z4x：失效池形态名缩小（参考确认池卡片密度） */
   .hz-card.fail { opacity: .85; border-style: dashed; }
   .db-modal-meta { font-size: 12.5px; color: var(--ink); line-height: 1.8; margin-bottom: 10px; }
   .db-modal-meta .lab { color: var(--ink2); }
@@ -2169,12 +2168,12 @@ function dbFailHtml(failPool, kind) {
   var items = failPool.map(function (e, i) {
     var nm = (e.name && e.name !== e.code) ? e.name : '';
     var click = e.code ? (' onclick="openFailIdx(\'' + kind + '\',' + i + ')"') : ''; // R100z4x：失效池弹窗接入同组导航（左右箭头）
-    var pat = e.pattern ? ('<span class="hz-pat">' + esc(e.pattern) + '</span>') : '';
     var sec = e.sector ? ('<span class="db-sec-pill">' + esc(e.sector) + '</span>') : ''; // R100z4x：失效池补板块徽章（与确认/观察池同款胶囊）
+    var fday = (e.failHz && e.failHz.failDay) ? String(e.failHz.failDay).slice(5) : ''; // R100z4z：失效日上卡片（回补/快照有 failDay 时），不再只显示归档日
     return '<div class="fail-chip"' + click + '>' +
-      '<div class="r1"><b>' + esc(nm || e.code) + '</b>' + (nm ? '<span class="cd">' + esc(e.code) + '</span>' : '') + sec + pat + '</div>' +
+      '<div class="r1"><b>' + esc(nm || e.code) + '</b>' + (nm ? '<span class="cd">' + esc(e.code) + '</span>' : '') + sec + '</div>' +
       '<div class="fr">' + esc(e.reason || '形态失效') + '</div>' +
-      '<div class="fd">归档：' + esc(e.entryDate || '—') + '（5 交易日内保留）</div></div>';
+      '<div class="fd">' + (fday ? '失效 ' + esc(fday) + ' · 归档 ' + esc(e.entryDate || '—') : '归档：' + esc(e.entryDate || '—') + '（5 交易日内保留）') + '</div></div>';
   }).join('');
   return '<div class="db-pool p-fail"><h2>失效归档池 · ' + failPool.length + ' 只</h2>' +
     '<div class="db-sub">原符合' + (kind === 'harmonic' ? '谐波' : '断板反包') + '形态、因破位或超期失效而归因失败；5 个交易日后自动清理</div>' +
@@ -2587,7 +2586,7 @@ function _dbk_option(kl, hz) {
     [hz.stop, hz.prz[0], hz.prz[1], hz.target1, hz.target2].forEach(function (v) {
       if (typeof v === 'number' && isFinite(v)) { _ymin = (_ymin === undefined) ? v : Math.min(_ymin, v); _ymax = (_ymax === undefined) ? v : Math.max(_ymax, v); }
     });
-    if (_ymin !== undefined) { var _pad = (_ymax - _ymin) * 0.03 || 1; _ymin -= _pad; _ymax += _pad; }
+    if (_ymin !== undefined) { var _pad = (_ymax - _ymin) * 0.03 || 1; _ymin = +(_ymin - _pad).toFixed(2); _ymax = +(_ymax + _pad).toFixed(2); } // R100z4z：取整两位，轴标签不再出现 13.0933000000000 浮点垃圾
   }
   var stg = _dbk_stage(hz);
   return {

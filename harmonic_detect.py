@@ -453,7 +453,19 @@ def _compute_fail_pool(prev_pools, today_codes, cur_info, today):
             continue
         cur = cur_info.get(code)
         if cur is None:
-            reason = '形态失效（不再符合谐波几何，价格已远离反转区）'
+            # R100z4z：区分「D 超龄归档」与「价格失效」——D 点日期距今（日历日 ×5/7 近似
+            # 交易日）超 30 个交易日，且该标的未被价格闸门当场击穿（cur=None 仅因时效被剔），
+            # 文案不能再写「价格已远离反转区」（友升股份/新华保险价格仍在 PRZ 附近属误导）。
+            d_day = ((info.get('pointDays') or {}).get('D') or '')[:10]
+            d_age = None
+            try:
+                d_age = (datetime.date.today() - datetime.datetime.strptime(d_day, '%Y-%m-%d').date()).days
+            except Exception:
+                d_age = None
+            if d_age is not None and d_age * 5 / 7 > 30:
+                reason = 'D 点距今超 30 个交易日，形态超龄归档（价格未破止损、仍在反转区附近，保守起见不再跟踪）'
+            else:
+                reason = '形态失效（不再符合谐波几何，价格已远离反转区）'
         elif cur.get('dead'):
             reason = '跌破止损位（' + str(info.get('stop')) + '），形态破位失效'
         else:

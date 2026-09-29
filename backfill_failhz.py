@@ -74,14 +74,36 @@ def main():
         # 前端把 K 线截断到 failDay 并画「失效」竖线，让失效位置一目了然。
         e['failHz']['asOf'] = bars[ri]['day']
         fail_day = None
+        fail_kind = None
         for j in range(ri + 1, len(bars)):
             r2 = scan_bars(bars[:j + 1])
             dist = (r2 or {}).get('distToPrzPct')
-            if (not r2 or not r2.get('points') or not r2.get('prz') or r2.get('dead')
-                    or (dist is not None and (dist > 8 or dist < -3))):
-                fail_day = bars[j]['day']
+            if not r2 or not r2.get('points') or not r2.get('prz'):
+                fail_day, fail_kind = bars[j]['day'], 'geometry'
+                break
+            if r2.get('dead'):
+                fail_day, fail_kind = bars[j]['day'], 'dead'
+                break
+            if dist is not None and dist > 8:
+                fail_day, fail_kind = bars[j]['day'], 'away'
+                break
+            if dist is not None and dist < -3:
+                fail_day, fail_kind = bars[j]['day'], 'over'
                 break
         e['failHz']['failDay'] = fail_day
+        # R100z4z：按真实失效原因重写 reason——旧文案统一「价格已远离反转区」，对
+        # D 超龄归档（友升股份/新华保险价格仍在 PRZ 附近）属误导；failDay=None
+        # 意味着几何至今仍过全部价格闸门，唯一不满足的就是 D 点 30 个交易日时效。
+        if fail_day is None:
+            e['reason'] = 'D 点距今超 30 个交易日，形态超龄归档（价格未破止损、仍在反转区附近，保守起见不再跟踪）'
+        elif fail_kind == 'dead':
+            e['reason'] = '跌破止损位（' + str(r.get('stop')) + '），形态破位失效'
+        elif fail_kind == 'away':
+            e['reason'] = '价格远离反转区（距 PRZ 超 8%，D 结构走完失效）'
+        elif fail_kind == 'over':
+            e['reason'] = '价格已越过 PRZ 上沿 3% 以上，D 段走完'
+        else:
+            e['reason'] = '形态失效（不再符合谐波几何）'
         hit += 1
 
     print(f"[BACKFILL] 回补完成：成功 {hit}，跳过 {miss}")
