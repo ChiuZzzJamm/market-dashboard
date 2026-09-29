@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609290837"></script>
+<script src="data.js?v=202609290923"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1521,11 +1521,11 @@ function stkNewsHtml(code) {
   }
   var storyParas = [];
   if (e) {
-    (e.bullRefs || []).forEach(function (r) { refItem(r, 'bull'); });
-    (e.bearRefs || []).forEach(function (r) { refItem(r, 'bear'); });
-    var story = typeof e.story === 'string' ? e.story.trim() : '';
-    if (story) {
-      story.split(/\n+/).map(function (p) { return p.split(/(?=【)/); }).reduce(function (a, b) { return a.concat(b); }, []).filter(function (s2) { return s2 && s2.trim(); }).forEach(function (p) {
+    var storyRaw = typeof e.story === 'string' ? e.story.trim() : ''; // R100z4k：先取 story 原文，供 refs 去重（story 已含的新闻不再重复渲染）
+    (e.bullRefs || []).forEach(function (r) { if (!(storyRaw && r && r.title && storyRaw.indexOf(r.title) >= 0)) refItem(r, 'bull'); });
+    (e.bearRefs || []).forEach(function (r) { if (!(storyRaw && r && r.title && storyRaw.indexOf(r.title) >= 0)) refItem(r, 'bear'); });
+    if (storyRaw) {
+      storyRaw.split(/\n+/).map(function (p) { return p.split(/(?=【)/); }).reduce(function (a, b) { return a.concat(b); }, []).filter(function (s2) { return s2 && s2.trim(); }).forEach(function (p) {
         storyParas.push(dbStoryParaHtml(p)); // R100z4g：统一渲染器（AI 小作文 → 🤖 旗标，脚本段落保留 🇨🇳/🌍）
       });
     }

@@ -523,10 +523,14 @@ def match_ths_industry(hybk, ths_names):
         return SPECIAL[clean]
     if hybk in SPECIAL and SPECIAL[hybk] in ths_names:
         return SPECIAL[hybk]
+    # R100z4k：前缀匹配取「最长」候选——防止当日抓取列表含被截断的行业名（如「计算机设」）
+    # 抢先匹配、把截断名写进池内 sector（页面板块徽章随之被截断）。
+    best = None
     for name in ths_names:
         if len(clean) >= 2 and (name.startswith(clean) or clean.startswith(name)):
-            return name
-    return None
+            if best is None or len(name) > len(best):
+                best = name
+    return best
 
 
 def fetch_board_map():
@@ -1143,6 +1147,10 @@ def build_module(pairs, D):
                         / float(kl[-2].get("close")) * 100, 2)
         # R98: 优先同花顺行业口径
         ths_name = match_ths_industry(p["hybk"], ths_names)
+        # R100z4k：截断护栏——匹配名是东财 hybk 的严格前缀（如「计算机设」⊂「计算机设备」）
+        # 说明同花顺匹配可疑，回退用完整东财行业名，杜绝池内 sector 存截断值。
+        if ths_name and p["hybk"] and p["hybk"].startswith(ths_name) and ths_name != p["hybk"]:
+            ths_name = None
         if ths_name:
             bpt = round(ths_map[ths_name]["pct"], 2)
             ths_code = ths_map[ths_name]["code"]
