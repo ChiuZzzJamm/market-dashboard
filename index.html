@@ -2566,18 +2566,8 @@ function _dbk_option(kl, hz) {
   var ma5 = _dbk_ma(5, kl), ma10 = _dbk_ma(10, kl), ma20 = _dbk_ma(20, kl), ma30 = _dbk_ma(30, kl);
   // R100z5c：dataZoom 改用整数 startValue（原百分比 start 会落在非整数索引 13.33%→7.87，
   // 首根K线被切在绘图区左缘、右端却对齐 → 视觉整体偏左不居中）。整数起点=窗口两端各留半带宽，天然对称。
-  var startVal = Math.max(0, kl.length - 30);
-  // R100z4s：含谐波时自动把窗口起点扩到最早谐波点之前——默认近30根会把 X/A 甩出窗外
-  if (hz && hz.pointDays) {
-    var _minIdx = -1;
-    ['X', 'A', 'B', 'C', 'D'].forEach(function (k) {
-      var day = hz.pointDays[k];
-      if (!day) return;
-      var ix = dates.indexOf(day);
-      if (ix >= 0 && (_minIdx < 0 || ix < _minIdx)) _minIdx = ix;
-    });
-    if (_minIdx >= 0 && Math.max(0, _minIdx - 2) < startVal) startVal = Math.max(0, _minIdx - 2);
-  }
+  // R100z6e：起点计算抽取为 _dbk_startVal（与 dispatchAction 兜底共用）
+  var startVal = _dbk_startVal(kl, hz);
   // R100z4y：谐波图 y 轴上下限纳入 止损/PRZ/T1/T2——否则止损在视野外（用户看不到红线，误以为「没有止损位」）
   var _hzRight = '4%';
   var _ymin, _ymax;
@@ -2665,10 +2655,28 @@ function _ensureEcharts(cb) {
   s.onerror = function () { cb(); };
   document.head.appendChild(s);
 }
+// R100z6e：初始窗口起点统一计算（近30根；含谐波时扩到最早形态点前2根）——
+// _dbk_option 与 dbKlineSvg 的 dispatchAction 兜底共用，避免两处逻辑漂移
+function _dbk_startVal(kl, hz) {
+  var startVal = Math.max(0, kl.length - 30);
+  if (hz && hz.pointDays) {
+    var dates = kl.map(function (b) { return b[0]; });
+    var _minIdx = -1;
+    ['X', 'A', 'B', 'C', 'D'].forEach(function (k) {
+      var day = hz.pointDays[k];
+      if (!day) return;
+      var ix = dates.indexOf(day);
+      if (ix >= 0 && (_minIdx < 0 || ix < _minIdx)) _minIdx = ix;
+    });
+    if (_minIdx >= 0 && Math.max(0, _minIdx - 2) < startVal) startVal = Math.max(0, _minIdx - 2);
+  }
+  return startVal;
+}
 function dbKlineSvg(kline, hz) {
   if (!kline || kline.length < 2) return '<div class="db-empty">暂无K线数据</div>';
   _dbk_seq++;
   var id = 'dbk-chart-' + _dbk_seq;
+  var _sv = _dbk_startVal(kline, hz); // R100z6e：初始窗口起点（setOption 与 dispatchAction 兜底共用）
   _dbk_cleanup();
   if (!_dbk_resize_bound) {
     _dbk_resize_bound = true;
@@ -2690,7 +2698,13 @@ function dbKlineSvg(kline, hz) {
         chart._dbkHzRef = function () { _dbk_hzGraphic(chart, kline, hz); };
       }
       DBK_CHARTS.push(chart);
-      setTimeout(function () { try { chart.resize(); } catch (e) {} }, 40);
+      // R100z6e：移动端弹窗容器尺寸未就绪时 echarts.init 捕获 0 尺寸，dataZoom 的 startValue
+      // 会被解析回退为全量（真机 iOS 截图实证：谐波 320 根全塞进屏幕、连线挤右）。resize 落定后
+      // 用 dispatchAction 强制再落一次初始窗口（对 inside+slider 全生效），随后重算连线像素。
+      setTimeout(function () {
+        try { chart.resize(); } catch (e) {}
+        try { chart.dispatchAction({ type: 'dataZoom', startValue: _sv, endValue: kline.length - 1 }); } catch (e) {}
+      }, 60);
     }, 0);
   });
   return '<div id="' + id + '" class="dbk-chart"></div>';
