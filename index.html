@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609291735"></script>
+<script src="data.js?v=202609291805"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1435,10 +1435,19 @@ function hzFailOf(code) {
   for (var i = 0; i < fp.length; i++) {
     var e = fp[i];
     if (e && e.code === code && e.failHz && e.failHz.prz) {
-      return Object.assign({}, e.failHz, { stage: '失效前', pattern: e.failHz.pattern || e.pattern });
+      return Object.assign({}, e.failHz, { stage: '失效前', pattern: e.failHz.pattern || e.pattern, reason: e.reason }); // R100z4y：带上失效原因
     }
   }
   return null;
+}
+/* R100z4y：失效前形态快照——K 线截断到失效日（failDay，其次 asOf），
+   让用户直接看到破位那根 K 线与「失效」竖线，而不是截至今日仍像「运行中」 */
+function _hzFailClip(kl, hz) {
+  if (!kl || !hz || hz.stage !== '失效前') return kl;
+  var cut = hz.failDay || hz.asOf;
+  if (!cut) return kl;
+  var out = kl.filter(function (b) { return b[0] <= cut; });
+  return (out.length > 1) ? out : kl;
 }
 // R100z4x：失效池弹窗同组导航——STK_GRP=失效归档池全列表，左右箭头/键盘 ←→ 在池内循环
 function openFailIdx(kind, idx) {
@@ -1627,7 +1636,7 @@ function hzMiniSvg(hz) {
       .concat([hz.prz[0], hz.prz[1], hz.stop, hz.target1, hz.target2]);
     var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
     var rng = (hi - lo) || 1;
-    var W = 250, H = 104, padL = 14, padR = 28, padT = 12, padB = 14;
+    var W = 250, H = 110, padL = 14, padR = 28, padT = 16, padB = 15; // R100z4y：字母加大 padT 12→16 防顶部裁切
     var span = W - padL - padR;
     var xs = [padL, padL + span * 0.25, padL + span * 0.5, padL + span * 0.75, W - padR];
     function y(v) { return padT + (hi - v) / rng * (H - padT - padB); }
@@ -1645,9 +1654,9 @@ function hzMiniSvg(hz) {
     s += '<polyline points="' + poly + '" fill="none" stroke="#f0435c" stroke-width="2" stroke-linejoin="round"/>';
     pts.forEach(function (q, i3) {
       var anchor = i3 === 4 ? 'start' : 'middle';
-      var lx = i3 === 4 ? xs[i3] + 7 : xs[i3];
-      s += '<circle cx="' + f(xs[i3]) + '" cy="' + f(y(q[1])) + '" r="3" fill="#fff" stroke="#f0435c" stroke-width="2"/>' +
-        '<text x="' + f(lx) + '" y="' + f(y(q[1]) - 6) + '" font-size="9" font-weight="700" fill="var(--ink2)" text-anchor="' + anchor + '">' + q[0] + '</text>';
+      var lx = i3 === 4 ? xs[i3] + 8 : xs[i3];
+      s += '<circle cx="' + f(xs[i3]) + '" cy="' + f(y(q[1])) + '" r="3.5" fill="#fff" stroke="#f0435c" stroke-width="2"/>' +
+        '<text x="' + f(lx) + '" y="' + f(y(q[1]) - 7) + '" font-size="12" font-weight="800" fill="var(--ink2)" text-anchor="' + anchor + '">' + q[0] + '</text>'; // R100z4y：9px→12px
     });
     s += '</svg>';
     return s;
@@ -1710,6 +1719,7 @@ function hzSideHtml(hz) {
     (_r.AB ? ' · 比率 AB=' + esc(_r.AB) + ' BC=' + esc(_r.BC) + ' CD=' + esc(_r.CD) : '') +
     (hz.accResonance ? ' · 吸筹共振' + esc(hz.accResonance) : '') +
     (function () { var v = hzViewText(hz); return v ? '<div class="hz-view">▸ ' + esc(v) + '</div>' : ''; })() + // R100z4w：确定性研判一句话
+    (hz.stage === '失效前' && hz.reason ? '<div class="hz-approx" style="color:#c0392b">▸ 失效原因：' + esc(hz.reason) + '</div>' : '') + // R100z4y：失效原因直读
     (hz.stage === '失效前' && hz.approx ? '<div class="hz-approx">（失效当时形态可能已变化，结构仅供参考）</div>' : '') + // R100z4x：近似形态标记
     '<div class="hz-lg"><i style="color:#0f9d78">━绿</i> PRZ区间 · <i style="color:#c0392b">━红</i> 止损 · <i style="color:#2f6fdb">━蓝</i> 目标位</div></span>'; // R100z4w：三色上色（原纯黑文本）
 }
@@ -1734,8 +1744,8 @@ function renderHarmonic() {
     if (it.accResonance) meta += ' · 吸筹共振' + it.accResonance;
     // R100g：名称缺失时只展示代码一次（禁 name/code 拼成 600613600613 双重渲染）
     var nm = (it.name && it.name !== it.code) ? it.name : '';
-    // R100l：板块胶囊对齐断板反包卡片（数据来自 harmonic_detect.py 写入的 sector 字段）
-    var secPill = it.sector ? '<span class="db-sec-pill">' + esc(it.sector) + '</span>' : '';
+    // R100l：板块胶囊对齐断板反包卡片；R100z4y：sector 缺失时走全站映射兜底（新浪行业/连板/AI预测等）
+    var secPill = (it.sector || stkSectorOf(it.code)) ? '<span class="db-sec-pill">' + esc(it.sector || stkSectorOf(it.code)) + '</span>' : '';
     return '<div class="hz-card" onclick="openHzModal(\'' + it.code + '\',\'' + escAttr(nm || it.code) + '\')">' +
       '<div class="hz-top"><span class="hz-nm">' + esc(nm || it.code) + '</span>' + (nm ? '<span class="hz-cd">' + esc(it.code) + '</span>' : '') + secPill + sentBadgeHtml(it.code) + // R100z4：板块徽标挪到代码后
       // R100s：卡片「确认/观察」徽标删除（池归属已由分组标题承载，弹窗内另有池徽章）
@@ -2465,6 +2475,11 @@ function _dbk_ma(n, kl) {
 }
 function _dbk_stage(hz) {
   if (!hz) return '';
+  if (hz.stage === '失效前') {
+    if (hz.asOf && hz.failDay) return '失效前形态快照（截至 ' + hz.asOf + '，' + hz.failDay.slice(5) + ' 失效）'; // R100z4y：不再误显示「D段（观察·运行中）」
+    if (hz.asOf) return '失效前形态快照（截至 ' + hz.asOf + '）';
+    return '失效前形态快照';
+  }
   return hz.stage === '确认' ? 'D段（确认·企稳）' : 'D段（观察·运行中）';
 }
 function _dbk_markline(hz) {
@@ -2486,6 +2501,10 @@ function _dbk_markline(hz) {
       var pv = hz.points[k], day = hz.pointDays[k];
       if (typeof pv === 'number' && !day) data.push({ yAxis: pv, lineStyle: { color: pm[k], type: 'dotted', width: 1 }, label: { formatter: k, color: pm[k], position: 'insideEndTop' } });
     });
+  }
+  // R100z4y：失效前形态快照——竖直红线标出形态失效日（backfill_failhz.py 回溯计算 failDay）
+  if (hz.stage === '失效前' && hz.failDay) {
+    data.push({ xAxis: hz.failDay, lineStyle: { color: '#c0392b', type: 'dashed', width: 1.5, opacity: 0.8 }, label: { formatter: '失效 ' + hz.failDay.slice(5), color: '#c0392b', position: 'insideEndTop', fontSize: 10 } });
   }
   if (!data.length) return undefined;
   return { silent: true, symbol: 'none', lineStyle: { width: 1 }, data: data };
@@ -2527,8 +2546,8 @@ function _dbk_hzGraphic(chart, kl, hz) {
   }
   pts.forEach(function (p) {
     var isD = p.k === 'D'; // D 实际=实心红点，X/A/B/C=白底红边空心圆（与迷你图统一）
-    children.push({ type: 'circle', shape: { cx: p.x, cy: p.y, r: isD ? 5.5 : 3.5 }, style: isD ? { fill: '#f0435c', stroke: '#fff', lineWidth: 2 } : { fill: '#fff', stroke: '#f0435c', lineWidth: 2 }, silent: true, z: 61 });
-    children.push({ type: 'text', style: { text: p.k, x: p.x, y: p.y - 10, fill: '#f0435c', font: '700 10px sans-serif', align: 'center' }, silent: true, z: 62 });
+    children.push({ type: 'circle', shape: { cx: p.x, cy: p.y, r: isD ? 7 : 4.5 }, style: isD ? { fill: '#f0435c', stroke: '#fff', lineWidth: 2 } : { fill: '#fff', stroke: '#f0435c', lineWidth: 2 }, silent: true, z: 61 });
+    children.push({ type: 'text', style: { text: p.k, x: p.x, y: p.y - 13, fill: '#f0435c', font: '800 15px sans-serif', align: 'center' }, silent: true, z: 62 }); // R100z4y：字母 10px→15px 加粗（用户反馈太小）
   });
   chart.setOption({ graphic: [{ id: 'dbkhz', type: 'group', children: children }] });
 }
@@ -2540,6 +2559,7 @@ function _dbk_option(kl, hz) {
   var ma5 = _dbk_ma(5, kl), ma10 = _dbk_ma(10, kl), ma20 = _dbk_ma(20, kl), ma30 = _dbk_ma(30, kl);
   var startPct = Math.max(0, (kl.length - 30) / kl.length * 100);
   // R100z4s：含谐波时自动把窗口起点扩到最早谐波点之前——默认近30根会把 X/A 甩出窗外
+  var _win0 = kl.length - 30;
   if (hz && hz.pointDays) {
     var _minIdx = -1;
     ['X', 'A', 'B', 'C', 'D'].forEach(function (k) {
@@ -2553,12 +2573,28 @@ function _dbk_option(kl, hz) {
       if (_st < startPct) startPct = _st;
     }
   }
+  // R100z4y：谐波图 y 轴上下限纳入 止损/PRZ/T1/T2——否则止损在视野外（用户看不到红线，误以为「没有止损位」）
+  var _hzRight = '4%';
+  var _ymin, _ymax;
+  if (hz && hz.prz) {
+    _hzRight = '13%'; // R100z4y：右边距加宽，PRZ/D投影/止损 insideEnd 标签不再被画布右缘裁切
+    var i0 = Math.floor(kl.length * startPct / 100);
+    for (var _i = i0; _i < kl.length; _i++) {
+      var _lo = kl[_i][4], _hi = kl[_i][3];
+      _ymin = (_ymin === undefined) ? _lo : Math.min(_ymin, _lo);
+      _ymax = (_ymax === undefined) ? _hi : Math.max(_ymax, _hi);
+    }
+    [hz.stop, hz.prz[0], hz.prz[1], hz.target1, hz.target2].forEach(function (v) {
+      if (typeof v === 'number' && isFinite(v)) { _ymin = (_ymin === undefined) ? v : Math.min(_ymin, v); _ymax = (_ymax === undefined) ? v : Math.max(_ymax, v); }
+    });
+    if (_ymin !== undefined) { var _pad = (_ymax - _ymin) * 0.03 || 1; _ymin -= _pad; _ymax += _pad; }
+  }
   var stg = _dbk_stage(hz);
   return {
     animation: false,
     grid: [
-      { left: '2%', right: '4%', top: stg ? '8%' : '4%', height: '60%' }, // R100z4x：left 9%→2%（Y轴已移右侧，原左侧 9% 纯空白致 K 线整体偏移不居中）
-      { left: '2%', right: '4%', top: '72%', height: '18%' }
+      { left: '2%', right: _hzRight, top: stg ? '8%' : '4%', height: '60%' }, // R100z4x：left 9%→2%（Y轴已移右侧，原左侧 9% 纯空白致 K 线整体偏移不居中）；R100z4y：谐波图 right 13%
+      { left: '2%', right: _hzRight, top: '72%', height: '18%' }
     ],
     title: stg ? { text: '● ' + stg, left: '2%', top: '0.5%', textStyle: { color: '#f0435c', fontSize: 11, fontWeight: 700 } } : undefined,
     xAxis: [
@@ -2566,12 +2602,12 @@ function _dbk_option(kl, hz) {
       { type: 'category', data: dates, gridIndex: 1, boundaryGap: true, axisLabel: { color: '#5a6e82', fontSize: 10 }, axisLine: { lineStyle: { color: '#c7d3e0' } } }
     ],
     yAxis: [
-      { scale: true, gridIndex: 0, position: 'right', axisLabel: { color: '#5a6e82', fontSize: 10 }, splitLine: { lineStyle: { color: '#eef3f8' } }, axisLine: { show: false } },
+      { scale: true, min: _ymin, max: _ymax, gridIndex: 0, position: 'right', axisLabel: { color: '#5a6e82', fontSize: 10 }, splitLine: { lineStyle: { color: '#eef3f8' } }, axisLine: { show: false } }, // R100z4y：谐波图固定上下限含止损/目标位
       { scale: true, gridIndex: 1, position: 'right', axisLabel: { color: '#5a6e82', fontSize: 9, formatter: function (v) { return _dbk_volfmt(v); } }, splitLine: { show: false }, axisLine: { show: false } }
     ],
     dataZoom: [
       { type: 'inside', xAxisIndex: [0, 1], start: startPct, end: 100, zoomLock: false, throttle: 50 },
-      { type: 'slider', xAxisIndex: [0, 1], start: startPct, end: 100, left: '2%', right: '4%', bottom: 0, height: 14, borderColor: '#c7d3e0', fillerColor: 'rgba(74,168,224,0.15)', handleSize: '60%', textStyle: { color: '#5a6e82' } } // R100z4x：滑条与图区左右对齐
+      { type: 'slider', xAxisIndex: [0, 1], start: startPct, end: 100, left: '2%', right: _hzRight, bottom: 0, height: 14, borderColor: '#c7d3e0', fillerColor: 'rgba(74,168,224,0.15)', handleSize: '60%', textStyle: { color: '#5a6e82' } } // R100z4x：滑条与图区左右对齐；R100z4y：谐波图同步加宽
     ],
     tooltip: {
       trigger: 'axis', axisPointer: { type: 'cross', lineStyle: { color: '#aab6c4' } },
@@ -2893,12 +2929,13 @@ function openStkModal(code, name, note) {
   var done = false;
   function render(kl, err) {
     if (done) return;
+    kl = _hzFailClip(kl, hz); // R100z4y：失效前形态快照截断到失效日
     if (kl && kl.length > 1 && hzNeedsLong(kl, hz)) {
       // R100z4n：谐波 XABCD 点在当前窗口外 → 拉 320 根长窗重渲染（失败/未变长则回退当前 kl）
       done = true;
       stkFetchKlineLong(code, function (klL) {
         var use = (klL && klL.length > kl.length) ? klL : kl;
-        box.innerHTML = dbKlineSvg(use, hz);
+        box.innerHTML = dbKlineSvg(_hzFailClip(use, hz), hz);
       });
       return;
     }

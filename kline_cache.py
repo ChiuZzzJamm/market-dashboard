@@ -341,16 +341,47 @@ def sina_industry_map(max_nodes=999, node_deadline=None):
         return {}
 
 
+def fetch_sector_single(code, timeout=10):
+    """R100z4y：单票行业兜底——新浪行业全量映射存在缺口（分页静默失败，~3000/5000 只），
+    对缺口代码逐只抓「所属行业板块」页（vCI_CorpOtherInfo menu_num/2）提取行业名。
+    返回行业名或 ''。任一环节失败返回 ''（调用方保留原值不清场）。"""
+    code = str(code or '')
+    if not (len(code) == 6 and code.isdigit()):
+        return ''
+    url = ('https://vip.stock.finance.sina.com.cn/corp/go.php/vCI_CorpOtherInfo/'
+           'stockid/%s/menu_num/2.phtml' % code)
+    try:
+        import subprocess
+        p = subprocess.run(['curl', '-s', '--max-time', str(timeout),
+                            '-H', 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', url],
+                           capture_output=True, timeout=timeout + 5)
+        if not p or p.returncode != 0 or not p.stdout.strip():
+            return ''
+        txt = p.stdout.decode('gbk', errors='replace')
+    except Exception:
+        return ''
+    import re
+    for m in re.finditer(r'所属行业板块[\s\S]*?<td[^>]*>\s*([^<]+?)\s*</td>', txt):
+        val = (m.group(1) or '').strip()
+        if val and val not in ('所属行业板块', '同行业个股', '点击查看'):
+            return val
+    return ''
+
+
 def collect_sectors(D, use_sina=True, node_deadline=180):
     """R100q：code→行业 映射（供 harmonic/power/accumulation 三脚本写 sector 字段，
     与前端 stkSecOf 同口径）。优先级：站内真实字段（断板池/精选/谐波池/连板 hybk/
     板块TOP成分/AI预测成分/已有池 sector）→ 新浪行业全量兜底。失败只降级不清场。"""
     sec = {}
+    wanted = []  # R100z4y：站内池内代码清单（供单票行业兜底定位缺口）
 
     def put(c, s):
         c, s = str(c or ''), str(s or '').strip()
-        if len(c) == 6 and c.isdigit() and s and s != c:
-            sec.setdefault(c, s)
+        if len(c) == 6 and c.isdigit():
+            if c not in wanted:
+                wanted.append(c)
+            if s and s != c:
+                sec.setdefault(c, s)
 
     db = (D or {}).get('duanban') or {}
     for key in ('confirmed', 'watching'):
@@ -378,4 +409,15 @@ def collect_sectors(D, use_sina=True, node_deadline=180):
         sm = sina_industry_map(node_deadline=node_deadline)
         for c, s in sm.items():
             put(c, s)
+    # R100z4y：单票行业兜底——池内仍缺行业的（新浪全量映射有缺口）逐只抓所属行业页。
+    # 上限 40 只 + 总预算 45s 防拖垮 16:00 流水线；失败保留缺省（前端另有 stkSectorOf 兜底）。
+    missing = [c for c in wanted if c not in sec][:40]
+    t_single = time.time()
+    for c in missing:
+        if node_deadline is not None and time.time() - t_single > 45:
+            break
+        s = fetch_sector_single(c)
+        if s:
+            sec.setdefault(c, s)
+        time.sleep(0.25)
     return sec

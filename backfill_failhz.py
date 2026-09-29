@@ -24,9 +24,10 @@ def main():
     D = common.load_dashboard_data(BASE)
     hz = D.get('harmonic') or {}
     fp = hz.get('failPool') or []
+    force = '--force' in sys.argv  # R100z4y：重算已有 failHz（补 asOf/failDay）
     todo = [e for e in fp if isinstance(e, dict) and e.get('code')
-            and not (isinstance(e.get('failHz'), dict) and e['failHz'].get('prz'))]
-    print(f"[BACKFILL] failPool {len(fp)} 只，待回补 {len(todo)} 只")
+            and (force or not (isinstance(e.get('failHz'), dict) and e['failHz'].get('prz')))]
+    print(f"[BACKFILL] failPool {len(fp)} 只，待回补 {len(todo)} 只（force={force}）")
     if not todo:
         print('[BACKFILL] 无待回补条目，退出')
         return
@@ -48,16 +49,17 @@ def main():
         # entryDate 通常复现不出。改为「从最新一根 K 线向前逐日回溯，找最近一次能复现谐波
         # 几何（优先同形态）的日期」，该几何即失效前结构（含 dead——破位当天结构恰是失效原貌）。
         best_exact = best_any = None
+        best_exact_i = best_any_i = -1
         for i in range(len(bars) - 1, 39, -1):
             r = scan_bars(bars[:i + 1])
             if not r or not r.get('points') or not r.get('prz'):
                 continue
             if best_any is None:
-                best_any = r
+                best_any, best_any_i = r, i
             if r.get('pattern') == e.get('pattern'):
-                best_exact = r
+                best_exact, best_exact_i = r, i
                 break
-        r = best_exact or best_any
+        r, ri = (best_exact, best_exact_i) if best_exact is not None else (best_any, best_any_i)
         if not r:
             miss += 1
             print(f"[BACKFILL] 跳过 {code} {e.get('name','')}：回溯全程无有效形态几何")
@@ -67,6 +69,19 @@ def main():
             'stage', 'points', 'pointDays', 'ratios', 'prz', 'stop', 'target1', 'target2', 'pattern')}
         if approx:
             e['failHz']['approx'] = True
+        # R100z4y：asOf=形态最后有效日（快照日）；failDay=其后首个失效日
+        #（无几何/破位/距 PRZ 超闸门 → 与 harmonic_detect 有效性闸门同口径）。
+        # 前端把 K 线截断到 failDay 并画「失效」竖线，让失效位置一目了然。
+        e['failHz']['asOf'] = bars[ri]['day']
+        fail_day = None
+        for j in range(ri + 1, len(bars)):
+            r2 = scan_bars(bars[:j + 1])
+            dist = (r2 or {}).get('distToPrzPct')
+            if (not r2 or not r2.get('points') or not r2.get('prz') or r2.get('dead')
+                    or (dist is not None and (dist > 8 or dist < -3))):
+                fail_day = bars[j]['day']
+                break
+        e['failHz']['failDay'] = fail_day
         hit += 1
 
     print(f"[BACKFILL] 回补完成：成功 {hit}，跳过 {miss}")
