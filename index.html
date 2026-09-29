@@ -2334,14 +2334,21 @@ function openDbModal(key) {
     (e.note ? '<div><span class="lab">盘面观察：</span>' + esc(e.note) + '</div>' : '') +
     '<div><span class="lab">上涨概率：</span><b class="' + probCls + '">' + (e.probability !== null && e.probability !== undefined ? e.probability + '%' : '—') + '</b></div>' +
     techMetaLines(String(e.code)); // R100z3：对应技术面（九门/吸筹）纯文本行，命中才渲染
-  // R100z4t：K线兜底链——池条目内嵌 → 顶层 stkKlines（embed 320 根全覆盖）→ 网络拉取后回填
+  // R100z6d：断板弹窗主图补画谐波 XABCD 连线（此前 dbKlineSvg 漏传 hz，仅头部迷你图有连线——用户反馈"有谐波技术但K线没连线"）
+  // K线兜底链——池条目内嵌 → 顶层 stkKlines（embed 分级内嵌）→ 网络拉取后回填；
+  // 谐波形态点在池内短窗之外时优先用顶层长窗（320 根）渲染，避免连线丢失
   (function () {
+    var hzDb = findHarmonic(String(e.code)) || hzFailOf(String(e.code));
     var kl0 = e.kline || stkGlobalKline(e.code);
     if (!kl0 && /^\d{6}$/.test(String(e.code))) {
       var _kkey = key;
-      stkFetchKline(String(e.code), function (kl2) { if (kl2 && DB_CURR === _kkey) document.getElementById('db-kline').innerHTML = dbKlineSvg(kl2); });
+      stkFetchKline(String(e.code), function (kl2) { if (kl2 && DB_CURR === _kkey) document.getElementById('db-kline').innerHTML = dbKlineSvg(kl2, hzDb); });
     }
-    document.getElementById('db-kline').innerHTML = dbKlineSvg(kl0);
+    if (hzDb && kl0 && hzNeedsLong(kl0, hzDb)) {
+      var gkl = stkGlobalKline(e.code);
+      if (gkl && gkl.length > kl0.length) kl0 = gkl;
+    }
+    document.getElementById('db-kline').innerHTML = dbKlineSvg(_hzFailClip(kl0, hzDb), hzDb);
   })();
   // R89 依据小作文化：story（AI 消息面解读，非空时优先）或结构化 refs（含新闻摘要）逐段渲染
   // R100z4g：段落统一走 dbStoryParaHtml / 真实旗标映射——「个股消息 🇨🇳：」蓝色加粗，AI 小作文标 🤖
@@ -2929,7 +2936,14 @@ function openStkModal(code, name, note) {
     if (done) return;
     kl = _hzFailClip(kl, hz); // R100z4y：失效前形态快照截断到失效日
     if (kl && kl.length > 1 && hzNeedsLong(kl, hz)) {
-      // R100z4n：谐波 XABCD 点在当前窗口外 → 拉 320 根长窗重渲染（失败/未变长则回退当前 kl）
+      // R100z6d：顶层 stkKlines 已内嵌更长窗口（embed 分级：谐波池 320）→ 直接用，免手机端网络拉长窗失败致 XABCD 连线丢失
+      var gkl = stkGlobalKline(code);
+      if (gkl && gkl.length > kl.length) {
+        done = true;
+        box.innerHTML = dbKlineSvg(_hzFailClip(gkl, hz), hz);
+        return;
+      }
+      // R100z4n：内嵌仍不够长 → 拉网络 320 根长窗重渲染（失败/未变长则回退当前 kl）
       done = true;
       stkFetchKlineLong(code, function (klL) {
         var use = (klL && klL.length > kl.length) ? klL : kl;
