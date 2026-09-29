@@ -448,6 +448,7 @@
   .db-modal-close:hover { border-color: var(--accent); color: var(--accent-deep); }
   /* R100j：弹窗恢复右上角迷你谐波示意图（用户反馈完整教学大图不直观，R100i 大图下线） */
   .hz-mini { margin-left: auto; flex-shrink: 0; line-height: 0; border: 1px dashed var(--line); border-radius: 8px; padding: 2px; background: var(--paper); }  /* R100t：迷你谐波图挪到第二行徽标区右侧——× 回第一行右上角，消除第二行上方大空档；R100z4f：手机端不再隐藏（hz-strip 行参数文本 flex:1 自动让位） */
+  @media (max-width: 640px) { .hz-mini svg { width: 128px; height: auto; } .hz-side { font-size: 11px; } .hz-side .hz-lg { font-size: 9.5px; } }  /* R100z4w：手机端迷你图 250px→128px 缩放，参数文本不再被挤成竖条 */
   /* R100j：🧰 工具箱三个子页入口——横着的椭圆形嵌入对应文字（原竖长条椭圆改横向） */
   .db-subnav { display: flex; justify-content: center; align-items: center; gap: 14px; margin: 0 0 16px; flex-wrap: wrap; }
   .db-subtab { padding: 10px 24px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--paper); font-size: 13.5px; font-weight: 800; color: var(--ink2); cursor: pointer; font-family: var(--font); box-shadow: var(--shadow); transition: all .18s ease; letter-spacing: 1px; }
@@ -493,6 +494,7 @@
   .hz-card .hz-cd { font-size:11px; color:var(--ink2); }
   .hz-card .hz-pat { font-size:11px; color:var(--accent-deep); font-weight:700; margin-left:auto; }
   .hz-card .hz-note { font-size:11px; color:var(--ink); margin-top:5px; line-height:1.55; }
+  .hz-card .hz-view, .hz-side .hz-view { font-size:11px; color:var(--accent-deep); margin-top:4px; line-height:1.55; font-weight:600; }  /* R100z4w：确定性研判一句话（卡片+弹窗共用） */
   /* R100s：卡片 hz-stage（确认/观察）徽标已删，CSS 一并清理 */
   .hz-meta { font-size:10.5px; color:var(--ink2); margin-top:6px; font-variant-numeric:tabular-nums; }
 
@@ -1657,6 +1659,24 @@ function openGrpModal(list, idx) {
 function hzMiniWrap(hz) {
   return hz ? '<span class="hz-mini" title="谐波形态示意：红折线=X-A-B-C-D 五点结构 · 绿带=PRZ 潜在反转区 · 红虚线=止损 · 蓝虚线=T1/T2 目标位">' + hzMiniSvg(hz) + '</span>' : '';
 }
+// R100z4w：谐波确定性研判一句话（脚本字段推导，非 AI 叙事）——按池阶段 × 现价距反转区位置
+// 给出方向判断（企稳/看反弹/待确认/已兑现）+ 风险收益比（T1 空间 vs 止损距离）+ 吸筹共振加分
+function hzViewText(hz) {
+  if (!hz || !hz.prz) return '';
+  var lc = (typeof hz.lastClose === 'number') ? hz.lastClose : null;
+  var dist = (typeof hz.distToPrzPct === 'number') ? hz.distToPrzPct : (lc ? (hz.prz[1] - lc) / lc * 100 : null);
+  if (dist === null) return '';
+  var conf = hz.stage === '确认';
+  var s;
+  if (dist < -3) s = conf ? '反转已兑现：价格站上反转区，看 T1/T2 逐级兑现' : '价格已越过反转区：关注回踩不破 PRZ 后的二次走强';
+  else if (dist <= 0) s = conf ? 'D 已落入反转区：看企稳反弹，放量反包则确认成立' : '已触及反转区：待企稳K线确认，破止损即形态作废';
+  else s = conf ? 'D 在反转区附近企稳：关注放量反包，向 T1/T2 靠拢' : 'D 段运行中：距反转区约 ' + dist.toFixed(1) + '%，接近后看企稳，勿提前抄底';
+  if (lc && typeof hz.target1 === 'number' && typeof hz.stop === 'number') {
+    s += '；上行看 T1 ' + (hz.target1 - lc > 0 ? '+' : '') + ((hz.target1 - lc) / lc * 100).toFixed(1) + '%，下行止损 ' + ((hz.stop - lc) / lc * 100).toFixed(1) + '%';
+  }
+  if (hz.accResonance) s += ' · 吸筹共振加分';
+  return s;
+}
 function hzSideHtml(hz) {
   if (!hz) return '';
   var _r = hz.ratios || {};
@@ -1664,7 +1684,8 @@ function hzSideHtml(hz) {
     '</span> · 止损 <span class="hz-v">' + hz.stop + '</span> · T1 <span class="hz-v">' + hz.target1 + '</span> · T2 <span class="hz-v">' + hz.target2 + '</span>' +
     (_r.AB ? ' · 比率 AB=' + esc(_r.AB) + ' BC=' + esc(_r.BC) + ' CD=' + esc(_r.CD) : '') +
     (hz.accResonance ? ' · 吸筹共振' + esc(hz.accResonance) : '') +
-    '<div class="hz-lg">━绿 PRZ区间 · ━红 止损 · ━蓝 目标位</div></span>';
+    (function () { var v = hzViewText(hz); return v ? '<div class="hz-view">▸ ' + esc(v) + '</div>' : ''; })() + // R100z4w：确定性研判一句话
+    '<div class="hz-lg"><i style="color:#0f9d78">━绿</i> PRZ区间 · <i style="color:#c0392b">━红</i> 止损 · <i style="color:#2f6fdb">━蓝</i> 目标位</div></span>'; // R100z4w：三色上色（原纯黑文本）
 }
 function techMetaLines(code) {
   var D = window.DASHBOARD_DATA || {};
@@ -1694,6 +1715,7 @@ function renderHarmonic() {
       // R100s：卡片「确认/观察」徽标删除（池归属已由分组标题承载，弹窗内另有池徽章）
       '<span class="hz-pat">' + esc(it.pattern) + '</span></div>' +
       (it.story ? '<div class="hz-note">' + esc(it.story) + '</div>' : '') +
+      (function () { var v = hzViewText(it); return v ? '<div class="hz-view">▸ ' + esc(v) + '</div>' : ''; })() + // R100z4w：确定性研判一句话（数字行下方）
       '<div class="hz-meta">' + meta + '</div></div>';
   };
   // R100l：三池样式对齐断板反包页——.db-pool 圆点标题容器（确认池红点 / 观察池蓝点 / 失效池灰点 dbFailHtml）
@@ -2440,17 +2462,17 @@ function _dbk_markline(hz) {
   if (!data.length) return undefined;
   return { silent: true, symbol: 'none', lineStyle: { width: 1 }, data: data };
 }
-// R100z4s：谐波 X→A→B→C→D 红色连线（仅谐波池弹窗，hz 非空时注入）。
-// 点直接作为 line series 数据项（per-point itemStyle/label）——原 markPoint 在 dataZoom
-// 窗口外不渲染，挪进 series 后配合 clip:false 即可「一直渲染」（用户要求，R100z4s）。
-// R100z4u：日期不在 K 线数组时钳位到边界（D=今日盘中 > stkKlines 末根时落最后一根），
-// 不再整点跳过——否则 C→D 段整段消失（600183/000878 等 7 只曾中招）。
-function _dbk_hzline(hz, dates) {
-  if (!hz || !hz.points || !hz.pointDays || !dates.length) return null;
-  var seq = ['X', 'A', 'B', 'C', 'D'];
+// R100z4w：谐波 X→A→B→C→D 红色连线改 **graphic 像素层** 绘制（仅谐波池弹窗）。
+// 弃用 line series 方案：① series 数据被 dataZoom 过滤 → 缩放后 X/A/B/C 标签消失、连线被改形
+// （SSR 实测：缩到近 30 根只剩 D）；② 辅助不过滤轴方案会把 y 轴 extent 撑爆（实测 80~140，K线压扁）。
+// graphic 用像素坐标画折线+圆点+字母：不受 dataZoom 过滤、不参与 y 轴范围、永远渲染；
+// 缩放/resize 时按 convertToPixel 重算位置。日期钳位逻辑沿用 R100z4u。
+function _dbk_hzPixels(chart, kl, hz) {
+  var dates = kl.map(function (b) { return b[0]; });
   var dmap = {};
   dates.forEach(function (d, i) { dmap[d] = i; });
-  var data = [];
+  var seq = ['X', 'A', 'B', 'C', 'D'];
+  var pts = [];
   for (var i = 0; i < seq.length; i++) {
     var k = seq[i], pv = hz.points[k], day = hz.pointDays[k];
     if (typeof pv !== 'number' || !day) continue;
@@ -2458,29 +2480,29 @@ function _dbk_hzline(hz, dates) {
       var cl = null;
       if (day > dates[dates.length - 1]) cl = dates[dates.length - 1];
       else if (day < dates[0]) cl = dates[0];
-      else { // 区间内但非交易日（停牌等）→ 取该日之前最近交易日
-        for (var j = dates.length - 1; j >= 0; j--) { if (dates[j] < day) { cl = dates[j]; break; } }
-      }
+      else { for (var j = dates.length - 1; j >= 0; j--) { if (dates[j] < day) { cl = dates[j]; break; } } }
       if (!cl) continue;
       day = cl;
     }
-    var isD = (k === 'D'); // D 实际=实心红点，X/A/B/C=白底红边空心圆（与迷你图统一，R100z4q）
-    data.push({
-      value: [day, pv], name: k,
-      itemStyle: isD ? { color: '#f0435c', borderColor: '#fff', borderWidth: 2 }
-                     : { color: '#fff', borderColor: '#f0435c', borderWidth: 2 },
-      label: { show: true, formatter: k, color: '#f0435c', fontSize: 10, fontWeight: 700, position: 'top', distance: 4 }
-    });
+    var xy = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [dmap[day], pv]);
+    if (xy && isFinite(xy[0]) && isFinite(xy[1])) pts.push({ k: k, x: xy[0], y: xy[1] });
   }
-  if (!data.length) return null;
-  return {
-    name: '谐波结构', type: 'line', xAxisIndex: 0, yAxisIndex: 0,
-    data: data, showSymbol: true, symbol: 'circle',
-    symbolSize: function (v, p) { return (p && p.data && p.data.name === 'D') ? 11 : 7; },
-    lineStyle: { color: '#f0435c', width: 2, type: 'solid' },
-    clip: false, // R100z4s：超出 dataZoom 窗口/网格边界也一直渲染，不截断
-    z: 6, silent: true, tooltip: { show: false }, animation: false
-  };
+  return pts;
+}
+function _dbk_hzGraphic(chart, kl, hz) {
+  if (!chart || !hz || !hz.points || !hz.pointDays || chart.isDisposed()) return;
+  var pts = _dbk_hzPixels(chart, kl, hz);
+  if (!pts.length) return;
+  var children = [];
+  for (var i = 0; i < pts.length - 1; i++) {
+    children.push({ type: 'line', shape: { x1: pts[i].x, y1: pts[i].y, x2: pts[i + 1].x, y2: pts[i + 1].y }, style: { stroke: '#f0435c', lineWidth: 2 }, silent: true, z: 60 });
+  }
+  pts.forEach(function (p) {
+    var isD = p.k === 'D'; // D 实际=实心红点，X/A/B/C=白底红边空心圆（与迷你图统一）
+    children.push({ type: 'circle', shape: { cx: p.x, cy: p.y, r: isD ? 5.5 : 3.5 }, style: isD ? { fill: '#f0435c', stroke: '#fff', lineWidth: 2 } : { fill: '#fff', stroke: '#f0435c', lineWidth: 2 }, silent: true, z: 61 });
+    children.push({ type: 'text', style: { text: p.k, x: p.x, y: p.y - 10, fill: '#f0435c', font: '700 10px sans-serif', align: 'center' }, silent: true, z: 62 });
+  });
+  chart.setOption({ graphic: [{ id: 'dbkhz', type: 'group', children: children }] });
 }
 function _dbk_option(kl, hz) {
   var UP = '#f0435c', DOWN = '#0f9d78';
@@ -2562,9 +2584,6 @@ function _dbk_option(kl, hz) {
       { name: 'MA30', type: 'line', data: ma30, xAxisIndex: 0, yAxisIndex: 0, smooth: true, showSymbol: false, lineStyle: { width: 1, color: '#16a085' } },
       { name: '成交量', type: 'bar', data: vol, xAxisIndex: 1, yAxisIndex: 1, barWidth: '60%' }
       ];
-      // R100z4p：谐波池弹窗才注入红色 X-A-B-C-D 连线 series（非谐波弹窗 hz=null → 不注入）
-      var _hzl = _dbk_hzline(hz, dates);
-      if (_hzl) s.push(_hzl);
       return s;
     })()
   };
@@ -2585,7 +2604,7 @@ function dbKlineSvg(kline, hz) {
   if (!_dbk_resize_bound) {
     _dbk_resize_bound = true;
     window.addEventListener('resize', function () {
-      DBK_CHARTS.forEach(function (c) { try { if (c.getDom().isConnected) c.resize(); } catch (e) {} });
+      DBK_CHARTS.forEach(function (c) { try { if (c.getDom().isConnected) { c.resize(); if (c._dbkHzRef) c._dbkHzRef(); } } catch (e) {} }); // R100z4w：谐波 graphic 随 resize 重算像素位
     });
   }
   _ensureEcharts(function () {
@@ -2595,6 +2614,12 @@ function dbKlineSvg(kline, hz) {
       if (!el) return;
       var chart = echarts.init(el);
       chart.setOption(_dbk_option(kline, hz));
+      // R100z4w：谐波连线为 graphic 像素层——初始绘制 + 缩放时重算像素位置（resize 由全局 resize 监听统一触发 c._dbkHzRef）
+      if (hz) {
+        _dbk_hzGraphic(chart, kline, hz);
+        chart.on('dataZoom', function () { try { _dbk_hzGraphic(chart, kline, hz); } catch (e) {} });
+        chart._dbkHzRef = function () { _dbk_hzGraphic(chart, kline, hz); };
+      }
       DBK_CHARTS.push(chart);
       setTimeout(function () { try { chart.resize(); } catch (e) {} }, 40);
     }, 0);
