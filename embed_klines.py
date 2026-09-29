@@ -4,9 +4,9 @@
 背景：断板双池标的的 K 线已内嵌在 duanban.confirmed/watching[].kline，弹窗离线秒开；
 但页面其余 A股标的（要闻股/题材掘金/AI预测股/板块领涨TOP/连板天梯）点击弹窗时需
 前端实时 fetch 腾讯 ifzq，部分环境网络受限会失败。本脚本在自动化 AI 写回之后、
-validate 之前运行，把所有 A股标的的近 60 根日 K 线一次性抓取并写入 data.js 顶层：
+validate 之前运行，把所有 A股标的的近 320 根日 K 线一次性抓取并写入 data.js 顶层：
 
-  stkKlines     : {"600519": [[date,open,close,high,low,volume], ...], ...}
+  stkKlines     : {"600519": [[date,open,close,high,low,volume], ...], ...}  # 近 320 根日K
   stkKlineNames : {"贵州茅台": "600519", ...}   # 板块领涨TOP 等无 code 条目的名称反查
 
 数据源：
@@ -27,11 +27,11 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-IFZQ_URL = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={sym},day,,,60,qfq"
+IFZQ_URL = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={sym},day,,,320,qfq"
 SMARTBOX_URL = "https://smartbox.gtimg.cn/s3/?v=2&q={q}&t=all"
 # R98j：腾讯 ifzq 被 WAF 拦截/失败时的新浪 JSON 备源（日K 不复权，兜底；指数/个股通用）
 SINA_URL = ("https://quotes.sina.cn/cn/api/json_v2.php/CN_MarketDataService.getKLineData"
-            "?symbol={sym}&scale=240&ma=no&datalen=60")
+            "?symbol={sym}&scale=240&ma=no&datalen=320")
 # R98j：大盘指数 sym（前端点击指数看K线；指数键带 sh/sz 前缀，与个股 6 位键不冲突）
 INDEX_SYMS = {"上证指数": "sh000001", "深证成指": "sz399001", "创业板指": "sz399006",
               "科创50": "sh000688", "上证50": "sh000016"}
@@ -114,6 +114,11 @@ def collect_stocks(D):
             sym = INDEX_SYMS.get(str(idx.get("name") or "").strip(), "")
         if sym:
             syms.add(sym)
+    # 7) 谐波池（确认/观察）—— R100z4o 全量 320：需 320 根长窗才能显示 X/A/B/C 形态点
+    for hp in (D.get("harmonic") or {}).get("confirmPool") or []:
+        add_code(hp.get("code") or hp.get("thsCode"))
+    for hp in (D.get("harmonic") or {}).get("watchPool") or []:
+        add_code(hp.get("code") or hp.get("thsCode"))
     return codes, names, syms
 
 
@@ -200,7 +205,7 @@ def fetch_kline(code, timeout=15):
 
 
 def main():
-    deadline = time.time() + 240
+    deadline = time.time() + 300
     if "--deadline" in sys.argv:
         try:
             deadline = time.time() + float(sys.argv[sys.argv.index("--deadline") + 1])
@@ -219,6 +224,15 @@ def main():
     # 既有内嵌保留（防清场），只补缺/刷新
     kl = D.get("stkKlines") if isinstance(D.get("stkKlines"), dict) else {}
     kl_names = D.get("stkKlineNames") if isinstance(D.get("stkKlineNames"), dict) else {}
+
+    # R100z4o：全量 320 —— 既有 stkKlines 的全部键也纳入刷新，确保每只要么 320 根、
+    # 要么因上市不足 320 个交易日而天然少于 320（绝不退回旧 60 根）
+    for k in list(kl.keys()):
+        k = str(k)
+        if is_ashare_code(k):
+            codes.add(k)
+        elif re.fullmatch(r"(sh|sz)\d{6}", k):
+            syms.add(k)
 
     ok, fail = 0, []
 
