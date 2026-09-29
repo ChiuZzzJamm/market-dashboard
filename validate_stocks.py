@@ -347,9 +347,11 @@ def check_story_quality(D):
 
 def check_star_module(D):
     """R98k 软闸门：① 双池上涨概率全池拉平（如全为 50%）→ 疑似未校准 WARN；
-    ② duanban.star（10:00 开盘精选）picks 数量不限（≥1，R98l）；
-       picks 允许两类：a) 双池内标的；b) src='board' 的板块动量标的（早盘真实强势板块领涨股，R98n，允许池外）。
-       纯池外且无 src='board'/无板块依据的标的 → WARN。"""
+    ② duanban.star（9:45 开盘精选）picks 数量不限（≥1，R98l）；
+       picks 允许三类：a) 双池内标的（src='pool'）；b) src='board' 的板块动量标的
+       （早盘真实强势板块领涨股，R98n，允许池外）；c) src='pw'/'hz'/'acc' 的技术池标的
+       （谐波/九门/吸筹，R100m 前一日 16:00 产物，允许池外）。
+       纯池外且无合法 src/无板块依据的标的 → WARN。"""
     db = D.get('duanban')
     if not isinstance(db, dict):
         return []
@@ -373,12 +375,15 @@ def check_star_module(D):
                     continue
                 c = str(p.get('code') or '')
                 if c and c not in pool_codes:
-                    # R98n：允许 src='board' 的板块动量标的（早盘真实强势板块领涨股，可池外入选）
-                    if (p.get('src') == 'board'
-                            and str(p.get('name') or '').strip()
-                            and str(p.get('sector') or '').strip()):
+                    src = p.get('src')
+                    name_ok = bool(str(p.get('name') or '').strip())
+                    # R98n：允许 src='board' 的板块动量标的（早盘真实强势板块领涨股，需有板块依据）
+                    if src == 'board' and name_ok and str(p.get('sector') or '').strip():
                         continue
-                    warns.append(f"duanban.star.picks {c} {p.get('name')} 不在断板反包双池内且非板块动量标的（精选只能从池内或强势板块筛）")
+                    # R100m：允许 src='pw'/'hz'/'acc' 的技术池标的（谐波/九门/吸筹，前一日 16:00 产物）
+                    if src in ('pw', 'hz', 'acc') and name_ok:
+                        continue
+                    warns.append(f"duanban.star.picks {c} {p.get('name')} 不在断板反包双池内且非合规来源标的（精选只能从双池/板块动量/技术池筛）")
             if not str(star.get('pushText') or '').strip():
                 warns.append("duanban.star.pushText 为空（微信推送深度分析缺失，10:00 自动化 AI 须补写）")
     return warns
