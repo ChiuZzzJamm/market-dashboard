@@ -1889,6 +1889,10 @@ function sentBadgeHtml(code) {
 function dbChipHtml(e, key, done, showSec) {
   var prob = (e.probability !== null && e.probability !== undefined) ? e.probability + '%' : '—';
   var secPill = showSec ? '<span class="db-sec-pill">' + esc(e.sector || '其他') + '</span>' : '';
+  // R100z4u：开盘精选技术池标的分数徽章——九门=红「N分」（过门数）、吸筹=黄「评级 N分」（与各自子页一致）
+  var scoreBadge = '';
+  if (e.score != null && e.src === 'pw') scoreBadge = '<span class="pw-grd">' + esc(e.score) + '分</span>';
+  else if (e.score != null && e.src === 'acc') scoreBadge = '<span class="acc-grd ' + (e.grade === '强' ? 'strong' : 'watch') + '">' + esc(e.grade || '观察') + ' ' + esc(e.score) + '分</span>';
   var tip = e.name + ' ' + e.code + '（' + (e.sector || '') + '）\n'
     + (done ? '确认池 · 全流程达标' : '观察池 · ' + e.stage) + '\n'
     + '形态：' + (e.form || '') + '\n'
@@ -1899,7 +1903,7 @@ function dbChipHtml(e, key, done, showSec) {
     + '涨停日板块：' + (e.boardPctZt == null ? '—' : fmtPct(e.boardPctZt)) + '\n'
     + '点击查看K线与利好依据';
   return '<div class="db-chip" data-k="' + escAttr(key) + '" title="' + escAttr(tip) + '">' +
-    '<div class="r1"><b>' + esc(e.name) + '</b><span class="cd">' + esc(e.code) + '</span>' + secPill + sentBadgeHtml(e.code) + '</div>' + // R100z4：板块徽标挪到代码后
+    '<div class="r1"><b>' + esc(e.name) + '</b><span class="cd">' + esc(e.code) + '</span>' + secPill + sentBadgeHtml(e.code) + scoreBadge + '</div>' + // R100z4：板块徽标挪到代码后；R100z4u：精选技术池分数徽章
     // R100s：卡片「已确认/待企稳/待缩量」阶段徽标删除（池归属由所在分组标题承载，弹窗内另有池徽章）
     '<div class="r2"><span class="db-prob2 ' + (e.sentiment === 'bear' ? 'down' : (e.sentiment === 'bull' ? 'up' : '')) + '">' + prob + '</span>' +
     '<span class="nt">' + esc((e.form || '').replace(/^.*?断板/, '断板').replace(/·/, '：')) + '</span></div></div>'; // R100z4e：仅首个 ·→：（断板反包：…·…），后续分隔保留 ·
@@ -2012,6 +2016,13 @@ function renderDuanban() {
     // 无概率排断板池之后；前端对池外标的构造最小弹窗条目（K线由 stkFetchKline 网络兜底）。
     var starPool = st.picks.filter(function (p) { return poolByCode[String(p.code)]; });
     var starTech = st.picks.filter(function (p) { return !poolByCode[String(p.code)] && String(p.code || '').length === 6; });
+    // R100z4u：技术池 code→条目 映射（九门→谐波→吸筹 顺序），精选卡补分数徽章 + 分数降序
+    var D0 = window.DASHBOARD_DATA || {};
+    var _techMap = {};
+    ((D0.powerScreen || {}).passed || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
+    [].concat((D0.harmonic || {}).confirmPool || [], (D0.harmonic || {}).watchPool || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
+    ((D0.accumulation || {}).scored || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
+    starTech.forEach(function (p) { var tp = _techMap[String(p.code)]; if (tp) { if (tp.score != null) p.score = tp.score; if (tp.grade) p.grade = tp.grade; } });
     starPool.sort(function (a, b) {
       var ea = poolByCode[String(a.code)], eb = poolByCode[String(b.code)];
       var pa = (ea.probability == null) ? -1 : ea.probability, pb = (eb.probability == null) ? -1 : eb.probability;
@@ -2038,15 +2049,14 @@ function renderDuanban() {
       } else {
         e2 = { code: code, name: p.name || '', sector: p.sector || '', stage: '精选',
                sentiment: p.sentiment || 'neutral', probability: p.probability,
+               src: p.src || '',
                form: ({ hz: '谐波形态', pw: '日线九门', acc: '主力吸筹' }[p.src] || '技术池候选'), note: p.note || '' };
+        if (p.score != null) e2.score = p.score;
+        if (p.grade) e2.grade = p.grade;
         // R100z4t：合并技术池条目字段——story/deduce（AI 写回后弹窗可见）、sector 补全。
         // 注意不合并 pw.pct（那是涨停日涨幅，弹窗「今日」位会误标）。
         (function () {
-          var D0 = window.DASHBOARD_DATA || {};
-          var tp = null;
-          ((D0.powerScreen || {}).passed || []).forEach(function (x) { if (!tp && x && String(x.code) === code) tp = x; });
-          if (!tp) [].concat((D0.harmonic || {}).confirmPool || [], (D0.harmonic || {}).watchPool || []).forEach(function (x) { if (!tp && x && String(x.code) === code) tp = x; });
-          if (!tp) ((D0.accumulation || {}).scored || []).forEach(function (x) { if (!tp && x && String(x.code) === code) tp = x; });
+          var tp = _techMap[code];
           if (tp) {
             if (tp.story) e2.story = tp.story;
             if (tp.deduce) e2.deduce = tp.deduce;
@@ -2432,14 +2442,27 @@ function _dbk_markline(hz) {
 // R100z4s：谐波 X→A→B→C→D 红色连线（仅谐波池弹窗，hz 非空时注入）。
 // 点直接作为 line series 数据项（per-point itemStyle/label）——原 markPoint 在 dataZoom
 // 窗口外不渲染，挪进 series 后配合 clip:false 即可「一直渲染」（用户要求，R100z4s）。
-// 无日期的点（延伸族名义 C 兜底）跳过该顶点，由水平虚线保留其价位。
+// R100z4u：日期不在 K 线数组时钳位到边界（D=今日盘中 > stkKlines 末根时落最后一根），
+// 不再整点跳过——否则 C→D 段整段消失（600183/000878 等 7 只曾中招）。
 function _dbk_hzline(hz, dates) {
-  if (!hz || !hz.points || !hz.pointDays) return null;
+  if (!hz || !hz.points || !hz.pointDays || !dates.length) return null;
   var seq = ['X', 'A', 'B', 'C', 'D'];
+  var dmap = {};
+  dates.forEach(function (d, i) { dmap[d] = i; });
   var data = [];
   for (var i = 0; i < seq.length; i++) {
     var k = seq[i], pv = hz.points[k], day = hz.pointDays[k];
-    if (typeof pv !== 'number' || !day || dates.indexOf(day) < 0) continue;
+    if (typeof pv !== 'number' || !day) continue;
+    if (dmap[day] === undefined) {
+      var cl = null;
+      if (day > dates[dates.length - 1]) cl = dates[dates.length - 1];
+      else if (day < dates[0]) cl = dates[0];
+      else { // 区间内但非交易日（停牌等）→ 取该日之前最近交易日
+        for (var j = dates.length - 1; j >= 0; j--) { if (dates[j] < day) { cl = dates[j]; break; } }
+      }
+      if (!cl) continue;
+      day = cl;
+    }
     var isD = (k === 'D'); // D 实际=实心红点，X/A/B/C=白底红边空心圆（与迷你图统一，R100z4q）
     data.push({
       value: [day, pv], name: k,
