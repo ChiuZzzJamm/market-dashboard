@@ -119,6 +119,12 @@ def collect_stocks(D):
         add_code(hp.get("code") or hp.get("thsCode"))
     for hp in (D.get("harmonic") or {}).get("watchPool") or []:
         add_code(hp.get("code") or hp.get("thsCode"))
+    # 8) 九门池 / 吸筹池 —— R100z4t：开盘精选会直接从这两池取标的，弹窗 K 线走
+    #    stkGlobalKline 兜底读顶层 stkKlines，池内标的必须全部内嵌覆盖
+    for pp in (D.get("powerScreen") or {}).get("passed") or []:
+        add_code(pp.get("code"))
+    for ap in (D.get("accumulation") or {}).get("scored") or []:
+        add_code(ap.get("code"))
     return codes, names, syms
 
 

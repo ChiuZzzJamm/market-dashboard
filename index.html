@@ -2039,6 +2039,20 @@ function renderDuanban() {
         e2 = { code: code, name: p.name || '', sector: p.sector || '', stage: '精选',
                sentiment: p.sentiment || 'neutral', probability: p.probability,
                form: ({ hz: '谐波形态', pw: '日线九门', acc: '主力吸筹' }[p.src] || '技术池候选'), note: p.note || '' };
+        // R100z4t：合并技术池条目字段——story/deduce（AI 写回后弹窗可见）、sector 补全。
+        // 注意不合并 pw.pct（那是涨停日涨幅，弹窗「今日」位会误标）。
+        (function () {
+          var D0 = window.DASHBOARD_DATA || {};
+          var tp = null;
+          ((D0.powerScreen || {}).passed || []).forEach(function (x) { if (!tp && x && String(x.code) === code) tp = x; });
+          if (!tp) [].concat((D0.harmonic || {}).confirmPool || [], (D0.harmonic || {}).watchPool || []).forEach(function (x) { if (!tp && x && String(x.code) === code) tp = x; });
+          if (!tp) ((D0.accumulation || {}).scored || []).forEach(function (x) { if (!tp && x && String(x.code) === code) tp = x; });
+          if (tp) {
+            if (tp.story) e2.story = tp.story;
+            if (tp.deduce) e2.deduce = tp.deduce;
+            if (tp.sector && !e2.sector) e2.sector = tp.sector;
+          }
+        })();
       }
       DB_INDEX[key] = e2;
       DB_ORDER.push(key);
@@ -2238,13 +2252,26 @@ function openDbModal(key) {
     '</div>' +
     (function () { var hz = findHarmonic(String(e.code)); return hz ? '<div class="hz-strip">' + hzSideHtml(hz) + hzMiniWrap(hz) + '</div>' : ''; })(); // R100z4：断板弹窗谐波参数+迷你图独立成行（命中谐波池才渲染）
   var probCls = e.sentiment === 'bear' ? 'down' : (e.sentiment === 'neutral' ? '' : 'up');
+  // R100z4t：池内标的带涨停日/板块涨幅；精选技术池标的无这些字段（原样渲染两行「—」像坏了）——
+  // 无 ztDate 且无 pct 时隐藏这两行，改显示 note（9:45 写入的竞价/现涨观察）。
   document.getElementById('db-modal-meta').innerHTML =
-    '<div><span class="lab">涨停日：</span>' + esc(e.ztDate || '') + '　<span class="lab">今日：</span><b class="' + (e.pct >= 0 ? 'up' : 'down') + '">' + fmtPct(e.pct) + '</b></div>' +
-    '<div><span class="lab">涨停日板块涨幅：</span><b class="' + (e.boardPctZt >= 0 ? 'up' : 'down') + '">' + (e.boardPctZt == null ? '—' : fmtPct(e.boardPctZt)) + '</b>　<span class="lab">今日板块涨幅：</span><b class="' + (e.boardPctToday >= 0 ? 'up' : 'down') + '">' + (e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday)) + '</b></div>' +
+    (e.ztDate || e.pct != null
+      ? '<div><span class="lab">涨停日：</span>' + esc(e.ztDate || '') + '　<span class="lab">今日：</span><b class="' + (e.pct >= 0 ? 'up' : 'down') + '">' + fmtPct(e.pct) + '</b></div>' +
+        '<div><span class="lab">涨停日板块涨幅：</span><b class="' + (e.boardPctZt >= 0 ? 'up' : 'down') + '">' + (e.boardPctZt == null ? '—' : fmtPct(e.boardPctZt)) + '</b>　<span class="lab">今日板块涨幅：</span><b class="' + (e.boardPctToday >= 0 ? 'up' : 'down') + '">' + (e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday)) + '</b></div>'
+      : '') +
     '<div><span class="lab">形态：</span>' + esc((e.form || '').replace(/·/, '：')) + '</div>' + // R100z4e：仅首个 ·→：
+    (e.note ? '<div><span class="lab">盘面观察：</span>' + esc(e.note) + '</div>' : '') +
     '<div><span class="lab">上涨概率：</span><b class="' + probCls + '">' + (e.probability !== null && e.probability !== undefined ? e.probability + '%' : '—') + '</b></div>' +
     techMetaLines(String(e.code)); // R100z3：对应技术面（九门/吸筹）纯文本行，命中才渲染
-  document.getElementById('db-kline').innerHTML = dbKlineSvg(e.kline);
+  // R100z4t：K线兜底链——池条目内嵌 → 顶层 stkKlines（embed 320 根全覆盖）→ 网络拉取后回填
+  (function () {
+    var kl0 = e.kline || stkGlobalKline(e.code);
+    if (!kl0 && /^\d{6}$/.test(String(e.code))) {
+      var _kkey = key;
+      stkFetchKline(String(e.code), function (kl2) { if (kl2 && DB_CURR === _kkey) document.getElementById('db-kline').innerHTML = dbKlineSvg(kl2); });
+    }
+    document.getElementById('db-kline').innerHTML = dbKlineSvg(kl0);
+  })();
   // R89 依据小作文化：story（AI 消息面解读，非空时优先）或结构化 refs（含新闻摘要）逐段渲染
   // R100z4g：段落统一走 dbStoryParaHtml / 真实旗标映射——「个股消息 🇨🇳：」蓝色加粗，AI 小作文标 🤖
   function dbRefPara(r) {
@@ -2286,6 +2313,7 @@ function openDbModal(key) {
     refsHtml += label + (bullP || '—');
     if (bearP) refsHtml += '<div style="margin-top:6px;"><b style="color:var(--down)">利空口径：</b>' + bearP + '</div>';
   }
+  if (e.deduce) refsHtml += renderDeduce(e.deduce, true); // R100z4t：技术池标的合并自 powerScreen/harmonic/accumulation 的三候选推演
   document.getElementById('db-refs').innerHTML =
     refsHtml +
     '<br>形态核验：check_duanban.py 确定性脚本（涨停池 + 腾讯日K）；板块涨幅与 TOP10 榜采用同花顺行业口径（R98）。观察池标的待最后一根确认K线，确认失败即移出。';
