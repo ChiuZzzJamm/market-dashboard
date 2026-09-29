@@ -50,6 +50,12 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# R100z6：THS 抓取收口到 common（原 curl_ths_text/curl_ths_json/parse_ths_industries/
+# fetch_ths_industries 双副本合一，与 update_ashare_sectors 共用单一来源）
+from common import (ths_get as curl_ths_text, ths_json as curl_ths_json,
+                    parse_ths_industries, fetch_ths_industries)
+
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 EX = "https://push2ex.eastmoney.com"
@@ -213,26 +219,6 @@ THS_LIMITUP_API = "https://data.10jqka.com.cn/dataapi/limit_up/limit_up_pool"
 THS_LIMITUP_FIELDS = "199112,10,9001,330323,330324,330325,9002,330329,133971"
 
 
-def curl_ths_json(url, timeout=15):
-    """同花顺 JSON 接口：curl + Referer，失败返回 None。"""
-    r = subprocess.run(["curl", "-s", "--max-time", str(timeout),
-                       "-H", "User-Agent: " + UA,
-                       "-H", "Referer: https://data.10jqka.com.cn/",
-                       url], capture_output=True, timeout=timeout + 10)
-    out = r.stdout or b""
-    if isinstance(out, (bytes, bytearray)):
-        try:
-            out = out.decode("utf-8")
-        except UnicodeDecodeError:
-            out = out.decode("gbk", errors="replace")
-    if not isinstance(out, str) or not out.strip():
-        return None
-    try:
-        return json.loads(out)
-    except Exception:
-        return None
-
-
 def _ths_lbc_of(it):
     """连板天数：从 high_days（如 '3天3板'）提取首日数字；'首板'→1。"""
     hd = str(it.get("high_days") or "")
@@ -335,88 +321,14 @@ HIS = "https://push2his.eastmoney.com/api/qt/stock/kline/get"
 EM_UT = "fa5c3db4f1ca16c5b6e3b9a3f3ae3dfa"
 
 # ---------- R98: 同花顺行业板块口径（断板池板块相关数据） ----------
-THS_INDUSTRY_URL = "https://q.10jqka.com.cn/thshy/"
+# R100z6：curl_ths_text/parse_ths_industries/fetch_ths_industries 已收口到 common
+# （文件头部 from common import），THS_INDUSTRY_URL 一并由 common.THS_URL 提供。
 THS_KLINE_REFERER = "https://stockpage.10jqka.com.cn/"
 
 _board_map_cache = None
 _board_pct_hist_cache = {}
 _THS_BOARD_CACHE = None
 _THS_KLINE_CACHE = {}
-
-
-def curl_ths_text(url, timeout=20):
-    r = subprocess.run(["curl", "-s", "--max-time", str(timeout),
-                       "-H", "User-Agent: " + UA, url],
-                      capture_output=True, timeout=timeout + 10)
-    return (r.stdout or b"")
-
-
-def parse_ths_industries(html):
-    """解析同花顺行业一览表。返回 [{code,name,pct}]；失败/不足返回 []。
-    移植自 update_ashare_sectors.py（R97g）。"""
-    if isinstance(html, (bytes, bytearray)):
-        try:
-            text = html.decode("utf-8")
-        except UnicodeDecodeError:
-            text = html.decode("gbk", errors="replace")
-    else:
-        text = str(html)
-    rows = re.findall(r"<tr[^>]*>(.*?)</tr>", text, re.S)
-    out = []
-    for row in rows:
-        m = re.search(r'thshy/detail/code/(\d+)[^>]*>([^<]+)</a>', row)
-        if not m:
-            continue
-        code, name = m.group(1), m.group(2).strip()
-        if not name:
-            continue
-        tds = re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)
-        tds = [re.sub(r"<[^>]+>", "", t).strip() for t in tds]
-        ni = None
-        for i, t in enumerate(tds):
-            if t == name:
-                ni = i
-                break
-        if ni is None or ni + 1 >= len(tds):
-            continue
-        def _num(s):
-            s = s.replace("%", "").replace("亿", "").replace("万", "").replace(",", "")
-            try:
-                return float(s)
-            except Exception:
-                return None
-        pct = _num(tds[ni + 1])
-        if pct is None or pct < -15 or pct > 15:
-            continue
-        out.append({"code": code, "name": name, "pct": round(pct, 2)})
-    return out
-
-
-def fetch_ths_industries():
-    """R100z5d：一览表分页抓全（第1页50个 + 第2页40个 = 90 个同花顺行业）。
-    与 update_ashare_sectors.R98h 对齐——旧版只取第 1 页漏 40 个行业（电力/通用设备/
-    房地产开发等在第 2 页），导致池内匹配失败回退东财（沙箱被 WAF 拦）→
-    boardPctToday/boardPctZt 双 None。第2页用非 ajax 整页 URL（ajax/1/ 触发反爬跳转）。
-    按 code 去重合并；第 1 页失败（<10 个）时原样返回，避免半空表误匹配。"""
-    import time as _time
-    import random as _random
-    seen, out = set(), []
-    for page in range(1, 4):  # 最多抓到第3页防死循环
-        html = curl_ths_text(f"https://q.10jqka.com.cn/thshy/index/page/{page}/" if page > 1
-                             else THS_INDUSTRY_URL, timeout=20)
-        rows = parse_ths_industries(html)
-        fresh = [x for x in rows if x["code"] not in seen]
-        if page == 1 and len(out) + len(fresh) < 10:
-            return out + fresh  # 第1页异常，宁缺勿滥（调用方走东财兜底）
-        if not fresh:
-            break
-        for x in fresh:
-            seen.add(x["code"])
-            out.append(x)
-        if len(rows) < 10:  # 不足一页说明已到尾页
-            break
-        _time.sleep(1.0 + _random.random())
-    return out
 
 
 def fetch_ths_board_map():
@@ -534,6 +446,7 @@ def match_ths_industry(hybk, ths_names):
         "白酒": "白酒", "小家电": "小家电", "通信设备": "通信设备", "钢铁": "钢铁",
         "证券": "证券", "汽车整车": "汽车整车", "银行": "银行",
         "建筑装饰": "建筑装饰", "房地产": "房地产", "元件": "元件",
+        "房地产开发": "房地产",  # R100z6：同花顺行业已改名「房地产开发」→「房地产」
         "生物制品": "生物制品", "自动化设备": "自动化设备", "环境治理": "环境治理",
         "橡胶制品": "橡胶制品", "机场航运": "机场航运", "环保设备": "环保设备",
         "公路铁路运输": "公路铁路运输", "食品加工制造": "食品加工制造",
