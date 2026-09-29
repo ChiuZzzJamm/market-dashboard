@@ -2354,15 +2354,18 @@ function _dbk_markline(hz) {
   if (hz.prz) {
     data.push({ yAxis: hz.prz[0], lineStyle: { color: '#0f9d78', type: 'dashed' }, label: { formatter: 'PRZ', color: '#0f9d78', position: 'insideEndTop' } });
     data.push({ yAxis: hz.prz[1], lineStyle: { color: '#0f9d78', type: 'dashed' } });
+    // D 投影（= PRZ 中线，即 d_proj 真实价）= 虚线红线，与下方红色实线（实际 D）形成「实/虚」对照
+    data.push({ yAxis: (hz.prz[0] + hz.prz[1]) / 2, lineStyle: { color: '#f0435c', type: 'dashed', width: 1.5 }, label: { formatter: 'D投影', color: '#f0435c', position: 'insideEndTop' } });
   }
   if (typeof hz.stop === 'number') data.push({ yAxis: hz.stop, lineStyle: { color: '#c0392b', type: 'dashed' }, label: { formatter: '止损', color: '#c0392b', position: 'insideEndTop' } });
   if (typeof hz.target1 === 'number') data.push({ yAxis: hz.target1, lineStyle: { color: '#2f6fdb', type: 'dashed' }, label: { formatter: 'T1', color: '#2f6fdb', position: 'insideEndBottom' } });
   if (typeof hz.target2 === 'number') data.push({ yAxis: hz.target2, lineStyle: { color: '#2f6fdb', type: 'dashed' }, label: { formatter: 'T2', color: '#2f6fdb', position: 'insideEndBottom' } });
-  if (hz.points) {
+  // 仅对「无日期」的谐波点补水平虚线（有日期的点已由红色连线覆盖，避免重复标注；C 点常缺日期故保留其价位参考）
+  if (hz.points && hz.pointDays) {
     var pm = { X: '#7f8c8d', A: '#2f6fdb', B: '#9b59b6', C: '#e8862c', D: '#f0435c' };
     ['X', 'A', 'B', 'C', 'D'].forEach(function (k) {
-      var pv = hz.points[k];
-      if (typeof pv === 'number') data.push({ yAxis: pv, lineStyle: { color: pm[k], type: 'dotted', width: 1 }, label: { formatter: k, color: pm[k], position: 'insideEndTop' } });
+      var pv = hz.points[k], day = hz.pointDays[k];
+      if (typeof pv === 'number' && !day) data.push({ yAxis: pv, lineStyle: { color: pm[k], type: 'dotted', width: 1 }, label: { formatter: k, color: pm[k], position: 'insideEndTop' } });
     });
   }
   if (!data.length) return undefined;
@@ -2374,10 +2377,30 @@ function _dbk_markpoint(hz) {
   var pts = [];
   ['X', 'A', 'B', 'C', 'D'].forEach(function (k) {
     var pv = hz.points[k], day = hz.pointDays[k];
-    if (typeof pv === 'number' && day) pts.push({ name: k, coord: [day, pv], itemStyle: { color: pm[k] }, symbolSize: 8, label: { show: false } });
+    if (typeof pv === 'number' && day) {
+      var isD = (k === 'D'); // 实际 D：实心红点 + 白边放大，与「D投影」虚线对照
+      pts.push({ name: k, coord: [day, pv], itemStyle: { color: pm[k], borderColor: isD ? '#fff' : 'transparent', borderWidth: isD ? 2 : 0 }, symbolSize: isD ? 12 : 8, label: { show: false } });
+    }
   });
   if (!pts.length) return undefined;
   return { symbol: 'circle', symbolSize: 8, data: pts };
+}
+// R100z4p：谐波 X→A→B→C→D 红色连线（仅谐波池弹窗，hz 非空时注入）。无日期的点（C 常缺）跳过该顶点，由水平虚线保留其价位。
+function _dbk_hzline(hz, dates) {
+  if (!hz || !hz.points || !hz.pointDays) return null;
+  var seq = ['X', 'A', 'B', 'C', 'D'];
+  var data = [];
+  for (var i = 0; i < seq.length; i++) {
+    var k = seq[i], pv = hz.points[k], day = hz.pointDays[k];
+    if (typeof pv === 'number' && day && dates.indexOf(day) >= 0) data.push([day, pv]);
+  }
+  if (data.length < 2) return null;
+  return {
+    name: '谐波结构', type: 'line', xAxisIndex: 0, yAxisIndex: 0,
+    data: data, showSymbol: false, symbol: 'none',
+    lineStyle: { color: '#f0435c', width: 2, type: 'solid' },
+    z: 6, silent: true, tooltip: { show: false }, animation: false
+  };
 }
 function _dbk_option(kl, hz) {
   var UP = '#f0435c', DOWN = '#0f9d78';
@@ -2431,7 +2454,8 @@ function _dbk_option(kl, hz) {
       }
     },
     axisPointer: { link: [{ xAxisIndex: 'all' }] },
-    series: [
+    series: (function () {
+      var s = [
       {
         name: 'K线', type: 'candlestick', data: candle, xAxisIndex: 0, yAxisIndex: 0,
         itemStyle: { color: UP, color0: DOWN, borderColor: UP, borderColor0: DOWN },
@@ -2444,7 +2468,12 @@ function _dbk_option(kl, hz) {
       { name: 'MA20', type: 'line', data: ma20, xAxisIndex: 0, yAxisIndex: 0, smooth: true, showSymbol: false, lineStyle: { width: 1, color: '#9b59b6' } },
       { name: 'MA30', type: 'line', data: ma30, xAxisIndex: 0, yAxisIndex: 0, smooth: true, showSymbol: false, lineStyle: { width: 1, color: '#16a085' } },
       { name: '成交量', type: 'bar', data: vol, xAxisIndex: 1, yAxisIndex: 1, barWidth: '60%' }
-    ]
+      ];
+      // R100z4p：谐波池弹窗才注入红色 X-A-B-C-D 连线 series（非谐波弹窗 hz=null → 不注入）
+      var _hzl = _dbk_hzline(hz, dates);
+      if (_hzl) s.push(_hzl);
+      return s;
+    })()
   };
 }
 function _ensureEcharts(cb) {
