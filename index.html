@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609291835"></script>
+<script src="data.js?v=202609291855"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -2557,9 +2557,10 @@ function _dbk_option(kl, hz) {
   var candle = kl.map(function (b) { return [b[1], b[2], b[4], b[3]]; }); // open,close,low,high
   var vol = kl.map(function (b) { return { value: b[5], itemStyle: { color: b[2] >= b[1] ? UP : DOWN } }; });
   var ma5 = _dbk_ma(5, kl), ma10 = _dbk_ma(10, kl), ma20 = _dbk_ma(20, kl), ma30 = _dbk_ma(30, kl);
-  var startPct = Math.max(0, (kl.length - 30) / kl.length * 100);
+  // R100z5c：dataZoom 改用整数 startValue（原百分比 start 会落在非整数索引 13.33%→7.87，
+  // 首根K线被切在绘图区左缘、右端却对齐 → 视觉整体偏左不居中）。整数起点=窗口两端各留半带宽，天然对称。
+  var startVal = Math.max(0, kl.length - 30);
   // R100z4s：含谐波时自动把窗口起点扩到最早谐波点之前——默认近30根会把 X/A 甩出窗外
-  var _win0 = kl.length - 30;
   if (hz && hz.pointDays) {
     var _minIdx = -1;
     ['X', 'A', 'B', 'C', 'D'].forEach(function (k) {
@@ -2568,17 +2569,14 @@ function _dbk_option(kl, hz) {
       var ix = dates.indexOf(day);
       if (ix >= 0 && (_minIdx < 0 || ix < _minIdx)) _minIdx = ix;
     });
-    if (_minIdx >= 0) {
-      var _st = Math.max(0, _minIdx - 2) / kl.length * 100;
-      if (_st < startPct) startPct = _st;
-    }
+    if (_minIdx >= 0 && Math.max(0, _minIdx - 2) < startVal) startVal = Math.max(0, _minIdx - 2);
   }
   // R100z4y：谐波图 y 轴上下限纳入 止损/PRZ/T1/T2——否则止损在视野外（用户看不到红线，误以为「没有止损位」）
   var _hzRight = '4%';
   var _ymin, _ymax;
   if (hz && hz.prz) {
-    _hzRight = '13%'; // R100z4y：右边距加宽，PRZ/D投影/止损 insideEnd 标签不再被画布右缘裁切
-    var i0 = Math.floor(kl.length * startPct / 100);
+    _hzRight = '7%'; // R100z4y：右边距加宽防 PRZ/D投影/止损 标签被画布右缘裁切；R100z5b：13%→7%（左侧仅 2%，右侧留白过大致 K 线整体偏左不居中；7%≈60px 仍够 y 轴标签与 insideEnd 标签）
+    var i0 = startVal;
     for (var _i = i0; _i < kl.length; _i++) {
       var _lo = kl[_i][4], _hi = kl[_i][3];
       _ymin = (_ymin === undefined) ? _lo : Math.min(_ymin, _lo);
@@ -2606,8 +2604,8 @@ function _dbk_option(kl, hz) {
       { scale: true, gridIndex: 1, position: 'right', axisLabel: { color: '#5a6e82', fontSize: 9, formatter: function (v) { return _dbk_volfmt(v); } }, splitLine: { show: false }, axisLine: { show: false } }
     ],
     dataZoom: [
-      { type: 'inside', xAxisIndex: [0, 1], start: startPct, end: 100, zoomLock: false, throttle: 50 },
-      { type: 'slider', xAxisIndex: [0, 1], start: startPct, end: 100, left: '2%', right: _hzRight, bottom: 0, height: 14, borderColor: '#c7d3e0', fillerColor: 'rgba(74,168,224,0.15)', handleSize: '60%', textStyle: { color: '#5a6e82' } } // R100z4x：滑条与图区左右对齐；R100z4y：谐波图同步加宽
+      { type: 'inside', xAxisIndex: [0, 1], startValue: startVal, endValue: kl.length - 1, zoomLock: false, throttle: 50 }, // R100z5c：整数 startValue，窗口起点精确对齐K线（修复首根被切+视觉偏左）
+      { type: 'slider', xAxisIndex: [0, 1], startValue: startVal, endValue: kl.length - 1, left: '2%', right: _hzRight, bottom: 0, height: 14, borderColor: '#c7d3e0', fillerColor: 'rgba(74,168,224,0.15)', handleSize: '60%', textStyle: { color: '#5a6e82' } } // R100z4x：滑条与图区左右对齐；R100z4y：谐波图同步加宽；R100z5c：同步整数起点
     ],
     tooltip: {
       trigger: 'axis', axisPointer: { type: 'cross', lineStyle: { color: '#aab6c4' } },
