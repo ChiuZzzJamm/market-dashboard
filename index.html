@@ -374,7 +374,7 @@
   .db-title { font-size: 22px; font-weight: 900; letter-spacing: 2px; }
   .db-date { font-size: 12px; color: var(--ink2); position: absolute; right: 0; }
   @media (max-width: 700px) { .db-date { position: static; width: 100%; text-align: center; } }
-  .db-note { font-size: 12px; font-weight: 700; color: var(--ink2); margin: 0 0 14px; line-height: 1.7; }  /* R100z4i：去背景/边框/阴影，样式对齐谐波子页说明（hz-sub 朴素文字） */
+  /* R100z4v：.db-note 已删——断板页口径说明改静态 hz-sub（与谐波/九门/吸筹子页同款），不再读 db.note */
   .db-pool { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
   .db-pool h2 { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 9px; margin: 0 0 4px; }
   .db-pool h2::before { content: ""; width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
@@ -1963,8 +1963,9 @@ function renderDuanban() {
   DB_INDEX = {}; DB_ORDER = [];
   var db = duanbanData();
   document.getElementById('db-date').textContent = db && db.generatedAt ? '数据生成：' + db.generatedAt + '（每日 16:00 收盘后更新 · 次日 07:30 隔夜复核）' : '数据生成：—（待 16:00 自动化首跑）';
-  // R100j：说明随子页切换——断板页口径说明从顶部静态位挪到确认池上方（原 #db-note 已删除）
-  var _dbNote = (db && db.note) || '断板反包形态由脚本确定性核验（涨停池 + 腾讯日K，check_duanban.py）；板块涨幅与 TOP10 榜采用同花顺行业口径（R98）。每只标的按当日要闻/AI预测自动标注口径：利好（红）/利空（绿）/中性（灰）；上涨概率=脚本确定性基线（情绪+线索加权，R98k）+自动化 AI 复核校准（16:00 生成，次日 07:30 复核）。';
+  // R100z4v：断板页口径说明改静态（与谐波/九门/吸筹三子页同款 hz-sub + 悬停详解）——
+  // 原用动态 db.note，该字段被 07:30 自动化 AI 写回污染（写入流程说明而非口径），弃用。
+  var _dbNote = '<div class="hz-sub" style="margin:0 0 14px;" title="断板反包=确定性脚本核验（check_duanban.py：涨停池 + 腾讯日K）。T日涨停 → 次日放量断板（成交量≥1.5×T日） → 缩量回踩、不破T日最低点与MA5 → 待反包。确认池=全流程走完；观察池=形态进行中、差最后一根确认K线（待企稳 ＞ 待缩量）。仅沪深主板 60/00（排除科创板/北交所）；破位或超期移入失败池，5 个交易日后自动清理。每只标的按当日要闻/AI预测自动标注：利好（红）/利空（绿）/中性（灰）；上涨概率=脚本确定性基线+AI 复核校准（16:00 生成，次日 07:30 复核）。">断板反包口径：T日涨停 → 次日放量断板(≥1.5×) → 缩量回踩不破T日低点与MA5 → 待反包｜确认池=全流程走完 · 观察池=差最后一根确认K线｜沪深主板 60/00 · 涨停池+腾讯日K 确定性核验</div>';
   var conf = (db && db.confirmed) || [], watch = (db && db.watching) || [];
   var badge = document.getElementById('db-badge');
   badge.textContent = (conf.length + watch.length) ? ('确认 ' + conf.length + ' · 观察 ' + watch.length) : '';
@@ -2075,8 +2076,8 @@ function renderDuanban() {
   document.getElementById('db-fixed').innerHTML = fixed;
   // R100k：子页菜单移到内容流——断板页位于「开盘精选」与确认池说明之间（用户指定红框位置）
   html += subnavHtml();
-  // R100j：断板页口径说明置于确认池上方（TOP10 与 开盘精选 保持置顶不动）
-  html += '<div class="db-note">' + esc(_dbNote) + '</div>';
+  // R100j/R100z4v：断板页口径说明置于确认池上方（TOP10 与 开盘精选 保持置顶不动）；R100z4v 起为静态 HTML，不再 esc
+  html += _dbNote;
   html += dbPoolHtml('确认池', 'p-conf', '已走完「涨停 → 放量断板 → 缩量 → 不破T日低点与MA5」全流程', conf, true, 'c');
   html += dbPoolHtml('观察池', 'p-watch', '形态进行中、只差最后一根确认K线（待企稳 ＞ 待缩量）', watch, false, 'w');
   // R100i：断板反包失败池（破位 / 超期失效归档，5 交易日后自动清理）
