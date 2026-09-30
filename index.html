@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610010157"></script>
+<script src="data.js?v=202610010222"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -2566,8 +2566,10 @@ function _dbk_option(kl, hz) {
   var candle = kl.map(function (b) { return [b[1], b[2], b[4], b[3]]; }); // open,close,low,high
   var vol = kl.map(function (b) { return { value: b[5], itemStyle: { color: b[2] >= b[1] ? UP : DOWN } }; });
   var ma5 = _dbk_ma(5, kl), ma10 = _dbk_ma(10, kl), ma20 = _dbk_ma(20, kl), ma30 = _dbk_ma(30, kl);
-  // R100z6j：dataZoom 初始窗口交由物理裁切决定（传 kl 的就是 _dbk_slice 切好的视图），
-  // 不再设 startValue/endValue——iOS 本就忽略，桌面端若生效反而与切片窗口不一致。缩放仍由用户 dataZoom 承担。
+  // R100z6j：dataZoom 初始窗口曾交由物理裁切决定（传 kl 的就是 _dbk_slice 切好的视图）。
+  // R100z7（2026-10-01 用户反馈：默认 90 根太缩小，要默认放大到约 30 根、自己手动缩小看全量）：
+  // 普通图 dataZoom 设 startValue/endValue=最近 30 根（放大态初始视图），滑条/双指可缩回 90 根全量；
+  // iOS 忽略 startValue 时自动回退全量 90 根（与旧行为一致，不劣化）。谐波图保留形态全窗（X 点须在视野内）。
   // R100z4y：谐波图 y 轴上下限纳入 止损/PRZ/T1/T2——否则止损在视野外（用户看不到红线，误以为「没有止损位」）
   var _hzRight = '4%';
   var _ymin, _ymax;
@@ -2601,10 +2603,14 @@ function _dbk_option(kl, hz) {
       { scale: true, min: _ymin, max: _ymax, gridIndex: 0, position: 'right', axisLabel: { color: '#5a6e82', fontSize: 10 }, splitLine: { lineStyle: { color: '#eef3f8' } }, axisLine: { show: false } }, // R100z4y：谐波图固定上下限含止损/目标位
       { scale: true, gridIndex: 1, position: 'right', axisLabel: { color: '#5a6e82', fontSize: 9, formatter: function (v) { return _dbk_volfmt(v); } }, splitLine: { show: false }, axisLine: { show: false } }
     ],
-    dataZoom: [
-      { type: 'inside', xAxisIndex: [0, 1], zoomLock: false, throttle: 50 }, // R100z6j：不设 startValue/endValue，初始窗口=传入切片全量（物理裁切定窗口，跨端一致）
-      { type: 'slider', xAxisIndex: [0, 1], left: '2%', right: _hzRight, bottom: 0, height: 14, borderColor: '#c7d3e0', fillerColor: 'rgba(74,168,224,0.15)', handleSize: '60%', textStyle: { color: '#5a6e82' } } // R100z4x：滑条与图区左右对齐；R100z4y：谐波图同步加宽；R100z6j：去掉 startValue/endValue
-    ],
+    dataZoom: (function () {
+      // R100z7：普通图默认只放大显示最近 30 根（用户 10/1 反馈），滑条/双指可缩回全量；谐波保留形态全窗
+      var init = (!hz || !hz.pointDays) ? { startValue: Math.max(0, kl.length - 30), endValue: kl.length - 1 } : {};
+      return [
+        { type: 'inside', xAxisIndex: [0, 1], zoomLock: false, throttle: 50, startValue: init.startValue, endValue: init.endValue },
+        { type: 'slider', xAxisIndex: [0, 1], left: '2%', right: _hzRight, bottom: 0, height: 14, borderColor: '#c7d3e0', fillerColor: 'rgba(74,168,224,0.15)', handleSize: '60%', textStyle: { color: '#5a6e82' }, startValue: init.startValue, endValue: init.endValue }
+      ];
+    })(),
     tooltip: {
       trigger: 'axis', axisPointer: { type: 'cross', lineStyle: { color: '#aab6c4' } },
       backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#c7d3e0', borderWidth: 1, textStyle: { color: '#2b3a4b', fontSize: 11 },
@@ -2656,8 +2662,9 @@ function _ensureEcharts(cb) {
   s.onerror = function () { cb(); };
   document.head.appendChild(s);
 }
-// R100z6j：_dbk_startVal 已删——dataZoom 不再设 startValue/endValue（初始窗口=物理切片全量，跨端一致），
-// y 轴上下限改为扫描整个传入视图（见 _dbk_option 内 R100z6j 注）。
+// R100z6j：_dbk_startVal 曾删——初始窗口=物理切片全量；R100z7（2026-10-01 用户反馈「默认90根太小，
+// 要默认放大到约30根、自己手动缩小看全量」）起普通图恢复 dataZoom startValue/endValue=最近30根，
+// y 轴经 _dbkFit 初始调用适配可见区间（iOS 忽略 startValue 时 visible=全量、fit 同步等价全窗口，跨端自洽）。
 // R100z6g：确定性初始窗口——渲染前物理裁切数据（不再依赖 dataZoom startValue/dispatchAction，
 // iOS Safari 上两者均被忽略、真机实证全量塞屏）。谐波图=全量90日窗口（R100z6i：原「X-10缓冲且≥60根」
 // 的 min 钳制会把近期形态标的钳回只显示60根，与「谐波=90日线」定稿冲突，改为默认从90日窗口起点展示；
@@ -2736,6 +2743,7 @@ function dbKlineSvg(kline, hz) {
         }
       };
       chart.on('dataZoom', chart._dbkFit);
+      chart._dbkFit(); // R100z7：初始窗口=近30根时 y 轴立即适配可见区间（startValue 被忽略的平台 visible=全量，fit 自动等价全窗）
       // R100z4w：谐波连线初始绘制 + resize 重算像素位（resize 一并触发 y 自适应，保持缩放态一致）
       if (hz) {
         _dbk_hzGraphic(chart, view, hz);
