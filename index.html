@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609301409"></script>
+<script src="data.js?v=202609301421"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -2564,17 +2564,16 @@ function _dbk_option(kl, hz) {
   var candle = kl.map(function (b) { return [b[1], b[2], b[4], b[3]]; }); // open,close,low,high
   var vol = kl.map(function (b) { return { value: b[5], itemStyle: { color: b[2] >= b[1] ? UP : DOWN } }; });
   var ma5 = _dbk_ma(5, kl), ma10 = _dbk_ma(10, kl), ma20 = _dbk_ma(20, kl), ma30 = _dbk_ma(30, kl);
-  // R100z5c：dataZoom 改用整数 startValue（原百分比 start 会落在非整数索引 13.33%→7.87，
-  // 首根K线被切在绘图区左缘、右端却对齐 → 视觉整体偏左不居中）。整数起点=窗口两端各留半带宽，天然对称。
-  // R100z6e：起点计算抽取为 _dbk_startVal（与 dispatchAction 兜底共用）
-  var startVal = _dbk_startVal(kl, hz);
+  // R100z6j：dataZoom 初始窗口交由物理裁切决定（传 kl 的就是 _dbk_slice 切好的视图），
+  // 不再设 startValue/endValue——iOS 本就忽略，桌面端若生效反而与切片窗口不一致。缩放仍由用户 dataZoom 承担。
   // R100z4y：谐波图 y 轴上下限纳入 止损/PRZ/T1/T2——否则止损在视野外（用户看不到红线，误以为「没有止损位」）
   var _hzRight = '4%';
   var _ymin, _ymax;
   if (hz && hz.prz) {
     _hzRight = '7%'; // R100z4y：右边距加宽防 PRZ/D投影/止损 标签被画布右缘裁切；R100z5b：13%→7%（左侧仅 2%，右侧留白过大致 K 线整体偏左不居中；7%≈60px 仍够 y 轴标签与 insideEnd 标签）
-    var i0 = startVal;
-    for (var _i = i0; _i < kl.length; _i++) {
+    // R100z6j：扫描整个传入视图（原只扫最后30根——窗口扩到90日后，早期高价段蜡烛超出按近期算的上限被整体裁掉，
+    // 表现为「中部蜡烛消失、均线仍在」，即用户截图红框区）
+    for (var _i = 0; _i < kl.length; _i++) {
       var _lo = kl[_i][4], _hi = kl[_i][3];
       _ymin = (_ymin === undefined) ? _lo : Math.min(_ymin, _lo);
       _ymax = (_ymax === undefined) ? _hi : Math.max(_ymax, _hi);
@@ -2601,8 +2600,8 @@ function _dbk_option(kl, hz) {
       { scale: true, gridIndex: 1, position: 'right', axisLabel: { color: '#5a6e82', fontSize: 9, formatter: function (v) { return _dbk_volfmt(v); } }, splitLine: { show: false }, axisLine: { show: false } }
     ],
     dataZoom: [
-      { type: 'inside', xAxisIndex: [0, 1], startValue: startVal, endValue: kl.length - 1, zoomLock: false, throttle: 50 }, // R100z5c：整数 startValue，窗口起点精确对齐K线（修复首根被切+视觉偏左）
-      { type: 'slider', xAxisIndex: [0, 1], startValue: startVal, endValue: kl.length - 1, left: '2%', right: _hzRight, bottom: 0, height: 14, borderColor: '#c7d3e0', fillerColor: 'rgba(74,168,224,0.15)', handleSize: '60%', textStyle: { color: '#5a6e82' } } // R100z4x：滑条与图区左右对齐；R100z4y：谐波图同步加宽；R100z5c：同步整数起点
+      { type: 'inside', xAxisIndex: [0, 1], zoomLock: false, throttle: 50 }, // R100z6j：不设 startValue/endValue，初始窗口=传入切片全量（物理裁切定窗口，跨端一致）
+      { type: 'slider', xAxisIndex: [0, 1], left: '2%', right: _hzRight, bottom: 0, height: 14, borderColor: '#c7d3e0', fillerColor: 'rgba(74,168,224,0.15)', handleSize: '60%', textStyle: { color: '#5a6e82' } } // R100z4x：滑条与图区左右对齐；R100z4y：谐波图同步加宽；R100z6j：去掉 startValue/endValue
     ],
     tooltip: {
       trigger: 'axis', axisPointer: { type: 'cross', lineStyle: { color: '#aab6c4' } },
@@ -2655,23 +2654,8 @@ function _ensureEcharts(cb) {
   s.onerror = function () { cb(); };
   document.head.appendChild(s);
 }
-// R100z6e：初始窗口起点统一计算（近30根；含谐波时扩到最早形态点前2根）——
-// _dbk_option 与 dbKlineSvg 的 dispatchAction 兜底共用，避免两处逻辑漂移
-function _dbk_startVal(kl, hz) {
-  var startVal = Math.max(0, kl.length - 30);
-  if (hz && hz.pointDays) {
-    var dates = kl.map(function (b) { return b[0]; });
-    var _minIdx = -1;
-    ['X', 'A', 'B', 'C', 'D'].forEach(function (k) {
-      var day = hz.pointDays[k];
-      if (!day) return;
-      var ix = dates.indexOf(day);
-      if (ix >= 0 && (_minIdx < 0 || ix < _minIdx)) _minIdx = ix;
-    });
-    if (_minIdx >= 0 && Math.max(0, _minIdx - 2) < startVal) startVal = Math.max(0, _minIdx - 2);
-  }
-  return startVal;
-}
+// R100z6j：_dbk_startVal 已删——dataZoom 不再设 startValue/endValue（初始窗口=物理切片全量，跨端一致），
+// y 轴上下限改为扫描整个传入视图（见 _dbk_option 内 R100z6j 注）。
 // R100z6g：确定性初始窗口——渲染前物理裁切数据（不再依赖 dataZoom startValue/dispatchAction，
 // iOS Safari 上两者均被忽略、真机实证全量塞屏）。谐波图=全量90日窗口（R100z6i：原「X-10缓冲且≥60根」
 // 的 min 钳制会把近期形态标的钳回只显示60根，与「谐波=90日线」定稿冲突，改为默认从90日窗口起点展示；
