@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609301421"></script>
+<script src="data.js?v=202609301428"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -2673,6 +2673,33 @@ function _dbk_slice(kl, hz) {
   var from = Math.max(0, Math.min(minIx - 10, kl.length - 90));
   return kl.slice(from);
 }
+// R100z6k：缩放监听辅助——按当前可见区间重算 y 轴 min/max（含谐波止损/PRZ/T1/T2），
+// 让缩放后蜡烛不再被整段范围压扁。初始（未缩放）visible=全窗口，结果与 _dbk_option 固定全窗口一致。
+function _dbk_visibleIdx(chart, len) {
+  var dz = (chart.getOption().dataZoom || [])[0] || {};
+  var s = (dz.start == null ? 0 : dz.start) / 100;
+  var e = (dz.end == null ? 100 : dz.end) / 100;
+  var i0 = Math.max(0, Math.floor(s * (len - 1)));
+  var i1 = Math.min(len - 1, Math.ceil(e * (len - 1)));
+  if (i1 < i0) i1 = i0;
+  return [i0, i1];
+}
+function _dbk_fitY(chart, view, hz, i0, i1) {
+  var ymin, ymax;
+  for (var i = i0; i <= i1; i++) {
+    var b = view[i]; if (!b) continue;
+    ymin = (ymin === undefined) ? b[4] : Math.min(ymin, b[4]);
+    ymax = (ymax === undefined) ? b[3] : Math.max(ymax, b[3]);
+  }
+  if (hz && hz.prz) {
+    [hz.stop, hz.prz[0], hz.prz[1], hz.target1, hz.target2].forEach(function (v) {
+      if (typeof v === 'number' && isFinite(v)) { ymin = Math.min(ymin, v); ymax = Math.max(ymax, v); }
+    });
+  }
+  if (ymin === undefined || ymax === undefined || ymax <= ymin) return;
+  var pad = (ymax - ymin) * 0.03 || 1; // R100z4z 同口径 3% 上下留白
+  chart.setOption({ yAxis: [{ min: +(ymin - pad).toFixed(2), max: +(ymax + pad).toFixed(2) }] }); // 仅更新价格轴(索引0)，量轴不动
+}
 function dbKlineSvg(kline, hz) {
   if (!kline || kline.length < 2) return '<div class="db-empty">暂无K线数据</div>';
   var view = _dbk_slice(kline, hz); // R100z6g：渲染前裁切，初始视图=数据全量，任何设备不可能错位
@@ -2693,11 +2720,22 @@ function dbKlineSvg(kline, hz) {
       if (!el) return;
       var chart = echarts.init(el);
       chart.setOption(_dbk_option(view, hz)); // R100z6g：渲染裁切后窗口（不再传 startValue）
-      // R100z4w：谐波连线为 graphic 像素层——初始绘制 + 缩放时重算像素位置（resize 由全局 resize 监听统一触发 c._dbkHzRef）
+      // R100z6k：缩放监听——dataZoom 时 y 轴自适应可见窗口（普通/谐波通用；谐波额外纳入止损/PRZ/T1/T2）。
+      // 谐波连线 graphic 在 rAF 内基于新坐标重算像素位（y 改变后 convertToPixel 须待布局完成再取，故延一帧）。
+      chart._dbkFit = function () {
+        try {
+          var rng = _dbk_visibleIdx(chart, view.length);
+          _dbk_fitY(chart, view, hz, rng[0], rng[1]);
+        } catch (e) {}
+        if (hz) {
+          if (!chart._dbkRaf) chart._dbkRaf = requestAnimationFrame(function () { chart._dbkRaf = null; try { _dbk_hzGraphic(chart, view, hz); } catch (e) {} });
+        }
+      };
+      chart.on('dataZoom', chart._dbkFit);
+      // R100z4w：谐波连线初始绘制 + resize 重算像素位（resize 一并触发 y 自适应，保持缩放态一致）
       if (hz) {
         _dbk_hzGraphic(chart, view, hz);
-        chart.on('dataZoom', function () { try { _dbk_hzGraphic(chart, view, hz); } catch (e) {} });
-        chart._dbkHzRef = function () { _dbk_hzGraphic(chart, view, hz); };
+        chart._dbkHzRef = chart._dbkFit;
       }
       DBK_CHARTS.push(chart);
       setTimeout(function () { try { chart.resize(); if (hz) _dbk_hzGraphic(chart, view, hz); } catch (e) {} }, 60);
