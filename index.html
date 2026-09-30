@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609301856"></script>
+<script src="data.js?v=202610010157"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1754,8 +1754,10 @@ function renderHarmonic() {
       '<div class="hz-meta">' + meta + '</div></div>';
   };
   // R100l：三池样式对齐断板反包页——.db-pool 圆点标题容器（确认池红点 / 观察池蓝点 / 失效池灰点 dbFailHtml）
-  // R100z4x：谐波子页顶部术语说明段落（.hz-sub）按用户反馈删除——PRZ/止损/T1/T2 已在每张卡片 hz-side 展示，顶部段落冗余
-  var html = '';
+  // R100z4x：谐波子页顶部术语说明段落（.hz-sub）曾按用户反馈删除——2026-09-30 用户要求恢复（与九门/吸筹口径行同款）
+  // R100z6l：恢复口径行（hz-sub 朴素样式 + 悬停详解），术语与 R100g 定稿一致
+  var hzDef = '<div class="hz-sub" style="margin:0 0 14px;" title="谐波=XABCD 五点形态（腾讯 ifzq 前复权日K，harmonic_detect.py）。X-A=初段 · A-B=回调 · B-C=延续 · C-D=终段；D 点落入 PRZ 后观察反转。PRZ=潜在反转区（D 点投影 ±0.5×ATR14）；T1/T2=D+0.382/0.618×CD 两级目标位；止损=形态失效位（D 点结构破坏）。确认池=D 已触及 PRZ 且现企稳确认（按距 PRZ 距离升序）；观察池=D 行进中、距 PRZ≤8%；D 点破位或超期移入失效池，5 个交易日后自动清理。">谐波口径：XABCD 五点形态（前复权日K）｜PRZ=潜在反转区（D投影±0.5×ATR14）｜T1/T2=D+0.382/0.618×CD｜止损=形态失效位｜确认池=D触及PRZ企稳 · 观察池=距PRZ≤8%</div>';
+  var html = hzDef;
   if (c.length) html += '<div class="db-pool p-conf"><h2>确认池 · ' + c.length + ' 只</h2><div class="db-sub">D 点已触及 PRZ 且现企稳确认 · 按距 PRZ 距离升序（越近越靠前）</div><div class="hz-pool">' + c.map(card).join('') + '</div></div>';
   else html += '<div class="db-pool p-conf"><h2>确认池 · 0 只</h2><div class="db-empty">暂无标的（形态核验宁缺毋滥，无达标即如实留空）</div></div>';
   if (w.length) html += '<div class="db-pool p-watch"><h2>观察池 · ' + w.length + ' 只</h2><div class="db-sub">D 点行进中、距 PRZ ≤8%，待触及反转区确认</div><div class="hz-pool">' + w.map(card).join('') + '</div></div>';
@@ -2659,10 +2661,12 @@ function _ensureEcharts(cb) {
 // R100z6g：确定性初始窗口——渲染前物理裁切数据（不再依赖 dataZoom startValue/dispatchAction，
 // iOS Safari 上两者均被忽略、真机实证全量塞屏）。谐波图=全量90日窗口（R100z6i：原「X-10缓冲且≥60根」
 // 的 min 钳制会把近期形态标的钳回只显示60根，与「谐波=90日线」定稿冲突，改为默认从90日窗口起点展示；
-// 仅当数据长于90根（hzNeedsLong 网络拉取的长窗）才从 X-10 起裁）；普通图=最后60根。
+// 仅当数据长于90根（hzNeedsLong 网络拉取的长窗）才从 X-10 起裁）。
+// R100z6l：普通图也从 60 根扩到 90 根（R100z6h「全量统一90交易日」含展示口径；用户 9/30 反馈
+// AI预测/题材掘金等 stk-modal 弹窗只显示约60根、与数据层90根不符——根因即本函数 no-hz 分支 slice(-60)）。
 // dataZoom 仍可放大细看，代价是切片之前的历史不可见（弹窗主用途=形态+近期走势）。
 function _dbk_slice(kl, hz) {
-  if (!hz || !hz.pointDays) return kl.slice(-60);
+  if (!hz || !hz.pointDays) return kl.slice(-90);
   var dates = kl.map(function (b) { return b[0]; });
   var minIx = kl.length - 1;
   ['X', 'A', 'B', 'C', 'D'].forEach(function (k) {
