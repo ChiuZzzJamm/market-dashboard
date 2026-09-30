@@ -7,7 +7,7 @@
 validate 之前运行，把所有 A股标的的日 K 线一次性抓取并写入 data.js 顶层：
 
   stkKlines     : {"600519": [[date,open,close,high,low,volume], ...], ...}  # 分级根数日K
-                  # R100z6f：全量统一 120 根
+                  # R100z6g：全量统一 90 根（含谐波池）
   stkKlineNames : {"贵州茅台": "600519", ...}   # 板块领涨TOP 等无 code 条目的名称反查
 
 数据源：
@@ -28,15 +28,15 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-# R100z6f：全量统一 120 根（用户拍板：谐波池也 120；当前 24 只形态点均在 120 窗口内，
-#         弹窗 hzNeedsLong 为 false 不触发长窗拉取。若未来形态点超出 120 窗口，弹窗走网络 320 兜底）
+# R100z6g（2026-09-30 用户拍板）：全量统一 90 根（含谐波池）。当前 24 只谐波形态点 X/A/B/C/D 全部
+#         落在 90 交易日窗口内，弹窗 _dbk_slice 直接切片渲染、hzNeedsLong=false 不触发长窗网络拉取。
 IFZQ_URL = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={sym},day,,,{n},qfq"
 SMARTBOX_URL = "https://smartbox.gtimg.cn/s3/?v=2&q={q}&t=all"
 # R98j：腾讯 ifzq 被 WAF 拦截/失败时的新浪 JSON 备源（日K 不复权，兜底；指数/个股通用）
 SINA_URL = ("https://quotes.sina.cn/cn/api/json_v2.php/CN_MarketDataService.getKLineData"
             "?symbol={sym}&scale=240&ma=no&datalen={n}")
-BARS_DEFAULT = 120
-BARS_HARMONIC = 120  # R100z6f：与 DEFAULT 统一（保留分流结构便于日后调整）
+BARS_DEFAULT = 90
+BARS_HARMONIC = 90  # R100z6g：与 DEFAULT 统一（保留分流结构便于日后调整）；当前 24 只谐波形态点均在 90 窗口内
 # R98j：大盘指数 sym（前端点击指数看K线；指数键带 sh/sz 前缀，与个股 6 位键不冲突）
 INDEX_SYMS = {"上证指数": "sh000001", "深证成指": "sz399001", "创业板指": "sz399006",
               "科创50": "sh000688", "上证50": "sh000016"}
@@ -119,7 +119,7 @@ def collect_stocks(D):
             sym = INDEX_SYMS.get(str(idx.get("name") or "").strip(), "")
         if sym:
             syms.add(sym)
-    # 7) 谐波池（确认/观察）—— R100z4o 全量 320：需 320 根长窗才能显示 X/A/B/C 形态点
+    # 7) 谐波池（确认/观察）—— R100z6g：纳入内嵌（当前 90 根窗口已覆盖全部 24 只形态点，无需长窗）
     for hp in (D.get("harmonic") or {}).get("confirmPool") or []:
         add_code(hp.get("code") or hp.get("thsCode"))
     for hp in (D.get("harmonic") or {}).get("watchPool") or []:
@@ -236,7 +236,7 @@ def main():
     kl = D.get("stkKlines") if isinstance(D.get("stkKlines"), dict) else {}
     kl_names = D.get("stkKlineNames") if isinstance(D.get("stkKlineNames"), dict) else {}
 
-    # R100z6d：既有 stkKlines 的全部键也纳入刷新；谐波池键 320 根、其余 120 根
+    # R100z6g：既有 stkKlines 的全部键也纳入刷新；谐波池键 90 根、其余 90 根（统一）
     hz_pool = D.get("harmonic") if isinstance(D.get("harmonic"), dict) else {}
     hz_codes = {x.get("code") for x in (hz_pool.get("confirmPool") or []) + (hz_pool.get("watchPool") or [])
                 if isinstance(x, dict) and x.get("code")}
