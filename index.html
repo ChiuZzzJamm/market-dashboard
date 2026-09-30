@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202609300952"></script>
+<script src="data.js?v=202609301409"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -2673,8 +2673,10 @@ function _dbk_startVal(kl, hz) {
   return startVal;
 }
 // R100z6g：确定性初始窗口——渲染前物理裁切数据（不再依赖 dataZoom startValue/dispatchAction，
-// iOS Safari 上两者均被忽略、真机实证全量塞屏）。谐波图=最早形态点前10根缓冲 至 末尾（≥60根）；
-// 普通图=最后60根。dataZoom 仍可放大细看，代价是切片之前的历史不可见（弹窗主用途=形态+近期走势）。
+// iOS Safari 上两者均被忽略、真机实证全量塞屏）。谐波图=全量90日窗口（R100z6i：原「X-10缓冲且≥60根」
+// 的 min 钳制会把近期形态标的钳回只显示60根，与「谐波=90日线」定稿冲突，改为默认从90日窗口起点展示；
+// 仅当数据长于90根（hzNeedsLong 网络拉取的长窗）才从 X-10 起裁）；普通图=最后60根。
+// dataZoom 仍可放大细看，代价是切片之前的历史不可见（弹窗主用途=形态+近期走势）。
 function _dbk_slice(kl, hz) {
   if (!hz || !hz.pointDays) return kl.slice(-60);
   var dates = kl.map(function (b) { return b[0]; });
@@ -2684,7 +2686,7 @@ function _dbk_slice(kl, hz) {
     var ix = day ? dates.indexOf(day) : -1;
     if (ix >= 0 && ix < minIx) minIx = ix;
   });
-  var from = Math.max(0, Math.min(minIx - 10, kl.length - 60));
+  var from = Math.max(0, Math.min(minIx - 10, kl.length - 90));
   return kl.slice(from);
 }
 function dbKlineSvg(kline, hz) {
