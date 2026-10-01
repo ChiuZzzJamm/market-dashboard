@@ -159,6 +159,22 @@
   .cal-seg.cal-miss { color: var(--down); }
   .ai-verify .v-note { display: block; font-weight: 400; font-size: 11.5px; color: var(--ink-soft, #6b7a8d); margin-top: 1px; }
 
+  /* ===== R100z15：退出纪律 + 超额口径 + 净值曲线 ===== */
+  .exit-row { margin-top: 4px; font-size: 11px; color: var(--ink-soft, #6b7a8d); line-height: 1.55; }
+  .exit-row b { color: var(--ink2); font-weight: 600; }
+  .exit-row .xs { color: var(--down); }
+  .exit-row .xt { color: var(--up); }
+  .excess-dot { display: inline-block; padding: 0 5px; margin-left: 4px; border-radius: 3px; font-size: 10.5px;
+    border: 1px dashed currentColor; vertical-align: 1px; }
+  .excess-dot.pos { color: var(--up); }
+  .excess-dot.neg { color: var(--down); }
+  .pf-box { margin: 8px 0 2px; }
+  .pf-stat { display: flex; gap: 8px; flex-wrap: wrap; font-size: 11px; margin-top: 4px; }
+  .pf-stat span { padding: 2px 6px; border-radius: 4px; border: 1px solid currentColor; color: var(--ink2); }
+  .pf-stat .up { color: var(--up); }
+  .pf-stat .down { color: var(--down); }
+  .pf-stat .flat { color: var(--ink2); }
+
   /* ===== 推演块（fin-strategy-engine 三候选推演，内嵌题材掘金/要闻/预测等模块条目，R99m） ===== */
   .dd-box { margin: 8px 0 2px; background: var(--accent-soft); border: 1px dashed var(--line); border-radius: 12px; padding: 9px 13px; font-size: 12.5px; line-height: 1.75; }
   .dd-cand { margin: 1px 0; }
@@ -1234,6 +1250,60 @@ function expBadge(exp) {
     esc(txt + ' · ' + (exp.verdict || '')) + '</span>';
 }
 
+/* R100z15 缺口③：退出纪律行（止损 / 目标 / 证伪）。
+   取数优先级：标的自带 st.exit（16:00 流程写回）> stock_pool.json 里的机械池 exit（异步兜底）。
+   两者都取不到就这一行不渲染，绝不猜一个止损位糊上去。 */
+var POOL_EXIT = null;
+
+function loadPoolExit(cb) {
+  if (POOL_EXIT !== null) { cb && cb(); return; }
+  try {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'stock_pool.json', true);
+    xhr.onload = function () {
+      if (xhr.status !== 200) { POOL_EXIT = false; return; }
+      try {
+        var d = JSON.parse(xhr.responseText), m = {};
+        var by = (d && d.bySector) || {};
+        Object.keys(by).forEach(function (k) {
+          (by[k] || []).forEach(function (x) { if (x && x.code && x.exit) m[String(x.code)] = x.exit; });
+        });
+        POOL_EXIT = m;
+      } catch (e) { POOL_EXIT = false; }
+      cb && cb();
+    };
+    xhr.send();
+  } catch (e) { POOL_EXIT = false; cb && cb(); }
+}
+
+function exitOf(st) {
+  if (st && st.exit && typeof st.exit === 'object') return st.exit;
+  if (!POOL_EXIT || typeof POOL_EXIT !== 'object') return null;
+  return POOL_EXIT[String(st && st.code || '').replace(/\D/g, '')] || null;
+}
+
+function exitRowHtml(stocks) {
+  if (!stocks || !stocks.length) return '';
+  var rows = [];
+  stocks.forEach(function (st) {
+    var ex = exitOf(st);
+    if (!ex || typeof ex !== 'object') return;
+    if (ex.stop === null || ex.stop === undefined || !ex.falsify) return;
+    rows.push('<b>' + esc(st.name || st.code) + '</b> 止损 ' + Number(ex.stop).toFixed(2) +
+      (ex.target !== null && ex.target !== undefined ? ' · 目标 ' + '<span class="xt">' + Number(ex.target).toFixed(2) + '</span>' : '') +
+      ' <span class="xs">✖</span> ' + esc(ex.falsify));
+  });
+  if (!rows.length) return '';
+  return '<div class="exit-row">' + rows.join('<br>') + '</div>';
+}
+
+/* R100z15 缺口①：超额口径小胶囊——「走强」两个字要扣掉基准才值钱 */
+function excessDot(d) {
+  if (!d || d.excessPct === null || d.excessPct === undefined) return '';
+  var v = Number(d.excessPct), cls = v >= 0 ? 'pos' : 'neg';
+  return '<span class="excess-dot ' + cls + '">超额 ' + (v >= 0 ? '+' : '') + v.toFixed(2) + '%</span>';
+}
+
 /* AI 预测分析 */
 // R100z13：最近 5 个预测日的命中横条——复用校准台账，让「系统最近准不准」一眼可见。
 // 台账取不到（netlify/pages 未发布该文件或本地 file:// 预览）时整块静默不渲染，绝不白屏、绝不报错。
@@ -1303,6 +1373,58 @@ function riskBadge(code0) {
   return '<span class="risk-dot" title="⚠️ 硬风险（不进 8 只池）：' + escAttr(rs) + '">⚠️</span>';
 }
 
+/* R100z15 缺口④：组合净值曲线——命中 60% 但亏钱、命中 50% 但赚钱，光看命中率分不出来。
+   组合 = 每个预测日 8 只标的等权平均涨跌幅累乘；基准 = 同日市场基准累乘；下面再挂一条回撤。
+   取不到 portfolio_curve.json（未发布 / 本地预览）时整块静默，不白屏、不报错。 */
+function loadPortfolioCurve() {
+  var box = document.getElementById('pf-box');
+  if (!box) return;
+  try {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'portfolio_curve.json', true);
+    xhr.onload = function () {
+      if (xhr.status !== 200) return;
+      try {
+        var d = JSON.parse(xhr.responseText);
+        var se = (d && d.series) || [];
+        if (!se.length) return;
+        var s = d.stat || {};
+        var h = '<div class="cal-hist-t">📈 组合净值（8 只等权 vs 市场基准，含回撤）</div>' +
+          '<div id="chart-pf" style="width:100%;height:150px;"></div><div class="pf-stat">' +
+          '<span class="' + ((s.totRetPct || 0) >= 0 ? 'up' : 'down') + '">组合 ' +
+          (s.totRetPct >= 0 ? '+' : '') + (s.totRetPct || 0).toFixed(2) + '%</span>' +
+          '<span class="' + ((s.benchRetPct || 0) >= 0 ? 'up' : 'down') + '">基准 ' +
+          (s.benchRetPct >= 0 ? '+' : '') + (s.benchRetPct || 0).toFixed(2) + '%</span>' +
+          '<span class="' + ((s.excessPct || 0) >= 0 ? 'up' : 'down') + '">超额 ' +
+          (s.excessPct >= 0 ? '+' : '') + (s.excessPct || 0).toFixed(2) + '%</span>' +
+          '<span class="flat">最大回撤 ' + (s.maxDdPct || 0).toFixed(2) + '%（' + esc(s.maxDdDate || '') + '）</span>' +
+          '<span class="flat">' + (s.days || 0) + ' 个交易快照</span></div>';
+        box.innerHTML = h;
+        var el = document.getElementById('chart-pf');
+        if (el && window.echarts) {
+          var c = echarts.init(el);
+          var dates = se.map(function (x) { return String(x.date).slice(5); });
+          var ln = function (key, name, color) {
+            return { name: name, type: 'line', smooth: true, symbol: 'circle', symbolSize: 4,
+              lineStyle: { width: 2, color: color }, itemStyle: { color: color },
+              data: se.map(function (x) { return x[key]; }) };
+          };
+          c.setOption({
+            grid: { left: 42, right: 10, top: 26, bottom: 22 },
+            tooltip: { trigger: 'axis' },
+            legend: { data: ['组合', '基准'], top: 0, textStyle: { fontSize: 10 } },
+            xAxis: { type: 'category', data: dates, axisLabel: { fontSize: 10 }, axisLine: { lineStyle: { color: '#bbb' } } },
+            yAxis: { type: 'value', scale: true, axisLabel: { fontSize: 10, formatter: function (v) { return v.toFixed(2); } } },
+            series: [ln('pf', '组合', '#f0435c'), ln('bench', '基准', '#8fa3b8')]
+          });
+          charts.push(c);
+        }
+      } catch (e) { /* 曲线坏了也不影响主看板 */ }
+    };
+    xhr.send();
+  } catch (e) { /* file:// 下被拦，静默跳过 */ }
+}
+
 /* R100z13：8 只池里的硬风险标的汇总一行（无命中返回空串）。
    口径与 stock_risk_blacklist.py 一致：ST / 解禁 T+2~T+5 / 减持 30 日 / 业绩预减 30 日。 */
 function riskLineHtml(p) {
@@ -1328,6 +1450,7 @@ function renderAiPrediction() {
   var html = '<div class="ai-card"><div class="ai-head"><h2>AI 预测分析' + (p.date ? '<span class="h2-date">' + esc(p.date) + '</span>' : '') + '</h2></div>' +
     '<div class="ai-summary">' + (p.indexLine ? esc(p.indexLine) + '。' : '') + '通过隔夜美股各板块涨跌推导今日 A 股强弱方向：' + esc(p.summary) + '</div>' +
     '<div id="cal-hist" class="cal-hist"></div>' +
+    '<div id="pf-box" class="pf-box"></div>' +
     riskLineHtml(p) +
     '<div class="ai-grid">';
   p.sectors.forEach(function (s) {
@@ -1352,6 +1475,8 @@ function renderAiPrediction() {
           (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
       });
       html += '</div>';
+      // R100z15 缺口③：只有买入没有卖出 → 每只标的必须带退出纪律（止损位 / 目标位 / 证伪条件）
+      html += exitRowHtml(s.stocks);
     }
     html += '</div>';
   });
@@ -1371,7 +1496,7 @@ function renderAiPrediction() {
         v.details.forEach(function(d) {
           var r = String(d.result || '');
           var vcls = (r.indexOf('未命中') !== -1 || r.indexOf('未兑现') !== -1) ? 'miss' : ((r.indexOf('命中') !== -1 || r.indexOf('兑现') !== -1) ? 'hit' : 'miss');
-          vHtml += '<div class="' + vcls + '">· ' + esc(d.sector) + '：预测「' + esc(d.predicted) + '」→ 实际 ' + (d.actualPct === null || d.actualPct === undefined ? '—' : (d.actualPct >= 0 ? '+' : '') + d.actualPct + '%') + ' → ' + esc(d.result) + (d.note ? '<span class="v-note">' + esc(d.note) + '</span>' : '') + '</div>';
+          vHtml += '<div class="' + vcls + '">· ' + esc(d.sector) + '：预测「' + esc(d.predicted) + '」→ 实际 ' + (d.actualPct === null || d.actualPct === undefined ? '—' : (d.actualPct >= 0 ? '+' : '') + d.actualPct + '%') + ' → ' + esc(d.result) + excessDot(d) + (d.note ? '<span class="v-note">' + esc(d.note) + '</span>' : '') + '</div>';
         });
         vHtml += '</div>';
       }
@@ -1407,6 +1532,7 @@ function renderAiPrediction() {
   html += '</div>';
   box.innerHTML = html;
   renderCalHistory();
+  loadPortfolioCurve();
   renderRiskLines();
 }
 
@@ -3398,6 +3524,7 @@ function renderOpenOutlook() {
 
 document.getElementById('updatedAt').textContent = '数据更新：' + window.DASHBOARD_DATA.updatedAt;
 syncMktToggle();
+loadPoolExit();        // R100z15：机械选股池的退出纪律（异步到货后自动重画一次）
 loadRiskBlacklist();   // R100z13：先发请求，黑名单异步到后再自动重画一次
 renderAiPrediction();
 renderOpenOutlook();

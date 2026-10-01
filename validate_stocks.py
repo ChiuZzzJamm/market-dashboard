@@ -524,6 +524,154 @@ def check_risk_blacklist(D):
     return out
 
 
+def check_logic_depth(D):
+    """R100z15 缺口⑤：内容深度没人管 → 机器兜底。
+
+    体检实测（2026-10-01）：aiPrediction.sectors[].logic 只有 32~55 字，
+    而 R98p 定的标准是 110-160 字；更关键的是 validate 里**没有任何闸管字数**——
+    写多短全靠 AI 自觉，偷懒了照样上线。这里补上：
+        logic < 40 字 → FAIL（这不是「写得短」，是没写完）
+        logic < 80 字 → WARN（离 110 字下限还差一截）
+        deduce.main < 30 字 → WARN
+    """
+    hards, warns = [], []
+    ai = D.get('aiPrediction') or {}
+    for s in (ai.get('sectors') or []):
+        if not isinstance(s, dict):
+            continue
+        nm = str(s.get('sector') or '')[:16]
+        lg = str(s.get('logic') or '').strip()
+        if len(lg) < 40:
+            hards.append(f"aiPrediction.{nm}.logic 仅 {len(lg)} 字（<40，等于没写完）——"
+                         f"须按 R98p 写满 110-160 字的映射推演（R100z15 硬闸）")
+        elif len(lg) < 80:
+            warns.append(f"aiPrediction.{nm}.logic 仅 {len(lg)} 字（<80，下限 110 字）——内容偏薄")
+        dd = s.get('deduce') or {}
+        if isinstance(dd, dict):
+            mm = str(dd.get('main') or '').strip()
+            if len(mm) < 30:
+                warns.append(f"aiPrediction.{nm}.deduce.main 仅 {len(mm)} 字（<30）——主推理由未说清")
+    return hards, warns
+
+
+def check_exit(D):
+    """R100z15 缺口③：只有买入、没有卖出 → 每只标的必须带退出纪律。
+
+    exit = {stop, target, falsify}：止损位 / 目标位 / 证伪条件，三者缺一不可。
+    止损位若在现价之上（比现价还高）属于明显错误，单独点名。"""
+    warns = []
+    for s in ((D.get('aiPrediction') or {}).get('sectors') or []):
+        if not isinstance(s, dict):
+            continue
+        nm = str(s.get('sector') or '')[:16]
+        for st in (s.get('stocks') or []):
+            if not isinstance(st, dict):
+                continue
+            tag = f"{st.get('code')} {st.get('name') or ''}".strip()
+            ex = st.get('exit')
+            if not isinstance(ex, dict) or not ex:
+                warns.append(f"aiPrediction.{nm}.{tag}: 缺 exit（须含 stop / target / falsify 三项）——"
+                             f"没有退出纪律的清单只是「想买什么」，不是交易计划")
+                continue
+            for k in ('stop', 'target', 'falsify'):
+                if not (ex.get(k) or ('' if k == 'falsify' else None)):
+                    warns.append(f"aiPrediction.{nm}.{tag}.exit.{k} 缺失")
+            stop, last = ex.get('stop'), st.get('lastClose')
+            if isinstance(stop, (int, float)) and isinstance(last, (int, float)) and stop >= last:
+                warns.append(f"aiPrediction.{nm}.{tag}.exit.stop({stop}) ≥ 现价({last})——"
+                             f"止损位在现价上方，逻辑荒谬")
+    return warns
+
+
+def check_stock_pool(D):
+    """R100z15 缺口②：选股引擎没进决策链 → 板块**有机械候选时，AI 必须照抄机械池**。
+
+    体检实测：断板池 42 确认 + 32 观察 = 74 只候选，48 只预测标的里只有 6 只（12.5%）来自断板池，
+    剩下 42 只是 AI 看 note 手写——而硬风险黑名单拦掉的 4 只恰好全在这批手写票里。
+    黑名单能拦坏票，拦不住「好票是瞎挑的」，所以这里把选择权机械化：
+        机械池里有货 → AI 选的必须是它的子集（候选不足 8 只时允许给少，但绝不许塞池外的票）
+        机械池里没货 → WARN（应补 SECTOR_ALIAS 或换板块），不硬拦
+    """
+    root = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(root, 'stock_pool.json')
+    if not os.path.exists(path):
+        return ([], ["未找到 stock_pool.json（build_stock_pool.py --write 未跑，"
+                     "选股引擎没进决策链，AI 手挑的票无人兜底）"])
+    try:
+        with open(path, encoding='utf-8') as f:
+            pool = json.load(f)
+    except Exception as e:
+        return ([], [f"stock_pool.json 解析失败（{e}）"])
+
+    by = pool.get('bySector') or {}
+    if not isinstance(by, dict) or not by:
+        return ([], ["stock_pool.json 里 bySector 为空——机械池没产出，等于没接回决策链"])
+
+    # 复用 build_stock_pool 的板块匹配（避免两份别名表各自漂移）
+    try:
+        sys.path.insert(0, root)
+        import build_stock_pool as bsp
+        norm, sim, aliases_of = bsp.norm, bsp.sim, bsp.SECTOR_ALIAS
+    except Exception:
+        bsp = None
+
+    def find_pool(sector):
+        if sector in by:
+            return sector, by[sector]
+        if bsp:
+            al = aliases_of.get(sector, [])
+            best, bs = None, 0.0
+            for k in by:
+                s = sim(sector, k)
+                ali = any((a == k) or (k in a) or (a in k) for a in al)
+                if ali:
+                    return k, by[k]
+                if s > bs:
+                    best, bs = k, s
+            if bs >= 0.5:
+                return best, by[best]
+        return None, None
+
+    hards, warns = [], []
+    for s in ((D.get('aiPrediction') or {}).get('sectors') or []):
+        if not isinstance(s, dict):
+            continue
+        sector = str(s.get('sector') or '')
+        if not sector:
+            continue
+        key, lst = find_pool(sector)
+        chosen = set()
+        for st in (s.get('stocks') or []):
+            if isinstance(st, dict) and st.get('code'):
+                chosen.add(str(st['code']).replace('.SH', '').replace('.SZ', '').zfill(6))
+        if lst is None:
+            warns.append(f"aiPrediction.{sector}: 机械选股池无该板块候选"
+                         f"{'（补 SECTOR_ALIAS 或换板块）' if bsp else ''}"
+                         f"——有候选时必须照抄，不许自己点名")
+            continue
+        cand = set(str(x.get('code') or '').replace('.SH', '').replace('.SZ', '').zfill(6) for x in lst)
+        if not chosen:
+            continue
+        outside = chosen - cand
+        if outside and (len(chosen) - len(chosen & cand)) >= 2:
+            # 只差 1 只视为「机械候选里有但漏抄」，提示；差 ≥2 视为自己另起炉灶，硬拦
+            if len(outside) >= 2:
+                hards.append(f"aiPrediction.{sector}: 选了 {len(chosen)} 只，其中 {len(outside)} 只不在机械选股池"
+                             f"（{'、'.join(sorted(outside)[:5])}）——机械池里有货就必须照抄，"
+                             f"AI 只保留解释权、交出选择权（R100z15）")
+            else:
+                warns.append(f"aiPrediction.{sector}: 有 {len(outside)} 只漏抄机械选股池"
+                             f"（{'、'.join(sorted(outside))}），请核对")
+            continue
+        if chosen and not (chosen & cand):
+            hards.append(f"aiPrediction.{sector}: 8 只标的与机械选股池（{len(cand)} 只）零交集——"
+                         f"和候选池完全无关（R100z15）")
+        elif len(cand) and len(chosen) < len(cand):
+            warns.append(f"aiPrediction.{sector}: 机械候选 {len(cand)} 只，只采用了 {len(chosen)} 只"
+                         f"（未抄满不算错，但须在 note 说明取舍理由）")
+    return hards, warns
+
+
 def check_source_names(D):
     """R91h/R91j 来源命名软闸门：全文只允许「彭博社」「路透社」「华尔街日报」，
     出现 彭博新闻社/路透通讯社/WSJ 或简称「彭博」「路透」→ WARN（不阻断部署）。"""
@@ -832,9 +980,14 @@ def main():
     oo_warns = check_openoutlook(D)                    # R100z13：开盘前瞻六维度深度
     ooloop_warns = check_openoutlook_loop(D)           # R100z13：前瞻兑现闭环两头闸（原同名被覆盖，已改名接线）
     risk_violations = check_risk_blacklist(D)          # R100z13：个股硬风险黑名单（命中即 FAIL）
+    logic_hards, logic_warns = check_logic_depth(D)    # R100z15：内容深度机器闸
+    exit_warns = check_exit(D)                         # R100z15：退出纪律（止损/目标/证伪）
+    pool_hards, pool_warns = check_stock_pool(D)       # R100z15：机械选股池是否真进决策链
     violations.extend(deduce_hards)
     violations.extend(exp_hards)
     violations.extend(risk_violations)
+    violations.extend(logic_hards)
+    violations.extend(pool_hards)
 
     for mk in ('ashare', 'us'):
         sec = D.get(mk) or {}
@@ -876,6 +1029,9 @@ def main():
                           'openoutlook_warnings': oo_warns,
                           'openoutlook_loop_warnings': ooloop_warns,
                           'risk_blacklist_violations': risk_violations,
+                          'logic_depth_warnings': logic_warns,
+                          'exit_warnings': exit_warns,
+                          'stock_pool_warnings': pool_warns,
                           'duanban_warnings': duanban_warns,
                           'violations': violations}, ensure_ascii=False, indent=2))
     for w in dir_warns:
@@ -916,6 +1072,12 @@ def main():
         print("[WARN] openOutlook兑现闭环:", w)
     for w in sel_warns:
         print("[WARN] 选股扩展模块:", w)
+    for w in logic_warns:
+        print("[WARN] 内容深度:", w)
+    for w in exit_warns:
+        print("[WARN] 退出纪律:", w)
+    for w in pool_warns:
+        print("[WARN] 机械选股池:", w)
     if violations:
         print(f"[FAIL] 共 {len(violations)} 处违规：")
         for v in violations:
