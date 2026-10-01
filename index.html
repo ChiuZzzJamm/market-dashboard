@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610010756"></script>
+<script src="data.js?v=202610011048"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -125,6 +125,11 @@
   .dir-down { background: var(--down); }
   /* 置信度：低→浅蓝，中→中蓝，高→深蓝 */
   .conf-badge { font-size: 11px; border-radius: 999px; padding: 2px 9px; font-weight: 700; margin-left: 6px; line-height: 1.45; border: 1px solid currentColor; } /* R100y：全站徽标统一带边框 */
+  /* R100z11：预期差徽章（price-in 结构化字段落前端）——三档配色对应 4c 结论三选一 */
+  .exp-badge { font-size: 11px; border-radius: 999px; padding: 2px 9px; font-weight: 700; margin-left: 6px; line-height: 1.45; border: 1px dashed currentColor; cursor: help; }
+  .exp-add { color: var(--up); }        /* 加确认 */
+  .exp-hold { color: var(--ink2); }     /* 维持 */
+  .exp-trim { color: var(--down); }     /* 兑现降级 */
   .conf-low { background: #dcebfa; color: #4a90d9; }
   .conf-mid { background: #85b9ea; color: #fff; }
   .conf-high { background: #2b6cb0; color: #fff; }
@@ -1201,6 +1206,21 @@ function renderDeduce(dd, hideBadge) {
   return h;
 }
 
+/* R100z11：预期差徽章——把 4c 的 price-in 结构化字段落到 AI 预测卡（无 exp 字段则渲染空串，旧数据不受影响） */
+function expBadge(exp) {
+  if (!exp || typeof exp !== 'object') return '';
+  var map = { '加确认': 'add', '维持': 'hold', '兑现降级': 'trim' };
+  var cls = map[String(exp.verdict || '')] || 'hold';
+  var pi = (exp.priceIn === null || exp.priceIn === undefined || exp.priceIn === '') ? null : Number(exp.priceIn);
+  var txt = pi === null ? '预期 未量化' : ('预期 ' + (pi >= 0 ? '+' : '') + pi + '%');
+  var title = '预期层[E] · price-in ' + (pi === null ? '未量化' : (pi + '%')) +
+    '｜依据：' + (exp.priceInBasis || '未填') +
+    '｜四象限：' + (exp.quad || '未落位') +
+    '｜结论：' + (exp.verdict || '未给');
+  return '<span class="exp-badge exp-' + cls + '" title="' + escAttr(title) + '">' +
+    esc(txt + ' · ' + (exp.verdict || '')) + '</span>';
+}
+
 /* AI 预测分析 */
 function renderAiPrediction() {
   var p = window.DASHBOARD_DATA.aiPrediction;
@@ -1219,6 +1239,7 @@ function renderAiPrediction() {
       '<span class="sec-nm">' + esc(s.sector) + '</span>' +
       '<span class="dir-badge ' + (isUp ? 'dir-up' : 'dir-down') + '">预计' + esc(s.direction) + '</span>' +
       '<span class="conf-badge ' + confCls + '">置信度 ' + esc(s.confidence) + '</span>' +
+      expBadge(s.exp) +
       '</div>' +
       '<div class="drv">隔夜驱动：' + esc(s.usDriver) + '</div>' +
       '<div class="lgc">映射逻辑：' + esc(s.logic) + '</div>' +
@@ -1255,6 +1276,21 @@ function renderAiPrediction() {
         });
         vHtml += '</div>';
       }
+      vHtml += '</div>';
+    }
+    // R100z11：标的层面验证（颗粒度下移）——板块方向说对但 8 只全选错，账户照样亏，必须单列一层
+    if (v.stockCheck && v.stockCheck.length) {
+      vHtml += '<div class="v-detail">';
+      v.stockCheck.forEach(function (sc) {
+        var avg = (sc.avgPct === null || sc.avgPct === undefined) ? null : Number(sc.avgPct);
+        var ag = (sc.alignRate === null || sc.alignRate === undefined) ? null : Number(sc.alignRate);
+        var scCls = (ag === null) ? '' : (ag >= 0.75 ? 'hit' : (ag <= 0.375 ? 'miss' : ''));
+        vHtml += '<div class="' + scCls + '">· ' + esc(sc.sector || '') + '：8 只标的平均 ' +
+          (avg === null ? '—' : ((avg >= 0 ? '+' : '') + avg.toFixed(2) + '%')) +
+          '，方向一致率 ' + (ag === null ? '—' : (Math.round(ag * 100) + '%')) +
+          '（同上涨方向 ' + (sc.hitN === null || sc.hitN === undefined ? '—' : (sc.hitN + '/8')) + '）' +
+          (sc.note ? '<span class="v-note">' + esc(sc.note) + '</span>' : '') + '</div>';
+      });
       vHtml += '</div>';
     }
     }

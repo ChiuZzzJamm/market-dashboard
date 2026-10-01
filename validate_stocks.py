@@ -35,6 +35,7 @@
 退出码: 0 = 全部合规(输出 ALL OK)；1 = 有违规。
 """
 import json
+import os
 import re
 import subprocess
 import sys
@@ -265,6 +266,179 @@ def check_horizon(D):
                         warns.append(
                             f"{mk}.{key}[{i}].impacts[{j}]({imp.get('theme', '')}): "
                             f"horizon 缺失或非法（{hz!r}），须为「长线」或「短线」")
+    return warns
+
+
+def check_deduce(D):
+    """R99m/R99o/R99p：aiPrediction 每板块必须内嵌 deduce 三候选推演（前端推演段依赖）。
+    结构性缺失（deduce 非对象 / cands 数≠2 / conf 非枚举 / counter 缺失或为空 / 自带「主推：」「反证：」前缀）
+    → 硬违规（FAIL，阻断部署）；cands 文本过短等质量项 → WARN。"""
+    hards, warns = [], []
+    ap = D.get('aiPrediction') or {}
+    sectors = ap.get('sectors') or []
+    for i, s in enumerate(sectors):
+        if not isinstance(s, dict):
+            continue
+        tag = f"aiPrediction.sectors[{i}]({str(s.get('sector'))[:14]})"
+        d = s.get('deduce')
+        if not isinstance(d, dict):
+            hards.append(f"{tag}: 缺 deduce 三候选推演对象（R99m 内嵌硬约束，前端推演段将空白）")
+            continue
+        cands = d.get('cands')
+        if not isinstance(cands, list) or len(cands) != 2:
+            hards.append(f"{tag}: deduce.cands 必须恰好 2 个候选（当前 {0 if cands is None else len(cands)} 个）")
+        for k, c in enumerate(cands if isinstance(cands, list) else []):
+            if not isinstance(c, dict) or not str(c.get('text') or '').strip():
+                hards.append(f"{tag}: deduce.cands[{k}] 缺 text 推演内容")
+        conf = d.get('conf')
+        if conf not in ('高确信', '中等确信', '推测', '直觉'):
+            hards.append(f"{tag}: deduce.conf 非法（{conf!r}），须取 高确信/中等确信/推测/直觉 之一（禁方向词）")
+        counter = d.get('counter')
+        if not isinstance(counter, str) or not counter.strip():
+            hards.append(f"{tag}: deduce.counter 反证缺失或为空（R99p：不分确信度必列）")
+        for key in ('main', 'counter'):
+            v = d.get(key)
+            if isinstance(v, str):
+                for bad in ('主推：', '反证：'):
+                    if v.startswith(bad):
+                        hards.append(f"{tag}: deduce.{key} 自带「{bad}」前缀（R99o：前端会重复渲染成「{bad}{bad}」）")
+                if len(v.strip()) < 6:
+                    warns.append(f"{tag}: deduce.{key} 过短（{len(v.strip())} 字），推演信息量不足")
+    if not sectors:
+        warns.append("aiPrediction.sectors 为空，deduce 校验跳过")
+    return hards, warns
+
+
+def check_exp(D):
+    """R100z11：aiPrediction.sectors[].exp —— 4c 的 price-in / 四象限落位结构化成字段（前端徽章 + 脚本可校验的前提）。
+    带 exp 就必须字段完整；exp.layer=='E' 时该板块 confidence 不得为「高」
+    （预期层上限「中等确信」，对应 08:30 禁令⑰）。E 层字段不齐 → 硬违规 FAIL。"""
+    hards, warns = [], []
+    for i, s in enumerate((D.get('aiPrediction') or {}).get('sectors') or []):
+        if not isinstance(s, dict):
+            continue
+        tag = f"aiPrediction.sectors[{i}]({str(s.get('sector'))[:14]})"
+        exp = s.get('exp')
+        if not isinstance(exp, dict) or not exp:
+            continue  # 未声明预期层 → 不在机械校验范围（散文口径仍有效）
+        if exp.get('layer') not in ('F', 'E', 'O'):
+            hards.append(f"{tag}: exp.layer 非法（{exp.get('layer')!r}），须为 F/E/O 之一")
+        if exp.get('layer') == 'E':
+            if str(s.get('confidence')) == '高':
+                hards.append(f"{tag}: 预期层(E) 标了「高确信」，上限只能是「中等确信」（R100z9 禁令⑰）")
+            pi = exp.get('priceIn')
+            if isinstance(pi, bool) or not isinstance(pi, (int, float)) or not -100 <= pi <= 200:
+                hards.append(f"{tag}: exp.priceIn 须为 -100~200 的数值（当前 {pi!r}）")
+            if not str(exp.get('priceInBasis') or '').strip():
+                hards.append(f"{tag}: exp.priceInBasis 为空（须写「窗口期板块累计 +X%、龙头 N 连板、扩散 M 只」可核查依据）")
+            if str(exp.get('verdict') or '') not in ('加确认', '维持', '兑现降级'):
+                hards.append(f"{tag}: exp.verdict 非法（{exp.get('verdict')!r}），须为 加确认/维持/兑现降级 三选一")
+            if '×' not in str(exp.get('quad') or ''):
+                warns.append(f"{tag}: exp.quad 未写成「公布值×price-in」四象限格式（当前 {exp.get('quad')!r}）")
+    return hards, warns
+
+
+def check_stockcheck(D):
+    """R100z11：verification.stockCheck —— 验证颗粒度下移到标的层面（方向对但 8 只全选错必须被检出）。
+    hitN 须 0~8 整数、alignRate 须 = hitN/8、avgPct 须数值，details 条数对齐 sectors → WARN。"""
+    ap = D.get('aiPrediction') or {}
+    v = ap.get('verification') if isinstance(ap.get('verification'), dict) else {}
+    sc = v.get('stockCheck')
+    if sc is None:
+        return ["顶层 aiPrediction.verification.stockCheck 缺失（R100z11：标的层面验证未落地，"
+                "「方向对但选股错」无法被检出）"]
+    if not isinstance(sc, list):
+        return ["verification.stockCheck 不是数组"]
+    warns = []
+    n_sec = len(ap.get('sectors') or [])
+    if n_sec and len(sc) != n_sec:
+        warns.append(f"verification.stockCheck({len(sc)} 条) 与 sectors({n_sec} 个) 不一一对应")
+    for i, x in enumerate(sc):
+        if not isinstance(x, dict):
+            warns.append(f"stockCheck[{i}] 不是对象")
+            continue
+        nm = str(x.get('sector') or '')[:14]
+        n = x.get('hitN')
+        if isinstance(n, bool) or not isinstance(n, int) or not 0 <= n <= 8:
+            warns.append(f"stockCheck[{i}]({nm}): hitN 非法（{n!r}），须 0~8 的整数")
+            continue
+        ar = x.get('alignRate')
+        if not isinstance(ar, (int, float)):
+            warns.append(f"stockCheck[{i}]({nm}): alignRate 缺失或非法（须 = hitN/8 = {n / 8.0:.3f}）")
+        elif abs(ar - n / 8.0) > 0.01:
+            warns.append(f"stockCheck[{i}]({nm}): alignRate({ar}) 与 hitN/8({n / 8.0:.3f}) 不一致")
+        if not isinstance(x.get('avgPct'), (int, float)):
+            warns.append(f"stockCheck[{i}]({nm}): avgPct 缺失或非数值（8 只标的当日平均涨幅）")
+    return warns
+
+
+def check_calibration(D):
+    """R100z11：置信度后验校准门槛落地校验——读 .calibration_state.json 的降档门槛，
+    当日标「高确信」的条数若超过门槛 → WARN（台账已生效但当日越线）。"""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.calibration_state.json')
+    if not os.path.exists(path):
+        return ["未找到 .calibration_state.json（track_calibration.py 未运行，置信度后验校准门槛未生效）"]
+    try:
+        state = json.load(open(path, encoding='utf-8'))
+    except Exception as e:
+        return [f"校准台账 .calibration_state.json 解析失败（{e}）"]
+    warns = []
+    secs = (D.get('aiPrediction') or {}).get('sectors') or []
+    gates = state.get('gates') or {}
+    for key, cap_field in (('高', 'maxHighConf'), ('中', 'maxConf')):
+        gate = gates.get(key) or {}
+        cap = gate.get(cap_field)
+        if cap is None:
+            continue
+        if cap == 0:
+            n = len([s for s in secs if isinstance(s, dict) and str(s.get('confidence')) == '高'])
+            if n:
+                warns.append(f"校准门槛：「{key}」层已禁用（{gate.get('reason')}），但当日仍标 {n} 条「高确信」")
+        elif isinstance(cap, int) and cap == 1:
+            n = len([s for s in secs if isinstance(s, dict) and str(s.get('confidence')) == '高'])
+            if n > 1:
+                warns.append(f"校准门槛：当日最多 1 条「高确信」（{gate.get('reason')}），实际 {n} 条")
+    return warns
+
+
+def check_verification(D):
+    """R99j/R100z6m：顶层 aiPrediction.verification 必须是对象（严禁纯字符串），
+    且 details 与 sectors 一一对应 → WARN（不阻断部署，但缺失会导致命中闭环失效）。"""
+    warns = []
+    ap = D.get('aiPrediction') or {}
+    v = ap.get('verification')
+    if v is None:
+        return ["顶层 aiPrediction.verification 缺失（R99j：须为对象 {total,hit,miss,summary,details}，命中验证闭环失效）"]
+    if isinstance(v, str):
+        return ["顶层 aiPrediction.verification 是字符串，必须是对象（R99j 硬口径）"]
+    if not isinstance(v, dict):
+        return [f"顶层 aiPrediction.verification 类型异常（{type(v).__name__}），须为对象"]
+    if len(v) < 4:
+        warns.append(f"aiPrediction.verification 字段不全（当前 {sorted(v.keys())}，缺 total/hit/miss/summary/details 之一）")
+    det = v.get('details')
+    if isinstance(det, list):
+        n_sec = len(ap.get('sectors') or [])
+        if n_sec and len(det) != n_sec:
+            warns.append(f"aiPrediction.verification.details({len(det)} 条) 与 sectors({n_sec} 个) 不一一对应（R100z6m）")
+    else:
+        warns.append("aiPrediction.verification.details 缺失或不是数组")
+    return warns
+
+
+def check_openoutlook(D):
+    """R98p：顶层 openOutlook 必须存在且六维度齐全（消息面/政策面/外围映射/板块轮动/风险与避险/结论）、
+    正文 ≥400 字 → WARN（不阻断部署）。"""
+    warns = []
+    oo = D.get('openOutlook')
+    if not isinstance(oo, dict):
+        return ["顶层 openOutlook 缺失或不是对象（开盘前瞻缺失）"]
+    content = str(oo.get('content') or '')
+    if len(content) < 400:
+        warns.append(f"openOutlook.content 仅 {len(content)} 字（硬要求 450-650 字，深度不足）")
+    dims = ['消息面', '政策面', '外围映射', '板块轮动', '风险与避险', '结论']
+    miss = [d for d in dims if f"【{d}】" not in content]
+    if miss:
+        warns.append(f"openOutlook 缺维度标题：{'、'.join(miss)}")
     return warns
 
 
@@ -559,12 +733,22 @@ def main():
     quality_warns = check_news_quality(D)
     fresh_warns = check_freshness(D)
     horizon_warns = check_horizon(D)
+    # R100z10 新增闸门：deduce 结构硬校验 / verification 闭环软校验 / openOutlook 六维度软校验
+    deduce_hards, deduce_warns = check_deduce(D)
+    # R100z11：预期差结构化字段 / 标的层面验证 / 置信度校准门槛
+    exp_hards, exp_warns = check_exp(D)
+    veri_warns = check_verification(D)
+    stock_warns = check_stockcheck(D)
+    calib_warns = check_calibration(D)
+    oo_warns = check_openoutlook(D)
     src_warns = check_source_names(D)
     lb_warns = check_lianban_notes(D)
     tb_warns = check_top_boards(D)
     st_warns = check_story_quality(D)
     star_warns = check_star_module(D)
     sel_warns = check_selection_modules(D)
+    violations.extend(deduce_hards)
+    violations.extend(exp_hards)
 
     for mk in ('ashare', 'us'):
         sec = D.get(mk) or {}
@@ -598,6 +782,12 @@ def main():
                           'top_boards_warnings': tb_warns,
                           'story_warnings': st_warns,
                           'star_warnings': star_warns,
+                          'deduce_warnings': deduce_warns,
+                          'verification_warnings': veri_warns,
+                          'exp_warnings': exp_warns,
+                          'stockcheck_warnings': stock_warns,
+                          'calibration_warnings': calib_warns,
+                          'openoutlook_warnings': oo_warns,
                           'duanban_warnings': duanban_warns,
                           'violations': violations}, ensure_ascii=False, indent=2))
     for w in dir_warns:
@@ -622,6 +812,18 @@ def main():
         print("[WARN] story质量:", w)
     for w in star_warns:
         print("[WARN] 🌟开盘精选:", w)
+    for w in deduce_warns:
+        print("[WARN] deduce:", w)
+    for w in veri_warns:
+        print("[WARN] verification:", w)
+    for w in exp_warns:
+        print("[WARN] exp:", w)
+    for w in stock_warns:
+        print("[WARN] stockCheck:", w)
+    for w in calib_warns:
+        print("[WARN] calibration:", w)
+    for w in oo_warns:
+        print("[WARN] openOutlook:", w)
     for w in sel_warns:
         print("[WARN] 选股扩展模块:", w)
     if violations:
