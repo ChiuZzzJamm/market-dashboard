@@ -1,0 +1,49 @@
+{
+ "generatedAt": "2026-10-01",
+ "window": [
+  "2026-09-30"
+ ],
+ "stat": {
+  "高": {
+   "n": 2,
+   "hit": 0,
+   "rate": 0.0,
+   "minSample": 8,
+   "sampleEnough": false,
+   "ci": {
+    "lo": 0.0,
+    "hi": 0.0,
+    "sigma": 0.0
+   }
+  },
+  "中": {
+   "n": 4,
+   "hit": 2.5,
+   "rate": 0.625,
+   "minSample": 5,
+   "sampleEnough": false,
+   "ci": {
+    "lo": 0.383,
+    "hi": 0.867,
+    "sigma": 0.242
+   }
+  }
+ },
+ "gates": {
+  "高": {
+   "maxHighConf": 2,
+   "maxConf": "高确信",
+   "reason": "「高」层样本不足（2/8），暂不降档"
+  },
+  "中": {
+   "maxHighConf": 2,
+   "maxConf": "高确信",
+   "reason": "「中」层命中率 62%（±1σ [38%, 87%]）但样本 4<5，未达降档门槛，暂不降档（继续攒样本后再评）"
+  },
+  "低": {
+   "maxHighConf": 2,
+   "maxConf": "高确信",
+   "reason": "「低」层样本不足（0/5），暂不降档"
+  }
+ }
+}

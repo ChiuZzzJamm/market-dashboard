@@ -379,15 +379,17 @@ def check_stockcheck(D):
 
 
 def check_calibration(D):
-    """R100z11：置信度后验校准门槛落地校验——读 .calibration_state.json 的降档门槛，
-    当日标「高确信」的条数若超过门槛 → WARN（台账已生效但当日越线）。"""
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.calibration_state.json')
+    """R100z11：置信度后验校准门槛落地校验——读 calibration_state.json 的降档门槛，
+    当日标「高确信」的条数若超过门槛 → WARN（台账已生效但当日越线）。
+    ★R100z13：文件名不带点——GitHub Pages 不发布 dotfile，前端要靠 fetch('calibration_log.json')
+    画命中横条，两个台账都必须能在 Pages 上被读到。"""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'calibration_state.json')
     if not os.path.exists(path):
-        return ["未找到 .calibration_state.json（track_calibration.py 未运行，置信度后验校准门槛未生效）"]
+        return ["未找到 calibration_state.json（track_calibration.py 未运行，置信度后验校准门槛未生效）"]
     try:
         state = json.load(open(path, encoding='utf-8'))
     except Exception as e:
-        return [f"校准台账 .calibration_state.json 解析失败（{e}）"]
+        return [f"校准台账 calibration_state.json 解析失败（{e}）"]
     warns = []
     secs = (D.get('aiPrediction') or {}).get('sectors') or []
     gates = state.get('gates') or {}
@@ -404,6 +406,36 @@ def check_calibration(D):
             n = len([s for s in secs if isinstance(s, dict) and str(s.get('confidence')) == '高'])
             if n > 1:
                 warns.append(f"校准门槛：当日最多 1 条「高确信」（{gate.get('reason')}），实际 {n} 条")
+    return warns
+
+
+def check_openoutlook(D):
+    """R100z13：开盘前瞻兑现闭环的两头闸门（WARN 级）。
+    用户拍板口径：T 日 08:30 写 openOutlook（含结构化假设 openOutlook.pos），
+    T 日 16:00 打分开进 openOutlook.verification，T+1 08:30 新前瞻整字段覆盖旧的。
+    因此只有「pos 与 verification 不同时出现」才算漏项（单看缺失会每天必报假 WARN）。"""
+    warns = []
+    oo = D.get('openOutlook')
+    if not isinstance(oo, dict):
+        return warns
+    pos, ver = oo.get('pos'), oo.get('verification')
+    has_pos = isinstance(pos, dict)
+    has_ver = isinstance(ver, dict)
+    if has_pos and not has_ver:
+        warns.append("openOutlook.pos 已写但 openOutlook.verification 缺失"
+                     "（16:00 未跑 score_openoutlook.py 打分，或没把结果写回：前瞻兑现闭环断了一天）")
+    elif has_ver and not has_pos:
+        warns.append("openOutlook.verification 存在但 openOutlook.pos 缺失"
+                     "（08:30 未写结构化假设 {tendency,bandLo,bandHi,volExpect}，事后没法核对这份前瞻该不该被判命中）")
+    elif has_pos and has_ver:
+        for k in ('tendency', 'bandLo', 'bandHi'):
+            if pos.get(k) in (None, ''):
+                warns.append(f"openOutlook.pos.{k} 缺失（结构化前瞻假设不完整，打分口径会漂）")
+                break
+        for k in ('score', 'verdict'):
+            if ver.get(k) in (None, ''):
+                warns.append(f"openOutlook.verification.{k} 缺失（16:00 打分结果没写全）")
+                break
     return warns
 
 
@@ -753,6 +785,7 @@ def main():
     st_warns = check_story_quality(D)
     star_warns = check_star_module(D)
     sel_warns = check_selection_modules(D)
+    oo_warns = check_openoutlook(D)          # R100z13：开盘前瞻兑现闭环两头闸
     violations.extend(deduce_hards)
     violations.extend(exp_hards)
 

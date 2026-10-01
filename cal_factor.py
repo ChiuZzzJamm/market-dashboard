@@ -16,6 +16,8 @@
     outWeight  隔夜外盘映射权重系数（1.00 常态；越低表示外盘只作背景、A股自身结构做主推）
     lockIn     落袋 / 减仓倾向（0.00~0.45，越高表示当日越偏向兑现而非追高）
     drift      流动性回补上浮（节后首日 / 月初首日）
+    posLo/posHi/posText  建议仓位带（R100z13：把日历因子落到可记录、可回测的数字上，
+                         整成向下取整，posText 表示「建议不超过该上限」，如「5-6 成」）
 """
 import argparse
 import json
@@ -141,10 +143,25 @@ def evaluate(day, holidays):
         drift, lock_in = 0.10, max(0.0, lock_in - 0.10)
     out_weight = round(min(1.0, out_weight + drift), 2)
 
+    # 5) 建议仓位带（R100z13）：仓位 = 基准 - 落袋倾向 + 流动性回补，可记录、可回测
+    pos_lo, pos_hi = 0.60, 0.70          # 常态基准 6-7 成
+    if any(t.startswith('长假前') for t in tags):
+        pos_lo, pos_hi = 0.35, 0.45
+    elif '月末' in tags or '季末' in tags:
+        pos_lo, pos_hi = 0.45, 0.55
+    elif '周五' in tags:
+        pos_lo, pos_hi = 0.45, 0.55
+    if '节后首日' in tags or '月初首日' in tags:
+        pos_lo, pos_hi = round(pos_lo + 0.05, 2), round(pos_hi + 0.05, 2)
+    pos_lo, pos_hi = max(0.0, min(0.95, pos_lo)), max(0.0, min(0.95, pos_hi))
+    pos_text = f'{int(pos_lo * 10)}-{int(pos_hi * 10)} 成'
+    note.append(f'建议仓位带 {pos_text}（而非只给权重不给仓位：这条数字进校准台账，季度回看「长假前降仓」到底赚没赚）')
+
     summary = '、'.join(tags) if tags else '普通交易日（无显著日历窗口）'
     return {'date': day.isoformat(), 'weekday': '一二三四五六日'[day.weekday()],
             'aShareClosed': False, 'tags': tags,
             'outWeight': out_weight, 'lockIn': lock_in, 'drift': drift,
+            'posLo': pos_lo, 'posHi': pos_hi, 'posText': pos_text,
             'note': f'日历标签：{summary}。' + '；'.join(note)}
 
 

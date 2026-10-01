@@ -9,10 +9,12 @@
     python3 track_calibration.py                 # 并入本轮 data.js 预测结果 + 打印分层命中率与门槛
     python3 track_calibration.py --view          # 只查看台账与统计，不并入
     python3 track_calibration.py --json          # 机器可读输出（自动化读取门槛用）
+    python3 track_calibration.py --backfill 25   # 从 git 历史 data.js 回填样本（幂等）
 
-数据：
-    台账 .calibration_log.json  { log: { "<预测日期>": [ {date,sector,predicted,actualPct,result,conf,hit} ] } }
-    门槛 .calibration_state.json { generatedAt, window, rate:{高:..,中:..,低:..}, gate:{...} }
+数据（★文件名不带点：GitHub Pages 不发布 dotfile，前端要靠 fetch('calibration_log.json') 画命中横条）：
+    台账 calibration_log.json     { log: { "<预测日期>": [ {date,sector,predicted,actualPct,result,conf,hit,pos} ] },
+                                    open: { "<预测日期>": {tendencyHit,bandHit,volHit,score,pos} } }
+    门槛 calibration_state.json   { generatedAt, window, stat:{层:{n,hit,rate,ci,sampleEnough}}, gates:{...} }
 
 命中口径（与 16:00 生成 verification 时一致）：
     预测「走强/偏强」→ 板块当日涨幅 > 0 命中；预测「承压」→ 涨幅 < 0 命中；
@@ -26,13 +28,16 @@ from datetime import date
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA_JS = os.path.join(ROOT, 'data.js')
-LOG_FILE = os.path.join(ROOT, '.calibration_log.json')
-STATE_FILE = os.path.join(ROOT, '.calibration_state.json')
+# ★R100z13：一律不带点的文件名——GitHub Pages 不发布 dotfile，前端要 fetch('calibration_log.json')
+LOG_FILE = os.path.join(ROOT, 'calibration_log.json')
+STATE_FILE = os.path.join(ROOT, 'calibration_state.json')
 
 # 门槛阈值（命中率 < 阈值即触发降档；见 references/predict-calibration.md）
 HARD_GATE = 0.25    # 低于此值：当日禁止使用「高确信」
 SOFT_GATE = 0.40    # 低于此值：当日最多 1 条「高确信」
-MIN_SAMPLE = 5      # 样本不足时不降档（避免小样本噪声误杀）
+MIN_SAMPLE = 5      # 通用层：样本不足时不降档（避免小样本噪声误杀）
+MIN_SAMPLE_HIGH = 8 # R100z13：「高确信」层专用硬门槛——高确信是最高承诺，
+                    # 只有 ≥8 条样本才允许据此降档（3~5 条就下「禁用高确信」会天天跳、且容易过冲）
 WINDOW = 20         # 统计窗口（交易日）
 
 NODE_SRC = r"""
@@ -43,10 +48,15 @@ let m = s.match(/window\s*\.\s*DASHBOARD_DATA\s*=\s*(\{[\s\S]*\});?\s*$/);
 if (!m) { console.error('data.js parse failed'); process.exit(1); }
 let d; try { d = eval('(' + m[1] + ')'); } catch (e) { console.error('eval failed', e.message); process.exit(1); }
 const ap = d.aiPrediction || {};
+const oo = d.openOutlook || {};
 process.stdout.write(JSON.stringify({
   date: ap.date || null,
   confBySector: (ap.sectors || []).map((x) => ({ sector: x.sector, conf: x.confidence || null })),
-  verification: ap.verification || null
+  verification: ap.verification || null,
+  // R100z13：建议仓位（8:30/16:00 写下的可回测数字）+ 今日开盘前瞻结构化假设（供前瞻兑现打分）
+  pos: d.posAdvice || null,
+  openPos: oo.pos || null,
+  openVerification: oo.verification || null
 }));
 """
 
@@ -83,7 +93,29 @@ def load_log():
             return json.load(open(LOG_FILE, encoding='utf-8'))
         except Exception:
             pass
-    return {'log': {}}
+    return {'log': {}, 'open': {}}
+
+
+def save_log(log):
+    """R100z13：供 score_openoutlook.py 直接 import 本模块后落盘（避免重复实现）。"""
+    log.setdefault('log', {})
+    log.setdefault('open', {})
+    with open(LOG_FILE, 'w', encoding='utf-8') as f:
+        json.dump(log, f, ensure_ascii=False, indent=1)
+
+
+def min_sample_for(key):
+    """「高确信」层样本门槛更高：最高承诺不能拿 3 条样本下结论（R100z13）。"""
+    return MIN_SAMPLE_HIGH if key == '高' else MIN_SAMPLE
+
+
+def ci_of(p, n):
+    """命中率 ±1σ 区间（二项分布正态近似）；n 太小则区间失去意义，直接返回 full=False。"""
+    if not n:
+        return None
+    s = (p * (1 - p) / n) ** 0.5
+    lo, hi = max(0.0, p - s), min(1.0, p + s)
+    return {'lo': round(lo, 3), 'hi': round(hi, 3), 'sigma': round(s, 3)}
 
 
 def main():
@@ -129,8 +161,13 @@ def main():
                     items.append({'date': pd['date'], 'sector': d.get('sector'),
                                   'predicted': d.get('predicted'), 'actualPct': d.get('actualPct'),
                                   'result': d.get('result'), 'conf': conf_map.get(d.get('sector'), 'unknown'),
-                                  'hit': score(d.get('predicted'), d.get('actualPct'))})
+                                  'hit': score(d.get('predicted'), d.get('actualPct')),
+                                  'pos': pd.get('pos')})
                 log['log'][pd['date']] = items
+                # R100z13：开盘前瞻兑现打分一并入账（16:00 已打分的才并入，没打分的跳过）
+                ov = pd.get('openVerification')
+                if ov:
+                    log.setdefault('open', {})[pd['date']] = ov
                 added += 1
             except Exception:
                 continue
@@ -151,10 +188,10 @@ def main():
                 sc = score(d.get('predicted'), d.get('actualPct'))
                 items.append({'date': pred['date'], 'sector': d.get('sector'),
                               'predicted': d.get('predicted'), 'actualPct': d.get('actualPct'),
-                              'result': d.get('result'), 'conf': conf, 'hit': sc})
+                              'result': d.get('result'), 'conf': conf, 'hit': sc,
+                              'pos': pred.get('pos')})
             log['log'][pred['date']] = items
-            with open(LOG_FILE, 'w', encoding='utf-8') as f:
-                json.dump(log, f, ensure_ascii=False, indent=1)
+            save_log(log)
             if not a.json:
                 print(f"[OK] 已并入台账：{pred['date']}（{len(items)} 条）")
 
@@ -171,21 +208,33 @@ def main():
             continue
         got = sum(x['hit'] for x in v if x['hit'] is not None)
         n = len([x for x in v if x['hit'] is not None])
-        stat[k] = {'n': n, 'hit': got, 'rate': round(got / n, 3) if n else None,
-                   'sampleEnough': n >= MIN_SAMPLE}
+        rate = round(got / n, 3) if n else None
+        need = min_sample_for(k)
+        stat[k] = {'n': n, 'hit': got, 'rate': rate,
+                   'minSample': need, 'sampleEnough': n >= need,
+                   'ci': ci_of(rate, n) if rate is not None else None}
 
     def gate_for(key):
         s = stat.get(key)
+        need = min_sample_for(key)
         if not s or not s.get('rate'):
-            return {'maxHighConf': 2, 'maxConf': '高确信', 'reason': '样本不足，暂不降档'}
-        if s['rate'] < HARD_GATE and s['sampleEnough']:
+            return {'maxHighConf': 2, 'maxConf': '高确信',
+                    'reason': f'「{key}」层样本不足（{s["n"] if s else 0}/{need}），暂不降档'}
+        ci = s.get('ci') or {}
+        band = f'±1σ [{ci.get("lo", 0):.0%}, {ci.get("hi", 0):.0%}]'
+        if not s['sampleEnough']:
+            # R100z13：样本没到该层门槛，即使命中率看着低也不降档——小样本噪声会天天跳门槛
+            return {'maxHighConf': 2, 'maxConf': '高确信',
+                    'reason': f'「{key}」层命中率 {s["rate"]:.0%}（{band}）但样本 {s["n"]}<{need}，'
+                              '未达降档门槛，暂不降档（继续攒样本后再评）'}
+        if s['rate'] < HARD_GATE:
             return {'maxHighConf': 0, 'maxConf': '中等确信',
-                    'reason': f'「{key}」层近 {len(dates)} 日命中率 {s["rate"]:.0%} < {HARD_GATE:.0%}，当日禁用该层'}
-        if s['rate'] < SOFT_GATE and s['sampleEnough']:
+                    'reason': f'「{key}」层近 {len(dates)} 日命中率 {s["rate"]:.0%} {band} < {HARD_GATE:.0%}（样本≥{need}），当日禁用该层'}
+        if s['rate'] < SOFT_GATE:
             return {'maxHighConf': 1, 'maxConf': '中等确信',
-                    'reason': f'「{key}」层近 {len(dates)} 日命中率 {s["rate"]:.0%} < {SOFT_GATE:.0%}，当日最多 1 条该层'}
+                    'reason': f'「{key}」层近 {len(dates)} 日命中率 {s["rate"]:.0%} {band} < {SOFT_GATE:.0%}（样本≥{need}），当日最多 1 条该层'}
         return {'maxHighConf': 2, 'maxConf': '高确信',
-                'reason': f'「{key}」层近 {len(dates)} 日命中率 {s["rate"]:.0%}（≥{SOFT_GATE:.0%}），可正常使用'}
+                'reason': f'「{key}」层近 {len(dates)} 日命中率 {s["rate"]:.0%} {band}（≥{SOFT_GATE:.0%}，样本≥{need}），可正常使用'}
 
     gates = {k: gate_for(k) for k in ('高', '中', '低')}
     state = {'generatedAt': date.today().isoformat(), 'window': dates, 'stat': stat, 'gates': gates}
@@ -201,9 +250,14 @@ def main():
         if not s:
             print(f'  {k}确信：无样本')
             continue
+        ci = s.get('ci') or {}
         print(f"  {k}确信：{s['n']} 条 / 命中分 {s['hit']} / 命中率 {s['rate']:.0%}"
-              f"{'' if s['sampleEnough'] else '（样本不足 %d，暂不降档）' % MIN_SAMPLE}")
+              f"（±1σ {ci.get('lo', 0):.0%}~{ci.get('hi', 0):.0%}）"
+              f"{'' if s['sampleEnough'] else '（样本 %d<%d，暂不降档）' % (s['n'], s['minSample'])}")
         print('      门槛：' + gates[k]['reason'])
+    op = log.get('open') or {}
+    if op:
+        print(f"  开盘前瞻兑现：{len(op)} 个交易日已打分（{'、'.join(sorted(op)[-5:])}）")
     print('[OK] 门槛已写入 ' + os.path.basename(STATE_FILE))
     return 0
 

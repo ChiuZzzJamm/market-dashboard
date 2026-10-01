@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610011056"></script>
+<script src="data.js?v=202610011121"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -148,6 +148,15 @@
   .ai-verify .v-detail { font-size: 12px; line-height: 1.7; }
   .ai-verify .v-detail .hit { color: var(--up); font-weight: 700; }
   .ai-verify .v-detail .miss { color: var(--down); font-weight: 700; }
+  /* R100z13：最近 5 个预测日的命中横条（读 calibration_log.json，取不到就整块不渲染） */
+  .cal-hist { margin: 6px 0 4px; }
+  .cal-hist-t { font-size: 11px; color: var(--ink2); margin-bottom: 4px; }
+  .cal-bar { display: flex; gap: 4px; }
+  .cal-seg { flex: 1; text-align: center; font-size: 10px; line-height: 1.6; padding: 3px 0;
+    border: 1px solid currentColor; border-radius: 4px; color: var(--ink2); }
+  .cal-seg.cal-hit { color: var(--up); }
+  .cal-seg.cal-mid { color: #d8a33a; }
+  .cal-seg.cal-miss { color: var(--down); }
   .ai-verify .v-note { display: block; font-weight: 400; font-size: 11.5px; color: var(--ink-soft, #6b7a8d); margin-top: 1px; }
 
   /* ===== 推演块（fin-strategy-engine 三候选推演，内嵌题材掘金/要闻/预测等模块条目，R99m） ===== */
@@ -1222,6 +1231,42 @@ function expBadge(exp) {
 }
 
 /* AI 预测分析 */
+// R100z13：最近 5 个预测日的命中横条——复用校准台账，让「系统最近准不准」一眼可见。
+// 台账取不到（netlify/pages 未发布该文件或本地 file:// 预览）时整块静默不渲染，绝不白屏、绝不报错。
+function renderCalHistory() {
+  var box = document.getElementById('cal-hist');
+  if (!box) return;
+  try {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'calibration_log.json', true);
+    xhr.onload = function () {
+      if (xhr.status !== 200) return;
+      try {
+        var d = JSON.parse(xhr.responseText);
+        var log = (d && d.log) || {};
+        var days = Object.keys(log).sort().slice(-5);
+        if (!days.length) return;
+        var h = '<div class="cal-hist-t">📅 最近 ' + days.length + ' 个预测日的命中率</div><div class="cal-bar">';
+        days.forEach(function (dt) {
+          var arr = log[dt] || [], scored = 0, got = 0;
+          arr.forEach(function (it) {
+            if (it.hit === null || it.hit === undefined) return;
+            scored++; got += Number(it.hit);
+          });
+          var r = scored ? got / scored : null;
+          var cls = (r === null) ? 'na' : (r >= 0.9 ? 'cal-hit' : (r >= 0.5 ? 'cal-mid' : 'cal-miss'));
+          h += '<span class="cal-seg ' + cls + '" title="' + esc(dt) + '：' + scored + ' 条，'
+             + '命中分 ' + got.toFixed(1) + (r === null ? '' : '（命中率 ' + Math.round(r * 100) + '%）')
+             + '">' + esc(String(dt).slice(5)) + '</span>';
+        });
+        h += '</div>';
+        box.innerHTML = h;
+      } catch (e) { /* 台账坏了也不影响主看板 */ }
+    };
+    xhr.send();
+  } catch (e) { /* file:// 下 fetch/XHR 被拦，静默跳过 */ }
+}
+
 function renderAiPrediction() {
   var p = window.DASHBOARD_DATA.aiPrediction;
   var box = document.getElementById('ai-prediction');
@@ -1230,6 +1275,7 @@ function renderAiPrediction() {
   // R100f：「谐波共振」横幅已按用户要求移除（2026-09-28），谐波交叉徽标保留在谐波模块内
   var html = '<div class="ai-card"><div class="ai-head"><h2>AI 预测分析' + (p.date ? '<span class="h2-date">' + esc(p.date) + '</span>' : '') + '</h2></div>' +
     '<div class="ai-summary">' + (p.indexLine ? esc(p.indexLine) + '。' : '') + '通过隔夜美股各板块涨跌推导今日 A 股强弱方向：' + esc(p.summary) + '</div>' +
+    '<div id="cal-hist" class="cal-hist"></div>' +
     '<div class="ai-grid">';
   p.sectors.forEach(function (s) {
     var isUp = String(s.direction || '').indexOf('承压') === -1;
@@ -1285,10 +1331,19 @@ function renderAiPrediction() {
         var avg = (sc.avgPct === null || sc.avgPct === undefined) ? null : Number(sc.avgPct);
         var ag = (sc.alignRate === null || sc.alignRate === undefined) ? null : Number(sc.alignRate);
         var scCls = (ag === null) ? '' : (ag >= 0.75 ? 'hit' : (ag <= 0.375 ? 'miss' : ''));
+        var fundTxt = '';
+        if (sc.fund) {
+          var fm = (sc.fund.avgMainYi === null || sc.fund.avgMainYi === undefined) ? null : Number(sc.fund.avgMainYi);
+          var fu = (sc.fund.netInN === null || sc.fund.netInN === undefined) ? null : Number(sc.fund.netInN);
+          fundTxt = '，主力净额均值 ' + (fm === null ? '—' : ((fm >= 0 ? '+' : '') + fm.toFixed(2) + ' 亿')) +
+            ' / 净流入 ' + (fu === null ? '—' : fu + ' 只') +
+            (sc.fund.src ? '（' + esc(sc.fund.src) + '）' : '');
+        }
         vHtml += '<div class="' + scCls + '">· ' + esc(sc.sector || '') + '：8 只标的平均 ' +
           (avg === null ? '—' : ((avg >= 0 ? '+' : '') + avg.toFixed(2) + '%')) +
           '，方向一致率 ' + (ag === null ? '—' : (Math.round(ag * 100) + '%')) +
           '（同上涨方向 ' + (sc.hitN === null || sc.hitN === undefined ? '—' : (sc.hitN + '/8')) + '）' +
+          fundTxt +
           (sc.note ? '<span class="v-note">' + esc(sc.note) + '</span>' : '') + '</div>';
       });
       vHtml += '</div>';
@@ -1298,6 +1353,7 @@ function renderAiPrediction() {
   }
   html += '</div>';
   box.innerHTML = html;
+  renderCalHistory();
 }
 
 window.addEventListener('resize', function () { charts.forEach(function (c) { c.resize(); }); });
