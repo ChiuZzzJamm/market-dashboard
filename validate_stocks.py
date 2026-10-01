@@ -655,6 +655,21 @@ def check_stock_pool(D):
         return None, None
 
     hards, warns = [], []
+
+    # R100z17 时序闸（2026-10-01 体检发现的结构性缺陷）：
+    # 机械池 stock_pool.json 由 16:00 任务在第 5.9 步 `--write` 当日重建，而顶层 aiPrediction
+    # 是同日 08:30 定稿的（16:00 只补 verification、不整改 sectors）。因此 16:00 用「当日收盘
+    # 重算出的机械池」去考「当日早上写死的预测」，必然大面积零交集 —— 这不是 AI 自选违规，
+    # 是检验时序错位。此类场景降级为提示，真正的照抄约束留给下一个交易日的 07:30/08:30/周日
+    # 校验（那时 pool.date < pred.date，比对有效）。
+    pred_date = str((D.get('aiPrediction') or {}).get('date') or '')
+    pool_date = str(pool.get('date') or '')
+    if pred_date and pool_date and pool_date >= pred_date:
+        warns.append(f"stock_pool.json(date={pool_date}) 不早于 aiPrediction(date={pred_date})："
+                     f"机械池在本任务周期内被重建，08:30 定稿的预测无从照抄，照抄约束降级为提示；"
+                     f"下一交易日的 07:30/08:30/周日校验仍按同一规则硬拦（R100z17 时序闸）")
+        return [], warns
+
     for s in ((D.get('aiPrediction') or {}).get('sectors') or []):
         if not isinstance(s, dict):
             continue
