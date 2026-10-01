@@ -485,7 +485,7 @@ def check_openoutlook(D):
     return warns
 
 
-def check_risk_blacklist(D):
+def check_risk_blacklist(D, scope='all'):
     """R100z13：个股硬风险黑名单（FAIL 硬拦）。
 
     用户口径：一只票遭大股东减持 / 限售解禁 / ST / 业绩预减，方向说得再对也会被市场锤，
@@ -493,7 +493,13 @@ def check_risk_blacklist(D):
     risk_blacklist.json（源不可达的维度走 unknown，不判安全也不算命中）。
 
     注意：文件缺失只 WARN（脚本还没跑），只有「黑名单里确实有、且又被选进 8 只池」
-    才 FAIL——那才是必须拦下来的选股。"""
+    才 FAIL——那才是必须拦下来的选股。
+
+    R100z16：scope 决定扫哪些节点——
+      all / ai → aiPrediction.sectors（16:00、08:30、周日任务职责）
+      all / us → us + ashare 五节与 bullish/bearish（07:30、周日任务职责；
+                 这两个任务自己就是这些标的的选股者，必须自己过闸，不能
+                 把黑名单推给 16:00 去背，否则等于没闸）。"""
     root = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(root, 'risk_blacklist.json')
     if not os.path.exists(path):
@@ -507,20 +513,36 @@ def check_risk_blacklist(D):
     if not isinstance(bl, dict):
         return ["risk_blacklist.json 结构异常（须含 blacklist 对象）"]
 
-    out = []
-    for sec in ((D.get('aiPrediction') or {}).get('sectors') or []):
-        if not isinstance(sec, dict):
-            continue
-        for st in (sec.get('stocks') or []):
+    bl_map = bl.get('blacklist') or {}
+
+    def scan(stocks, where):
+        for st in (stocks or []):
             if not isinstance(st, dict):
                 continue
             code = str(st.get('code') or '').replace('.', '').replace('sh', '').replace('sz', '').zfill(6)
-            hit = (bl.get('blacklist') or {}).get(str(code))
+            hit = bl_map.get(str(code))
             if not hit:
                 continue
             reasons = '；'.join(hit.get('reasons') or [])
             out.append(f"个股硬风险黑名单命中：{code} {hit.get('name') or st.get('name') or ''}"
                        f"（{reasons}）——须换股，不得留在 8 只池（R100z13 硬闸）")
+
+    out = []
+    if scope in ('all', 'ai'):
+        for sec in ((D.get('aiPrediction') or {}).get('sectors') or []):
+            if isinstance(sec, dict):
+                scan(sec.get('stocks'), 'aiPrediction')
+    if scope in ('all', 'us'):
+        for mk in ('us', 'ashare'):
+            sec = D.get(mk) or {}
+            for key in ('bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews', 'bullish', 'bearish'):
+                for nw in (sec.get(key) or []):
+                    if not isinstance(nw, dict):
+                        continue
+                    scan(nw.get('stocks'), f"{mk}.{key}")
+                    for imp in (nw.get('impacts') or []):
+                        if isinstance(imp, dict):
+                            scan(imp.get('stocks'), f"{mk}.{key}.impacts")
     return out
 
 
@@ -947,13 +969,29 @@ def check_selection_modules(D):
 
 def main():
     as_json = '--json' in sys.argv
+    # R100z16 --no-fix：纯只读校验，不自动补 direction / 不剔 duanban / 不重排 / 不写盘。
+    # 9:45 唯一写入口是 duanban.star，跑默认模式反会被 validate 改掉 duanban 池内
+    # probability 与池成员、重排 aiPrediction 标的，等于从后门绕过任务自己的禁令。
+    no_fix = '--no-fix' in sys.argv
+    # R100z16 --scope：让每个自动化只对自己写的节点负责，拆掉
+    # 「FAIL 全在 aiPrediction 却要 9:45 / 07:30 修到 ALL OK」的死锁——
+    # 那两个任务被绝对禁止改 aiPrediction，等于被要求修自己碰不了的东西。
+    scope = 'all'
+    for _i, _a in enumerate(sys.argv):
+        if _a == '--scope' and _i + 1 < len(sys.argv):
+            scope = sys.argv[_i + 1]
+        elif _a.startswith('--scope='):
+            scope = _a.split('=', 1)[1]
+    if scope not in ('all', 'ai', 'us', 'star'):
+        print(f"[ERROR] --scope 非法：{scope}（可选 all / ai / us / star）")
+        sys.exit(2)
     D = load_data()
 
     # 先自动补救 direction（缺失/非法 → 中性）、duanban 软闸门（剔除非主板/补概率），
     # 再无破坏性地按统一顺序重排（龙头→概念→小盘人气→断板反包）；均写回但不阻断部署。
-    dir_warns = fix_direction_inplace(D)
-    duanban_changed, duanban_warns = fix_duanban_inplace(D)
-    if '--no-fix-order' not in sys.argv or duanban_changed:
+    dir_warns = fix_direction_inplace(D) if not no_fix else []
+    duanban_changed, duanban_warns = (fix_duanban_inplace(D) if not no_fix else (False, []))
+    if (not no_fix) and ('--no-fix-order' not in sys.argv or duanban_changed):
         reorder_inplace(D)
         with open('data.js', 'w', encoding='utf-8') as f:
             f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';\n')
@@ -979,36 +1017,41 @@ def main():
     sel_warns = check_selection_modules(D)
     oo_warns = check_openoutlook(D)                    # R100z13：开盘前瞻六维度深度
     ooloop_warns = check_openoutlook_loop(D)           # R100z13：前瞻兑现闭环两头闸（原同名被覆盖，已改名接线）
-    risk_violations = check_risk_blacklist(D)          # R100z13：个股硬风险黑名单（命中即 FAIL）
+    risk_violations = check_risk_blacklist(D, scope=scope)   # R100z13：个股硬风险黑名单（命中即 FAIL）
     logic_hards, logic_warns = check_logic_depth(D)    # R100z15：内容深度机器闸
     exit_warns = check_exit(D)                         # R100z15：退出纪律（止损/目标/证伪）
     pool_hards, pool_warns = check_stock_pool(D)       # R100z15：机械选股池是否真进决策链
-    violations.extend(deduce_hards)
-    violations.extend(exp_hards)
-    violations.extend(risk_violations)
-    violations.extend(logic_hards)
-    violations.extend(pool_hards)
+    # R100z16：只把「本职责范围内」的 FAIL 计入 violations。
+    if scope in ('all', 'ai'):
+        violations.extend(deduce_hards)
+        violations.extend(exp_hards)
+        violations.extend(logic_hards)
+        violations.extend(pool_hards)
+    if scope in ('all', 'ai', 'us'):
+        violations.extend(risk_violations)
 
-    for mk in ('ashare', 'us'):
-        sec = D.get(mk) or {}
-        for key in ('bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews'):
-            for i, nw in enumerate(sec.get(key) or []):
-                if not isinstance(nw, dict):
-                    continue
-                for j, imp in enumerate(nw.get('impacts') or []):
-                    if isinstance(imp, dict):
-                        check_tiered(imp.get('stocks'),
-                                     f"{mk}.{key}[{i}].impacts[{j}]({(imp.get('theme') or '')[:14]})",
-                                     violations)
-        for key in ('bullish', 'bearish'):
-            for i, g in enumerate(sec.get(key) or []):
-                if isinstance(g, dict):
-                    check4(g.get('stocks'), f"{mk}.{key}[{i}]({(g.get('theme') or '')[:14]})", violations)
+    if scope in ('all', 'us'):
+        for mk in ('ashare', 'us'):
+            sec = D.get(mk) or {}
+            for key in ('bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews'):
+                for i, nw in enumerate(sec.get(key) or []):
+                    if not isinstance(nw, dict):
+                        continue
+                    for j, imp in enumerate(nw.get('impacts') or []):
+                        if isinstance(imp, dict):
+                            check_tiered(imp.get('stocks'),
+                                         f"{mk}.{key}[{i}].impacts[{j}]({(imp.get('theme') or '')[:14]})",
+                                         violations)
+            for key in ('bullish', 'bearish'):
+                for i, g in enumerate(sec.get(key) or []):
+                    if isinstance(g, dict):
+                        check4(g.get('stocks'), f"{mk}.{key}[{i}]({(g.get('theme') or '')[:14]})", violations)
 
-    ai = D.get('aiPrediction') or {}
-    for i, s in enumerate(ai.get('sectors') or []):
-        if isinstance(s, dict):
-            check_tiered(s.get('stocks'), f"aiPrediction.{(s.get('sector') or '')[:16]}", violations)
+    if scope in ('all', 'ai'):
+        ai = D.get('aiPrediction') or {}
+        for i, s in enumerate(ai.get('sectors') or []):
+            if isinstance(s, dict):
+                check_tiered(s.get('stocks'), f"aiPrediction.{(s.get('sector') or '')[:16]}", violations)
 
     if as_json:
         print(json.dumps({'ok': not violations, 'direction_warnings': dir_warns,

@@ -19,7 +19,7 @@ import json
 import re
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 
 MAINBOARD = re.compile(r"^(60|00)\d{4}$")
 
@@ -146,15 +146,24 @@ def main():
         _inherit_enrich(mod, (D.get("duanban") or {}), warns)
     except Exception as e:
         print(f"[WARN] enrichment 继承失败（不影响合并）：{e}", file=sys.stderr)
-    # R98k：保留当日 🌟 开盘半小时精选（10:00 自动化产物，16:00 重建 duanban 时
-    # 不得洗掉）；跨日（次日 10:00 前）自然失效丢弃。
+    # R98k：保留 🌟 开盘半小时精选（9:45 自动化产物，16:00 重建 duanban 时不得洗掉）。
+    #
+    # R100z16 修 bug：原判定是「star.date == 今天」才保留，但 07:30 复核任务在 07:00 就跑
+    # merge_duanban，比 9:45 早两个多小时——那天 09:30 生成的 star 此刻 date 是昨天，
+    # 于是被当成「非当日」丢弃。实证事故：2026-09-30 9:45 写入 star(picks=2)，
+    # 10-01 07:30 任务跑到这里把 star 删空，此后连续多天开盘精选模块空窗。
+    # 前端本就有 R100e 闸门（star.date===本地今日才渲染），旧 star 不会被展示，
+    # 所以改为「最近一个交易日的 star 一律保留」，由 9:45 整字段覆盖刷新，
+    # 既不产生过期展示，也不会被早跑的复核脚本清场。
     old_star = (D.get("duanban") or {}).get("star")
     if old_star and not mod.get("star"):
-        if str(old_star.get("date") or "") == datetime.now().strftime("%Y-%m-%d"):
+        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        od = str(old_star.get("date") or "")
+        if od >= yesterday:
             mod["star"] = old_star
-            print("[merge] 保留当日 🌟 开盘精选模块", file=sys.stderr)
+            print(f"[merge] 保留 🌟 开盘精选模块（{od}，未过期未清场）", file=sys.stderr)
         else:
-            print(f"[merge] 丢弃非当日 🌟 模块（{old_star.get('date')}），待 9:45 开盘精选自动化重建",
+            print(f"[merge] 丢弃过期 🌟 模块（{od}，早于 {yesterday}），待 9:45 开盘精选自动化重建",
                   file=sys.stderr)
     D["duanban"] = mod
     out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ";\n"
