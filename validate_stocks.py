@@ -409,8 +409,13 @@ def check_calibration(D):
     return warns
 
 
-def check_openoutlook(D):
+def check_openoutlook_loop(D):
     """R100z13：开盘前瞻兑现闭环的两头闸门（WARN 级）。
+
+    ★2026-10-01 修隐 bug：本函数原先与下面的「六维度深度」同名 check_openoutlook，
+    被后定义者整体覆盖成死代码，闭环闸门一直没接线。现改名 check_openoutlook_loop，
+    与 check_openoutlook（深度）并存，两个都在 main 里调用。
+
     用户拍板口径：T 日 08:30 写 openOutlook（含结构化假设 openOutlook.pos），
     T 日 16:00 打分开进 openOutlook.verification，T+1 08:30 新前瞻整字段覆盖旧的。
     因此只有「pos 与 verification 不同时出现」才算漏项（单看缺失会每天必报假 WARN）。"""
@@ -478,6 +483,45 @@ def check_openoutlook(D):
     if miss:
         warns.append(f"openOutlook 缺维度标题：{'、'.join(miss)}")
     return warns
+
+
+def check_risk_blacklist(D):
+    """R100z13：个股硬风险黑名单（FAIL 硬拦）。
+
+    用户口径：一只票遭大股东减持 / 限售解禁 / ST / 业绩预减，方向说得再对也会被市场锤，
+    命中即换股、不进 8 只池。本闸读 stock_risk_blacklist.py --write 产出的
+    risk_blacklist.json（源不可达的维度走 unknown，不判安全也不算命中）。
+
+    注意：文件缺失只 WARN（脚本还没跑），只有「黑名单里确实有、且又被选进 8 只池」
+    才 FAIL——那才是必须拦下来的选股。"""
+    root = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(root, 'risk_blacklist.json')
+    if not os.path.exists(path):
+        return [f"未找到 risk_blacklist.json（stock_risk_blacklist.py --write 未跑，"
+                f"个股硬风险黑名单没进闸门）"]
+    try:
+        with open(path, encoding='utf-8') as f:
+            bl = json.load(f)
+    except Exception as e:
+        return [f"risk_blacklist.json 解析失败（{e}）"]
+    if not isinstance(bl, dict):
+        return ["risk_blacklist.json 结构异常（须含 blacklist 对象）"]
+
+    out = []
+    for sec in ((D.get('aiPrediction') or {}).get('sectors') or []):
+        if not isinstance(sec, dict):
+            continue
+        for st in (sec.get('stocks') or []):
+            if not isinstance(st, dict):
+                continue
+            code = str(st.get('code') or '').replace('.', '').replace('sh', '').replace('sz', '').zfill(6)
+            hit = (bl.get('blacklist') or {}).get(str(code))
+            if not hit:
+                continue
+            reasons = '；'.join(hit.get('reasons') or [])
+            out.append(f"个股硬风险黑名单命中：{code} {hit.get('name') or st.get('name') or ''}"
+                       f"（{reasons}）——须换股，不得留在 8 只池（R100z13 硬闸）")
+    return out
 
 
 def check_source_names(D):
@@ -785,9 +829,12 @@ def main():
     st_warns = check_story_quality(D)
     star_warns = check_star_module(D)
     sel_warns = check_selection_modules(D)
-    oo_warns = check_openoutlook(D)          # R100z13：开盘前瞻兑现闭环两头闸
+    oo_warns = check_openoutlook(D)                    # R100z13：开盘前瞻六维度深度
+    ooloop_warns = check_openoutlook_loop(D)           # R100z13：前瞻兑现闭环两头闸（原同名被覆盖，已改名接线）
+    risk_violations = check_risk_blacklist(D)          # R100z13：个股硬风险黑名单（命中即 FAIL）
     violations.extend(deduce_hards)
     violations.extend(exp_hards)
+    violations.extend(risk_violations)
 
     for mk in ('ashare', 'us'):
         sec = D.get(mk) or {}
@@ -827,6 +874,8 @@ def main():
                           'stockcheck_warnings': stock_warns,
                           'calibration_warnings': calib_warns,
                           'openoutlook_warnings': oo_warns,
+                          'openoutlook_loop_warnings': ooloop_warns,
+                          'risk_blacklist_violations': risk_violations,
                           'duanban_warnings': duanban_warns,
                           'violations': violations}, ensure_ascii=False, indent=2))
     for w in dir_warns:
@@ -863,6 +912,8 @@ def main():
         print("[WARN] calibration:", w)
     for w in oo_warns:
         print("[WARN] openOutlook:", w)
+    for w in ooloop_warns:
+        print("[WARN] openOutlook兑现闭环:", w)
     for w in sel_warns:
         print("[WARN] 选股扩展模块:", w)
     if violations:

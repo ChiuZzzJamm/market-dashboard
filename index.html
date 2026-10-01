@@ -535,6 +535,10 @@
   .pw-card .hz-top .pw-grd { margin-left:2px; }
   /* R100m：全站标的池角标（谐波🌟/吸筹👀/九门💡/断板❗️），可叠加 */
   .stk-tag { font-size:10px; line-height:1; margin-left:2px; flex-shrink:0; }
+  /* R100z13：个股硬风险角标（减持/解禁/ST/业绩预减）——红底白字，hover 看原因 */
+  .risk-dot { font-size:10px; line-height:1; margin-left:2px; padding:1px 4px; border-radius:999px;
+    color:#fff; background:#c0392b; flex-shrink:0; cursor:help; }
+  .risk-line { font-size:11.5px; color:#a5342a; margin:4px 0 2px; line-height:1.6; }
   /* R100p：弧色标注（.tk-chip 边框渐变描边）按用户要求整体删除，胶囊恢复统一背景 */
   /* R100n：通用标的板块小胶囊——R100p 起仅用于弹窗标题行（stkSecBadge），主页胶囊不再显示 */
   .chip-sec { font-size:11px; font-weight:700; color:var(--accent-deep); background:var(--accent-soft); border:1px solid currentColor; border-radius:4px; padding:1px 7px; line-height:1.5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:96px; flex-shrink:0; }
@@ -855,7 +859,7 @@ function renderTops(s, isUp) {
     if (bname) info += ' · ' + bname + (isUp ? ' 领涨第' : ' 领跌第') + (idx + 1) + '位';
     if (op !== null && op !== undefined) info += ' · 今开 ' + (op >= 0 ? '+' : '') + op + '%' + (op > 1 ? '（高开）' : op < -1 ? '（低开）' : '（平开）');
     // R100p：弧色标注与主页板块徽标已删（用户要求），板块只在弹窗标题行显示（stkSecBadge）
-    return '<span class="tchip' + stkGoldCls(code0) + '" data-stk="' + escAttr(code0) + '|' + escAttr(name) + '|' + escAttr(info) + '" title="' + escAttr(info + '（点击查看K线）') + '"><b>' + esc(name) + '</b>' + (pctStr ? '<span class="tp ' + cls + '">' + pctStr + '</span>' : '') + '<span class="nt">' + esc(info) + '</span></span>';
+    return '<span class="tchip' + stkGoldCls(code0) + '" data-stk="' + escAttr(code0) + '|' + escAttr(name) + '|' + escAttr(info) + '" title="' + escAttr(info + '（点击查看K线）') + '"><b>' + esc(name) + '</b>' + (pctStr ? '<span class="tp ' + cls + '">' + pctStr + '</span>' : '') + riskBadge(code0) + '<span class="nt">' + esc(info) + '</span></span>';
   }).join('');
   return '<div class="reason-tops"><span class="tops-h">' + label + '</span>' + chips + '</div>';
 }
@@ -1267,6 +1271,54 @@ function renderCalHistory() {
   } catch (e) { /* file:// 下 fetch/XHR 被拦，静默跳过 */ }
 }
 
+/* R100z13：个股硬风险黑名单（ST / 解禁 T+2~T+5 / 减持 30 日 / 业绩预减 30 日）。
+   risk_blacklist.json 由 stock_risk_blacklist.py --write 产出；取不到就 RISK_BL 保持 null，
+   全站不渲染 ❗️ 风险角标，但不影响任何其它逻辑（不白屏、不报错）。 */
+var RISK_BL = null;
+
+function loadRiskBlacklist() {
+  try {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'risk_blacklist.json', true);
+    xhr.onload = function () {
+      if (xhr.status !== 200) return;
+      try {
+        var d = JSON.parse(xhr.responseText);
+        RISK_BL = (d && d.blacklist) || null;
+        // 黑名单是异步到的：已经渲染过一次卡片就重画一遍，把 ⚠️ 角标和汇总行补上
+        var aiBox = document.getElementById('ai-prediction');
+        if (RISK_BL && aiBox && aiBox.innerHTML) renderAiPrediction();
+      } catch (e) { RISK_BL = null; }
+    };
+    xhr.send();
+  } catch (e) { RISK_BL = null; }
+}
+
+/* 标的胶囊上的硬风险角标；无命中返回空串 */
+function riskBadge(code0) {
+  if (!RISK_BL || !code0) return '';
+  var hit = RISK_BL[String(code0).replace(/\D/g, '')];
+  if (!hit) return '';
+  var rs = (hit.reasons || []).join('；');
+  return '<span class="risk-dot" title="⚠️ 硬风险（不进 8 只池）：' + escAttr(rs) + '">⚠️</span>';
+}
+
+/* R100z13：8 只池里的硬风险标的汇总一行（无命中返回空串）。
+   口径与 stock_risk_blacklist.py 一致：ST / 解禁 T+2~T+5 / 减持 30 日 / 业绩预减 30 日。 */
+function riskLineHtml(p) {
+  if (!RISK_BL || !p || !p.sectors) return '';
+  var hits = [];
+  p.sectors.forEach(function (s) {
+    (s.stocks || []).forEach(function (st) {
+      var hit = RISK_BL[String(st.code || '').replace(/\D/g, '')];
+      if (hit) hits.push((st.name || st.code || '') + '（' + (hit.reasons || []).join('；') + '）');
+    });
+  });
+  if (!hits.length) return '';
+  return '<div class="risk-line">⚠️ 硬风险黑名单命中 ' + hits.length + ' 只，按规则须换股、不进 8 只池：'
+    + esc(hits.join('；')) + '</div>';
+}
+
 function renderAiPrediction() {
   var p = window.DASHBOARD_DATA.aiPrediction;
   var box = document.getElementById('ai-prediction');
@@ -1276,6 +1328,7 @@ function renderAiPrediction() {
   var html = '<div class="ai-card"><div class="ai-head"><h2>AI 预测分析' + (p.date ? '<span class="h2-date">' + esc(p.date) + '</span>' : '') + '</h2></div>' +
     '<div class="ai-summary">' + (p.indexLine ? esc(p.indexLine) + '。' : '') + '通过隔夜美股各板块涨跌推导今日 A 股强弱方向：' + esc(p.summary) + '</div>' +
     '<div id="cal-hist" class="cal-hist"></div>' +
+    riskLineHtml(p) +
     '<div class="ai-grid">';
   p.sectors.forEach(function (s) {
     var isUp = String(s.direction || '').indexOf('承压') === -1;
@@ -1354,6 +1407,21 @@ function renderAiPrediction() {
   html += '</div>';
   box.innerHTML = html;
   renderCalHistory();
+  renderRiskLines();
+}
+
+/* R100z13：把黑名单里的命中标的再点一遍（供 8 只池以外的胶囊兜底，不可用时静默） */
+function renderRiskLines() {
+  if (!RISK_BL) return;
+  var p = window.DASHBOARD_DATA && window.DASHBOARD_DATA.aiPrediction;
+  if (!p) return;
+  document.querySelectorAll('.tchip').forEach(function (c) {
+    var raw = (c.getAttribute('data-stk') || '').split('|')[0];
+    var code = String(raw || '').replace(/\D/g, '');
+    if (!code || RISK_BL[code] || c.querySelector('.risk-dot')) return;
+    var nm = c.querySelector('b');
+    if (nm) nm.innerHTML = esc(nm.textContent) + riskBadge(code);
+  });
 }
 
 window.addEventListener('resize', function () { charts.forEach(function (c) { c.resize(); }); });
@@ -3330,6 +3398,7 @@ function renderOpenOutlook() {
 
 document.getElementById('updatedAt').textContent = '数据更新：' + window.DASHBOARD_DATA.updatedAt;
 syncMktToggle();
+loadRiskBlacklist();   // R100z13：先发请求，黑名单异步到后再自动重画一次
 renderAiPrediction();
 renderOpenOutlook();
 
