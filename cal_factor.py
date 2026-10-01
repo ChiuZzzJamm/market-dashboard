@@ -33,20 +33,38 @@ HOLIDAYS_2026 = {
     '劳动节': ['2026-05-01', '2026-05-05'],
     '端午': ['2026-06-19', '2026-06-21'],
     '中秋': ['2026-09-25', '2026-09-27'],
-    '国庆': ['2026-10-01', '2026-10-08'],
+    # ★2026-10-01 修正（R100z14）：原写 10-08 会误框国庆后复牌首日。
+    # 交易所公告原文：10月1日(四)至10月7日(三)休市，10月8日(四)起照常开市。
+    '国庆': ['2026-10-01', '2026-10-07'],
 }
-
 
 def _d(s):
     y, m, dd = (int(x) for x in s.split('-'))
     return date(y, m, dd)
 
 
-def holiday_ranges(holidays):
-    out = []
+# 复牌首日白名单：交易所明确规定照常开市，但日期落在假期区间端点上。
+# 这类日子一旦被假期区间误框 → 08:30 的「A股交易日守卫」会直接结束，
+# 当天不生成盘前前瞻/AI预测/推送，等于节后复牌首日裸奔（R100z14 实际踩过）。
+# 本白名单强制把这些日期从休市区间里剔除，比靠人工维护表格更稳。
+REOPEN_OVERRIDE_2026 = {
+    _d('2026-10-08'),  # 国庆（10/1-10/7 休市）后复牌首日
+}
+
+
+def holiday_ranges(holidays, reopen=()):
+    """构造休市区间。reopen 里的日期强制剔除出区间（复牌首日白名单），
+    返回 (区间列表, 被剔除的日期列表)。"""
+    out, skipped = [], []
     for name, (a, b) in holidays.items():
-        out.append((name, _d(a), _d(b)))
-    return out
+        da, db = _d(a), _d(b)
+        if da in reopen:
+            da, skipped = da + timedelta(days=1), skipped + [da.isoformat()]
+        if db in reopen:
+            db, skipped = db - timedelta(days=1), skipped + [db.isoformat()]
+        if da <= db:
+            out.append((name, da, db))
+    return out, skipped
 
 
 def is_trading_day(d, ranges):
@@ -78,10 +96,12 @@ def month_last_trading_days(d, ranges):
     return days
 
 
-def evaluate(day, holidays):
-    ranges = holiday_ranges(holidays)
+def evaluate(day, holidays, reopen=()):
+    ranges, skipped = holiday_ranges(holidays, reopen)
     tags = []
     note = []
+    if skipped:
+        note.append('已按复牌白名单把 %s 从休市区间剔除（交易所规定照常开市）' % '、'.join(skipped))
 
     closed = any(a <= day <= b for _, a, b in ranges)
     if not is_trading_day(day, ranges):
@@ -123,10 +143,12 @@ def evaluate(day, holidays):
 
     # 4) 节后首日 / 月初首日（流动性回补）
     prev = day - timedelta(days=1)
-    if not is_trading_day(prev, ranges) or prev.weekday() >= 5:
-        if not any(a <= prev <= b for _, a, b in ranges):
-            tags.append('节后首日')
-            note.append('节后首日流动性回补、前日踏空盘补涨，外盘映射权重可小幅上浮')
+    # ★R100z14 修正：原写法 `not any(a <= prev <= b)` 语义反了——
+    #   只有「前一日在假期区间内」才是节后（复牌）首日；写成取反会让真正复牌日漏标，
+    #   导致节后首日的 drift +0.10 / lockIn -0.10 从不生效（2026 国庆 10-08 实测漏标）。
+    if any(a <= prev <= b for _, a, b in ranges):
+        tags.append('节后首日')
+        note.append('节后首日流动性回补、前日踏空盘补涨，外盘映射权重可小幅上浮')
     if day.day <= 3:
         tags.append('月初首日')
         note.append('月初首日资金回补，落袋倾向低')
@@ -178,7 +200,8 @@ def main():
         for k, v in raw.items():
             hol[k] = v
     day = _d(a.date) if a.date else date.today()
-    r = evaluate(day, hol)
+    reopen = set(REOPEN_OVERRIDE_2026)
+    r = evaluate(day, hol, reopen=reopen)
     if a.json:
         print(json.dumps(r, ensure_ascii=False))
     else:
