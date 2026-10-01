@@ -342,10 +342,16 @@ def check_stockcheck(D):
     """R100z11：verification.stockCheck —— 验证颗粒度下移到标的层面（方向对但 8 只全选错必须被检出）。
     hitN 须 0~8 整数、alignRate 须 = hitN/8、avgPct 须数值，details 条数对齐 sectors → WARN。"""
     ap = D.get('aiPrediction') or {}
-    v = ap.get('verification') if isinstance(ap.get('verification'), dict) else {}
+    # R100z12 闸门口径修正：verification 由 16:00 填写，08:30（盘前）与周日（date=下周一）
+    # 按设计就是 null，此时「stockCheck 缺失」属正常，绝不能报成每日必现的假 WARN
+    #（否则 08:30 的 5.5 校验会出现一个永远修不好的 WARN，逼 AI 反复绕）。
+    if not isinstance(ap.get('verification'), dict):
+        return []
+    v = ap['verification']
     sc = v.get('stockCheck')
     if sc is None:
-        return ["顶层 aiPrediction.verification.stockCheck 缺失（R100z11：标的层面验证未落地，"
+        # 当日既已写了 verification 却没有 stockCheck → 才真正属于漏项
+        return ["顶层 aiPrediction.verification 已写但 stockCheck 缺失（R100z11：标的层面验证未落地，"
                 "「方向对但选股错」无法被检出）"]
     if not isinstance(sc, list):
         return ["verification.stockCheck 不是数组"]
