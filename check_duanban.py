@@ -1122,18 +1122,11 @@ _DUANBAN_STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '
 
 
 def _trading_days_between(d0, d1):
-    a = datetime.strptime(d0, '%Y-%m-%d').date()
-    b = datetime.strptime(d1, '%Y-%m-%d').date()
-    if b < a:
-        a, b = b, a
-    n = 0
-    cur = a
-    one = datetime.timedelta(days=1)
-    while cur <= b:
-        if cur.weekday() < 5:
-            n += 1
-        cur += one
-    return n
+    """真实交易日数量（含端点，节假日感知）。R100z44：委托 common.trading_days_between——
+    旧实现只数周一~周五，国庆/春节长假会被数成交易日，节后首日运行时失效池
+    被提前清空（09-30 归档到 10-08 被数成 8>5 误删）。"""
+    from common import trading_days_between
+    return trading_days_between(d0, d1)
 
 
 def _load_duanban_state():
@@ -1382,8 +1375,14 @@ def main():
         carried = _clean_duanban_fail(prev_ds.get('failPool', []), today_str)
         carried_codes = set(f.get('code') for f in carried)
         failPool = carried + [f for f in new_fails if f['code'] not in carried_codes]
+        # R100z44：入池首日标记——新入池标的 entryDate=今日，老标的沿用首次入池日（state 逐日携带）。
+        # 前端据此给首日新入池卡片整体黄色高亮+「新」徽章，次日自动恢复（用户 2026-10-04 要求）。
+        for e in (mod.get('confirmed') or []) + (mod.get('watching') or []):
+            _c = str(e.get('code') or '')
+            e['entryDate'] = (prev_pools.get(_c) or {}).get('entryDate') or today_str
         cur_pools = {str(e.get('code') or ''): {'name': e.get('name', ''), 'sector': e.get('sector', ''),
-                                                 'form': e.get('form', '')}
+                                                 'form': e.get('form', ''),
+                                                 'entryDate': e.get('entryDate') or today_str}
                      for e in (mod.get('confirmed') or []) + (mod.get('watching') or [])}
         _save_duanban_state({'pools': cur_pools, 'failPool': failPool})
         mod['failPool'] = failPool

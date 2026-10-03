@@ -391,19 +391,11 @@ STATE_FILE = os.path.join(BASE, '.harmonic_state.json')
 
 
 def _trading_days_between(d0, d1):
-    """工作日（≈交易日）数量（含端点），用于 5 交易日清理闸门。d0/d1='YYYY-MM-DD'。"""
-    a = datetime.date.fromisoformat(d0)
-    b = datetime.date.fromisoformat(d1)
-    if b < a:
-        a, b = b, a
-    n = 0
-    cur = a
-    one = datetime.timedelta(days=1)
-    while cur <= b:
-        if cur.weekday() < 5:  # 0=周一 .. 4=周五
-            n += 1
-        cur += one
-    return n
+    """真实交易日数量（含端点，节假日感知），用于「自失效日起保留 5 个交易日」清理闸门。
+    R100z44：委托 common.trading_days_between——旧实现只数周一~周五，国庆/春节长假
+    会被数成交易日，节后首日运行时失效池被提前清空（09-30 归档到 10-08 被数成 8>5 误删）。"""
+    import common
+    return common.trading_days_between(d0, d1)
 
 
 def _load_state():
@@ -423,7 +415,8 @@ def _save_state(st):
 
 
 def _clean_fail(fp, today):
-    """抓取异常日的兜底保留（正常轮次失效池整体替换，只留最新一轮归档）；超期清理。"""
+    """失效池 5 个交易日滚动窗口清洗（R100z44：自失效/归档日起保留 5 个真实交易日，
+    超期剔除；节假日感知，国庆/春节不误数）。正常轮次与抓取异常日都走这道闸门。"""
     if not fp:
         return []
     out = []
@@ -589,17 +582,28 @@ def main():
     fetch_ok = len(codes) > 0 and n_ok >= len(codes) * 0.8
 
     # R100i：失败池——原在池内、今日滑出的标的归因失败归档。
-    # R100z5a：失效池只保留最新一轮归档（=最近一个交易日失效的标的，用户拍板），
-    # 不再累计携带 5 个交易日的历史归档；抓取异常日沿用旧池兜底（R91m 防清场）。
+    # R100z44（用户 2026-10-04 拍板，推翻 R100z5a「只保留最新一轮归档」）：
+    # 失效标的自失效日起保留 5 个交易日后才剔除——旧归档（5 交易日窗口内）继续携带，
+    # 与断板侧 check_duanban.py 的 carried+new_fails 口径完全一致；
+    # 抓取异常日沿用旧池兜底（R91m 防清场）。
     # 仅在抓取正常（fetch_ok）且确有数据/旧池时计算新失败，避免抓取故障时误判全池失效。
     today_codes = set([it['code'] for it in confirm] + [it['code'] for it in watch])
     prev_state = _load_state()
     prev_pools = prev_state.get('pools', {})
+    # R100z44：入池首日标记——新入池标的 entryDate=今日，老标的沿用首次入池日（state 逐日携带）。
+    # 前端据此给首日新入池卡片整体黄色高亮+「新」徽章，次日自动恢复（用户 2026-10-04 要求）。
+    for it in confirm + watch:
+        it['entryDate'] = (prev_pools.get(it['code']) or {}).get('entryDate') or today
     carried = _clean_fail(prev_state.get('failPool', []), today)
     new_fails = []
     if fetch_ok and (confirm or watch or prev_pools):
         new_fails = _compute_fail_pool(prev_pools, today_codes, cur_info, today, kl)
-    failPool = new_fails if fetch_ok else carried
+    if fetch_ok:
+        # R100z44：窗口内旧归档 + 今日新失效（同 code 以新条目为准）
+        carried_codes = set(str(f.get('code')) for f in carried)
+        failPool = carried + [f for f in new_fails if str(f.get('code')) not in carried_codes]
+    else:
+        failPool = carried
     # R100z4x：failHz 跨运行保留——把既有 data.js harmonic.failPool 的 failHz 按 code 合并回
     # carried/new 条目（backfill_failhz.py 一次性回补的失效前几何不会被下次抓取覆盖冲掉）；
     # 新失败项若已有快照（来自 prev_pools 几何）则不覆盖。
@@ -621,7 +625,8 @@ def main():
                                  'stop': it.get('stop'), 'prz': it.get('prz'),
                                  'stage': it.get('stage'), 'points': it.get('points'),
                                  'pointDays': it.get('pointDays'), 'ratios': it.get('ratios'),
-                                 'target1': it.get('target1'), 'target2': it.get('target2')}
+                                 'target1': it.get('target1'), 'target2': it.get('target2'),
+                                 'entryDate': it.get('entryDate') or today}  # R100z44
     _save_state({'pools': cur_pools if fetch_ok else prev_pools, 'failPool': failPool})
 
     new_field = {

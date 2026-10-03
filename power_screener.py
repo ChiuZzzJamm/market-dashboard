@@ -218,6 +218,12 @@ def main():
         'summary': '',
     }
     old = D.get('powerScreen')
+    # R100z44：入池首日标记——新入池标的 entryDate=本数据交易日，老标的沿用首次入池日
+    # （从旧 data.js 按 code 继承；离池后再进视为新入池）。前端据此首日黄色高亮+「新」徽章。
+    _old_ed = {str(i.get('code') or ''): i.get('entryDate')
+               for i in (old or {}).get('passed') or [] if isinstance(i, dict)}
+    for i in new_field.get('passed') or []:
+        i['entryDate'] = _old_ed.get(str(i.get('code') or '')) or today
     if not passed and old:
         print('[POWER] 本轮无达标标的，保留既有池（R91n 不清场）')
         old['note'] = (old.get('note') or '') + f"｜{today} 本轮无新命中"

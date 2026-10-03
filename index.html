@@ -485,6 +485,12 @@
   /* R100z41：最新归档批次用实线暖色边框 + 淡底，与滚动窗口里剩下的旧归档一眼区分 */
   .fail-chip.fail-new { border-style: solid; border-color: #d6ab63; background: #fffdf7; }
   .fail-chip .nb { font-size: 10px; font-weight: 700; color: #8a5c12; border: 1px solid #d6ab63; border-radius: 4px; padding: 0 3px; line-height: 1.35; }
+  /* R100z44：新入池首日高亮——断板/谐波/九门/吸筹确认·观察池与失效池新归档，
+     入池当天整卡淡黄底+琥珀边+「新」徽章（参考失效池既有样式），次日自动恢复。
+     置于 .tc.dim 之后：归档态（dim 虚线灰字）遇「新」也要黄底优先。 */
+  .tc.fresh { border-style: solid; border-color: #d6ab63; background: #fffdf7; }
+  .tc.fresh .tc-cell { background: #fdf3dd; }
+  .tc .nb { font-size: 10px; font-weight: 700; color: #8a5c12; border: 1px solid #d6ab63; border-radius: 4px; padding: 0 3px; line-height: 1.35; flex-shrink: 0; }
   .db-modal-meta { font-size: 12.5px; color: var(--ink); line-height: 1.8; margin-bottom: 10px; }
   .db-modal-meta .lab { color: var(--ink2); }
   .db-kline svg { width: 100%; height: auto; display: block; }
@@ -528,7 +534,9 @@
   .acc-grd.strong { color:#fff; background:linear-gradient(135deg,#f0435c,#d02c44); }
   .acc-grd.watch { color:#8a5800; background:#ffe9c2; border:1px solid #f0c36d; }
   /* R100z21：吸筹页强池/观察池分区小标题；R100z28 字号/颜色对齐断板页 db-pool h2（17px+9px 红/蓝点，同页不出现两套语义色） */
-  .acc-sub { display:flex; align-items:center; gap:9px; font-size:17px; font-weight:700; color:var(--ink); margin:16px 0 2px; }
+  .acc-sub { display:flex; align-items:center; flex-wrap:wrap; row-gap:2px; gap:9px; font-size:17px; font-weight:700; color:var(--ink); margin:16px 0 2px; }
+  /* R100z43：池名不折断（修手机端「强/池」竖排断行），说明文字 .cnt 允许整体折行 */
+  .acc-sub .t { white-space:nowrap; flex-shrink:0; }
   .acc-sub:first-child { margin-top:10px; }
   .acc-sub .dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
   /* R100z28：强池圆点改红（与卡内 acc-grd.strong 同色、与谐波『确认池』红点同语义），观察池＝断板观察池同款蓝点 */
@@ -2214,6 +2222,7 @@ function renderHarmonic() {
       (it.accResonance ? ' · 吸筹共振' + esc(it.accResonance) : '');
     return tcCard({
       code: it.code, name: nm || it.code, chg: tcPctOf(it.code, null), dim: !conf,
+      fresh: poolFresh(it, h.tradeDate), // R100z44：新入池首日黄色+「新」徽章
       pills: [it.sector || stkSectorOf(it.code), it.pattern], sent: true,
       cells: [
         tcCell('距PRZ', dist === null ? '—' : fmtPct(dist), distCls),
@@ -2289,6 +2298,7 @@ function renderAccumulation() {
       (lagDays >= 10 ? ' · <span style="color:#b3541e">结构走旧·不得主推</span>' : '');
     return tcCard({
       code: it.code, name: nm || it.code, chg: tcPctOf(it.code, null), dim: it.grade !== '强',
+      fresh: poolFresh(it, a.tradeDate), // R100z44：新入池首日黄色+「新」徽章
       pills: [it.sector || stkSectorOf(it.code)], sent: true,
       cells: [
         tcCell('强度', '<span class="acc-grd ' + gd + '">' + esc(it.grade) + ' ' + it.score + '</span>', it.grade === '强' ? 'up' : ''),
@@ -2330,13 +2340,16 @@ function renderAccumulation() {
     if (stale) demoted++;
     if ((it.grade === '强') && !stale) sB.push(h); else wB.push(h);
   });
+  // R100z43：强/观察两节标题换行排版对齐谐波页（池名 nowrap 不折断，说明文字可整体折到下一行），
+  // 修手机端「强/池」两字竖排断行（image#2）。池名包 .t 白空格 nowrap + 父级 flex-wrap。
   var secS = sB.length
-    ? '<div class="acc-sub s"><span class="dot"></span>强池<span class="cnt">共 ' + sB.length + ' 只 · 特征命中多、结构完整，可直接跟（盯次日量能与竞价）</span></div><div class="acc-grid">' + sB.join('') + '</div>' : '';
+    ? '<div class="acc-sub s"><span class="dot"></span><span class="t">强池</span><span class="cnt">共 ' + sB.length + ' 只 · 特征命中多、结构完整，可直接跟（盯次日量能与竞价）</span></div><div class="acc-grid">' + sB.join('') + '</div>' : '';
   var secW = wB.length
-    ? '<div class="acc-sub w"><span class="dot"></span>观察池<span class="cnt">共 ' + wB.length + ' 只 · 缺 1-2 项，只排队候补，不主动做' +
+    ? '<div class="acc-sub w"><span class="dot"></span><span class="t">观察池</span><span class="cnt">共 ' + wB.length + ' 只 · 缺 1-2 项，只排队候补，不主动做' +
       (demoted ? '；其中 <b>' + demoted + '</b> 只打分虽到强池线，但信号滞后超 10 日、结构已走旧，按纪律<b>降级至此</b>' : '') +
       '</span></div><div class="acc-grid">' + wB.join('') + '</div>' : '';
-  return accLeg + '<div class="card"><h2>🧲 主力吸筹' + (a.tradeDate ? ' <span class="h2-date">' + esc(a.tradeDate) + '</span>' : '') + '</h2>' +
+  // R100z43：去掉「🧲 主力吸筹 + 日期」大标题（image#1 用户要求）——tab 名与口径条已够定位，卡片直接进分池。
+  return accLeg + '<div class="card">' +
     secS + secW + (a.summary ? '<div class="note-line">' + esc(a.summary) + '</div>' : '') + '</div>';
 }
 
@@ -2355,6 +2368,7 @@ function renderPowerScreen() {
       (it.acc ? ' · <span class="hz-badge">吸筹</span>' : '');
     return tcCard({
       code: it.code, name: nm || it.code, chg: tcPctOf(it.code, it.pct), dim: false,
+      fresh: poolFresh(it, p.tradeDate), // R100z44：新入池首日黄色+「新」徽章
       pills: [it.sector || stkSectorOf(it.code)], sent: true,
       cells: [
         tcCell('门通过', it.score + ' / 9', 'up'),
@@ -2550,18 +2564,25 @@ function tcStopCell(code) {
    口径以 harmonic_detect.py 的 PATTERNS 为准，取不到就原样显示英文，绝不猜译。 */
 var HZ_PAT_CN = { 'Bat': '蝙蝠', 'Gartley': '加特利', 'Butterfly': '蝶形', 'Crab': '蟹形', 'Shark': '鲨鱼', 'Cypher': '塞弗', 'AB=CD': 'AB等CD' };
 function hzPatCn(p) { return HZ_PAT_CN[p] || p; }
-/* R100z36：统一卡片骨架。o = {code,name,sector,pills[],sent,chg,cells[],foot,dim,attrs,onclick,title} */
+/* R100z36：统一卡片骨架。o = {code,name,sector,pills[],sent,chg,cells[],foot,dim,attrs,onclick,title,fresh}
+   R100z44：fresh=true → 整卡淡黄+「新」徽章（新入池首日高亮，次日恢复）。 */
 function tcCard(o) {
   var pills = '';
   (o.pills || []).forEach(function (p) { if (p) pills += '<span class="db-sec-pill">' + esc(p) + '</span>'; });
   var sent = o.sent === false ? '' : sentBadgeHtml(o.code);
-  return '<div class="tc' + (o.dim ? ' dim' : '') + '"' + (o.attrs || '') + (o.onclick ? ' onclick="' + o.onclick + '"' : '') +
+  var nb = o.fresh ? '<span class="nb">新</span>' : '';
+  return '<div class="tc' + (o.dim ? ' dim' : '') + (o.fresh ? ' fresh' : '') + '"' + (o.attrs || '') + (o.onclick ? ' onclick="' + o.onclick + '"' : '') +
     (o.title ? ' title="' + escAttr(o.title) + '"' : '') + '>' +
-    '<div class="tc-top">' + pills + '<span class="tc-sp"></span>' + sent + '</div>' +
+    '<div class="tc-top">' + pills + nb + '<span class="tc-sp"></span>' + sent + '</div>' +
     '<div class="tc-id"><b>' + esc(o.name || o.code) + '</b>' +
     ((o.name && o.name !== o.code) ? '<span class="cd">' + esc(o.code) + '</span>' : '') + tcChgHtml(o.chg) + '</div>' +
     '<div class="tc-g">' + (o.cells || []).join('') + '</div>' +
     (o.foot ? '<div class="tc-foot">' + o.foot + '</div>' : '') + '</div>';
+}
+/* R100z44：入池首日判定——生成侧给每个池内标的写 entryDate（首次入池日，老标的逐日沿用），
+   等于本模块数据交易日即「今日新入池」；无 entryDate 的旧数据一律不当新（宁缺毋滥）。 */
+function poolFresh(it, modDate) {
+  return !!(it && it.entryDate && modDate && String(it.entryDate) === String(modDate).slice(0, 10));
 }
 
 /* R100z36：断板反包双池卡片改用统一 T2 骨架。
@@ -2578,8 +2599,11 @@ function dbCardHtml(e, key, done, showSec, scoreBadge) {
   var sCls = e.sentiment === 'bull' ? 'up' : (e.sentiment === 'bear' ? 'down' : '');
   var bCls = e.boardPctToday > 0 ? 'up' : (e.boardPctToday < 0 ? 'down' : '');
   var foot = '<span class="xt">' + esc(form.replace(/^.*?断板/, '断板').replace(/·/, '：')) + '</span>';
+  // R100z44：断板模块数据日取 generatedAt（该模块无 tradeDate 字段）
+  var modD = String(((window.DASHBOARD_DATA || {}).duanban || {}).generatedAt || '').slice(0, 10);
   return tcCard({
     code: e.code, name: e.name, chg: tcPctOf(e.code, e.pct), dim: !done,
+    fresh: poolFresh(e, modD), // R100z44：新入池首日黄色+「新」徽章
     pills: [showSec ? (e.sector || '其他') : null], sent: true,
     cells: [
       tcCell('反包概率', prob === null ? '—' : prob + '%', sCls),
@@ -2845,11 +2869,12 @@ function failTcHtml(e, i, latestD) {
   var bp = failBoardPct(e);
   var bpCls = bp === null ? 'flat' : (bp > 0 ? 'up' : (bp < 0 ? 'down' : 'flat'));
   var isNew = (latestD && e.entryDate === latestD);
+  // R100z44：「新」徽章统一由 tcCard fresh 在 tc-top 渲染（与四模块新入池同位置），foot 不再重复
   var foot = '<span class="xt">' + esc(String(e.reason || '形态失效').replace(/（.*$/, '')) + '</span>' +
-    (isNew ? '<span class="nb">新</span> ' : '') +
     ' · 归档 ' + esc(e.entryDate || '—');
   return tcCard({
     code: e.code, name: e.name, chg: tcPctOf(e.code, e.pct), dim: true,
+    fresh: isNew, // R100z44：失效池新归档首日同样整卡黄色（与四模块新入池同一样式）
     pills: [e.sector || '其他'], sent: false,
     cells: [
       tcCell('反包概率', '<span class="xt">失效</span>', 'warn'),
@@ -2865,13 +2890,14 @@ function failTcHtml(e, i, latestD) {
   });
 }
 /* R100i：失败池（断板反包 / 谐波形态）——原符合形态但破位或超期失效的标的归档。
-   R100z5a：只保留最新一轮归档（=最近一个交易日失效的标的），不再累计历史。
+   R100z44（用户 2026-10-04 拍板，推翻 R100z5a）：自失效日起保留 5 个交易日后才剔除
+   （生成侧节假日感知滚动窗口，见 common.trading_days_between）。
    failPool: [{code,name,pattern,form,reason,entryDate}]；点击看该标的 K 线。 */
 function dbFailHtml(failPool, kind) {
   failPool = failPoolSorted(failPool);
   if (!failPool.length) {
     return '<div class="db-pool p-fail"><h2>失效归档池 · 0 只</h2>' +
-      '<div class="db-empty">暂无失效标的（最近一个交易日失效的标的才会落入此池，次日自动滚出）</div></div>';
+      '<div class="db-empty">暂无失效标的（失效标的中自失效日起保留 5 个交易日，窗口内会留在此池，超期自动滚出）</div></div>';
   }
   var _latestD = failPoolLatest(failPool); // R100z41：最新一批归档的日期，用于高亮 + 标题标注
   // R100z42：断板反包失效池 → 统一 T2 四格卡；谐波失效池 → 沿用紧凑 chip
@@ -2879,7 +2905,7 @@ function dbFailHtml(failPool, kind) {
     var tcItems = failPool.map(function (e, i) { return failTcHtml(e, i, _latestD); }).join('');
     return '<div class="db-pool p-fail"><h2>失效归档池 · ' + failPool.length + ' 只' +
       (_latestD ? ' · 最近归档 ' + esc(String(_latestD).slice(5)) : '') + '</h2>' +
-      '<div class="db-sub">原符合断板反包形态、因破位或超期失效而归因失败；仅保留最近一个交易日失效的标的（卡面「反包概率」记为失效）</div>' +
+      '<div class="db-sub">原符合断板反包形态、因破位或超期失效而归因失败；自失效日起保留 5 个交易日后剔除（卡面「反包概率」记为失效）</div>' +
       '<div class="db-chips">' + tcItems + '</div></div>';
   }
   var items = failPool.map(function (e, i) {
@@ -2896,7 +2922,7 @@ function dbFailHtml(failPool, kind) {
   }).join('');
   return '<div class="db-pool p-fail"><h2>失效归档池 · ' + failPool.length + ' 只' +
     (_latestD ? ' · 最近归档 ' + esc(String(_latestD).slice(5)) : '') + '</h2>' +
-    '<div class="db-sub">原符合' + (kind === 'harmonic' ? '谐波' : '断板反包') + '形态、因破位或超期失效而归因失败；仅保留最近一个交易日失效的标的</div>' +
+    '<div class="db-sub">原符合' + (kind === 'harmonic' ? '谐波' : '断板反包') + '形态、因破位或超期失效而归因失败；自失效日起保留 5 个交易日后剔除</div>' +
     '<div class="db-chips">' + items + '</div></div>';
 }
 

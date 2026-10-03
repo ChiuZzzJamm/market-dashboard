@@ -146,6 +146,26 @@ def main():
         _inherit_enrich(mod, (D.get("duanban") or {}), warns)
     except Exception as e:
         print(f"[WARN] enrichment 继承失败（不影响合并）：{e}", file=sys.stderr)
+    # R100z44：entryDate（入池首日标记）兜底——check_duanban 草稿已带，但 AI 补概率
+    # 环节若在 draft.json 上整条目重写可能弄丢；缺时先按 code 从旧 data.js 继承，
+    # 旧数据也没有（真·新入池标的）落 generatedAt 日期（= 当日，恰是首日，前端正好亮「新」）。
+    try:
+        _old_ed = {}
+        for pool in ("confirmed", "watching"):
+            for e in (D.get("duanban") or {}).get(pool) or []:
+                if isinstance(e, dict) and e.get("code") and e.get("entryDate"):
+                    _old_ed[str(e["code"])] = e["entryDate"]
+        _gd = str(mod.get("generatedAt") or "")[:10]
+        _n_ed = 0
+        for pool in ("confirmed", "watching"):
+            for e in mod.get(pool) or []:
+                if not e.get("entryDate"):
+                    e["entryDate"] = _old_ed.get(str(e.get("code") or "")) or _gd
+                    _n_ed += 1
+        if _n_ed:
+            print(f"[merge] entryDate 兜底补齐 {_n_ed} 处（R100z44 入池首日标记）", file=sys.stderr)
+    except Exception as e:
+        print(f"[WARN] entryDate 兜底失败（不影响合并）：{e}", file=sys.stderr)
     # R98k：保留 🌟 开盘半小时精选（9:45 自动化产物，16:00 重建 duanban 时不得洗掉）。
     #
     # R100z16 修 bug：原判定是「star.date == 今天」才保留，但 07:30 复核任务在 07:00 就跑
