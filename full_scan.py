@@ -25,7 +25,6 @@ harmonic_detect.py / accumulation_score.py 复用（用户需求：全量扫安�
 import argparse
 import json
 import os
-import re
 import subprocess
 import sys
 import time

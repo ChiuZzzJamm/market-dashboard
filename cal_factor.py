@@ -74,16 +74,6 @@ def is_trading_day(d, ranges):
     return not any(a <= d <= b for _, a, b in ranges)
 
 
-def next_trading_days(d, ranges, horizon=400):
-    """从 d 之后找出未来 N 个交易日。"""
-    out, cur = [], d + timedelta(days=1)
-    while len(out) < horizon and cur.year <= d.year + 2:
-        if is_trading_day(cur, ranges):
-            out.append(cur)
-        cur += timedelta(days=1)
-    return out
-
-
 def month_last_trading_days(d, ranges):
     """本月最后 3 个交易日（含 d 之后）。"""
     base = d.replace(day=28) + timedelta(days=6)
@@ -103,7 +93,6 @@ def evaluate(day, holidays, reopen=()):
     if skipped:
         note.append('已按复牌白名单把 %s 从休市区间剔除（交易所规定照常开市）' % '、'.join(skipped))
 
-    closed = any(a <= day <= b for _, a, b in ranges)
     if not is_trading_day(day, ranges):
         tags.append('A股休市')
         note.append('A股当日休市（节假/周末），盘前推演应直接结束，不生成 aiPrediction/openOutlook')

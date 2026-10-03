@@ -29,7 +29,6 @@ import argparse
 import json
 import os
 import sys
-import time
 import urllib.request
 from datetime import date, datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
@@ -253,7 +252,6 @@ def main():
         names.setdefault(c, local_names.get(c, ''))
 
     blacklist, unknown, failed = {}, [], []
-    rec_rows = []  # (code, hits dict) 供并发填
 
     def one(code):
         lift, e1 = fetch_lift(code, args.lift_lo, args.lift_hi, today)

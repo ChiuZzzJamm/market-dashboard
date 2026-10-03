@@ -24,8 +24,8 @@ A股板块/指数/涨跌家数抓取（零 MCP 依赖，全部 HTTP 直连）：
 import json, re, subprocess, os, sys, time, argparse, random
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutTimeout
 from datetime import datetime, timezone, timedelta
-from common import (find_node, ths_get, ths_json, parse_ths_industries, fetch_ths_industries,
-                    THS_URL, THS_REFERER, THS_DATACENTER_REFERER)  # R100z6：THS 抓取收口到 common
+from common import (find_node, ths_get, ths_json, fetch_ths_industries,
+                    THS_REFERER, THS_DATACENTER_REFERER)  # R100z6：THS 抓取收口到 common
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(BASE)
@@ -226,10 +226,6 @@ def fetch_zt_ladder(date):
             except Exception:
                 lbc = 1
             pct = p.get("zdp")
-            try:
-                fpct = float(pct) if pct not in (None, "") else 0
-            except Exception:
-                fpct = 0
             out.append({
                 "code": str(p.get("c") or ""),
                 "name": str(p.get("n") or ""),
@@ -374,21 +370,6 @@ def fetch_top5(board_code, po):
             break
     return out
 
-def build_sectors():
-    up_rows = fetch_boards("f3", 1)    # 按涨跌幅降序 → 领涨
-    time.sleep(2)
-    down_rows = fetch_boards("f3", 0)  # 升序 → 领跌
-    if up_rows and down_rows:
-        r = _build_sectors_em(up_rows, down_rows)
-        # 东财数据不足（ups/downs < 3）时也回退新浪，避免返回 None 触发 em_failed
-        if r[0] is not None and r[1] is not None:
-            return r
-    # ---- R93 新浪备用源（2026-09-23）：东财 push2/push2delay 被 WAF 按 IP 段封锁
-    # （本地+WebFetch 云端均空回复，push2ex 幸存），行业板块/全板块榜改用新浪行业
-    # 板块口径兜底（~90 个细分行业，含板块涨跌幅；成分股 TOP5 走新浪节点接口）。
-    print("[info] 东财 clist 行业板块不可达/不足，改用新浪行业板块备用源")
-    return build_sectors_sina()
-
 def _build_sectors_em(up_rows, down_rows):
     def mk(r, po):
         pct = to_f(r.get("f3"))
@@ -514,9 +495,6 @@ def build_sectors_sina():
 # 注意：沙箱出口 IP 被同花顺 Nginx forbidden，故本地跑会落备源；云端自动化 IP 通常可达。
 # R100z6：curl_ths_url/curl_ths/parse_ths_industries/fetch_ths_industries 收口到 common（单一来源）。
 curl_ths_url = ths_get
-
-def curl_ths(timeout=20):
-    return ths_get(THS_URL, timeout=timeout)
 
 def fetch_ths_tops(ths_code, po, timeout=15):
     """同花顺行业详情页成分股 TOP5（R98d）：po=1 领涨（详情页默认按涨跌幅 desc）、
@@ -1108,7 +1086,6 @@ def main():
               "不写 data.js，保留既有值（自动化可对上述项走 WebFetch 兜底）")
         sys.exit(1)
 
-    today_md = datetime.now(TZ8).strftime("%m/%d")
     updated_parts = []
 
     # 成交额文本（亿元 → 万亿）

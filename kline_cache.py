@@ -9,7 +9,7 @@ harmonic_detect.py 与 accumulation_score.py 共用，避免同日重复抓取�
   可用 KLINE_DEADLINE 环境变量覆盖），超时未抓到的标的按缺失处理。
 - 约定（R91m/R91n）：抓取失败一律返回 None，由调用方保留旧值，禁止静默清场。
 """
-import json, os, time, hashlib
+import json, os, time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -69,9 +69,12 @@ def fetch_kline_tencent(code, days=320, retries=2):
                     if not isinstance(a, list) or len(a) < 6:
                         continue
                     try:
+                        # R100z25：腾讯 ifzq 的 volume 单位是「手」，新浪是「股」——两源口径不一
+                        # 会让「日均成交额＝volume×close」差 100 倍（手口径全部 <2 亿门禁→285 只全灭）。
+                        # 统一归一化为「股」，任何模块拿 volume×close 直接得元。
                         out.append({'day': str(a[0]), 'open': float(a[1]),
                                     'close': float(a[2]), 'high': float(a[3]),
-                                    'low': float(a[4]), 'volume': float(a[5])})
+                                    'low': float(a[4]), 'volume': float(a[5]) * 100})
                     except Exception:
                         continue
                 if len(out) >= 30:
@@ -241,14 +244,17 @@ def _kline_arr_to_dicts(arr):
 
 
 def get_bars(code, D, days=320):
-    """取单只 K 线（dict 列表）。优先用 data.js 内嵌 stkKlines（离线、无频限），
-    其次走 get_kline 网络兜底。返回 list 或 None。"""
-    sk = (D or {}).get('stkKlines') or {}
-    arr = sk.get(code)
-    if isinstance(arr, list) and len(arr) >= 30:
-        bars = _kline_arr_to_dicts(arr)
-        if bars:
-            return bars[-days:] if days else bars
+    """取单只 K 线（dict 列表）。默认**只走网络全量**（get_kline，days=320），
+    不走 data.js 内嵌 stkKlines。
+
+    为什么默认不再用内嵌：内嵌 stkKlines 按 R100z21 前端定稿只保留 90 根（弹窗
+    优化），而扫描脚本要靠 250 根算回撤/涨停史/长周期形态——拿 90 根算出来的是
+    另一套结果（实测：同一只票内嵌 90 根 → 流动性不足判 0 分；网络 320 根 →
+    76 分，打分口径随「内嵌里恰好有没有这只票」漂移）。网页缓存有 20h TTL，
+    命中缓存基本是零成本，未命中才真去抓，代价可控。
+
+    前端弹窗仍读内嵌 stkKlines（离线秒开），本函数只服务扫描侧，两者各取所需。
+    """
     return get_kline(code, days=days)
 
 

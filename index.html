@@ -598,6 +598,30 @@
   .hz-legend { font-size:10px; }
   .hz-legend i { font-style:normal; font-weight:700; }
   .hz-sub { font-size:12px; font-weight:700; color:var(--ink2); margin:10px 0 2px; }
+  /* R100z22：三技术子页（谐波/九门/吸筹）口径说明从「一行文字 + 超长 title 悬停」改成可展开条目块——
+     原来要把 200+ 字口径塞进 title 属性，手机上根本看不到（iOS Safari 不显示 title 悬停），
+     等于没写；改成 <details> 折叠 + 逐条列名，手机上点开即读。 */
+  .tech-legend { margin:0 0 14px; border:1px solid var(--line); border-radius:10px; background:var(--paper); }
+  .tech-legend summary { cursor:pointer; list-style:none; display:flex; align-items:center; gap:7px; font-size:12px; font-weight:700; color:var(--ink2); padding:8px 12px; }
+  .tech-legend summary::-webkit-details-marker { display:none; }
+  .tech-legend summary::before { content:'▸'; font-size:10px; color:var(--accent); transition:transform .15s; }
+  .tech-legend[open] summary::before { transform:rotate(90deg); }
+  .tech-legend .lg-body { padding:0 12px 11px; font-size:11.5px; line-height:1.9; color:var(--ink2); }
+  .tech-legend .lg-body b { color:var(--ink); font-weight:700; }
+  .tech-legend .lg-hr { height:1px; background:var(--line); margin:7px 0; }
+  .tech-legend .lg-tip { color:#8a5a00; background:#fff8e6; border:1px solid #f0dcaa; border-radius:6px; padding:4px 8px; font-size:11px; line-height:1.7; }
+  /* R100z23：技术信号「历史有效性」条（signal_stats.py 逐日重放回测产物）。
+     把「这个信号过去到底灵不灵」摆到台面上——没统计过的信号不配被称为信号。 */
+  .sig-stat { margin:8px 0 12px; background:var(--paper-2); border:1px solid var(--line);
+              border-radius:8px; padding:7px 10px; font-size:11px; line-height:1.85; color:var(--ink2); }
+  .sig-stat .sig-hd { font-weight:700; color:var(--ink); }
+  .sig-stat .sig-num { color:var(--ink); font-weight:700; }
+  .sig-stat .sig-bad { color:#b3351f; font-weight:700; }
+  .sig-stat .sig-good { color:#0f7a52; font-weight:700; }
+  .sig-stat .sig-cmt { color:var(--ink2); }
+  /* 信号滞后灰标（R100z22）：吸筹是历史 K 线模型，同样分数信号新旧不同，滞后 ≥10 日转告警色 */
+  .acc-lag { display:inline-block; font-size:9.5px; color:var(--ink2); border:1px solid var(--line); border-radius:999px; padding:0 6px; margin-top:6px; }
+  .acc-lag.late { color:#b3541e; border-color:#e8c9a8; background:#fff6ee; }
   .ai-harmonic { font-size:12.5px; font-weight:700; color:#7a4d00; background:#fff3d6; border:1px solid #f0c36d; border-radius:8px; padding:6px 10px; margin:8px 0; }
 </style>
 </head>
@@ -2125,7 +2149,15 @@ function renderHarmonic() {
   // R100l：三池样式对齐断板反包页——.db-pool 圆点标题容器（确认池红点 / 观察池蓝点 / 失效池灰点 dbFailHtml）
   // R100z4x：谐波子页顶部术语说明段落（.hz-sub）曾按用户反馈删除——2026-09-30 用户要求恢复（与九门/吸筹口径行同款）
   // R100z6l：恢复口径行（hz-sub 朴素样式 + 悬停详解），术语与 R100g 定稿一致
-  var hzDef = '<div class="hz-sub" style="margin:0 0 14px;" title="谐波=XABCD 五点形态（腾讯 ifzq 前复权日K，harmonic_detect.py）。X-A=初段 · A-B=回调 · B-C=延续 · C-D=终段；D 点落入 PRZ 后观察反转。PRZ=潜在反转区（D 点投影 ±0.5×ATR14）；T1/T2=D+0.382/0.618×CD 两级目标位；止损=形态失效位（D 点结构破坏）。确认池=D 已触及 PRZ 且现企稳确认（按距 PRZ 距离升序）；观察池=D 行进中、距 PRZ≤8%；D 点破位或超期移入失效池，5 个交易日后自动清理。">谐波口径：XABCD 五点形态（前复权日K）｜PRZ=潜在反转区（D投影±0.5×ATR14）｜T1/T2=D+0.382/0.618×CD｜止损=形态失效位｜确认池=D触及PRZ企稳 · 观察池=距PRZ≤8%</div>';
+  var hzDef = '<details class="tech-legend"><summary>谐波口径 · XABCD 五点形态（点开看每条定义）</summary><div class="lg-body">' +
+    '<div><b>形态</b>：X→A 初段 · A→B 回调 · B→C 延续 · C→D 终段；D 点落到 PRZ 后盯反转信号</div>' +
+    '<div><b>PRZ</b>：潜在反转区＝D 点投影 ±0.5×ATR14（腾讯 ifzq 前复权日 K）</div>' +
+    '<div><b>目标位</b>：T1＝D+0.382×CD，T2＝D+0.618×CD，分两级兑现</div>' +
+    '<div><b>止损</b>＝形态失效位（D 点结构被破坏），不是固定百分比</div>' +
+    '<div><b>分池</b>：确认池＝D 已触及 PRZ 且现企稳确认（按距 PRZ 距离升序，越近越靠前）；观察池＝D 正在行进、距 PRZ≤8%</div>' +
+    '<div><b>失效</b>：D 点破位或超期未成，移入失效池，5 个交易日后自动清理</div>' +
+    '<div class="lg-tip">下一步：PRZ 内等企稳 K 线（缩量止跌／下影）再动；跌破 PRZ 下沿＝D 点投影失效，形态作废、不出手。</div>' +
+    '</div></details>';
   var html = hzDef;
   if (c.length) html += '<div class="db-pool p-conf"><h2>确认池 · ' + c.length + ' 只</h2><div class="db-sub">D 点已触及 PRZ 且现企稳确认 · 按距 PRZ 距离升序（越近越靠前）</div><div class="hz-pool">' + c.map(card).join('') + '</div></div>';
   else html += '<div class="db-pool p-conf"><h2>确认池 · 0 只</h2><div class="db-empty">暂无标的（形态核验宁缺毋滥，无达标即如实留空）</div></div>';
@@ -2137,21 +2169,68 @@ function renderHarmonic() {
   return html;
 }
 
+/* R100z23：技术信号历史有效性条（数据源 data.js 顶层 signalStats，由
+   signal_stats.py 逐日重放检测器算出）。四个技术页共用一段结论话术，
+   避免「口径说得很花、从不回答过去灵不灵」。 */
+function sigPct(v, digits) {
+  if (v === null || v === undefined || !isFinite(v)) return '—';
+  var s = (v > 0 ? '+' : '') + v.toFixed(digits === undefined ? 2 : digits);
+  return s + '%';
+}
+function sigRate(v) {
+  if (v === null || v === undefined || !isFinite(v)) return '—';
+  return Math.round(v * 100) + '%';
+}
+function sigStatHtml(key, label) {
+  var s = (window.DASHBOARD_DATA || {}).signalStats;
+  if (!s || !s[key] || !s[key].n) return '';
+  var r = s[key], b = s.benchmark || {}, cf = s.confirmed || {};
+  var a5 = r.avgPct5, b5 = (b.avgPct5 === undefined ? 0 : b.avgPct5);
+  var ex = (a5 === null || a5 === undefined) ? null : a5 - b5;
+  var cls = (ex === null) ? '' : (ex >= 0 ? 'sig-good' : 'sig-bad');
+  var cfTxt = '';
+  if (cf.n && cf.avgPct5 !== undefined && cf.avgPct5 !== null) {
+    cfTxt = '；等<b>放量突破再跟</b>（' + cf.n + ' 次）胜率回到 ' + sigRate(cf.winRate5) +
+            '、' + sigPct(cf.avgPct5) + '——胜率向基准靠拢，但绝对收益仍未转正，说明这套形态「能缩小观察范围、不能单独给出买入点」';
+  }
+  return '<div class="sig-stat"><span class="sig-hd">' + esc(label) +
+    '</span>：近 ' + (s.lookback || 120) + ' 个交易日逐日重放，共 ' + r.n +
+    ' 次信号。信号后 T+5 平均 ' + sigPct(a5) + '（胜率 ' + sigRate(r.winRate5) +
+    '），同期「随便买一只」基准 ' + sigPct(b5) + '（胜率 ' + sigRate(b.winRate5) +
+    '）→ <span class="' + cls + '">超额 ' +
+    (ex === null ? '—' : (ex >= 0 ? '+' : '') + ex.toFixed(2) + ' 个百分点</span>') +
+    cfTxt + '。<span class="sig-cmt">结论：本模块只作缩小范围的观察过滤器，' +
+    '不构成买入理由；必须叠加放量突破确认与止损，且仓位按中等及以下确信度给。</span></div>';
+}
+
 function renderAccumulation() {
   var a = window.DASHBOARD_DATA.accumulation;
   if (!a || !a.scored || !a.scored.length) return '';
   // R100z21：吸筹页分「强池 / 观察池」两节——强池=特征命中多、结构完整可直接跟；
   // 观察池=缺 1-2 项只排队候补。渲染一律按 scored 内每张卡自己的 grade 分组（新旧数据通用）。
   var pick = a.scored.slice(0, 20);
+  // R100z22：特征胶囊加 title 释义（原来只有「试盘/横盘」两个字，看不出触发条件）
+  var FEAT_TITLE = {
+    f1: 'F1 试盘（20分）：长上影≥2×实体、量≥1.5×5日均量，随后3日均量回落且收盘低于试盘价，当时处在近120日区间下部',
+    f2: 'F2 止跌（15分）：3日缩量连跌、末日量≤0.7×均量，第4-8日收复逾半跌幅',
+    f3: 'F3 横盘（20分）：近6个月同类试盘≥2次、近10日振幅收窄到20日的6成内、10日收盘贴中枢±6%',
+    f4: 'F4 缩量（15分）：6日内量不到前20日峰量的0.6倍、低点未破20日前低、全程横盘±3%',
+    f5: 'F5 缩量板（首次板22/接力板16分）：跳空高开≥5%的涨停、量≤前日0.8倍且收最高；首次板筹码干净，接力板防对倒',
+    f6: 'F6 流动性+热度（双达标10/单达标6分）：近20日日均成交额≥2亿（硬门禁）；近250日有涨停或距高点回撤25%-70%算热度'
+  };
   var items = pick.map(function (it, idx) {
     var gd = it.grade === '强' ? 'strong' : 'watch';
     var feats = '';
     if (it.features) {
       [['f1', '试盘'], ['f2', '止跌'], ['f3', '横盘'], ['f4', '缩量'], ['f5', '缩量板'], ['f6', '流动']].forEach(function (f) {
         var v = it.features[f[0]];
-        feats += '<span class="' + (v ? 'on' : 'off') + '">' + (v ? '✓ ' : '✕ ') + f[1] + (v ? ('·' + v) : '') + '</span>';
+        feats += '<span class="' + (v ? 'on' : 'off') + '" title="' + escAttr(FEAT_TITLE[f[0]]) + '">' + (v ? '✓ ' : '✕ ') + f[1] + (v ? ('·' + v) : '') + '</span>';
       });
     }
+    // R100z22：信号滞后灰标（lagDays 由 accumulation_score.py 算：最近一次试盘/涨停距今几个交易日）
+    var lagDays = Number(it.lagDays);
+    var lagTag = (lagDays > 0)
+      ? '<span class="acc-lag' + (lagDays >= 10 ? ' late' : '') + '">信号滞后 ' + lagDays + ' 日' + (lagDays >= 10 ? '·结构走旧' : '') + '</span>' : '';
     // R100g：名称缺失只展示代码一次
     var nm = (it.name && it.name !== it.code) ? it.name : '';
     // R100j：卡片美化——头部（名称+代码｜评级徽章右对齐）+ 评分进度条 + ✓/✕ 特征胶囊
@@ -2161,11 +2240,22 @@ function renderAccumulation() {
       '<span class="acc-grd ' + gd + '">' + esc(it.grade) + ' ' + it.score + '分</span></div>' +
       '<div class="acc-bar"><i style="width:' + Math.max(4, Math.min(100, it.score || 0)) + '%"></i></div>' +
       (it.note ? '<div class="hz-note">' + esc(it.note) + '</div>' : '') +
-      '<div class="acc-feat">' + feats + '</div></div>';
+      '<div class="acc-feat">' + feats + '</div>' + lagTag + '</div>';
   });
   // R100z21：items 是 map 出来的数组（不再 .join('')），下方按 grade 分桶后各自 join
   // R100z4i：新增子页口径说明（与谐波/九门同款位置与样式：子页导航下方、hz-sub 朴素文字、悬停详解）
-  var accDef = '<div class="hz-sub" style="margin:0 0 14px;" title="主力吸筹=六特征打分模型（日线收盘口径，accumulation_score.py）。F1 试盘=低位冲高后缩量回落（20分）；F2 止跌=缩量下杀后拉回过半（15分）；F3 横盘=二次试盘+横盘收窄±6%（20分）；F4 缩量=再度缩量下杀不破前低（15分）；F5 缩量板=底部涨停后缩量整理（首次板22分／接力板16分）；F6 流动=日均成交额≥2亿+涨停史/回撤热度（10分，单满足6分）。总分=六特征合计（满分102），评级=强（≥70）/观察（50-69）；流动性不足（日均成交额<2亿）一票否决不入池。分池：强池=结构完整可直接跟；观察池=缺1-2项只排队。">吸筹口径：六特征打分 F1试盘·F2止跌·F3横盘·F4缩量·F5缩量板(首板22/接力16)·F6流动（合计102分）｜评级=总分定级（强≥70/观察50-69）｜日均成交额<2亿不入池</div>';
+  // R100z22：吸筹口径（原一行文字 + 200 字 title，手机上 title 不显示＝白写）改可展开条目块
+  var accLeg = '<details class="tech-legend"><summary>吸筹口径 · 六特征打分（点开看每条触发条件）</summary><div class="lg-body">' +
+    '<div><b>F1 试盘 · 20 分</b>：长上影≥2×实体、量≥1.5×5日均量，随后 3 日均量回落且收盘低于试盘价，当时处在近 120 日区间下部</div>' +
+    '<div><b>F2 止跌 · 15 分</b>：3 日缩量连跌、末日量≤0.7×均量，第 4-8 日收复逾半跌幅</div>' +
+    '<div><b>F3 横盘 · 20 分</b>：近 6 个月同类试盘≥2 次、近 10 日振幅收窄到 20 日的 6 成内、10 日收盘贴中枢±6%</div>' +
+    '<div><b>F4 缩量 · 15 分</b>：6 日内量不到前 20 日峰量的 0.6 倍、低点未破 20 日前低、全程横盘±3%</div>' +
+    '<div><b>F5 缩量板 · 首次板 22 / 接力板 16 分</b>：跳空高开≥5% 的涨停、量≤前一日 0.8 倍且收在最高；本轮首次涨停（上方筹码干净）给高分，20 日内已有涨停的算接力板（老资金接力、防对倒）给低分</div>' +
+    '<div><b>F6 流动性+热度 · 双达标 10 / 单达标 6 分</b>：近 20 日日均成交额≥2 亿（硬门禁，不足直接不入池）；热度＝近 250 日有涨停、或距高点回撤落在 25%-70%</div>' +
+    '<div class="lg-hr"></div>' +
+    '<div><b>评级</b>：六项合计 102 分 → ≥70 强（结构完整、可直接跟）｜50-69 观察（缺一两项、只排队）｜&lt;50 不入池</div>' +
+    '<div class="lg-tip">下一步：盯次日竞价与量能（吸筹最怕缩量破位）；跌破最近收盘 −2.5% 无条件离场，形态走坏即出。卡片上的「信号滞后 N 日」＝最近一次试盘/涨停距今几个交易日，≥10 日的结构已走旧，只排队不主动做。</div>' +
+    '</div></details>';
   // R100z21：强/观察两节渲染（空档不显示，避免「0 只」占位盖住真内容）
   var sB = [], wB = [];
   pick.forEach(function (it, idx) {
@@ -2177,7 +2267,7 @@ function renderAccumulation() {
     ? '<div class="acc-sub s"><span class="dot"></span>强池<span class="cnt">共 ' + sB.length + ' 只 · 特征命中多、结构完整，可直接跟（盯次日量能与竞价）</span></div><div class="acc-grid">' + sB.join('') + '</div>' : '';
   var secW = wB.length
     ? '<div class="acc-sub w"><span class="dot"></span>观察池<span class="cnt">共 ' + wB.length + ' 只 · 缺 1-2 项，只排队候补，不主动做</span></div><div class="acc-grid">' + wB.join('') + '</div>' : '';
-  return accDef + '<div class="card"><h2>🧲 主力吸筹' + (a.tradeDate ? ' <span class="h2-date">' + esc(a.tradeDate) + '</span>' : '') + '</h2>' +
+  return accLeg + sigStatHtml('accumulation', '主力吸筹') + '<div class="card"><h2>🧲 主力吸筹' + (a.tradeDate ? ' <span class="h2-date">' + esc(a.tradeDate) + '</span>' : '') + '</h2>' +
     secS + secW + (a.summary ? '<div class="note-line">' + esc(a.summary) + '</div>' : '') + '</div>';
 }
 
@@ -2197,8 +2287,20 @@ function renderPowerScreen() {
       '<div class="pw-gate">' + gates + '</div></div>';
   }).join('');
   // R100z4i：口径说明挪出 card（子页导航下方、谐波说明同款位置），去 📐 emoji、无背景（hz-sub 朴素样式）
-  var gateDef = '<div class="hz-sub" style="margin:0 0 14px;" title="九门=9 道量化硬阈值（日线收盘口径）。硬门禁（必过 5 道）：G1 当日涨幅≥3% · G2 放量≥1.5×5日均量 · G4 站上MA20 · G5 非ST主板 · G7 当日振幅≤15%。质量门（过≥3 道）：G3 价处20日区间上1/3 · G6 近5日无长上影出货 · G8 波动率适中(ATR14/收盘∈[2%,8%]) · G9 RSI14∈[40,80]。打分=通过阈值数(0-9分)；入选=硬门禁全过 且 质量门≥3道。">九门口径：硬门禁 G1涨幅≥3%·G2放量1.5×·G4站MA20·G5非ST·G7振幅≤15%（必过）｜质量门 G3位置·G6无出货·G8波动·G9RSI（过≥3）｜打分=过门数(0-9分)</div>';
-  return gateDef + '<div class="card"><h2>⚡ 日线九门' + (p.tradeDate ? ' <span class="h2-date">' + esc(p.tradeDate) + '</span>' : '') + '</h2>' +
+  var gateDef = '<details class="tech-legend"><summary>九门口径 · 9 道量化硬阈值（点开看每道门槛）</summary><div class="lg-body">' +
+    '<div><b>硬门禁（必过 5 道）</b>：G1 当日涨幅≥3% · G2 放量≥1.5×5日均量 · G4 站上 MA20 · G5 非 ST 主板 · G7 当日振幅≤15%</div>' +
+    '<div><b>质量门（过≥3 道）</b>：G3 价处 20 日区间上 1/3 · G6 近 5 日无长上影出货 · G8 波动率适中（ATR14/收盘∈2%-8%） · G9 RSI14∈40-80</div>' +
+    '<div><b>打分</b>＝通过阈值数（0-9 分）；入选＝硬门禁全过 且 质量门≥3 道</div>' +
+    '<div class="lg-tip">下一步：这是「当日强度」筛（偏追当天）；次日看能否站稳 MA20、量能能否续上，站不稳量缩就先出。</div>' +
+    '</div></details>';
+  // R100z23：九门是 9 道独立硬阈值（不是单点信号），历史有效性回测尚未覆盖；
+  // 与其拿谐波的统计顶替，不如把「这一格还没做」如实写在页面上。
+  return gateDef +
+    '<div class="sig-stat"><span class="sig-hd">历史有效性</span>：本页 9 道硬阈值属' +
+    '「各自独立的多空过滤器」，与谐波/吸筹的单点信号不同，回测口径尚未搭好——' +
+    '<span class="sig-cmt">在补齐「信号后 T+1/T+5 超额」之前，九门只按硬阈值筛股，' +
+    '不承诺任何方向性收益，仓位一律按中等及以下确信度给。</span></div>' +
+    '<div class="card"><h2>⚡ 日线九门' + (p.tradeDate ? ' <span class="h2-date">' + esc(p.tradeDate) + '</span>' : '') + '</h2>' +
     '<div class="pw-grid">' + items + '</div>' + (p.summary ? '<div class="note-line">' + esc(p.summary) + '</div>' : '') + '</div>';
 }
 

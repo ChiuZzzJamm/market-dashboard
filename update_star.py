@@ -24,7 +24,6 @@ import re
 import subprocess
 import sys
 from datetime import datetime
-import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import update_ashare_sectors as uas  # noqa: E402  （复用 curl/UA/同花顺解析）
@@ -101,45 +100,6 @@ def fetch_stock_quotes(codes):
     return quotes
 
 
-def fetch_strong_board_leaders(sectors, fund_in, max_boards=4):
-    """早盘强势板块领涨成分股（R98n）：从同花顺行业里挑强势板块，拉其领涨股作板块动量候选。
-    强势判定：同花顺行业涨幅居前(>1.2%) 或 主力净流入居前。仅取沪深主板(60/00)领涨股。
-    返回 [{code,name,sector,boardPct,changePct}]；任一源失败返回 []（不阻塞主流程）。"""
-    if not sectors:
-        return []
-    strong = [s for s in sorted(sectors, key=lambda x: -x["pct"])[:6] if s["pct"] > 1.2]
-    fund_names = {str(f.get("name") or "") for f in (fund_in or [])[:5]}
-    for s in sectors:
-        if str(s["name"]) in fund_names and s not in strong:
-            strong.append(s)
-    seen = set(); boards = []
-    for s in strong:
-        if s["name"] in seen:
-            continue
-        seen.add(s["name"]); boards.append(s)
-    boards = boards[:max_boards]
-    leads = []
-    for b in boards:
-        try:
-            tops = uas.fetch_ths_tops(b["code"], 1)  # 领涨成分股 TOP
-        except Exception:
-            continue
-        if not tops:
-            continue
-        cnt = 0
-        for t in tops:
-            code = str(t.get("code") or "")
-            if not code.startswith(("60", "00")):  # 仅沪深主板，遵循项目标的池约束
-                continue
-            leads.append({"code": code, "name": t.get("name"), "sector": b["name"],
-                          "boardPct": b["pct"], "changePct": t.get("changePct")})
-            cnt += 1
-            if cnt >= 2:
-                break
-        time.sleep(0.4)
-    return leads
-
-
 def build_star(D):
     db = D.get("duanban") or {}
     pools = []
@@ -198,7 +158,6 @@ def build_star(D):
             continue
     sectors = [s for s in sectors if s["name"]]
     sectors.sort(key=lambda s: -s["pct"])
-    hot_secs = [s["name"] for s in sectors[:8] if s["pct"] > 0]
     try:
         fund_in, fund_out = uas.fetch_ths_funds()
     except Exception:

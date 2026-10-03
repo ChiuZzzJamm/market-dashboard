@@ -15,13 +15,18 @@
 - 用法：python3 accumulation_score.py [--dry-run] [--self-test]
   --self-test：合成强吸筹序列离线自检，验证 grade=强，不读写 data.js。
 """
-import sys, json, os, time, datetime
+
+import sys, json, os, datetime
 
 import kline_cache as K
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 MIN_SCORE = 50
 HARD_LIQ = 2e8  # 近 20 日日均成交额 ≥ 2 亿（流动性硬门禁）
+# R100z22：信号新鲜度硬纪律（专业口径——历史 K 线模型的分数会随走势走旧，
+# 同样的 76 分，3 日前有涨停和 40 日前有涨停完全不是一回事）。
+STRONG_MAX_LAG = 10   # 强池必须有 ≥10 个交易日内的试盘/涨停信号，否则再高分也只算「观察」
+POOL_MAX_LAG = 25     # 信号滞后 ≥25 个交易日＝结构早已走旧，直接不入池
 
 
 def _ma(vals, n):
@@ -41,10 +46,6 @@ def _is_limit_up(bar, prev_close):
     return (bar['close'] / prev_close - 1) >= 0.095
 
 
-def _is_up(bar):
-    return bar['close'] >= bar['open']
-
-
 def _upper_shadow(bar):
     return bar['high'] - max(bar['open'], bar['close'])
 
@@ -58,30 +59,40 @@ def score_one(bars, name=''):
     n = len(bars)
     feats = {'f1': 0, 'f2': 0, 'f3': 0, 'f4': 0, 'f5': 0, 'f6': 0}
     notes = []
+    sig_idx = -1  # R100z22：最近一次信号（试盘/涨停板）所在 K 线序号，用于算「信号滞后几日」
 
     if n < 60:
         return {'score': 0, 'features': feats, 'hitCount': 0, 'grade': '观察',
-                'note': '数据不足60根'}
+                'sigIdx': -1, 'note': '数据不足60根'}
 
     closes = [b['close'] for b in bars]
     vols = [b['volume'] for b in bars]
-    turns = [(bars[i]['close'] / bars[i - 1]['close'] - 1) for i in range(1, n)]
 
     # ---- F6 前置：流动性 + 热度 ----
     avg_amt20 = _ma([bars[i]['volume'] * bars[i]['close'] for i in range(n - 20, n)], 20) or 0
     liq_ok = avg_amt20 >= HARD_LIQ
     hi250 = max(closes[-250:]) if n >= 250 else max(closes)
-    lo250 = min(closes[-250:]) if n >= 250 else min(closes)
     drawdown = (hi250 - closes[-1]) / hi250 if hi250 else 0
     has_zt = any(_is_limit_up(bars[i], bars[i - 1]['close'])
                  for i in range(max(1, n - 250), n))
     heat = (1 if has_zt else 0) + (1 if 0.25 <= drawdown <= 0.70 else 0)
     if not liq_ok:
-        # 流动性一票否决：不进入打分
+        # 流动性一票否决：不进入打分（R100z25：lagDays 必须回，否则前端读 undefined 会渲染出脏标签）
         return {'score': 0, 'features': feats, 'hitCount': 0, 'grade': '观察',
-                'note': '流动性不足（日均成交额<2亿），不进入吸筹打分'}
+                'sigIdx': -1, 'lagDays': None, 'note': '流动性不足（日均成交额<2亿），不进入吸筹打分'}
     feats['f6'] = 10 if heat == 2 else (6 if heat == 1 else 0)
-    notes.append(f"F6=流动性达标;热度{'双满足' if heat==2 else ('单满足' if heat==1 else '无')}(涨停史={has_zt},回撤={drawdown:.0%})")
+    # R100z22：note 文案改为投资人人话（原「F6=流动性达标;热度双满足(涨停史=True,回撤=28%)」机器串，
+    # 且每张卡重复同一段括号后缀、读不出在说什么）。按实际命中项拼装中文短句，去掉 F 编号与布尔字面量。
+    amt_yi = avg_amt20 / 1e8
+    dd_pct = round(drawdown * 100)
+    if heat == 2:
+        head = '日均 %.1f 亿·热度双达标（近 250 日有涨停、回撤 %d%%）' % (amt_yi, dd_pct)
+    elif heat == 1:
+        head = '日均 %.1f 亿·热度单达标（近 250 日%s、回撤 %d%%）' % (
+            amt_yi, '有过涨停' if has_zt else '回撤够大但无涨停', dd_pct)
+    else:
+        head = '日均 %.1f 亿·无涨停且回撤不足 25%%（热度不计分）' % amt_yi
+    notes.append(head)
 
     # ---- F1 试盘冲高自然回落 ----
     # R100z21：低位区判定改用「试盘当日」所处窗口位置（前 120 日区间下 45% 分位），
@@ -108,10 +119,12 @@ def score_one(bars, name=''):
                 w_hi = max(b['high'] for b in bars[max(0, i - 120):i + 1])
                 if w_hi > w_lo and bars[i]['close'] <= w_lo + 0.45 * (w_hi - w_lo):
                     f1_hit = True
+                    sig_idx = max(sig_idx, i)  # R100z22：信号新鲜度用（最近一次试盘）
                     break
     if f1_hit:
         feats['f1'] = 20
-        notes.append("F1=试盘冲高缩量回落(低位区)")
+        notes.append('近 2 个月出现过放量长上影试盘线，冲高后 3 日缩量回落、'
+                     '收盘仍留在上冲价下方')
 
     # ---- F2 缩量下杀后止跌拉回 ----
     f2_hit = False
@@ -127,10 +140,11 @@ def score_one(bars, name=''):
                 rec = bars[i + 3:i + 8]
                 if rec and (rec[-1]['close'] - seg[-1]['close']) >= 0.5 * drop:
                     f2_hit = True
+                    sig_idx = max(sig_idx, i + 3)  # R100z22：止跌完成日也作为信号日
                     break
     if f2_hit:
         feats['f2'] = 15
-        notes.append("F2=缩量下杀后止跌拉回≥50%")
+        notes.append('3日缩量连跌后已收复过半跌幅')
 
     # ---- F3 二次试盘 + 横盘收窄 ----
     # R100z21：原 F3 硬依赖 f1_hit（F1 常年=false → F3 常年=false，特征只剩 f2/f4/f5/f6 四项二值）。
@@ -153,9 +167,11 @@ def score_one(bars, name=''):
         within = all(abs(b['close'] - center) / center <= 0.06 for b in bars[-10:])
         if flat and within:
             f3_hit = True
+            sig_idx = max(sig_idx, n - 2)  # R100z22：横盘收窄是「最近 10 日」的当下结构，算最新信号
     if f3_hit:
         feats['f3'] = 20
-        notes.append("F3=二次试盘×%d+横盘收窄±6%%" % probe_cnt)
+        notes.append('近 6 个月同类试盘共 %d 次·近 10 日振幅已收窄到 20 日的 6 成以内·'
+                     '收盘贴着中枢 ±6%%' % probe_cnt)
 
     # ---- F4 再度缩量下杀不破前低 ----
     f4_hit = False
@@ -169,10 +185,11 @@ def score_one(bars, name=''):
         stable = all(abs(b['close'] - seg[0]['close']) / seg[0]['close'] <= 0.03 for b in seg)
         if pull_v < 0.6 * pre_hi_v and pull_lo > pre_lo and stable:
             f4_hit = True
+            sig_idx = max(sig_idx, i + 5)  # R100z22：缩量横盘段末日
             break
     if f4_hit:
         feats['f4'] = 15
-        notes.append("F4=缩量下杀未破前低+横盘±3%")
+        notes.append('再下杀未破前低·6日内横盘±3%')
 
     # ---- F5 底部缩量板（R100z21：首次板 / 接力板 tier 分层）----
     # 首次板：本轮第一次涨停，上方无套牢、筹码干净，是「新资金进场」的启动位 → 高分。
@@ -189,19 +206,34 @@ def score_one(bars, name=''):
                          for k in range(max(1, i - 20), i))
             f5_tier = '首次板' if not pre_zt else '接力板'
             f5_hit = True
+            sig_idx = max(sig_idx, i)  # R100z22：涨停日是最靠后的强信号
             break
     if f5_hit:
         feats['f5'] = 22 if f5_tier == '首次板' else 16
-        notes.append("F5=底部缩量开盘板[%s](%s)(次日盯竞价)"
-                     % (f5_tier, '底部启动筹码干净' if f5_tier == '首次板' else '老资金接力防对倒'))
+        if f5_tier == '首次板':
+            notes.append('底部缩量跳空涨停（量仅前一日 8 成以下）·命中首次板分支（22 分）：'
+                         '本轮第一根涨停、上方筹码干净无套牢')
+        else:
+            notes.append('底部缩量跳空涨停（量仅前一日 8 成以下）·命中接力板分支（16 分）：'
+                         '前 20 日已有涨停，属老资金接力，防对倒出货')
     else:
         f5_tier = '-'
 
     score = sum(feats.values())
     hit = sum(1 for v in feats.values() if v > 0)
-    grade = '强' if score >= 70 else ('观察' if score >= MIN_SCORE else '不入池')
+    # R100z22：信号滞后 = 最近一次信号（试盘/涨停）距今几个交易日；历史 K 线模型下，
+    # 同样 76 分，「3 日前有涨停」和「40 日前有涨停」完全不是一回事，据此加新鲜度硬纪律：
+    # 滞后 ≥25 日直接不入池；≥70 分但滞后 >10 日的降级为「观察」（结构还在，但已不是当下可执行的票）。
+    lag = (n - 1 - sig_idx) if sig_idx >= 0 else None
+    if lag is not None and lag >= POOL_MAX_LAG:
+        grade = '不入池'
+    elif score >= 70 and lag is not None and lag <= STRONG_MAX_LAG:
+        grade = '强'
+    else:
+        grade = '观察' if score >= MIN_SCORE else '不入池'
     return {'score': score, 'features': feats, 'hitCount': hit, 'grade': grade,
-            'f5Tier': f5_tier, 'note': ';'.join(notes) if notes else '无特征命中'}
+            'f5Tier': f5_tier, 'sigIdx': sig_idx, 'lagDays': lag,
+            'note': '；'.join(notes) if notes else '无特征命中'}
 
 
 # ---------------- 自检 ----------------
@@ -296,7 +328,9 @@ def main():
     else:
         print('[ACC] fullScan 缺失/非今日，退回池内扫描域')
     codes = sorted(set(codes))
-    print(f"[ACC] 扫描域 {len(codes)} 只（优先内嵌 stkKlines）")
+    # R100z25：口径说明写准——内嵌 stkKlines 只有 90 根（不够 F3/F6 的 120/250 日窗口），
+    # 打分一律走网络全量 320 根，前端弹窗才读内嵌那 90 根做 K 线图，两者各取所需。
+    print(f"[ACC] 扫描域 {len(codes)} 只（K 线取网络全量 320 根）")
 
     scored = []
     sample_day = ''
@@ -309,15 +343,23 @@ def main():
             sample_day = str(bars[-1]['day'])[:10]
         nm = names.get(c) or (D.get('stkKlineNames') or {}).get(c) or ''
         r = score_one(bars, nm)
-        if r['score'] < MIN_SCORE:
+        if r['score'] < MIN_SCORE or r['grade'] == '不入池':
             continue
+        # R100z22：信号滞后直接取 score_one 的返回值（最近一次试盘/涨停距今几个交易日）；
+        # 排序时作为次序键（滞后小者靠前），前端据此挂灰标， grade 判定也已用同一口径。
+        lag_days = r.get('lagDays')
         scored.append({'code': c, 'name': nm, 'sector': sec_map.get(c, ''), 'score': r['score'],
                        'grade': r['grade'], 'features': r['features'],
                        'hitCount': r['hitCount'], 'f5Tier': r.get('f5Tier') or '-',
+                       # R100z22：sigIdx 为最近一次信号（试盘/涨停）的 K 线序号，算滞后要用
+                       'sigIdx': int(r.get('sigIdx') or -1),
+                       'lagDays': lag_days,
                        'note': r['note'],
                        'story': '', 'deduce': None})
     # R100z21：双键排序——score（权重深度）主序，hitCount（特征广度）次序，code 兜底保证确定性
-    scored.sort(key=lambda x: (-x['score'], -x['hitCount'], x['code']))
+    # R100z22：滞后天数作为次序键（越新鲜越靠前），缺失（无试盘/涨停信号）排最后
+    scored.sort(key=lambda x: (-x['score'], -x['hitCount'],
+                               x['lagDays'] if x['lagDays'] is not None else 999, x['code']))
     scored = scored[:20]
     today = datetime.date.today().strftime('%Y-%m-%d')
     trade_date = sample_day or today
@@ -326,10 +368,19 @@ def main():
     strong = [s for s in scored if s['grade'] == '强']
     watch = [s for s in scored if s['grade'] == '观察']
     n_first = sum(1 for s in scored if s.get('f5Tier') == '首次板')
+    lags = [s['lagDays'] for s in scored if s['lagDays'] is not None]
+    if lags:
+        lag_txt = (f"信号新鲜度：最近一次试盘/涨停平均滞后 {sum(lags) / len(lags):.1f} 个交易日"
+                   f"（最长 {max(lags)} 日）｜规则：滞后 ≤{STRONG_MAX_LAG} 日才进强池，"
+                   f">={STRONG_MAX_LAG} 日降观察，≥{POOL_MAX_LAG} 日直接不入池。")
+    else:
+        lag_txt = (f"信号新鲜度：池内均无线索类强信号（试盘/涨停），全部按滞后规则降级处理"
+                   f"（≤{STRONG_MAX_LAG} 日才进强池，≥{POOL_MAX_LAG} 日不入池）。")
     summary = (f"六特征打分：强 {len(strong)} 只 / 观察 {len(watch)} 只（共 {len(scored)} 只）。"
-               f"强池=结构完整、可直接跟（盯量能与次日竞价）；观察池=缺一两项、只排队的候选。"
+               f"强池=结构完整、且信号在 {STRONG_MAX_LAG} 个交易日内、可直接跟（盯量能与次日竞价）；"
+               f"观察池=缺一两项或信号走旧的候选，只排队。"
                f"F5 分层：首次板 {n_first} 只（底部启动，筹码干净，高分）、"
-               f"接力板 {len(scored) - n_first} 只（老资金接力，防对倒）。")
+               f"接力板 {len(scored) - n_first} 只（老资金接力，防对倒）。" + lag_txt)
 
     new_field = {
         'updatedAt': f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}（吸筹打分 {trade_date} 收盘 数据已自动更新）",

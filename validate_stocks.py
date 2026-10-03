@@ -39,7 +39,6 @@ import os
 import re
 import subprocess
 import sys
-import os
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -503,7 +502,7 @@ def check_risk_blacklist(D, scope='all'):
     root = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(root, 'risk_blacklist.json')
     if not os.path.exists(path):
-        return [f"未找到 risk_blacklist.json（stock_risk_blacklist.py --write 未跑，"
+        return ["未找到 risk_blacklist.json（stock_risk_blacklist.py --write 未跑，"
                 f"个股硬风险黑名单没进闸门）"]
     try:
         with open(path, encoding='utf-8') as f:
@@ -633,7 +632,7 @@ def check_stock_pool(D):
     try:
         sys.path.insert(0, root)
         import build_stock_pool as bsp
-        norm, sim, aliases_of = bsp.norm, bsp.sim, bsp.SECTOR_ALIAS
+        _, sim, aliases_of = bsp.norm, bsp.sim, bsp.SECTOR_ALIAS
     except Exception:
         bsp = None
 

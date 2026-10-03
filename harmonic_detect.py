@@ -204,7 +204,6 @@ def match_patterns(X, A, B, C, D):
         return abs((D - C) / xa - 1.618)
     best = min(cands, key=dev)
     name, d_proj, r = best
-    a = atr14_last = None
     return name, d_proj, r
 
 
@@ -342,9 +341,7 @@ def _mk_bars(points):
     """把五点价格序列铺成合成 K 线（线性插值 + 微噪声）。"""
     import random
     random.seed(42)
-    xs = [100, 70, 88.54, 81.46, None]
     bars = []
-    keys = ['X', 'A', 'B', 'C', 'D']
     path = []
     for a, b in zip(points[:-1], points[1:]):
         steps = 20
@@ -657,7 +654,6 @@ def main():
                          ensure_ascii=False))
         return
 
-    node = common.find_node()
     out = 'window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False,
                                                   separators=(',', ':')) + ';\n'
     with open(os.path.join(BASE, 'data.js'), 'w', encoding='utf-8') as f:

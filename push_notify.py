@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # 固化微信推送脚本：从 data.js 读最新数据，按模块空行排版，推送给 .notify-config.json 中所有人
 # 用法: python3 push_notify.py [ashare|us|weekend]
-import subprocess, json, sys, urllib.request, time, os, re
+import json, sys, urllib.request, time, os, re
 from common import find_node, load_dashboard_data
 
 # R100z6 防护：本脚本为模块级流程脚本（无 main 函数），被 import 会直接执行微信推送
@@ -136,17 +136,6 @@ def fmt_deduce_brief(dd, max_main=26, max_counter=22):
     if dd.get('counter'):
         parts.append('反证：' + str(dd['counter'])[:max_counter])
     return ' '.join(parts)
-
-def fmt_theme_pick(it, idx):
-    """题材掘金单条：事件 + 内嵌推演（deduce）。无 deduce 时只出事件，保持旧排版。"""
-    ev = (it.get('event') or it.get('theme') or '').strip()
-    if len(ev) > 38:
-        ev = ev[:38] + '…'
-    line = f"{idx}. {ev}"
-    db = fmt_deduce_brief(it.get('deduce'))
-    if db:
-        line += '\n   ' + db
-    return line
 
 def fmt_bullish(t, idx):
     """利好板块：保留括号内板块说明 + 核心受益股"""

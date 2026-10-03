@@ -53,8 +53,7 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # R100z6：THS 抓取收口到 common（原 curl_ths_text/curl_ths_json/parse_ths_industries/
 # fetch_ths_industries 双副本合一，与 update_ashare_sectors 共用单一来源）
-from common import (ths_get as curl_ths_text, ths_json as curl_ths_json,
-                    parse_ths_industries, fetch_ths_industries)
+from common import (ths_json as curl_ths_json, fetch_ths_industries)
 
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
@@ -554,42 +553,6 @@ CLIST_HOSTS = ["https://push2delay.eastmoney.com",
 HIS_HOSTS = ["https://push2his.eastmoney.com",
              "https://92.push2his.eastmoney.com",
              "https://23.push2his.eastmoney.com"]
-
-
-def _board_clist_all():
-    """主源：clist 一次拉全量行业板块（f3 今日涨幅 / f109 3日涨幅），按主机轮询容错。
-    成功返回 {name: {code, pct, pct3}}，全部失败返回 None。"""
-    for host in CLIST_HOSTS:
-        rows, pn = [], 1
-        while pn <= 4:
-            url = (f"{host}/api/qt/clist/get?pn={pn}&pz=500&po=1&np=1&fltt=2&invt=2"
-                   f"&fid=f109&fs=m:90%2Bt:2&fields=f12,f14,f3,f109&ut={EM_UT}")
-            j = get_json_curl(url, retries=1, gap=2)
-            page = (j.get("data") or {}).get("diff") or [] if j else []
-            if not page:
-                rows = []
-                break
-            rows.extend(page)
-            if len(page) < 500:
-                break
-            pn += 1
-            time.sleep(0.3)
-        if rows:
-            m = {}
-            for r in rows:
-                name = str(r.get("f14") or "").strip()
-                code = str(r.get("f12") or "").strip()
-                try:
-                    pct = float(r.get("f3"))
-                    pct3 = float(r.get("f109"))
-                except (TypeError, ValueError):
-                    continue
-                if name and code:
-                    m[name] = {"code": code, "pct": pct, "pct3": pct3}
-            if m:
-                return m
-        time.sleep(1)  # 换下一主机前稍歇
-    return None
 
 
 def _stock_clist_agg():

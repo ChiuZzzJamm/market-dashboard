@@ -322,7 +322,6 @@ def g5_source_assertions(r):
         return
     # 找到写盘语句所在行号，与 `if not no_fix` 分支比较
     write_lines, guard_lines = [], []
-    src_lines = src.splitlines()
     for node in ast.walk(tree):
         if isinstance(node, ast.With):
             for item in node.items:
@@ -478,7 +477,7 @@ def g8_g9_g10_data(r):
                 continue                                # 左侧已有兜底迹象 → 安全
             tripwires.append(f".{fld} → …{post.strip()[:12]}")
     if tripwires:
-        r.warn("G9b", f"豁免空字段存在无兜底的裸字符串拼接（会渲染空白）：" +
+        r.warn("G9b", "豁免空字段存在无兜底的裸字符串拼接（会渲染空白）：" +
                "; ".join(sorted(set(tripwires))[:6]))
     else:
         r.ok("G9b", f"{len(guard_fields)} 类豁免空字段全部通过前端反证"
@@ -544,7 +543,6 @@ def g8_g9_g10_data(r):
     # duanban.star 存在性（R100z16 清场事故回归）
     # 休市期缺失属预期（9:45 在下一个交易日才重建），仅当最近交易日刚过 1 天仍缺才判 FAIL
     today = datetime.now().strftime("%Y-%m-%d")
-    holding = bool(last and today > last)
     if "star" not in (D.get("duanban") or {}):
         # 口径：star 由 9:45 在「交易日当天」写入。
         # ① 下一个交易日还没到（休市期）→ 缺失是必然，PASS（不是缺陷）
