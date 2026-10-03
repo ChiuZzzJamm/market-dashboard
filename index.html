@@ -611,36 +611,6 @@
   .tech-legend .lg-body b { color:var(--ink); font-weight:700; }
   .tech-legend .lg-hr { height:1px; background:var(--line); margin:7px 0; }
   .tech-legend .lg-tip { color:#8a5a00; background:#fff8e6; border:1px solid #f0dcaa; border-radius:6px; padding:4px 8px; font-size:11px; line-height:1.7; }
-  /* R100z23：技术信号「历史有效性」条（signal_stats.py 逐日重放回测产物）。
-     把「这个信号过去到底灵不灵」摆到台面上——没统计过的信号不配被称为信号。 */
-  .sig-stat { margin:8px 0 12px; background:var(--paper-2); border:1px solid var(--line);
-              border-radius:8px; padding:7px 10px; font-size:11px; line-height:1.85; color:var(--ink2); }
-  .sig-stat .sig-hd { font-weight:700; color:var(--ink); }
-  .sig-stat .sig-num { color:var(--ink); font-weight:700; }
-  .sig-stat .sig-bad { color:#b3351f; font-weight:700; }
-  .sig-stat .sig-good { color:#0f7a52; font-weight:700; }
-  .sig-stat .sig-cmt { color:var(--ink2); }
-  /* R100z27：九门「单门统计」小表——9 道门各拆通过/未通过两组，一眼看哪道门有区分度 */
-  .gate-tbl { border:1px solid var(--line); border-radius:8px; padding:2px 10px 6px; margin:0 0 12px; background:var(--paper-2); }
-  .gate-row { display:flex; flex-wrap:wrap; align-items:baseline; gap:0 10px;
-              padding:4px 0; border-bottom:1px dashed var(--line); font-size:11px; color:var(--ink2); }
-  .gate-row:last-child { border-bottom:none; }
-  .gate-nm { min-width:150px; font-weight:700; color:var(--ink); }
-  .gate-y, .gate-x { min-width:120px; }
-  .gate-y b, .gate-x b { font-weight:700; }
-  .gate-d { min-width:64px; text-align:right; font-weight:700; }
-  .gate-d.pos { color:#0f7a52; }
-  .gate-d.neg { color:#b3351f; }
-  .gate-d.flat { color:var(--ink2); font-weight:400; }
-  /* R100z29：单门判定角标——有区分度 / 反向 / 无区别·展示项 */
-  .gate-flag { min-width:60px; text-align:right; font-size:10.5px; font-weight:700; }
-  .gate-flag.ok { color:#0f7a52; }
-  .gate-flag.bad { color:#b3351f; }
-  .gate-flag.none { color:var(--ink2); font-weight:400; }
-  .gate-verdict { margin:0 0 12px; padding:9px 11px; border:1px solid var(--line); border-radius:8px; background:var(--paper-2); font-size:11.5px; line-height:1.75; color:var(--ink2); }
-  .gate-verdict b { color:var(--ink); }
-  .vd-ok { color:#0f7a52; font-weight:700; }
-  .vd-bad { color:#b3351f; font-weight:700; }
   /* 信号滞后灰标（R100z22）：吸筹是历史 K 线模型，同样分数信号新旧不同，滞后 ≥10 日转告警色 */
   .acc-lag { display:inline-block; font-size:9.5px; color:var(--ink2); border:1px solid var(--line); border-radius:999px; padding:0 6px; margin-top:6px; }
   .acc-lag.late { color:#b3541e; border-color:#e8c9a8; background:#fff6ee; }
@@ -2252,98 +2222,6 @@ function renderHarmonic() {
   return html;
 }
 
-/* R100z23：技术信号历史有效性条（数据源 data.js 顶层 signalStats，由
-   signal_stats.py 逐日重放检测器算出）。四个技术页共用一段结论话术，
-   避免「口径说得很花、从不回答过去灵不灵」。 */
-function sigPct(v, digits) {
-  if (v === null || v === undefined || !isFinite(v)) return '—';
-  var s = (v > 0 ? '+' : '') + v.toFixed(digits === undefined ? 2 : digits);
-  return s + '%';
-}
-function sigRate(v) {
-  if (v === null || v === undefined || !isFinite(v)) return '—';
-  return Math.round(v * 100) + '%';
-}
-function sigStatHtml(key, label) {
-  var s = (window.DASHBOARD_DATA || {}).signalStats;
-  if (!s || !s[key] || !s[key].n) return '';
-  var r = s[key], b = s.benchmark || {}, cf = s.breakout || {};
-  var a5 = r.avgPct5, b5 = (b.avgPct5 === undefined ? 0 : b.avgPct5);
-  var ex = (a5 === null || a5 === undefined) ? null : a5 - b5;
-  var cls = (ex === null) ? '' : (ex >= 0 ? 'sig-good' : 'sig-bad');
-  var cfTxt = '';
-  if (cf.n && cf.avgPct5 !== undefined && cf.avgPct5 !== null) {
-    cfTxt = '；等<b>放量突破再跟</b>（' + cf.n + ' 次）胜率回到 ' + sigRate(cf.winRate5) +
-            '、' + sigPct(cf.avgPct5) + '——胜率向基准靠拢，但绝对收益仍未转正，说明这套形态「能缩小观察范围、不能单独给出买入点」';
-  }
-  // 止损率：回测已含 −3% 止损路径，不写这一格会让人以为「买了不动」
-  var stopTxt = '';
-  if (r.stopRate !== undefined && r.stopRate !== null) {
-    stopTxt = '；信号后 T+1 内触及 −' + (s.stopPct || 3) + '% 止损线的占 <span class="' +
-      (r.stopRate >= (b.stopRate || 0) ? 'sig-bad">高' : 'sig-good">低') + '于基准</span> ' +
-      Math.round(r.stopRate * 100) + '% vs ' + Math.round((b.stopRate || 0) * 100) + '%';
-  }
-  var concl = (key === 'duanban')
-    ? '结论：断板反包的历史样本是「负超额 + 高止损率」——形态成立不等于买点成立，只用来排队等反包确认；破位与超期一律走人。'
-    : '结论：本模块只作缩小范围的观察过滤器，不构成买入理由；必须叠加放量突破确认与止损，且仓位按中等及以下确信度给。';
-  return '<div class="sig-stat"><span class="sig-hd">' + esc(label) +
-    '</span>：近 ' + (s.lookback || 120) + ' 个交易日逐日重放，共 ' + r.n +
-    ' 次信号。信号后 T+5 平均 ' + sigPct(a5) + '（胜率 ' + sigRate(r.winRate5) +
-    '），同期「随便买一只」基准 ' + sigPct(b5) + '（胜率 ' + sigRate(b.winRate5) +
-    '）→ <span class="' + cls + '">超额 ' +
-    (ex === null ? '—' : (ex >= 0 ? '+' : '') + ex.toFixed(2) + ' 个百分点</span>') +
-    stopTxt + cfTxt + '。<span class="sig-cmt">' + concl + '</span></div>';
-}
-
-/* R100z27：九门「单门统计」表——九门是 9 道独立硬阈值、不是单点信号，
-   「9 门全过」日均样本太少，所以每道门拆「通过 / 未通过」两组各报 T+5 均值与胜率。
-   未通过组为 0 样本时写「无可比样本」（不用 0% 冒充），差值 <0.05pp 写「基本无差别」。 */
-function sigGateTable() {
-  var s = (window.DASHBOARD_DATA || {}).signalStats;
-  if (!s || !s.power || !s.power.gates) return '';
-  var b = s.benchmark || {};
-  var head = '<div class="sig-stat"><span class="sig-hd">历史有效性 · 单门统计</span>：本页 9 道门是' +
-    '「各自独立的多空过滤器」，与谐波/吸筹的单点信号不同——「9 门全过」日均样本数太低，' +
-    '所以改按<b>单门</b>统计：每道门拆通过 / 未通过两组，各报信号日后 T+5 平均涨幅与胜率，' +
-    '<span class="sig-cmt">末列差值＝通过组减未通过组（百分点），为正才说明这道门有区分度；' +
-    '未通过组为 0 样本时标「无可比样本」，差值不足 0.05 个百分点写「基本无差别」。' +
-    '基准（随便买一只）T+5 ' + sigPct(b.avgPct5) + ' / 胜率 ' + sigRate(b.winRate5) + '。</span></div>';
-  var ks = Object.keys(s.power.gates);
-  // R100z29：按回测结果给每道门下判定——有区分度 / 反向 / 无区别（展示项），
-  // 结论从数据实算，不硬编码，下次回测换了门数不会说错话。
-  var eff = [], rev = [], flatL = [];
-  ks.forEach(function (g) {
-    var it = s.power.gates[g], d = it.diff5;
-    if (d === null || d === undefined || Math.abs(d) < 0.05) flatL.push(it.label || g);
-    else if (d > 0) eff.push(it.label || g);
-    else rev.push(it.label || g);
-  });
-  var rows = '';
-  ks.forEach(function (g) {
-    var it = s.power.gates[g];
-    var y = it.pass || {}, x = it.fail || {};
-    var yTxt = y.n ? ('通过 ' + y.n + ' 次 · <b>' + sigPct(y.avgPct5) + '</b> / 胜率 ' + sigRate(y.winRate5)) : '通过样本 0';
-    var xTxt = x.n ? ('未过 ' + x.n + ' 次 · <b>' + sigPct(x.avgPct5) + '</b> / 胜率 ' + sigRate(x.winRate5)) : '无可比样本';
-    var d = it.diff5, dCls = 'flat', dTxt = '—', fCls = 'none', fTxt = '展示项';
-    if (d === null || d === undefined) { dTxt = '—'; fTxt = '无可比样本'; }
-    else if (d > 0.05) { dTxt = '+' + d.toFixed(2) + ' pp'; dCls = 'pos'; fCls = 'ok'; fTxt = '有区分度'; }
-    else if (d < -0.05) { dTxt = d.toFixed(2) + ' pp'; dCls = 'neg'; fCls = 'bad'; fTxt = '反向'; }
-    else { dTxt = '基本无差别'; }
-    rows += '<div class="gate-row"><span class="gate-nm">' + esc(it.label || g) + '</span>' +
-      '<span class="gate-y">' + yTxt + '</span>' +
-      '<span class="gate-x">' + xTxt + '</span>' +
-      '<span class="gate-d ' + dCls + '">' + dTxt + '</span>' +
-      '<span class="gate-flag ' + fCls + '">' + fTxt + '</span></div>';
-  });
-  // R100z29：明写「九门只有这几道真有用，其余是展示项」——9 道门同时亮着会给「很严格」的错觉
-  var vd = '<div class="gate-verdict"><b>回测结论</b>：' +
-    (eff.length ? '真正有区分度（通过组跑赢未过组）的只有 <span class="vd-ok">' + eff.join('、') + '</span> 共 ' + eff.length + ' 道' : '九道门里没有任何一道通过组跑赢未过组') +
-    (rev.length ? '；<span class="vd-bad">' + rev.join('、') + '</span> 共 ' + rev.length + ' 道为<b>反向</b>——过了反而更差，等于白卡一道' : '') +
-    (flatL.length ? '；其余 ' + flatL.length + ' 道（' + flatL.join('、') + '）差值不足 0.05 个百分点，<b>与基准无差别，只作展示项</b>' : '') +
-    '。所以「9 门全过」不等于更优：本页是<b>当日强度筛</b>，用来排除明显不合格标的，不提供买入点。</div>';
-  return head + '<div class="gate-tbl">' + rows + '</div>' + vd;
-}
-
 function renderAccumulation() {
   var a = window.DASHBOARD_DATA.accumulation;
   if (!a || !a.scored || !a.scored.length) return '';
@@ -2418,7 +2296,7 @@ function renderAccumulation() {
     ? '<div class="acc-sub w"><span class="dot"></span>观察池<span class="cnt">共 ' + wB.length + ' 只 · 缺 1-2 项，只排队候补，不主动做' +
       (demoted ? '；其中 <b>' + demoted + '</b> 只打分虽到强池线，但信号滞后超 10 日、结构已走旧，按纪律<b>降级至此</b>' : '') +
       '</span></div><div class="acc-grid">' + wB.join('') + '</div>' : '';
-  return accLeg + sigStatHtml('accumulation', '主力吸筹') + '<div class="card"><h2>🧲 主力吸筹' + (a.tradeDate ? ' <span class="h2-date">' + esc(a.tradeDate) + '</span>' : '') + '</h2>' +
+  return accLeg + '<div class="card"><h2>🧲 主力吸筹' + (a.tradeDate ? ' <span class="h2-date">' + esc(a.tradeDate) + '</span>' : '') + '</h2>' +
     secS + secW + (a.summary ? '<div class="note-line">' + esc(a.summary) + '</div>' : '') + '</div>';
 }
 
@@ -2444,8 +2322,7 @@ function renderPowerScreen() {
     '<div><b>打分</b>＝通过阈值数（0-9 分）；入选＝硬门禁全过 且 质量门≥3 道</div>' +
     '<div class="lg-tip">下一步：这是「当日强度」筛（偏追当天）；次日看能否站稳 MA20、量能能否续上，站不稳量缩就先出。</div>' +
     '</div></details>';
-  // R100z27：九门「历史有效性」从「回测口径尚未搭好」换成单门统计表（sigGateTable）。
-  return gateDef + sigGateTable() +
+  return gateDef +
     '<div class="card"><h2>⚡ 日线九门' + (p.tradeDate ? ' <span class="h2-date">' + esc(p.tradeDate) + '</span>' : '') + '</h2>' +
     '<div class="pw-grid">' + items + '</div>' + (p.summary ? '<div class="note-line">' + esc(p.summary) + '</div>' : '') + '</div>';
 }
@@ -2781,8 +2658,6 @@ function renderDuanban() {
   html += subnavHtml();
   // R100j/R100z4v：断板页口径说明置于确认池上方（TOP10 与 开盘精选 保持置顶不动）；R100z4v 起为静态 HTML，不再 esc
   html += _dbNote;
-  // R100z27：断板反包自己的历史有效性回测（signal_stats.py 的 duanban 键）
-  html += sigStatHtml('duanban', '断板反包');
   html += dbPoolHtml('确认池', 'p-conf', '已走完「涨停 → 放量断板 → 缩量 → 不破T日低点与MA5」全流程', conf, true, 'c');
   html += dbPoolHtml('观察池', 'p-watch', '形态进行中、只差最后一根确认K线（待企稳 ＞ 待缩量）', watch, false, 'w');
   // R100i：断板反包失败池（破位 / 超期失效归档，5 交易日后自动清理）
