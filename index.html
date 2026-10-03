@@ -164,6 +164,10 @@
   .exit-row b { color: var(--ink2); font-weight: 600; }
   .exit-row .xs { color: var(--down); }
   .exit-row .xt { color: var(--up); }
+  /* R100z18：弹窗内单条退出纪律行（止损/目标/证伪） */
+  .exit-row.exit-line { margin-top: 6px; margin-bottom: 2px; padding: 6px 8px; border-radius: 5px;
+    background: var(--down-soft, rgba(15,157,120,.07)); border: 1px solid var(--down-soft, rgba(15,157,120,.18)); }
+  .exit-row .xb { color: #98a6b5; }
   .excess-dot { display: inline-block; padding: 0 5px; margin-left: 4px; border-radius: 3px; font-size: 10.5px;
     border: 1px dashed currentColor; vertical-align: 1px; }
   .excess-dot.pos { color: var(--up); }
@@ -1202,8 +1206,17 @@ function psClose() { document.getElementById('ps-modal').classList.remove('open'
      main:'…', conf:'推测', counter:'…' }
    缺失字段自动跳过，保证向后兼容（老数据无 deduce 不报错） */
 /* R99o：AI 生成值偶发自带「主推：/反证：」前缀，统一剥掉防重复；全空 deduce 返回空串不渲染 */
+/* R100z18：改为**循环全剥**——外层由来渲染层补「主推：/反证：」标签，只剥一层时
+   AI 若已写「反证：反证：…」（或夹不可见字符/换行）会漏剥 → 页面出现「反证：反证：…」双标签。
+   任一轮无变化即收手，最多 4 轮防死循环。 */
 function _ddClean(t) {
-  return String(t || '').trim().replace(/^主推[:：]\s*/, '').replace(/^反证[:：]\s*/, '').trim();
+  var s = String(t || '');
+  for (var i = 0; i < 4; i++) {
+    var before = s;
+    s = s.trim().replace(/^[\s\u3000\u200b]*主推[:：]\s*/, '').replace(/^[\s\u3000\u200b]*反证[:：]\s*/, '');
+    if (s === before) break;
+  }
+  return s.trim();
 }
 /* R100c：确信度徽章抽成独立函数——主推行不再内嵌徽章；利好/利空卡挪到标题行（nc-theme），
    异动板块/题材掘金保持原位（hideBadge 传 true 即隐藏） */
@@ -1276,10 +1289,55 @@ function loadPoolExit(cb) {
   } catch (e) { POOL_EXIT = false; cb && cb(); }
 }
 
-function exitOf(st) {
+/* R100z18：退出纪律统一取数（按码查，供 AI 预测行 / 个股弹窗 / 断板弹窗共用）。
+   优先级：机械选股池 exit（异步兜底）> AI 预测内嵌 st.exit（16:00 写回）> 谐波形态几何。
+   谐波是**技术指标自带**的止损/目标（stop=形态失效位、target1=一级目标），
+   使弹窗对谐波池标的无需任何写回也有退出纪律；实在取不到就整行不渲染，绝不编一个止损位糊上去。 */
+function exitForCode(code0, st) {
+  code0 = String(code0 || '').replace(/\D/g, '');
+  if (!code0) return null;
+  // ① 机械选股池（stock_pool.json 异步到货）
+  if (POOL_EXIT && typeof POOL_EXIT === 'object') {
+    var ex0 = POOL_EXIT[code0];
+    if (ex0 && typeof ex0 === 'object') return ex0;
+  }
+  // ② AI 预测写回的内嵌 exit
   if (st && st.exit && typeof st.exit === 'object') return st.exit;
-  if (!POOL_EXIT || typeof POOL_EXIT !== 'object') return null;
-  return POOL_EXIT[String(st && st.code || '').replace(/\D/g, '')] || null;
+  var secs = ((window.DASHBOARD_DATA || {}).aiPrediction || {}).sectors || [];
+  for (var i = 0; i < secs.length; i++) {
+    var arr = (secs[i] && secs[i].stocks) || [];
+    for (var j = 0; j < arr.length; j++) {
+      if (String((arr[j] && arr[j].code) || '').replace(/\D/g, '') === code0 &&
+          arr[j].exit && typeof arr[j].exit === 'object') return arr[j].exit;
+    }
+  }
+  // ③ 谐波形态（含失效池回退的「失效前」几何）：技术指标天然带止损/目标
+  var hz = (typeof findHarmonic === 'function' ? findHarmonic(code0) : null) ||
+           (typeof hzFailOf === 'function' ? hzFailOf(code0) : null);
+  if (hz && hz.stop !== null && hz.stop !== undefined) {
+    return { stop: hz.stop, target: hz.target1,
+             falsify: '跌破 ' + hz.stop + ' 元（D 点结构失效位）——谐波形态作废，无条件离场',
+             stopBasis: '谐波 D 点结构失效位（前复权）', src: 'harmonic' };
+  }
+  return null;
+}
+
+function exitOf(st) {
+  return exitForCode(String((st && st.code) || '').replace(/\D/g, ''), st);
+}
+
+/* R100z18：弹窗内单条退出纪律行——有止损位就给「止损/目标/证伪」三件套，
+   只有证伪口径没有止损位（断板池等）时退化为纯证伪行，同样不编数字。 */
+function exitMetaLine(code) {
+  var ex = exitForCode(code);
+  if (!ex || typeof ex !== 'object') return '';
+  if (ex.stop === null || ex.stop === undefined) {
+    return ex.falsify ? '<div class="exit-row exit-line"><span class="xs">✖</span> ' + esc(ex.falsify) + '</div>' : '';
+  }
+  return '<div class="exit-row exit-line"><b>退出纪律</b> 止损 ' + Number(ex.stop).toFixed(2) +
+    (ex.target !== null && ex.target !== undefined ? ' · 目标 ' + '<span class="xt">' + Number(ex.target).toFixed(2) + '</span>' : '') +
+    ' <span class="xs">✖</span> ' + esc(ex.falsify) +
+    (ex.stopBasis ? '<span class="xb">（' + esc(ex.stopBasis) + '）</span>' : '') + '</div>';
 }
 
 function exitRowHtml(stocks) {
@@ -2621,7 +2679,8 @@ function openDbModal(key) {
     '<div><span class="lab">形态：</span>' + esc((e.form || '').replace(/·/, '：')) + '</div>' + // R100z4e：仅首个 ·→：
     (e.note ? '<div><span class="lab">盘面观察：</span>' + esc(e.note) + '</div>' : '') +
     '<div><span class="lab">上涨概率：</span><b class="' + probCls + '">' + (e.probability !== null && e.probability !== undefined ? e.probability + '%' : '—') + '</b></div>' +
-    techMetaLines(String(e.code)); // R100z3：对应技术面（九门/吸筹）纯文本行，命中才渲染
+    // R100z3：对应技术面（九门/吸筹）纯文本行，命中才渲染；R100z18 末尾补退出纪律行
+    techMetaLines(String(e.code)) + exitMetaLine(String(e.code));
   // R100z6d：断板弹窗主图补画谐波 XABCD 连线（此前 dbKlineSvg 漏传 hz，仅头部迷你图有连线——用户反馈"有谐波技术但K线没连线"）
   // K线兜底链——池条目内嵌 → 顶层 stkKlines（embed 分级内嵌）→ 网络拉取后回填；
   // 谐波形态点在池内短窗之外时优先用顶层长窗（320 根）渲染，避免连线丢失
@@ -3271,8 +3330,10 @@ function openStkModal(code, name, note) {
     (stkTechMeta(code) ? sentBadgeHtml(code) : '') + // R100z4c：九门/谐波/吸筹标的徽标行末尾加 利好/中性/利空（非技术池标的不显示）
     '</div>' +
     (hz ? '<div class="hz-strip">' + hzSideHtml(hz) + hzMiniWrap(hz) + '</div>' : ''); // R100z4：谐波参数+迷你图独立成行，参数贴左填满消除空档
+  // R100z3：九门/吸筹纯文本行（断板弹窗同格式）；R100z18 末尾补退出纪律行（止损/目标/证伪）
   document.getElementById('stk-modal-meta').innerHTML =
-    (note ? esc(note) + '<br>' : '') + techMetaLines(code); // R100z3：九门/吸筹纯文本行（断板弹窗同格式）
+    (note ? esc(note) + '<br>' : '') + techMetaLines(code) +
+    exitMetaLine(code); // R100z18：所有带技术指标的标的（机械池/AI内嵌/谐波）弹窗内都给出退出纪律
   var box = document.getElementById('stk-kline');
   box.innerHTML = '<div class="db-empty">K线加载中…</div>';
   document.getElementById('stk-news').innerHTML = stkNewsHtml(code); // R100n：个股消息面（利好/利空/中性，参考断板反包）
@@ -3524,7 +3585,14 @@ function renderOpenOutlook() {
 
 document.getElementById('updatedAt').textContent = '数据更新：' + window.DASHBOARD_DATA.updatedAt;
 syncMktToggle();
-loadPoolExit();        // R100z15：机械选股池的退出纪律（异步到货后自动重画一次）
+// R100z18：必须**传回调**——此前这里空调用，stock_pool.json 到货后没人重画，而 risk_blacklist.json
+// 只有 302B 几乎必然先到并把 AI 预测区重画一遍（那一刻 POOL_EXIT 还是 null）→ 退出纪律行（R100z15）
+// 在绝大多数机上永远画不出来（手机能显示纯属 stock_pool 抢先到的时序运气）。
+// 到货后主动重画一次，两请求不再抢跑：退出纪律行不再依赖谁先到。
+loadPoolExit(function () {
+  var aiBox = document.getElementById('ai-prediction');
+  if (aiBox && aiBox.innerHTML) renderAiPrediction();
+});
 loadRiskBlacklist();   // R100z13：先发请求，黑名单异步到后再自动重画一次
 renderAiPrediction();
 renderOpenOutlook();
