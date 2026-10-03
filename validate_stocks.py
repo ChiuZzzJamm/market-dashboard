@@ -495,10 +495,16 @@ def check_risk_blacklist(D, scope='all'):
     才 FAIL——那才是必须拦下来的选股。
 
     R100z16：scope 决定扫哪些节点——
-      all / ai → aiPrediction.sectors（16:00、08:30、周日任务职责）
-      all / us → us + ashare 五节与 bullish/bearish（07:30、周日任务职责；
-                 这两个任务自己就是这些标的的选股者，必须自己过闸，不能
-                 把黑名单推给 16:00 去背，否则等于没闸）。"""
+      all / ai  → aiPrediction.sectors（16:00、08:30、周日任务职责）
+      all / us  → us + ashare 五节与 bullish/bearish（07:30、周日任务职责；
+                  这两个任务自己就是这些标的的选股者，必须自己过闸，不能
+                  把黑名单推给 16:00 去背，否则等于没闸）
+      all / star→ duanban.star.picks（9:45 职责；star 同样由本任务自己挑，
+                  9:45 又禁止池外补股，若不过闸就等于 star 这一支完全没有硬闸）
+
+    ⚠️ R100z41 补记：scope='star' 原本不在任何分支里，check_risk_blacklist 直接
+    返回空、main() 的 violations 也恒为空——「--scope star 跑出 ALL OK」其实是
+    闸门空转，不是真的校验通过。现已按上述口径补齐。"""
     root = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(root, 'risk_blacklist.json')
     if not os.path.exists(path):
@@ -542,6 +548,10 @@ def check_risk_blacklist(D, scope='all'):
                     for imp in (nw.get('impacts') or []):
                         if isinstance(imp, dict):
                             scan(imp.get('stocks'), f"{mk}.{key}.impacts")
+    if scope in ('all', 'star'):
+        # R100z41：🌟开盘精选的 picks 是本任务自己挑的，不许池外补股，
+        # 那就必须自己过闸——否则 9:45 整条链路完全没有硬风险拦截面。
+        scan(((D.get('duanban') or {}).get('star') or {}).get('picks'), 'duanban.star.picks')
     return out
 
 
@@ -1022,7 +1032,6 @@ def main():
     veri_warns = check_verification(D)
     stock_warns = check_stockcheck(D)
     calib_warns = check_calibration(D)
-    oo_warns = check_openoutlook(D)
     src_warns = check_source_names(D)
     lb_warns = check_lianban_notes(D)
     tb_warns = check_top_boards(D)
@@ -1030,7 +1039,7 @@ def main():
     star_warns = check_star_module(D)
     sel_warns = check_selection_modules(D)
     oo_warns = check_openoutlook(D)                    # R100z13：开盘前瞻六维度深度
-    ooloop_warns = check_openoutlook_loop(D)           # R100z13：前瞻兑现闭环两头闸（原同名被覆盖，已改名接线）
+    ooloop_warns = check_openoutlook_loop(D)           # R100z13：前瞻兑现闭环两头闸
     risk_violations = check_risk_blacklist(D, scope=scope)   # R100z13：个股硬风险黑名单（命中即 FAIL）
     logic_hards, logic_warns = check_logic_depth(D)    # R100z15：内容深度机器闸
     exit_warns = check_exit(D)                         # R100z15：退出纪律（止损/目标/证伪）
@@ -1041,7 +1050,7 @@ def main():
         violations.extend(exp_hards)
         violations.extend(logic_hards)
         violations.extend(pool_hards)
-    if scope in ('all', 'ai', 'us'):
+    if scope in ('all', 'ai', 'us', 'star'):  # R100z41：star 也要计（此前空转，闸门形同虚设）
         violations.extend(risk_violations)
 
     if scope in ('all', 'us'):

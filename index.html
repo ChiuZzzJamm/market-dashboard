@@ -482,6 +482,9 @@
   .fail-chip .cd { font-size: 11px; color: var(--ink2); }
   .fail-chip .fr { font-size: 11px; color: #a33; margin-top: 4px; line-height: 1.5; }
   .fail-chip .fd { font-size: 10px; color: var(--ink2); margin-top: 2px; }
+  /* R100z41：最新归档批次用实线暖色边框 + 淡底，与滚动窗口里剩下的旧归档一眼区分 */
+  .fail-chip.fail-new { border-style: solid; border-color: #d6ab63; background: #fffdf7; }
+  .fail-chip .nb { font-size: 10px; font-weight: 700; color: #8a5c12; border: 1px solid #d6ab63; border-radius: 4px; padding: 0 3px; line-height: 1.35; }
   .db-modal-meta { font-size: 12.5px; color: var(--ink); line-height: 1.8; margin-bottom: 10px; }
   .db-modal-meta .lab { color: var(--ink2); }
   .db-kline svg { width: 100%; height: auto; display: block; }
@@ -1904,7 +1907,9 @@ function _hzFailClip(kl, hz) {
 // R100z4x：失效池弹窗同组导航——STK_GRP=失效归档池全列表，左右箭头/键盘 ←→ 在池内循环
 function openFailIdx(kind, idx) {
   var D = window.DASHBOARD_DATA || {};
-  var fp = (kind === 'harmonic' ? ((D.harmonic || {}).failPool) : ((D.duanban || {}).failPool)) || [];
+  var raw = (kind === 'harmonic' ? ((D.harmonic || {}).failPool) : ((D.duanban || {}).failPool)) || [];
+  // R100z41：必须与 dbFailHtml 用同一套排序，否则弹窗下标会串到相邻的旧归档条目上
+  var fp = failPoolSorted(raw);
   if (!fp[idx]) return;
   STK_GRP = fp.map(function (x) { return { c: x.code, n: (x.name && x.name !== x.code) ? x.name : x.code, t: '' }; });
   STK_IDX = idx;
@@ -2196,24 +2201,25 @@ function renderHarmonic() {
     if (it.accResonance) meta += ' · 吸筹共振' + it.accResonance;
     // R100g：名称缺失时只展示代码一次（禁 name/code 拼成 600613600613 双重渲染）
     var nm = (it.name && it.name !== it.code) ? it.name : '';
-    // R100z36：谐波卡改用统一 T2 骨架。四格＝形态 / 距PRZ / 止损 / T1（T2 上移到状态行）。
+    // R100z36：谐波卡改用统一 T2 骨架；R100z40：四格＝距PRZ / 止损 / T1 / T2（全部数值位）。
+    // 形态名（蟹形/蝙蝠…）下沉到 foot，四格腾给可量化指标，与断板卡「四格＝数字」口径一致。
     // 观察池 distToPrzPct 为正（还没到 PRZ），确认池多为负（已落入/越过反转区），
-    // 颜色按语义给：已到 PRZ 用涨色、未到用灰、止损与目标位分别用跌色/涨色。
+    // 颜色按语义给：已到 PRZ 用涨色、未到用灰、止损用跌色（离场位）、T1/T2 用涨色（兑现位）。
     var dist = (typeof it.distToPrzPct === 'number') ? it.distToPrzPct : null;
     var conf = it.stage === '确认';
     var distCls = dist === null ? 'flat' : (dist <= 0 ? 'up' : 'flat');
-    var foot = (conf ? '确认池 · XABCD 已到位' : '观察池 · 差最后一根确认K') +
+    var foot = esc(hzPatCn(it.pattern)) + '形态 · ' +
+      (conf ? '确认池 · XABCD 已到位' : '观察池 · 差最后一根确认K') +
       ' · PRZ <span class="xt">' + it.prz[0] + '~' + it.prz[1] + '</span>' +
-      ' · T2 <span class="xt">' + it.target2 + '</span>' +
       (it.accResonance ? ' · 吸筹共振' + esc(it.accResonance) : '');
     return tcCard({
       code: it.code, name: nm || it.code, chg: tcPctOf(it.code, null), dim: !conf,
       pills: [it.sector || stkSectorOf(it.code), it.pattern], sent: true,
       cells: [
-        tcCell('形态', esc(hzPatCn(it.pattern)), conf ? 'up' : ''),
         tcCell('距PRZ', dist === null ? '—' : fmtPct(dist), distCls),
         tcCell('止损', '<span class="xt">' + it.stop + '</span>', 'down'),
-        tcCell('T1', '<span class="xt">' + it.target1 + '</span>', 'up')
+        tcCell('T1', '<span class="xt">' + it.target1 + '</span>', 'up'),
+        tcCell('T2', '<span class="xt">' + it.target2 + '</span>', 'up')
       ],
       foot: foot,
       onclick: 'openHzModal(\'' + it.code + '\',\'' + escAttr(nm || it.code) + '\')',
@@ -2559,28 +2565,26 @@ function tcCard(o) {
 }
 
 /* R100z36：断板反包双池卡片改用统一 T2 骨架。
-   四格：反包概率 / 断板量比 / 缩量天数 / 止损。
-   - 断板量比与缩量天数从 form 文本解析（check_duanban.py 写的「09/28涨停→次1.7倍量断板→4日缩量·站稳MA5」），
+   四格：反包概率 / 缩量天数 / 板块涨幅 / 止损。
+   - 缩量天数从 form 文本解析（check_duanban.py 写的「…→4日缩量·站稳MA5」），
      解析不到就显示「—」，不编数字。
-   - 止损走 tcStopOf → exitForCode⓪（断板日最低价，形态位），与弹窗退出纪律同源。
-   - 「是否破位/已破MA5」这类文字状态上移到虚线状态行（第二行那格改为止损）。 */
+   - 板块涨幅取自 e.boardPctToday，已前置到格子内（原 foot 里「板块今日」去重）。
+   - 止损走 tcStopOf → exitForCode⓪（断板日最低价，形态位），与弹窗退出纪律同源。 */
 function dbCardHtml(e, key, done, showSec, scoreBadge) {
   var form = String(e.form || '');
-  var mV = form.match(/(\d+(?:\.\d+)?)\s*倍量断板/);
-  var volRatio = mV ? Number(mV[1]).toFixed(1) + '×' : '—';
   var mS = form.match(/(\d+)\s*日缩量/);
   var shrink = mS ? mS[1] + ' 日' : (/已缩量/.test(form) ? '已缩量' : (/待缩量/.test(form) ? '待缩量' : '—'));
   var prob = (e.probability !== null && e.probability !== undefined) ? e.probability : null;
   var sCls = e.sentiment === 'bull' ? 'up' : (e.sentiment === 'bear' ? 'down' : '');
-  var foot = '<span class="xt">' + esc(form.replace(/^.*?断板/, '断板').replace(/·/, '：')) + '</span>' +
-    (e.boardPctToday == null ? '' : ' · 板块今日 <span class="' + (e.boardPctToday > 0 ? 'up' : (e.boardPctToday < 0 ? 'down' : '')) + '">' + fmtPct(e.boardPctToday) + '</span>');
+  var bCls = e.boardPctToday > 0 ? 'up' : (e.boardPctToday < 0 ? 'down' : '');
+  var foot = '<span class="xt">' + esc(form.replace(/^.*?断板/, '断板').replace(/·/, '：')) + '</span>';
   return tcCard({
     code: e.code, name: e.name, chg: tcPctOf(e.code, e.pct), dim: !done,
     pills: [showSec ? (e.sector || '其他') : null], sent: true,
     cells: [
       tcCell('反包概率', prob === null ? '—' : prob + '%', sCls),
-      tcCell('断板量比', volRatio, ''),
       tcCell('缩量天数', shrink, ''),
+      tcCell('板块涨幅', e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday), bCls),
       tcStopCell(e.code)
     ],
     foot: foot,
@@ -2794,26 +2798,52 @@ function renderDuanban() {
   switchSubTab(['db', 'hz', 'pw', 'acc'].indexOf(_savedTab) >= 0 ? _savedTab : 'db');
 }
 
+/* R100z41（截图7「失效池没更新」修复）：失效池改按「归档日倒序」渲染——最新归档排最前。
+   背景：failPool 是滚动窗口（check_duanban.py 保留 entryDate ≤5 交易日的旧归档 + 当日新增），
+   数组里天然存在多个 entryDate；旧实现直接按数组原序渲染，上一交易日的条目会占满第一屏，
+   肉眼看上去像「池子没更新」。实际 09-30 当天还归档了 33 只，数据是新的。
+   ⚠️ 关键：openFailIdx() 是按 data.js 数组下标取条目、走弹窗左右箭头导航，
+   下标必须与这里渲染的下标严格一致，否则会串票。故两处共用 failPoolSorted()。 */
+function failPoolSorted(failPool) {
+  if (!failPool || !failPool.length) return [];
+  return failPool.slice().sort(function (a, b) {
+    var ka = (a && (a.entryDate || (a.failHz && a.failHz.failDay) || '')) || '';
+    var kb = (b && (b.entryDate || (b.failHz && b.failHz.failDay) || '')) || '';
+    if (ka === kb) return 0;
+    return ka > kb ? -1 : 1; // 倒序：最新在前；同日保持原序（sort 稳定）
+  });
+}
+function failPoolLatest(failPool) {
+  var s = failPoolSorted(failPool);
+  if (!s.length) return '';
+  var d = s[0].entryDate || (s[0].failHz && s[0].failHz.failDay) || '';
+  return String(d);
+}
+
 /* R100i：失败池（断板反包 / 谐波形态）——原符合形态但破位或超期失效的标的归档。
    R100z5a：只保留最新一轮归档（=最近一个交易日失效的标的），不再累计历史。
    failPool: [{code,name,pattern,form,reason,entryDate}]；点击看该标的 K 线。 */
 function dbFailHtml(failPool, kind) {
-  failPool = failPool || [];
+  failPool = failPoolSorted(failPool);
   if (!failPool.length) {
     return '<div class="db-pool p-fail"><h2>失效归档池 · 0 只</h2>' +
       '<div class="db-empty">暂无失效标的（最近一个交易日失效的标的才会落入此池，次日自动滚出）</div></div>';
   }
+  var _latestD = failPoolLatest(failPool); // R100z41：最新一批归档的日期，用于高亮 + 标题标注
   var items = failPool.map(function (e, i) {
     var nm = (e.name && e.name !== e.code) ? e.name : '';
     var click = e.code ? (' onclick="openFailIdx(\'' + kind + '\',' + i + ')"') : ''; // R100z4x：失效池弹窗接入同组导航（左右箭头）
     var sec = e.sector ? ('<span class="db-sec-pill">' + esc(e.sector) + '</span>') : ''; // R100z4x：失效池补板块徽章（与确认/观察池同款胶囊）
     var fday = (e.failHz && e.failHz.failDay) ? String(e.failHz.failDay).slice(5) : ''; // R100z4z：失效日上卡片（回补/快照有 failDay 时），不再只显示归档日
-    return '<div class="fail-chip"' + click + '>' +
-      '<div class="r1"><b>' + esc(nm || e.code) + '</b>' + (nm ? '<span class="cd">' + esc(e.code) + '</span>' : '') + sec + '</div>' +
+    var isNew = (_latestD && e.entryDate === _latestD) ? ' fail-new' : '';
+    var nb = isNew ? '<span class="nb">新</span>' : ''; // R100z41：最新归档批次打标，避免「看不出更新过」
+    return '<div class="fail-chip' + isNew + '"' + click + '>' +
+      '<div class="r1"><b>' + esc(nm || e.code) + '</b>' + (nm ? '<span class="cd">' + esc(e.code) + '</span>' : '') + sec + nb + '</div>' +
       '<div class="fr">' + esc(e.reason || '形态失效') + '</div>' +
       '<div class="fd">' + (fday ? '失效 ' + esc(fday) + ' · 归档 ' + esc(e.entryDate || '—') : '归档：' + esc(e.entryDate || '—')) + '</div></div>';
   }).join('');
-  return '<div class="db-pool p-fail"><h2>失效归档池 · ' + failPool.length + ' 只</h2>' +
+  return '<div class="db-pool p-fail"><h2>失效归档池 · ' + failPool.length + ' 只' +
+    (_latestD ? ' · 最近归档 ' + esc(String(_latestD).slice(5)) : '') + '</h2>' +
     '<div class="db-sub">原符合' + (kind === 'harmonic' ? '谐波' : '断板反包') + '形态、因破位或超期失效而归因失败；仅保留最近一个交易日失效的标的</div>' +
     '<div class="db-chips">' + items + '</div></div>';
 }
