@@ -632,6 +632,15 @@
   .gate-d.pos { color:#0f7a52; }
   .gate-d.neg { color:#b3351f; }
   .gate-d.flat { color:var(--ink2); font-weight:400; }
+  /* R100z29：单门判定角标——有区分度 / 反向 / 无区别·展示项 */
+  .gate-flag { min-width:60px; text-align:right; font-size:10.5px; font-weight:700; }
+  .gate-flag.ok { color:#0f7a52; }
+  .gate-flag.bad { color:#b3351f; }
+  .gate-flag.none { color:var(--ink2); font-weight:400; }
+  .gate-verdict { margin:0 0 12px; padding:9px 11px; border:1px solid var(--line); border-radius:8px; background:var(--paper-2); font-size:11.5px; line-height:1.75; color:var(--ink2); }
+  .gate-verdict b { color:var(--ink); }
+  .vd-ok { color:#0f7a52; font-weight:700; }
+  .vd-bad { color:#b3351f; font-weight:700; }
   /* 信号滞后灰标（R100z22）：吸筹是历史 K 线模型，同样分数信号新旧不同，滞后 ≥10 日转告警色 */
   .acc-lag { display:inline-block; font-size:9.5px; color:var(--ink2); border:1px solid var(--line); border-radius:999px; padding:0 6px; margin-top:6px; }
   .acc-lag.late { color:#b3541e; border-color:#e8c9a8; background:#fff6ee; }
@@ -2299,22 +2308,40 @@ function sigGateTable() {
     '<span class="sig-cmt">末列差值＝通过组减未通过组（百分点），为正才说明这道门有区分度；' +
     '未通过组为 0 样本时标「无可比样本」，差值不足 0.05 个百分点写「基本无差别」。' +
     '基准（随便买一只）T+5 ' + sigPct(b.avgPct5) + ' / 胜率 ' + sigRate(b.winRate5) + '。</span></div>';
+  var ks = Object.keys(s.power.gates);
+  // R100z29：按回测结果给每道门下判定——有区分度 / 反向 / 无区别（展示项），
+  // 结论从数据实算，不硬编码，下次回测换了门数不会说错话。
+  var eff = [], rev = [], flatL = [];
+  ks.forEach(function (g) {
+    var it = s.power.gates[g], d = it.diff5;
+    if (d === null || d === undefined || Math.abs(d) < 0.05) flatL.push(it.label || g);
+    else if (d > 0) eff.push(it.label || g);
+    else rev.push(it.label || g);
+  });
   var rows = '';
-  Object.keys(s.power.gates).forEach(function (g) {
+  ks.forEach(function (g) {
     var it = s.power.gates[g];
     var y = it.pass || {}, x = it.fail || {};
     var yTxt = y.n ? ('通过 ' + y.n + ' 次 · <b>' + sigPct(y.avgPct5) + '</b> / 胜率 ' + sigRate(y.winRate5)) : '通过样本 0';
     var xTxt = x.n ? ('未过 ' + x.n + ' 次 · <b>' + sigPct(x.avgPct5) + '</b> / 胜率 ' + sigRate(x.winRate5)) : '无可比样本';
-    var d = it.diff5, dCls = 'flat', dTxt = '—';
-    if (d === null || d === undefined) { dTxt = '—'; }
-    else if (Math.abs(d) < 0.05) { dTxt = '基本无差别'; }
-    else { dTxt = (d > 0 ? '+' : '') + d.toFixed(2) + ' pp'; dCls = d > 0 ? 'pos' : 'neg'; }
+    var d = it.diff5, dCls = 'flat', dTxt = '—', fCls = 'none', fTxt = '展示项';
+    if (d === null || d === undefined) { dTxt = '—'; fTxt = '无可比样本'; }
+    else if (d > 0.05) { dTxt = '+' + d.toFixed(2) + ' pp'; dCls = 'pos'; fCls = 'ok'; fTxt = '有区分度'; }
+    else if (d < -0.05) { dTxt = d.toFixed(2) + ' pp'; dCls = 'neg'; fCls = 'bad'; fTxt = '反向'; }
+    else { dTxt = '基本无差别'; }
     rows += '<div class="gate-row"><span class="gate-nm">' + esc(it.label || g) + '</span>' +
       '<span class="gate-y">' + yTxt + '</span>' +
       '<span class="gate-x">' + xTxt + '</span>' +
-      '<span class="gate-d ' + dCls + '">' + dTxt + '</span></div>';
+      '<span class="gate-d ' + dCls + '">' + dTxt + '</span>' +
+      '<span class="gate-flag ' + fCls + '">' + fTxt + '</span></div>';
   });
-  return head + '<div class="gate-tbl">' + rows + '</div>';
+  // R100z29：明写「九门只有这几道真有用，其余是展示项」——9 道门同时亮着会给「很严格」的错觉
+  var vd = '<div class="gate-verdict"><b>回测结论</b>：' +
+    (eff.length ? '真正有区分度（通过组跑赢未过组）的只有 <span class="vd-ok">' + eff.join('、') + '</span> 共 ' + eff.length + ' 道' : '九道门里没有任何一道通过组跑赢未过组') +
+    (rev.length ? '；<span class="vd-bad">' + rev.join('、') + '</span> 共 ' + rev.length + ' 道为<b>反向</b>——过了反而更差，等于白卡一道' : '') +
+    (flatL.length ? '；其余 ' + flatL.length + ' 道（' + flatL.join('、') + '）差值不足 0.05 个百分点，<b>与基准无差别，只作展示项</b>' : '') +
+    '。所以「9 门全过」不等于更优：本页是<b>当日强度筛</b>，用来排除明显不合格标的，不提供买入点。</div>';
+  return head + '<div class="gate-tbl">' + rows + '</div>' + vd;
 }
 
 function renderAccumulation() {
@@ -2358,6 +2385,9 @@ function renderAccumulation() {
       '<div class="acc-feat">' + feats + '</div>' + lagTag + '</div>';
   });
   // R100z21：items 是 map 出来的数组（不再 .join('')），下方按 grade 分桶后各自 join
+  // R100z29：分桶结果容器在下面「口径说明」之前声明——lg-tip 里要引用 demoted（降级只数），
+  // 否则 var 提升后是 undefined，页面上会印出「（本次共 undefined 只）」。
+  var sB = [], wB = [], demoted = 0;
   // R100z4i：新增子页口径说明（与谐波/九门同款位置与样式：子页导航下方、hz-sub 朴素文字、悬停详解）
   // R100z22：吸筹口径（原一行文字 + 200 字 title，手机上 title 不显示＝白写）改可展开条目块
   var accLeg = '<details class="tech-legend"><summary>吸筹口径 · 六特征打分（点开看每条触发条件）</summary><div class="lg-body">' +
@@ -2369,19 +2399,25 @@ function renderAccumulation() {
     '<div><b>F6 流动性+热度 · 双达标 10 / 单达标 6 分</b>：近 20 日日均成交额≥2 亿（硬门禁，不足直接不入池）；热度＝近 250 日有涨停、或距高点回撤落在 25%-70%</div>' +
     '<div class="lg-hr"></div>' +
     '<div><b>评级</b>：六项合计 102 分 → ≥70 强（结构完整、可直接跟）｜50-69 观察（缺一两项、只排队）｜&lt;50 不入池</div>' +
-    '<div class="lg-tip">下一步：盯次日竞价与量能（吸筹最怕缩量破位）；跌破最近收盘 −2.5% 无条件离场，形态走坏即出。卡片上的「信号滞后 N 日」＝最近一次试盘/涨停距今几个交易日，≥10 日的结构已走旧，只排队不主动做。</div>' +
+    '<div class="lg-tip">下一步：盯次日竞价与量能（吸筹最怕缩量破位）；跌破最近收盘 −2.5% 无条件离场，形态走坏即出。卡片上的「信号滞后 N 日」＝最近一次试盘/涨停距今几个交易日，≥10 日的结构已走旧，只排队不主动做——<b>打分到强池线、但滞后超 10 日的标的，本页会强制降到观察池</b>（本次共 ' + demoted + ' 只）。</div>' +
     '</div></details>';
   // R100z21：强/观察两节渲染（空档不显示，避免「0 只」占位盖住真内容）
-  var sB = [], wB = [];
+  // R100z29：退出纪律——结构走旧（信号滞后 >10 个交易日）的「强」一律降入观察池。
+  // 跟一个 10 日前的吸筹结构不是纪律是运气；降级只在渲染时做，不动数据口径与打分。
+  sB = []; wB = []; demoted = 0;
   pick.forEach(function (it, idx) {
     var h = items[idx];
     if (!h) return;
-    if (it.grade === '强') sB.push(h); else wB.push(h);
+    var stale = (it.grade === '强') && (Number(it.lagDays) > 10);
+    if (stale) demoted++;
+    if ((it.grade === '强') && !stale) sB.push(h); else wB.push(h);
   });
   var secS = sB.length
     ? '<div class="acc-sub s"><span class="dot"></span>强池<span class="cnt">共 ' + sB.length + ' 只 · 特征命中多、结构完整，可直接跟（盯次日量能与竞价）</span></div><div class="acc-grid">' + sB.join('') + '</div>' : '';
   var secW = wB.length
-    ? '<div class="acc-sub w"><span class="dot"></span>观察池<span class="cnt">共 ' + wB.length + ' 只 · 缺 1-2 项，只排队候补，不主动做</span></div><div class="acc-grid">' + wB.join('') + '</div>' : '';
+    ? '<div class="acc-sub w"><span class="dot"></span>观察池<span class="cnt">共 ' + wB.length + ' 只 · 缺 1-2 项，只排队候补，不主动做' +
+      (demoted ? '；其中 <b>' + demoted + '</b> 只打分虽到强池线，但信号滞后超 10 日、结构已走旧，按纪律<b>降级至此</b>' : '') +
+      '</span></div><div class="acc-grid">' + wB.join('') + '</div>' : '';
   return accLeg + sigStatHtml('accumulation', '主力吸筹') + '<div class="card"><h2>🧲 主力吸筹' + (a.tradeDate ? ' <span class="h2-date">' + esc(a.tradeDate) + '</span>' : '') + '</h2>' +
     secS + secW + (a.summary ? '<div class="note-line">' + esc(a.summary) + '</div>' : '') + '</div>';
 }
