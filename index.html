@@ -399,7 +399,8 @@
     .mkt-toggle, .db-entry, .db-entry-in { width: 42px; height: 42px; font-size: 36px; }
   }
   /* R99e：断板反包手机端不显示股票代码（窄屏下被挤没，无信息量） */
-  @media (max-width: 700px) { #duanban-view .db-chip .cd { display: none; } }
+  /* R99e + R100z36：断板反包手机端不显示股票代码（窄屏下被挤没，无信息量） */
+  @media (max-width: 700px) { #duanban-view .tc .cd { display: none; } }
 
   /* 独立页面：打开时隐藏看板主体，只显示本模块 */
   #duanban-view { display: none; }
@@ -417,8 +418,8 @@
   .db-pool.p-watch h2::before { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
   /* R99：🌟 开盘精选——复用确认池卡片样式，金色系区分 */
   .db-pool.p-star h2::before { background: #e8a013; box-shadow: 0 0 0 4px rgba(232,160,19,.16); }
-  .db-pool.p-star .db-chip { border-color: rgba(232,160,19,.4); }
-  .db-pool.p-star .db-chip:hover { border-color: #e8a013; background: rgba(255,248,228,.9); }
+  .db-pool.p-star .tc { border-color: rgba(232,160,13,.45); }
+  .db-pool.p-star .tc:hover { border-color: #e8a013; background: rgba(255,248,228,.9); }
   /* R100s：卡片 db-stage 阶段徽标（已确认/待企稳/待缩量）已删，对应 CSS 一并清理 */
   .db-pool .db-sub { font-size: 12px; color: var(--ink2); margin-bottom: 14px; }
   /* R91j: 近3日涨幅居前板块 TOP10 */
@@ -436,30 +437,13 @@
   .db-sec .db-sec-n { font-size: 11px; color: var(--ink2); font-weight: 600; }
   .db-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
   @media (max-width: 700px) { .db-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  .db-chip {
-    background: #f7fafd; border: 1px solid var(--line); border-radius: 12px;
-    padding: 8px 10px; font-size: 12.5px; cursor: pointer; position: relative;
-    display: flex; flex-direction: column; gap: 1px; min-width: 0;
-    transition: all .15s ease; -webkit-tap-highlight-color: transparent;
-  }
-  .db-chip:hover { border-color: var(--accent); background: var(--accent-soft); }
-  .db-chip .r1 { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
-  .db-chip b { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .db-chip .cd { color: var(--ink2); font-size: 10.5px; white-space: nowrap; }
-  .db-sec-pill { font-size: 9.5px; font-weight: 700; color: var(--accent-deep); background: var(--accent-soft); border: 1px solid currentColor; border-radius: 4px; padding: 0.5px 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 88px; flex-shrink: 0; } /* R100y：基础版（谐波/天梯卡片内） */
-  .db-chip .db-sec-pill { font-size: 9px; border-radius: 4px; padding: 0.5px 4px; max-width: 72px; }
-  .db-chip .db-prob { margin-left: auto; font-size: 11.5px; font-weight: 800; color: var(--up); font-variant-numeric: tabular-nums; flex-shrink: 0; }
-  .db-chip .r2 { display: flex; align-items: center; gap: 5px; min-width: 0; }
-  .db-chip .nt { font-size: 10.5px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-  .db-chip .db-prob2 { font-size: 11px; font-weight: 800; color: var(--ink2); font-variant-numeric: tabular-nums; flex-shrink: 0; }
-  .db-chip .db-prob2.up { color: var(--up); }
-  .db-chip .db-prob2.down { color: var(--down); }
+  /* R100y：板块胶囊基础版（谐波/九门/吸筹/断板四页 .tc 卡片共用，R100z36 起只有这一处定义） */
+  .db-sec-pill { font-size: 9.5px; font-weight: 700; color: var(--accent-deep); background: var(--accent-soft); border: 1px solid currentColor; border-radius: 4px; padding: 0.5px 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; flex-shrink: 0; }
   /* 口径三色标签（R88）：利好=红 / 利空=绿 / 中性=灰（R100r 统一徽标几何：圆角4px、字号11、内边距1px 7px，与全站徽标一致） */
   .db-sent { font-size: 11px; font-weight: 700; border-radius: 4px; padding: 1px 7px; line-height: 1.5; white-space: nowrap; flex-shrink: 0; display: inline-block; letter-spacing: .5px; }
   .db-sent.bull { background: var(--up-soft); color: var(--up); border: 1px solid var(--up); }
   .db-sent.bear { background: var(--down-soft); color: var(--down); border: 1px solid var(--down); }
   .db-sent.neu  { background: #eef1f5; color: var(--ink2); border: 1px solid #d6dee7; }
-  .db-chip .db-sent { margin-left: 4px; }
   .db-empty { font-size: 13px; color: var(--ink2); padding: 14px 4px; }
 
   /* 弹窗左右箭头切换（R88） */
@@ -498,7 +482,6 @@
   .fail-chip .cd { font-size: 11px; color: var(--ink2); }
   .fail-chip .fr { font-size: 11px; color: #a33; margin-top: 4px; line-height: 1.5; }
   .fail-chip .fd { font-size: 10px; color: var(--ink2); margin-top: 2px; }
-  .hz-card.fail { opacity: .85; border-style: dashed; }
   .db-modal-meta { font-size: 12.5px; color: var(--ink); line-height: 1.8; margin-bottom: 10px; }
   .db-modal-meta .lab { color: var(--ink2); }
   .db-kline svg { width: 100%; height: auto; display: block; }
@@ -521,26 +504,18 @@
   /* R100q：技术池标的金框（参考开盘精选金框色，底色不变）——A股/美股页所有标的胶囊共用 */
   .gold-ring { border-color: #e8a013 !important; box-shadow: 0 0 0 1px rgba(232,160,19,.5), 0 0 3px rgba(232,160,19,.25) !important; }
   .gold-ring:hover { border-color: #d18f00 !important; box-shadow: 0 0 0 2px rgba(232,160,19,.65), 0 0 6px rgba(232,160,19,.4) !important; }
-  .hz-pool { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; margin-top:8px; }
-  .hz-card { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:var(--paper); cursor:pointer; transition:.15s; }
-  .hz-card:hover { border-color:var(--accent); box-shadow:0 4px 14px rgba(17,17,26,.10); }
-  .hz-card .hz-top { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }  /* R100z4f：允许折行，名称不再被压缩竖排 */
-  .hz-card .hz-nm { font-weight:800; white-space:nowrap; }  /* R100z4f：名称禁逐字竖排 */
-  .hz-card .hz-cd { font-size:11px; color:var(--ink2); }
-  .hz-card .hz-pat { font-size:11px; color:var(--accent-deep); font-weight:700; margin-left:auto; }
-  .hz-card .hz-note { font-size:11px; color:var(--ink); margin-top:5px; line-height:1.55; }
-  .hz-card .hz-view, .hz-side .hz-view { font-size:11px; color:var(--accent-deep); margin-top:4px; line-height:1.55; font-weight:600; }  /* R100z4w：确定性研判一句话（卡片+弹窗共用） */
+  /* R100z36：四子页网格统一为同一列宽（一行 4 个，.tc 卡片 2×2 矩阵需要这个宽度） */
+  .hz-pool { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; margin-top:8px; }
+  @media (max-width: 900px) { .hz-pool { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+  .hz-side .hz-view { font-size:11px; color:var(--accent-deep); margin-top:4px; line-height:1.55; font-weight:600; }  /* R100z4w：确定性研判一句话（弹窗用；R100z36 起卡片不再渲染 .hz-view） */
   .hz-side .hz-approx { font-size:10px; color:var(--ink2); margin-top:3px; opacity:.85; } /* R100z4x：失效前近似形态提示 */
   /* R100s：卡片 hz-stage（确认/观察）徽标已删，CSS 一并清理 */
-  .hz-meta { font-size:10.5px; color:var(--ink2); margin-top:6px; font-variant-numeric:tabular-nums; }
 
-  .pw-card { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:var(--paper); }
-  .pw-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px; margin-top:8px; }
+  .pw-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; margin-top:8px; }
+  @media (max-width: 900px) { .pw-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
   /* R100j：主力吸筹卡片美化——左侧强调条 + 评分进度条 + 特征胶囊（通过亮/未过灰） */
-  .acc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:12px; margin-top:10px; }
-  .acc-card { position:relative; border:1px solid var(--line); border-radius:12px; padding:12px 14px 11px 17px; background:linear-gradient(180deg,#fff,var(--paper)); cursor:pointer; transition:.18s; overflow:hidden; }
-  .acc-card::before { content:''; position:absolute; left:0; top:12px; bottom:12px; width:3.5px; border-radius:0 4px 4px 0; background:linear-gradient(180deg,var(--accent),#f5a26b); opacity:.85; }
-  .acc-card:hover { border-color:var(--accent); box-shadow:0 6px 16px rgba(17,17,26,.10); transform:translateY(-2px); }
+  .acc-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; margin-top:10px; }
+  @media (max-width: 900px) { .acc-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
   .acc-head { display:flex; align-items:center; gap:6px; }
   .acc-head .acc-id { display:flex; align-items:baseline; gap:6px; min-width:0; }
   .acc-head .acc-id b { font-weight:800; }
@@ -549,8 +524,6 @@
   /* R100z28：强池/强评＝红（A股涨红惯例，与九门 pw-grd 同款红），观察池沿用琥珀黄 */
   .acc-grd.strong { color:#fff; background:linear-gradient(135deg,#f0435c,#d02c44); }
   .acc-grd.watch { color:#8a5800; background:#ffe9c2; border:1px solid #f0c36d; }
-  .acc-bar { height:4px; border-radius:999px; background:rgba(17,17,26,.07); margin-top:8px; overflow:hidden; }
-  .acc-bar i { display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,#f5a26b,var(--accent)); }
   /* R100z21：吸筹页强池/观察池分区小标题；R100z28 字号/颜色对齐断板页 db-pool h2（17px+9px 红/蓝点，同页不出现两套语义色） */
   .acc-sub { display:flex; align-items:center; gap:9px; font-size:17px; font-weight:700; color:var(--ink); margin:16px 0 2px; }
   .acc-sub:first-child { margin-top:10px; }
@@ -561,8 +534,6 @@
   .acc-sub .cnt { font-size:11px; font-weight:600; color:var(--ink2); }
   /* R100m：九门评分徽章——红色、与代码同行平行（与吸筹评级徽章 acc-grd 区分） */
   .pw-grd { font-size:10.5px; font-weight:800; border-radius:999px; padding:1px 8px; flex-shrink:0; font-variant-numeric:tabular-nums; color:#fff; background:linear-gradient(135deg,#e35d5d,#c0392b); }
-  .pw-card .hz-top { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  .pw-card .hz-top .pw-grd { margin-left:2px; }
   /* R100m：全站标的池角标（谐波🌟/吸筹👀/九门💡/断板❗️），可叠加 */
   .stk-tag { font-size:10px; line-height:1; margin-left:2px; flex-shrink:0; }
   /* R100z13：个股硬风险角标（减持/解禁/ST/业绩预减）——红底白字，hover 看原因 */
@@ -573,15 +544,7 @@
   /* R100n：通用标的板块小胶囊——R100p 起仅用于弹窗标题行（stkSecBadge），主页胶囊不再显示 */
   .chip-sec { font-size:11px; font-weight:700; color:var(--accent-deep); background:var(--accent-soft); border:1px solid currentColor; border-radius:4px; padding:1px 7px; line-height:1.5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:96px; flex-shrink:0; }
   .tchip .chip-sec { max-width:88px; }
-  .acc-card .hz-note { font-size:11px; color:var(--ink2); margin-top:7px; line-height:1.6; }
-  .acc-feat { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }
-  .acc-feat span { font-size:9.5px; color:var(--ink2); border:1px solid var(--line); border-radius:999px; padding:1px 7px; opacity:.55; }
-  .acc-feat span.on { color:var(--accent-deep); border-color:var(--accent); background:var(--accent-soft); font-weight:700; opacity:1; }
-  .pw-gate { display:flex; flex-wrap:wrap; gap:3px; margin-top:5px; }
-  .pw-gate span { font-size:9px; font-weight:700; border-radius:4px; padding:0 4px; }
   /* R100n：九门 G1-G9 通过胶囊改红色（用户要求）；未过门保持警示但区分度更高（红底白字） */
-  .pw-gate span.pass { color:#c0392b; background:#fdeaea; border:1px solid #f2c4ca; }
-  .pw-gate span.fail { color:#fff; background:#c0392b; }
 
   /* R100h：清单 .cl-* 样式已随必带数据清单模块下线删除 */
 
@@ -612,8 +575,52 @@
   .tech-legend .lg-hr { height:1px; background:var(--line); margin:7px 0; }
   .tech-legend .lg-tip { color:#8a5a00; background:#fff8e6; border:1px solid #f0dcaa; border-radius:6px; padding:4px 8px; font-size:11px; line-height:1.7; }
   /* 信号滞后灰标（R100z22）：吸筹是历史 K 线模型，同样分数信号新旧不同，滞后 ≥10 日转告警色 */
-  .acc-lag { display:inline-block; font-size:9.5px; color:var(--ink2); border:1px solid var(--line); border-radius:999px; padding:0 6px; margin-top:6px; }
-  .acc-lag.late { color:#b3541e; border-color:#e8c9a8; background:#fff6ee; }
+  /* R100z36：卡片内的价格/目标位强调（.exit-line .xt 只在退出纪律行内生效，tc 卡片需单列） */
+  .tc .xt { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .tc-foot .up { color: var(--up); }
+  .tc-foot .down { color: var(--down); }
+
+  /* ===== R100z36：技术看板四子页统一卡片（T2 指标矩阵）=====
+     骨架固定六位：①板块 pill + 形态/状态 pill ②方向徽章 ③名称·代码
+     ④2×2 指标矩阵（每格＝标签 + 数值）⑤虚线状态行。
+     四页（断板/谐波/吸筹/九门）只用同一套类名，换内容不换位置。 */
+  .tc {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 12px;
+    padding: 7px 9px 6px; cursor: pointer; transition: all .15s ease;
+    display: flex; flex-direction: column; gap: 4px; min-width: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tc:hover { border-color: var(--accent); box-shadow: 0 4px 14px rgba(17,17,26,.10); }
+  /* 头部：板块 pill 在左，方向徽章在右（板块缺失时也能靠徽章撑住第一行） */
+  .tc-top { display: flex; align-items: center; gap: 4px; min-width: 0; }
+  .tc-top .tc-sp { flex: 1 1 auto; min-width: 0; }
+  /* 名称行：名称 + 代码 + 今日涨幅（涨幅靠右，涨红跌绿） */
+  .tc-id { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
+  .tc-id b { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tc-id .cd { color: var(--ink2); font-size: 10.5px; white-space: nowrap; }
+  .tc-id .tc-chg { margin-left: auto; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  .tc-chg.up { color: var(--up); }
+  .tc-chg.down { color: var(--down); }
+  .tc-chg.flat { color: var(--ink2); }
+  /* 2×2 指标矩阵 */
+  .tc-g { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .tc-cell { background: #eef2f7; border-radius: 7px; padding: 2px 6px 3px; min-width: 0; }
+  .tc-cell .k { display: block; font-size: 9.5px; color: var(--ink2); line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tc-cell .v { display: block; font-size: 13.5px; font-weight: 800; line-height: 1.25; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tc-cell .v.up { color: var(--up); }
+  .tc-cell .v.down { color: var(--down); }
+  .tc-cell .v.flat { color: var(--ink2); }
+  .tc-cell .v.warn { color: #b3541e; }
+  /* 虚线状态行 */
+  .tc-foot { border-top: 1px dashed var(--line); padding-top: 3px; font-size: 9.5px; color: var(--ink2); line-height: 1.4; }
+  /* 观察池 / 降级卡：虚线边 + 灰字，四页统一 */
+  .tc.dim { border-style: dashed; background: var(--paper); }
+  .tc.dim .tc-cell { background: #f2f4f7; }
+  .tc.dim .tc-cell .v { color: var(--ink2); }
+  .tc.dim .tc-foot { color: var(--ink2); }
+  /* 今日涨幅取不到时（顶层无该票 K 线）显示灰破折号，不编数字 */
+  @media (max-width: 700px) { .tc-cell .v { font-size: 13px; } }
+
   .ai-harmonic { font-size:12.5px; font-weight:700; color:#7a4d00; background:#fff3d6; border:1px solid #f0c36d; border-radius:8px; padding:6px 10px; margin:8px 0; }
 </style>
 </head>
@@ -2189,15 +2196,29 @@ function renderHarmonic() {
     if (it.accResonance) meta += ' · 吸筹共振' + it.accResonance;
     // R100g：名称缺失时只展示代码一次（禁 name/code 拼成 600613600613 双重渲染）
     var nm = (it.name && it.name !== it.code) ? it.name : '';
-    // R100l：板块胶囊对齐断板反包卡片；R100z4y：sector 缺失时走全站映射兜底（新浪行业/连板/AI预测等）
-    var secPill = (it.sector || stkSectorOf(it.code)) ? '<span class="db-sec-pill">' + esc(it.sector || stkSectorOf(it.code)) + '</span>' : '';
-    return '<div class="hz-card" onclick="openHzModal(\'' + it.code + '\',\'' + escAttr(nm || it.code) + '\')">' +
-      '<div class="hz-top"><span class="hz-nm">' + esc(nm || it.code) + '</span>' + (nm ? '<span class="hz-cd">' + esc(it.code) + '</span>' : '') + secPill + sentBadgeHtml(it.code) + // R100z4：板块徽标挪到代码后
-      // R100s：卡片「确认/观察」徽标删除（池归属已由分组标题承载，弹窗内另有池徽章）
-      '<span class="hz-pat">' + esc(it.pattern) + '</span></div>' +
-      (it.story ? '<div class="hz-note">' + esc(it.story) + '</div>' : '') +
-      // R100z4x：卡片上的研判一句话（.hz-view）按用户反馈删除（弹窗内仍保留）——卡片空间有限，一段蓝字挤压 PRZ 数字行
-      '<div class="hz-meta">' + meta + '</div></div>';
+    // R100z36：谐波卡改用统一 T2 骨架。四格＝形态 / 距PRZ / 止损 / T1（T2 上移到状态行）。
+    // 观察池 distToPrzPct 为正（还没到 PRZ），确认池多为负（已落入/越过反转区），
+    // 颜色按语义给：已到 PRZ 用涨色、未到用灰、止损与目标位分别用跌色/涨色。
+    var dist = (typeof it.distToPrzPct === 'number') ? it.distToPrzPct : null;
+    var conf = it.stage === '确认';
+    var distCls = dist === null ? 'flat' : (dist <= 0 ? 'up' : 'flat');
+    var foot = (conf ? '确认池 · XABCD 已到位' : '观察池 · 差最后一根确认K') +
+      ' · PRZ <span class="xt">' + it.prz[0] + '~' + it.prz[1] + '</span>' +
+      ' · T2 <span class="xt">' + it.target2 + '</span>' +
+      (it.accResonance ? ' · 吸筹共振' + esc(it.accResonance) : '');
+    return tcCard({
+      code: it.code, name: nm || it.code, chg: tcPctOf(it.code, null), dim: !conf,
+      pills: [it.sector || stkSectorOf(it.code), it.pattern], sent: true,
+      cells: [
+        tcCell('形态', esc(hzPatCn(it.pattern)), conf ? 'up' : ''),
+        tcCell('距PRZ', dist === null ? '—' : fmtPct(dist), distCls),
+        tcCell('止损', '<span class="xt">' + it.stop + '</span>', 'down'),
+        tcCell('T1', '<span class="xt">' + it.target1 + '</span>', 'up')
+      ],
+      foot: foot,
+      onclick: 'openHzModal(\'' + it.code + '\',\'' + escAttr(nm || it.code) + '\')',
+      title: nm + ' ' + it.code + '\n' + meta + '\n点击查看XABCD五点几何与K线'
+    });
   };
   // R100l：三池样式对齐断板反包页——.db-pool 圆点标题容器（确认池红点 / 观察池蓝点 / 失效池灰点 dbFailHtml）
   // R100z4x：谐波子页顶部术语说明段落（.hz-sub）曾按用户反馈删除——2026-09-30 用户要求恢复（与九门/吸筹口径行同款）
@@ -2240,27 +2261,40 @@ function renderAccumulation() {
   var items = pick.map(function (it, idx) {
     var gd = it.grade === '强' ? 'strong' : 'watch';
     var feats = '';
+    var hitList = [];
     if (it.features) {
       [['f1', '试盘'], ['f2', '止跌'], ['f3', '横盘'], ['f4', '缩量'], ['f5', '缩量板'], ['f6', '流动']].forEach(function (f) {
         var v = it.features[f[0]];
+        if (v) hitList.push(f[1]);
         feats += '<span class="' + (v ? 'on' : 'off') + '" title="' + escAttr(FEAT_TITLE[f[0]]) + '">' + (v ? '✓ ' : '✕ ') + f[1] + (v ? ('·' + v) : '') + '</span>';
       });
     }
     // R100z22：信号滞后灰标（lagDays 由 accumulation_score.py 算：最近一次试盘/涨停距今几个交易日）
     var lagDays = Number(it.lagDays);
-    var lagTag = (lagDays > 0)
-      ? '<span class="acc-lag' + (lagDays >= 10 ? ' late' : '') + '">信号滞后 ' + lagDays + ' 日' + (lagDays >= 10 ? '·结构走旧' : '') + '</span>' : '';
     // R100g：名称缺失只展示代码一次
     var nm = (it.name && it.name !== it.code) ? it.name : '';
-    // R100j：卡片美化——头部（名称+代码｜评级徽章右对齐）+ 评分进度条 + ✓/✕ 特征胶囊
-    return '<div class="acc-card" onclick="openGrpModal(window.DASHBOARD_DATA.accumulation.scored,' + idx + ')">' +
-      '<div class="acc-head"><span class="acc-id"><b>' + esc(nm || it.code) + '</b>' + (nm ? '<span class="cd">' + esc(it.code) + '</span>' : '') + '</span>' +
-      sentBadgeHtml(it.code) + // R100z4c：代码后加 利好/中性/利空 徽章（参考断板/谐波卡片）
-      '<span class="acc-grd ' + gd + '">' + esc(it.grade) + ' ' + it.score + '分</span></div>' +
-      '<div class="acc-bar"><i style="width:' + Math.max(4, Math.min(100, it.score || 0)) + '%"></i></div>' +
-      // R100z26：卡片上的中文注记整块下线——同一段话弹窗「主力吸筹」行已完整展示（techMetaLines），
-      // 卡片上再挂一遍只会把胶囊和滞后标挤到第一屏外面（强池卡片超出一屏看不到滞后标）。
-      '<div class="acc-feat">' + feats + '</div>' + lagTag + '</div>';
+    // R100z36：吸筹卡改用统一 T2 骨架。四格＝强度 / 特征命中 / 滞后 / 止损。
+    // 滞后 ≥10 日按纪律已降入观察池（见下方分桶），此处用告警色标出，与降级逻辑同源。
+    var lagCls = lagDays >= 10 ? 'warn' : '';
+    var lagTxt = lagDays > 0 ? lagDays + ' 日' : '—';
+    var foot = (it.grade === '强' ? '强池' : '观察池') +
+      ' · 特征 ' + (hitList.length ? hitList.join('-') : '无') +
+      (it.f5Tier && it.f5Tier !== '-' ? ' · ' + esc(it.f5Tier) : '') +
+      (lagDays >= 10 ? ' · <span style="color:#b3541e">结构走旧·不得主推</span>' : '');
+    return tcCard({
+      code: it.code, name: nm || it.code, chg: tcPctOf(it.code, null), dim: it.grade !== '强',
+      pills: [it.sector || stkSectorOf(it.code)], sent: true,
+      cells: [
+        tcCell('强度', '<span class="acc-grd ' + gd + '">' + esc(it.grade) + ' ' + it.score + '</span>', it.grade === '强' ? 'up' : ''),
+        tcCell('特征命中', (it.hitCount || 0) + ' / 6', ''),
+        tcCell('信号滞后', lagTxt, lagCls),
+        tcStopCell(it.code)
+      ],
+      foot: foot,
+      onclick: 'openGrpModal(window.DASHBOARD_DATA.accumulation.scored,' + idx + ')',
+      title: nm + ' ' + it.code + ' · ' + it.grade + ' ' + it.score + '分（六项合计 102 分）\n' +
+        '命中：' + (hitList.length ? hitList.join('、') : '无') + '\n点击查看六特征逐条触发说明'
+    });
   });
   // R100z21：items 是 map 出来的数组（不再 .join('')），下方按 grade 分桶后各自 join
   // R100z29：分桶结果容器在下面「口径说明」之前声明——lg-tip 里要引用 demoted（降级只数），
@@ -2304,16 +2338,29 @@ function renderPowerScreen() {
   var p = window.DASHBOARD_DATA.powerScreen;
   if (!p || !p.passed || !p.passed.length) return '';
   var items = p.passed.slice(0, 30).map(function (it, idx) {
-    var gates = (it.reasons || '').split(';').filter(Boolean).map(function (g) { return '<span class="pass">' + esc(g) + '</span>'; }).join('');
-    // R100z4c：谐波徽标去掉，改位利好/中性/利空徽章（吸筹徽章保留其后）
-    var badges = sentBadgeHtml(it.code) + (it.acc ? '<span class="hz-badge">吸筹</span>' : '');
+    var gates = (it.reasons || '').split(';').filter(Boolean);
     // R100g：名称缺失只展示代码一次
     var nm = (it.name && it.name !== it.code) ? it.name : '';
-    return '<div class="pw-card" onclick="openGrpModal(window.DASHBOARD_DATA.powerScreen.passed,' + idx + ')">' +
-      '<div class="hz-top"><span class="hz-nm">' + esc(nm || it.code) + '</span>' + (nm ? '<span class="hz-cd">' + esc(it.code) + '</span>' : '') +
-      '<span class="pw-grd">' + it.score + '分</span>' + badges + '</div>' +
-      '<div class="hz-meta">涨幅 ' + it.pct + '% · 量比 ' + it.volRatio + ' · RSI ' + it.rsi + '</div>' +
-      '<div class="pw-gate">' + gates + '</div></div>';
+    // R100z36：九门卡改用统一 T2 骨架。四格＝门通过 / 量比 / RSI / 止损。
+    // RSI14 落在 40-80 是 G9 的合格区间，出区间给跌色提示（过热/超卖都不是好事）。
+    var rsi = Number(it.rsi);
+    var rsiCls = (isFinite(rsi) && (rsi > 80 || rsi < 40)) ? 'warn' : '';
+    var foot = '收 <span class="xt">' + it.lastClose + '</span> · 过 ' + esc(gates.join(' ')) +
+      (it.acc ? ' · <span class="hz-badge">吸筹</span>' : '');
+    return tcCard({
+      code: it.code, name: nm || it.code, chg: tcPctOf(it.code, it.pct), dim: false,
+      pills: [it.sector || stkSectorOf(it.code)], sent: true,
+      cells: [
+        tcCell('门通过', it.score + ' / 9', 'up'),
+        tcCell('量比', (it.volRatio === null || it.volRatio === undefined) ? '—' : Number(it.volRatio).toFixed(2) + '×', ''),
+        tcCell('RSI14', isFinite(rsi) ? rsi.toFixed(1) : '—', rsiCls),
+        tcStopCell(it.code)
+      ],
+      foot: foot,
+      onclick: 'openGrpModal(window.DASHBOARD_DATA.powerScreen.passed,' + idx + ')',
+      title: nm + ' ' + it.code + ' · 九门 ' + it.score + '/9\n通过：' + gates.join('、') +
+        '\n涨幅 ' + it.pct + '% · 量比 ' + it.volRatio + ' · RSI14 ' + it.rsi
+    });
   }).join('');
   // R100z4i：口径说明挪出 card（子页导航下方、谐波说明同款位置），去 📐 emoji、无背景（hz-sub 朴素样式）
   var gateDef = '<details class="tech-legend"><summary>九门口径 · 9 道量化硬阈值（点开看每道门槛）</summary><div class="lg-body">' +
@@ -2455,27 +2502,93 @@ function sentBadgeHtml(code) {
   return '<span class="db-sent ' + m[1] + '" style="margin-left:4px">' + m[0] + '</span>';
 }
 
-function dbChipHtml(e, key, done, showSec) {
-  var prob = (e.probability !== null && e.probability !== undefined) ? e.probability + '%' : '—';
-  var secPill = showSec ? '<span class="db-sec-pill">' + esc(e.sector || '其他') + '</span>' : '';
-  // R100z4u：开盘精选技术池标的分数徽章——九门=红「N分」（过门数）、吸筹=黄「评级 N分」（与各自子页一致）
-  var scoreBadge = '';
-  if (e.score != null && e.src === 'pw') scoreBadge = '<span class="pw-grd">' + esc(e.score) + '分</span>';
-  else if (e.score != null && e.src === 'acc') scoreBadge = '<span class="acc-grd ' + (e.grade === '强' ? 'strong' : 'watch') + '">' + esc(e.grade || '观察') + ' ' + esc(e.score) + '分</span>';
-  var tip = e.name + ' ' + e.code + '（' + (e.sector || '') + '）\n'
-    + (done ? '确认池 · 全流程达标' : '观察池 · ' + e.stage) + '\n'
-    + '形态：' + (e.form || '') + '\n'
-    + '口径：' + ({ bull: '利好', bear: '利空', neutral: '中性' }[e.sentiment] || '中性') + '\n'
-    + '上涨概率：' + prob + '\n'
-    + '今日：' + fmtPct(e.pct) + '\n'
-    + '板块今日：' + (e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday)) + '\n'
-    + '涨停日板块：' + (e.boardPctZt == null ? '—' : fmtPct(e.boardPctZt)) + '\n'
-    + '点击查看K线与利好依据';
-  return '<div class="db-chip" data-k="' + escAttr(key) + '" title="' + escAttr(tip) + '">' +
-    '<div class="r1"><b>' + esc(e.name) + '</b><span class="cd">' + esc(e.code) + '</span>' + secPill + sentBadgeHtml(e.code) + scoreBadge + '</div>' + // R100z4：板块徽标挪到代码后；R100z4u：精选技术池分数徽章
-    // R100s：卡片「已确认/待企稳/待缩量」阶段徽标删除（池归属由所在分组标题承载，弹窗内另有池徽章）
-    '<div class="r2"><span class="db-prob2 ' + (e.sentiment === 'bear' ? 'down' : (e.sentiment === 'bull' ? 'up' : '')) + '">' + prob + '</span>' +
-    '<span class="nt">' + esc((e.form || '').replace(/^.*?断板/, '断板').replace(/·/, '：')) + '</span></div></div>'; // R100z4e：仅首个 ·→：（断板反包：…·…），后续分隔保留 ·
+/* R100z36：技术看板四子页统一卡片（T2）公共 helper =========================
+   1) tcPctOf  今日涨幅：优先用条目自带 pct；否则用顶层 stkKlines 最后两根收盘算。
+   2) tcStopOf 止损位：走 exitForCode（⓪断板形态位 →③谐波结构位 →④统一 −2.5%），
+      口径与弹窗「退出纪律」完全一致，绝不另算一套。
+   3) tcCard   统一骨架组装；4) tcCell 单格；5) tcSentCls 方向→涨跌色类。
+   取不到值一律显示「—」，不编数字。 */
+function tcKlineLast2(code) {
+  var rows = stkParseKline(stkGlobalKline(code));
+  if (!rows || rows.length < 2) return null;
+  return rows;
+}
+function tcPctOf(code, own) {
+  if (own !== null && own !== undefined && own !== '' && isFinite(Number(own))) return Number(own);
+  var rows = tcKlineLast2(code);
+  if (!rows) return null;
+  var a = rows[rows.length - 2][2], b = rows[rows.length - 1][2];
+  if (!(a > 0) || !(b > 0)) return null;
+  return Math.round((b / a - 1) * 10000) / 100;
+}
+function tcStopOf(code) {
+  var ex = exitForCode(String(code || ''));
+  if (!ex || ex.stop === null || ex.stop === undefined || !isFinite(Number(ex.stop))) return null;
+  return Number(ex.stop);
+}
+function tcCell(k, v, cls) {
+  return '<div class="tc-cell"><span class="k">' + esc(k) + '</span><span class="v ' + (cls || '') + '">' + v + '</span></div>';
+}
+function tcChgHtml(pct) {
+  if (pct === null || pct === undefined || !isFinite(pct)) return '<span class="tc-chg flat">—</span>';
+  var c = pct > 0 ? 'up' : (pct < 0 ? 'down' : 'flat');
+  return '<span class="tc-chg ' + c + '">' + fmtPct(pct) + '</span>';
+}
+/* 止损格：止损位是「离场价」，用跌色（绿）统一；取不到显示灰破折号 */
+function tcStopCell(code) {
+  var s = tcStopOf(code);
+  if (s === null) return tcCell('止损', '—', 'flat');
+  return tcCell('止损', '<span class="xt">' + s.toFixed(2) + '</span>', 'down');
+}
+/* R100z36：谐波形态英文名 → 短中文（格内空间窄，Butterfly 这类长名会被截断）。
+   口径以 harmonic_detect.py 的 PATTERNS 为准，取不到就原样显示英文，绝不猜译。 */
+var HZ_PAT_CN = { 'Bat': '蝙蝠', 'Gartley': '加特利', 'Butterfly': '蝶形', 'Crab': '蟹形', 'Shark': '鲨鱼', 'Cypher': '塞弗', 'AB=CD': 'AB等CD' };
+function hzPatCn(p) { return HZ_PAT_CN[p] || p; }
+/* R100z36：统一卡片骨架。o = {code,name,sector,pills[],sent,chg,cells[],foot,dim,attrs,onclick,title} */
+function tcCard(o) {
+  var pills = '';
+  (o.pills || []).forEach(function (p) { if (p) pills += '<span class="db-sec-pill">' + esc(p) + '</span>'; });
+  var sent = o.sent === false ? '' : sentBadgeHtml(o.code);
+  return '<div class="tc' + (o.dim ? ' dim' : '') + '"' + (o.attrs || '') + (o.onclick ? ' onclick="' + o.onclick + '"' : '') +
+    (o.title ? ' title="' + escAttr(o.title) + '"' : '') + '>' +
+    '<div class="tc-top">' + pills + '<span class="tc-sp"></span>' + sent + '</div>' +
+    '<div class="tc-id"><b>' + esc(o.name || o.code) + '</b>' +
+    ((o.name && o.name !== o.code) ? '<span class="cd">' + esc(o.code) + '</span>' : '') + tcChgHtml(o.chg) + '</div>' +
+    '<div class="tc-g">' + (o.cells || []).join('') + '</div>' +
+    (o.foot ? '<div class="tc-foot">' + o.foot + '</div>' : '') + '</div>';
+}
+
+/* R100z36：断板反包双池卡片改用统一 T2 骨架。
+   四格：反包概率 / 断板量比 / 缩量天数 / 止损。
+   - 断板量比与缩量天数从 form 文本解析（check_duanban.py 写的「09/28涨停→次1.7倍量断板→4日缩量·站稳MA5」），
+     解析不到就显示「—」，不编数字。
+   - 止损走 tcStopOf → exitForCode⓪（断板日最低价，形态位），与弹窗退出纪律同源。
+   - 「是否破位/已破MA5」这类文字状态上移到虚线状态行（第二行那格改为止损）。 */
+function dbCardHtml(e, key, done, showSec, scoreBadge) {
+  var form = String(e.form || '');
+  var mV = form.match(/(\d+(?:\.\d+)?)\s*倍量断板/);
+  var volRatio = mV ? Number(mV[1]).toFixed(1) + '×' : '—';
+  var mS = form.match(/(\d+)\s*日缩量/);
+  var shrink = mS ? mS[1] + ' 日' : (/已缩量/.test(form) ? '已缩量' : (/待缩量/.test(form) ? '待缩量' : '—'));
+  var prob = (e.probability !== null && e.probability !== undefined) ? e.probability : null;
+  var sCls = e.sentiment === 'bull' ? 'up' : (e.sentiment === 'bear' ? 'down' : '');
+  var foot = '<span class="xt">' + esc(form.replace(/^.*?断板/, '断板').replace(/·/, '：')) + '</span>' +
+    (e.boardPctToday == null ? '' : ' · 板块今日 <span class="' + (e.boardPctToday > 0 ? 'up' : (e.boardPctToday < 0 ? 'down' : '')) + '">' + fmtPct(e.boardPctToday) + '</span>');
+  return tcCard({
+    code: e.code, name: e.name, chg: tcPctOf(e.code, e.pct), dim: !done,
+    pills: [showSec ? (e.sector || '其他') : null], sent: true,
+    cells: [
+      tcCell('反包概率', prob === null ? '—' : prob + '%', sCls),
+      tcCell('断板量比', volRatio, ''),
+      tcCell('缩量天数', shrink, ''),
+      tcStopCell(e.code)
+    ],
+    foot: foot,
+    attrs: ' data-k="' + escAttr(key) + '"',
+    title: e.name + ' ' + e.code + '（' + (e.sector || '') + '）\n' + (done ? '确认池 · 全流程达标' : '观察池 · ' + e.stage) +
+      '\n今日：' + fmtPct(e.pct) + ' · 板块今日：' + (e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday)) +
+      '\n涨停日板块：' + (e.boardPctZt == null ? '—' : fmtPct(e.boardPctZt)) + '\n点击查看K线与利好依据'
+  });
 }
 
 function dbPoolHtml(title, cls, sub, list, done, poolKey) {
@@ -2504,7 +2617,9 @@ function dbPoolHtml(title, cls, sub, list, done, poolKey) {
       var key = poolKey + '|' + e.code;
       DB_INDEX[key] = e;
       DB_ORDER.push(key);
-      h += dbChipHtml(e, key, done, secName);
+      // R100z36：统一 T2 卡片；板块策略改为「每张卡都带板块 pill」（secName 恒真），
+      // 分组标题里的大板块名保留（承担排序信息），但不再靠它替代卡内板块。
+      h += dbCardHtml(e, key, done, true);
     });
   };
   var smallMerged = [];
@@ -2648,7 +2763,7 @@ function renderDuanban() {
       DB_INDEX[key] = e2;
       DB_ORDER.push(key);
       if (code.length === 6) { window._STAR_LIST.push(code); }
-      fixed += dbChipHtml(e2, key, false, false); // R100q：卡片不放板块徽章，统一进弹窗标题行
+      fixed += dbCardHtml(e2, key, false, true); // R100z36：与四子页同一套 T2 卡片，板块 pill 同样带
     });
     fixed += '</div></div>';
   }
@@ -2953,14 +3068,16 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'ArrowLeft') dbStep(-1);
   if (e.key === 'ArrowRight') dbStep(1);
 });
+// R100z36：断板双池卡片 class 已从 .db-chip 换成统一 .tc（带 data-k），两个代理同步跟改。
+// 失效池卡（.fail-chip）走 openFailIdx 的内联 onclick，不经过这里。
 document.getElementById('db-pools').addEventListener('click', function (ev) {
-  var chip = ev.target ? ev.target.closest('.db-chip') : null;
+  var chip = ev.target ? ev.target.closest('.tc[data-k], .db-chip[data-k]') : null;
   if (chip) openDbModal(chip.getAttribute('data-k'));
 });
 // R100q：开盘精选在 #db-fixed 固定区——此前只绑 #db-pools，精选卡片点不开；补同一代理。
-// 仅匹配 .db-chip[data-k]（TOP10 卡是 .tchip[data-stk]，走全站弹窗代理，互不干扰）。
+// 仅匹配带 data-k 的池卡（TOP10 卡是 .tchip[data-stk]，走全站弹窗代理，互不干扰）。
 document.getElementById('db-fixed').addEventListener('click', function (ev) {
-  var chip = ev.target ? ev.target.closest('.db-chip[data-k]') : null;
+  var chip = ev.target ? ev.target.closest('.tc[data-k], .db-chip[data-k]') : null;
   if (chip) openDbModal(chip.getAttribute('data-k'));
 });
 // R89：点击K线红/绿柱显示收盘涨幅浮层（再点同柱或空白处关闭）
