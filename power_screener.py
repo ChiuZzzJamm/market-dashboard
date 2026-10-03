@@ -54,9 +54,11 @@ def _rsi14(closes):
 def screen_one(bars, name='', idx=None):
     """返回 dict: {passed, score, gates:{g1..g9:bool}, pct, volRatio, rsi, reason}。
 
-    idx：以 bars[idx] 作为「最新一根」判定（回测 signal_stats.py 逐日重放用，
+    idx：以 bars[idx] 作为「最新一根」判定（历史逐日重放口径用，
     默认 None = bars[-1]，与实盘口径一致）。所有相对尾部的窗口（20 日区间、
     近 5 日、ATR14、RSI14）都随 idx 平移；idx 之外的数据一律不得泄漏。
+    注：原依赖的外部回测脚本 signal_stats.py 已于 R100z31 下线（不计入
+    data.js.signalStats），重放口径现由本函数自身支持。
     """
     n = len(bars)
     gates = {f'g{i}': False for i in range(1, 10)}
