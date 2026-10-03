@@ -2820,6 +2820,50 @@ function failPoolLatest(failPool) {
   return String(d);
 }
 
+/* R100z42（用户截图要求）：断板反包失效池改用与确认/观察池同款的 T2 骨架四格，
+   与断板卡（反包概率/缩量天数/板块涨幅/止损）视觉对齐；「反包概率」格固定写「失效」
+   ——失效标的已无反包概率可言，写「失效」比写「—」更能一眼区分归档标的。
+   谐波失效池字段口径不同（无 form/缩量语义），仍走下方紧凑 chip。 */
+function failBoardPct(e) {
+  if (e && typeof e.boardPctToday === 'number') return e.boardPctToday; // 生成侧字段优先
+  var D = window.DASHBOARD_DATA || {};
+  var sec = (e && e.sector) || '';
+  if (!sec) return null;
+  // ashare.allBoards 是 90 个同花顺行业全量（带 pct），比 sectorsUp/Down 的涨跌 TOP5 覆盖得广；
+  // 其 endsWith 兜底 sectorsUp/Down（同名命中但只 10 个板块）。取不到显示「—」，不编数字。
+  var arr = (D.ashare || {}).allBoards || [];
+  if (!arr.length) arr = [].concat((D.ashare || {}).sectorsUp || [], (D.ashare || {}).sectorsDown || []);
+  for (var i = 0; i < arr.length; i++) {
+    if (arr[i] && arr[i].name === sec && typeof arr[i].pct === 'number') return arr[i].pct;
+  }
+  return null;
+}
+function failTcHtml(e, i, latestD) {
+  var form = String(e.form || '');
+  var mS = form.match(/(\d+)\s*日缩量/); // 与 dbCardHtml 同源解析，口径一致
+  var shrink = mS ? mS[1] + ' 日' : (/已缩量/.test(form) ? '已缩量' : (/待缩量/.test(form) ? '待缩量' : '—'));
+  var bp = failBoardPct(e);
+  var bpCls = bp === null ? 'flat' : (bp > 0 ? 'up' : (bp < 0 ? 'down' : 'flat'));
+  var isNew = (latestD && e.entryDate === latestD);
+  var foot = '<span class="xt">' + esc(String(e.reason || '形态失效').replace(/（.*$/, '')) + '</span>' +
+    (isNew ? '<span class="nb">新</span> ' : '') +
+    ' · 归档 ' + esc(e.entryDate || '—');
+  return tcCard({
+    code: e.code, name: e.name, chg: tcPctOf(e.code, e.pct), dim: true,
+    pills: [e.sector || '其他'], sent: false,
+    cells: [
+      tcCell('反包概率', '<span class="xt">失效</span>', 'warn'),
+      tcCell('缩量天数', shrink, ''),
+      tcCell('板块涨幅', bp === null ? '—' : fmtPct(bp), bpCls),
+      tcStopCell(e.code)
+    ],
+    foot: foot,
+    attrs: ' data-fail="1"',
+    onclick: e.code ? ('openFailIdx(\'duanban\',' + i + ')') : '',
+    title: (e.name || e.code) + ' ' + (e.code || '') + '\n' + (e.sector || '') + ' · 失效归档 ' + (e.entryDate || '') +
+      '\n' + (e.reason || '形态失效') + '\n点击查看K线'
+  });
+}
 /* R100i：失败池（断板反包 / 谐波形态）——原符合形态但破位或超期失效的标的归档。
    R100z5a：只保留最新一轮归档（=最近一个交易日失效的标的），不再累计历史。
    failPool: [{code,name,pattern,form,reason,entryDate}]；点击看该标的 K 线。 */
@@ -2830,6 +2874,14 @@ function dbFailHtml(failPool, kind) {
       '<div class="db-empty">暂无失效标的（最近一个交易日失效的标的才会落入此池，次日自动滚出）</div></div>';
   }
   var _latestD = failPoolLatest(failPool); // R100z41：最新一批归档的日期，用于高亮 + 标题标注
+  // R100z42：断板反包失效池 → 统一 T2 四格卡；谐波失效池 → 沿用紧凑 chip
+  if (kind === 'duanban') {
+    var tcItems = failPool.map(function (e, i) { return failTcHtml(e, i, _latestD); }).join('');
+    return '<div class="db-pool p-fail"><h2>失效归档池 · ' + failPool.length + ' 只' +
+      (_latestD ? ' · 最近归档 ' + esc(String(_latestD).slice(5)) : '') + '</h2>' +
+      '<div class="db-sub">原符合断板反包形态、因破位或超期失效而归因失败；仅保留最近一个交易日失效的标的（卡面「反包概率」记为失效）</div>' +
+      '<div class="db-chips">' + tcItems + '</div></div>';
+  }
   var items = failPool.map(function (e, i) {
     var nm = (e.name && e.name !== e.code) ? e.name : '';
     var click = e.code ? (' onclick="openFailIdx(\'' + kind + '\',' + i + ')"') : ''; // R100z4x：失效池弹窗接入同组导航（左右箭头）
