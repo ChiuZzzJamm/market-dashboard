@@ -546,16 +546,17 @@
   .acc-head .acc-id b { font-weight:800; }
   .acc-head .cd { font-size:11px; color:var(--ink2); }
   .acc-grd { font-size:10.5px; font-weight:800; border-radius:999px; padding:1px 8px; margin-left:auto; flex-shrink:0; font-variant-numeric:tabular-nums; }
-  .acc-grd.strong { color:#fff; background:linear-gradient(135deg,#0f9d78,#0bb578); }
+  /* R100z28：强池/强评＝红（A股涨红惯例，与九门 pw-grd 同款红），观察池沿用琥珀黄 */
+  .acc-grd.strong { color:#fff; background:linear-gradient(135deg,#f0435c,#d02c44); }
   .acc-grd.watch { color:#8a5800; background:#ffe9c2; border:1px solid #f0c36d; }
   .acc-bar { height:4px; border-radius:999px; background:rgba(17,17,26,.07); margin-top:8px; overflow:hidden; }
   .acc-bar i { display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,#f5a26b,var(--accent)); }
-  /* R100z21：吸筹页强池/观察池分区小标题（点色沿用断板池确认池红点、观察池蓝点） */
-  .acc-sub { display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:800; color:var(--ink); margin:16px 0 2px; }
+  /* R100z21：吸筹页强池/观察池分区小标题；R100z28 字号/颜色对齐断板页 db-pool h2（17px+9px 红/蓝点，同页不出现两套语义色） */
+  .acc-sub { display:flex; align-items:center; gap:9px; font-size:17px; font-weight:700; color:var(--ink); margin:16px 0 2px; }
   .acc-sub:first-child { margin-top:10px; }
   .acc-sub .dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
-  /* 强池圆点=卡内 acc-grd.strong 同色（绿），观察池=断板观察池同款蓝点，同页不出现两套语义色 */
-  .acc-sub.s .dot { background:#0f9d78; box-shadow:0 0 0 4px rgba(15,157,120,.16); }
+  /* R100z28：强池圆点改红（与卡内 acc-grd.strong 同色、与谐波『确认池』红点同语义），观察池＝断板观察池同款蓝点 */
+  .acc-sub.s .dot { background:var(--up); box-shadow:0 0 0 4px var(--up-soft); }
   .acc-sub.w .dot { background:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); }
   .acc-sub .cnt { font-size:11px; font-weight:600; color:var(--ink2); }
   /* R100m：九门评分徽章——红色、与代码同行平行（与吸筹评级徽章 acc-grd 区分） */
@@ -2795,11 +2796,13 @@ function dbFailHtml(failPool, kind) {
    同步所有实例的 .on 高亮。断板页位置=开盘精选与确认池说明之间；谐波/九门页位置=页首。 */
 var currentSubTab = 'db';
 function subnavHtml() {
+  // R100z28：用户指定把「主力吸筹」排到「日线九门」前面（吸筹是唯一还在跟的买点型信号，
+  // 九门已回测出负超额，不该占更靠前的位）；四个键的映射关系不变，仅调整视觉顺序。
   var tabs = [
     { k: 'db', t: '断板反包' },
     { k: 'hz', t: '谐波形态' },
-    { k: 'pw', t: '日线九门' },
-    { k: 'acc', t: '主力吸筹' }
+    { k: 'acc', t: '主力吸筹' },
+    { k: 'pw', t: '日线九门' }
   ];
   return '<div class="db-subnav">' + tabs.map(function (x) {
     return '<div class="db-subtab' + (x.k === currentSubTab ? ' on' : '') + '" data-k="' + x.k + '" onclick="switchSubTab(\'' + x.k + '\')">' + x.t + '</div>';
@@ -2950,12 +2953,20 @@ function openDbModal(key) {
   // 谐波形态点在池内短窗之外时优先用顶层长窗（320 根）渲染，避免连线丢失
   (function () {
     var hzDb = findHarmonic(String(e.code)) || hzFailOf(String(e.code));
-    var kl0 = e.kline || stkGlobalKline(e.code);
-    if (!kl0 && /^\d{6}$/.test(String(e.code))) {
-      var _kkey = key;
+    // R100z28：主图优先用全量 90 根（stkEmbeddedKline 已在内部比长度），
+    // 不再无条件吃断板条目那 40 根——否则图上起点只到断板日前 40 个交易日。
+    var kl0 = stkEmbeddedKline(String(e.code)) || e.kline || stkGlobalKline(e.code);
+    var _kkey = key;
+    // R100z28：只要手上这份不足 KL_FULL（90）根——条目只有 40 根、或顶层没内嵌的票——就再补拉一次长窗（最多 320 根），
+    // 到货后取两者较长的那份重画。旧逻辑只在「一份都没有」时才去拉，导致这些票永远停在 40 根（用户反馈「没有 90 根」）。
+    // 拉不到（接口失败/非 A 股）就照旧用现有那份，绝不因为拉不到而清成空图。
+    if ((!kl0 || kl0.length < KL_FULL) && /^\d{6}$/.test(String(e.code))) {
       stkFetchKline(String(e.code), function (kl2) {
         if (!kl2 || DB_CURR !== _kkey) return;
-        document.getElementById('db-kline').innerHTML = dbKlineSvg(kl2, hzDb);
+        var base = (kl0 && kl0.length >= kl2.length) ? kl0 : kl2;
+        kl0 = base;
+        var el = document.getElementById('db-kline');
+        if (el) el.innerHTML = dbKlineSvg(_hzFailClip(base, hzDb), hzDb);
         exitMetaLineAsync(String(e.code), 'db-modal-meta'); // R100z27：K线到货后补画退出纪律行
       });
     }
@@ -3386,14 +3397,29 @@ function stkSymbol(code) {
   if (/^(sh|sz|bj|us|hk)/i.test(code) || code.indexOf('.') >= 0) return code.toLowerCase();
   return '';
 }
+/* R100z28：K 线取「最长」的一份，而不是「第一个命中的池内条目」。
+   坑：断板/谐波条目自带 40 根日 K，顶层 stkKlines 是全量 90 根（embed_klines.py 写入），
+   旧实现一命中条目就 return → 断板弹窗图上只有 40 根（起点 08-05、终点断板日），用户反馈「没有 90 根」。
+   改法：两条来源都取、比长度，90 根那份胜出；条目那份仍服务退出纪律（fbDbEntry 独立取，不受影响）。 */
+var KL_FULL = 90; // R100z19 K线定稿：顶层内嵌全量 90 根
 function stkEmbeddedKline(code) {
-  if (!code || !DB_INDEX) return null;
-  var keys = Object.keys(DB_INDEX);
-  for (var i = 0; i < keys.length; i++) {
-    var e = DB_INDEX[keys[i]];
-    if (e && e.code === code && e.kline && e.kline.length > 1) return e.kline;
+  if (!code) return null;
+  var best = null;
+  // ① 池内嵌条目（断板/谐波/吸筹/九门）——多个池都命中时同样比长度
+  if (DB_INDEX) {
+    var keys = Object.keys(DB_INDEX);
+    for (var i = 0; i < keys.length; i++) {
+      var e = DB_INDEX[keys[i]];
+      var k = (e && e.code === code && e.kline && e.kline.length > 1) ? e.kline : null;
+      if (k && (!best || k.length > best.length)) best = k;
+    }
   }
-  return null;
+  // ② 顶层 stkKlines（全量 90 根）——比条目短就不换，避免把 90 根降级成 40 根
+  if (!best || best.length < KL_FULL) {
+    var g = stkGlobalKline(code);
+    if (g && g.length > 1 && (!best || g.length > best.length)) best = g;
+  }
+  return best;
 }
 // R98c: 全局内嵌 K 线（embed_klines.py 写入 data.js 顶层 stkKlines，覆盖要闻股/题材掘金/AI预测/板块领涨/连板天梯）
 function stkGlobalKline(code) {
