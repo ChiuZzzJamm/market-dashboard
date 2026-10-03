@@ -82,6 +82,9 @@ EMPTY_WHITELIST = [
      "R100z11：非预期型板块不落 exp，expBadge 返回空串不渲染"),
     (r"(bullish|bearish)$",
      "R98i：外盘方向每股独立写，无观点即空"),
+    (r"harmonic\.failPool$",     # 当天无谐波失效标的即空数组
+     "R100z27：失效池无新增即空数组，属正常日度状态（不是脚本漏跑）"
+     "；前端 dbFailHtml/谐波失效区统一走 if(!x.length) 兜底显示『暂无失效标的』"),
 ]
 
 DATA_KEYS_REQUIRED = [

@@ -51,17 +51,23 @@ def _rsi14(closes):
     return 100 - 100 / (1 + rs)
 
 
-def screen_one(bars, name=''):
-    """返回 dict: {passed, score, gates:{g1..g9:bool}, pct, volRatio, rsi, reason}。"""
+def screen_one(bars, name='', idx=None):
+    """返回 dict: {passed, score, gates:{g1..g9:bool}, pct, volRatio, rsi, reason}。
+
+    idx：以 bars[idx] 作为「最新一根」判定（回测 signal_stats.py 逐日重放用，
+    默认 None = bars[-1]，与实盘口径一致）。所有相对尾部的窗口（20 日区间、
+    近 5 日、ATR14、RSI14）都随 idx 平移；idx 之外的数据一律不得泄漏。
+    """
     n = len(bars)
     gates = {f'g{i}': False for i in range(1, 10)}
-    if n < 25:
+    if n < 25 or (idx is not None and idx < 24):
         return {'passed': False, 'score': 0, 'gates': gates, 'pct': 0,
                 'volRatio': 0, 'rsi': 0, 'reason': '数据不足25根'}
 
-    last = bars[-1]
-    prev = bars[-2]
-    closes = [b['close'] for b in bars]
+    end = n - 1 if idx is None else idx
+    last = bars[end]
+    prev = bars[end - 1]
+    closes = [b['close'] for b in bars[:end + 1]]
     pct = last['close'] / prev['close'] - 1
     # G1 涨幅≥3%
     gates['g1'] = pct >= 0.03
@@ -70,8 +76,8 @@ def screen_one(bars, name=''):
     vol_ratio = (last['volume'] / vma5) if vma5 else 0
     gates['g2'] = vol_ratio >= 1.5
     # G3 价处20日区间上1/3
-    hi20 = max(b['high'] for b in bars[-20:])
-    lo20 = min(b['low'] for b in bars[-20:])
+    hi20 = max(b['high'] for b in bars[end - 19:end + 1])
+    lo20 = min(b['low'] for b in bars[end - 19:end + 1])
     gates['g3'] = (hi20 - lo20) > 0 and last['close'] >= lo20 + 0.66 * (hi20 - lo20)
     # G4 站上MA20
     ma20 = _ma(closes, 20)
@@ -80,7 +86,7 @@ def screen_one(bars, name=''):
     gates['g5'] = 'ST' not in (name or '') and 'st' not in (name or '')
     # G6 近5日无长上影出货
     cnt_bad = 0
-    for b in bars[-5:]:
+    for b in bars[end - 4:end + 1]:
         us = b['high'] - max(b['open'], b['close'])
         body = abs(b['close'] - b['open'])
         if body > 0 and us >= 2.5 * body and b['close'] < b['open']:
@@ -91,7 +97,7 @@ def screen_one(bars, name=''):
     gates['g7'] = amp <= 0.15
     # G8 波动率适中
     trs = []
-    for i in range(1, len(bars)):
+    for i in range(1, end + 1):
         h, l, pc = bars[i]['high'], bars[i]['low'], bars[i - 1]['close']
         trs.append(max(h - l, abs(h - pc), abs(l - pc)))
     atr = sum(trs[-14:]) / 14 if len(trs) >= 14 else 0
@@ -149,8 +155,17 @@ def main():
     args = sys.argv[1:]
     if '--self-test' in args:
         sys.exit(0 if self_test() else 1)
+    # R100z27：本脚本没用 argparse，`--help` 会直接跑一遍 651 只全扫描（慢且易被误当成语法检查）。
+    # 显式早退，与其它脚本的 --help 行为对齐（避免「查一下用法」触发一次生产扫描）。
+    if '--help' in args or '-h' in args:
+        print('用法：python3 power_screener.py [--dry-run] [--self-test] [--write]')
+        print('  --dry-run   只打印扫描结果，不写回 data.js（默认即 dry）')
+        print('  --self-test 合成一只强势股自检 9 道门是否都能判过')
+        print('  --write     写回 data.js 的 D.powerScreen')
+        return
 
     import common
+    # 注意：默认**写回**（16:00 流水线直接调本脚本无参数即落盘），只有 --dry-run 不写。
     dry = '--dry-run' in args
 
     D = common.load_dashboard_data(BASE)

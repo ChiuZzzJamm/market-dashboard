@@ -503,7 +503,7 @@ def check_risk_blacklist(D, scope='all'):
     path = os.path.join(root, 'risk_blacklist.json')
     if not os.path.exists(path):
         return ["未找到 risk_blacklist.json（stock_risk_blacklist.py --write 未跑，"
-                f"个股硬风险黑名单没进闸门）"]
+                "个股硬风险黑名单没进闸门）"]
     try:
         with open(path, encoding='utf-8') as f:
             bl = json.load(f)

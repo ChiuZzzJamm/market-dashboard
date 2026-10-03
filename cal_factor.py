@@ -123,7 +123,8 @@ def evaluate(day, holidays, reopen=()):
         tag = '季末' if (day.month in (3, 6, 9, 12)) else '月末'
         tags.append(tag)
         order = len([x for x in last_days if x >= day])  # 该日是本月倒数第几交易日
-        note.append(f'本月最后交易日窗口（倒数第 {order} 个交易日，{'季' if tag == '季末' else '月'}末资金结算与考核效应，外盘映射权重下调）')
+        qty = '季' if tag == '季末' else '月'
+        note.append(f'本月最后交易日窗口（倒数第 {order} 个交易日，{qty}末资金结算与考核效应，外盘映射权重下调）')
 
     # 3) 周五（周末效应，隔夜外围不可验证）
     if day.weekday() == 4:

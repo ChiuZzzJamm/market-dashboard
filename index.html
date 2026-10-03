@@ -619,6 +619,18 @@
   .sig-stat .sig-bad { color:#b3351f; font-weight:700; }
   .sig-stat .sig-good { color:#0f7a52; font-weight:700; }
   .sig-stat .sig-cmt { color:var(--ink2); }
+  /* R100z27：九门「单门统计」小表——9 道门各拆通过/未通过两组，一眼看哪道门有区分度 */
+  .gate-tbl { border:1px solid var(--line); border-radius:8px; padding:2px 10px 6px; margin:0 0 12px; background:var(--paper-2); }
+  .gate-row { display:flex; flex-wrap:wrap; align-items:baseline; gap:0 10px;
+              padding:4px 0; border-bottom:1px dashed var(--line); font-size:11px; color:var(--ink2); }
+  .gate-row:last-child { border-bottom:none; }
+  .gate-nm { min-width:150px; font-weight:700; color:var(--ink); }
+  .gate-y, .gate-x { min-width:120px; }
+  .gate-y b, .gate-x b { font-weight:700; }
+  .gate-d { min-width:64px; text-align:right; font-weight:700; }
+  .gate-d.pos { color:#0f7a52; }
+  .gate-d.neg { color:#b3351f; }
+  .gate-d.flat { color:var(--ink2); font-weight:400; }
   /* 信号滞后灰标（R100z22）：吸筹是历史 K 线模型，同样分数信号新旧不同，滞后 ≥10 日转告警色 */
   .acc-lag { display:inline-block; font-size:9.5px; color:var(--ink2); border:1px solid var(--line); border-radius:999px; padding:0 6px; margin-top:6px; }
   .acc-lag.late { color:#b3541e; border-color:#e8c9a8; background:#fff6ee; }
@@ -1329,6 +1341,41 @@ function loadPoolExit(cb) {
 function exitForCode(code0, st, allowFb) {
   code0 = String(code0 || '').replace(/\D/g, '');
   if (!code0) return null;
+  // ⓪ R100z27 断板池条目内嵌 K 线 —— **优先级高于机械池**。
+  //   理由：断板反包自己的证伪条件就是「放量跌破断板日最低价」，止损位本就该取这个形态位，
+  //   而不是机械池/兜底的「最近收盘 −2.5%」统一纪律口径（后者 basis 自述「非形态位」）。
+  //   同时补上一处真缺口：此前兜底只认顶层 stkKlines（只内嵌约 700 只），未内嵌的断板票
+  //   （如 002347）三级全落空 → 整行不渲染退出纪律，而 605018 恰好在名单里所以有。
+  var dbEnt0 = fbDbEntry(code0);
+  if (dbEnt0 && dbEnt0.kline) {
+    var rows0 = stkParseKline(dbEnt0.kline);
+    if (rows0 && rows0.length) {
+      var lastC0 = rows0[rows0.length - 1][2];
+      if (isFinite(lastC0) && lastC0 > 0 && lastC0 < 10000) {
+        var stop0 = null, basis0 = '';
+        var ztD0 = String(dbEnt0.ztDate || '');
+        // 坑：ztDate 是 '2026-09-28'（10 位带连字符），用 /^\d{8}$/ 会整块跳过、静默退回兜底
+        if (/^\d{4}-\d{2}-\d{2}$/.test(ztD0)) {
+          for (var q0 = 0; q0 < rows0.length - 1; q0++) {
+            // 断板日 = 涨停日的次一交易日（放量断板那根），取其最低价作形态止损
+            if (rows0[q0][0] === ztD0 && rows0[q0 + 1] && rows0[q0 + 1][0] > ztD0) {
+              stop0 = rows0[q0 + 1][4];
+              basis0 = '断板日（' + rows0[q0 + 1][0] + '）最低价 ' + stop0.toFixed(2) +
+                       '，跌破即放量破位、断板反包形态失败';
+              break;
+            }
+          }
+        }
+        if (stop0 === null || !isFinite(stop0) || stop0 <= 0) {
+          stop0 = lastC0 * 0.975;
+          basis0 = '最近收盘 ' + lastC0.toFixed(2) + ' 的 −2.5%（全站统一止损纪律位，非形态位）';
+        }
+        return { stop: stop0, target: Math.round(lastC0 * 1.06 * 100) / 100,
+                 falsify: '放量跌破断板日最低价，或反包日冲高回落收阴——断板反包形态失败，无条件离场',
+                 stopBasis: basis0, src: 'duanban', fb: true };
+      }
+    }
+  }
   // ① 机械选股池（stock_pool.json 异步到货）
   if (POOL_EXIT && typeof POOL_EXIT === 'object') {
     var ex0 = POOL_EXIT[code0];
@@ -1352,7 +1399,9 @@ function exitForCode(code0, st, allowFb) {
              falsify: '跌破 ' + hz.stop + ' 元（D 点结构失效位）——谐波形态作废，无条件离场',
              stopBasis: '谐波 D 点结构失效位（前复权）', src: 'harmonic' };
   }
-  // ④ R100z19 统一口径兜底：机械池/AI内嵌/谐波三级都拿不到时，用顶层内嵌 K 线最近收盘
+  // ③④ 之间原是「断板条目兜底」，R100z27 已提到函数最前面（⓪ 分支，需优先于机械池），
+  //    此处不再重复——断板票在 ⓪ 就已早退，走不到这里。
+  // ④ R100z19 统一口径兜底（非断板标的：AI内嵌/九门/谐波以外仍无止损位的）：机械池/AI内嵌/谐波三级都拿不到时，用顶层内嵌 K 线最近收盘
   //    按全站统一纪律（−2.5% / +6%）折算止损目标。口径与 build_stock_pool.py 的
   //    stoploss_basis/falsify_of 一致，basis 自述「统一纪律位，非形态位」——不自称形态位，
   //    也不编造不存在的技术位。取不到有效收盘价就返回 null，绝不给空数字。
@@ -1374,6 +1423,30 @@ function exitForCode(code0, st, allowFb) {
     }
   }
   return null;
+}
+
+/* R100z27：断板池条目内嵌 K 线取数（confirmed/watching）——退出纪律兜底 ③b。
+   断板条目自带 40 根日 K（含 low 列），比顶层 stkKlines 覆盖更全；
+   取不到返回 null，绝不猜、绝不编价。 */
+function fbDbEntry(code0) {
+  try {
+    var d = (window.DASHBOARD_DATA || {}).duanban || {};
+    var pool = [].concat(d.confirmed || [], d.watching || []);
+    for (var i = 0; i < pool.length; i++) {
+      var it = pool[i];
+      if (it && it.kline && String((it.code || '')).replace(/\D/g, '') === code0) return it;
+    }
+  } catch (e) { return null; }
+  return null;
+}
+
+/* R100z27：K 线异步到货后补画退出纪律行（同步那一步同步拿不到内嵌 K 线时）。
+   已经在的不重复画，画不出来的依旧整行不渲染——不编数字。 */
+function exitMetaLineAsync(code, boxId) {
+  var box = document.getElementById(boxId);
+  if (!box || box.querySelector('.exit-row')) return;
+  var h = exitMetaLine(code);
+  if (h) box.insertAdjacentHTML('beforeend', h);
 }
 
 /* R100z19：该代码是否属断板池（确认/观察/精选）——用于兜底退出纪律挑对证伪口径。
@@ -2184,7 +2257,7 @@ function sigRate(v) {
 function sigStatHtml(key, label) {
   var s = (window.DASHBOARD_DATA || {}).signalStats;
   if (!s || !s[key] || !s[key].n) return '';
-  var r = s[key], b = s.benchmark || {}, cf = s.confirmed || {};
+  var r = s[key], b = s.benchmark || {}, cf = s.breakout || {};
   var a5 = r.avgPct5, b5 = (b.avgPct5 === undefined ? 0 : b.avgPct5);
   var ex = (a5 === null || a5 === undefined) ? null : a5 - b5;
   var cls = (ex === null) ? '' : (ex >= 0 ? 'sig-good' : 'sig-bad');
@@ -2193,14 +2266,54 @@ function sigStatHtml(key, label) {
     cfTxt = '；等<b>放量突破再跟</b>（' + cf.n + ' 次）胜率回到 ' + sigRate(cf.winRate5) +
             '、' + sigPct(cf.avgPct5) + '——胜率向基准靠拢，但绝对收益仍未转正，说明这套形态「能缩小观察范围、不能单独给出买入点」';
   }
+  // 止损率：回测已含 −3% 止损路径，不写这一格会让人以为「买了不动」
+  var stopTxt = '';
+  if (r.stopRate !== undefined && r.stopRate !== null) {
+    stopTxt = '；信号后 T+1 内触及 −' + (s.stopPct || 3) + '% 止损线的占 <span class="' +
+      (r.stopRate >= (b.stopRate || 0) ? 'sig-bad">高' : 'sig-good">低') + '于基准</span> ' +
+      Math.round(r.stopRate * 100) + '% vs ' + Math.round((b.stopRate || 0) * 100) + '%';
+  }
+  var concl = (key === 'duanban')
+    ? '结论：断板反包的历史样本是「负超额 + 高止损率」——形态成立不等于买点成立，只用来排队等反包确认；破位与超期一律走人。'
+    : '结论：本模块只作缩小范围的观察过滤器，不构成买入理由；必须叠加放量突破确认与止损，且仓位按中等及以下确信度给。';
   return '<div class="sig-stat"><span class="sig-hd">' + esc(label) +
     '</span>：近 ' + (s.lookback || 120) + ' 个交易日逐日重放，共 ' + r.n +
     ' 次信号。信号后 T+5 平均 ' + sigPct(a5) + '（胜率 ' + sigRate(r.winRate5) +
     '），同期「随便买一只」基准 ' + sigPct(b5) + '（胜率 ' + sigRate(b.winRate5) +
     '）→ <span class="' + cls + '">超额 ' +
     (ex === null ? '—' : (ex >= 0 ? '+' : '') + ex.toFixed(2) + ' 个百分点</span>') +
-    cfTxt + '。<span class="sig-cmt">结论：本模块只作缩小范围的观察过滤器，' +
-    '不构成买入理由；必须叠加放量突破确认与止损，且仓位按中等及以下确信度给。</span></div>';
+    stopTxt + cfTxt + '。<span class="sig-cmt">' + concl + '</span></div>';
+}
+
+/* R100z27：九门「单门统计」表——九门是 9 道独立硬阈值、不是单点信号，
+   「9 门全过」日均样本太少，所以每道门拆「通过 / 未通过」两组各报 T+5 均值与胜率。
+   未通过组为 0 样本时写「无可比样本」（不用 0% 冒充），差值 <0.05pp 写「基本无差别」。 */
+function sigGateTable() {
+  var s = (window.DASHBOARD_DATA || {}).signalStats;
+  if (!s || !s.power || !s.power.gates) return '';
+  var b = s.benchmark || {};
+  var head = '<div class="sig-stat"><span class="sig-hd">历史有效性 · 单门统计</span>：本页 9 道门是' +
+    '「各自独立的多空过滤器」，与谐波/吸筹的单点信号不同——「9 门全过」日均样本数太低，' +
+    '所以改按<b>单门</b>统计：每道门拆通过 / 未通过两组，各报信号日后 T+5 平均涨幅与胜率，' +
+    '<span class="sig-cmt">末列差值＝通过组减未通过组（百分点），为正才说明这道门有区分度；' +
+    '未通过组为 0 样本时标「无可比样本」，差值不足 0.05 个百分点写「基本无差别」。' +
+    '基准（随便买一只）T+5 ' + sigPct(b.avgPct5) + ' / 胜率 ' + sigRate(b.winRate5) + '。</span></div>';
+  var rows = '';
+  Object.keys(s.power.gates).forEach(function (g) {
+    var it = s.power.gates[g];
+    var y = it.pass || {}, x = it.fail || {};
+    var yTxt = y.n ? ('通过 ' + y.n + ' 次 · <b>' + sigPct(y.avgPct5) + '</b> / 胜率 ' + sigRate(y.winRate5)) : '通过样本 0';
+    var xTxt = x.n ? ('未过 ' + x.n + ' 次 · <b>' + sigPct(x.avgPct5) + '</b> / 胜率 ' + sigRate(x.winRate5)) : '无可比样本';
+    var d = it.diff5, dCls = 'flat', dTxt = '—';
+    if (d === null || d === undefined) { dTxt = '—'; }
+    else if (Math.abs(d) < 0.05) { dTxt = '基本无差别'; }
+    else { dTxt = (d > 0 ? '+' : '') + d.toFixed(2) + ' pp'; dCls = d > 0 ? 'pos' : 'neg'; }
+    rows += '<div class="gate-row"><span class="gate-nm">' + esc(it.label || g) + '</span>' +
+      '<span class="gate-y">' + yTxt + '</span>' +
+      '<span class="gate-x">' + xTxt + '</span>' +
+      '<span class="gate-d ' + dCls + '">' + dTxt + '</span></div>';
+  });
+  return head + '<div class="gate-tbl">' + rows + '</div>';
 }
 
 function renderAccumulation() {
@@ -2294,13 +2407,8 @@ function renderPowerScreen() {
     '<div><b>打分</b>＝通过阈值数（0-9 分）；入选＝硬门禁全过 且 质量门≥3 道</div>' +
     '<div class="lg-tip">下一步：这是「当日强度」筛（偏追当天）；次日看能否站稳 MA20、量能能否续上，站不稳量缩就先出。</div>' +
     '</div></details>';
-  // R100z23：九门是 9 道独立硬阈值（不是单点信号），历史有效性回测尚未覆盖；
-  // 与其拿谐波的统计顶替，不如把「这一格还没做」如实写在页面上。
-  return gateDef +
-    '<div class="sig-stat"><span class="sig-hd">历史有效性</span>：本页 9 道硬阈值属' +
-    '「各自独立的多空过滤器」，与谐波/吸筹的单点信号不同，回测口径尚未搭好——' +
-    '<span class="sig-cmt">在补齐「信号后 T+1/T+5 超额」之前，九门只按硬阈值筛股，' +
-    '不承诺任何方向性收益，仓位一律按中等及以下确信度给。</span></div>' +
+  // R100z27：九门「历史有效性」从「回测口径尚未搭好」换成单门统计表（sigGateTable）。
+  return gateDef + sigGateTable() +
     '<div class="card"><h2>⚡ 日线九门' + (p.tradeDate ? ' <span class="h2-date">' + esc(p.tradeDate) + '</span>' : '') + '</h2>' +
     '<div class="pw-grid">' + items + '</div>' + (p.summary ? '<div class="note-line">' + esc(p.summary) + '</div>' : '') + '</div>';
 }
@@ -2636,6 +2744,8 @@ function renderDuanban() {
   html += subnavHtml();
   // R100j/R100z4v：断板页口径说明置于确认池上方（TOP10 与 开盘精选 保持置顶不动）；R100z4v 起为静态 HTML，不再 esc
   html += _dbNote;
+  // R100z27：断板反包自己的历史有效性回测（signal_stats.py 的 duanban 键）
+  html += sigStatHtml('duanban', '断板反包');
   html += dbPoolHtml('确认池', 'p-conf', '已走完「涨停 → 放量断板 → 缩量 → 不破T日低点与MA5」全流程', conf, true, 'c');
   html += dbPoolHtml('观察池', 'p-watch', '形态进行中、只差最后一根确认K线（待企稳 ＞ 待缩量）', watch, false, 'w');
   // R100i：断板反包失败池（破位 / 超期失效归档，5 交易日后自动清理）
@@ -2843,7 +2953,11 @@ function openDbModal(key) {
     var kl0 = e.kline || stkGlobalKline(e.code);
     if (!kl0 && /^\d{6}$/.test(String(e.code))) {
       var _kkey = key;
-      stkFetchKline(String(e.code), function (kl2) { if (kl2 && DB_CURR === _kkey) document.getElementById('db-kline').innerHTML = dbKlineSvg(kl2, hzDb); });
+      stkFetchKline(String(e.code), function (kl2) {
+        if (!kl2 || DB_CURR !== _kkey) return;
+        document.getElementById('db-kline').innerHTML = dbKlineSvg(kl2, hzDb);
+        exitMetaLineAsync(String(e.code), 'db-modal-meta'); // R100z27：K线到货后补画退出纪律行
+      });
     }
     if (hzDb && kl0 && hzNeedsLong(kl0, hzDb)) {
       var gkl = stkGlobalKline(e.code);
@@ -3502,6 +3616,7 @@ function openStkModal(code, name, note) {
       if (gkl && gkl.length > kl.length) {
         done = true;
         box.innerHTML = dbKlineSvg(_hzFailClip(gkl, hz), hz);
+        exitMetaLineAsync(code, 'stk-modal-meta');
         return;
       }
       // R100z4n：内嵌仍不够长 → 拉网络 320 根长窗重渲染（失败/未变长则回退当前 kl）
@@ -3509,11 +3624,13 @@ function openStkModal(code, name, note) {
       stkFetchKlineLong(code, function (klL) {
         var use = (klL && klL.length > kl.length) ? klL : kl;
         box.innerHTML = dbKlineSvg(_hzFailClip(use, hz), hz);
+        exitMetaLineAsync(code, 'stk-modal-meta');
       });
       return;
     }
     done = true;
     box.innerHTML = (kl && kl.length > 1) ? dbKlineSvg(kl, hz) : '<div class="db-empty">' + esc(err || '暂无K线数据') + '</div>';
+    exitMetaLineAsync(code, 'stk-modal-meta'); // R100z27：K线到货后才补画得到退出纪律行（下方阶梯多路 render 共用出口）
   }
   if (code) { stkFetchKline(code, render); return; }
   if (name) {
