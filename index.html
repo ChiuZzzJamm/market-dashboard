@@ -1293,7 +1293,7 @@ function loadPoolExit(cb) {
    优先级：机械选股池 exit（异步兜底）> AI 预测内嵌 st.exit（16:00 写回）> 谐波形态几何。
    谐波是**技术指标自带**的止损/目标（stop=形态失效位、target1=一级目标），
    使弹窗对谐波池标的无需任何写回也有退出纪律；实在取不到就整行不渲染，绝不编一个止损位糊上去。 */
-function exitForCode(code0, st) {
+function exitForCode(code0, st, allowFb) {
   code0 = String(code0 || '').replace(/\D/g, '');
   if (!code0) return null;
   // ① 机械选股池（stock_pool.json 异步到货）
@@ -1319,11 +1319,49 @@ function exitForCode(code0, st) {
              falsify: '跌破 ' + hz.stop + ' 元（D 点结构失效位）——谐波形态作废，无条件离场',
              stopBasis: '谐波 D 点结构失效位（前复权）', src: 'harmonic' };
   }
+  // ④ R100z19 统一口径兜底：机械池/AI内嵌/谐波三级都拿不到时，用顶层内嵌 K 线最近收盘
+  //    按全站统一纪律（−2.5% / +6%）折算止损目标。口径与 build_stock_pool.py 的
+  //    stoploss_basis/falsify_of 一致，basis 自述「统一纪律位，非形态位」——不自称形态位，
+  //    也不编造不存在的技术位。取不到有效收盘价就返回 null，绝不给空数字。
+  if (allowFb !== false) {
+    var kl = stkGlobalKline(code0);
+    var rows = stkParseKline(kl);
+    if (rows && rows.length) {
+      var lastC = rows[rows.length - 1][2];   // [date, open, close, high, low, vol]
+      if (isFinite(lastC) && lastC > 0 && lastC < 10000) {
+        var isDb = fbIsDuanban(code0);
+        return { stop: Math.round(lastC * 0.975 * 100) / 100,
+                 target: Math.round(lastC * 1.06 * 100) / 100,
+                 falsify: isDb
+                   ? '放量跌破断板日最低价，或反包日冲高回落收阴——断板反包形态失败，无条件离场'
+                   : '跌破止损位即形态/纪律失败——无条件离场，不摊不扛',
+                 stopBasis: '最近收盘 ' + lastC.toFixed(2) + ' 的 −2.5%（全站统一止损纪律位，非形态位）',
+                 src: 'fallback', fb: true };
+      }
+    }
+  }
   return null;
 }
 
-function exitOf(st) {
-  return exitForCode(String((st && st.code) || '').replace(/\D/g, ''), st);
+/* R100z19：该代码是否属断板池（确认/观察/精选）——用于兜底退出纪律挑对证伪口径。
+   取不到就返回 false，不猜。 */
+function fbIsDuanban(code0) {
+  try {
+    var d = (window.DASHBOARD_DATA || {}).duanban || {};
+    var pool = [].concat(d.confirmed || [], d.watching || [], d.star || [],
+                         (d.star && Array.isArray(d.star)) ? [] : ((d.star && d.star.stocks) || []));
+    for (var i = 0; i < pool.length; i++) {
+      if (String((pool[i] && pool[i].code) || '').replace(/\D/g, '') === code0) return true;
+    }
+  } catch (e) { return false; }
+  return false;
+}
+
+/* R100z19：弹窗单只渲染时才放兜底（用户要求「所有有技术指标的标的弹窗都带退出纪律」）；
+   AI 预测区批量列表走 exitRowHtml，显式传 false 保持严格三级源——
+   否则 48 行全是机器按 −2.5% 折出来的统一值，会把真口径（形态位/AI 证伪）淹没成噪音。 */
+function exitOf(st, allowFb) {
+  return exitForCode(String((st && st.code) || '').replace(/\D/g, ''), st, allowFb);
 }
 
 /* R100z18：弹窗内单条退出纪律行——有止损位就给「止损/目标/证伪」三件套，
@@ -1344,7 +1382,7 @@ function exitRowHtml(stocks) {
   if (!stocks || !stocks.length) return '';
   var rows = [];
   stocks.forEach(function (st) {
-    var ex = exitOf(st);
+    var ex = exitOf(st, false);   // R100z19：批量列表只用真口径，避免 48 行兜底值刷屏
     if (!ex || typeof ex !== 'object') return;
     if (ex.stop === null || ex.stop === undefined || !ex.falsify) return;
     rows.push('<b>' + esc(st.name || st.code) + '</b> 止损 ' + Number(ex.stop).toFixed(2) +
