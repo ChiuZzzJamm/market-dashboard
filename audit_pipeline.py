@@ -50,8 +50,10 @@ EMPTY_WHITELIST = [
     # --- 被动技术池：脚本只出形态/量化，AI 叙事由 16:00 AI 写回，脚本阶段天然空 ---
     (r"harmonic\.(confirmPool|watchPool|failPool)\[\d+\]\.(story|deduce)",
      "R100z4q：harmonic_detect 从旧池继承叙事，新形态条目脚本阶段无叙事，等 AI 写回"),
-    (r"(accumulation|powerScreen)\.(scored|passed)\[\d+\]\.(story|deduce)",
-     "同上：吸筹/九门技术池的 AI 叙事位，脚本阶段为空由 AI 写回"),
+    (r"(accumulation|powerScreen)\.(scored|passed|strong|watch)\[\d+\]\.(story|deduce)",
+     "R100z21：scored 全量 + strong/watch 分池副本同构，AI 叙事位脚本阶段为空、由 AI 写回"),
+    (r"(accumulation|powerScreen)\.(scored|strong|watch)\[\d+\]\.sector",
+     "R100z21：strong/watch 分池副本沿用 scored 的板块字段，sec_map 查不到时留空"),
     # --- 结构化可选字段：脚本写 foo or ''，无值时该维度不存在 ---
     (r"(harmonic|accumulation|powerScreen)\.(confirmPool|watchPool|scored|passed|failPool)\[\d+\]\.sector",
      "sec_map 查不到板块时留空；前端按板块分组，无板块归入默认组不渲染空标签"),

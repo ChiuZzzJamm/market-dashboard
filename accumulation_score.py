@@ -8,7 +8,9 @@
 
 - 扫描域：与 harmonic_detect.py 一致（collect_pool_codes + 断板池），主板 60/00。
 - 数据：优先 data.js 内嵌 stkKlines（离线），其次 kline_cache 网络兜底。
-- 分池：强（≥70）/ 观察（50-69）；仅保留 ≥50 的标的，上限 20 只，按分降序。
+- 分池：强（≥70）/ 观察（50-69）；仅保留 ≥50 的标的，上限 20 只。
+- 排序（R100z21）：双键 -score → -hitCount → code，先比权重深度再比特征广度。
+- 输出：scored 全量（强在前）+ strong / watch 两个子池，供前端分组渲染成「强池 / 观察池」。
 - 输出：D.accumulation（契约见 references §3）。失败保留旧值（R91n）。
 - 用法：python3 accumulation_score.py [--dry-run] [--self-test]
   --self-test：合成强吸筹序列离线自检，验证 grade=强，不读写 data.js。
@@ -82,21 +84,29 @@ def score_one(bars, name=''):
     notes.append(f"F6=流动性达标;热度{'双满足' if heat==2 else ('单满足' if heat==1 else '无')}(涨停史={has_zt},回撤={drawdown:.0%})")
 
     # ---- F1 试盘冲高自然回落 ----
+    # R100z21：低位区判定改用「试盘当日」所处窗口位置（前 120 日区间下 45% 分位），
+    # 原写法拿 bars[-1]['close']（当前收盘）比 250 日区间 → 一旦股价已反弹出低位区，
+    # F1 永久不命中（实测池内 100% 为 0），连带 F3（原硬依赖 F1）也永久 0 分。
     f1_hit = False
+    probe_idx = []
     for i in range(max(1, n - 40), n - 4):
         vma = _vol_ma5(bars, i)
         if vma <= 0:
             continue
         us = _upper_shadow(bars[i])
         bd = _body(bars[i])
-        if us >= 2 * bd and bars[i]['volume'] >= 1.8 * vma:
-            # 次日起 3 日内缩量回落
+        # R100z21：阈值 1.8→1.5、3 日逐日量改为均值口径。实测 285 只扫描域内
+        # 「上影≥2×实体 + 单日量≥1.8×5日均量」几乎全灭（F1 命中率 0%），
+        # 属模型阈值脱离当下缩量节奏，放松到 1.5× + 3 日均量回落仍属「放完就歇」的试盘语义。
+        if us >= 2 * bd and bars[i]['volume'] >= 1.5 * vma:
+            probe_idx.append(i)  # 试盘日留档，供 F3 独立计数
+            # 次日起 3 日内缩量回落（3 日平均量 < 0.85×5 日均量，且收盘回到试盘价下方）
             nxt = bars[i + 1:i + 4]
-            if nxt and all(b['volume'] < vma for b in nxt) and nxt[-1]['close'] < bars[i]['close']:
-                lo250_now = min(closes[-250:]) if n >= 250 else min(closes)
-                hi250_now = max(closes[-250:]) if n >= 250 else max(closes)
-                in_low_zone = bars[-1]['close'] <= lo250_now + 0.4 * (hi250_now - lo250_now)
-                if in_low_zone:
+            if nxt and sum(b['volume'] for b in nxt) / len(nxt) < 0.85 * vma \
+                    and nxt[-1]['close'] < bars[i]['close']:
+                w_lo = min(b['low'] for b in bars[max(0, i - 120):i + 1])
+                w_hi = max(b['high'] for b in bars[max(0, i - 120):i + 1])
+                if w_hi > w_lo and bars[i]['close'] <= w_lo + 0.45 * (w_hi - w_lo):
                     f1_hit = True
                     break
     if f1_hit:
@@ -123,26 +133,29 @@ def score_one(bars, name=''):
         notes.append("F2=缩量下杀后止跌拉回≥50%")
 
     # ---- F3 二次试盘 + 横盘收窄 ----
+    # R100z21：原 F3 硬依赖 f1_hit（F1 常年=false → F3 常年=false，特征只剩 f2/f4/f5/f6 四项二值）。
+    # 改为独立计数最近 120 日的试盘次数，≥2 次即成立，与 F1 是否命中解耦。
     f3_hit = False
-    if f1_hit:
-        # 计数 F1 式试盘出现 ≥2 次
-        cnt = 0
+    probe_cnt = len(probe_idx)
+    if probe_cnt < 2:
+        probe_cnt = 0
         for i in range(max(1, n - 120), n - 4):
             vma = _vol_ma5(bars, i)
             if vma <= 0:
                 continue
-            if _upper_shadow(bars[i]) >= 2 * _body(bars[i]) and bars[i]['volume'] >= 1.8 * vma:
-                cnt += 1
+            if _upper_shadow(bars[i]) >= 2 * _body(bars[i]) and bars[i]['volume'] >= 1.5 * vma:
+                probe_cnt += 1
+    if probe_cnt >= 2:
         amp10 = (max(b['high'] for b in bars[-10:]) - min(b['low'] for b in bars[-10:])) / bars[-1]['close']
         amp20 = (max(b['high'] for b in bars[-20:]) - min(b['low'] for b in bars[-20:])) / bars[-1]['close']
         flat = amp10 < 0.6 * amp20
         center = sum(b['close'] for b in bars[-10:]) / 10
         within = all(abs(b['close'] - center) / center <= 0.06 for b in bars[-10:])
-        if cnt >= 2 and flat and within:
+        if flat and within:
             f3_hit = True
     if f3_hit:
         feats['f3'] = 20
-        notes.append("F3=二次试盘+横盘收窄±6%")
+        notes.append("F3=二次试盘×%d+横盘收窄±6%%" % probe_cnt)
 
     # ---- F4 再度缩量下杀不破前低 ----
     f4_hit = False
@@ -161,25 +174,34 @@ def score_one(bars, name=''):
         feats['f4'] = 15
         notes.append("F4=缩量下杀未破前低+横盘±3%")
 
-    # ---- F5 底部缩量板 ----
+    # ---- F5 底部缩量板（R100z21：首次板 / 接力板 tier 分层）----
+    # 首次板：本轮第一次涨停，上方无套牢、筹码干净，是「新资金进场」的启动位 → 高分。
+    # 接力板：20 日内已有涨停，属老资金接力/连板中段，缩量要防对倒出货 → 低分。
     f5_hit = False
+    f5_tier = ''
     for i in range(max(1, n - 60), n):
         prev_c = bars[i - 1]['close']
         gap = bars[i]['open'] / prev_c - 1
         if _is_limit_up(bars[i], prev_c) and gap >= 0.05 \
                 and bars[i]['volume'] <= 0.8 * bars[i - 1]['volume'] \
                 and bars[i]['close'] == bars[i]['high']:
+            pre_zt = any(_is_limit_up(bars[k], bars[k - 1]['close'])
+                         for k in range(max(1, i - 20), i))
+            f5_tier = '首次板' if not pre_zt else '接力板'
             f5_hit = True
             break
     if f5_hit:
-        feats['f5'] = 20
-        notes.append("F5=底部缩量开盘板(次日盯竞价)")
+        feats['f5'] = 22 if f5_tier == '首次板' else 16
+        notes.append("F5=底部缩量开盘板[%s](%s)(次日盯竞价)"
+                     % (f5_tier, '底部启动筹码干净' if f5_tier == '首次板' else '老资金接力防对倒'))
+    else:
+        f5_tier = '-'
 
     score = sum(feats.values())
     hit = sum(1 for v in feats.values() if v > 0)
     grade = '强' if score >= 70 else ('观察' if score >= MIN_SCORE else '不入池')
     return {'score': score, 'features': feats, 'hitCount': hit, 'grade': grade,
-            'note': ';'.join(notes) if notes else '无特征命中'}
+            'f5Tier': f5_tier, 'note': ';'.join(notes) if notes else '无特征命中'}
 
 
 # ---------------- 自检 ----------------
@@ -277,27 +299,45 @@ def main():
     print(f"[ACC] 扫描域 {len(codes)} 只（优先内嵌 stkKlines）")
 
     scored = []
+    sample_day = ''
     for c in codes:
         bars = K.get_bars(c, D)
         if not bars or len(bars) < 60:
             continue
+        # R100z21：tradeDate 取样本最后一根 K 线的交易日（非跑批当天，避免非交易日写脏）
+        if not sample_day and bars[-1].get('day'):
+            sample_day = str(bars[-1]['day'])[:10]
         nm = names.get(c) or (D.get('stkKlineNames') or {}).get(c) or ''
         r = score_one(bars, nm)
         if r['score'] < MIN_SCORE:
             continue
         scored.append({'code': c, 'name': nm, 'sector': sec_map.get(c, ''), 'score': r['score'],
                        'grade': r['grade'], 'features': r['features'],
-                       'hitCount': r['hitCount'], 'note': r['note'],
+                       'hitCount': r['hitCount'], 'f5Tier': r.get('f5Tier') or '-',
+                       'note': r['note'],
                        'story': '', 'deduce': None})
-    scored.sort(key=lambda x: -x['score'])
+    # R100z21：双键排序——score（权重深度）主序，hitCount（特征广度）次序，code 兜底保证确定性
+    scored.sort(key=lambda x: (-x['score'], -x['hitCount'], x['code']))
     scored = scored[:20]
     today = datetime.date.today().strftime('%Y-%m-%d')
+    trade_date = sample_day or today
+
+    # R100z21：显式分池（强池 / 观察池），供前端分组渲染；scored 仍为全量强在前
+    strong = [s for s in scored if s['grade'] == '强']
+    watch = [s for s in scored if s['grade'] == '观察']
+    n_first = sum(1 for s in scored if s.get('f5Tier') == '首次板')
+    summary = (f"六特征打分：强 {len(strong)} 只 / 观察 {len(watch)} 只（共 {len(scored)} 只）。"
+               f"强池=结构完整、可直接跟（盯量能与次日竞价）；观察池=缺一两项、只排队的候选。"
+               f"F5 分层：首次板 {n_first} 只（底部启动，筹码干净，高分）、"
+               f"接力板 {len(scored) - n_first} 只（老资金接力，防对倒）。")
 
     new_field = {
-        'updatedAt': f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}（吸筹打分 {today} 收盘 数据已自动更新）",
-        'tradeDate': today,
+        'updatedAt': f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}（吸筹打分 {trade_date} 收盘 数据已自动更新）",
+        'tradeDate': trade_date,
         'scored': scored,
-        'summary': '',
+        'strong': strong,
+        'watch': watch,
+        'summary': summary,
     }
 
     old = D.get('accumulation')
@@ -311,15 +351,15 @@ def main():
 
     if dry:
         print(f"[ACC][DRY] 命中 {len(scored)} 只（强/观察），未写回")
-        print(json.dumps([(i['code'], i['name'], i['score'], i['grade'])
-                          for i in scored[:10]], ensure_ascii=False))
+        print(json.dumps([(i['code'], i['name'], i['score'], i['grade'], i['hitCount'],
+                           i['f5Tier'], i['features']) for i in scored], ensure_ascii=False))
         return
 
     out = 'window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False,
                                                   separators=(',', ':')) + ';\n'
     with open(os.path.join(BASE, 'data.js'), 'w', encoding='utf-8') as f:
         f.write(out)
-    print(f"[ACC] 写回 data.js：命中 {len(scored)} 只（强 {sum(1 for s in scored if s['grade']=='强')} / 观察 {sum(1 for s in scored if s['grade']=='观察')}）")
+    print(f"[ACC] 写回 data.js：命中 {len(scored)} 只（强 {len(strong)} / 观察 {len(watch)}）｜tradeDate={trade_date}")
 
 
 if __name__ == '__main__':

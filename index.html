@@ -550,6 +550,14 @@
   .acc-grd.watch { color:#8a5800; background:#ffe9c2; border:1px solid #f0c36d; }
   .acc-bar { height:4px; border-radius:999px; background:rgba(17,17,26,.07); margin-top:8px; overflow:hidden; }
   .acc-bar i { display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,#f5a26b,var(--accent)); }
+  /* R100z21：吸筹页强池/观察池分区小标题（点色沿用断板池确认池红点、观察池蓝点） */
+  .acc-sub { display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:800; color:var(--ink); margin:16px 0 2px; }
+  .acc-sub:first-child { margin-top:10px; }
+  .acc-sub .dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  /* 强池圆点=卡内 acc-grd.strong 同色（绿），观察池=断板观察池同款蓝点，同页不出现两套语义色 */
+  .acc-sub.s .dot { background:#0f9d78; box-shadow:0 0 0 4px rgba(15,157,120,.16); }
+  .acc-sub.w .dot { background:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); }
+  .acc-sub .cnt { font-size:11px; font-weight:600; color:var(--ink2); }
   /* R100m：九门评分徽章——红色、与代码同行平行（与吸筹评级徽章 acc-grd 区分） */
   .pw-grd { font-size:10.5px; font-weight:800; border-radius:999px; padding:1px 8px; flex-shrink:0; font-variant-numeric:tabular-nums; color:#fff; background:linear-gradient(135deg,#e35d5d,#c0392b); }
   .pw-card .hz-top { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
@@ -2132,7 +2140,10 @@ function renderHarmonic() {
 function renderAccumulation() {
   var a = window.DASHBOARD_DATA.accumulation;
   if (!a || !a.scored || !a.scored.length) return '';
-  var items = a.scored.slice(0, 20).map(function (it, idx) {
+  // R100z21：吸筹页分「强池 / 观察池」两节——强池=特征命中多、结构完整可直接跟；
+  // 观察池=缺 1-2 项只排队候补。渲染一律按 scored 内每张卡自己的 grade 分组（新旧数据通用）。
+  var pick = a.scored.slice(0, 20);
+  var items = pick.map(function (it, idx) {
     var gd = it.grade === '强' ? 'strong' : 'watch';
     var feats = '';
     if (it.features) {
@@ -2151,11 +2162,23 @@ function renderAccumulation() {
       '<div class="acc-bar"><i style="width:' + Math.max(4, Math.min(100, it.score || 0)) + '%"></i></div>' +
       (it.note ? '<div class="hz-note">' + esc(it.note) + '</div>' : '') +
       '<div class="acc-feat">' + feats + '</div></div>';
-  }).join('');
+  });
+  // R100z21：items 是 map 出来的数组（不再 .join('')），下方按 grade 分桶后各自 join
   // R100z4i：新增子页口径说明（与谐波/九门同款位置与样式：子页导航下方、hz-sub 朴素文字、悬停详解）
-  var accDef = '<div class="hz-sub" style="margin:0 0 14px;" title="主力吸筹=六特征打分模型（日线收盘口径，accumulation_score.py）。F1 试盘=低位冲高后缩量回落（20分）；F2 止跌=缩量下杀后拉回过半（15分）；F3 横盘=二次试盘+横盘收窄±6%（20分）；F4 缩量=再度缩量下杀不破前低（15分）；F5 缩量板=底部涨停后缩量整理（20分）；F6 流动=日均成交额≥2亿+涨停史/回撤热度（10分）。总分=六特征合计（满分100），评级=强/观察；流动性不足（日均成交额<2亿）一票否决不入池。">吸筹口径：六特征打分 F1试盘·F2止跌·F3横盘·F4缩量·F5缩量板·F6流动（合计100分）｜评级=总分定级（强/观察）｜日均成交额<2亿不入池</div>';
+  var accDef = '<div class="hz-sub" style="margin:0 0 14px;" title="主力吸筹=六特征打分模型（日线收盘口径，accumulation_score.py）。F1 试盘=低位冲高后缩量回落（20分）；F2 止跌=缩量下杀后拉回过半（15分）；F3 横盘=二次试盘+横盘收窄±6%（20分）；F4 缩量=再度缩量下杀不破前低（15分）；F5 缩量板=底部涨停后缩量整理（首次板22分／接力板16分）；F6 流动=日均成交额≥2亿+涨停史/回撤热度（10分，单满足6分）。总分=六特征合计（满分102），评级=强（≥70）/观察（50-69）；流动性不足（日均成交额<2亿）一票否决不入池。分池：强池=结构完整可直接跟；观察池=缺1-2项只排队。">吸筹口径：六特征打分 F1试盘·F2止跌·F3横盘·F4缩量·F5缩量板(首板22/接力16)·F6流动（合计102分）｜评级=总分定级（强≥70/观察50-69）｜日均成交额<2亿不入池</div>';
+  // R100z21：强/观察两节渲染（空档不显示，避免「0 只」占位盖住真内容）
+  var sB = [], wB = [];
+  pick.forEach(function (it, idx) {
+    var h = items[idx];
+    if (!h) return;
+    if (it.grade === '强') sB.push(h); else wB.push(h);
+  });
+  var secS = sB.length
+    ? '<div class="acc-sub s"><span class="dot"></span>强池<span class="cnt">共 ' + sB.length + ' 只 · 特征命中多、结构完整，可直接跟（盯次日量能与竞价）</span></div><div class="acc-grid">' + sB.join('') + '</div>' : '';
+  var secW = wB.length
+    ? '<div class="acc-sub w"><span class="dot"></span>观察池<span class="cnt">共 ' + wB.length + ' 只 · 缺 1-2 项，只排队候补，不主动做</span></div><div class="acc-grid">' + wB.join('') + '</div>' : '';
   return accDef + '<div class="card"><h2>🧲 主力吸筹' + (a.tradeDate ? ' <span class="h2-date">' + esc(a.tradeDate) + '</span>' : '') + '</h2>' +
-    '<div class="acc-grid">' + items + '</div>' + (a.summary ? '<div class="note-line">' + esc(a.summary) + '</div>' : '') + '</div>';
+    secS + secW + (a.summary ? '<div class="note-line">' + esc(a.summary) + '</div>' : '') + '</div>';
 }
 
 function renderPowerScreen() {
