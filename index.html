@@ -2239,7 +2239,8 @@ function renderAccumulation() {
       sentBadgeHtml(it.code) + // R100z4c：代码后加 利好/中性/利空 徽章（参考断板/谐波卡片）
       '<span class="acc-grd ' + gd + '">' + esc(it.grade) + ' ' + it.score + '分</span></div>' +
       '<div class="acc-bar"><i style="width:' + Math.max(4, Math.min(100, it.score || 0)) + '%"></i></div>' +
-      (it.note ? '<div class="hz-note">' + esc(it.note) + '</div>' : '') +
+      // R100z26：卡片上的中文注记整块下线——同一段话弹窗「主力吸筹」行已完整展示（techMetaLines），
+      // 卡片上再挂一遍只会把胶囊和滞后标挤到第一屏外面（强池卡片超出一屏看不到滞后标）。
       '<div class="acc-feat">' + feats + '</div>' + lagTag + '</div>';
   });
   // R100z21：items 是 map 出来的数组（不再 .join('')），下方按 grade 分桶后各自 join
@@ -2511,7 +2512,18 @@ function renderDuanban() {
   document.getElementById('db-date').textContent = db && db.generatedAt ? '数据生成：' + db.generatedAt + '（每日 16:00 收盘后更新 · 次日 07:30 隔夜复核）' : '数据生成：—（待 16:00 自动化首跑）';
   // R100z4v：断板页口径说明改静态（与谐波/九门/吸筹三子页同款 hz-sub + 悬停详解）——
   // 原用动态 db.note，该字段被 07:30 自动化 AI 写回污染（写入流程说明而非口径），弃用。
-  var _dbNote = '<div class="hz-sub" style="margin:0 0 14px;" title="断板反包=确定性脚本核验（check_duanban.py：涨停池 + 腾讯日K）。T日涨停 → 次日放量断板（成交量≥1.5×T日） → 缩量回踩、不破T日最低点与MA5 → 待反包。确认池=全流程走完；观察池=形态进行中、差最后一根确认K线（待企稳 ＞ 待缩量）。仅沪深主板 60/00（排除科创板/北交所）；破位或超期移入失败池，5 个交易日后自动清理。每只标的按当日要闻/AI预测自动标注：利好（红）/利空（绿）/中性（灰）；上涨概率=脚本确定性基线+AI 复核校准（16:00 生成，次日 07:30 复核）。">断板反包口径：T日涨停 → 次日放量断板(≥1.5×) → 缩量回踩不破T日低点与MA5 → 待反包｜确认池=全流程走完 · 观察池=差最后一根确认K线｜沪深主板 60/00 · 涨停池+腾讯日K 确定性核验</div>';
+  // R100z26：断板页口径说明改成与谐波/九门/吸筹同款的「可展开条目块」。
+  // 原来是一行 hz-sub + 400 字 title 悬浮 —— 手机上 title 根本不显示，等于没写。
+  var _dbNote = '<details class="tech-legend"><summary>断板反包口径 · 全流程与分池（点开看每一条）</summary><div class="lg-body">' +
+    '<div><b>一句话逻辑</b>：涨停次日的放量断板 = 抛压被兑现；之后缩量不破位 = 筹码被接走。跌得动（放量破位）说明是出货，跌不动才有反包机会。</div>' +
+    '<div><b>判定四步（须按顺序）</b>：① T 日涨停 → ② 次日放量断板（成交量≥1.5×T 日） → ③ 缩量回踩 → ④ 不破 T 日最低点、也站稳 MA5 → 待反包</div>' +
+    '<div><b>两个池</b>：确认池＝四步全流程走完（可随时等反包）；观察池＝形态进行中、只差最后一根确认 K 线（先待企稳、再待缩量）</div>' +
+    '<div><b>选股范围</b>：仅沪深主板 60/00，排除科创板 688 与北交所；用东财涨停池取 T 日、腾讯日 K 核验（check_duanban.py，纯脚本确定性，不靠人眼）</div>' +
+    '<div><b>标签与概率</b>：按当日要闻/AI 预测自动标注利好（红）/利空（绿）/中性（灰）；上涨概率＝脚本确定性基线＋AI 复核校准（16:00 生成，次日 07:30 复核）</div>' +
+    '<div class="lg-hr"></div>' +
+    '<div><b>失效与归档</b>：跌破 T 日最低点或 MA5（破位）、或 5 个交易日内没走完反包（超期）→ 移入失败池，5 个交易日后自动清理</div>' +
+    '<div class="lg-tip">下一步：缩量不破位只算「跌不动」，反包日放量收复断板日最高价 / 站回 MA5 才算真确认；破位无条件走，不摊平不扛单。此页与「谐波 / 九门 / 吸筹」同为技术面观察器，仓位按中等及以下确信度给。</div>' +
+    '</div></details>';
   var conf = (db && db.confirmed) || [], watch = (db && db.watching) || [];
   var badge = document.getElementById('db-badge');
   badge.textContent = (conf.length + watch.length) ? ('确认 ' + conf.length + ' · 观察 ' + watch.length) : '';
