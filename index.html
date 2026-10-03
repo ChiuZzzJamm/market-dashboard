@@ -161,9 +161,10 @@
 
   /* ===== R100z15：退出纪律 + 超额口径 + 净值曲线 ===== */
   .exit-row { margin-top: 4px; font-size: 11px; color: var(--ink-soft, #6b7a8d); line-height: 1.55; }
-  .exit-row b { color: var(--ink2); font-weight: 600; }
-  .exit-row .xs { color: var(--down); }
-  .exit-row .xt { color: var(--up); }
+  /* R100z20：板块下方的批量退出纪律罗列已下线（同板块挤 3-8 行又与胶囊标签重复），
+     退出纪律统一只在「点开个股 → 弹窗」里显示 → 颜色规则收窄到 .exit-line */
+  .exit-line .xs { color: var(--down); }
+  .exit-line .xt { color: var(--up); }
   /* R100z18：弹窗内单条退出纪律行（止损/目标/证伪） */
   .exit-row.exit-line { margin-top: 6px; margin-bottom: 2px; padding: 6px 8px; border-radius: 5px;
     background: var(--down-soft, rgba(15,157,120,.07)); border: 1px solid var(--down-soft, rgba(15,157,120,.18)); }
@@ -1357,13 +1358,6 @@ function fbIsDuanban(code0) {
   return false;
 }
 
-/* R100z19：弹窗单只渲染时才放兜底（用户要求「所有有技术指标的标的弹窗都带退出纪律」）；
-   AI 预测区批量列表走 exitRowHtml，显式传 false 保持严格三级源——
-   否则 48 行全是机器按 −2.5% 折出来的统一值，会把真口径（形态位/AI 证伪）淹没成噪音。 */
-function exitOf(st, allowFb) {
-  return exitForCode(String((st && st.code) || '').replace(/\D/g, ''), st, allowFb);
-}
-
 /* R100z18：弹窗内单条退出纪律行——有止损位就给「止损/目标/证伪」三件套，
    只有证伪口径没有止损位（断板池等）时退化为纯证伪行，同样不编数字。 */
 function exitMetaLine(code) {
@@ -1376,21 +1370,6 @@ function exitMetaLine(code) {
     (ex.target !== null && ex.target !== undefined ? ' · 目标 ' + '<span class="xt">' + Number(ex.target).toFixed(2) + '</span>' : '') +
     ' <span class="xs">✖</span> ' + esc(ex.falsify) +
     (ex.stopBasis ? '<span class="xb">（' + esc(ex.stopBasis) + '）</span>' : '') + '</div>';
-}
-
-function exitRowHtml(stocks) {
-  if (!stocks || !stocks.length) return '';
-  var rows = [];
-  stocks.forEach(function (st) {
-    var ex = exitOf(st, false);   // R100z19：批量列表只用真口径，避免 48 行兜底值刷屏
-    if (!ex || typeof ex !== 'object') return;
-    if (ex.stop === null || ex.stop === undefined || !ex.falsify) return;
-    rows.push('<b>' + esc(st.name || st.code) + '</b> 止损 ' + Number(ex.stop).toFixed(2) +
-      (ex.target !== null && ex.target !== undefined ? ' · 目标 ' + '<span class="xt">' + Number(ex.target).toFixed(2) + '</span>' : '') +
-      ' <span class="xs">✖</span> ' + esc(ex.falsify));
-  });
-  if (!rows.length) return '';
-  return '<div class="exit-row">' + rows.join('<br>') + '</div>';
 }
 
 /* R100z15 缺口①：超额口径小胶囊——「走强」两个字要扣掉基准才值钱 */
@@ -1571,8 +1550,8 @@ function renderAiPrediction() {
           (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
       });
       html += '</div>';
-      // R100z15 缺口③：只有买入没有卖出 → 每只标的必须带退出纪律（止损位 / 目标位 / 证伪条件）
-      html += exitRowHtml(s.stocks);
+      // R100z20：板块下方不再重复罗列退出纪律——同板块的多只标的挤在一起既长又和胶囊标签重复，
+      // 退出纪律（止损/目标/证伪）统一收敛到「点开个股 → 弹窗内」那一行显示（R100z18/z19）。
     }
     html += '</div>';
   });
