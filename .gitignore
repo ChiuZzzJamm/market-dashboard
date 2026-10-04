@@ -35,3 +35,6 @@ market-dashboard.zip
 # 内含家庭网络/路由器/油猴脚本等私有信息，且 deploy.sh 用 `git add -A`，
 # 不排除会被误推进公开仓库 → 硬排除（记忆只在本地文件系统，不进 git）
 .workbuddy/
+
+# 一次性构建脚本（周末任务临时生成，不入库）
+_weekend_*.py
