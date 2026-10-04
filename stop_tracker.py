@@ -348,7 +348,11 @@ def main():
         return 1
 
     if not a.view:
-        today = D.get('date')
+        # R100z59：原来只取顶层 D['date']，但 data.js 顶层根本没有这个键（日期在
+        # aiPrediction.date / openOutlook.date 里）→ 每次都 [SKIP] 直接 return 0，
+        # 台账永远为空。这就是「脚本一直在、数据一直是空的」的根因，补三级兜底。
+        today = (D.get('date') or (D.get('aiPrediction') or {}).get('date')
+                 or (D.get('openOutlook') or {}).get('date'))
         if not today:
             print('[SKIP] data.js 无 aiPrediction.date，无法确定登记日', file=sys.stderr)
             return 0

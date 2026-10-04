@@ -34,10 +34,14 @@
     光看命中率分不出来。
 """
 import argparse
+import contextlib
+import io
 import json
 import os
 import sys
 from datetime import date
+
+import stop_tracker  # R100z59：止损台账接线（见 main() 内「R100z59 止损台账」段）
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA_JS = os.path.join(ROOT, 'data.js')
@@ -374,6 +378,27 @@ def main():
             if not a.json:
                 print(f"[OK] 已并入台账：{pred['date']}（{len(items)} 条）"
                       f"{'' if bench is not None else '（市场基准缺失，本轮只落旧方向口径）'}")
+
+    # ---------------- R100z59 止损台账：接上「只算不跟踪」的补丁 ----------------
+    # 7 项硬约束里的止损纪律，此前只有 stop_tracker.py 在算、却从没被调用过（死脚本），
+    # stop_ledger.json 永远是空的——等于止损位算出来没人回扫，纸面纪律。
+    # 这里只在**真实跑**（无 --view、且非 --json 读门槛模式）时接一次：
+    #   登记当日各模块止损位（同码不覆盖，幂等）+ 回扫所有已登记条的触及情况。
+    # --json 是 08:30 / 周末任务读门槛用的**只读**模式，不接：避免多一轮 K 线网络抓取、
+    # 也避免任何写盘把「只读校验」变成副作用。stop_tracker.main() 内部会 argparse 读
+    # sys.argv，调用前必须把 argv 换成它自己的（否则会拿走本脚本的参数直接 SystemExit）。
+    if (not a.view) and (not a.json) and pred and pred.get('date'):
+        _argv = sys.argv
+        try:
+            _buf = io.StringIO()
+            with contextlib.redirect_stdout(_buf), contextlib.redirect_stderr(_buf):
+                stop_tracker.main()
+            if not a.json:
+                for _ln in _buf.getvalue().splitlines():
+                    if _ln.startswith(('[OK]', '[info]', '[SKIP]')):
+                        print('  ' + _ln)
+        finally:
+            sys.argv = _argv
 
     # 统计：按 conf 层聚合，取最近 WINDOW 个预测日
     dates = sorted(log['log'].keys())[-WINDOW:]
