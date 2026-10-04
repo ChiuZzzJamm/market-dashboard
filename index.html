@@ -495,17 +495,21 @@
   .fail-chip .cd { font-size: 11px; color: var(--ink2); }
   .fail-chip .fr { font-size: 11px; color: #a33; margin-top: 4px; line-height: 1.5; }
   .fail-chip .fd { font-size: 10px; color: var(--ink2); margin-top: 2px; }
-  /* R100z41：最新归档批次用实线暖色边框 + 淡底，与滚动窗口里剩下的旧归档一眼区分 */
-  .fail-chip.fail-new { border-style: solid; border-color: #e3a008; background: #fff7dd; }
-  .fail-chip .nb { font-size: 10px; font-weight: 800; color: #6b4a00; background: #ffc93c; border: 1px solid #e3a008; border-radius: 4px; padding: 0 3px; line-height: 1.35; }
+  /* R100z41：最新归档批次用实线边框 + 「新」徽章，与滚动窗口里剩下的旧归档一眼区分。
+     R100z59（用户 2026-10-04「颜色不用是黄的，鼠标放上去才显示黄色」）：
+     常态**不**上黄——去黄底/琥珀边、徽章改浅蓝，「新」只靠徽章提示；
+     整卡与徽章的黄色统一挪到 :hover 才出现（见下方 R100z46 段）。 */
+  .fail-chip.fail-new { border-style: solid; }
+  .fail-chip .nb { font-size: 10px; font-weight: 800; color: #0c447c; background: #e6f1fb; border: 1px solid #378add; border-radius: 4px; padding: 0 3px; line-height: 1.35; }
   /* R100z44：新入池首日高亮——断板/谐波/九门/吸筹确认·观察池与失效池新归档，
      入池当天整卡淡黄底+琥珀边+「新」徽章（参考失效池既有样式），次日自动恢复。
      置于 .tc.dim 之后：归档态（dim 虚线灰字）遇「新」也要黄底优先。 */
-  /* R100z45：首日高亮黄色加深（用户反馈 #d6ab63/#fffdf7 太淡、扫一眼看不出）——
-     边框/徽章改饱和琥珀 #e3a008 + 实心黄徽章 #ffc93c，卡底/格底同步加深一档。 */
-  .tc.fresh { border-style: solid; border-color: #e3a008; background: #fff7dd; }
-  .tc.fresh .tc-cell { background: #fceec2; }
-  .tc .nb { font-size: 10px; font-weight: 800; color: #6b4a00; background: #ffc93c; border: 1px solid #e3a008; border-radius: 4px; padding: 0 3px; line-height: 1.35; flex-shrink: 0; }
+  /* R100z45：首日高亮曾把边框/徽章改饱和琥珀 + 卡底/格底加深一档（用户反馈太淡）。
+     R100z59 回滚常态黄色（用户 2026-10-04 要求）：新入池卡平时就是普通卡片，
+     只挂一枚浅蓝「新」徽章；鼠标放上去才整卡转黄（R100z46 那条 hover 规则），
+     不再靠常驻黄底抢眼——黄底只在交互瞬间出现，扫列表时不会满屏晃。 */
+  .tc.fresh { border-style: solid; }
+  .tc .nb { font-size: 10px; font-weight: 800; color: #0c447c; background: #e6f1fb; border: 1px solid #378add; border-radius: 4px; padding: 0 3px; line-height: 1.35; flex-shrink: 0; }
   .db-modal-meta { font-size: 12.5px; color: var(--ink); line-height: 1.8; margin-bottom: 10px; }
   .db-modal-meta .lab { color: var(--ink2); }
   .db-kline svg { width: 100%; height: auto; display: block; }
@@ -623,8 +627,11 @@
   .tc:hover { border-color: var(--accent); box-shadow: 0 4px 14px rgba(17,17,26,.10); }
   /* R100z46：首日黄卡 hover 保持黄色——.tc:hover 的蓝描边（var(--accent)）与 .tc.fresh 同优先级且位置靠后，
      会把琥珀边盖成蓝色（用户截图：失效池黄卡悬停变蓝）。此处放在 .tc:hover 之后夺回。 */
+  /* R100z59：这就是「鼠标放上去才显示黄色」的唯一出处——常态不黄，悬停才转黄（卡底+琥珀边+黄徽章，
+     与 R100z45 同一套琥珀色值，只是从常驻改成交互态）。 */
   .tc.fresh:hover { border-color: #e3a008; background: #ffefc2; box-shadow: 0 4px 14px rgba(227,160,8,.22); }
   .fail-chip.fail-new:hover { border-color: #e3a008; }
+  .tc.fresh:hover .nb, .fail-chip.fail-new:hover .nb { color: #6b4a00; background: #ffc93c; border-color: #e3a008; }
   /* 头部：板块 pill 在左，方向徽章在右（板块缺失时也能靠徽章撑住第一行） */
   .tc-top { display: flex; align-items: center; gap: 4px; min-width: 0; }
   .tc-top .tc-sp { flex: 1 1 auto; min-width: 0; }
@@ -4084,15 +4091,33 @@ function renderOpenOutlook() {
   var now = new Date();
   var day = now.getDay();
   var isWeekend = (day === 0 || day === 6);
-  // target：应当匹配的日期（工作日=今天；周末=下周一）
-  var target;
-  if (!isWeekend) {
-    target = fmt(now);
-  } else {
-    var diff = (8 - day) % 7; if (diff === 0) diff = 1;
-    var nm = new Date(now); nm.setDate(now.getDate() + diff);
-    target = fmt(nm);
-  }
+  /* R100z59：节假日感知的「下一个交易日」。
+     旧写法只跳过周六周日（`diff = (8-day)%7` 推下周一），遇到调休长假就把 target 算到假期中间——
+     2026-10-04（周日）国庆假期里，它算出 target=10-05（假期中、休市），而周末任务写的前瞻
+     date=2026-10-08（假期后的首个交易日、且未来 4 天）。于是 ①精确匹配不到、②缓冲期又只收
+     diffDays≥0（过去的），未来日期被直接判死 → 微信推送有前瞻、网页上却整块空白。
+     这里补一份 2026 节假日黑名单 + 向前找 14 天的 fdate，避免再靠推算撞假期。 */
+  var HOLIDAYS_2026 = {
+    '2026-01-01': 1, '2026-01-02': 1, '2026-02-16': 1, '2026-02-17': 1, '2026-02-18': 1,
+    '2026-02-19': 1, '2026-02-20': 1, '2026-04-06': 1, '2026-05-01': 1, '2026-05-04': 1,
+    '2026-05-05': 1, '2026-06-19': 1, '2026-09-25': 1, '2026-10-01': 1, '2026-10-02': 1,
+    '2026-10-03': 1, '2026-10-04': 1, '2026-10-05': 1, '2026-10-06': 1, '2026-10-07': 1,
+    '2027-01-01': 1
+  };
+  var isTradeDay = function (d) {
+    var w = d.getDay();
+    return w !== 0 && w !== 6 && !HOLIDAYS_2026[fmt(d)];
+  };
+  var nextTradeDay = function (from) {
+    var d = new Date(from.getTime());
+    for (var i = 0; i < 14; i++) {
+      d.setDate(d.getDate() + 1);
+      if (isTradeDay(d)) return fmt(d);
+    }
+    return '';
+  };
+  // target：应当匹配的日期（交易日=今天；周末/假期=下一个交易日）
+  var target = isTradeDay(now) ? fmt(now) : nextTradeDay(now);
   // 1) 日期精确匹配：正常显示
   if (o.date === target) {
     var title = wkTitle(o.date);
@@ -4100,14 +4125,19 @@ function renderOpenOutlook() {
     box.style.display = '';
     return;
   }
-  // 2) 缓冲期：o.date 不等于 target，但距今天 ≤3 天 → 仍显示并标注真实日期（避免盘前空白）
+  // 2) 缓冲期：o.date 不等于 target 但足够接近 → 仍显示并标注真实日期（避免盘前空白）。
+  //    R100z59：diffDays 允许为负（前瞻日期在未来 = "还没开盘的前瞻"）。
+  //    旧判据 `diffDays >= 0 && <= 3` 只认过去，长假前写的"复牌首日前瞻"会被当成过期藏掉。
   var od = new Date(o.date.replace(/-/g, '/'));
   var diffDays = Math.floor((now - od) / 86400000);
-  if (!isNaN(od.getTime()) && diffDays >= 0 && diffDays <= 3) {
+  if (!isNaN(od.getTime()) && diffDays >= -7 && diffDays <= 3) {
     var sub;
     if (!isWeekend) {
       var genLabel = (day <= 4) ? '今日 08:30' : '周一 08:30';
       sub = wkTitle(o.date) + '（' + esc(o.date) + ' 昨日版，' + genLabel + '前瞻待生成）';
+    } else if (diffDays < 0) {
+      // 未来版：周末/假期里提前铺到下个交易日的前瞻（如国庆里看到 10-08 复牌首日版）
+      sub = wkTitle(o.date) + '（' + esc(o.date) + ' 版 · 尚未开盘，提前预热）';
     } else {
       sub = wkTitle(o.date) + '（' + esc(o.date) + ' 周五版 · 周一盘前参考）';
     }
