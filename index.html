@@ -1693,6 +1693,7 @@ function renderAiPrediction() {
     '<div class="ai-summary">' + (p.indexLine ? esc(p.indexLine) + '。' : '') + '通过隔夜美股各板块涨跌推导今日 A 股强弱方向：' + esc(p.summary) + '</div>' +
     '<div id="cal-hist" class="cal-hist"></div>' +
     '<div id="pf-box" class="pf-box"></div>' +
+    '<div id="st-track-box"></div>' +
     riskLineHtml(p) +
     '<div class="ai-grid">';
   p.sectors.forEach(function (s) {
@@ -1775,7 +1776,36 @@ function renderAiPrediction() {
   box.innerHTML = html;
   renderCalHistory();
   loadPortfolioCurve();
+  renderStopTrack();
   renderRiskLines();
+}
+
+/* R100z60b：止损跟踪统计卡（接线 stop_tracker.py 写的 data.js 顶层 stopTrack）。
+   此前这个字段只有写入方（stop_tracker --write-data 每轮写）、**前端 0 处读取**，
+   属于半成品死产出——代码里注释还写着「前端展示用」，但页面从没渲染过。
+   现在补上：已回算只数 / 触及止损只数 / 触及率 / 入场第5日均值 / 触后5日均值 /
+   触后反弹均值 / 触后上涨率。数据缺失或为空时整块静默（跟组合净值卡同一口径，不白屏）。
+   样式直接复用 .cal-hist-t（标题）+ .pf-stat（涨红 #f0435c / 跌绿 #0f9d78 胶囊），不新造类。 */
+function renderStopTrack() {
+  var box = document.getElementById('st-track-box');
+  if (!box) return;
+  var st = (window.DASHBOARD_DATA || {}).stopTrack;
+  if (!st || !st.total) return;
+  var num = function (v) { return (v === null || v === undefined || v === '') ? null : Number(v); };
+  var pct = function (v) { var n = num(v); return n === null ? '—' : (n > 0 ? '+' : '') + n.toFixed(2) + '%'; };
+  var rate = function (v) { var n = num(v); return n === null ? '—' : (n * 100).toFixed(1) + '%'; };
+  var cls = function (v) { var n = num(v); return n === null ? 'flat' : (n > 0 ? 'up' : (n < 0 ? 'down' : 'flat')); };
+  var cell = function (c, t) { return '<span class="' + c + '">' + t + '</span>'; };
+  box.innerHTML = '<div class="cal-hist-t">🛑 止损跟踪统计（台账 ' + esc(st.updatedAt || '') + '）</div>' +
+    '<div class="pf-stat">' +
+    cell('flat', '已回算 ' + (st.total || 0) + ' 只') +
+    cell('flat', '触及止损 ' + (st.touched || 0) + ' 只') +
+    cell('flat', '触及率 ' + rate(st.touchRate)) +
+    cell(cls(st.avgP5Pct), '入场第5日均值 ' + pct(st.avgP5Pct)) +
+    cell(cls(st.avgAfter5Pct), '触后5日均值 ' + pct(st.avgAfter5Pct)) +
+    cell(cls(st.avgRebound5Pct), '触后反弹均值 ' + pct(st.avgRebound5Pct)) +
+    cell(cls(st.hitThenUpRate), '触后上涨率 ' + rate(st.hitThenUpRate)) +
+    '</div>';
 }
 
 /* R100z13：把黑名单里的命中标的再点一遍（供 8 只池以外的胶囊兜底，不可用时静默） */
