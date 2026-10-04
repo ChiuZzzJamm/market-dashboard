@@ -214,7 +214,9 @@ def main():
             item['acc'] = True
         passed.append(item)
     passed.sort(key=lambda x: (-x['score'], -x['pct']))
-    today = datetime.date.today().strftime('%Y-%m-%d')
+    # ⚠️ R100z57：不许拿 date.today() 当交易日——周末/长假跑一次就会把假日期写进
+    # tradeDate 与 entryDate（页面标题印「周六收盘」+ 全池误挂「新」徽章）。
+    today = common.today_trade_date()
 
     new_field = {
         'updatedAt': f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}（量化筛选 {today} 收盘 数据已自动更新）",
@@ -225,10 +227,19 @@ def main():
     old = D.get('powerScreen')
     # R100z44：入池首日标记——新入池标的 entryDate=本数据交易日，老标的沿用首次入池日
     # （从旧 data.js 按 code 继承；离池后再进视为新入池）。前端据此首日黄色高亮+「新」徽章。
-    _old_ed = {str(i.get('code') or ''): i.get('entryDate')
-               for i in (old or {}).get('passed') or [] if isinstance(i, dict)}
+    # ⚠️ R100z57 判定口径收紧（见 accumulation_score.py 同段长注）：旧写法 `_old_ed.get(code) or today`
+    # 会在「上一轮没有 entryDate」时一律写今天 → 整屏刷「新」。现改三分支：沿用旧值 / 首次见→写今天 /
+    # 见过但无记忆→不写（前端不挂徽章，宁缺毋滥）。
+    _old_pools = [i for i in (old or {}).get('passed') or [] if isinstance(i, dict)]
+    _old_ed = {str(i.get('code') or ''): i.get('entryDate') for i in _old_pools}
+    _old_codes = set(_old_ed.keys())
     for i in new_field.get('passed') or []:
-        i['entryDate'] = _old_ed.get(str(i.get('code') or '')) or today
+        _c = str(i.get('code') or '')
+        _ed = _old_ed.get(_c)
+        if _c in _old_codes and _ed:
+            i['entryDate'] = _ed
+        elif _c not in _old_codes:
+            i['entryDate'] = today
     # ---------------- R100z56：失效归档池（用户 2026-10-04 要求，参考断板反包/谐波） ----------------
     # 定义：上一轮 passed 内、本轮不再过阈值的标的 → 归因失效归档，自失效日起留 5 个交易日。
     # 九门是「当日强度」筛、天然逐日重算，只对上一轮还在池内的标的归档，绝不对从未入池的标的补写。

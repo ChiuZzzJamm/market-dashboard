@@ -1396,9 +1396,17 @@ def main():
         failPool = carried + [f for f in new_fails if f['code'] not in carried_codes]
         # R100z44：入池首日标记——新入池标的 entryDate=今日，老标的沿用首次入池日（state 逐日携带）。
         # 前端据此给首日新入池卡片整体黄色高亮+「新」徽章，次日自动恢复（用户 2026-10-04 要求）。
+        # ⚠️ R100z57：旧写法 `(prev_pools[code].entryDate) or today_str` 会在上一轮没留下 entryDate
+        # 时一律写今天 → 整屏刷「新」（老 data.js 正是这种形态）。改三分支，与 accumulation_score /
+        # power_screener / harmonic_detect 同口径：① 旧池有 entryDate → 沿用；② 旧池没见过 → 写 today；
+        # ③ 旧池见过但无 entryDate（老数据、生成代码早于 R100z44）→ 不写，前端不挂徽章（宁缺毋滥）。
         for e in (mod.get('confirmed') or []) + (mod.get('watching') or []):
             _c = str(e.get('code') or '')
-            e['entryDate'] = (prev_pools.get(_c) or {}).get('entryDate') or today_str
+            _pv = prev_pools.get(_c) or {}
+            if _c in prev_pools and _pv.get('entryDate'):
+                e['entryDate'] = _pv['entryDate']
+            elif _c not in prev_pools:
+                e['entryDate'] = today_str
         cur_pools = {str(e.get('code') or ''): {'name': e.get('name', ''), 'sector': e.get('sector', ''),
                                                  'form': e.get('form', ''),
                                                  'entryDate': e.get('entryDate') or today_str}

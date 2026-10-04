@@ -16,6 +16,7 @@
 import sys, json, os, time, datetime
 
 import kline_cache as K
+import common  # R100z57：交易日口径（common.today_trade_date），周末/长假跑不得写假日期
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
@@ -575,7 +576,10 @@ def main():
     confirm.sort(key=lambda x: x['distToPrzPct'])
     watch.sort(key=lambda x: x['distToPrzPct'])
 
-    today = datetime.date.today().strftime('%Y-%m-%d')
+    # ⚠️ R100z57：不许拿 date.today() 当交易日——见 power_screener.py 同处注释。
+    # 原先这里写的是 date.today()，10-03（周六）手工跑就把「周六收盘」写进了
+    # updatedAt/tradeDate，26 只池内标的的 entryDate 也跟着落到周六（整屏误挂「新」）。
+    today = common.today_trade_date()
     # R100h：tags 必须与截断后的池一致（此前用全量 confirm+watch，池截断 12/20 后
     # 被截掉的标的"量化卡有谐波徽标、弹窗无图像无提示"——findHarmonic 在池内找不到）
     pool_c, pool_w = confirm[:12], watch[:20]
@@ -598,8 +602,16 @@ def main():
     prev_pools = prev_state.get('pools', {})
     # R100z44：入池首日标记——新入池标的 entryDate=今日，老标的沿用首次入池日（state 逐日携带）。
     # 前端据此给首日新入池卡片整体黄色高亮+「新」徽章，次日自动恢复（用户 2026-10-04 要求）。
+    # ⚠️ R100z57：旧写法 `(prev_pools[code].entryDate) or today` 会在上一轮没留下 entryDate 时
+    # 一律写今天 → 整屏刷「新」。改三分支（与 accumulation_score / power_screener 同口径）：
+    # ① 旧池有 entryDate → 沿用；② 旧池没见过 → 写 today（确实是首次入池）；
+    # ③ 旧池见过但无 entryDate（老数据、生成代码早于 R100z44）→ 不写，前端不挂徽章。
     for it in confirm + watch:
-        it['entryDate'] = (prev_pools.get(it['code']) or {}).get('entryDate') or today
+        _pv = prev_pools.get(it['code']) or {}
+        if it['code'] in prev_pools and _pv.get('entryDate'):
+            it['entryDate'] = _pv['entryDate']
+        elif it['code'] not in prev_pools:
+            it['entryDate'] = today
     carried = _clean_fail(prev_state.get('failPool', []), today)
     new_fails = []
     if fetch_ok and (confirm or watch or prev_pools):

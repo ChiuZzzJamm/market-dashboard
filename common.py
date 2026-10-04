@@ -3,6 +3,7 @@
 供 push_notify.py 与 update_us_from_quotes.py 复用，避免重复实现。
 """
 import os, shutil, glob, json, re, random, subprocess, time
+import datetime as _dt
 
 
 def http_get(url, timeout=15, retries=3, decode='utf-8'):
@@ -76,6 +77,30 @@ def is_trade_day(d):
         if a <= s <= b:
             return False
     return True
+
+
+def last_trade_day(d):
+    """把任意日期回退到「不晚于它」的最近交易日（d 本身是交易日则原样返回）。
+
+    ⚠️ R100z57：生成侧绝不能再拿 `datetime.date.today()` 当交易日写 tradeDate/entryDate。
+    长假/周末跑一次（手工补跑、自动化误触发、跨时区）就会把一个**不存在的交易日**
+    印进模块标题、写进 entryDate，直接后果是：
+      · 页面标题出现「周六收盘 / 国庆休市日收盘」这类假日期；
+      · entryDate === modDate → 全池标的当天集体挂「新」徽章（整屏刷黄）。
+    d 支持 'YYYY-MM-DD' 字符串或 datetime.date。
+    """
+    import datetime as _dt
+    cur = d if isinstance(d, _dt.date) else _dt.datetime.strptime(str(d)[:10], '%Y-%m-%d').date()
+    for _ in range(15):  # 最多回退两周，跨长假足够
+        if is_trade_day(cur):
+            return cur.strftime('%Y-%m-%d')
+        cur -= _dt.timedelta(days=1)
+    return cur.strftime('%Y-%m-%d')
+
+
+def today_trade_date():
+    """今天对应的交易日——今天休市（周末/法定假日）就回退到最近一个交易日。"""
+    return last_trade_day(datetime.date.today())
 
 
 def trading_days_between(d0, d1):

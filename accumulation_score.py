@@ -394,10 +394,26 @@ def main():
     old = D.get('accumulation')
     # R100z44：入池首日标记——新入池标的 entryDate=本数据交易日，老标的沿用首次入池日
     # （从旧 data.js 按 code 继承；离池后再进视为新入池）。前端据此首日黄色高亮+「新」徽章。
-    _old_ed = {str(i.get('code') or ''): i.get('entryDate')
-               for i in (old or {}).get('scored') or [] if isinstance(i, dict)}
+    #
+    # ⚠️ R100z57 判定口径收紧（用户 2026-10-04 反馈「四模块都看不到新入徽标」后查出来的坑）：
+    # 旧写法是 `_old_ed.get(code) or trade_date`——**只要上一轮没留下 entryDate，就一律写今天**
+    # → 上线当天整屏刷「新」（首版 data.js 里 20 只吸筹/16 只九门/26 只谐波存量标的全被判新）。
+    # 现在改成三分支：
+    #   ① 上一轮有 entryDate 且是合法交易日 → 沿用（离池重进视为新入池，符合直觉）；
+    #   ② 上一轮没见过这个 code           → 写本数据交易日（它确实是第一次进池）；
+    #   ③ 上一轮见过、但没留下 entryDate（老数据/生成代码早于 R100z44）
+    #        → **不写**，前端 poolFresh 因 entryDate 缺失不挂徽章（宁缺毋滥）。
+    # 第 ③ 类是关键：有记忆却判断不了，就别拿「今天」假充，否则徽章当场贬值。
+    _old_pools = [i for i in (old or {}).get('scored') or [] if isinstance(i, dict)]
+    _old_ed = {str(i.get('code') or ''): i.get('entryDate') for i in _old_pools}
+    _old_codes = set(_old_ed.keys())
     for i in new_field.get('scored') or []:
-        i['entryDate'] = _old_ed.get(str(i.get('code') or '')) or trade_date
+        _c = str(i.get('code') or '')
+        _ed = _old_ed.get(_c)
+        if _c in _old_codes and _ed:
+            i['entryDate'] = _ed
+        elif _c not in _old_codes:
+            i['entryDate'] = trade_date
 
     # ---------------- R100z56：失效归档池（用户 2026-10-04 要求，参考断板反包/谐波） ----------------
     # 定义：上一轮 scored 内、本轮跌出（不再达标）的标的 → 归因失效归档，自失效日起留 5 个交易日。
