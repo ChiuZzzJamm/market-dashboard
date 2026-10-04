@@ -27,6 +27,7 @@
     G10 日期新鲜度    aiPrediction/openOutlook/ashare/us 日期 vs 最近交易日；
                       openOutlook.pos / duanban.star 按「下一个交易日是否已到」分流
     G11 只读冒烟(--deep)
+    G12 半死链路      data.js 顶层产出必须登记「流程主人」+ 被自动化点名 + 脚本零孤儿
 """
 import ast
 import json
@@ -96,6 +97,94 @@ DATA_KEYS_REQUIRED = [
 ]
 
 VALIDATE_SCOPES = ("all", "ai", "us", "star")
+
+
+# ---------------------------------------------------------------- G12 表（产出 · 生产方 · 流程主人）
+# R100z62：G12「半死链路」闸门的登记表——每个 data.js 顶层节点必须登记「流程主人」。
+#
+# 为什么要这张表（这就是此前「每查一次都能再挖出新半死链路」的根因）：
+#   改代码与同步自动化流程之间，此前没有任何机器可复验的约束。脚本写了个新顶层节点、
+#   前端接了线，但五个自动化的 prompt 一个字没提，它就这么静静地摆着，直到下一次体检
+#   换了个视角才被翻出来（fullScan / weekendNews / stopTrack / sectorMap 各踩过一次）。
+#   闸门 G2 只查「prompt 引用的脚本存不存在」——那是单向检查，反向的「产出有没有被消费」
+#   没人守，所以半死链路能长期存活。
+#
+# 字段：
+#   require : 五条看板自动化的 prompt 必须点名的关键词（大小写不敏感）。留空 = 豁免点名。
+#   proof   : 豁免的机器可复验反证，成立后豁免才作数（不写 = 不校验反证）。
+#               intermediate：脚本间中间产物（前端不引用它）
+#               mapping     ：静态映射表（dict[str,str]，内容不随交易日变化）
+#   note    : 为什么是这个主人 / 为什么豁免
+#
+# 新增 data.js 顶层节点时：**必须在此登记**，G12 会直接 FAIL。不许靠「跑一遍闸门没报错」
+# 蒙混过关，也不许往表里塞名字却不写 note。
+PRODUCT_OWNERSHIP = {
+    "aiPrediction": {
+        "require": ("aiPrediction", "AI 预测", "预测卡"),
+        "note": "16:00 任务写回 AI 叙事/概率，前端 AI 预测卡直接用",
+    },
+    "ashare": {
+        "require": ("ashare", "A 股", "A股", "大盘"),
+        "note": "A 股大盘与板块行情的主节点",
+    },
+    "us": {
+        "require": ("us", "美股"),
+        "note": "美股行情节点，07:30 / 08:30 两条任务各自负责一段",
+    },
+    "panorama": {
+        "require": ("panorama", "全景", "韩", "日"),
+        "note": "韩日早盘全景，覆盖在全景卡",
+    },
+    "duanban": {
+        "require": ("duanban", "断板"),
+        "note": "断板反包确认池/观察池/失效池",
+    },
+    "harmonic": {
+        "require": ("harmonic", "谐波"),
+        "note": "谐波形态池",
+    },
+    "accumulation": {
+        "require": ("accumulation", "吸筹"),
+        "note": "吸筹形态池",
+    },
+    "powerScreen": {
+        "require": ("powerScreen", "九门", "强势"),
+        "note": "九门强势筛选池（power_screener）",
+    },
+    "openOutlook": {
+        "require": ("openOutlook", "开盘前瞻", "前瞻"),
+        "note": "开盘前瞻节点",
+    },
+    "stkKlines": {
+        "require": ("stkKlines", "K 线", "K线"),
+        "note": "K 线内联数据，前端弹窗取数用",
+    },
+    "stkKlineNames": {
+        "require": ("stkKlineNames",),
+        "note": "K 线代码对照表，与 stkKlines 配套",
+    },
+    "stopTrack": {
+        "require": ("stopTrack", "止损跟踪"),
+        "note": "R100z61b 新增的止损台账统计卡，只能由 stop_tracker.py 刷写，AI 禁手写",
+    },
+    "fullScan": {
+        "require": (), "proof": "intermediate",
+        "note": "脚本间中间产物：读方是 harmonic_detect/accumulation_score，不进前端渲染",
+    },
+    "weekendNews": {
+        "require": (), "proof": "intermediate",
+        "note": "脚本间中间产物：读方是 push_notify/validate_stocks，不进前端渲染",
+    },
+    "sectorMap": {
+        "require": (), "proof": "mapping",
+        "note": "R100v2 新浪行业代码→行业名静态映射（数千条），embed_klines 写、前端板块兜底读；"
+                "内容不随交易日变化，故流程不逐日核对（但仍须是 dict[str,str] 静态映射形态）",
+    },
+    "updatedAt": {
+        "require": (),
+        "note": "整版生成时间戳，前端只渲染成文案，不参与任何决策，豁免点名",
+    },
+}
 
 
 class Report:
@@ -590,7 +679,124 @@ def g11_smoke(r):
         r.ok("G11", f"{len(cands)} 个只读脚本冒烟可执行（exit 0/1 均视为契约正常）")
 
 
-# ---------------------------------------------------------------- main
+# ---------------------------------------------------------------- G12
+def load_auto_prompts():
+    """读五条看板自动化的 prompt 全文。
+
+    单一事实源是 DB 本身，不用基线快照（快照会随代码演进而腐化）。
+    注意 R100z62：DB 里 deleted_at IS NULL 的自动化有 7 条，混着「公益花园·照顾宠物」
+    与「美团每日自动领券」（cwds 不在本项目）——必须用 cwds 收窄，否则会把别的任务的
+    prompt 当成看板流程，得出「无人点名」这类假结论。
+    """
+    try:
+        import sqlite3
+        db = os.path.expanduser("~/.workbuddy/workbuddy.db")
+        c = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        rows = c.execute(
+            "SELECT name, prompt, cwds, rrule FROM automations "
+            "WHERE deleted_at IS NULL AND cwds LIKE '%market dashboard%'"
+        ).fetchall()
+        return [{"name": n, "text": (t or ""), "cwds": w, "rrule": rr}
+                for n, t, w, rr in rows]
+    except Exception as e:                                   # noqa: BLE001
+        print(f"[G12] 读不到自动化 prompt（{e}），跳过点名校验")
+        return []
+
+
+def _proof_ok(kind, key, val, html):
+    """豁免反证是否仍成立。不成立 = 豁免理由已失效，必须重新登记。"""
+    if kind == "intermediate":
+        return key not in html
+    if kind == "mapping":
+        return isinstance(val, dict) and all(
+            isinstance(k, str) and isinstance(v, str) and v for k, v in val.items()
+        )
+    return True
+
+
+def g12_deadlinks(r):
+    """半死链路闸门：产出必须有人认领、被流程点名；脚本不许当孤儿。"""
+    D = load_data_json()
+    html = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
+    autos = load_auto_prompts()
+    allp = "\n".join(a["text"] for a in autos)
+
+    # ① 无主产出：新增顶层节点却没登记流程主人 → 直接 FAIL（前端渲染了也没人核对）
+    unknown = [k for k in D if k not in PRODUCT_OWNERSHIP]
+    for k in sorted(unknown):
+        r.fail("G12", f"无主产出：data.js 顶层节点 {k} 未登记流程主人——"
+                      f"先在 PRODUCT_OWNERSHIP 里补 owner/note，不许靠「闸门没报错」蒙混")
+
+    # ② 点名校验 + 豁免反证
+    dead, exempt_broken, named_n = [], [], 0
+    for k, spec in PRODUCT_OWNERSHIP.items():
+        val = D.get(k)
+        req = tuple(x.lower() for x in (spec.get("require") or ()))
+        if req:
+            hit = [a["name"] for a in autos if any(x in a["text"].lower() for x in req)]
+            if hit:
+                named_n += 1
+            else:
+                # 前端在渲染却没人点名 = 真半死（FAIL）；纯后台产物 = WARN
+                dead.append(f"{k}（前端渲染={k in html}）")
+                if k in html:
+                    r.fail("G12", f"半死链路：{k} 前端已渲染，但五条看板自动化无一条点名"
+                                  f" {list(spec['require'])}——要么补进 prompt，要么在"
+                                  f" PRODUCT_OWNERSHIP 登记 owner 并写明豁免理由")
+                else:
+                    r.warn("G12", f"半死链路（后台）：{k} 无自动化点名 {list(spec['require'])}")
+        # 豁免反证
+        kind = spec.get("proof")
+        if kind and not _proof_ok(kind, k, val, html):
+            exempt_broken.append(k)
+            r.fail("G12", f"豁免已失效：{k} 原本按「{kind}」豁免，但现状不再满足"
+                          f"（intermediate=前端不引用它；mapping=dict[str,str] 静态映射）")
+
+    if not dead and not exempt_broken:
+        r.ok("G12", f"{len(PRODUCT_OWNERSHIP)} 个顶层产出全部有主人、{named_n} 个被自动化点名、"
+                    f"豁免项反证成立（{len([k for k, s in PRODUCT_OWNERSHIP.items() if s.get('proof')])} 个）")
+
+    # ②b 自动化元数据：cwds 必须是合法 JSON 数组且指向本项目，rrule 不许空。
+    # 这条是「不改就出事」的硬约束——手写漏一个双引号会存成 [/path] 字符串，
+    # 自动化照跑但不干任何事，且不报错，只能靠这个闸门抓。
+    bad_cwds, bad_rrule = [], []
+    for a in autos:
+        try:
+            cs = json.loads(a["cwds"])
+            if not (isinstance(cs, list) and cs and all(isinstance(x, str) and x for x in cs)):
+                bad_cwds.append(f"{a['name']}:cwds=({a['cwds']!r} 不是 JSON 数组)")
+            elif not any(HERE in x for x in cs):
+                bad_cwds.append(f"{a['name']}:cwds 未指向本项目")
+        except Exception as e:                               # noqa: BLE001
+            bad_cwds.append(f"{a['name']}:cwds 解析失败({e})")
+        if not (a.get("rrule") or "").strip():
+            bad_rrule.append(a["name"])
+    if bad_cwds:
+        r.fail("G12", "自动化工作目录非法（自动化会静默跑空不报错）：" + "; ".join(bad_cwds))
+    elif bad_rrule:
+        r.warn("G12", f"自动化缺 rrule（可能是一次性任务）：{', '.join(bad_rrule)}")
+    else:
+        r.ok("G12", f"{len(autos)} 条看板自动化 cwds 均为合法 JSON 数组且指向本项目、rrule 非空")
+
+    # ③ 脚本孤儿：prompt 与「其它 py 的源码」都不出现该模块名。
+    # 注意必须比模块名（去 .py）——代码里写的是 `import kline_cache`，拿 'kline_cache.py'
+    # 去 substr 匹配必然失败，会把满地引用的热脚本误报成孤儿。
+    pyfiles = sorted(f for f in os.listdir(HERE) if f.endswith(".py"))
+    srcs = {f: open(os.path.join(HERE, f), encoding="utf-8", errors="ignore").read()
+            for f in pyfiles}
+    orphan = []
+    for f in pyfiles:
+        mod = f[:-3]
+        if mod in allp:
+            continue                                  # 自动化 prompt 直接点名
+        if any(mod in s for n, s in srcs.items() if n != f):
+            continue                                  # 别处 import / subprocess 引用
+        orphan.append(f)
+    if orphan:
+        r.warn("G12", f"疑似孤儿脚本（prompt 与各 py 源码均无引用，动态引用 ex.submit/ex.map 需人工确认）："
+                      f"{', '.join(sorted(orphan))}")
+    else:
+        r.ok("G12", f"{len(pyfiles)} 个 py 全部有调用方（prompt 点名或代码引用）")
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -613,6 +819,7 @@ def main():
     g6_calendar(r)
     g7_validate_scopes(r)
     g8_g9_g10_data(r)
+    g12_deadlinks(r)
     if deep:
         g11_smoke(r)
 
