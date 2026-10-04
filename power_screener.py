@@ -30,7 +30,10 @@ SOFT_NEED = 3
 
 
 def _ma(vals, n):
-    if len(vals) < n:
+    # R100z59：与 accumulation_score.py/_ma 同口径补 `n <= 0` 守卫——九门只调 _ma(v,5)，
+    # 但同一个 _ma 也被 MA20 之类的曲线复用；n=0 时原写法走 `vals[-0:]` = 全量切片，
+    # 返回"整段均值"而非 None，指标会静默变成一条被拉平的错误值（宁缺毋滥 → 该判无效就 None）。
+    if len(vals) < n or n <= 0:
         return None
     s = vals[-n:]
     return sum(s) / len(s)
