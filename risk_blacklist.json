@@ -1,33 +1,14 @@
 {
  "ok": true,
- "date": "2026-10-04",
- "checked": 147,
+ "date": "2026-09-30",
+ "checked": 48,
  "liftWindow": [
   2,
   5
  ],
  "watchPledgeWithin": 365,
  "cutDays": 30,
- "blacklist": {
-  "002497": {
-   "name": "",
-   "reasons": [
-    "2026-09-08 减持公告"
-   ],
-   "count": 1,
-   "watch": []
-  },
-  "601088": {
-   "name": "",
-   "reasons": [
-    "解禁 2026-10-08（定向增发机构配售股份，占总股本 2.1%）"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 0.2%（截至 2026-05-22）"
-   ]
-  }
- },
+ "blacklist": {},
  "unknown": [],
  "failed": [],
  "note": "硬风险黑名单：ST/退市、T+2~T+5 解禁、质押≥30%, 减持公告 30 日内；源不可达不判安全"

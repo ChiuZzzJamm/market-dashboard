@@ -2409,7 +2409,12 @@ function renderAccumulation() {
   //   （生成侧 accumulation_score.py 走 roll_fail_pool 剔除），样式与断板反包/谐波页同款。
   // ⚠️ 这里判断的是「字段存不存在」而不是「有没有条目」——池空时也要露出「失效归档池 · 0 只」，
   // 用户才知道这个池子存在（首次生成前 failPool 整块缺失、自然不渲染，不编数据）。
-  var accFail = (a.failPool !== undefined) ? dbFailHtml(a.failPool || [], 'accumulation') : '';
+  /* R100z58（用户 2026-10-04「吸筹/九门失效池看不到」）：原写法 `a.failPool!==undefined` 才渲染，
+     而 failPool 字段只有脚本实跑过才会写入——节前 09-30 那次生成在 R100z56 加字段之前，
+     之后 10-01~10-04 国庆休市没再跑过 → 字段一直 undefined → 整块失效池连「0 只」都不显示，
+     看起来像功能没做。dbFailHtml 本身已为空池备好「失效归档池 · 0 只 / 暂无失效标的」文案，
+     故这里改成无条件渲染，缺失时露出占位，跑过之后自动变有内容的池。 */
+  var accFail = dbFailHtml(a.failPool || [], 'accumulation');
   return accLeg + '<div class="card">' + secS + secW + accFail + '</div>';
 }
 
@@ -2451,7 +2456,7 @@ function renderPowerScreen() {
     '</div></details>';
   // R100z56（用户 2026-10-04 要求）：九门页同样补失效归档池（原在池内、本轮不再过阈值的标的，
   // 自失效日起留 5 个交易日，生成侧 power_screener.py 走 roll_fail_pool 剔除）。
-  var pwFail = (p.failPool !== undefined) ? dbFailHtml(p.failPool || [], 'powerScreen') : '';
+  var pwFail = dbFailHtml(p.failPool || [], 'powerScreen'); // R100z58 同吸筹：无条件渲染，空池露占位
   return gateDef +
     '<div class="card"><h2>⚡ 日线九门' + (p.tradeDate ? ' <span class="h2-date">' + esc(p.tradeDate) + '</span>' : '') + '</h2>' +
     '<div class="pw-grid">' + items + '</div>' + pwFail + (p.summary ? '<div class="note-line">' + esc(p.summary) + '</div>' : '') + '</div>';
