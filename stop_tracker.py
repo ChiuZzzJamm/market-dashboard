@@ -23,7 +23,8 @@
 用法：
   python3 stop_tracker.py              # 登记当日 + 回算已完成跟踪 + 写台账
   python3 stop_tracker.py --view       # 只打印统计，不登记
-  python3 stop_tracker.py --write-data # 额外把统计写进 data.js 顶层 stopTrack（前端展示用）
+  python3 stop_tracker.py --write-data # 统计写进 data.js 顶层 stopTrack（前端展示用）
+                                       # R100z60c 起**默认就写**，此参数仅为兼容保留（等价默认行为）
   python3 stop_tracker.py --days 10    # 回算最近 N 个交易日（默认全部）
 
 口径铁律：
@@ -424,7 +425,14 @@ def main():
         L['stats'] = st
         L['updatedAt'] = _now()
         save_ledger(L)
-    if a.write_data:
+    # R100z60c：改成**默认就写**（--view 除外），别再要求显式 --write-data。
+    # 原因：此前只有带 --write-data 才写，但全仓库 + 五条自动化 prompt 里**没有任何调用方
+    # 带这个参数**，唯一一次手写停在 2026-10-04 12:32:45 —— 于是前端「止损跟踪统计」卡永远
+    # 是那份旧快照，而 stop_ledger.json 每天都在被 track_calibration 更新。
+    # 现在 track_calibration.py 在真实跑（非 --view / 非 --json）时会调 stop_tracker.main()，
+    # 这里顺带把统计刷新进 data.js 顶层 stopTrack；写入发生在 16:00 流程 deploy 之前，
+    # 后面没有别的生成步骤覆盖 data.js（validate_stocks / audit 都只读不改）。
+    if not a.view:
         write_stop_track_to_datajs(st)
     _print(st, ledger)
     return 0
