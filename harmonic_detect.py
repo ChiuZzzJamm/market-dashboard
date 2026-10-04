@@ -16,7 +16,10 @@
 import sys, json, os, time, datetime
 
 import kline_cache as K
-import common  # R100z57：交易日口径（common.today_trade_date），周末/长假跑不得写假日期
+# R100z57 交易日纪律：交易日口径一律走 common.today_trade_date（周末/长假跑不得写假日期），
+# 常见写法 date.today() 会印出「周六收盘」并把全池误挂「新」徽章。
+# R100z64：此处原有一行 `import common`，但本文件从不在顶层用它（真正调用点都在函数内
+# import common，见 _trading_days_between / main），属死 import，已删；删后 pyflakes 仍干净。
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 

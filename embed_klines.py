@@ -235,7 +235,10 @@ def _fetch_names(codes, timeout=10):
     codes = [str(c).strip() for c in codes if re.fullmatch(r"\d{6}", str(c).strip())]
     for i in range(0, len(codes), 30):
         batch = codes[i:i + 30]
-        url = QTIMG_URL.format(q=",".join(_sym(c) for c in batch))
+        # R100z64 修复：这里原先调的是已删死脚本 fix_pools_meta.py 内部的 _sym()，
+        # 删模块时漏改消费者 → 只要哪一轮有标的不知名（missing 非空）就 NameError 崩在补名上，
+        # 平时 missing 为空就静默无事发生。内联同款 sh/sz 前缀逻辑（与 fetch_kline:200 一致）。
+        url = QTIMG_URL.format(q=",".join(("sh" if c.startswith("6") else "sz") + c for c in batch))
         try:
             p = subprocess.run(
                 ["curl", "-s", "--max-time", str(timeout), "-H", "User-Agent: " + UA, url],

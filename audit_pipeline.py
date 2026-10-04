@@ -45,6 +45,14 @@ _NODE_CAND = "/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node
 NODE = _NODE_CAND if os.path.exists(_NODE_CAND) else "node"
 VFLAGS = ("--no-fix",)
 
+# R100z64：pyflakes 装在托管 venv 里。它就是靠人肉扫抓不到那类 bug 的答案——
+# compileall 只验语法，「undefined name」要运行到那一行才 NameError，而流水线
+# 可能因为休市压根没跑过，把炸弹埋到复牌首日才炸（本轮实测踩中，10-08 会崩流水线）。
+_PYF_CANDS = (
+    "/Users/loccco/.workbuddy/binaries/python/envs/default/bin/python",
+    "python3", "python",
+)
+
 # R100z17：data.js 里「结构性可空」的字段——不是缺陷，是脚本/前端设计预期。
 # 每条豁免必须给出豁免理由，且由 G9b 强制反证「前端不会渲染出空白」：
 #   ① 前端根本不引用该字段（纯数据层字段，空值无害）
@@ -276,6 +284,21 @@ def walk_paths(obj, prefix=""):
 
 
 # ---------------------------------------------------------------- G1
+def _pyflakes():
+    """跑 pyflakes。返回 (clean, 用的解释器 basename, 输出)。
+
+    退出码 0 = 零告警，1 = 有告警（输出到 stdout）。三个解释器都找不到就放过，
+    不硬拦——闸门断掉等于误判 FAIL。
+    """
+    for b in _PYF_CANDS:
+        c, _, _ = sh(f"{b} -c 'import pyflakes'")
+        if c != 0:
+            continue                       # 这个解释器没装 pyflakes，换下一个
+        c, out, _ = sh(f"{b} -m pyflakes *.py", timeout=180)
+        return c == 0, b, (out or "").strip()
+    return True, None, ""
+
+
 def g1_syntax(r):
     bad = []
     for fn in sorted(os.listdir(HERE)):
@@ -291,8 +314,15 @@ def g1_syntax(r):
     n_sh = len([f for f in os.listdir(HERE) if f.endswith(".sh")])
     if bad:
         r.fail("G1", f"语法错误：{', '.join(bad)}")
-    else:
-        r.ok("G1", f"{n_py} 个 .py + {n_sh} 个 .sh 语法全部通过")
+
+    # pyflakes：抓 compileall 看不见的 undefined name / 未用 import / 重定义
+    clean, bin_, out = _pyflakes()
+    if not clean:
+        r.fail("G1", "pyflakes 静态检查未通过（undefined name / 未用 import / 重复定义）："
+                     + out.replace("\n", " | ")[:400])
+    elif not bad:
+        tag = f"via {os.path.basename(bin_)}" if bin_ else "环境无 pyflakes，跳过"
+        r.ok("G1", f"{n_py} 个 .py + {n_sh} 个 .sh 语法全部通过，pyflakes 零告警 {tag}")
 
 
 # ---------------------------------------------------------------- G2/G3

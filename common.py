@@ -100,7 +100,11 @@ def last_trade_day(d):
 
 def today_trade_date():
     """今天对应的交易日——今天休市（周末/法定假日）就回退到最近一个交易日。"""
-    return last_trade_day(datetime.date.today())
+    # R100z64 修复：本文件顶层是 `import datetime as _dt`（R100z57 为免函数内 import 遮蔽
+    # 模块级命名而改的），这里原先却写 `datetime.date.today()` → NameError。
+    # 该函数被 harmonic_detect / power_screener 当主路径日期口径调用，而 10-04 改完后
+    # 恰逢国庆休市没跑过一次，错误一直休眠，10-08 复牌首日会直接崩掉 A 股流水线。
+    return last_trade_day(_dt.date.today())
 
 
 def trading_days_between(d0, d1):

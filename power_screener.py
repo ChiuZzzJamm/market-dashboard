@@ -18,7 +18,9 @@
 import sys, json, os, datetime
 
 import kline_cache as K
-import common  # R100z56：失效归档池滚动窗口（common.roll_fail_pool，节假日感知 5 交易日）
+# R100z56：失效归档池滚动窗口走 common.roll_fail_pool（节假日感知 5 交易日），
+# 旧实现只数周一~周五，长假会被数错、导致节后首日误清空归档池。
+# R100z64：原顶层 `import common` 从未被顶层使用（调用点在 main 内 import），属死 import，已删。
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
