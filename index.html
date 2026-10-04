@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610041522"></script>
+<script src="data.js?v=202610041536"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -188,14 +188,11 @@
   .dd-main { font-weight: 600; }
   /* R100c：确信度徽章挪至利好/利空卡标题行（nc-theme），主推行不再内嵌 */
   .nc-theme .conf-badge { margin-left: 6px; }
-  /* R100z53：反证单独成条（不再跟主推挤一行）——左侧色条 + 浅底 + 加粗标签，
-     让「这条预测为什么可能错」在一屏里能被一眼挑出来。 */
-  .dd-counter { display: block; margin-top: 5px; margin-bottom: 6px; padding: 4px 9px;
-    border-left: 3px solid #d9a05b; background: rgba(217, 160, 91, .09);
-    border-radius: 0 4px 4px 0; color: #8a5320; font-weight: 400; font-size: 11.8px; line-height: 1.6; }
-  .dd-counter .dd-c-tag { display: inline-block; font-weight: 700; font-size: 10.5px;
-    letter-spacing: .5px; margin-right: 5px; padding: 0 4px; border-radius: 3px;
-    background: #d9a05b; color: #fff; vertical-align: 1px; }
+  /* 反证条目 —— 回归 R100z53 之前的朴素样式：纯文本「反证：」+ 棕字，
+     无橙底标签块 / 无左侧色条 / 无浅底，避免在一屏里抢过主推。
+     ⚠️ 2026-10-04 用户拍板回退（曾在 R100z53 改成「色条+浅底+橙块标签」，用户判为太抢眼）。
+     改这里别顺手把「反证：」冒号去掉（旧的渲染口径就是带冒号纯文本）。 */
+  .dd-counter { display: block; margin-top: 3px; margin-bottom: 4px; color: #b06a2c; font-weight: 400; font-size: 11.5px; }
 
   /* ===== 全球要闻 / 周末 ===== */
   .wk-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 26px; margin-bottom: 20px; box-shadow: var(--shadow); }
@@ -1326,9 +1323,9 @@ function renderDeduce(dd, hideBadge) {
   /* 主推+反证在前（R99n：置于候选上方），确信度徽章复用 AI 预测 .conf-badge 三级配色 */
   if (main) {
     h += '<div class="dd-main">主推：' + esc(main) + (hideBadge ? '' : deduceConfBadge(dd)) + '</div>';
-    if (counter) h += '<div class="dd-counter"><span class="dd-c-tag">反证</span>' + esc(counter) + '</div>';
+    if (counter) h += '<div class="dd-counter">反证：' + esc(counter) + '</div>';
   } else if (counter) {
-    h += '<div class="dd-counter"><span class="dd-c-tag">反证</span>' + esc(counter) + '</div>';
+    h += '<div class="dd-counter">反证：' + esc(counter) + '</div>';
   }
   cands.forEach(function (c, idx) {
     h += '<div class="dd-cand">▸ 候选' + String.fromCharCode(65 + idx) + '｜' + esc(c.tag || '') +
@@ -1691,7 +1688,7 @@ function renderAiPrediction() {
       '</div>' +
       '<div class="drv">隔夜驱动：' + esc(s.usDriver) + '</div>' +
       '<div class="lgc">映射逻辑：' + esc(s.logic) + '</div>' +
-      (s.deduce ? renderDeduce(s.deduce, true) : (s.counter ? '<div class="dd-box"><div class="dd-counter"><span class="dd-c-tag">反证</span>' + esc(s.counter) + '</div></div>' : ''));
+      (s.deduce ? renderDeduce(s.deduce, true) : (s.counter ? '<div class="dd-box"><div class="dd-counter">反证：' + esc(s.counter) + '</div></div>' : ''));
     if (s.stocks && s.stocks.length) {
       html += '<div class="stock-chips">';
       s.stocks.forEach(function (st) {
@@ -2132,7 +2129,7 @@ function stkNewsHtml(code) {
       (aiHit.usDriver ? '<div class="db-ref-sum">隔夜驱动：' + esc(aiHit.usDriver) + '</div>' : '') +
       (aiHit.logic ? '<div class="db-ref-sum">映射逻辑：' + esc(aiHit.logic) + '</div>' : '') + '</div>';
     if (aiHit.deduce) h += renderDeduce(aiHit.deduce, true);
-    else if (aiHit.counter) h += '<div class="dd-box"><div class="dd-counter"><span class="dd-c-tag">反证</span>' + esc(_ddClean(aiHit.counter)) + '</div></div>';
+    else if (aiHit.counter) h += '<div class="dd-box"><div class="dd-counter">反证：' + esc(_ddClean(aiHit.counter)) + '</div></div>';
   }
   if (!e && !hits.length && !secHit && !aiHit) h += '<div class="db-ref-sum">暂无明确利好/利空消息（按当日要闻与 AI 写回自动更新）</div>';
   return h;
