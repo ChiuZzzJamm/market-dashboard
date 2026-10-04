@@ -92,6 +92,37 @@ def _f(x):
     return float(x) if isinstance(x, (int, float)) else None
 
 
+def mech_stop(x, last_close, default_pct=DEFAULT_STOP_PCT):
+    """机械池止损锚（R100z61b，2026-10-05 用户拍板）——治「止损线每天漂移」。
+
+    ① 断板反包 = **T 日（涨停日）最低价**。涨停日已过去，最低价是历史事实、不随
+       每日重算变化，天然固定锚。它与形态淘汰线**分离**：形态破位（check_duanban 判
+       不破 T 日低点×0.98，破了移失效池）照常执行，但这里的止损位仍独立按 T 日低点
+       记账 —— 两条线，别混成一个。
+    ② 其余机械池（九门/补位/强势/吸筹）= build_stock_pool 已锁定的 `entryClose` ×
+       (1−pct)。entryClose 是生成那天写死的入场日收盘，不随每日重算漂移。
+    ③ 两者都取不到才回落「最新收盘 ×(1−pct)」—— 这个会漂移，仅作兜底并如实标注来源。
+
+    返回 (stop价, stopSrc标签)；调用方按 stopSrc 区分「真形态位」与「兜底值」，
+    避免拿兜底值去评价形态位的有效性。
+    """
+    zt = x.get('ztDate')
+    if zt:
+        for b in (x.get('kline') or []):
+            if isinstance(b, (list, tuple)) and len(b) > 4 and b[0] == zt:
+                tlow = _f(b[4])
+            elif isinstance(b, dict) and b.get('day') == zt:
+                tlow = _f(b.get('low'))
+            else:
+                continue
+            if tlow and last_close and 0.8 * last_close <= tlow <= 1.2 * last_close:
+                return round(tlow, 2), 'T日低点'
+    ec = _f(x.get('entryClose'))
+    if ec and last_close and 0.7 * last_close <= ec <= 1.3 * last_close:
+        return round(ec * (1 - default_pct), 2), 'entryClose-%s%%' % round(default_pct * 100, 1)
+    return round(last_close * (1 - default_pct), 2), 'default-%s%%' % round(default_pct * 100, 1)
+
+
 def collect_entries(D):
     """按优先级从四个模块抽 (code, name, sector, stop, stopSrc)。"""
     out = {}
@@ -136,9 +167,11 @@ def collect_entries(D):
             lc = _f(kl[-1][2]) if kl else None
         if not c or c in out or lc is None:
             continue
+        # R100z61b：不再一律按「最新收盘 −3%」记账（那条线每天重算、等于永不触发）；
+        # 改走 mech_stop()：断板用 T 日最低价，其余用已锁定的 entryClose。
+        _st, _src = mech_stop(x, lc)
         out[c] = {'code': c, 'name': x.get('name') or '', 'sector': x.get('sector') or '',
-                  'stop': round(lc * (1 - DEFAULT_STOP_PCT), 2),
-                  'stopSrc': 'default-3%', 'lastClose': lc, 'from': src}
+                  'stop': _st, 'stopSrc': _src, 'lastClose': lc, 'from': src}
     vals = list(out.values())
     vals.sort(key=lambda v: (SRC_PRIORITY.index(v['stopSrc'])
                              if v['stopSrc'] in SRC_PRIORITY else 99, v['code']))

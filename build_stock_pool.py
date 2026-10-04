@@ -142,8 +142,11 @@ def stoploss_basis(item):
     if src == '谐波':
         return '形态失效位（谐波 D 点投影下方）'
     if src == '断板反包':
-        return '最近收盘 −2.5%（断板反包形态位）'
-    return '最近收盘 −3%（机械候选，无形态位）'
+        # R100z61b：止损锚 = T 日（涨停日）最低价（历史事实、不漂移）。
+        # 注意与形态淘汰线分离——形态破位由 check_duanban 判、照常移入失效池，
+        # 这里只管「价格止损位」，两者是两条线，别混成一个。
+        return 'T 日（涨停日）最低价（固定锚；形态破位移失效池，与止损位分离）'
+    return '入场日收盘 −3%（机械候选，锚入场价不锚现价）'
 
 
 def falsify_of(item):
@@ -212,7 +215,9 @@ def pick_for(sector, pools, quota_duan=4, quota_harm=2, quota_acc=2, quota_fill=
         if len(got) >= quota_fill:
             break
         last = r2((it.get('kline') or [None])[-1][2] if it.get('kline') else None)
-        got.append(mk(it, '断板反包', last, stop_pct=-2.5, tgt=6.0))
+        # R100z61b：止损锚改 T 日（涨停日）最低价（绝对价、固定），不再用 last ×0.975。
+        # 形态淘汰（破 T 日低点×0.98 出池）仍由 check_duanban 独立判定，两条线分离。
+        got.append(mk(it, '断板反包', last, stop_pct=-2.5, tgt=6.0, stop_price=zt_low(it)))
     # 2) 谐波池（最多 2，确认池优先）
     for it in m_h[:quota_harm]:
         if len(got) >= quota_fill:
@@ -263,22 +268,58 @@ def code6(it):
     return str(it.get('code') or '').replace('.SH', '').replace('.SZ', '').replace('.BJ', '').zfill(6)
 
 
-def mk(it, src, last, stop_pct=0.0, tgt=6.0, use_harm_stop=False, filled=False):
+def zt_low(it):
+    """断板反包：T 日（涨停日）最低价，作为**绝对价止损锚**（R100z61b）。
+
+    涨停日已过去，其最低价是历史事实、不随每日重算变化，天然是固定锚 —— 正好治
+    「止损 = 最新收盘 × 固定百分比」那个病（最新收盘每天变 → 止损线永远贴着现价
+    下方 N 个百分点同步下移 → 价格跌多少线就降多少 → 理论上永不停损）。
+    data.js 里 kline 两种容器都见过（list[day,open,close,high,low,vol] 与 dict），
+    这里全部兼容。取不到返回 None，交给调用方回落百分比口径。
+    """
+    zt = it.get('ztDate')
+    if not zt:
+        return None
+    for b in (it.get('kline') or []):
+        if isinstance(b, (list, tuple)):
+            if len(b) > 4 and b[0] == zt:
+                return r2(b[4])
+        elif isinstance(b, dict) and b.get('day') == zt:
+            return r2(b.get('low'))
+    return None
+
+
+def mk(it, src, last, stop_pct=0.0, tgt=6.0, use_harm_stop=False, filled=False, stop_price=None):
     """tgt 传的是**百分数**（6 表示 +6%），stop_pct 同理（-2.5 表示 −2.5%）。
 
     ★踩坑（2026-10-01）：第一版把 6 当「0.06 倍」相乘，目标价算成 0.29 元这种荒谬值，
     页面挂上去会被当成笑话。现统一为价格 = last × (1 + pct/100)。
+
+    ★R100z61b（2026-10-05 用户拍板）：止损锚换成**固定锚**，不再锚「最新收盘」。
+    旧实现一律 `stop = last × (1+pct/100)`，而 last = lastClose 每天重算 → 止损线
+    永远贴着现价下方 N 个百分点同步下移（trailing 反向），价格跌多少线就降多少，
+    等于**理论上永远等不到触发**；只有走 use_harm_stop 的谐波是固定锚。
+    新优先级：① 谐波形态位 ② 绝对价锚 stop_price（断板反包 = T 日最低价）
+              ③ 条目已写入的 entryClose（上一轮生成时锁定的入场日收盘）
+              ④ 兜底 last（仅首日，之后会被 ③ 接管）。
     """
     code = code6(it)
     name = norm(it.get('name'))
-    # 止损：谐波优先用形态失效位；价格必须在 last 的合理量级内（±20%）才采信
+    # 止损锚：形态位 > 绝对价锚 > 已锁定的入场日收盘 > 兜底最新收盘
     hz_stop = r2(it.get('stop'))
     if use_harm_stop and hz_stop and last and 0.8 * last <= hz_stop <= 1.2 * last:
         stop = hz_stop
-    elif use_harm_stop and hz_stop and last:
-        stop = r2(last * (1 + stop_pct / 100.0))       # 形态位量级异常，退回百分比止损
+    elif stop_price and last and 0.8 * last <= stop_price <= 1.2 * last:
+        stop = r2(stop_price)                          # 断板反包：T 日（涨停日）最低价
     else:
-        stop = r2(last * (1 + stop_pct / 100.0)) if last else None
+        _ec = r2(it.get('entryClose'))
+        if _ec and last and 0.7 * last <= _ec <= 1.3 * last:
+            stop = r2(_ec * (1 + stop_pct / 100.0))    # 入场日收盘锚（生成时锁定，固定）
+        else:
+            stop = r2(last * (1 + stop_pct / 100.0)) if last else None   # 兜底（会漂移，仅首日）
+    # entryClose：机械池锁一次就不再变（谐波走形态位，不占这个字段）
+    _ec = r2(it.get('entryClose'))
+    entry_close = _ec if _ec else (r2(last) if (last and not use_harm_stop) else None)
     # 目标：谐波优先用形态 T1，但同样要过量级校验
     hz_tgt = r2(it.get('target1'))
     if use_harm_stop and hz_tgt and last and 1.2 * last <= hz_tgt <= 2.0 * last:
@@ -288,7 +329,8 @@ def mk(it, src, last, stop_pct=0.0, tgt=6.0, use_harm_stop=False, filled=False):
     item = {'code': code, 'name': name, 'sector': norm(it.get('sector')),
             'src': src + ('·补位' if filled else ''),
             'note': (('[%s] ' % src) if filled else '') + norm(it.get('probNote') or it.get('note') or '')[:60],
-            'lastClose': last, 'exit': build_exit({'src': src}, stop, target)}
+            'lastClose': last, 'entryClose': entry_close,
+            'exit': build_exit({'src': src}, stop, target)}
     return item
 
 
