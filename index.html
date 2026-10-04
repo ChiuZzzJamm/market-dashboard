@@ -184,6 +184,13 @@
   .pf-stat .down { color: var(--down); }
   .pf-stat .flat { color: var(--ink2); }
 
+  /* R100z60c（用户 2026-10-05 截图：止损卡胶囊行紧贴下方标的网格）：
+     #st-track-box 之前完全没有自己的 margin，胶囊行到底下的 .ai-grid 只剩 .risk-line 的
+     2px 底边距，7 个胶囊和「新型电池·固态电池」那排卡片几乎粘在一起。
+     这里补 18px 下间距（顶部不动，上方是 .pf-box 的 18px 底边距）。
+     ⚠️「留空白」一律是加 margin，不是删块/隐藏——别再理解成 display:none。 */
+  #st-track-box { margin-bottom: 18px; }
+
   /* ===== 推演块（fin-strategy-engine 三候选推演，内嵌题材掘金/要闻/预测等模块条目，R99m） ===== */
   .dd-box { margin: 8px 0 2px; background: var(--accent-soft); border: 1px dashed var(--line); border-radius: 12px; padding: 9px 13px; font-size: 12.5px; line-height: 1.75; }
   .dd-cand { margin: 1px 0; }
