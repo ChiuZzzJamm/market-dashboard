@@ -339,7 +339,10 @@ elif mode == 'us':
 elif mode == 'weekend':
     # 周末推送改源：周末消息面前瞻卡已删除（与全球要闻重合），推送改用
     # 周末更新的全球要闻（R68 起周日写入美股卡：us.bullNews/bearNews/intlNews/bankViews/macroNews，
-    # 旧数据兜底读 ashare 同名字段）+ 周一开盘预判（weekendNews.mondayOutlook）。
+    # 旧数据兜底读 ashare 同名字段）+ 下一交易日开盘前瞻（顶层 openOutlook.content）。
+    # ⚠️ 别再看「周一开盘预判（weekendNews.mondayOutlook）」——那是改源前的旧实现。
+    #    R100z55 核对：weekendNews 现只保留 {date, source} 元信息，mondayOutlook 早已下线，
+    #    本分支读的是 D['openOutlook']['content']，周末与周一两条前瞻都走这个键（见下方 _oo）。
     a = D.get('ashare') or {}
     w = D.get('weekendNews') or {}
     u = D.get('us') or {}

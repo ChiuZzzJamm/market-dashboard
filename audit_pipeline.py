@@ -38,7 +38,10 @@ from datetime import datetime
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PYBIN = sys.executable
-NODE = "/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node"
+# R100z55：原为无兜底硬编码路径，托管 node 升版后 G-* 闸门里的 node -e 会整体失败。
+# 审计闸门是 deploy 前的唯一放行口，这里断掉等于误判 FAIL（进而禁止上线），必须留兜底。
+_NODE_CAND = "/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node"
+NODE = _NODE_CAND if os.path.exists(_NODE_CAND) else "node"
 VFLAGS = ("--no-fix",)
 
 # R100z17：data.js 里「结构性可空」的字段——不是缺陷，是脚本/前端设计预期。

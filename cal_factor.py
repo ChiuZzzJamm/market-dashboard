@@ -196,7 +196,15 @@ def main():
         print(json.dumps(r, ensure_ascii=False))
     else:
         print(json.dumps(r, ensure_ascii=False, indent=2))
-    return 0 if not r['aShareClosed'] else 0
+    # ⚠️ 退出码恒为 0，请勿「顺手改得更正确」：
+    #   ① 所有自动化（07:30/08:30/9:45/16:00/周末）一律以 stdout 里的 `aShareClosed` 字段
+    #      判休市，没有一处看 returncode；
+    #   ② audit_pipeline.py 的 G6 用 `c != 0` 判 cal_factor 是否「执行成功」，而 G6 固定喂
+    #      `--date 2026-10-08`（开市日）——一旦改成「休市 return 1」，休市日跑 audit 时
+    #      这条还会因为 10-08 本身开市而侥幸不炸，但语义已经埋雷，谁改到别处谁背锅。
+    #   R100z55：此处原写作 `return 0 if not r['aShareClosed'] else 0`，两个分支都是 0，
+    #   属写残的死代码（看起来像「休市返回 1」，实际永远 0）。已显式收敛为 `return 0` 并留档。
+    return 0
 
 
 if __name__ == '__main__':

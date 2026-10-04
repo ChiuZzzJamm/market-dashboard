@@ -17,7 +17,7 @@
 
 用法：
     python3 stock_fundflow.py                        # 默认从 data.js 的 aiPrediction 标的里自动取码
-    python3 stock_fundflow.py --codes-file codes.txt # 指定标的（每行一个 6 位码）
+    python3 stock_fundflow.py --codes-file codes.txt # 指定标的（每行一个 6 位码，逐行读取）
     python3 stock_fundflow.py --json                 # 只输出 JSON
 """
 import argparse
@@ -140,8 +140,16 @@ def main():
 
     codes = []
     if a.codes_file:
-        codes = [''.join(ch for ch in open(a.codes_file, encoding='utf-8').read() if ch.isdigit())[:6]]
-        codes = [c for c in codes if len(c) == 6]
+        # ★R100z55 修 bug：原写法把整个文件所有数字拼成一条长串再取前 6 位
+        # （''.join(...)[:6]），8 行 codes.txt 只会拿到「第 1~6 位数字拼出来的 1 个假代码」，
+        # 其余 7 只全部落进 failed——看起来是「源都取不到」，其实是自己把输入读坏了。
+        # 正确口径与 stock_quotes.py / stock_risk_blacklist.py 一致：逐行取 6 位数字。
+        _raw = []
+        for _ln in open(a.codes_file, encoding='utf-8'):
+            _c = ''.join(ch for ch in _ln if ch.isdigit())[:6]
+            if len(_c) == 6:
+                _raw.append(_c)
+        codes = _raw
     else:
         import subprocess
         node = ('/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node'

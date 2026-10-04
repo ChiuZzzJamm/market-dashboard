@@ -28,7 +28,9 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import update_ashare_sectors as uas  # noqa: E402  （复用 curl/UA/同花顺解析）
 
-NODE = "/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node"
+# R100z55：原为无兜底硬编码路径，托管 node 升版后目录消失即崩；改为存在性判断 + PATH 兜底。
+_NODE_CAND = "/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node"
+NODE = _NODE_CAND if os.path.exists(_NODE_CAND) else "node"
 IDX_QT = "https://qt.gtimg.cn/q=sh000001,sz399001,sz399006"
 IDX_NAMES = {"sh000001": "上证指数", "sz399001": "深证成指", "sz399006": "创业板指"}
 

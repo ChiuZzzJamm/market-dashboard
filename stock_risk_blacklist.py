@@ -15,8 +15,6 @@
 
     硬约束（R91m/n）：源失败一律如实进 failed / unknown，绝不补 0、绝不把取不到写成「无风险」。
 
-硬约束（R91m/n）：源失败一律如实进 failed / unknown，绝不补 0、绝不把取不到写成「无风险」。
-
 用法：
     python3 stock_risk_blacklist.py                 # 默认取 data.js aiPrediction 的标的
     python3 stock_risk_blacklist.py --json          # 只输出 JSON
