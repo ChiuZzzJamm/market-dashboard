@@ -1957,10 +1957,19 @@ function _hzFailClip(kl, hz) {
   var out = kl.filter(function (b) { return b[0] <= cut; });
   return (out.length > 1) ? out : kl;
 }
+/* R100z56：失效池按 kind 分源（原写法非 harmonic 一律回落断板池——
+   传入 'powerScreen'/'accumulation' 会静默串到断板 failPool，弹窗错票且无报错）。
+   ⚠️ 新增 kind 必须同步 dbFailHtml 的 onclick 白名单与新生成侧字段名，别只改这里。 */
+function failPoolOf(kind) {
+  var D = window.DASHBOARD_DATA || {};
+  if (kind === 'harmonic') return (D.harmonic || {}).failPool || [];
+  if (kind === 'accumulation') return (D.accumulation || {}).failPool || [];
+  if (kind === 'powerScreen') return (D.powerScreen || {}).failPool || [];
+  return (D.duanban || {}).failPool || []; // 兜底：断板反包（默认）
+}
 // R100z4x：失效池弹窗同组导航——STK_GRP=失效归档池全列表，左右箭头/键盘 ←→ 在池内循环
 function openFailIdx(kind, idx) {
-  var D = window.DASHBOARD_DATA || {};
-  var raw = (kind === 'harmonic' ? ((D.harmonic || {}).failPool) : ((D.duanban || {}).failPool)) || [];
+  var raw = failPoolOf(kind);
   // R100z41：必须与 dbFailHtml 用同一套排序，否则弹窗下标会串到相邻的旧归档条目上
   var fp = failPoolSorted(raw);
   if (!fp[idx]) return;
@@ -2394,8 +2403,14 @@ function renderAccumulation() {
       (demoted ? '；其中 <b>' + demoted + '</b> 只打分虽到强池线，但信号滞后超 10 日、结构已走旧，按纪律<b>降级至此</b>' : '') +
       '</span></div><div class="acc-grid">' + wB.join('') + '</div>' : '';
   // R100z43：去掉「🧲 主力吸筹 + 日期」大标题（image#1 用户要求）——tab 名与口径条已够定位，卡片直接进分池。
-  return accLeg + '<div class="card">' +
-    secS + secW + (a.summary ? '<div class="note-line">' + esc(a.summary) + '</div>' : '') + '</div>';
+  // R100z56（用户 2026-10-04 要求）：① 删掉下方原本渲染的 a.summary 口径条（「六特征打分：强 N / 观察 M」，
+  //   强弱只数这类口径随行情天天变、页面上最容易过期，卡片本身已有强度/滞后格，口径不再重复）；
+  //   ② 新增失效归档池——原在强/观察池内、本轮走坏的标的自失效日起留 5 个交易日
+  //   （生成侧 accumulation_score.py 走 roll_fail_pool 剔除），样式与断板反包/谐波页同款。
+  // ⚠️ 这里判断的是「字段存不存在」而不是「有没有条目」——池空时也要露出「失效归档池 · 0 只」，
+  // 用户才知道这个池子存在（首次生成前 failPool 整块缺失、自然不渲染，不编数据）。
+  var accFail = (a.failPool !== undefined) ? dbFailHtml(a.failPool || [], 'accumulation') : '';
+  return accLeg + '<div class="card">' + secS + secW + accFail + '</div>';
 }
 
 function renderPowerScreen() {
@@ -2434,9 +2449,12 @@ function renderPowerScreen() {
     '<div><b>打分</b>＝通过阈值数（0-9 分）；入选＝硬门禁全过 且 质量门≥3 道</div>' +
     '<div class="lg-tip">下一步：这是「当日强度」筛（偏追当天）；次日看能否站稳 MA20、量能能否续上，站不稳量缩就先出。</div>' +
     '</div></details>';
+  // R100z56（用户 2026-10-04 要求）：九门页同样补失效归档池（原在池内、本轮不再过阈值的标的，
+  // 自失效日起留 5 个交易日，生成侧 power_screener.py 走 roll_fail_pool 剔除）。
+  var pwFail = (p.failPool !== undefined) ? dbFailHtml(p.failPool || [], 'powerScreen') : '';
   return gateDef +
     '<div class="card"><h2>⚡ 日线九门' + (p.tradeDate ? ' <span class="h2-date">' + esc(p.tradeDate) + '</span>' : '') + '</h2>' +
-    '<div class="pw-grid">' + items + '</div>' + (p.summary ? '<div class="note-line">' + esc(p.summary) + '</div>' : '') + '</div>';
+    '<div class="pw-grid">' + items + '</div>' + pwFail + (p.summary ? '<div class="note-line">' + esc(p.summary) + '</div>' : '') + '</div>';
 }
 
 // R100h：必带数据清单（renderChecklist）已整体下线（2026-09-28 用户要求），data_checklist.py 同步删除
@@ -2882,6 +2900,13 @@ function failPoolSorted(failPool) {
     return ka > kb ? -1 : 1; // 倒序：最新在前；同日保持原序（sort 稳定）
   });
 }
+/* R100z56：失效池 kind → 形态中文名（页面措辞用；只放行已知 kind，未知一律写「原形态」，
+   绝不因拼错 kind 就在页面上印出错误的形态名）。 */
+function failKindName(kind) {
+  var m = {'duanban': '断板反包形态', 'harmonic': '谐波形态',
+           'accumulation': '主力吸筹结构', 'powerScreen': '日线九门阈值'};
+  return m[String(kind)] || '原形态';
+}
 function failPoolLatest(failPool) {
   var s = failPoolSorted(failPool);
   if (!s.length) return '';
@@ -2970,7 +2995,9 @@ function dbFailHtml(failPool, kind) {
   }).join('');
   return '<div class="db-pool p-fail"><h2>失效归档池 · ' + failPool.length + ' 只' +
     (_latestD ? ' · 最近归档 ' + esc(String(_latestD).slice(5)) : '') + '</h2>' +
-    '<div class="db-sub">原符合' + (kind === 'harmonic' ? '谐波' : '断板反包') + '形态、因破位或超期失效而归因失败；自失效日起保留 5 个交易日后剔除</div>' +
+    // R100z56：kind 决定「原符合哪个形态」的措辞——旧写法非 harmonic 一律写「断板反包」，
+    // 吸筹/九门页挂上来会印错形态名（页面上出现「原符合断板反包形态」的吸筹失效卡）。
+    '<div class="db-sub">原符合' + esc(failKindName(kind)) + '、因破位或超期失效而归因失败；自失效日起保留 5 个交易日后剔除</div>' +
     '<div class="db-chips">' + items + '</div></div>';
 }
 

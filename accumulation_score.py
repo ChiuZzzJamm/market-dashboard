@@ -398,12 +398,62 @@ def main():
                for i in (old or {}).get('scored') or [] if isinstance(i, dict)}
     for i in new_field.get('scored') or []:
         i['entryDate'] = _old_ed.get(str(i.get('code') or '')) or trade_date
+
+    # ---------------- R100z56：失效归档池（用户 2026-10-04 要求，参考断板反包/谐波） ----------------
+    # 定义：上一轮 scored 内、本轮跌出（不再达标）的标的 → 归因失效归档，自失效日起留 5 个交易日。
+    # 归因只认三条硬证据，取不到就写「本轮未达 50 分线（形态走坏）」，绝不编原因：
+    #   ① 破位止损：最新收盘 < 入池日收盘 ×0.975（吸筹纪律＝跌破最近收盘 −2.5% 无条件离场）
+    #   ② 信号走旧：上一轮 lagDays ≥ POOL_MAX_LAG（25 日），本轮直接不入池
+    #   ③ 评分掉出 MIN_SCORE（50 分线）
+    def _acc_fail_reason(code, oi):
+        bars = K.get_bars(code) or []
+        if bars and len(bars) >= 2:
+            entry_close = None
+            ed = str(oi.get('entryDate') or '').strip()
+            if ed:
+                for b in bars:
+                    if str(b.get('day') or '').strip()[:10] == ed:
+                        entry_close = b.get('close')
+                        break
+            if entry_close:
+                if bars[-1].get('close', 0) < entry_close * 0.975:
+                    return f"破位止损（{ed} 入池收盘 {entry_close} → 最新 {bars[-1]['close']}，跌破 −2.5%）"
+        lag = oi.get('lagDays')
+        if lag is not None and lag >= POOL_MAX_LAG:
+            return f"信号走旧（滞后 {lag} 日 ≥{POOL_MAX_LAG} 日线，本轮不入池）"
+        return f"本轮评分低于 {MIN_SCORE} 分线（上一轮 {oi.get('score')} 分），形态走坏"
+
+    _old_scored = (old or {}).get('scored') or []
+    _new_codes = {str(i.get('code')) for i in scored}
+    new_fails = []
+    for _oi in _old_scored:
+        if not isinstance(_oi, dict):
+            continue
+        _c = str(_oi.get('code') or '')
+        if not _c or _c in _new_codes:
+            continue
+        new_fails.append({'code': _c,
+                          'name': _oi.get('name') or '',
+                          'sector': _oi.get('sector') or '',
+                          'score': _oi.get('score'),
+                          'grade': _oi.get('grade') or '',
+                          'lagDays': _oi.get('lagDays'),
+                          'reason': _acc_fail_reason(_c, _oi),
+                          'entryDate': trade_date})
     if not scored and old:
         print('[ACC] 本轮无 ≥50 分标的，保留既有池（R91n 不清场）')
         old['note'] = (old.get('note') or '') + f"｜{today} 本轮无新命中"
+        old['failPool'] = common.roll_fail_pool(old.get('failPool') or [], [], trade_date)
         new_field = old
     elif not scored and not old:
         print('[ACC] 无命中且无旧值，写空结构')
+    else:
+        _existed = len(new_fails)
+        new_field['failPool'] = common.roll_fail_pool(
+            old.get('failPool') or [], new_fails, trade_date)
+        if _existed:
+            print(f"[ACC] 失效池新增 {_existed} 只（5 交易日滚动窗口后共 "
+                  f"{len(new_field['failPool'])} 只）")
     D['accumulation'] = new_field
 
     if dry:

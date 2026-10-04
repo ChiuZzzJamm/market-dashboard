@@ -93,6 +93,32 @@ def trading_days_between(d0, d1):
     return n
 
 
+def roll_fail_pool(old_fail, new_entries, today, keep_days=5):
+    """失效归档池滚动窗口（R100z56，用户 2026-10-04 要求「失效当天入池、5 个交易日后剔除」）。
+
+    - 保留：自 entryDate 起 keep_days 个交易日内的旧归档 + 今日新失效（同 code 以新条目为准）；
+    - 剔除：trading_days_between(entryDate, today) > keep_days 的超期归档。
+    - ⚠️ 一律用上面节假日感知的 trading_days_between，不许自己数周一~周五
+      （国庆/春节会被数成交易日，节后首日跑就把窗口内归档提前清空了）。
+    返回新列表（不改动入参）。old_fail/new_entries 元素均为 dict，非 dict 一律跳过。
+    """
+    out = []
+    for f in (old_fail or []):
+        if not isinstance(f, dict):
+            continue
+        ed = f.get('entryDate')
+        try:
+            if ed and trading_days_between(ed, today) > keep_days:
+                continue
+        except Exception:
+            pass  # 日期格式异常：保守保留，宁多不删
+        out.append(f)
+    new_codes = {str(x.get('code')) for x in (new_entries or []) if isinstance(x, dict)}
+    out += [x for x in (new_entries or [])
+            if isinstance(x, dict) and str(x.get('code')) not in new_codes]
+    return out
+
+
 # ---------- R100z6: 同花顺抓取统一收口 ----------
 # 原 update_ashare_sectors.py（curl_ths_url/curl_ths/parse_ths_industries/fetch_ths_industries/curl_ths_json）
 # 与 check_duanban.py（curl_ths_text/curl_ths_json/parse_ths_industries/fetch_ths_industries）双副本合一，

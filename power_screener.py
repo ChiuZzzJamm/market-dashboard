@@ -18,6 +18,7 @@
 import sys, json, os, datetime
 
 import kline_cache as K
+import common  # R100z56：失效归档池滚动窗口（common.roll_fail_pool，节假日感知 5 交易日）
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
@@ -228,12 +229,38 @@ def main():
                for i in (old or {}).get('passed') or [] if isinstance(i, dict)}
     for i in new_field.get('passed') or []:
         i['entryDate'] = _old_ed.get(str(i.get('code') or '')) or today
+    # ---------------- R100z56：失效归档池（用户 2026-10-04 要求，参考断板反包/谐波） ----------------
+    # 定义：上一轮 passed 内、本轮不再过阈值的标的 → 归因失效归档，自失效日起留 5 个交易日。
+    # 九门是「当日强度」筛、天然逐日重算，只对上一轮还在池内的标的归档，绝不对从未入池的标的补写。
+    # ⚠️ 成因不再猜：旧条目只带 score/gates，取不到是哪道门掉下来，如实写「本轮未过九门阈值」。
+    _new_codes = {str(i.get('code')) for i in passed}
+    new_fails = []
+    for _oi in ((old or {}).get('passed') or []):
+        if not isinstance(_oi, dict):
+            continue
+        _c = str(_oi.get('code') or '')
+        if not _c or _c in _new_codes:
+            continue
+        new_fails.append({'code': _c,
+                          'name': _oi.get('name') or '',
+                          'sector': _oi.get('sector') or '',
+                          'score': _oi.get('score'),
+                          'reason': f"本轮未过九门阈值（上一轮 {_oi.get('score')}/9 门，阈值不再满足）",
+                          'entryDate': today})
     if not passed and old:
         print('[POWER] 本轮无达标标的，保留既有池（R91n 不清场）')
         old['note'] = (old.get('note') or '') + f"｜{today} 本轮无新命中"
+        old['failPool'] = common.roll_fail_pool(old.get('failPool') or [], [], today)
         new_field = old
     elif not passed and not old:
         print('[POWER] 无达标且无旧值，写空结构')
+    else:
+        _existed = len(new_fails)
+        new_field['failPool'] = common.roll_fail_pool(
+            (old or {}).get('failPool') or [], new_fails, today)
+        if _existed:
+            print(f"[POWER] 失效池新增 {_existed} 只（5 交易日滚动窗口后共 "
+                  f"{len(new_field['failPool'])} 只）")
     D['powerScreen'] = new_field
 
     if dry:
