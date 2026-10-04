@@ -483,14 +483,16 @@
   .fail-chip .fr { font-size: 11px; color: #a33; margin-top: 4px; line-height: 1.5; }
   .fail-chip .fd { font-size: 10px; color: var(--ink2); margin-top: 2px; }
   /* R100z41：最新归档批次用实线暖色边框 + 淡底，与滚动窗口里剩下的旧归档一眼区分 */
-  .fail-chip.fail-new { border-style: solid; border-color: #d6ab63; background: #fffdf7; }
-  .fail-chip .nb { font-size: 10px; font-weight: 700; color: #8a5c12; border: 1px solid #d6ab63; border-radius: 4px; padding: 0 3px; line-height: 1.35; }
+  .fail-chip.fail-new { border-style: solid; border-color: #e3a008; background: #fff7dd; }
+  .fail-chip .nb { font-size: 10px; font-weight: 800; color: #6b4a00; background: #ffc93c; border: 1px solid #e3a008; border-radius: 4px; padding: 0 3px; line-height: 1.35; }
   /* R100z44：新入池首日高亮——断板/谐波/九门/吸筹确认·观察池与失效池新归档，
      入池当天整卡淡黄底+琥珀边+「新」徽章（参考失效池既有样式），次日自动恢复。
      置于 .tc.dim 之后：归档态（dim 虚线灰字）遇「新」也要黄底优先。 */
-  .tc.fresh { border-style: solid; border-color: #d6ab63; background: #fffdf7; }
-  .tc.fresh .tc-cell { background: #fdf3dd; }
-  .tc .nb { font-size: 10px; font-weight: 700; color: #8a5c12; border: 1px solid #d6ab63; border-radius: 4px; padding: 0 3px; line-height: 1.35; flex-shrink: 0; }
+  /* R100z45：首日高亮黄色加深（用户反馈 #d6ab63/#fffdf7 太淡、扫一眼看不出）——
+     边框/徽章改饱和琥珀 #e3a008 + 实心黄徽章 #ffc93c，卡底/格底同步加深一档。 */
+  .tc.fresh { border-style: solid; border-color: #e3a008; background: #fff7dd; }
+  .tc.fresh .tc-cell { background: #fceec2; }
+  .tc .nb { font-size: 10px; font-weight: 800; color: #6b4a00; background: #ffc93c; border: 1px solid #e3a008; border-radius: 4px; padding: 0 3px; line-height: 1.35; flex-shrink: 0; }
   .db-modal-meta { font-size: 12.5px; color: var(--ink); line-height: 1.8; margin-bottom: 10px; }
   .db-modal-meta .lab { color: var(--ink2); }
   .db-kline svg { width: 100%; height: auto; display: block; }
@@ -585,6 +587,10 @@
   .tech-legend .lg-body b { color:var(--ink); font-weight:700; }
   .tech-legend .lg-hr { height:1px; background:var(--line); margin:7px 0; }
   .tech-legend .lg-tip { color:#8a5a00; background:#fff8e6; border:1px solid #f0dcaa; border-radius:6px; padding:4px 8px; font-size:11px; line-height:1.7; }
+  /* R100z45：四子页「口径条 → 首个池标题」间距统一 36px（口径条 mb14 + 容器上内边距 22，对齐断板/谐波 .db-pool）。
+     此前九门 38px（.card 上内边距 24）、吸筹 48px（再叠 .acc-sub:first-child 的 10px），肉眼空白不一。 */
+  #db-acc .card, #db-pw .card { padding-top: 22px; }
+  #db-acc .card > .acc-sub:first-child { margin-top: 0; }
   /* 信号滞后灰标（R100z22）：吸筹是历史 K 线模型，同样分数信号新旧不同，滞后 ≥10 日转告警色 */
   /* R100z36：卡片内的价格/目标位强调（.exit-line .xt 只在退出纪律行内生效，tc 卡片需单列） */
   .tc .xt { font-weight: 800; font-variant-numeric: tabular-nums; }
@@ -602,6 +608,10 @@
     -webkit-tap-highlight-color: transparent;
   }
   .tc:hover { border-color: var(--accent); box-shadow: 0 4px 14px rgba(17,17,26,.10); }
+  /* R100z46：首日黄卡 hover 保持黄色——.tc:hover 的蓝描边（var(--accent)）与 .tc.fresh 同优先级且位置靠后，
+     会把琥珀边盖成蓝色（用户截图：失效池黄卡悬停变蓝）。此处放在 .tc:hover 之后夺回。 */
+  .tc.fresh:hover { border-color: #e3a008; background: #ffefc2; box-shadow: 0 4px 14px rgba(227,160,8,.22); }
+  .fail-chip.fail-new:hover { border-color: #e3a008; }
   /* 头部：板块 pill 在左，方向徽章在右（板块缺失时也能靠徽章撑住第一行） */
   .tc-top { display: flex; align-items: center; gap: 4px; min-width: 0; }
   .tc-top .tc-sp { flex: 1 1 auto; min-width: 0; }
@@ -2238,7 +2248,7 @@ function renderHarmonic() {
   // R100l：三池样式对齐断板反包页——.db-pool 圆点标题容器（确认池红点 / 观察池蓝点 / 失效池灰点 dbFailHtml）
   // R100z4x：谐波子页顶部术语说明段落（.hz-sub）曾按用户反馈删除——2026-09-30 用户要求恢复（与九门/吸筹口径行同款）
   // R100z6l：恢复口径行（hz-sub 朴素样式 + 悬停详解），术语与 R100g 定稿一致
-  var hzDef = '<details class="tech-legend"><summary>谐波口径 · XABCD 五点形态（点开看每条定义）</summary><div class="lg-body">' +
+  var hzDef = '<details class="tech-legend"><summary>谐波口径 · XABCD 五点形态（点击查看技术指标）</summary><div class="lg-body">' +
     '<div><b>形态</b>：X→A 初段 · A→B 回调 · B→C 延续 · C→D 终段；D 点落到 PRZ 后盯反转信号</div>' +
     '<div><b>PRZ</b>：潜在反转区＝D 点投影 ±0.5×ATR14（腾讯 ifzq 前复权日 K）</div>' +
     '<div><b>目标位</b>：T1＝D+0.382×CD，T2＝D+0.618×CD，分两级兑现</div>' +
@@ -2318,7 +2328,7 @@ function renderAccumulation() {
   var sB = [], wB = [], demoted = 0;
   // R100z4i：新增子页口径说明（与谐波/九门同款位置与样式：子页导航下方、hz-sub 朴素文字、悬停详解）
   // R100z22：吸筹口径（原一行文字 + 200 字 title，手机上 title 不显示＝白写）改可展开条目块
-  var accLeg = '<details class="tech-legend"><summary>吸筹口径 · 六特征打分（点开看每条触发条件）</summary><div class="lg-body">' +
+  var accLeg = '<details class="tech-legend"><summary>吸筹口径 · 六特征打分（点击查看技术指标）</summary><div class="lg-body">' +
     '<div><b>F1 试盘 · 20 分</b>：长上影≥2×实体、量≥1.5×5日均量，随后 3 日均量回落且收盘低于试盘价，当时处在近 120 日区间下部</div>' +
     '<div><b>F2 止跌 · 15 分</b>：3 日缩量连跌、末日量≤0.7×均量，第 4-8 日收复逾半跌幅</div>' +
     '<div><b>F3 横盘 · 20 分</b>：近 6 个月同类试盘≥2 次、近 10 日振幅收窄到 20 日的 6 成内、10 日收盘贴中枢±6%</div>' +
@@ -2383,7 +2393,7 @@ function renderPowerScreen() {
     });
   }).join('');
   // R100z4i：口径说明挪出 card（子页导航下方、谐波说明同款位置），去 📐 emoji、无背景（hz-sub 朴素样式）
-  var gateDef = '<details class="tech-legend"><summary>九门口径 · 9 道量化硬阈值（点开看每道门槛）</summary><div class="lg-body">' +
+  var gateDef = '<details class="tech-legend"><summary>九门口径 · 9 道量化硬阈值（点击查看技术指标）</summary><div class="lg-body">' +
     '<div><b>硬门禁（必过 5 道）</b>：G1 当日涨幅≥3% · G2 放量≥1.5×5日均量 · G4 站上 MA20 · G5 非 ST 主板 · G7 当日振幅≤15%</div>' +
     '<div><b>质量门（过≥3 道）</b>：G3 价处 20 日区间上 1/3 · G6 近 5 日无长上影出货 · G8 波动率适中（ATR14/收盘∈2%-8%） · G9 RSI14∈40-80</div>' +
     '<div><b>打分</b>＝通过阈值数（0-9 分）；入选＝硬门禁全过 且 质量门≥3 道</div>' +
@@ -2679,7 +2689,7 @@ function renderDuanban() {
   // 原用动态 db.note，该字段被 07:30 自动化 AI 写回污染（写入流程说明而非口径），弃用。
   // R100z26：断板页口径说明改成与谐波/九门/吸筹同款的「可展开条目块」。
   // 原来是一行 hz-sub + 400 字 title 悬浮 —— 手机上 title 根本不显示，等于没写。
-  var _dbNote = '<details class="tech-legend"><summary>断板反包口径 · 全流程与分池（点开看每一条）</summary><div class="lg-body">' +
+  var _dbNote = '<details class="tech-legend"><summary>断板反包口径 · 全流程与分池（点击查看技术指标）</summary><div class="lg-body">' +
     '<div><b>一句话逻辑</b>：涨停次日的放量断板 = 抛压被兑现；之后缩量不破位 = 筹码被接走。跌得动（放量破位）说明是出货，跌不动才有反包机会。</div>' +
     '<div><b>判定四步（须按顺序）</b>：① T 日涨停 → ② 次日放量断板（成交量≥1.5×T 日） → ③ 缩量回踩 → ④ 不破 T 日最低点、也站稳 MA5 → 待反包</div>' +
     '<div><b>两个池</b>：确认池＝四步全流程走完（可随时等反包）；观察池＝形态进行中、只差最后一根确认 K 线（先待企稳、再待缩量）</div>' +
