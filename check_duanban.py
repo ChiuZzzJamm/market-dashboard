@@ -338,7 +338,7 @@ EM_UT = "fa5c3db4f1ca16c5b6e3b9a3f3ae3dfa"
 # ---------- R98: 同花顺行业板块口径（断板池板块相关数据） ----------
 # R100z6：curl_ths_text/parse_ths_industries/fetch_ths_industries 已收口到 common
 # （文件头部 from common import），THS_INDUSTRY_URL 一并由 common.THS_URL 提供。
-THS_KLINE_REFERER = "https://stockpage.10jqka.com.cn/"
+# R100z60 清理：原 THS_KLINE_REFERER 在这之后零引用（收口到 common 后残留的死常量），删掉。
 
 _board_map_cache = None
 _board_pct_hist_cache = {}
@@ -562,13 +562,11 @@ def fetch_board_pct_on(bk_code, date_iso):
 
 
 # ---------- R91j: 近3日涨幅居前板块 TOP10（东财行业板块口径） ----------
-BOARD_KLINE_CACHE = "/tmp/duanban_board_kline_cache"
+# R100z60 清理：BOARD_KLINE_CACHE / HIS_HOSTS 定义后全项目零引用（CLIST_HOSTS 是活的，别一起删），
+# 连同死常量一起删，避免下一个人再照着它接东财 push2his。
 CLIST_HOSTS = ["https://push2delay.eastmoney.com",
                "https://82.push2.eastmoney.com",
                "https://push2.eastmoney.com"]
-HIS_HOSTS = ["https://push2his.eastmoney.com",
-             "https://92.push2his.eastmoney.com",
-             "https://23.push2his.eastmoney.com"]
 
 
 def _stock_clist_agg():

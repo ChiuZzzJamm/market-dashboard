@@ -26,6 +26,7 @@ import subprocess
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone, timedelta
 
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 # R100z6g（2026-09-30 用户拍板）：全量统一 90 根（含谐波池）。当前 24 只谐波形态点 X/A/B/C/D 全部
@@ -215,6 +216,104 @@ def fetch_kline(code, timeout=15, bars=BARS_DEFAULT):
     return _parse_sina(curl_text(SINA_URL.format(sym=sym, n=bars), timeout=timeout))
 
 
+# ---------------------------------------------------------------------------
+# R100z60：从已删除的 fix_pools_meta.py 内联过来的「池内缺名回填 + themePicks 校准」
+# 背景见 R100z4f：① 九门/吸筹/谐波池部分标的只有代码没名称 → 腾讯 qt.gtimg 实时接口（GBK）批量回补；
+# ② themePicks 的 note 被 AI 写成「·今日涨停」「·涨X%」这种行情字样（与 chg 重复且可能虚构），
+#    note 只留概念归属；chg 用 stkKlines 当日日K 重算校准（日期非当日则保留 AI 值）。
+# 防清场（R91m 铁律）：只回填空 name / 校准 themePicks，不碰其他字段；行情接口失败保留原值。
+# ⚠️ 不再 import fix_pools_meta（该模块 2026-10-04 作死脚本删除，导致挂载点每轮静默失效）。
+# ---------------------------------------------------------------------------
+QTIMG_URL = "https://qt.gtimg.cn/q={q}"
+NOTE_TAIL_RE = re.compile(r"·(今日)?(涨停|[涨跌][0-9.]+%)")
+TZ8 = timezone(timedelta(hours=8))  # 与 common.is_trade_day 同一口径的东八区，供 themePicks 当日校准判日
+
+
+def _fetch_names(codes, timeout=10):
+    """腾讯 qt.gtimg 批量查名称（GBK）。返回 {code: name}，失败的代码不在结果里。"""
+    out = {}
+    codes = [str(c).strip() for c in codes if re.fullmatch(r"\d{6}", str(c).strip())]
+    for i in range(0, len(codes), 30):
+        batch = codes[i:i + 30]
+        url = QTIMG_URL.format(q=",".join(_sym(c) for c in batch))
+        try:
+            p = subprocess.run(
+                ["curl", "-s", "--max-time", str(timeout), "-H", "User-Agent: " + UA, url],
+                capture_output=True, timeout=timeout + 5)
+            if not p or p.returncode != 0 or not p.stdout.strip():
+                continue
+            txt = p.stdout.decode("gbk", errors="replace")
+        except Exception:
+            continue
+        for m in re.finditer(r'v_(?:sh|sz)(\d{6})="([^"]*)"', txt):
+            fields = m.group(2).split("~")
+            if len(fields) > 1 and fields[1].strip():
+                out[m.group(1)] = fields[1].strip()
+    return out
+
+
+def _iter_pools(D):
+    """产出 (容器描述, 条目列表)：九门 / 吸筹 / 谐波三个选股池。"""
+    ps = D.get("powerScreen") or {}
+    if isinstance(ps.get("passed"), list):
+        yield "powerScreen.passed", ps["passed"]
+    acc = D.get("accumulation") or {}
+    if isinstance(acc.get("scored"), list):
+        yield "accumulation.scored", acc["scored"]
+    hz = D.get("harmonic") or {}
+    for key in ("confirmPool", "watchPool"):
+        if isinstance(hz.get(key), list):
+            yield "harmonic." + key, hz[key]
+
+
+def _need_name(it):
+    return (isinstance(it, dict) and it.get("code") and not (str(it.get("name") or "").strip())
+            or (isinstance(it, dict) and it.get("name") == it.get("code")))
+
+
+def pools_meta_patch(D, fetch=True):
+    """就地修补 D：缺名回填 + themePicks 校准。返回 (补名数, chg 校准数, note 净化数)。"""
+    renamed = chg_fixed = note_cleaned = 0
+    missing = []
+    for _, items in _iter_pools(D):
+        for it in items:
+            if _need_name(it):
+                missing.append(str(it["code"]).strip())
+    missing = sorted(set(missing))
+    if missing and fetch:
+        names = _fetch_names(missing)
+        for _, items in _iter_pools(D):
+            for it in items:
+                c = str(it.get("code") or "").strip()
+                if _need_name(it) and names.get(c):
+                    it["name"] = names[c]
+                    renamed += 1
+    today = datetime.now(TZ8).strftime("%Y-%m-%d")
+    kl = D.get("stkKlines") if isinstance(D.get("stkKlines"), dict) else {}
+    a = D.get("ashare") or {}
+    for tp in (a.get("themePicks") or []):
+        for st in (tp.get("stocks") or []):
+            if not isinstance(st, dict):
+                continue
+            note = str(st.get("note") or "")
+            cleaned = NOTE_TAIL_RE.sub("", note).strip("· ").strip()
+            if cleaned != note:
+                st["note"] = cleaned
+                note_cleaned += 1
+            code = str(st.get("code") or "").strip()
+            arr = kl.get(code)
+            if isinstance(arr, list) and len(arr) >= 2:
+                last, prev = arr[-1], arr[-2]
+                try:
+                    if str(last[0]) == today:
+                        pct = (float(last[2]) / float(prev[2]) - 1) * 100
+                        st["chg"] = round(pct, 2)
+                        chg_fixed += 1
+                except (ValueError, ZeroDivisionError, TypeError, IndexError):
+                    pass
+    return renamed, chg_fixed, note_cleaned
+
+
 def main():
     deadline = time.time() + 300
     if "--deadline" in sys.argv:
@@ -299,13 +398,17 @@ def main():
             if old_map:
                 D["sectorMap"] = old_map
             print("[warn] 时间预算不足，跳过 sectorMap 刷新（保留既有值）")
-        # R100z4f：池内缺名回填 + themePicks 行情字段校准（确定性脚本，失败不阻塞不清场）
+        # R100z4f：池内缺名回填 + themePicks 行情字段校准（确定性逻辑，失败不阻塞不清场）
+        # R100z60（2026-10-05 修）：原挂载点是 `import fix_pools_meta → fix_pools_meta.patch(D)`，
+        # 但 fix_pools_meta.py 已在 commit b99fd69 当作死脚本删除 → 这段每次实跑都走 except，
+        # 每轮打一条 [warn] fix_pools_meta 异常(No module named ...)，**功能静默失效**（补名/校准都没做，
+        # 却看不出是缺功能，把功能丢失藏在一行 warn 里）。这里把逻辑内联成本文件私有函数（见
+        # pools_meta_patch()），不再依赖外部模块；原来 fix_pools_meta.py 的独立 CLI 入口已一并删掉。
         try:
-            import fix_pools_meta
-            _rn, _cf, _nc = fix_pools_meta.patch(D)
-            print(f"[info] fix_pools_meta：补名 {_rn} 只 / themePicks chg 校准 {_cf} 条 / note 净化 {_nc} 条")
+            _rn, _cf, _nc = pools_meta_patch(D)
+            print(f"[info] 池内缺名回填：补名 {_rn} 只 / themePicks chg 校准 {_cf} 条 / note 净化 {_nc} 条")
         except Exception as _exc:
-            print(f"[warn] fix_pools_meta 异常（{_exc}），跳过（保留原值不清场）")
+            print(f"[warn] 池内缺名回填异常（{_exc}），跳过（保留原值不清场）")
         save_data(D)
         print(f"[info] stkKlines 内嵌完成：成功 {ok} 只 / 失败 {len(fail)} 只 / 总计 {len(kl)} 只，名称映射 {len(kl_names)} 条")
         if fail:

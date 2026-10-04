@@ -23,7 +23,8 @@ import check_duanban as cd  # noqa: E402
 
 TZ8 = cd.TZ8 if hasattr(cd, "TZ8") else None
 
-BAND = {"bull": (55, 85), "bear": (15, 40), "neutral": (40, 55)}
+# R100z60 清理：BAND（区间判定版）定义后零引用——该方案中途放弃、改用下面的 DEFAULT_P 单点阈值，
+# 残留的死常量会让下一个人以为「区间档位」还在用，删掉。
 DEFAULT_P = {"bull": 70, "bear": 30, "neutral": 48}
 
 

@@ -101,7 +101,7 @@ VALIDATE_SCOPES = ("all", "ai", "us", "star")
 class Report:
     def __init__(self):
         self.items = []      # (group, level, msg)
-        self.counts = {"FAIL": 0, "WARN": 0, "PASS": 0, "INFO": 0}
+        self.counts = {"FAIL": 0, "WARN": 0, "PASS": 0}
 
     def add(self, group, level, msg):
         self.counts[level] = self.counts.get(level, 0) + 1
@@ -110,7 +110,9 @@ class Report:
     def ok(self, g, m): self.add(g, "PASS", m)
     def warn(self, g, m): self.add(g, "WARN", m)
     def fail(self, g, m): self.add(g, "FAIL", m)
-    def info(self, g, m): self.add(g, "INFO", m)
+    # R100z60 清理：原 Report.info() 全项目零调用点（只有这行 def 自己出现），
+    # 连带 counts["INFO"] 恒为 0 —— 它是个「永远跑不到的分支 + 一辈子是 0 的计数器」。
+    # 真要加提示信息，直接用 ok()/warn() 更省心，别再造一个只进不出的级别。
 
     def exit_code(self):
         return 1 if self.counts.get("FAIL", 0) else 0
