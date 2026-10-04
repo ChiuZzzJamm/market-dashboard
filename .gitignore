@@ -1,0 +1,37 @@
+# 敏感凭证与配置（公开仓库中绝对不能提交）
+.github-token
+.notify-config.json
+.wx-config.json
+.vscode/launch.json
+
+# 部署专用 SSH 私钥（仅本机使用，禁止提交）
+.deploy_key
+.deploy_key.pub
+DEPLOY_KEY_PUB.txt
+
+# 个人脚本/无关文件
+router-wol-schedule.sh
+
+# 临时文件
+*.log
+*.tmp
+draft.json
+.DS_Store
+__pycache__/
+
+# 打包与备份
+market-dashboard.zip
+*.bak
+.playwright-cli/
+
+# K 线抓取缓存（harmonic_detect/accumulation 脚本生成，TTL 20h，不应进仓库）
+.kline_cache/
+
+# 失败池状态文件（harmonic_detect / check_duanban 生成，运行时状态，不应进仓库）
+.harmonic_state.json
+.duanban_state.json
+
+# 本地记忆层（工作区 .workbuddy/memory/：PROJECT-MEMORY.md + 56 份 归档-*.md 等）
+# 内含家庭网络/路由器/油猴脚本等私有信息，且 deploy.sh 用 `git add -A`，
+# 不排除会被误推进公开仓库 → 硬排除（记忆只在本地文件系统，不进 git）
+.workbuddy/

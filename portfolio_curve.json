@@ -1,0 +1,21 @@
+{
+ "ok": true,
+ "series": [
+  {
+   "date": "2026-09-30",
+   "avgPct": -0.99,
+   "pf": 0.9901,
+   "bench": 1.0,
+   "dd": -0.99
+  }
+ ],
+ "stat": {
+  "days": 1,
+  "totRetPct": -0.99,
+  "benchRetPct": 0.0,
+  "excessPct": -0.99,
+  "maxDdPct": -0.99,
+  "maxDdDate": "2026-09-30",
+  "note": "组合=各预测日 8 只标的等权平均涨跌幅累乘；基准=同日市场基准累乘；回撤按组合净值峰谷算"
+ }
+}

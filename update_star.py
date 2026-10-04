@@ -1,0 +1,306 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""🌟 开盘精选（R98k→R99，每日 9:45 自动化调用）。
+
+职责（脚本自包含、AI 只复核不改结构）：
+  1. 读 data.js 断板反包双池（07:30 复核后的 confirmed/watching，sentiment/probability 已校准）；
+  2. 抓开盘半小时盘面：指数涨跌+成交额（腾讯 gtimg，本机可达）、
+     同花顺行业涨跌幅（fetch_ths_industries）、行业主力资金净额（fetch_ths_funds）；
+  3. 个股当日实时涨幅批量快照（腾讯 gtimg，一次批量）；
+  4. 确定性筛选「板块挂钩」标的写入 duanban.star（R99b）：
+     合格板块 = 开盘涨幅>0（板块情绪正向）且 主力净流入>0（资金正向）的板块；
+     精选 = 池内非利空标的、其板块与合格板块匹配（互含模糊匹配），按上涨概率降序；
+     无合格板块则 picks 为空（宁缺勿滥），绝不放板块不挂钩的标的；
+  5. marketLine / sentiment 写模板句（R99：只写开盘后板块情绪与资金情绪，不再含集合竞价），
+     pushText 留空——由自动化 AI 复核改写为「📖 分析」。
+
+只写 duanban.star（含 generatedAt 不动），其余字段一律不动；东财被 WAF 不影响（同花顺/腾讯源）。
+用法：python3 update_star.py [--dry]
+"""
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+from datetime import datetime
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import update_ashare_sectors as uas  # noqa: E402  （复用 curl/UA/同花顺解析）
+
+NODE = "/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node"
+IDX_QT = "https://qt.gtimg.cn/q=sh000001,sz399001,sz399006"
+IDX_NAMES = {"sh000001": "上证指数", "sz399001": "深证成指", "sz399006": "创业板指"}
+
+
+def load_data(data_path):
+    with open(data_path, encoding="utf-8") as f:
+        s = f.read()
+    i = s.index("{")
+    return s, json.loads(s[i:s.rindex("}") + 1])
+
+
+def fetch_open_indices():
+    """腾讯 gtimg 指数快照 → [{name, pct, amount亿}]；失败 []。"""
+    try:
+        r = subprocess.run(["curl", "-s", "--max-time", "15", IDX_QT],
+                           capture_output=True, timeout=25)
+        txt = r.stdout.decode("gbk", errors="ignore")
+    except Exception:
+        return []
+    out = []
+    for m in re.finditer(r'v_(sh|sz)(\d{6})="([^"]+)"', txt):
+        sym = m.group(1) + m.group(2)
+        f = m.group(3).split("~")
+        if len(f) <= 37:
+            continue
+        try:
+            cur, prev = float(f[3]), float(f[4])
+            pct = round((cur - prev) / prev * 100, 2) if prev else 0.0
+            open_pct = None
+            try:
+                op = float(f[5])
+                open_pct = round((op - prev) / prev * 100, 2) if prev and op > 0 else None
+            except Exception:
+                pass
+            amt_yi = round(float(f[37]) / 10000, 0)  # gtimg 成交额单位万元 → 亿
+            out.append({"name": IDX_NAMES.get(sym, f[1]), "pct": pct,
+                        "openPct": open_pct, "amount": amt_yi})
+        except Exception:
+            continue
+    return out
+
+
+def fetch_stock_quotes(codes):
+    """批量腾讯 gtimg 个股快照 → {code: {pct, openPct}}；失败 {}。"""
+    quotes = {}
+    for i in range(0, len(codes), 60):
+        batch = codes[i:i + 60]
+        q = ",".join(("sh" if c.startswith("6") else "sz") + c for c in batch)
+        try:
+            r = subprocess.run(["curl", "-s", "--max-time", "15",
+                                f"https://qt.gtimg.cn/q={q}"],
+                               capture_output=True, timeout=25)
+            txt = r.stdout.decode("gbk", errors="ignore")
+        except Exception:
+            continue
+        for m in re.finditer(r'v_(?:sh|sz)(\d{6})="([^"]+)"', txt):
+            f = m.group(2).split("~")
+            if len(f) > 32:
+                try:
+                    d = {"pct": round(float(f[32]), 2)}  # 32=涨跌幅%
+                    try:
+                        prev, op = float(f[4]), float(f[5])
+                        d["openPct"] = round((op - prev) / prev * 100, 2) if prev and op > 0 else None
+                    except Exception:
+                        d["openPct"] = None
+                    quotes[m.group(1)] = d
+                except Exception:
+                    continue
+    return quotes
+
+
+def build_star(D):
+    db = D.get("duanban") or {}
+    pools = []
+    for pool in ("confirmed", "watching"):
+        pools.extend(db.get(pool) or [])
+
+    # ---- R100m（需求7）：技术池候选——直接从 谐波/九门/吸筹 池取标的（前一日 16:00 结果） ----
+    # 这些标的无 sentiment/probability（neutral 兜底），按池内得分排序，取头部，宁缺勿滥。
+    tech = []
+    seen_tech = set()
+    hz = D.get("harmonic") or {}
+    for it in (hz.get("confirmPool") or [])[:6] + (hz.get("watchPool") or [])[:6]:
+        c = str(it.get("code") or "")
+        if c.startswith(("60", "00")) and c not in seen_tech:
+            seen_tech.add(c)
+            tech.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
+                         "src": "hz", "label": f"谐波{it.get('pattern') or ''}",
+                         "score": 65 if it.get("stage") == "确认" else 55})
+    pw = D.get("powerScreen") or {}
+    for it in (pw.get("passed") or [])[:10]:
+        c = str(it.get("code") or "")
+        if c.startswith(("60", "00")) and c not in seen_tech:
+            seen_tech.add(c)
+            tech.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
+                         "src": "pw", "label": f"九门{it.get('score') or ''}分",
+                         "score": int(it.get("score") or 0) * 10})  # 统一量纲：9分=90
+    acc = D.get("accumulation") or {}
+    for it in (acc.get("scored") or []):
+        try:
+            sc = int(it.get("score") or 0)
+        except Exception:
+            continue
+        c = str(it.get("code") or "")
+        if sc >= 60 and c.startswith(("60", "00")) and c not in seen_tech:
+            seen_tech.add(c)
+            tech.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
+                         "src": "acc", "label": f"吸筹{sc}分", "score": sc})
+    tech.sort(key=lambda x: -x["score"])
+    tech = tech[:8]
+
+    if not pools and not tech:
+        return None, "断板反包双池与技术池（谐波/九门/吸筹）均为空"
+
+    # ---- 盘面：指数 / 行业涨幅 / 资金 ----
+    idx = fetch_open_indices()
+    try:
+        ths = uas.fetch_ths_industries() or []
+    except Exception:
+        ths = []
+    sectors = []
+    for x in ths:
+        try:
+            sectors.append({"name": x.get("name") or "", "code": x.get("code") or "",
+                            "pct": round(float(x.get("pct") or 0), 2)})
+        except Exception:
+            continue
+    sectors = [s for s in sectors if s["name"]]
+    sectors.sort(key=lambda s: -s["pct"])
+    try:
+        fund_in, fund_out = uas.fetch_ths_funds()
+    except Exception:
+        fund_in, fund_out = None, None
+
+    # ---- 个股快照（当日实时涨幅）：断板池 + 技术池一并快照 ----
+    quotes = fetch_stock_quotes([str(e.get("code")) for e in pools] + [t["code"] for t in tech])
+
+    # ---- R99c：确定性筛选——仅「板块情绪正向 + 主力净流入正向」板块挂钩的池内标的 ----
+    # 合格板块：涨幅>0 且 主力净流入>0；池内板块与合格板块名互含即视为挂钩。
+    board_fund = {}
+    if fund_in:
+        for f in fund_in:
+            try:
+                board_fund[str(f.get("name") or "")] = float(f.get("value") or 0)
+            except Exception:
+                continue
+    good_boards = []  # [(name, pct, fund亿)]
+    for s in sectors:
+        if s["pct"] <= 0:
+            continue  # 板块情绪须正向
+        fv = None
+        for bn, bv in board_fund.items():
+            if bn and (bn in s["name"] or s["name"] in bn):
+                fv = bv
+                break
+        if fv is None or fv <= 0:
+            continue  # 资金须净流入正向
+        good_boards.append((s["name"], s["pct"], fv))
+
+    def _linked(sec):
+        for n, _, _ in good_boards:
+            if n and sec and (n in sec or sec in n):
+                return True
+        return False
+
+    sent_rank = {"bull": 0, "neutral": 1, "bear": 2}
+    cand = []
+    for e in pools:
+        sent = e.get("sentiment") or "neutral"
+        if sent == "bear":
+            continue  # 利空标的不进精选
+        sec = str(e.get("sector") or "")
+        if not _linked(sec):
+            continue  # R99b：板块不挂钩的不进精选
+        try:
+            p = float(e.get("probability") or 50)
+        except Exception:
+            p = 50.0
+        q = quotes.get(str(e.get("code"))) or {}
+        cand.append({"code": str(e.get("code")), "name": e.get("name"),
+                     "sector": sec, "sentiment": sent, "probability": round(p, 1),
+                     "pctLive": q.get("pct"), "openPct": q.get("openPct")})
+
+    cand.sort(key=lambda x: (-x["probability"], sent_rank.get(x["sentiment"], 1)))
+    picks = []
+    for c in cand:  # 按上涨概率降序（概率同则利好优先）
+        sent_cn = {"bull": "利好", "neutral": "中性"}.get(c["sentiment"], c["sentiment"])
+        note = f"{c['sector']}·{sent_cn}·基线{c['probability']:.0f}%"
+        if c.get("openPct") is not None:
+            note += f"·竞价{c['openPct']:+.1f}%"
+        if c.get("pctLive") is not None:
+            note += f"·现涨{c['pctLive']:+.1f}%"
+        picks.append({"code": c["code"], "name": c["name"], "sector": c["sector"],
+                      "sentiment": c["sentiment"], "probability": c["probability"],
+                      "note": note, "src": "pool"})
+
+    # ---- R100m（需求7）：技术池候选并入精选（排在断板池之后）——开盘现价深跌(<-2%)的剔除，宁缺勿滥 ----
+    pool_codes = {p["code"] for p in picks}
+    for t in tech:
+        if t["code"] in pool_codes or len(picks) >= 12:
+            continue
+        q = quotes.get(t["code"]) or {}
+        live = q.get("pct")
+        if live is not None and live < -2.0:
+            continue  # 开盘深跌的形态标的暂不进精选
+        if live is not None and live >= 9.5:
+            continue  # 开盘即涨停（买不进），推荐无意义
+        note = f"{t['label']}·前日16:00筛选"
+        if q.get("openPct") is not None:
+            note += f"·竞价{q['openPct']:+.1f}%"
+        if live is not None:
+            note += f"·现涨{live:+.1f}%"
+        picks.append({"code": t["code"], "name": t["name"], "sector": t["sector"],
+                      "sentiment": "neutral", "probability": None,
+                      "note": note, "src": t["src"]})
+
+    # ---- 文案模板（AI 复核改写 sentiment/pushText） ----
+    now = datetime.now()
+    market_line = "，".join(
+        (f"{x['name']}{x['pct']:+.2f}%（竞价{x['openPct']:+.2f}%）"
+         if x.get("openPct") is not None else f"{x['name']}{x['pct']:+.2f}%")
+        for x in idx) if idx else "指数快照获取失败"
+    if idx:
+        total_amt = sum(x.get("amount") or 0 for x in idx)
+        market_line += f"，半小时两市成交约 {total_amt:.0f} 亿"
+    top3 = "、".join(f"{s['name']}{s['pct']:+.2f}%" for s in sectors[:3]) or "—"
+    bot3 = "、".join(f"{s['name']}{s['pct']:+.2f}%" for s in sectors[-3:]) or "—"
+    fi_txt = "、".join(f"{x['name']}{x['value']:+.1f}亿" for x in (fund_in or [])) or "—"
+    fo_txt = "、".join(f"{x['name']}{x['value']:+.1f}亿" for x in (fund_out or [])) or "—"
+    # R99c：只写开盘后板块情绪与资金情绪（集合竞价强弱关系由 AI 写入 pushText）
+    sentiment = (f"开盘板块情绪：领涨 {top3}；领跌 {bot3}。"
+                 f"资金情绪：主力净流入前列 {fi_txt}；净流出前列 {fo_txt}。"
+                 f"合格板块（涨+净流入双正向）：{'、'.join(n for n, _, _ in good_boards) or '无'}。"
+                 "（AI 复核：请改写为完整开盘情绪判断与对断板反包标的的影响分析）")
+
+    star = {
+        "date": now.strftime("%Y-%m-%d"),
+        "time": now.strftime("%H:%M"),
+        "marketLine": market_line,
+        "sentiment": sentiment,
+        "picks": picks,
+        "pushText": "",
+        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波/九门/吸筹池直接取标的）+ 自动化 AI 复核",
+    }
+    return star, None
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--dry", action="store_true", help="只打印不写回")
+    args = ap.parse_args()
+    data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.js")
+    _, D = load_data(data_path)
+    star, err = build_star(D)
+    if err:
+        print(f"[FAIL] {err}，不写入")
+        sys.exit(1)
+    print(f"[star] {star['date']} {star['time']} | 精选 {len(star['picks'])} 只:")
+    for p in star["picks"]:
+        print(f"  {p['code']} {p['name']} | {p['note']} | score源概率 {p['probability']}%")
+    print("[star] marketLine:", star["marketLine"])
+    if args.dry:
+        print("[DRY-RUN] 未写回")
+        return
+    s, D = load_data(data_path)
+    D.setdefault("duanban", {})["star"] = star
+    out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ";\n"
+    with open(data_path, "w", encoding="utf-8") as f:
+        f.write(out)
+    subprocess.run([NODE, "--check", data_path], check=True, timeout=30)
+    print("[star] data.js 写回完成，node --check 通过")
+
+
+if __name__ == "__main__":
+    main()

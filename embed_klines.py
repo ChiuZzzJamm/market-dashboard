@@ -1,0 +1,317 @@
+#!/usr/bin/env python3
+"""R98c: 全站 A股标的 K 线内嵌（消除前端实时 fetch 失败「K线获取失败(Failed to fetch)」）。
+
+背景：断板双池标的的 K 线已内嵌在 duanban.confirmed/watching[].kline，弹窗离线秒开；
+但页面其余 A股标的（要闻股/题材掘金/AI预测股/板块领涨TOP/连板天梯）点击弹窗时需
+前端实时 fetch 腾讯 ifzq，部分环境网络受限会失败。本脚本在自动化 AI 写回之后、
+validate 之前运行，把所有 A股标的的日 K 线一次性抓取并写入 data.js 顶层：
+
+  stkKlines     : {"600519": [[date,open,close,high,low,volume], ...], ...}  # 分级根数日K
+                  # R100z6g：全量统一 90 根（含谐波池）
+  stkKlineNames : {"贵州茅台": "600519", ...}   # 板块领涨TOP 等无 code 条目的名称反查
+
+数据源：
+  - 腾讯 ifzq fqkline（个股日K，与前端同源）
+  - 腾讯 smartbox s3（板块领涨股等仅有名称的标的 → 代码反查，GBK）
+
+防清场（R91m 铁律）：本脚本只新增/更新 stkKlines、stkKlineNames 两个顶层字段；
+全部抓取失败时保留既有值，绝不写空覆盖。其余字段一律不触碰。
+
+用法：python3 embed_klines.py [--deadline 240]
+挂载：16:00 / 07:30 / 周日23:00 自动化在 AI 写回之后运行（08:30 不写 A股标的，不挂）。
+"""
+import json
+import re
+import subprocess
+import sys
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+# R100z6g（2026-09-30 用户拍板）：全量统一 90 根（含谐波池）。当前 24 只谐波形态点 X/A/B/C/D 全部
+#         落在 90 交易日窗口内，弹窗 _dbk_slice 直接切片渲染、hzNeedsLong=false 不触发长窗网络拉取。
+IFZQ_URL = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={sym},day,,,{n},qfq"
+SMARTBOX_URL = "https://smartbox.gtimg.cn/s3/?v=2&q={q}&t=all"
+# R98j：腾讯 ifzq 被 WAF 拦截/失败时的新浪 JSON 备源（日K 不复权，兜底；指数/个股通用）
+SINA_URL = ("https://quotes.sina.cn/cn/api/json_v2.php/CN_MarketDataService.getKLineData"
+            "?symbol={sym}&scale=240&ma=no&datalen={n}")
+BARS_DEFAULT = 90
+BARS_HARMONIC = 90  # R100z6g：与 DEFAULT 统一（保留分流结构便于日后调整）；当前 24 只谐波形态点均在 90 窗口内
+# R98j：大盘指数 sym（前端点击指数看K线；指数键带 sh/sz 前缀，与个股 6 位键不冲突）
+INDEX_SYMS = {"上证指数": "sh000001", "深证成指": "sz399001", "创业板指": "sz399006",
+              "科创50": "sh000688", "上证50": "sh000016"}
+
+BASE = __file__.rsplit("/", 1)[0] or "."
+
+
+def curl_text(url, timeout=15, decode="utf-8"):
+    try:
+        p = subprocess.run(
+            ["curl", "-s", "--max-time", str(timeout), "-H", "User-Agent: " + UA, url],
+            capture_output=True, timeout=timeout + 5)
+    except Exception:
+        return None
+    if not p or p.returncode != 0 or not p.stdout.strip():
+        return None
+    return p.stdout.decode(decode, errors="replace")
+
+
+def load_data():
+    s = open(f"{BASE}/data.js", encoding="utf-8").read()
+    m = re.search(r"window\s*\.\s*DASHBOARD_DATA\s*=\s*(\{[\s\S]*\});?\s*$", s)
+    if not m:
+        raise RuntimeError("data.js parse failed")
+    return json.loads(m.group(1))
+
+
+def save_data(D):
+    out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ";\n"
+    open(f"{BASE}/data.js", "w", encoding="utf-8").write(out)
+
+
+def is_ashare_code(code):
+    return bool(re.fullmatch(r"\d{6}", str(code or "").strip())) and str(code).startswith(("6", "0", "3"))
+
+
+def collect_stocks(D):
+    """返回 (codes:set[str], names:set[str], syms:set[str])。
+    codes=6位纯数字个股；names=待反查的领涨股名；syms=带前缀指数键（sh000001 等）。"""
+    codes, names, syms = set(), set(), set()
+
+    def add_code(c):
+        c = str(c or "").strip()
+        if is_ashare_code(c):
+            codes.add(c)
+        else:
+            m = re.search(r"(\d{6})", str(c or ""))
+            if m and is_ashare_code(m.group(1)):
+                codes.add(m.group(1))
+
+    a = D.get("ashare") or {}
+    # 1) 要闻五节 impacts stocks（有 code）
+    for key in ("bullNews", "bearNews", "macroNews", "intlNews", "bankViews"):
+        for grp in (a.get(key) or []):
+            for imp in (grp.get("impacts") or []):
+                for st in (imp.get("stocks") or []):
+                    add_code(st.get("code"))
+    # 2) 题材掘金（有 code）
+    for tp in (a.get("themePicks") or []):
+        for st in (tp.get("stocks") or []):
+            add_code(st.get("code"))
+    # 3) AI 预测 sectors stocks（有 code）
+    for sec in ((D.get("aiPrediction") or {}).get("sectors") or []):
+        for st in (sec.get("stocks") or []):
+            add_code(st.get("code"))
+    # 4) 连板天梯（有 code；断板池内嵌不覆盖 lianban 弹窗）
+    for lb in (a.get("lianban") or []):
+        add_code(lb.get("code"))
+    # 5) 板块领涨/领跌 TOP（R98d 起带 code 的直接收集；仅 name 的需 smartbox 反查）
+    for s in (a.get("sectorsUp") or []) + (a.get("sectorsDown") or []):
+        for t in (s.get("tops") or []):
+            add_code(t.get("code"))
+            nm = str(t.get("name") or "").strip()
+            if nm and not t.get("code"):
+                names.add(nm)
+    # 6) 大盘指数（R98j：指数点击看K线；code 字段优先，历史数据按名称映射兜底）
+    for idx in (a.get("indices") or []):
+        sym = str(idx.get("code") or "").strip().lower()
+        if not re.fullmatch(r"(sh|sz)\d{6}", sym):
+            sym = INDEX_SYMS.get(str(idx.get("name") or "").strip(), "")
+        if sym:
+            syms.add(sym)
+    # 7) 谐波池（确认/观察）—— R100z6g：纳入内嵌（当前 90 根窗口已覆盖全部 24 只形态点，无需长窗）
+    for hp in (D.get("harmonic") or {}).get("confirmPool") or []:
+        add_code(hp.get("code") or hp.get("thsCode"))
+    for hp in (D.get("harmonic") or {}).get("watchPool") or []:
+        add_code(hp.get("code") or hp.get("thsCode"))
+    # 8) 九门池 / 吸筹池 —— R100z4t：开盘精选会直接从这两池取标的，弹窗 K 线走
+    #    stkGlobalKline 兜底读顶层 stkKlines，池内标的必须全部内嵌覆盖
+    for pp in (D.get("powerScreen") or {}).get("passed") or []:
+        add_code(pp.get("code"))
+    for ap in (D.get("accumulation") or {}).get("scored") or []:
+        add_code(ap.get("code"))
+    return codes, names, syms
+
+
+def resolve_names(names, deadline):
+    """腾讯 smartbox 反查：名称 → 6位代码。GBK 编码，v_hint="sz~301595~太力科技~tlkj~GP-A"。"""
+    out = {}
+    for nm in sorted(names):
+        if time.time() > deadline:
+            break
+        raw = curl_text(SMARTBOX_URL.format(q=__import__("urllib.parse", fromlist=["quote"]).quote(nm)),
+                        decode="gbk")
+        if not raw:
+            continue
+        m = re.search(r'v_hint="([^"]*)"', raw)
+        if not m:
+            continue
+        # smartbox 返回名称为 \uXXXX 转义形式（如 \u592a\u529b\u79d1\u6280=太力科技），需先解码
+        hint = m.group(1)
+        try:
+            hint = hint.encode("ascii", errors="ignore").decode("unicode_escape")
+        except Exception:
+            pass
+        for rec in hint.split("^"):
+            p = rec.split("~")
+            if len(p) >= 3 and p[2] == nm and re.fullmatch(r"\d{6}", p[1] or ""):
+                if p[1].startswith(("6", "0", "3")):
+                    out[nm] = p[1]
+                break
+    return out
+
+
+def _parse_ifzq_rows(rows):
+    out = []
+    for r in rows or []:
+        if not isinstance(r, list) or len(r) < 6:
+            continue
+        try:
+            o, c, h, l, v = (float(r[1]), float(r[2]), float(r[3]), float(r[4]), float(r[5]))
+        except (TypeError, ValueError):
+            continue
+        out.append([str(r[0]), o, c, h, l, v])
+    return out if len(out) > 1 else None
+
+
+def _parse_sina(raw):
+    try:
+        arr = json.loads(raw)
+    except Exception:
+        return None
+    if not isinstance(arr, list):
+        return None
+    out = []
+    for r in arr:
+        try:
+            out.append([str(r.get("day", ""))[:10], float(r["open"]), float(r["close"]),
+                        float(r["high"]), float(r["low"]), float(r.get("volume") or 0)])
+        except Exception:
+            continue
+    return out if len(out) > 1 else None
+
+
+def fetch_kline(code, timeout=15, bars=BARS_DEFAULT):
+    """code 可为 6 位个股代码（自动补 sh/sz）或带前缀指数 sym（sh000001 等）。
+    腾讯 ifzq 主源（空回复/WAF 跳转页视为失败）→ 新浪 JSON 备源。"""
+    code = str(code or "").strip()
+    if re.fullmatch(r"\d{6}", code):
+        sym = ("sh" if code.startswith("6") else "sz") + code
+    elif re.fullmatch(r"(sh|sz)\d{6}", code.lower()):
+        sym = code.lower()
+    else:
+        return None
+    raw = curl_text(IFZQ_URL.format(sym=sym, n=bars), timeout=timeout)
+    out = None
+    try:
+        j = json.loads(raw) if raw else None
+        d = (j.get("data") or {}).get(sym) or {}
+        out = _parse_ifzq_rows(d.get("qfqday") or d.get("day") or [])
+    except Exception:
+        out = None
+    if out:
+        return out
+    # R98j：ifzq 失败（含 WAF 501 跳转页，json 解析必失败）→ 新浪备源兜底
+    return _parse_sina(curl_text(SINA_URL.format(sym=sym, n=bars), timeout=timeout))
+
+
+def main():
+    deadline = time.time() + 300
+    if "--deadline" in sys.argv:
+        try:
+            deadline = time.time() + float(sys.argv[sys.argv.index("--deadline") + 1])
+        except Exception:
+            pass
+    D = load_data()
+    codes, names, syms = collect_stocks(D)
+    print(f"[info] 待内嵌：{len(codes)} 只代码标的 + {len(names)} 个待反查名称 + {len(syms)} 个指数")
+
+    # 名称反查（串行，smartbox 轻量）
+    name_map = resolve_names(names, deadline)
+    if name_map:
+        print(f"[info] smartbox 反查成功 {len(name_map)}/{len(names)}: {name_map}")
+    codes |= set(name_map.values())
+
+    # 既有内嵌保留（防清场），只补缺/刷新
+    kl = D.get("stkKlines") if isinstance(D.get("stkKlines"), dict) else {}
+    kl_names = D.get("stkKlineNames") if isinstance(D.get("stkKlineNames"), dict) else {}
+
+    # R100z6g：既有 stkKlines 的全部键也纳入刷新；谐波池键 90 根、其余 90 根（统一）
+    hz_pool = D.get("harmonic") if isinstance(D.get("harmonic"), dict) else {}
+    hz_codes = {x.get("code") for x in (hz_pool.get("confirmPool") or []) + (hz_pool.get("watchPool") or [])
+                if isinstance(x, dict) and x.get("code")}
+    for k in list(kl.keys()):
+        k = str(k)
+        if is_ashare_code(k):
+            codes.add(k)
+        elif re.fullmatch(r"(sh|sz)\d{6}", k):
+            syms.add(k)
+
+    ok, fail = 0, []
+
+    def work(c):
+        return c, fetch_kline(c, bars=BARS_HARMONIC if c in hz_codes else BARS_DEFAULT)
+
+    with ThreadPoolExecutor(max_workers=6) as exe:
+        futs = {exe.submit(work, c): c for c in sorted(codes) + sorted(syms)}
+        for fu in as_completed(futs):
+            if time.time() > deadline:
+                for f in futs:
+                    f.cancel()
+                break
+            c, k = fu.result()
+            if k:
+                kl[c] = k
+                ok += 1
+            else:
+                fail.append(c)
+
+    # 名称映射仅保留抓到 K 线的代码
+    kl_names = {nm: c for nm, c in {**kl_names, **name_map}.items() if c in kl}
+
+    if ok == 0 and not kl:
+        print("[warn] 全部 K 线抓取失败且无既有数据，保留空 stkKlines（不清其他字段）")
+        D["stkKlines"] = {}
+        D["stkKlineNames"] = {}
+    else:
+        D["stkKlines"] = kl
+        D["stkKlineNames"] = kl_names
+        # R100v2：全局行业映射 sectorMap（顶层新字段）——题材掘金/全球要闻等不在池内的
+        # 标的也能出板块徽章。防清场：仅新增/覆盖条目，抓取失败/超时保留既有映射；
+        # 时间预算不足（<110s 剩余）直接跳过不抓。
+        old_map = D.get("sectorMap") if isinstance(D.get("sectorMap"), dict) else {}
+        if time.time() < deadline - 110:
+            try:
+                import kline_cache as K
+                sm = K.collect_sectors(D, use_sina=True, node_deadline=90)
+                if sm:
+                    D["sectorMap"] = {**old_map, **sm}
+                    print(f"[info] sectorMap 更新：{len(sm)} 条（既有 {len(old_map)} 条保留合并）")
+                else:
+                    if old_map:
+                        D["sectorMap"] = old_map
+                    print("[warn] 行业映射抓取失败，保留既有 sectorMap（不清场）")
+            except Exception as exc:
+                if old_map:
+                    D["sectorMap"] = old_map
+                print(f"[warn] sectorMap 生成异常（{exc}），保留既有值")
+        else:
+            if old_map:
+                D["sectorMap"] = old_map
+            print("[warn] 时间预算不足，跳过 sectorMap 刷新（保留既有值）")
+        # R100z4f：池内缺名回填 + themePicks 行情字段校准（确定性脚本，失败不阻塞不清场）
+        try:
+            import fix_pools_meta
+            _rn, _cf, _nc = fix_pools_meta.patch(D)
+            print(f"[info] fix_pools_meta：补名 {_rn} 只 / themePicks chg 校准 {_cf} 条 / note 净化 {_nc} 条")
+        except Exception as _exc:
+            print(f"[warn] fix_pools_meta 异常（{_exc}），跳过（保留原值不清场）")
+        save_data(D)
+        print(f"[info] stkKlines 内嵌完成：成功 {ok} 只 / 失败 {len(fail)} 只 / 总计 {len(kl)} 只，名称映射 {len(kl_names)} 条")
+        if fail:
+            print("[warn] 抓取失败:", ",".join(sorted(fail)))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,103 @@
+{
+ "log": {
+  "2026-09-30": [
+   {
+    "date": "2026-09-30",
+    "sector": "光通信·光模块",
+    "predicted": "走强",
+    "dirClass": "up",
+    "actualPct": -0.99,
+    "benchPct": null,
+    "excessPct": null,
+    "result": "未命中",
+    "conf": "高",
+    "avgPct": null,
+    "excessAvg": null,
+    "hit": 0,
+    "hitAbs": 0,
+    "pos": null
+   },
+   {
+    "date": "2026-09-30",
+    "sector": "半导体设备材料",
+    "predicted": "走强",
+    "dirClass": "up",
+    "actualPct": -2.92,
+    "benchPct": null,
+    "excessPct": null,
+    "result": "未命中",
+    "conf": "高",
+    "avgPct": null,
+    "excessAvg": null,
+    "hit": 0,
+    "hitAbs": 0,
+    "pos": null
+   },
+   {
+    "date": "2026-09-30",
+    "sector": "黄金·贵金属",
+    "predicted": "走强",
+    "dirClass": "up",
+    "actualPct": 1.08,
+    "benchPct": null,
+    "excessPct": null,
+    "result": "命中",
+    "conf": "中",
+    "avgPct": null,
+    "excessAvg": null,
+    "hit": 1,
+    "hitAbs": 1,
+    "pos": null
+   },
+   {
+    "date": "2026-09-30",
+    "sector": "核电·数据中心供电",
+    "predicted": "走强",
+    "dirClass": "up",
+    "actualPct": 0.03,
+    "benchPct": null,
+    "excessPct": null,
+    "result": "未命中",
+    "conf": "中",
+    "avgPct": null,
+    "excessAvg": null,
+    "hit": 0.5,
+    "hitAbs": 0.5,
+    "pos": null
+   },
+   {
+    "date": "2026-09-30",
+    "sector": "光伏逆变器",
+    "predicted": "偏强",
+    "dirClass": "up",
+    "actualPct": 0.1,
+    "benchPct": null,
+    "excessPct": null,
+    "result": "部分兑现",
+    "conf": "中",
+    "avgPct": null,
+    "excessAvg": null,
+    "hit": 0.5,
+    "hitAbs": 0.5,
+    "pos": null
+   },
+   {
+    "date": "2026-09-30",
+    "sector": "有色·工业金属",
+    "predicted": "承压",
+    "dirClass": "down",
+    "actualPct": -0.1,
+    "benchPct": null,
+    "excessPct": null,
+    "result": "命中",
+    "conf": "中",
+    "avgPct": null,
+    "excessAvg": null,
+    "hit": 0.5,
+    "hitAbs": 0.5,
+    "pos": null
+   }
+  ]
+ },
+ "open": {}
+}
