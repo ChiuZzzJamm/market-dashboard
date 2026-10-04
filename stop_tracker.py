@@ -126,6 +126,14 @@ def collect_entries(D):
     for x, src in plain:
         c = str(x.get('code') or '')
         lc = _f(x.get('lastClose'))
+        # R100z61：data.js 里断板池条目**只有 kline（60 根日 K），没有 lastClose 字段**，
+        # 原来这里 `lc is None` 直接 continue → 机械池一只都进不了台账，下面那句
+        # DEFAULT_STOP_PCT 兜底是条死路径；台账里 41 条全是 harmonic(26)+default-3%(15)，
+        # 断板/吸筹 0 条，"台账积累够→回测优化机械池止损"这条链路从数据源头就断了。
+        # 用条目自带的 kline 最后一根收盘兜底 lastClose（= 最新收盘）。
+        if lc is None:
+            kl = [b for b in (x.get('kline') or []) if isinstance(b, (list, tuple)) and len(b) > 2]
+            lc = _f(kl[-1][2]) if kl else None
         if not c or c in out or lc is None:
             continue
         out[c] = {'code': c, 'name': x.get('name') or '', 'sector': x.get('sector') or '',
