@@ -173,8 +173,12 @@
     border: 1px dashed currentColor; vertical-align: 1px; }
   .excess-dot.pos { color: var(--up); }
   .excess-dot.neg { color: var(--down); }
-  .pf-box { margin: 8px 0 2px; }
-  .pf-stat { display: flex; gap: 8px; flex-wrap: wrap; font-size: 11px; margin-top: 4px; }
+  /* R100z60（用户 2026-10-04「增加点空格」）：组合净值块（命中率 + 净值曲线 + 统计标签行）
+     与下方板块卡片（「新型电池·固态电池」等）之间原来只留 2px，两坨内容几乎贴在一起；
+     底部撑到 18px（顶部保持 10px），扫读时曲线区和下面的板块卡能分开。
+     同时把统计标签行与曲线图之间也补 6px（原来 4px），标签不至于糊在曲线下缘。 */
+  .pf-box { margin: 10px 0 18px; }
+  .pf-stat { display: flex; gap: 8px; flex-wrap: wrap; font-size: 11px; margin-top: 6px; }
   .pf-stat span { padding: 2px 6px; border-radius: 4px; border: 1px solid currentColor; color: var(--ink2); }
   .pf-stat .up { color: var(--up); }
   .pf-stat .down { color: var(--down); }
@@ -497,19 +501,23 @@
   .fail-chip .fd { font-size: 10px; color: var(--ink2); margin-top: 2px; }
   /* R100z41：最新归档批次用实线边框 + 「新」徽章，与滚动窗口里剩下的旧归档一眼区分。
      R100z59（用户 2026-10-04「颜色不用是黄的，鼠标放上去才显示黄色」）：
-     常态**不**上黄——去黄底/琥珀边、徽章改浅蓝，「新」只靠徽章提示；
-     整卡与徽章的黄色统一挪到 :hover 才出现（见下方 R100z46 段）。 */
+     常态**不**上黄——去黄底/琥珀边，「新」只靠徽章提示；整卡黄色统一挪到 :hover 才出现。
+     R100z60（用户 2026-10-04 再定）：**徽章改成一直是实心黄**（#ffc93c 底 + #6b4a00 字 +
+     #e3a008 边，即 R100z45 那版饱和琥珀），因为「新」是要一眼扫到的强提示，只有 hover 变黄会
+     在静态截图/缩略图里整个消失；卡片本体仍按 R100z59 走——平时白底、hover 才整卡转黄（R100z46）。 */
   .fail-chip.fail-new { border-style: solid; }
-  .fail-chip .nb { font-size: 10px; font-weight: 800; color: #0c447c; background: #e6f1fb; border: 1px solid #378add; border-radius: 4px; padding: 0 3px; line-height: 1.35; }
+  .fail-chip .nb { font-size: 10px; font-weight: 800; color: #6b4a00; background: #ffc93c; border: 1px solid #e3a008; border-radius: 4px; padding: 0 3px; line-height: 1.35; }
   /* R100z44：新入池首日高亮——断板/谐波/九门/吸筹确认·观察池与失效池新归档，
      入池当天整卡淡黄底+琥珀边+「新」徽章（参考失效池既有样式），次日自动恢复。
      置于 .tc.dim 之后：归档态（dim 虚线灰字）遇「新」也要黄底优先。 */
   /* R100z45：首日高亮曾把边框/徽章改饱和琥珀 + 卡底/格底加深一档（用户反馈太淡）。
      R100z59 回滚常态黄色（用户 2026-10-04 要求）：新入池卡平时就是普通卡片，
-     只挂一枚浅蓝「新」徽章；鼠标放上去才整卡转黄（R100z46 那条 hover 规则），
-     不再靠常驻黄底抢眼——黄底只在交互瞬间出现，扫列表时不会满屏晃。 */
+     只挂一枚「新」徽章；鼠标放上去才整卡转黄（R100z46 那条 hover 规则），
+     不再靠常驻黄底抢眼——黄底只在交互瞬间出现，扫列表时不会满屏晃。
+     R100z60：卡片仍按这个走（hover 才整卡黄），但**徽章本身改回常态实心黄**（见上方
+     `.fail-chip .nb` 那段注释），「新」在静态图里也一眼可见。 */
   .tc.fresh { border-style: solid; }
-  .tc .nb { font-size: 10px; font-weight: 800; color: #0c447c; background: #e6f1fb; border: 1px solid #378add; border-radius: 4px; padding: 0 3px; line-height: 1.35; flex-shrink: 0; }
+  .tc .nb { font-size: 10px; font-weight: 800; color: #6b4a00; background: #ffc93c; border: 1px solid #e3a008; border-radius: 4px; padding: 0 3px; line-height: 1.35; flex-shrink: 0; }
   .db-modal-meta { font-size: 12.5px; color: var(--ink); line-height: 1.8; margin-bottom: 10px; }
   .db-modal-meta .lab { color: var(--ink2); }
   .db-kline svg { width: 100%; height: auto; display: block; }
@@ -2414,13 +2422,12 @@ function renderAccumulation() {
   //   强弱只数这类口径随行情天天变、页面上最容易过期，卡片本身已有强度/滞后格，口径不再重复）；
   //   ② 新增失效归档池——原在强/观察池内、本轮走坏的标的自失效日起留 5 个交易日
   //   （生成侧 accumulation_score.py 走 roll_fail_pool 剔除），样式与断板反包/谐波页同款。
-  // ⚠️ 这里判断的是「字段存不存在」而不是「有没有条目」——池空时也要露出「失效归档池 · 0 只」，
-  // 用户才知道这个池子存在（首次生成前 failPool 整块缺失、自然不渲染，不编数据）。
   /* R100z58（用户 2026-10-04「吸筹/九门失效池看不到」）：原写法 `a.failPool!==undefined` 才渲染，
      而 failPool 字段只有脚本实跑过才会写入——节前 09-30 那次生成在 R100z56 加字段之前，
      之后 10-01~10-04 国庆休市没再跑过 → 字段一直 undefined → 整块失效池连「0 只」都不显示，
-     看起来像功能没做。dbFailHtml 本身已为空池备好「失效归档池 · 0 只 / 暂无失效标的」文案，
-     故这里改成无条件渲染，缺失时露出占位，跑过之后自动变有内容的池。 */
+     看起来像功能没做，故改成无条件调用 dbFailHtml。
+     R100z60（同日再定）：空态**改回留白**——dbFailHtml 对空池直接返回空串，不再印
+     「失效归档池 · 0 只」那块灰卡（用户反馈空占位太占版面）；有标的时才出标题 + chips。 */
   var accFail = dbFailHtml(a.failPool || [], 'accumulation');
   return accLeg + '<div class="card">' + secS + secW + accFail + '</div>';
 }
@@ -2463,7 +2470,7 @@ function renderPowerScreen() {
     '</div></details>';
   // R100z56（用户 2026-10-04 要求）：九门页同样补失效归档池（原在池内、本轮不再过阈值的标的，
   // 自失效日起留 5 个交易日，生成侧 power_screener.py 走 roll_fail_pool 剔除）。
-  var pwFail = dbFailHtml(p.failPool || [], 'powerScreen'); // R100z58 同吸筹：无条件渲染，空池露占位
+  var pwFail = dbFailHtml(p.failPool || [], 'powerScreen'); // R100z58 无条件调用；R100z60 起空池留白（dbFailHtml 返空串）
   return gateDef +
     '<div class="card"><h2>⚡ 日线九门' + (p.tradeDate ? ' <span class="h2-date">' + esc(p.tradeDate) + '</span>' : '') + '</h2>' +
     '<div class="pw-grid">' + items + '</div>' + pwFail + (p.summary ? '<div class="note-line">' + esc(p.summary) + '</div>' : '') + '</div>';
@@ -2977,10 +2984,10 @@ function failTcHtml(e, i, latestD) {
    failPool: [{code,name,pattern,form,reason,entryDate}]；点击看该标的 K 线。 */
 function dbFailHtml(failPool, kind) {
   failPool = failPoolSorted(failPool);
-  if (!failPool.length) {
-    return '<div class="db-pool p-fail"><h2>失效归档池 · 0 只</h2>' +
-      '<div class="db-empty">暂无失效标的（失效标的中自失效日起保留 5 个交易日，窗口内会留在此池，超期自动滚出）</div></div>';
-  }
+  /* R100z60（用户 2026-10-04「九门和吸筹这里要留空白」）：空池直接返回空串、**不渲染整块灰卡**——
+     「失效归档池 · 0 只 + 暂无失效标的」对空池只是占版面的噪音（R100z58 那次是为了解释"字段没写进来
+     所以整块消失"，现在既已统一无条件调用，空态就该安静留白）。只有真有失效标的才出标题 + chips。 */
+  if (!failPool.length) return '';
   var _latestD = failPoolLatest(failPool); // R100z41：最新一批归档的日期，用于高亮 + 标题标注
   // R100z42：断板反包失效池 → 统一 T2 四格卡；谐波失效池 → 沿用紧凑 chip
   if (kind === 'duanban') {
