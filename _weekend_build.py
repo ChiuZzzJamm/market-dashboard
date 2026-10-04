@@ -953,7 +953,7 @@ SECTOR_REASON = {
 # 置信度门槛：track_calibration gates.高.maxHighConf = 2 → 最多 2 条「高确信」
 AI_SECTORS = [
     {
-        'sector': '新型电池·固态电池', 'direction': '走强', 'confidence': 76,
+        'sector': '新型电池·固态电池', 'direction': '走强', 'confidence': '高',
         'usDriver': '费半 +2.18%、英特尔 10 月 5 日 PC 用 CPU 再提价约 10%，'
                     '芝商所推出 GPU 算力期货',
         'logic': ('七部门印发新型电池产业发展规划，明确 2030 年全固态电池初步规模化应用、'
@@ -973,7 +973,7 @@ AI_SECTORS = [
         'N': 2, 'spec': BATT,
     },
     {
-        'sector': '算力硬件·光模块', 'direction': '走强', 'confidence': 74,
+        'sector': '算力硬件·光模块', 'direction': '走强', 'confidence': '高',
         'usDriver': 'AI 算力 +3.41%（ARM+5.18%、AVGO+3.35%）、CPO/光模块 +3.34%，'
                     '费半 +2.18% 高开 2.53%',
         'logic': ('美股 AI 算力板块高开 2.87% 后收涨 3.41%，CPO 与光模块同步收涨 3.34%，'
@@ -994,7 +994,7 @@ AI_SECTORS = [
         'N': 0, 'spec': AIHW,
     },
     {
-        'sector': '创新药·医药', 'direction': '偏强', 'confidence': 62,
+        'sector': '创新药·医药', 'direction': '偏强', 'confidence': '中',
         'usDriver': '生物医药 -0.61%（标普 11 大板块唯一下跌），上交所发布创新药新指数',
         'logic': ('上交所发布创新药指数与科创板软件服务指数，各选取 40 只优质样本股，'
                   '为后续 ETF 产品供给预留接口，被动配置资金有了明确的入场通道；'
@@ -1015,7 +1015,7 @@ AI_SECTORS = [
         'N': 3, 'spec': PHAR,
     },
     {
-        'sector': '大金融·券商', 'direction': '偏强', 'confidence': 60,
+        'sector': '大金融·券商', 'direction': '偏强', 'confidence': '中',
         'usDriver': '标普 500 +0.73%、道指 +0.49%，非农爆冷后风险偏好回升',
         'logic': ('美银策略师 Tupper 报告指出，该行分析的近 2800 只全球主动型多头基金'
                   '自今年 6 月起已将对中国股票的平均配置权重从低配调整至基准中性，'
@@ -1036,7 +1036,7 @@ AI_SECTORS = [
         'N': 0, 'spec': FIN,
     },
     {
-        'sector': '房地产·地产链', 'direction': '偏强', 'confidence': 55,
+        'sector': '房地产·地产链', 'direction': '偏强', 'confidence': '中',
         'usDriver': 'G7 释放 1 亿桶战略油储压制通胀预期，外围流动性未收紧',
         'logic': ('财政部、央行与金融监管总局联合发文，自 10 月 1 日起对首套住房贷款给予年化 1 个百分点贴息、'
                   '期限最长 5 年、贷款规模最高 100 万元，且六大行 9 月 30 日已集体公告免申即享；'
@@ -1057,7 +1057,7 @@ AI_SECTORS = [
         'N': 5, 'spec': RE,
     },
     {
-        'sector': '半导体·存储芯片', 'direction': '承压', 'confidence': 58,
+        'sector': '半导体·存储芯片', 'direction': '承压', 'confidence': '中',
         'usDriver': '存储 -6.57% 全场最弱（WDC-10.22%、STX-10.21%），'
                     'SK 海力士 NAND 子公司拟 IPO 募资 150 亿美元',
         'logic': ('美股存储板块低开 5.36% 后一路低走收跌 6.57%，是当日唯一跌幅超过 5% 的方向，'
