@@ -29,6 +29,7 @@
     G11 只读冒烟(--deep)
     G12 半死链路      data.js 顶层产出必须登记「流程主人」+ 被自动化点名 + 脚本零孤儿
     G13 节假日表      common 与 cal_factor 两份手工节假日表同源等价 + 覆盖到期前 30 天 WARN 提醒跨年更新
+    G14 路径断裂      prompt 内脚本绝对路径必须含完整 dashboard/ 或走 cd 相对调用（禁「缺 dashboard/ 裸路径」）
 """
 import ast
 import json
@@ -888,6 +889,33 @@ def g13_holiday_table(r):
                 r.ok("G13", f"节假日表覆盖到 {max_d}（剩 {left} 天，暂无需更新）")
     except Exception as e:                                   # noqa: BLE001
         r.fail("G13", f"节假日表覆盖前瞻检查失败：{e}")
+def g14_prompt_broken_path(r):
+    """G14 路径断裂闸门（R100z71）：prompt 内禁止出现「/WorkBuddy/market <空格><脚本>.py」
+    这类签名——合法路径是 /WorkBuddy/market dashboard/...（含空格需整体引号或走 cd 相对调用）。
+
+    R100z71 发现：07:30 / 周日两条任务曾因路径损坏（缺 `dashboard/` 且未加引号）导致
+    `update_us_from_quotes` / `check_duanban` / `stock_risk_blacklist` / `build_stock_pool`
+    调用把目录当脚本跑、静默失败（python3: can't open file '/Users/loccco/WorkBuddy/market'），
+    us 美股行情与断板池长期未更新、且无人察觉。G2 只校验 audit_expectations.json 里的
+    相对文件名是否存在于磁盘，扫不到 prompt 内写死的绝对路径，故补本闸固化。
+
+    注意：本闸只拦「缺 dashboard/ 的裸路径签名」，不拦「cd /WorkBuddy/market dashboard && python3 ...」
+    这种未引号 cd 形式——后者在自动化执行器内能正确运行（16:00/08:30/09:45 及本任务内
+    多行正确调用均为该形式，已实证可部署），本地裸 shell 测出的 cd 报错属执行上下文差异。"""
+    autos = load_auto_prompts()
+    bad = []
+    pat = re.compile(r'/Users/loccco/WorkBuddy/market\s+[A-Za-z0-9_]+\.(?:py|sh)')
+    for a in autos:
+        for m in pat.finditer(a["text"]):
+            ln = a["text"][:m.start()].count("\n") + 1
+            bad.append(f"{a['name']} L{ln}: {m.group(0)}")
+    if bad:
+        r.fail("G14", "prompt 内存在「路径断裂」签名（/WorkBuddy/market 后缺 dashboard/ 且未加引号，"
+                     "脚本调用会静默失败、把目录当脚本跑）：" + "; ".join(bad))
+    else:
+        r.ok("G14", f"{len(autos)} 份 prompt 无路径断裂签名（脚本调用均含完整 dashboard/ 或走 cd 相对调用）")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -914,6 +942,7 @@ def main():
     g13_holiday_table(r)
     if deep:
         g11_smoke(r)
+    g14_prompt_broken_path(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
