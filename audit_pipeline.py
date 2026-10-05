@@ -28,6 +28,7 @@
                       openOutlook.pos / duanban.star 按「下一个交易日是否已到」分流
     G11 只读冒烟(--deep)
     G12 半死链路      data.js 顶层产出必须登记「流程主人」+ 被自动化点名 + 脚本零孤儿
+    G13 节假日表      common 与 cal_factor 两份手工节假日表同源等价 + 覆盖到期前 30 天 WARN 提醒跨年更新
 """
 import ast
 import json
@@ -843,6 +844,50 @@ def g12_deadlinks(r):
                       f"{', '.join(sorted(orphan))}")
     else:
         r.ok("G12", f"{len(pyfiles)} 个 py 全部有调用方（prompt 点名或代码引用）")
+
+
+def g13_holiday_table(r):
+    """节假日表闸门：两份手工表必须同源等价 + 覆盖前瞻提醒跨年更新。
+
+    背景（R100z66 体检发现）：common.HOLIDAY_RANGES_2026（is_trade_day /
+    last_trade_day / today_trade_date 用）与 cal_factor.HOLIDAYS_2026
+    （aShareClosed / 日历标签用）是两份手工副本，注释各自标了「跨年须同步更新」——
+    纯靠人记必漏。任一处漏更 → 两个脚本对「今天是否交易日」判定打架：
+    一个剔除节假日、一个不剔，tradeDate / aShareClosed 口径分裂且无任何报错。
+    另外表目前只到 2026-10-07，2027-01-01 起节假日将全部被当交易日 →
+    需要在 12 月初（覆盖到期前 30 天）提前 WARN 提醒更新 2027 年度表。"""
+    try:
+        sys.path.insert(0, HERE)
+        import common as _cm
+        import cal_factor as _cf
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G13", f"无法导入 common/cal_factor 校验节假日表：{e}")
+        return
+    # ① 同源等价：两份表展开成 (start, end) 序列后必须完全一致
+    a = sorted((str(x[0]), str(x[1])) for x in (getattr(_cm, "HOLIDAY_RANGES_2026", []) or []))
+    b = sorted((str(v[0]), str(v[-1]))
+               for v in (getattr(_cf, "HOLIDAYS_2026", {}) or {}).values())
+    if a != b:
+        r.fail("G13", f"两份节假日表不同源（is_trade_day 与 cal_factor.aShareClosed 会判定打架）："
+                      f"common={a} vs cal_factor={b}——必须同步更新")
+    else:
+        r.ok("G13", f"common 与 cal_factor 节假日表同源等价（{len(a)} 段）")
+    # ② 覆盖前瞻：表尾距今不足 30 天 → WARN（提醒更新下一年度表，WARN 不拦部署）
+    try:
+        from datetime import date as _date
+        max_d = _date.fromisoformat(max(x[1] for x in a)) if a else None
+        if max_d is None:
+            r.fail("G13", "节假日表为空——is_trade_day 将把所有日子（含节假日）当交易日")
+        else:
+            left = (max_d - _date.today()).days
+            if left < 30:
+                r.warn("G13", f"节假日表最晚只覆盖到 {max_d}（剩 {left} 天）——"
+                              "请对照国务院放假通知更新下一年度表（common.py + cal_factor.py 两处同步，"
+                              "只改一处会被本闸门 ① 拦下）")
+            else:
+                r.ok("G13", f"节假日表覆盖到 {max_d}（剩 {left} 天，暂无需更新）")
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G13", f"节假日表覆盖前瞻检查失败：{e}")
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -866,6 +911,7 @@ def main():
     g7_validate_scopes(r)
     g8_g9_g10_data(r)
     g12_deadlinks(r)
+    g13_holiday_table(r)
     if deep:
         g11_smoke(r)
 
