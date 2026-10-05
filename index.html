@@ -1605,21 +1605,29 @@ function loadRiskBlacklist() {
         var d = JSON.parse(xhr.responseText);
         RISK_BL = (d && d.blacklist) || null;
         // 黑名单是异步到的：已经渲染过一次卡片就重画一遍，把 ⚠️ 角标和汇总行补上
+        // R100z70：四技术池（断板/谐波/九门/吸筹）卡片角标也走这里，一并重画
         var aiBox = document.getElementById('ai-prediction');
         if (RISK_BL && aiBox && aiBox.innerHTML) renderAiPrediction();
+        var dbPools = document.getElementById('db-pools');
+        if (RISK_BL && dbPools && dbPools.innerHTML) renderDuanban();
       } catch (e) { RISK_BL = null; }
     };
     xhr.send();
   } catch (e) { RISK_BL = null; }
 }
 
-/* 标的胶囊上的硬风险角标；无命中返回空串 */
-function riskBadge(code0) {
+/* 标的胶囊上的硬风险角标；无命中返回空串。
+   R100z70：poolMode=true 时用于四技术池卡片（口径是「打标不删」——观察池仅提示、不剔除，
+   措辞与 8 只池的硬闸语义区分开）。 */
+function riskBadge(code0, poolMode) {
   if (!RISK_BL || !code0) return '';
   var hit = RISK_BL[String(code0).replace(/\D/g, '')];
   if (!hit) return '';
   var rs = (hit.reasons || []).join('；');
-  return '<span class="risk-dot" title="⚠️ 硬风险（不进 8 只池）：' + escAttr(rs) + '">⚠️</span>';
+  var tip = poolMode
+    ? '⚠️ 硬风险提示（技术观察池仅打标不剔除）：' + rs
+    : '⚠️ 硬风险（不进 8 只池）：' + rs;
+  return '<span class="risk-dot" title="' + escAttr(tip) + '">⚠️</span>';
 }
 
 /* R100z15 缺口④：组合净值曲线——命中 60% 但亏钱、命中 50% 但赚钱，光看命中率分不出来。
@@ -2698,7 +2706,7 @@ function tcCard(o) {
   return '<div class="tc' + (o.dim ? ' dim' : '') + (o.fresh ? ' fresh' : '') + '"' + (o.attrs || '') + (o.onclick ? ' onclick="' + escAttr(o.onclick) + '"' : '') +
     (o.title ? ' title="' + escAttr(o.title) + '"' : '') + '>' +
     '<div class="tc-top">' + pills + nb + '<span class="tc-sp"></span>' + sent + '</div>' +
-    '<div class="tc-id"><b>' + esc(o.name || o.code) + '</b>' +
+    '<div class="tc-id"><b>' + esc(o.name || o.code) + '</b>' + riskBadge(o.code, 1) +
     ((o.name && o.name !== o.code) ? '<span class="cd">' + esc(o.code) + '</span>' : '') + tcChgHtml(o.chg) + '</div>' +
     '<div class="tc-g">' + (o.cells || []).join('') + '</div>' +
     (o.foot ? '<div class="tc-foot">' + o.foot + '</div>' : '') + '</div>';

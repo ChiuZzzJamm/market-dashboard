@@ -15,8 +15,9 @@
 
     硬约束（R91m/n）：源失败一律如实进 failed / unknown，绝不补 0、绝不把取不到写成「无风险」。
 
-用法：
-    python3 stock_risk_blacklist.py                 # 默认取 data.js aiPrediction 的标的
+    用法：
+    python3 stock_risk_blacklist.py                 # 默认扫 data.js：aiPrediction + us/ashare 五节要闻
+                                                    #   + bullish/bearish + 四技术池（R100z70 扩域）
     python3 stock_risk_blacklist.py --json          # 只输出 JSON
     python3 stock_risk_blacklist.py --write         # 同时写 risk_blacklist.json（前端+闸门读）
     python3 stock_risk_blacklist.py --codes-file c.txt
@@ -42,22 +43,42 @@ let s = fs.readFileSync(p, 'utf8');
 let m = s.match(/window\s*\.\s*DASHBOARD_DATA\s*=\s*(\{[\s\S]*\});?\s*$/);
 if (!m) { console.error('data.js parse failed'); process.exit(1); }
 let d; try { d = eval('(' + m[1] + ')'); } catch (e) { console.error('eval failed', e.message); process.exit(1); }
-const ap = d.aiPrediction || {};
-const codes = []; const seen = {};
-for (const sec of (ap.sectors || [])) {
-  for (const st of (sec.stocks || [])) {
-    const c = String(st.code || '').replace(/\D/g, '');
-    if (c.length === 6 && !seen[c]) { seen[c] = 1; codes.push(c); }
-  }
+// R100z70：扫描域从「仅 aiPrediction」扩为 aiPrediction + us/ashare 五节要闻(含 impacts) +
+// bullish/bearish + 四技术池(断板/谐波/吸筹/九门)。此前 validate 的新闻闸/9:45 star 闸
+// 都拿本文件当日标的对象做命中，扫描域不含这些 code 时闸门等于对它们失明。
+const codes = []; const seen = {}; const names = {};
+function add(st) {
+  if (!st || typeof st !== 'object') return;
+  const c = String(st.code || '').replace(/\D/g, '');
+  if (c.length !== 6) return;
+  if (!seen[c]) { seen[c] = 1; codes.push(c); }
+  if (st.name && !names[c]) names[c] = st.name;
 }
-const names = {};
-for (const sec of (ap.sectors || [])) {
-  for (const st of (sec.stocks || [])) {
-    const c = String(st.code || '').replace(/\D/g, '');
-    if (c.length === 6 && st.name) { names[c] = st.name; }
+// 1) AI 预测（原口径）
+for (const sec of ((d.aiPrediction || {}).sectors || [])) for (const st of (sec.stocks || [])) add(st);
+// 2) us/ashare 五节要闻 + bullish/bearish
+for (const mk of ['us', 'ashare']) {
+  const sec = d[mk] || {};
+  for (const key of ['bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews']) {
+    for (const nw of (sec[key] || [])) {
+      if (!nw || typeof nw !== 'object') continue;
+      for (const st of (nw.stocks || [])) add(st);
+      for (const imp of (nw.impacts || [])) { if (imp && typeof imp === 'object') for (const st of (imp.stocks || [])) add(st); }
+    }
   }
+  for (const key of ['bullish', 'bearish']) for (const g of (sec[key] || [])) { if (g && typeof g === 'object') for (const st of (g.stocks || [])) add(st); }
 }
-process.stdout.write(JSON.stringify({ date: ap.date || null, codes: codes, names: names }));
+// 3) 四技术池（前端卡片 ⚠️ 角标也读这份黑名单）
+const db = d.duanban || {};
+for (const st of (db.confirmed || [])) add(st);
+for (const st of (db.watching || [])) add(st);
+const hz = d.harmonic || {};
+for (const st of (hz.confirmPool || [])) add(st);
+for (const st of (hz.watchPool || [])) add(st);
+const acc = d.accumulation || {};
+for (const st of (acc.scored || [])) add(st);
+for (const st of (((d.powerScreen || {}).passed) || [])) add(st);
+process.stdout.write(JSON.stringify({ date: (d.aiPrediction || {}).date || null, codes: codes, names: names }));
 """
 
 UA = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120 Safari/537.36'}
@@ -257,7 +278,7 @@ def main():
         ann, e3 = fetch_ann(code, args.cut_days)
         return code, lift, e1, ple, e2, ann, e3
 
-    with ThreadPoolExecutor(max_workers=8) as ex:
+    with ThreadPoolExecutor(max_workers=12) as ex:  # R100z70 扩域后标的量数倍增，8→12
         for code, lift, e1, ple, e2, ann, e3 in ex.map(one, codes):
             reasons, watch = [], []
             if e1:
