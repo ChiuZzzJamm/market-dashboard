@@ -808,6 +808,22 @@ def g12_deadlinks(r):
     else:
         r.ok("G12", f"{len(autos)} 条看板自动化 cwds 均为合法 JSON 数组且指向本项目、rrule 非空")
 
+    # ②c 流程纪律：会 deploy.sh 上线的自动化必须接审计闸门；prompt 不得写死闸门基线数字。
+    # R100z65：此前 audit_pipeline 只接在 16:00 与周日 22:00 两条上，07:30/08:30/9:45
+    # 三条都会 deploy.sh 上线却绕过闸门——「闸门只长在部分任务身上」也是半死链路。
+    # 而写死 PASS=24 这类基线数字，闸门一增项就必然误判（现自报 27）。
+    miss_gate = [a["name"] for a in autos
+                 if "deploy.sh" in a["text"] and "audit_pipeline" not in a["text"]]
+    hard_base = [a["name"] for a in autos if re.search(r"PASS\s*=\s*\d+", a["text"])]
+    if miss_gate:
+        r.fail("G12", "会 deploy.sh 上线却没接流水线审计闸门（闸门只长在部分任务身上 = 半死链路）："
+                      + "; ".join(miss_gate))
+    else:
+        r.ok("G12", f"{len(autos)} 条看板自动化凡会 deploy.sh 的均已接 audit_pipeline 闸门")
+    if hard_base:
+        r.warn("G12", "prompt 里写死了闸门基线数字（PASS=N），闸门增项后必然误判，"
+                      "应改为以脚本自报 + 退出码为准：" + "; ".join(hard_base))
+
     # ③ 脚本孤儿：prompt 与「其它 py 的源码」都不出现该模块名。
     # 注意必须比模块名（去 .py）——代码里写的是 `import kline_cache`，拿 'kline_cache.py'
     # 去 substr 匹配必然失败，会把满地引用的热脚本误报成孤儿。
