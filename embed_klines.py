@@ -21,6 +21,7 @@ validate 之前运行，把所有 A股标的的日 K 线一次性抓取并写入
 挂载：16:00 / 07:30 / 周日23:00 自动化在 AI 写回之后运行（08:30 不写 A股标的，不挂）。
 """
 import json
+import os
 import re
 import subprocess
 import sys
@@ -318,7 +319,15 @@ def pools_meta_patch(D, fetch=True):
 
 
 def main():
-    deadline = time.time() + 300
+    # R100z72：先读 KLINE_DEADLINE 环境变量（kline_cache 同一约定，使 16:00 流水线
+    # 通过 `KLINE_DEADLINE=900` 设定的预算真正生效；此前只认 `--deadline` CLI，
+    # 环境变量被静默忽略、实际跑在 300s 默认预算上）。CLI --deadline 仍可覆盖。
+    _kd = 300.0
+    try:
+        _kd = float(os.environ.get("KLINE_DEADLINE", "300"))
+    except (ValueError, TypeError):
+        _kd = 300.0
+    deadline = time.time() + _kd
     if "--deadline" in sys.argv:
         try:
             deadline = time.time() + float(sys.argv[sys.argv.index("--deadline") + 1])

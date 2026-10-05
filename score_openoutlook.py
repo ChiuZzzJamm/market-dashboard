@@ -113,7 +113,11 @@ def main():
 
     st = load_state()
     if not st:
-        return 1
+        # R100z72：台账状态缺失是「08:30 尚未写入 openOutlook.pos」的常态（非错误），
+        # 本步本就是 16:00 里的非关键打分环节——返回 0（跳过）而非 1，否则会被自动化
+        # 当成「步骤失败」中断部署。
+        print('[SKIP] 前瞻台账状态缺失（08:30 尚未写入 openOutlook.pos），本步跳过（不计入失败）')
+        return 0
     # pos 读取口径（R100z53 修订，勿再改）：
     #   NODE_SRC 第 42 行输出 `pos: oo.pos || null` —— top-level 的 `pos` 键
     #   已经是 openOutlook.pos 的映射，且经 node 提取后已是 dict。

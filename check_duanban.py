@@ -1232,6 +1232,12 @@ def main():
                                  len(old_mod.get("watching") or [])), file=sys.stderr)
                         old_mod['failPool'] = _clean_duanban_fail(old_mod.get('failPool', []), datetime.now().strftime('%Y-%m-%d'))
                         print(json.dumps(old_mod, ensure_ascii=False, indent=1))
+                        # R100z72：即便涨停池全源不可达，也把保留下来的既有模块落到 --out，
+                        # 避免下游 merge_duanban 因 --out 缺失而 FileNotFoundError 崩掉 16:00 步骤。
+                        if args.out:
+                            with open(args.out, "w", encoding="utf-8") as _f:
+                                _f.write(json.dumps(old_mod, ensure_ascii=False, indent=1) + "\n")
+                            print(f"[module] 草稿已写入 {args.out}（保留既有模块，涨停池不可达）", file=sys.stderr)
                         return
                 except Exception as e:
                     print("[warn] 保留既有模块失败，回退空模块：%s" % e, file=sys.stderr)
@@ -1245,6 +1251,11 @@ def main():
             except Exception:
                 pass
             print(json.dumps(mod, ensure_ascii=False, indent=1))
+            # R100z72：空模块也落 --out，保证下游 merge_duanban 永远有草稿可读。
+            if args.out:
+                with open(args.out, "w", encoding="utf-8") as _f:
+                    _f.write(json.dumps(mod, ensure_ascii=False, indent=1) + "\n")
+                print(f"[module] 草稿已写入 {args.out}（空模块）", file=sys.stderr)
             return
         print("[]" if args.json else "无达标候选（涨停池为空或不可用）")
         return

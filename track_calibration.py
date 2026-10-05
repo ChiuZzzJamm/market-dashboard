@@ -391,8 +391,12 @@ def main():
         _argv = sys.argv
         try:
             _buf = io.StringIO()
-            with contextlib.redirect_stdout(_buf), contextlib.redirect_stderr(_buf):
-                stop_tracker.main()
+            try:
+                with contextlib.redirect_stdout(_buf), contextlib.redirect_stderr(_buf):
+                    stop_tracker.main()
+            except Exception as _e:
+                # R100z72：止损台账是校准主流程的旁路副作用，即便它异常也绝不应中断校准。
+                print(f"[WARN] 止损台账登记异常（不影响校准主流程）：{_e}", file=sys.stderr)
             if not a.json:
                 for _ln in _buf.getvalue().splitlines():
                     if _ln.startswith(('[OK]', '[info]', '[SKIP]')):
