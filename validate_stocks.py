@@ -66,7 +66,7 @@ TIERS = {
 
 def load_data():
     node = subprocess.run(
-        ['/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node', '-e',
+        ['/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-6/bin/node', '-e',
          "const fs=require('fs');let s=fs.readFileSync('data.js','utf8');"
          "let m=s.match(/window\\s*\\.\\s*DASHBOARD_DATA\\s*=\\s*(\\{[\\s\\S]*\\});?\\s*$/);"
          "process.stdout.write(JSON.stringify(eval('('+m[1]+')')))"],
