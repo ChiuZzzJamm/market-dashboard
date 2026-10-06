@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610060740"></script>
+<script src="data.js?v=202610061601"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -137,6 +137,7 @@
   .ai-item .lgc { font-size: 12.5px; color: var(--ink); margin-bottom: 8px; }
   .stock-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--line); }
   .stock-chip { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 4px 7px; font-size: 12px; min-width: 0; overflow: hidden; cursor: pointer; -webkit-tap-highlight-color: transparent; position: relative; }
+  /* R100z73b：共振徽标已移除，技术池命中改由淡紫边框 .gold-ring 表达（避免与边框重复） */
   .stock-chip b { font-weight: 700; white-space: nowrap; }
   .stock-chip .cd { color: var(--ink2); font-size: 10.5px; margin-left: 3px; white-space: nowrap; }
   .stock-chip .nt { display: block; font-size: 10.5px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -548,9 +549,9 @@
 
   /* ===== 选股扩展模块（谐波/吸筹/量化/必带数据，2026-09-26） ===== */
   .hz-badge { display:inline-block; font-size:11px; font-weight:700; color:#7a4d00; background:#fff3d6; border:1px solid #f0c36d; border-radius:4px; padding:1px 7px; line-height:1.5; white-space:nowrap; flex-shrink:0; vertical-align:middle; margin-left:4px; }
-  /* R100q：技术池标的金框（参考开盘精选金框色，底色不变）——A股/美股页所有标的胶囊共用 */
-  .gold-ring { border-color: #e8a013 !important; box-shadow: 0 0 0 1px rgba(232,160,19,.5), 0 0 3px rgba(232,160,19,.25) !important; }
-  .gold-ring:hover { border-color: #d18f00 !important; box-shadow: 0 0 0 2px rgba(232,160,19,.65), 0 0 6px rgba(232,160,19,.4) !important; }
+  /* R100q：技术池标的紫框（命中九门/谐波/吸筹/断板任一时由 stkGoldCls 加 .gold-ring）——A股/美股页所有标的胶囊共用 */
+  .gold-ring { border-color: #a78bfa !important; box-shadow: 0 0 0 1px rgba(167,139,250,.35) !important; }
+  .gold-ring:hover { border-color: #8b5cf6 !important; box-shadow: 0 0 0 1px rgba(167,139,250,.55) !important; }
   /* R100z36：四子页网格统一为同一列宽（一行 4 个，.tc 卡片 2×2 矩阵需要这个宽度） */
   .hz-pool { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; margin-top:8px; }
   @media (max-width: 900px) { .hz-pool { grid-template-columns:repeat(2, minmax(0,1fr)); } }
@@ -938,7 +939,7 @@ function stkTechBadgeHtml(code, noPoolMerge) {
     return '<span class="hz-badge" style="' + style + '" title="' + escAttr(tip) + '">' + esc(label) + '</span>';
   }).join('');
 }
-/* 主页标的金框（命中任一技术池 → class="gold-ring"，底色不变，参考开盘精选金框色） */
+/* 主页标的紫框（命中任一技术池 → class="gold-ring"，底色不变） */
 function stkGoldCls(code) {
   return stkTechMeta(code) ? ' gold-ring' : '';
 }
@@ -1881,7 +1882,7 @@ function newsEntryInner(it, showSrc, tag, tradeDate) {
     s += '<div class="nc-imp">' + (impTheme ? '<span class="nc-imp-theme">' + esc(impTheme) + '</span>' : '') + (im.horizon ? '<span class="nc-imp-hz">' + esc(im.horizon) + '</span>' : '');
     s += '<div class="nc-stocks">';
     im.stocks.forEach(function (st) {
-      // R100n：技术池边框描边 + 所属板块胶囊
+      // R100n：技术池边框描边 + 所属板块胶囊（琥珀边框即表达技术池命中；R100z73b 已移除重复共振徽标）
       var _t0 = (st.name || '') + ' ' + (st.code || '') + (st.note ? ' · ' + st.note : '') + '（点击查看K线）';
       s += '<span class="stock-chip' + stkGoldCls(st.code) + '" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (st.note || '')) + '" title="' + escAttr(_t0) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
     });
