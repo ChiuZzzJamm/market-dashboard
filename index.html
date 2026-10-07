@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610080024"></script>
+<script src="data.js?v=202610080032"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -2280,6 +2280,11 @@ function openHzModal(code, name) {
   openStkModal(code, name || code, '');
 }
 // R100h：吸筹/量化九门卡片固定本组导航——此前直接 openStkModal，STK_GRP 残留上一组导致箭头跳出本模块
+/* R100z82：弹窗按下标回取必须用与渲染同一份排序数组——
+   R100z76-③ 给九门/吸筹加 sortByReso 排序后，tcCard 的 idx 是「排序+截断后」的位置，
+   而 onclick 仍回取原始未排序池 → 点上海洗霸弹出传艺科技（硬教训#4 原样复发）。
+   两页各存一份全局排序数组，渲染与 openGrpModal（含组内导航）共用；谐波页按 code 回取不受影响。 */
+var PW_SORTED = [], ACC_SORTED = [];
 function openGrpModal(list, idx) {
   if (!list || !list[idx]) return;
   STK_GRP = list.map(function (x) { return { c: x.code, n: (x.name && x.name !== x.code) ? x.name : x.code, t: '' }; });
@@ -2403,7 +2408,8 @@ function renderAccumulation() {
   if (!a || !a.scored || !a.scored.length) return '';
   // R100z21：吸筹页分「强池 / 观察池」两节——强池=特征命中多、结构完整可直接跟；
   // 观察池=缺 1-2 项只排队候补。渲染一律按 scored 内每张卡自己的 grade 分组（新旧数据通用）。
-  var pick = sortByReso(a.scored).slice(0, 20); // R100z76-③：共振命中≥2池的标的排前
+  // R100z82：先固化排序数组到全局 ACC_SORTED，渲染与弹窗回取共用（否则 idx 错位串票，见 openGrpModal 上注释）
+  var pick = (ACC_SORTED = sortByReso(a.scored).slice(0, 20)); // R100z76-③：共振命中≥2池的标的排前
   // R100z22：特征胶囊加 title 释义（原来只有「试盘/横盘」两个字，看不出触发条件）
   var FEAT_TITLE = {
     f1: 'F1 试盘（20分）：长上影≥2×实体、量≥1.5×5日均量，随后3日均量回落且收盘低于试盘价，当时处在近120日区间下部',
@@ -2447,7 +2453,7 @@ function renderAccumulation() {
         tcStopCell(it.code)
       ],
       foot: foot,
-      onclick: 'openGrpModal(window.DASHBOARD_DATA.accumulation.scored,' + idx + ')',
+      onclick: 'openGrpModal(ACC_SORTED,' + idx + ')', // R100z82：回取同一份排序数组，原写法传 a.scored 会串票
       title: nm + ' ' + it.code + ' · ' + it.grade + ' ' + it.score + '分（六项合计 102 分）\n' +
         '命中：' + (hitList.length ? hitList.join('、') : '无') + '\n点击查看六特征逐条触发说明'
     });
@@ -2507,7 +2513,9 @@ function renderAccumulation() {
 function renderPowerScreen() {
   var p = window.DASHBOARD_DATA.powerScreen;
   if (!p || !p.passed || !p.passed.length) return '';
-  var items = sortByReso(p.passed).slice(0, 30).map(function (it, idx) { // R100z76-③：共振命中≥2池排前
+  // R100z82：先固化排序数组到全局 PW_SORTED，渲染与弹窗回取共用（否则 idx 错位串票，见 openGrpModal 上注释）
+  PW_SORTED = sortByReso(p.passed).slice(0, 30); // R100z76-③：共振命中≥2池排前
+  var items = PW_SORTED.map(function (it, idx) {
     var gates = (it.reasons || '').split(';').filter(Boolean);
     // R100g：名称缺失只展示代码一次
     var nm = (it.name && it.name !== it.code) ? it.name : '';
@@ -2528,7 +2536,7 @@ function renderPowerScreen() {
         tcStopCell(it.code)
       ],
       foot: foot,
-      onclick: 'openGrpModal(window.DASHBOARD_DATA.powerScreen.passed,' + idx + ')',
+      onclick: 'openGrpModal(PW_SORTED,' + idx + ')', // R100z82：回取同一份排序数组，原写法传 p.passed 会串票
       title: nm + ' ' + it.code + ' · 九门 ' + it.score + '/9\n通过：' + gates.join('、') +
         '\n涨幅 ' + it.pct + '% · 量比 ' + it.volRatio + ' · RSI14 ' + it.rsi
     });
