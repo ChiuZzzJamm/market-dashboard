@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610072355"></script>
+<script src="data.js?v=202610080019"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -137,7 +137,7 @@
   .ai-item .lgc { font-size: 12.5px; color: var(--ink); margin-bottom: 8px; }
   .stock-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--line); }
   .stock-chip { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 4px 7px; font-size: 12px; min-width: 0; overflow: hidden; cursor: pointer; -webkit-tap-highlight-color: transparent; position: relative; }
-  /* R100z73b：共振徽标已移除，技术池命中改由淡紫边框 .gold-ring 表达（避免与边框重复） */
+  /* R100z73b→R100z80：技术池命中由分级边框表达（reso-1黄/2橙/3红/4紫，stkGoldCls 全站共用），不再用单一 gold-ring */
   .stock-chip b { font-weight: 700; white-space: nowrap; }
   .stock-chip .cd { color: var(--ink2); font-size: 10.5px; margin-left: 3px; white-space: nowrap; }
   .stock-chip .nt { display: block; font-size: 10.5px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -549,11 +549,22 @@
 
   /* ===== 选股扩展模块（谐波/吸筹/量化/必带数据，2026-09-26） ===== */
   .hz-badge { display:inline-block; font-size:11px; font-weight:700; color:#7a4d00; background:#fff3d6; border:1px solid #f0c36d; border-radius:4px; padding:1px 7px; line-height:1.5; white-space:nowrap; flex-shrink:0; vertical-align:middle; margin-left:4px; }
-  /* R100q：技术池标的紫框（命中九门/谐波/吸筹/断板任一时由 stkGoldCls 加 .gold-ring）——A股/美股页所有标的胶囊共用 */
-  .gold-ring { border-color: #a78bfa !important; box-shadow: 0 0 0 1px rgba(167,139,250,.35) !important; }
-  .gold-ring:hover { border-color: #8b5cf6 !important; box-shadow: 0 0 0 1px rgba(167,139,250,.55) !important; }
-  /* R100z76-③：技术共振徽标（同票命中≥2技术池）。琥珀底+深棕字，与紫色技术边框区分、与风险⚠️角标区分 */
-  .reso-badge { display: inline-block; margin-left: 5px; padding: 0 5px; font-size: 10px; line-height: 15px; border-radius: 6px; color: #7a4a00; background: #fde68a; border: 1px solid #f59e0b; vertical-align: middle; white-space: nowrap; }
+  /* R100z80：跨池共振分级边框——命中池数→颜色：1黄 / 2橙 / 3红 / 4紫；stkGoldCls 全站标的共用，原 gold-ring 单一紫框已按此分级取代 */
+  .reso-1 { border-color: #f59e0b !important; box-shadow: 0 0 0 1px rgba(245,158,11,.35) !important; }
+  .reso-1:hover { border-color: #d97706 !important; }
+  .reso-2 { border-color: #f97316 !important; box-shadow: 0 0 0 1px rgba(249,115,22,.35) !important; }
+  .reso-2:hover { border-color: #ea580c !important; }
+  .reso-3 { border-color: #ef4444 !important; box-shadow: 0 0 0 1px rgba(239,68,68,.35) !important; }
+  .reso-3:hover { border-color: #dc2626 !important; }
+  .reso-4 { border-color: #a78bfa !important; box-shadow: 0 0 0 1px rgba(167,139,250,.35) !important; }
+  .reso-4:hover { border-color: #8b5cf6 !important; }
+  /* R100z76-③ 共振徽标（同票命中≥2技术池）；R100z80：按池数分级底色（与分级边框同色系） */
+  .reso-badge { display: inline-block; margin-left: 5px; padding: 0 5px; font-size: 10px; line-height: 15px; border-radius: 6px; vertical-align: middle; white-space: nowrap; }
+  .reso-badge.rb-2 { color: #9a3412; background: #ffedd5; border: 1px solid #f97316; }
+  .reso-badge.rb-3 { color: #fff; background: #ef4444; border: 1px solid #dc2626; }
+  .reso-badge.rb-4 { color: #fff; background: #a78bfa; border: 1px solid #8b5cf6; }
+  /* 板块领涨 TOP5 胶囊为 flex 行内，徽标自带 margin 会与容器 gap 叠加，去重 */
+  .tchip .reso-badge { margin-left: 0; }
   /* R100z36：四子页网格统一为同一列宽（一行 4 个，.tc 卡片 2×2 矩阵需要这个宽度） */
   .hz-pool { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; margin-top:8px; }
   @media (max-width: 900px) { .hz-pool { grid-template-columns:repeat(2, minmax(0,1fr)); } }
@@ -944,9 +955,10 @@ function stkTechBadgeHtml(code, noPoolMerge) {
     return '<span class="hz-badge" style="' + style + '" title="' + escAttr(tip) + '">' + esc(label) + '</span>';
   }).join('');
 }
-/* 主页标的紫框（命中任一技术池 → class="gold-ring"，底色不变） */
+/* R100z80：技术池命中分级边框（stkTechMeta 命中池数 → reso-1/2/3/4：1黄/2橙/3红/4紫）；全站标的胶囊/卡片共用 */
 function stkGoldCls(code) {
-  return stkTechMeta(code) ? ' gold-ring' : '';
+  var n = (stkTechMeta(code) || []).length;
+  return n >= 1 ? ' reso-' + Math.min(n, 4) : '';
 }
 /* R100s→R100t：独立池徽章仅保留开盘精选（断板/谐波池已并入技术徽章文案） */
 function stkPoolBadge(code) {
@@ -999,7 +1011,7 @@ function renderTops(s, isUp) {
     if (bname) info += ' · ' + bname + (isUp ? ' 领涨第' : ' 领跌第') + (idx + 1) + '位';
     if (op !== null && op !== undefined) info += ' · 今开 ' + (op >= 0 ? '+' : '') + op + '%' + (op > 1 ? '（高开）' : op < -1 ? '（低开）' : '（平开）');
     // R100p：弧色标注与主页板块徽标已删（用户要求），板块只在弹窗标题行显示（stkSecBadge）
-    return '<span class="tchip' + stkGoldCls(code0) + '" data-stk="' + escAttr(code0) + '|' + escAttr(name) + '|' + escAttr(info) + '" title="' + escAttr(info + '（点击查看K线）') + '"><b>' + esc(name) + '</b>' + (pctStr ? '<span class="tp ' + cls + '">' + pctStr + '</span>' : '') + riskBadge(code0) + '<span class="nt">' + esc(info) + '</span></span>';
+    return '<span class="tchip' + stkGoldCls(code0) + '" data-stk="' + escAttr(code0) + '|' + escAttr(name) + '|' + escAttr(info) + '" title="' + escAttr(info + '（点击查看K线）') + '"><b>' + esc(name) + '</b>' + (pctStr ? '<span class="tp ' + cls + '">' + pctStr + '</span>' : '') + riskBadge(code0) + resoBadge(code0) + '<span class="nt">' + esc(info) + '</span></span>';
   }).join('');
   return '<div class="reason-tops"><span class="tops-h">' + label + '</span>' + chips + '</div>';
 }
@@ -1746,7 +1758,7 @@ function renderAiPrediction() {
       s.stocks.forEach(function (st) {
         // R100n：技术池边框描边（修复 R100m 漏给 AI 预测候选打标的问题）+ 所属板块胶囊
         var _t1 = st.name + ' ' + st.code + (st.note ? ' · ' + st.note : '') + '（点击查看K线）';
-        html += '<span class="stock-chip' + stkGoldCls(st.code) + '" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (st.note || '')) + '" title="' + escAttr(_t1) + '"><b>' + esc(st.name) + '</b><span class="cd">' + esc(st.code) + '</span>' +
+        html += '<span class="stock-chip' + stkGoldCls(st.code) + '" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (st.note || '')) + '" title="' + escAttr(_t1) + '"><b>' + esc(st.name) + '</b><span class="cd">' + esc(st.code) + '</span>' + resoBadge(st.code) +
           (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
       });
       html += '</div>';
@@ -1999,7 +2011,7 @@ function renderThemePicks(list, tradeDate) {
         var hzTag = (st.code && window.DASHBOARD_DATA.harmonic && window.DASHBOARD_DATA.harmonic.tags) ? window.DASHBOARD_DATA.harmonic.tags[st.code] : null;
         var hzBadge = hzTag ? '<span class="hz-badge">谐波·' + esc(hzTag) + '</span>' : '';
         // R100n：emoji 角标改技术池边框描边 + 所属板块胶囊
-        s += '<span class="stock-chip' + stkGoldCls(st.code) + '" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (note || '')) + '" title="' + escAttr(title) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + hzBadge + (note ? '<span class="nt">' + esc(note) + '</span>' : '') + '</span>';
+        s += '<span class="stock-chip' + stkGoldCls(st.code) + '" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (note || '')) + '" title="' + escAttr(title) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + hzBadge + resoBadge(st.code) + (note ? '<span class="nt">' + esc(note) + '</span>' : '') + '</span>';
       });
       s += '</div>';
     }
@@ -2566,7 +2578,7 @@ function renderLianban(list) {
       var ctx = st.reason || st.hybk || '';
       var title = (st.name || '') + ' ' + (st.code || '') + (st.hybk ? ' · ' + st.hybk : '') + (st.reason ? ' ｜ ' + st.reason : '') + '（点击查看深度解读）';
       // R100n：技术池边框描边 + 所属板块胶囊
-      s += '<span class="stock-chip lb-click' + stkGoldCls(st.code) + '" title="' + escAttr(title) + '" onclick="lbShow(' + idx + ')"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + (pct ? '<span class="rt">' + pct + '</span>' : '') + (ctx ? '<span class="nt">' + esc(ctx) + '</span>' : '') + '</span>';
+      s += '<span class="stock-chip lb-click' + stkGoldCls(st.code) + '" title="' + escAttr(title) + '" onclick="lbShow(' + idx + ')"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + resoBadge(st.code) + (pct ? '<span class="rt">' + pct + '</span>' : '') + (ctx ? '<span class="nt">' + esc(ctx) + '</span>' : '') + '</span>';
     });
     s += '</div></div>';
   });
@@ -2737,10 +2749,13 @@ function resoMap() {
   _RESO_MAP = m; return m;
 }
 function resoBadge(code) {
-  var pools = resoMap()[String(code || '').replace(/\D/g, '')] || [];
-  if (pools.length < 2) return '';
-  return '<span class="reso-badge" title="技术共振：同票命中 ' + escAttr(pools.join('+')) +
-    ' 共 ' + pools.length + ' 个技术池，多池共振确信度更高">共振·' + pools.length + '</span>';
+  var code6 = String(code || '').replace(/\D/g, '');
+  var pools = resoMap()[code6] || [];
+  var n = pools.length;
+  if (n < 2) return '';
+  var t = Math.min(n, 4);
+  return '<span class="reso-badge rb-' + t + '" title="技术共振：同票命中 ' + escAttr(pools.join('+')) +
+    ' 共 ' + n + ' 个技术池，多池共振确信度更高">共振·' + n + '</span>';
 }
 function sortByReso(arr) {
   if (!arr || !arr.length) return arr;
@@ -2756,7 +2771,7 @@ function tcCard(o) {
   (o.pills || []).forEach(function (p) { if (p) pills += '<span class="db-sec-pill">' + esc(p) + '</span>'; });
   var sent = o.sent === false ? '' : sentBadgeHtml(o.code);
   var nb = o.fresh ? '<span class="nb">新</span>' : '';
-  return '<div class="tc' + (o.dim ? ' dim' : '') + (o.fresh ? ' fresh' : '') + '"' + (o.attrs || '') + (o.onclick ? ' onclick="' + escAttr(o.onclick) + '"' : '') +
+  return '<div class="tc' + stkGoldCls(o.code) + (o.dim ? ' dim' : '') + (o.fresh ? ' fresh' : '') + '"' + (o.attrs || '') + (o.onclick ? ' onclick="' + escAttr(o.onclick) + '"' : '') +
     (o.title ? ' title="' + escAttr(o.title) + '"' : '') + '>' +
     '<div class="tc-top">' + pills + nb + '<span class="tc-sp"></span>' + sent + '</div>' +
     '<div class="tc-id"><b>' + esc(o.name || o.code) + '</b>' + riskBadge(o.code, 1) + resoBadge(o.code) +
