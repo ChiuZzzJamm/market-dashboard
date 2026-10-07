@@ -36,7 +36,7 @@ import kline_cache as K  # noqa: E402
 
 # R100z55：与 track_calibration/stock_risk_blacklist/score_openoutlook 同口径。
 # 原先是无兜底的硬编码路径，托管 node 升版后该目录消失 → subprocess 直接 FileNotFoundError。
-_NODE_CAND = "/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node"
+_NODE_CAND = "/Users/loccco/.workbuddy/binaries/run-node"
 NODE = _NODE_CAND if os.path.exists(_NODE_CAND) else "node"
 SINA_LIST = ("https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php"
              "/Market_Center.getHQNodeData?page={page}&num=100&node=hs_a"

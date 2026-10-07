@@ -86,8 +86,8 @@ process.stdout.write(JSON.stringify({
 
 def load_prediction(path=DATA_JS):
     import subprocess
-    node = ('/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node'
-            if os.path.exists('/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node') else 'node')
+    node = ('/Users/loccco/.workbuddy/binaries/run-node'
+            if os.path.exists('/Users/loccco/.workbuddy/binaries/run-node') else 'node')
     env = dict(os.environ, DATA_PATH=path)
     pr = subprocess.run([node, '-e', NODE_SRC], env=env, capture_output=True, text=True)
     if pr.returncode != 0:

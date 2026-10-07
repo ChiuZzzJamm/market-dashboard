@@ -190,7 +190,7 @@ def main():
     with open(data_path, "w", encoding="utf-8") as f:
         f.write(out)
     try:
-        subprocess.run(["/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node",
+        subprocess.run(["/Users/loccco/.workbuddy/binaries/run-node",
                         "--check", data_path], check=True,
                        capture_output=True, timeout=30)
         print("[merge] data.js 写回完成，node --check 通过", file=sys.stderr)

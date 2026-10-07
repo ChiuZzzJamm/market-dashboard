@@ -718,7 +718,7 @@ def build_sectors_unified(prev_up, prev_down, prev_all, ths_list=None):
         all_b = [{"code": (b.get("code") or n), "name": n, "pct": round(b["pct"], 2)}
                  for n, b in sb.items() if isinstance(b, dict) and b.get("pct") is not None][:120]
         print(f"[info] 行业板块回退新浪口径（{len(all_b)} 个板块）")
-        return r2[0], r2[1], all_b, "em"
+        return r2[0], r2[1], all_b, "sina"
     # 4) 保留上一轮（R91m）
     print("[warn] 行业板块全部源失败，保留上一轮数据")
     return (prev_up or []), (prev_down or []), (prev_all or []), "prev"

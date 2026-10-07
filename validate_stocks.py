@@ -66,7 +66,7 @@ TIERS = {
 
 def load_data():
     node = subprocess.run(
-        ['/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-6/bin/node', '-e',
+        ['/Users/loccco/.workbuddy/binaries/run-node', '-e',
          "const fs=require('fs');let s=fs.readFileSync('data.js','utf8');"
          "let m=s.match(/window\\s*\\.\\s*DASHBOARD_DATA\\s*=\\s*(\\{[\\s\\S]*\\});?\\s*$/);"
          "process.stdout.write(JSON.stringify(eval('('+m[1]+')')))"],
@@ -499,6 +499,12 @@ def check_risk_blacklist(D, scope='all'):
     注意：文件缺失只 WARN（脚本还没跑），只有「黑名单里确实有、且又被选进 8 只池」
     才 FAIL——那才是必须拦下来的选股。
 
+    R100z76-④：severity 分级处置——
+      red   → FAIL（硬剔，须换股，不进 8 只池）
+      orange→ WARN（警示，可保留但需重点关注，不强制换股）
+      yellow→ 跳过（仅作风险参考，如股东质押，不报错）
+    旧版 JSON 缺 severity 字段时默认按 red 处理（保持硬闸语义，不静默放行）。
+
     R100z16：scope 决定扫哪些节点——
       all / ai  → aiPrediction.sectors（16:00、08:30、周日任务职责）
       all / us  → us + ashare 五节与 bullish/bearish（07:30、周日任务职责；
@@ -512,16 +518,18 @@ def check_risk_blacklist(D, scope='all'):
     闸门空转，不是真的校验通过。现已按上述口径补齐。"""
     root = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(root, 'risk_blacklist.json')
+    # R100z76-④：早期返回统一为 (fails, warns) 二元组，避免 main() 解包崩溃；
+    # 文件缺失/损坏属 WARN（脚本还没跑），不硬拦部署（与 docstring 口径一致）。
     if not os.path.exists(path):
-        return ["未找到 risk_blacklist.json（stock_risk_blacklist.py --write 未跑，"
+        return [], ["未找到 risk_blacklist.json（stock_risk_blacklist.py --write 未跑，"
                 "个股硬风险黑名单没进闸门）"]
     try:
         with open(path, encoding='utf-8') as f:
             bl = json.load(f)
     except Exception as e:
-        return [f"risk_blacklist.json 解析失败（{e}）"]
+        return [], [f"risk_blacklist.json 解析失败（{e}）"]
     if not isinstance(bl, dict):
-        return ["risk_blacklist.json 结构异常（须含 blacklist 对象）"]
+        return [], ["risk_blacklist.json 结构异常（须含 blacklist 对象）"]
 
     bl_map = bl.get('blacklist') or {}
 
@@ -533,11 +541,21 @@ def check_risk_blacklist(D, scope='all'):
             hit = bl_map.get(str(code))
             if not hit:
                 continue
+            # R100z76-④：severity 分级处置——red 硬剔(FAIL)、orange 警示(WARN)、yellow 参考(跳过)。
+            # 旧版 JSON 缺 severity 字段时默认 red（保持硬闸语义，不静默放行）。
+            sev = hit.get('severity') or 'red'
             reasons = '；'.join(hit.get('reasons') or [])
-            out.append(f"个股硬风险黑名单命中：{code} {hit.get('name') or st.get('name') or ''}"
-                       f"（{reasons}）——须换股，不得留在 8 只池（R100z13 硬闸）")
+            nm = hit.get('name') or st.get('name') or ''
+            if sev == 'red':
+                out.append(f"个股硬风险黑名单命中(红/硬剔)：{code} {nm}"
+                           f"（{reasons}）——须换股，不得留在 8 只池（R100z13 硬闸）")
+            elif sev == 'orange':
+                warns_out.append(f"个股硬风险黑名单命中(橙/警示)：{code} {nm}"
+                                 f"（{reasons}）——可保留但需重点关注，不强制换股")
+            else:  # yellow / none / 其它：仅风险参考，不报错
+                continue
 
-    out = []
+    out, warns_out = [], []
     if scope in ('all', 'ai'):
         for sec in ((D.get('aiPrediction') or {}).get('sectors') or []):
             if isinstance(sec, dict):
@@ -557,7 +575,7 @@ def check_risk_blacklist(D, scope='all'):
         # R100z41：🌟开盘精选的 picks 是本任务自己挑的，不许池外补股，
         # 那就必须自己过闸——否则 9:45 整条链路完全没有硬风险拦截面。
         scan(((D.get('duanban') or {}).get('star') or {}).get('picks'), 'duanban.star.picks')
-    return out
+    return out, warns_out
 
 
 def check_logic_depth(D):
@@ -1077,7 +1095,7 @@ def main():
     sel_warns = check_selection_modules(D)
     oo_warns = check_openoutlook(D)                    # R100z13：开盘前瞻六维度深度
     ooloop_warns = check_openoutlook_loop(D)           # R100z13：前瞻兑现闭环两头闸
-    risk_violations = check_risk_blacklist(D, scope=scope)   # R100z13：个股硬风险黑名单（命中即 FAIL）
+    risk_fails, risk_warns = check_risk_blacklist(D, scope=scope)   # R100z76-④：个股硬风险黑名单（red=FAIL / orange=WARN / yellow=跳过）
     logic_hards, logic_warns = check_logic_depth(D)    # R100z15：内容深度机器闸
     exit_warns = check_exit(D)                         # R100z15：退出纪律（止损/目标/证伪）
     pool_hards, pool_warns = check_stock_pool(D)       # R100z15：机械选股池是否真进决策链
@@ -1088,7 +1106,7 @@ def main():
         violations.extend(logic_hards)
         violations.extend(pool_hards)
     if scope in ('all', 'ai', 'us', 'star'):  # R100z41：star 也要计（此前空转，闸门形同虚设）
-        violations.extend(risk_violations)
+        violations.extend(risk_fails)
 
     if scope in ('all', 'us'):
         for mk in ('ashare', 'us'):
@@ -1131,7 +1149,8 @@ def main():
                           'calibration_warnings': calib_warns,
                           'openoutlook_warnings': oo_warns,
                           'openoutlook_loop_warnings': ooloop_warns,
-                          'risk_blacklist_violations': risk_violations,
+                          'risk_blacklist_violations': risk_fails,
+                          'risk_blacklist_warnings': risk_warns,
                           'logic_depth_warnings': logic_warns,
                           'exit_warnings': exit_warns,
                           'stock_pool_warnings': pool_warns,
@@ -1177,6 +1196,8 @@ def main():
         print("[WARN] openOutlook兑现闭环:", w)
     for w in sel_warns:
         print("[WARN] 选股扩展模块:", w)
+    for w in risk_warns:
+        print("[WARN] 硬风险黑名单(警示):", w)
     for w in logic_warns:
         print("[WARN] 内容深度:", w)
     for w in exit_warns:

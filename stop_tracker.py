@@ -48,8 +48,8 @@ DEFAULT_STOP_PCT = 0.03   # 机械池兜底止损：最近收盘 −3%（与 08:
 LOOKAHEAD = 5             # 「触及后 5 日表现」的窗口（交易日）
 SRC_PRIORITY = ('harmonic', 'ai-exit', 'default')
 
-NODE_BIN = ('/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node'
-            if os.path.exists('/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node')
+NODE_BIN = ('/Users/loccco/.workbuddy/binaries/run-node'
+            if os.path.exists('/Users/loccco/.workbuddy/binaries/run-node')
             else 'node')
 
 NODE_SRC = r"""
@@ -163,8 +163,16 @@ def collect_entries(D):
         # 断板/吸筹 0 条，"台账积累够→回测优化机械池止损"这条链路从数据源头就断了。
         # 用条目自带的 kline 最后一根收盘兜底 lastClose（= 最新收盘）。
         if lc is None:
-            kl = [b for b in (x.get('kline') or []) if isinstance(b, (list, tuple)) and len(b) > 2]
-            lc = _f(kl[-1][2]) if kl else None
+            # duanban 条目 kline 为 dict 容器（[{day,open,close,high,low,volume}]），原写法只认
+            # list 容器 → kl 为空 → lc 永远 None → 整条断板/吸筹标的被静默剔出止损台账。
+            # 这里两种容器都兼容（见 mech_stop / zt_low 同款口径）。
+            for b in reversed(x.get('kline') or []):
+                if isinstance(b, (list, tuple)) and len(b) > 2:
+                    lc = _f(b[2])
+                    break
+                if isinstance(b, dict):
+                    lc = _f(b.get('close'))
+                    break
         if not c or c in out or lc is None:
             continue
         # R100z61b：不再一律按「最新收盘 −3%」记账（那条线每天重算、等于永不触发）；

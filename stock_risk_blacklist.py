@@ -117,8 +117,8 @@ def d8(v):
 
 def load_stocks(path=DATA_JS):
     import subprocess
-    node = ('/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node'
-            if os.path.exists('/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node') else 'node')
+    node = ('/Users/loccco/.workbuddy/binaries/run-node'
+            if os.path.exists('/Users/loccco/.workbuddy/binaries/run-node') else 'node')
     env = dict(os.environ, DATA_PATH=path)
     pr = subprocess.run([node, '-e', NODE_SRC], env=env, capture_output=True, text=True)
     if pr.returncode != 0:
@@ -235,6 +235,38 @@ def fetch_ann(code, days=30):
     return cuts + losses, None
 
 
+def grade_reasons(reasons, watch):
+    """R100z76-④：把命中原因分级为 severity（red/orange/yellow），并抽减持进度。
+
+    red   = 硬剔（ST/退市、业绩预减/预亏、减持实施中）
+    orange = 警示但可保留（减持预披露/计划、限售解禁窗口）
+    yellow = 参考（股东质押≥阈值，仅作风险参考）
+    默认 none；调用方对 red 才 FAIL、orange 给 WARN、yellow 跳过。
+    """
+    sev = 0  # 0 none, 1 yellow, 2 orange, 3 red
+    progress = []
+    for r in (reasons or []):
+        if 'ST' in r or '退' in r:
+            sev = max(sev, 3)
+        elif '业绩预减' in r or '预亏' in r:
+            sev = max(sev, 3)
+        elif '减持计划' in r:
+            sev = max(sev, 2)
+            if '减持预披露' not in progress:
+                progress.append('减持预披露')
+        elif '减持' in r or '减仓' in r:
+            sev = max(sev, 3)
+            if '减持实施中' not in progress:
+                progress.append('减持实施中')
+        elif '解禁' in r:
+            sev = max(sev, 2)
+    for w in (watch or []):
+        if '质押' in w:
+            sev = max(sev, 1)
+    name = {3: 'red', 2: 'orange', 1: 'yellow', 0: 'none'}[sev]
+    return name, progress
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--json', action='store_true')
@@ -297,8 +329,10 @@ def main():
             if nm and ('ST' in nm.upper() or '退' in nm):
                 reasons.insert(0, 'ST/退市（当前名称 %s）' % nm)
             if reasons:
+                sev, prog = grade_reasons(reasons, watch)
                 blacklist[code] = {'name': nm, 'reasons': reasons,
-                                   'count': len(reasons), 'watch': watch}
+                                   'count': len(reasons), 'watch': watch,
+                                   'severity': sev, 'progress': prog}
 
     res = {
         'ok': True,
@@ -310,8 +344,10 @@ def main():
         'blacklist': blacklist,
         'unknown': sorted(set(unknown)),
         'failed': sorted(set(failed)),
-        'note': '硬风险黑名单：ST/退市、T+%d~T+%d 解禁、质押≥%.0f%%, 减持公告 %d 日内；源不可达不判安全' % (
-            args.lift_lo, args.lift_hi, args.pledge, args.cut_days),
+        'note': '硬风险黑名单（R100z76-④ severity 分级）：red=硬剔(ST/退市·业绩预减/预亏·减持实施中)、'
+                 'orange=警示可保留(减持预披露/计划·限售解禁窗口)、yellow=参考(质押≥%.0f%%)；'
+                 'ST/退市、T+%d~T+%d 解禁、减持公告 %d 日内；源不可达不判安全' % (
+            args.pledge, args.lift_lo, args.lift_hi, args.cut_days),
     }
 
     if args.write:
@@ -323,7 +359,9 @@ def main():
     else:
         print('标的 %d 只 / 硬风险命中 %d 只' % (len(codes), len(blacklist)))
         for c, v in sorted(blacklist.items()):
-            print('  ⚠️ %s %s → %s' % (c, v['name'], '；'.join(v['reasons'])))
+            sev = v.get('severity', 'red')
+            prog = (' · ' + '、'.join(v.get('progress') or [])) if v.get('progress') else ''
+            print('  [%s] %s %s → %s%s' % (sev.upper(), c, v['name'], '；'.join(v['reasons']), prog))
         if res['unknown']:
             print('[UNKNOWN] ' + '；'.join(res['unknown']))
         if res['failed']:

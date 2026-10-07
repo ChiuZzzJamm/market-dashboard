@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610071601"></script>
+<script src="data.js?v=202610072355"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -552,6 +552,8 @@
   /* R100q：技术池标的紫框（命中九门/谐波/吸筹/断板任一时由 stkGoldCls 加 .gold-ring）——A股/美股页所有标的胶囊共用 */
   .gold-ring { border-color: #a78bfa !important; box-shadow: 0 0 0 1px rgba(167,139,250,.35) !important; }
   .gold-ring:hover { border-color: #8b5cf6 !important; box-shadow: 0 0 0 1px rgba(167,139,250,.55) !important; }
+  /* R100z76-③：技术共振徽标（同票命中≥2技术池）。琥珀底+深棕字，与紫色技术边框区分、与风险⚠️角标区分 */
+  .reso-badge { display: inline-block; margin-left: 5px; padding: 0 5px; font-size: 10px; line-height: 15px; border-radius: 6px; color: #7a4a00; background: #fde68a; border: 1px solid #f59e0b; vertical-align: middle; white-space: nowrap; }
   /* R100z36：四子页网格统一为同一列宽（一行 4 个，.tc 卡片 2×2 矩阵需要这个宽度） */
   .hz-pool { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; margin-top:8px; }
   @media (max-width: 900px) { .hz-pool { grid-template-columns:repeat(2, minmax(0,1fr)); } }
@@ -589,6 +591,9 @@
   /* R100z13：个股硬风险角标（减持/解禁/ST/业绩预减）——红底白字，hover 看原因 */
   .risk-dot { font-size:10px; line-height:1; margin-left:2px; padding:1px 4px; border-radius:999px;
     color:#fff; background:#c0392b; flex-shrink:0; cursor:help; }
+  /* R100z76-④：severity 分级着色——red 硬剔(默认红) / orange 警示(琥珀黄) / yellow 参考(灰) */
+  .risk-dot.sev-orange { color:#7a4a00; background:#f59e0b; }
+  .risk-dot.sev-yellow { color:#555; background:#d9d9d9; }
   .risk-line { font-size:11.5px; color:#a5342a; margin:4px 0 2px; line-height:1.6; }
   /* R100p：弧色标注（.tk-chip 边框渐变描边）按用户要求整体删除，胶囊恢复统一背景 */
   /* R100n：通用标的板块小胶囊——R100p 起仅用于弹窗标题行（stkSecBadge），主页胶囊不再显示 */
@@ -1624,11 +1629,22 @@ function riskBadge(code0, poolMode) {
   if (!RISK_BL || !code0) return '';
   var hit = RISK_BL[String(code0).replace(/\D/g, '')];
   if (!hit) return '';
+  // R100z76-④：按 hit.severity 着色——red 硬剔 / orange 警示 / yellow 参考。
+  // 缺字段默认 red（与校验器默认一致，不静默放行）。
+  var sev = hit.severity || 'red';
   var rs = (hit.reasons || []).join('；');
-  var tip = poolMode
-    ? '⚠️ 硬风险提示（技术观察池仅打标不剔除）：' + rs
-    : '⚠️ 硬风险（不进 8 只池）：' + rs;
-  return '<span class="risk-dot" title="' + escAttr(tip) + '">⚠️</span>';
+  var cls, tip;
+  if (sev === 'red') {
+    cls = ' sev-red';
+    tip = (poolMode ? '硬风险提示（技术观察池仅打标不剔除）：' : '硬风险（不进 8 只池）：') + rs;
+  } else if (sev === 'orange') {
+    cls = ' sev-orange';
+    tip = '警示（可保留但需重点关注）：' + rs;
+  } else {  // yellow / none
+    cls = ' sev-yellow';
+    tip = '风险参考（如股东质押）：' + rs;
+  }
+  return '<span class="risk-dot' + cls + '" title="' + escAttr(tip) + '">⚠️</span>';
 }
 
 /* R100z15 缺口④：组合净值曲线——命中 60% 但亏钱、命中 50% 但赚钱，光看命中率分不出来。
@@ -2382,7 +2398,7 @@ function renderAccumulation() {
   if (!a || !a.scored || !a.scored.length) return '';
   // R100z21：吸筹页分「强池 / 观察池」两节——强池=特征命中多、结构完整可直接跟；
   // 观察池=缺 1-2 项只排队候补。渲染一律按 scored 内每张卡自己的 grade 分组（新旧数据通用）。
-  var pick = a.scored.slice(0, 20);
+  var pick = sortByReso(a.scored).slice(0, 20); // R100z76-③：共振命中≥2池的标的排前
   // R100z22：特征胶囊加 title 释义（原来只有「试盘/横盘」两个字，看不出触发条件）
   var FEAT_TITLE = {
     f1: 'F1 试盘（20分）：长上影≥2×实体、量≥1.5×5日均量，随后3日均量回落且收盘低于试盘价，当时处在近120日区间下部',
@@ -2486,7 +2502,7 @@ function renderAccumulation() {
 function renderPowerScreen() {
   var p = window.DASHBOARD_DATA.powerScreen;
   if (!p || !p.passed || !p.passed.length) return '';
-  var items = p.passed.slice(0, 30).map(function (it, idx) {
+  var items = sortByReso(p.passed).slice(0, 30).map(function (it, idx) { // R100z76-③：共振命中≥2池排前
     var gates = (it.reasons || '').split(';').filter(Boolean);
     // R100g：名称缺失只展示代码一次
     var nm = (it.name && it.name !== it.code) ? it.name : '';
@@ -2699,6 +2715,42 @@ var HZ_PAT_CN = { 'Bat': '蝙蝠', 'Gartley': '加特利', 'Butterfly': '蝶形'
 function hzPatCn(p) { return HZ_PAT_CN[p] || p; }
 /* R100z36：统一卡片骨架。o = {code,name,sector,pills[],sent,chg,cells[],foot,dim,attrs,onclick,title,fresh}
    R100z44：fresh=true → 整卡淡黄+「新」徽章（新入池首日高亮，次日恢复）。 */
+/* R100z76-③：四技术池跨池共振——同票命中≥2个技术池（吸筹/谐波/九门/断板反包）即高确信共振。
+   全局 memoized 计算 code→命中池名列表；tcCard 自动给≥2池的标的上「共振·N」徽标。 */
+var _RESO_MAP = null;
+function resoMap() {
+  if (_RESO_MAP) return _RESO_MAP;
+  var d = window.DASHBOARD_DATA || {};
+  var m = {};
+  function add(arr, pool) {
+    (arr || []).forEach(function (it) {
+      var c = String(it.code || '').replace(/\D/g, '');
+      if (c) { (m[c] = m[c] || []); if (m[c].indexOf(pool) < 0) m[c].push(pool); }
+    });
+  }
+  var h = d.harmonic || {};
+  add(d.accumulation && d.accumulation.scored, '吸筹');
+  add(h.confirmPool, '谐波'); add(h.watchPool, '谐波');
+  add(d.powerScreen && d.powerScreen.passed, '九门');
+  var db = d.duanban || {};
+  add(db.confirmed, '断板反包'); add(db.watching, '断板反包');
+  _RESO_MAP = m; return m;
+}
+function resoBadge(code) {
+  var pools = resoMap()[String(code || '').replace(/\D/g, '')] || [];
+  if (pools.length < 2) return '';
+  return '<span class="reso-badge" title="技术共振：同票命中 ' + escAttr(pools.join('+')) +
+    ' 共 ' + pools.length + ' 个技术池，多池共振确信度更高">共振·' + pools.length + '</span>';
+}
+function sortByReso(arr) {
+  if (!arr || !arr.length) return arr;
+  var m = resoMap();
+  return arr.slice().sort(function (a, b) {
+    var ra = (m[String(a.code || '').replace(/\D/g, '')] || []).length;
+    var rb = (m[String(b.code || '').replace(/\D/g, '')] || []).length;
+    return rb - ra;
+  });
+}
 function tcCard(o) {
   var pills = '';
   (o.pills || []).forEach(function (p) { if (p) pills += '<span class="db-sec-pill">' + esc(p) + '</span>'; });
@@ -2707,7 +2759,7 @@ function tcCard(o) {
   return '<div class="tc' + (o.dim ? ' dim' : '') + (o.fresh ? ' fresh' : '') + '"' + (o.attrs || '') + (o.onclick ? ' onclick="' + escAttr(o.onclick) + '"' : '') +
     (o.title ? ' title="' + escAttr(o.title) + '"' : '') + '>' +
     '<div class="tc-top">' + pills + nb + '<span class="tc-sp"></span>' + sent + '</div>' +
-    '<div class="tc-id"><b>' + esc(o.name || o.code) + '</b>' + riskBadge(o.code, 1) +
+    '<div class="tc-id"><b>' + esc(o.name || o.code) + '</b>' + riskBadge(o.code, 1) + resoBadge(o.code) +
     ((o.name && o.name !== o.code) ? '<span class="cd">' + esc(o.code) + '</span>' : '') + tcChgHtml(o.chg) + '</div>' +
     '<div class="tc-g">' + (o.cells || []).join('') + '</div>' +
     (o.foot ? '<div class="tc-foot">' + o.foot + '</div>' : '') + '</div>';

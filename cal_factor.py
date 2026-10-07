@@ -26,7 +26,7 @@ from datetime import date, timedelta
 
 # 2026 年中国法定节假日（含调休）区间。★年度维护项：跨年须对照国务院放假通知更新，
 # 或用 --holiday-file '{"2027-01-01":["2027-01-01","2027-01-03"]}' 覆盖。
-HOLIDAYS_2026 = {
+HOLIDAYS = {
     '元旦': ['2026-01-01', '2026-01-03'],
     '春节': ['2026-02-15', '2026-02-21'],
     '清明': ['2026-04-04', '2026-04-06'],
@@ -36,6 +36,12 @@ HOLIDAYS_2026 = {
     # ★2026-10-01 修正（R100z14）：原写 10-08 会误框国庆后复牌首日。
     # 交易所公告原文：10月1日(四)至10月7日(三)休市，10月8日(四)起照常开市。
     '国庆': ['2026-10-01', '2026-10-07'],
+    # ---- 2027 年度（R100z77 补）：元旦/清明/劳动/国庆为法定固定，直接按放假办法填；
+    #      春节/端午/中秋为农历，须待国务院放假通知公布后补（届时 G13 会重新 WARN）----
+    '元旦2027': ['2027-01-01', '2027-01-03'],
+    '清明2027': ['2027-04-04', '2027-04-06'],
+    '劳动节2027': ['2027-05-01', '2027-05-05'],
+    '国庆2027': ['2027-10-01', '2027-10-07'],
 }
 
 def _d(s):
@@ -47,8 +53,9 @@ def _d(s):
 # 这类日子一旦被假期区间误框 → 08:30 的「A股交易日守卫」会直接结束，
 # 当天不生成盘前前瞻/AI预测/推送，等于节后复牌首日裸奔（R100z14 实际踩过）。
 # 本白名单强制把这些日期从休市区间里剔除，比靠人工维护表格更稳。
-REOPEN_OVERRIDE_2026 = {
+REOPEN_OVERRIDE = {
     _d('2026-10-08'),  # 国庆（10/1-10/7 休市）后复牌首日
+    _d('2027-10-08'),  # 2027 国庆后复牌首日
 }
 
 
@@ -184,13 +191,13 @@ def main():
     ap.add_argument('--holiday-file', default=None,
                     help='JSON: {"2027-01-01": ["2027-01-01","2027-01-03"], ...} 覆盖内置节假日表')
     a = ap.parse_args()
-    hol = dict(HOLIDAYS_2026)
+    hol = dict(HOLIDAYS)
     if a.holiday_file:
         raw = json.load(open(a.holiday_file, encoding='utf-8'))
         for k, v in raw.items():
             hol[k] = v
     day = _d(a.date) if a.date else date.today()
-    reopen = set(REOPEN_OVERRIDE_2026)
+    reopen = set(REOPEN_OVERRIDE)
     r = evaluate(day, hol, reopen=reopen)
     if a.json:
         print(json.dumps(r, ensure_ascii=False))

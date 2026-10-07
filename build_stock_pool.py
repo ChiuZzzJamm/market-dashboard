@@ -113,8 +113,8 @@ def contains(a, b):
 
 def load():
     import subprocess
-    node = ('/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node'
-            if os.path.exists('/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node') else 'node')
+    node = ('/Users/loccco/.workbuddy/binaries/run-node'
+            if os.path.exists('/Users/loccco/.workbuddy/binaries/run-node') else 'node')
     pr = subprocess.run([node, '-e', NODE_SRC], env=dict(os.environ, DATA_PATH=os.path.join(ROOT, 'data.js')),
                         capture_output=True, text=True)
     if pr.returncode != 0:
@@ -214,7 +214,7 @@ def pick_for(sector, pools, quota_duan=4, quota_harm=2, quota_acc=2, quota_fill=
     for it in m_d[:quota_duan]:
         if len(got) >= quota_fill:
             break
-        last = r2((it.get('kline') or [None])[-1][2] if it.get('kline') else None)
+        last = last_close_of(it)
         # R100z61b：止损锚改 T 日（涨停日）最低价（绝对价、固定），不再用 last ×0.975。
         # 形态淘汰（破 T 日低点×0.98 出池）仍由 check_duanban 独立判定，两条线分离。
         got.append(mk(it, '断板反包', last, stop_pct=-2.5, tgt=6.0, stop_price=zt_low(it)))
@@ -266,6 +266,21 @@ def pick_for(sector, pools, quota_duan=4, quota_harm=2, quota_acc=2, quota_fill=
 
 def code6(it):
     return str(it.get('code') or '').replace('.SH', '').replace('.SZ', '').replace('.BJ', '').zfill(6)
+
+
+def last_close_of(it):
+    """断板池条目常无 lastClose 字段（R100z61 注释已确认），需从 kline 末根取收盘价；
+    kline 两种容器都见过（list[day,open,close,high,low,vol] 与 dict），两种都要兼容，
+    否则 dict 格式下 `(kline or [None])[-1][2]` 会抛 KeyError 把整只板块的选股直接打崩。"""
+    lc = r2(it.get('lastClose'))
+    if lc is not None:
+        return lc
+    for b in reversed(it.get('kline') or []):
+        if isinstance(b, (list, tuple)) and len(b) > 2:
+            return r2(b[2])
+        if isinstance(b, dict):
+            return r2(b.get('close'))
+    return None
 
 
 def zt_low(it):

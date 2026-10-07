@@ -43,7 +43,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PYBIN = sys.executable
 # R100z55：原为无兜底硬编码路径，托管 node 升版后 G-* 闸门里的 node -e 会整体失败。
 # 审计闸门是 deploy 前的唯一放行口，这里断掉等于误判 FAIL（进而禁止上线），必须留兜底。
-_NODE_CAND = "/Users/loccco/.workbuddy/binaries/node/versions/22.22.2-3/bin/node"
+_NODE_CAND = "/Users/loccco/.workbuddy/binaries/run-node"
 NODE = _NODE_CAND if os.path.exists(_NODE_CAND) else "node"
 VFLAGS = ("--no-fix",)
 
@@ -850,8 +850,8 @@ def g12_deadlinks(r):
 def g13_holiday_table(r):
     """节假日表闸门：两份手工表必须同源等价 + 覆盖前瞻提醒跨年更新。
 
-    背景（R100z66 体检发现）：common.HOLIDAY_RANGES_2026（is_trade_day /
-    last_trade_day / today_trade_date 用）与 cal_factor.HOLIDAYS_2026
+    背景（R100z66 体检发现）：common.HOLIDAY_RANGES（is_trade_day /
+    last_trade_day / today_trade_date 用）与 cal_factor.HOLIDAYS
     （aShareClosed / 日历标签用）是两份手工副本，注释各自标了「跨年须同步更新」——
     纯靠人记必漏。任一处漏更 → 两个脚本对「今天是否交易日」判定打架：
     一个剔除节假日、一个不剔，tradeDate / aShareClosed 口径分裂且无任何报错。
@@ -865,9 +865,9 @@ def g13_holiday_table(r):
         r.fail("G13", f"无法导入 common/cal_factor 校验节假日表：{e}")
         return
     # ① 同源等价：两份表展开成 (start, end) 序列后必须完全一致
-    a = sorted((str(x[0]), str(x[1])) for x in (getattr(_cm, "HOLIDAY_RANGES_2026", []) or []))
+    a = sorted((str(x[0]), str(x[1])) for x in (getattr(_cm, "HOLIDAY_RANGES", []) or []))
     b = sorted((str(v[0]), str(v[-1]))
-               for v in (getattr(_cf, "HOLIDAYS_2026", {}) or {}).values())
+               for v in (getattr(_cf, "HOLIDAYS", {}) or {}).values())
     if a != b:
         r.fail("G13", f"两份节假日表不同源（is_trade_day 与 cal_factor.aShareClosed 会判定打架）："
                       f"common={a} vs cal_factor={b}——必须同步更新")
@@ -916,6 +916,78 @@ def g14_prompt_broken_path(r):
         r.ok("G14", f"{len(autos)} 份 prompt 无路径断裂签名（脚本调用均含完整 dashboard/ 或走 cd 相对调用）")
 
 
+def g15_interp_bins(r):
+    """G15 解释器入口闸门（R100z76d 初建 → R100z77 升级）：prompt/脚本引用的解释器入口必须可用。
+
+    根因修复：版本号不再写死，改为自修复包装脚本 run-node / run-python
+    （动态解析托管版最高版本目录，缺失时回退 PATH）。本闸校验两类引用：
+      (a) 残留硬版本路径 versions/X.Y.Z/bin/(node|python3) —— 必须存在；
+      (b) 包装脚本 /Users/loccco/.workbuddy/binaries/run-(node|python) —— 必须存在、
+          可执行、且能解析到一个真实存在的解释器二进制（glob 到 versions/*/bin/(node|python3)）。
+    """
+    autos = load_auto_prompts()
+    ver_pat = re.compile(
+        r'(/Users/loccco/\.workbuddy/binaries/(?:node|python)/versions/[^/\s]+/bin/(?:node|python3))')
+    problems = []
+
+    # (a) 残留版本路径：必须存在
+    for a in autos:
+        for m in ver_pat.finditer(a["text"]):
+            path = m.group(1)
+            if not os.path.exists(path):
+                ln = a["text"][:m.start()].count("\n") + 1
+                problems.append(f"{a['name']} L{ln}: 硬版本路径不存在 {path}")
+
+    # (b) 包装脚本：存在 + 可执行 + 能解析到真实二进制；缺失则自愈重建
+    WRAP_TPL = {
+        "node": "#!/bin/sh\nROOT=/Users/loccco/.workbuddy/binaries/node/versions\n"
+                '[ -e "$ROOT/current/bin/node" ] && exec "$ROOT/current/bin/node" "$@"\n'
+                'd=$(ls -d "$ROOT"/*/ 2>/dev/null | sort -V | tail -1)\n'
+                '[ -n "$d" ] && [ -x "${d}bin/node" ] && exec "${d}bin/node" "$@"\n'
+                'exec node "$@"\n',
+        "python": "#!/bin/sh\nROOT=/Users/loccco/.workbuddy/binaries/python/versions\n"
+                  '[ -e "$ROOT/current/bin/python3" ] && exec "$ROOT/current/bin/python3" "$@"\n'
+                  'd=$(ls -d "$ROOT"/*/ 2>/dev/null | sort -V | tail -1)\n'
+                  '[ -n "$d" ] && [ -x "${d}bin/python3" ] && exec "${d}bin/python3" "$@"\n'
+                  'exec python3 "$@"\n',
+    }
+    for kind, bin_name in (("node", "node"), ("python", "python3")):
+        wp = f"/Users/loccco/.workbuddy/binaries/run-{kind}"
+        if not os.path.exists(wp):
+            # 自愈：缺失即重建（保证 pre-deploy 闸门跑完必定存在，自动化不会因文件丢失而崩）
+            try:
+                with open(wp, "w", encoding="utf-8") as fh:
+                    fh.write(WRAP_TPL[kind])
+                os.chmod(wp, 0o755)
+                r.ok("G15", f"解释器包装脚本缺失已自愈重建：{wp}")
+            except Exception as e:  # noqa: BLE001
+                problems.append(f"解释器包装脚本缺失且重建失败 {wp}：{e}")
+                continue
+        elif not os.access(wp, os.X_OK):
+            try:
+                os.chmod(wp, 0o755)
+                r.ok("G15", f"解释器包装脚本不可执行已自愈修复权限：{wp}")
+            except Exception as e:  # noqa: BLE001
+                problems.append(f"解释器包装脚本不可执行且修复失败 {wp}：{e}")
+                continue
+        root = f"/Users/loccco/.workbuddy/binaries/{kind}/versions"
+        real = []
+        try:
+            for d in os.listdir(root):
+                cand = os.path.join(root, d, "bin", bin_name)
+                if os.path.exists(cand):
+                    real.append(cand)
+        except FileNotFoundError:
+            pass
+        if not real:
+            problems.append(f"{wp} 解析不到任何托管 {bin_name}（{root} 下无版本目录）")
+
+    if problems:
+        r.fail("G15", "解释器入口不可用：" + "; ".join(problems))
+    else:
+        r.ok("G15", f"{len(autos)} 份 prompt 引用的解释器入口均可用（run-node/run-python 自修复生效）")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -943,6 +1015,7 @@ def main():
     if deep:
         g11_smoke(r)
     g14_prompt_broken_path(r)
+    g15_interp_bins(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
