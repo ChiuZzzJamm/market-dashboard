@@ -1,161 +1,192 @@
 {
  "ok": true,
  "date": "2026-10-08",
- "checked": 291,
+ "checked": 338,
  "liftWindow": [
   2,
   5
  ],
  "watchPledgeWithin": 365,
  "cutDays": 30,
- "blacklist": {
-  "600032": {
-   "name": "600032",
-   "reasons": [
-    "2026-09-12 减持公告"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "002912": {
-   "name": "中新赛克",
-   "reasons": [
-    "2026-09-17 减持公告"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "603533": {
-   "name": "掌阅科技",
-   "reasons": [
-    "2026-09-25 减持公告"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "600189": {
-   "name": "泉阳泉",
-   "reasons": [
-    "2026-09-25 减持公告"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 11.7%（截至 2026-05-22）"
-   ],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "603278": {
-   "name": "大业股份",
-   "reasons": [
-    "2026-09-09 减持公告"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 36.8%（截至 2026-05-22）"
-   ],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "002935": {
-   "name": "天奥电子",
-   "reasons": [
-    "2026-09-08 减持公告"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 0.3%（截至 2026-05-22）"
-   ],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "603222": {
-   "name": "济民健康",
-   "reasons": [
-    "2026-09-24 减持公告"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 26.8%（截至 2026-05-22）"
-   ],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "600118": {
-   "name": "中国卫星",
-   "reasons": [
-    "2026-09-11 减持公告"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "600183": {
-   "name": "生益科技",
-   "reasons": [
-    "2026-09-24 减持公告"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "002558": {
-   "name": "巨人网络",
-   "reasons": [
-    "2026-09-09 减持公告"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 20.4%（截至 2026-05-22）"
-   ],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "002869": {
-   "name": "金溢科技",
-   "reasons": [
-    "2026-09-23 减持公告",
-    "2026-09-17 减持公告"
-   ],
-   "count": 2,
-   "watch": [
-    "参考·质押 10.1%（截至 2026-05-22）"
-   ],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  }
- },
- "unknown": [],
+ "blacklist": {},
+ "unknown": [
+  "000011 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000020 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000063 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000068 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000096 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000100 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000333 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000425 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000498 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000506 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000513 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000523 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000547 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000568 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000592 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000596 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000620 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000630 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000661 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000678 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000690 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000692 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000722 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000725 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000753 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000762 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000878 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000905 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000960 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000980 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "000985 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "001266 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "001268 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "001318 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002032 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002038 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002041 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002058 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002081 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002188 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002212 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002232 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002286 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002301 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002335 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002340 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002347 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002361 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002395 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002407 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002419 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002436 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002454 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002456 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002463 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002466 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002467 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002480 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002494 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002508 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002554 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002558 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002580 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002614 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002633 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002638 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002679 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002703 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002733 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002745 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002755 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002797 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002799 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002821 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002846 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002866 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002869 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002911 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002912 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002926 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "002962 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600000 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600015 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600023 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600032 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600050 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600059 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600066 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600072 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600081 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600109 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600111 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600118 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600160 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600183 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600189 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600219 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600241 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600256 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600259 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600346 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600356 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600362 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600397 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600459 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600488 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600497 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600535 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600546 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600549 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600552 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600580 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600583 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600592 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600605 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600617 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600653 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600663 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600711 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600777 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600812 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600855 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600863 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600871 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600938 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600941 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600968 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "600982 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "601058 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "601099 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "601118 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "601231 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "601555 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "601728 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "601811 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "601872 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "601899 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "601975 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603011 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603019 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603073 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603127 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603185 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603188 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603198 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603200 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603222 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603236 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603278 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603308 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603318 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603322 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603345 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603369 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603500 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603533 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603538 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603590 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603602 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603686 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603727 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603739 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603767 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603868 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603882 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603906 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603919 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603928 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603937 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603968 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603970 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "603993 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "605011 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "605018 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "605287 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论",
+  "605288 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持/业绩预减未下结论"
+ ],
  "failed": [],
  "note": "硬风险黑名单（R100z76-④ severity 分级）：red=硬剔(ST/退市·业绩预减/预亏·减持实施中)、orange=警示可保留(减持预披露/计划·限售解禁窗口)、yellow=参考(质押≥30%)；ST/退市、T+2~T+5 解禁、减持公告 30 日内；源不可达不判安全"
 }
