@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610081849"></script>
+<script src="data.js?v=202610082050"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -162,6 +162,12 @@
   /* R100z81：预测验证并入「大盘趋势研判」卡——块内分隔线 + 与研判文同卡的间距 */
   .v-divider { height: 1px; background: var(--line); margin: 14px 0 6px; }
   .ai-verify.v-merged { margin-top: 12px; }
+  /* R100z82：标的层验证行（stockCheck 下沉到各板块 AI 预测卡底部，日期与验证块一致） */
+  .ai-sc { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 11.5px; line-height: 1.7; font-weight: 700; color: var(--ink); }
+  .ai-sc.hit { color: var(--up); }
+  .ai-sc.miss { color: var(--down); }
+  .ai-sc .sc-date { font-size: 10px; font-weight: 600; color: var(--ink2); background: rgba(0,0,0,.05); border: 1px solid currentColor; border-radius: 999px; padding: 1px 7px; margin-right: 5px; white-space: nowrap; vertical-align: 1px; }
+  .ai-sc .v-note { display: block; font-weight: 400; font-size: 11px; color: var(--ink-soft, #6b7a8d); margin-top: 1px; }
 
   /* ===== R100z15：退出纪律 + 超额口径 + 净值曲线 ===== */
   .exit-row { margin-top: 4px; font-size: 11px; color: var(--ink-soft, #6b7a8d); line-height: 1.55; }
@@ -1143,14 +1149,9 @@ function render(market) {
 
   html += '<div class="card"><h2>大盘指数' + h2Date(d) + '</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + '</div>';
 
-  // R100z81：大盘趋势研判卡内直接并入「盘前预测兑现验证」块（用户要求与研判卡合并，不再单独漂浮在 AI 预测卡底部）
-  var _outlookCard = '<div class="card"><h2>大盘趋势研判' + h2Date(d) + '</h2><div class="outlook">' + formatOutlook(d.outlook) + '</div>';
-  if (isA) {
-    var _vblk = renderVerificationBlock();
-    if (_vblk) _outlookCard += '<div class="v-divider"></div>' + _vblk;
-  }
-  _outlookCard += '</div>';
-  html += _outlookCard;
+  // R100z82：预测验证块按用户要求移回 AI 预测卡（renderAiPrediction 内渲染）；
+  // 大盘趋势研判卡恢复为纯研判内容（2026-10-08 用户反馈：验证块应放在 AI 预测下面）
+  html += '<div class="card"><h2>大盘趋势研判' + h2Date(d) + '</h2><div class="outlook">' + formatOutlook(d.outlook) + '</div></div>';
 
   var _ssMap = {'ths': '同花顺行业口径', 'em': '东财行业口径', 'prev': '上一轮数据'};
   var _ssTag = _ssMap[d.sectorSource] ? ' <span class="src-tag">' + _ssMap[d.sectorSource] + '</span>' : '';
@@ -1788,6 +1789,12 @@ function renderAiPrediction() {
     '<div id="st-track-box"></div>' +
     riskLineHtml(p) +
     '<div class="ai-grid">';
+  // R100z82：标的层验证按板块名建索引（verification.stockCheck.sector 与 aiPrediction.sectors 同名），
+  // 供下方各板块卡底部渲染「8 只标的平均/方向一致率/主力净额」行。
+  var _scMap = {};
+  if (p.verification && p.verification.stockCheck && p.verification.stockCheck.length) {
+    p.verification.stockCheck.forEach(function (sc) { if (sc && sc.sector) _scMap[sc.sector] = sc; });
+  }
   p.sectors.forEach(function (s) {
     var isUp = String(s.direction || '').indexOf('承压') === -1;
     var conf = String(s.confidence || '');
@@ -1813,10 +1820,16 @@ function renderAiPrediction() {
       // R100z20：板块下方不再重复罗列退出纪律——同板块的多只标的挤在一起既长又和胶囊标签重复，
       // 退出纪律（止损/目标/证伪）统一收敛到「点开个股 → 弹窗内」那一行显示（R100z18/z19）。
     }
+      // R100z82：标的层验证（stockCheck）下沉到对应板块卡底部——日期徽章取 aiPrediction.date，
+      // 与下方「盘前预测兑现验证」块展示时间一致（同一预测日的命中/未命中）。无当日数据整行不渲染。
+      var _sc = (_scMap && _scMap[s.sector]) || null;
+      if (_sc) html += renderStockCheckLine(_sc, p.date);
     html += '</div>';
   });
-  html += '</div><div class="ai-foot">标的筛选口径：每个板块 8 只 A 股，按「2 只板块龙头 + 2 只相关概念股 + 2 只游资/机构偏好小盘人气股（涨停基因好）+ 2 只断板反包图形股（1-5 日前涨停、次日放量倍量、随后缩量回调）」搭配，已排除科创板（688 开头）及北交所。<br>' + esc(p.riskNote) + '</div>';
-  // R100z81：预测验证块已移至「大盘趋势研判」卡内（renderVerificationBlock），此处不再重复渲染
+  // R100z82：盘前预测兑现验证块移回 AI 预测卡底部（用户 2026-10-08：应放在 AI 预测下面）；
+  // 板块层 details 在这里渲染，标的层 stockCheck 已下沉到上方各板块卡内。
+  var _vblk = renderVerificationBlock();
+  html += '</div>' + _vblk + '<div class="ai-foot">标的筛选口径：每个板块 8 只 A 股，按「2 只板块龙头 + 2 只相关概念股 + 2 只游资/机构偏好小盘人气股（涨停基因好）+ 2 只断板反包图形股（1-5 日前涨停、次日放量倍量、随后缩量回调）」搭配，已排除科创板（688 开头）及北交所。<br>' + esc(p.riskNote) + '</div>';
   html += '</div>';
   box.innerHTML = html;
   renderCalHistory();
@@ -1825,22 +1838,25 @@ function renderAiPrediction() {
   renderRiskLines();
 }
 
-/* R100z81：预测验证块（原漂浮在 AI 预测卡底部，现并入「大盘趋势研判」卡）。
-   只读顶层 aiPrediction.verification（16:00 填充的当日盘前预测兑现验证），
-   中文标签渲染、对 note 做 cleanLeak 清洗（去 alignRate= / cal_factor 等英文泄漏）。
-   无 verification 时返回空串（08:30 盘前 / 周日任务按设计就是 null，不报错）。 */
+/* R100z82：盘前预测兑现验证块（板块层）。原「漂浮在 AI 预测卡底部」，R100z81 并入大盘趋势研判卡，
+   现按用户 2026-10-08 要求移回 AI 预测卡底部（renderAiPrediction 内调用）。
+   只读顶层 aiPrediction.verification（16:00 填充的当日盘前预测兑现验证），标题带 aiPrediction.date
+   表示「该日预测」的命中/未命中时间，与下方各板块卡的 stockCheck 日期一致。
+   note 做 cleanLeak 清洗（去 alignRate= / cal_factor 等英文泄漏）。无 verification 返回空串。
+   标的层 stockCheck 已下沉到各板块卡内，这里不再渲染（见 renderStockCheckLine）。 */
 function renderVerificationBlock() {
   var ap = window.DASHBOARD_DATA && window.DASHBOARD_DATA.aiPrediction;
   if (!ap || !ap.verification) return '';
   var v = ap.verification;
+  var _dt = ap.date ? '（' + esc(ap.date) + '）' : '';
   if (typeof v === 'string') {
     var vs = String(v).trim();
     if (!vs) return '';
-    return '<div class="ai-verify v-merged"><div class="v-title">📊 盘前预测兑现验证</div><div class="v-detail"><div class="hit">' + esc(cleanLeak(vs)) + '</div></div></div>';
+    return '<div class="ai-verify v-merged"><div class="v-title">📊 盘前预测兑现验证' + _dt + '</div><div class="v-detail"><div class="hit">' + esc(cleanLeak(vs)) + '</div></div></div>';
   }
   var vHtml = '';
   if (v.summary || (v.details && v.details.length)) {
-    vHtml = '<div class="ai-verify v-merged"><div class="v-title">📊 盘前预测兑现验证：' + esc(cleanLeak(v.summary || '')) + '</div>';
+    vHtml = '<div class="ai-verify v-merged"><div class="v-title">📊 盘前预测兑现验证' + _dt + '：' + esc(cleanLeak(v.summary || '')) + '</div>';
     if (v.details && v.details.length) {
       vHtml += '<div class="v-detail">';
       v.details.forEach(function (d) {
@@ -1853,33 +1869,32 @@ function renderVerificationBlock() {
       });
       vHtml += '</div>';
     }
-    // 标的层面验证（颗粒度下移）——板块方向说对但 8 只全选错，账户照样亏，必须单列一层
-    if (v.stockCheck && v.stockCheck.length) {
-      vHtml += '<div class="v-detail">';
-      v.stockCheck.forEach(function (sc) {
-        var avg = (sc.avgPct === null || sc.avgPct === undefined) ? null : Number(sc.avgPct);
-        var ag = (sc.alignRate === null || sc.alignRate === undefined) ? null : Number(sc.alignRate);
-        var scCls = (ag === null) ? '' : (ag >= 0.75 ? 'hit' : (ag <= 0.375 ? 'miss' : ''));
-        var fundTxt = '';
-        if (sc.fund) {
-          var fm = (sc.fund.avgMainYi === null || sc.fund.avgMainYi === undefined) ? null : Number(sc.fund.avgMainYi);
-          var fu = (sc.fund.netInN === null || sc.fund.netInN === undefined) ? null : Number(sc.fund.netInN);
-          fundTxt = '，主力净额均值 ' + (fm === null ? '—' : ((fm >= 0 ? '+' : '') + fm.toFixed(2) + ' 亿')) +
-            ' / 净流入 ' + (fu === null ? '—' : fu + ' 只') +
-            (sc.fund.src ? '（' + esc(sc.fund.src) + '）' : '');
-        }
-        vHtml += '<div class="' + scCls + '">· ' + esc(sc.sector || '') + '：8 只标的平均 ' +
-          (avg === null ? '—' : ((avg >= 0 ? '+' : '') + avg.toFixed(2) + '%')) +
-          '，方向一致率 ' + (ag === null ? '—' : (Math.round(ag * 100) + '%')) +
-          '（同方向 ' + (sc.hitN === null || sc.hitN === undefined ? '—' : (sc.hitN + '/8')) + '）' +
-          fundTxt +
-          (sc.note ? '<span class="v-note">' + esc(cleanLeak(sc.note)) + '</span>' : '') + '</div>';
-      });
-      vHtml += '</div>';
-    }
     vHtml += '</div>';
   }
   return vHtml;
+}
+
+/* R100z82：标的层验证行（8 只标的平均/方向一致率/主力净额）——渲染进对应板块 AI 预测卡底部，
+   日期徽章取 aiPrediction.date，与「盘前预测兑现验证」块展示时间一致（同一预测日的命中/未命中）。
+   方向一致率 ≥0.75 着红（涨红 #f0435c）、≤0.375 着绿（跌绿 #0f9d78），中间档不着色（neutral）。 */
+function renderStockCheckLine(sc, dateStr) {
+  var avg = (sc.avgPct === null || sc.avgPct === undefined) ? null : Number(sc.avgPct);
+  var ag = (sc.alignRate === null || sc.alignRate === undefined) ? null : Number(sc.alignRate);
+  var cls = (ag === null) ? '' : (ag >= 0.75 ? 'hit' : (ag <= 0.375 ? 'miss' : ''));
+  var fundTxt = '';
+  if (sc.fund) {
+    var fm = (sc.fund.avgMainYi === null || sc.fund.avgMainYi === undefined) ? null : Number(sc.fund.avgMainYi);
+    var fu = (sc.fund.netInN === null || sc.fund.netInN === undefined) ? null : Number(sc.fund.netInN);
+    fundTxt = '，主力净额均值 ' + (fm === null ? '—' : ((fm >= 0 ? '+' : '') + fm.toFixed(2) + ' 亿')) +
+      ' / 净流入 ' + (fu === null ? '—' : fu + ' 只') +
+      (sc.fund.src ? '（' + esc(sc.fund.src) + '）' : '');
+  }
+  return '<div class="ai-sc ' + cls + '"><span class="sc-date">' + esc(dateStr || '') + '</span>8 只标的平均 ' +
+    (avg === null ? '—' : ((avg >= 0 ? '+' : '') + avg.toFixed(2) + '%')) +
+    '，方向一致率 ' + (ag === null ? '—' : (Math.round(ag * 100) + '%')) +
+    '（同方向 ' + (sc.hitN === null || sc.hitN === undefined ? '—' : (sc.hitN + '/8')) + '）' +
+    fundTxt +
+    (sc.note ? '<span class="v-note">' + esc(cleanLeak(sc.note)) + '</span>' : '') + '</div>';
 }
 
 /* R100z60b：止损跟踪统计卡（接线 stop_tracker.py 写的 data.js 顶层 stopTrack）。
@@ -1947,13 +1962,31 @@ function shortDate(t) {
   return m ? (parseInt(m[2], 10)) + '/' + (parseInt(m[3], 10)) : String(t || '');
 }
 
+/* R100z82：方向枚举归一——枚举（看涨/看跌/中性）原样返回；短语按 利好/利空 出现情况推导：
+   只利好→看涨、只利空→看跌、两者都有（如「利好油气/油服，利空化工下游」）→中性。
+   宏观/国际/投行徽章与 wk-item 左边框统一走这里，A 股短语数据也能呈现美股页同款紧凑彩徽。 */
+function dirEnumOf(d) {
+  d = String(d || '').trim();
+  if (d === '看涨' || d === '看跌' || d === '中性') return d;
+  var up = d.indexOf('利好') !== -1, dn = d.indexOf('利空') !== -1;
+  if (up && dn) return '中性';
+  if (up) return '看涨';
+  if (dn) return '看跌';
+  return '中性';
+}
+
 function newsEntryInner(it, showSrc, tag, tradeDate) {
   // 单条要闻内部内容：板块标签 + 发布时间 + 方向徽标 + 标题简述 + 各板块成分股（8 只四类标的）；全球要闻卡与周末卡共用
+  // R100z82（用户 2026-10-08）：方向徽章规则重写——
+  //   ①利好/利空卡（短线·盘面）不再渲染方向徽章：卡片标题「利好方向/利空方向」+ 左边框已表达方向，
+  //     短语徽章（如「利好电池/固态电池产业链」）纯属重复（用户要求去掉）；
+  //   ②宏观/国际/投行条目：direction 是枚举（看涨/看跌/中性）直接用紧凑彩徽；
+  //     是短语（如「利好A股整体流动性」）则推导成枚举紧凑彩徽，与美股页同款，全站不再有灰色长短语徽章。
   var dirBadge = '';
-  if (it.direction) {
-    // R97：红底看涨 / 绿底看跌 / 灰底中性（填充色胶囊，与 AI 预测方向徽标同款）
-    var dcl = it.direction === '看涨' ? 'dir-up' : (it.direction === '看跌' ? 'dir-down' : 'dir-flat');
-    dirBadge = '<span class="dir-badge ' + dcl + '">' + esc(it.direction) + '</span>';
+  if (tag !== '短线·盘面' && it.direction) {
+    var dEnum = dirEnumOf(it.direction);
+    var dcl = dEnum === '看涨' ? 'dir-up' : (dEnum === '看跌' ? 'dir-down' : 'dir-flat');
+    dirBadge = '<span class="dir-badge ' + dcl + '">' + esc(dEnum) + '</span>';
   }
   // R99i：日期徽章（nc-time）按用户要求整体移除——全球要闻/周末卡不再显示「今日 9/23」/「9/23」徽章
   var perspTag = tag ? '<span class="persp-tag">' + esc(tag) + '</span>' : '';
@@ -2035,19 +2068,19 @@ function renderNewsCard(d, market) {
   // 宏观（央行 / 通胀 / 大宗 / 美债 / 汇率）——顺序（R68 定稿）：宏观 → 彭博/路透/WSJ → 投行观点
   if (macro.length) {
     html += '<div class="wk-section macro"><h4>宏观 · 央行 / 通胀 / 大宗 / 美债</h4>';
-    macro.forEach(function (it) { html += '<div class="wk-item wk-dir-' + (it.direction === '看涨' ? 'up' : (it.direction === '看跌' ? 'down' : 'flat')) + '">' + newsEntryInner(it, true, '宏观·事件', d.tradeDate) + '</div>'; });
+    macro.forEach(function (it) { html += '<div class="wk-item wk-dir-' + (dirEnumOf(it.direction) === '看涨' ? 'up' : (dirEnumOf(it.direction) === '看跌' ? 'down' : 'flat')) + '">' + newsEntryInner(it, true, '宏观·事件', d.tradeDate) + '</div>'; });
     html += '</div>';
   }
   // 视角标题（R91h）：A股页用国内财经媒体视角（卡片来源已切财联社/华尔街见闻/证券时报），美股页保留国际通讯社视角
   if (intl.length) {
     html += '<div class="wk-section intl"><h4>' + (market === 'ashare' ? '国内财经媒体视角' : '彭博社 / 路透社 / 华尔街日报 视角') + '</h4>';
-    intl.forEach(function (it) { html += '<div class="wk-item wk-dir-' + (it.direction === '看涨' ? 'up' : (it.direction === '看跌' ? 'down' : 'flat')) + '">' + newsEntryInner(it, true, '中期·海外产业', d.tradeDate) + '</div>'; });
+    intl.forEach(function (it) { html += '<div class="wk-item wk-dir-' + (dirEnumOf(it.direction) === '看涨' ? 'up' : (dirEnumOf(it.direction) === '看跌' ? 'down' : 'flat')) + '">' + newsEntryInner(it, true, '中期·海外产业', d.tradeDate) + '</div>'; });
     html += '</div>';
   }
   // 投行观点（高盛 / 大摩 / 中金 / 中信等研报级观点）
   if (bank.length) {
     html += '<div class="wk-section bank"><h4>投行观点</h4>';
-    bank.forEach(function (it) { html += '<div class="wk-item wk-dir-' + (it.direction === '看涨' ? 'up' : (it.direction === '看跌' ? 'down' : 'flat')) + '">' + newsEntryInner(it, true, '机构·观点', d.tradeDate) + '</div>'; });
+    bank.forEach(function (it) { html += '<div class="wk-item wk-dir-' + (dirEnumOf(it.direction) === '看涨' ? 'up' : (dirEnumOf(it.direction) === '看跌' ? 'down' : 'flat')) + '">' + newsEntryInner(it, true, '机构·观点', d.tradeDate) + '</div>'; });
     html += '</div>';
   }
   if (d.source) html += '<div class="wk-src">来源：' + esc(d.source) + '</div>';
