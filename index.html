@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610082250"></script>
+<script src="data.js?v=202610082321"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1173,14 +1173,8 @@ function render(market) {
     (d.sectorNote ? '<div class="src-line">' + esc(d.sectorNote) + '</div>' : '') +
     renderReasons(d.sectorsDown, d.tradeDate, false) + '</div>';
 
-  // R100z93：主题型领涨/领跌（bullish/bearish，含 AI 深度 detail+deduce）此前数据已生成却 Never 渲染——
-  // 补齐接入主页（A股/美股通用），让用户看到之前加的 AI 深度分析，而非只有板块广度几个字。
-  if (d.bullish && d.bullish.length) {
-    html += '<div class="card"><h2>领涨题材 · AI 深度解读' + h2Date(d) + '</h2>' + renderBullBear(d.bullish, true, d.tradeDate) + '</div>';
-  }
-  if (d.bearish && d.bearish.length) {
-    html += '<div class="card"><h2>领跌题材 · AI 深度解读' + h2Date(d) + '</h2>' + renderBullBear(d.bearish, false, d.tradeDate) + '</div>';
-  }
+  // R100z93b：主题型领涨/领跌（bullish/bearish）独立模块已按用户要求下线（2026-10-08：
+  // 深度分析应整合进板块异动的「行业原因」与题材掘金，而不是另开两张卡）。数据字段保留（校验器仍查 4 只），前端不再渲染。
 
   // R98j：题材掘金仅 A股页展示（美股页模块已按用户要求下线）
   if (isA && d.themePicks && d.themePicks.length) {
@@ -1747,14 +1741,14 @@ function loadPortfolioCurve() {
         var s = d.stat || {};
         var h = '<div class="cal-hist-t">📈 组合净值（8 只等权 vs 市场基准，含回撤）</div>' +
           '<div id="chart-pf" style="width:100%;height:150px;"></div><div class="pf-stat">' +
-          '<span class="' + ((s.totRetPct || 0) >= 0 ? 'up' : 'down') + '">组合 ' +
+          '<span class="' + ((s.totRetPct || 0) >= 0 ? 'up' : 'down') + '" title="组合净值：每个预测日把 8 只预测标的等权买入、按日累乘的总涨跌幅。正数 = 预测组合整体赚钱。">组合 ' +
           (s.totRetPct >= 0 ? '+' : '') + (s.totRetPct || 0).toFixed(2) + '%</span>' +
-          '<span class="' + ((s.benchRetPct || 0) >= 0 ? 'up' : 'down') + '">基准 ' +
+          '<span class="' + ((s.benchRetPct || 0) >= 0 ? 'up' : 'down') + '" title="基准净值：同期的市场基准（对照指数）累计涨跌幅，代表「不做预测、直接买市场」的结果，用来和组合对照。">基准 ' +
           (s.benchRetPct >= 0 ? '+' : '') + (s.benchRetPct || 0).toFixed(2) + '%</span>' +
-          '<span class="' + ((s.excessPct || 0) >= 0 ? 'up' : 'down') + '">超额 ' +
+          '<span class="' + ((s.excessPct || 0) >= 0 ? 'up' : 'down') + '" title="超额收益 = 组合 − 基准。为正说明这套预测选股确实跑赢了市场，是预测含金量最直接的体现；为负说明选股反而拖了后腿。">超额 ' +
           (s.excessPct >= 0 ? '+' : '') + (s.excessPct || 0).toFixed(2) + '%</span>' +
-          '<span class="flat">最大回撤 ' + (s.maxDdPct || 0).toFixed(2) + '%（' + esc(s.maxDdDate || '') + '）</span>' +
-          '<span class="flat">' + (s.days || 0) + ' 个交易快照</span></div>';
+          '<span class="flat" title="最大回撤：持有期内净值从最高点回落的最大幅度（括号内为发生日期），衡量最不利情形下要忍受多大的浮亏。">最大回撤 ' + (s.maxDdPct || 0).toFixed(2) + '%（' + esc(s.maxDdDate || '') + '）</span>' +
+          '<span class="flat" title="统计覆盖的交易日数量：样本越多，这组收益与胜率数据越有说服力；样本少时只作参考。">' + (s.days || 0) + ' 个交易快照</span></div>';
         box.innerHTML = h;
         var el = document.getElementById('chart-pf');
         if (el && window.echarts) {
@@ -1936,13 +1930,13 @@ function renderStopTrack() {
   var cell = function (c, t) { return '<span class="' + c + '">' + t + '</span>'; };
   box.innerHTML = '<div class="cal-hist-t">🛑 止损跟踪统计（台账 ' + esc(st.updatedAt || '') + '）</div>' +
     '<div class="pf-stat">' +
-    cell('flat', '已回算 ' + (st.total || 0) + ' 只') +
-    cell('flat', '触及止损 ' + (st.touched || 0) + ' 只') +
-    cell('flat', '触及率 ' + rate(st.touchRate)) +
-    cell(cls(st.avgP5Pct), '入场第5日均值 ' + pct(st.avgP5Pct)) +
-    cell(cls(st.avgAfter5Pct), '触后5日均值 ' + pct(st.avgAfter5Pct)) +
-    cell(cls(st.avgRebound5Pct), '触后反弹均值 ' + pct(st.avgRebound5Pct)) +
-    cell(cls(st.hitThenUpRate), '触后上涨率 ' + rate(st.hitThenUpRate)) +
+    cell('flat', '已回算 ' + (st.total || 0) + ' 只').replace('<span ', '<span title="止损台账中已完成事后回算（K 线走完足够天数）的标的数量，是其余各项统计的分母。" ') +
+    cell('flat', '触及止损 ' + (st.touched || 0) + ' 只').replace('<span ', '<span title="入场后最低价触及止损位的标的数量。" ') +
+    cell('flat', '触及率 ' + rate(st.touchRate)).replace('<span ', '<span title="触及率 = 触及止损 ÷ 已回算。越低说明入场点越准、很少被吓到止损位；偏高则说明入场时机或止损位需要检讨。" ') +
+    cell(cls(st.avgP5Pct), '入场第5日均值 ' + pct(st.avgP5Pct)).replace('<span ', '<span title="全部已回算标的入场后第 5 个交易日的平均涨跌幅（含未触损的），衡量按这套预测持股 5 日的普遍结果。" ') +
+    cell(cls(st.avgAfter5Pct), '触后5日均值 ' + pct(st.avgAfter5Pct)).replace('<span ', '<span title="仅统计触过止损的标的：触损后 5 个交易日相对入场价的平均涨跌。深负 = 止损帮你躲过了继续下跌，止损位有效；接近 0 或转正 = 触损后很快收复。" ') +
+    cell(cls(st.avgRebound5Pct), '触后反弹均值 ' + pct(st.avgRebound5Pct)).replace('<span ', '<span title="仅统计触过止损的标的：触损后 5 日内相对最低点的平均反弹幅度。反弹越大 = 越容易割在半山腰，可结合止损位松紧来判断该收紧还是放宽。" ') +
+    cell(cls(st.hitThenUpRate), '触后上涨率 ' + rate(st.hitThenUpRate)).replace('<span ', '<span title="触过止损的标的中、5 日后相对入场价收涨的比例。偏高 = 止损可能设得太近、容易被洗出去；偏低 = 触损的标的大概率继续走弱，止损位合理。" ') +
     '</div>';
 }
 
@@ -2133,7 +2127,9 @@ function renderThemePicks(list, tradeDate) {
     // R97：事件行兼容 us 的 theme 字段；行尾标注发布日期，让用户知道是当天还是前几天的内容
     var ev = it.event || it.theme || '';
     if (ev) s += '<div class="tp-event">⚡ ' + esc(ev) + (tradeDate ? ' <span class="nc-time">' + esc(shortDate(tradeDate)) + ' 发布</span>' : '') + '</div>'; // R100t：徽标前补空格
-    if (it.logic) s += '<div class="tp-logic"><b>逻辑传导：</b>' + renderLogicChain(it.logic) + '</div>';
+    // R100z93b：去掉「逻辑传导：」标签——内容本身就是深度整合分析（资金+盘面+情绪+要闻+传导），
+    // 直接呈现；若 AI 仍写 → 级联则降级为 ①②③ 分步（renderLogicChain 兜底），纯散文则原样显示。
+    if (it.logic) s += '<div class="tp-logic">' + renderLogicChain(it.logic) + '</div>';
     if (it.deduce) s += renderDeduce(it.deduce);
     var sts = it.stocks || [];
     if (sts.length) {
@@ -2162,38 +2158,8 @@ function renderThemePicks(list, tradeDate) {
   return s;
 }
 
-/* R100z93：主题型领涨/领跌（bullish/bearish）——含 AI 深度 detail + deduce，此前数据已生成却从未渲染，
-   用户一直看到「板块领涨/领跌（行业广度）」几个字、找不到 AI 深度。此处补齐，与题材掘金同款 tp-item 卡片。 */
-function renderBullBear(list, isUp, tradeDate) {
-  if (!list || !list.length) return '';
-  var s = '';
-  list.forEach(function (it) {
-    s += '<div class="tp-item' + (isUp ? '' : ' tp-down') + '">';
-    var th = it.theme || '';
-    if (th) s += '<div class="tp-event">⚡ ' + esc(th) + (tradeDate ? ' <span class="nc-time">' + esc(shortDate(tradeDate)) + ' 发布</span>' : '') + '</div>';
-    if (it.detail) s += '<div class="tp-logic">AI 深度解读：' + esc(it.detail) + '</div>';
-    if (it.deduce) s += renderDeduce(it.deduce);
-    var sts = it.stocks || [];
-    if (sts.length) {
-      s += '<div class="stock-chips">';
-      sts.forEach(function (st) {
-        var ntRaw = String(st.note || '').replace(/·(今日)?(涨停|[涨跌][0-9.]+%)/g, '').replace(/^·|·$/g, '').trim();
-        var parts = [];
-        if (ntRaw) parts.push(ntRaw);
-        var chgN = (typeof st.chg === 'number') ? st.chg : parseFloat(String(st.chg == null ? '' : st.chg).replace('%', ''));
-        if (!isNaN(chgN)) parts.push((chgN > 0 ? '+' : '') + chgN.toFixed(2) + '%');
-        var note = parts.join(' · ');
-        var title = (st.name || '') + ' ' + (st.code || '') + (note ? ' · ' + note : '') + '（点击查看K线）';
-        var hzTag = (st.code && window.DASHBOARD_DATA.harmonic && window.DASHBOARD_DATA.harmonic.tags) ? window.DASHBOARD_DATA.harmonic.tags[st.code] : null;
-        var hzBadge = hzTag ? '<span class="hz-badge">谐波·' + esc(hzTag) + '</span>' : '';
-        s += '<span class="stock-chip' + stkGoldCls(st.code) + '" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (note || '')) + '" title="' + escAttr(title) + '"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + hzBadge + (note ? '<span class="nt">' + esc(note) + '</span>' : '') + '</span>';
-      });
-      s += '</div>';
-    }
-    s += '</div>';
-  });
-  return s;
-}
+/* R100z93b：renderBullBear（领涨/领跌题材独立卡）已删除——用户 2026-10-08 要求深度分析整合进
+   板块异动「行业原因」与题材掘金，不另开模块。bullish/bearish 数据字段保留（校验器口径不变）。 */
 /* ===== 选股扩展模块渲染（2026-09-26 · 谐波 / 吸筹 / 量化 / 必带数据） ===== */
 function findHarmonic(code) {
   var h = window.DASHBOARD_DATA.harmonic;
