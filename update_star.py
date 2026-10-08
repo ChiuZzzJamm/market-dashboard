@@ -110,24 +110,31 @@ def build_star(D):
 
     # ---- R100m（需求7）：技术池候选——直接从 谐波/九门/吸筹 池取标的（前一日 16:00 结果） ----
     # 这些标的无 sentiment/probability（neutral 兜底），按池内得分排序，取头部，宁缺勿滥。
-    tech = []
-    seen_tech = set()
+    # R100z85（量纲修正，2026-10-08 用户质询「标的映射只有断板+九门」暴露）：原实现全池合并
+    # 按 score 降序取前 8，但九门量纲 score×10（8~10分=80~100）结构性碾压 谐波(确认65/观察55)
+    # 与 吸筹(60~76)——实测九门前 10 全为 90/80，top8 被九门垄断，谐波 12 只/吸筹 6 只候选
+    # 一个都进不了终选，AI 映射段随之只写断板+九门。改为**按池配额保底**：九门≤3、谐波≤3、
+    # 吸筹≤2（配额决定入选资格，合并后分数只决定展示顺序），总量仍 ≤8；跨池去重按
+    # 九门→谐波→吸筹优先级（多池命中取先处理池的 label）；-2% 深跌/≥9.5% 涨停剔除守卫不变。
+    hz_list, pw_list, acc_list = [], [], []
     hz = D.get("harmonic") or {}
+    _seen_hz = set()
     for it in (hz.get("confirmPool") or [])[:6] + (hz.get("watchPool") or [])[:6]:
         c = str(it.get("code") or "")
-        if c.startswith(("60", "00")) and c not in seen_tech:
-            seen_tech.add(c)
-            tech.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
-                         "src": "hz", "label": f"谐波{it.get('pattern') or ''}",
-                         "score": 65 if it.get("stage") == "确认" else 55})
+        if c.startswith(("60", "00")) and c not in _seen_hz:
+            _seen_hz.add(c)
+            hz_list.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
+                            "src": "hz", "label": f"谐波{it.get('pattern') or ''}",
+                            "score": 65 if it.get("stage") == "确认" else 55})
     pw = D.get("powerScreen") or {}
+    _seen_pw = set()
     for it in (pw.get("passed") or [])[:10]:
         c = str(it.get("code") or "")
-        if c.startswith(("60", "00")) and c not in seen_tech:
-            seen_tech.add(c)
-            tech.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
-                         "src": "pw", "label": f"九门{it.get('score') or ''}分",
-                         "score": int(it.get("score") or 0) * 10})  # 统一量纲：9分=90
+        if c.startswith(("60", "00")) and c not in _seen_pw:
+            _seen_pw.add(c)
+            pw_list.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
+                            "src": "pw", "label": f"九门{it.get('score') or ''}分",
+                            "score": int(it.get("score") or 0) * 10})  # 量纲：9分=90（仅池内排序用）
     acc = D.get("accumulation") or {}
     for it in (acc.get("scored") or []):
         try:
@@ -135,10 +142,20 @@ def build_star(D):
         except Exception:
             continue
         c = str(it.get("code") or "")
-        if sc >= 60 and c.startswith(("60", "00")) and c not in seen_tech:
-            seen_tech.add(c)
-            tech.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
-                         "src": "acc", "label": f"吸筹{sc}分", "score": sc})
+        if sc >= 60 and c.startswith(("60", "00")):
+            acc_list.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
+                             "src": "acc", "label": f"吸筹{sc}分", "score": sc})
+    tech, _used = [], set()
+    for _lst, _quota in ((pw_list, 3), (hz_list, 3), (acc_list, 2)):
+        _cnt = 0
+        for _t in _lst:
+            if _cnt >= _quota:
+                break
+            if _t["code"] in _used:
+                continue
+            _used.add(_t["code"])
+            tech.append(_t)
+            _cnt += 1
     tech.sort(key=lambda x: -x["score"])
     tech = tech[:8]
 
@@ -273,7 +290,7 @@ def build_star(D):
         "sentiment": sentiment,
         "picks": picks,
         "pushText": "",
-        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波/九门/吸筹池直接取标的）+ 自动化 AI 复核",
+        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波/九门/吸筹池直接取标的；R100z85：技术池按池配额 九门3/谐波3/吸筹2 防单池量纲垄断）+ 自动化 AI 复核",
     }
     return star, None
 
