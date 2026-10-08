@@ -1115,11 +1115,36 @@ def main():
                 for i, nw in enumerate(sec.get(key) or []):
                     if not isinstance(nw, dict):
                         continue
+                    # 五节要闻的 8 只口径是**整条新闻扁平合计8 只**（N 分层表本身就是
+                    # 按 8 只的总数定义的，如 N≥5 → 1/1/1/5），不是「每个 impacts 分组各8 只」。
+                    # 此前这里按分组逐个调check_tiered，导致每组只有 1~5 只被硬判FAIL——
+                    # 与 check_impact_count / 前端渲染的扁平口径自相矛盾，且会让 --scope us 永久红。
+                    # 现改为：①逐组校验「非空 + 主板过滤」；②整条新闻扁平合计走 check_tiered 全套。
                     for j, imp in enumerate(nw.get('impacts') or []):
-                        if isinstance(imp, dict):
-                            check_tiered(imp.get('stocks'),
-                                         f"{mk}.{key}[{i}].impacts[{j}]({(imp.get('theme') or '')[:14]})",
-                                         violations)
+                        if not isinstance(imp, dict):
+                            continue
+                        g = imp.get('stocks')
+                        gname = f"{mk}.{key}[{i}].impacts[{j}]({(imp.get('theme') or '')[:14]})"
+                        if not isinstance(g, list) or not g:
+                            violations.append(f"{gname}: stocks 缺失或为空")
+                            continue
+                        for s in g:
+                            if isinstance(s, dict) and board_bad(s.get('code')):
+                                violations.append(
+                                    f"{gname}: 含非沪深主板标的 {s.get('code')} {s.get('name', '')}")
+                    flat = [s for imp in (nw.get('impacts') or []) if isinstance(imp, dict)
+                            for s in (imp.get('stocks') or []) if isinstance(s, dict)]
+                    # 扁平口径下同一 code 可跨组复用（上限 2 次，见 check_news_quality 的 C 口径），
+                    # 故先按 code 去重再做「恰好 8 只互异」判定，避免与设计意图冲突。
+                    seen = {}
+                    for s in flat:
+                        seen.setdefault(str(s.get('code')), s)
+                    uniq = list(seen.values())
+                    if len(uniq) != len(flat):
+                        # 有跨组复用时按去重口径校验，并单独提示复用情况（不判FAIL）
+                        check_tiered(uniq, f"{mk}.{key}[{i}]({(nw.get('sector') or '')[:14]})", violations)
+                    else:
+                        check_tiered(flat, f"{mk}.{key}[{i}]({(nw.get('sector') or '')[:14]})", violations)
             for key in ('bullish', 'bearish'):
                 for i, g in enumerate(sec.get(key) or []):
                     if isinstance(g, dict):

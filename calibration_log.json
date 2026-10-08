@@ -97,7 +97,156 @@
     "hitAbs": 0.5,
     "pos": null
    }
+  ],
+  "2026-10-08": [
+   {
+    "date": "2026-10-08",
+    "sector": "新型电池·固态电池",
+    "predicted": "走强",
+    "dirClass": "up",
+    "actualPct": 3.44,
+    "benchPct": -2.135,
+    "excessPct": 5.575,
+    "result": "命中",
+    "conf": "高",
+    "avgPct": 2.9,
+    "excessAvg": 5.035,
+    "hit": 1,
+    "hitAbs": 1,
+    "pos": {
+     "tendency": "偏强",
+     "bandLo": 3820,
+     "bandHi": 3900,
+     "volExpect": "放量"
+    }
+   },
+   {
+    "date": "2026-10-08",
+    "sector": "算力硬件·光模块",
+    "predicted": "偏强",
+    "dirClass": "up",
+    "actualPct": -3.03,
+    "benchPct": -2.135,
+    "excessPct": -0.895,
+    "result": "未命中",
+    "conf": "中",
+    "avgPct": -3.61,
+    "excessAvg": -1.475,
+    "hit": 0,
+    "hitAbs": 0,
+    "pos": {
+     "tendency": "偏强",
+     "bandLo": 3820,
+     "bandHi": 3900,
+     "volExpect": "放量"
+    }
+   },
+   {
+    "date": "2026-10-08",
+    "sector": "创新药·医药",
+    "predicted": "偏强",
+    "dirClass": "up",
+    "actualPct": -1.77,
+    "benchPct": -2.135,
+    "excessPct": 0.365,
+    "result": "部分兑现",
+    "conf": "中",
+    "avgPct": -2.41,
+    "excessAvg": -0.275,
+    "hit": 1,
+    "hitAbs": 0,
+    "pos": {
+     "tendency": "偏强",
+     "bandLo": 3820,
+     "bandHi": 3900,
+     "volExpect": "放量"
+    }
+   },
+   {
+    "date": "2026-10-08",
+    "sector": "大金融·券商",
+    "predicted": "偏强",
+    "dirClass": "up",
+    "actualPct": -1.52,
+    "benchPct": -2.135,
+    "excessPct": 0.615,
+    "result": "命中",
+    "conf": "中",
+    "avgPct": -1.43,
+    "excessAvg": 0.705,
+    "hit": 1,
+    "hitAbs": 0,
+    "pos": {
+     "tendency": "偏强",
+     "bandLo": 3820,
+     "bandHi": 3900,
+     "volExpect": "放量"
+    }
+   },
+   {
+    "date": "2026-10-08",
+    "sector": "房地产·地产链",
+    "predicted": "偏强",
+    "dirClass": "up",
+    "actualPct": -1.26,
+    "benchPct": -2.135,
+    "excessPct": 0.875,
+    "result": "命中",
+    "conf": "中",
+    "avgPct": -2.82,
+    "excessAvg": -0.685,
+    "hit": 1,
+    "hitAbs": 0,
+    "pos": {
+     "tendency": "偏强",
+     "bandLo": 3820,
+     "bandHi": 3900,
+     "volExpect": "放量"
+    }
+   },
+   {
+    "date": "2026-10-08",
+    "sector": "半导体·存储芯片",
+    "predicted": "走强",
+    "dirClass": "up",
+    "actualPct": -4.98,
+    "benchPct": -2.135,
+    "excessPct": -2.845,
+    "result": "未命中",
+    "conf": "高",
+    "avgPct": -3.89,
+    "excessAvg": -1.755,
+    "hit": 0,
+    "hitAbs": 0,
+    "pos": {
+     "tendency": "偏强",
+     "bandLo": 3820,
+     "bandHi": 3900,
+     "volExpect": "放量"
+    }
+   }
   ]
  },
- "open": {}
+ "open": {
+  "2026-10-08": {
+   "date": "2026-10-08",
+   "openDate": "2026-10-08",
+   "tendency": "偏强",
+   "bandLo": 3820,
+   "bandHi": 3900,
+   "volExpect": "放量",
+   "actual": {
+    "point": 3811.9,
+    "changePct": -0.79,
+    "upRate": 0.3118,
+    "volumeText": "成交约 1.68 万亿"
+   },
+   "tendencyHit": 0,
+   "bandHit": 0.5,
+   "volHit": 0,
+   "score": 0.15,
+   "verdict": "未命中",
+   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；量能为涨跌家数占比代理，口径固定不可调"
+  }
+ }
 }

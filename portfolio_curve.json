@@ -7,13 +7,20 @@
    "pf": 0.9901,
    "bench": 1.0,
    "dd": -0.99
+  },
+  {
+   "date": "2026-10-08",
+   "avgPct": 2.9,
+   "pf": 1.0188,
+   "bench": 0.9787,
+   "dd": 0.0
   }
  ],
  "stat": {
-  "days": 1,
-  "totRetPct": -0.99,
-  "benchRetPct": 0.0,
-  "excessPct": -0.99,
+  "days": 2,
+  "totRetPct": 1.88,
+  "benchRetPct": -2.13,
+  "excessPct": 4.01,
   "maxDdPct": -0.99,
   "maxDdDate": "2026-09-30",
   "note": "组合=各预测日 8 只标的等权平均涨跌幅累乘；基准=同日市场基准累乘；回撤按组合净值峰谷算"
