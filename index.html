@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610090053"></script>
+<script src="data.js?v=202610090105"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1739,9 +1739,9 @@ function loadPortfolioCurve() {
         var se = (d && d.series) || [];
         if (!se.length) return;
         var s = d.stat || {};
-        var h = '<div class="cal-hist-t">📈 组合净值（8 只等权 vs 市场基准，含回撤）</div>' +
+        var h = '<div class="cal-hist-t">📈 组合净值（高置信板块标的等权 vs 市场基准，含回撤）</div>' +
           '<div id="chart-pf" style="width:100%;height:150px;"></div><div class="pf-stat">' +
-          '<span class="' + ((s.totRetPct || 0) >= 0 ? 'up' : 'down') + '" title="组合净值：每个预测日把 8 只预测标的等权买入、按日累乘的总涨跌幅。正数 = 预测组合整体赚钱。">组合 ' +
+          '<span class="' + ((s.totRetPct || 0) >= 0 ? 'up' : 'down') + '" title="组合净值：每个预测日把当日「置信度=高」板块的预测标的等权买入（当日无高置信则取置信度最高一档），按日累乘的总涨跌幅。各日入选板块数不同（每日 8/16/24…只）。正数 = 预测组合整体赚钱。">组合 ' +
           (s.totRetPct >= 0 ? '+' : '') + (s.totRetPct || 0).toFixed(2) + '%</span>' +
           '<span class="' + ((s.benchRetPct || 0) >= 0 ? 'up' : 'down') + '" title="基准净值：同期的市场基准（对照指数）累计涨跌幅，代表「不做预测、直接买市场」的结果，用来和组合对照。">基准 ' +
           (s.benchRetPct >= 0 ? '+' : '') + (s.benchRetPct || 0).toFixed(2) + '%</span>' +
@@ -1796,6 +1796,11 @@ function renderAiPrediction() {
   var box = document.getElementById('ai-prediction');
   if (!p) { box.style.display = 'none'; return; }
   p.sectors = p.sectors || [];
+  // R100z97（用户要求）：AI 预测板块卡按置信度 高→中→低 排序展示
+  var _confRank = { '高': 0, '中': 1, '低': 2 };
+  var _sortedSectors = p.sectors.slice().sort(function (a, b) {
+    return (_confRank[String(a.confidence || '').charAt(0)] ?? 9) - (_confRank[String(b.confidence || '').charAt(0)] ?? 9);
+  });
   // R100f：「谐波共振」横幅已按用户要求移除（2026-09-28），谐波交叉徽标保留在谐波模块内
   var html = '<div class="ai-card"><div class="ai-head"><h2>AI 预测分析' + (p.date ? '<span class="h2-date">' + esc(p.date) + '</span>' : '') + '</h2></div>' +
     '<div class="ai-summary">' + (p.indexLine ? esc(p.indexLine) + '。' : '') + '通过隔夜美股各板块涨跌推导今日 A 股强弱方向：' + esc(p.summary) + '</div>' +
@@ -1810,7 +1815,7 @@ function renderAiPrediction() {
   if (p.verification && p.verification.stockCheck && p.verification.stockCheck.length) {
     p.verification.stockCheck.forEach(function (sc) { if (sc && sc.sector) _scMap[sc.sector] = sc; });
   }
-  p.sectors.forEach(function (s) {
+  _sortedSectors.forEach(function (s) {
     var isUp = String(s.direction || '').indexOf('承压') === -1;
     var conf = String(s.confidence || '');
     var confCls = conf.indexOf('高') >= 0 ? 'conf-high' : (conf.indexOf('中') >= 0 ? 'conf-mid' : 'conf-low');

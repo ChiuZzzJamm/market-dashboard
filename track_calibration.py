@@ -246,14 +246,18 @@ def build_curve(log):
     series, pf, bn, peak = [], 1.0, 1.0, 1.0
     for dt in sorted(log.get('log', {}).keys()):
         items = log['log'][dt] or []
-        # 组合=该预测日所有板块（6 板块 × 8 只=48 只）等权平均，不能用第一个板块代表全天
-        # （旧实现只取第一个板块的 avgPct，导致 10-08 显示 +2.9% 实为固态电池单板块，真值≈-1.88%）
-        avgs = [float(x['avgPct']) for x in items
+        # R100z97 组合口径（用户拍板）：只取「置信度=高」的板块（每板块 8 只），板块间再等权
+        # ——当日无「高」则降档取当日最高置信档（中→低），保证曲线连续；不再用全部 48 只
+        # （旧实现①只取第一板块 avgPct，②临时修成 6 板块全等权，均非用户想要的口径）
+        conf_rank = {'高': 0, '中': 1, '低': 2, 'unknown': 9}
+        best_rank = min((conf_rank.get(x.get('conf'), 9) for x in items), default=9)
+        pool = [x for x in items if conf_rank.get(x.get('conf'), 9) == best_rank] or items
+        avgs = [float(x['avgPct']) for x in pool
                 if isinstance(x.get('avgPct'), (int, float))]
         if avgs:
             avg = sum(avgs) / len(avgs)
         else:
-            acts = [float(x['actualPct']) for x in items
+            acts = [float(x['actualPct']) for x in pool
                     if isinstance(x.get('actualPct'), (int, float))]
             avg = sum(acts) / len(acts) if acts else None
         if avg is None:
@@ -267,7 +271,9 @@ def build_curve(log):
         peak = max(peak, pf)
         dd = round((pf - peak) / peak * 100.0, 2)
         series.append({'date': dt, 'avgPct': round(avg, 3), 'pf': round(pf, 4),
-                       'bench': round(bn, 4), 'dd': dd})
+                       'bench': round(bn, 4), 'dd': dd,
+                       'nSec': len(pool), 'nStocks': len(pool) * 8,
+                       'poolConf': pool[0].get('conf') if pool else ''})
     if not series:
         return None
     max_dd = min(series, key=lambda x: x['dd'])
@@ -276,7 +282,7 @@ def build_curve(log):
     stat = {'days': len(series), 'totRetPct': round(tot, 2), 'benchRetPct': round(bn_tot, 2),
             'excessPct': round(tot - bn_tot, 2),
             'maxDdPct': max_dd['dd'], 'maxDdDate': max_dd['date'],
-            'note': '组合=各预测日 8 只标的等权平均涨跌幅累乘；基准=同日市场基准累乘；回撤按组合净值峰谷算'}
+            'note': '组合=各预测日「置信度=高」板块（无高则取当日最高置信档）的预测标的等权平均涨跌幅累乘；基准=同日市场基准累乘；回撤按组合净值峰谷算'}
     return {'ok': True, 'series': series, 'stat': stat}
 
 
@@ -489,7 +495,7 @@ def main():
             print('      ⚠️ 旧口径明显虚高：全市场普跌时「某板块跌幅 lesser 仍算命中」，'
                   '这就是为什么必须扣掉基准再判（R100z15）')
 
-    # 缺口④：组合净值曲线（8 只等权 vs 基准）
+    # 缺口④：组合净值曲线（高置信板块标的等权 vs 基准，R100z97 口径见 build_curve）
     curve = build_curve(log)
     if curve:
         with open(CURVE_FILE, 'w', encoding='utf-8') as f:
