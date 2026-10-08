@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610090113"></script>
+<script src="data.js?v=202610090209"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -133,6 +133,12 @@
   .conf-low { background: #dcebfa; color: #4a90d9; }
   .conf-mid { background: #85b9ea; color: #fff; }
   .conf-high { background: #2b6cb0; color: #fff; }
+  /* R100z98：象限落点徽章（置信度×已计价 四象限，镜像 .exp-badge 胶囊样式） */
+  .quad-badge { font-size: 11px; border-radius: 999px; padding: 2px 9px; font-weight: 700; margin-left: 6px; line-height: 1.45; border: 1px dashed currentColor; cursor: help; }
+  .q-sweet { color: var(--up); }    /* ① 甜点区 */
+  .q-pricey { color: #b7791f; }     /* ② 对但已贵 */
+  .q-cheap { color: #4a90d9; }      /* ③ 便宜没谱 */
+  .q-avoid { color: var(--down); }  /* ④ 回避 */
   .ai-item .drv { font-size: 12px; color: var(--ink2); margin-bottom: 3px; }
   .ai-item .lgc { font-size: 12.5px; color: var(--ink); margin-bottom: 8px; }
   .stock-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--line); }
@@ -1439,6 +1445,28 @@ function expBadge(exp) {
     esc(txt + ' · ' + (exp.verdict || '')) + '</span>';
 }
 
+/* R100z98：由 置信度 + 已计价% 推导四象限落点（阈值 PRICEIN_HIGH：≥该值视为已透支侧） */
+function quadOf(s) {
+  var PRICEIN_HIGH = 15;
+  var conf = String(s.confidence || '');
+  var top = conf.indexOf('高') >= 0;
+  var pi = (s.exp && typeof s.exp.priceIn === 'number') ? s.exp.priceIn : NaN;
+  var right = !isNaN(pi) && pi >= PRICEIN_HIGH;
+  if (top && !right) return { n: '①', t: '甜点区', cls: 'q-sweet',
+    why: '置信度=高 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（有空间）→ 高把握+有空间，可重仓/加确认' };
+  if (top && right) return { n: '②', t: '对但已贵', cls: 'q-pricey',
+    why: '置信度=高 但 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（已透支）→ 方向对、肉已少，轻仓防兑现降级' };
+  if (!top && !right) return { n: '③', t: '便宜没谱', cls: 'q-cheap',
+    why: '置信度=' + (conf || '未给') + ' 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（有空间）→ 空间在但没把握，等确认信号' };
+  return { n: '④', t: '回避', cls: 'q-avoid',
+    why: '置信度=' + (conf || '未给') + ' 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（已透支）→ 没把握且已透支，不碰' };
+}
+function quadPill(s) {
+  var q = quadOf(s);
+  if (!q) return '';
+  return '<span class="quad-badge ' + q.cls + '" title="' + escAttr('象限' + q.n + '·' + q.t + '：' + q.why) + '">象限' + q.n + '·' + q.t + '</span>';
+}
+
 /* R100z15 缺口③：退出纪律行（止损 / 目标 / 证伪）。
    取数优先级：标的自带 st.exit（16:00 流程写回）> stock_pool.json 里的机械池 exit（异步兜底）。
    两者都取不到就这一行不渲染，绝不猜一个止损位糊上去。 */
@@ -1830,6 +1858,7 @@ function renderAiPrediction() {
       '<span class="dir-badge ' + (isUp ? 'dir-up' : 'dir-down') + '">预计' + esc(s.direction) + '</span>' +
       '<span class="conf-badge ' + confCls + '">置信度 ' + esc(s.confidence) + '</span>' +
       expBadge(s.exp) +
+      quadPill(s) +
       '</div>' +
       '<div class="drv">隔夜驱动：' + esc(s.usDriver) + '</div>' +
       '<div class="lgc">映射逻辑：' + esc(s.logic) + '</div>' +
