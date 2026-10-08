@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610090246"></script>
+<script src="data.js?v=202610090251"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -2790,7 +2790,10 @@ function renderAccumulation() {
      用户说的"留空白"= 块与上方标的之间**留一条空白带**（`.db-pool.p-fail { margin-top:16px }`），
      不是把块删掉。曾误改成 dbFailHtml 空态 return '' 把吸筹/九门/谐波三页失效池整块抹了，已回滚。 */
   var accFail = dbFailHtml(a.failPool || [], 'accumulation');
-  return accLeg + '<div class="card">' + secS + secW + accFail + '</div>';
+  // R100z102（用户 2026-10-09 截图）：失效池移出 .card 直排——断板/谐波/九门三页失效池都是
+  // 独立 .db-pool 卡（上方 16px 空白带），吸筹原先嵌在确认/观察池的 card 里成「卡中卡」，
+  // 双层边框 + 间距全不一样。card 只包确认/观察两池，失效池与三页同构。
+  return accLeg + '<div class="card">' + secS + secW + '</div>' + accFail;
 }
 
 function renderPowerScreen() {
