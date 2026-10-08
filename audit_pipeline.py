@@ -672,17 +672,28 @@ def g8_g9_g10_data(r):
 
     # duanban.star 存在性（R100z16 清场事故回归）
     # 休市期缺失属预期（9:45 在下一个交易日才重建），仅当最近交易日刚过 1 天仍缺才判 FAIL
+    # R100z83（2026-10-08 实战教训）：交易日 **10:00 前** star 缺失降为 WARN——
+    #   star 由 9:45 任务写入，07:30/08:30 任务先于它部署，若此时判 FAIL 会逼着
+    #   前置任务按「FAIL 必须修正」条款提前跑 update_star.py 补造 star（08:11 实际发生），
+    #   违反「9:45 是 star 唯一写入口」的职责边界、产出开盘前低质量版本。
+    #   10:00 后（9:45 窗口已过）仍缺才是真事故，恢复硬拦。
     today = datetime.now().strftime("%Y-%m-%d")
+    _before_star_window = datetime.now().hour < 10  # 9:45 任务窗口（留 15 分钟宽限）未过
     if "star" not in (D.get("duanban") or {}):
         # 口径：star 由 9:45 在「交易日当天」写入。
         # ① 下一个交易日还没到（休市期）→ 缺失是必然，PASS（不是缺陷）
-        # ② 下一交易日已到 / 就是今天 仍缺 → 真事故（历史上 merge 会把它清场）
+        # ② 下一交易日已到 / 就是今天、但当前 <10:00 → 9:45 尚未跑，WARN（不是缺陷）
+        # ③ 下一交易日已到 / 就是今天、且已过 10:00 仍缺 → 真事故（历史上 merge 会把它清场）
         if not nxt or nxt > today:
             r.ok("G10", f"duanban.star 当前缺失属预期：下一个交易日 {nxt or '—'} 尚未到"
                         f"（9:45 开盘精选届时写入；R100z16 后 merge 不再清场）")
+        elif _before_star_window:
+            r.warn("G10", f"duanban.star 缺失但当前在 10:00 前（下一交易日 {nxt} 当天、9:45 开盘精选"
+                          f"尚未跑）——属预期，07:30/08:30 任务**不要**跑 update_star.py 补造，照常部署；"
+                          f"10:00 后仍缺才升级 FAIL")
         else:
-            r.fail("G10", f"duanban.star（🌟开盘精选）缺失，而下一个交易日 {nxt} 已到/就是今天"
-                          f"——历史曾因 merge 时序被清场，须在当日 9:45 前补回")
+            r.fail("G10", f"duanban.star（🌟开盘精选）缺失，而下一交易日 {nxt} 已到且已过 9:45 窗口"
+                          f"——历史曾因 merge 时序被清场，属真事故，须排查清场根因并补回")
     else:
         sd = (D["duanban"]["star"] or {}).get("date")
         if sd and last and sd < last:
