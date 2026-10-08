@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610082050"></script>
+<script src="data.js?v=202610082120"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -823,6 +823,13 @@ function cleanLeak(s) {
   s = s.replace(/alignRate\s*=\s*[0-9.]+(?:\s*[;；])?/gi, '')  // alignRate=0.875
        .replace(/cal_factor/gi, '')                              // cal_factor
        .replace(/alignRate/gi, '');                             // 其余 alignRate（如 alignRate≤0.375）
+  // R100z90：align0.125 / align(0.125) 这类裸 align+数值（LLM 写验证摘要时的简写泄漏）
+  //   翻译成中文「方向一致率12.5%」（非整数保留一位小数），而非删除——数值本身有意义。
+  //   注意不吞括号：原文多为「光模块(align0.125)」，替换后应为「光模块(方向一致率12.5%)」
+  s = s.replace(/align\s*([0-9]+(?:\.[0-9]+)?)/gi, function (_, n) {
+    var p = parseFloat(n) * 100;
+    return '方向一致率' + (Number.isInteger(p) ? p : p.toFixed(1)) + '%';
+  });
   s = s.replace(/\s*[;；]\s*[;；]/g, '；').replace(/\s{2,}/g, ' ').replace(/[;；]\s*$/g, '').trim();
   return s;
 }
@@ -1886,8 +1893,8 @@ function renderStockCheckLine(sc, dateStr) {
     var fm = (sc.fund.avgMainYi === null || sc.fund.avgMainYi === undefined) ? null : Number(sc.fund.avgMainYi);
     var fu = (sc.fund.netInN === null || sc.fund.netInN === undefined) ? null : Number(sc.fund.netInN);
     fundTxt = '，主力净额均值 ' + (fm === null ? '—' : ((fm >= 0 ? '+' : '') + fm.toFixed(2) + ' 亿')) +
-      ' / 净流入 ' + (fu === null ? '—' : fu + ' 只') +
-      (sc.fund.src ? '（' + esc(sc.fund.src) + '）' : '');
+      ' / 净流入 ' + (fu === null ? '—' : fu + ' 只');
+    // R100z90：fund.src（如 sina）是内部取数源标记，不再展示给用户
   }
   return '<div class="ai-sc ' + cls + '"><span class="sc-date">' + esc(dateStr || '') + '</span>8 只标的平均 ' +
     (avg === null ? '—' : ((avg >= 0 ? '+' : '') + avg.toFixed(2) + '%')) +
