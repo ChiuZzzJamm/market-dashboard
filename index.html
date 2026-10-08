@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610082120"></script>
+<script src="data.js?v=202610082159"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -527,7 +527,7 @@
      #e3a008 边，即 R100z45 那版饱和琥珀），因为「新」是要一眼扫到的强提示，只有 hover 变黄会
      在静态截图/缩略图里整个消失；卡片本体仍按 R100z59 走——平时白底、hover 才整卡转黄（R100z46）。 */
   .fail-chip.fail-new { border-style: solid; }
-  .fail-chip .nb { font-size: 10px; font-weight: 800; color: #6b4a00; background: #ffc93c; border: 1px solid #e3a008; border-radius: 4px; padding: 0 3px; line-height: 1.35; }
+  .fail-chip .nb { font-size: 9.5px; font-weight: 800; color: #6b4a00; background: #ffc93c; border: 1px solid #e3a008; border-radius: 4px; padding: 0.5px 3px; line-height: inherit; }
   /* R100z44：新入池首日高亮——断板/谐波/九门/吸筹确认·观察池与失效池新归档，
      入池当天整卡淡黄底+琥珀边+「新」徽章（参考失效池既有样式），次日自动恢复。
      置于 .tc.dim 之后：归档态（dim 虚线灰字）遇「新」也要黄底优先。 */
@@ -538,7 +538,7 @@
      R100z60：卡片仍按这个走（hover 才整卡黄），但**徽章本身改回常态实心黄**（见上方
      `.fail-chip .nb` 那段注释），「新」在静态图里也一眼可见。 */
   .tc.fresh { border-style: solid; }
-  .tc .nb { font-size: 10px; font-weight: 800; color: #6b4a00; background: #ffc93c; border: 1px solid #e3a008; border-radius: 4px; padding: 0 3px; line-height: 1.35; flex-shrink: 0; }
+  .tc .nb { font-size: 9.5px; font-weight: 800; color: #6b4a00; background: #ffc93c; border: 1px solid #e3a008; border-radius: 4px; padding: 0.5px 3px; line-height: inherit; flex-shrink: 0; }
   .db-modal-meta { font-size: 12.5px; color: var(--ink); line-height: 1.8; margin-bottom: 10px; }
   .db-modal-meta .lab { color: var(--ink2); }
   .db-kline svg { width: 100%; height: auto; display: block; }
@@ -692,6 +692,9 @@
   /* 2×2 指标矩阵 */
   .tc-g { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
   .tc-cell { background: #eef2f7; border-radius: 7px; padding: 2px 6px 3px; min-width: 0; }
+  /* R100z92：跨两列合并格（谐波失效池「结构状态」＝原 T1/T2 两框位置合一） */
+  .tc-cell.wide { grid-column: span 2; }
+  .tc-cell.wide .v { white-space: normal; line-height: 1.3; font-size: 12px; }
   .tc-cell .k { display: block; font-size: 9.5px; color: var(--ink2); line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tc-cell .v { display: block; font-size: 13.5px; font-weight: 800; line-height: 1.25; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tc-cell .v.up { color: var(--up); }
@@ -2915,8 +2918,9 @@ function tcStopOf(code) {
   if (!ex || ex.stop === null || ex.stop === undefined || !isFinite(Number(ex.stop))) return null;
   return Number(ex.stop);
 }
-function tcCell(k, v, cls) {
-  return '<div class="tc-cell"><span class="k">' + esc(k) + '</span><span class="v ' + (cls || '') + '">' + v + '</span></div>';
+function tcCell(k, v, cls, wide) {
+  // R100z92：wide=true → 跨两列（谐波失效池「结构状态」合并格用）
+  return '<div class="tc-cell' + (wide ? ' wide' : '') + '"><span class="k">' + esc(k) + '</span><span class="v ' + (cls || '') + '">' + v + '</span></div>';
 }
 function tcChgHtml(pct) {
   if (pct === null || pct === undefined || !isFinite(pct)) return '<span class="tc-chg flat">—</span>';
@@ -3297,6 +3301,41 @@ function failTcHtml(e, i, latestD) {
       '\n' + (e.reason || '形态失效') + '\n点击查看K线与消息面'
   });
 }
+/* R100z92（用户 2026-10-08 截图要求）：谐波失效池改用与确认/观察池同款 T2 骨架——
+   框1=距PRZ（现价距失效前结构 prz 上沿的百分比；失效标的多已不在内嵌池，
+   tcKlineLast2 取不到就如实写「—」）、框2=止损（failHz.stop，失效前结构位）、
+   原 T1/T2 两框合并为一格「结构状态」：按失效原因写「仍在反转区附近」（超期归档、
+   价格未破止损）或「不再符合谐波几何」（K线破位、摆动结构不成立）。 */
+function failHzTcHtml(e, i, latestD) {
+  var hz = e.failHz || {};
+  var rows = tcKlineLast2(e.code);
+  var lc = rows ? rows[rows.length - 1][2] : null;
+  var dist = (hz.prz && lc > 0) ? Math.round((hz.prz[1] - lc) / lc * 10000) / 100 : null;
+  var distCls = dist === null ? 'flat' : (dist <= 0 ? 'up' : 'flat');
+  var near = /反转区附近/.test(String(e.reason || ''));
+  var state = near ? '仍在反转区附近' : '不再符合谐波几何';
+  var stateCls = near ? 'flat' : 'warn';
+  var isNew = (latestD && e.entryDate === latestD);
+  var foot = esc(hzPatCn(e.pattern)) + '形态 · ' +
+    (/超龄|超期/.test(String(e.reason || '')) ? '超期归档' : '形态失效') +
+    ' · 归档 ' + esc(e.entryDate || '—');
+  return tcCard({
+    code: e.code, name: e.name || e.code, chg: tcPctOf(e.code, null), dim: true,
+    fresh: isNew, // R100z44：新归档首日同样整卡黄色
+    pills: [e.sector || stkSectorOf(e.code)], sent: true,
+    cells: [
+      tcCell('距PRZ', dist === null ? '—' : fmtPct(dist), distCls),
+      tcCell('止损', '<span class="xt">' + (hz.stop !== null && hz.stop !== undefined ? hz.stop : '—') + '</span>', 'down'),
+      tcCell('结构状态', state, stateCls, true)
+    ],
+    foot: foot,
+    onclick: e.code ? ('openFailIdx(\'harmonic\',' + i + ')') : '',
+    title: (e.name || e.code) + ' ' + (e.code || '') + '\n' + (e.sector || '') + ' · ' + hzPatCn(e.pattern) +
+      (hz.prz ? ' · PRZ ' + hz.prz[0] + '~' + hz.prz[1] : '') +
+      (hz.stop !== null && hz.stop !== undefined ? ' · 止损 ' + hz.stop : '') +
+      '\n' + (e.reason || '形态失效') + '\n点击查看失效前K线与消息面'
+  });
+}
 /* R100i：失败池（断板反包 / 谐波形态）——原符合形态但破位或超期失效的标的归档。
    R100z44（用户 2026-10-04 拍板，推翻 R100z5a）：自失效日起保留 5 个交易日后才剔除
    （生成侧节假日感知滚动窗口，见 common.trading_days_between）。
@@ -3313,13 +3352,20 @@ function dbFailHtml(failPool, kind) {
       '<div class="db-empty">暂无失效标的（失效标的中自失效日起保留 5 个交易日，窗口内会留在此池，超期自动滚出）</div></div>';
   }
   var _latestD = failPoolLatest(failPool); // R100z41：最新一批归档的日期，用于高亮 + 标题标注
-  // R100z42：断板反包失效池 → 统一 T2 四格卡；谐波失效池 → 沿用紧凑 chip
+  // R100z42：断板反包失效池 → 统一 T2 四格卡；R100z92：谐波失效池 → 同款 T2 卡（距PRZ/止损/结构状态合并格）
   if (kind === 'duanban') {
     var tcItems = failPool.map(function (e, i) { return failTcHtml(e, i, _latestD); }).join('');
     return '<div class="db-pool p-fail"><h2>失效归档池 · ' + failPool.length + ' 只' +
       (_latestD ? ' · 最近归档 ' + esc(String(_latestD).slice(5)) : '') + '</h2>' +
       '<div class="db-sub">原符合断板反包形态、因破位或超期失效而归因失败；自失效日起保留 5 个交易日后剔除（卡面「反包概率」记为失效）</div>' +
       '<div class="db-chips">' + tcItems + '</div></div>';
+  }
+  if (kind === 'harmonic') {
+    var hzItems = failPool.map(function (e, i) { return failHzTcHtml(e, i, _latestD); }).join('');
+    return '<div class="db-pool p-fail"><h2>失效归档池 · ' + failPool.length + ' 只' +
+      (_latestD ? ' · 最近归档 ' + esc(String(_latestD).slice(5)) : '') + '</h2>' +
+      '<div class="db-sub">原符合谐波形态、因破位或超期失效而归因失败；自失效日起保留 5 个交易日后剔除</div>' +
+      '<div class="db-chips">' + hzItems + '</div></div>';
   }
   var items = failPool.map(function (e, i) {
     var nm = (e.name && e.name !== e.code) ? e.name : '';
