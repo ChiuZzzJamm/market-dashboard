@@ -3,26 +3,26 @@
  "series": [
   {
    "date": "2026-09-30",
-   "avgPct": -0.99,
-   "pf": 0.9901,
+   "avgPct": -0.467,
+   "pf": 0.9953,
    "bench": 1.0,
-   "dd": -0.99
+   "dd": -0.47
   },
   {
    "date": "2026-10-08",
-   "avgPct": 2.9,
-   "pf": 1.0188,
+   "avgPct": -1.877,
+   "pf": 0.9767,
    "bench": 0.9787,
-   "dd": 0.0
+   "dd": -2.33
   }
  ],
  "stat": {
   "days": 2,
-  "totRetPct": 1.88,
+  "totRetPct": -2.33,
   "benchRetPct": -2.13,
-  "excessPct": 4.01,
-  "maxDdPct": -0.99,
-  "maxDdDate": "2026-09-30",
+  "excessPct": -0.2,
+  "maxDdPct": -2.33,
+  "maxDdDate": "2026-10-08",
   "note": "组合=各预测日 8 只标的等权平均涨跌幅累乘；基准=同日市场基准累乘；回撤按组合净值峰谷算"
  }
 }

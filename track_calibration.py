@@ -246,12 +246,21 @@ def build_curve(log):
     series, pf, bn, peak = [], 1.0, 1.0, 1.0
     for dt in sorted(log.get('log', {}).keys()):
         items = log['log'][dt] or []
-        avg = next((x.get('avgPct') for x in items if x.get('avgPct') is not None), None)
-        if avg is None:
-            avg = next((x.get('actualPct') for x in items if x.get('actualPct') is not None), None)
+        # 组合=该预测日所有板块（6 板块 × 8 只=48 只）等权平均，不能用第一个板块代表全天
+        # （旧实现只取第一个板块的 avgPct，导致 10-08 显示 +2.9% 实为固态电池单板块，真值≈-1.88%）
+        avgs = [float(x['avgPct']) for x in items
+                if isinstance(x.get('avgPct'), (int, float))]
+        if avgs:
+            avg = sum(avgs) / len(avgs)
+        else:
+            acts = [float(x['actualPct']) for x in items
+                    if isinstance(x.get('actualPct'), (int, float))]
+            avg = sum(acts) / len(acts) if acts else None
         if avg is None:
             continue
-        b = next((x.get('benchPct') for x in items if x.get('benchPct') is not None), None)
+        bs = [float(x['benchPct']) for x in items
+              if isinstance(x.get('benchPct'), (int, float))]
+        b = sum(bs) / len(bs) if bs else None
         pf *= (1 + avg / 100.0)
         if b is not None:
             bn *= (1 + b / 100.0)

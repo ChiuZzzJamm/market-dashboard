@@ -31,6 +31,7 @@
     G13 节假日表      common 与 cal_factor 两份手工节假日表同源等价 + 覆盖到期前 30 天 WARN 提醒跨年更新
     G14 路径断裂      prompt 内脚本绝对路径必须含完整 dashboard/ 或走 cd 相对调用（禁「缺 dashboard/ 裸路径」）
     G16 叙事深度      防 AI 偷懒·叙事主字段字数硬下限（A 股≥240 / 美股≥200 / outlook≥300 等，低于即 FAIL 拦部署）
+    G17 防模板复读    防 AI 偷懒·同一句 ≥14 字在 ≥3 个叙述字段复现 = 万能模板尾巴（R100z96：us 页 34 条统一收尾事故），FAIL 拦部署
 """
 import ast
 import json
@@ -1074,6 +1075,27 @@ def g16_narrative_depth(r):
             if isinstance(e, dict):
                 add(f"ashare.accumulation.{grp}[{i}].note", e.get("note"), 90)
 
+    # deduce 三候选推演（全站任意条目，R100z96：main/counter 曾被 prompt 定为「一句话」口径）
+    def _deduce_walk(o, k=[0]):
+        if isinstance(o, dict):
+            dd = o.get("deduce")
+            if isinstance(dd, dict):
+                add(f"deduce#{k[0]}.main", dd.get("main"), 60)
+                add(f"deduce#{k[0]}.counter", dd.get("counter"), 40)
+                for j, c in enumerate(dd.get("cands") or []):
+                    if isinstance(c, dict):
+                        add(f"deduce#{k[0]}.cands[{j}].text", c.get("text"), 40)
+                        el = c.get("eliminate")
+                        add(f"deduce#{k[0]}.cands[{j}].eliminate",
+                            el if isinstance(el, str) else "", 15)
+                k[0] += 1
+            for v in o.values():
+                _deduce_walk(v, k)
+        elif isinstance(o, list):
+            for v in o:
+                _deduce_walk(v, k)
+    _deduce_walk(D)
+
     fails = []
     for label, text, floor in checks:
         if len(text) < floor:
@@ -1082,7 +1104,89 @@ def g16_narrative_depth(r):
         r.fail("G16", f"发现 {len(fails)} 处叙事字段过短（防 AI 偷懒硬闸）："
                + "；".join(fails[:15]) + (" …" if len(fails) > 15 else ""))
     else:
-        r.ok("G16", f"全站叙事字段深度达标（校验 {len(checks)} 处，阈值 90~300 字）")
+        r.ok("G16", f"全站叙事字段深度达标（校验 {len(checks)} 处，阈值 15~300 字）")
+
+
+def g17_template_tails(r):
+    """G17 防 AI 偷懒·防模板复读闸（R100z96）。
+
+    事故：us.* 34 条叙述字段全部以同一句万能尾巴收尾（25×「操作上需结合盘面强度
+    与成交量变化动态评估，切忌单因子外推。」+ 9×「映射到A股…避免追高。」）——
+    深度达标但内容模板化，用户一眼识破「又偷懒了」。本闸按「同一句 ≥14 字出现在
+    ≥3 个不同叙述字段」判万能模板，FAIL 拦部署。扫描面与 G16 相同（真渲染的长文
+    主字段 + 全站 deduce 三候选），不含 chip 标签与量化池。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G17", f"data.js 解析失败：{e}")
+        return
+
+    owner = {}  # sentence -> set(field label)
+
+    def put(text, label):
+        for s in re.split(r"(?<=[。！？])", str(text or "")):
+            s = s.strip()
+            if len(s) >= 14:
+                owner.setdefault(s, set()).add(label)
+
+    for mk in ("ashare", "us"):
+        sec = D.get(mk) or {}
+        for arr in ("sectorsUp", "sectorsDown"):
+            for i, s in enumerate(sec.get(arr) or []):
+                if isinstance(s, dict):
+                    put((s.get("reason") or {}).get("detail"), f"{mk}.{arr}[{i}]")
+        for s in ("bullNews", "bearNews", "macroNews", "intlNews", "bankViews"):
+            for i, nw in enumerate(sec.get(s) or []):
+                if isinstance(nw, dict):
+                    put(nw.get("summary"), f"{mk}.{s}[{i}]")
+        if sec.get("outlook"):
+            put(sec.get("outlook"), f"{mk}.outlook")
+    ap = D.get("aiPrediction") or {}
+    for i, s in enumerate(ap.get("sectors") or []):
+        if isinstance(s, dict):
+            put(s.get("logic"), f"aiPrediction.sectors[{i}]")
+    put(D.get("openOutlook"), "openOutlook")
+    if isinstance(ap, dict) and ap.get("openOutlook"):
+        put(ap.get("openOutlook"), "aiPrediction.openOutlook")
+    for i, s in enumerate((D.get("ashare") or {}).get("lianban") or []):
+        if isinstance(s, dict):
+            put(s.get("story"), f"ashare.lianban[{i}]")
+    dbsec = (D.get("ashare") or {}).get("duanban") or {}
+    for pool in ("confirmed", "watching"):
+        for i, e in enumerate(dbsec.get(pool) or []):
+            if isinstance(e, dict):
+                put(e.get("story"), f"ashare.duanban.{pool}[{i}]")
+    for grp in ("scored", "strong", "watch"):
+        for i, e in enumerate(((D.get("ashare") or {}).get("accumulation") or {}).get(grp) or []):
+            if isinstance(e, dict):
+                put(e.get("note"), f"ashare.accumulation.{grp}[{i}]")
+    # 全站 deduce
+    def _ded_walk(o):
+        if isinstance(o, dict):
+            dd = o.get("deduce")
+            if isinstance(dd, dict):
+                lbl = f"deduce#{id(dd) % 10000}"
+                put(dd.get("main"), lbl + ".main")
+                put(dd.get("counter"), lbl + ".counter")
+                for c in dd.get("cands") or []:
+                    if isinstance(c, dict):
+                        put(c.get("text"), lbl + ".cand")
+            for v in o.values():
+                _ded_walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                _ded_walk(v)
+    _ded_walk(D)
+
+    dups = sorted(((s, o) for s, o in owner.items() if len(o) >= 3),
+                  key=lambda x: -len(x[1]))
+    if dups:
+        top = dups[:3]
+        det = "；".join(f"「{s[:30]}…」×{len(o)} 处" for s, o in top)
+        r.fail("G17", f"发现 {len(dups)} 句万能模板复读（≥3 个字段共用同一句，防 AI 偷懒硬闸）：{det}")
+    else:
+        r.ok("G17", f"无跨字段模板复读（扫描 {sum(len(o) for o in owner.values())} 句次 / {len(owner)} 句）")
 
 
 def main():
@@ -1114,6 +1218,7 @@ def main():
     g14_prompt_broken_path(r)
     g15_interp_bins(r)
     g16_narrative_depth(r)
+    g17_template_tails(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
