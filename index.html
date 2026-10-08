@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610090223"></script>
+<script src="data.js?v=202610090246"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -605,7 +605,9 @@
   /* R100z28：强池圆点改红（与卡内 acc-grd.strong 同色、与谐波『确认池』红点同语义），观察池＝断板观察池同款蓝点 */
   .acc-sub.s .dot { background:var(--up); box-shadow:0 0 0 4px var(--up-soft); }
   .acc-sub.w .dot { background:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); }
-  .acc-sub .cnt { font-size:11px; font-weight:600; color:var(--ink2); }
+  /* R100z101：池头说明行——对齐 .db-pool .db-sub（12px 灰字、独占一行）；
+     原 .acc-sub .cnt（11px 挤在池名同行）已随池头改版移除 */
+  .acc-sub-desc { font-size:12px; color:var(--ink2); margin:0 0 2px; }
   /* R100m：九门评分徽章——红色、与代码同行平行（与吸筹评级徽章 acc-grd 区分） */
   .pw-grd { font-size:10.5px; font-weight:800; border-radius:999px; padding:1px 8px; flex-shrink:0; font-variant-numeric:tabular-nums; color:#fff; background:linear-gradient(135deg,#e35d5d,#c0392b); }
   /* R100m：全站标的池角标（谐波🌟/吸筹👀/九门💡/断板❗️），可叠加 */
@@ -660,8 +662,8 @@
   .tech-legend .lg-hr { height:1px; background:var(--line); margin:7px 0; }
   .tech-legend .lg-tip { color:#8a5a00; background:#fff8e6; border:1px solid #f0dcaa; border-radius:6px; padding:4px 8px; font-size:11px; line-height:1.7; }
   /* R100z45：四子页「口径条 → 首个池标题」间距统一 36px（口径条 mb14 + 容器上内边距 22，对齐断板/谐波 .db-pool）。
-     此前九门 38px（.card 上内边距 24）、吸筹 48px（再叠 .acc-sub:first-child 的 10px），肉眼空白不一。 */
-  #db-acc .card, #db-pw .card { padding-top: 22px; }
+     R100z101：九门页已去掉 .card 大标题（直排 .db-pool，与谐波同构），#db-pw .card 规则随之失效移除。 */
+  #db-acc .card { padding-top: 22px; }
   #db-acc .card > .acc-sub:first-child { margin-top: 0; }
   /* 信号滞后灰标（R100z22）：吸筹是历史 K 线模型，同样分数信号新旧不同，滞后 ≥10 日转告警色 */
   /* R100z36：卡片内的价格/目标位强调（.exit-line .xt 只在退出纪律行内生效，tc 卡片需单列） */
@@ -1399,7 +1401,8 @@ function _ddClean(t) {
    异动板块/题材掘金保持原位（hideBadge 传 true 即隐藏） */
 function deduceConfBadge(dd) {
   if (!dd || !dd.conf) return '';
-  var cf = String(dd.conf);
+  // R100z101：防御式归一——AI 偶发自写「中等确信」（prompt 枚举已改为'中确信'，但历史/未来写回仍可能溜进来），渲染层统一 中等→中
+  var cf = String(dd.conf).replace(/中等/g, '中');
   var cls = cf.indexOf('高') >= 0 ? 'conf-high' : (cf.indexOf('中') >= 0 ? 'conf-mid' : 'conf-low');
   return '<span class="conf-badge ' + cls + '">' + esc(cf) + '</span>';
 }
@@ -2165,9 +2168,10 @@ function renderThemePicks(list, tradeDate) {
   var s = '';
   list.forEach(function (it) {
     s += '<div class="tp-item' + (it.direction === '看跌' ? ' tp-down' : '') + '">';
-    // R97：事件行兼容 us 的 theme 字段；行尾标注发布日期，让用户知道是当天还是前几天的内容
+    // R97：事件行兼容 us 的 theme 字段。R100z101（用户 2026-10-09）：删掉「10/8 发布」日期徽章
+    // （模块标题自带交易日，卡片上再标一次属重复信息）。
     var ev = it.event || it.theme || '';
-    if (ev) s += '<div class="tp-event">⚡ ' + esc(ev) + (tradeDate ? ' <span class="nc-time">' + esc(shortDate(tradeDate)) + ' 发布</span>' : '') + '</div>'; // R100t：徽标前补空格
+    if (ev) s += '<div class="tp-event">⚡ ' + esc(ev) + '</div>';
     // R100z93b：去掉「逻辑传导：」标签——内容本身就是深度整合分析（资金+盘面+情绪+要闻+传导），
     // 直接呈现；若 AI 仍写 → 级联则降级为 ①②③ 分步（renderLogicChain 兜底），纯散文则原样显示。
     if (it.logic) s += '<div class="tp-logic">' + renderLogicChain(it.logic) + '</div>';
@@ -2710,9 +2714,11 @@ function renderAccumulation() {
     // 滞后 ≥10 日按纪律已降入观察池（见下方分桶），此处用告警色标出，与降级逻辑同源。
     var lagCls = lagDays >= 10 ? 'warn' : '';
     var lagTxt = lagDays > 0 ? lagDays + ' 日' : '—';
+    // R100z101（用户 2026-10-09）：技术指标换行——池名·板型一行、「特征 …」独占一行，
+    // 修「接力板」等词被折行拆字的挤压观感（对齐谐波卡 foot 的换行留白）。
     var foot = (it.grade === '强' ? '确认池' : '观察池') +
-      ' · 特征 ' + (hitList.length ? hitList.join('-') : '无') +
       (it.f5Tier && it.f5Tier !== '-' ? ' · ' + esc(it.f5Tier) : '') +
+      '<br>特征 ' + (hitList.length ? hitList.join('-') : '无') +
       (lagDays >= 10 ? ' · <span style="color:#b3541e">结构走旧·不得主推</span>' : '');
     return tcCard({
       code: it.code, name: nm || it.code, chg: tcPctOf(it.code, null), dim: it.grade !== '强',
@@ -2760,12 +2766,17 @@ function renderAccumulation() {
   });
   // R100z43：强/观察两节标题换行排版对齐谐波页（池名 nowrap 不折断，说明文字可整体折到下一行），
   // 修手机端「强/池」两字竖排断行（image#2）。池名包 .t 白空格 nowrap + 父级 flex-wrap。
+  // R100z101（用户 2026-10-09，对齐谐波页池头样式）：只数并入池名同行同字号（「确认池 · 6 只」），
+  // 说明文字整体下沉为独立小字行（.acc-sub-desc），不再用 11px .cnt 挤在同一行。
   var secS = sB.length
-    ? '<div class="acc-sub s"><span class="dot"></span><span class="t">确认池</span><span class="cnt">共 ' + sB.length + ' 只 · 特征命中多、结构完整，可直接跟（盯次日量能与竞价）</span></div><div class="acc-grid">' + sB.join('') + '</div>' : '';
+    ? '<div class="acc-sub s"><span class="dot"></span><span class="t">确认池 · ' + sB.length + ' 只</span></div>' +
+      '<div class="acc-sub-desc">特征命中多、结构完整，可直接跟（盯次日量能与竞价）</div>' +
+      '<div class="acc-grid">' + sB.join('') + '</div>' : '';
   var secW = wB.length
-    ? '<div class="acc-sub w"><span class="dot"></span><span class="t">观察池</span><span class="cnt">共 ' + wB.length + ' 只 · 缺 1-2 项，只排队候补，不主动做' +
+    ? '<div class="acc-sub w"><span class="dot"></span><span class="t">观察池 · ' + wB.length + ' 只</span></div>' +
+      '<div class="acc-sub-desc">缺 1-2 项，只排队候补，不主动做' +
       (demoted ? '；其中 <b>' + demoted + '</b> 只打分虽到强池线，但信号滞后超 10 日、结构已走旧，按纪律<b>降级至此</b>' : '') +
-      '</span></div><div class="acc-grid">' + wB.join('') + '</div>' : '';
+      '</div><div class="acc-grid">' + wB.join('') + '</div>' : '';
   // R100z43：去掉「🧲 主力吸筹 + 日期」大标题（image#1 用户要求）——tab 名与口径条已够定位，卡片直接进分池。
   // R100z56（用户 2026-10-04 要求）：① 删掉下方原本渲染的 a.summary 口径条（「六特征打分：强 N / 观察 M」，
   //   强弱只数这类口径随行情天天变、页面上最容易过期，卡片本身已有强度/滞后格，口径不再重复）；
@@ -2823,11 +2834,12 @@ function renderPowerScreen() {
   // R100z56（用户 2026-10-04 要求）：九门页同样补失效归档池（原在池内、本轮不再过阈值的标的，
   // 自失效日起留 5 个交易日，生成侧 power_screener.py 走 roll_fail_pool 剔除）。
   var pwFail = dbFailHtml(p.failPool || [], 'powerScreen'); // R100z58 无条件调用；R100z60 空池仍渲染 0 只块（留白=块上 16px 间距，不是删块）
+  // R100z101（用户 2026-10-09，对齐吸筹页 R100z43 同款要求）：删「⚡ 日线九门 + 日期」大标题——
+  // tab 名与口径条已够定位，模块直接以「确认池」开头（与谐波/断板页 .db-pool 直排同构，不再套 .card）。
   return gateDef +
-    '<div class="card"><h2>⚡ 日线九门' + (p.tradeDate ? ' <span class="h2-date">' + esc(p.tradeDate) + '</span>' : '') + '</h2>' +
     '<div class="db-pool p-conf"><h2>确认池 · ' + PW_SORTED.length + ' 只</h2>' +
     '<div class="db-sub">九门全过阈值、当日最强，可直接跟（次日看能否站稳 MA20、量能能否续上，站不稳量缩先出）</div>' +
-    '<div class="pw-grid">' + items + '</div></div>' + pwFail + (p.summary ? '<div class="note-line">' + esc(p.summary) + '</div>' : '') + '</div>';
+    '<div class="pw-grid">' + items + '</div></div>' + pwFail + (p.summary ? '<div class="note-line">' + esc(p.summary) + '</div>' : '');
 }
 
 // R100h：必带数据清单（renderChecklist）已整体下线（2026-09-28 用户要求），data_checklist.py 同步删除
