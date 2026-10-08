@@ -30,6 +30,7 @@
     G12 半死链路      data.js 顶层产出必须登记「流程主人」+ 被自动化点名 + 脚本零孤儿
     G13 节假日表      common 与 cal_factor 两份手工节假日表同源等价 + 覆盖到期前 30 天 WARN 提醒跨年更新
     G14 路径断裂      prompt 内脚本绝对路径必须含完整 dashboard/ 或走 cd 相对调用（禁「缺 dashboard/ 裸路径」）
+    G16 叙事深度      防 AI 偷懒·叙事主字段字数硬下限（A 股≥240 / 美股≥200 / outlook≥300 等，低于即 FAIL 拦部署）
 """
 import ast
 import json
@@ -999,6 +1000,91 @@ def g15_interp_bins(r):
         r.ok("G15", f"{len(autos)} 份 prompt 引用的解释器入口均可用（run-node/run-python 自修复生效）")
 
 
+def g16_narrative_depth(r):
+    """G16 防 AI 偷懒·叙事深度硬闸（R100z94）。
+
+    背景：用户复盘满意 A 股深度（板块 285-390 / 题材 371-411 / 要闻 333-431 字），
+    但美股 us.* 长期只有 60-110 字（根因：07:30 / 周日两条自动化 prompt 把字数上限
+    写成 60-110）。量化页（谐波/九门/吸筹）无叙事字段渲染，其空 story 是设计行为，不在这
+    里管；chip 标签类字段（lianban.reason / 各池 note / star.picks.note / failPool.reason）
+    也非主叙事，不在这管。本闸只管「真正渲染给用户的长文主字段」。
+
+    阈值（字符数，留足安全垫、远在偷懒区之上）：
+        A 股 板块 reason.detail / 题材 logic / 五节要闻 summary → 240
+        A 股 outlook / us.outlook → 300
+        A 股 aiPrediction.sectors[].logic → 200
+        A 股 开盘前瞻 openOutlook → 300
+        A 股 lianban[].story → 120；duanban confirmed/watching[].story → 100
+        A 股 accumulation.{scored,strong,watch}[].note → 90
+        美股 板块 reason.detail / 五节要闻 summary → 200
+    低于阈值即 FAIL（拦部署）；阈值取「当前已达标数据的最小值再下探一档」，
+    既能挡住偷懒，又不误伤正常波动。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G16", f"data.js 解析失败：{e}")
+        return
+
+    checks = []  # (label, text, floor)
+
+    def add(label, text, floor):
+        checks.append((label, str(text or ""), floor))
+
+    # 板块异动 + 五节要闻（A 股 / 美股）
+    for mk, sec_floor, news_floor in (("ashare", 240, 240), ("us", 200, 200)):
+        sec = D.get(mk) or {}
+        for arr in ("sectorsUp", "sectorsDown"):
+            for i, s in enumerate(sec.get(arr) or []):
+                if isinstance(s, dict):
+                    add(f"{mk}.{arr}[{i}].reason.detail",
+                        (s.get("reason") or {}).get("detail"), sec_floor)
+        for s in ("bullNews", "bearNews", "macroNews", "intlNews", "bankViews"):
+            for i, nw in enumerate(sec.get(s) or []):
+                if isinstance(nw, dict):
+                    add(f"{mk}.{s}[{i}].summary", nw.get("summary"), news_floor)
+        if sec.get("outlook"):
+            add(f"{mk}.outlook", sec.get("outlook"), 300)
+
+    # AI 预测逻辑链 + 开盘前瞻（顶层）
+    ap = D.get("aiPrediction") or {}
+    for i, s in enumerate(ap.get("sectors") or []):
+        if isinstance(s, dict):
+            add(f"aiPrediction.sectors[{i}].logic", s.get("logic"), 200)
+    if D.get("openOutlook"):
+        add("openOutlook", D.get("openOutlook"), 300)
+    if isinstance(ap, dict) and ap.get("openOutlook"):
+        add("aiPrediction.openOutlook", ap.get("openOutlook"), 300)
+
+    # 连板天梯 story（A 股）
+    for i, s in enumerate((D.get("ashare") or {}).get("lianban") or []):
+        if isinstance(s, dict):
+            add(f"ashare.lianban[{i}].story", s.get("story"), 120)
+
+    # 断板反包 confirmed/watching story
+    db = (D.get("ashare") or {}).get("duanban") or {}
+    for pool in ("confirmed", "watching"):
+        for i, e in enumerate(db.get(pool) or []):
+            if isinstance(e, dict):
+                add(f"ashare.duanban.{pool}[{i}].story", e.get("story"), 100)
+
+    # 吸筹 scored/strong/watch note
+    for grp in ("scored", "strong", "watch"):
+        for i, e in enumerate(((D.get("ashare") or {}).get("accumulation") or {}).get(grp) or []):
+            if isinstance(e, dict):
+                add(f"ashare.accumulation.{grp}[{i}].note", e.get("note"), 90)
+
+    fails = []
+    for label, text, floor in checks:
+        if len(text) < floor:
+            fails.append(f"{label} 仅 {len(text)} 字（<{floor}，疑似偷懒/未写完）")
+    if fails:
+        r.fail("G16", f"发现 {len(fails)} 处叙事字段过短（防 AI 偷懒硬闸）："
+               + "；".join(fails[:15]) + (" …" if len(fails) > 15 else ""))
+    else:
+        r.ok("G16", f"全站叙事字段深度达标（校验 {len(checks)} 处，阈值 90~300 字）")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -1027,6 +1113,7 @@ def main():
         g11_smoke(r)
     g14_prompt_broken_path(r)
     g15_interp_bins(r)
+    g16_narrative_depth(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
