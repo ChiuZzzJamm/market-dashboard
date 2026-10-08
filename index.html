@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610081046"></script>
+<script src="data.js?v=202610081101"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -599,6 +599,13 @@
   .risk-dot.sev-orange { color:#7a4a00; background:#f59e0b; }
   .risk-dot.sev-yellow { color:#555; background:#d9d9d9; }
   .risk-line { font-size:11.5px; color:#a5342a; margin:4px 0 2px; line-height:1.6; }
+  /* R100z87：弹窗内可见风险提示徽章（「风险提示 · 2026-09-25 减持公告」）——
+     与 db-sent 同族尺寸，severity 三档配色（red 红边红字 / orange 琥珀 / yellow 灰） */
+  .risk-tip { font-size: 11px; font-weight: 700; border-radius: 4px; padding: 1px 7px; line-height: 1.5;
+    white-space: nowrap; flex-shrink: 0; display: inline-block; cursor: help;
+    background: var(--down-soft); color: var(--down); border: 1px solid var(--down); }
+  .risk-tip.sev-orange { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
+  .risk-tip.sev-yellow { background: #eef1f5; color: #555; border-color: #d6dee7; }
   /* R100p：弧色标注（.tk-chip 边框渐变描边）按用户要求整体删除，胶囊恢复统一背景 */
   /* R100n：通用标的板块小胶囊——R100p 起仅用于弹窗标题行（stkSecBadge），主页胶囊不再显示 */
   .chip-sec { font-size:11px; font-weight:700; color:var(--accent-deep); background:var(--accent-soft); border:1px solid currentColor; border-radius:4px; padding:1px 7px; line-height:1.5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:96px; flex-shrink:0; }
@@ -1650,6 +1657,32 @@ function riskBadge(code0, poolMode) {
     tip = '风险参考（如股东质押）：' + rs;
   }
   return '<span class="risk-dot' + cls + '" title="' + escAttr(tip) + '">⚠️</span>';
+}
+
+/* R100z87（用户 2026-10-08）：标的弹窗内的**可见**风险提示徽章——原 ⚠️ 角标信息全在 title 悬停里，
+   手机端看不到；此徽章把原因直接写在文本里（格式「风险提示 · 2026-09-25 减持公告」），
+   放在利好/利空/中性徽章前面。按 severity 三档配色；reasons 缺失时回退 watch 首条，
+   两者全空则不渲染（不占位）。悬停 title 保留完整口径（progress 等仍在卡片 ⚠️ 角标上）。 */
+function riskTipBadge(code0, poolMode) {
+  if (!RISK_BL || !code0) return '';
+  var hit = RISK_BL[String(code0).replace(/\D/g, '')];
+  if (!hit) return '';
+  var rs = (hit.reasons || []).join('；');
+  if (!rs && (hit.watch || []).length) rs = hit.watch.join('；');
+  if (!rs) return '';
+  var sev = hit.severity || 'red';
+  var cls, tip;
+  if (sev === 'red') {
+    cls = ' sev-red';
+    tip = (poolMode ? '硬风险提示（技术观察池仅打标不剔除）：' : '硬风险（不进 8 只池）：') + rs;
+  } else if (sev === 'orange') {
+    cls = ' sev-orange';
+    tip = '警示（可保留但需重点关注）：' + rs;
+  } else {
+    cls = ' sev-yellow';
+    tip = '风险参考（如股东质押）：' + rs;
+  }
+  return '<span class="risk-tip' + cls + '" title="' + escAttr(tip) + '">风险提示 · ' + esc(rs) + '</span>';
 }
 
 /* R100z15 缺口④：组合净值曲线——命中 60% 但亏钱、命中 50% 但赚钱，光看命中率分不出来。
@@ -3365,6 +3398,7 @@ function openDbModal(key) {
       if (isFail) return tb + '<span class="db-stage" style="font-size:11px;font-weight:700;border-radius:4px;padding:1px 7px;border:1px solid currentColor;background:#eef1f4;color:#66707c">失效归档池</span>';
       return tb || ('<span class="db-stage ' + (done ? 'done' : 'hold') + '" style="font-size:11px;font-weight:700;border-radius:4px;padding:1px 7px;border:1px solid currentColor;' + (done ? 'background:var(--up-soft);color:var(--up)' : 'background:var(--accent-soft);color:var(--accent-deep)') + '">' + (done ? '确认池' : ('观察池 · ' + esc(e.stage))) + '</span>');
     })() +
+    riskTipBadge(String(e.code)) + // R100z87：可见风险提示徽章（手机端也能看到，原 ⚠️ 悬停信息不可达）
     dbSentBadge(e, 'font-size:11px;padding:1px 7px;border-radius:4px;') +
     '</div>' +
     (function () { var hz = findHarmonic(String(e.code)); return hz ? '<div class="hz-strip">' + hzSideHtml(hz) + hzMiniWrap(hz) + '</div>' : ''; })(); // R100z4：断板弹窗谐波参数+迷你图独立成行（命中谐波池才渲染）
@@ -4073,6 +4107,7 @@ function openStkModal(code, name, note) {
     (nav ? '<span class="cd2">' + (STK_IDX + 1) + '/' + STK_GRP.length + '</span>' : '') + // R100s：数量紧跟代码
     '<button class="db-modal-close" onclick="stkClose()">×</button>' +
     '<div class="m-badge-row">' + stkSecBadge(code) + stkTechBadgeHtml(code) + stkPoolBadge(code) +
+    riskTipBadge(code) + // R100z87：可见风险提示徽章（手机端可达，置于情绪徽章前）
     (stkTechMeta(code) ? sentBadgeHtml(code) : '') + // R100z4c：九门/谐波/吸筹标的徽标行末尾加 利好/中性/利空（非技术池标的不显示）
     '</div>' +
     (hz ? '<div class="hz-strip">' + hzSideHtml(hz) + hzMiniWrap(hz) + '</div>' : ''); // R100z4：谐波参数+迷你图独立成行，参数贴左填满消除空档
@@ -4120,7 +4155,7 @@ function openStkModal(code, name, note) {
       if (!cd0) { cd0 = document.createElement('span'); cd0.className = 'cd2'; hd0.insertBefore(cd0, hd0.querySelector('.db-modal-close')); }
       cd0.textContent = mapped;
       var row0 = hd0.querySelector('.m-badge-row'); // R100s：反查回填后补第二行徽标（板块+技术+池归属）
-      if (row0) row0.innerHTML = stkSecBadge(mapped) + stkTechBadgeHtml(mapped) + stkPoolBadge(mapped) + (stkTechMeta(mapped) ? sentBadgeHtml(mapped) : '');
+      if (row0) row0.innerHTML = stkSecBadge(mapped) + stkTechBadgeHtml(mapped) + stkPoolBadge(mapped) + riskTipBadge(mapped) + (stkTechMeta(mapped) ? sentBadgeHtml(mapped) : ''); // R100z87：补风险提示徽章
       stkFetchKline(mapped, render);
       return;
     }
@@ -4132,7 +4167,7 @@ function openStkModal(code, name, note) {
       if (!cdSpan) { cdSpan = document.createElement('span'); cdSpan.className = 'cd2'; hd.insertBefore(cdSpan, hd.querySelector('.db-modal-close')); }
       cdSpan.textContent = fullCode;
       var row1 = hd.querySelector('.m-badge-row'); // R100s：反查回填后补第二行徽标（板块+技术+池归属）
-      if (row1) row1.innerHTML = stkSecBadge(fullCode) + stkTechBadgeHtml(fullCode) + stkPoolBadge(fullCode) + (stkTechMeta(fullCode) ? sentBadgeHtml(fullCode) : '');
+      if (row1) row1.innerHTML = stkSecBadge(fullCode) + stkTechBadgeHtml(fullCode) + stkPoolBadge(fullCode) + riskTipBadge(fullCode) + (stkTechMeta(fullCode) ? sentBadgeHtml(fullCode) : ''); // R100z87：补风险提示徽章
       stkFetchKline(fullCode, render);
     });
     return;
