@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610081101"></script>
+<script src="data.js?v=202610081105"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -600,12 +600,13 @@
   .risk-dot.sev-yellow { color:#555; background:#d9d9d9; }
   .risk-line { font-size:11.5px; color:#a5342a; margin:4px 0 2px; line-height:1.6; }
   /* R100z87：弹窗内可见风险提示徽章（「风险提示 · 2026-09-25 减持公告」）——
-     与 db-sent 同族尺寸，severity 三档配色（red 红边红字 / orange 琥珀 / yellow 灰） */
-  .risk-tip { font-size: 11px; font-weight: 700; border-radius: 4px; padding: 1px 7px; line-height: 1.5;
+     R100z88：按用户指定配色重做=字黄、底棕（暗红棕），前置 ⚠️，与用户参考图一致；
+     severity 三档仅保留在 hover title 里（视觉统一为警示款） */
+  .risk-tip { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1.5px 8px 1.5px 6px; line-height: 1.5;
     white-space: nowrap; flex-shrink: 0; display: inline-block; cursor: help;
-    background: var(--down-soft); color: var(--down); border: 1px solid var(--down); }
-  .risk-tip.sev-orange { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
-  .risk-tip.sev-yellow { background: #eef1f5; color: #555; border-color: #d6dee7; }
+    background: #7a2b1f; color: #ffd54a; border: 1px solid #5f2117; }
+  .risk-tip.sev-orange { background: #8a4a17; color: #ffd54a; border-color: #6d3a12; }
+  .risk-tip.sev-yellow { background: #6e5a1e; color: #ffe082; border-color: #57471a; }
   /* R100p：弧色标注（.tk-chip 边框渐变描边）按用户要求整体删除，胶囊恢复统一背景 */
   /* R100n：通用标的板块小胶囊——R100p 起仅用于弹窗标题行（stkSecBadge），主页胶囊不再显示 */
   .chip-sec { font-size:11px; font-weight:700; color:var(--accent-deep); background:var(--accent-soft); border:1px solid currentColor; border-radius:4px; padding:1px 7px; line-height:1.5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:96px; flex-shrink:0; }
@@ -1682,7 +1683,7 @@ function riskTipBadge(code0, poolMode) {
     cls = ' sev-yellow';
     tip = '风险参考（如股东质押）：' + rs;
   }
-  return '<span class="risk-tip' + cls + '" title="' + escAttr(tip) + '">风险提示 · ' + esc(rs) + '</span>';
+  return '<span class="risk-tip' + cls + '" title="' + escAttr(tip) + '">⚠️ 风险提示 · ' + esc(rs) + '</span>';
 }
 
 /* R100z15 缺口④：组合净值曲线——命中 60% 但亏钱、命中 50% 但赚钱，光看命中率分不出来。
