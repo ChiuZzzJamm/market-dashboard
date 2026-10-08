@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610090217"></script>
+<script src="data.js?v=202610090223"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -124,7 +124,7 @@
   .persp-tag { font-size: 10.5px; font-weight: 600; color: var(--ink2); border: 1px solid var(--line, #d8dee6); border-radius: 999px; padding: 1.5px 8px; margin-left: 6px; white-space: nowrap; line-height: 1.45; }
   .dir-up { background: var(--up); }
   .dir-down { background: var(--down); }
-  /* 置信度：低→浅蓝，中→中蓝，高→深蓝 */
+  /* 确信：低→浅蓝，中→中蓝，高→深蓝 */
   .conf-badge { font-size: 11px; border-radius: 999px; padding: 2px 9px; font-weight: 700; margin-left: 6px; line-height: 1.45; border: 1px solid currentColor; } /* R100y：全站徽标统一带边框 */
   /* R100z11：预期差徽章（price-in 结构化字段落前端）——三档配色对应 4c 结论三选一 */
   .exp-badge { font-size: 11px; border-radius: 999px; padding: 2px 9px; font-weight: 700; margin-left: 6px; line-height: 1.45; border: 1px dashed currentColor; cursor: help; }
@@ -134,7 +134,7 @@
   .conf-low { background: #dcebfa; color: #4a90d9; }
   .conf-mid { background: #85b9ea; color: #fff; }
   .conf-high { background: #2b6cb0; color: #fff; }
-  /* R100z98：象限落点徽章（置信度×已计价 四象限，镜像 .exp-badge 胶囊样式） */
+  /* R100z98：象限落点徽章（确信×已计价 四象限，镜像 .exp-badge 胶囊样式） */
   .quad-badge { font-size: 11px; border-radius: 999px; padding: 2px 9px; font-weight: 700; margin-left: 6px; line-height: 1.45; border: 1px dashed currentColor; cursor: help; }
   .q-sweet { color: var(--up); }    /* ① 甜点区 */
   .q-pricey { color: #b7791f; }     /* ② 对但已贵 */
@@ -1446,7 +1446,7 @@ function expBadge(exp) {
     esc(txt + ' ' + (exp.verdict || '')) + '</span>';
 }
 
-/* R100z98：由 置信度 + 已计价% 推导四象限落点（阈值 PRICEIN_HIGH：≥该值视为已透支侧） */
+/* R100z98：由 确信 + 已计价% 推导四象限落点（阈值 PRICEIN_HIGH：≥该值视为已透支侧） */
 function quadOf(s) {
   var PRICEIN_HIGH = 15;
   var conf = String(s.confidence || '');
@@ -1454,13 +1454,13 @@ function quadOf(s) {
   var pi = (s.exp && typeof s.exp.priceIn === 'number') ? s.exp.priceIn : NaN;
   var right = !isNaN(pi) && pi >= PRICEIN_HIGH;
   if (top && !right) return { n: '①', t: '甜点区', cls: 'q-sweet',
-    why: '高置信度 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（有空间）→ 高把握+有空间，可重仓/加确认' };
+    why: '高确信 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（有空间）→ 高把握+有空间，可重仓/加确认' };
   if (top && right) return { n: '②', t: '对但已贵', cls: 'q-pricey',
-    why: '高置信度 但 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（已透支）→ 方向对、肉已少，轻仓防兑现降级' };
+    why: '高确信 但 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（已透支）→ 方向对、肉已少，轻仓防兑现降级' };
   if (!top && !right) return { n: '③', t: '便宜没谱', cls: 'q-cheap',
-    why: (conf || '未给') + '置信度 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（有空间）→ 空间在但没把握，等确认信号' };
+    why: (conf ? conf+'确信' : '推测') + ' 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（有空间）→ 空间在但没把握，等确认信号' };
   return { n: '④', t: '回避', cls: 'q-avoid',
-    why: (conf || '未给') + '置信度 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（已透支）→ 没把握且已透支，不碰' };
+    why: (conf ? conf+'确信' : '推测') + ' 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（已透支）→ 没把握且已透支，不碰' };
 }
 function quadPill(s) {
   var q = quadOf(s);
@@ -1774,9 +1774,9 @@ function loadPortfolioCurve() {
         var se = (d && d.series) || [];
         if (!se.length) return;
         var s = d.stat || {};
-        var h = '<div class="cal-hist-t">📈 组合净值（高置信板块标的等权 vs 市场基准，含回撤）</div>' +
+        var h = '<div class="cal-hist-t">📈 组合净值（高确信板块标的等权 vs 市场基准，含回撤）</div>' +
           '<div id="chart-pf" style="width:100%;height:150px;"></div><div class="pf-stat">' +
-          '<span class="' + ((s.totRetPct || 0) >= 0 ? 'up' : 'down') + '" title="组合净值：每个预测日把当日「置信度=高」板块的预测标的等权买入（当日无高置信则取置信度最高一档），按日累乘的总涨跌幅。各日入选板块数不同（每日 8/16/24…只）。正数 = 预测组合整体赚钱。">组合 ' +
+          '<span class="' + ((s.totRetPct || 0) >= 0 ? 'up' : 'down') + '" title="组合净值：每个预测日把当日「确信=高」板块的预测标的等权买入（当日无高确信则取确信最高一档），按日累乘的总涨跌幅。各日入选板块数不同（每日 8/16/24…只）。正数 = 预测组合整体赚钱。">组合 ' +
           (s.totRetPct >= 0 ? '+' : '') + (s.totRetPct || 0).toFixed(2) + '%</span>' +
           '<span class="' + ((s.benchRetPct || 0) >= 0 ? 'up' : 'down') + '" title="基准净值：同期的市场基准（对照指数）累计涨跌幅，代表「不做预测、直接买市场」的结果，用来和组合对照。">基准 ' +
           (s.benchRetPct >= 0 ? '+' : '') + (s.benchRetPct || 0).toFixed(2) + '%</span>' +
@@ -1831,8 +1831,8 @@ function renderAiPrediction() {
   var box = document.getElementById('ai-prediction');
   if (!p) { box.style.display = 'none'; return; }
   p.sectors = p.sectors || [];
-  // R100z97（用户要求）：AI 预测板块卡按置信度 高→中→低 排序展示
-  var _confRank = { '高': 0, '中': 1, '低': 2 };
+  // R100z99（用户要求）：AI 预测板块卡按确信 高→中→低 排序展示
+  var _confRank = { '高': 0, '中': 1, '低': 2, '推测': 3 };
   var _sortedSectors = p.sectors.slice().sort(function (a, b) {
     return (_confRank[String(a.confidence || '').charAt(0)] ?? 9) - (_confRank[String(b.confidence || '').charAt(0)] ?? 9);
   });
@@ -1857,7 +1857,7 @@ function renderAiPrediction() {
     html += '<div class="ai-item"><div class="row1">' +
       '<span class="sec-nm">' + esc(s.sector) + '</span>' +
       '<span class="dir-badge ' + (isUp ? 'dir-up' : 'dir-down') + '">预计' + esc(s.direction) + '</span>' +
-      '<span class="conf-badge ' + confCls + '">' + esc(s.confidence) + '置信度</span>' +
+      '<span class="conf-badge ' + confCls + '">' + esc(s.confidence ? s.confidence+'确信' : '推测') + '</span>' +
       expBadge(s.exp) +
       quadPill(s) +
       '</div>' +
@@ -2492,7 +2492,7 @@ function stkNewsHtml(code) {
   }
   if (aiHit) {
     h += '<div class="db-ref-p" style="margin-top:6px;"><b>AI 预测 · ' + esc(aiHit.sector || '') + '：</b>' +
-      '<div class="db-ref-sum">预计' + esc(aiHit.direction || '') + ' · ' + esc(aiHit.confidence || '') + '置信度</div>' +
+      '<div class="db-ref-sum">预计' + esc(aiHit.direction || '') + ' · ' + esc(aiHit.confidence ? aiHit.confidence+'确信' : '推测') + '</div>' +
       (aiHit.usDriver ? '<div class="db-ref-sum">隔夜驱动：' + esc(aiHit.usDriver) + '</div>' : '') +
       (aiHit.logic ? '<div class="db-ref-sum">映射逻辑：' + esc(aiHit.logic) + '</div>' : '') + '</div>';
     if (aiHit.deduce) h += renderDeduce(aiHit.deduce, true);
