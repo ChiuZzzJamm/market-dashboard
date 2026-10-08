@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610090105"></script>
+<script src="data.js?v=202610090113"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1425,9 +1425,15 @@ function expBadge(exp) {
   var cls = map[String(exp.verdict || '')] || 'hold';
   var pi = (exp.priceIn === null || exp.priceIn === undefined || exp.priceIn === '') ? null : Number(exp.priceIn);
   var txt = pi === null ? '预期 未量化' : ('预期 ' + (pi >= 0 ? '+' : '') + pi + '%');
-  var title = '预期层[E] · price-in ' + (pi === null ? '未量化' : (pi + '%')) +
+  // R100z97b：行为金融/卖方行话原词统一中文化（防御式——未来数据写回英文也能转中文）
+  var quadZh = function (q) {
+    if (!q) return '未落位';
+    return String(q).replace(/price-in/g, '已计价').replace(/in-line/g, '符合预期')
+      .replace(/\bbeat\b/g, '超预期').replace(/\bmiss\b/g, '不及预期');
+  };
+  var title = '预期层 · 已计价 ' + (pi === null ? '未量化' : (pi + '%')) +
     '｜依据：' + (exp.priceInBasis || '未填') +
-    '｜四象限：' + (exp.quad || '未落位') +
+    '｜四象限：' + quadZh(exp.quad) +
     '｜结论：' + (exp.verdict || '未给');
   return '<span class="exp-badge exp-' + cls + '" title="' + escAttr(title) + '">' +
     esc(txt + ' · ' + (exp.verdict || '')) + '</span>';
