@@ -382,6 +382,107 @@ def check_stockcheck(D):
     return warns
 
 
+def check_impact_merge(D):
+    """R100z81：同一条要闻内出现多个 theme 完全相同的 impact 分组 → 数据层碎片化
+    （本应合并为 1 组 8 只去重）。前端已按 theme 归并兜底，但源头仍须禁止，故 WARN。"""
+    warns = []
+    from collections import Counter
+    for mk in ('ashare', 'us'):
+        sec = D.get(mk) or {}
+        for key in ('bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews'):
+            for i, nw in enumerate(sec.get(key) or []):
+                if not isinstance(nw, dict):
+                    continue
+                themes = [str(im.get('theme') or im.get('sector') or '').strip()
+                          for im in (nw.get('impacts') or []) if isinstance(im, dict)]
+                cnt = Counter(t for t in themes if t)
+                for th, c in cnt.items():
+                    if c > 1:
+                        warns.append(
+                            f"{mk}.{key}[{i}]({(nw.get('sector') or '')[:14]}): "
+                            f"同 theme「{th}」被拆成 {c} 个 impact 分组（应合并为 1 组 8 只去重，"
+                            f"避免前端重复标题 + 稀疏网格）")
+    return warns
+
+
+def check_outlook_depth(D):
+    """R100z81：大盘趋势研判 outlook 深度 + 禁英文内部字段名。
+    <300 字 → WARN；含 cal_factor / alignRate 等内部变量名 → WARN（CRO 是合法医药术语，不查）。"""
+    warns = []
+    for mk in ('ashare', 'us'):
+        d = (D.get(mk) or {}).get('outlook')
+        if not d:
+            continue
+        text = str(d)
+        if len(text) < 300:
+            warns.append(f"{mk}.outlook 仅 {len(text)} 字（硬要求 300-500 字，深度不足）")
+        for kw in ('cal_factor', 'alignRate'):
+            if kw in text:
+                warns.append(f"{mk}.outlook 含英文内部字段名「{kw}」（须改写为中文叙述，"
+                             f"如「与节前量化给出的落袋/回补倾向一致」）")
+    return warns
+
+
+def check_reason_depth(D):
+    """R100z81：板块异动 reason.detail 与题材掘金 logic 深度 + 模板化检测。
+    reason.detail <40 字或题材掘金 logic <40 字 → WARN；跨板块高度雷同（模板化套话）→ WARN。"""
+    warns = []
+    from difflib import SequenceMatcher
+    for mk in ('ashare', 'us'):
+        sec = D.get(mk) or {}
+        for key in ('sectorsUp', 'sectorsDown'):
+            for i, s in enumerate(sec.get(key) or []):
+                if not isinstance(s, dict):
+                    continue
+                det = str((s.get('reason') or {}).get('detail') or '').strip()
+                if det and len(det) < 40:
+                    warns.append(f"{mk}.{key}[{i}]({(s.get('name') or '')[:14]}): 行业原因仅 {len(det)} 字"
+                                 f"（<40，须写满 60-110 字含研报/政策/事件催化）")
+        for i, t in enumerate(sec.get('themePicks') or []):
+            if not isinstance(t, dict):
+                continue
+            lg = str(t.get('logic') or '').strip()
+            if lg and len(lg) < 40:
+                warns.append(f"{mk}.themePicks[{i}]({(t.get('event') or '')[:14]}): 逻辑传导仅 {len(lg)} 字"
+                             f"（<40，须写满 70-140 字四级传导链）")
+    # 模板化：同一市场内多条 reason.detail 两两相似度 ≥0.85（雷同套话）
+    for mk in ('ashare', 'us'):
+        dets = [str((s.get('reason') or {}).get('detail') or '').strip()
+                for s in (((D.get(mk) or {}).get('sectorsUp') or []) + ((D.get(mk) or {}).get('sectorsDown') or []))
+                if isinstance(s, dict) and (s.get('reason') or {}).get('detail')]
+        n = len(dets)
+        hit = False
+        for a in range(n):
+            if hit:
+                break
+            for b in range(a + 1, n):
+                if len(dets[a]) >= 20 and len(dets[b]) >= 20:
+                    if SequenceMatcher(None, dets[a], dets[b]).ratio() >= 0.85:
+                        warns.append(f"{mk}: 板块异动行业原因存在高度雷同（相似度 "
+                                     f"{SequenceMatcher(None, dets[a], dets[b]).ratio():.0%}），"
+                                     f"疑似模板化套话，须按各板块真实催化分别撰写")
+                        hit = True
+                        break
+    return warns
+
+
+def check_note_leak(D):
+    """R100z81：verification / stockCheck 的 note 禁写 alignRate= 等英文内部字段名
+    （前端已清洗，但源头须禁止，故 WARN）。"""
+    warns = []
+    ap = D.get('aiPrediction') or {}
+    v = ap.get('verification')
+    if not isinstance(v, dict):
+        return warns
+    for d in (v.get('details') or []):
+        if isinstance(d, dict) and ('alignRate' in str(d.get('note') or '') or 'cal_factor' in str(d.get('note') or '')):
+            warns.append(f"aiPrediction.verification.details({str(d.get('sector') or '')[:14]}): note 含英文内部字段名（须中文叙述）")
+    for sc in (v.get('stockCheck') or []):
+        if isinstance(sc, dict) and ('alignRate' in str(sc.get('note') or '') or 'cal_factor' in str(sc.get('note') or '')):
+            warns.append(f"aiPrediction.verification.stockCheck({str(sc.get('sector') or '')[:14]}): note 含 alignRate= 等英文内部字段名（前端已清洗，源头须禁写）")
+    return warns
+
+
 def check_calibration(D):
     """R100z11：置信度后验校准门槛落地校验——读 calibration_state.json 的降档门槛，
     当日标「高确信」的条数若超过门槛 → WARN（台账已生效但当日越线）。
@@ -1090,6 +1191,12 @@ def main():
     nsrc_warns = check_news_sources(D)   # R100z53：新闻来源白名单机器闸
     lb_warns = check_lianban_notes(D)
     tb_warns = check_top_boards(D)
+    # R100z81：碎片化 / 深度 / 英文泄漏 机器闸（按 scope 决定谁负责：新闻+outlook+reason 归 us 职责，
+    # verification.note 泄漏归 ai 职责——与 16:00「先 --scope ai 再 --scope us」两次校验口径一致）
+    imp_merge_warns = check_impact_merge(D) if scope in ('all', 'us') else []
+    outlook_warns = check_outlook_depth(D) if scope in ('all', 'us') else []
+    reason_warns = check_reason_depth(D) if scope in ('all', 'us') else []
+    note_leak_warns = check_note_leak(D) if scope in ('all', 'ai') else []
     st_warns = check_story_quality(D)
     star_warns = check_star_module(D)
     sel_warns = check_selection_modules(D)
@@ -1177,6 +1284,10 @@ def main():
                           'risk_blacklist_violations': risk_fails,
                           'risk_blacklist_warnings': risk_warns,
                           'logic_depth_warnings': logic_warns,
+                          'impact_merge_warnings': imp_merge_warns,
+                          'outlook_depth_warnings': outlook_warns,
+                          'reason_depth_warnings': reason_warns,
+                          'note_leak_warnings': note_leak_warns,
                           'exit_warnings': exit_warns,
                           'stock_pool_warnings': pool_warns,
                           'duanban_warnings': duanban_warns,
@@ -1225,6 +1336,14 @@ def main():
         print("[WARN] 硬风险黑名单(警示):", w)
     for w in logic_warns:
         print("[WARN] 内容深度:", w)
+    for w in imp_merge_warns:
+        print("[WARN] impacts 碎片化:", w)
+    for w in outlook_warns:
+        print("[WARN] 大盘研判深度/英文:", w)
+    for w in reason_warns:
+        print("[WARN] 行业原因/题材逻辑深度:", w)
+    for w in note_leak_warns:
+        print("[WARN] 验证note英文泄漏:", w)
     for w in exit_warns:
         print("[WARN] 退出纪律:", w)
     for w in pool_warns:

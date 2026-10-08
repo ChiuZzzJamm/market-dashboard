@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610081752"></script>
+<script src="data.js?v=202610081849"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -159,6 +159,9 @@
   .cal-seg.cal-mid { color: #d8a33a; }
   .cal-seg.cal-miss { color: var(--down); }
   .ai-verify .v-note { display: block; font-weight: 400; font-size: 11.5px; color: var(--ink-soft, #6b7a8d); margin-top: 1px; }
+  /* R100z81：预测验证并入「大盘趋势研判」卡——块内分隔线 + 与研判文同卡的间距 */
+  .v-divider { height: 1px; background: var(--line); margin: 14px 0 6px; }
+  .ai-verify.v-merged { margin-top: 12px; }
 
   /* ===== R100z15：退出纪律 + 超额口径 + 净值曲线 ===== */
   .exit-row { margin-top: 4px; font-size: 11px; color: var(--ink-soft, #6b7a8d); line-height: 1.55; }
@@ -806,6 +809,17 @@ function cls(v) { return v > 0 ? "up" : (v < 0 ? "down" : "flat"); }
 function fmtPct(v) { if (v === null || v === undefined) return "—"; return (v > 0 ? "+" : "") + v.toFixed(2) + "%"; }
 function esc(s) { if (s === null || s === undefined) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 function escAttr(s){ return esc(s).replace(/"/g, '&quot;'); }
+// R100z81：清洗 AI 写回时泄漏的内部变量名（cal_factor / alignRate=0.xxx），避免大盘研判/
+//   验证块里夹英文。注意 CRO 是合法医药术语（医药研发外包），不在此清洗范围。
+function cleanLeak(s) {
+  if (s === null || s === undefined) return s;
+  s = String(s);
+  s = s.replace(/alignRate\s*=\s*[0-9.]+(?:\s*[;；])?/gi, '')  // alignRate=0.875
+       .replace(/cal_factor/gi, '')                              // cal_factor
+       .replace(/alignRate/gi, '');                             // 其余 alignRate（如 alignRate≤0.375）
+  s = s.replace(/\s*[;；]\s*[;；]/g, '；').replace(/\s{2,}/g, ' ').replace(/[;；]\s*$/g, '').trim();
+  return s;
+}
 function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 function dateTag(tradeDate) { var m = String(tradeDate).match(/(\d{4})-(\d{2})-(\d{2})/); return m ? m[2] + "月" + m[3] + "日" : ""; }
 function formatOutlook(text) {
@@ -815,8 +829,8 @@ function formatOutlook(text) {
   text = String(text || '');
   // 按「【」标题分段，每段渲染成 <p> 实现网页内换行；微信推送端保持原始连续文本
   var segs = text.split(/(?=【)/).filter(function(s){ return s.trim(); });
-  if (segs.length <= 1) return '<p style="margin:0 0 10px 0; line-height:1.7;">' + esc(text) + '</p>';
-  return segs.map(function(seg){ return '<p style="margin:0 0 10px 0; line-height:1.7;">' + esc(seg.trim()) + '</p>'; }).join('');
+  if (segs.length <= 1) return '<p style="margin:0 0 10px 0; line-height:1.7;">' + esc(cleanLeak(text)) + '</p>';
+  return segs.map(function(seg){ return '<p style="margin:0 0 10px 0; line-height:1.7;">' + esc(cleanLeak(seg.trim())) + '</p>'; }).join('');
 }
 
 // R98j：指数点击看K线——sym 优先取脚本生成的 code 字段，历史数据按名称映射兜底
@@ -1129,7 +1143,14 @@ function render(market) {
 
   html += '<div class="card"><h2>大盘指数' + h2Date(d) + '</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + '</div>';
 
-  html += '<div class="card"><h2>大盘趋势研判' + h2Date(d) + '</h2><div class="outlook">' + formatOutlook(d.outlook) + '</div></div>';
+  // R100z81：大盘趋势研判卡内直接并入「盘前预测兑现验证」块（用户要求与研判卡合并，不再单独漂浮在 AI 预测卡底部）
+  var _outlookCard = '<div class="card"><h2>大盘趋势研判' + h2Date(d) + '</h2><div class="outlook">' + formatOutlook(d.outlook) + '</div>';
+  if (isA) {
+    var _vblk = renderVerificationBlock();
+    if (_vblk) _outlookCard += '<div class="v-divider"></div>' + _vblk;
+  }
+  _outlookCard += '</div>';
+  html += _outlookCard;
 
   var _ssMap = {'ths': '同花顺行业口径', 'em': '东财行业口径', 'prev': '上一轮数据'};
   var _ssTag = _ssMap[d.sectorSource] ? ' <span class="src-tag">' + _ssMap[d.sectorSource] + '</span>' : '';
@@ -1795,28 +1816,44 @@ function renderAiPrediction() {
     html += '</div>';
   });
   html += '</div><div class="ai-foot">标的筛选口径：每个板块 8 只 A 股，按「2 只板块龙头 + 2 只相关概念股 + 2 只游资/机构偏好小盘人气股（涨停基因好）+ 2 只断板反包图形股（1-5 日前涨停、次日放量倍量、随后缩量回调）」搭配，已排除科创板（688 开头）及北交所。<br>' + esc(p.riskNote) + '</div>';
-  if (p.verification) {
-    var vHtml = '';
-    if (typeof p.verification === 'string') {
-      // R99j 兼容：自动化偶发把 verification 写成整段字符串（而非 {summary,details} 对象）
-      var vs = String(p.verification).trim();
-      if (vs) vHtml = '<div class="ai-verify"><div class="v-title">📊 预测验证</div><div class="v-detail"><div class="hit">' + esc(vs) + '</div></div></div>';
-    } else {
-    var v = p.verification;
-    if (v.summary || (v.details && v.details.length)) {
-      vHtml = '<div class="ai-verify"><div class="v-title">📊 预测验证：' + esc(v.summary || '') + '</div>';
-      if (v.details && v.details.length) {
-        vHtml += '<div class="v-detail">';
-        v.details.forEach(function(d) {
-          var r = String(d.result || '');
-          var vcls = (r.indexOf('未命中') !== -1 || r.indexOf('未兑现') !== -1) ? 'miss' : ((r.indexOf('命中') !== -1 || r.indexOf('兑现') !== -1) ? 'hit' : 'miss');
-          vHtml += '<div class="' + vcls + '">· ' + esc(d.sector) + '：预测「' + esc(d.predicted) + '」→ 实际 ' + (d.actualPct === null || d.actualPct === undefined ? '—' : (d.actualPct >= 0 ? '+' : '') + d.actualPct + '%') + ' → ' + esc(d.result) + excessDot(d) + (d.note ? '<span class="v-note">' + esc(d.note) + '</span>' : '') + '</div>';
-        });
-        vHtml += '</div>';
-      }
+  // R100z81：预测验证块已移至「大盘趋势研判」卡内（renderVerificationBlock），此处不再重复渲染
+  html += '</div>';
+  box.innerHTML = html;
+  renderCalHistory();
+  loadPortfolioCurve();
+  renderStopTrack();
+  renderRiskLines();
+}
+
+/* R100z81：预测验证块（原漂浮在 AI 预测卡底部，现并入「大盘趋势研判」卡）。
+   只读顶层 aiPrediction.verification（16:00 填充的当日盘前预测兑现验证），
+   中文标签渲染、对 note 做 cleanLeak 清洗（去 alignRate= / cal_factor 等英文泄漏）。
+   无 verification 时返回空串（08:30 盘前 / 周日任务按设计就是 null，不报错）。 */
+function renderVerificationBlock() {
+  var ap = window.DASHBOARD_DATA && window.DASHBOARD_DATA.aiPrediction;
+  if (!ap || !ap.verification) return '';
+  var v = ap.verification;
+  if (typeof v === 'string') {
+    var vs = String(v).trim();
+    if (!vs) return '';
+    return '<div class="ai-verify v-merged"><div class="v-title">📊 盘前预测兑现验证</div><div class="v-detail"><div class="hit">' + esc(cleanLeak(vs)) + '</div></div></div>';
+  }
+  var vHtml = '';
+  if (v.summary || (v.details && v.details.length)) {
+    vHtml = '<div class="ai-verify v-merged"><div class="v-title">📊 盘前预测兑现验证：' + esc(cleanLeak(v.summary || '')) + '</div>';
+    if (v.details && v.details.length) {
+      vHtml += '<div class="v-detail">';
+      v.details.forEach(function (d) {
+        var r = String(d.result || '');
+        var vcls = (r.indexOf('未命中') !== -1 || r.indexOf('未兑现') !== -1) ? 'miss' : ((r.indexOf('命中') !== -1 || r.indexOf('兑现') !== -1) ? 'hit' : 'miss');
+        vHtml += '<div class="' + vcls + '">· ' + esc(d.sector) + '：预测「' + esc(d.predicted) + '」→ 实际 ' +
+          (d.actualPct === null || d.actualPct === undefined ? '—' : (d.actualPct >= 0 ? '+' : '') + d.actualPct + '%') +
+          ' → ' + esc(d.result) + excessDot(d) +
+          (d.note ? '<span class="v-note">' + esc(cleanLeak(d.note)) + '</span>' : '') + '</div>';
+      });
       vHtml += '</div>';
     }
-    // R100z11：标的层面验证（颗粒度下移）——板块方向说对但 8 只全选错，账户照样亏，必须单列一层
+    // 标的层面验证（颗粒度下移）——板块方向说对但 8 只全选错，账户照样亏，必须单列一层
     if (v.stockCheck && v.stockCheck.length) {
       vHtml += '<div class="v-detail">';
       v.stockCheck.forEach(function (sc) {
@@ -1834,21 +1871,15 @@ function renderAiPrediction() {
         vHtml += '<div class="' + scCls + '">· ' + esc(sc.sector || '') + '：8 只标的平均 ' +
           (avg === null ? '—' : ((avg >= 0 ? '+' : '') + avg.toFixed(2) + '%')) +
           '，方向一致率 ' + (ag === null ? '—' : (Math.round(ag * 100) + '%')) +
-          '（同上涨方向 ' + (sc.hitN === null || sc.hitN === undefined ? '—' : (sc.hitN + '/8')) + '）' +
+          '（同方向 ' + (sc.hitN === null || sc.hitN === undefined ? '—' : (sc.hitN + '/8')) + '）' +
           fundTxt +
-          (sc.note ? '<span class="v-note">' + esc(sc.note) + '</span>' : '') + '</div>';
+          (sc.note ? '<span class="v-note">' + esc(cleanLeak(sc.note)) + '</span>' : '') + '</div>';
       });
       vHtml += '</div>';
     }
-    }
-    html += vHtml;
+    vHtml += '</div>';
   }
-  html += '</div>';
-  box.innerHTML = html;
-  renderCalHistory();
-  loadPortfolioCurve();
-  renderStopTrack();
-  renderRiskLines();
+  return vHtml;
 }
 
 /* R100z60b：止损跟踪统计卡（接线 stop_tracker.py 写的 data.js 顶层 stopTrack）。
@@ -1931,9 +1962,25 @@ function newsEntryInner(it, showSrc, tag, tradeDate) {
   var s = '<div class="nc-theme"><span class="nc-tt">' + esc(it.sector || '') + '</span>' + dirBadge + perspTag + confHead + '</div>'; // R100x：标题包 nc-tt 保留省略号，整行 flex 垂直居中
   var dtlFull = (it.title || '') + ' — ' + (it.summary || '');
   s += '<div class="nc-dtl" title="' + escAttr(dtlFull) + '"><b>' + esc(it.title || '') + '</b> — ' + esc(it.summary || '') + '</div>';
+  // R100z81：同 theme 的 impacts 合并渲染（数据层碎片化兜底——一条新闻被拆成多个同 theme
+  //   分组时，前端按 theme 归并成一组、标题只标一次、标的不跨组重复，避免「电池/电池/电池」
+  //   重复标题 + 每组只 2~3 只的稀疏网格；合法的不同 theme 仍各自成组）
+  var _impMap = {};
   (it.impacts || []).forEach(function (im) {
-    if (!im.stocks || !im.stocks.length) return;
-    var impTheme = im.theme || im.sector || '';
+    if (!im || !im.stocks || !im.stocks.length) return;
+    var _k = String(im.theme || im.sector || '').trim() || ' ';
+    if (!_impMap[_k]) _impMap[_k] = { theme: im.theme || im.sector || '', horizon: im.horizon || '', stocks: [], _seen: {} };
+    var _g = _impMap[_k];
+    if (im.horizon && !_g.horizon) _g.horizon = im.horizon;
+    (im.stocks || []).forEach(function (st) {
+      if (!st || !st.code) { _g.stocks.push(st); return; }
+      var _c = String(st.code);
+      if (!_g._seen[_c]) { _g._seen[_c] = 1; _g.stocks.push(st); }
+    });
+  });
+  Object.keys(_impMap).forEach(function (_k) {
+    var im = _impMap[_k];
+    var impTheme = im.theme || '';
     s += '<div class="nc-imp">' + (impTheme ? '<span class="nc-imp-theme">' + esc(impTheme) + '</span>' : '') + (im.horizon ? '<span class="nc-imp-hz">' + esc(im.horizon) + '</span>' : '');
     s += '<div class="nc-stocks">';
     im.stocks.forEach(function (st) {
