@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610090253"></script>
+<script src="data.js?v=202610090258"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -585,9 +585,8 @@
 
   .pw-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; margin-top:8px; }
   @media (max-width: 900px) { .pw-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
-  /* R100j：主力吸筹卡片美化——左侧强调条 + 评分进度条 + 特征胶囊（通过亮/未过灰） */
-  .acc-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; margin-top:10px; }
-  @media (max-width: 900px) { .acc-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+  /* R100j：主力吸筹卡片美化——左侧强调条 + 评分进度条 + 特征胶囊（通过亮/未过灰）。
+     R100z102c：原 .acc-grid 网格随池结构改版弃用（统一 .db-chips），仅保留卡内件样式。 */
   .acc-head { display:flex; align-items:center; gap:6px; }
   .acc-head .acc-id { display:flex; align-items:baseline; gap:6px; min-width:0; }
   .acc-head .acc-id b { font-weight:800; }
@@ -596,21 +595,8 @@
   /* R100z28：强池/强评＝红（A股涨红惯例，与九门 pw-grd 同款红），观察池沿用琥珀黄 */
   .acc-grd.strong { color:#fff; background:linear-gradient(135deg,#f0435c,#d02c44); }
   .acc-grd.watch { color:#8a5800; background:#ffe9c2; border:1px solid #f0c36d; }
-  /* R100z21：吸筹页强池/观察池分区小标题；R100z28 字号/颜色对齐断板页 db-pool h2（17px+9px 红/蓝点，同页不出现两套语义色） */
-  /* R100z102b（用户 2026-10-09 截图）：池与池之间留空白带——参考谐波页 db-pool 卡间
-     20px 空隙 + 卡内 22px 内边距的视觉间距，吸筹同卡分节的原 16px 太贴，加到 32px；
-     首池不受影响（:first-child 仍归零）。 */
-  .acc-sub { display:flex; align-items:center; flex-wrap:wrap; row-gap:2px; gap:9px; font-size:17px; font-weight:700; color:var(--ink); margin:32px 0 2px; }
-  /* R100z43：池名不折断（修手机端「强/池」竖排断行），说明文字 .cnt 允许整体折行 */
-  .acc-sub .t { white-space:nowrap; flex-shrink:0; }
-  .acc-sub:first-child { margin-top:10px; }
-  .acc-sub .dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
-  /* R100z28：强池圆点改红（与卡内 acc-grd.strong 同色、与谐波『确认池』红点同语义），观察池＝断板观察池同款蓝点 */
-  .acc-sub.s .dot { background:var(--up); box-shadow:0 0 0 4px var(--up-soft); }
-  .acc-sub.w .dot { background:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); }
-  /* R100z101：池头说明行——对齐 .db-pool .db-sub（12px 灰字、独占一行）；
-     原 .acc-sub .cnt（11px 挤在池名同行）已随池头改版移除 */
-  .acc-sub-desc { font-size:12px; color:var(--ink2); margin:0 0 2px; }
+  /* R100z102c：原 .acc-sub / .acc-sub-desc 池头小节样式已随「db-pool 独立卡」重构整体移除
+     （池头由 .db-pool h2 + .db-sub 接管，与断板/谐波/九门三页共用同一套样式）。 */
   /* R100m：九门评分徽章——红色、与代码同行平行（与吸筹评级徽章 acc-grd 区分） */
   .pw-grd { font-size:10.5px; font-weight:800; border-radius:999px; padding:1px 8px; flex-shrink:0; font-variant-numeric:tabular-nums; color:#fff; background:linear-gradient(135deg,#e35d5d,#c0392b); }
   /* R100m：全站标的池角标（谐波🌟/吸筹👀/九门💡/断板❗️），可叠加 */
@@ -665,9 +651,8 @@
   .tech-legend .lg-hr { height:1px; background:var(--line); margin:7px 0; }
   .tech-legend .lg-tip { color:#8a5a00; background:#fff8e6; border:1px solid #f0dcaa; border-radius:6px; padding:4px 8px; font-size:11px; line-height:1.7; }
   /* R100z45：四子页「口径条 → 首个池标题」间距统一 36px（口径条 mb14 + 容器上内边距 22，对齐断板/谐波 .db-pool）。
-     R100z101：九门页已去掉 .card 大标题（直排 .db-pool，与谐波同构），#db-pw .card 规则随之失效移除。 */
-  #db-acc .card { padding-top: 22px; }
-  #db-acc .card > .acc-sub:first-child { margin-top: 0; }
+     R100z101：九门页去掉 .card 大标题，#db-pw .card 规则移除。
+     R100z102c：吸筹页三池改 .db-pool 独立卡直排，#db-acc .card 两条规则随之失效移除。 */
   /* 信号滞后灰标（R100z22）：吸筹是历史 K 线模型，同样分数信号新旧不同，滞后 ≥10 日转告警色 */
   /* R100z36：卡片内的价格/目标位强调（.exit-line .xt 只在退出纪律行内生效，tc 卡片需单列） */
   .tc .xt { font-weight: 800; font-variant-numeric: tabular-nums; }
@@ -2771,15 +2756,19 @@ function renderAccumulation() {
   // 修手机端「强/池」两字竖排断行（image#2）。池名包 .t 白空格 nowrap + 父级 flex-wrap。
   // R100z101（用户 2026-10-09，对齐谐波页池头样式）：只数并入池名同行同字号（「确认池 · 6 只」），
   // 说明文字整体下沉为独立小字行（.acc-sub-desc），不再用 11px .cnt 挤在同一行。
+  /* R100z102c（用户 2026-10-09 三页对比截图）：确认/观察池改成与断板/谐波完全同构的
+     .db-pool 独立卡（每池一张白底圆角卡、圆点标题+db-sub 说明在卡内）——原先是全池挤在
+     一张 .card 里用 .acc-sub 小节标题分隔，观察池标题裸在页面上，与另两页观感不一致。
+     网格同步换 .db-chips（4列/700px 折2列，与三页一致，原 .acc-grid 900px 折点弃用）。 */
   var secS = sB.length
-    ? '<div class="acc-sub s"><span class="dot"></span><span class="t">确认池 · ' + sB.length + ' 只</span></div>' +
-      '<div class="acc-sub-desc">特征命中多、结构完整，可直接跟（盯次日量能与竞价）</div>' +
-      '<div class="acc-grid">' + sB.join('') + '</div>' : '';
+    ? '<div class="db-pool p-conf"><h2>确认池 · ' + sB.length + ' 只</h2>' +
+      '<div class="db-sub">特征命中多、结构完整，可直接跟（盯次日量能与竞价）</div>' +
+      '<div class="db-chips">' + sB.join('') + '</div></div>' : '';
   var secW = wB.length
-    ? '<div class="acc-sub w"><span class="dot"></span><span class="t">观察池 · ' + wB.length + ' 只</span></div>' +
-      '<div class="acc-sub-desc">缺 1-2 项，只排队候补，不主动做' +
+    ? '<div class="db-pool p-watch"><h2>观察池 · ' + wB.length + ' 只</h2>' +
+      '<div class="db-sub">缺 1-2 项，只排队候补，不主动做' +
       (demoted ? '；其中 <b>' + demoted + '</b> 只打分虽到强池线，但信号滞后超 10 日、结构已走旧，按纪律<b>降级至此</b>' : '') +
-      '</div><div class="acc-grid">' + wB.join('') + '</div>' : '';
+      '</div><div class="db-chips">' + wB.join('') + '</div></div>' : '';
   // R100z43：去掉「🧲 主力吸筹 + 日期」大标题（image#1 用户要求）——tab 名与口径条已够定位，卡片直接进分池。
   // R100z56（用户 2026-10-04 要求）：① 删掉下方原本渲染的 a.summary 口径条（「六特征打分：强 N / 观察 M」，
   //   强弱只数这类口径随行情天天变、页面上最容易过期，卡片本身已有强度/滞后格，口径不再重复）；
@@ -2795,8 +2784,10 @@ function renderAccumulation() {
   var accFail = dbFailHtml(a.failPool || [], 'accumulation');
   // R100z102（用户 2026-10-09 截图）：失效池移出 .card 直排——断板/谐波/九门三页失效池都是
   // 独立 .db-pool 卡（上方 16px 空白带），吸筹原先嵌在确认/观察池的 card 里成「卡中卡」，
-  // 双层边框 + 间距全不一样。card 只包确认/观察两池，失效池与三页同构。
-  return accLeg + '<div class="card">' + secS + secW + '</div>' + accFail;
+  // 双层边框 + 间距全不一样。
+  // R100z102c（同日三页对比截图）：确认/观察池也改为 .db-pool 独立卡后，外层 .card 整个
+  // 去掉——口径条 + 三池 .db-pool 直排，与断板/谐波/九门完全同构。
+  return accLeg + secS + secW + accFail;
 }
 
 function renderPowerScreen() {
