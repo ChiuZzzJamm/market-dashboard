@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610090209"></script>
+<script src="data.js?v=202610090217"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -117,7 +117,8 @@
   .ai-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 860px) { .ai-grid { grid-template-columns: 1fr; } }
   .ai-item { background: var(--accent-soft); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; display: flex; flex-direction: column; }
-  .ai-item .row1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .ai-item .row1 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+  .ai-item .row1 > .dir-badge, .ai-item .row1 > .conf-badge, .ai-item .row1 > .exp-badge, .ai-item .row1 > .quad-badge { margin-left: 0; } /* R100z99：去掉 margin 与 gap 叠加的双倍间距，保证五个徽章一层放下 */
   .ai-item .sec-nm { font-size: 14px; font-weight: 700; }
   .dir-badge { font-size: 11.5px; font-weight: 700; color: #fff; border-radius: 999px; padding: 2px 9px; }
   .persp-tag { font-size: 10.5px; font-weight: 600; color: var(--ink2); border: 1px solid var(--line, #d8dee6); border-radius: 999px; padding: 1.5px 8px; margin-left: 6px; white-space: nowrap; line-height: 1.45; }
@@ -1442,7 +1443,7 @@ function expBadge(exp) {
     '｜四象限：' + quadZh(exp.quad) +
     '｜结论：' + (exp.verdict || '未给');
   return '<span class="exp-badge exp-' + cls + '" title="' + escAttr(title) + '">' +
-    esc(txt + ' · ' + (exp.verdict || '')) + '</span>';
+    esc(txt + ' ' + (exp.verdict || '')) + '</span>';
 }
 
 /* R100z98：由 置信度 + 已计价% 推导四象限落点（阈值 PRICEIN_HIGH：≥该值视为已透支侧） */
@@ -1453,18 +1454,18 @@ function quadOf(s) {
   var pi = (s.exp && typeof s.exp.priceIn === 'number') ? s.exp.priceIn : NaN;
   var right = !isNaN(pi) && pi >= PRICEIN_HIGH;
   if (top && !right) return { n: '①', t: '甜点区', cls: 'q-sweet',
-    why: '置信度=高 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（有空间）→ 高把握+有空间，可重仓/加确认' };
+    why: '高置信度 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（有空间）→ 高把握+有空间，可重仓/加确认' };
   if (top && right) return { n: '②', t: '对但已贵', cls: 'q-pricey',
-    why: '置信度=高 但 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（已透支）→ 方向对、肉已少，轻仓防兑现降级' };
+    why: '高置信度 但 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（已透支）→ 方向对、肉已少，轻仓防兑现降级' };
   if (!top && !right) return { n: '③', t: '便宜没谱', cls: 'q-cheap',
-    why: '置信度=' + (conf || '未给') + ' 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（有空间）→ 空间在但没把握，等确认信号' };
+    why: (conf || '未给') + '置信度 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（有空间）→ 空间在但没把握，等确认信号' };
   return { n: '④', t: '回避', cls: 'q-avoid',
-    why: '置信度=' + (conf || '未给') + ' 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（已透支）→ 没把握且已透支，不碰' };
+    why: (conf || '未给') + '置信度 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（已透支）→ 没把握且已透支，不碰' };
 }
 function quadPill(s) {
   var q = quadOf(s);
   if (!q) return '';
-  return '<span class="quad-badge ' + q.cls + '" title="' + escAttr('象限' + q.n + '·' + q.t + '：' + q.why) + '">象限' + q.n + '·' + q.t + '</span>';
+  return '<span class="quad-badge ' + q.cls + '" title="' + escAttr('象限' + q.n + '·' + q.t + '：' + q.why) + '">' + q.n + q.t + '</span>';
 }
 
 /* R100z15 缺口③：退出纪律行（止损 / 目标 / 证伪）。
@@ -1856,7 +1857,7 @@ function renderAiPrediction() {
     html += '<div class="ai-item"><div class="row1">' +
       '<span class="sec-nm">' + esc(s.sector) + '</span>' +
       '<span class="dir-badge ' + (isUp ? 'dir-up' : 'dir-down') + '">预计' + esc(s.direction) + '</span>' +
-      '<span class="conf-badge ' + confCls + '">置信度 ' + esc(s.confidence) + '</span>' +
+      '<span class="conf-badge ' + confCls + '">' + esc(s.confidence) + '置信度</span>' +
       expBadge(s.exp) +
       quadPill(s) +
       '</div>' +
@@ -2491,7 +2492,7 @@ function stkNewsHtml(code) {
   }
   if (aiHit) {
     h += '<div class="db-ref-p" style="margin-top:6px;"><b>AI 预测 · ' + esc(aiHit.sector || '') + '：</b>' +
-      '<div class="db-ref-sum">预计' + esc(aiHit.direction || '') + ' · 置信度 ' + esc(aiHit.confidence || '') + '</div>' +
+      '<div class="db-ref-sum">预计' + esc(aiHit.direction || '') + ' · ' + esc(aiHit.confidence || '') + '置信度</div>' +
       (aiHit.usDriver ? '<div class="db-ref-sum">隔夜驱动：' + esc(aiHit.usDriver) + '</div>' : '') +
       (aiHit.logic ? '<div class="db-ref-sum">映射逻辑：' + esc(aiHit.logic) + '</div>' : '') + '</div>';
     if (aiHit.deduce) h += renderDeduce(aiHit.deduce, true);
