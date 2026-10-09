@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610100132"></script>
+<script src="data.js?v=202610100147"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -720,6 +720,26 @@
   /* 悬浮组现有 3 个按钮（🐼/📄/🧰），页内返回按钮默认对齐组内最后一个按钮的位置 */
   .db-entry-in { top: calc(50% + 37px); }
   @media (max-width: 700px) { .db-entry-in { top: calc(50% + 33px); } }
+  /* R100z110：修复 📄 页返回按钮不显示的 bug——此前只有 body.db-open 有 display 放行规则，
+     gnews-open 漏了同款规则，#gn-entry-in 在 DOM 里但永远 display:none（用户 2026-10-10 反馈「缺少返回icon」） */
+  body.gnews-open .db-entry-in { display: flex; }
+  /* R100z110：📄 页内 🐼/🦅 定位按钮——对齐悬浮组第 4/5 槽位（46px 按钮 + 14px 间距 = 60px 步进） */
+  .gn-jump {
+    position: fixed; right: var(--float-x); width: 46px; height: 46px; border-radius: 50%;
+    background: transparent; border: none; padding: 0; box-shadow: none;
+    cursor: pointer; z-index: 1200; display: none; align-items: center; justify-content: center;
+    font-size: 42px; line-height: 1; user-select: none; -webkit-tap-highlight-color: transparent;
+  }
+  body.gnews-open .gn-jump { display: flex; }
+  #gn-jump-a { top: calc(50% + 97px); }
+  #gn-jump-u { top: calc(50% + 157px); }
+  @media (max-width: 700px) {
+    .gn-jump { width: 42px; height: 42px; font-size: 36px; }
+    #gn-jump-a { top: calc(50% + 87px); }
+    #gn-jump-u { top: calc(50% + 141px); }
+  }
+  /* 页内定位锚点：给顶部留出呼吸空间 */
+  #gn-ashare, #gn-us { scroll-margin-top: 12px; }
 </style>
 </head>
 <body>
@@ -781,6 +801,9 @@
       <div class="db-date" id="gn-date"></div>
     </div>
     <button class="db-entry-in" id="gn-entry-in" title="点击返回每日市场看板">📄</button>
+    <!-- R100z110：页内 🐼/🦅 定位按钮（对齐主页面悬浮组风格）：熊猫→A股要闻，鹰→美股要闻 -->
+    <button class="gn-jump" id="gn-jump-a" title="定位到 A股 · 全球要闻">🐼</button>
+    <button class="gn-jump" id="gn-jump-u" title="定位到 美股 · 全球要闻">🦅</button>
     <div id="gnews-body"></div>
   </div>
 </div>
@@ -3682,10 +3705,16 @@ function renderGnews() {
       renderPolicySignals(D.policySignals) + '</div>';
   }
   // ② A股五节要闻 ③ 美股五节要闻（renderNewsCard 全空时返回 ''，自动不渲染空卡）
-  html += renderNewsCard(D.ashare, 'ashare');
-  html += renderNewsCard(D.us, 'us');
+  // R100z110：各包一层锚点 div，供页内 🐼/🦅 定位按钮平滑滚动
+  html += '<div id="gn-ashare">' + renderNewsCard(D.ashare, 'ashare') + '</div>';
+  html += '<div id="gn-us">' + renderNewsCard(D.us, 'us') + '</div>';
   if (!html) html = '<div class="wk-card"><div class="wk-head"><h2>全球要闻</h2></div><div class="gn-empty">今日暂无要闻数据</div></div>';
   box.innerHTML = html;
+  // R100z110：A股/美股任一市场五节全空时，隐藏对应定位按钮（点了没目标）
+  function _gnHas(d) { return !!d && ['bullNews','bearNews','macroNews','intlNews','bankViews'].some(function (k) { return (d[k] || []).length > 0; }); }
+  var bja = document.getElementById('gn-jump-a'), bju = document.getElementById('gn-jump-u');
+  if (bja) bja.style.display = _gnHas(D.ashare) ? '' : 'none';
+  if (bju) bju.style.display = _gnHas(D.us) ? '' : 'none';
   var gd = document.getElementById('gn-date');
   if (gd) {
     var aD = (D.ashare || {}).tradeDate || '', uD = (D.us || {}).tradeDate || '';
@@ -3712,6 +3741,11 @@ window.addEventListener('popstate', function () {
   var gnei = document.getElementById('gn-entry-in');
   if (gne) gne.addEventListener('click', function () { openGnews(); });
   if (gnei) gnei.addEventListener('click', function () { closeGnews(); });
+  // R100z110：页内 🐼/🦅 定位按钮——平滑滚动到 A股/美股要闻卡
+  var gja = document.getElementById('gn-jump-a');
+  var gju = document.getElementById('gn-jump-u');
+  if (gja) gja.addEventListener('click', function () { var el = document.getElementById('gn-ashare'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  if (gju) gju.addEventListener('click', function () { var el = document.getElementById('gn-us'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   try { localStorage.removeItem('dbFloatPos'); } catch (e) {} // 清理更早版本的位置键
   var g = document.getElementById('float-group');
   if (!g) return;
@@ -3737,6 +3771,11 @@ window.addEventListener('popstate', function () {
       gni.style.left = l + 'px'; gni.style.top = (t + h - 46) + 'px';
       gni.style.right = 'auto'; gni.style.bottom = 'auto';
     }
+    // R100z110：🐼/🦅 定位按钮跟随返回按钮下方（60px 步进 = 46 按钮 + 14 间距）
+    var gja2 = document.getElementById('gn-jump-a');
+    var gju2 = document.getElementById('gn-jump-u');
+    if (gja2) { gja2.style.left = l + 'px'; gja2.style.top = (t + h + 14) + 'px'; gja2.style.right = 'auto'; }
+    if (gju2) { gju2.style.left = l + 'px'; gju2.style.top = (t + h + 74) + 'px'; gju2.style.right = 'auto'; }
     if (save) {
       try { localStorage.setItem(POS_KEY, JSON.stringify({ lf: l / window.innerWidth, tf: t / window.innerHeight })); } catch (e) {}
     }
