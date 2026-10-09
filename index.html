@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610100214"></script>
+<script src="data.js?v=202610100222"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -737,10 +737,13 @@
   body.gnews-open .gn-jump { display: flex; }
   .gn-jump:hover { transform: scale(1.1); }
   .gn-jump:active { transform: scale(.92); }
-  #gn-jump { top: calc(50% - 23px); }   /* 📄 返回在 +37，上移 60px → -23 */
+  /* R100z113：对齐主组槽位——#gn-entry-in 落主组 📄 槽（中，-23），#gn-jump 落主组 🐼 槽（顶，-83） */
+  #gn-entry-in { top: calc(50% - 23px); }
+  #gn-jump { top: calc(50% - 83px); }
   @media (max-width: 700px) {
     .gn-jump { width: 42px; height: 42px; font-size: 36px; }
-    #gn-jump { top: calc(50% - 27px); }  /* 移动端 📄 在 +33 */
+    #gn-entry-in { top: calc(50% - 21px); }
+    #gn-jump { top: calc(50% - 75px); }
   }
   /* 页内定位锚点：给顶部留出呼吸空间 */
   #gn-ashare, #gn-us { scroll-margin-top: 12px; }
@@ -3701,7 +3704,7 @@ function gnSetJump(mk) {
   var b = document.getElementById('gn-jump'); if (!b) return;
   _gnJumpTarget = mk;
   b.textContent = (mk === 'ashare') ? '🐼' : '🦅';
-  b.title = (mk === 'ashare') ? '点击定位到 A股 · 全球要闻' : '点击定位到 美股 · 全球要闻';
+  b.title = (mk === 'ashare') ? '当前 A股要闻 · 点击切换到美股' : '当前 美股要闻 · 点击切换到A股';
 }
 function gnSpy() {
   var b = document.getElementById('gn-jump');
@@ -3767,11 +3770,13 @@ window.addEventListener('popstate', function () {
   var gnei = document.getElementById('gn-entry-in');
   if (gne) gne.addEventListener('click', function () { openGnews(); });
   if (gnei) gnei.addEventListener('click', function () { closeGnews(); });
-  // R100z112：页内单一定位按钮——点击平滑滚动到当前图标指向的市场要闻卡（🐼→A股 / 🦅→美股）
+  // R100z113：点击 = 切换市场（toggle）：点 🐼 → 滚到美股要闻且图标切 🦅；点 🦅 → 滚回 A股且切 🐼。
+  // 滚动监听保留：手动翻页时图标仍随所在板块自动切换（gnSpy）。
   var gnj = document.getElementById('gn-jump');
   if (gnj) gnj.addEventListener('click', function () {
-    var el = document.getElementById(_gnJumpTarget === 'ashare' ? 'gn-ashare' : 'gn-us');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    var to = _gnJumpTarget === 'ashare' ? 'us' : 'ashare';
+    var el = document.getElementById(to === 'ashare' ? 'gn-ashare' : 'gn-us');
+    if (el) { gnSetJump(to); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   });
   window.addEventListener('scroll', function () { gnSpy(); }, { passive: true });
   try { localStorage.removeItem('dbFloatPos'); } catch (e) {} // 清理更早版本的位置键
@@ -3794,14 +3799,16 @@ window.addEventListener('popstate', function () {
       dei.style.right = 'auto'; dei.style.bottom = 'auto';
     }
     // R100z109：全球要闻页内返回按钮与组内 📄 位置实时同步（同 db-entry-in）
+    // R100z113：页内按钮对齐主组「同槽位」——gn-entry-in 落主组 📄 槽（中），gn-jump 落主组 🐼 槽（顶），
+    // 保证主页面点 📄 进来后鼠标不动仍悬在 📄 上（用户 2026-10-10 反馈「点进去鼠标在🐼上面」）
+    var _gnMob = window.innerWidth <= 700, _gnHalf = _gnMob ? 21 : 23; // 42/46 按钮的一半
     var gni = document.getElementById('gn-entry-in');
     if (gni) {
-      gni.style.left = l + 'px'; gni.style.top = (t + h - 46) + 'px';
+      gni.style.left = l + 'px'; gni.style.top = (t + h / 2 - _gnHalf) + 'px';
       gni.style.right = 'auto'; gni.style.bottom = 'auto';
     }
-    // R100z112：单一定位按钮置于返回按钮 📄 上方 60px（与组内按钮同步进），并钳制在视口内
     var gnj2 = document.getElementById('gn-jump');
-    if (gnj2) { gnj2.style.left = l + 'px'; gnj2.style.top = Math.max(6, Math.min(t + h - 106, window.innerHeight - 52)) + 'px'; gnj2.style.right = 'auto'; }
+    if (gnj2) { gnj2.style.left = l + 'px'; gnj2.style.top = t + 'px'; gnj2.style.right = 'auto'; }
     if (save) {
       try { localStorage.setItem(POS_KEY, JSON.stringify({ lf: l / window.innerWidth, tf: t / window.innerHeight })); } catch (e) {}
     }
@@ -3836,7 +3843,7 @@ window.addEventListener('popstate', function () {
       if (e.button) return;
       sx = e.clientX; sy = e.clientY;
       var r = el.getBoundingClientRect();
-      ox = r.left; oy = r.top - (el === dei || el === gnei ? grpH() - 46 : 0);
+      ox = r.left; oy = r.top - (el === dei ? grpH() - 46 : (el === gnei ? grpH() / 2 - (window.innerWidth <= 700 ? 21 : 23) : 0));
       moved = false; trackH();
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
