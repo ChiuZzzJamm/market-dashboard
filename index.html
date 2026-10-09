@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610091022"></script>
+<script src="data.js?v=202610091038"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -3022,6 +3022,22 @@ function stkMa5Of(code0, embKline) {
   }
   return s / 5;
 }
+/* R100z105：开盘精选技术池标的（src=hz/acc/pw）回源查池内条目。
+   四格渲染需要来源池的专属字段（谐波 prz/stop/target1、吸筹 score/f5Tier/hitCount、九门 score/volRatio/rsi），
+   star 循环合成的 e2 只带了 score/grade/story/deduce，不够用——按 src 回原池查全量条目，查不到返回 null。 */
+function starTechOf(code0, src) {
+  var c = String(code0 || '').replace(/\D/g, '');
+  if (!c) return null;
+  if (src === 'hz') return findHarmonic(c);
+  var D = window.DASHBOARD_DATA || {};
+  var arr = src === 'acc' ? ((D.accumulation || {}).scored || [])
+          : src === 'pw' ? ((D.powerScreen || {}).passed || []) : null;
+  if (!arr) return null;
+  for (var i = 0; i < arr.length; i++) {
+    if (String((arr[i] || {}).code || '').replace(/\D/g, '') === c) return arr[i];
+  }
+  return null;
+}
 /* R100z36：谐波形态英文名 → 短中文（格内空间窄，Butterfly 这类长名会被截断）。
    口径以 harmonic_detect.py 的 PATTERNS 为准，取不到就原样显示英文，绝不猜译。 */
 var HZ_PAT_CN = { 'Bat': '蝙蝠', 'Gartley': '加特利', 'Butterfly': '蝶形', 'Crab': '蟹形', 'Shark': '鲨鱼', 'Cypher': '塞弗', 'AB=CD': 'AB等CD' };
@@ -3094,9 +3110,43 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
   var foot = '<span class="xt">' + esc(form.replace(/^.*?断板/, '断板').replace(/·/, '：')) + '</span>';
   // R100z44：断板模块数据日取 generatedAt（该模块无 tradeDate 字段）
   var modD = String(((window.DASHBOARD_DATA || {}).duanban || {}).generatedAt || '').slice(0, 10);
-  // R100z104（用户 2026-10-09）：开盘精选四格＝板块涨幅 / 上涨概率 / 建议买入价(MA5) / 止损；
-  // 断板确认池/观察池维持原四格（反包概率/缩量天数/板块涨幅/止损）不变。
-  var cells = star ? [
+  // R100z104→R100z105（用户 2026-10-09 两轮反馈）：开盘精选标的来自四池，但「板块涨幅/上涨概率/MA5买入/断板日止损」
+  // 全是断板反包专属口径——九门/吸筹/谐波没有这些指标，硬套只会渲染一排「—」和口径错误的买入价。
+  // 改为按来源分派四格：断板=板块涨幅/上涨概率/建议买入价(MA5)/止损；谐波=买入区(PRZ)/距PRZ/止损(D点)/T1；
+  // 吸筹=吸筹评分/信号阶段/特征命中/止损(纪律位)；九门=九门评分/量比/RSI/止损(纪律位)。取不到如实「—」，绝不编数。
+  var cells;
+  if (star && (e.src === 'hz' || e.src === 'acc' || e.src === 'pw')) {
+    var te = starTechOf(e.code, e.src);
+    if (e.src === 'hz' && te && te.prz) {
+      var hzDist = (typeof te.distToPrzPct === 'number') ? te.distToPrzPct : null;
+      cells = [
+        tcCell('买入区', '<span class="xt" title="PRZ＝潜在反转区：价格回踩入区企稳后介入；非限价单，跌破止损位无条件离场">' + te.prz[0] + '~' + te.prz[1] + '</span>', ''),
+        tcCell('距PRZ', hzDist === null ? '—' : fmtPct(hzDist), hzDist === null ? 'flat' : (hzDist <= 0 ? 'up' : 'flat')),
+        tcCell('止损', '<span class="xt" title="D 点结构失效位：跌破即谐波形态作废，无条件离场">' + te.stop + '</span>', 'down'),
+        tcCell('T1', '<span class="xt" title="一级目标位（T2=' + te.target2 + '）">' + te.target1 + '</span>', 'up')
+      ];
+      foot = '<span class="xt">' + esc(hzPatCn(te.pattern)) + '形态 · ' + (te.stage === '确认' ? '已确认' : '观察中') + '</span>';
+    } else if (e.src === 'acc' && te) {
+      cells = [
+        tcCell('吸筹评分', te.score == null ? '—' : te.score + ' 分', te.grade === '强' ? 'up' : ''),
+        tcCell('信号阶段', te.f5Tier ? esc(te.f5Tier) : '—', ''),
+        tcCell('特征命中', te.hitCount == null ? '—' : te.hitCount + ' / 6 项', ''),
+        tcStopCell(e.code) // 吸筹无形态止损位 → exitForCode 统一纪律位（最近收盘 −2.5%，basis 自述非形态位）
+      ];
+    } else if (e.src === 'pw' && te) {
+      cells = [
+        tcCell('九门评分', te.score == null ? '—' : te.score + ' / 9', Number(te.score) >= 8 ? 'up' : ''),
+        tcCell('量比', (te.volRatio == null || !isFinite(Number(te.volRatio))) ? '—' : Number(te.volRatio).toFixed(2), ''),
+        tcCell('RSI', (te.rsi == null || !isFinite(Number(te.rsi))) ? '—' : Number(te.rsi).toFixed(1), ''),
+        tcStopCell(e.code) // 九门无形态止损位 → 统一纪律位兜底
+      ];
+    } else {
+      // 来源池已找不到该标的（数据日错位等）——如实「—」，止损仍走纪律位兜底，绝不用 MA5 冒充
+      cells = [tcCell('评分', '—', 'flat'), tcCell('信号', '—', 'flat'), tcStopCell(e.code), tcCell('参考位', '—', 'flat')];
+    }
+  } else if (star) {
+    // 断板反包（src=pool 或未标记）：维持 R100z104 口径
+    cells = [
       tcCell('板块涨幅', e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday), bCls),
       tcCell('上涨概率', prob === null ? '—' : prob + '%', sCls),
       tcCell('建议买入价', (function () {
@@ -3105,12 +3155,16 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
         return '<span class="xt" title="MA5＝最近5根日K收盘均值：回踩5日线附近企稳介入（与形态确认条件「站稳MA5」同源）；非限价单，跌破止损位无条件离场">' + ma5.toFixed(2) + '</span>';
       })(), ''),
       tcStopCell(e.code)
-    ] : [
+    ];
+  } else {
+    // 断板确认池/观察池原四格（反包概率/缩量天数/板块涨幅/止损）不变
+    cells = [
       tcCell('反包概率', prob === null ? '—' : prob + '%', sCls),
       tcCell('缩量天数', shrink, ''),
       tcCell('板块涨幅', e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday), bCls),
       tcStopCell(e.code)
     ];
+  }
   return tcCard({
     code: e.code, name: e.name, chg: tcPctOf(e.code, e.pct), dim: !done,
     fresh: poolFresh(e, modD), // R100z44：新入池首日黄色+「新」徽章
@@ -3121,7 +3175,11 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
     title: e.name + ' ' + e.code + '（' + (e.sector || '') + '）\n' + (done ? '确认池 · 全流程达标' : '观察池 · ' + e.stage) +
       '\n今日：' + fmtPct(e.pct) + ' · 板块今日：' + (e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday)) +
       '\n涨停日板块：' + (e.boardPctZt == null ? '—' : fmtPct(e.boardPctZt)) +
-      (star ? '\n建议买入价＝MA5（回踩5日线企稳介入）· 止损＝断板日最低价' : '') +
+      (star ? '\n' + ({
+        hz: '建议买入区＝PRZ 潜在反转区（回踩入区企稳介入）· 止损＝D 点结构失效位 · T1＝一级目标位',
+        acc: '吸筹评分＝六项特征加权（命中越多分越高）· 止损＝全站统一纪律位（最近收盘 −2.5%，非形态位）',
+        pw: '九门评分＝量化九门通过数（满分 9）· 止损＝全站统一纪律位（最近收盘 −2.5%，非形态位）'
+      }[e.src] || '建议买入价＝MA5（回踩5日线企稳介入）· 止损＝断板日最低价') : '') +
       '\n点击查看K线与利好依据'
   });
 }
@@ -3298,7 +3356,7 @@ function renderDuanban() {
       DB_INDEX[key] = e2;
       DB_ORDER.push(key);
       if (code.length === 6) { window._STAR_LIST.push(code); }
-      fixed += dbCardHtml(e2, key, false, true, false, true); // R100z36：与四子页同一套 T2 卡片；R100z104：star=true → 四格＝板块涨幅/上涨概率/建议买入价/止损
+      fixed += dbCardHtml(e2, key, false, true, false, true); // R100z36：与四子页同一套 T2 卡片；R100z105：star=true → 四格按来源分派（断板=板块涨幅/上涨概率/MA5买入/止损；谐波=买入区PRZ/距PRZ/D点止损/T1；吸筹=评分/阶段/命中/纪律止损；九门=评分/量比/RSI/纪律止损）
     });
     fixed += '</div></div>';
   }
