@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610100236"></script>
+<script src="data.js?v=202610100241"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -700,10 +700,10 @@
   .ps-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
   .ps-item { border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; background: var(--paper); }
   /* R100z114（用户 2026-10-10）：政策信号卡可点击 → 跳转到对应要闻条目（标题同源精确匹配） */
+  /* R100z114b（用户 2026-10-10）：去掉「→ 新闻」文字提示（用户不需要提示，直接点击即可），
+     但 ps-link 点击跳转与 ps-flash 高亮保留；货币政策徽章（.ps-sig margin-left:auto）自动回最右原位 */
   .ps-item.ps-link { cursor: pointer; transition: border-color .15s, box-shadow .15s; }
   .ps-item.ps-link:hover { border-color: var(--accent-deep, #2c5fa8); box-shadow: 0 2px 10px rgba(44,95,168,.14); }
-  .ps-go { margin-left: auto; font-size: 10.5px; color: var(--accent-deep, #2c5fa8); opacity: .75; white-space: nowrap; }
-  .ps-item.ps-link:hover .ps-go { opacity: 1; }
   @keyframes psFlashK { 0% { background: #fff1b8; box-shadow: inset 0 0 0 2px #f0b429; } 100% { background: var(--accent-soft, #f6f8fb); box-shadow: none; } }
   .wk-item.ps-flash { animation: psFlashK 2.2s ease-out 1; }
   .ps-head { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
@@ -1217,11 +1217,10 @@ function renderPolicySignals(list) {
       : '<span class="ps-chip ps-mut">—</span>';
     var tgt = (it.targets && it.targets.length) ? ' · 目标 ' + it.targets.map(esc).join('/') : '';
     // R100z114：title 与五节要闻同源精确相等 + market 指定锚点（ashare/us），点击滚动定位到对应要闻条目
-    h += '<div class="ps-item ps-link" data-ps-title="' + escAttr(it.title||'') + '" data-ps-mk="' + esc(it.market||'ashare') + '" title="点击跳转到对应新闻">' +
+    h += '<div class="ps-item ps-link" data-ps-title="' + escAttr(it.title||'') + '" data-ps-mk="' + esc(it.market||'ashare') + '">' +
       '<div class="ps-head"><span class="ps-tier ' + tc + '">' + it.tier + '</span>' +
       '<span class="ps-score">' + it.score + '</span>' +
-      '<span class="ps-sig ' + sc + '">' + esc(it.signalClass) + '</span>' +
-      '<span class="ps-go">→ 新闻</span></div>' +
+      '<span class="ps-sig ' + sc + '">' + esc(it.signalClass) + '</span></div>' +
       '<div class="ps-title">' + esc(it.title) + '</div>' +
       '<div class="ps-meta">' + esc(it.issuer) + ' · ' + esc(it.docType) + ' · ' + bind + tgt + '</div>' +
       '<div class="ps-chips">' + chips + '</div>' +
@@ -2123,8 +2122,8 @@ function newsEntryInner(it, showSrc, tag, tradeDate) {
   // R100c：利好/利空卡（短线·盘面）把确信度徽章从主推行挪到标题行；宏观/国际/投行条目徽章整体移除
   var confHead = (tag === '短线·盘面') ? deduceConfBadge(it.deduce) : '';
   var s = '<div class="nc-theme"><span class="nc-tt">' + esc(it.sector || '') + '</span>' + dirBadge + perspTag + confHead + '</div>'; // R100x：标题包 nc-tt 保留省略号，整行 flex 垂直居中
-  var dtlFull = (it.title || '') + ' — ' + (it.summary || '');
-  s += '<div class="nc-dtl" title="' + escAttr(dtlFull) + '"><b>' + esc(it.title || '') + '</b> — ' + esc(it.summary || '') + '</div>';
+  // R100z114b（用户 2026-10-10）：nc-dtl 原生 title 悬停提示已删——摘要本就默认全文展开，tooltip 纯属遮挡（全球要闻页截图反馈）
+  s += '<div class="nc-dtl"><b>' + esc(it.title || '') + '</b> — ' + esc(it.summary || '') + '</div>';
   // R100z81：同 theme 的 impacts 合并渲染（数据层碎片化兜底——一条新闻被拆成多个同 theme
   //   分组时，前端按 theme 归并成一组、标题只标一次、标的不跨组重复，避免「电池/电池/电池」
   //   重复标题 + 每组只 2~3 只的稀疏网格；合法的不同 theme 仍各自成组）
