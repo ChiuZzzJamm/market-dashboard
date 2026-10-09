@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610091008"></script>
+<script src="data.js?v=202610091022"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -3007,6 +3007,21 @@ function tcStopCell(code) {
   if (s === null) return tcCell('止损', '—', 'flat');
   return tcCell('止损', '<span class="xt">' + s.toFixed(2) + '</span>', 'down');
 }
+/* R100z104：MA5（开盘精选「建议买入价」）——最后 5 根日 K 收盘均值。
+   优先用条目内嵌 K 线（断板池条目自带 40 根），没有再查顶层 stkKlines；
+   不足 5 根或任一收盘无效 → null，格子如实写「—」，不编数字。
+   口径（用户 2026-10-09 拍板）：回踩 5 日线附近企稳介入，与形态确认条件「站稳 MA5」同源。 */
+function stkMa5Of(code0, embKline) {
+  var rows = stkParseKline(embKline || stkGlobalKline(String(code0 || '').replace(/\D/g, '')));
+  if (!rows || rows.length < 5) return null;
+  var s = 0;
+  for (var i = rows.length - 5; i < rows.length; i++) {
+    var c = Number(rows[i][2]); // [date, open, close, high, low, vol]
+    if (!isFinite(c) || c <= 0 || c >= 10000) return null;
+    s += c;
+  }
+  return s / 5;
+}
 /* R100z36：谐波形态英文名 → 短中文（格内空间窄，Butterfly 这类长名会被截断）。
    口径以 harmonic_detect.py 的 PATTERNS 为准，取不到就原样显示英文，绝不猜译。 */
 var HZ_PAT_CN = { 'Bat': '蝙蝠', 'Gartley': '加特利', 'Butterfly': '蝶形', 'Crab': '蟹形', 'Shark': '鲨鱼', 'Cypher': '塞弗', 'AB=CD': 'AB等CD' };
@@ -3069,7 +3084,7 @@ function poolFresh(it, modDate) {
      解析不到就显示「—」，不编数字。
    - 板块涨幅取自 e.boardPctToday，已前置到格子内（原 foot 里「板块今日」去重）。
    - 止损走 tcStopOf → exitForCode⓪（断板日最低价，形态位），与弹窗退出纪律同源。 */
-function dbCardHtml(e, key, done, showSec, scoreBadge) {
+function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
   var form = String(e.form || '');
   var mS = form.match(/(\d+)\s*日缩量/);
   var shrink = mS ? mS[1] + ' 日' : (/已缩量/.test(form) ? '已缩量' : (/待缩量/.test(form) ? '待缩量' : '—'));
@@ -3079,21 +3094,35 @@ function dbCardHtml(e, key, done, showSec, scoreBadge) {
   var foot = '<span class="xt">' + esc(form.replace(/^.*?断板/, '断板').replace(/·/, '：')) + '</span>';
   // R100z44：断板模块数据日取 generatedAt（该模块无 tradeDate 字段）
   var modD = String(((window.DASHBOARD_DATA || {}).duanban || {}).generatedAt || '').slice(0, 10);
-  return tcCard({
-    code: e.code, name: e.name, chg: tcPctOf(e.code, e.pct), dim: !done,
-    fresh: poolFresh(e, modD), // R100z44：新入池首日黄色+「新」徽章
-    pills: [showSec ? (e.sector || '其他') : null], sent: true,
-    cells: [
+  // R100z104（用户 2026-10-09）：开盘精选四格＝板块涨幅 / 上涨概率 / 建议买入价(MA5) / 止损；
+  // 断板确认池/观察池维持原四格（反包概率/缩量天数/板块涨幅/止损）不变。
+  var cells = star ? [
+      tcCell('板块涨幅', e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday), bCls),
+      tcCell('上涨概率', prob === null ? '—' : prob + '%', sCls),
+      tcCell('建议买入价', (function () {
+        var ma5 = stkMa5Of(e.code, e.kline);
+        if (ma5 === null) return '—';
+        return '<span class="xt" title="MA5＝最近5根日K收盘均值：回踩5日线附近企稳介入（与形态确认条件「站稳MA5」同源）；非限价单，跌破止损位无条件离场">' + ma5.toFixed(2) + '</span>';
+      })(), ''),
+      tcStopCell(e.code)
+    ] : [
       tcCell('反包概率', prob === null ? '—' : prob + '%', sCls),
       tcCell('缩量天数', shrink, ''),
       tcCell('板块涨幅', e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday), bCls),
       tcStopCell(e.code)
-    ],
+    ];
+  return tcCard({
+    code: e.code, name: e.name, chg: tcPctOf(e.code, e.pct), dim: !done,
+    fresh: poolFresh(e, modD), // R100z44：新入池首日黄色+「新」徽章
+    pills: [showSec ? (e.sector || '其他') : null], sent: true,
+    cells: cells,
     foot: foot,
     attrs: ' data-k="' + escAttr(key) + '"',
     title: e.name + ' ' + e.code + '（' + (e.sector || '') + '）\n' + (done ? '确认池 · 全流程达标' : '观察池 · ' + e.stage) +
       '\n今日：' + fmtPct(e.pct) + ' · 板块今日：' + (e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday)) +
-      '\n涨停日板块：' + (e.boardPctZt == null ? '—' : fmtPct(e.boardPctZt)) + '\n点击查看K线与利好依据'
+      '\n涨停日板块：' + (e.boardPctZt == null ? '—' : fmtPct(e.boardPctZt)) +
+      (star ? '\n建议买入价＝MA5（回踩5日线企稳介入）· 止损＝断板日最低价' : '') +
+      '\n点击查看K线与利好依据'
   });
 }
 
@@ -3269,7 +3298,7 @@ function renderDuanban() {
       DB_INDEX[key] = e2;
       DB_ORDER.push(key);
       if (code.length === 6) { window._STAR_LIST.push(code); }
-      fixed += dbCardHtml(e2, key, false, true); // R100z36：与四子页同一套 T2 卡片，板块 pill 同样带
+      fixed += dbCardHtml(e2, key, false, true, false, true); // R100z36：与四子页同一套 T2 卡片；R100z104：star=true → 四格＝板块涨幅/上涨概率/建议买入价/止损
     });
     fixed += '</div></div>';
   }
