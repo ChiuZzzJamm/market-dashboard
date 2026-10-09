@@ -20,15 +20,25 @@
    "nSec": 2,
    "nStocks": 16,
    "poolConf": "高"
+  },
+  {
+   "date": "2026-10-09",
+   "avgPct": -0.375,
+   "pf": 0.9719,
+   "bench": 0.9806,
+   "dd": -2.81,
+   "nSec": 2,
+   "nStocks": 16,
+   "poolConf": "高"
   }
  ],
  "stat": {
-  "days": 2,
-  "totRetPct": -2.44,
-  "benchRetPct": -2.13,
-  "excessPct": -0.31,
-  "maxDdPct": -2.44,
-  "maxDdDate": "2026-10-08",
+  "days": 3,
+  "totRetPct": -2.81,
+  "benchRetPct": -1.94,
+  "excessPct": -0.87,
+  "maxDdPct": -2.81,
+  "maxDdDate": "2026-10-09",
   "note": "组合=各预测日「置信度=高」板块（无高则取当日最高置信档）的预测标的等权平均涨跌幅累乘；基准=同日市场基准累乘；回撤按组合净值峰谷算"
  }
 }
