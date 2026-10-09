@@ -42,6 +42,26 @@ def load_data(data_path):
     return s, json.loads(s[i:s.rindex("}") + 1])
 
 
+def load_blacklist(base):
+    """读 risk_blacklist.json 的 blacklist 段 → {code: severity}。
+
+    R100z9y（2026-10-09 实战）：star 精选把硬风险黑名单标的（金溢科技 002869，
+    red·两次减持公告）选进了 picks，直到 validate_stocks --scope star 才报 FAIL。
+    断板池由 16:00 流程负责、谐波/九门/吸筹池也不查减持，**开盘精选是唯一有机会
+    在选股环节拦住这类标的的闸口**，故在脚本里硬剔（severity=red），而不是让
+    每天靠 AI 事后补救（AI 补救还会踩「配额已用尽、下一名也上不了」的坑）。
+    文件缺失/损坏一律按空处理（源不可达不等于安全，但也不阻塞本任务）。
+    """
+    try:
+        with open(os.path.join(base, "risk_blacklist.json"), encoding="utf-8") as f:
+            raw = json.load(f)
+        bl = raw.get("blacklist") or {}
+        return {str(c): str(v.get("severity") or "") for c, v in bl.items()
+                if isinstance(v, dict)}
+    except Exception:
+        return {}
+
+
 def fetch_open_indices():
     """腾讯 gtimg 指数快照 → [{name, pct, amount亿}]；失败 []。"""
     try:
@@ -102,7 +122,9 @@ def fetch_stock_quotes(codes):
     return quotes
 
 
-def build_star(D):
+def build_star(D, base=None):
+    base = base or os.path.dirname(os.path.abspath(__file__))
+    blacklist = load_blacklist(base)
     db = D.get("duanban") or {}
     pools = []
     for pool in ("confirmed", "watching"):
@@ -153,6 +175,8 @@ def build_star(D):
                 break
             if _t["code"] in _used:
                 continue
+            if blacklist.get(_t["code"]) == "red":
+                continue  # R100z9y：硬风险黑名单不进精选，且不占配额（顺位递补）
             _used.add(_t["code"])
             tech.append(_t)
             _cnt += 1
@@ -219,6 +243,8 @@ def build_star(D):
         sent = e.get("sentiment") or "neutral"
         if sent == "bear":
             continue  # 利空标的不进精选
+        if blacklist.get(str(e.get("code"))) == "red":
+            continue  # R100z9y：硬风险黑名单（减持实施中/ST/预亏）不进精选
         sec = str(e.get("sector") or "")
         if not _linked(sec):
             continue  # R99b：板块不挂钩的不进精选
@@ -300,8 +326,9 @@ def main():
     ap.add_argument("--dry", action="store_true", help="只打印不写回")
     args = ap.parse_args()
     data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.js")
+    base = os.path.dirname(data_path)
     _, D = load_data(data_path)
-    star, err = build_star(D)
+    star, err = build_star(D, base)
     if err:
         print(f"[FAIL] {err}，不写入")
         sys.exit(1)
