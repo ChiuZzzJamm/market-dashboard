@@ -58,10 +58,17 @@ def _decode_all(D):
             title = (it.get("title") or "").strip()
             if not title:
                 continue
-            r = dp.policy_score(title)
-            # 只保留真政策源（媒体/券商/外国源、未识别源 decode_issuer 已归 0/1 档）
-            if r["issuer"].startswith("媒体") or r["issuer"].startswith("未识别"):
+            # R100z111：真政策源判定仍只看标题（摘要里提到"央行"的媒体快讯不算政策源），
+            # 但其余四维（文种/量化指标/受益板块/时间压缩）用 标题+摘要 联合解码——
+            # 此前只扫标题，受益板块/数字目标大多藏在摘要里 → 前端 sectors 渲染恒「—」、
+            # 且央行内容若只出现在摘要会漏解（用户 2026-10-10 反馈）。
+            tier0, name0, _ = dp.decode_issuer(title)
+            if name0.startswith("媒体") or name0.startswith("未识别"):
                 continue
+            full = (title + "。" + str(it.get("summary") or ""))[:800]
+            r = dp.policy_score(full)
+            # 主体口径保持标题级别（摘要提到更高层级主体不升级，避免误标发文主体）
+            r["issuer"] = f"{name0}(t{tier0})"
             items.append({
                 "title": title,
                 "issuer": r["issuer"],

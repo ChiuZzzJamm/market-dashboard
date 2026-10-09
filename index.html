@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610100147"></script>
+<script src="data.js?v=202610100201"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -224,9 +224,13 @@
 
   /* ===== 全球要闻 / 周末 ===== */
   .wk-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 26px; margin-bottom: 20px; box-shadow: var(--shadow); }
-  .wk-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+  /* R100z111（用户 2026-10-10）：卡头下那条线去掉、留白压小——原 border-bottom+padding12+margin14，
+     首节再有 border-top+padding16+margin22，双重分隔线夹出 ~64px 空白带 */
+  .wk-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
   .wk-head h2 { margin: 0; }
   .wk-head .date { font-size: 12.5px; color: var(--ink2); }
+  /* 紧跟卡头的第一节：不再叠第二层线与上边距 */
+  .wk-head + .wk-section { margin-top: 0; padding-top: 0; border-top: none; }
   /* 卡片 h2 内日期角标（主力资金流向等，R98f；R99e 扩展到 AI 预测卡） */
   .card h2 .h2-date, .ai-card h2 .h2-date, .wk-card h2 .h2-date { font-size: 12.5px; color: var(--ink2); font-weight: 400; margin-left: 8px; }
   /* R100z54：开盘前瞻结构化假设 pos 速览三格（倾向 / 点位区间 / 量能），
@@ -263,8 +267,8 @@
   .wk-item .nc-stocks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: 6px; }
   .nc-theme { font-size: 14px; font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; min-width: 0; }
   .nc-theme .nc-tt { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .nc-dtl { font-size: 13px; color: var(--ink); line-height: 1.65; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; min-height: calc(13px * 1.65 * 3); cursor: pointer; }
-  .nc-dtl.expanded { display: block; -webkit-line-clamp: unset; overflow: visible; min-height: 0; }
+  /* R100z111（用户 2026-10-10）：取消「点击展开全文」，摘要默认完整显示（原 3 行 line-clamp + 点击 .expanded 切换已废） */
+  .nc-dtl { font-size: 13px; color: var(--ink); line-height: 1.65; margin-bottom: 10px; display: block; }
   .nc-dtl b { font-weight: 700; }
   .nc-imp { display: flex; flex-wrap: wrap; align-items: center; } /* R100x：传导链行 flex 垂直居中（主题+期距徽章+个股网格） */
   .nc-imp .nc-stocks { width: 100%; }
@@ -731,6 +735,8 @@
     font-size: 42px; line-height: 1; user-select: none; -webkit-tap-highlight-color: transparent;
   }
   body.gnews-open .gn-jump { display: flex; }
+  .gn-jump:hover { transform: scale(1.1); }
+  .gn-jump:active { transform: scale(.92); }
   #gn-jump-a { top: calc(50% + 97px); }
   #gn-jump-u { top: calc(50% + 157px); }
   @media (max-width: 700px) {
@@ -1191,10 +1197,14 @@ function h2Date(d) {
 function renderPolicySignals(list) {
   var tierCls = { S: 't-s', A: 't-a', B: 't-b', C: 't-c' };
   var clsSig = { '货币政策': 'sig-mon', '财政': 'sig-fis', '产业': 'sig-ind', '其他': 'sig-oth' };
+  // R100z111：binding 数据层为 hard/soft/directional 英文枚举，渲染层强制转中文（页面只出中文硬规矩；
+  // 用户 2026-10-10 反馈「约束性·预期性·方向性我没看到」即因裸渲染 directional 认不出）
+  var bindingZh = { hard: '约束性', soft: '预期性', directional: '方向性' };
   var h = '<div class="ps-list">';
   list.forEach(function (it) {
     var tc = tierCls[it.tier] || 't-c';
     var sc = clsSig[it.signalClass] || 'sig-oth';
+    var bind = bindingZh[it.binding] || esc(it.binding);
     var chips = (it.sectors && it.sectors.length)
       ? it.sectors.map(function (s) { return '<span class="ps-chip">' + esc(s) + '</span>'; }).join('')
       : '<span class="ps-chip ps-mut">—</span>';
@@ -1204,7 +1214,7 @@ function renderPolicySignals(list) {
       '<span class="ps-score">' + it.score + '</span>' +
       '<span class="ps-sig ' + sc + '">' + esc(it.signalClass) + '</span></div>' +
       '<div class="ps-title">' + esc(it.title) + '</div>' +
-      '<div class="ps-meta">' + esc(it.issuer) + ' · ' + esc(it.docType) + ' · ' + esc(it.binding) + tgt + '</div>' +
+      '<div class="ps-meta">' + esc(it.issuer) + ' · ' + esc(it.docType) + ' · ' + bind + tgt + '</div>' +
       '<div class="ps-chips">' + chips + '</div>' +
       '</div>';
   });
@@ -2139,13 +2149,7 @@ function newsEntryInner(it, showSrc, tag, tradeDate) {
   return s;
 }
 
-(function () {
-  // R91：摘要 nc-dtl 点击展开/收起（悬停由 title 提示承担）
-  document.addEventListener('click', function (e) {
-    var t = e.target && e.target.closest ? e.target.closest('.nc-dtl') : null;
-    if (t) t.classList.toggle('expanded');
-  });
-})();
+// R100z111：原「R91 摘要 nc-dtl 点击展开/收起」已按用户要求废除——摘要默认全文显示
 
 function renderNewsCard(d, market) {
   // R100z109（用户 2026-10-10）：A股/美股要闻卡迁入「📄 全球要闻」独立页；
@@ -3772,10 +3776,11 @@ window.addEventListener('popstate', function () {
       gni.style.right = 'auto'; gni.style.bottom = 'auto';
     }
     // R100z110：🐼/🦅 定位按钮跟随返回按钮下方（60px 步进 = 46 按钮 + 14 间距）
+    // R100z111：加视口下缘钳制——组被拖近底部时按钮不再被推出屏幕外
     var gja2 = document.getElementById('gn-jump-a');
     var gju2 = document.getElementById('gn-jump-u');
-    if (gja2) { gja2.style.left = l + 'px'; gja2.style.top = (t + h + 14) + 'px'; gja2.style.right = 'auto'; }
-    if (gju2) { gju2.style.left = l + 'px'; gju2.style.top = (t + h + 74) + 'px'; gju2.style.right = 'auto'; }
+    if (gja2) { gja2.style.left = l + 'px'; gja2.style.top = Math.min(t + h + 14, window.innerHeight - 52) + 'px'; gja2.style.right = 'auto'; }
+    if (gju2) { gju2.style.left = l + 'px'; gju2.style.top = Math.min(t + h + 74, window.innerHeight - 52) + 'px'; gju2.style.right = 'auto'; }
     if (save) {
       try { localStorage.setItem(POS_KEY, JSON.stringify({ lf: l / window.innerWidth, tf: t / window.innerHeight })); } catch (e) {}
     }
@@ -3803,13 +3808,14 @@ window.addEventListener('popstate', function () {
     if (moved && lastPos) place(lastPos.l, lastPos.t, true); // 组隐藏时 rect() 为 0，用内存位置保存
   }
   // R100c：g（🐼+💰 整组）与 dei（断板页返回💰）共用同一套拖拽；拖 dei 时换算为组左上角坐标，两页共享 floatGroupPos
+  // R100z111：📄 全球要闻页返回按钮(#gn-entry-in)接入同一套拖拽（用户反馈「不能拖拽」）， Panda/鹰 定位按钮随 place() 跟随
   function bindDrag(el) {
     if (!el) return;
     el.addEventListener('pointerdown', function (e) {
       if (e.button) return;
       sx = e.clientX; sy = e.clientY;
       var r = el.getBoundingClientRect();
-      ox = r.left; oy = r.top - (el === dei ? grpH() - 46 : 0);
+      ox = r.left; oy = r.top - (el === dei || el === gnei ? grpH() - 46 : 0);
       moved = false; trackH();
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
@@ -3822,6 +3828,7 @@ window.addEventListener('popstate', function () {
   }
   bindDrag(g);
   bindDrag(dei);
+  if (typeof gnei !== 'undefined' && gnei) bindDrag(gnei);
   window.addEventListener('resize', applySaved);
   applySaved();
 })();
