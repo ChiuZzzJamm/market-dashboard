@@ -261,21 +261,6 @@
   .wk-item .nc-imp { margin-top: 6px; padding-top: 7px; border-top: 1px dashed var(--line); }
   .wk-item .nc-imp-theme { font-size: 12px; font-weight: 700; color: var(--accent-deep); }
   .wk-item .nc-stocks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: 6px; }
-  .news-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
-  .news-cols .news-cell { min-width: 0; }
-  .news-cell.ghost-slot { visibility: hidden; padding: 0; border: none; background: none; }
-  @media (max-width: 700px) {
-    .news-cols { grid-template-columns: 1fr; }
-    .news-cols .nc-head.bull { order: 1; }
-    .news-cols .p-bull { order: 2; }
-    .news-cols .nc-head.bear { order: 3; }
-    .news-cols .p-bear { order: 4; }
-  }
-  .nc-head { font-size: 14.5px; font-weight: 800; margin-bottom: 8px; letter-spacing: 1px; }
-  .nc-head.bull { color: var(--up); }
-  .nc-head.bear { color: var(--down); }
-  .news-cell { background: var(--accent-soft); border-radius: 14px; border-left: 4px solid var(--up); padding: 12px 14px; display: flex; flex-direction: column; }
-  .news-cell.bear { border-left-color: var(--down); }
   .nc-theme { font-size: 14px; font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; min-width: 0; }
   .nc-theme .nc-tt { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .nc-dtl { font-size: 13px; color: var(--ink); line-height: 1.65; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; min-height: calc(13px * 1.65 * 3); cursor: pointer; }
@@ -285,7 +270,6 @@
   .nc-imp .nc-stocks { width: 100%; }
   .nc-imp-hz { font-size: 11px; font-weight: 600; color: var(--ink2); background: var(--line); border: 1px solid currentColor; border-radius: 8px; padding: 1px 7px; flex: none; line-height: 1.5; margin-left: 6px; }
   /* 分组间距：顶对齐——分组紧跟摘要排（固定 8px），剩余空间留白在卡片底部，上方不留大空隙 */
-  .news-cell .nc-imp { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
   .nc-imp-theme { font-size: 12.5px; font-weight: 700; color: var(--accent-deep); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
   .nc-imp-theme::before { content: ''; width: 3px; height: 11px; border-radius: 2px; background: var(--accent); flex: none; }
   .dir-badge { font-size: 11px; font-weight: 700; margin-left: 6px; line-height: 1.45; border: 1px solid currentColor; }
@@ -301,13 +285,10 @@
   .nc-time { font-size: 10.5px; font-weight: 600; color: var(--ink2); background: rgba(0,0,0,.05); border: 1px solid currentColor; border-radius: 999px; padding: 1.5px 8px; margin-left: 6px; white-space: nowrap; line-height: 1.45; }
   .nc-time.today { color: #fff; background: var(--accent-deep); }
   .nc-stocks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: 6px; }
-  .news-cell.bull .stock-chip { border-color: #f2c4ca; }
-  .news-cell.bear .stock-chip { border-color: #b9e2d8; }
   /* 手机端：4 列网格芯片过窄会导致股票名+代码被 overflow:hidden 截断，改 2 列保证完整显示 */
   @media (max-width: 560px) {
     .stock-chips, .nc-stocks, .lb-stocks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
-  .nc-empty { font-size: 12.5px; color: var(--ink2); }
   /* 题材掘金 · 个股事件驱动 */
   .tp-item { background: var(--accent-soft); border-radius: 12px; padding: 11px 13px; margin-bottom: 10px; border-left: 4px solid var(--up); }
   .tp-item.tp-down { border-left-color: var(--down); }
@@ -731,12 +712,21 @@
   .ps-chips { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 4px; }
   .ps-chip { font-size: 10.5px; padding: 1px 7px; border-radius: 10px; background: #eef1f5; color: #34495e; }
   .ps-chip.ps-mut { background: #f5f5f5; color: #999; }
+  /* R100z109 全球要闻独立页（📄）：与 #duanban-view 同款「打开即独占」模式 */
+  #gnews-view { display: none; }
+  body.gnews-open .wrap > *:not(#gnews-view) { display: none !important; }
+  body.gnews-open #gnews-view { display: block; }
+  .gn-empty { font-size: 12.5px; color: var(--ink2); }
+  /* 悬浮组现有 3 个按钮（🐼/📄/🧰），页内返回按钮默认对齐组内最后一个按钮的位置 */
+  .db-entry-in { top: calc(50% + 37px); }
+  @media (max-width: 700px) { .db-entry-in { top: calc(50% + 33px); } }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="float-group" id="float-group" title="整组可拖动到任意位置">
     <button class="mkt-toggle" id="mkt-toggle" title="切换到美股看板" aria-label="切换A股/美股看板" onclick="switchTab(currentMarket==='ashare'?'us':'ashare')">🐼</button>
+    <button class="db-entry" id="gn-entry" title="点击进入全球要闻（A股/美股要闻 · 政策信号解码）" aria-label="全球要闻"><span class="db-emoji">📄</span></button>
     <button class="db-entry" id="db-entry" title="点击进入策略工具箱（断板反包 / 谐波形态 / 日线九门）" aria-label="策略工具箱"><span class="db-emoji">🧰</span><span class="db-badge" id="db-badge"></span></button>
   </div>
   <div class="hero">
@@ -754,8 +744,6 @@
     <div class="tab" id="tab-u" onclick="switchTab('us')">美 股</div>
   </div>
   <div id="content"></div>
-
-  <div id="news-slot"></div>
 
   <div class="card" id="pano-card">
     <h2>行业全景 · 美股 / 韩股 / 日经</h2>
@@ -784,6 +772,16 @@
     <div id="db-hz" class="db-subpage" style="display:none;"></div>
     <div id="db-pw" class="db-subpage" style="display:none;"></div>
     <div id="db-acc" class="db-subpage" style="display:none;"></div>
+  </div>
+
+  <!-- R100z109：全球要闻独立页（📄）——A股/美股五节要闻 + 政策信号解码，自主页面迁入 -->
+  <div id="gnews-view">
+    <div class="db-topbar">
+      <div class="db-title">全球要闻</div>
+      <div class="db-date" id="gn-date"></div>
+    </div>
+    <button class="db-entry-in" id="gn-entry-in" title="点击返回每日市场看板">📄</button>
+    <div id="gnews-body"></div>
   </div>
 </div>
 
@@ -1229,11 +1227,8 @@ function render(market) {
     }
   }
 
-  // R100z107b：政策信号解码面板（数据来自 enrich_policy.py 写回的顶层 policySignals）
-  if (isA && window.DASHBOARD_DATA.policySignals && window.DASHBOARD_DATA.policySignals.length) {
-    html += '<div class="card"><h2>📜 政策信号解码' + h2Date(d) + '</h2>' +
-      renderPolicySignals(window.DASHBOARD_DATA.policySignals) + '</div>';
-  }
+  // R100z109（用户 2026-10-10）：全球要闻与政策信号解码迁至「📄 全球要闻」独立页（renderGnews），
+  // 主页面（A股/美股）不再渲染这两个模块。
 
   // R100m：主力吸筹已移至「🧰 技术看板」第 4 子页（db-acc），主页面不再渲染（用户 2026-09-28 要求）。
   // 谐波形态 / 量化九门此前已移入子页（R100i），子页渲染见 renderDuanban()。
@@ -1250,10 +1245,6 @@ function render(market) {
   // 子页渲染见 renderDuanban() 内 db-hz / db-pw 容器。
 
   document.getElementById('content').innerHTML = html;
-
-  // R97：全球要闻（含宏观/财经/投行）独立渲染到 #news-slot——紧贴行业全景上方（2026-09-23 用户要求）
-  var newsBox = document.getElementById('news-slot');
-  if (newsBox) newsBox.innerHTML = renderNewsCard(d, market);
 
   if (isA) {
     var fIn = d.fundIn || [], fOut = d.fundOut || [];
@@ -2134,7 +2125,9 @@ function newsEntryInner(it, showSrc, tag, tradeDate) {
 })();
 
 function renderNewsCard(d, market) {
-  // A股/美股共用：大标题「全球要闻」，桌面两栏按行配对（同行等高、左右对齐），手机单列组内重排
+  // R100z109（用户 2026-10-10）：A股/美股要闻卡迁入「📄 全球要闻」独立页；
+  // 原利好/利空两栏紧凑卡（news-cols/news-cell）废除，五节统一为通栏展开卡（wk-item，
+  // 与宏观/媒体视角/投行条目同款：标题+长叙事+板块chips+主推/反证/候选+来源行）。
   if (!d) return '';
   var bn = d.bullNews||[], be = d.bearNews||[];
   // R99d：宏观/财经/投行三栏按方向排序——看涨靠前、中性居中、看跌靠后（稳定排序，同向保持原序）
@@ -2144,22 +2137,18 @@ function renderNewsCard(d, market) {
   var bank = (d.bankViews||[]).slice().sort(dirSort);
   var macro = (d.macroNews||[]).slice().sort(dirSort);
   if (!bn.length && !be.length && !intl.length && !bank.length && !macro.length) return '';
-  var itemHtml = function (it, dir) {
-    return '<div class="news-cell ' + dir + '">' + newsEntryInner(it, false, '短线·盘面', d.tradeDate) + '</div>';
-  };
-  // 桌面：第 i 行 = 利好第 i 条 + 利空第 i 条（网格同行等高，左右始终对齐）
-  // 手机(≤700px)：单列 + order 重排为 利好标题→利好条目→利空标题→利空条目
-  var html = '<div class="wk-card"><div class="wk-head"><h2>全球要闻</h2>'
+  var mkTitle = market === 'us' ? '🇺🇸 美股 · 全球要闻' : '🇨🇳 A股 · 全球要闻';
+  var html = '<div class="wk-card"><div class="wk-head"><h2>' + mkTitle + '</h2>'
     + '<span class="date">' + esc(d.tradeDate||'') + '</span></div>';
-  if (bn.length || be.length) {
-    html += '<div class="news-cols">';
-    html += '<div class="nc-head bull">利好方向</div><div class="nc-head bear">利空方向</div>';
-    var nRows = Math.max(bn.length, be.length);
-    for (var i = 0; i < nRows; i++) {
-      html += i < bn.length ? itemHtml(bn[i], 'bull').replace('news-cell bull"', 'news-cell bull p-bull"') : '<div class="news-cell ghost-slot"></div>';
-      html += i < be.length ? itemHtml(be[i], 'bear').replace('news-cell bear"', 'news-cell bear p-bear"') : '<div class="news-cell ghost-slot"></div>';
-    }
-    if (!nRows) html += '<div class="news-cell bull p-bull"><div class="nc-empty">今日暂无</div></div><div class="news-cell bear p-bear"><div class="nc-empty">今日暂无</div></div>';
+  // 利好 / 利空方向（短线·盘面）：通栏展开卡，左侧色条表达方向（红=利好 / 绿=利空）
+  if (bn.length) {
+    html += '<div class="wk-section"><h4 class="bull">利好方向 · 短线盘面</h4>';
+    bn.forEach(function (it) { html += '<div class="wk-item wk-dir-up">' + newsEntryInner(it, true, '短线·盘面', d.tradeDate) + '</div>'; });
+    html += '</div>';
+  }
+  if (be.length) {
+    html += '<div class="wk-section"><h4 class="bear">利空方向 · 短线盘面</h4>';
+    be.forEach(function (it) { html += '<div class="wk-item wk-dir-down">' + newsEntryInner(it, true, '短线·盘面', d.tradeDate) + '</div>'; });
     html += '</div>';
   }
   // 宏观（央行 / 通胀 / 大宗 / 美债 / 汇率）——顺序（R68 定稿）：宏观 → 彭博/路透/WSJ → 投行观点
@@ -3665,10 +3654,51 @@ function closeDuanban() {
   closeDbModal();
   window.scrollTo(0, window._dbScrollY || 0); // 返回刚刚浏览的界面位置
 }
+
+/* R100z109：📄 全球要闻独立页——与 #duanban-view 同款「打开即独占」模式（hash=#gnews，
+   进入记住主页面浏览位置、退出还原；页内浏览位置也记忆） */
+function openGnews() {
+  if (location.hash !== '#gnews') history.pushState(null, '', '#gnews');
+  window._gnHomeScrollY = window.scrollY;
+  document.body.classList.add('gnews-open');
+  window.scrollTo(0, window._gnViewScrollY || 0);
+  renderGnews();
+}
+function closeGnews() {
+  if (location.hash === '#gnews') history.pushState(null, '', location.pathname + location.search);
+  window._gnViewScrollY = window.scrollY;
+  document.body.classList.remove('gnews-open');
+  window.scrollTo(0, window._gnHomeScrollY || 0);
+}
+function renderGnews() {
+  var D = window.DASHBOARD_DATA || {};
+  var box = document.getElementById('gnews-body');
+  if (!box) return;
+  var html = '';
+  // ① 政策信号解码（自 A股主页面迁入）
+  if (D.policySignals && D.policySignals.length) {
+    var psDate = (D.policySignals[0] && D.policySignals[0].date) || '';
+    html += '<div class="wk-card"><div class="wk-head"><h2>📜 政策信号解码</h2><span class="date">' + esc(psDate) + '</span></div>' +
+      renderPolicySignals(D.policySignals) + '</div>';
+  }
+  // ② A股五节要闻 ③ 美股五节要闻（renderNewsCard 全空时返回 ''，自动不渲染空卡）
+  html += renderNewsCard(D.ashare, 'ashare');
+  html += renderNewsCard(D.us, 'us');
+  if (!html) html = '<div class="wk-card"><div class="wk-head"><h2>全球要闻</h2></div><div class="gn-empty">今日暂无要闻数据</div></div>';
+  box.innerHTML = html;
+  var gd = document.getElementById('gn-date');
+  if (gd) {
+    var aD = (D.ashare || {}).tradeDate || '', uD = (D.us || {}).tradeDate || '';
+    gd.textContent = 'A股 ' + aD + (aD && uD ? ' · ' : '') + '美股 ' + uD;
+  }
+}
 window.addEventListener('popstate', function () {
-  var open = location.hash === '#duanban';
-  document.body.classList.toggle('db-open', open);
-  if (open) renderDuanban(); else closeDbModal();
+  var openDb = location.hash === '#duanban';
+  var openGn = location.hash === '#gnews';
+  document.body.classList.toggle('db-open', openDb);
+  if (openDb) renderDuanban(); else closeDbModal();
+  document.body.classList.toggle('gnews-open', openGn);
+  if (openGn) renderGnews();
 });
 /* R99g：🐼/💰 悬浮组合并为一个整体，整组可拖拽（>6px 位移判定为拖动，否则视为点击）+ 位置记忆（floatGroupPos）；
    断板反包页内返回 💰(#db-entry-in) 与组内 💰 位置实时同步（组顶 + 组高 - 46） */
@@ -3677,6 +3707,11 @@ window.addEventListener('popstate', function () {
   var dei = document.getElementById('db-entry-in');
   if (de) de.addEventListener('click', function () { openDuanban(); });
   if (dei) dei.addEventListener('click', function () { closeDuanban(); });
+  // R100z109：📄 全球要闻入口 / 页内返回
+  var gne = document.getElementById('gn-entry');
+  var gnei = document.getElementById('gn-entry-in');
+  if (gne) gne.addEventListener('click', function () { openGnews(); });
+  if (gnei) gnei.addEventListener('click', function () { closeGnews(); });
   try { localStorage.removeItem('dbFloatPos'); } catch (e) {} // 清理更早版本的位置键
   var g = document.getElementById('float-group');
   if (!g) return;
@@ -3695,6 +3730,12 @@ window.addEventListener('popstate', function () {
     if (dei) {
       dei.style.left = l + 'px'; dei.style.top = (t + h - 46) + 'px';
       dei.style.right = 'auto'; dei.style.bottom = 'auto';
+    }
+    // R100z109：全球要闻页内返回按钮与组内 📄 位置实时同步（同 db-entry-in）
+    var gni = document.getElementById('gn-entry-in');
+    if (gni) {
+      gni.style.left = l + 'px'; gni.style.top = (t + h - 46) + 'px';
+      gni.style.right = 'auto'; gni.style.bottom = 'auto';
     }
     if (save) {
       try { localStorage.setItem(POS_KEY, JSON.stringify({ lf: l / window.innerWidth, tf: t / window.innerHeight })); } catch (e) {}
@@ -4849,6 +4890,7 @@ render('ashare');
 renderPano();
 renderDuanban();
 if (location.hash === '#duanban') { document.body.classList.add('db-open'); window.scrollTo(0, 0); }
+if (location.hash === '#gnews') { document.body.classList.add('gnews-open'); renderGnews(); window.scrollTo(0, 0); }
 </script>
 </body>
 </html>
