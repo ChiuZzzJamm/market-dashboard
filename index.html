@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610100222"></script>
+<script src="data.js?v=202610100236"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -699,6 +699,13 @@
   /* R100z107b 政策信号解码面板 */
   .ps-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
   .ps-item { border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; background: var(--paper); }
+  /* R100z114（用户 2026-10-10）：政策信号卡可点击 → 跳转到对应要闻条目（标题同源精确匹配） */
+  .ps-item.ps-link { cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+  .ps-item.ps-link:hover { border-color: var(--accent-deep, #2c5fa8); box-shadow: 0 2px 10px rgba(44,95,168,.14); }
+  .ps-go { margin-left: auto; font-size: 10.5px; color: var(--accent-deep, #2c5fa8); opacity: .75; white-space: nowrap; }
+  .ps-item.ps-link:hover .ps-go { opacity: 1; }
+  @keyframes psFlashK { 0% { background: #fff1b8; box-shadow: inset 0 0 0 2px #f0b429; } 100% { background: var(--accent-soft, #f6f8fb); box-shadow: none; } }
+  .wk-item.ps-flash { animation: psFlashK 2.2s ease-out 1; }
   .ps-head { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
   .ps-tier { font-size: 12px; font-weight: 800; width: 20px; height: 20px; line-height: 20px; text-align: center; border-radius: 6px; color: #fff; }
   .ps-tier.t-s { background: #c0392b; }
@@ -1209,10 +1216,12 @@ function renderPolicySignals(list) {
       ? it.sectors.map(function (s) { return '<span class="ps-chip">' + esc(s) + '</span>'; }).join('')
       : '<span class="ps-chip ps-mut">—</span>';
     var tgt = (it.targets && it.targets.length) ? ' · 目标 ' + it.targets.map(esc).join('/') : '';
-    h += '<div class="ps-item">' +
+    // R100z114：title 与五节要闻同源精确相等 + market 指定锚点（ashare/us），点击滚动定位到对应要闻条目
+    h += '<div class="ps-item ps-link" data-ps-title="' + escAttr(it.title||'') + '" data-ps-mk="' + esc(it.market||'ashare') + '" title="点击跳转到对应新闻">' +
       '<div class="ps-head"><span class="ps-tier ' + tc + '">' + it.tier + '</span>' +
       '<span class="ps-score">' + it.score + '</span>' +
-      '<span class="ps-sig ' + sc + '">' + esc(it.signalClass) + '</span></div>' +
+      '<span class="ps-sig ' + sc + '">' + esc(it.signalClass) + '</span>' +
+      '<span class="ps-go">→ 新闻</span></div>' +
       '<div class="ps-title">' + esc(it.title) + '</div>' +
       '<div class="ps-meta">' + esc(it.issuer) + ' · ' + esc(it.docType) + ' · ' + bind + tgt + '</div>' +
       '<div class="ps-chips">' + chips + '</div>' +
@@ -2170,30 +2179,30 @@ function renderNewsCard(d, market) {
   // 利好 / 利空方向（短线·盘面）：通栏展开卡，左侧色条表达方向（红=利好 / 绿=利空）
   if (bn.length) {
     html += '<div class="wk-section"><h4 class="bull">利好方向 · 短线盘面</h4>';
-    bn.forEach(function (it) { html += '<div class="wk-item wk-dir-up">' + newsEntryInner(it, true, '短线·盘面', d.tradeDate) + '</div>'; });
+    bn.forEach(function (it) { html += '<div class="wk-item wk-dir-up" data-ntitle="' + escAttr(it.title||'') + '">' + newsEntryInner(it, true, '短线·盘面', d.tradeDate) + '</div>'; });
     html += '</div>';
   }
   if (be.length) {
     html += '<div class="wk-section"><h4 class="bear">利空方向 · 短线盘面</h4>';
-    be.forEach(function (it) { html += '<div class="wk-item wk-dir-down">' + newsEntryInner(it, true, '短线·盘面', d.tradeDate) + '</div>'; });
+    be.forEach(function (it) { html += '<div class="wk-item wk-dir-down" data-ntitle="' + escAttr(it.title||'') + '">' + newsEntryInner(it, true, '短线·盘面', d.tradeDate) + '</div>'; });
     html += '</div>';
   }
   // 宏观（央行 / 通胀 / 大宗 / 美债 / 汇率）——顺序（R68 定稿）：宏观 → 彭博/路透/WSJ → 投行观点
   if (macro.length) {
     html += '<div class="wk-section macro"><h4>宏观 · 央行 / 通胀 / 大宗 / 美债</h4>';
-    macro.forEach(function (it) { html += '<div class="wk-item wk-dir-' + (dirEnumOf(it.direction) === '看涨' ? 'up' : (dirEnumOf(it.direction) === '看跌' ? 'down' : 'flat')) + '">' + newsEntryInner(it, true, '宏观·事件', d.tradeDate) + '</div>'; });
+    macro.forEach(function (it) { html += '<div class="wk-item wk-dir-' + (dirEnumOf(it.direction) === '看涨' ? 'up' : (dirEnumOf(it.direction) === '看跌' ? 'down' : 'flat')) + '" data-ntitle="' + escAttr(it.title||'') + '">' + newsEntryInner(it, true, '宏观·事件', d.tradeDate) + '</div>'; });
     html += '</div>';
   }
   // 视角标题（R91h）：A股页用国内财经媒体视角（卡片来源已切财联社/华尔街见闻/证券时报），美股页保留国际通讯社视角
   if (intl.length) {
     html += '<div class="wk-section intl"><h4>' + (market === 'ashare' ? '国内财经媒体视角' : '彭博社 / 路透社 / 华尔街日报 视角') + '</h4>';
-    intl.forEach(function (it) { html += '<div class="wk-item wk-dir-' + (dirEnumOf(it.direction) === '看涨' ? 'up' : (dirEnumOf(it.direction) === '看跌' ? 'down' : 'flat')) + '">' + newsEntryInner(it, true, '中期·海外产业', d.tradeDate) + '</div>'; });
+    intl.forEach(function (it) { html += '<div class="wk-item wk-dir-' + (dirEnumOf(it.direction) === '看涨' ? 'up' : (dirEnumOf(it.direction) === '看跌' ? 'down' : 'flat')) + '" data-ntitle="' + escAttr(it.title||'') + '">' + newsEntryInner(it, true, '中期·海外产业', d.tradeDate) + '</div>'; });
     html += '</div>';
   }
   // 投行观点（高盛 / 大摩 / 中金 / 中信等研报级观点）
   if (bank.length) {
     html += '<div class="wk-section bank"><h4>投行观点</h4>';
-    bank.forEach(function (it) { html += '<div class="wk-item wk-dir-' + (dirEnumOf(it.direction) === '看涨' ? 'up' : (dirEnumOf(it.direction) === '看跌' ? 'down' : 'flat')) + '">' + newsEntryInner(it, true, '机构·观点', d.tradeDate) + '</div>'; });
+    bank.forEach(function (it) { html += '<div class="wk-item wk-dir-' + (dirEnumOf(it.direction) === '看涨' ? 'up' : (dirEnumOf(it.direction) === '看跌' ? 'down' : 'flat')) + '" data-ntitle="' + escAttr(it.title||'') + '">' + newsEntryInner(it, true, '机构·观点', d.tradeDate) + '</div>'; });
     html += '</div>';
   }
   if (d.source) html += '<div class="wk-src">来源：' + esc(d.source) + '</div>';
@@ -3757,6 +3766,38 @@ window.addEventListener('popstate', function () {
   if (openDb) renderDuanban(); else closeDbModal();
   document.body.classList.toggle('gnews-open', openGn);
   if (openGn) renderGnews();
+});
+/* R100z114（用户 2026-10-10）：政策信号解码卡点击 → 跳转到对应新闻条目。
+   依据：enrich_policy.py 的 ps.title 就是五节要闻的原始 title（同源精确相等），
+   ps.market（ashare/us）指定市场锚点。事件委托挂在 document（renderGnews 每次 innerHTML 重建，无需重复绑定）。
+   匹配不到时兜底滚到该市场要闻区顶部（如 AI 预测写回导致标题微调）。 */
+document.addEventListener('click', function (ev) {
+  var card = ev.target && ev.target.closest ? ev.target.closest('.ps-item.ps-link') : null;
+  if (!card || !document.body.classList.contains('gnews-open')) return;
+  var mk = card.getAttribute('data-ps-mk') === 'us' ? 'us' : 'ashare';
+  var tt = card.getAttribute('data-ps-title') || '';
+  var root = document.getElementById(mk === 'us' ? 'gn-us' : 'gn-ashare');
+  if (!root) return;
+  var items = root.querySelectorAll('.wk-item[data-ntitle]');
+  var hit = null, i, nt;
+  for (i = 0; i < items.length; i++) { // ① 精确匹配
+    if (items[i].getAttribute('data-ntitle') === tt) { hit = items[i]; break; }
+  }
+  if (!hit) { // ② 包含匹配兜底（标题被截断/拼接场景）
+    for (i = 0; i < items.length; i++) {
+      nt = items[i].getAttribute('data-ntitle') || '';
+      if (tt && (nt.indexOf(tt) !== -1 || tt.indexOf(nt) !== -1)) { hit = items[i]; break; }
+    }
+  }
+  if (hit) {
+    hit.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    hit.classList.remove('ps-flash');
+    void hit.offsetWidth; // 强制 reflow 重启动画
+    hit.classList.add('ps-flash');
+    setTimeout(function () { hit.classList.remove('ps-flash'); }, 2400);
+  } else {
+    root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 });
 /* R99g：🐼/💰 悬浮组合并为一个整体，整组可拖拽（>6px 位移判定为拖动，否则视为点击）+ 位置记忆（floatGroupPos）；
    断板反包页内返回 💰(#db-entry-in) 与组内 💰 位置实时同步（组顶 + 组高 - 46） */
