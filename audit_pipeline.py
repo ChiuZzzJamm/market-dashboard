@@ -101,6 +101,10 @@ EMPTY_WHITELIST = [
     (r"harmonic\.failPool$",     # 当天无谐波失效标的即空数组
      "R100z27：失效池无新增即空数组，属正常日度状态（不是脚本漏跑）"
      "；前端 dbFailHtml/谐波失效区统一走 if(!x.length) 兜底显示『暂无失效标的』"),
+    (r"policySignals\[\d+\]\.(sectors|targets)",
+     "R100z107b：政策解码无识别到受益板块/量化目标时为空数组，前端按 '-' 显示"),
+    (r"^policySignals$",
+     "R100z107b：当日无政策源新闻时 policySignals 为空数组（正常）"),
 ]
 
 DATA_KEYS_REQUIRED = [
@@ -195,6 +199,10 @@ PRODUCT_OWNERSHIP = {
     "updatedAt": {
         "require": (),
         "note": "整版生成时间戳，前端只渲染成文案，不参与任何决策，豁免点名",
+    },
+    "policySignals": {
+        "require": ("policySignals", "政策解码", "政策信号", "enrich_policy"),
+        "note": "R100z107b：enrich_policy.py 解码新闻标题为政策信号，16:00 任务在新闻写回后调用写回；前端政策信号解码面板渲染",
     },
 }
 
@@ -705,7 +713,28 @@ def g8_g9_g10_data(r):
 
 
 # ---------------------------------------------------------------- G11
-def g11_smoke(r):
+def g11_smoke(r, deep=False):
+    # ① 始终运行的「导入级冒烟」（无网络）：捕获 import 级静默 rot——
+    #    仅靠 py_compile 抓不到 import 期故障（缺依赖 / 循环 import / 全局副作用崩），
+    #    一旦部署链路里有模块导入失败，G1 语法闸也拦不住，会在复牌/首跑才炸。
+    #    故固化进闸门、所有自动化部署都跑（不再依赖 --deep 才会触发）。
+    import importlib
+    mods = ["cal_factor", "build_stock_pool", "track_calibration",
+            "stock_risk_blacklist", "market_bench", "common", "audit_pipeline"]
+    bad_imp = []
+    for m in mods:
+        try:
+            importlib.import_module(m)
+        except Exception as e:                              # noqa: BLE001
+            bad_imp.append(f"{m}: {type(e).__name__}: {e}"[:100])
+    if bad_imp:
+        r.fail("G11", "模块导入冒烟失败（部署前静默 rot 风险）：" + "; ".join(bad_imp))
+    else:
+        r.ok("G11", f"{len(mods)} 个流水线模块导入冒烟通过（无 import 级故障）")
+
+    if not deep:
+        return
+    # ② --deep 时的「脚本网络冒烟」：逐个实跑（可能走网络，慢）
     cands = [
         ("cal_factor.py --json", "cal_factor.py --json"),
         ("build_stock_pool.py --json", "build_stock_pool.py --json"),
@@ -1189,6 +1218,45 @@ def g17_template_tails(r):
         r.ok("G17", f"无跨字段模板复读（扫描 {sum(len(o) for o in owner.values())} 句次 / {len(owner)} 句）")
 
 
+def g18_policy_signals(r):
+    """G18 政策信号解码闸门（R100z107b）：policySignals 若存在则必须结构合法。
+
+    由 enrich_policy.py 在 16:00 任务写回。非 16:00 任务部署时该节点可能尚未生成
+    （由前一次 16:00 持久化在 data.js 中），缺失属预期 → WARN 不拦。"""
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G18", f"data.js 解析失败：{e}")
+        return
+    ps = D.get("policySignals")
+    if ps is None:
+        r.warn("G18", "policySignals 尚未生成（应由 16:00 任务 enrich_policy.py 写回）——"
+                     "非 16:00 任务部署时为预期，16:00 后会补齐")
+        return
+    if not isinstance(ps, list):
+        r.fail("G18", "policySignals 不是数组")
+        return
+    req = {"title", "issuer", "docType", "binding", "signalClass",
+           "tier", "score", "sectors", "targets", "date", "market"}
+    bad = []
+    for i, it in enumerate(ps):
+        if not isinstance(it, dict):
+            bad.append(f"[{i}] 非对象"); continue
+        miss = req - set(it.keys())
+        if miss:
+            bad.append(f"[{i}]{str(it.get('title', ''))[:10]} 缺{miss}")
+        if not isinstance(it.get("sectors"), list) or not isinstance(it.get("targets"), list):
+            bad.append(f"[{i}] sectors/targets 非数组")
+        if it.get("tier") not in ("S", "A", "B", "C"):
+            bad.append(f"[{i}] tier 非法 {it.get('tier')}")
+    if bad:
+        r.fail("G18", "policySignals 结构异常：" + "; ".join(bad[:8]))
+    else:
+        tiers = {t: sum(1 for x in ps if x.get("tier") == t) for t in "SABC"}
+        r.ok("G18", f"policySignals 结构合法（{len(ps)} 条，"
+                    f"S{tiers['S']}/A{tiers['A']}/B{tiers['B']}/C{tiers['C']}）")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -1214,11 +1282,14 @@ def main():
     g12_deadlinks(r)
     g13_holiday_table(r)
     if deep:
-        g11_smoke(r)
+        g11_smoke(r, deep=deep)
+    else:
+        g11_smoke(r, deep=False)
     g14_prompt_broken_path(r)
     g15_interp_bins(r)
     g16_narrative_depth(r)
     g17_template_tails(r)
+    g18_policy_signals(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))

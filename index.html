@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610091706"></script>
+<script src="data.js?v=202610100116"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -711,6 +711,26 @@
   @media (max-width: 700px) { .tc-cell .v { font-size: 13px; } }
 
   .ai-harmonic { font-size:12.5px; font-weight:700; color:#7a4d00; background:#fff3d6; border:1px solid #f0c36d; border-radius:8px; padding:6px 10px; margin:8px 0; }
+  /* R100z107b 政策信号解码面板 */
+  .ps-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .ps-item { border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; background: var(--paper); }
+  .ps-head { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
+  .ps-tier { font-size: 12px; font-weight: 800; width: 20px; height: 20px; line-height: 20px; text-align: center; border-radius: 6px; color: #fff; }
+  .ps-tier.t-s { background: #c0392b; }
+  .ps-tier.t-a { background: #e67e22; }
+  .ps-tier.t-b { background: #2e86c1; }
+  .ps-tier.t-c { background: #7f8c8d; }
+  .ps-score { font-size: 12px; font-weight: 800; color: var(--ink2); font-variant-numeric: tabular-nums; }
+  .ps-sig { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 10px; margin-left: auto; }
+  .ps-sig.sig-mon { background: #fdecea; color: #c0392b; }
+  .ps-sig.sig-fis { background: #eafaf1; color: #1e8449; }
+  .ps-sig.sig-ind { background: #eaf2fb; color: #2e86c1; }
+  .ps-sig.sig-oth { background: #f0f0f0; color: #555; }
+  .ps-title { font-size: 13.5px; font-weight: 700; line-height: 1.35; color: var(--ink); margin: 2px 0 3px; }
+  .ps-meta { font-size: 11px; color: var(--ink2); line-height: 1.5; }
+  .ps-chips { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .ps-chip { font-size: 10.5px; padding: 1px 7px; border-radius: 10px; background: #eef1f5; color: #34495e; }
+  .ps-chip.ps-mut { background: #f5f5f5; color: #999; }
 </style>
 </head>
 <body>
@@ -1147,6 +1167,30 @@ function h2Date(d) {
   return (d && d.tradeDate) ? ' <span class="h2-date">' + esc(d.tradeDate) + '</span>' : '';
 }
 
+function renderPolicySignals(list) {
+  var tierCls = { S: 't-s', A: 't-a', B: 't-b', C: 't-c' };
+  var clsSig = { '货币政策': 'sig-mon', '财政': 'sig-fis', '产业': 'sig-ind', '其他': 'sig-oth' };
+  var h = '<div class="ps-list">';
+  list.forEach(function (it) {
+    var tc = tierCls[it.tier] || 't-c';
+    var sc = clsSig[it.signalClass] || 'sig-oth';
+    var chips = (it.sectors && it.sectors.length)
+      ? it.sectors.map(function (s) { return '<span class="ps-chip">' + esc(s) + '</span>'; }).join('')
+      : '<span class="ps-chip ps-mut">—</span>';
+    var tgt = (it.targets && it.targets.length) ? ' · 目标 ' + it.targets.map(esc).join('/') : '';
+    h += '<div class="ps-item">' +
+      '<div class="ps-head"><span class="ps-tier ' + tc + '">' + it.tier + '</span>' +
+      '<span class="ps-score">' + it.score + '</span>' +
+      '<span class="ps-sig ' + sc + '">' + esc(it.signalClass) + '</span></div>' +
+      '<div class="ps-title">' + esc(it.title) + '</div>' +
+      '<div class="ps-meta">' + esc(it.issuer) + ' · ' + esc(it.docType) + ' · ' + esc(it.binding) + tgt + '</div>' +
+      '<div class="ps-chips">' + chips + '</div>' +
+      '</div>';
+  });
+  h += '</div>';
+  return h;
+}
+
 function render(market) {
   charts.forEach(function (c) { c.dispose(); });
   charts = [];
@@ -1183,6 +1227,12 @@ function render(market) {
     if (lbHtml) {
       html += '<div class="card"><h2>🔥 连板梯队' + h2Date(d) + '</h2>' + lbHtml + '</div>';
     }
+  }
+
+  // R100z107b：政策信号解码面板（数据来自 enrich_policy.py 写回的顶层 policySignals）
+  if (isA && window.DASHBOARD_DATA.policySignals && window.DASHBOARD_DATA.policySignals.length) {
+    html += '<div class="card"><h2>📜 政策信号解码' + h2Date(d) + '</h2>' +
+      renderPolicySignals(window.DASHBOARD_DATA.policySignals) + '</div>';
   }
 
   // R100m：主力吸筹已移至「🧰 技术看板」第 4 子页（db-acc），主页面不再渲染（用户 2026-09-28 要求）。
