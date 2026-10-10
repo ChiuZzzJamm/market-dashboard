@@ -6,6 +6,7 @@
    "avgPct": -1.955,
    "pf": 0.9805,
    "bench": 1.0,
+   "benchMain": 1.0,
    "dd": -1.95,
    "nSec": 2,
    "nStocks": 16,
@@ -16,6 +17,7 @@
    "avgPct": -0.495,
    "pf": 0.9756,
    "bench": 0.9787,
+   "benchMain": 1.0,
    "dd": -2.44,
    "nSec": 2,
    "nStocks": 16,
@@ -26,6 +28,7 @@
    "avgPct": -0.375,
    "pf": 0.9719,
    "bench": 0.9806,
+   "benchMain": 1.0011,
    "dd": -2.81,
    "nSec": 2,
    "nStocks": 16,
@@ -37,8 +40,19 @@
   "totRetPct": -2.81,
   "benchRetPct": -1.94,
   "excessPct": -0.87,
+  "benchMainRetPct": 0.11,
+  "benchMainExcessPct": -2.92,
   "maxDdPct": -2.81,
   "maxDdDate": "2026-10-09",
+  "assumptions": {
+   "feePerSide": 0.025,
+   "stampDutySell": 0.05,
+   "slippagePerSide": 0.1,
+   "turnover": "T+1 次日兑现，单标的年化换手高；净值为毛收益，未扣费/税/滑点",
+   "sampleWindow": 3,
+   "sampleEnough": false,
+   "benchmarkNote": "基准=上证/深成/创业板/中证1000 四指数涨跌幅中位数（全市场代理）；benchMain=上证+深成等权（主板口径代理，低 beta）。两者均为对照指数，不代表「买市场」的可交易组合。"
+  },
   "note": "组合=各预测日「置信度=高」板块（无高则取当日最高置信档）的预测标的等权平均涨跌幅累乘；基准=同日市场基准累乘；回撤按组合净值峰谷算"
  }
 }

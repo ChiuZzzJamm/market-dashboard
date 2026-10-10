@@ -73,6 +73,15 @@ echo "🔍 校验 data.js 语法..."
 echo "📜 刷新政策信号解码（enrich_policy.py）..."
 "$PY" enrich_policy.py || true
 
+# ---------- R100z117 前瞻层 + 信号闭环（确定性脚本，兜底写空 exit 0，绝不阻断部署）----------
+# macro_calendar.py：未来 45 日确定性宏观事件（FOMC/GDP/CPI/PPI/MLF/LPR/工增固投社零），零网络纯函数；
+# strategy_engine.py：聚合政策/AI预测/断板反包三类信号为盘前关注清单+仓位纪律，并写入回测反馈闭环。
+# 两者均读整份 data.js 仅新增顶层键、改写整文件，与 enrich_policy 同机制、互不覆盖其它键。
+echo "📅 生成宏观事件日历（macro_calendar.py）..."
+"$PY" macro_calendar.py || true
+echo "🎯 生成盘前策略闭环（strategy_engine.py）..."
+"$PY" strategy_engine.py || true
+
 # ---------- R100z53：审计闸门下沉（一次性覆盖五条自动化）----------
 # 背景（子代理对账 P0-1）：此前只有 16:00 / 周末两条 automation 的 prompt 里手写了
 # 「deploy 前先跑 audit_pipeline」，07:30 / 08:30 / 09:45 三条没有 → 那三条改完代码可以直接 push，

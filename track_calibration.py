@@ -218,8 +218,10 @@ def save_log(log):
         json.dump(log, f, ensure_ascii=False, indent=1)
 
 
-def build_items(date, dets, conf_map, bench, sc_list):
-    """把 verification.details 落成台账条目（R100z15：同时落超额口径与旧方向口径）。"""
+def build_items(date, dets, conf_map, bench, sc_list, bench_main=None):
+    """把 verification.details 落成台账条目（R100z15：同时落超额口径与旧方向口径）。
+    bench_main：主板等权代理基准（上证+深成当日涨幅均值），与 benchPct（四指数中位数）并列存，
+    供 build_curve 产第二条更贴近主板口径的基准线（R100z117 回测方法论补强）。"""
     items = []
     for d in dets:
         nm = d.get('sector')
@@ -232,6 +234,7 @@ def build_items(date, dets, conf_map, bench, sc_list):
                       'dirClass': classify_dir(d.get('predicted')),
                       'actualPct': act,
                       'benchPct': bench, 'excessPct': ex,
+                      'benchMainPct': bench_main,
                       'result': d.get('result'),
                       'conf': conf_map.get(nm, 'unknown'),
                       'avgPct': avg, 'excessAvg': ex_avg,
@@ -242,8 +245,9 @@ def build_items(date, dets, conf_map, bench, sc_list):
 
 
 def build_curve(log):
-    """R100z15 缺口④：组合等权净值 vs 基准净值 + 回撤（命中率再高，净值不涨就是白忙）。"""
-    series, pf, bn, peak = [], 1.0, 1.0, 1.0
+    """R100z15 缺口④：组合等权净值 vs 基准净值 + 回撤（命中率再高，净值不涨就是白忙）。
+    R100z117：新增第二条基准线 benchMain（上证+深成等权，主板口径代理）+ 方法论假设与样本量标注。"""
+    series, pf, bn, bn_main, peak = [], 1.0, 1.0, 1.0, 1.0
     for dt in sorted(log.get('log', {}).keys()):
         items = log['log'][dt] or []
         # R100z97 组合口径（用户拍板）：只取「置信度=高」的板块（每板块 8 只），板块间再等权
@@ -265,13 +269,18 @@ def build_curve(log):
         bs = [float(x['benchPct']) for x in items
               if isinstance(x.get('benchPct'), (int, float))]
         b = sum(bs) / len(bs) if bs else None
+        bm = [float(x['benchMainPct']) for x in items
+              if isinstance(x.get('benchMainPct'), (int, float))]
+        bm_v = sum(bm) / len(bm) if bm else None
         pf *= (1 + avg / 100.0)
         if b is not None:
             bn *= (1 + b / 100.0)
+        if bm_v is not None:
+            bn_main *= (1 + bm_v / 100.0)
         peak = max(peak, pf)
         dd = round((pf - peak) / peak * 100.0, 2)
         series.append({'date': dt, 'avgPct': round(avg, 3), 'pf': round(pf, 4),
-                       'bench': round(bn, 4), 'dd': dd,
+                       'bench': round(bn, 4), 'benchMain': round(bn_main, 4), 'dd': dd,
                        'nSec': len(pool), 'nStocks': len(pool) * 8,
                        'poolConf': pool[0].get('conf') if pool else ''})
     if not series:
@@ -279,9 +288,22 @@ def build_curve(log):
     max_dd = min(series, key=lambda x: x['dd'])
     tot = (series[-1]['pf'] - 1) * 100
     bn_tot = (series[-1]['bench'] - 1) * 100
+    bm_tot = (series[-1]['benchMain'] - 1) * 100 if series[-1].get('benchMain') else None
+    # R100z117：方法论假设（文档化，未回灌净值——回灌只会让曲线更差，且各源口径不一）
+    assumptions = {
+        'feePerSide': 0.025, 'stampDutySell': 0.05, 'slippagePerSide': 0.1,
+        'turnover': 'T+1 次日兑现，单标的年化换手高；净值为毛收益，未扣费/税/滑点',
+        'sampleWindow': len(series),
+        'sampleEnough': len(series) >= 15,
+        'benchmarkNote': '基准=上证/深成/创业板/中证1000 四指数涨跌幅中位数（全市场代理）；'
+                         'benchMain=上证+深成等权（主板口径代理，低 beta）。两者均为对照指数，'
+                         '不代表「买市场」的可交易组合。'}
     stat = {'days': len(series), 'totRetPct': round(tot, 2), 'benchRetPct': round(bn_tot, 2),
             'excessPct': round(tot - bn_tot, 2),
+            'benchMainRetPct': round(bm_tot, 2) if bm_tot is not None else None,
+            'benchMainExcessPct': round(tot - bm_tot, 2) if bm_tot is not None else None,
             'maxDdPct': max_dd['dd'], 'maxDdDate': max_dd['date'],
+            'assumptions': assumptions,
             'note': '组合=各预测日「置信度=高」板块（无高则取当日最高置信档）的预测标的等权平均涨跌幅累乘；基准=同日市场基准累乘；回撤按组合净值峰谷算'}
     return {'ok': True, 'series': series, 'stat': stat}
 
@@ -311,7 +333,13 @@ def main():
     a = ap.parse_args()
 
     log = load_log()
-    bench = (load_bench() or {}).get('benchPct')
+    _b = load_bench() or {}
+    bench = _b.get('benchPct')
+    # R100z117：主板等权代理基准（上证+深成当日涨幅均值），与 benchPct 并列
+    _names = _b.get('names') or []
+    _maint = [n['pct'] for n in _names
+              if n.get('code') in ('sh000001', 'sz399001') and n.get('pct') is not None]
+    bench_main = (sum(_maint) / len(_maint)) if _maint else None
 
     # --recalc：R100z52 方向词表修版后，历史上用「只认『承压』」坏口径算出的命中率
     # 全在台账里，不重算就永远带着偏高值往下滚。台账本身存了 predicted / actualPct /
@@ -364,7 +392,8 @@ def main():
                     continue
                 conf_map = {c['sector']: c['conf'] for c in (pd.get('confBySector') or [])}
                 log['log'][pd['date']] = build_items(
-                    pd['date'], pd['verification']['details'], conf_map, bench, pd.get('stockCheck') or [])
+                    pd['date'], pd['verification']['details'], conf_map, bench,
+                    pd.get('stockCheck') or [], bench_main)
                 # R100z13：开盘前瞻兑现打分一并入账（16:00 已打分的才并入，没打分的跳过）
                 ov = pd.get('openVerification')
                 if ov:
@@ -383,9 +412,14 @@ def main():
         conf_map = {c['sector']: c['conf'] for c in (pred.get('confBySector') or [])}
         dets = (pred.get('verification') or {}).get('details') or []
         if pred.get('date') and dets:
-            bench = (load_bench(pred['date']) or {}).get('benchPct')
+            _bb = load_bench(pred['date']) or {}
+            bench = _bb.get('benchPct')
+            _nm = _bb.get('names') or []
+            _mt = [n['pct'] for n in _nm
+                   if n.get('code') in ('sh000001', 'sz399001') and n.get('pct') is not None]
+            bench_main = (sum(_mt) / len(_mt)) if _mt else None
             items = build_items(pred['date'], dets, conf_map, bench,
-                                pred.get('stockCheck') or [])
+                                pred.get('stockCheck') or [], bench_main)
             for it in items:
                 it['pos'] = pred.get('pos')
             log['log'][pred['date']] = items
@@ -501,10 +535,19 @@ def main():
         with open(CURVE_FILE, 'w', encoding='utf-8') as f:
             json.dump(curve, f, ensure_ascii=False, indent=1)
         s = curve['stat']
-        print('  组合净值：%d 个交易日，累计 %+.2f%%（基准 %+.2f%%，超额 %+.2f%%），'
-              '最大回撤 %.2f%%（%s）' %
+        print('  组合净值：%d 个交易日，累计 %+.2f%%（基准 %+.2f%%，超额 %+.2f%%；'
+              '主板代理基准 %s，超额 %s），最大回撤 %.2f%%（%s）' %
               (s['days'], s['totRetPct'], s['benchRetPct'], s['excessPct'],
+               ('%+.2f%%' % s['benchMainRetPct'] if s.get('benchMainRetPct') is not None else '—'),
+               ('%+.2f%%' % s['benchMainExcessPct'] if s.get('benchMainExcessPct') is not None else '—'),
                s['maxDdPct'], s['maxDdDate']))
+        if not s['assumptions']['sampleEnough']:
+            print('      ⚠️ 样本仅 %d 个交易日（<15），结论统计显著性不足，仅供观察、勿据此下重注'
+                  % s['days'])
+        print('      假设：单边佣金 %.3f%% / 卖出印花税 %.3f%% / 滑点 %.3f%%（净值未扣，毛收益）；'
+              '基准=四指数中位、主板代理=上证+深成等权' %
+              (s['assumptions']['feePerSide'], s['assumptions']['stampDutySell'],
+               s['assumptions']['slippagePerSide']))
         print('      已写入 ' + os.path.basename(CURVE_FILE) + '（前端画净值与回撤）')
 
     print('[OK] 门槛已写入 ' + os.path.basename(STATE_FILE))

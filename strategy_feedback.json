@@ -1,0 +1,6 @@
+{
+ "underperform": true,
+ "excessPct": -0.87,
+ "highConfCap": 2,
+ "note": "近期回测跑输基准（超额 -0.87%），高确信层已按后验闸门收紧至 2 条"
+}

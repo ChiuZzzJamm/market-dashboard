@@ -204,6 +204,17 @@ PRODUCT_OWNERSHIP = {
         "require": ("policySignals", "政策解码", "政策信号", "enrich_policy"),
         "note": "R100z107b：enrich_policy.py 解码新闻标题为政策信号，16:00 任务在新闻写回后调用写回；前端政策信号解码面板渲染",
     },
+    "macroCalendar": {
+        "require": (),
+        "note": "R100z117 ⑥：macro_calendar.py 产出的未来 45 日宏观事件日历（FOMC/GDP/CPI/PPI/MLF/LPR/工增固投社零），"
+                "由 deploy.sh 流水线调用（零网络纯函数，兜底写空 exit 0）；前端「📅 宏观事件日历」卡渲染（renderMacroCalendar）",
+    },
+    "strategy": {
+        "require": (),
+        "note": "R100z117 ①：strategy_engine.py 聚合政策/AI预测/断板反包三类信号为盘前关注清单+仓位纪律+回测反馈闭环，"
+                "由 deploy.sh 流水线调用（读 cal_factor/calibration_state/portfolio_curve，兜底写空 exit 0）；"
+                "前端「🎯 盘前策略」卡渲染（renderStrategy）",
+    },
 }
 
 
