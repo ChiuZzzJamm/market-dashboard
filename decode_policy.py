@@ -151,10 +151,17 @@ SECTOR_LEXICON = {
 
 def decode_sector(text):
     t = text or ""
-    out = []
+    # R100z115（用户 2026-10-10）：按关键词在政策原文中的出现位置排序——
+    # 越早出现的关键词与政策主旨越贴近（标题词 > 摘要尾词），前端再按当日板块涨幅做二级重排
+    hits = []
     for kw, secs in SECTOR_LEXICON.items():
-        if kw in t:
-            out.extend(secs)
+        pos = t.find(kw)
+        if pos >= 0:
+            hits.append((pos, secs))
+    hits.sort(key=lambda x: x[0])
+    out = []
+    for _, secs in hits:
+        out.extend(secs)
     return list(dict.fromkeys(out))
 
 
@@ -229,6 +236,8 @@ def policy_score(text):
     raw = issuer_norm * doc_w * binding_factor * time_factor * joint_boost * monetary_boost
     score = int(min(raw, 1.4) / 1.4 * 100)
     tier = "S" if score >= 80 else "A" if score >= 60 else "B" if score >= 40 else "C"
+    # R100z115（用户 2026-10-10）：量化目标去重保序（PSL 卡曾渲染「0.25个百分点」连续重复两次）
+    nums = list(dict.fromkeys(nums))
     decay = DOC_DECAY.get(doc_name[:2], 10)
     return {
         "issuer": f"{issuer_name}(t{issuer_tier})",

@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610100241"></script>
+<script src="data.js?v=202610101053"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -723,6 +723,10 @@
   .ps-chips { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 4px; }
   .ps-chip { font-size: 10.5px; padding: 1px 7px; border-radius: 10px; background: #eef1f5; color: #34495e; }
   .ps-chip.ps-mut { background: #f5f5f5; color: #999; }
+  /* R100z115：受益板块徽章内当日涨幅 + 底部图例行 */
+  .ps-chip-pct { font-weight: 700; margin-left: 3px; font-size: 10px; }
+  .ps-legend { margin-top: 9px; font-size: 11px; color: var(--ink2, #6b7684); line-height: 1.75; background: var(--accent-soft, #f6f8fb); border: 1px dashed var(--line, #dfe4ea); border-radius: 8px; padding: 7px 10px; }
+  .ps-legend b { color: var(--ink, #2c3e50); }
   /* R100z109 全球要闻独立页（📄）：与 #duanban-view 同款「打开即独占」模式 */
   #gnews-view { display: none; }
   body.gnews-open .wrap > *:not(#gnews-view) { display: none !important; }
@@ -1207,15 +1211,37 @@ function renderPolicySignals(list) {
   // R100z111：binding 数据层为 hard/soft/directional 英文枚举，渲染层强制转中文（页面只出中文硬规矩；
   // 用户 2026-10-10 反馈「约束性·预期性·方向性我没看到」即因裸渲染 directional 认不出）
   var bindingZh = { hard: '约束性', soft: '预期性', directional: '方向性' };
+  // R100z115（用户 2026-10-10）：当日板块涨幅映射——A股用 allBoards（同花顺全量 90 板块），
+  // 美股用 sectorsUp/sectorsDown 兜底；用于受益板块排序（盘面验证）+ 徽章涨幅
+  var Dps = window.DASHBOARD_DATA || {};
+  var pctMap = {};
+  function _absorbPct(arr) { (arr || []).forEach(function (b) { if (b && b.name && typeof b.pct === 'number') pctMap[b.name] = b.pct; }); }
+  _absorbPct((Dps.ashare || {}).allBoards);
+  _absorbPct((Dps.ashare || {}).sectorsUp); _absorbPct((Dps.ashare || {}).sectorsDown);
+  _absorbPct((Dps.us || {}).sectorsUp); _absorbPct((Dps.us || {}).sectorsDown);
+  function pctColor(p) { return p > 0 ? '#f0435c' : (p < 0 ? '#0f9d78' : '#9aa4af'); } // A股惯例：涨红跌绿
+  function pctText(p) { return (p > 0 ? '+' : '') + p.toFixed(2) + '%'; }
   var h = '<div class="ps-list">';
   list.forEach(function (it) {
     var tc = tierCls[it.tier] || 't-c';
     var sc = clsSig[it.signalClass] || 'sig-oth';
     var bind = bindingZh[it.binding] || esc(it.binding);
-    var chips = (it.sectors && it.sectors.length)
-      ? it.sectors.map(function (s) { return '<span class="ps-chip">' + esc(s) + '</span>'; }).join('')
-      : '<span class="ps-chip ps-mut">—</span>';
-    var tgt = (it.targets && it.targets.length) ? ' · 目标 ' + it.targets.map(esc).join('/') : '';
+    // R100z115：受益板块排序——①当日有涨幅（盘面验证/最可能涨）在前、按涨幅降序；
+    // ②无当日数据的按数据层「政策原文关键词出现序」（越靠前越贴近政策）稳定保序在后 → 边缘板块自然沉底
+    var secs = (it.sectors || []).slice().sort(function (a, b) {
+      var pa = pctMap[a], pb = pctMap[b];
+      var ka = (typeof pa === 'number') ? pa : -999, kb = (typeof pb === 'number') ? pb : -999;
+      return kb - ka; // ES2019+ sort 稳定：同为 -999 保持原序
+    });
+    var chips = secs.length ? secs.map(function (s) {
+      var p = pctMap[s];
+      var pctBadge = (typeof p === 'number') ? '<span class="ps-chip-pct" style="color:' + pctColor(p) + '">' + pctText(p) + '</span>' : '';
+      return '<span class="ps-chip">' + esc(s) + pctBadge + '</span>';
+    }).join('') : '<span class="ps-chip ps-mut">—</span>';
+    // R100z115：目标去重（旧数据兜底）+ 最多展示 8 项，避免一长串数字淹没标题
+    var tgts = [];
+    (it.targets || []).forEach(function (t) { if (tgts.indexOf(t) === -1) tgts.push(t); });
+    var tgt = tgts.length ? ' · 目标 ' + tgts.slice(0, 8).map(esc).join('/') + (tgts.length > 8 ? ' 等' + tgts.length + '项' : '') : '';
     // R100z114：title 与五节要闻同源精确相等 + market 指定锚点（ashare/us），点击滚动定位到对应要闻条目
     h += '<div class="ps-item ps-link" data-ps-title="' + escAttr(it.title||'') + '" data-ps-mk="' + esc(it.market||'ashare') + '">' +
       '<div class="ps-head"><span class="ps-tier ' + tc + '">' + it.tier + '</span>' +
@@ -1227,6 +1253,13 @@ function renderPolicySignals(list) {
       '</div>';
   });
   h += '</div>';
+  // R100z115（用户 2026-10-10）：图例说明——力度分/信号分类/主体层级 t1~t4/约束性·预期性·方向性/目标/涨幅徽章
+  h += '<div class="ps-legend">📌 图例：<b>力度分</b>=信号强度 0~100（综合发文主体层级、文种权重、量化指标密度评定；≥80 为 S、≥60 为 A、≥40 为 B、其余 C）；' +
+    '<b>信号分类</b>=货币政策 / 财政 / 产业 / 其他（传导机制不同，货币看流动性、产业看盈利）；' +
+    '<b>t1~t4</b>=发文主体层级（t1 最高，如中共中央/国务院，依次递减）；' +
+    '<b>约束性</b>=带硬性量化指标、<b>预期性</b>=方向性指引、<b>方向性</b>=定调表态；' +
+    '<b>目标</b>=从政策原文抽取的量化数字（降息幅度/额度/利率等）；' +
+    '板块徽章内百分比=<b>当日板块涨幅</b>（红涨绿跌，按盘面验证度排序：有涨幅且涨得多的排最前，无当日行情的按政策贴近度排后）</div>';
   return h;
 }
 
