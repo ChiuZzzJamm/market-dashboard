@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610101152"></script>
+<script src="data.js?v=202610101224"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -202,44 +202,27 @@
   .pf-stat .flat { color: var(--ink2); }
   .pf-note { font-size: 10.5px; color: #9aa4af; line-height: 1.6; margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--line); }
 
-  /* R100z117 前瞻层：宏观事件日历 + 盘前策略卡 */
-  .mc-card, .str-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
-  .mc-head, .str-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-  .mc-head h2, .str-head h2 { font-size: 16px; margin: 0; }
-  .str-head { border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+  /* R100z117 前瞻层：宏观事件日历（R100z117b 起并入埋伏/风险两行，T+N 徽章按用户要求移除） */
+  .mc-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
+  .mc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .mc-head h2 { font-size: 16px; margin: 0; }
   .mc-list { display: flex; flex-direction: column; gap: 8px; }
   .mc-item { display: flex; align-items: flex-start; gap: 10px; background: var(--accent-soft); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; }
+  .mc-item.soon { border-left: 3px solid var(--accent-deep); }
   .mc-date { font-size: 12px; font-weight: 700; color: var(--ink); white-space: nowrap; min-width: 86px; }
-  .mc-days { font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
-  .mc-days.soon { color: #fff; background: var(--accent-deep); }
-  .mc-days.mid { color: var(--ink2); background: var(--paper); border: 1px solid var(--line); }
   .mc-body { flex: 1; min-width: 0; }
   .mc-name { font-size: 13px; font-weight: 700; color: var(--ink); }
   .mc-type { font-size: 10.5px; font-weight: 600; border-radius: 8px; padding: 1px 7px; margin-left: 6px; }
   .mc-type.dom { color: #2b6cb0; background: #e8f1fb; }
   .mc-type.ext { color: #b06a2b; background: #fbf0e8; }
   .mc-note { font-size: 11px; color: var(--ink2); margin-top: 3px; line-height: 1.6; }
+  .mc-imp { font-size: 11.5px; color: var(--ink); margin-top: 4px; line-height: 1.7; }
+  .mc-imp b { color: var(--accent-deep); }
+  .mc-rsk { font-size: 11px; color: #a23b2e; margin-top: 2px; line-height: 1.6; }
   .mc-foot { font-size: 10.5px; color: #9aa4af; line-height: 1.6; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); }
-  .str-pos { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--accent-soft); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
-  .str-pos .band { color: var(--accent-deep); font-weight: 800; }
-  .str-sec { font-size: 13px; font-weight: 800; color: var(--ink); margin: 14px 0 8px; padding-top: 12px; border-top: 1px dashed var(--line); }
-  .str-sec:first-of-type { border-top: none; padding-top: 0; margin-top: 6px; }
-  .str-wl { display: flex; flex-direction: column; gap: 8px; }
-  .str-wl-item { background: var(--accent-soft); border: 1px solid var(--line); border-radius: 12px; padding: 10px 13px; }
-  .str-wl-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .str-name { font-size: 13px; font-weight: 800; color: var(--ink); }
-  .str-conf { font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
-  .str-conf.high { color: #fff; background: #2b6cb0; }
-  .str-conf.mid { color: #fff; background: #5a8bc0; }
-  .str-conf.low { color: var(--ink2); background: var(--paper); border: 1px solid var(--line); }
-  .str-src { font-size: 10.5px; color: var(--ink2); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 1px 7px; }
-  .str-logic { font-size: 12px; color: var(--ink); line-height: 1.7; margin-top: 6px; }
-  .str-cat { font-size: 11px; color: var(--ink2); margin-top: 4px; line-height: 1.6; }
-  .str-risk { display: flex; flex-direction: column; gap: 8px; }
-  .str-risk-item { background: #fdecea; border: 1px solid #f5c6c0; border-radius: 12px; padding: 9px 12px; font-size: 12px; color: #a23b2e; line-height: 1.7; }
-  .str-risk-item b { color: #7d2a20; }
-  .str-fb { font-size: 12px; color: var(--ink2); background: var(--accent-soft); border: 1px dashed var(--line); border-radius: 12px; padding: 10px 13px; margin-top: 12px; line-height: 1.7; }
-  .str-note { font-size: 10.5px; color: #9aa4af; line-height: 1.6; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); }
+  /* R100z117b（用户 2026-10-10：不新增模块）：原独立「盘前策略」卡压缩为 AI 预测卡内一条纪律条 */
+  .str-strip { font-size: 12px; color: var(--ink); background: var(--accent-soft); border: 1px dashed var(--line); border-radius: 12px; padding: 9px 13px; margin: 10px 0 2px; line-height: 1.8; }
+  .str-strip b { color: var(--accent-deep); }
 
   /* R100z60c（用户 2026-10-05 截图：止损卡胶囊行紧贴下方标的网格）：
      #st-track-box 之前完全没有自己的 margin，胶囊行到底下的 .ai-grid 只剩 .risk-line 的
@@ -2043,58 +2026,31 @@ function riskLineHtml(p) {
     + esc(hits.join('；')) + '</div>';
 }
 
-/* R100z117 ① 信号闭环：盘前策略卡——把看板已产出的三类确定性信号（政策解码 S/A、AI预测 高/中、
-   AI预测 高/中、断板反包确认池 利好/中性）聚合为盘前关注清单，叠加日历窗口因子给的仓位纪律，
-   并用后验校准 / 组合回测反馈做闭环（跑输基准则次日自动收紧高确信条数）。
-   数据来自 strategy_engine.py，读 window.DASHBOARD_DATA.strategy；无数据返回空串。 */
-function renderStrategy() {
-  var D = window.DASHBOARD_DATA || {};
-  var st = D.strategy;
+/* R100z117b（用户 2026-10-10：不新增模块）：原独立「盘前策略」卡压缩为 AI 预测卡内一条纪律条——
+   只保留 AI 预测卡里没有的增量信息：仓位纪律（日历窗口因子）+ 锁仓/减仓 + 回测反馈闭环 +
+   风险预警名单；关注清单本身与 AI 预测板块卡逐条重复，不再渲染。
+   数据仍来自 strategy_engine.py 写回的 window.DASHBOARD_DATA.strategy；无数据返回空串。 */
+function strategyDisciplineHtml() {
+  var st = (window.DASHBOARD_DATA || {}).strategy;
   if (!st) return '';
   var pb = st.positionBand || {};
-  var posHtml = '<div class="str-pos">🎚️ 仓位纪律：<span class="band">' +
-    esc(pb.text || ((pb.lo != null && pb.hi != null) ? (pb.lo + '-' + pb.hi + ' 成') : '—')) + '</span>' +
-    (pb.source ? ' <span class="str-src">' + esc(pb.source) + '</span>' : '') +
-    (st.lockIn ? ' · 锁仓 ' + Number(st.lockIn) + '%' : '') +
-    (st.outWeight ? ' · 减仓 ' + Number(st.outWeight) + '%' : '') + '</div>';
-  var wl = st.watchlist || [];
-  var wlHtml = '';
-  if (wl.length) {
-    wlHtml = '<div class="str-sec">📌 盘前关注清单（' + wl.length + '）</div><div class="str-wl">' +
-      wl.map(function (w) {
-        var cf = String(w.confidence || '');
-        var ccls = cf.indexOf('高') >= 0 ? 'high' : (cf.indexOf('中') >= 0 ? 'mid' : 'low');
-        return '<div class="str-wl-item"><div class="str-wl-top">' +
-          '<span class="str-name">' + esc(w.name || '') + '</span>' +
-          (cf ? '<span class="str-conf ' + ccls + '">' + esc(cf) + '</span>' : '') +
-          (w.source ? '<span class="str-src">' + esc(w.source) + '</span>' : '') + '</div>' +
-          (w.logic ? '<div class="str-logic">' + esc(w.logic) + '</div>' : '') +
-          (w.catalyst ? '<div class="str-cat">📡 催化/验证：' + esc(w.catalyst) + '</div>' : '');
-      }).join('') + '</div>';
-  }
-  var rk = st.risks || [];
-  var rkHtml = '';
-  if (rk.length) {
-    rkHtml = '<div class="str-sec">⚠️ 风险预警（' + rk.length + '）</div><div class="str-risk">' +
-      rk.map(function (r) {
-        return '<div class="str-risk-item"><b>' + esc(r.name || '') + '</b> · ' + esc(r.source || '') +
-          (r.reason ? '<br>' + esc(r.reason) : '') + '</div>';
-      }).join('') + '</div>';
-  }
+  var parts = [];
+  var band = pb.text || ((pb.lo != null && pb.hi != null) ? (pb.lo + '-' + pb.hi + ' 成') : '');
+  if (band) parts.push('仓位纪律 <b>' + esc(band) + '</b>');
+  if (st.lockIn) parts.push('锁仓 ' + Number(st.lockIn) + '%');
+  if (st.outWeight) parts.push('减仓 ' + Number(st.outWeight) + '%');
   var fb = st.feedback || {};
-  var fbParts = [];
-  if (fb.note) fbParts.push(esc(fb.note));
   if (fb.excessPct != null) {
     var ex = Number(fb.excessPct);
-    var s = '近期组合超额收益 ' + (ex >= 0 ? '+' : '') + ex.toFixed(2) + '%' +
-      (fb.underperform ? '（跑输基准，已按后验闸门自动收紧高确信条数至 ' + (fb.highConfCap != null ? fb.highConfCap : '—') + '）' : '（跑赢基准）');
-    fbParts.push(s);
+    parts.push('组合回测超额 ' + (ex >= 0 ? '+' : '') + ex.toFixed(2) + '%' +
+      (fb.underperform ? '（跑输基准·已自动收紧高确信）' : '（跑赢基准）'));
   }
-  var fbHtml = fbParts.length ? '<div class="str-fb">🔁 回测反馈闭环：<br>' + fbParts.join('<br>') + '</div>' : '';
-  return '<div class="str-card"><div class="str-head"><h2>🎯 盘前策略 · 关注清单与仓位纪律</h2>' +
-    (st.generatedAt ? '<span class="h2-date">' + esc(st.generatedAt) + '</span>' : '') + '</div>' +
-    posHtml + wlHtml + rkHtml + fbHtml +
-    (st.note ? '<div class="str-note">' + esc(st.note) + '</div>' : '') + '</div>';
+  var rk = (st.risks || []).map(function (r) { return r.name || ''; }).filter(Boolean).slice(0, 6);
+  if (!parts.length && !rk.length) return '';
+  var html = '<div class="str-strip">🎯 ' + parts.join(' · ');
+  if (rk.length) html += '<br>⚠️ 风险预警：' + esc(rk.join('、'));
+  html += '</div>';
+  return html;
 }
 
 function renderAiPrediction() {
@@ -2114,6 +2070,7 @@ function renderAiPrediction() {
     '<div id="pf-box" class="pf-box"></div>' +
     '<div id="st-track-box"></div>' +
     riskLineHtml(p) +
+    strategyDisciplineHtml() +
     '<div class="ai-grid">';
   // R100z82：标的层验证按板块名建索引（verification.stockCheck.sector 与 aiPrediction.sectors 同名），
   // 供下方各板块卡底部渲染「8 只标的平均/方向一致率/主力净额」行。
@@ -2158,8 +2115,6 @@ function renderAiPrediction() {
   var _vblk = renderVerificationBlock();
   html += '</div>' + _vblk + '<div class="ai-foot">标的筛选口径：每个板块 8 只 A 股，按「2 只板块龙头 + 2 只相关概念股 + 2 只游资/机构偏好小盘人气股（涨停基因好）+ 2 只断板反包图形股（1-5 日前涨停、次日放量倍量、随后缩量回调）」搭配，已排除科创板（688 开头）及北交所。<br>' + esc(p.riskNote) + '</div>';
   html += '</div>';
-  // R100z117 ① 盘前策略卡（信号闭环）：与 AI 预测并列，构成「隔夜美股→A股映射→盘前策略」完整链路
-  html += renderStrategy();
   box.innerHTML = html;
   renderCalHistory();
   loadPortfolioCurve();
@@ -3936,14 +3891,17 @@ function renderMacroCalendar() {
   if (!mc || !mc.events || !mc.events.length) return '';
   var rows = mc.events.map(function (e) {
     var du = Number(e.daysUntil || 0);
-    var dcls = du <= 7 ? 'soon' : 'mid';
     var tcls = e.type === '外围' ? 'ext' : 'dom';
-    return '<div class="mc-item">' +
+    // R100z117b（用户 2026-10-10）：删 T+N 徽章，改为「埋伏方向 + 风险提示」两行；
+    // 7 日内事件用左侧色条提示临近。
+    return '<div class="mc-item' + (du <= 7 ? ' soon' : '') + '">' +
       '<div class="mc-date">' + esc(e.date) + '</div>' +
-      '<span class="mc-days ' + dcls + '">' + (du === 0 ? '今天' : ('T+' + du + ' 天')) + '</span>' +
       '<div class="mc-body"><div class="mc-name">' + esc(e.name) +
         '<span class="mc-type ' + tcls + '">' + esc(e.type || '') + '</span></div>' +
-        (e.note ? '<div class="mc-note">' + esc(e.note) + '</div>' : '') + '</div></div>';
+        (e.note ? '<div class="mc-note">' + esc(e.note) + '</div>' : '') +
+        (e.impact ? '<div class="mc-imp"><b>🎯 埋伏方向</b>：' + esc(e.impact) + '</div>' : '') +
+        (e.risk ? '<div class="mc-rsk">⚠️ 风险：' + esc(e.risk) + '</div>' : '') +
+        '</div></div>';
   }).join('');
   return '<div class="mc-card"><div class="mc-head"><h2>📅 未来 ' + (mc.horizonDays || 45) + ' 日宏观事件日历</h2>' +
     (mc.generatedAt ? '<span class="h2-date">' + esc(mc.generatedAt) + '</span>' : '') + '</div>' +
