@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610101053"></script>
+<script src="data.js?v=202610101105"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -727,6 +727,7 @@
   .ps-chip-pct { font-weight: 700; margin-left: 3px; font-size: 10px; }
   .ps-legend { margin-top: 9px; font-size: 11px; color: var(--ink2, #6b7684); line-height: 1.75; background: var(--accent-soft, #f6f8fb); border: 1px dashed var(--line, #dfe4ea); border-radius: 8px; padding: 7px 10px; }
   .ps-legend b { color: var(--ink, #2c3e50); }
+  .ps-legend > div + div { margin-top: 3px; }
   /* R100z109 全球要闻独立页（📄）：与 #duanban-view 同款「打开即独占」模式 */
   #gnews-view { display: none; }
   body.gnews-open .wrap > *:not(#gnews-view) { display: none !important; }
@@ -1211,8 +1212,8 @@ function renderPolicySignals(list) {
   // R100z111：binding 数据层为 hard/soft/directional 英文枚举，渲染层强制转中文（页面只出中文硬规矩；
   // 用户 2026-10-10 反馈「约束性·预期性·方向性我没看到」即因裸渲染 directional 认不出）
   var bindingZh = { hard: '约束性', soft: '预期性', directional: '方向性' };
-  // R100z115（用户 2026-10-10）：当日板块涨幅映射——A股用 allBoards（同花顺全量 90 板块），
-  // 美股用 sectorsUp/sectorsDown 兜底；用于受益板块排序（盘面验证）+ 徽章涨幅
+  // R100z115b：当日板块涨幅映射——A股用 allBoards（同花顺全量 90 板块），
+  // 美股用 sectorsUp/sectorsDown 兜底；仅用于板块徽章涨幅标注（排序已按用户要求回归数据层政策贴近序）
   var Dps = window.DASHBOARD_DATA || {};
   var pctMap = {};
   function _absorbPct(arr) { (arr || []).forEach(function (b) { if (b && b.name && typeof b.pct === 'number') pctMap[b.name] = b.pct; }); }
@@ -1226,13 +1227,9 @@ function renderPolicySignals(list) {
     var tc = tierCls[it.tier] || 't-c';
     var sc = clsSig[it.signalClass] || 'sig-oth';
     var bind = bindingZh[it.binding] || esc(it.binding);
-    // R100z115：受益板块排序——①当日有涨幅（盘面验证/最可能涨）在前、按涨幅降序；
-    // ②无当日数据的按数据层「政策原文关键词出现序」（越靠前越贴近政策）稳定保序在后 → 边缘板块自然沉底
-    var secs = (it.sectors || []).slice().sort(function (a, b) {
-      var pa = pctMap[a], pb = pctMap[b];
-      var ka = (typeof pa === 'number') ? pa : -999, kb = (typeof pb === 'number') ? pb : -999;
-      return kb - ka; // ES2019+ sort 稳定：同为 -999 保持原序
-    });
+    // R100z115b（用户 2026-10-10）：板块顺序回归数据层口径——关键词在政策原文里的出现位置序
+    // （越早提到＝越贴近政策主旨，decode_sector 已按首现位置去重保序）；当日涨幅只做徽章标注、不再参与排序
+    var secs = it.sectors || [];
     var chips = secs.length ? secs.map(function (s) {
       var p = pctMap[s];
       var pctBadge = (typeof p === 'number') ? '<span class="ps-chip-pct" style="color:' + pctColor(p) + '">' + pctText(p) + '</span>' : '';
@@ -1253,13 +1250,15 @@ function renderPolicySignals(list) {
       '</div>';
   });
   h += '</div>';
-  // R100z115（用户 2026-10-10）：图例说明——力度分/信号分类/主体层级 t1~t4/约束性·预期性·方向性/目标/涨幅徽章
-  h += '<div class="ps-legend">📌 图例：<b>力度分</b>=信号强度 0~100（综合发文主体层级、文种权重、量化指标密度评定；≥80 为 S、≥60 为 A、≥40 为 B、其余 C）；' +
-    '<b>信号分类</b>=货币政策 / 财政 / 产业 / 其他（传导机制不同，货币看流动性、产业看盈利）；' +
-    '<b>t1~t4</b>=发文主体层级（t1 最高，如中共中央/国务院，依次递减）；' +
-    '<b>约束性</b>=带硬性量化指标、<b>预期性</b>=方向性指引、<b>方向性</b>=定调表态；' +
-    '<b>目标</b>=从政策原文抽取的量化数字（降息幅度/额度/利率等）；' +
-    '板块徽章内百分比=<b>当日板块涨幅</b>（红涨绿跌，按盘面验证度排序：有涨幅且涨得多的排最前，无当日行情的按政策贴近度排后）</div>';
+  // R100z115b（用户 2026-10-10）：图例改为四行结构——力度分构成 / 信号分类 / 发文主体分级 / 量化指标三性，
+  // 并标注文种权重链（决定＞法/条例＞纲要/规划＞方案＞意见＞通知＞指南，与 decode_policy DOC_TYPES 口径一致）
+  h += '<div class="ps-legend">' +
+    '<div>📌 <b>力度分</b>（0~100）＝决策加权：发文主体层级 × 文种权重 × 量化指标密度 × 时效压缩（顶层联名、货币政策另有加成）；≥80 为 S、≥60 为 A、≥40 为 B、其余 C。</div>' +
+    '<div><b>信号分类</b>＝货币政策 / 财政 / 产业 / 其他——传导机制不同：货币看流动性，财政看需求端，产业看盈利与赛道。</div>' +
+    '<div><b>发文主体分级</b>＝t5（中共中央＋国务院联名 / 党中央机构）＞ t4（国务院）＞ t3（央行 / 多部委联合）＞ t2（单一部委）＞ t1（未识别），层级越高力度分越高。</div>' +
+    '<div><b>量化指标</b>＝约束性（带硬性数字指标，最实）＞ 预期性（方向性指引）＞ 方向性（定调表态）；「目标」为从政策原文抽取的量化数字（降息幅度/额度/利率等）。文种权重：决定＞法/条例＞纲要/规划＞方案＞意见＞通知＞指南。</div>' +
+    '<div>板块徽章内百分比＝该板块<b>当日涨幅</b>（红涨绿跌），仅作盘面验证标注，不参与排序。</div>' +
+    '</div>';
   return h;
 }
 
