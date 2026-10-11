@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610112319"></script>
+<script src="data.js?v=202610120204"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -799,7 +799,7 @@
     <h1>每日市场看板</h1>
     <div class="sub">A 股 · 美股 · 全球产业全景</div>
     <span class="updated" id="updatedAt"></span>
-    <div class="schedule-note">自动更新：A股 周一至五 16:00 收盘后 · 美股 周一至五 08:30 隔夜收盘（含AI预测与A股映射） · 周日 23:00 全球要闻 + 周一开盘预判</div>
+    <div class="schedule-note">自动更新：A股 周一至五 16:00 收盘后 · 美股 周一至五 08:30 隔夜收盘（含AI预测与A股映射） · 周日 22:00 全球要闻 + 周一开盘预判</div>
   </div>
 
   <div id="weekend-news"></div>
@@ -2315,6 +2315,21 @@ function newsEntryInner(it, showSrc, tag, tradeDate) {
 
 // R100z111：原「R91 摘要 nc-dtl 点击展开/收起」已按用户要求废除——摘要默认全文显示
 
+/* R100z118（用户 2026-10-12）：全球要闻卡日期角标对齐「要闻实际更新日」。
+   此前角标直接显示 d.tradeDate（美股=最后一个交易日，如 2026-10-09 美东），但周末要闻实际在 10-11 更新，
+   用户反馈「时间对不上」。现取五节要闻条目 time 字段里的最新日期作为「要闻更新日」，与交易日不同时并列展示。 */
+function newsUpdatedDate(d) {
+  if (!d) return '';
+  var keys = ['bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews'], best = '';
+  keys.forEach(function (k) {
+    (d[k] || []).forEach(function (it) {
+      var m = String((it && it.time) || '').match(/(\d{4}-\d{2}-\d{2})/);
+      if (m && m[0] > best) best = m[0];
+    });
+  });
+  return best;
+}
+
 function renderNewsCard(d, market) {
   // R100z109（用户 2026-10-10）：A股/美股要闻卡迁入「📄 全球要闻」独立页；
   // 原利好/利空两栏紧凑卡（news-cols/news-cell）废除，五节统一为通栏展开卡（wk-item，
@@ -2329,8 +2344,11 @@ function renderNewsCard(d, market) {
   var macro = (d.macroNews||[]).slice().sort(dirSort);
   if (!bn.length && !be.length && !intl.length && !bank.length && !macro.length) return '';
   var mkTitle = market === 'us' ? '🇺🇸 美股 · 全球要闻' : '🇨🇳 A股 · 全球要闻';
+  // R100z118：角标对齐要闻实际更新日（见 newsUpdatedDate）。交易日与要闻更新日不同时并列显示。
+  var _td = String(d.tradeDate || ''), _tdm = _td.match(/(\d{4}-\d{2}-\d{2})/), _ud = newsUpdatedDate(d);
+  var _dateLabel = (_ud && _tdm && _ud !== _tdm[1]) ? ('要闻更新 ' + _ud + ' · 数据 ' + _td) : _td;
   var html = '<div class="wk-card"><div class="wk-head"><h2>' + mkTitle + '</h2>'
-    + '<span class="date">' + esc(d.tradeDate||'') + '</span></div>';
+    + '<span class="date">' + esc(_dateLabel) + '</span></div>';
   // 利好 / 利空方向（短线·盘面）：通栏展开卡，左侧色条表达方向（红=利好 / 绿=利空）
   if (bn.length) {
     html += '<div class="wk-section"><h4 class="bull">利好方向 · 短线盘面</h4>';
