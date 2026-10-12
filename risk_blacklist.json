@@ -9,30 +9,6 @@
  "watchPledgeWithin": 365,
  "cutDays": 30,
  "blacklist": {
-  "600118": {
-   "name": "中国卫星",
-   "reasons": [
-    "2026-09-11 减持公告"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "003009": {
-   "name": "中天火箭",
-   "reasons": [
-    "2026-10-09 减持公告"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
   "603533": {
    "name": "掌阅科技",
    "reasons": [
@@ -135,6 +111,18 @@
    "progress": [
     "减持实施中"
    ]
+  },
+  "600759": {
+   "name": "ST洲际",
+   "reasons": [
+    "ST/退市（当前名称 ST洲际）"
+   ],
+   "count": 1,
+   "watch": [
+    "参考·质押 16.3%（截至 2026-05-29）"
+   ],
+   "severity": "red",
+   "progress": []
   },
   "600400": {
    "name": "红豆股份",
