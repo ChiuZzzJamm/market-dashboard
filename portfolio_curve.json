@@ -33,23 +33,34 @@
    "nSec": 2,
    "nStocks": 16,
    "poolConf": "高"
+  },
+  {
+   "date": "2026-10-12",
+   "avgPct": -1.54,
+   "pf": 0.957,
+   "bench": 0.9614,
+   "benchMain": 0.9888,
+   "dd": -4.3,
+   "nSec": 1,
+   "nStocks": 8,
+   "poolConf": "高"
   }
  ],
  "stat": {
-  "days": 3,
-  "totRetPct": -2.81,
-  "benchRetPct": -1.94,
-  "excessPct": -0.87,
-  "benchMainRetPct": 0.11,
-  "benchMainExcessPct": -2.92,
-  "maxDdPct": -2.81,
-  "maxDdDate": "2026-10-09",
+  "days": 4,
+  "totRetPct": -4.3,
+  "benchRetPct": -3.86,
+  "excessPct": -0.44,
+  "benchMainRetPct": -1.12,
+  "benchMainExcessPct": -3.18,
+  "maxDdPct": -4.3,
+  "maxDdDate": "2026-10-12",
   "assumptions": {
    "feePerSide": 0.025,
    "stampDutySell": 0.05,
    "slippagePerSide": 0.1,
    "turnover": "T+1 次日兑现，单标的年化换手高；净值为毛收益，未扣费/税/滑点",
-   "sampleWindow": 3,
+   "sampleWindow": 4,
    "sampleEnough": false,
    "benchmarkNote": "基准=上证/深成/创业板/中证1000 四指数涨跌幅中位数（全市场代理）；benchMain=上证+深成等权（主板口径代理，低 beta）。两者均为对照指数，不代表「买市场」的可交易组合。"
   },
