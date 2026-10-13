@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610121830"></script>
+<script src="data.js?v=202610130857"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -495,6 +495,16 @@
   .db-sent.bull { background: var(--up-soft); color: var(--up); border: 1px solid var(--up); }
   .db-sent.bear { background: var(--down-soft); color: var(--down); border: 1px solid var(--down); }
   .db-sent.neu  { background: #eef1f5; color: var(--ink2); border: 1px solid #d6dee7; }
+  /* R100z120 Q2：池归属徽章（断板确认/观察池 + 失效归档池）统一几何——font-size:11px;line-height:1.5;padding:1px 7px;
+     与 .hz-badge/.chip-sec/.db-sent 完全一致（原 .db-stage 内联样式缺 line-height，在继承大行高下显得更高）。
+     原 .db-stage 类在 R100s 已删，这里用 .pool-badge 接管，避免残留类无 CSS 兜底。 */
+  .pool-badge { display:inline-block; font-size:11px; font-weight:700; border-radius:4px; padding:1px 7px; border:1px solid currentColor; line-height:1.5; white-space:nowrap; flex-shrink:0; }
+  .pool-badge.fail { background:#eef1f4; color:#66707c; }
+  .pool-badge.done { background:var(--up-soft); color:var(--up); }
+  .pool-badge.hold { background:var(--accent-soft); color:var(--accent-deep); }
+  /* R100z120 Q3：弹窗「新」徽章——与卡片 .tc .nb 同口径（poolFresh：entryDate === 模块交易日），
+     覆盖断板/谐波/九门/吸筹的池内标的 + 四模块失效归档池（与卡片 fail-chip.fail-new 同口径）。 */
+  .m-nb { display:inline-block; font-size:9.5px; font-weight:800; color:#6b4a00; background:#ffc93c; border:1px solid #e3a008; border-radius:4px; padding:0.5px 3px; line-height:1.5; flex-shrink:0; }
   .db-empty { font-size: 13px; color: var(--ink2); padding: 14px 4px; }
 
   /* 弹窗左右箭头切换（R88） */
@@ -1132,7 +1142,7 @@ function renderTops(s, isUp) {
   return '<div class="reason-tops"><span class="tops-h">' + label + '</span>' + chips + '</div>';
 }
 
-function renderReasons(list, tradeDate, isUp) {
+function renderReasons(list, tradeDate, isUp, market) {
   list = list || [];
   var html = '';
   var tag = dateTag(tradeDate);
@@ -1142,7 +1152,7 @@ function renderReasons(list, tradeDate, isUp) {
     // 板块名与涨跌幅合并为一枚胶囊：涨=红底白字，跌=绿底白字；无涨跌幅时退回白底胶囊
     // R99h：板块胶囊点击看板块日K（同花顺行业口径，与断板页 TOP10 板块K线同款弹窗）；
     // 有 thsCode 才可点；脚本内嵌的 s.kline（16:00 update_ashare_sectors 附带）注册进 _SEC_KL 供弹窗直读
-    var klAttr = s.thsCode ? ' onclick="openSectorKline(\'' + esc(s.name) + '\',\'' + esc(s.thsCode) + '\')" title="点击查看板块日K线" style="cursor:pointer"' : '';
+    var klAttr = s.thsCode ? ' onclick="openSectorKline(\'' + esc(s.name) + '\',\'' + esc(s.thsCode) + '\',\'' + esc(market || 'ashare') + '\')" title="点击查看板块走势与行业新闻" style="cursor:pointer"' : '';
     if (s.kline && s.thsCode) { window._SEC_KL = window._SEC_KL || {}; window._SEC_KL[s.thsCode] = s.kline; }
     var pctHtml = (s.pct !== null && s.pct !== undefined)
       ? '<span class="pct ' + (s.pct >= 0 ? 'u' : 'd') + '"' + klAttr + '>' + esc(s.name) + ' ' + fmtPct(s.pct) + '</span>'
@@ -1369,11 +1379,11 @@ function render(market) {
 
   var _ssMap = {'ths': '同花顺行业口径', 'em': '东财行业口径', 'prev': '上一轮数据'};
   var _ssTag = _ssMap[d.sectorSource] ? ' <span class="src-tag">' + _ssMap[d.sectorSource] + '</span>' : '';
-  html += '<div class="card"><h2>领涨板块' + _ssTag + h2Date(d) + '</h2>' + renderReasons(d.sectorsUp, d.tradeDate, true) + '</div>';
+  html += '<div class="card"><h2>领涨板块' + _ssTag + h2Date(d) + '</h2>' + renderReasons(d.sectorsUp, d.tradeDate, true, market) + '</div>';
 
   html += '<div class="card"><h2>调整 / 领跌板块' + _ssTag + h2Date(d) + '</h2>' +
     (d.sectorNote ? '<div class="src-line">' + esc(d.sectorNote) + '</div>' : '') +
-    renderReasons(d.sectorsDown, d.tradeDate, false) + '</div>';
+    renderReasons(d.sectorsDown, d.tradeDate, false, market) + '</div>';
 
   // R100z93b：主题型领涨/领跌（bullish/bearish）独立模块已按用户要求下线（2026-10-08：
   // 深度分析应整合进板块异动的「行业原因」与题材掘金，而不是另开两张卡）。数据字段保留（校验器仍查 4 只），前端不再渲染。
@@ -1516,7 +1526,7 @@ function renderPano() {
     var c = cls(it.pct);
     // 含N个细分：内联小标签紧跟板块名，点击弹出细分板块涨幅明细
     var subTag = (it.subs > 1)
-      ? '<span class="subtag" onclick="showPanoSubs(\'' + escAttr(it.name) + '\')" title="点击查看细分板块涨幅">含' + it.subs + '个细分 ▾</span>'
+      ? '<span class="subtag" onclick="event.stopPropagation();showPanoSubs(\'' + escAttr(it.name) + '\')" title="点击查看细分板块涨幅">含' + it.subs + '个细分 ▾</span>'
       : '';
     // R98h：A股板块指标行（主力净流入/涨停数/领涨股/涨跌家数/近5日涨幅，缺字段条件渲染）
     var meta = '';
@@ -1534,7 +1544,7 @@ function renderPano() {
         segs.push('<span>5日</span><b class="' + (it.pct5 >= 0 ? 'up' : 'down') + '">' + fmtPct(it.pct5) + '</b>');
       if (segs.length) meta = '<div class="meta">' + segs.join('<em>·</em>') + '</div>';
     }
-    html += '<div class="pano-cell' + (meta ? ' pano-rich' : '') + '"><div class="nm">' + esc(it.name) + subTag +
+    html += '<div class="pano-cell' + (meta ? ' pano-rich' : '') + '" onclick="openPanoSector(\'' + escAttr(it.name) + '\')" title="点击查看板块走势与行业新闻" style="cursor:pointer"><div class="nm">' + esc(it.name) + subTag +
       (it.ref ? '<span class="ref">' + esc(it.ref) + '</span>' : '') + '</div>' +
       '<div class="pc ' + c + '">' + fmtPct(it.pct) + '</div>' + meta + '</div>';
   });
@@ -2480,6 +2490,13 @@ function failPoolOf(kind) {
   if (kind === 'powerScreen') return (D.powerScreen || {}).failPool || [];
   return (D.duanban || {}).failPool || []; // 兜底：断板反包（默认）
 }
+/* ⚠️ 新增 kind 必须同步 D 里（failPoolOf 白名单 + 本映射 + dbFailHtml 的 onclick）。 */
+function failKindCn(kind) {
+  return kind === 'harmonic' ? '谐波·'
+    : kind === 'powerScreen' ? '九门·'
+    : kind === 'accumulation' ? '吸筹·'
+    : '断板·';
+}
 // R100z4x：失效池弹窗同组导航——DB_NAV=失效归档池键数组，左右箭头/键盘 ←→ 在池内循环
 // R100z84（用户 2026-10-08）：弹窗改走 openDbModal（与确认池/观察池同款富弹窗：徽标行/形态/
 // 失效原因/消息三口径/技术面/K线）——原走 openStkModal 只有 K 线+板块徽章，信息量远低于双池。
@@ -2504,6 +2521,7 @@ function failEntryOf(e, kind) {
   var code = String(e.code || '');
   return Object.assign({}, e, {
     stage: '失效归档',
+    failKind: kind, // R100z124：记下来源模块（f|<kind>|<code>）——下游只许取本模块口径，禁止跨模块借几何/止损
     sentiment: e.sentiment || stkSentiment(code),
     probability: (e.probability != null) ? e.probability : null,
     sector: e.sector || stkSectorOf(code) || '',
@@ -2543,8 +2561,12 @@ function failNewsScan(code) {
 function failExitMetaLine(e) {
   var code = String((e && e.code) || '').replace(/\D/g, '');
   if (!code) return '';
-  // ① 谐波失效 → exitForCode ③ 命中 hzFailOf（D 点结构位 + target1），样式与全站一致
-  var hz = (typeof hzFailOf === 'function') ? hzFailOf(code) : null;
+  // R100z124（用户 2026-10-13 截图问「002724/600230 看着还在 PRZ 区间，也失效了吗」）：① 谐波口径
+  //   **只对谐波失效条目**生效。原实现无脑按 code 查 hzFailOf → 同一标的若同时在断板失效池与谐波失效池
+  //   （本批 8 只），断板弹窗会借到谐波的 D 点止损/证伪文案，并把下面 ②「断板日最低价」这条**本模块
+  //   正确口径整段短路成死代码**（截图里断板条目写着「谐波形态作废」即此）。按 failKind 分模块取口径。
+  var kind = String((e && e.failKind) || '');
+  var hz = (kind === 'harmonic' && typeof hzFailOf === 'function') ? hzFailOf(code) : null;
   if (hz && hz.stop !== null && hz.stop !== undefined) return exitMetaLine(code);
   var rows = stkParseKline(stkEmbeddedKline(code) || stkGlobalKline(code));
   if (rows && rows.length) {
@@ -2739,6 +2761,103 @@ function stkNewsHtml(code) {
     else if (aiHit.counter) h += '<div class="dd-box"><div class="dd-counter">反证：' + esc(_ddClean(aiHit.counter)) + '</div></div>';
   }
   if (!e && !hits.length && !secHit && !aiHit) h += '<div class="db-ref-sum">暂无明确利好/利空消息（按当日要闻与 AI 写回自动更新）</div>';
+  return h;
+}
+
+/* R100z118：板块级消息面（行业新闻 + 利好/利空标注），参考标的页 stkNewsHtml 样式。
+   入参 name=板块名，market='ashare'|'us'|'kr'|'jp'。
+   数据来源：① 当日五节要闻（bullNews/bearNews/macroNews/intlNews/bankViews）按 sector/impacts.theme 命中；
+   ② 板块异动 reason+deduce（market.sectorsUp/Down）；③ AI 预测板块（aiPrediction.sectors）；
+   ④ 政策信号解码（policySignals）命中受益板块；⑤ 板块概况（当日行情口径，行情/全景）。 */
+function sectorNewsHtml(name, market) {
+  name = String(name || '').trim();
+  if (!name) return '';
+  var D = window.DASHBOARD_DATA || {};
+  var mk = D[market] || {};
+  var groups = { bull: [], bear: [], neutral: [] };
+  function refItem(it, dir, flag) {
+    if (!it || !it.title) return;
+    var head = ((it.time || '') + ' ' + (it.source || it.src || '')).trim();
+    groups[dir].push('<div class="db-ref-p"><b>板块消息 ' + (flag || '🇨🇳') + '：</b>' + esc(head) + esc('《' + it.title + '》') +
+      (it.summary ? '<div class="db-ref-sum">' + esc(it.summary) + '</div>' : '') + '</div>');
+  }
+  ['bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews'].forEach(function (k) {
+    var dir = (k === 'bullNews') ? 'bull' : (k === 'bearNews') ? 'bear' : 'neutral';
+    (mk[k] || []).forEach(function (it) {
+      var matched = (it.sector && it.sector === name);
+      (it.impacts || []).forEach(function (im) { if (im.theme === name) matched = true; });
+      if (matched) refItem(it, dir, (k === 'intlNews') ? '🌍' : '🇨🇳');
+    });
+  });
+  var secHit = null;
+  ((mk.sectorsUp || []).concat(mk.sectorsDown || [])).forEach(function (s) { if (!secHit && s.name === name) secHit = s; });
+  var aiHit = null;
+  ((D.aiPrediction || {}).sectors || []).forEach(function (s) { if (!aiHit && s.sector === name) aiHit = s; });
+  var polHits = [];
+  ((D.policySignals || [])).forEach(function (p) { (p.sectors || []).forEach(function (s) { if (s === name) polHits.push(p); }); });
+  // 板块概况（行情口径）
+  var stat = ((mk.sectorsUp || []).concat(mk.sectorsDown || [])).filter(function (s) { return s.name === name; })[0];
+  var pano = null;
+  var pms = ((D.panorama || {}).markets || []).filter(function (m) { return m.key === market; })[0];
+  if (pms) (pms.items || []).forEach(function (it) { if (it.name === name) pano = it; });
+  var h = '';
+  // 利好/利空综合口径
+  var nB = groups.bull.length, nE = groups.bear.length;
+  var win = 'neutral';
+  if (nB > nE) win = 'bull';
+  else if (nE > nB) win = 'bear';
+  else if (secHit) win = (mk.sectorsUp && mk.sectorsUp.indexOf(secHit) >= 0) ? 'bull' : 'bear';
+  if (nB || nE || secHit || aiHit || polHits.length) {
+    var winMeta = { bull: ['利好口径', 'var(--up)'], bear: ['利空口径', 'var(--down)'], neutral: ['中性口径', 'var(--ink2)'] }[win];
+    h += '<div class="db-ref-p" style="margin-top:6px;"><b style="color:' + winMeta[1] + '">' + winMeta[0] + '：</b>' +
+      (nB + nE > 0 ? '<span class="db-ref-sum" style="display:inline;">（判定依据：利好 ' + nB + ' 条 · 利空 ' + nE + ' 条）</span>' : '') + '</div>';
+  }
+  var winItems = groups[win] || [];
+  if (winItems.length) h += winItems.join('');
+  else if (nB || nE) h += '<div class="db-ref-sum">暂无明确利好/利空消息（按当日要闻自动更新）</div>';
+  // 板块异动 reason+deduce
+  if (secHit) {
+    var _rs = secHit.reason;
+    var _rt = (_rs && typeof _rs === 'object') ? (_rs.title || '') : String(_rs || '');
+    var _rd = (_rs && typeof _rs === 'object') ? (_rs.detail || '') : '';
+    h += '<div class="db-ref-p" style="margin-top:6px;"><b>异动板块 · ' + esc(secHit.name || '') +
+      (secHit.pct != null ? '（今日 ' + (secHit.pct > 0 ? '+' : '') + secHit.pct + '%）' : '') + '：</b>' +
+      (_rt ? '<div class="db-ref-sum">' + esc(_rt) + (_rd ? '：' + esc(_rd) : '') + '</div>' : '') + '</div>';
+    if (secHit.deduce) h += renderDeduce(secHit.deduce, true);
+  }
+  // AI 预测
+  if (aiHit) {
+    h += '<div class="db-ref-p" style="margin-top:6px;"><b>AI 预测 · ' + esc(aiHit.sector || '') + '：</b>' +
+      '<div class="db-ref-sum">预计' + esc(aiHit.direction || '') + ' · ' + esc(aiHit.confidence ? aiHit.confidence + '确信' : '推测') + '</div>' +
+      (aiHit.usDriver ? '<div class="db-ref-sum">隔夜驱动：' + esc(aiHit.usDriver) + '</div>' : '') +
+      (aiHit.logic ? '<div class="db-ref-sum">映射逻辑：' + esc(aiHit.logic) + '</div>' : '') + '</div>';
+    if (aiHit.deduce) h += renderDeduce(aiHit.deduce, true);
+    else if (aiHit.counter) h += '<div class="dd-box"><div class="dd-counter">反证：' + esc(_ddClean(aiHit.counter)) + '</div></div>';
+  }
+  // 政策信号
+  if (polHits.length) {
+    h += '<div class="db-ref-p" style="margin-top:6px;"><b>政策信号 · 受益板块：</b></div>';
+    polHits.slice(0, 4).forEach(function (p) {
+      h += '<div class="db-ref-sum">《' + esc(p.title || '') + '》' + esc((p.issuer || '') + ' · ' + (p.signalClass || '')) + '</div>';
+    });
+  }
+  // 板块概况（无消息时仍展示当日行情，避免点击空白）
+  if (stat || pano) {
+    var segs = [];
+    var pct = (stat && typeof stat.pct === 'number') ? stat.pct : (pano && typeof pano.pct === 'number' ? pano.pct : null);
+    if (pct != null) segs.push('<span>今日</span><b class="' + (pct >= 0 ? 'up' : 'down') + '">' + (pct >= 0 ? '+' : '') + pct + '%</b>');
+    var pct5 = (pano && typeof pano.pct5 === 'number') ? pano.pct5 : null;
+    if (pct5 != null) segs.push('<span>5日</span><b class="' + (pct5 >= 0 ? 'up' : 'down') + '">' + (pct5 >= 0 ? '+' : '') + pct5 + '%</b>');
+    var ni = (pano && typeof pano.netInflow === 'number') ? pano.netInflow : (stat && typeof stat.netInflow === 'number' ? stat.netInflow : null);
+    if (ni != null) segs.push('<span>净流</span><b class="' + (ni >= 0 ? 'up' : 'down') + '">' + (ni >= 0 ? '+' : '') + ni.toFixed(2) + '亿</b>');
+    var zt = pano && pano.ztCount != null ? pano.ztCount : (stat && stat.ztCount != null ? stat.ztCount : null);
+    if (zt != null) segs.push('<span>涨停</span><b class="' + (zt > 0 ? 'up' : '') + '">' + zt + '</b>');
+    var uc = pano && pano.upCount != null ? pano.upCount : (stat && stat.upCount != null ? stat.upCount : null);
+    var dc = pano && pano.downCount != null ? pano.downCount : (stat && stat.downCount != null ? stat.downCount : null);
+    if (uc != null && dc != null) segs.push('<span>涨/跌</span><b><i class="up">' + uc + '</i>/<i class="down">' + dc + '</i></b>');
+    if (segs.length) h += '<div class="db-ref-p" style="margin-top:6px;"><b>板块概况：</b><div class="meta">' + segs.join('<em>·</em>') + '</div></div>';
+  }
+  if (!h) h = '<div class="db-ref-sum">暂无明确利好/利空消息（按当日要闻与 AI 写回自动更新）</div>';
   return h;
 }
 
@@ -3340,6 +3459,44 @@ function tcCard(o) {
    等于本模块数据交易日即「今日新入池」；无 entryDate 的旧数据一律不当新（宁缺毋滥）。 */
 function poolFresh(it, modDate) {
   return !!(it && it.entryDate && modDate && String(it.entryDate) === String(modDate).slice(0, 10));
+}
+/* R100z120 Q3：弹窗「新」徽章——与卡片 .tc .nb / fail-chip.fail-new 同口径（poolFresh：entryDate === 模块交易日）。
+   池内标的：逐模块比对 entryDate 与各自交易日（duanban.generatedAt / harmonic·powerScreen·accumulation 用 tradeDate）。
+   失效归档池（key=f|kind|code）：entryDate === 该池最新归档日（failPoolLatest，与卡片 fail-chip.fail-new 同口径）。 */
+function modalFreshBadgeHtml(key, code) {
+  code = String(code || '');
+  if (!code) return '';
+  var D = window.DASHBOARD_DATA || {};
+  var fresh = false;
+  if (typeof key === 'string' && key.indexOf('f|') === 0) {
+    var parts = key.split('|');
+    var kind = parts[1] || 'duanban';
+    var fp = failPoolOf(kind) || [];
+    var latest = failPoolLatest(fp);
+    for (var i = 0; i < fp.length; i++) {
+      if (String(fp[i].code) === code) { fresh = !!(latest && String(fp[i].entryDate) === String(latest)); break; }
+    }
+  } else {
+    var mods = [
+      { node: D.duanban || {}, date: ((D.duanban || {}).generatedAt || '').slice(0, 10), pools: ['confirmed', 'watching'] },
+      { node: D.harmonic || {}, date: ((D.harmonic || {}).tradeDate || '').slice(0, 10), pools: ['confirmPool', 'watchPool'] },
+      { node: D.powerScreen || {}, date: ((D.powerScreen || {}).tradeDate || '').slice(0, 10), pools: ['passed'] },
+      { node: D.accumulation || {}, date: ((D.accumulation || {}).tradeDate || '').slice(0, 10), pools: ['scored'] }
+    ];
+    outer:
+    for (var m = 0; m < mods.length; m++) {
+      var md = mods[m].date;
+      if (!md) continue;
+      var pls = mods[m].pools;
+      for (var p = 0; p < pls.length; p++) {
+        var arr = mods[m].node[pls[p]] || [];
+        for (var q = 0; q < arr.length; q++) {
+          if (String(arr[q].code) === code && arr[q].entryDate && String(arr[q].entryDate) === md) { fresh = true; break outer; }
+        }
+      }
+    }
+  }
+  return fresh ? '<span class="m-nb">新</span>' : '';
 }
 
 /* R100z36：断板反包双池卡片改用统一 T2 骨架。
@@ -4112,15 +4269,19 @@ function openDbModal(key) {
   var done = key.indexOf('c|') === 0;
   var isStar = key.indexOf('s|') === 0; // R99：开盘精选入口进入，徽标与确认池/观察池区分
   var isFail = key.indexOf('f|') === 0; // R100z84：失效归档池条目（openFailIdx 懒注册），富弹窗与双池同款
+  // R100z124：失效条目来源模块（key = f|<kind>|<code>）——徽章标模块名 + K线/退出纪律只取本模块几何，
+  //   不再跨模块借「失效前谐波快照」（同一标的可同时躺在两个模块的失效池，见 PROJECT-MEMORY）。
+  var kindFail = isFail ? String(key).split('|')[1] : '';
   document.getElementById('db-modal-head').innerHTML =
     '<span class="nm">' + esc(e.name) + '</span><span class="cd2">' + esc(e.code) + '</span>' +
+    modalFreshBadgeHtml(key, e.code) + // R100z121：弹窗「新」徽章移到标题行（代码右侧，用户 2026-10-13 截图指定）
     '<button class="db-modal-close" onclick="closeDbModal()">×</button>' +
     '<div class="m-badge-row">' + // R100s：徽标统一第二行
     stkSecBadge(e.code) +
     (function () { // R100z4：池归属并入断板反包徽章（断板反包·确认池 / 断板反包·观察池，金色样式与全站一致）；异常兜底回退独立池徽章
       var tb = stkTechBadgeHtml(e.code);
-      if (isFail) return tb + '<span class="db-stage" style="font-size:11px;font-weight:700;border-radius:4px;padding:1px 7px;border:1px solid currentColor;background:#eef1f4;color:#66707c">失效归档池</span>';
-      return tb || ('<span class="db-stage ' + (done ? 'done' : 'hold') + '" style="font-size:11px;font-weight:700;border-radius:4px;padding:1px 7px;border:1px solid currentColor;' + (done ? 'background:var(--up-soft);color:var(--up)' : 'background:var(--accent-soft);color:var(--accent-deep)') + '">' + (done ? '确认池' : ('观察池 · ' + esc(e.stage))) + '</span>');
+      if (isFail) return tb + '<span class="pool-badge fail">' + failKindCn(kindFail) + '失效归档池</span>';
+      return tb || ('<span class="pool-badge ' + (done ? 'done' : 'hold') + '">' + (done ? '确认池' : ('观察池 · ' + esc(e.stage))) + '</span>');
     })() +
     riskTipBadge(String(e.code)) + // R100z87：可见风险提示徽章（手机端也能看到，原 ⚠️ 悬停信息不可达）
     dbSentBadge(e, 'font-size:11px;padding:1px 7px;border-radius:4px;') +
@@ -4148,7 +4309,12 @@ function openDbModal(key) {
   // K线兜底链——池条目内嵌 → 顶层 stkKlines（embed 分级内嵌）→ 网络拉取后回填；
   // 谐波形态点在池内短窗之外时优先用顶层长窗（320 根）渲染，避免连线丢失
   (function () {
-    var hzDb = findHarmonic(String(e.code)) || hzFailOf(String(e.code));
+    // R100z124：谐波几何两条来源分级——findHarmonic=**在池**几何（任何弹窗都可画）；
+    //   hzFailOf=**失效前**快照（带「失效 X」竖线 +「失效前形态快照」标题），只在**谐波失效**弹窗里画。
+    //   原实现按 code 无脑回退 hzFailOf → 断板失效条目（002724/600230…本批 8 只）画出谐波 PRZ 带 +
+    //   谐波失效日竖线，与上方「归档日」自相矛盾（用户 2026-10-13 截图正被这张图问住）。
+    var hzDb = findHarmonic(String(e.code)) ||
+      ((isFail && kindFail === 'harmonic') ? hzFailOf(String(e.code)) : null);
     // R100z28：主图优先用全量 90 根（stkEmbeddedKline 已在内部比长度），
     // 不再无条件吃断板条目那 40 根——否则图上起点只到断板日前 40 个交易日。
     var kl0 = stkEmbeddedKline(String(e.code)) || e.kline || stkGlobalKline(e.code);
@@ -4441,7 +4607,12 @@ function _dbk_option(kl, hz) {
       // R100z7：普通图默认只放大显示最近 30 根（用户 10/1 反馈），滑条/双指可缩回全量；谐波保留形态全窗
       var init = (!hz || !hz.pointDays) ? { startValue: Math.max(0, kl.length - 30), endValue: kl.length - 1 } : {};
       return [
-        { type: 'inside', xAxisIndex: [0, 1], zoomLock: false, throttle: 50, startValue: init.startValue, endValue: init.endValue },
+        // R100z123（用户 2026-10-13）：取消「在K线图本体上左右滑动/拖拽平移」→ moveOnMouseMove:false。
+        // ECharts 里该开关同时挡住鼠标拖拽与移动端单指滑动（zrender 把 touchmove 模拟成 mousemove 投给 roam，
+        // 见 dom/HandlerProxy.touchmove → localDOMHandlers.mousemove），故双端一致不再被拖动。
+        // 缩放保留：滚轮=zoomOnMouseWheel 默认 true；双指 pinch 走 _pinchHandler，不受 moveOnMouseMove 影响。
+        // 光标改 'default'：图上已不可拖动，不再显示 grab/grabbing 误导；底部 slider（drag 平移 / 拖两端把手缩放）原样保留。
+        { type: 'inside', xAxisIndex: [0, 1], zoomLock: false, throttle: 50, moveOnMouseMove: false, cursorGrab: 'default', cursorGrabbing: 'default', startValue: init.startValue, endValue: init.endValue },
         { type: 'slider', xAxisIndex: [0, 1], left: '2%', right: _hzRight, bottom: 0, height: 14, borderColor: '#c7d3e0', fillerColor: 'rgba(74,168,224,0.15)', handleSize: '60%', textStyle: { color: '#5a6e82' }, startValue: init.startValue, endValue: init.endValue }
       ];
     })(),
@@ -4828,6 +4999,7 @@ function openStkModal(code, name, note) {
   document.getElementById('stk-modal-head').innerHTML =
     '<span class="nm">' + esc(name || '') + '</span>' +
     (code ? '<span class="cd2">' + esc(code) + '</span>' : '') +
+    modalFreshBadgeHtml(null, code) + // R100z121：弹窗「新」徽章移到标题行（代码右侧，用户 2026-10-13 截图指定）
     (nav ? '<span class="cd2">' + (STK_IDX + 1) + '/' + STK_GRP.length + '</span>' : '') + // R100s：数量紧跟代码
     '<button class="db-modal-close" onclick="stkClose()">×</button>' +
     '<div class="m-badge-row">' + stkSecBadge(code) + stkTechBadgeHtml(code) + stkPoolBadge(code) +
@@ -4986,8 +5158,7 @@ function thsParseKline(d) {
     return out.length > 1 ? out.slice(-30) : null;
   } catch (e) { return null; }
 }
-function openSectorKline(name, thsCode) {
-  if (!thsCode) return;
+function openSectorKline(name, thsCode, market) {
   TB_OPEN = true;
   TB_NAV_OFF = true; // 板块异动胶囊弹窗无 TOP10 箭头/键盘路由（R99h）
   document.getElementById('stk-modal-head').innerHTML =
@@ -4997,11 +5168,15 @@ function openSectorKline(name, thsCode) {
   document.getElementById('stk-modal-meta').innerHTML =
     '<span class="lab">日K线 · 滚轮缩放查看（默认近30根，可拉至全量）</span>';
   document.getElementById('stk-kline').innerHTML = '<div class="db-empty">K线加载中…</div>';
-  document.getElementById('stk-news').innerHTML = ''; // R100n：板块弹窗无个股消息面，清掉残留
+  document.getElementById('stk-news').innerHTML = sectorNewsHtml(name, market || 'ashare'); // R100z118：板块行业新闻 + 利好/利空标注（参考标的页样式）
   document.getElementById('stk-modal').classList.add('open');
   document.getElementById('stk-prev').style.display = 'none';
   document.getElementById('stk-next').style.display = 'none';
   tbShowArrows();
+  if (!thsCode) {
+    document.getElementById('stk-kline').innerHTML = '<div class="db-empty">该板块暂无同花顺行业K线源，已展示行业新闻与利好/利空标注</div>';
+    return;
+  }
   var kl = (window._SEC_KL || {})[thsCode];
   if (kl && kl.length > 1) {
     document.getElementById('stk-kline').innerHTML = dbKlineSvg(kl);
@@ -5022,6 +5197,13 @@ function openSectorKline(name, thsCode) {
       document.getElementById('stk-kline').innerHTML = '<div class="db-empty">板块K线获取失败，请稍后重试</div>';
     }
   });
+}
+// R100z118：行业全景板块点击 → 复用板块弹窗（有 thsCode 看K线，否则仅行业新闻/利好利空）
+function openPanoSector(name) {
+  var mp = {};
+  var a = (window.DASHBOARD_DATA || {}).ashare || {};
+  (a.sectorsUp || []).concat(a.sectorsDown || []).forEach(function (s) { if (s.name && s.thsCode) mp[s.name] = s.thsCode; });
+  openSectorKline(name, mp[name] || null, panoCurrent);
 }
 
 // R100z54：把 08:30 落的结构化假设 pos（倾向/点位区间/量能）渲染成三格速览条。

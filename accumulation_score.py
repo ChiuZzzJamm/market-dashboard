@@ -459,14 +459,15 @@ def main():
     if not scored and old:
         print('[ACC] 本轮无 ≥50 分标的，保留既有池（R91n 不清场）')
         old['note'] = (old.get('note') or '') + f"｜{today} 本轮无新命中"
-        old['failPool'] = common.roll_fail_pool(old.get('failPool') or [], [], trade_date)
+        old['failPool'] = common.roll_fail_pool(old.get('failPool') or [], [], trade_date,
+                                                 exclude_codes=_new_codes)
         new_field = old
     elif not scored and not old:
         print('[ACC] 无命中且无旧值，写空结构')
     else:
         _existed = len(new_fails)
         new_field['failPool'] = common.roll_fail_pool(
-            old.get('failPool') or [], new_fails, trade_date)
+            old.get('failPool') or [], new_fails, trade_date, exclude_codes=_new_codes)
         if _existed:
             print(f"[ACC] 失效池新增 {_existed} 只（5 交易日滚动窗口后共 "
                   f"{len(new_field['failPool'])} 只）")

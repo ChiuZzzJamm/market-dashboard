@@ -129,19 +129,27 @@ def trading_days_between(d0, d1):
     return n
 
 
-def roll_fail_pool(old_fail, new_entries, today, keep_days=5):
+def roll_fail_pool(old_fail, new_entries, today, keep_days=5, exclude_codes=None):
     """失效归档池滚动窗口（R100z56，用户 2026-10-04 要求「失效当天入池、5 个交易日后剔除」）。
 
     - 保留：自 entryDate 起 keep_days 个交易日内的旧归档 + 今日新失效（同 code 以新条目为准）；
-    - 剔除：trading_days_between(entryDate, today) > keep_days 的超期归档。
+    - 剔除：trading_days_between(entryDate, today) > keep_days 的超期归档；
+    - 剔除：当前已在「在池」集合里的 code（exclude_codes，R100z120）。
+      ⚠️ 口径修正（用户 2026-10-12 截图反馈「同一标的同时挂确认池与失效池」）：
+      旧归档滚动保留 5 日，若某票先失效归档、之后又重新达标回到在池（九门/吸筹逐日重算、
+      断板重走形态），旧归档仍会留着 → 同一标的既在确认池又在失效池。失效池语义 =
+      「已失效 **且当前不在池**」，故在池 code 一律从失效池移除。
     - ⚠️ 一律用上面节假日感知的 trading_days_between，不许自己数周一~周五
       （国庆/春节会被数成交易日，节后首日跑就把窗口内归档提前清空了）。
     返回新列表（不改动入参）。old_fail/new_entries 元素均为 dict，非 dict 一律跳过。
     """
+    excl = {str(c) for c in (exclude_codes or set()) if str(c)}
     out = []
     for f in (old_fail or []):
         if not isinstance(f, dict):
             continue
+        if excl and str(f.get('code')) in excl:
+            continue  # R100z120：当前已在池 → 不进失效池
         ed = f.get('entryDate')
         try:
             if ed and trading_days_between(ed, today) > keep_days:
@@ -149,9 +157,18 @@ def roll_fail_pool(old_fail, new_entries, today, keep_days=5):
         except Exception:
             pass  # 日期格式异常：保守保留，宁多不删
         out.append(f)
-    new_codes = {str(x.get('code')) for x in (new_entries or []) if isinstance(x, dict)}
-    out += [x for x in (new_entries or [])
-            if isinstance(x, dict) and str(x.get('code')) not in new_codes]
+    # R100z122（2026-10-13 体检发现的历史真 bug）：原写法
+    #   new_codes = {x.code for x in new_entries}
+    #   out += [x for x in new_entries if x.code not in new_codes]
+    # 里 new_codes 就是 new_entries 自己的 code 全集 → 过滤条件恒 False → new_entries
+    # **永远被丢弃**（九门/吸筹「本轮新失效」从未真正进过失效池，R100z56 起潜伏）。
+    # 正确口径（与 docstring「同 code 以新条目为准」一致）：carried 先剔除将被新条目覆盖的 code，
+    # 再整体并入 new_entries。new_fails 的 code 由调用方保证 ∉ 在池集合（≠exclude_codes），无需再滤。
+    new_list = [x for x in (new_entries or []) if isinstance(x, dict)]
+    if new_list:
+        new_codes = {str(x.get('code')) for x in new_list}
+        out = [f for f in out if str(f.get('code')) not in new_codes]
+        out += new_list
     return out
 
 

@@ -1058,6 +1058,7 @@ def g16_narrative_depth(r):
         A 股 lianban[].story → 120；duanban confirmed/watching[].story → 100
         A 股 accumulation.{scored,strong,watch}[].note → 90
         美股 板块 reason.detail / 五节要闻 summary → 200
+        美股 顶层 summary（脚本生成，数据驱动多维复盘）→ 150
     低于阈值即 FAIL（拦部署）；阈值取「当前已达标数据的最小值再下探一档」，
     既能挡住偷懒，又不误伤正常波动。
     """
@@ -1086,6 +1087,11 @@ def g16_narrative_depth(r):
                     add(f"{mk}.{s}[{i}].summary", nw.get("summary"), news_floor)
         if sec.get("outlook"):
             add(f"{mk}.outlook", sec.get("outlook"), 300)
+
+    # 美股顶层 summary（脚本生成；2026-10-12 前仅 ~124 字偏薄，用户要求与 A 股同口径扩充）
+    _us_sum = (D.get("us") or {}).get("summary")
+    if _us_sum:
+        add("us.summary", _us_sum, 150)
 
     # AI 预测逻辑链 + 开盘前瞻（顶层）
     ap = D.get("aiPrediction") or {}
@@ -1268,6 +1274,167 @@ def g18_policy_signals(r):
                     f"S{tiers['S']}/A{tiers['A']}/B{tiers['B']}/C{tiers['C']}）")
 
 
+def g19_summary_freshness(r):
+    """G19 板块综述·日期与行情一致性闸门（R100z118，修复 10/12「日期新、内容旧」事故）。
+
+    事故：2026-10-12 的 ashare.tradeDate 已更新为当日，但 ashare.summary 仍是 10/9 的
+    旧收盘综述（含「10月9日」「沪指3813.79点涨0.05%」等陈旧点位），上线即「日期更新、
+    内容没更新」。本闸检测两类陈旧信号，FAIL 拦部署，强迫 16:00 每轮用当日数据重写：
+      ① summary 里出现「M月D日」日期字面量且 ≠ tradeDate 的月日（说明在讲旧交易日）；
+      ② summary 里出现收盘型点位（数字须紧贴「点/涨/跌」信号，排除成交额/市值等「X亿元」
+         类非指数数值误伤）且数值与当日任一指数 point 偏差 > 2.0（说明在引用旧收盘点位）。
+    盘中极值（早盘/盘中/最低/最高/探至/一度/开盘/午盘/尾盘）视为允许，不误伤。"""
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G19", f"data.js 解析失败：{e}")
+        return
+    a = D.get("ashare") or {}
+    summary = a.get("summary")
+    if not isinstance(summary, str) or not summary.strip():
+        r.ok("G19", "ashare.summary 为空或缺失（跳过，按其他闸覆盖）")
+        return
+    trade_date = str(a.get("tradeDate") or "")
+    # ① 旧日期字面量
+    md = re.findall(r"(\d{1,2})月(\d{1,2})日", summary)
+    stale_md = []
+    if trade_date:
+        try:
+            t_m, t_d = int(trade_date.split("-")[1]), int(trade_date.split("-")[2])
+            for mm, dd in md:
+                if (int(mm), int(dd)) != (t_m, t_d):
+                    stale_md.append(f"{int(mm)}月{int(dd)}日")
+        except Exception:                                     # noqa: BLE001
+            pass
+    # ② 陈旧收盘点位
+    idx_pts = []
+    for it in (a.get("indices") or []):
+        if isinstance(it, dict) and isinstance(it.get("point"), (int, float)):
+            idx_pts.append(float(it.get("point")))
+    stale_pts = []
+    for num in re.findall(r"(\d{4}\.\d{2})", summary):
+        v = float(num)
+        if not (1000 <= v <= 20000):
+            continue
+        if any(abs(v - p) <= 2.0 for p in idx_pts):
+            continue
+        pos = summary.find(num)
+        suffix = summary[pos + len(num):].lstrip() if pos >= 0 else ""
+        # 仅认定「收盘型点位」引用：数字须紧贴「点/涨/跌」信号（如「3813.79点」「3813.79涨」），
+        # 否则「9876.54 亿元」成交额/市值/净买额等非指数数值会被误伤（宽松的上下文关键词会
+        # 因邻近的指数句泄露「点/涨」而误判，故必须锚定在数字本身后缀）。
+        if not any(ch in suffix[:3] for ch in ("点", "涨", "跌")):
+            continue
+        ctx = summary[max(0, pos - 25): pos + len(num) + 25] if pos >= 0 else ""
+        if any(k in ctx for k in ("早盘", "盘中", "最低", "最高", "探至", "一度", "开盘", "午盘", "尾盘")):
+            continue
+        stale_pts.append(f"{num}（上下文：「{ctx.strip()}…」）")
+    problems = []
+    if stale_md:
+        problems.append("含旧交易日日期字面量：" + "、".join(sorted(set(stale_md))))
+    if stale_pts:
+        problems.append("含与当日指数偏差>2.0的陈旧收盘点位：" + "；".join(stale_pts[:5]))
+    if problems:
+        r.fail("G19", "ashare.summary 疑似陈旧（日期已更新但内容未重写）：" + "；".join(problems)
+               + "——summary 必须每轮按当日 indices/sectors/breadth 重写，不得沿用上一交易日 narrative")
+    else:
+        r.ok("G19", "ashare.summary 与当日 tradeDate/indices 一致（无陈旧日期或收盘点位）")
+
+
+def g20_sector_deduce_no_template(r):
+    """G20 板块 deduce 防模板化闸门（R100z118，修复 us 板块 deduce 跨板块套话）。
+
+    事故：us.sectorsUp/Down 的 deduce.main/counter 普遍套用同一模板句（仅换板块名/涨跌幅，
+    如「X周五强势收涨，资金主动配置确认主线；跟踪龙头站稳均线即确认延续」），五个板块雷同。
+    本闸在「同一市场」内检测：任一 ≥12 字连续子串同时出现在 ≥3 个板块的 deduce.main（或
+    counter）中 → 判定为跨板块共享模板，FAIL 拦部署，强迫逐板块按真实驱动重写。
+    阈值 12 字 + 跨 3 板块，正常多样化写作不会误伤。"""
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G20", f"data.js 解析失败：{e}")
+        return
+    problems = []
+    for mk in ("ashare", "us"):
+        sec = D.get(mk) or {}
+        fields = []  # (label, text)
+        for arr in ("sectorsUp", "sectorsDown"):
+            for i, s in enumerate(sec.get(arr) or []):
+                if isinstance(s, dict):
+                    dd = s.get("deduce")
+                    if isinstance(dd, dict):
+                        if dd.get("main"):
+                            fields.append((f"{mk}.{arr}[{i}].main", str(dd.get("main"))))
+                        if dd.get("counter"):
+                            fields.append((f"{mk}.{arr}[{i}].counter", str(dd.get("counter"))))
+        win_owner = {}  # window -> set(field label)
+        for label, text in fields:
+            n = len(text)
+            for st in range(0, n - 11):
+                w = text[st:st + 12]
+                if len(re.findall(r"[\u4e00-\u9fff]", w)) < 6:
+                    continue
+                win_owner.setdefault(w, set()).add(label)
+        dup = sorted(((w, o) for w, o in win_owner.items() if len(o) >= 3),
+                    key=lambda x: -len(x[1]))
+        if dup:
+            top = dup[:2]
+            det = "；".join(f"「{w}」×{len(o)} 板块" for w, o in top)
+            problems.append(f"{mk}：{len(dup)} 处跨≥3板块共享≥12字模板句（{det}）")
+    if problems:
+        r.fail("G20", "板块 deduce 存在跨板块模板套话（防偷懒硬闸）：" + "；".join(problems)
+               + "——deduce.main/counter 必须按各板块真实隔夜/当日驱动分别撰写，每板块结论与验证信号必须不同")
+    else:
+        r.ok("G20", "板块 deduce 无跨≥3板块共享≥12字模板句（逐板块定制）")
+
+
+def g21_failpool_disjoint(r):
+    """G21 失效归档池与在池互斥闸门（R100z120，修复「同一标的既在确认池又在失效池」）。
+
+    事故：2026-10-12 截图发现 603185 弘元绿能、002912 中新赛克等标的同时出现在断板确认池与
+    断板失效池。根因：生成侧 roll_fail_pool 滚动保留旧归档时未排除当前已在池的 code——
+    某票先失效归档、之后又重新走完形态达标进池，旧归档未清，导致同一 code 两池共存。
+    失效池语义本应为「已失效且当前不在池」。修复：common.roll_fail_pool 增 exclude_codes 参数，
+    各模块生成脚本在滚动旧归档时剔除当前在池 code（check_duanban / harmonic_detect /
+    accumulation_score / power_screener）。本闸做硬校验，防止该 bug 回归：四模块 failPool 的
+    code 集合与各自在池（confirmed+watching / confirmPool+watchPool / scored / passed）的
+    code 集合必须互斥，有交集即 FAIL。"""
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G21", f"data.js 解析失败：{e}")
+        return
+    specs = [
+        ("duanban", ("confirmed", "watching"), "confirmed+watching"),
+        ("harmonic", ("confirmPool", "watchPool"), "confirmPool+watchPool"),
+        ("powerScreen", ("passed",), "passed"),
+        ("accumulation", ("scored",), "scored"),
+    ]
+    problems = []
+    for mod, fields, label in specs:
+        node = D.get(mod) or {}
+        in_pool = set()
+        for f in fields:
+            for it in (node.get(f) or []):
+                if isinstance(it, dict) and it.get("code"):
+                    in_pool.add(str(it.get("code")))
+        fail = node.get("failPool") or []
+        fail_codes = set()
+        for it in fail:
+            if isinstance(it, dict) and it.get("code"):
+                fail_codes.add(str(it.get("code")))
+        overlap = in_pool & fail_codes
+        if overlap:
+            problems.append(f"{mod}：{label} 与 failPool 共 {len(overlap)} 只重叠（"
+                           + "、".join(sorted(overlap)[:10])
+                           + ("…" if len(overlap) > 10 else "") + "）")
+    if problems:
+        r.fail("G21", "失效归档池与在池非互斥（bug 回归）：" + "；".join(problems)
+               + "——失效池语义=已失效且当前不在池；生成侧 roll_fail_pool 必须传 exclude_codes 剔除在池 code")
+    else:
+        r.ok("G21", "四模块 failPool 与各自在池 code 完全互斥（无重叠）")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -1301,6 +1468,9 @@ def main():
     g16_narrative_depth(r)
     g17_template_tails(r)
     g18_policy_signals(r)
+    g19_summary_freshness(r)
+    g20_sector_deduce_no_template(r)
+    g21_failpool_disjoint(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))

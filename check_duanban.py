@@ -1401,6 +1401,10 @@ def main():
                               'sector': info.get('sector', ''), 'form': info.get('form', ''),
                               'reason': reason, 'entryDate': today_str})
         carried = _clean_duanban_fail(prev_ds.get('failPool', []), today_str)
+        # R100z120（用户 2026-10-12 截图「同一标的既在确认池又在失效池」）：旧归档滚动保留 5 日，
+        # 若某票先失效归档、之后又重新走完形态达标进池（本节 cur_codes），旧归档不该再留——
+        # 失效池语义 = 已失效且当前不在池。故把当前在池 code 一律从 carried 剔除。
+        carried = [f for f in carried if str(f.get('code') or '') not in cur_codes]
         carried_codes = set(f.get('code') for f in carried)
         failPool = carried + [f for f in new_fails if f['code'] not in carried_codes]
         # R100z44：入池首日标记——新入池标的 entryDate=今日，老标的沿用首次入池日（state 逐日携带）。

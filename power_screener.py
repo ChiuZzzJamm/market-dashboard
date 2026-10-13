@@ -266,14 +266,15 @@ def main():
     if not passed and old:
         print('[POWER] 本轮无达标标的，保留既有池（R91n 不清场）')
         old['note'] = (old.get('note') or '') + f"｜{today} 本轮无新命中"
-        old['failPool'] = common.roll_fail_pool(old.get('failPool') or [], [], today)
+        old['failPool'] = common.roll_fail_pool(old.get('failPool') or [], [], today,
+                                                exclude_codes=_new_codes)
         new_field = old
     elif not passed and not old:
         print('[POWER] 无达标且无旧值，写空结构')
     else:
         _existed = len(new_fails)
         new_field['failPool'] = common.roll_fail_pool(
-            (old or {}).get('failPool') or [], new_fails, today)
+            (old or {}).get('failPool') or [], new_fails, today, exclude_codes=_new_codes)
         if _existed:
             print(f"[POWER] 失效池新增 {_existed} 只（5 交易日滚动窗口后共 "
                   f"{len(new_field['failPool'])} 只）")

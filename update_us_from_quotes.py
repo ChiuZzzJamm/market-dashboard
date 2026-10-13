@@ -51,20 +51,42 @@ def _walk_desc(op, chg):
 
 def _us_summary(trade_md, trend, sorted_up, sorted_down):
     """安全构造美股收盘 summary：带盘中走势（openPct×changePct，高开高走/低走等），
-    领涨/领跌板块各最多取前 2，避免极端单边市（某一侧仅 1 个板块）触发 IndexError 崩溃。"""
-    def _pair(items):
-        return "、".join(f"{it['name']}{fmt_pct(it['pct'])}" for it in items[:2])
+    领涨/领跌板块各最多取前 3，并给出板块涨跌家数与费城半导体表现，避免极端单边市
+    （某一侧仅 1 个板块）触发 IndexError 崩溃。2026-10-12 起扩充为数据驱动的多维复盘
+    （三大指数形态 + 费城半导体 + 板块涨跌家数 + 领涨/领跌前 3 + 隔夜映射说明），解决此前
+    仅 ~124 字过薄的问题（用户要求美股叙事与 A 股同口径）。"""
+    def _pair(items, n=3):
+        return "、".join(f"{it['name']}{fmt_pct(it['pct'])}" for it in items[:n])
 
-    lead, trail = _pair(sorted_up), _pair(sorted_down)
-    if not (sorted_up or sorted_down):
-        return f"{trade_md} 美股收盘数据已更新。"
+    _tail = "隔夜美股通过汇率、美债收益率与全球风险偏好三条渠道影响次日 A 股开盘节奏。"
     dw = _walk_desc(open_pct('usDJI'), pct('usDJI'))
     nw = _walk_desc(open_pct('usIXIC'), pct('usIXIC'))
     sw = _walk_desc(open_pct('usINX'), pct('usINX'))
-    head = (f"{trade_md} 美股收盘：三大指数{trend}"
-            f"（道指{dw}收{fmt_pct(pct('usDJI'))} / 纳指{nw}收{fmt_pct(pct('usIXIC'))} / 标普{sw}收{fmt_pct(pct('usINX'))}）。")
-    tail = (f"领涨：{lead}；" if lead else "") + (f"领跌：{trail}。" if trail else "。")
-    return head + tail
+    soxx_p = pct('usSOXX')
+    if soxx_p is not None:
+        soxx_w = _walk_desc(open_pct('usSOXX'), soxx_p)
+        soxx_txt = f"；费城半导体{soxx_w}收{fmt_pct(soxx_p)}"
+    else:
+        soxx_txt = ""
+    head = (f"{trade_md} 美股收盘：三大指数{trend}——"
+            f"道指{dw}收{fmt_pct(pct('usDJI'))}、纳指{nw}收{fmt_pct(pct('usIXIC'))}、"
+            f"标普{sw}收{fmt_pct(pct('usINX'))}{soxx_txt}。")
+
+    if not (sorted_up or sorted_down):
+        return head + _tail
+
+    up_n, down_n = len(sorted_up), len(sorted_down)
+    if up_n > down_n:
+        bias = f"上涨板块 {up_n} 个、下跌 {down_n} 个（多头占优）"
+    elif down_n > up_n:
+        bias = f"上涨板块 {up_n} 个、下跌 {down_n} 个（空头占优）"
+    else:
+        bias = f"上涨板块 {up_n} 个、下跌 {down_n} 个（多空均衡）"
+
+    lead, trail = _pair(sorted_up), _pair(sorted_down)
+    body = f"板块层面：{bias}。领涨：{lead}；" if lead else f"板块层面：{bias}。"
+    body += f"领跌：{trail}。" if trail else ""
+    return head + body + _tail
 
 def parse_quote_text(text):
     out = {}

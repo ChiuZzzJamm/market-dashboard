@@ -616,6 +616,9 @@ def main():
         elif it['code'] not in prev_pools:
             it['entryDate'] = today
     carried = _clean_fail(prev_state.get('failPool', []), today)
+    # R100z120（用户 2026-10-12 截图「同一标的既在确认池又在失效池」）：与断板侧同口径——
+    # 滚动保留的旧归档里，凡是当前已重新落在在池（today_codes）的票一律剔除，失效池 = 已失效且不在池。
+    carried = [f for f in carried if str(f.get('code') or '') not in today_codes]
     new_fails = []
     if fetch_ok and (confirm or watch or prev_pools):
         new_fails = _compute_fail_pool(prev_pools, today_codes, cur_info, today, kl)
