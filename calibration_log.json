@@ -493,6 +493,140 @@
      "volExpect": "放量"
     }
    }
+  ],
+  "2026-10-13": [
+   {
+    "date": "2026-10-13",
+    "sector": "存储·DRAM涨价",
+    "predicted": "走强",
+    "dirClass": "up",
+    "actualPct": -0.16,
+    "benchPct": -0.08,
+    "excessPct": -0.08,
+    "benchMainPct": -0.075,
+    "result": "部分兑现",
+    "conf": "中",
+    "avgPct": -0.16,
+    "excessAvg": -0.08,
+    "hit": 0.5,
+    "hitAbs": 0.5,
+    "pos": {
+     "tendency": "偏强",
+     "bandLo": 3780,
+     "bandHi": 3820,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-10-13",
+    "sector": "房地产·地产链",
+    "predicted": "走强",
+    "dirClass": "up",
+    "actualPct": -0.17,
+    "benchPct": -0.08,
+    "excessPct": -0.09,
+    "benchMainPct": -0.075,
+    "result": "未命中",
+    "conf": "高",
+    "avgPct": -0.17,
+    "excessAvg": -0.09,
+    "hit": 0.5,
+    "hitAbs": 0.5,
+    "pos": {
+     "tendency": "偏强",
+     "bandLo": 3780,
+     "bandHi": 3820,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-10-13",
+    "sector": "创新药·CXO",
+    "predicted": "走强",
+    "dirClass": "up",
+    "actualPct": -1.62,
+    "benchPct": -0.08,
+    "excessPct": -1.54,
+    "benchMainPct": -0.075,
+    "result": "未命中",
+    "conf": "高",
+    "avgPct": -0.34,
+    "excessAvg": -0.26,
+    "hit": 0,
+    "hitAbs": 0,
+    "pos": {
+     "tendency": "偏强",
+     "bandLo": 3780,
+     "bandHi": 3820,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-10-13",
+    "sector": "电力·核电电网",
+    "predicted": "走强",
+    "dirClass": "up",
+    "actualPct": -0.49,
+    "benchPct": -0.08,
+    "excessPct": -0.41,
+    "benchMainPct": -0.075,
+    "result": "未命中",
+    "conf": "中",
+    "avgPct": -0.49,
+    "excessAvg": -0.41,
+    "hit": 0,
+    "hitAbs": 0,
+    "pos": {
+     "tendency": "偏强",
+     "bandLo": 3780,
+     "bandHi": 3820,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-10-13",
+    "sector": "汽车出海链",
+    "predicted": "承压",
+    "dirClass": "down",
+    "actualPct": -0.42,
+    "benchPct": -0.08,
+    "excessPct": -0.34,
+    "benchMainPct": -0.075,
+    "result": "命中",
+    "conf": "中",
+    "avgPct": -0.42,
+    "excessAvg": -0.34,
+    "hit": 1,
+    "hitAbs": 1,
+    "pos": {
+     "tendency": "偏强",
+     "bandLo": 3780,
+     "bandHi": 3820,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-10-13",
+    "sector": "卫星互联网",
+    "predicted": "承压",
+    "dirClass": "down",
+    "actualPct": 3.24,
+    "benchPct": -0.08,
+    "excessPct": 3.32,
+    "benchMainPct": -0.075,
+    "result": "未命中",
+    "conf": "中",
+    "avgPct": 1.51,
+    "excessAvg": 1.59,
+    "hit": 0,
+    "hitAbs": 0,
+    "pos": {
+     "tendency": "偏强",
+     "bandLo": 3780,
+     "bandHi": 3820,
+     "volExpect": "平量"
+    }
+   }
   ]
  },
  "open": {
@@ -554,6 +688,26 @@
    "volHit": 0,
    "score": 0.3,
    "verdict": "未命中",
+   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；量能为涨跌家数占比代理，口径固定不可调"
+  },
+  "2026-10-13": {
+   "date": "2026-10-13",
+   "openDate": "2026-10-13",
+   "tendency": "偏强",
+   "bandLo": 3780,
+   "bandHi": 3820,
+   "volExpect": "平量",
+   "actual": {
+    "point": 3800.86,
+    "changePct": 0.1,
+    "upRate": 0.5392,
+    "volumeText": "成交约 1.68 万亿"
+   },
+   "tendencyHit": 0.5,
+   "bandHit": 1,
+   "volHit": 1,
+   "score": 0.75,
+   "verdict": "部分兑现",
    "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；量能为涨跌家数占比代理，口径固定不可调"
   }
  }

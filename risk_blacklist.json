@@ -1,7 +1,7 @@
 {
  "ok": true,
  "date": "2026-10-13",
- "checked": 347,
+ "checked": 375,
  "liftWindow": [
   2,
   5
@@ -9,6 +9,112 @@
  "watchPledgeWithin": 365,
  "cutDays": 30,
  "blacklist": {
+  "002207": {
+   "name": "*ST准油",
+   "reasons": [
+    "ST/退市（当前名称 *ST准油）"
+   ],
+   "count": 1,
+   "watch": [
+    "参考·质押 12.0%（截至 2026-05-29）"
+   ],
+   "severity": "red",
+   "progress": []
+  },
+  "600745": {
+   "name": "*ST闻泰",
+   "reasons": [
+    "ST/退市（当前名称 *ST闻泰）"
+   ],
+   "count": 1,
+   "watch": [
+    "参考·质押 5.1%（截至 2026-05-29）"
+   ],
+   "severity": "red",
+   "progress": []
+  },
+  "002650": {
+   "name": "ST加加",
+   "reasons": [
+    "ST/退市（当前名称 ST加加）"
+   ],
+   "count": 1,
+   "watch": [
+    "参考·质押 19.5%（截至 2026-05-29）"
+   ],
+   "severity": "red",
+   "progress": []
+  },
+  "600355": {
+   "name": "*ST精伦",
+   "reasons": [
+    "ST/退市（当前名称 *ST精伦）"
+   ],
+   "count": 1,
+   "watch": [],
+   "severity": "red",
+   "progress": []
+  },
+  "603377": {
+   "name": "ST东时",
+   "reasons": [
+    "ST/退市（当前名称 ST东时）"
+   ],
+   "count": 1,
+   "watch": [
+    "参考·质押 13.4%（截至 2026-05-29）"
+   ],
+   "severity": "red",
+   "progress": []
+  },
+  "600311": {
+   "name": "*ST荣华",
+   "reasons": [
+    "ST/退市（当前名称 *ST荣华）"
+   ],
+   "count": 1,
+   "watch": [],
+   "severity": "red",
+   "progress": []
+  },
+  "002598": {
+   "name": "ST章鼓",
+   "reasons": [
+    "ST/退市（当前名称 ST章鼓）"
+   ],
+   "count": 1,
+   "watch": [
+    "参考·质押 5.4%（截至 2025-12-12）"
+   ],
+   "severity": "red",
+   "progress": []
+  },
+  "600183": {
+   "name": "生益科技",
+   "reasons": [
+    "2026-09-24 减持公告"
+   ],
+   "count": 1,
+   "watch": [],
+   "severity": "red",
+   "progress": [
+    "减持实施中"
+   ]
+  },
+  "002741": {
+   "name": "光华科技",
+   "reasons": [
+    "2026-10-08 减持公告"
+   ],
+   "count": 1,
+   "watch": [
+    "参考·质押 1.2%（截至 2026-05-29）"
+   ],
+   "severity": "red",
+   "progress": [
+    "减持实施中"
+   ]
+  },
   "603533": {
    "name": "掌阅科技",
    "reasons": [
@@ -74,18 +180,6 @@
     "减持实施中"
    ]
   },
-  "603928": {
-   "name": "兴业股份",
-   "reasons": [
-    "2026-10-10 减持公告"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
   "600189": {
    "name": "泉阳泉",
    "reasons": [
@@ -100,6 +194,34 @@
     "减持实施中"
    ]
   },
+  "001330": {
+   "name": "博纳影业",
+   "reasons": [
+    "2026-09-29 减持公告"
+   ],
+   "count": 1,
+   "watch": [
+    "参考·质押 12.8%（截至 2026-05-29）"
+   ],
+   "severity": "red",
+   "progress": [
+    "减持实施中"
+   ]
+  },
+  "605358": {
+   "name": "立昂微",
+   "reasons": [
+    "2026-09-22 减持公告"
+   ],
+   "count": 1,
+   "watch": [
+    "参考·质押 4.6%（截至 2026-05-29）"
+   ],
+   "severity": "red",
+   "progress": [
+    "减持实施中"
+   ]
+  },
   "002919": {
    "name": "名臣健康",
    "reasons": [
@@ -108,6 +230,20 @@
    "count": 1,
    "watch": [
     "参考·质押 12.2%（截至 2026-05-29）"
+   ],
+   "severity": "red",
+   "progress": [
+    "减持实施中"
+   ]
+  },
+  "600577": {
+   "name": "精达股份",
+   "reasons": [
+    "2026-09-29 减持公告"
+   ],
+   "count": 1,
+   "watch": [
+    "参考·质押 4.0%（截至 2026-05-29）"
    ],
    "severity": "red",
    "progress": [
