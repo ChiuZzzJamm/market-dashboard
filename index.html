@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610130857"></script>
+<script src="data.js?v=202610131020"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -502,6 +502,7 @@
   .pool-badge.fail { background:#eef1f4; color:#66707c; }
   .pool-badge.done { background:var(--up-soft); color:var(--up); }
   .pool-badge.hold { background:var(--accent-soft); color:var(--accent-deep); }
+  .pool-badge.star { background:rgba(232,160,19,.14); color:#a86f0e; }  /* R100z125：开盘精选池徽章（金）——并入 .pool-badge 几何，借此补齐 line-height:1.5（原内联样式缺之，比同级徽章偏高） */
   /* R100z120 Q3：弹窗「新」徽章——与卡片 .tc .nb 同口径（poolFresh：entryDate === 模块交易日），
      覆盖断板/谐波/九门/吸筹的池内标的 + 四模块失效归档池（与卡片 fail-chip.fail-new 同口径）。 */
   .m-nb { display:inline-block; font-size:9.5px; font-weight:800; color:#6b4a00; background:#ffc93c; border:1px solid #e3a008; border-radius:4px; padding:0.5px 3px; line-height:1.5; flex-shrink:0; }
@@ -760,6 +761,12 @@
   .ps-chips { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 4px; }
   .ps-chip { font-size: 10.5px; padding: 1px 7px; border-radius: 10px; background: #eef1f5; color: #34495e; }
   .ps-chip.ps-mut { background: #f5f5f5; color: #999; }
+  /* R100z126（用户 2026-10-13）：政策卡内「受益板块」徽章独立可点 → 打开板块弹窗（板块日K + 行业新闻）。
+     与「整卡可点=跳要闻」区分：徽章做成白底+浅描边的按钮态（对齐 .stock-chip 全站可点 chip 语言），
+     不可点的「—」占位仍是灰底无描边。描边走 inset box-shadow 而非 border，避免 1px 边框把徽章撑高 2px
+     （徽章行等高纪律，见第六节/第十节）。 */
+  .ps-chip.ps-chip-link { cursor: pointer; background: var(--paper, #fff); box-shadow: 0 0 0 1px var(--line, #e3ecf4) inset; transition: background .15s, color .15s, box-shadow .15s; }
+  .ps-chip.ps-chip-link:hover { background: var(--accent-soft, #e6f2fb); color: var(--accent-deep, #2b6cb0); box-shadow: 0 0 0 1px var(--accent-deep, #2b6cb0) inset; }
   /* R100z115：受益板块徽章内当日涨幅 + 底部图例行 */
   .ps-chip-pct { font-weight: 700; margin-left: 3px; font-size: 10px; }
   .ps-legend { margin-top: 9px; font-size: 11px; color: var(--ink2, #6b7684); line-height: 1.75; background: var(--accent-soft, #f6f8fb); border: 1px dashed var(--line, #dfe4ea); border-radius: 8px; padding: 7px 10px; }
@@ -1076,7 +1083,7 @@ function stkTechBadgeHtml(code, noPoolMerge) {
            + '，目标②距现价 ' + (t.g2 >= 0 ? '+' : '') + '' + (t.g2 === 0 ? '0' : t.g2)
            + '%（≤0 即已达成，属「目标位倒挂」，不是还有上涨空间）';
     }
-    var style = 'font-size:10.5px;margin-left:0'; // R100z4：谐波/断板合并徽章统一 .hz-badge 默认金色（原谐波专属底色 rgba(232,160,19,.14) 与断板反包 #fff3d6 色不一致，已删）
+    var style = 'margin-left:0'; // R100z125：删 font-size:10.5px——弹窗徽标行统一回 .hz-badge 默认 11px（与 .chip-sec/.pool-badge/.db-sent 一致的 R100r 口径），此前 10.5px 令技术徽章比同行其余徽章矮 0.75px
     if (t.warn) style += ';background:#eef7f3;color:#0f9d78;border:1px solid #cfe6dc';
     return '<span class="hz-badge" style="' + style + '" title="' + escAttr(tip) + '">' + esc(label) + '</span>';
   }).join('');
@@ -1090,15 +1097,22 @@ function stkGoldCls(code) {
 function stkPoolBadge(code) {
   code = String(code || '');
   if (!/^\d{6}$/.test(code)) return '';
+  var db = (window.DASHBOARD_DATA || {}).duanban || {};
+  var st = db.star || {};
+  // R100z125：与断板页 🌟 开盘精选区同口径（R100e 展示闸门）——仅当 star.date == 本地今日才显示池徽章。
+  // 依据：9:45 自动化才写当日 star；07:30/08:30/周日流水线会把上一交易日的 star 原样带出。
+  // 此前弹窗徽章无日期闸门 → 9:45 跑批前把陈旧精选当当日命中（页面已隐藏、弹窗却仍显示，两处不一致）。
+  var _td = new Date();
+  var _tdStr = _td.getFullYear() + '-' + String(_td.getMonth() + 1).padStart(2, '0') + '-' + String(_td.getDate()).padStart(2, '0');
+  if (st.date !== _tdStr) return '';
   var P = window._STAR_POOL;
   if (!P) {
     P = {};
-    var db = (window.DASHBOARD_DATA || {}).duanban || {};
-    ((db.star || {}).picks || []).forEach(function (x) { if (x && x.code) P[String(x.code)] = 1; });
+    (st.picks || []).forEach(function (x) { if (x && x.code) P[String(x.code)] = 1; });
     window._STAR_POOL = P;
   }
   if (!P[code]) return '';
-  return '<span style="font-size:11px;font-weight:700;border-radius:4px;padding:1px 7px;background:rgba(232,160,19,.14);color:#a86f0e;border:1px solid currentColor">开盘精选</span>';
+  return '<span class="pool-badge star">开盘精选</span>'; // R100z125：改用 .pool-badge 统一几何（含 line-height:1.5），修徽章偏高
 }
 
 function renderTops(s, isUp) {
@@ -1261,7 +1275,7 @@ function renderPolicySignals(list) {
   function pctText(p) { return (p > 0 ? '+' : '') + p.toFixed(2) + '%'; }
   // R100z116：词典板块名（政策口径）→ 同花顺 allBoards 行业名（行情口径）别名映射。
   // 词典是自建的宽口径（如"家电"），行情是细分行业（白色/黑色/小家电），只能多对一聚合——取映射板块 pct 均值。
-  var pctAlias = {
+  pctAlias = {
     'AI': ['软件开发', 'IT服务', '计算机设备'],
     '交通运输': ['公路铁路运输', '港口航运', '机场航运', '物流'],
     '传媒': ['文化传媒', '影视院线', '游戏'],
@@ -1311,6 +1325,9 @@ function renderPolicySignals(list) {
     al.forEach(function (b) { if (typeof pctMap[b] === 'number') { v += pctMap[b]; n++; } });
     return n ? v / n : undefined;
   }
+  // R100z126（用户 2026-10-13）：政策词典板块名 → 同花顺行业板块（名 + 代码），供徽章点击开板块弹窗。
+  // allBoards 的 90 个行业 code 即同花顺 thsCode（如 银行=881155），与 sectorsUp/Down 的 thsCode 同格式、同值。
+  // R100z127：secBoardOf 已提升为全局函数（见下方定义），renderPolicySignals 直接调用，政策徽章点击委托也复用。
   var h = '<div class="ps-list">';
   list.forEach(function (it) {
     var tc = tierCls[it.tier] || 't-c';
@@ -1319,10 +1336,17 @@ function renderPolicySignals(list) {
     // R100z115b（用户 2026-10-10）：板块顺序回归数据层口径——关键词在政策原文里的出现位置序
     // （越早提到＝越贴近政策主旨，decode_sector 已按首现位置去重保序）；当日涨幅只做徽章标注、不再参与排序
     var secs = it.sectors || [];
+    var mkIt = (it.market === 'us') ? 'us' : 'ashare';
     var chips = secs.length ? secs.map(function (s) {
       var p = pctOf(s);
       var pctBadge = (typeof p === 'number') ? '<span class="ps-chip-pct" style="color:' + pctColor(p) + '">' + pctText(p) + '</span>' : '';
-      return '<span class="ps-chip">' + esc(s) + pctBadge + '</span>';
+      // R100z126（用户 2026-10-13）：徽章改为独立可点（ps-chip-link）→ 打开板块弹窗，
+      // 不再被整卡的「跳要闻」吃掉。us 卡不套 A 股同花顺代码（避免把 A 股板块K线安到美股板块上）。
+      var bd = (mkIt === 'ashare') ? secBoardOf(s) : { name: '', code: '' };
+      return '<span class="ps-chip ps-chip-link" data-ps-sec="' + escAttr(s) + '" data-ps-board="' + escAttr(bd.name || '') +
+        '" data-ps-code="' + escAttr(bd.code || '') + '" data-ps-mk="' + mkIt +
+        '" title="点击查看「' + escAttr(s) + '」板块走势' + (bd.name && bd.name !== s ? '（同花顺行业：' + escAttr(bd.name) + '）' : '') + '与行业新闻">' +
+        esc(s) + pctBadge + '</span>';
     }).join('') : '<span class="ps-chip ps-mut">—</span>';
     // R100z115：目标去重（旧数据兜底）+ 最多展示 8 项，避免一长串数字淹没标题
     var tgts = [];
@@ -1340,7 +1364,7 @@ function renderPolicySignals(list) {
       else { _reso = '持平 0%'; _resoC = 'reso-flat'; }
     } else { _reso = '未验证'; _resoC = 'reso-neutral'; }
     // R100z114：title 与五节要闻同源精确相等 + market 指定锚点（ashare/us），点击滚动定位到对应要闻条目
-    h += '<div class="ps-item ps-link" data-ps-title="' + escAttr(it.title||'') + '" data-ps-mk="' + esc(it.market||'ashare') + '">' +
+    h += '<div class="ps-item ps-link" data-ps-title="' + escAttr(it.title||'') + '" data-ps-mk="' + esc(it.market||'ashare') + '" data-ps-sectors="' + escAttr(JSON.stringify(it.sectors||[])) + '">' +
       '<div class="ps-head"><span class="ps-tier ' + tc + '">' + it.tier + '</span>' +
       '<span class="ps-score">' + it.score + '</span>' +
       '<span class="ps-reso ' + _resoC + '" title="政策信号均利好；本标签看受益板块当日平均涨幅：涨=共振（政策被盘面认可）、跌=背离（市场未买账，需警惕）、无当日数据=未验证">' + _reso + '</span>' +
@@ -4131,6 +4155,28 @@ window.addEventListener('popstate', function () {
    ps.market（ashare/us）指定市场锚点。事件委托挂在 document（renderGnews 每次 innerHTML 重建，无需重复绑定）。
    匹配不到时兜底滚到该市场要闻区顶部（如 AI 预测写回导致标题微调）。 */
 document.addEventListener('click', function (ev) {
+  // R100z126（用户 2026-10-13）：政策卡内「受益板块」徽章独立可点 → 打开板块弹窗（板块日K + 行业新闻）。
+  // 必须在 .ps-item.ps-link 分支之前拦下并 return：否则点徽章会一路冒泡、被当成「整卡点击」跳到要闻条目
+  // （用户反馈「点了会自动落到该新闻内容处，没有做到板块徽章和大页面的区分」就是这个原因）。
+  var secChip = ev.target && ev.target.closest ? ev.target.closest('.ps-chip.ps-chip-link') : null;
+  if (secChip && document.body.classList.contains('gnews-open')) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    var psSec = secChip.getAttribute('data-ps-sec') || '';
+    if (psSec && typeof openSectorKline === 'function') {
+      var _mk = secChip.getAttribute('data-ps-mk') === 'us' ? 'us' : 'ashare';
+      // R100z127：构建同组板块导航（箭头）——取所属政策卡的板块清单，解析同花顺码
+      var _card = secChip.closest('.ps-item.ps-link');
+      var _secs = [];
+      try { _secs = JSON.parse((_card && _card.getAttribute('data-ps-sectors')) || '[]'); } catch (e) { _secs = []; }
+      var _map = {}, _list = [];
+      _secs.forEach(function (s) { _list.push(s); if (_mk === 'ashare') { var _bd = secBoardOf(s); if (_bd && _bd.code) _map[s] = _bd.code; } });
+      window._SECNAV_MAP = _map;
+      openSectorKline(psSec, secChip.getAttribute('data-ps-code') || null, _mk,
+        secChip.getAttribute('data-ps-board') || '', _list);
+    }
+    return;
+  }
   var card = ev.target && ev.target.closest ? ev.target.closest('.ps-item.ps-link') : null;
   if (!card || !document.body.classList.contains('gnews-open')) return;
   var mk = card.getAttribute('data-ps-mk') === 'us' ? 'us' : 'ashare';
@@ -4987,7 +5033,7 @@ function openStkModal(code, name, note) {
   code = (code || '').trim();
   name = (name || '').trim();
   note = String(note || '').trim().replace(/·/, '：'); // R100z4e：仅首个 ·→：（与卡片/断板弹窗同口径）
-  TB_OPEN = false; tbShowArrows(); // R98g：标的模式隐藏板块箭头
+  TB_OPEN = false; TB_MODE = ''; tbShowArrows(); // R98g：标的模式隐藏板块箭头
   var nav = STK_GRP && STK_GRP.length > 1;
   document.getElementById('stk-prev').style.display = nav ? 'flex' : 'none';
   document.getElementById('stk-next').style.display = nav ? 'flex' : 'none';
@@ -5074,17 +5120,44 @@ function stkClose() { TB_OPEN = false; document.getElementById('stk-modal').clas
 // R98b：板块 TOP10 点击看K线（数据已预加载在后端，无需再fetch）
 // R98e：K线从 _TB_KL 注册表按板块名取（onclick 内联 JSON 双引号会截断 HTML 属性，已废弃）
 // R98g：左右箭头在 TOP10 内快速切换（与标的K线弹窗同款 .db-nav），键盘 ←/→ 同样路由
-var TB_OPEN = false, TB_IDX = 0, TB_NAV_OFF = false; // R99h：TB_NAV_OFF=板块异动胶囊弹窗（无 TOP10 箭头/键盘路由）
+var TB_OPEN = false, TB_IDX = 0, TB_MODE = ''; // R100z127：TB_MODE='top'(TOP10板块)/'sec'(全景·政策板块)；取代 TB_NAV_OFF
+var _SECNAV_NAME = '', _SECNAV_LIST = [], _SECNAV_MARKET = 'ashare', _SECNAV_MAP = {}; // R100z127：板块(sec)导航状态（与 stkSecOf 的 _SEC_MAP 区分，避免冲突）
+var pctAlias; // R100z127：政策词典板块别名表（全局；renderPolicySignals 内赋值，secBoardOf 全局复用）
+// R100z127：secBoardOf 提升为全局——政策徽章点击委托（全局作用域）与 renderPolicySignals 内芯片生成共用；
+// 解析政策词典板块名（如 AI→软件开发）为同花顺行业名+thsCode（allBoards.code / sectorsUp·Down.thsCode），
+// 供点开板块弹窗与同组导航。
+function secBoardOf(name) {
+  var a = (window.DASHBOARD_DATA || {}).ashare || {};
+  var m = {};
+  (a.allBoards || []).forEach(function (b) { if (b && b.name && b.code) m[b.name] = String(b.code); });
+  (a.sectorsUp || []).concat(a.sectorsDown || []).forEach(function (b) { if (b && b.name && b.thsCode) m[b.name] = String(b.thsCode); });
+  if (!m[name]) {
+    var al = (typeof pctAlias !== 'undefined') ? pctAlias[name] : null;
+    if (al) { for (var i2 = 0; i2 < al.length; i2++) { if (m[al[i2]]) return { name: al[i2], code: m[al[i2]] }; } }
+    return { name: '', code: '' };
+  }
+  return { name: name, code: m[name] };
+}
 function tbShowArrows() {
-  var nav = TB_OPEN && !TB_NAV_OFF && window._TB_LIST && window._TB_LIST.length > 1;
+  var list = (TB_MODE === 'top') ? (window._TB_LIST || []) : (window._SECNAV_LIST || []);
+  var nav = TB_OPEN && TB_MODE !== '' && list.length > 1;
   document.getElementById('tb-prev').style.display = nav ? 'flex' : 'none';
   document.getElementById('tb-next').style.display = nav ? 'flex' : 'none';
 }
 function tbStep(delta) {
-  if (!TB_OPEN || TB_NAV_OFF || !window._TB_LIST || window._TB_LIST.length < 2) return;
-  TB_IDX = (TB_IDX + delta + window._TB_LIST.length) % window._TB_LIST.length;
-  var nm = window._TB_LIST[TB_IDX];
-  openBoardKlineByName(nm);
+  if (!TB_OPEN || TB_MODE === '') return;
+  if (TB_MODE === 'top') {
+    if (!window._TB_LIST || window._TB_LIST.length < 2) return;
+    TB_IDX = (TB_IDX + delta + window._TB_LIST.length) % window._TB_LIST.length;
+    openBoardKlineByName(window._TB_LIST[TB_IDX]);
+  } else if (TB_MODE === 'sec') {
+    var L = window._SECNAV_LIST || [];
+    if (L.length < 2) return;
+    var i = L.indexOf(window._SECNAV_NAME || '');
+    if (i < 0) i = 0;
+    i = (i + delta + L.length) % L.length;
+    openSectorKlineByName(L[i]);
+  }
 }
 function openBoardKlineByName(name) {
   var list = window._TB_LIST || [];
@@ -5095,7 +5168,7 @@ function openBoardKlineByName(name) {
 function openBoardKline(name, kline) {
   if (!kline || kline.length < 2) return;
   TB_OPEN = true;
-  TB_NAV_OFF = false; // R99h：TOP10 板块弹窗恢复箭头/键盘路由
+  TB_MODE = 'top'; // R100z127：TOP10 板块弹窗恢复箭头/键盘路由
   var list = window._TB_LIST || [];
   var nav = list.length > 1;
   document.getElementById('stk-modal-head').innerHTML =
@@ -5106,7 +5179,7 @@ function openBoardKline(name, kline) {
   document.getElementById('stk-modal-meta').innerHTML =
     '<span class="lab">日K线 · 滚轮缩放查看（默认近30根，可拉至全量）</span>';
   document.getElementById('stk-kline').innerHTML = dbKlineSvg(kline);
-  document.getElementById('stk-news').innerHTML = ''; // R100n：板块弹窗无个股消息面，清掉残留
+  document.getElementById('stk-news').innerHTML = sectorNewsHtml(name, 'ashare'); // R100z127：近3日涨幅TOP板块弹窗补行业新闻+利好/利空
   document.getElementById('stk-modal').classList.add('open');
   document.getElementById('stk-prev').style.display = 'none';
   document.getElementById('stk-next').style.display = 'none';
@@ -5158,15 +5231,25 @@ function thsParseKline(d) {
     return out.length > 1 ? out.slice(-30) : null;
   } catch (e) { return null; }
 }
-function openSectorKline(name, thsCode, market) {
+function openSectorKline(name, thsCode, market, boardName, list) {
   TB_OPEN = true;
-  TB_NAV_OFF = true; // 板块异动胶囊弹窗无 TOP10 箭头/键盘路由（R99h）
+  TB_MODE = 'sec'; // R100z127：板块(全景/政策)弹窗启用箭头导航
+  window._SECNAV_NAME = name || '';
+  window._SECNAV_MARKET = market || 'ashare';
+  window._SECNAV_LIST = (list && list.length) ? list.slice() : [];
+  // 解析同组其他板块的 thsCode（供箭头切换）；调用方若已设全局 _SECNAV_MAP 则保留并集
+  window._SECNAV_MAP = window._SECNAV_MAP || {};
+  if (thsCode) window._SECNAV_MAP[name] = thsCode;
+  // R100z126：有 thsCode 才标「同花顺行业板块」；政策词典名（如 AI→软件开发）解析出的行业名并列展示，避免名实不符
+  var _srcLab = thsCode ? ('同花顺行业板块' + (boardName && boardName !== name ? ' · ' + esc(boardName) : '')) : '板块消息面';
+  var _idx = window._SECNAV_LIST.indexOf(name);
+  var _counter = (window._SECNAV_LIST.length > 1) ? '<span class="cd2">' + (_idx + 1) + '/' + window._SECNAV_LIST.length + '</span>' : '';
   document.getElementById('stk-modal-head').innerHTML =
     '<span class="nm">' + esc(name || '') + '</span>' +
-    '<span class="cd2">同花顺行业板块</span>' +
+    '<span class="cd2">' + _srcLab + '</span>' + _counter +
     '<button class="db-modal-close" onclick="stkClose()">×</button>';
   document.getElementById('stk-modal-meta').innerHTML =
-    '<span class="lab">日K线 · 滚轮缩放查看（默认近30根，可拉至全量）</span>';
+    '<span class="lab">' + (thsCode ? '日K线 · 滚轮缩放查看（默认近30根，可拉至全量）' : '行业新闻与利好/利空标注') + '</span>';
   document.getElementById('stk-kline').innerHTML = '<div class="db-empty">K线加载中…</div>';
   document.getElementById('stk-news').innerHTML = sectorNewsHtml(name, market || 'ashare'); // R100z118：板块行业新闻 + 利好/利空标注（参考标的页样式）
   document.getElementById('stk-modal').classList.add('open');
@@ -5198,12 +5281,28 @@ function openSectorKline(name, thsCode, market) {
     }
   });
 }
+function openSectorKlineByName(name) {
+  var mp = window._SECNAV_MAP || {};
+  var mk = window._SECNAV_MARKET || 'ashare';
+  var list = window._SECNAV_LIST || [];
+  window._SECNAV_NAME = name;
+  openSectorKline(name, mp[name] || null, mk, null, list);
+}
 // R100z118：行业全景板块点击 → 复用板块弹窗（有 thsCode 看K线，否则仅行业新闻/利好利空）
 function openPanoSector(name) {
+  var D = window.DASHBOARD_DATA || {};
+  var a = D.ashare || {};
   var mp = {};
-  var a = (window.DASHBOARD_DATA || {}).ashare || {};
   (a.sectorsUp || []).concat(a.sectorsDown || []).forEach(function (s) { if (s.name && s.thsCode) mp[s.name] = s.thsCode; });
-  openSectorKline(name, mp[name] || null, panoCurrent);
+  // R100z127：allBoards 用 code 字段承载同花顺板块码（房地产等仅在此、无 thsCode），补齐 K 线源
+  (a.allBoards || []).forEach(function (s) { if (s.name && s.code && !mp[s.name]) mp[s.name] = s.code; });
+  // 当前全景市场板块清单，供弹窗左右箭头快速切换
+  var list = [];
+  (D.panorama || {}).markets.forEach(function (m) {
+    if (m.key === panoCurrent) (m.items || []).forEach(function (it) { if (it && it.name) list.push(it.name); });
+  });
+  window._SECNAV_MAP = mp;
+  openSectorKline(name, mp[name] || null, panoCurrent, null, list);
 }
 
 // R100z54：把 08:30 落的结构化假设 pos（倾向/点位区间/量能）渲染成三格速览条。
