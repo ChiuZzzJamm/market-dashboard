@@ -1,7 +1,8 @@
 {
  "ok": true,
+ "nameSrc": "em",
  "date": "2026-10-13",
- "checked": 375,
+ "checked": 347,
  "liftWindow": [
   2,
   5
@@ -9,6 +10,18 @@
  "watchPledgeWithin": 365,
  "cutDays": 30,
  "blacklist": {
+  "600759": {
+   "name": "ST洲际",
+   "reasons": [
+    "ST/退市（当前名称 ST洲际）"
+   ],
+   "count": 1,
+   "watch": [
+    "参考·质押 16.3%（截至 2026-05-29）"
+   ],
+   "severity": "red",
+   "progress": []
+  },
   "002207": {
    "name": "*ST准油",
    "reasons": [
@@ -21,70 +34,61 @@
    "severity": "red",
    "progress": []
   },
-  "600745": {
-   "name": "*ST闻泰",
+  "600387": {
+   "name": "退市海越",
    "reasons": [
-    "ST/退市（当前名称 *ST闻泰）"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 5.1%（截至 2026-05-29）"
-   ],
-   "severity": "red",
-   "progress": []
-  },
-  "002650": {
-   "name": "ST加加",
-   "reasons": [
-    "ST/退市（当前名称 ST加加）"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 19.5%（截至 2026-05-29）"
-   ],
-   "severity": "red",
-   "progress": []
-  },
-  "600355": {
-   "name": "*ST精伦",
-   "reasons": [
-    "ST/退市（当前名称 *ST精伦）"
+    "ST/退市（当前名称 退市海越）"
    ],
    "count": 1,
    "watch": [],
    "severity": "red",
    "progress": []
   },
-  "603377": {
-   "name": "ST东时",
+  "002912": {
+   "name": "中新赛克",
    "reasons": [
-    "ST/退市（当前名称 ST东时）"
+    "2026-09-17 减持公告"
    ],
    "count": 1,
+   "watch": [],
+   "severity": "red",
+   "progress": [
+    "减持实施中"
+   ]
+  },
+  "002869": {
+   "name": "金溢科技",
+   "reasons": [
+    "2026-09-23 减持公告",
+    "2026-09-17 减持公告"
+   ],
+   "count": 2,
    "watch": [
-    "参考·质押 13.4%（截至 2026-05-29）"
+    "参考·质押 10.1%（截至 2026-05-29）"
    ],
    "severity": "red",
-   "progress": []
+   "progress": [
+    "减持实施中"
+   ]
   },
-  "600311": {
-   "name": "*ST荣华",
+  "603189": {
+   "name": "*ST网达",
    "reasons": [
-    "ST/退市（当前名称 *ST荣华）"
+    "ST/退市（当前名称 *ST网达）"
    ],
    "count": 1,
    "watch": [],
    "severity": "red",
    "progress": []
   },
-  "002598": {
-   "name": "ST章鼓",
+  "600537": {
+   "name": "*ST亿晶",
    "reasons": [
-    "ST/退市（当前名称 ST章鼓）"
+    "ST/退市（当前名称 *ST亿晶）"
    ],
    "count": 1,
    "watch": [
-    "参考·质押 5.4%（截至 2025-12-12）"
+    "参考·质押 3.2%（截至 2025-10-17）"
    ],
    "severity": "red",
    "progress": []
@@ -101,36 +105,44 @@
     "减持实施中"
    ]
   },
-  "002741": {
-   "name": "光华科技",
+  "601212": {
+   "name": "白银有色",
    "reasons": [
-    "2026-10-08 减持公告"
+    "2026-09-19 减持公告"
    ],
    "count": 1,
    "watch": [
-    "参考·质押 1.2%（截至 2026-05-29）"
+    "参考·质押 29.9%（截至 2026-05-29）"
    ],
    "severity": "red",
    "progress": [
     "减持实施中"
    ]
+  },
+  "600311": {
+   "name": "*ST荣华",
+   "reasons": [
+    "ST/退市（当前名称 *ST荣华）"
+   ],
+   "count": 1,
+   "watch": [],
+   "severity": "red",
+   "progress": []
+  },
+  "002938": {
+   "name": "鹏鼎控股",
+   "reasons": [
+    "解禁 2026-10-16（股权激励限售股份，占总股本 0.1%）"
+   ],
+   "count": 1,
+   "watch": [],
+   "severity": "orange",
+   "progress": []
   },
   "603533": {
    "name": "掌阅科技",
    "reasons": [
     "2026-09-25 减持公告"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "002912": {
-   "name": "中新赛克",
-   "reasons": [
-    "2026-09-17 减持公告"
    ],
    "count": 1,
    "watch": [],
@@ -147,21 +159,6 @@
    "count": 1,
    "watch": [
     "参考·质押 1.0%（截至 2026-05-29）"
-   ],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "002869": {
-   "name": "金溢科技",
-   "reasons": [
-    "2026-09-23 减持公告",
-    "2026-09-17 减持公告"
-   ],
-   "count": 2,
-   "watch": [
-    "参考·质押 10.1%（截至 2026-05-29）"
    ],
    "severity": "red",
    "progress": [

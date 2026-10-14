@@ -299,7 +299,8 @@ def main():
         return 1
 
     names = fetch_names(codes)
-    for c in codes:
+    name_src = 'em' if names else 'local'   # R100z129：区分「行情名」与「data.js 旧名」，后者判 ST 不可靠
+    for c in codes:   # 兜底仅用于显示名称；此时 ST 判定降级为存疑（见下方 unknown，绝不静默当安全）
         names.setdefault(c, local_names.get(c, ''))
 
     blacklist, unknown, failed = {}, [], []
@@ -334,8 +335,13 @@ def main():
                                    'count': len(reasons), 'watch': watch,
                                    'severity': sev, 'progress': prog}
 
+    if name_src == 'local':   # R100z129：行情名源不可达时不得静默给「无 ST 命中」的假阴性
+        unknown.append('行情名源（东财 push2）不可达：ST/退市判定已回退 data.js 名称'
+                       '（AI 写回的可能是更名前旧名，会漏判 ST），该维度本次不判安全')
+
     res = {
         'ok': True,
+        'nameSrc': name_src,
         'date': date_tag or today.isoformat(),
         'checked': len(codes),
         'liftWindow': [args.lift_lo, args.lift_hi],

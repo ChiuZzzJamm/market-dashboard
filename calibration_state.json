@@ -9,15 +9,15 @@
  ],
  "stat": {
   "高": {
-   "n": 9,
-   "hit": 1.5,
-   "rate": 0.167,
+   "n": 7,
+   "hit": 1,
+   "rate": 0.143,
    "minSample": 8,
-   "sampleEnough": true,
+   "sampleEnough": false,
    "ci": {
-    "lo": 0.043,
-    "hi": 0.291,
-    "sigma": 0.124
+    "lo": 0.011,
+    "hi": 0.275,
+    "sigma": 0.132
    }
   },
   "中": {
@@ -31,13 +31,25 @@
     "hi": 0.702,
     "sigma": 0.107
    }
+  },
+  "中等确信": {
+   "n": 2,
+   "hit": 0.5,
+   "rate": 0.25,
+   "minSample": 5,
+   "sampleEnough": false,
+   "ci": {
+    "lo": 0.0,
+    "hi": 0.556,
+    "sigma": 0.306
+   }
   }
  },
  "gates": {
   "高": {
-   "maxHighConf": 0,
-   "maxConf": "中等确信",
-   "reason": "「高」层近 5 日命中率 17% ±1σ [4%, 29%] < 25%（样本≥8），当日禁用该层"
+   "maxHighConf": 2,
+   "maxConf": "高确信",
+   "reason": "「高」层命中率 14%（±1σ [1%, 28%]）但样本 7<8，未达降档门槛，暂不降档（继续攒样本后再评）"
   },
   "中": {
    "maxHighConf": 2,

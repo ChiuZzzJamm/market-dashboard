@@ -1103,6 +1103,12 @@ def g16_narrative_depth(r):
     if isinstance(ap, dict) and ap.get("openOutlook"):
         add("aiPrediction.openOutlook", ap.get("openOutlook"), 300)
 
+    # A 股题材掘金 logic（R100z129 补齐：docstring 早已声明 240，但代码一直漏检，
+    # 只靠 16:00 prompt 软约束 240-420 —— 用户 2026-10-13 拍板补机器闸）
+    for i, t in enumerate((D.get("ashare") or {}).get("themePicks") or []):
+        if isinstance(t, dict):
+            add(f"ashare.themePicks[{i}].logic", t.get("logic"), 240)
+
     # 连板天梯 story（A 股）
     for i, s in enumerate((D.get("ashare") or {}).get("lianban") or []):
         if isinstance(s, dict):
@@ -1192,6 +1198,9 @@ def g17_template_tails(r):
     for i, s in enumerate(ap.get("sectors") or []):
         if isinstance(s, dict):
             put(s.get("logic"), f"aiPrediction.sectors[{i}]")
+    for i, t in enumerate((D.get("ashare") or {}).get("themePicks") or []):   # R100z129：与 G16 扫描面保持一致
+        if isinstance(t, dict):
+            put(t.get("logic"), f"ashare.themePicks[{i}]")
     put(D.get("openOutlook"), "openOutlook")
     if isinstance(ap, dict) and ap.get("openOutlook"):
         put(ap.get("openOutlook"), "aiPrediction.openOutlook")
