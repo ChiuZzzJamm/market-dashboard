@@ -47,25 +47,25 @@
   },
   {
    "date": "2026-10-13",
-   "avgPct": -0.255,
-   "pf": 0.9545,
+   "avgPct": 0.11,
+   "pf": 0.958,
    "bench": 0.9606,
    "benchMain": 0.988,
-   "dd": -4.55,
-   "nSec": 2,
-   "nStocks": 16,
-   "poolConf": "高"
+   "dd": -4.2,
+   "nSec": 4,
+   "nStocks": 32,
+   "poolConf": "中"
   }
  ],
  "stat": {
   "days": 5,
-  "totRetPct": -4.55,
+  "totRetPct": -4.2,
   "benchRetPct": -3.94,
-  "excessPct": -0.61,
+  "excessPct": -0.26,
   "benchMainRetPct": -1.2,
-  "benchMainExcessPct": -3.35,
-  "maxDdPct": -4.55,
-  "maxDdDate": "2026-10-13",
+  "benchMainExcessPct": -3.0,
+  "maxDdPct": -4.3,
+  "maxDdDate": "2026-10-12",
   "assumptions": {
    "feePerSide": 0.025,
    "stampDutySell": 0.05,
