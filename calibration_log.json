@@ -627,6 +627,140 @@
      "volExpect": "平量"
     }
    }
+  ],
+  "2026-10-15": [
+   {
+    "date": "2026-10-15",
+    "sector": "贵金属",
+    "predicted": "走强",
+    "dirClass": "up",
+    "actualPct": -2.9,
+    "benchPct": -2.675,
+    "excessPct": -0.225,
+    "benchMainPct": -2.0100000000000002,
+    "result": "未命中",
+    "conf": "高",
+    "avgPct": -2.46,
+    "excessAvg": 0.215,
+    "hit": 0,
+    "hitAbs": 0,
+    "pos": {
+     "tendency": "承压",
+     "bandLo": 3720,
+     "bandHi": 3780,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-10-15",
+    "sector": "电网设备",
+    "predicted": "走强",
+    "dirClass": "up",
+    "actualPct": -2.91,
+    "benchPct": -2.675,
+    "excessPct": -0.235,
+    "benchMainPct": -2.0100000000000002,
+    "result": "未命中",
+    "conf": "中",
+    "avgPct": -1.99,
+    "excessAvg": 0.685,
+    "hit": 0,
+    "hitAbs": 0,
+    "pos": {
+     "tendency": "承压",
+     "bandLo": 3720,
+     "bandHi": 3780,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-10-15",
+    "sector": "核电",
+    "predicted": "承压",
+    "dirClass": "down",
+    "actualPct": -2.8,
+    "benchPct": -2.675,
+    "excessPct": -0.125,
+    "benchMainPct": -2.0100000000000002,
+    "result": "命中",
+    "conf": "中",
+    "avgPct": -2.43,
+    "excessAvg": 0.245,
+    "hit": 0.5,
+    "hitAbs": 1,
+    "pos": {
+     "tendency": "承压",
+     "bandLo": 3720,
+     "bandHi": 3780,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-10-15",
+    "sector": "军工",
+    "predicted": "偏强",
+    "dirClass": "up",
+    "actualPct": -3.8,
+    "benchPct": -2.675,
+    "excessPct": -1.125,
+    "benchMainPct": -2.0100000000000002,
+    "result": "未命中",
+    "conf": "中",
+    "avgPct": -2.77,
+    "excessAvg": -0.095,
+    "hit": 0,
+    "hitAbs": 0,
+    "pos": {
+     "tendency": "承压",
+     "bandLo": 3720,
+     "bandHi": 3780,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-10-15",
+    "sector": "油气开采",
+    "predicted": "走强",
+    "dirClass": "up",
+    "actualPct": -4.79,
+    "benchPct": -2.675,
+    "excessPct": -2.115,
+    "benchMainPct": -2.0100000000000002,
+    "result": "未命中",
+    "conf": "高",
+    "avgPct": -3.57,
+    "excessAvg": -0.895,
+    "hit": 0,
+    "hitAbs": 0,
+    "pos": {
+     "tendency": "承压",
+     "bandLo": 3720,
+     "bandHi": 3780,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-10-15",
+    "sector": "光模块",
+    "predicted": "承压",
+    "dirClass": "down",
+    "actualPct": -4.45,
+    "benchPct": -2.675,
+    "excessPct": -1.775,
+    "benchMainPct": -2.0100000000000002,
+    "result": "命中",
+    "conf": "中",
+    "avgPct": -4.76,
+    "excessAvg": -2.085,
+    "hit": 1,
+    "hitAbs": 1,
+    "pos": {
+     "tendency": "承压",
+     "bandLo": 3720,
+     "bandHi": 3780,
+     "volExpect": "平量"
+    }
+   }
   ]
  },
  "open": {
@@ -728,6 +862,26 @@
    "volHit": 0,
    "score": 0.15,
    "verdict": "未命中",
+   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；量能为涨跌家数占比代理，口径固定不可调"
+  },
+  "2026-10-15": {
+   "date": "2026-10-15",
+   "openDate": "2026-10-15",
+   "tendency": "承压",
+   "bandLo": 3720,
+   "bandHi": 3780,
+   "volExpect": "平量",
+   "actual": {
+    "point": 3707.48,
+    "changePct": -1.59,
+    "upRate": 0.0776,
+    "volumeText": "成交约 1.63 万亿"
+   },
+   "tendencyHit": 1,
+   "bandHit": 0.5,
+   "volHit": 0,
+   "score": 0.65,
+   "verdict": "部分兑现",
    "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；量能为涨跌家数占比代理，口径固定不可调"
   }
  }
