@@ -1100,7 +1100,7 @@ function stkPoolBadge(code) {
   var db = (window.DASHBOARD_DATA || {}).duanban || {};
   var st = db.star || {};
   // R100z125：与断板页 🌟 开盘精选区同口径（R100e 展示闸门）——仅当 star.date == 本地今日才显示池徽章。
-  // 依据：9:45 自动化才写当日 star；07:30/08:30/周日流水线会把上一交易日的 star 原样带出。
+  // 依据：9:45 自动化才写当日 star；07:00/08:30/周日流水线会把上一交易日的 star 原样带出。
   // 此前弹窗徽章无日期闸门 → 9:45 跑批前把陈旧精选当当日命中（页面已隐藏、弹窗却仍显示，两处不一致）。
   var _td = new Date();
   var _tdStr = _td.getFullYear() + '-' + String(_td.getMonth() + 1).padStart(2, '0') + '-' + String(_td.getDate()).padStart(2, '0');
@@ -3668,9 +3668,9 @@ function dbPoolHtml(title, cls, sub, list, done, poolKey) {
 function renderDuanban() {
   DB_INDEX = {}; DB_ORDER = [];
   var db = duanbanData();
-  document.getElementById('db-date').textContent = db && db.generatedAt ? '数据生成：' + db.generatedAt + '（每日 16:00 收盘后更新 · 次日 07:30 隔夜复核）' : '数据生成：—（待 16:00 自动化首跑）';
+  document.getElementById('db-date').textContent = db && db.generatedAt ? '数据生成：' + db.generatedAt + '（每日 16:00 收盘后更新 · 次日 07:00 隔夜复核）' : '数据生成：—（待 16:00 自动化首跑）';
   // R100z4v：断板页口径说明改静态（与谐波/九门/吸筹三子页同款 hz-sub + 悬停详解）——
-  // 原用动态 db.note，该字段被 07:30 自动化 AI 写回污染（写入流程说明而非口径），弃用。
+  // 原用动态 db.note，该字段被 07:00 自动化 AI 写回污染（写入流程说明而非口径），弃用。
   // R100z26：断板页口径说明改成与谐波/九门/吸筹同款的「可展开条目块」。
   // 原来是一行 hz-sub + 400 字 title 悬浮 —— 手机上 title 根本不显示，等于没写。
   var _dbNote = '<details class="tech-legend"><summary>断板反包口径 · 全流程与分池（点击查看技术指标）</summary><div class="lg-body">' +
@@ -3678,7 +3678,7 @@ function renderDuanban() {
     '<div><b>判定四步（须按顺序）</b>：① T 日涨停 → ② 次日放量断板（成交量≥1.5×T 日） → ③ 缩量回踩 → ④ 不破 T 日最低点、也站稳 MA5 → 待反包</div>' +
     '<div><b>两个池</b>：确认池＝四步全流程走完（可随时等反包）；观察池＝形态进行中、只差最后一根确认 K 线（先待企稳、再待缩量）</div>' +
     '<div><b>选股范围</b>：仅沪深主板 60/00，排除科创板 688 与北交所；用东财涨停池取 T 日、腾讯日 K 核验（check_duanban.py，纯脚本确定性，不靠人眼）</div>' +
-    '<div><b>标签与概率</b>：按当日要闻/AI 预测自动标注利好（红）/利空（绿）/中性（灰）；上涨概率＝脚本确定性基线＋AI 复核校准（16:00 生成，次日 07:30 复核）</div>' +
+    '<div><b>标签与概率</b>：按当日要闻/AI 预测自动标注利好（红）/利空（绿）/中性（灰）；上涨概率＝脚本确定性基线＋AI 复核校准（16:00 生成，次日 07:00 复核）</div>' +
     '<div class="lg-hr"></div>' +
     '<div><b>失效与归档</b>：跌破 T 日最低点或 MA5（破位）、或 5 个交易日内没走完反包（超期）→ 移入失败池，5 个交易日后自动清理</div>' +
     '<div class="lg-tip">下一步：缩量不破位只算「跌不动」，反包日放量收复断板日最高价 / 站回 MA5 才算真确认；破位无条件走，不摊平不扛单。此页与「谐波 / 九门 / 吸筹」同为技术面观察器，仓位按中等及以下确信度给。</div>' +
@@ -3721,7 +3721,7 @@ function renderDuanban() {
   // 金色「精选」徽标区分；点击弹窗 1:1 复用确认池/观察池标的弹窗（openDbModal）。
   // R100e：🌟 开盘精选展示闸门——仅当 star.date == 本地今日 才渲染。
   // 依据：9:45 自动化唯一写入当日 star；16:00 经 merge_duanban 仅保留「date==今日」的 star（展示）；
-  // 07:30/08:30/周日22:00 流水线不写 star，但历史上会把前一交易日的 star 原样带出 data.js。
+  // 07:00/08:30/周日22:00 流水线不写 star，但历史上会把前一交易日的 star 原样带出 data.js。
   // 页面此前只看 st.picks.length，导致陈旧 star 在「不更新不展示」的时段被错误展示。
   // 加日期闸门后：非今日的 star 一律隐藏；今日的 star（9:45 写入 / 16:00 保留）正常展示。
   var st = db && db.star;

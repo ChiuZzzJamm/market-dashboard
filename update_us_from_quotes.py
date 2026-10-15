@@ -350,7 +350,7 @@ def prior_us_trading_day(from_date):
 def us_market_open(now_utc):
     """判断当前是否处于美股常规交易时段（美东 9:30-16:00 且为交易日）。
     盘中行情是动态数据而非收盘数据，此时写入会把盘中误标为「收盘」；
-    排程任务（07:30 / 周日23:00）均在休市时段，不受影响。"""
+    排程任务（07:00 / 周日23:00）均在休市时段，不受影响。"""
     try:
         from zoneinfo import ZoneInfo
         et = now_utc.astimezone(ZoneInfo('America/New_York'))
@@ -450,7 +450,7 @@ if len(valid_items) < 15:
     print(f'[ERROR] 美股有效板块仅 {len(valid_items)} 个（阈值 15），疑似行情抓取残缺，保留上一交易日数据，不覆盖')
     raise SystemExit(0)
 
-# 保留旧 us 中各板块的 reason（周一等场景下，reason 由 07:30 任务写入，周末脚本不应覆盖）
+# 保留旧 us 中各板块的 reason（周一等场景下，reason 由 07:00 任务写入，周末脚本不应覆盖）
 old_reason_map = {}
 for s in D.get('us', {}).get('sectorsUp', []) + D.get('us', {}).get('sectorsDown', []):
     if 'reason' in s:
@@ -522,7 +522,7 @@ if None not in (_di, _ix, _sp):
     elif _di < 0 and _ix < 0 and _sp < 0:
         _trend = '收跌'
 
-# 题材掘金同日保留：themePicks 由 07:30/周日 AI 基于当日真实新闻生成，本脚本同日重跑时
+# 题材掘金同日保留：themePicks 由 07:00/周日 AI 基于当日真实新闻生成，本脚本同日重跑时
 # 不得洗掉；跨日（trade_iso 变化）则清空，由当日 AI 重新生成，避免旧事件挂新行情。
 _old_tp = D.get('us', {}).get('themePicks') or []
 _old_us_date = (D.get('us', {}).get('tradeDate') or '')[:10]

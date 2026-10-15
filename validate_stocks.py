@@ -111,7 +111,7 @@ def check_tiered(stocks, where, violations):
     if n != 8:
         violations.append(
             f"{where}: 共 {n} 只（应为 8）| 配比 L{cnt['L']} C{cnt['C']} X{cnt['X']} D{cnt['D']}"
-            + ("| 含无法识别类别note" + dict(cnt)['?'] if cnt['?'] else ''))
+            + ("| 含无法识别类别note " + str(dict(cnt)['?']) if cnt['?'] else ''))
         return
     # 组内 code 必须互不相同（防「8 个位置只有 6~7 只不同标的」的隐藏重复 bug）
     codes = [str((s or {}).get('code')) for s in stocks]
@@ -608,7 +608,7 @@ def check_risk_blacklist(D, scope='all'):
 
     R100z16：scope 决定扫哪些节点——
       all / ai  → aiPrediction.sectors（16:00、08:30、周日任务职责）
-      all / us  → us + ashare 五节与 bullish/bearish（07:30、周日任务职责；
+      all / us  → us + ashare 五节与 bullish/bearish（07:00、周日任务职责；
                   这两个任务自己就是这些标的的选股者，必须自己过闸，不能
                   把黑名单推给 16:00 去背，否则等于没闸）
       all / star→ duanban.star.picks（9:45 职责；star 同样由本任务自己挑，
@@ -793,14 +793,14 @@ def check_stock_pool(D):
     # 机械池 stock_pool.json 由 16:00 任务在第 5.9 步 `--write` 当日重建，而顶层 aiPrediction
     # 是同日 08:30 定稿的（16:00 只补 verification、不整改 sectors）。因此 16:00 用「当日收盘
     # 重算出的机械池」去考「当日早上写死的预测」，必然大面积零交集 —— 这不是 AI 自选违规，
-    # 是检验时序错位。此类场景降级为提示，真正的照抄约束留给下一个交易日的 07:30/08:30/周日
+    # 是检验时序错位。此类场景降级为提示，真正的照抄约束留给下一个交易日的 07:00/08:30/周日
     # 校验（那时 pool.date < pred.date，比对有效）。
     pred_date = str((D.get('aiPrediction') or {}).get('date') or '')
     pool_date = str(pool.get('date') or '')
     if pred_date and pool_date and pool_date >= pred_date:
         warns.append(f"stock_pool.json(date={pool_date}) 不早于 aiPrediction(date={pred_date})："
                      f"机械池在本任务周期内被重建，08:30 定稿的预测无从照抄，照抄约束降级为提示；"
-                     f"下一交易日的 07:30/08:30/周日校验仍按同一规则硬拦（R100z17 时序闸）")
+                     f"下一交易日的 07:00/08:30/周日校验仍按同一规则硬拦（R100z17 时序闸）")
         return [], warns
 
     for s in ((D.get('aiPrediction') or {}).get('sectors') or []):
@@ -1153,7 +1153,7 @@ def main():
     # probability 与池成员、重排 aiPrediction 标的，等于从后门绕过任务自己的禁令。
     no_fix = '--no-fix' in sys.argv
     # R100z16 --scope：让每个自动化只对自己写的节点负责，拆掉
-    # 「FAIL 全在 aiPrediction 却要 9:45 / 07:30 修到 ALL OK」的死锁——
+    # 「FAIL 全在 aiPrediction 却要 9:45 / 07:00 修到 ALL OK」的死锁——
     # 那两个任务被绝对禁止改 aiPrediction，等于被要求修自己碰不了的东西。
     scope = 'all'
     for _i, _a in enumerate(sys.argv):

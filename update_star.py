@@ -3,7 +3,7 @@
 """🌟 开盘精选（R98k→R99，每日 9:45 自动化调用）。
 
 职责（脚本自包含、AI 只复核不改结构）：
-  1. 读 data.js 断板反包双池（07:30 复核后的 confirmed/watching，sentiment/probability 已校准）；
+  1. 读 data.js 断板反包双池（07:00 复核后的 confirmed/watching，sentiment/probability 已校准）；
   2. 抓开盘半小时盘面：指数涨跌+成交额（腾讯 gtimg，本机可达）、
      同花顺行业涨跌幅（fetch_ths_industries）、行业主力资金净额（fetch_ths_funds）；
   3. 个股当日实时涨幅批量快照（腾讯 gtimg，一次批量）；

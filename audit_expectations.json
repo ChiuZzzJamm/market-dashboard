@@ -4,7 +4,7 @@
   "automations": [
     {
       "id": "automation-1788494481298",
-      "schedule": "TU,WE,TH,FR 07:30",
+      "schedule": "TU,WE,TH,FR 07:00",
       "stepOrder": [
         0,
         1,

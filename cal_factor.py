@@ -204,7 +204,7 @@ def main():
     else:
         print(json.dumps(r, ensure_ascii=False, indent=2))
     # ⚠️ 退出码恒为 0，请勿「顺手改得更正确」：
-    #   ① 所有自动化（07:30/08:30/9:45/16:00/周末）一律以 stdout 里的 `aShareClosed` 字段
+    #   ① 所有自动化（07:00/08:30/9:45/16:00/周末）一律以 stdout 里的 `aShareClosed` 字段
     #      判休市，没有一处看 returncode；
     #   ② audit_pipeline.py 的 G6 用 `c != 0` 判 cal_factor 是否「执行成功」，而 G6 固定喂
     #      `--date 2026-10-08`（开市日）——一旦改成「休市 return 1」，休市日跑 audit 时

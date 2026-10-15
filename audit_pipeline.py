@@ -145,7 +145,7 @@ PRODUCT_OWNERSHIP = {
     },
     "us": {
         "require": ("us", "美股"),
-        "note": "美股行情节点，07:30 / 08:30 两条任务各自负责一段",
+        "note": "美股行情节点，07:00 / 08:30 两条任务各自负责一段",
     },
     "panorama": {
         "require": ("panorama", "全景", "韩", "日"),
@@ -694,7 +694,7 @@ def g8_g9_g10_data(r):
     # duanban.star 存在性（R100z16 清场事故回归）
     # 休市期缺失属预期（9:45 在下一个交易日才重建），仅当最近交易日刚过 1 天仍缺才判 FAIL
     # R100z83（2026-10-08 实战教训）：交易日 **10:00 前** star 缺失降为 WARN——
-    #   star 由 9:45 任务写入，07:30/08:30 任务先于它部署，若此时判 FAIL 会逼着
+    #   star 由 9:45 任务写入，07:00/08:30 任务先于它部署，若此时判 FAIL 会逼着
     #   前置任务按「FAIL 必须修正」条款提前跑 update_star.py 补造 star（08:11 实际发生），
     #   违反「9:45 是 star 唯一写入口」的职责边界、产出开盘前低质量版本。
     #   10:00 后（9:45 窗口已过）仍缺才是真事故，恢复硬拦。
@@ -710,7 +710,7 @@ def g8_g9_g10_data(r):
                         f"（9:45 开盘精选届时写入；R100z16 后 merge 不再清场）")
         elif _before_star_window:
             r.warn("G10", f"duanban.star 缺失但当前在 10:00 前（下一交易日 {nxt} 当天、9:45 开盘精选"
-                          f"尚未跑）——属预期，07:30/08:30 任务**不要**跑 update_star.py 补造，照常部署；"
+                          f"尚未跑）——属预期，07:00/08:30 任务**不要**跑 update_star.py 补造，照常部署；"
                           f"10:00 后仍缺才升级 FAIL")
         else:
             r.fail("G10", f"duanban.star（🌟开盘精选）缺失，而下一交易日 {nxt} 已到且已过 9:45 窗口"
@@ -864,7 +864,7 @@ def g12_deadlinks(r):
         r.ok("G12", f"{len(autos)} 条看板自动化 cwds 均为合法 JSON 数组且指向本项目、rrule 非空")
 
     # ②c 流程纪律：会 deploy.sh 上线的自动化必须接审计闸门；prompt 不得写死闸门基线数字。
-    # R100z65：此前 audit_pipeline 只接在 16:00 与周日 22:00 两条上，07:30/08:30/9:45
+    # R100z65：此前 audit_pipeline 只接在 16:00 与周日 22:00 两条上，07:00/08:30/9:45
     # 三条都会 deploy.sh 上线却绕过闸门——「闸门只长在部分任务身上」也是半死链路。
     # 而写死 PASS=24 这类基线数字，闸门一增项就必然误判（现自报 27）。
     miss_gate = [a["name"] for a in autos
@@ -946,7 +946,7 @@ def g14_prompt_broken_path(r):
     """G14 路径断裂闸门（R100z71）：prompt 内禁止出现「/WorkBuddy/market <空格><脚本>.py」
     这类签名——合法路径是 /WorkBuddy/market dashboard/...（含空格需整体引号或走 cd 相对调用）。
 
-    R100z71 发现：07:30 / 周日两条任务曾因路径损坏（缺 `dashboard/` 且未加引号）导致
+    R100z71 发现：07:00 / 周日两条任务曾因路径损坏（缺 `dashboard/` 且未加引号）导致
     `update_us_from_quotes` / `check_duanban` / `stock_risk_blacklist` / `build_stock_pool`
     调用把目录当脚本跑、静默失败（python3: can't open file '/Users/loccco/WorkBuddy/market'），
     us 美股行情与断板池长期未更新、且无人察觉。G2 只校验 audit_expectations.json 里的
@@ -1045,7 +1045,7 @@ def g16_narrative_depth(r):
     """G16 防 AI 偷懒·叙事深度硬闸（R100z94）。
 
     背景：用户复盘满意 A 股深度（板块 285-390 / 题材 371-411 / 要闻 333-431 字），
-    但美股 us.* 长期只有 60-110 字（根因：07:30 / 周日两条自动化 prompt 把字数上限
+    但美股 us.* 长期只有 60-110 字（根因：07:00 / 周日两条自动化 prompt 把字数上限
     写成 60-110）。量化页（谐波/九门/吸筹）无叙事字段渲染，其空 story 是设计行为，不在这
     里管；chip 标签类字段（lianban.reason / 各池 note / star.picks.note / failPool.reason）
     也非主叙事，不在这管。本闸只管「真正渲染给用户的长文主字段」。
