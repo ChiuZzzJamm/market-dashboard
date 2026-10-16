@@ -23,7 +23,7 @@
    重复出现——均 WARNING 不阻断，由自动化 prompt 与 AI 自检负责修正。
 7) duanban 断板反包模块（R87，软闸门）：确认池/观察池全部标的须 60/00 开头沪深主板
    （违规自动剔除 + WARNING）、probability 缺失/非法自动补 50 + WARNING、缺 bullRefs/
-   kline 输出 WARNING。模块整体缺失不检查（15:15 数据步职责）。
+   kline 输出 WARNING。模块整体缺失不检查（16:00 数据步职责）。
 
 类别按 note 前缀判定：断板反包→断板；板块龙头/龙头→龙头；相关概念/概念→概念；
 小盘→小盘；其余前缀视为无法识别（报违规）。
@@ -346,7 +346,7 @@ def check_stockcheck(D):
     """R100z11：verification.stockCheck —— 验证颗粒度下移到标的层面（方向对但 8 只全选错必须被检出）。
     hitN 须 0~8 整数、alignRate 须 = hitN/8、avgPct 须数值，details 条数对齐 sectors → WARN。"""
     ap = D.get('aiPrediction') or {}
-    # R100z12 闸门口径修正：verification 由 16:15 叙事步填写，08:30（盘前）与周日（date=下周一）
+    # R100z12 闸门口径修正：verification 由 17:00 叙事步填写，08:30（盘前）与周日（date=下周一）
     # 按设计就是 null，此时「stockCheck 缺失」属正常，绝不能报成每日必现的假 WARN
     #（否则 08:30 的 5.5 校验会出现一个永远修不好的 WARN，逼 AI 反复绕）。
     if not isinstance(ap.get('verification'), dict):
@@ -522,7 +522,7 @@ def check_openoutlook_loop(D):
     与 check_openoutlook（深度）并存，两个都在 main 里调用。
 
     用户拍板口径：T 日 08:30 写 openOutlook（含结构化假设 openOutlook.pos），
-    T 日 16:15 叙事步打分开进 openOutlook.verification，T+1 08:30 新前瞻整字段覆盖旧的。
+    T 日 17:00 叙事步打分开进 openOutlook.verification，T+1 08:30 新前瞻整字段覆盖旧的。
     因此只有「pos 与 verification 不同时出现」才算漏项（单看缺失会每天必报假 WARN）。"""
     warns = []
     oo = D.get('openOutlook')
@@ -533,7 +533,7 @@ def check_openoutlook_loop(D):
     has_ver = isinstance(ver, dict)
     if has_pos and not has_ver:
         warns.append("openOutlook.pos 已写但 openOutlook.verification 缺失"
-                     "（16:15 叙事步未跑 score_openoutlook.py 打分，或没把结果写回：前瞻兑现闭环断了一天）")
+                     "（17:00 叙事步未跑 score_openoutlook.py 打分，或没把结果写回：前瞻兑现闭环断了一天）")
     elif has_ver and not has_pos:
         warns.append("openOutlook.verification 存在但 openOutlook.pos 缺失"
                      "（08:30 未写结构化假设 {tendency,bandLo,bandHi,volExpect}，事后没法核对这份前瞻该不该被判命中）")
@@ -544,7 +544,7 @@ def check_openoutlook_loop(D):
                 break
         for k in ('score', 'verdict'):
             if ver.get(k) in (None, ''):
-                warns.append(f"openOutlook.verification.{k} 缺失（16:15 叙事步打分结果没写全）")
+                warns.append(f"openOutlook.verification.{k} 缺失（17:00 叙事步打分结果没写全）")
                 break
     return warns
 
@@ -607,10 +607,10 @@ def check_risk_blacklist(D, scope='all'):
     旧版 JSON 缺 severity 字段时默认按 red 处理（保持硬闸语义，不静默放行）。
 
     R100z16：scope 决定扫哪些节点——
-      all / ai  → aiPrediction.sectors（16:15、08:30、周日任务职责）
+      all / ai  → aiPrediction.sectors（17:00、08:30、周日任务职责）
       all / us  → us + ashare 五节与 bullish/bearish（07:00、周日任务职责；
                   这两个任务自己就是这些标的的选股者，必须自己过闸，不能
-                  把黑名单推给 16:15 叙事步去背，否则等于没闸）
+                  把黑名单推给 17:00 叙事步去背，否则等于没闸）
       all / star→ duanban.star.picks（9:45 职责；star 同样由本任务自己挑，
                   9:45 又禁止池外补股，若不过闸就等于 star 这一支完全没有硬闸）
 
@@ -790,8 +790,8 @@ def check_stock_pool(D):
     hards, warns = [], []
 
     # R100z17 时序闸（2026-10-01 体检发现的结构性缺陷）：
-    # 机械池 stock_pool.json 由 16:15 叙事步在第 3 步 `--write` 当日重建，而顶层 aiPrediction
-    # 是同日 08:30 定稿的（16:15 叙事步只补 verification、不整改盘前 sectors 预测）。因此 16:15 叙事步用「当日收盘
+    # 机械池 stock_pool.json 由 17:00 叙事步在第 3 步 `--write` 当日重建，而顶层 aiPrediction
+    # 是同日 08:30 定稿的（17:00 叙事步只补 verification、不整改盘前 sectors 预测）。因此 17:00 叙事步用「当日收盘
     # 重算出的机械池」去考「当日早上写死的预测」，必然大面积零交集 —— 这不是 AI 自选违规，
     # 是检验时序错位。此类场景降级为提示，真正的照抄约束留给下一个交易日的 07:00/08:30/周日
     # 校验（那时 pool.date < pred.date，比对有效）。
@@ -955,7 +955,7 @@ def check_star_module(D):
     ② duanban.star（9:45 开盘精选）picks 数量不限（≥1，R98l）；
        picks 允许三类：a) 双池内标的（src='pool'）；b) src='board' 的板块动量标的
        （早盘真实强势板块领涨股，R98n，允许池外）；c) src='pw'/'hz'/'acc' 的技术池标的
-       （谐波/九门/吸筹，R100m 前一日 15:15 数据步产物，允许池外）。
+       （谐波/九门/吸筹，R100m 前一日 16:00 数据步产物，允许池外）。
        纯池外且无合法 src/无板块依据的标的 → WARN。"""
     db = D.get('duanban')
     if not isinstance(db, dict):
@@ -985,7 +985,7 @@ def check_star_module(D):
                     # R98n：允许 src='board' 的板块动量标的（早盘真实强势板块领涨股，需有板块依据）
                     if src == 'board' and name_ok and str(p.get('sector') or '').strip():
                         continue
-                    # R100m：允许 src='pw'/'hz'/'acc' 的技术池标的（谐波/九门/吸筹，前一日 15:15 数据步产物）
+                    # R100m：允许 src='pw'/'hz'/'acc' 的技术池标的（谐波/九门/吸筹，前一日 16:00 数据步产物）
                     if src in ('pw', 'hz', 'acc') and name_ok:
                         continue
                     warns.append(f"duanban.star.picks {c} {p.get('name')} 不在断板反包双池内且非合规来源标的（精选只能从双池/板块动量/技术池筛）")
@@ -1044,7 +1044,7 @@ def reorder_inplace(D):
 def fix_duanban_inplace(D):
     """duanban 断板反包模块软闸门（R87 / R88 打标制）：非主板标的自动剔除、
     sentiment 非法补 neutral、probability 补 50，缺 bullRefs/kline 告警。
-    模块整体缺失不处理（属 15:15 数据步职责）。返回 (改动?, 告警列表)。"""
+    模块整体缺失不处理（属 16:00 数据步职责）。返回 (改动?, 告警列表)。"""
     db = D.get('duanban')
     if not isinstance(db, dict):
         return False, []
@@ -1087,7 +1087,7 @@ def fix_duanban_inplace(D):
 def check_selection_modules(D):
     """2026-09-26 选股扩展模块（谐波/吸筹/量化/必带数据）结构校验。
 
-    软闸门：仅 WARN 不阻断部署（与质量类一致）。这些模块由新脚本在 15:15 数据步流水线生成，
+    软闸门：仅 WARN 不阻断部署（与质量类一致）。这些模块由新脚本在 16:00 数据步流水线生成，
     缺失时不报（流水线未跑不代表坏）；存在时校验关键字段与主板约束。
     """
     warns = []
@@ -1192,7 +1192,7 @@ def main():
     lb_warns = check_lianban_notes(D)
     tb_warns = check_top_boards(D)
     # R100z81：碎片化 / 深度 / 英文泄漏 机器闸（按 scope 决定谁负责：新闻+outlook+reason 归 us 职责，
-    # verification.note 泄漏归 ai 职责——与 16:15 叙事步「先 --scope ai 再 --scope us」两次校验口径一致）
+    # verification.note 泄漏归 ai 职责——与 17:00 叙事步「先 --scope ai 再 --scope us」两次校验口径一致）
     imp_merge_warns = check_impact_merge(D) if scope in ('all', 'us') else []
     outlook_warns = check_outlook_depth(D) if scope in ('all', 'us') else []
     reason_warns = check_reason_depth(D) if scope in ('all', 'us') else []

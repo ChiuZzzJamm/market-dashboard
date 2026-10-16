@@ -177,7 +177,7 @@ def main():
         return
 
     import common
-    # 注意：默认**写回**（15:15 数据步直接调本脚本无参数即落盘），只有 --dry-run 不写。
+    # 注意：默认**写回**（16:00 数据步直接调本脚本无参数即落盘），只有 --dry-run 不写。
     dry = '--dry-run' in args
 
     D = common.load_dashboard_data(BASE)

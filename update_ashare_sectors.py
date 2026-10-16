@@ -984,7 +984,7 @@ def build_funds():
     return ins, outs
 
 def build_all_boards():
-    """约前 120 个板块（涨前60+跌前60）完整涨幅榜，供 16:15 叙事步 AI 预测验证按板块名匹配实际涨跌幅；不参与页面展示。"""
+    """约前 120 个板块（涨前60+跌前60）完整涨幅榜，供 17:00 叙事步 AI 预测验证按板块名匹配实际涨跌幅；不参与页面展示。"""
     out = {}
     for po in (1, 0):
         rows = fetch_boards("f3", po)
@@ -1109,10 +1109,10 @@ def main():
             b["volumeText"] = volume_text
             a["breadth"] = b
         if sectors_up is not None:
-            # 当日 reason 保留：16:15 叙事步由 AI 写入板块 reason，本脚本重建板块时
+            # 当日 reason 保留：17:00 叙事步由 AI 写入板块 reason，本脚本重建板块时
             # 若直接覆盖会把当日的 reason 洗掉（页面上"异动原因"消失）。
             # 仅当已有数据同为今日（tradeDate 相同）时按板块名保留 reason；
-            # 跨日不保留，避免昨天的原因挂今天的行情（跨日 reason 由 16:15 叙事步 AI 重新生成）。
+            # 跨日不保留，避免昨天的原因挂今天的行情（跨日 reason 由 17:00 叙事步 AI 重新生成）。
             if a.get("tradeDate") == now:
                 old_reason = {}
                 for s in (a.get("sectorsUp") or []) + (a.get("sectorsDown") or []):
@@ -1129,7 +1129,7 @@ def main():
             # R100z6：panorama 层镜像 sectorSource（原只在 ashare 层，行业全景排查口径时要翻两层）
             D.setdefault("panorama", {})["sectorSource"] = sector_src
             updated_parts.append("行业板块TOP5")
-            # 全板块涨幅榜（同花顺/东财push2delay/新浪，供 16:15 叙事步 AI 预测验证按板块名匹配实际涨跌幅；不参与页面展示）
+            # 全板块涨幅榜（同花顺/东财push2delay/新浪，供 17:00 叙事步 AI 预测验证按板块名匹配实际涨跌幅；不参与页面展示）
             all_b = all_boards
             if all_b:
                 a["allBoards"] = all_b
@@ -1183,11 +1183,11 @@ def main():
         if lianban is not None:
             # 空池且已有原值时保留（避免限频 rc:102 空池清空真实数据）；非空或首次则写回
             if lianban or not a.get("lianban"):
-                # 同日 reason/story 保留：16:15 叙事步由 AI 为连板标的补异动原因（reason）
+                # 同日 reason/story 保留：17:00 叙事步由 AI 为连板标的补异动原因（reason）
                 # 与深度解读（story），本脚本若同日重跑会重建 lianban（脚本侧 reason/story 恒为空），
                 # 把刚补的内容洗掉——与板块 reason 同类防护。
                 # 仅当已有数据同为今日（tradeDate 相同）时按 code 保留；跨日不保留
-                # （昨日理由不挂今日涨停池，跨日由 16:15 叙事步 AI 重新补全）。
+                # （昨日理由不挂今日涨停池，跨日由 17:00 叙事步 AI 重新补全）。
                 if a.get("tradeDate") == now:
                     old_reason = {}
                     for s in (a.get("lianban") or []):

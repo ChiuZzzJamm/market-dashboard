@@ -248,7 +248,7 @@ if mode == 'ashare':
     a = D.get('ashare')
     if not a or not a.get('indices'):
         print('[warn] ashare 数据缺失，跳过推送'); sys.exit(0)
-    # R100z54（15:15 数据步休市分支）：A股休市时**绝不能**把上一交易日的指数/板块/资金
+    # R100z54（16:00 数据步休市分支）：A股休市时**绝不能**把上一交易日的指数/板块/资金
     # 当作「今日收盘」推送——那会让休市日产生虚假行情。改为只推休市短讯：
     # 链接 + 休市说明 + 页面数据所属交易日，不含任何行情/标的/预测数字。
     _status = str(a.get('status') or '')
@@ -293,7 +293,7 @@ if mode == 'ashare':
         if lianban_line:
             desp_parts.append(lianban_line)
         desp_parts.append(build_panorama_line(D.get('panorama')))
-        # R100z4f：16:15 推送定稿清单=💡研判/💰资金/📈领涨/📉领跌/🔥连板/🌏日韩，删除「🧩 题材掘金」独立段（页面模块与 deduce 内嵌保留）
+        # R100z4f：17:00 推送定稿清单=💡研判/💰资金/📈领涨/📉领跌/🔥连板/🌏日韩，删除「🧩 题材掘金」独立段（页面模块与 deduce 内嵌保留）
         desp = '\n\n'.join(desp_parts)
 
 elif mode == 'us':

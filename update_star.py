@@ -47,7 +47,7 @@ def load_blacklist(base):
 
     R100z9y（2026-10-09 实战）：star 精选把硬风险黑名单标的（金溢科技 002869，
     red·两次减持公告）选进了 picks，直到 validate_stocks --scope star 才报 FAIL。
-    断板池由 15:15 数据步负责、谐波/九门/吸筹池也不查减持，**开盘精选是唯一有机会
+    断板池由 16:00 数据步负责、谐波/九门/吸筹池也不查减持，**开盘精选是唯一有机会
     在选股环节拦住这类标的的闸口**，故在脚本里硬剔（severity=red），而不是让
     每天靠 AI 事后补救（AI 补救还会踩「配额已用尽、下一名也上不了」的坑）。
     文件缺失/损坏一律按空处理（源不可达不等于安全，但也不阻塞本任务）。
@@ -130,7 +130,7 @@ def build_star(D, base=None):
     for pool in ("confirmed", "watching"):
         pools.extend(db.get(pool) or [])
 
-    # ---- R100m（需求7）：技术池候选——直接从 谐波/九门/吸筹 池取标的（前一日 15:15 数据步结果） ----
+    # ---- R100m（需求7）：技术池候选——直接从 谐波/九门/吸筹 池取标的（前一日 16:00 数据步结果） ----
     # 这些标的无 sentiment/probability（neutral 兜底），按池内得分排序，取头部，宁缺勿滥。
     # R100z85（量纲修正，2026-10-08 用户质询「标的映射只有断板+九门」暴露）：原实现全池合并
     # 按 score 降序取前 8，但九门量纲 score×10（8~10分=80~100）结构性碾压 谐波(确认65/观察55)
@@ -281,7 +281,7 @@ def build_star(D, base=None):
             continue  # 开盘深跌的形态标的暂不进精选
         if live is not None and live >= 9.5:
             continue  # 开盘即涨停（买不进），推荐无意义
-        note = f"{t['label']}·前日15:15筛选"
+        note = f"{t['label']}·前日16:00筛选"
         if q.get("openPct") is not None:
             note += f"·竞价{q['openPct']:+.1f}%"
         if live is not None:

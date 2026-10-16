@@ -63,7 +63,7 @@ _PYF_CANDS = (
 #   ② 前端引用处全部带真值兜底（if/三元/|| ''/typeof==='string' 等）
 # 以后若要新增豁免，必须同时补一条 G9b 能验证的理由，不许只往表里塞名字。
 EMPTY_WHITELIST = [
-    # --- 被动技术池：脚本只出形态/量化，AI 叙事由 16:15 叙事步 AI 写回，脚本阶段天然空 ---
+    # --- 被动技术池：脚本只出形态/量化，AI 叙事由 17:00 叙事步 AI 写回，脚本阶段天然空 ---
     (r"harmonic\.(confirmPool|watchPool|failPool)\[\d+\]\.(story|deduce)",
      "R100z4q：harmonic_detect 从旧池继承叙事，新形态条目脚本阶段无叙事，等 AI 写回"),
     (r"(accumulation|powerScreen)\.(scored|passed|strong|watch)\[\d+\]\.(story|deduce)",
@@ -137,7 +137,7 @@ VALIDATE_SCOPES = ("all", "ai", "us", "star")
 PRODUCT_OWNERSHIP = {
     "aiPrediction": {
         "require": ("aiPrediction", "AI 预测", "预测卡"),
-        "note": "16:15 叙事步写回 AI 叙事/概率，前端 AI 预测卡直接用",
+        "note": "17:00 叙事步写回 AI 叙事/概率，前端 AI 预测卡直接用",
     },
     "ashare": {
         "require": ("ashare", "A 股", "A股", "大盘"),
@@ -202,7 +202,7 @@ PRODUCT_OWNERSHIP = {
     },
     "policySignals": {
         "require": ("policySignals", "政策解码", "政策信号", "enrich_policy"),
-        "note": "R100z107b：enrich_policy.py 解码新闻标题为政策信号，16:15 叙事步在新闻写回后调用写回；前端政策信号解码面板渲染",
+        "note": "R100z107b：enrich_policy.py 解码新闻标题为政策信号，17:00 叙事步在新闻写回后调用写回；前端政策信号解码面板渲染",
     },
     "macroCalendar": {
         "require": (),
@@ -664,8 +664,8 @@ def g8_g9_g10_data(r):
     else:
         r.ok("G10", f"各模块日期均 ≥ 最近交易日 {last}")
 
-    # openOutlook.pos 闭环（R100z13 → 16:15 score_openoutlook 打分依赖）
-    # 分流：① 前瞻已为「下一交易日」写了但缺 pos → 真缺陷（当天 16:15 必然 [SKIP]）
+    # openOutlook.pos 闭环（R100z13 → 17:00 score_openoutlook 打分依赖）
+    # 分流：① 前瞻已为「下一交易日」写了但缺 pos → 真缺陷（当天 17:00 必然 [SKIP]）
     #      ② 前瞻尚未为下一交易日写 → 属正常未到期，INFO 不告警
     def next_trading_day(start):
         d = start
@@ -686,11 +686,11 @@ def g8_g9_g10_data(r):
     pos_bad = (not isinstance(oo.get("pos"), dict)
                or not {"tendency", "bandLo", "bandHi", "volExpect"} <= set(oo["pos"]))
     if not pos_bad:
-        r.ok("G10", f"openOutlook.pos 完整（date={oo_date}，16:15 前瞻打分闭环可用）")
+        r.ok("G10", f"openOutlook.pos 完整（date={oo_date}，17:00 前瞻打分闭环可用）")
     elif nxt and oo_date and oo_date >= nxt:
         r.fail("G10", f"openOutlook(date={oo_date}) 已为下一交易日 {nxt} 写了前瞻却缺结构化 pos"
-                      f"（tendency/bandLo/bandHi/volExpect）→ 当日 16:15 score_openoutlook 将 [SKIP]。"
-                      f"本条硬拦 deploy：08:30 当次就该发现，不许拖到 16:15")
+                      f"（tendency/bandLo/bandHi/volExpect）→ 当日 17:00 score_openoutlook 将 [SKIP]。"
+                      f"本条硬拦 deploy：08:30 当次就该发现，不许拖到 17:00")
     elif nxt:
         r.ok("G10", f"openOutlook 尚未为下一交易日 {nxt} 写入前瞻（date={oo_date}）"
                     f"——08:30 自动化到期后补写；届时 audit 会校验 pos 是否完整，缺 pos 即 FAIL")
@@ -868,7 +868,7 @@ def g12_deadlinks(r):
         r.ok("G12", f"{len(autos)} 条看板自动化 cwds 均为合法 JSON 数组且指向本项目、rrule 非空")
 
     # ②c 流程纪律：会 deploy.sh 上线的自动化必须接审计闸门；prompt 不得写死闸门基线数字。
-    # R100z65：此前 audit_pipeline 只接在 16:15 与周日 22:00 两条上，07:00/08:30/9:45
+    # R100z65：此前 audit_pipeline 只接在 17:00 与周日 22:00 两条上，07:00/08:30/9:45
     # 三条都会 deploy.sh 上线却绕过闸门——「闸门只长在部分任务身上」也是半死链路。
     # 而写死 PASS=24 这类基线数字，闸门一增项就必然误判（现自报 27）。
     miss_gate = [a["name"] for a in autos
@@ -957,7 +957,7 @@ def g14_prompt_broken_path(r):
     相对文件名是否存在于磁盘，扫不到 prompt 内写死的绝对路径，故补本闸固化。
 
     注意：本闸只拦「缺 dashboard/ 的裸路径签名」，不拦「cd /WorkBuddy/market dashboard && python3 ...」
-    这种未引号 cd 形式——后者在自动化执行器内能正确运行（16:15/08:30/09:45 及本任务内
+    这种未引号 cd 形式——后者在自动化执行器内能正确运行（17:00/08:30/09:45 及本任务内
     多行正确调用均为该形式，已实证可部署），本地裸 shell 测出的 cd 报错属执行上下文差异。"""
     autos = load_auto_prompts()
     bad = []
@@ -1087,7 +1087,7 @@ def collect_g16_checks(D):
         add("aiPrediction.openOutlook", ap.get("openOutlook"), 300)
 
     # A 股题材掘金 logic（R100z129 补齐：docstring 早已声明 240，但代码一直漏检，
-    # 只靠 16:15 prompt 软约束 240-420 —— 用户 2026-10-13 拍板补机器闸）
+    # 只靠 17:00 prompt 软约束 240-420 —— 用户 2026-10-13 拍板补机器闸）
     for i, t in enumerate((D.get("ashare") or {}).get("themePicks") or []):
         if isinstance(t, dict):
             add(f"ashare.themePicks[{i}].logic", t.get("logic"), 240)
@@ -1276,8 +1276,8 @@ def g17_template_tails(r):
 def g18_policy_signals(r):
     """G18 政策信号解码闸门（R100z107b）：policySignals 若存在则必须结构合法。
 
-    由 enrich_policy.py 在 16:15 叙事步写回。非 16:15 叙事步部署时该节点可能尚未生成
-    （由前一次 16:15 叙事步持久化在 data.js 中），缺失属预期 → WARN 不拦。"""
+    由 enrich_policy.py 在 17:00 叙事步写回。非 17:00 叙事步部署时该节点可能尚未生成
+    （由前一次 17:00 叙事步持久化在 data.js 中），缺失属预期 → WARN 不拦。"""
     try:
         D = load_data_json()
     except Exception as e:                                   # noqa: BLE001
@@ -1285,8 +1285,8 @@ def g18_policy_signals(r):
         return
     ps = D.get("policySignals")
     if ps is None:
-        r.warn("G18", "policySignals 尚未生成（应由 16:15 叙事步 enrich_policy.py 写回）——"
-                     "非 16:15 叙事步部署时为预期，16:15 后会补齐")
+        r.warn("G18", "policySignals 尚未生成（应由 17:00 叙事步 enrich_policy.py 写回）——"
+                     "非 17:00 叙事步部署时为预期，17:00 后会补齐")
         return
     if not isinstance(ps, list):
         r.fail("G18", "policySignals 不是数组")
@@ -1317,7 +1317,7 @@ def g19_summary_freshness(r):
 
     事故：2026-10-12 的 ashare.tradeDate 已更新为当日，但 ashare.summary 仍是 10/9 的
     旧收盘综述（含「10月9日」「沪指3813.79点涨0.05%」等陈旧点位），上线即「日期更新、
-    内容没更新」。本闸检测两类陈旧信号，FAIL 拦部署，强迫 16:15 每轮用当日数据重写：
+    内容没更新」。本闸检测两类陈旧信号，FAIL 拦部署，强迫 17:00 每轮用当日数据重写：
       ① summary 里出现「M月D日」日期字面量且 ≠ tradeDate 的月日（说明在讲旧交易日）；
       ② summary 里出现收盘型点位（数字须紧贴「点/涨/跌」信号，排除成交额/市值等「X亿元」
          类非指数数值误伤）且数值与当日任一指数 point 偏差 > 2.0（说明在引用旧收盘点位）。

@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610161942"></script>
+<script src="data.js?v=202610162002"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -257,7 +257,7 @@
   /* 卡片 h2 内日期角标（主力资金流向等，R98f；R99e 扩展到 AI 预测卡） */
   .card h2 .h2-date, .ai-card h2 .h2-date, .wk-card h2 .h2-date, .mc-card h2 .h2-date { font-size: 12.5px; color: var(--ink2); font-weight: 400; margin-left: 8px; }
   /* R100z54：开盘前瞻结构化假设 pos 速览三格（倾向 / 点位区间 / 量能），
-     08:30 写、16:15 打分用；此前前端完全不消费，只进台账不上页面。 */
+     08:30 写、17:00 打分用；此前前端完全不消费，只进台账不上页面。 */
   .oo-pos { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 16px; }
   .oo-pos-item { flex: 1 1 120px; min-width: 110px; background: var(--accent-soft); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; }
   .oo-pos-item .k { display: block; font-size: 11px; color: var(--ink2); letter-spacing: 1px; margin-bottom: 3px; }
@@ -816,7 +816,7 @@
     <h1>每日市场看板</h1>
     <div class="sub">A 股 · 美股 · 全球产业全景</div>
     <span class="updated" id="updatedAt"></span>
-    <div class="schedule-note">自动更新：A股 周一至五 15:15 数据更新 · 16:15 叙事与部署 · 美股 周一至五 08:30 隔夜收盘（含AI预测与A股映射） · 周日 22:00 全球要闻 + 周一开盘预判</div>
+    <div class="schedule-note">自动更新：A股 周一至五 16:00 数据更新 · 17:00 叙事与部署 · 美股 周一至五 08:30 隔夜收盘（含AI预测与A股映射） · 周日 22:00 全球要闻 + 周一开盘预判</div>
   </div>
 
   <div id="weekend-news"></div>
@@ -1165,7 +1165,7 @@ function renderReasons(list, tradeDate, isUp, market) {
     var hasReason = !!(s.reason && s.reason.title);
     // 板块名与涨跌幅合并为一枚胶囊：涨=红底白字，跌=绿底白字；无涨跌幅时退回白底胶囊
     // R99h：板块胶囊点击看板块日K（同花顺行业口径，与断板页 TOP10 板块K线同款弹窗）；
-    // 有 thsCode 才可点；脚本内嵌的 s.kline（15:15 数据步 update_ashare_sectors 附带）注册进 _SEC_KL 供弹窗直读
+    // 有 thsCode 才可点；脚本内嵌的 s.kline（16:00 数据步 update_ashare_sectors 附带）注册进 _SEC_KL 供弹窗直读
     var klAttr = s.thsCode ? ' onclick="openSectorKline(\'' + esc(s.name) + '\',\'' + esc(s.thsCode) + '\',\'' + esc(market || 'ashare') + '\')" title="点击查看板块走势与行业新闻" style="cursor:pointer"' : '';
     if (s.kline && s.thsCode) { window._SEC_KL = window._SEC_KL || {}; window._SEC_KL[s.thsCode] = s.kline; }
     var pctHtml = (s.pct !== null && s.pct !== undefined)
@@ -1698,7 +1698,7 @@ function quadPill(s) {
 }
 
 /* R100z15 缺口③：退出纪律行（止损 / 目标 / 证伪）。
-   取数优先级：标的自带 st.exit（16:15 叙事步写回）> stock_pool.json 里的机械池 exit（异步兜底）。
+   取数优先级：标的自带 st.exit（17:00 叙事步写回）> stock_pool.json 里的机械池 exit（异步兜底）。
    两者都取不到就这一行不渲染，绝不猜一个止损位糊上去。 */
 var POOL_EXIT = null;
 
@@ -1724,7 +1724,7 @@ function loadPoolExit(cb) {
 }
 
 /* R100z18：退出纪律统一取数（按码查，供 AI 预测行 / 个股弹窗 / 断板弹窗共用）。
-   优先级：机械选股池 exit（异步兜底）> AI 预测内嵌 st.exit（16:15 叙事步写回）> 谐波形态几何。
+   优先级：机械选股池 exit（异步兜底）> AI 预测内嵌 st.exit（17:00 叙事步写回）> 谐波形态几何。
    谐波是**技术指标自带**的止损/目标（stop=形态失效位、target1=一级目标），
    使弹窗对谐波池标的无需任何写回也有退出纪律；实在取不到就整行不渲染，绝不编一个止损位糊上去。 */
 function exitForCode(code0, st, allowFb) {
@@ -2159,7 +2159,7 @@ function renderAiPrediction() {
 
 /* R100z82：盘前预测兑现验证块（板块层）。原「漂浮在 AI 预测卡底部」，R100z81 并入大盘趋势研判卡，
    现按用户 2026-10-08 要求移回 AI 预测卡底部（renderAiPrediction 内调用）。
-   只读顶层 aiPrediction.verification（16:15 叙事步填充的当日盘前预测兑现验证），标题带 aiPrediction.date
+   只读顶层 aiPrediction.verification（17:00 叙事步填充的当日盘前预测兑现验证），标题带 aiPrediction.date
    表示「该日预测」的命中/未命中时间，与下方各板块卡的 stockCheck 日期一致。
    note 做 cleanLeak 清洗（去 alignRate= / cal_factor 等英文泄漏）。无 verification 返回空串。
    标的层 stockCheck 已下沉到各板块卡内，这里不再渲染（见 renderStockCheckLine）。 */
@@ -3266,7 +3266,7 @@ function lbStoryHtml(st) {
   var story = String(st.story || '').trim();
   if (!story) {
     var fallback = st.reason || st.hybk || '';
-    return '<p>' + esc(fallback ? '当日连板驱动：' + fallback + '。' : '') + '深度解读生成中（每日 16:15 收盘后自动化补全）。</p>';
+    return '<p>' + esc(fallback ? '当日连板驱动：' + fallback + '。' : '') + '深度解读生成中（每日 17:00 收盘后自动化补全）。</p>';
   }
   // 按「【」小标题分段（与大盘研判 formatOutlook 同款规则），段内【标题】加粗高亮
   var segs = story.split(/(?=【)/).filter(function (x) { return x.trim(); });
@@ -3668,7 +3668,7 @@ function dbPoolHtml(title, cls, sub, list, done, poolKey) {
 function renderDuanban() {
   DB_INDEX = {}; DB_ORDER = [];
   var db = duanbanData();
-  document.getElementById('db-date').textContent = db && db.generatedAt ? '数据生成：' + db.generatedAt + '（每日 15:15 数据更新 · 16:15 叙事部署 · 次日 07:00 隔夜复核）' : '数据生成：—（待 15:15 数据步首跑）';
+  document.getElementById('db-date').textContent = db && db.generatedAt ? '数据生成：' + db.generatedAt + '（每日 16:00 数据更新 · 17:00 叙事部署 · 次日 07:00 隔夜复核）' : '数据生成：—（待 16:00 数据步首跑）';
   // R100z4v：断板页口径说明改静态（与谐波/九门/吸筹三子页同款 hz-sub + 悬停详解）——
   // 原用动态 db.note，该字段被 07:00 自动化 AI 写回污染（写入流程说明而非口径），弃用。
   // R100z26：断板页口径说明改成与谐波/九门/吸筹同款的「可展开条目块」。
@@ -3678,7 +3678,7 @@ function renderDuanban() {
     '<div><b>判定四步（须按顺序）</b>：① T 日涨停 → ② 次日放量断板（成交量≥1.5×T 日） → ③ 缩量回踩 → ④ 不破 T 日最低点、也站稳 MA5 → 待反包</div>' +
     '<div><b>两个池</b>：确认池＝四步全流程走完（可随时等反包）；观察池＝形态进行中、只差最后一根确认 K 线（先待企稳、再待缩量）</div>' +
     '<div><b>选股范围</b>：仅沪深主板 60/00，排除科创板 688 与北交所；用东财涨停池取 T 日、腾讯日 K 核验（check_duanban.py，纯脚本确定性，不靠人眼）</div>' +
-    '<div><b>标签与概率</b>：按当日要闻/AI 预测自动标注利好（红）/利空（绿）/中性（灰）；上涨概率＝脚本确定性基线＋AI 复核校准（15:15 数据步生成，次日 07:00 复核）</div>' +
+    '<div><b>标签与概率</b>：按当日要闻/AI 预测自动标注利好（红）/利空（绿）/中性（灰）；上涨概率＝脚本确定性基线＋AI 复核校准（16:00 数据步生成，次日 07:00 复核）</div>' +
     '<div class="lg-hr"></div>' +
     '<div><b>失效与归档</b>：跌破 T 日最低点或 MA5（破位）、或 5 个交易日内没走完反包（超期）→ 移入失败池，5 个交易日后自动清理</div>' +
     '<div class="lg-tip">下一步：缩量不破位只算「跌不动」，反包日放量收复断板日最高价 / 站回 MA5 才算真确认；破位无条件走，不摊平不扛单。此页与「谐波 / 九门 / 吸筹」同为技术面观察器，仓位按中等及以下确信度给。</div>' +
@@ -3699,7 +3699,7 @@ function renderDuanban() {
   if (tb.length) {
     var hasPct3 = tb[0] && tb[0].pct3 != null;
     fixed += '<div class="db-pool" style="padding-bottom:14px;"><h2>📈 近3个交易日涨幅居前板块 TOP10</h2>' +
-      '<div class="db-sub">同花顺行业口径 · ' + (hasPct3 ? '3个交易日累计涨幅 · ' : '') + '今日=当日涨幅（每日 15:15 数据步随断板反包更新）</div><div class="db-tb">';
+      '<div class="db-sub">同花顺行业口径 · ' + (hasPct3 ? '3个交易日累计涨幅 · ' : '') + '今日=当日涨幅（每日 16:00 数据步随断板反包更新）</div><div class="db-tb">';
     tb.forEach(function (b, i) {
       var up3 = b.pct3 != null ? b.pct3 >= 0 : null, up1 = b.pctToday >= 0;
       var p3cell = b.pct3 != null ? '<div class="db-tb-p3 ' + (up3 ? 'up' : 'down') + '">' + (up3 ? '+' : '') + b.pct3.toFixed(2) + '%</div>' : '';
@@ -3720,10 +3720,10 @@ function renderDuanban() {
   // 仅保留断板反包池内标的（R99 剔除板块动量等池外候选），按上涨概率降序；卡片复用确认池 db-chip 样式、
   // 金色「精选」徽标区分；点击弹窗 1:1 复用确认池/观察池标的弹窗（openDbModal）。
   // R100e：🌟 开盘精选展示闸门——仅当 star.date == 本地今日 才渲染。
-  // 依据：9:45 自动化唯一写入当日 star；15:15 数据步经 merge_duanban 仅保留「date==今日」的 star（展示）；
+  // 依据：9:45 自动化唯一写入当日 star；16:00 数据步经 merge_duanban 仅保留「date==今日」的 star（展示）；
   // 07:00/08:30/周日22:00 流水线不写 star，但历史上会把前一交易日的 star 原样带出 data.js。
   // 页面此前只看 st.picks.length，导致陈旧 star 在「不更新不展示」的时段被错误展示。
-  // 加日期闸门后：非今日的 star 一律隐藏；今日的 star（9:45 写入 / 15:15 数据步保留）正常展示。
+  // 加日期闸门后：非今日的 star 一律隐藏；今日的 star（9:45 写入 / 16:00 数据步保留）正常展示。
   var st = db && db.star;
   var _td = new Date();
   var _tdStr = _td.getFullYear() + '-' + String(_td.getMonth() + 1).padStart(2, '0') + '-' + String(_td.getDate()).padStart(2, '0');
@@ -5187,7 +5187,7 @@ function openBoardKline(name, kline) {
 }
 
 /* ===== R99h：A股页板块异动胶囊点击看板块日K（同花顺行业口径） =====
-   数据两级来源：① 15:15 数据步 update_ashare_sectors 内嵌 s.kline（renderReasons 已注册进 _SEC_KL）；
+   数据两级来源：① 16:00 数据步 update_ashare_sectors 内嵌 s.kline（renderReasons 已注册进 _SEC_KL）；
    ② 无内嵌时前端 JSONP 实时拉 d.10jqka.com.cn/v4/line/bk_<thsCode>/01/last.js。
    回调名为 URL 固定值（quotebridge_v4_line_bk_<code>_01_last），用 defineProperty 拦截
    全局赋值（R98q 新浪同款手法）；script 标签加载不受 CORS 限制，referrerPolicy=no-referrer。 */
