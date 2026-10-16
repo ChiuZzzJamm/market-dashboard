@@ -4,7 +4,7 @@
 用户拍板（2026-10-01）：「当天开盘前瞻的结论在每天 16 点自动化里面更新吧，次日早上更新新的
 开盘前瞻再覆盖掉即可」——即：
     T 日 08:30 写 openOutlook（含结构化假设 openOutlook.pos：倾向 / 点位区间 / 量能预期）
-    T 日 16:30 叙事步本脚本按当日真实收盘给这份前瞻打分，结果写进台账 open[date]；
+    T 日 16:15 叙事步本脚本按当日真实收盘给这份前瞻打分，结果写进台账 open[date]；
                 AI 再把打分写回 openOutlook.verification（当日可见一天）
     T+1 08:30 新前瞻整字段覆盖旧的（verification 随之消失，历史留在台账里不会被冲掉）
 
@@ -15,7 +15,7 @@
 
 用法：
     python3 score_openoutlook.py                # 打分并写入台账 open[date]
-    python3 score_openoutlook.py --json         # 机器可读输出（16:30 叙事步写 openOutlook.verification 用）
+    python3 score_openoutlook.py --json         # 机器可读输出（16:15 叙事步写 openOutlook.verification 用）
     python3 score_openoutlook.py --view         # 只看台账里已有的前瞻打分，不写
 """
 import argparse
@@ -114,7 +114,7 @@ def main():
     st = load_state()
     if not st:
         # R100z72：台账状态缺失是「08:30 尚未写入 openOutlook.pos」的常态（非错误），
-        # 本步本就是 16:30 叙事步里的非关键打分环节——返回 0（跳过）而非 1，否则会被自动化
+        # 本步本就是 16:15 叙事步里的非关键打分环节——返回 0（跳过）而非 1，否则会被自动化
         # 当成「步骤失败」中断部署。
         print('[SKIP] 前瞻台账状态缺失（08:30 尚未写入 openOutlook.pos），本步跳过（不计入失败）')
         return 0
@@ -193,7 +193,7 @@ def main():
         print(f"[OK] 开盘前瞻兑现打分 {day}：{verdict}（倾向 {t_hit} / 点位 {b_hit} / 量能 {v_hit}，综合 {score}）")
         print('      实际：上证 %s 点 %s%%；涨跌家数占比 %s；%s' %
               (point, pct, up_rate, br.get('volumeText') or ''))
-        print('      已写入台账 open[%s]；请由 16:30 叙事步把此结果写回 data.js 的 openOutlook.verification' % day)
+        print('      已写入台账 open[%s]；请由 16:15 叙事步把此结果写回 data.js 的 openOutlook.verification' % day)
     return 0
 
 

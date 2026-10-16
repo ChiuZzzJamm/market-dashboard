@@ -166,7 +166,7 @@ def main():
             print(f"[merge] entryDate 兜底补齐 {_n_ed} 处（R100z44 入池首日标记）", file=sys.stderr)
     except Exception as e:
         print(f"[WARN] entryDate 兜底失败（不影响合并）：{e}", file=sys.stderr)
-    # R98k：保留 🌟 开盘半小时精选（9:45 自动化产物，15:30 数据步重建 duanban 时不得洗掉）。
+    # R98k：保留 🌟 开盘半小时精选（9:45 自动化产物，15:15 数据步重建 duanban 时不得洗掉）。
     #
     # R100z16 修 bug：原判定是「star.date == 今天」才保留，但 07:00 复核任务比 9:45 早两个多小时就跑
     # merge_duanban，比 9:45 早两个多小时——那天 09:30 生成的 star 此刻 date 是昨天，

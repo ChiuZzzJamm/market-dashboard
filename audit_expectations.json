@@ -557,7 +557,7 @@
   },
   {
    "id": "a140dfda-b878-4c9d-9a03-448d0d55a58b",
-   "schedule": "MO,TU,WE,TH,FR 15:30",
+   "schedule": "MO,TU,WE,TH,FR 15:15",
    "stepOrder": [
     0,
     1,
@@ -693,20 +693,20 @@
     "weekendNews",
     "aiPrediction",
     "openOutlook",
-    "ashare.reason / 五节要闻 / themePicks / outlook 等叙述字段（16:30 叙事步职责）",
+    "ashare.reason / 五节要闻 / themePicks / outlook 等叙述字段（16:15 叙事步职责）",
     "duanban.star",
-    "stkKlines（16:30 叙事步 embed_klines 职责）",
+    "stkKlines（16:15 叙事步 embed_klines 职责）",
     "strategy/macroCalendar 顶层键（deploy.sh 自动生成）"
    ],
    "notes": [
-    "R100z138（2026-10-16）：由原 16:00 任务（automation-1788494481279）拆分出的数据步，rrule 15:30。",
+    "R100z138（2026-10-16）：由原 16:00 任务（automation-1788494481279）拆分出的数据步，rrule 15:15（R100z139 用户拍板由 15:30 提前）。",
     "本步不部署不推送（休市分支除外：SKIP_AUDIT=1 bash deploy.sh 上线休市状态）。",
     "第 2 步断板 story 由脚本基于 check_duanban 真实字段数据驱动填充，AI 逐只复核 sentiment/格式/probability。"
    ]
   },
   {
    "id": "automation-1788494481279",
-   "schedule": "MO,TU,WE,TH,FR 16:30",
+   "schedule": "MO,TU,WE,TH,FR 16:15",
    "stepOrder": [
     0,
     1,
@@ -1057,8 +1057,8 @@
     "stopTrack 的 AI 手写"
    ],
    "notes": [
-    "R100z138（2026-10-16）：16:00 任务拆分为 15:30 数据步 + 16:30 叙事步两条自动化，本条目为叙事步（原 automation-1788494481279 改 rrule 到 16:30）。",
-    "第 0 步核验 15:30 数据步产物当日性，缺失则补跑对应脚本（scripts 里标注「补跑分支」）。",
+    "R100z138（2026-10-16）：16:00 任务拆分为 15:15 数据步 + 16:15 叙事步两条自动化，本条目为叙事步（原 automation-1788494481279 改 rrule 到 16:15；R100z139 用户拍板由 16:30 提前）。",
+    "第 0 步核验 15:15 数据步产物当日性，缺失则补跑对应脚本（scripts 里标注「补跑分支」）。",
     "第 10 步先 node --check data.js，再 validate_stocks.py --no-fix --scope ai 与 --scope us 二跑，check_narrative 预检后 audit_pipeline FAIL=0 才 deploy.sh + run_push.sh ashare。"
    ]
   },
@@ -1322,7 +1322,7 @@
    ],
    "notes": [
     "第 5.5 步的 validate_stocks.py 已改为双跑：--no-fix --scope ai 与 --no-fix --scope us 各跑一次，两次 ALL OK 才可进入第 6 步部署（R95：禁止裸跑，裸跑会真实写回 data.js 并从后门改掉本任务写入边界外的字段）。",
-    "本任务明确不运行 accumulation_score / harmonic_detect / power_screener（沿用周五 15:30 数据步产物），三者仅出现在禁止/保持条款中，故未计入 scripts。",
+    "本任务明确不运行 accumulation_score / harmonic_detect / power_screener（沿用周五 15:15 数据步产物），三者仅出现在禁止/保持条款中，故未计入 scripts。",
     "cal_factor.py 还支持 --date 逐日试算以判定 NEXT_DAY，未在 scripts 中单独列调用。"
    ]
   }
