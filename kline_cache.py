@@ -238,8 +238,41 @@ def get_kline(code, days=320):
     return _read_cache(cp)
 
 
+def prune_cache(verbose=False):
+    """清理超过 TTL 的缓存文件（R100z141 新增）。
+
+    背景：缓存目录只写不删——`_cache_valid` 判过期后下次抓取会覆盖同名文件，
+    但**换成新 code 池后旧 code 的缓存永远留在盘中**（full_scan 每轮几百只滚动），
+    2026-10-16 实测 1246 份里 140 份已超 20h TTL，任其增长会无限堆积。
+    口径：删 mtime 超过 CACHE_TTL_H 的 `*.json`；`industry_map.json` 有
+    自己的日期级新鲜度逻辑（sina_industry_map 内），跳过不删。
+    任何异常只吞不抛——清理是保洁逻辑，严禁影响取数主流程。
+    """
+    try:
+        if not os.path.isdir(CACHE_DIR):
+            return 0
+        cutoff = time.time() - CACHE_TTL_H * 3600.0
+        n = 0
+        with os.scandir(CACHE_DIR) as it:
+            for entry in it:
+                try:
+                    if not entry.name.endswith('.json') or entry.name == 'industry_map.json':
+                        continue
+                    if entry.is_file(follow_symlinks=False) and entry.stat().st_mtime < cutoff:
+                        os.unlink(entry.path)
+                        n += 1
+                except Exception:
+                    continue
+        if verbose and n:
+            print(f"[kline_cache] 清理过期缓存 {n} 份（TTL {CACHE_TTL_H:g}h）")
+        return n
+    except Exception:
+        return 0
+
+
 def get_klines_bulk(codes, days=320, workers=8):
     """并行批量取 K 线，返回 {code: bars 或 None}。遵守总时间预算。"""
+    prune_cache(verbose=True)
     out = {c: None for c in codes}
     todo = [c for c in codes if not _cache_valid(_cache_path(c))]
     if todo:
