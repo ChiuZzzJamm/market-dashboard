@@ -16,6 +16,9 @@ validate 之前运行，把所有 A股标的的日 K 线一次性抓取并写入
 
 防清场（R91m 铁律）：本脚本只新增/更新 stkKlines、stkKlineNames 两个顶层字段；
 全部抓取失败时保留既有值，绝不写空覆盖。其余字段一律不触碰。
+唯一例外（R100z142，2026-10-16 用户拍板）：剔除 stkKlines 死代码条目——不在当前
+扫描域且末K 陈旧的键（退市/长期停牌票，抓取必失败、每轮空转刷新还占 data.js 体积）；
+当前扫描域内的标的（含抓取失败按 R91m 保留旧值的）永不剔除。
 
 用法：python3 embed_klines.py [--deadline 240]
 挂载：17:00 / 07:00 / 周日 22:00 自动化在 AI 写回之后运行（08:30 不写 A股标的，不挂）。
@@ -39,6 +42,9 @@ SINA_URL = ("https://quotes.sina.cn/cn/api/json_v2.php/CN_MarketDataService.getK
             "?symbol={sym}&scale=240&ma=no&datalen={n}")
 BARS_DEFAULT = 90
 BARS_HARMONIC = 90  # R100z6g：与 DEFAULT 统一（保留分流结构便于日后调整）；当前 24 只谐波形态点均在 90 窗口内
+# R100z142：stkKlines 死代码判定阈值——末K 距今年数超过此值、且不在当前扫描域的键，
+# 视为退市/长期停牌死票（抓取必失败，每轮空转刷新还占 data.js 体积），run 时剔除。
+DEAD_KLINE_DAYS = 120
 # R98j：大盘指数 sym（前端点击指数看K线；指数键带 sh/sz 前缀，与个股 6 位键不冲突）
 INDEX_SYMS = {"上证指数": "sh000001", "深证成指": "sz399001", "创业板指": "sz399006",
               "科创50": "sh000688", "上证50": "sh000016"}
@@ -318,6 +324,39 @@ def pools_meta_patch(D, fetch=True):
     return renamed, chg_fixed, note_cleaned
 
 
+def prune_dead_klines(kl, pool_codes, pool_syms, max_age_days=DEAD_KLINE_DAYS, today=None):
+    """R100z142：剔除 stkKlines 死代码条目（用户 2026-10-16 拍板，「剔除吧」）。
+
+    判定：不在当前扫描域（pool_codes/pool_syms）且末K 日期距今年数超过 max_age_days 的键。
+    这类键是退市/长期停牌票——抓取必失败、每轮被纳入刷新却永远失败、旧数据还占
+    data.js 体积（5.2MB 的主要增长源）。就地修改 kl，返回被剔除的键（已排序）。
+
+    防清场铁律延伸：当前扫描域内的标的永不剔除——包括抓取失败、按 R91m 保留旧值的
+    （如 600837 海通证券：2025 年合并退市，仍被 bankViews 要闻引用，弹窗要靠旧 K 线）。
+    stkKlineNames 无需在此处理：main() 末尾按 `c in kl` 的过滤会自动同步。
+    """
+    if not isinstance(kl, dict) or not kl:
+        return []
+    today = today or datetime.now(TZ8).date()
+    cutoff = (today - timedelta(days=max_age_days)).isoformat()
+    dead = []
+    for k in list(kl.keys()):
+        if k in pool_codes or k in pool_syms:
+            continue
+        arr = kl.get(k)
+        if not (isinstance(arr, list) and arr and isinstance(arr[-1], list) and arr[-1]):
+            continue
+        try:
+            last = str(arr[-1][0])[:10]
+        except Exception:
+            continue
+        if last and last < cutoff:
+            dead.append(k)
+    for k in dead:
+        del kl[k]
+    return sorted(dead)
+
+
 def main():
     # R100z72：先读 KLINE_DEADLINE 环境变量（kline_cache 同一约定，使 17:00 流水线
     # 通过 `KLINE_DEADLINE=900` 设定的预算真正生效；此前只认 `--deadline` CLI，
@@ -346,6 +385,13 @@ def main():
     # 既有内嵌保留（防清场），只补缺/刷新
     kl = D.get("stkKlines") if isinstance(D.get("stkKlines"), dict) else {}
     kl_names = D.get("stkKlineNames") if isinstance(D.get("stkKlineNames"), dict) else {}
+
+    # R100z142（2026-10-16 用户拍板）：剔除死代码条目（不在扫描域且末K 陈旧的退市/停牌票）。
+    # 必须在下面「既有键全部纳入刷新」之前抓取当前扫描域快照，否则死键会被并进 codes 免剔。
+    pool_codes, pool_syms = set(codes), set(syms)
+    pruned = prune_dead_klines(kl, pool_codes, pool_syms)
+    if pruned:
+        print(f"[info] 剔除 stkKlines 死代码条目 {len(pruned)} 只: {','.join(pruned)}")
 
     # R100z6g：既有 stkKlines 的全部键也纳入刷新；谐波池键 90 根、其余 90 根（统一）
     hz_pool = D.get("harmonic") if isinstance(D.get("harmonic"), dict) else {}
