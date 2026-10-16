@@ -116,7 +116,8 @@
     "merge_duanban.py /tmp/duanban_am.json",
     "embed_klines.py",
     "us.macroNews",
-    "保持该字段原值不动"
+    "保持该字段原值不动",
+    "price-in→已计价"
    ],
    "forbidden": [
     "①",
@@ -316,7 +317,8 @@
     "retag_duanban.py",
     "openOutlook.pos",
     "sectors[].exp",
-    "check_stock_pool"
+    "check_stock_pool",
+    "price-in 写作「已计价」"
    ],
    "forbidden": [
     "①",
@@ -490,7 +492,8 @@
     "harmonic_detect.py",
     "power_screener.py",
     "accumulation_score.py",
-    "full_scan.py"
+    "full_scan.py",
+    "price-in→已计价"
    ],
    "forbidden": [
     "①",
@@ -645,7 +648,8 @@
     "FULLSCAN_MAX=500 KLINE_DEADLINE=900",
     "KLINE_DEADLINE=900",
     "SKIP_AUDIT",
-    "tdx"
+    "tdx",
+    "price-in→已计价"
    ],
    "forbidden": [
     "①",
@@ -921,7 +925,8 @@
     "run_push.sh ashare",
     "verification.stockCheck[].fund",
     "narrative_patch.json",
-    "check_narrative.py"
+    "check_narrative.py",
+    "price-in→已计价"
    ],
    "forbidden": [
     "①",
@@ -1192,7 +1197,8 @@
     "track_calibration.py --json",
     "embed_klines.py",
     "ashare 全部字段不变",
-    "run_push.sh weekend"
+    "run_push.sh weekend",
+    "price-in→已计价"
    ],
    "forbidden": [
     "①",
