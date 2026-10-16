@@ -1041,33 +1041,12 @@ def g15_interp_bins(r):
         r.ok("G15", f"{len(autos)} 份 prompt 引用的解释器入口均可用（run-node/run-python 自修复生效）")
 
 
-def g16_narrative_depth(r):
-    """G16 防 AI 偷懒·叙事深度硬闸（R100z94）。
+def collect_g16_checks(D):
+    """G16 叙事深度字段清单采集（R100z136 从 g16_narrative_depth 拆出）。
 
-    背景：用户复盘满意 A 股深度（板块 285-390 / 题材 371-411 / 要闻 333-431 字），
-    但美股 us.* 长期只有 60-110 字（根因：07:00 / 周日两条自动化 prompt 把字数上限
-    写成 60-110）。量化页（谐波/九门/吸筹）无叙事字段渲染，其空 story 是设计行为，不在这
-    里管；chip 标签类字段（lianban.reason / 各池 note / star.picks.note / failPool.reason）
-    也非主叙事，不在这管。本闸只管「真正渲染给用户的长文主字段」。
-
-    阈值（字符数，留足安全垫、远在偷懒区之上）：
-        A 股 板块 reason.detail / 题材 logic / 五节要闻 summary → 240
-        A 股 outlook / us.outlook → 300
-        A 股 aiPrediction.sectors[].logic → 200
-        A 股 开盘前瞻 openOutlook → 300
-        A 股 lianban[].story → 120；duanban confirmed/watching[].story → 100
-        A 股 accumulation.{scored,strong,watch}[].note → 90
-        美股 板块 reason.detail / 五节要闻 summary → 200
-        美股 顶层 summary（脚本生成，数据驱动多维复盘）→ 150
-    低于阈值即 FAIL（拦部署）；阈值取「当前已达标数据的最小值再下探一档」，
-    既能挡住偷懒，又不误伤正常波动。
+    check_narrative.py 落笔前预检复用本函数——预检与审计闸门必须同一份清单、
+    同一套阈值，禁止出现两套口径。返回 [(label, text, floor), ...]。
     """
-    try:
-        D = load_data_json()
-    except Exception as e:                                   # noqa: BLE001
-        r.fail("G16", f"data.js 解析失败：{e}")
-        return
-
     checks = []  # (label, text, floor)
 
     def add(label, text, floor):
@@ -1148,6 +1127,39 @@ def g16_narrative_depth(r):
                 _deduce_walk(v, k)
     _deduce_walk(D)
 
+    return checks
+
+
+def g16_narrative_depth(r):
+    """G16 防 AI 偷懒·叙事深度硬闸（R100z94）。
+
+    背景：用户复盘满意 A 股深度（板块 285-390 / 题材 371-411 / 要闻 333-431 字），
+    但美股 us.* 长期只有 60-110 字（根因：07:00 / 周日两条自动化 prompt 把字数上限
+    写成 60-110）。量化页（谐波/九门/吸筹）无叙事字段渲染，其空 story 是设计行为，不在这
+    里管；chip 标签类字段（lianban.reason / 各池 note / star.picks.note / failPool.reason）
+    也非主叙事，不在这管。本闸只管「真正渲染给用户的长文主字段」。
+
+    阈值（字符数，留足安全垫、远在偷懒区之上）：
+        A 股 板块 reason.detail / 题材 logic / 五节要闻 summary → 240
+        A 股 outlook / us.outlook → 300
+        A 股 aiPrediction.sectors[].logic → 200
+        A 股 开盘前瞻 openOutlook → 300
+        A 股 lianban[].story → 120；duanban confirmed/watching[].story → 100
+        A 股 accumulation.{scored,strong,watch}[].note → 90
+        美股 板块 reason.detail / 五节要闻 summary → 200
+        美股 顶层 summary（脚本生成，数据驱动多维复盘）→ 150
+    低于阈值即 FAIL（拦部署）；阈值取「当前已达标数据的最小值再下探一档」，
+    既能挡住偷懒，又不误伤正常波动。
+
+    R100z136：清单采集拆到 collect_g16_checks（与 check_narrative.py 预检共用）。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G16", f"data.js 解析失败：{e}")
+        return
+
+    checks = collect_g16_checks(D)
     fails = []
     for label, text, floor in checks:
         if len(text) < floor:
@@ -1159,21 +1171,13 @@ def g16_narrative_depth(r):
         r.ok("G16", f"全站叙事字段深度达标（校验 {len(checks)} 处，阈值 15~300 字）")
 
 
-def g17_template_tails(r):
-    """G17 防 AI 偷懒·防模板复读闸（R100z96）。
+def collect_g17_owners(D):
+    """G17 复读句归属采集（R100z136 从 g17_template_tails 拆出）。
 
-    事故：us.* 34 条叙述字段全部以同一句万能尾巴收尾（25×「操作上需结合盘面强度
-    与成交量变化动态评估，切忌单因子外推。」+ 9×「映射到A股…避免追高。」）——
-    深度达标但内容模板化，用户一眼识破「又偷懒了」。本闸按「同一句 ≥14 字出现在
-    ≥3 个不同叙述字段」判万能模板，FAIL 拦部署。扫描面与 G16 相同（真渲染的长文
-    主字段 + 全站 deduce 三候选），不含 chip 标签与量化池。
+    check_narrative.py 预检复用本函数。返回 {sentence: set(field label)}——
+    同一句 ≥14 字被 ≥3 个不同叙述字段共用即判「万能模板尾巴」。
+    与 g17_template_tails 共用同一扫描面与阈值，不存在两套口径。
     """
-    try:
-        D = load_data_json()
-    except Exception as e:                                   # noqa: BLE001
-        r.fail("G17", f"data.js 解析失败：{e}")
-        return
-
     owner = {}  # sentence -> set(field label)
 
     def put(text, label):
@@ -1234,6 +1238,27 @@ def g17_template_tails(r):
                 _ded_walk(v)
     _ded_walk(D)
 
+    return owner
+
+
+def g17_template_tails(r):
+    """G17 防 AI 偷懒·防模板复读闸（R100z96）。
+
+    事故：us.* 34 条叙述字段全部以同一句万能尾巴收尾（25×「操作上需结合盘面强度
+    与成交量变化动态评估，切忌单因子外推。」+ 9×「映射到A股…避免追高。」）——
+    深度达标但内容模板化，用户一眼识破「又偷懒了」。本闸按「同一句 ≥14 字出现在
+    ≥3 个不同叙述字段」判万能模板，FAIL 拦部署。扫描面与 G16 相同（真渲染的长文
+    主字段 + 全站 deduce 三候选），不含 chip 标签与量化池。
+
+    R100z136：归属采集拆到 collect_g17_owners（与 check_narrative.py 预检共用）。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G17", f"data.js 解析失败：{e}")
+        return
+
+    owner = collect_g17_owners(D)
     dups = sorted(((s, o) for s, o in owner.items() if len(o) >= 3),
                   key=lambda x: -len(x[1]))
     if dups:
@@ -1350,20 +1375,14 @@ def g19_summary_freshness(r):
         r.ok("G19", "ashare.summary 与当日 tradeDate/indices 一致（无陈旧日期或收盘点位）")
 
 
-def g20_sector_deduce_no_template(r):
-    """G20 板块 deduce 防模板化闸门（R100z118，修复 us 板块 deduce 跨板块套话）。
+def collect_g20_dups(D):
+    """G20 跨板块共享模板窗口采集（R100z136 从 g20_sector_deduce_no_template 拆出）。
 
-    事故：us.sectorsUp/Down 的 deduce.main/counter 普遍套用同一模板句（仅换板块名/涨跌幅，
-    如「X周五强势收涨，资金主动配置确认主线；跟踪龙头站稳均线即确认延续」），五个板块雷同。
-    本闸在「同一市场」内检测：任一 ≥12 字连续子串同时出现在 ≥3 个板块的 deduce.main（或
-    counter）中 → 判定为跨板块共享模板，FAIL 拦部署，强迫逐板块按真实驱动重写。
-    阈值 12 字 + 跨 3 板块，正常多样化写作不会误伤。"""
-    try:
-        D = load_data_json()
-    except Exception as e:                                   # noqa: BLE001
-        r.fail("G20", f"data.js 解析失败：{e}")
-        return
-    problems = []
+    check_narrative.py 预检复用本函数。返回 [(mk, window, labels), ...]：
+    同一市场内任一 ≥12 字连续子串（含 ≥6 个汉字）同时出现在 ≥3 个板块的
+    deduce.main/counter 中即判跨板块模板套话。与 g20 同扫描面同阈值。
+    """
+    out = []
     for mk in ("ashare", "us"):
         sec = D.get(mk) or {}
         fields = []  # (label, text)
@@ -1384,12 +1403,38 @@ def g20_sector_deduce_no_template(r):
                 if len(re.findall(r"[\u4e00-\u9fff]", w)) < 6:
                     continue
                 win_owner.setdefault(w, set()).add(label)
-        dup = sorted(((w, o) for w, o in win_owner.items() if len(o) >= 3),
-                    key=lambda x: -len(x[1]))
-        if dup:
-            top = dup[:2]
-            det = "；".join(f"「{w}」×{len(o)} 板块" for w, o in top)
-            problems.append(f"{mk}：{len(dup)} 处跨≥3板块共享≥12字模板句（{det}）")
+        for w, o in sorted(win_owner.items(), key=lambda x: -len(x[1])):
+            if len(o) >= 3:
+                out.append((mk, w, sorted(o)))
+    return out
+
+
+def g20_sector_deduce_no_template(r):
+    """G20 板块 deduce 防模板化闸门（R100z118，修复 us 板块 deduce 跨板块套话）。
+
+    事故：us.sectorsUp/Down 的 deduce.main/counter 普遍套用同一模板句（仅换板块名/涨跌幅，
+    如「X周五强势收涨，资金主动配置确认主线；跟踪龙头站稳均线即确认延续」），五个板块雷同。
+    本闸在「同一市场」内检测：任一 ≥12 字连续子串同时出现在 ≥3 个板块的 deduce.main（或
+    counter）中 → 判定为跨板块共享模板，FAIL 拦部署，强迫逐板块按真实驱动重写。
+    阈值 12 字 + 跨 3 板块，正常多样化写作不会误伤。
+
+    R100z136：窗口采集拆到 collect_g20_dups（与 check_narrative.py 预检共用）。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G20", f"data.js 解析失败：{e}")
+        return
+
+    dups = collect_g20_dups(D)
+    problems = []
+    by_mk = {}
+    for mk, w, labels in dups:
+        by_mk.setdefault(mk, []).append((w, labels))
+    for mk, items in by_mk.items():
+        top = items[:2]
+        det = "；".join(f"「{w}」×{len(o)} 板块" for w, o in top)
+        problems.append(f"{mk}：{len(items)} 处跨≥3板块共享≥12字模板句（{det}）")
     if problems:
         r.fail("G20", "板块 deduce 存在跨板块模板套话（防偷懒硬闸）：" + "；".join(problems)
                + "——deduce.main/counter 必须按各板块真实隔夜/当日驱动分别撰写，每板块结论与验证信号必须不同")

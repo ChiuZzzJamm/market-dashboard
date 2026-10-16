@@ -11,7 +11,7 @@
     兜底 新浪 逐只 ssl_qsfx_zjlrqs  取最新一条
          https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_qsfx_zjlrqs?daima=sh600000
          netamount 主力净额 / r0_net 超大单净额 / r1_net 大单 / r2_net 中单 / r3_net 小单
-    兜底源会在东财失败时自动启用（逐只并发，只取最新一条历史记录）
+    兜底源会在东财重试 1 次（2 秒退避）仍失败时自动启用（逐只并发，只取最新一条历史记录）
 
 硬约束（R91m/n）：任一源失败一律保留既有值、如实进 failed 列表，绝不补 0。
 
@@ -24,6 +24,7 @@ import argparse
 import json
 import os
 import sys
+import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
@@ -57,13 +58,29 @@ UA = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit
       'Referer': 'https://finance.sina.com.cn'}
 
 
-def http_json(url, referer=None, timeout=12):
+def http_json(url, referer=None, timeout=12, retries=2, backoff=2.0):
+    """带轻量退避的 JSON 抓取。
+
+    R100z136（优化⑤脚本侧）：东财 push2 在本网络只能偶发连通（见文件头实测备注），
+    原先单发失败即降级新浪，白丢主源——主源是一次性批量、带超大单/大单/中单/小单
+    全口径，兜底源只有净额。改为重试 1 次 + 2 秒退避后再让调用方走兜底：限流是
+    短时性的，多数情况第二次就通；代价上限约 2 秒，远小于换源的数据口径损失。
+    退避时长刻意压小（backoff*i：2s），不让「救主源」变成「拖时长」。
+    """
     headers = dict(UA)
     if referer:
         headers['Referer'] = referer
-    req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read().decode('utf-8', 'ignore'))
+    last = None
+    for i in range(1, retries + 1):
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return json.loads(r.read().decode('utf-8', 'ignore'))
+        except Exception as e:                                   # noqa: BLE001
+            last = e
+            if i < retries:
+                time.sleep(backoff * i)
+    raise last
 
 
 def to_sina_code(code):
