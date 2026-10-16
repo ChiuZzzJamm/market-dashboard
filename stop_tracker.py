@@ -479,7 +479,7 @@ def main():
     # 带这个参数**，唯一一次手写停在 2026-10-04 12:32:45 —— 于是前端「止损跟踪统计」卡永远
     # 是那份旧快照，而 stop_ledger.json 每天都在被 track_calibration 更新。
     # 现在 track_calibration.py 在真实跑（非 --view / 非 --json）时会调 stop_tracker.main()，
-    # 这里顺带把统计刷新进 data.js 顶层 stopTrack；写入发生在 16:00 流程 deploy 之前，
+    # 这里顺带把统计刷新进 data.js 顶层 stopTrack；写入发生在 16:30 叙事步 deploy 之前，
     # 后面没有别的生成步骤覆盖 data.js（validate_stocks / audit 都只读不改）。
     if not a.view:
         write_stop_track_to_datajs(st)

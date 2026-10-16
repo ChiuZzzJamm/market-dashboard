@@ -49,7 +49,7 @@ def main():
                 bw = sum(2 if r.get("kind") == "stock" else 1 for r in new.get("bearRefs") or [])
                 rw = sum(2 if r.get("kind") == "stock" else 1 for r in new.get("bullRefs") or [])
                 # 情绪翻转时 probability 重置到新区间参考值，probNote 说明依据，
-                # 待下一轮 16:00 自动化 AI 复核校准
+                # 待下一轮 15:30 数据步 AI 复核校准
                 new["probability"] = DEFAULT_P.get(new_sent)
                 new["probNote"] = {
                     "bull": f"自动重打标：利好线索加权{rw}压过利空{bw}",

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """enrich_policy.py — 把新闻标题确定性解码为政策信号，写回 data.js 顶层 policySignals。
 
-零网络、纯函数（复用 decode_policy.policy_score）。由 16:00 自动化在新闻写回后、校验前调用：
+零网络、纯函数（复用 decode_policy.policy_score）。由 16:30 叙事步在新闻写回后、校验前调用：
     cd /Users/loccco/WorkBuddy/market dashboard && run-python enrich_policy.py
 
 产出：data.js 顶层 policySignals = [

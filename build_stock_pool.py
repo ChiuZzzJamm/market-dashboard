@@ -3,7 +3,7 @@
 
 为什么需要它（2026-10-01 体检实测的最根本问题）：
     项目自己造了四个选股引擎（check_duanban / harmonic_detect / accumulation_score / power_screener），
-    16:00 那个交易日里却只有 6/48 只（12.5%）来自断板池，剩下 42 只是 AI 看 note 手写的
+    旧 16:00 单步任务那个交易日里却只有 6/48 只（12.5%）来自断板池，剩下 42 只是 AI 看 note 手写的
     「板块龙头 / CPO概念 / 换手活跃」。而刚上的个股硬风险黑名单拦掉的 4 只（恒邦股份、豫光金铅、
     华钰矿业、立昂微），恰好全都是这类主观 pick——**黑名单拦得住坏票，却拦不住「好票是 AI 瞎挑的」**。
 
@@ -257,10 +257,10 @@ def pick_for(sector, pools, quota_duan=4, quota_harm=2, quota_acc=2, quota_fill=
             sum(1 for x in got if x['src'] == '谐波'),
             sum(1 for x in got if x['src'] in ('吸筹', '强势')),
             sum(1 for x in got if x['src'] == '补位'))
-    # 少于 3 只 = 这个板块机器根本选不出来：正确的反应是 16:00 换板块，不是硬凑 8 只
+    # 少于 3 只 = 这个板块机器根本选不出来：正确的反应是 16:30 叙事步换板块，不是硬凑 8 只
     if len(got) < 3:
         notes.append('机械候选仅 %d 只（<3）——该板块「机器选不出来」，'
-                     '16:00 应换一个候选充足的板块，绝不允许拿别的板块股票来凑数' % len(got))
+                     '16:30 叙事步应换一个候选充足的板块，绝不允许拿别的板块股票来凑数' % len(got))
     return got, notes
 
 

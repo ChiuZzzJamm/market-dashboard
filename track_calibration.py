@@ -74,7 +74,7 @@ process.stdout.write(JSON.stringify({
   verification: ap.verification || null,
   // R100z15 缺口①/④：标的层平均涨幅（8 只等权）→ 组合净值曲线；stockCheck.fund 保留
   stockCheck: (ap.verification && ap.verification.stockCheck) || null,
-  // R100z13：建议仓位（8:30/16:00 写下的可回测数字）+ 今日开盘前瞻结构化假设（供前瞻兑现打分）
+  // R100z13：建议仓位（8:30/15:30 数据步写下的可回测数字）+ 今日开盘前瞻结构化假设（供前瞻兑现打分）
   // （R100z51 键名修正）：建议仓位实际写在 **openOutlook.pos**（score_openoutlook.py:42 读的也是这个），
   // data.js 顶层从来没有 `posAdvice` 键 → 原写法恒为 null，台账每条 pos / 组合曲线的仓位归因一直是空的。
   pos: (oo && oo.pos) || null,
@@ -394,7 +394,7 @@ def main():
                 log['log'][pd['date']] = build_items(
                     pd['date'], pd['verification']['details'], conf_map, bench,
                     pd.get('stockCheck') or [], bench_main)
-                # R100z13：开盘前瞻兑现打分一并入账（16:00 已打分的才并入，没打分的跳过）
+                # R100z13：开盘前瞻兑现打分一并入账（16:30 叙事步已打分的才并入，没打分的跳过）
                 ov = pd.get('openVerification')
                 if ov:
                     log.setdefault('open', {})[pd['date']] = ov

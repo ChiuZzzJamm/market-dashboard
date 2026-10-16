@@ -483,7 +483,7 @@ def collect_sectors(D, use_sina=True, node_deadline=180):
         for c, s in sm.items():
             put(c, s)
     # R100z4y：单票行业兜底——池内仍缺行业的（新浪全量映射有缺口）逐只抓所属行业页。
-    # 上限 40 只 + 总预算 45s 防拖垮 16:00 流水线；失败保留缺省（前端另有 stkSectorOf 兜底）。
+    # 上限 40 只 + 总预算 45s 防拖垮 15:30/16:30 流水线；失败保留缺省（前端另有 stkSectorOf 兜底）。
     missing = [c for c in wanted if c not in sec][:40]
     t_single = time.time()
     for c in missing:

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """全量扫（R100m，2026-09-28 新增）：沪深主板 60/00 全市场扫描，产出候选集供
-harmonic_detect.py / accumulation_score.py 复用（用户需求：全量扫安排在交易日 16 点，
+harmonic_detect.py / accumulation_score.py 复用（用户需求：全量扫安排在交易日 15:30 数据步，
 之后谐波和主力吸筹都从全量扫里筛选标的）。
 
-流水线（16:00 自动化先跑本脚本，再跑 harmonic/accumulation/power）：
+流水线（15:30 数据步先跑本脚本，再跑 harmonic/accumulation/power）：
   1. 新浪 Market_Center.getHQNodeData 分页拉全 A 快照（约 5600 只，56 页）；
   2. 预筛（快照级，零 K 线成本）：
      - 仅沪深主板 60/00（项目标的池铁律，排除 688/300/301 等）；

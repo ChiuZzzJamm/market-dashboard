@@ -18,7 +18,7 @@ validate 之前运行，把所有 A股标的的日 K 线一次性抓取并写入
 全部抓取失败时保留既有值，绝不写空覆盖。其余字段一律不触碰。
 
 用法：python3 embed_klines.py [--deadline 240]
-挂载：16:00 / 07:00 / 周日23:00 自动化在 AI 写回之后运行（08:30 不写 A股标的，不挂）。
+挂载：16:30 / 07:00 / 周日 22:00 自动化在 AI 写回之后运行（08:30 不写 A股标的，不挂）。
 """
 import json
 import os
@@ -319,7 +319,7 @@ def pools_meta_patch(D, fetch=True):
 
 
 def main():
-    # R100z72：先读 KLINE_DEADLINE 环境变量（kline_cache 同一约定，使 16:00 流水线
+    # R100z72：先读 KLINE_DEADLINE 环境变量（kline_cache 同一约定，使 16:30 流水线
     # 通过 `KLINE_DEADLINE=900` 设定的预算真正生效；此前只认 `--deadline` CLI，
     # 环境变量被静默忽略、实际跑在 300s 默认预算上）。CLI --deadline 仍可覆盖。
     _kd = 300.0

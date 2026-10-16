@@ -1233,7 +1233,7 @@ def main():
                         old_mod['failPool'] = _clean_duanban_fail(old_mod.get('failPool', []), datetime.now().strftime('%Y-%m-%d'))
                         print(json.dumps(old_mod, ensure_ascii=False, indent=1))
                         # R100z72：即便涨停池全源不可达，也把保留下来的既有模块落到 --out，
-                        # 避免下游 merge_duanban 因 --out 缺失而 FileNotFoundError 崩掉 16:00 步骤。
+                        # 避免下游 merge_duanban 因 --out 缺失而 FileNotFoundError 崩掉 15:30 数据步。
                         if args.out:
                             with open(args.out, "w", encoding="utf-8") as _f:
                                 _f.write(json.dumps(old_mod, ensure_ascii=False, indent=1) + "\n")
@@ -1264,7 +1264,7 @@ def main():
     cands = sorted(cand.items(), key=lambda kv: max(kv[1]["zt"]), reverse=True)[:args.limit]
 
     # R93 时间预算（2026-09-23）：自动化环境对脚本有超时限制（此前串行抓 300 只候选
-    # K 线 + 二轮重试常超 6 分钟，16:00 自动化中被 SIGTERM 杀掉、duanban 模块整体跳过）。
+    # K 线 + 二轮重试常超 6 分钟，15:30 数据步中被 SIGTERM 杀掉、duanban 模块整体跳过）。
     # 现并行抓取 + 全局时间预算（默认 420s，可用环境变量 DUANBAN_DEADLINE 覆盖）：
     # 到点后取消剩余任务、跳过二轮重试，保证预算内必出结果（候选按最近涨停优先排序，
     # 被截断的是最旧的候选，影响最小）。
