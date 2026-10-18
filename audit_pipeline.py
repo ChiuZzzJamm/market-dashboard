@@ -215,6 +215,13 @@ PRODUCT_OWNERSHIP = {
                 "由 deploy.sh 流水线调用（读 cal_factor/calibration_state/portfolio_curve，兜底写空 exit 0）；"
                 "前端「🎯 盘前策略」卡渲染（renderStrategy）",
     },
+    "stockNews": {
+        "require": ("stock_news.py", "个股消息库", "stockNews"),
+        "note": "R100z149：stock_news.py 抓东财个股公告 + 资讯搜索，按 code 汇总成 {code:{name,notices,news}}，"
+                "覆盖断板（含失效池）/谐波/吸筹/九门/连板/板块成分/AI预测/要闻影响标的；"
+                "前端弹窗（网页 db-modal、小程序 stock-modal）统一渲染「个股消息」段。"
+                "16:00 数据步点名（取数后、断板主生成前跑）。",
+    },
 }
 
 

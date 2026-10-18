@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610190153"></script>
+<script src="data.js?v=202610190245"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -575,6 +575,9 @@
   .db-refs { margin-top: 10px; font-size: 12px; color: var(--ink2); line-height: 1.7; border-top: 1px dashed var(--line); padding-top: 8px; }
   .db-refs b { color: var(--accent-deep); }
   .db-ref-p { margin: 5px 0 2px; color: var(--ink); }
+  /* R100z149：个股消息块（公告 + 新闻），与上方面板留一道浅分隔，避免与「口径」段糊在一起 */
+  .sn-block { margin: 10px 0 4px; padding-top: 9px; border-top: 1px dashed var(--line); }
+  .sn-block .db-ref-p b { font-size: 12px; }
   .db-ref-sum { color: var(--ink2); font-size: 11.5px; line-height: 1.65; margin: 2px 0 0 2px; }
   .db-src-tag { display: inline-block; font-size: 9.5px; font-weight: 700; color: var(--accent-deep); background: var(--accent-soft); border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; margin-left: 2px; line-height: 1.6; }
   .db-kline { position: relative; }
@@ -2684,6 +2687,57 @@ function dbStoryParaHtml(p) {
   if (!t) t = newsFlag(body2) || '🤖';
   return '<div class="db-ref-p"><b>' + esc(m2[1]) + (m2[2] ? '·' + esc(m2[2]) : '') + ' ' + t + '：</b>' + esc(body2) + '</div>';
 }
+/* R100z149：个股消息库（data.js 顶层 stockNews，由 stock_news.py 抓东财公告 + 资讯）。
+   背景：原消息面只来自「板块级要闻」，个股自己的公告/新闻从来没进过看板——
+   用户 2026-10-19 反馈「同花顺有个股消息（收购/终止收购），网页端什么都没有，
+   而且不只东百，所有标的都没有」。本函数把个股消息渲染成可复用条目，
+   断板弹窗（含失效归档池）与通用标的弹窗都调它。 */
+function stockNewsItems(code) {
+  code = String(code || '').trim();
+  if (!/^\d{6}$/.test(code)) return [];
+  var D = window.DASHBOARD_DATA || {};
+  var sn = (D.stockNews || {})[code];
+  if (!sn) return [];
+  var out = [];
+  function push(dir, tag, head, title, summary) {
+    out.push({
+      dir: dir,
+      html: '<div class="db-ref-p"><b>' + esc(tag) + '：</b>' + esc(head) + esc('《' + title + '》') +
+        (summary ? '<div class="db-ref-sum">' + esc(summary) + '</div>' : '') + '</div>'
+    });
+  }
+  (sn.notices || []).forEach(function (n) {
+    var dir = n.dir === 'bear' ? 'bear' : (n.dir === 'bull' ? 'bull' : 'neutral');
+    var tag = '个股公告 ' + (dir === 'bear' ? '⚠️' : (dir === 'bull' ? '✅' : '📄'));
+    push(dir, tag, (n.date || '') + (n.column ? ' · ' + n.column : ' '), n.title || '', '');
+  });
+  (sn.news || []).forEach(function (n) {
+    var dir = n.dir === 'bear' ? 'bear' : (n.dir === 'bull' ? 'bull' : 'neutral');
+    var tag = '个股新闻 ' + (dir === 'bear' ? '⚠️' : (dir === 'bull' ? '✅' : '📰'));
+    push(dir, tag, ((n.time || '') + ' ' + (n.source || '')).trim(), n.title || '', n.summary || '');
+  });
+  return out;
+}
+/* 断板/通用弹窗用：整块「个股消息」段（不参与三口径判定，直接按方向列出）。
+   skipText 传已渲染的 story，命中的条目跳过，避免与小作文重复。 */
+function stockNewsHtml(code, skipText) {
+  var items = stockNewsItems(code);
+  if (!items.length) return '';
+  var sn = ((window.DASHBOARD_DATA || {}).stockNews || {})[String(code || '').trim()] || {};
+  var skip = String(skipText || '');
+  var rows = items.filter(function (it) {
+    var m = /《([^》]+)》/.exec(it.html);
+    return !(m && skip && skip.indexOf(m[1]) >= 0);
+  });
+  if (!rows.length) return '';
+  var nBear = items.filter(function (x) { return x.dir === 'bear'; }).length;
+  var nBull = items.filter(function (x) { return x.dir === 'bull'; }).length;
+  var tone = nBear > nBull ? 'var(--down)' : (nBull > nBear ? 'var(--up)' : 'var(--ink2)');
+  return '<div class="sn-block">' +
+    '<div class="db-ref-p"><b style="color:' + tone + '">个股消息：</b>' +
+    '<span class="db-ref-sum" style="display:inline;">公告 ' + ((sn.notices || []).length) + ' 条 · 新闻 ' + ((sn.news || []).length) + ' 条</span></div>' +
+    rows.map(function (x) { return x.html; }).join('') + '</div>';
+}
 function stkNewsHtml(code) {
   code = String(code || '').trim();
   if (!/^\d{6}$/.test(code)) return '';
@@ -2718,10 +2772,20 @@ function stkNewsHtml(code) {
     if (aiHit || !s || !s.stocks) return;
     for (var i = 0; i < s.stocks.length; i++) { if (String((s.stocks[i] || {}).code) === code) { aiHit = s; break; } }
   });
-  if (!e && !hits.length && !hzIt && !accIt && !pwIt && !secHit && !aiHit) return '';
+  if (!e && !hits.length && !hzIt && !accIt && !pwIt && !secHit && !aiHit) {
+    // R100z149：只有个股消息库命中时仍要渲染（板块/池都没挂上，但公司自己发了公告）
+    if (!stockNewsItems(code).length) return '';
+  }
+  // R100z149：个股公告/新闻并入消息面（story 里已写到的公告标题跳过，避免复读）
+  var _snStory = (e && typeof e.story === 'string') ? e.story : '';
+  var snItems = stockNewsItems(code).filter(function (it) {
+    var m = /《([^》]+)》/.exec(it.html);
+    return !(m && _snStory && _snStory.indexOf(m[1]) >= 0);
+  });
   // R100y：与断板反包弹窗同款「三口径」分组——利好口径/利空口径/中性口径，
   // 组内条目统一「个股消息 🇨🇳：」/「个股消息 🌍：」格式（🇨🇳=国内，🌍=隔夜/国际）。
   var groups = { bull: [], bear: [], neutral: [] };
+  snItems.forEach(function (it) { groups[it.dir].push(it.html); });
   function refItem(r, dir) {
     if (!r || typeof r !== 'object' || !r.title) return;
     var tag = String(r.srcTag || '');
@@ -2784,7 +2848,7 @@ function stkNewsHtml(code) {
     if (aiHit.deduce) h += renderDeduce(aiHit.deduce, true);
     else if (aiHit.counter) h += '<div class="dd-box"><div class="dd-counter">反证：' + esc(_ddClean(aiHit.counter)) + '</div></div>';
   }
-  if (!e && !hits.length && !secHit && !aiHit) h += '<div class="db-ref-sum">暂无明确利好/利空消息（按当日要闻与 AI 写回自动更新）</div>';
+  if (!e && !hits.length && !secHit && !aiHit && !snItems.length) h += '<div class="db-ref-sum">暂无明确利好/利空消息（按当日要闻与 AI 写回自动更新）</div>';
   return h;
 }
 
@@ -4410,7 +4474,10 @@ function openDbModal(key) {
     var fr = failNewsScan(String(e.code));
     var win = fr.nB > fr.nBe ? 'bull' : (fr.nBe > fr.nB ? 'bear' : 'neutral');
     var winItems = fr.items[win] || [];
-    refsHtml += label + (winItems.length ? winItems.join('') : '暂无明确利好/利空依据（按当日要闻自动匹配，AI 复核可改判）');
+    // R100z149：个股公告/新闻库有内容时不再写死「暂无」——那正是用户反复反馈的矛盾点
+    var _snHas = stockNewsItems(String(e.code)).length > 0;
+    refsHtml += label + (winItems.length ? winItems.join('')
+      : (_snHas ? '板块级要闻无匹配，公司自身公告与新闻见下方「个股消息」' : '暂无明确利好/利空依据（按当日要闻自动匹配，AI 复核可改判）'));
     var _o = win === 'bull' ? 'bear' : 'bull';
     if (win !== 'neutral' && (fr.items[_o] || []).length) {
       refsHtml += '<div style="margin-top:6px;"><b style="color:' + (_o === 'bull' ? 'var(--up)' : 'var(--down)') + '">' + (_o === 'bull' ? '利好口径：' : '利空口径：') + '</b>' + fr.items[_o].join('') + '</div>';
@@ -4439,6 +4506,7 @@ function openDbModal(key) {
   if (e.deduce) refsHtml += renderDeduce(e.deduce, true); // R100z4t：技术池标的合并自 powerScreen/harmonic/accumulation 的三候选推演
   document.getElementById('db-refs').innerHTML =
     refsHtml +
+    stockNewsHtml(String(e.code), story) +
     '<br>形态核验：check_duanban.py 确定性脚本（涨停池 + 腾讯日K）；板块涨幅与 TOP10 榜采用同花顺行业口径（R98）。观察池标的待最后一根确认K线，确认失败即移出。';
   document.getElementById('db-modal').classList.add('open');
 }
