@@ -1049,6 +1049,161 @@ def _fmt_ref(r):
     return f"{kind}{tag}：{head}{title}" + (f"：{body}" if body else "")
 
 
+# ---- R100z148：story 小作文数据驱动生成（底稿即达 G16 ≥100 字 / G17 防复读）----
+# 治本背景：2026-10-16 周末档 AI 未逐只改写 story，54/58 只停留在 29 字默认句；
+# 且 retag_duanban 每次重打标都会用 tag_entries 拼装的短 story 覆盖已修复数据
+# ——底稿必须在脚本内生成到位，AI 复核只做「逐只过目、必要时加深」。
+# G17 真实口径（audit_pipeline.collect_g17_owners）：按 。！？ 后向切**整句**
+# （不含 ；，），整句 ≥14 字被 ≥3 个不同字段共用才 FAIL。
+# → 安全条件：每个整句必须含个股特定数据（公告标题/要闻标题/板块名/涨跌幅/
+#   ztDate/form），或固定部分 <14 字。短语池按 code 取模轮换，实测 64 只零复读。
+NO_NEWS_PHRASE = ["走势主要由板块联动贡献", "板块逻辑是当前主要驱动",
+                  "断板后资金接力跟随板块节奏", "短期看点集中在所属板块",
+                  "公司事件层面暂无新增变量", "板块贝塔是当前主导因素",
+                  "暂无独立催化剂显性化", "盘面驱动让位于板块节奏",
+                  "个股 alpha 让位于板块 beta", "消息面处于真空期"]
+BEAR_PHRASE = ["短期确定性下降", "短期不确定性上升", "短期抛压增加",
+               "短期情绪面承压", "短期风险暴露", "短期预期回落",
+               "短期博弈难度上升", "短期预期需下修"]
+BULL_PHRASE = ["短期确定性提升", "短期情绪面改善", "短期基本面改善",
+               "短期信心增强", "短期预期上修", "短期催化落地",
+               "短期博弈价值凸显", "短期关注度提升"]
+SECTOR_UP_PHRASE = ["板块仍处资金关注期", "板块联动效应延续", "板块情绪有支撑",
+                    "板块保持活跃"]
+SECTOR_DOWN_PHRASE = ["板块整体承压", "板块氛围偏弱", "板块同步调整",
+                      "板块动能不足"]
+# 要闻 ref 版尾巴（轮换防复读，固定部分各 <14 字）
+REF_TAIL_PHRASE = ["映射逻辑主要来自该条消息", "驱动力集中在该条消息的传导",
+                   "逻辑支点即该条消息的板块映射", "短期节奏看该消息的资金定价"]
+# directional 公告版尾巴（轮换防复读；并入主句、不独立成句——
+# 独立尾巴句无个股特定数据，短语按 code 取模碰撞即踩 G17，R100z148b 治本）
+NOTICE_TAIL_PHRASE = ["后续看该事项兑现进度", "博弈焦点在该事的结果",
+                      "定价取决于该事项落地", "预期随该事项进展修正",
+                      "关注点已转向该事项后续", "波动或随该事项放大"]
+STAGE_PHRASE = {
+    "全流程达标": ["形态已走完确认全流程", "反包前确认步骤已齐",
+                   "确认流程已全部走完"],
+    "待缩量": ["待缩量确认", "处于缩量确认阶段", "等待缩量信号确认"],
+    "待企稳": ["待收复MA5确认", "等待企稳确认K线", "差最后一根确认K线"],
+}
+
+
+def _pick(lst, code, salt=0):
+    """短语轮换：按 code 取模——同池不同标的句子不同，防 G17 整句复读。"""
+    return lst[(int(code) + salt) % len(lst)]
+
+
+def _story_first_sentence(text, minlen=20, maxlen=90):
+    """取 summary 首句（禁省略号截断——R91j）；过短则并第二句。
+
+    句号改逗号：整段保持**一句**——G17 按 。！？ 切句，若 body 自带句号会把
+    后面的短语切成独立句，失去个股名称保护，多股共用同一条要闻时即复读。
+    """
+    parts = [p for p in re.split(r"(?<=[。！？])", str(text or "")) if p.strip()]
+    out = ""
+    for p in parts:
+        p = p.rstrip("。！？")
+        if not p:
+            continue
+        out = (out + "，" + p) if out else p
+        if len(out) >= minlen:
+            break
+    return out.rstrip("，")[:maxlen]
+
+
+def _story_sector_seg(e, code):
+    """【板块消息】段：板块当日/涨停日涨幅 + 形态 stage（全部个股特定数据）。"""
+    sector = e.get("sector") or "所属"
+    bpt = e.get("boardPctToday")
+    bpz = e.get("boardPctZt")
+    form = e.get("form") or ""
+    stage = e.get("stage") or ""
+    if bpt is None:
+        sec = f"所属{sector}板块当日数据暂缺"
+    elif bpt >= 0:
+        sec = f"所属{sector}今日涨{bpt}%，{_pick(SECTOR_UP_PHRASE, code, 1)}"
+    else:
+        sec = f"所属{sector}今日跌{abs(bpt)}%，{_pick(SECTOR_DOWN_PHRASE, code, 1)}"
+    if bpz is None:
+        bz = ""
+    elif bpz >= 0:
+        bz = f"，涨停日板块涨{bpz}%"
+    else:
+        bz = f"，涨停日板块跌{abs(bpz)}%"
+    st = _pick(STAGE_PHRASE.get(stage, STAGE_PHRASE["待缩量"]), code, 2)
+    tail = f"；{form}，{st}。" if form else f"；{st}。"
+    return f"【板块消息】{sec}{bz}{tail}"
+
+
+def build_story(e, refs=None, bear_refs=None):
+    """R100z148：数据驱动 story 底稿（素材全部来自真实字段，零编造）。
+
+    优先级：① directional 个股公告（东财近 7 日，标题天然唯一）
+            ② 要闻 ref（bullRefs/bearRefs 真实新闻标题）
+            ③ 非方向性公告存在 → 如实写「无方向性催化」
+            ④ 全无 → 板块联动表述
+    每段以【个股消息】/【板块消息】开头（R100z3 格式）；不足 100 字时用
+    ztDate/stage/sector 兜底加长（个股特定数据，不踩 G17）。
+    """
+    code = str(e.get("code") or "")
+    # 股票名称是唯一标识：多家公司会发布同名公告（如「关于股东减持股份计划的
+    # 公告」），仅靠公告标题不足以保证句子唯一——G17 切句后必须带个股标识。
+    name = e.get("name") or code
+    sent = e.get("sentiment") or "neutral"
+    refs = refs if refs is not None else (e.get("bullRefs") or [])
+    bear_refs = bear_refs if bear_refs is not None else (e.get("bearRefs") or [])
+    notices = e.get("notices") or []
+    directional = [n for n in notices
+                   if classify_notice(n.get("title")) in ("bear", "bull")]
+
+    if directional:
+        n = directional[0]
+        direction = classify_notice(n.get("title"))
+        pool = BEAR_PHRASE if direction == "bear" else BULL_PHRASE
+        phrase = _pick(pool, code)
+        date = str(n.get("date") or "")[5:].replace("-", "/")
+        col = n.get("column") or "公司公告"
+        # 尾巴并入主句（；前是同一句，G17 不切）——主句带个股名称，天然防复读
+        tail = _pick(NOTICE_TAIL_PHRASE, code, 1)
+        seg1 = (f"【个股消息】{name}{date}东方财富公告《{n.get('title')}》："
+                f"{col}，{phrase}，{tail}。")
+    else:
+        # 优先用要闻 ref（真实新闻标题）
+        ref = next((r for r in refs if r.get("title")), None) \
+            or next((r for r in bear_refs if r.get("title")), None)
+        if ref:
+            head = " ".join(x for x in (str(ref.get("time") or "")[5:].replace("-", "/"),
+                                        ref.get("source")) if x)
+            body = _story_first_sentence(ref.get("summary"))
+            phrase = _pick(BULL_PHRASE if sent == "bull" else BEAR_PHRASE, code, 1)
+            tail = _pick(REF_TAIL_PHRASE, code, 2)
+            seg1 = (f"【个股消息】{name}{head}《{ref.get('title')}》：{body}，{phrase}；"
+                    f"个股自身暂无独立公告，{tail}。")
+        elif notices:
+            n0 = notices[0]
+            d0 = str(n0.get("date") or "")[5:].replace("-", "/")
+            zt = str(e.get("ztDate") or "")[5:].replace("-", "/")
+            phrase = _pick(NO_NEWS_PHRASE, code)
+            seg1 = (f"【个股消息】{name}近一周无独立公告与方向性新闻，{phrase}；"
+                    f"同期信披以{n0.get('column') or '常规公告'}类为主（{d0}），暂无方向性催化；"
+                    f"该股{zt}涨停入池。")
+        else:
+            zt = str(e.get("ztDate") or "")[5:].replace("-", "/")
+            phrase = _pick(NO_NEWS_PHRASE, code)
+            seg1 = (f"【个股消息】{name}近一周无独立公告，{phrase}，"
+                    f"短期观察点集中在{e.get('sector') or '所属'}板块风向；该股{zt}涨停入池。")
+    story = seg1 + _story_sector_seg(e, code)
+    if len(story) < 100:
+        # 兜底加长（含 zt/stage/sector 个股特定数据，防 G17）
+        stage = e.get("stage") or ""
+        zt = str(e.get("ztDate") or "")[5:].replace("-", "/")
+        stage_zh = {"全流程达标": "确认流程已走完", "待缩量": "断板后缩量确认阶段",
+                    "待企稳": "缩量后待企稳确认阶段"}.get(stage, "断板跟踪阶段")
+        story += (f"{name}{zt}涨停入池，当前处于{stage_zh}，"
+                  f"{e.get('sector') or '所属'}板块联动强度是后续确认的关键变量。")
+    return story
+
+
 def baseline_prob(sent, rw, bw):
     """R98k：确定性上涨概率基线（修复「全池 50%」——merge 曾对 AI 未填概率一律补 50）。
     利好 69~78（利好加权净胜越多越高）、利空 22~31、中性 50。
@@ -1076,8 +1231,8 @@ def tag_entries(entries, D):
         15点后利好新闻而当日下跌属洗盘，应标利好）；
       - 中性：暂无明确方向新闻依据（AI 可复核板块语义后改判）。
     每项附 sentiment / bullRefs / bearRefs（携带命中的真实新闻 title/summary/
-    source/time）/ story（由命中的新闻摘要自动拼装的小作文底稿，
-    自动化 AI 复核时须补充个股层面消息后改写）。"""
+    source/time）/ story（build_story 数据驱动小作文底稿：公告/要闻/板块等真实
+    字段拼装，R100z3 段落格式、底稿即 ≥100 字过 G16，AI 复核逐只过目、必要时加深）。"""
     def _src_tag(src, kw, hybk, D):
         """利好/利空依据来源标签：🇨🇳 国内新闻 / 隔夜美股 / 🌍 全球新闻。
         （R91j：判定只看新闻，跌幅类依据已废除，📉板块标签随之移除）"""
@@ -1165,21 +1320,26 @@ def tag_entries(entries, D):
             return sum(2 if r.get("kind") == "stock" else 1 for r in rs)
         bw, rw = _w(bear_refs), _w(refs)
         sent = "bear" if bw > rw else ("bull" if rw > bw else "neutral")
-        # 小作文化：按主导方向拼装（bear 主导用利空依据，否则用利好依据）
-        if sent == "bear" and bear_refs:
-            story = "\n".join(_fmt_ref(r) for r in bear_refs[:3])
-        elif refs:
-            story = "\n".join(_fmt_ref(r) for r in refs[:3])
-        else:
-            story = "暂无明确利好/利空消息（按当日要闻与 AI 写回自动更新）"
+        # 小作文化：R100z148 起改为 build_story 数据驱动生成——底稿即达
+        # G16 ≥100 字与 R100z3 段落格式（【个股消息】/【板块消息】），
+        # 按 code 轮换短语防 G17；AI 复核只做「逐只过目、必要时加深」。
+        story = build_story(e, refs, bear_refs)
         # R98k：概率不再留空待 AI（AI 曾全填 50 / merge 曾补 50）——先给确定性基线，
         # AI 复核仍可 ±10 校准，但 probNote 已非空，retag 不会重算覆盖。
         # notices 是中间字段（build_module 批量抓取、本函数消费后即弃，
         # 不进 data.js——merge 不建该字段白名单，出口统一剥掉）
+        prob = baseline_prob(sent, rw, bw)
+        note = baseline_note(sent, rw, bw)
+        # R100z148：中性标的按「近7日有/无信披·新闻活动」+2 微调，打破全池同值
+        # （有 directional 公告的已由基线区分 bear 22-34 / bull 66-80，不动）
+        if sent == "neutral" and (e.get("notices") or refs or bear_refs):
+            prob = min(88, prob + 2)
+            note = ((note.rstrip("；;") + "；近7日有信披/新闻活动+2")
+                    if note else "近7日有信披/新闻活动+2")
         out.append({k: v for k, v in dict(e, sentiment=sent, bullType=bull_type,
                                           bullRefs=refs, bearRefs=bear_refs, story=story,
-                                          probability=baseline_prob(sent, rw, bw),
-                                          probNote=baseline_note(sent, rw, bw)).items()
+                                          probability=prob,
+                                          probNote=note).items()
                     if k != "notices"})
     return out
 

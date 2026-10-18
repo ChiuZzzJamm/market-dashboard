@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""R91p 断板反包重打标（2026-09-23）：
-用 data.js **当前**要闻/AI预测对已部署 duanban 模块重算
-sentiment / bullRefs / bearRefs / story（纯本地新闻匹配，零东财依赖，
-本机沙箱可跑）。用途：08:30 隔夜新闻写回后刷新断板口径，
-弥补「07:00 复核在 08:30 新闻更新之前」的时序缺口。
+"""R91p 断板反包重打标（2026-09-23，R100z148 增强）：
+用 data.js **当前**要闻/AI预测 + 东财近 7 日个股公告对已部署 duanban 模块
+重算 sentiment / bullRefs / bearRefs / story。用途：08:30 隔夜新闻写回后
+刷新断板口径，弥补「07:00 复核在 08:30 新闻更新之前」的时序缺口。
 打标口径与 check_duanban.tag_entries 完全一致（R91p 加权：个股级×2、板块级×1，
 bear 加权 > bull 加权才判 bear）。池成员、K线、板块涨幅等行情字段一律不动。
+R100z148 两处变化：① 抓取池内标的近 7 日东财公告（盘后发布的终止收购/
+减持/立案等方向性公告按个股级×2 参与打标；公告 API 失败时自动降级为纯
+本地新闻匹配，不阻塞）；② story 由 build_story 数据驱动重生成（≥100 字、
+【个股消息】/【板块消息】分段），但情绪未变且旧 story 已达标时保留 AI
+深化版，不被底稿覆盖。
 
 用法：python3 retag_duanban.py [data.js 路径，默认当前目录]
 """
@@ -88,6 +92,15 @@ def main():
                                               + (4 if pool == "confirmed" else -2))))
                     new["probability"] = p
                     new["probNote"] = (new.get("probNote") or "") + "（补算）"
+            # R100z148：AI 深化版 story 保留——情绪未变且旧 story 已达标
+            # （≥100 字 + 【】段首格式，R100z3）时保留旧值，不被 build_story
+            # 数据驱动底稿覆盖（16:00/07:00 步 AI 逐只深化的个股消息不因早间
+            # 重打标丢失）；情绪翻转（新公告改判）或旧 story 不达标
+            # （29 字默认句等）才用新底稿替换。
+            old_story = str(old.get("story") or "")
+            if (new.get("sentiment") == old.get("sentiment")
+                    and len(old_story) >= 100 and old_story.startswith("【")):
+                new["story"] = old_story
         db[pool] = retagged
     db["generatedAt"] = datetime.now().strftime("%Y-%m-%d %H:%M")
     db["note"] = db.get("note") or ""
