@@ -1097,12 +1097,14 @@ def collect_g16_checks(D):
         if isinstance(s, dict):
             add(f"ashare.lianban[{i}].story", s.get("story"), 120)
 
-    # 断板反包 confirmed/watching story
-    db = (D.get("ashare") or {}).get("duanban") or {}
+    # 断板反包 confirmed/watching story（R100z148：检查面从 ashare.duanban 改到顶层
+    # duanban——ashare.duanban 是 2026-10-14 后无任何读写方的死节点（前端/小程序/
+    # 脚本均只读写顶层 D.duanban），已从 data.js 剔除；顶层才是真实渲染的数据源）
+    db = D.get("duanban") or {}
     for pool in ("confirmed", "watching"):
         for i, e in enumerate(db.get(pool) or []):
             if isinstance(e, dict):
-                add(f"ashare.duanban.{pool}[{i}].story", e.get("story"), 100)
+                add(f"duanban.{pool}[{i}].story", e.get("story"), 100)
 
     # 吸筹 scored/strong/watch note
     for grp in ("scored", "strong", "watch"):
@@ -1215,11 +1217,12 @@ def collect_g17_owners(D):
     for i, s in enumerate((D.get("ashare") or {}).get("lianban") or []):
         if isinstance(s, dict):
             put(s.get("story"), f"ashare.lianban[{i}]")
-    dbsec = (D.get("ashare") or {}).get("duanban") or {}
+    # R100z148：与 G16 扫描面一致——顶层 duanban（ashare.duanban 死节点已剔除）
+    dbsec = D.get("duanban") or {}
     for pool in ("confirmed", "watching"):
         for i, e in enumerate(dbsec.get(pool) or []):
             if isinstance(e, dict):
-                put(e.get("story"), f"ashare.duanban.{pool}[{i}]")
+                put(e.get("story"), f"duanban.{pool}[{i}]")
     for grp in ("scored", "strong", "watch"):
         for i, e in enumerate(((D.get("ashare") or {}).get("accumulation") or {}).get(grp) or []):
             if isinstance(e, dict):

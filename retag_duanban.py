@@ -38,6 +38,24 @@ def main():
         print("[info] duanban 模块为空，跳过重打标")
         return
     changed = []
+    # R100z148: 与 check_duanban --module 同一口径——批量抓池内标的近 7 日公告，
+    # 让盘后发布的个股公告（终止收购/减持/立案等）在次日 08:30 刷新断板口径时
+    # 即可打标，不必等 16:00 数据步。此前 sentiment 唯一数据源是 data.js 要闻，
+    # 而 AI 要闻检索覆盖不到单只个股的公司公告（2026-10-15 东百集团「终止收购」
+    # 公告后连续跌停、池内仍 neutral 无消息——用户实报缺陷的根因之一）。
+    try:
+        notices = cd.fetch_notices_batch(
+            [e.get("code") for pool in ("confirmed", "watching")
+             for e in (db.get(pool) or [])])
+        for pool in ("confirmed", "watching"):
+            for e in db.get(pool) or []:
+                e["notices"] = notices.get(str(e.get("code"))) or []
+        n_hit = sum(1 for pool in ("confirmed", "watching")
+                    for e in (db.get(pool) or []) if e.get("notices"))
+        print("[info] 公告抓取：%d 只近 %d 日有公告（打标依据增强）"
+              % (n_hit, cd.NOTICE_WINDOW_DAYS))
+    except Exception as ex:
+        print("[warn] 公告抓取失败（不影响重打标主流程）: %s" % ex)
     for pool in ("confirmed", "watching"):
         entries = db.get(pool) or []
         if not entries:

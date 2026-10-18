@@ -38,3 +38,6 @@ market-dashboard.zip
 
 # 一次性构建脚本（周末任务临时生成，不入库）
 _weekend_*.py
+
+# 个股公告抓取缓存（R100z148：check_duanban/retag_duanban 生成，TTL 当日，不应进仓库）
+.notice_cache/

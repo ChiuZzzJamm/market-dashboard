@@ -661,6 +661,133 @@ def fetch_top_boards(D, top=10, days=3):
     return []
 
 
+# ---------- R100z148: 个股公告抓取（东财公告 API）——个股级利好/利空确定性打标 ----------
+# 背景：断板池 sentiment 原唯一数据源是 data.js 五节要闻 + aiPrediction
+# （collect_sentiment），而 AI 要闻检索面向板块级/市场级事件，**抓不到单只
+# 个股的公司公告**——2026-10-15 东百集团「终止收购杭州快灵光电」公告后
+# 连续跌停，池内仍标 neutral、无任何消息面依据（用户实报缺陷）。
+# 本模块用东财公告 API 对池内标的批量拉近 3 日公告标题，按保守关键词表
+# 分类为 bear/bull（确定性规则，零 AI），经 tag_entries 既有加权逻辑
+# （个股级×2）参与打标，并进 story 小作文的【个股消息】段。
+NOTICE_API = "https://np-anotice-stock.eastmoney.com/api/security/ann"
+NOTICE_CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.notice_cache')
+# 回看 7 日：与断板候选回看窗口（--days 7）对齐——池内标的可能是 5-7 天前
+# 涨停的，关键公告（终止收购/减持等）常发生在 T 日~T+2，3 日窗口会漏
+# （2026-10-19 实测：东百 10-15「终止收购」公告在 3 日窗口外）。
+NOTICE_WINDOW_DAYS = 7
+NOTICE_PAGE_SIZE = 30       # 单只拉取条数（7 日窗口需覆盖 20+ 条）
+# 利空关键词（保守：只收确定性实质事件）。
+# 注意：**不含**「风险提示/异常波动/停牌」——R91j 口径：涨跌幅与走势形态
+# 不构成利好/利空依据，此类公告本质是对股价异动的提示，纳入会违背该口径。
+NOTICE_BEAR_KW = ("终止收购", "终止协议", "终止合作", "终止框架", "终止实施",
+                  "终止本次", "终止重大", "终止筹划", "减持", "预亏", "业绩预减",
+                  "业绩快亏", "处罚", "立案", "问询", "关注函", "退市", "违规",
+                  "败诉", "清算", "停产", "停工", "下调业绩", "下修业绩",
+                  "被冻结", "轮候冻结", "被动减持", "违约", "否决")
+# 利好关键词（同样保守）
+NOTICE_BULL_KW = ("中标", "签约", "签订", "涨价", "提价", "回购", "增持",
+                  "业绩预增", "预增", "获批", "投产", "量产", "定增", "重组",
+                  "获奖", "通过认证", "战略合作", "中标候选")
+# 「终止减持/增持/回购计划」是中性偏好事件，含「减持」会被错标 bear——显式排除。
+# 「解除冻结/解除质押/解除限售」同属解除类公告（利好方向但不标 bull，保守不标）。
+NOTICE_NEUTRAL_OVERRIDE = ("终止减持", "终止增持", "终止回购", "减持计划", "增持计划",
+                           "解除冻结", "解除质押", "解除限售", "解除冻结及")
+
+
+def classify_notice(title):
+    """公告标题 → 'bear' / 'bull' / None（保守：一词多义或歧义时不打标）。"""
+    t = str(title or "")
+    if not t:
+        return None
+    if any(k in t for k in NOTICE_NEUTRAL_OVERRIDE):
+        return None
+    bear = any(k in t for k in NOTICE_BEAR_KW)
+    bull = any(k in t for k in NOTICE_BULL_KW)
+    if bear and not bull:
+        return "bear"
+    if bull and not bear:
+        return "bull"
+    return None  # 都命中/都不命中：宁可不标，不可错标
+
+
+def fetch_stock_notices(code, days=NOTICE_WINDOW_DAYS):
+    """东财公告 API 拉个股近 days 日公告（当日缓存，失败静默返回 []）。"""
+    code = str(code or "")
+    if not re.fullmatch(r"\d{6}", code):
+        return []
+    try:
+        os.makedirs(NOTICE_CACHE_DIR, exist_ok=True)
+        cp = os.path.join(NOTICE_CACHE_DIR, code + ".json")
+        today = _today_str()
+        if os.path.exists(cp):
+            try:
+                cached = json.load(open(cp, encoding='utf-8'))
+                if cached.get('date') == today:
+                    return cached.get('list') or []
+            except Exception:
+                pass
+        cutoff = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
+        url = (f"{NOTICE_API}?sr=-1&page_size={NOTICE_PAGE_SIZE}&page_index=1"
+               f"&ann_type=A&client_source=web&stock_list={code}"
+               f"&f_node=0&s_node=0")
+        data = get_json_curl(url, retries=1, gap=2)
+        lst = ((data or {}).get('data') or {}).get('list') or []
+        out = []
+        for x in lst:
+            nd = str(x.get('notice_date') or '')[:10]
+            if not nd or nd < cutoff:
+                continue
+            title = str(x.get('title') or '').strip()
+            # 去掉「公司名:公司名关于…」式冗余前缀（只去掉第一段）
+            if ':' in title:
+                title = title.split(':', 1)[1].strip() or title
+            col = ''
+            for c in x.get('columns') or []:
+                col = str(c.get('column_name') or '')
+                break
+            out.append({'date': nd, 'title': title, 'column': col})
+        with open(cp, 'w', encoding='utf-8') as f:
+            json.dump({'date': today, 'list': out}, f, ensure_ascii=False)
+        return out
+    except Exception:
+        return []
+
+
+def fetch_notices_batch(codes, budget=90):
+    """并发抓池内标的公告 → {code: [notice,...]}。
+    内部 90s 预算（NOTICE_BUDGET 环境变量可调），到点放弃剩余——
+    公告是增强项，绝不能拖垮断板主流程（K线抓取另有 DUANBAN_DEADLINE 预算）。"""
+    out = {}
+    todo = [c for c in dict.fromkeys(str(x) for x in (codes or [])) if re.fullmatch(r"\d{6}", c)]
+    if not todo:
+        return out
+    try:
+        budget = float(os.environ.get("NOTICE_BUDGET", str(budget)))
+    except ValueError:
+        budget = 90.0
+    t0 = time.time()
+
+    def work(c):
+        return c, fetch_stock_notices(c)
+
+    try:
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            futs = [ex.submit(work, c) for c in todo]
+            for fut in as_completed(futs):
+                try:
+                    c, lst = fut.result()
+                    out[c] = lst
+                except Exception:
+                    pass
+                if time.time() - t0 > budget:
+                    print("[warn] 公告抓取超预算 %ds，剩余 %d 只放弃（不影响主流程）"
+                          % (budget, len(todo) - len(out)), file=sys.stderr)
+                    break
+    except Exception as ex:
+        print("[warn] 公告批量抓取异常（不影响主流程）: %s" % ex, file=sys.stderr)
+    return out
+
+
 def sina_symbol(code):
     if code.startswith(("60", "68")):
         return "sh" + code
@@ -1012,6 +1139,23 @@ def tag_entries(entries, D):
                 nd2 = dict(kw_hit[1], kind="sector", kw=kw_hit[0])
                 nd2["srcTag"] = _src_tag(kw_hit[1].get("src"), kw_hit[0], hybk, D)
                 refs = [nd2]
+        # ---- R100z148: 个股公告（东财公告 API）转个股级线索（确定性抓取，
+        #      弥补 AI 要闻检索覆盖不到单只个股公司公告的缺口） ----
+        for nt in e.get("notices") or []:
+            direction = classify_notice(nt.get("title") or "")
+            if not direction:
+                continue
+            ref = {"src": "notice", "sec": e.get("sector") or "",
+                   "title": nt.get("title") or "",
+                   "summary": nt.get("column") or "",
+                   "source": "东方财富公告", "time": nt.get("date") or "",
+                   "kind": "stock"}
+            if direction == "bear":
+                if not any(b.get("title") == ref["title"] for b in bear_refs):
+                    bear_refs.append(ref)
+            else:
+                if not any(b.get("title") == ref["title"] for b in refs):
+                    refs.append(ref)
         bull_type = "stock" if any(r.get("kind") == "stock" for r in refs) else ("sector" if refs else None)
         # R91p 加权打标（2026-09-23 用户反馈修复：有研新材 12 条利好被 1 条间接利空
         # 一票否决）：个股级线索×2、板块级线索×1，bear 加权 > bull 加权才判 bear；
@@ -1030,10 +1174,13 @@ def tag_entries(entries, D):
             story = "暂无明确利好/利空消息（按当日要闻与 AI 写回自动更新）"
         # R98k：概率不再留空待 AI（AI 曾全填 50 / merge 曾补 50）——先给确定性基线，
         # AI 复核仍可 ±10 校准，但 probNote 已非空，retag 不会重算覆盖。
-        out.append(dict(e, sentiment=sent, bullType=bull_type,
-                        bullRefs=refs, bearRefs=bear_refs, story=story,
-                        probability=baseline_prob(sent, rw, bw),
-                        probNote=baseline_note(sent, rw, bw)))
+        # notices 是中间字段（build_module 批量抓取、本函数消费后即弃，
+        # 不进 data.js——merge 不建该字段白名单，出口统一剥掉）
+        out.append({k: v for k, v in dict(e, sentiment=sent, bullType=bull_type,
+                                          bullRefs=refs, bearRefs=bear_refs, story=story,
+                                          probability=baseline_prob(sent, rw, bw),
+                                          probNote=baseline_note(sent, rw, bw)).items()
+                    if k != "notices"})
     return out
 
 
@@ -1094,6 +1241,18 @@ def build_module(pairs, D):
                         "pct": pct, "boardPctToday": bpt, "boardPctZt": bpz, "bkCode": bk_code,
                         "probability": None, "probNote": "",
                         "kline": bars})
+    # R100z148: 批量抓池内标的近 3 日公告（个股级利好/利空确定性打标，
+    # 弥补 AI 要闻检索只覆盖板块级事件、抓不到单只个股公告的缺口）。
+    # notices 是中间字段（不进 data.js），tag_entries 消费后由 merge 的白名单丢弃。
+    try:
+        notices = fetch_notices_batch([p["code"] for p in pairs])
+        for e in entries:
+            e["notices"] = notices.get(str(e["code"])) or []
+        n_hit = sum(1 for e in entries if e["notices"])
+        print("[info] 公告抓取：%d/%d 只近 %d 日有公告"
+              % (n_hit, len(entries), NOTICE_WINDOW_DAYS), file=sys.stderr)
+    except Exception as ex:
+        print("[warn] 公告抓取失败（不影响主流程）: %s" % ex, file=sys.stderr)
     tagged = tag_entries(entries, D)
     confirmed = [e for e in tagged if e["stage"] == "全流程达标"]
     watching = [e for e in tagged if e["stage"] != "全流程达标"]
