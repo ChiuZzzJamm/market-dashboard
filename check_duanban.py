@@ -746,6 +746,13 @@ def fetch_stock_notices(code, days=NOTICE_WINDOW_DAYS):
                 col = str(c.get('column_name') or '')
                 break
             out.append({'date': nd, 'title': title, 'column': col})
+        # R100z149b：只在 API 确实返回了数据（data 真值）时才写缓存。
+        # 背景：批量并发下公告接口偶发返回 None（超时/限流）→ out=[] → 空列表被
+        #       TTL 当日缓存，这只票当天永久「无个股消息」，重跑也读缓存不重试。
+        #       同日 stock_news.py 新闻路径实测出过同一坑（4 只标的缓存 {"list":[]}
+        #       但直打 API hitsTotal=52/322 有数据）。失败不落盘 → 下次运行自然重试。
+        if not data:
+            return out
         with open(cp, 'w', encoding='utf-8') as f:
             json.dump({'date': today, 'list': out}, f, ensure_ascii=False)
         return out

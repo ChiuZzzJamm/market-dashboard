@@ -46,6 +46,11 @@ NEWS_MAX_KEEP = 3       # 单只最多保留条数（体积优先：data.js 已 
 NOTICE_MAX_KEEP = 3     # 单只最多保留公告条数
 SUMMARY_MAX = 72        # 摘要截断（控制 data.js 体积：538 只 × 6 条 × 72 字 ≈ 300KB）
 BUDGET = float(os.environ.get('STOCK_NEWS_BUDGET', '600'))  # 全流程秒级预算
+# 跳过「当日缓存读取」强制重抓（写入照常覆盖旧缓存）。
+# 用途：改了过滤/归一化逻辑后要对全量标的生效时不必 `rm -rf .news_cache`
+# ——那是几百文件的目录，会被安全删除策略拦下（2026-10-19 实测）。
+# NEWS_FORCE=1 python3 stock_news.py
+NEWS_FORCE = os.environ.get('NEWS_FORCE', '0') == '1'
 
 # 新闻是自由文本，公告那套「整词命中」不够用（"三日即终止的跨界收购"命中不了
 # 「终止收购」）。这里用「事件词 + 对象词」同时出现判定，仍然保守：
@@ -79,6 +84,30 @@ NEWS_LOW_VALUE = ('龙虎榜', '资金流向', '主力资金', '涨幅榜', '跌
                   '大宗交易', '融资余额', '股东户数')
 # 评论/述评类（不构成新消息，占位没价值）
 NEWS_COMMENTARY = ('侃股', '时评', '观察家', '记者观察', '编后语', '社论', '述评')
+# R100z149b：盘面统计类标题（"56只股涨停 最大封单资金19.88亿元" / "45只股上午收盘涨停(附股)"）。
+# 这类文章只是把个股代码列在正文里，被现有「摘要前 60 字含代码」判据误判为个股新闻，
+# 显示在弹窗「个股消息」段就是噪音。标题命中即丢弃（与个股真实动态无关）。
+NEWS_STATS_PAT = (
+    re.compile(r'\d+\s*只股'),
+    re.compile(r'附股'),
+    re.compile(r'连板股|涨停股复盘|炸板'),
+    re.compile(r'^\s*\d+\.\d+亿元资金'),
+)
+
+
+def _norm(s):
+    """全角→半角归一化（2026-10-19 实测：data.js 里 000032 名为全角『深桑达Ａ』，
+    而资讯标题写作半角『深桑达A』→ 名称匹配恒定失败、整只票抓不到个股新闻）。"""
+    out = []
+    for ch in str(s or ''):
+        o = ord(ch)
+        if 0xFF01 <= o <= 0xFF5E:
+            out.append(chr(o - 0xFEE0))
+        elif ch == '　':
+            out.append(' ')
+        else:
+            out.append(ch)
+    return ''.join(out)
 
 
 def classify_news(title, summary=''):
@@ -111,45 +140,68 @@ def fetch_stock_news(name, code, days=NEWS_DAYS):
     code = str(code or '').strip()
     if not re.fullmatch(r'\d{6}', code) or not name:
         return []
+    nm = _norm(name)
     os.makedirs(NEWS_CACHE_DIR, exist_ok=True)
     cp = os.path.join(NEWS_CACHE_DIR, code + '.json')
     today = _today_str()
-    try:
-        if os.path.exists(cp):
-            cached = json.load(open(cp, encoding='utf-8'))
-            if cached.get('date') == today:
-                return cached.get('list') or []
-    except Exception:
-        pass
+    if not NEWS_FORCE:
+        try:
+            if os.path.exists(cp):
+                cached = json.load(open(cp, encoding='utf-8'))
+                if cached.get('date') == today:
+                    return cached.get('list') or []
+        except Exception:
+            pass
 
-    param = {
-        "uid": "", "keyword": f"{name} {code}",
-        "type": ["cmsArticleWebOld"], "client": "web", "clientVersion": "curr",
-        "clientType": "web",
-        "param": {"cmsArticleWebOld": {
-            "searchScope": "default", "sort": "time", "pageIndex": 1,
-            "pageSize": NEWS_PAGE_SIZE, "preTag": "", "postTag": ""
-        }},
-    }
-    url = NEWS_API + '?cb=cb&param=' + quote(json.dumps(param, ensure_ascii=False))
-    raw = ''
-    try:
-        for _ in range(2):
-            raw = cd.curl_text(url) or ''
-            if raw.strip():
-                break
-            time.sleep(1.5)
-    except Exception:
-        raw = ''
+    # R100z149b：双轮搜索。第一轮「名称 代码」，第二轮「纯名称」。
+    # 实测单轮带代码时东财会把代码当独立关键词，返回大量仅正文列到该代码的涨停榜
+    # 文章（"56只股涨停…"），把真正的个股新闻挤出前 20 条；补一轮纯名称显著提高精度。
+    raw, raw2 = '', ''
+    for kw in (f"{nm} {code}", nm):
+        param = {
+            "uid": "", "keyword": kw,
+            "type": ["cmsArticleWebOld"], "client": "web", "clientVersion": "curr",
+            "clientType": "web",
+            "param": {"cmsArticleWebOld": {
+                "searchScope": "default", "sort": "time", "pageIndex": 1,
+                "pageSize": NEWS_PAGE_SIZE, "preTag": "", "postTag": ""
+            }},
+        }
+        url = NEWS_API + '?cb=cb&param=' + quote(json.dumps(param, ensure_ascii=False))
+        try:
+            for _ in range(2):
+                r = cd.curl_text(url) or ''
+                if r.strip():
+                    break
+                time.sleep(1.5)
+        except Exception:
+            r = ''
+        if kw.startswith(nm + ' '):
+            raw = r
+        else:
+            raw2 = r
     items = []
-    if raw:
-        m = re.search(r'^[^(]*\((.*)\)\s*;?\s*$', raw.strip(), re.S)
-        body = m.group(1) if m else raw
+    for r in (raw, raw2):
+        if not r:
+            continue
+        m = re.search(r'^[^(]*\((.*)\)\s*;?\s*$', r.strip(), re.S)
+        body = m.group(1) if m else r
         try:
             obj = json.loads(body)
-            items = ((obj.get('result') or {}).get('cmsArticleWebOld')) or []
+            items.extend(((obj.get('result') or {}).get('cmsArticleWebOld')) or [])
         except Exception:
-            items = []
+            pass
+    # 两轮结果按 title 去重（同一条资讯可能两次都返回）
+    _uniq, items2 = set(), []
+    for x in items:
+        _k = re.sub(r'\s+', '', re.sub(r'<[^>]+>', '', str(x.get('title') or '')))
+        if _k and _k not in _uniq:
+            _uniq.add(_k)
+            items2.append(x)
+    items = items2
+    if not raw and not raw2:
+        # R100z149b：两次请求都没拿到响应体（超时/限流）→ 不落缓存，下次自然重试
+        return []
     cutoff = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
     out, seen = [], set()
     for x in items:
@@ -158,8 +210,11 @@ def fetch_stock_news(name, code, days=NEWS_DAYS):
         tm = str(x.get('date') or '').strip()
         if not title or not tm or tm[:10] < cutoff:
             continue
-        head = title + '｜' + summary[:60]
-        if name not in head and code not in head:
+        # 盘面统计类标题（"56只股涨停" / "…(附股)"）：正文列出代码 ≠ 个股消息，直接丢
+        if any(p.search(title) for p in NEWS_STATS_PAT):
+            continue
+        head = _norm(title) + '｜' + summary[:60]
+        if nm not in head and code not in head:
             continue
         key = re.sub(r'\s+', '', title)
         if key in seen:
@@ -201,11 +256,18 @@ def fetch_stock_news(name, code, days=NEWS_DAYS):
         if len(picked) >= NEWS_MAX_KEEP:
             break
     out = picked
-    try:
-        with open(cp, 'w', encoding='utf-8') as f:
-            json.dump({'date': today, 'list': out}, f, ensure_ascii=False)
-    except Exception:
-        pass
+    # 写缓存：R100z149b —— 只在「请求确实成功拿到响应体」时落盘。
+    # 背景：8 并发下偶发超时/限流 → raw='' → out=[] → 空列表被 TTL 当日缓存，
+    #       这只票当天永久显示「暂无个股消息」，且重跑也读缓存不重试。
+    #       2026-10-19 实测：龙溪股份 / 华控赛格 / 华斯股份 / 深桑达Ａ 缓存为 {"list":[]}，
+    #       但直打同一 API hitsTotal=52 / 322 明明有数据 —— 一次抖动锁死一整天。
+    #       失败不落盘 → 下次运行自然重试。请求成功但确实无新闻（raw 非空、items 空）照常缓存。
+    if raw or raw2:
+        try:
+            with open(cp, 'w', encoding='utf-8') as f:
+                json.dump({'date': today, 'list': out}, f, ensure_ascii=False)
+        except Exception:
+            pass
     return out
 
 
@@ -332,9 +394,13 @@ def main():
         return
 
     old = D.get('stockNews') or {}
-    # 合并：本次抓到的覆盖旧值；本次没抓到但有旧值的保留（接口抖动不至于清空）
     D['stockNews'] = news
-    if old:
+    if old and not NEWS_FORCE:
+        # 合并：本次抓到的覆盖旧值；本次没抓到但有旧值的保留（接口抖动不至于清空）。
+        # ⚠️ NEWS_FORCE=1（全量强制重抓）时**不做兜底** —— 否则改了过滤/归一化逻辑后，
+        #    新结果为空或变少的标的会保留旧条目，噪音永远清不掉。
+        #    2026-10-19 实测：华阳新材旧条目含「涨停股复盘：16股封单超亿元」
+        #    「187只股中线走稳」等盘面统计类，加严过滤后 news=0 却被兜底保留。
         for k, v in old.items():
             if k not in D['stockNews'] and k in targets:
                 D['stockNews'][k] = v
