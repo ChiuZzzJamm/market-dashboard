@@ -273,43 +273,95 @@ def check_horizon(D):
     return warns
 
 
-def check_deduce(D):
+# ── R100z152g（2026-10-19）：叙事型 deduce 白名单 + scope 分派 ─────────────────────
+# 实发事故：ashare.fundNote_deduce.conf='中确信'（应为「中等确信」）溜过原闸门并上线——
+# 原 check_deduce 只扫 aiPrediction.sectors，17:00 run 照它的报错修掉了 sectors 内 5 处同错、
+# 唯独漏掉闸门外的这 1 处（git 实证：「中确信」6→1、「中等确信」61→66）。
+# 分派原则 =「写它的任务跑哪个 scope」，与 check_logic_depth(ai) / check_reason_depth(us) 对齐：
+#   ai 组 = 决策链（aiPrediction + A股利好/利空卡）
+#   us 组 = 叙事段落（A股/美股 板块理由、五节要闻、题材掘金 + ashare.fundNote_deduce）
+# 不入白名单：量化池（harmonic/accumulation/powerScreen）的 deduce 恒为 None（纯指标页
+#   by-design 占位，2026-10-19 实测 99 处全 None）、us.bullish/bearish 当前不带 deduce。
+# 列表节点用「有则校验」语义（deduce 缺失/非对象 = 未启用，跳过）；仅 aiPrediction.sectors
+#   保持「缺失即 FAIL」旧语义（三候挑选股是前端推演段硬依赖）。
+_NARRATIVE_DEDUCE_AI = (
+    ('aiPrediction', 'sectors', True),
+    ('ashare', 'bullish', False),
+    ('ashare', 'bearish', False),
+)
+_NARRATIVE_DEDUCE_US = (
+    ('ashare', 'sectorsUp', False), ('ashare', 'sectorsDown', False),
+    ('ashare', 'themePicks', False),
+    ('ashare', 'bullNews', False), ('ashare', 'bearNews', False),
+    ('ashare', 'macroNews', False), ('ashare', 'intlNews', False),
+    ('ashare', 'bankViews', False),
+    ('us', 'sectorsUp', False), ('us', 'sectorsDown', False),
+    ('us', 'bullNews', False), ('us', 'bearNews', False),
+    ('us', 'macroNews', False), ('us', 'intlNews', False),
+    ('us', 'bankViews', False),
+)
+
+
+def _dd_validate(d, tag, hards, warns):
+    """单条 deduce 结构校验（R100z152g：自 check_deduce 抽出，供白名单各节点复用）。
+    结构缺失/枚举非法 → hard（阻断部署）；文本过短 → warn。d 须为 dict（调用方保证）。"""
+    cands = d.get('cands')
+    if not isinstance(cands, list) or len(cands) != 2:
+        cnt = 0 if cands is None else (len(cands) if isinstance(cands, list) else f"非列表({type(cands).__name__})")
+        hards.append(f"{tag}: deduce.cands 必须恰好 2 个候选（当前 {cnt} 个）")
+    for k, c in enumerate(cands if isinstance(cands, list) else []):
+        if not isinstance(c, dict) or not str(c.get('text') or '').strip():
+            hards.append(f"{tag}: deduce.cands[{k}] 缺 text 推演内容")
+    conf = d.get('conf')
+    if conf not in ('高确信', '中等确信', '推测', '直觉'):
+        hards.append(f"{tag}: deduce.conf 非法（{conf!r}），须取 高确信/中等确信/推测/直觉 之一（禁方向词）")
+    counter = d.get('counter')
+    if not isinstance(counter, str) or not counter.strip():
+        hards.append(f"{tag}: deduce.counter 反证缺失或为空（R99p：不分确信度必列）")
+    for key in ('main', 'counter'):
+        v = d.get(key)
+        if isinstance(v, str):
+            for bad in ('主推：', '反证：'):
+                if v.startswith(bad):
+                    hards.append(f"{tag}: deduce.{key} 自带「{bad}」前缀（R99o：前端会重复渲染成「{bad}{bad}」）")
+            if len(v.strip()) < 6:
+                warns.append(f"{tag}: deduce.{key} 过短（{len(v.strip())} 字），推演信息量不足")
+
+
+def check_deduce(D, scope='all'):
     """R99m/R99o/R99p：aiPrediction 每板块必须内嵌 deduce 三候选推演（前端推演段依赖）。
     结构性缺失（deduce 非对象 / cands 数≠2 / conf 非枚举 / counter 缺失或为空 / 自带「主推：」「反证：」前缀）
-    → 硬违规（FAIL，阻断部署）；cands 文本过短等质量项 → WARN。"""
+    → 硬违规（FAIL，阻断部署）；cands 文本过短等质量项 → WARN。
+
+    R100z152g：白名单扩到全部叙事型 deduce 节点，按 scope 过滤（ai 组 / us 组，见上方注释）。"""
     hards, warns = [], []
-    ap = D.get('aiPrediction') or {}
-    sectors = ap.get('sectors') or []
-    for i, s in enumerate(sectors):
-        if not isinstance(s, dict):
+    targets = []
+    if scope in ('all', 'ai'):
+        targets += _NARRATIVE_DEDUCE_AI
+    if scope in ('all', 'us'):
+        targets += _NARRATIVE_DEDUCE_US
+    for mkt, key, required in targets:
+        arr = (D.get(mkt) or {}).get(key) or []
+        if not isinstance(arr, list):
+            warns.append(f"{mkt}.{key} 非列表（{type(arr).__name__}），deduce 校验跳过")
             continue
-        tag = f"aiPrediction.sectors[{i}]({str(s.get('sector'))[:14]})"
-        d = s.get('deduce')
-        if not isinstance(d, dict):
-            hards.append(f"{tag}: 缺 deduce 三候选推演对象（R99m 内嵌硬约束，前端推演段将空白）")
-            continue
-        cands = d.get('cands')
-        if not isinstance(cands, list) or len(cands) != 2:
-            hards.append(f"{tag}: deduce.cands 必须恰好 2 个候选（当前 {0 if cands is None else len(cands)} 个）")
-        for k, c in enumerate(cands if isinstance(cands, list) else []):
-            if not isinstance(c, dict) or not str(c.get('text') or '').strip():
-                hards.append(f"{tag}: deduce.cands[{k}] 缺 text 推演内容")
-        conf = d.get('conf')
-        if conf not in ('高确信', '中等确信', '推测', '直觉'):
-            hards.append(f"{tag}: deduce.conf 非法（{conf!r}），须取 高确信/中等确信/推测/直觉 之一（禁方向词）")
-        counter = d.get('counter')
-        if not isinstance(counter, str) or not counter.strip():
-            hards.append(f"{tag}: deduce.counter 反证缺失或为空（R99p：不分确信度必列）")
-        for key in ('main', 'counter'):
-            v = d.get(key)
-            if isinstance(v, str):
-                for bad in ('主推：', '反证：'):
-                    if v.startswith(bad):
-                        hards.append(f"{tag}: deduce.{key} 自带「{bad}」前缀（R99o：前端会重复渲染成「{bad}{bad}」）")
-                if len(v.strip()) < 6:
-                    warns.append(f"{tag}: deduce.{key} 过短（{len(v.strip())} 字），推演信息量不足")
-    if not sectors:
-        warns.append("aiPrediction.sectors 为空，deduce 校验跳过")
+        for i, item in enumerate(arr):
+            if not isinstance(item, dict):
+                continue
+            nm = str(item.get('name') or item.get('sector') or item.get('title') or '')[:14]
+            tag = f"{mkt}.{key}[{i}]({nm})"
+            d = item.get('deduce')
+            if not isinstance(d, dict):
+                if required:
+                    hards.append(f"{tag}: 缺 deduce 三候选推演对象（R99m 内嵌硬约束，前端推演段将空白）")
+                continue
+            _dd_validate(d, tag, hards, warns)
+        if required and not arr:
+            warns.append(f"{mkt}.{key} 为空，deduce 校验跳过")
+    if scope in ('all', 'us'):
+        d = (D.get('ashare') or {}).get('fundNote_deduce')
+        if isinstance(d, dict):
+            _dd_validate(d, 'ashare.fundNote_deduce', hards, warns)
     return hards, warns
 
 
@@ -1181,7 +1233,8 @@ def main():
     fresh_warns = check_freshness(D)
     horizon_warns = check_horizon(D)
     # R100z10 新增闸门：deduce 结构硬校验 / verification 闭环软校验 / openOutlook 六维度软校验
-    deduce_hards, deduce_warns = check_deduce(D)
+    # R100z152g：check_deduce 内部按 scope 过滤白名单（ai 组/ us 组），这里如实传入即可
+    deduce_hards, deduce_warns = check_deduce(D, scope=scope)
     # R100z11：预期差结构化字段 / 标的层面验证 / 置信度校准门槛
     exp_hards, exp_warns = check_exp(D)
     veri_warns = check_verification(D)
@@ -1207,7 +1260,9 @@ def main():
     exit_warns = check_exit(D)                         # R100z15：退出纪律（止损/目标/证伪）
     pool_hards, pool_warns = check_stock_pool(D)       # R100z15：机械选股池是否真进决策链
     # R100z16：只把「本职责范围内」的 FAIL 计入 violations。
-    if scope in ('all', 'ai'):
+    # R100z152g：deduce 白名单已含 us 组（要闻/理由/资金/美股），故 us scope 也须计入——
+    # hards 已在 check_deduce 内按 scope 过滤，此处只放行、不重复过滤。
+    if scope in ('all', 'ai', 'us'):
         violations.extend(deduce_hards)
         violations.extend(exp_hards)
         violations.extend(logic_hards)
