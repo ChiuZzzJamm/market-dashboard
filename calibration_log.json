@@ -761,6 +761,140 @@
      "volExpect": "平量"
     }
    }
+  ],
+  "2026-10-19": [
+   {
+    "date": "2026-10-19",
+    "sector": "计算机设备·信创",
+    "predicted": "看涨",
+    "dirClass": "flat",
+    "actualPct": -0.11,
+    "benchPct": 0.185,
+    "excessPct": -0.295,
+    "benchMainPct": 0.26,
+    "result": "未命中",
+    "conf": "中",
+    "avgPct": 0.51,
+    "excessAvg": 0.325,
+    "hit": null,
+    "hitAbs": null,
+    "pos": {
+     "tendency": "震荡",
+     "bandLo": 3700,
+     "bandHi": 3800,
+     "volExpect": "放量"
+    }
+   },
+   {
+    "date": "2026-10-19",
+    "sector": "软件开发·AI应用",
+    "predicted": "看涨",
+    "dirClass": "flat",
+    "actualPct": 0.53,
+    "benchPct": 0.185,
+    "excessPct": 0.345,
+    "benchMainPct": 0.26,
+    "result": "命中",
+    "conf": "中",
+    "avgPct": 2.01,
+    "excessAvg": 1.825,
+    "hit": null,
+    "hitAbs": null,
+    "pos": {
+     "tendency": "震荡",
+     "bandLo": 3700,
+     "bandHi": 3800,
+     "volExpect": "放量"
+    }
+   },
+   {
+    "date": "2026-10-19",
+    "sector": "半导体·存储芯片",
+    "predicted": "中性",
+    "dirClass": "flat",
+    "actualPct": -0.66,
+    "benchPct": 0.185,
+    "excessPct": -0.845,
+    "benchMainPct": 0.26,
+    "result": "命中",
+    "conf": "中",
+    "avgPct": -1.16,
+    "excessAvg": -1.345,
+    "hit": null,
+    "hitAbs": null,
+    "pos": {
+     "tendency": "震荡",
+     "bandLo": 3700,
+     "bandHi": 3800,
+     "volExpect": "放量"
+    }
+   },
+   {
+    "date": "2026-10-19",
+    "sector": "油气能源",
+    "predicted": "看涨",
+    "dirClass": "flat",
+    "actualPct": 0.09,
+    "benchPct": 0.185,
+    "excessPct": -0.095,
+    "benchMainPct": 0.26,
+    "result": "部分兑现",
+    "conf": "中",
+    "avgPct": -0.11,
+    "excessAvg": -0.295,
+    "hit": null,
+    "hitAbs": null,
+    "pos": {
+     "tendency": "震荡",
+     "bandLo": 3700,
+     "bandHi": 3800,
+     "volExpect": "放量"
+    }
+   },
+   {
+    "date": "2026-10-19",
+    "sector": "黄金避险",
+    "predicted": "看涨",
+    "dirClass": "flat",
+    "actualPct": 0.89,
+    "benchPct": 0.185,
+    "excessPct": 0.705,
+    "benchMainPct": 0.26,
+    "result": "命中",
+    "conf": "中",
+    "avgPct": 1.03,
+    "excessAvg": 0.845,
+    "hit": null,
+    "hitAbs": null,
+    "pos": {
+     "tendency": "震荡",
+     "bandLo": 3700,
+     "bandHi": 3800,
+     "volExpect": "放量"
+    }
+   },
+   {
+    "date": "2026-10-19",
+    "sector": "创新药·CXO",
+    "predicted": "看涨",
+    "dirClass": "flat",
+    "actualPct": -0.83,
+    "benchPct": 0.185,
+    "excessPct": -1.015,
+    "benchMainPct": 0.26,
+    "result": "未命中",
+    "conf": "中",
+    "avgPct": 2.4,
+    "excessAvg": 2.215,
+    "hit": null,
+    "hitAbs": null,
+    "pos": {
+     "tendency": "震荡",
+     "bandLo": 3700,
+     "bandHi": 3800,
+     "volExpect": "放量"
+    }
+   }
   ]
  },
  "open": {
@@ -881,6 +1015,26 @@
    "bandHit": 0.5,
    "volHit": 0,
    "score": 0.65,
+   "verdict": "部分兑现",
+   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；量能为涨跌家数占比代理，口径固定不可调"
+  },
+  "2026-10-19": {
+   "date": "2026-10-19",
+   "openDate": "2026-10-19",
+   "tendency": "震荡",
+   "bandLo": 3700,
+   "bandHi": 3800,
+   "volExpect": "放量",
+   "actual": {
+    "point": 3730.92,
+    "changePct": 0.39,
+    "upRate": 0.421,
+    "volumeText": "成交约 1.44 万亿"
+   },
+   "tendencyHit": 1,
+   "bandHit": 1,
+   "volHit": 0,
+   "score": 0.8,
    "verdict": "部分兑现",
    "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；量能为涨跌家数占比代理，口径固定不可调"
   }

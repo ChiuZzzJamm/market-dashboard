@@ -43,7 +43,7 @@ import sys
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# R100z53：新闻来源白名单从「只写在五条自动化 prompt 正文里」下沉成机器闸门，
+# R100z53：新闻来源白名单从「只写在看板自动化 prompt 正文里」下沉成机器闸门，
 # 判定口径单一来源 news_sources.py（prompt 只指路，不再各写一份免得口径漂移）。
 import news_sources
 

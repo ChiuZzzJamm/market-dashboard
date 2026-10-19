@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """新闻来源白名单（R100z53 新增，机器闸门 + prompt 指路共用单一事实源）。
 
-背景：此前「新闻源白名单」只存在于五条自动化的 prompt 正文里（人工约束、跑完才复盘），
+背景：此前「新闻源白名单」只存在于看板自动化的 prompt 正文里（人工约束、跑完才复盘），
 没有机器闸门兜底——AI 某次写了个「某某财经自媒体」或把「证监会」写成「CSRC」都不会被拦。
-本次下沉为代码：validate_stocks.check_news_sources 读本文件判定，五条自动化 prompt 也
+本次下沉为代码：validate_stocks.check_news_sources 读本文件判定，看板自动化 prompt 也
 只写「以 news_sources.py 为准」，不再各写一份（避免口径漂移）。
 
 白名单分四类：

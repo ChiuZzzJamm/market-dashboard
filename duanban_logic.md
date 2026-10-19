@@ -20,14 +20,14 @@
    │
    ├─① check_duanban.py --module --out draft.json
    │      a. recent_trade_dates(5)  取最近 5 个工作日
-   │      b. fetch_zt_pool(d)       逐日拉东财涨停池（含行业板块 hybk）
+   │      b. fetch_zt_pool(d)       逐日拉同花顺涨停池（主源，R99i；东财 push2ex 兜底，hybk 由东财 best-effort 映射补充）
    │      c. get_kline(code)        腾讯日K(主) / 新浪(备) / 本地缓存兜底
    │      d. eval_candidate()       对每只候选的每一个涨停日做分池评估
    │      e. build_module()         组装 {confirmed, watching} + 近60根K线
    │      f. tag_entries()          与 data.js 要闻/AI预测交叉打标 + 拼 story 底稿
    │
    ├─② 自动化 AI 复核（按 prompt 7.6 步）
-   │      · 逐只写 80–180 字 story（板块消息写具体内容；个股财报/业绩/大单优先，可 websearch 核实）
+   │      · 逐只复核/深化 100–180 字 story（底稿由 build_story 数据驱动生成、≥100 字；板块消息写具体内容；个股公告/财报/业绩/大单优先，可 websearch 核实）
    │      · 补 probability / probNote（基于形态完成度 + 题材热度）
    │      · 禁编造个股公告/财务数据；story 必须非空（自检 e2）
    │
@@ -99,7 +99,7 @@
 
 每只附：
 - `bullRefs` / `bearRefs`：结构化的命中新闻条目 `{kind:'stock'|'sector', kw, sec, title, summary, source, time, src}`
-- `story`（R89 新增）：由命中新闻**自动拼装的小作文底稿**，例如 `板块消息（半导体）：2026-09-22 财联社《xxx》：……` / `个股消息：……`；中性兜底提示"请检索个股公告/财报/大单补充"。**最终个股层面（财报日期、盈利增幅、中标金额等）由自动化 AI 逐只 websearch 改写补全。**
+- `story`：由 `build_story()` **数据驱动生成的底稿**（R100z148b 起，**≥100 字**，【个股消息】/【板块消息】分段），素材=个股公告标题（东财近 7 日）/要闻标题/板块涨幅/涨停日/形态；**每个整句必须含个股标识（名称或唯一公告标题）**。自动化 AI 逐只过目，有 websearch 到的新消息才深化补写；**严禁改短到 100 字以下**（audit G16 硬闸拦部署）。
 
 ---
 
@@ -117,7 +117,8 @@
 
 | 数据 | 来源 | 备注 |
 |---|---|---|
-| 涨停池（含 hybk 行业板块） | 东财 `push2ex.getTopicZTPool` | `date=YYYYMMDD` 无横线，失败重试 |
+| 涨停池（主源） | 同花顺 `dataapi/limit_up/limit_up_pool` | `date=YYYYMMDD` 无横线（R99i 迁移）；hybk 由东财映射 best-effort 补 |
+| 涨停池（兜底） | 东财 `push2ex.getTopicZTPool` | 主源失败时整池兜底（自带 hybk） |
 | 日 K 线（主） | 腾讯 `web.ifzq.gtimg.cn` fqkline | 独立域名、限频少 |
 | 日 K 线（备） | 新浪 `CN_MarketData.getKLineData` | 限频窗口兜底 |
 | 日 K 线（兜底） | 本地缓存 `kline_cache/` | 两源皆失败启用 |
@@ -135,7 +136,7 @@
 
 ## 9. 自动化协作口径（R89 prompt）
 
-- **16:00 A股数据步 / 07:00 美股 / 周日 22:00 周末** 三份 prompt 同步要求：逐只写 `story`（80–180 字），板块消息写具体内容，个股财报/业绩/大单优先并 `websearch` 核实，单只超 15 秒放弃，**禁编造**；自检 `e2` 要求 `story` 非空。（R100z138：story 写回职责已随拆分归入 16:00 数据步，17:00 叙事步不再碰断板 story。）
+- **16:00 A股数据步 / 07:00 美股 / 周日 22:00 周末** 三份 prompt 同步要求：逐只复核/深化 `story`（100–180 字），板块消息写具体内容，个股公告/财报/业绩/大单优先并 `websearch` 核实，单只超 15 秒放弃，**禁编造**。（R100z138：story 写回职责已随拆分归入 16:00 数据步，17:00 叙事步不再碰断板 story；R100z148b：底稿由 `build_story` 数据驱动生成、字数下限 100 字。）
 - 绝对禁止：第⑪条新增"story 编造个股公告/财务数据"红线。
 
 ## 回归验证（2026-09-22，用户提供的 8 个历史模型图形）

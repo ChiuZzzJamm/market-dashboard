@@ -475,7 +475,7 @@ def main():
         L['updatedAt'] = _now()
         save_ledger(L)
     # R100z60c：改成**默认就写**（--view 除外），别再要求显式 --write-data。
-    # 原因：此前只有带 --write-data 才写，但全仓库 + 五条自动化 prompt 里**没有任何调用方
+    # 原因：此前只有带 --write-data 才写，但全仓库 + 看板自动化 prompt 里**没有任何调用方
     # 带这个参数**，唯一一次手写停在 2026-10-04 12:32:45 —— 于是前端「止损跟踪统计」卡永远
     # 是那份旧快照，而 stop_ledger.json 每天都在被 track_calibration 更新。
     # 现在 track_calibration.py 在真实跑（非 --view / 非 --json）时会调 stop_tracker.main()，

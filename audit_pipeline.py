@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""audit_pipeline.py · 五自动化 + 流水线一次性机器验收（R100z17）
+"""audit_pipeline.py · 七自动化 + 流水线一次性机器验收（R100z17）
 
 把此前「靠人逐条翻脚本 / 翻 prompt」的体检方式，改成机器可执行的验收清单。
 
@@ -126,7 +126,7 @@ VALIDATE_SCOPES = ("all", "ai", "us", "star")
 #   没人守，所以半死链路能长期存活。
 #
 # 字段：
-#   require : 五条看板自动化的 prompt 必须点名的关键词（大小写不敏感）。留空 = 豁免点名。
+#   require : 看板自动化的 prompt 必须点名的关键词（大小写不敏感）。留空 = 豁免点名。
 #   proof   : 豁免的机器可复验反证，成立后豁免才作数（不写 = 不校验反证）。
 #               intermediate：脚本间中间产物（前端不引用它）
 #               mapping     ：静态映射表（dict[str,str]，内容不随交易日变化）
@@ -777,7 +777,7 @@ def g11_smoke(r, deep=False):
 
 # ---------------------------------------------------------------- G12
 def load_auto_prompts():
-    """读五条看板自动化的 prompt 全文。
+    """读看板自动化的 prompt 全文。
 
     单一事实源是 DB 本身，不用基线快照（快照会随代码演进而腐化）。
     注意 R100z62：DB 里 deleted_at IS NULL 的自动化有 7 条，混着「公益花园·照顾宠物」
@@ -836,7 +836,7 @@ def g12_deadlinks(r):
                 # 前端在渲染却没人点名 = 真半死（FAIL）；纯后台产物 = WARN
                 dead.append(f"{k}（前端渲染={k in html}）")
                 if k in html:
-                    r.fail("G12", f"半死链路：{k} 前端已渲染，但五条看板自动化无一条点名"
+                    r.fail("G12", f"半死链路：{k} 前端已渲染，但七条看板自动化无一条点名"
                                   f" {list(spec['require'])}——要么补进 prompt，要么在"
                                   f" PRODUCT_OWNERSHIP 登记 owner 并写明豁免理由")
                 else:
@@ -1549,7 +1549,7 @@ def main():
                 groups.append((g, []))
             groups[-1][1].append((lv, msg))
         print("=" * 78)
-        print(" audit_pipeline · 五自动化与流水线一次性机器验收 (R100z17)")
+        print(" audit_pipeline · 七自动化与流水线一次性机器验收 (R100z17)")
         print("=" * 78)
         for g, rows in groups:
             print(f"\n[{g}]")
