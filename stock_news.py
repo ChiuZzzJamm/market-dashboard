@@ -44,7 +44,8 @@ NEWS_DAYS = 14          # 个股新闻回看天数
 NEWS_PAGE_SIZE = 20     # 单只搜索条数（再按相关性与日期过滤）
 NEWS_MAX_KEEP = 3       # 单只最多保留条数（体积优先：data.js 已 5MB+，小程序 60s 超时）
 NOTICE_MAX_KEEP = 3     # 单只最多保留公告条数
-SUMMARY_MAX = 72        # 摘要截断（控制 data.js 体积：538 只 × 6 条 × 72 字 ≈ 300KB）
+SUMMARY_MAX = 180       # 新闻摘要字数上限。东财 content 原文实测 p90=147 / max=154，
+                        # 取 180 可完整保留（原 72 字把 1251/1513 条砍成半句，用户实报「显示不全」）
 BUDGET = float(os.environ.get('STOCK_NEWS_BUDGET', '600'))  # 全流程秒级预算
 # 跳过「当日缓存读取」强制重抓（写入照常覆盖旧缓存）。
 # 用途：改了过滤/归一化逻辑后要对全量标的生效时不必 `rm -rf .news_cache`
@@ -87,10 +88,13 @@ NEWS_COMMENTARY = ('侃股', '时评', '观察家', '记者观察', '编后语',
 # R100z149b：盘面统计类标题（"56只股涨停 最大封单资金19.88亿元" / "45只股上午收盘涨停(附股)"）。
 # 这类文章只是把个股代码列在正文里，被现有「摘要前 60 字含代码」判据误判为个股新闻，
 # 显示在弹窗「个股消息」段就是噪音。标题命中即丢弃（与个股真实动态无关）。
+# R100z150 补强：「27只涨停股」「78只跌停股」「午间涨跌停股分析」——原 `\d+\s*只股`
+# 要求「只股」连续，「只涨停股」中间隔字所以漏网（用户实报 8 条残留）。
 NEWS_STATS_PAT = (
-    re.compile(r'\d+\s*只股'),
+    re.compile(r'\d+\s*只(?:涨停|跌停|上涨|下跌)?股'),     # 185只股 / 27只涨停股 / 78只跌停股
     re.compile(r'附股'),
-    re.compile(r'连板股|涨停股复盘|炸板'),
+    re.compile(r'连板股|涨停股复盘|炸板|涨跌停股'),
+    re.compile(r'(?:午间|收盘|早盘|盘中|尾盘)[^，。]{0,6}(?:分析|盘点|速递|播报)'),
     re.compile(r'^\s*\d+\.\d+亿元资金'),
 )
 
@@ -127,6 +131,28 @@ def classify_news(title, summary=''):
 
 def _today_str():
     return datetime.now().strftime('%Y-%m-%d')
+
+
+def _clip_sent(text, limit=SUMMARY_MAX):
+    """按句读截断，避免把一句话砍成半截。
+
+    背景（用户 2026-10-19 实报「个股新闻内容没显示全」）：原实现 `summary[:72]`
+    硬切，1251/1513 条都断在句中，出现"…与景德镇陶阳置业有限公司签"这种残句。
+    东财 content 原文 p90=147 / max=154，limit=180 时基本不触发截断；
+    真超长时优先回退到最后一个句末标点，其次逗号，都没有才加省略号。
+    """
+    t = str(text or '').strip()
+    if len(t) <= limit:
+        return t
+    seg = t[:limit]
+    for mk in ('。', '！', '？', '；', '. ', '! ', '? '):
+        i = seg.rfind(mk)
+        if i >= limit * 0.55:
+            return seg[:i + len(mk)].rstrip()
+    i = max(seg.rfind('，'), seg.rfind('、'), seg.rfind(','))
+    if i >= limit * 0.55:
+        return seg[:i].rstrip() + '…'
+    return seg.rstrip() + '…'
 
 
 def fetch_stock_news(name, code, days=NEWS_DAYS):
@@ -223,7 +249,7 @@ def fetch_stock_news(name, code, days=NEWS_DAYS):
         out.append({
             'time': tm[:16],
             'title': title[:80],
-            'summary': summary[:SUMMARY_MAX],
+            'summary': _clip_sent(summary),
             'source': str(x.get('mediaName') or '东方财富资讯')[:20],
             'dir': classify_news(title, summary),
         })
@@ -366,7 +392,16 @@ def build(targets, days=NEWS_DAYS):
         nw = news.get(code) or []
         if not nl and not nw:
             continue
-        out[code] = {'name': name, 'notices': nl, 'news': nw}
+        # R100z150：只写非空的一侧。原先无条件同时带 notices/news 两个键，
+        # 「有新闻无公告」的标的会产出 200+ 个 `notices: []`，全部被 audit G9 判为
+        # 「白名单外空内容」刷屏（掩盖真正的空字段）。前端一律用 (x.notices || []) 取值，
+        # 缺键安全。
+        item = {'name': name}
+        if nl:
+            item['notices'] = nl
+        if nw:
+            item['news'] = nw
+        out[code] = item
     return out
 
 

@@ -115,8 +115,11 @@ def main():
             nonlocal n_high
             if item['confidence'] == '高确信':
                 if n_high >= high_max:
-                    item = dict(item, confidence='中等确信',
-                                note=item.get('note', '') + '（受后验闸门限制，由高确信降级）')
+                    # R100z150：原实现写 note=...+'（受后验闸门限制…）'，但 item 本就没有
+                    # note 字段 → 拼出的是纯括号句；且未降级的条目 note 恒为空串，
+                    # 全站空内容扫描每次报 strategy.watchlist[*].note 空串（9+ 处噪音）。
+                    # watchlist 前端并不渲染、无任何消费方 → 直接去掉 note 字段，用布尔标记降级。
+                    item = dict(item, confidence='中等确信', demoted=True)
                 else:
                     n_high += 1
             watch.append(item)
@@ -134,7 +137,6 @@ def main():
                 'confidence': conf,
                 'logic': '力度分 %s（%s）；%s' % (ps.get('score'), ps.get('signalClass'), ps.get('binding') or ''),
                 'catalyst': '受益板块盘面验证：' + (secs[0] if secs else '—') + sec_str,
-                'note': '',
             })
 
         # 2) AI 高确信板块
@@ -149,7 +151,6 @@ def main():
                 'confidence': conf,
                 'logic': (s.get('reason') or s.get('logic') or '')[:80],
                 'catalyst': '次日板块强弱兑现',
-                'note': '',
             })
 
         # 3) 断板反包确认池：利好/中性进关注、利空进风险
@@ -168,7 +169,6 @@ def main():
                 'confidence': '中等确信',
                 'logic': (e.get('story') or e.get('form') or '')[:80],
                 'catalyst': '反包确认（放量突破断板价）',
-                'note': '',
             })
 
         # 反馈（闭环读数）

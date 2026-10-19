@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610190837"></script>
+<script src="data.js?v=202610190959"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -2734,9 +2734,30 @@ function stockNewsHtml(code, skipText) {
   var nBull = items.filter(function (x) { return x.dir === 'bull'; }).length;
   var tone = nBear > nBull ? 'var(--down)' : (nBull > nBear ? 'var(--up)' : 'var(--ink2)');
   return '<div class="sn-block">' +
-    '<div class="db-ref-p"><b style="color:' + tone + '">个股消息：</b>' +
+    '<div class="db-ref-p"><b style="color:' + tone + '">个股公告与新闻：</b>' +
     '<span class="db-ref-sum" style="display:inline;">公告 ' + ((sn.notices || []).length) + ' 条 · 新闻 ' + ((sn.news || []).length) + ' 条</span></div>' +
     rows.map(function (x) { return x.html; }).join('') + '</div>';
+}
+/* R100z150：剔除 story 里「个股自身暂无独立公告」这类断言。
+   触发条件：数据层 stockNews 里该标的**确有公告**——此时 AI 的断言与下方列表直接冲突
+   （用户 2026-10-19 实报：上面写「个股自身暂无独立公告，映射逻辑主要来自该条消息」，
+   下面却列「个股消息：公告 1 条 · 新闻 3 条」）。
+   原则：AI 只能引用具体消息，无权断言"有没有公告"；有无公告以数据层为准。
+   真的没有公告时原样保留（AI 的判断此时并不错）。 */
+function stripStaleNoticeClaim(story, code) {
+  var s = String(story || '');
+  if (!s) return s;
+  var sn = ((window.DASHBOARD_DATA || {}).stockNews || {})[String(code || '').trim()] || {};
+  if (!(sn.notices || []).length) return s;
+  var pats = [
+    /个股(?:自身)?(?:暂|目前|当前|尚|均)?(?:无|没有|未发布|未披露|不存在)(?:独立)?(?:公告|消息)[，,、]?/g,
+    /(?:该股|公司|标的)(?:近期|目前|当前|暂|尚)?(?:无|没有|未发布|未披露)(?:应披露的?)?(?:独立)?(?:公告|消息)[，,、]?/g,
+    /(?:暂|尚|目前|当前)未(?:检索|发现|查到)(?:到)?(?:任何)?(?:个股|公司)?(?:独立)?(?:公告|消息)[，,、]?/g
+  ];
+  for (var i = 0; i < pats.length; i++) s = s.replace(pats[i], '');
+  // 清掉删句后可能留下的「，。」「：。」这类悬空标点
+  s = s.replace(/[，,、]\s*(?=[。；;！!？?])/g, '').replace(/：\s*(?=[。；;！!？?])/g, '：');
+  return s;
 }
 function stkNewsHtml(code) {
   code = String(code || '').trim();
@@ -4464,6 +4485,10 @@ function openDbModal(key) {
   var bullP = (e.bullRefs || []).map(dbRefPara).join('');
   var bearP = (e.bearRefs || []).map(dbRefPara).join('');
   var story = typeof e.story === 'string' ? e.story.trim() : '';
+  // R100z150：AI 在 story 里会断言「个股自身暂无独立公告，映射逻辑主要来自该条消息」，
+  // 而数据层 stockNews 实际有公告 → 弹窗上段说"没公告"、下段却列「公告 1 条」，
+  // 自相矛盾（用户 2026-10-19 实报）。以数据层为准：确有公告时剔除该类断言分句。
+  story = stripStaleNoticeClaim(story, e.code);
   var refsHtml = '';
   var label = e.sentiment === 'bear' ? '<b style="color:var(--down)">利空口径：</b>'
     : (e.sentiment === 'neutral' ? '<b>中性口径：</b>'
