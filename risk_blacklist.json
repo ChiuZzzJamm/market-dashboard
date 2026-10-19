@@ -2,7 +2,7 @@
  "ok": true,
  "nameSrc": "em",
  "date": "2026-10-19",
- "checked": 382,
+ "checked": 384,
  "liftWindow": [
   2,
   5
@@ -10,84 +10,6 @@
  "watchPledgeWithin": 365,
  "cutDays": 30,
  "blacklist": {
-  "001298": {
-   "name": "好上好",
-   "reasons": [
-    "2026-10-09 减持公告"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "002237": {
-   "name": "恒邦股份",
-   "reasons": [
-    "2026-09-23 减持公告"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 2.2%（截至 2026-06-05）"
-   ],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "600732": {
-   "name": "爱旭股份",
-   "reasons": [
-    "2026-10-09 减持公告"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 15.7%（截至 2026-06-05）"
-   ],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "605138": {
-   "name": "盛泰集团",
-   "reasons": [
-    "2026-10-10 减持公告"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "002655": {
-   "name": "共达电声",
-   "reasons": [
-    "2026-09-19 减持公告"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 4.1%（截至 2026-06-05）"
-   ],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "603517": {
-   "name": "ST绝味",
-   "reasons": [
-    "ST/退市（当前名称 ST绝味）"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 1.2%（截至 2026-06-05）"
-   ],
-   "severity": "red",
-   "progress": []
-  },
   "603533": {
    "name": "掌阅科技",
    "reasons": [
