@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610191740"></script>
+<script src="data.js?v=202610191747"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1860,11 +1860,15 @@ function fbIsDuanban(code0) {
 function exitMetaLine(code) {
   var ex = exitForCode(code);
   if (!ex || typeof ex !== 'object') return '';
-  if (ex.stop === null || ex.stop === undefined) {
+  // R100z151：止损/目标必须是可用数字。数据层若误写「-8%」这类字符串，
+  // Number() 会得到 NaN、页面渲染成「止损 NaN」——那种行直接不渲染，退化为纯证伪行，绝不显示 NaN。
+  var _stop = Number(ex.stop), _okStop = (ex.stop !== null && ex.stop !== undefined && isFinite(_stop));
+  if (!_okStop) {
     return ex.falsify ? '<div class="exit-row exit-line"><span class="xs">✖</span> ' + esc(ex.falsify) + '</div>' : '';
   }
-  return '<div class="exit-row exit-line"><b>退出纪律</b> 止损 ' + Number(ex.stop).toFixed(2) +
-    (ex.target !== null && ex.target !== undefined ? ' · 目标 ' + '<span class="xt">' + Number(ex.target).toFixed(2) + '</span>' : '') +
+  var _tgt = Number(ex.target), _okTgt = (ex.target !== null && ex.target !== undefined && isFinite(_tgt));
+  return '<div class="exit-row exit-line"><b>退出纪律</b> 止损 ' + _stop.toFixed(2) +
+    (_okTgt ? ' · 目标 ' + '<span class="xt">' + _tgt.toFixed(2) + '</span>' : '') +
     ' <span class="xs">✖</span> ' + esc(ex.falsify) +
     (ex.stopBasis ? '<span class="xb">（' + esc(ex.stopBasis) + '）</span>' : '') + '</div>';
 }
