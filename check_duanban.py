@@ -1067,7 +1067,7 @@ def _fmt_ref(r):
 NO_NEWS_PHRASE = ["走势主要由板块联动贡献", "板块逻辑是当前主要驱动",
                   "断板后资金接力跟随板块节奏", "短期看点集中在所属板块",
                   "公司事件层面暂无新增变量", "板块贝塔是当前主导因素",
-                  "暂无独立催化剂显性化", "盘面驱动让位于板块节奏",
+                  "催化沿产业链逐级传导", "盘面驱动让位于板块节奏",
                   "个股 alpha 让位于板块 beta", "消息面处于真空期"]
 BEAR_PHRASE = ["短期确定性下降", "短期不确定性上升", "短期抛压增加",
                "短期情绪面承压", "短期风险暴露", "短期预期回落",
@@ -1075,6 +1075,16 @@ BEAR_PHRASE = ["短期确定性下降", "短期不确定性上升", "短期抛�
 BULL_PHRASE = ["短期确定性提升", "短期情绪面改善", "短期基本面改善",
                "短期信心增强", "短期预期上修", "短期催化落地",
                "短期博弈价值凸显", "短期关注度提升"]
+# R100z153：neutral 标的曾误用 BEAR_PHRASE（sent=="bull" 才取 BULL 池，其余一律
+# 落空头池）→ 中性标的写出「短期情绪面承压」等反向措辞，与 sentiment 自相矛盾。
+# 中性必须走中性池（全部 ≤14 字，G17 整句复读不触发）。
+NEUTRAL_PHRASE = ["多空力量暂处相持", "方向选择待资金确认", "短线驱动尚未定型",
+                  "多空分歧仍待收敛", "定价权交回市场博弈", "方向待量能确认"]
+# R100z153：禁断言「个股暂无独立公告」——有无公告以东财公告+stockNews 为准，
+# AI 写死该结论会与下方个股消息列表自相矛盾。改为描述消息来源，不描述「没有」。
+# 各短语 ≤14 字，防 G17 整句复读。
+STOCK_DRIVER_PHRASE = ["议题沿板块与产业链传导", "消息沿产业链向个股传导",
+                       "定价锚定板块与产业链", "个股随产业链消息定价"]
 SECTOR_UP_PHRASE = ["板块仍处资金关注期", "板块联动效应延续", "板块情绪有支撑",
                     "板块保持活跃"]
 SECTOR_DOWN_PHRASE = ["板块整体承压", "板块氛围偏弱", "板块同步调整",
@@ -1182,22 +1192,24 @@ def build_story(e, refs=None, bear_refs=None):
             head = " ".join(x for x in (str(ref.get("time") or "")[5:].replace("-", "/"),
                                         ref.get("source")) if x)
             body = _story_first_sentence(ref.get("summary"))
-            phrase = _pick(BULL_PHRASE if sent == "bull" else BEAR_PHRASE, code, 1)
+            phrase = _pick(BULL_PHRASE if sent == "bull"
+                           else (BEAR_PHRASE if sent == "bear" else NEUTRAL_PHRASE),
+                           code, 1)
             tail = _pick(REF_TAIL_PHRASE, code, 2)
+            drv = _pick(STOCK_DRIVER_PHRASE, code, 3)
             seg1 = (f"【个股消息】{name}{head}《{ref.get('title')}》：{body}，{phrase}；"
-                    f"个股自身暂无独立公告，{tail}。")
+                    f"{drv}，{tail}。")
         elif notices:
             n0 = notices[0]
             d0 = str(n0.get("date") or "")[5:].replace("-", "/")
             zt = str(e.get("ztDate") or "")[5:].replace("-", "/")
             phrase = _pick(NO_NEWS_PHRASE, code)
-            seg1 = (f"【个股消息】{name}近一周无独立公告与方向性新闻，{phrase}；"
-                    f"同期信披以{n0.get('column') or '常规公告'}类为主（{d0}），暂无方向性催化；"
-                    f"该股{zt}涨停入池。")
+            seg1 = (f"【个股消息】{name}近期信披以{n0.get('column') or '常规公告'}类为主（{d0}），"
+                    f"未见方向性催化，{phrase}；该股{zt}涨停入池。")
         else:
             zt = str(e.get("ztDate") or "")[5:].replace("-", "/")
             phrase = _pick(NO_NEWS_PHRASE, code)
-            seg1 = (f"【个股消息】{name}近一周无独立公告，{phrase}，"
+            seg1 = (f"【个股消息】{name}的公开信息焦点仍在板块与产业链层面，{phrase}，"
                     f"短期观察点集中在{e.get('sector') or '所属'}板块风向；该股{zt}涨停入池。")
     story = seg1 + _story_sector_seg(e, code)
     if len(story) < 100:

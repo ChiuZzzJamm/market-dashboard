@@ -2,7 +2,7 @@
  "ok": true,
  "nameSrc": "local",
  "date": "2026-10-19",
- "checked": 415,
+ "checked": 375,
  "liftWindow": [
   2,
   5
@@ -10,53 +10,15 @@
  "watchPledgeWithin": 365,
  "cutDays": 30,
  "blacklist": {
-  "002527": {
-   "name": "新时达",
+  "002142": {
+   "name": "宁波银行",
    "reasons": [
-    "2026-09-19 减持公告"
+    "解禁 2026-10-23（首发原股东限售股份，占总股本 0.0%）"
    ],
    "count": 1,
    "watch": [],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "603960": {
-   "name": "克来机电",
-   "reasons": [
-    "2026-09-30 减持公告"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "002097": {
-   "name": "山河智能",
-   "reasons": [
-    "2026-09-19 减持公告"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "600183": {
-   "name": "生益科技",
-   "reasons": [
-    "2026-09-24 减持公告"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
+   "severity": "orange",
+   "progress": []
   },
   "002836": {
    "name": "新宏泽",
@@ -114,20 +76,6 @@
    "count": 1,
    "watch": [
     "参考·质押 11.4%（截至 2026-06-05）"
-   ],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "601212": {
-   "name": "白银有色",
-   "reasons": [
-    "2026-09-19 减持公告"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 29.9%（截至 2026-06-05）"
    ],
    "severity": "red",
    "progress": [
