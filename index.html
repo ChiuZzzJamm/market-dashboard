@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610191817"></script>
+<script src="data.js?v=202610191827"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1626,12 +1626,21 @@ function _ddClean(t) {
   }
   return s.trim();
 }
+/* R100z152h（2026-10-19 用户拍板）：确信度文案全站统一「中等确信」全称——数据层与展示层同口径，
+   不再做「中等→中」的前端简写（原 R100z101 的渲染层归一已并入本函数）。
+   入参兼容两类来源：deduce.conf 四枚举（高确信/中等确信/推测/直觉）与 confidence 三档（高/中/低）。 */
+function confZh(c) {
+  var s = String(c || '');
+  if (s === '高') return '高确信';
+  if (s === '中' || s === '中确信') return '中等确信';  /* 防御：历史数据若残留简写也按全称显示 */
+  if (s === '低') return '低确信';
+  return s || '推测';
+}
 /* R100c：确信度徽章抽成独立函数——主推行不再内嵌徽章；利好/利空卡挪到标题行（nc-theme），
    异动板块/题材掘金保持原位（hideBadge 传 true 即隐藏） */
 function deduceConfBadge(dd) {
   if (!dd || !dd.conf) return '';
-  // R100z101：防御式归一——AI 偶发自写「中等确信」（prompt 枚举已改为'中确信'，但历史/未来写回仍可能溜进来），渲染层统一 中等→中
-  var cf = String(dd.conf).replace(/中等/g, '中');
+  var cf = confZh(dd.conf);
   var cls = cf.indexOf('高') >= 0 ? 'conf-high' : (cf.indexOf('中') >= 0 ? 'conf-mid' : 'conf-low');
   return '<span class="conf-badge ' + cls + '">' + esc(cf) + '</span>';
 }
@@ -1690,9 +1699,9 @@ function quadOf(s) {
   if (top && right) return { n: '②', t: '对但已贵', cls: 'q-pricey',
     why: '高确信 但 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（已透支）→ 方向对、肉已少，轻仓防兑现降级' };
   if (!top && !right) return { n: '③', t: '便宜没谱', cls: 'q-cheap',
-    why: (conf ? conf+'确信' : '推测') + ' 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（有空间）→ 空间在但没把握，等确认信号' };
+    why: confZh(conf) + ' 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（有空间）→ 空间在但没把握，等确认信号' };
   return { n: '④', t: '回避', cls: 'q-avoid',
-    why: (conf ? conf+'确信' : '推测') + ' 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（已透支）→ 没把握且已透支，不碰' };
+    why: confZh(conf) + ' 且 已计价=' + (isNaN(pi) ? '未量化' : pi + '%') + '（已透支）→ 没把握且已透支，不碰' };
 }
 function quadPill(s) {
   var q = quadOf(s);
@@ -2127,7 +2136,7 @@ function renderAiPrediction() {
     html += '<div class="ai-item"><div class="row1">' +
       '<span class="sec-nm">' + esc(s.sector) + '</span>' +
       '<span class="dir-badge ' + (isUp ? 'dir-up' : 'dir-down') + '">预计' + esc(s.direction) + '</span>' +
-      '<span class="conf-badge ' + confCls + '">' + esc(s.confidence ? s.confidence+'确信' : '推测') + '</span>' +
+      '<span class="conf-badge ' + confCls + '">' + esc(confZh(s.confidence)) + '</span>' +
       expBadge(s.exp) +
       quadPill(s) +
       '</div>' +
@@ -2867,7 +2876,7 @@ function stkNewsHtml(code) {
   }
   if (aiHit) {
     h += '<div class="db-ref-p" style="margin-top:6px;"><b>AI 预测 · ' + esc(aiHit.sector || '') + '：</b>' +
-      '<div class="db-ref-sum">预计' + esc(aiHit.direction || '') + ' · ' + esc(aiHit.confidence ? aiHit.confidence+'确信' : '推测') + '</div>' +
+      '<div class="db-ref-sum">预计' + esc(aiHit.direction || '') + ' · ' + esc(confZh(aiHit.confidence)) + '</div>' +
       (aiHit.usDriver ? '<div class="db-ref-sum">隔夜驱动：' + esc(aiHit.usDriver) + '</div>' : '') +
       (aiHit.logic ? '<div class="db-ref-sum">映射逻辑：' + esc(aiHit.logic) + '</div>' : '') + '</div>';
     if (aiHit.deduce) h += renderDeduce(aiHit.deduce, true);
@@ -2941,7 +2950,7 @@ function sectorNewsHtml(name, market) {
   // AI 预测
   if (aiHit) {
     h += '<div class="db-ref-p" style="margin-top:6px;"><b>AI 预测 · ' + esc(aiHit.sector || '') + '：</b>' +
-      '<div class="db-ref-sum">预计' + esc(aiHit.direction || '') + ' · ' + esc(aiHit.confidence ? aiHit.confidence + '确信' : '推测') + '</div>' +
+      '<div class="db-ref-sum">预计' + esc(aiHit.direction || '') + ' · ' + esc(confZh(aiHit.confidence)) + '</div>' +
       (aiHit.usDriver ? '<div class="db-ref-sum">隔夜驱动：' + esc(aiHit.usDriver) + '</div>' : '') +
       (aiHit.logic ? '<div class="db-ref-sum">映射逻辑：' + esc(aiHit.logic) + '</div>' : '') + '</div>';
     if (aiHit.deduce) h += renderDeduce(aiHit.deduce, true);
