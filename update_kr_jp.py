@@ -10,6 +10,9 @@
 - 注意：这是 HTTP 行情接口，与「东财 MCP（mx-ds-mcp）」完全无关，后者已证明不可靠并禁用
 
 流程：抓取 → 时间戳校验（必须今日）→ 异常值校验 → 写回 data.js 的 panorama.kr/jp。
+      R100z156：读数据走 common.load_dashboard_data 的 Python JSON 通道（保留 0.0 字面量），
+      只改 panorama.kr/jp 时 git diff 里就只有这两块，不再整文件重排（旧 node 通道的
+      JSON.stringify 会把 164437075.0 写成 164437075，一次读改写就淹掉真 diff）。
 用法：python3 update_kr_jp.py --label 早盘|收盘（默认按时间：北京时间>=14:00 为收盘，否则早盘）
 """
 import json, os, sys, re, subprocess, argparse, time

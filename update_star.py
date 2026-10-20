@@ -11,6 +11,8 @@
      合格板块 = 开盘涨幅>0（板块情绪正向）且 主力净流入>0（资金正向）的板块；
      精选 = 池内非利空标的、其板块与合格板块匹配（互含模糊匹配），按上涨概率降序；
      无合格板块则 picks 为空（宁缺勿滥），绝不放板块不挂钩的标的；
+     R100z156：行业/资金接口抓空（连续 2 次）按「数据缺口」降级——不做板块挂钩判定，
+     marketLine/sentiment/pushText 三处显式标注，**不写成「无合格板块」**；
   5. marketLine / sentiment 写模板句（R99：只写开盘后板块情绪与资金情绪，不再含集合竞价），
      pushText 留空——由自动化 AI 复核改写为「📖 分析」。
 
@@ -23,6 +25,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -122,6 +125,38 @@ def fetch_stock_quotes(codes):
     return quotes
 
 
+def fetch_industries_resilient():
+    """同花顺行业一览：抓空重试一次，仍空返回 (None, 原因)。
+
+    R100z156（2026-10-20）：`common.fetch_ths_industries` 的契约是「抓空返回 []，
+    由调用方自行走备源/兜底」，但本脚本原来只写 `or []`，把「接口抓空」静默当成
+    「当日没有合格板块」——10-20 09:54 行业页被反爬打回 17KB 空页（20:05 复测已
+    恢复 90 行，属间歇性），star 判定「合格板块：无」，断板池 0 只入选，页面与
+    微信推送都看不出是取数故障。现改为：二次重试 → 仍空则显式降级（marketLine /
+    sentiment 标数据缺口、pushText 写兜底提示、stdout 打 [WARN]），
+    **绝不把「抓不到」写成「没有」**。
+    """
+    last_n, last_err = 0, None
+    for attempt in (1, 2):
+        try:
+            rows = uas.fetch_ths_industries() or []
+            last_err = None
+        except Exception as e:  # noqa: BLE001 —— 任何抓取异常都按「抓空」处理
+            rows, last_err = [], repr(e)
+        last_n = len(rows)
+        if last_n >= 10:
+            if attempt == 2:
+                print(f"[WARN] 同花顺行业接口第 2 次重试成功（{last_n} 行），本次数据可用")
+            return rows, None
+        if attempt == 1:
+            print(f"[WARN] 同花顺行业接口仅返回 {last_n} 行（<10，疑似反爬空页），2s 后重试一次")
+            time.sleep(2.0)
+    reason = f"同花顺行业接口连续 2 次抓空（末次 {last_n} 行"
+    if last_err:
+        reason += f"，异常 {last_err}"
+    return None, reason + "）"
+
+
 def build_star(D, base=None):
     base = base or os.path.dirname(os.path.abspath(__file__))
     blacklist = load_blacklist(base)
@@ -188,12 +223,9 @@ def build_star(D, base=None):
 
     # ---- 盘面：指数 / 行业涨幅 / 资金 ----
     idx = fetch_open_indices()
-    try:
-        ths = uas.fetch_ths_industries() or []
-    except Exception:
-        ths = []
+    ths, ths_err = fetch_industries_resilient()
     sectors = []
-    for x in ths:
+    for x in (ths or []):
         try:
             sectors.append({"name": x.get("name") or "", "code": x.get("code") or "",
                             "pct": round(float(x.get("pct") or 0), 2)})
@@ -205,6 +237,12 @@ def build_star(D, base=None):
         fund_in, fund_out = uas.fetch_ths_funds()
     except Exception:
         fund_in, fund_out = None, None
+
+    # R100z156：行业涨幅 / 主力资金 任一条判据抓空 = 数据缺口，必须显式降级，
+    # 不能像过去那样让 good_boards 自然空集、把「抓不到」说成「无合格板块」。
+    gap_reason = ths_err or (None if fund_in else
+                             "同花顺行业资金接口抓空（主力净流入判据缺失）")
+    degraded = gap_reason is not None
 
     # ---- 个股快照（当日实时涨幅）：断板池 + 技术池一并快照 ----
     quotes = fetch_stock_quotes([str(e.get("code")) for e in pools] + [t["code"] for t in tech])
@@ -230,6 +268,11 @@ def build_star(D, base=None):
         if fv is None or fv <= 0:
             continue  # 资金须净流入正向
         good_boards.append((s["name"], s["pct"], fv))
+
+    if degraded:
+        print(f"[WARN] {gap_reason}")
+        print("[WARN] → 本次不做板块挂钩判定（严禁把「抓不到」说成「无合格板块」），"
+              "断板池标的不参与精选，picks 仅保留技术池形态标的")
 
     def _linked(sec):
         for n, _, _ in good_boards:
@@ -299,15 +342,40 @@ def build_star(D, base=None):
     if idx:
         total_amt = sum(x.get("amount") or 0 for x in idx)
         market_line += f"，半小时两市成交约 {total_amt:.0f} 亿"
+    if degraded:  # R100z156：marketLine 也要可见地标出缺口，别让页面看不出是取数故障
+        market_line += "（⚠️ 行业/资金接口抓空，板块判定本次不参与）"
     top3 = "、".join(f"{s['name']}{s['pct']:+.2f}%" for s in sectors[:3]) or "—"
     bot3 = "、".join(f"{s['name']}{s['pct']:+.2f}%" for s in sectors[-3:]) or "—"
     fi_txt = "、".join(f"{x['name']}{x['value']:+.1f}亿" for x in (fund_in or [])) or "—"
     fo_txt = "、".join(f"{x['name']}{x['value']:+.1f}亿" for x in (fund_out or [])) or "—"
     # R99c：只写开盘后板块情绪与资金情绪（集合竞价强弱关系由 AI 写入 pushText）
-    sentiment = (f"开盘板块情绪：领涨 {top3}；领跌 {bot3}。"
+    # R100z156：数据缺口时首句直接点明，并把「合格板块」从「无」改成「本次不判定」——
+    # AI 改写 sentiment 时会读到这句，避免它把取数故障写成「板块无机会」。
+    gap_head = ""
+    if degraded:
+        gap_head = (f"⚠️ 数据缺口：{gap_reason}。板块涨幅与主力净流入两项判据本次缺失，"
+                    "按纪律不做板块挂钩判定（断板池标的不参与精选），picks 仅含技术池形态标的。"
+                    "严禁把「接口抓空」写成「无合格板块」或「板块无机会」。")
+        board_line = "合格板块：判据缺失，本次不判定。"
+    else:
+        board_line = f"合格板块（涨+净流入双正向）：{'、'.join(n for n, _, _ in good_boards) or '无'}。"
+    sentiment = (gap_head
+                 + f"开盘板块情绪：领涨 {top3}；领跌 {bot3}。"
                  f"资金情绪：主力净流入前列 {fi_txt}；净流出前列 {fo_txt}。"
-                 f"合格板块（涨+净流入双正向）：{'、'.join(n for n, _, _ in good_boards) or '无'}。"
-                 "（AI 复核：请改写为完整开盘情绪判断与对断板反包标的的影响分析）")
+                 + board_line
+                 + "（AI 复核：请改写为完整开盘情绪判断与对断板反包标的的影响分析）")
+
+    # R100z156：降级时预置 pushText 兜底——页面「🌟 开盘精选」正文与微信推送共用此字段，
+    # 前端只渲染 pushText（不渲染 marketLine/sentiment），AI 若漏改写或改跑失败，
+    # 用户仍能看到「这是取数故障」而不是一行空白。正常情况仍留空交 AI 写。
+    push_text = "" if not degraded else (
+        "⚠️ 本次开盘精选存在数据缺口：同花顺行业涨幅与主力资金接口连续两次抓取失败，"
+        "板块情绪与资金流向两项判据缺失。脚本按既定纪律不做板块挂钩判定，"
+        "因此断板反包池标的全部不参与本次精选，仅保留前一日 16:00 数据步筛出的"
+        "形态类技术池标的（谐波/九门/吸筹）。指数与个股实时涨跌取自腾讯行情，正常可用。"
+        "此为取数故障，不代表当日「无合格板块」或市场无机会，请勿据此判断强弱；"
+        "可结合盘中资金回流情况另行观察，待接口恢复后按常规口径重跑。"
+    )
 
     star = {
         "date": now.strftime("%Y-%m-%d"),
@@ -315,8 +383,8 @@ def build_star(D, base=None):
         "marketLine": market_line,
         "sentiment": sentiment,
         "picks": picks,
-        "pushText": "",
-        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波/九门/吸筹池直接取标的；R100z85：技术池按池配额 九门3/谐波3/吸筹2 防单池量纲垄断）+ 自动化 AI 复核",
+        "pushText": push_text,
+        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波/九门/吸筹池直接取标的；R100z85：技术池按池配额 九门3/谐波3/吸筹2 防单池量纲垄断；R100z156：行业/资金接口抓空重试+显式降级） + 自动化 AI 复核",
     }
     return star, None
 

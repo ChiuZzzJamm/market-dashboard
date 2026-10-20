@@ -38,7 +38,24 @@ def find_node():
 
 
 def load_dashboard_data(base):
-    """用 node 把 data.js 解析为 Python dict。失败即抛异常。"""
+    """把 data.js 解析为 Python dict。
+
+    R100z156：优先用 Python json.loads 直接解析文本——完整保留 int/float 字面量，
+    加载→写回可做到字节级不变（实测 6.25MB 文件往返完全一致）。旧实现一律走
+    node eval 通道，JS 的 JSON.stringify 会把 164437075.0 归一成 164437075，
+    凡「读-改-写」一次就整文件重排：2026-10-20 08:30 的 update_kr_jp 只改
+    panorama.kr/jp，却因这一层产生 23 万字符的无意义 diff（把真改动全淹了）。
+    仅当文本不是纯 JSON（历史遗留 JS 字面量 / NaN / Infinity）时才回退 node 通道，
+    回退路径保持与旧实现完全一致，不改变任何调用方语义。
+    """
+    try:
+        with open(os.path.join(base, "data.js"), encoding="utf-8") as f:
+            s = f.read()
+        m = re.search(r"window\s*\.\s*DASHBOARD_DATA\s*=\s*(\{[\s\S]*\});?\s*$", s)
+        if m:
+            return json.loads(m.group(1))
+    except Exception:
+        pass  # 落到 node 通道；两条路都失败时由 node 通道抛 RuntimeError
     node = find_node()
     node_src = r'''
 const fs = require('fs');
