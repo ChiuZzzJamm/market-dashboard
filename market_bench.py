@@ -83,12 +83,123 @@ def median(xs):
     return round(xs[n // 2], 4) if n % 2 else round((xs[n // 2 - 1] + xs[n // 2]) / 2.0, 4)
 
 
+def load_sector_bench():
+    """R100z158：从 data.js 的 allBoards 取**全行业涨跌幅中位数**——板块预测的同源基准。
+
+    为什么要加这个（2026-10-20 实测）：此前板块方向判定用的是「四指数中位数」，但被判定
+    的对象是**行业板块**。两者量纲不一致，实测差异很大：
+        10-20  行业中位 +0.94%  四指数中位 -0.14%（差 1.08pp）
+        10-15  行业中位 -2.94%  四指数中位 -1.59%（差 1.35pp）
+        10-08  行业中位 -0.70%  四指数中位 -2.07%（差 1.38pp）
+    普涨日行业涨幅天然高于综合指数（小盘/题材权重更大），拿指数当基准会让**每一个板块都
+    轻松「跑赢」**，超额虚高；普跌日反过来让超额虚低。同源比较才谈得上 alpha。
+
+    只在 data.js 里 allBoards 有 ≥10 个有效 pct 时才返回，否则 (None, 0) —— 不猜、不补 0。
+    """
+    try:
+        with open(os.path.join(ROOT, 'data.js'), encoding='utf-8') as f:
+            s = f.read()
+        m = re.search(r"window\s*\.\s*DASHBOARD_DATA\s*=\s*(\{[\s\S]*\});?\s*$", s)
+        if not m:
+            return None, 0
+        d = json.loads(m.group(1))
+        ab = [x['pct'] for x in ((d.get('ashare') or {}).get('allBoards') or [])
+              if isinstance(x, dict) and isinstance(x.get('pct'), (int, float))]
+        if len(ab) < 10:
+            return None, len(ab)
+        return median(ab), len(ab)
+    except Exception:
+        return None, 0
+
+
+def _datajs_boards(d):
+    """从已解析的 data.js 字典里取 (tradeDate, 行业涨跌幅中位数, 行业数)。"""
+    a = (d.get('ashare') or {})
+    ab = [x['pct'] for x in (a.get('allBoards') or [])
+          if isinstance(x, dict) and isinstance(x.get('pct'), (int, float))]
+    if len(ab) < 10:
+        return a.get('tradeDate'), None, len(ab)
+    return a.get('tradeDate'), median(ab), len(ab)
+
+
+def _parse_datajs(raw):
+    m = re.search(r"window\s*\.\s*DASHBOARD_DATA\s*=\s*(\{[\s\S]*\});?\s*$", raw)
+    if not m:
+        return None
+    try:
+        return json.loads(m.group(1))
+    except Exception:
+        return None
+
+
+def backfill_history(limit=0):
+    """R100z158：从 git 历史 data.js 回填**历史行业基准**，写进 market_bench.json 的 history 层。
+
+    为什么必须回填而不是「当天跑一次就算了」（2026-10-20 实测）：
+      台账里 8 个预测日，只有最近一天能拿到实时基准。历史日子要么没有基准（超额留空），
+      要么（更糟）被 code 拿「当天的尺子」去量——回填前 backfill 路径就是这么错的。
+      行业基准 benchSecPct 是超额口径的尺子，尺子缺失 → 整段回测结论不可信。
+
+    口径：同一 tradeDate 取**最新一个**提交（越晚的提交越是修完数据后的定稿），只补不改。
+    09-30 无提交（git 历史重建时丢了），永远补不出来——那天的超额只能留空，不猜。
+    """
+    import subprocess
+    try:
+        hashes = subprocess.run(['git', '-C', ROOT, 'log', '--format=%H', '--', 'data.js'],
+                                capture_output=True, text=True, timeout=120).stdout.split()
+    except Exception as e:
+        print('[FAIL] git 历史读取失败：' + str(e)[:120])
+        return 1
+    if limit:
+        hashes = hashes[:limit]
+    got, seen = {}, set()
+    for h in hashes:
+        try:
+            raw = subprocess.run(['git', '-C', ROOT, 'show', f'{h}:data.js'],
+                                 capture_output=True, text=True, timeout=60).stdout
+        except Exception:
+            continue
+        d = _parse_datajs(raw or '')
+        if not d:
+            continue
+        dt, med, n = _datajs_boards(d)
+        if not dt or med is None or dt in seen:
+            continue
+        seen.add(dt)
+        got[dt] = {'date': dt, 'benchPct': None, 'benchSectorPct': med, 'sectorN': n,
+                   'src': 'git-backfill:%s' % h[:7]}
+    if not got:
+        print('[WARN] 历史 data.js 里没找到可用的 allBoards，未写入')
+        return 0
+    cur = {}
+    if os.path.exists(OUT):
+        try:
+            cur = json.load(open(OUT, encoding='utf-8'))
+        except Exception:
+            cur = {}
+    hist = cur.get('history') or {}
+    hist.update(got)
+    cur['history'] = {k: hist[k] for k in sorted(hist)}
+    with open(OUT, 'w', encoding='utf-8') as f:
+        json.dump(cur, f, ensure_ascii=False, indent=1)
+    print('[OK] 历史行业基准已回填 %d 天 → market_bench.json[history]' % len(got))
+    for k in sorted(got):
+        print('      %s  行业中位 %+.2f%%  (%d 个行业)' % (k, got[k]['benchSectorPct'], got[k]['sectorN']))
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--date', default=None)
     ap.add_argument('--json', action='store_true')
     ap.add_argument('--write', action='store_true', help='写入 market_bench.json')
+    ap.add_argument('--backfill-bench', action='store_true',
+                    help='R100z158：从 git 历史 data.js 回填历史行业基准到 market_bench.json[history]，只补不改')
+    ap.add_argument('--limit', type=int, default=0, help='回填时最多扫多少个 data.js 提交（0=全部）')
     a = ap.parse_args()
+
+    if a.backfill_bench:
+        return backfill_history(a.limit)
 
     d = a.date or date.today().isoformat()
     names, pcts, errs = [], [], []
@@ -113,12 +224,27 @@ def main():
         return 0
 
     bench = median(pcts)
+    sec_bench, sec_n = load_sector_bench()
     res = {'date': d, 'benchPct': bench, 'benchSrc': 'gtimg',
            'benchFormula': '上证指数/深证成指/创业板指/中证1000 涨跌幅**中位数**',
+           'benchSectorPct': sec_bench, 'sectorN': sec_n,
+           'benchSectorFormula': '同花顺一级行业（allBoards）当日涨跌幅**中位数**',
            'names': names, 'errors': errs,
-           'note': '超额 = 板块(或8只组合)实际涨幅 − benchPct；命中判定改用超额（R100z15）'}
+           'note': ('基准双轨：benchPct=四指数中位数（描述大盘）；benchSectorPct=全行业中位数。'
+                    '★板块方向与组合的超额判定以 benchSectorPct 为准（同源比较），'
+                    'benchPct 仅作大盘参照；benchSectorPct 缺失时退回 benchPct 并在台账标注。')}
 
     if a.write:
+        # R100z158：写盘时**保留 history 层**——否则每跑一次实时基准就把回填的历史尺子冲掉，
+        # 回测又要从头补。（踩过同型：整文件重写把别的节点带没了）
+        hist = {}
+        if os.path.exists(OUT):
+            try:
+                hist = (json.load(open(OUT, encoding='utf-8')) or {}).get('history') or {}
+            except Exception:
+                hist = {}
+        if hist:
+            res['history'] = {k: hist[k] for k in sorted(hist)}
         with open(OUT, 'w', encoding='utf-8') as f:
             json.dump(res, f, ensure_ascii=False, indent=1)
 

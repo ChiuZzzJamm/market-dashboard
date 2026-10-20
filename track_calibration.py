@@ -12,16 +12,23 @@
     python3 track_calibration.py --backfill 25   # 从 git 历史 data.js 回填样本（幂等）
 
 数据（★文件名不带点：GitHub Pages 不发布 dotfile，前端要靠 fetch('calibration_log.json') 画命中横条）：
-    台账 calibration_log.json     { log: { "<预测日期>": [ {date,sector,predicted,actualPct,excessPct,
-                                              conf,hit,hitAbs,avgPct,benchPct,pos} ] },
+    台账 calibration_log.json     { log: { "<预测日期>": [ {date,sector,sectorKey,predicted,actualPct,
+                                              excessPct,excessPctIdx,conf,hit,hitAbs,hitStock,
+                                              avgPct,excessAvg,benchPct,benchSecPct,benchUsed,pos} ] },
                                     open: { "<预测日期>": {tendencyHit,bandHit,volHit,score,pos} } }
     门槛 calibration_state.json   { generatedAt, window, stat:{层:{n,hit,rate,ci,sampleEnough}}, gates:{...} }
     净值 portfolio_curve.json     { series:[{date,pf,bench,dd}], stat:{totRet,benchRet,maxDd,...} }
 
-命中口径（R100z15 缺口①——2026-10-01 体检定稿）：
-    基准 benchPct = 上证 / 深成 / 创业板 / 中证1000 四指数当日涨跌幅中位数（由 market_bench.py 产出，
-    读 market_bench.json；该文件缺失时超额留空、不得补 0）。
-    超额 excessPct = actualPct − benchPct。
+命中口径（R100z15 缺口①——2026-10-01 定稿；R100z158 基准改双轨）：
+    ★权威基准 benchSecPct = 同花顺一级行业（data.js 的 ashare.allBoards）当日涨跌幅**中位数**。
+      为什么换掉指数基准（2026-10-20 实测）：被判定对象是**行业板块**，拿综合指数当尺子是量纲错配。
+      实测差异：10-20 行业中位 +0.94% vs 四指数中位 −0.14%（差 1.08pp）；10-15 −2.94% vs −1.59%；
+      10-08 −0.70% vs −2.07%。普涨日行业天然跑赢综合指数 → 每个板块都「轻松跑赢」，超额系统性虚高；
+      普跌日反过来虚低。同源比较才谈得上 alpha。
+    benchPct = 上证 / 深成 / 创业板 / 中证1000 四指数涨跌幅中位数，**降级为大盘参照**，
+      仅在 benchSecPct 缺失时顶替，并在条目里以 benchUsed 标注实际用的是哪把尺子。
+    超额 excessPct = actualPct − (benchSecPct or benchPct)；excessPctIdx 保留旧指数口径作对照。
+    基准全部缺失时超额留空、**不得补 0**。
     「hit」= 超额口径：预测走强/偏强 → 超额 > 0 命中；预测承压 → 超额 < 0 命中；
              |超额| < 0.2% 记 0.5（部分兑现）；方向不匹配记 0。
     「hitAbs」= 旧的方向口径（实际涨幅 ±），原样留在台账里做**对照**。
@@ -38,6 +45,7 @@ import contextlib
 import io
 import json
 import os
+import re
 import sys
 from datetime import date
 
@@ -131,10 +139,16 @@ def norm_conf(v):
 
 
 DIR_FLAT = ('震荡', '横盘', '胶着', '犹豫', '整理', '分歧', '观望', '僵持', '拉锯', '中性')
-DIR_UP = ('走强', '上行', '上涨', '偏强', '看多', '走高', '提振', '回暖', '反弹',
-          '突破', '扩张', '接力', '活跃', '走俏', '领涨')
+# ★R100z158（2026-10-20 实测修）：原词表缺「看涨 / 看跌」这组最常用的方向词。
+# 10-19 六条预测里 4 条写「看涨」→ classify_dir 全部返回 flat → hit=None 被排除出统计，
+# 而那 4 条中有 3 条方向是错的（计算机设备 −0.30 / 油气 −0.10 / 创新药 −1.02）。
+# 结果是「失败样本被系统性剔除、命中率被抬高」——比少判更坏的是**有偏**。
+# 教训：方向词表必须覆盖 AI 实际用词，且新增词要能用 --selftest 回归。
+DIR_UP = ('走强', '上行', '上涨', '偏强', '看多', '看涨', '偏多', '做多', '走高', '提振',
+          '回暖', '反弹', '反攻', '突破', '扩张', '接力', '活跃', '走俏', '领涨', '企稳回升')
 DIR_DOWN = ('承压', '偏弱', '下行', '下跌', '回落', '回调', '回撤', '走弱', '降温',
-            '退潮', '减仓', '抛压', '避险', '收窄', '领跌')
+            '退潮', '减仓', '抛压', '避险', '收窄', '领跌',
+            '看跌', '看空', '偏空', '做空', '杀跌', '补跌', '走低')
 
 
 def classify_dir(predicted):
@@ -156,6 +170,67 @@ def classify_dir(predicted):
     if hd:
         return 'down'
     return 'flat'
+
+
+# ---------------- R100z158：板块名归一（回测归集的必要前提） ----------------
+# 实测 48 条台账里出现 **41 个不同的板块名**——「光通信·光模块 / 算力硬件·光模块 /
+# 通信设备·光模块 / 光模块 / 光模块·CPO」在业务上是同一件事，却被记成 5 个板块，
+# 于是任何一个板块都攒不到 ≥3 条样本，分层命中率永远建立在噪声上。
+# 归一口径（保守，只去装饰不合并语义）：
+#   ① 去空格与间隔号；
+#   ② 取「·」前的主词（AI 习惯「主词·细分」，主词才是板块归属）；
+#   ③ 去掉「板块/行业/概念/指数/链/方向」这类纯后缀词。
+# 不做同义词合并（「电力」≠「核电」），宁可少归集也不要造出假样本；
+# 归集后的 key 只用于「按板块看历史战绩」，不作为对外展示名。
+SEC_SUFFIX = ('板块', '行业', '概念', '指数', '方向', '产业链', '条线')
+
+
+def sector_key(name):
+    """把板块名压成可归集的 key；空值返回 ''。
+
+    顺序很重要：必须**先按「·」取主词再清洗**。反过来先删间隔号会把
+    「半导体设备·国产替代」粘成「半导体设备国产替代」，等于没归集。
+    """
+    s = str(name or '').strip()
+    if not s:
+        return ''
+    s = re.split(r'[·・]', s)[0]
+    s = re.sub(r'[\s\u3000\-—/]+', '', s)
+    if not s:
+        return ''
+    for suf in SEC_SUFFIX:
+        if len(s) > len(suf) + 1 and s.endswith(suf):
+            s = s[: -len(suf)]
+    return s
+
+
+def self_test():
+    """方向词表回归（--selftest 调用）。新增词必须先过这里，避免又漏一组常用词。"""
+    cases = [
+        ('走强', 'up'), ('偏强', 'up'), ('看涨', 'up'), ('偏多', 'up'), ('做多', 'up'),
+        ('企稳回升', 'up'), ('领涨', 'up'),
+        ('承压', 'down'), ('看跌', 'down'), ('看空', 'down'), ('偏空', 'down'),
+        ('杀跌', 'down'), ('补跌', 'down'), ('走低', 'down'), ('领跌', 'down'),
+        ('震荡', 'flat'), ('中性', 'flat'), ('震荡偏弱', 'flat'),
+        ('看多看空各半', 'flat'), ('', 'flat'), (None, 'flat'),
+    ]
+    bad = [(t, w, classify_dir(t)) for t, w in cases if classify_dir(t) != w]
+    if bad:
+        print('[FAIL] 方向词表回归失败：')
+        for t, w, g in bad:
+            print('   %-14s 期望 %-4s 实得 %s' % (repr(t), w, g))
+        return 1
+    keys = [('半导体设备·国产替代', '半导体设备'), ('半导体·存储芯片', '半导体'),
+            ('光模块·CPO', '光模块'), ('核电板块', '核电'), (' 电力 · 核电电网 ', '电力'),
+            ('', ''), (None, '')]
+    kbad = [(a, b, sector_key(a)) for a, b in keys if sector_key(a) != b]
+    if kbad:
+        print('[FAIL] 板块归一回失败：')
+        for a, b, g in kbad:
+            print('   %-20s 期望 %-12s 实得 %s' % (a, b, g))
+        return 1
+    print('[OK] 自检通过：方向词表 %d 例 / 板块归一 %d 例' % (len(cases), len(keys)))
+    return 0
 
 
 def score(predicted, actual_pct, excess_pct=None):
@@ -195,21 +270,57 @@ def score_abs(predicted, actual_pct):
     return (1 if up and actual_pct > 0 else (1 if (not up) and actual_pct < 0 else 0))
 
 
+def score_stock(predicted, excess_avg):
+    """R100z158：**选股 alpha** 口径——与 score() 的板块方向口径平行，别混用。
+
+    为什么必须拆开（2026-10-20 实证）：10-19「创新药·CXO」预测看涨，板块指数 −0.83%
+    （方向错，hit=0），但选出的 8 只等权 +2.40%、超额 +2.22%（选股是对的）。合成一个
+    verdict 时只能判「未命中」，等于把「选股有效」全抹掉；反过来也有「板块涨了但选的票
+    跑输」——那才是真该扣分的情形。两个指标一起看才知道该改「看板块」还是「选票」：
+        hit      = 板块指数超额 → 检验「判方向」的能力
+        hitStock = 8 只等权超额 → 检验「选标的」的能力
+    口径与 score() 严格同构（|超额|<0.2 记 0.5），只是输入换成 excessAvg。
+    """
+    if excess_avg is None:
+        return None
+    d = classify_dir(predicted)
+    if d == 'flat':
+        return None
+    up = d == 'up'
+    if abs(excess_avg) < 0.2:
+        return 0.5
+    return (1 if up and excess_avg > 0 else (1 if (not up) and excess_avg < 0 else 0))
+
+
 def load_bench(on_date=None):
     """读 market_bench.py 产出的市场基准。
 
-    ★口径铁律（2026-10-01 踩到）：market_bench.json 里只有**当天**一个基准值。
+    ★口径铁律（2026-10-01 踩到）：market_bench.json 里的实时值只有**当天**一个。
       把 10-01 的基准去算 09-30 的超额，等于拿昨天的尺子量前天的身高——历史超额会全是假的
       （第一版就犯了这个错，跑出来「旧口径 42% vs 超额 58%」这个数根本不可信）。
-      所以：bench 的 date 必须与待入账的预测日一致，否则一律返回 None（超额留空，绝不补 0）。
+      所以：实时值的 date 必须与待入账的预测日一致，否则不得直接挪用。
+
+    R100z158：新增 history 层（按日期键存的历史基准，由 market_bench.py --backfill-bench
+      从 git 历史 data.js 的 allBoards 回填）。查序：当日实时值 → 按日期查 history → None。
+      仍然**绝不**把某一天的基准套到另一天，也绝不补 0；查不到就让超额留空。
     """
-    if os.path.exists(BENCH_FILE):
-        try:
-            b = json.load(open(BENCH_FILE, encoding='utf-8'))
-            if b.get('benchPct') is not None and (on_date is None or b.get('date') == on_date):
-                return b
-        except Exception:
-            pass
+    if not os.path.exists(BENCH_FILE):
+        return None
+    try:
+        b = json.load(open(BENCH_FILE, encoding='utf-8'))
+    except Exception:
+        return None
+    _has = (b.get('benchPct') is not None) or (b.get('benchSectorPct') is not None)
+    if _has and (on_date is None or b.get('date') == on_date):
+        return b
+    if on_date:
+        h = (b.get('history') or {}).get(on_date)
+        if isinstance(h, dict):
+            hp, hs = h.get('benchPct'), h.get('benchSectorPct')
+            if hp is not None or hs is not None:
+                return {'date': on_date, 'benchPct': hp, 'benchSectorPct': hs,
+                        'sectorN': h.get('sectorN'), 'names': h.get('names') or [],
+                        'benchSrc': h.get('src') or 'history'}
     return None
 
 
@@ -243,28 +354,35 @@ def save_log(log):
         json.dump(log, f, ensure_ascii=False, indent=1)
 
 
-def build_items(date, dets, conf_map, bench, sc_list, bench_main=None):
+def build_items(date, dets, conf_map, bench, sc_list, bench_main=None, bench_sec=None):
     """把 verification.details 落成台账条目（R100z15：同时落超额口径与旧方向口径）。
     bench_main：主板等权代理基准（上证+深成当日涨幅均值），与 benchPct（四指数中位数）并列存，
-    供 build_curve 产第二条更贴近主板口径的基准线（R100z117 回测方法论补强）。"""
+    供 build_curve 产第二条更贴近主板口径的基准线（R100z117 回测方法论补强）。
+    bench_sec：R100z158 权威基准（全行业涨跌幅中位数）。给了就用它算超额，benchPct 仅留作对照。"""
+    eff = bench_sec if bench_sec is not None else bench
+    used = 'sector' if bench_sec is not None else ('index' if bench is not None else '')
     items = []
     for d in dets:
         nm = d.get('sector')
         act = d.get('actualPct')
         act = float(act) if isinstance(act, (int, float)) else None
-        ex = round(act - bench, 3) if (act is not None and bench is not None) else None
-        avg, ex_avg = avg_of(sc_list, nm, bench)
+        ex = round(act - eff, 3) if (act is not None and eff is not None) else None
+        ex_idx = round(act - bench, 3) if (act is not None and bench is not None) else None
+        avg, ex_avg = avg_of(sc_list, nm, eff)
         items.append({'date': date, 'sector': nm,
+                      'sectorKey': sector_key(nm),
                       'predicted': d.get('predicted'),
                       'dirClass': classify_dir(d.get('predicted')),
                       'actualPct': act,
-                      'benchPct': bench, 'excessPct': ex,
+                      'benchPct': bench, 'benchSecPct': bench_sec, 'benchUsed': used,
+                      'excessPct': ex, 'excessPctIdx': ex_idx,
                       'benchMainPct': bench_main,
                       'result': d.get('result'),
                       'conf': norm_conf(conf_map.get(nm)),
                       'avgPct': avg, 'excessAvg': ex_avg,
                       'hit': score(d.get('predicted'), act, ex),
                       'hitAbs': score_abs(d.get('predicted'), act),
+                      'hitStock': score_stock(d.get('predicted'), ex_avg),
                       'pos': None})
     return items
 
@@ -273,6 +391,9 @@ def build_curve(log):
     """R100z15 缺口④：组合等权净值 vs 基准净值 + 回撤（命中率再高，净值不涨就是白忙）。
     R100z117：新增第二条基准线 benchMain（上证+深成等权，主板口径代理）+ 方法论假设与样本量标注。"""
     series, pf, bn, bn_main, peak = [], 1.0, 1.0, 1.0, 1.0
+    bn_sec = 1.0
+    pf_cmp, bn_cmp, cmp_days = 1.0, 1.0, 0   # R100z158：指数基准齐全日的可比净值
+    pf_sec, bn_sec_cmp, sec_days = 1.0, 1.0, 0   # R100z158：行业基准齐全日（组合的正确尺子）
     for dt in sorted(log.get('log', {}).keys()):
         items = log['log'][dt] or []
         # R100z97 组合口径（用户拍板）：只取「置信度=高」的板块（每板块 8 只），板块间再等权
@@ -298,16 +419,37 @@ def build_curve(log):
         bm = [float(x['benchMainPct']) for x in items
               if isinstance(x.get('benchMainPct'), (int, float))]
         bm_v = sum(bm) / len(bm) if bm else None
+        bsec = [float(x['benchSecPct']) for x in items
+                if isinstance(x.get('benchSecPct'), (int, float))]
+        bsec_v = sum(bsec) / len(bsec) if bsec else None
         pf *= (1 + avg / 100.0)
         if b is not None:
             bn *= (1 + b / 100.0)
         if bm_v is not None:
             bn_main *= (1 + bm_v / 100.0)
+        if bsec_v is not None:
+            bn_sec *= (1 + bsec_v / 100.0)
+        # R100z158：可比超额——只在**基准齐全**的日子同时累乘组合与基准。
+        # 起因：09-30 没有 benchPct（market_bench.json 当日缺失），旧实现让组合照跌 −1.96%
+        # 而基准原地不动，等于把「随大盘下跌」记成 −1.96% 的纯超额，直接污染 excessPct。
+        if b is not None:
+            pf_cmp *= (1 + avg / 100.0)
+            bn_cmp *= (1 + b / 100.0)
+            cmp_days += 1
+        # ★组合是一篮子行业板块，正确的尺子是**同源行业基准**而不是综合指数（量纲错配会让
+        # 普涨日超额虚高）。这里单独累乘一对，只在行业基准齐全的日子计入。
+        if bsec_v is not None:
+            pf_sec *= (1 + avg / 100.0)
+            bn_sec_cmp *= (1 + bsec_v / 100.0)
+            sec_days += 1
         peak = max(peak, pf)
         dd = round((pf - peak) / peak * 100.0, 2)
         series.append({'date': dt, 'avgPct': round(avg, 3), 'pf': round(pf, 4),
-                       'bench': round(bn, 4), 'benchMain': round(bn_main, 4), 'dd': dd,
+                       'bench': round(bn, 4), 'benchMain': round(bn_main, 4),
+                       'benchSec': round(bn_sec, 4) if bsec_v is not None else None,
+                       'dd': dd,
                        'nSec': len(pool), 'nStocks': len(pool) * 8,
+                       'benchMissing': b is None, 'benchSecMissing': bsec_v is None,
                        'poolConf': norm_conf(pool[0].get('conf')) if pool else ''})
     if not series:
         return None
@@ -315,22 +457,62 @@ def build_curve(log):
     tot = (series[-1]['pf'] - 1) * 100
     bn_tot = (series[-1]['bench'] - 1) * 100
     bm_tot = (series[-1]['benchMain'] - 1) * 100 if series[-1].get('benchMain') else None
+    # R100z158：分置信档净值——「高确信」到底有没有用，靠这条线自证，不靠争论。
+    # 每个档位只在**当日存在该档板块**时累乘（没预测就不动，不拿别的档充数）。
+    by_conf = {}
+    for _k in CONF_ENUM:
+        _pf, _days, _peak = 1.0, 0, 1.0
+        for it_dt in sorted(log.get('log', {}).keys()):
+            _items = [x for x in (log['log'][it_dt] or [])
+                      if norm_conf(x.get('conf')) == _k
+                      and isinstance(x.get('avgPct'), (int, float))]
+            if not _items:
+                continue
+            _a = sum(float(x['avgPct']) for x in _items) / len(_items)
+            _pf *= (1 + _a / 100.0)
+            _days += 1
+            _peak = max(_peak, _pf)
+        if _days:
+            by_conf[_k] = {'days': _days, 'totRetPct': round((_pf - 1) * 100, 2),
+                           'maxDdPct': round((_pf - _peak) / _peak * 100, 2)}
     # R100z117：方法论假设（文档化，未回灌净值——回灌只会让曲线更差，且各源口径不一）
     assumptions = {
         'feePerSide': 0.025, 'stampDutySell': 0.05, 'slippagePerSide': 0.1,
         'turnover': 'T+1 次日兑现，单标的年化换手高；净值为毛收益，未扣费/税/滑点',
         'sampleWindow': len(series),
         'sampleEnough': len(series) >= 15,
-        'benchmarkNote': '基准=上证/深成/创业板/中证1000 四指数涨跌幅中位数（全市场代理）；'
-                         'benchMain=上证+深成等权（主板口径代理，低 beta）。两者均为对照指数，'
+        'benchmarkNote': '★权威基准=同花顺一级行业涨跌幅中位数（benchSec，与预测对象同源）；'
+                         'bench=上证/深成/创业板/中证1000 四指数涨跌幅中位数（大盘参照）；'
+                         'benchMain=上证+深成等权（主板口径代理，低 beta）。三者均为对照线，'
                          '不代表「买市场」的可交易组合。'}
+    cmp_tot = (pf_cmp - 1) * 100
+    cmp_bench = (bn_cmp - 1) * 100
+    sec_tot = (pf_sec - 1) * 100
+    sec_bench_tot = (bn_sec_cmp - 1) * 100
     stat = {'days': len(series), 'totRetPct': round(tot, 2), 'benchRetPct': round(bn_tot, 2),
             'excessPct': round(tot - bn_tot, 2),
+            # 指数基准可比层（保留对照）
+            'comparableDays': cmp_days,
+            'excessComparablePct': round(cmp_tot - cmp_bench, 2) if cmp_days else None,
+            'totRetComparablePct': round(cmp_tot, 2) if cmp_days else None,
+            'benchRetComparablePct': round(cmp_bench, 2) if cmp_days else None,
+            # ★R100z158 权威层：同源行业基准（组合就是一篮子行业板块，这才是同一个尺子）
+            'sectorCmpDays': sec_days,
+            'excessSectorPct': round(sec_tot - sec_bench_tot, 2) if sec_days else None,
+            'totRetSectorCmpPct': round(sec_tot, 2) if sec_days else None,
+            'benchSectorCmpRetPct': round(sec_bench_tot, 2) if sec_days else None,
+            'benchSectorRetPct': round((bn_sec - 1) * 100, 2) if sec_days else None,
             'benchMainRetPct': round(bm_tot, 2) if bm_tot is not None else None,
             'benchMainExcessPct': round(tot - bm_tot, 2) if bm_tot is not None else None,
+            'byConf': by_conf,
             'maxDdPct': max_dd['dd'], 'maxDdDate': max_dd['date'],
             'assumptions': assumptions,
-            'note': '组合=各预测日「置信度=高」板块（无高则取当日最高置信档）的预测标的等权平均涨跌幅累乘；基准=同日市场基准累乘；回撤按组合净值峰谷算'}
+            'note': ('组合=各预测日「置信度=高」板块（无高则取当日最高置信档）的预测标的等权平均涨跌幅累乘；'
+                     '基准=同日市场基准累乘；回撤按组合净值峰谷算。'
+                     '★权威超额=excessSectorPct（同源行业基准，只统计行业基准齐全的 %d 天）——'
+                     '组合本身是一篮子行业板块，拿综合指数当尺子是量纲错配，普涨日会虚高。'
+                     'excessComparablePct（指数基准 %d 天）与 excessPct 均留作对照。'
+                     % (sec_days, cmp_days))}
     return {'ok': True, 'series': series, 'stat': stat}
 
 
@@ -356,7 +538,12 @@ def main():
                     help='从 git 历史 data.js 回填最近 N 个版本的预测结果，快速攒够分层样本（默认不回填）')
     ap.add_argument('--recalc', action='store_true',
                     help='用当前口径重算台账全量 hit / hitAbs（R100z52 方向词表修版专用，幂等）')
+    ap.add_argument('--selftest', action='store_true',
+                    help='R100z158：方向词表与板块归一的回归自检（改词表后必跑）')
     a = ap.parse_args()
+
+    if a.selftest:
+        return self_test()
 
     log = load_log()
     _b = load_bench() or {}
@@ -373,8 +560,22 @@ def main():
     if a.recalc:
         fixed = 0
         conf_fixed = 0
+        bench_filled = 0
+        # R100z158：重算前先从 market_bench.json 的 history 层**按日期补齐基准**。
+        # 否则历史条目的 benchSecPct 全是 None（它们在行业基准出现之前入账），命中率永远
+        # 拿指数基准重算，等于没换尺子。补齐后：「当日实时值 → history[日期] → 保留条目旧值」。
+        _hist = (load_bench() or {}).get('history') or {}
         for _dt, items in log.get('log', {}).items():
+            _h = _hist.get(_dt) or {}
             for it in items:
+                _nb = it.get('benchSecPct')
+                if _nb is None and _h.get('benchSectorPct') is not None:
+                    it['benchSecPct'] = round(float(_h['benchSectorPct']), 3)
+                    bench_filled += 1
+                # 顺带修正历史错算的指数基准（10-13 曾把 -0.18 记成 -0.08 之类的史前口径）
+                if it.get('benchPct') is None and _h.get('benchPct') is not None:
+                    it['benchPct'] = round(float(_h['benchPct']), 3)
+                    bench_filled += 1
                 # R100z157：顺带回填被写成「中等确信」一类的全称 conf（幂等）
                 _c0 = it.get('conf')
                 _c1 = norm_conf(_c0)
@@ -383,17 +584,40 @@ def main():
                     conf_fixed += 1
                 act = it.get('actualPct')
                 act = float(act) if isinstance(act, (int, float)) else None
-                ex = it.get('excessPct')
-                ex = float(ex) if isinstance(ex, (int, float)) else None
-                before = (it.get('hit'), it.get('hitAbs'))
+                # R100z158：超额一律从「实际值 − 基准」重算，而不是读存下来的 excessPct
+                # （旧流程里 excessAvg 与 excessPct 可能用两把不同的尺子算出来，读旧值会把错口径固化）。
+                # 尺子优先级：benchSecPct（行业中位）→ benchPct（指数中位）→ 无（留空，绝不补 0）。
+                _bs = it.get('benchSecPct')
+                _bs = float(_bs) if isinstance(_bs, (int, float)) else None
+                _bi = it.get('benchPct')
+                _bi = float(_bi) if isinstance(_bi, (int, float)) else None
+                eff = _bs if _bs is not None else _bi
+                it['benchUsed'] = 'sector' if _bs is not None else ('index' if _bi is not None else '')
+                it['excessPct'] = round(act - eff, 3) if (act is not None and eff is not None) else None
+                it['excessPctIdx'] = round(act - _bi, 3) if (act is not None and _bi is not None) else None
+                ex = it['excessPct']
+                exa = it.get('avgPct')
+                exa = float(exa) if isinstance(exa, (int, float)) else None
+                if exa is not None:
+                    it['excessAvg'] = round(exa - eff, 3) if eff is not None else None
+                else:   # 无 8 只等权均值时保留旧值，别把能算的 hitStock 一起抹掉
+                    _e0 = it.get('excessAvg')
+                    it['excessAvg'] = float(_e0) if isinstance(_e0, (int, float)) else None
+                exa = it['excessAvg']
+                before = (it.get('hit'), it.get('hitAbs'), it.get('hitStock'))
                 it['hit'] = score(it.get('predicted'), act, ex)
                 it['hitAbs'] = score_abs(it.get('predicted'), act)
+                it['hitStock'] = score_stock(it.get('predicted'), exa)
                 it['dirClass'] = classify_dir(it.get('predicted'))
-                if (it.get('hit'), it.get('hitAbs')) != before:
+                # R100z158：历史条目补 sectorKey（幂等，只补不改名）
+                if not it.get('sectorKey'):
+                    it['sectorKey'] = sector_key(it.get('sector'))
+                if (it.get('hit'), it.get('hitAbs'), it.get('hitStock')) != before:
                     fixed += 1
         save_log(log)
-        print(f"[OK] --recalc 完成：{fixed} 条命中分被修正，{conf_fixed} 条 conf 归一为 高/中/低；"
-              f"台账共 {sum(len(v) for v in log['log'].values())} 条已按新词表重算")
+        print(f"[OK] --recalc 完成：{fixed} 条命中分被修正，{bench_filled} 条基准被补齐（行业中位），"
+              f"{conf_fixed} 条 conf 归一为 高/中/低；"
+              f"台账共 {sum(len(v) for v in log['log'].values())} 条已按新词表+同源行业基准重算")
         return 0
 
     # --backfill：从 git 历史提交里的 data.js 提取 aiPrediction.verification，快速攒样本。
@@ -424,9 +648,18 @@ def main():
                 if pd['date'] in log['log']:
                     continue
                 conf_map = {c['sector']: c['conf'] for c in (pd.get('confBySector') or [])}
+                # ★R100z158 修 bug：此前这里直接把「今天」的 bench 套给每个历史日期，
+                # 等于拿今天的尺子量一个月前的身高——回填出来的超额全是假的。
+                # 现在按日期取基准（实时值只在同日命中，否则走 market_bench.json 的 history 层）。
+                _bb = load_bench(pd['date']) or {}
+                _bi = _bb.get('benchPct')
+                _bsec = _bb.get('benchSectorPct')
+                _mt = [n['pct'] for n in (_bb.get('names') or [])
+                       if n.get('code') in ('sh000001', 'sz399001') and n.get('pct') is not None]
+                _bm = (sum(_mt) / len(_mt)) if _mt else None
                 log['log'][pd['date']] = build_items(
-                    pd['date'], pd['verification']['details'], conf_map, bench,
-                    pd.get('stockCheck') or [], bench_main)
+                    pd['date'], pd['verification']['details'], conf_map, _bi,
+                    pd.get('stockCheck') or [], _bm, _bsec)
                 # R100z13：开盘前瞻兑现打分一并入账（17:00 叙事步已打分的才并入，没打分的跳过）
                 ov = pd.get('openVerification')
                 if ov:
@@ -447,19 +680,23 @@ def main():
         if pred.get('date') and dets:
             _bb = load_bench(pred['date']) or {}
             bench = _bb.get('benchPct')
+            bench_sec = _bb.get('benchSectorPct')
             _nm = _bb.get('names') or []
             _mt = [n['pct'] for n in _nm
                    if n.get('code') in ('sh000001', 'sz399001') and n.get('pct') is not None]
             bench_main = (sum(_mt) / len(_mt)) if _mt else None
             items = build_items(pred['date'], dets, conf_map, bench,
-                                pred.get('stockCheck') or [], bench_main)
+                                pred.get('stockCheck') or [], bench_main, bench_sec)
             for it in items:
                 it['pos'] = pred.get('pos')
             log['log'][pred['date']] = items
             save_log(log)
             if not a.json:
-                print(f"[OK] 已并入台账：{pred['date']}（{len(items)} 条）"
-                      f"{'' if bench is not None else '（市场基准缺失，本轮只落旧方向口径）'}")
+                _bs = ('行业中位 %+.2f%%（%s 个行业）' % (bench_sec, _bb.get('sectorN') or '?')
+                       if bench_sec is not None else
+                       ('四指数中位 %+.2f%%（行业基准缺失，降级）' % bench if bench is not None
+                        else '基准缺失，本轮只落旧方向口径'))
+                print(f"[OK] 已并入台账：{pred['date']}（{len(items)} 条，基准={_bs}）")
 
     # ---------------- R100z59 止损台账：接上「只算不跟踪」的补丁 ----------------
     # 7 项硬约束里的止损纪律，此前只有 stop_tracker.py 在算、却从没被调用过（死脚本），
@@ -561,6 +798,17 @@ def main():
         if ra - rw >= 0.15:
             print('      ⚠️ 旧口径明显虚高：全市场普跌时「某板块跌幅 lesser 仍算命中」，'
                   '这就是为什么必须扣掉基准再判（R100z15）')
+    # R100z158：方向 vs 选股拆分解读——两者差距说明该改「看板块」还是「选票」
+    ss = [x['hitStock'] for x in allx if x.get('hitStock') is not None]
+    if ss and hs:
+        rs = sum(ss) / len(ss)
+        print('  方向 vs 选股：判方向 %.0f%%（%d 条） / 选标的 %.0f%%（%d 条）'
+              % (rw * 100, len(hs), rs * 100, len(ss)))
+        if rs - rw >= 0.10:
+            print('      → 选股明显强于判方向：alpha 主要来自「选票」而非「看板块」，'
+                  '优化重心应放在板块方向（择时）而非标的筛选')
+        elif rw - rs >= 0.10:
+            print('      → 判方向强于选股：板块看对了但票没选好，优化重心应放在标的筛选与权重')
 
     # 缺口④：组合净值曲线（高置信板块标的等权 vs 基准，R100z97 口径见 build_curve）
     curve = build_curve(log)
@@ -568,17 +816,34 @@ def main():
         with open(CURVE_FILE, 'w', encoding='utf-8') as f:
             json.dump(curve, f, ensure_ascii=False, indent=1)
         s = curve['stat']
-        print('  组合净值：%d 个交易日，累计 %+.2f%%（基准 %+.2f%%，超额 %+.2f%%；'
-              '主板代理基准 %s，超额 %s），最大回撤 %.2f%%（%s）' %
-              (s['days'], s['totRetPct'], s['benchRetPct'], s['excessPct'],
-               ('%+.2f%%' % s['benchMainRetPct'] if s.get('benchMainRetPct') is not None else '—'),
-               ('%+.2f%%' % s['benchMainExcessPct'] if s.get('benchMainExcessPct') is not None else '—'),
-               s['maxDdPct'], s['maxDdDate']))
+        print('  组合净值：%d 个交易日，累计 %+.2f%%（指数基准 %+.2f%%）'
+              % (s['days'], s['totRetPct'], s['benchRetPct']))
+        if s.get('excessSectorPct') is not None:
+            print('      ★权威超额（同源行业基准）%+.2f%%：组合 %+.2f%% vs 行业中位 %+.2f%%，'
+                  '只算行业基准齐全的 %d 天'
+                  % (s['excessSectorPct'], s['totRetSectorCmpPct'],
+                     s['benchSectorCmpRetPct'], s['sectorCmpDays']))
+        if s.get('excessComparablePct') is not None:
+            print('      指数基准超额 %+.2f%%（组合 %+.2f%% vs 指数中位 %+.2f%%，%d 天）——'
+                  '供对照，组合是一篮子行业，这条线天然虚高'
+                  % (s['excessComparablePct'], s['totRetComparablePct'],
+                     s['benchRetComparablePct'], s['comparableDays']))
+        print('      主板代理基准 %s（超额 %s）｜全样本超额 %+.2f%%（含缺基准日，仅对照）'
+              % (('%+.2f%%' % s['benchMainRetPct'] if s.get('benchMainRetPct') is not None else '—'),
+                 ('%+.2f%%' % s['benchMainExcessPct'] if s.get('benchMainExcessPct') is not None else '—'),
+                 s['excessPct']))
+        print('      最大回撤 %.2f%%（%s）' % (s['maxDdPct'], s['maxDdDate']))
+        byc = s.get('byConf') or {}
+        if byc:
+            print('      分置信档净值（自证置信度有没有用）：' +
+                  '｜'.join('%s %d 天 %+.2f%%（回撤 %.2f%%）'
+                            % (k, v['days'], v['totRetPct'], v['maxDdPct'])
+                            for k, v in byc.items()))
         if not s['assumptions']['sampleEnough']:
             print('      ⚠️ 样本仅 %d 个交易日（<15），结论统计显著性不足，仅供观察、勿据此下重注'
                   % s['days'])
         print('      假设：单边佣金 %.3f%% / 卖出印花税 %.3f%% / 滑点 %.3f%%（净值未扣，毛收益）；'
-              '基准=四指数中位、主板代理=上证+深成等权' %
+              '权威基准=同花顺一级行业中位、指数基准=四指数中位、主板代理=上证+深成等权' %
               (s['assumptions']['feePerSide'], s['assumptions']['stampDutySell'],
                s['assumptions']['slippagePerSide']))
         print('      已写入 ' + os.path.basename(CURVE_FILE) + '（前端画净值与回撤）')

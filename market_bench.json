@@ -26,5 +26,77 @@
   }
  ],
  "errors": [],
- "note": "超额 = 板块(或8只组合)实际涨幅 − benchPct；命中判定改用超额（R100z15）"
+ "note": "超额 = 板块(或8只组合)实际涨幅 − benchPct；命中判定改用超额（R100z15）",
+ "history": {
+  "2026-09-30": {
+   "date": "2026-09-30",
+   "benchPct": null,
+   "benchSectorPct": 0.07,
+   "sectorN": 90,
+   "src": "git-backfill:11e524b"
+  },
+  "2026-10-08": {
+   "date": "2026-10-08",
+   "benchPct": null,
+   "benchSectorPct": -0.695,
+   "sectorN": 90,
+   "src": "git-backfill:d2a4c82"
+  },
+  "2026-10-09": {
+   "date": "2026-10-09",
+   "benchPct": null,
+   "benchSectorPct": 0.655,
+   "sectorN": 90,
+   "src": "git-backfill:ec35bda"
+  },
+  "2026-10-12": {
+   "date": "2026-10-12",
+   "benchPct": null,
+   "benchSectorPct": -1.655,
+   "sectorN": 90,
+   "src": "git-backfill:e6f7922"
+  },
+  "2026-10-13": {
+   "date": "2026-10-13",
+   "benchPct": null,
+   "benchSectorPct": 0.5,
+   "sectorN": 90,
+   "src": "git-backfill:b122dc9"
+  },
+  "2026-10-14": {
+   "date": "2026-10-14",
+   "benchPct": null,
+   "benchSectorPct": -1.745,
+   "sectorN": 90,
+   "src": "git-backfill:c5f28c1"
+  },
+  "2026-10-15": {
+   "date": "2026-10-15",
+   "benchPct": null,
+   "benchSectorPct": -2.935,
+   "sectorN": 90,
+   "src": "git-backfill:f760dec"
+  },
+  "2026-10-16": {
+   "date": "2026-10-16",
+   "benchPct": null,
+   "benchSectorPct": 0.435,
+   "sectorN": 120,
+   "src": "git-backfill:98702e8"
+  },
+  "2026-10-19": {
+   "date": "2026-10-19",
+   "benchPct": null,
+   "benchSectorPct": -0.205,
+   "sectorN": 90,
+   "src": "git-backfill:09948db"
+  },
+  "2026-10-20": {
+   "date": "2026-10-20",
+   "benchPct": null,
+   "benchSectorPct": 0.94,
+   "sectorN": 90,
+   "src": "git-backfill:7cb24e6"
+  }
+ }
 }

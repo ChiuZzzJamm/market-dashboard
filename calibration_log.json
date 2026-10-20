@@ -8,14 +8,19 @@
     "dirClass": "up",
     "actualPct": -0.99,
     "benchPct": null,
-    "excessPct": null,
+    "excessPct": -1.06,
     "result": "未命中",
     "conf": "高",
     "avgPct": null,
     "excessAvg": null,
     "hit": 0,
     "hitAbs": 0,
-    "pos": null
+    "pos": null,
+    "hitStock": null,
+    "sectorKey": "光通信",
+    "benchUsed": "sector",
+    "excessPctIdx": null,
+    "benchSecPct": 0.07
    },
    {
     "date": "2026-09-30",
@@ -24,14 +29,19 @@
     "dirClass": "up",
     "actualPct": -2.92,
     "benchPct": null,
-    "excessPct": null,
+    "excessPct": -2.99,
     "result": "未命中",
     "conf": "高",
     "avgPct": null,
     "excessAvg": null,
     "hit": 0,
     "hitAbs": 0,
-    "pos": null
+    "pos": null,
+    "hitStock": null,
+    "sectorKey": "半导体设备材料",
+    "benchUsed": "sector",
+    "excessPctIdx": null,
+    "benchSecPct": 0.07
    },
    {
     "date": "2026-09-30",
@@ -40,14 +50,19 @@
     "dirClass": "up",
     "actualPct": 1.08,
     "benchPct": null,
-    "excessPct": null,
+    "excessPct": 1.01,
     "result": "命中",
     "conf": "中",
     "avgPct": null,
     "excessAvg": null,
     "hit": 1,
     "hitAbs": 1,
-    "pos": null
+    "pos": null,
+    "hitStock": null,
+    "sectorKey": "黄金",
+    "benchUsed": "sector",
+    "excessPctIdx": null,
+    "benchSecPct": 0.07
    },
    {
     "date": "2026-09-30",
@@ -56,14 +71,19 @@
     "dirClass": "up",
     "actualPct": 0.03,
     "benchPct": null,
-    "excessPct": null,
+    "excessPct": -0.04,
     "result": "未命中",
     "conf": "中",
     "avgPct": null,
     "excessAvg": null,
     "hit": 0.5,
     "hitAbs": 0.5,
-    "pos": null
+    "pos": null,
+    "hitStock": null,
+    "sectorKey": "核电",
+    "benchUsed": "sector",
+    "excessPctIdx": null,
+    "benchSecPct": 0.07
    },
    {
     "date": "2026-09-30",
@@ -72,14 +92,19 @@
     "dirClass": "up",
     "actualPct": 0.1,
     "benchPct": null,
-    "excessPct": null,
+    "excessPct": 0.03,
     "result": "部分兑现",
     "conf": "中",
     "avgPct": null,
     "excessAvg": null,
     "hit": 0.5,
     "hitAbs": 0.5,
-    "pos": null
+    "pos": null,
+    "hitStock": null,
+    "sectorKey": "光伏逆变器",
+    "benchUsed": "sector",
+    "excessPctIdx": null,
+    "benchSecPct": 0.07
    },
    {
     "date": "2026-09-30",
@@ -88,14 +113,19 @@
     "dirClass": "down",
     "actualPct": -0.1,
     "benchPct": null,
-    "excessPct": null,
+    "excessPct": -0.17,
     "result": "命中",
     "conf": "中",
     "avgPct": null,
     "excessAvg": null,
     "hit": 0.5,
     "hitAbs": 0.5,
-    "pos": null
+    "pos": null,
+    "hitStock": null,
+    "sectorKey": "有色",
+    "benchUsed": "sector",
+    "excessPctIdx": null,
+    "benchSecPct": 0.07
    }
   ],
   "2026-10-08": [
@@ -106,11 +136,11 @@
     "dirClass": "up",
     "actualPct": 3.44,
     "benchPct": -2.135,
-    "excessPct": 5.575,
+    "excessPct": 4.135,
     "result": "命中",
     "conf": "高",
     "avgPct": 2.9,
-    "excessAvg": 5.035,
+    "excessAvg": 3.595,
     "hit": 1,
     "hitAbs": 1,
     "pos": {
@@ -118,7 +148,12 @@
      "bandLo": 3820,
      "bandHi": 3900,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 1,
+    "sectorKey": "新型电池",
+    "benchUsed": "sector",
+    "excessPctIdx": 5.575,
+    "benchSecPct": -0.695
    },
    {
     "date": "2026-10-08",
@@ -127,11 +162,11 @@
     "dirClass": "up",
     "actualPct": -3.03,
     "benchPct": -2.135,
-    "excessPct": -0.895,
+    "excessPct": -2.335,
     "result": "未命中",
     "conf": "中",
     "avgPct": -3.61,
-    "excessAvg": -1.475,
+    "excessAvg": -2.915,
     "hit": 0,
     "hitAbs": 0,
     "pos": {
@@ -139,7 +174,12 @@
      "bandLo": 3820,
      "bandHi": 3900,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 0,
+    "sectorKey": "算力硬件",
+    "benchUsed": "sector",
+    "excessPctIdx": -0.895,
+    "benchSecPct": -0.695
    },
    {
     "date": "2026-10-08",
@@ -148,19 +188,24 @@
     "dirClass": "up",
     "actualPct": -1.77,
     "benchPct": -2.135,
-    "excessPct": 0.365,
+    "excessPct": -1.075,
     "result": "部分兑现",
     "conf": "中",
     "avgPct": -2.41,
-    "excessAvg": -0.275,
-    "hit": 1,
+    "excessAvg": -1.715,
+    "hit": 0,
     "hitAbs": 0,
     "pos": {
      "tendency": "偏强",
      "bandLo": 3820,
      "bandHi": 3900,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 0,
+    "sectorKey": "创新药",
+    "benchUsed": "sector",
+    "excessPctIdx": 0.365,
+    "benchSecPct": -0.695
    },
    {
     "date": "2026-10-08",
@@ -169,19 +214,24 @@
     "dirClass": "up",
     "actualPct": -1.52,
     "benchPct": -2.135,
-    "excessPct": 0.615,
+    "excessPct": -0.825,
     "result": "命中",
     "conf": "中",
     "avgPct": -1.43,
-    "excessAvg": 0.705,
-    "hit": 1,
+    "excessAvg": -0.735,
+    "hit": 0,
     "hitAbs": 0,
     "pos": {
      "tendency": "偏强",
      "bandLo": 3820,
      "bandHi": 3900,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 0,
+    "sectorKey": "大金融",
+    "benchUsed": "sector",
+    "excessPctIdx": 0.615,
+    "benchSecPct": -0.695
    },
    {
     "date": "2026-10-08",
@@ -190,19 +240,24 @@
     "dirClass": "up",
     "actualPct": -1.26,
     "benchPct": -2.135,
-    "excessPct": 0.875,
+    "excessPct": -0.565,
     "result": "命中",
     "conf": "中",
     "avgPct": -2.82,
-    "excessAvg": -0.685,
-    "hit": 1,
+    "excessAvg": -2.125,
+    "hit": 0,
     "hitAbs": 0,
     "pos": {
      "tendency": "偏强",
      "bandLo": 3820,
      "bandHi": 3900,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 0,
+    "sectorKey": "房地产",
+    "benchUsed": "sector",
+    "excessPctIdx": 0.875,
+    "benchSecPct": -0.695
    },
    {
     "date": "2026-10-08",
@@ -211,11 +266,11 @@
     "dirClass": "up",
     "actualPct": -4.98,
     "benchPct": -2.135,
-    "excessPct": -2.845,
+    "excessPct": -4.285,
     "result": "未命中",
     "conf": "高",
     "avgPct": -3.89,
-    "excessAvg": -1.755,
+    "excessAvg": -3.195,
     "hit": 0,
     "hitAbs": 0,
     "pos": {
@@ -223,7 +278,12 @@
      "bandLo": 3820,
      "bandHi": 3900,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 0,
+    "sectorKey": "半导体",
+    "benchUsed": "sector",
+    "excessPctIdx": -2.845,
+    "benchSecPct": -0.695
    }
   ],
   "2026-10-09": [
@@ -234,20 +294,25 @@
     "dirClass": "up",
     "actualPct": 0.18,
     "benchPct": 0.195,
-    "excessPct": -0.015,
+    "excessPct": -0.475,
     "benchMainPct": 0.11000000000000001,
     "result": "未命中",
     "conf": "中",
     "avgPct": -0.82,
-    "excessAvg": -1.015,
-    "hit": 0.5,
+    "excessAvg": -1.475,
+    "hit": 0,
     "hitAbs": 0.5,
     "pos": {
      "tendency": "承压",
      "bandLo": 3760,
      "bandHi": 3850,
      "volExpect": "缩量"
-    }
+    },
+    "hitStock": 0,
+    "sectorKey": "房地产",
+    "benchUsed": "sector",
+    "excessPctIdx": -0.015,
+    "benchSecPct": 0.655
    },
    {
     "date": "2026-10-09",
@@ -256,20 +321,25 @@
     "dirClass": "up",
     "actualPct": 0.83,
     "benchPct": 0.195,
-    "excessPct": 0.635,
+    "excessPct": 0.175,
     "benchMainPct": 0.11000000000000001,
     "result": "命中",
     "conf": "中",
     "avgPct": 0.86,
-    "excessAvg": 0.665,
-    "hit": 1,
+    "excessAvg": 0.205,
+    "hit": 0.5,
     "hitAbs": 1,
     "pos": {
      "tendency": "承压",
      "bandLo": 3760,
      "bandHi": 3850,
      "volExpect": "缩量"
-    }
+    },
+    "hitStock": 1,
+    "sectorKey": "必需消费",
+    "benchUsed": "sector",
+    "excessPctIdx": 0.635,
+    "benchSecPct": 0.655
    },
    {
     "date": "2026-10-09",
@@ -278,12 +348,12 @@
     "dirClass": "up",
     "actualPct": -1.0,
     "benchPct": 0.195,
-    "excessPct": -1.195,
+    "excessPct": -1.655,
     "benchMainPct": 0.11000000000000001,
     "result": "未命中",
     "conf": "高",
     "avgPct": -1.3,
-    "excessAvg": -1.495,
+    "excessAvg": -1.955,
     "hit": 0,
     "hitAbs": 0,
     "pos": {
@@ -291,7 +361,12 @@
      "bandLo": 3760,
      "bandHi": 3850,
      "volExpect": "缩量"
-    }
+    },
+    "hitStock": 0,
+    "sectorKey": "军工",
+    "benchUsed": "sector",
+    "excessPctIdx": -1.195,
+    "benchSecPct": 0.655
    },
    {
     "date": "2026-10-09",
@@ -300,12 +375,12 @@
     "dirClass": "up",
     "actualPct": -0.63,
     "benchPct": 0.195,
-    "excessPct": -0.825,
+    "excessPct": -1.285,
     "benchMainPct": 0.11000000000000001,
     "result": "部分兑现",
     "conf": "高",
     "avgPct": 0.55,
-    "excessAvg": 0.355,
+    "excessAvg": -0.105,
     "hit": 0,
     "hitAbs": 0,
     "pos": {
@@ -313,7 +388,12 @@
      "bandLo": 3760,
      "bandHi": 3850,
      "volExpect": "缩量"
-    }
+    },
+    "hitStock": 0.5,
+    "sectorKey": "原油",
+    "benchUsed": "sector",
+    "excessPctIdx": -0.825,
+    "benchSecPct": 0.655
    },
    {
     "date": "2026-10-09",
@@ -322,12 +402,12 @@
     "dirClass": "down",
     "actualPct": -0.58,
     "benchPct": 0.195,
-    "excessPct": -0.775,
+    "excessPct": -1.235,
     "benchMainPct": 0.11000000000000001,
     "result": "命中",
     "conf": "中",
     "avgPct": -1.98,
-    "excessAvg": -2.175,
+    "excessAvg": -2.635,
     "hit": 1,
     "hitAbs": 1,
     "pos": {
@@ -335,7 +415,12 @@
      "bandLo": 3760,
      "bandHi": 3850,
      "volExpect": "缩量"
-    }
+    },
+    "hitStock": 1,
+    "sectorKey": "光模块",
+    "benchUsed": "sector",
+    "excessPctIdx": -0.775,
+    "benchSecPct": 0.655
    },
    {
     "date": "2026-10-09",
@@ -344,20 +429,25 @@
     "dirClass": "down",
     "actualPct": 0.17,
     "benchPct": 0.195,
-    "excessPct": -0.025,
+    "excessPct": -0.485,
     "benchMainPct": 0.11000000000000001,
     "result": "未命中",
     "conf": "中",
     "avgPct": 0.14,
-    "excessAvg": -0.055,
-    "hit": 0.5,
+    "excessAvg": -0.515,
+    "hit": 1,
     "hitAbs": 0.5,
     "pos": {
      "tendency": "承压",
      "bandLo": 3760,
      "bandHi": 3850,
      "volExpect": "缩量"
-    }
+    },
+    "hitStock": 1,
+    "sectorKey": "核电",
+    "benchUsed": "sector",
+    "excessPctIdx": -0.025,
+    "benchSecPct": 0.655
    }
   ],
   "2026-10-12": [
@@ -368,12 +458,12 @@
     "dirClass": "up",
     "actualPct": -2.73,
     "benchPct": -1.955,
-    "excessPct": -0.775,
+    "excessPct": -1.075,
     "benchMainPct": -1.23,
     "result": "未命中",
     "conf": "高",
     "avgPct": -1.54,
-    "excessAvg": 0.415,
+    "excessAvg": 0.115,
     "hit": 0,
     "hitAbs": 0,
     "pos": {
@@ -381,7 +471,12 @@
      "bandLo": 3780,
      "bandHi": 3880,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 0.5,
+    "sectorKey": "半导体",
+    "benchUsed": "sector",
+    "excessPctIdx": -0.775,
+    "benchSecPct": -1.655
    },
    {
     "date": "2026-10-12",
@@ -390,12 +485,12 @@
     "dirClass": "up",
     "actualPct": -2.84,
     "benchPct": -1.955,
-    "excessPct": -0.885,
+    "excessPct": -1.185,
     "benchMainPct": -1.23,
     "result": "未命中",
     "conf": "中",
     "avgPct": -4.0,
-    "excessAvg": -2.045,
+    "excessAvg": -2.345,
     "hit": 0,
     "hitAbs": 0,
     "pos": {
@@ -403,7 +498,12 @@
      "bandLo": 3780,
      "bandHi": 3880,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 0,
+    "sectorKey": "房地产",
+    "benchUsed": "sector",
+    "excessPctIdx": -0.885,
+    "benchSecPct": -1.655
    },
    {
     "date": "2026-10-12",
@@ -412,12 +512,12 @@
     "dirClass": "up",
     "actualPct": -2.35,
     "benchPct": -1.955,
-    "excessPct": -0.395,
+    "excessPct": -0.695,
     "benchMainPct": -1.23,
     "result": "未命中",
     "conf": "中",
     "avgPct": -1.06,
-    "excessAvg": 0.895,
+    "excessAvg": 0.595,
     "hit": 0,
     "hitAbs": 0,
     "pos": {
@@ -425,7 +525,12 @@
      "bandLo": 3780,
      "bandHi": 3880,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 1,
+    "sectorKey": "医疗服务",
+    "benchUsed": "sector",
+    "excessPctIdx": -0.395,
+    "benchSecPct": -1.655
    },
    {
     "date": "2026-10-12",
@@ -434,12 +539,12 @@
     "dirClass": "up",
     "actualPct": -1.04,
     "benchPct": -1.955,
-    "excessPct": 0.915,
+    "excessPct": 0.615,
     "benchMainPct": -1.23,
     "result": "部分兑现",
     "conf": "中",
     "avgPct": -0.81,
-    "excessAvg": 1.145,
+    "excessAvg": 0.845,
     "hit": 1,
     "hitAbs": 0,
     "pos": {
@@ -447,7 +552,12 @@
      "bandLo": 3780,
      "bandHi": 3880,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 1,
+    "sectorKey": "电力",
+    "benchUsed": "sector",
+    "excessPctIdx": 0.915,
+    "benchSecPct": -1.655
    },
    {
     "date": "2026-10-12",
@@ -456,20 +566,25 @@
     "dirClass": "up",
     "actualPct": -1.51,
     "benchPct": -1.955,
-    "excessPct": 0.445,
+    "excessPct": 0.145,
     "benchMainPct": -1.23,
     "result": "部分兑现",
     "conf": "中",
     "avgPct": -3.9,
-    "excessAvg": -1.945,
-    "hit": 1,
+    "excessAvg": -2.245,
+    "hit": 0.5,
     "hitAbs": 0,
     "pos": {
      "tendency": "偏强",
      "bandLo": 3780,
      "bandHi": 3880,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 0,
+    "sectorKey": "汽车零部件",
+    "benchUsed": "sector",
+    "excessPctIdx": 0.445,
+    "benchSecPct": -1.655
    },
    {
     "date": "2026-10-12",
@@ -478,20 +593,25 @@
     "dirClass": "down",
     "actualPct": -1.99,
     "benchPct": -1.955,
-    "excessPct": -0.035,
+    "excessPct": -0.335,
     "benchMainPct": -1.23,
     "result": "命中",
     "conf": "中",
     "avgPct": -3.41,
-    "excessAvg": -1.455,
-    "hit": 0.5,
+    "excessAvg": -1.755,
+    "hit": 1,
     "hitAbs": 1,
     "pos": {
      "tendency": "偏强",
      "bandLo": 3780,
      "bandHi": 3880,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 1,
+    "sectorKey": "商业航天",
+    "benchUsed": "sector",
+    "excessPctIdx": -0.035,
+    "benchSecPct": -1.655
    }
   ],
   "2026-10-13": [
@@ -502,20 +622,25 @@
     "dirClass": "up",
     "actualPct": -0.16,
     "benchPct": -0.08,
-    "excessPct": -0.08,
+    "excessPct": -0.66,
     "benchMainPct": -0.075,
     "result": "部分兑现",
     "conf": "中",
     "avgPct": -0.16,
-    "excessAvg": -0.08,
-    "hit": 0.5,
+    "excessAvg": -0.66,
+    "hit": 0,
     "hitAbs": 0.5,
     "pos": {
      "tendency": "偏强",
      "bandLo": 3780,
      "bandHi": 3820,
      "volExpect": "平量"
-    }
+    },
+    "hitStock": 0,
+    "sectorKey": "存储",
+    "benchUsed": "sector",
+    "excessPctIdx": -0.08,
+    "benchSecPct": 0.5
    },
    {
     "date": "2026-10-13",
@@ -524,20 +649,25 @@
     "dirClass": "up",
     "actualPct": -0.17,
     "benchPct": -0.08,
-    "excessPct": -0.09,
+    "excessPct": -0.67,
     "benchMainPct": -0.075,
     "result": "未命中",
     "conf": "中",
     "avgPct": -0.17,
-    "excessAvg": -0.09,
-    "hit": 0.5,
+    "excessAvg": -0.67,
+    "hit": 0,
     "hitAbs": 0.5,
     "pos": {
      "tendency": "偏强",
      "bandLo": 3780,
      "bandHi": 3820,
      "volExpect": "平量"
-    }
+    },
+    "hitStock": 0,
+    "sectorKey": "房地产",
+    "benchUsed": "sector",
+    "excessPctIdx": -0.09,
+    "benchSecPct": 0.5
    },
    {
     "date": "2026-10-13",
@@ -546,12 +676,12 @@
     "dirClass": "up",
     "actualPct": -1.62,
     "benchPct": -0.08,
-    "excessPct": -1.54,
+    "excessPct": -2.12,
     "benchMainPct": -0.075,
     "result": "未命中",
     "conf": "中",
     "avgPct": -0.34,
-    "excessAvg": -0.26,
+    "excessAvg": -0.84,
     "hit": 0,
     "hitAbs": 0,
     "pos": {
@@ -559,7 +689,12 @@
      "bandLo": 3780,
      "bandHi": 3820,
      "volExpect": "平量"
-    }
+    },
+    "hitStock": 0,
+    "sectorKey": "创新药",
+    "benchUsed": "sector",
+    "excessPctIdx": -1.54,
+    "benchSecPct": 0.5
    },
    {
     "date": "2026-10-13",
@@ -568,12 +703,12 @@
     "dirClass": "up",
     "actualPct": -0.49,
     "benchPct": -0.08,
-    "excessPct": -0.41,
+    "excessPct": -0.99,
     "benchMainPct": -0.075,
     "result": "未命中",
     "conf": "中",
     "avgPct": -0.49,
-    "excessAvg": -0.41,
+    "excessAvg": -0.99,
     "hit": 0,
     "hitAbs": 0,
     "pos": {
@@ -581,7 +716,12 @@
      "bandLo": 3780,
      "bandHi": 3820,
      "volExpect": "平量"
-    }
+    },
+    "hitStock": 0,
+    "sectorKey": "电力",
+    "benchUsed": "sector",
+    "excessPctIdx": -0.41,
+    "benchSecPct": 0.5
    },
    {
     "date": "2026-10-13",
@@ -590,12 +730,12 @@
     "dirClass": "down",
     "actualPct": -0.42,
     "benchPct": -0.08,
-    "excessPct": -0.34,
+    "excessPct": -0.92,
     "benchMainPct": -0.075,
     "result": "命中",
     "conf": "中",
     "avgPct": -0.42,
-    "excessAvg": -0.34,
+    "excessAvg": -0.92,
     "hit": 1,
     "hitAbs": 1,
     "pos": {
@@ -603,7 +743,12 @@
      "bandLo": 3780,
      "bandHi": 3820,
      "volExpect": "平量"
-    }
+    },
+    "hitStock": 1,
+    "sectorKey": "汽车出海链",
+    "benchUsed": "sector",
+    "excessPctIdx": -0.34,
+    "benchSecPct": 0.5
    },
    {
     "date": "2026-10-13",
@@ -612,12 +757,12 @@
     "dirClass": "down",
     "actualPct": 3.24,
     "benchPct": -0.08,
-    "excessPct": 3.32,
+    "excessPct": 2.74,
     "benchMainPct": -0.075,
     "result": "未命中",
     "conf": "中",
     "avgPct": 1.51,
-    "excessAvg": 1.59,
+    "excessAvg": 1.01,
     "hit": 0,
     "hitAbs": 0,
     "pos": {
@@ -625,7 +770,12 @@
      "bandLo": 3780,
      "bandHi": 3820,
      "volExpect": "平量"
-    }
+    },
+    "hitStock": 0,
+    "sectorKey": "卫星互联网",
+    "benchUsed": "sector",
+    "excessPctIdx": 3.32,
+    "benchSecPct": 0.5
    }
   ],
   "2026-10-15": [
@@ -636,20 +786,25 @@
     "dirClass": "up",
     "actualPct": -2.9,
     "benchPct": null,
-    "excessPct": null,
+    "excessPct": 0.035,
     "benchMainPct": null,
     "result": "未命中",
     "conf": "高",
     "avgPct": -2.46,
-    "excessAvg": null,
-    "hit": 0,
+    "excessAvg": 0.475,
+    "hit": 0.5,
     "hitAbs": 0,
     "pos": {
      "tendency": "承压",
      "bandLo": 3720,
      "bandHi": 3780,
      "volExpect": "平量"
-    }
+    },
+    "hitStock": 1,
+    "sectorKey": "贵金属",
+    "benchUsed": "sector",
+    "excessPctIdx": null,
+    "benchSecPct": -2.935
    },
    {
     "date": "2026-10-15",
@@ -658,20 +813,25 @@
     "dirClass": "up",
     "actualPct": -2.91,
     "benchPct": null,
-    "excessPct": null,
+    "excessPct": 0.025,
     "benchMainPct": null,
     "result": "未命中",
     "conf": "中",
     "avgPct": -1.99,
-    "excessAvg": null,
-    "hit": 0,
+    "excessAvg": 0.945,
+    "hit": 0.5,
     "hitAbs": 0,
     "pos": {
      "tendency": "承压",
      "bandLo": 3720,
      "bandHi": 3780,
      "volExpect": "平量"
-    }
+    },
+    "hitStock": 1,
+    "sectorKey": "电网设备",
+    "benchUsed": "sector",
+    "excessPctIdx": null,
+    "benchSecPct": -2.935
    },
    {
     "date": "2026-10-15",
@@ -680,20 +840,25 @@
     "dirClass": "down",
     "actualPct": -2.8,
     "benchPct": null,
-    "excessPct": null,
+    "excessPct": 0.135,
     "benchMainPct": null,
     "result": "命中",
     "conf": "中",
     "avgPct": -2.43,
-    "excessAvg": null,
-    "hit": 1,
+    "excessAvg": 0.505,
+    "hit": 0.5,
     "hitAbs": 1,
     "pos": {
      "tendency": "承压",
      "bandLo": 3720,
      "bandHi": 3780,
      "volExpect": "平量"
-    }
+    },
+    "hitStock": 0,
+    "sectorKey": "核电",
+    "benchUsed": "sector",
+    "excessPctIdx": null,
+    "benchSecPct": -2.935
    },
    {
     "date": "2026-10-15",
@@ -702,12 +867,12 @@
     "dirClass": "up",
     "actualPct": -3.8,
     "benchPct": null,
-    "excessPct": null,
+    "excessPct": -0.865,
     "benchMainPct": null,
     "result": "未命中",
     "conf": "中",
     "avgPct": -2.77,
-    "excessAvg": null,
+    "excessAvg": 0.165,
     "hit": 0,
     "hitAbs": 0,
     "pos": {
@@ -715,7 +880,12 @@
      "bandLo": 3720,
      "bandHi": 3780,
      "volExpect": "平量"
-    }
+    },
+    "hitStock": 0.5,
+    "sectorKey": "军工",
+    "benchUsed": "sector",
+    "excessPctIdx": null,
+    "benchSecPct": -2.935
    },
    {
     "date": "2026-10-15",
@@ -724,12 +894,12 @@
     "dirClass": "up",
     "actualPct": -4.79,
     "benchPct": null,
-    "excessPct": null,
+    "excessPct": -1.855,
     "benchMainPct": null,
     "result": "未命中",
     "conf": "高",
     "avgPct": -3.57,
-    "excessAvg": null,
+    "excessAvg": -0.635,
     "hit": 0,
     "hitAbs": 0,
     "pos": {
@@ -737,7 +907,12 @@
      "bandLo": 3720,
      "bandHi": 3780,
      "volExpect": "平量"
-    }
+    },
+    "hitStock": 0,
+    "sectorKey": "油气开采",
+    "benchUsed": "sector",
+    "excessPctIdx": null,
+    "benchSecPct": -2.935
    },
    {
     "date": "2026-10-15",
@@ -746,12 +921,12 @@
     "dirClass": "down",
     "actualPct": -4.45,
     "benchPct": null,
-    "excessPct": null,
+    "excessPct": -1.515,
     "benchMainPct": null,
     "result": "命中",
     "conf": "中",
     "avgPct": -4.76,
-    "excessAvg": null,
+    "excessAvg": -1.825,
     "hit": 1,
     "hitAbs": 1,
     "pos": {
@@ -759,7 +934,12 @@
      "bandLo": 3720,
      "bandHi": 3780,
      "volExpect": "平量"
-    }
+    },
+    "hitStock": 1,
+    "sectorKey": "光模块",
+    "benchUsed": "sector",
+    "excessPctIdx": null,
+    "benchSecPct": -2.935
    }
   ],
   "2026-10-19": [
@@ -767,45 +947,55 @@
     "date": "2026-10-19",
     "sector": "计算机设备·信创",
     "predicted": "看涨",
-    "dirClass": "flat",
+    "dirClass": "up",
     "actualPct": -0.11,
     "benchPct": 0.185,
-    "excessPct": -0.295,
+    "excessPct": 0.095,
     "benchMainPct": 0.26,
     "result": "未命中",
     "conf": "中",
     "avgPct": 0.51,
-    "excessAvg": 0.325,
-    "hit": null,
-    "hitAbs": null,
+    "excessAvg": 0.715,
+    "hit": 0.5,
+    "hitAbs": 0.5,
     "pos": {
      "tendency": "震荡",
      "bandLo": 3700,
      "bandHi": 3800,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 1,
+    "sectorKey": "计算机设备",
+    "benchUsed": "sector",
+    "excessPctIdx": -0.295,
+    "benchSecPct": -0.205
    },
    {
     "date": "2026-10-19",
     "sector": "软件开发·AI应用",
     "predicted": "看涨",
-    "dirClass": "flat",
+    "dirClass": "up",
     "actualPct": 0.53,
     "benchPct": 0.185,
-    "excessPct": 0.345,
+    "excessPct": 0.735,
     "benchMainPct": 0.26,
     "result": "命中",
     "conf": "中",
     "avgPct": 2.01,
-    "excessAvg": 1.825,
-    "hit": null,
-    "hitAbs": null,
+    "excessAvg": 2.215,
+    "hit": 1,
+    "hitAbs": 1,
     "pos": {
      "tendency": "震荡",
      "bandLo": 3700,
      "bandHi": 3800,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 1,
+    "sectorKey": "软件开发",
+    "benchUsed": "sector",
+    "excessPctIdx": 0.345,
+    "benchSecPct": -0.205
    },
    {
     "date": "2026-10-19",
@@ -814,12 +1004,12 @@
     "dirClass": "flat",
     "actualPct": -0.66,
     "benchPct": 0.185,
-    "excessPct": -0.845,
+    "excessPct": -0.455,
     "benchMainPct": 0.26,
     "result": "命中",
     "conf": "中",
     "avgPct": -1.16,
-    "excessAvg": -1.345,
+    "excessAvg": -0.955,
     "hit": null,
     "hitAbs": null,
     "pos": {
@@ -827,73 +1017,93 @@
      "bandLo": 3700,
      "bandHi": 3800,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": null,
+    "sectorKey": "半导体",
+    "benchUsed": "sector",
+    "excessPctIdx": -0.845,
+    "benchSecPct": -0.205
    },
    {
     "date": "2026-10-19",
     "sector": "油气能源",
     "predicted": "看涨",
-    "dirClass": "flat",
+    "dirClass": "up",
     "actualPct": 0.09,
     "benchPct": 0.185,
-    "excessPct": -0.095,
+    "excessPct": 0.295,
     "benchMainPct": 0.26,
     "result": "部分兑现",
     "conf": "中",
     "avgPct": -0.11,
-    "excessAvg": -0.295,
-    "hit": null,
-    "hitAbs": null,
+    "excessAvg": 0.095,
+    "hit": 1,
+    "hitAbs": 0.5,
     "pos": {
      "tendency": "震荡",
      "bandLo": 3700,
      "bandHi": 3800,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 0.5,
+    "sectorKey": "油气能源",
+    "benchUsed": "sector",
+    "excessPctIdx": -0.095,
+    "benchSecPct": -0.205
    },
    {
     "date": "2026-10-19",
     "sector": "黄金避险",
     "predicted": "看涨",
-    "dirClass": "flat",
+    "dirClass": "up",
     "actualPct": 0.89,
     "benchPct": 0.185,
-    "excessPct": 0.705,
+    "excessPct": 1.095,
     "benchMainPct": 0.26,
     "result": "命中",
     "conf": "中",
     "avgPct": 1.03,
-    "excessAvg": 0.845,
-    "hit": null,
-    "hitAbs": null,
+    "excessAvg": 1.235,
+    "hit": 1,
+    "hitAbs": 1,
     "pos": {
      "tendency": "震荡",
      "bandLo": 3700,
      "bandHi": 3800,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 1,
+    "sectorKey": "黄金避险",
+    "benchUsed": "sector",
+    "excessPctIdx": 0.705,
+    "benchSecPct": -0.205
    },
    {
     "date": "2026-10-19",
     "sector": "创新药·CXO",
     "predicted": "看涨",
-    "dirClass": "flat",
+    "dirClass": "up",
     "actualPct": -0.83,
     "benchPct": 0.185,
-    "excessPct": -1.015,
+    "excessPct": -0.625,
     "benchMainPct": 0.26,
     "result": "未命中",
     "conf": "中",
     "avgPct": 2.4,
-    "excessAvg": 2.215,
-    "hit": null,
-    "hitAbs": null,
+    "excessAvg": 2.605,
+    "hit": 0,
+    "hitAbs": 0,
     "pos": {
      "tendency": "震荡",
      "bandLo": 3700,
      "bandHi": 3800,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 1,
+    "sectorKey": "创新药",
+    "benchUsed": "sector",
+    "excessPctIdx": -1.015,
+    "benchSecPct": -0.205
    }
   ],
   "2026-10-20": [
@@ -904,12 +1114,12 @@
     "dirClass": "up",
     "actualPct": 2.92,
     "benchPct": -0.01,
-    "excessPct": 2.93,
+    "excessPct": 1.98,
     "benchMainPct": -0.010000000000000009,
     "result": "命中",
     "conf": "中",
     "avgPct": 1.38,
-    "excessAvg": 1.39,
+    "excessAvg": 0.44,
     "hit": 1,
     "hitAbs": 1,
     "pos": {
@@ -917,7 +1127,12 @@
      "bandLo": 3710,
      "bandHi": 3790,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 1,
+    "sectorKey": "半导体设备",
+    "benchUsed": "sector",
+    "excessPctIdx": 2.93,
+    "benchSecPct": 0.94
    },
    {
     "date": "2026-10-20",
@@ -926,12 +1141,12 @@
     "dirClass": "up",
     "actualPct": 2.83,
     "benchPct": -0.01,
-    "excessPct": 2.84,
+    "excessPct": 1.89,
     "benchMainPct": -0.010000000000000009,
     "result": "命中",
     "conf": "中",
     "avgPct": 1.57,
-    "excessAvg": 1.58,
+    "excessAvg": 0.63,
     "hit": 1,
     "hitAbs": 1,
     "pos": {
@@ -939,7 +1154,12 @@
      "bandLo": 3710,
      "bandHi": 3790,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 1,
+    "sectorKey": "AI算力",
+    "benchUsed": "sector",
+    "excessPctIdx": 2.84,
+    "benchSecPct": 0.94
    },
    {
     "date": "2026-10-20",
@@ -948,12 +1168,12 @@
     "dirClass": "up",
     "actualPct": 2.41,
     "benchPct": -0.01,
-    "excessPct": 2.42,
+    "excessPct": 1.47,
     "benchMainPct": -0.010000000000000009,
     "result": "命中",
     "conf": "中",
     "avgPct": 1.05,
-    "excessAvg": 1.06,
+    "excessAvg": 0.11,
     "hit": 1,
     "hitAbs": 1,
     "pos": {
@@ -961,7 +1181,12 @@
      "bandLo": 3710,
      "bandHi": 3790,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 0.5,
+    "sectorKey": "通信设备",
+    "benchUsed": "sector",
+    "excessPctIdx": 2.42,
+    "benchSecPct": 0.94
    },
    {
     "date": "2026-10-20",
@@ -970,12 +1195,12 @@
     "dirClass": "down",
     "actualPct": -0.79,
     "benchPct": -0.01,
-    "excessPct": -0.78,
+    "excessPct": -1.73,
     "benchMainPct": -0.010000000000000009,
     "result": "命中",
     "conf": "中",
     "avgPct": -0.44,
-    "excessAvg": -0.43,
+    "excessAvg": -1.38,
     "hit": 1,
     "hitAbs": 1,
     "pos": {
@@ -983,7 +1208,12 @@
      "bandLo": 3710,
      "bandHi": 3790,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 1,
+    "sectorKey": "核电",
+    "benchUsed": "sector",
+    "excessPctIdx": -0.78,
+    "benchSecPct": 0.94
    },
    {
     "date": "2026-10-20",
@@ -992,12 +1222,12 @@
     "dirClass": "down",
     "actualPct": 1.4,
     "benchPct": -0.01,
-    "excessPct": 1.41,
+    "excessPct": 0.46,
     "benchMainPct": -0.010000000000000009,
     "result": "未命中",
     "conf": "中",
     "avgPct": 1.81,
-    "excessAvg": 1.82,
+    "excessAvg": 0.87,
     "hit": 0,
     "hitAbs": 0,
     "pos": {
@@ -1005,7 +1235,12 @@
      "bandLo": 3710,
      "bandHi": 3790,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 0,
+    "sectorKey": "稀土",
+    "benchUsed": "sector",
+    "excessPctIdx": 1.41,
+    "benchSecPct": 0.94
    },
    {
     "date": "2026-10-20",
@@ -1014,12 +1249,12 @@
     "dirClass": "up",
     "actualPct": 1.29,
     "benchPct": -0.01,
-    "excessPct": 1.3,
+    "excessPct": 0.35,
     "benchMainPct": -0.010000000000000009,
     "result": "命中",
     "conf": "中",
     "avgPct": 0.22,
-    "excessAvg": 0.23,
+    "excessAvg": -0.72,
     "hit": 1,
     "hitAbs": 1,
     "pos": {
@@ -1027,7 +1262,12 @@
      "bandLo": 3710,
      "bandHi": 3790,
      "volExpect": "放量"
-    }
+    },
+    "hitStock": 0,
+    "sectorKey": "消费",
+    "benchUsed": "sector",
+    "excessPctIdx": 1.3,
+    "benchSecPct": 0.94
    }
   ]
  },
@@ -1043,14 +1283,17 @@
     "point": 3811.9,
     "changePct": -0.79,
     "upRate": 0.3118,
-    "volumeText": "成交约 1.68 万亿"
+    "volumeText": "成交约 1.68 万亿",
+    "amountYi": 16800.0,
+    "amountPrevYi": null,
+    "amountChgPct": null
    },
    "tendencyHit": 0,
    "bandHit": 0.5,
-   "volHit": 0,
-   "score": 0.15,
+   "volHit": null,
+   "score": 0.187,
    "verdict": "未命中",
-   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；量能为涨跌家数占比代理，口径固定不可调"
+   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；★量能口径 R100z158b 起 = 成交额环比（≥+10% 放量 / ≤−10% 缩量 / 界内平量），环比基准取台账内上一交易日成交额（首日无前值时该项不计入）；口径固定不可调"
   },
   "2026-10-09": {
    "date": "2026-10-09",
@@ -1063,14 +1306,17 @@
     "point": 3813.79,
     "changePct": 0.05,
     "upRate": 0.6058,
-    "volumeText": "成交约 1.90 万亿"
+    "volumeText": "成交约 1.90 万亿",
+    "amountYi": 19000.0,
+    "amountPrevYi": 16800.0,
+    "amountChgPct": 13.1
    },
    "tendencyHit": 0.5,
    "bandHit": 1,
    "volHit": 0,
    "score": 0.55,
    "verdict": "部分兑现",
-   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；量能为涨跌家数占比代理，口径固定不可调"
+   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；★量能口径 R100z158b 起 = 成交额环比（≥+10% 放量 / ≤−10% 缩量 / 界内平量），环比基准取台账内上一交易日成交额（首日无前值时该项不计入）；口径固定不可调"
   },
   "2026-10-12": {
    "date": "2026-10-12",
@@ -1083,14 +1329,17 @@
     "point": 3797.24,
     "changePct": -0.43,
     "upRate": 0.2125,
-    "volumeText": "成交约 1.54 万亿"
+    "volumeText": "成交约 1.54 万亿",
+    "amountYi": 15400.0,
+    "amountPrevYi": 19000.0,
+    "amountChgPct": -18.95
    },
    "tendencyHit": 0,
    "bandHit": 1,
    "volHit": 0,
    "score": 0.3,
    "verdict": "未命中",
-   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；量能为涨跌家数占比代理，口径固定不可调"
+   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；★量能口径 R100z158b 起 = 成交额环比（≥+10% 放量 / ≤−10% 缩量 / 界内平量），环比基准取台账内上一交易日成交额（首日无前值时该项不计入）；口径固定不可调"
   },
   "2026-10-13": {
    "date": "2026-10-13",
@@ -1103,14 +1352,17 @@
     "point": 3800.86,
     "changePct": 0.1,
     "upRate": 0.5392,
-    "volumeText": "成交约 1.68 万亿"
+    "volumeText": "成交约 1.68 万亿",
+    "amountYi": 16800.0,
+    "amountPrevYi": 15400.0,
+    "amountChgPct": 9.09
    },
    "tendencyHit": 0.5,
    "bandHit": 1,
    "volHit": 1,
    "score": 0.75,
    "verdict": "部分兑现",
-   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；量能为涨跌家数占比代理，口径固定不可调"
+   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；★量能口径 R100z158b 起 = 成交额环比（≥+10% 放量 / ≤−10% 缩量 / 界内平量），环比基准取台账内上一交易日成交额（首日无前值时该项不计入）；口径固定不可调"
   },
   "2026-10-14": {
    "date": "2026-10-14",
@@ -1123,14 +1375,17 @@
     "point": 3767.23,
     "changePct": -0.88,
     "upRate": 0.1788,
-    "volumeText": "成交约 1.41 万亿"
+    "volumeText": "成交约 1.41 万亿",
+    "amountYi": 14100.0,
+    "amountPrevYi": 16800.0,
+    "amountChgPct": -16.07
    },
    "tendencyHit": 0,
    "bandHit": 0.5,
    "volHit": 0,
    "score": 0.15,
    "verdict": "未命中",
-   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；量能为涨跌家数占比代理，口径固定不可调"
+   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；★量能口径 R100z158b 起 = 成交额环比（≥+10% 放量 / ≤−10% 缩量 / 界内平量），环比基准取台账内上一交易日成交额（首日无前值时该项不计入）；口径固定不可调"
   },
   "2026-10-15": {
    "date": "2026-10-15",
@@ -1143,14 +1398,17 @@
     "point": 3707.48,
     "changePct": -1.59,
     "upRate": 0.0776,
-    "volumeText": "成交约 1.63 万亿"
+    "volumeText": "成交约 1.63 万亿",
+    "amountYi": 16300.0,
+    "amountPrevYi": 14100.0,
+    "amountChgPct": 15.6
    },
    "tendencyHit": 1,
    "bandHit": 0.5,
    "volHit": 0,
    "score": 0.65,
    "verdict": "部分兑现",
-   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；量能为涨跌家数占比代理，口径固定不可调"
+   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；★量能口径 R100z158b 起 = 成交额环比（≥+10% 放量 / ≤−10% 缩量 / 界内平量），环比基准取台账内上一交易日成交额（首日无前值时该项不计入）；口径固定不可调"
   },
   "2026-10-19": {
    "date": "2026-10-19",
@@ -1163,14 +1421,17 @@
     "point": 3730.92,
     "changePct": 0.39,
     "upRate": 0.421,
-    "volumeText": "成交约 1.44 万亿"
+    "volumeText": "成交约 1.44 万亿",
+    "amountYi": 14400.0,
+    "amountPrevYi": 16300.0,
+    "amountChgPct": -11.66
    },
    "tendencyHit": 1,
    "bandHit": 1,
    "volHit": 0,
    "score": 0.8,
    "verdict": "部分兑现",
-   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；量能为涨跌家数占比代理，口径固定不可调"
+   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；★量能口径 R100z158b 起 = 成交额环比（≥+10% 放量 / ≤−10% 缩量 / 界内平量），环比基准取台账内上一交易日成交额（首日无前值时该项不计入）；口径固定不可调"
   },
   "2026-10-20": {
    "date": "2026-10-20",
@@ -1183,14 +1444,17 @@
     "point": 3735.37,
     "changePct": 0.12,
     "upRate": 0.6937,
-    "volumeText": "成交约 1.46 万亿"
+    "volumeText": "成交约 1.46 万亿",
+    "amountYi": 14600.0,
+    "amountPrevYi": 14400.0,
+    "amountChgPct": 1.39
    },
    "tendencyHit": 0.5,
    "bandHit": 1,
-   "volHit": 1,
-   "score": 0.75,
+   "volHit": 0,
+   "score": 0.55,
    "verdict": "部分兑现",
-   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；量能为涨跌家数占比代理，口径固定不可调"
+   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；★量能口径 R100z158b 起 = 成交额环比（≥+10% 放量 / ≤−10% 缩量 / 界内平量），环比基准取台账内上一交易日成交额（首日无前值时该项不计入）；口径固定不可调"
   }
  }
 }

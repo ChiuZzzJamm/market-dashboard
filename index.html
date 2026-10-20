@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610202157"></script>
+<script src="data.js?v=202610202341"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1974,19 +1974,95 @@ function renderCalHistory() {
         var days = Object.keys(log).sort().slice(-5);
         if (!days.length) return;
         var h = '<div class="cal-hist-t">📅 最近 ' + days.length + ' 个预测日的命中率</div><div class="cal-bar">';
+        var dirS = 0, dirG = 0, stkS = 0, stkG = 0;
         days.forEach(function (dt) {
           var arr = log[dt] || [], scored = 0, got = 0;
           arr.forEach(function (it) {
+            // R100z158b：两种口径同时统计——判方向（板块指数是否跑赢行业）与选标的（8 只等权是否跑赢）
+            if (it.hit !== null && it.hit !== undefined) { dirS++; dirG += Number(it.hit); }
+            if (it.hitStock !== null && it.hitStock !== undefined) { stkS++; stkG += Number(it.hitStock); }
             if (it.hit === null || it.hit === undefined) return;
             scored++; got += Number(it.hit);
           });
           var r = scored ? got / scored : null;
           var cls = (r === null) ? 'na' : (r >= 0.9 ? 'cal-hit' : (r >= 0.5 ? 'cal-mid' : 'cal-miss'));
           h += '<span class="cal-seg ' + cls + '" title="' + esc(dt) + '：' + scored + ' 条，'
-             + '命中分 ' + got.toFixed(1) + (r === null ? '' : '（命中率 ' + Math.round(r * 100) + '%）')
+             + '命中分 ' + got.toFixed(1) + (r === null ? '' : '（判方向命中率 ' + Math.round(r * 100) + '%）')
              + '">' + esc(String(dt).slice(5)) + '</span>';
         });
         h += '</div>';
+        // R100z158b：判方向 vs 选标的——预测的实际用途是选股，两个口径必须分开看
+        if (dirS || stkS) {
+          var dr = dirS ? Math.round(dirG / dirS * 100) : null;
+          var sr = stkS ? Math.round(stkG / stkS * 100) : null;
+          h += '<div class="pf-note">口径拆分：判方向（板块指数是否跑赢同源行业）'
+             + (dr === null ? '—' : dr + '%（' + dirS + ' 条）')
+             + ' vs 选标的（板块内 8 只等权是否跑赢）'
+             + (sr === null ? '—' : sr + '%（' + stkS + ' 条）')
+             + (dr !== null && sr !== null && sr - dr >= 10
+                ? '—— 选股显著强于判方向，说明「在哪里选」比「板块涨不涨」更靠谱，权重应更偏向标的层。' : '。')
+             + '</div>';
+        }
+        // R100z158c：分置信档校准——检验「高确信是否真的更准」。★这是 AI 预测准确度的核心仪表：
+        // 曾实测高确信命中率 17% < 中确信 50%（置信度反向），门槛据此自动收紧高确信条数
+        // （calibration_state.gates.高.maxHighConf=0 → 当日禁用高确信层，strategy_engine 已消费）。
+        // 「同日配对」= 当天同时存在高/中两档时的逐日比较，比跨日聚合更少受大盘环境干扰。
+        var tier = { '高': [0, 0, 0, 0], '中': [0, 0, 0, 0], '低': [0, 0, 0, 0] };
+        var pairHi = 0, pairLo = 0, pairTie = 0;
+        Object.keys(log).sort().forEach(function (dt) {
+          var by = {};
+          (log[dt] || []).forEach(function (it) {
+            var cf = it.conf;
+            if (cf !== '高' && cf !== '中' && cf !== '低') return;
+            if (it.hit !== null && it.hit !== undefined) {
+              tier[cf][0] += Number(it.hit); tier[cf][1]++;
+              var o = by[cf] || (by[cf] = [0, 0]); o[0] += Number(it.hit); o[1]++;
+            }
+            if (it.hitStock !== null && it.hitStock !== undefined) { tier[cf][2] += Number(it.hitStock); tier[cf][3]++; }
+          });
+          if (by['高'] && by['中']) {
+            var pa = by['高'][0] / by['高'][1], pb = by['中'][0] / by['中'][1];
+            if (Math.abs(pa - pb) < 0.02) pairTie++; else if (pa > pb) pairHi++; else pairLo++;
+          }
+        });
+        if (tier['高'][1] + tier['中'][1] + tier['低'][1]) {
+          var tp = function (k) {
+            return tier[k][1] ? Math.round(tier[k][0] / tier[k][1] * 100) + '%（' + tier[k][0] + '/' + tier[k][1] + ' 条）' : '—';
+          };
+          var tsk = function (k) {
+            return tier[k][3] ? '，选标的 ' + Math.round(tier[k][2] / tier[k][3] * 100) + '%（' + tier[k][2] + '/' + tier[k][3] + '）' : '';
+          };
+          var hiR = tier['高'][1] ? tier['高'][0] / tier['高'][1] : null;
+          var midR = tier['中'][1] ? tier['中'][0] / tier['中'][1] : null;
+          var invert = (hiR !== null && midR !== null && hiR < midR - 0.001);
+          h += '<div class="pf-note" title="按 AI 自报的置信档聚合命中率（判方向口径为主）。高确信理应高于中确信；'
+             + '若反向，说明置信度标定失灵，门槛会自动收紧高确信条数（当日禁用即 maxHighConf→0）。">'
+             + '🎚 分档校准：' + confZh('高') + ' ' + tp('高') + tsk('高')
+             + ' · ' + confZh('中') + ' ' + tp('中') + tsk('中')
+             + ' · ' + confZh('低') + ' ' + tp('低') + tsk('低')
+             + (invert ? '　⚠️ 置信度反向：高确信低于中确信，门槛应已自动收紧高确信条数。' : '')
+             + ((pairHi + pairLo + pairTie)
+                ? '　同日配对 ' + (pairHi + pairLo + pairTie) + ' 日：高更准 ' + pairHi + ' 日 / 高更差 ' + pairLo + ' 日'
+                  + (pairTie ? ' / 持平 ' + pairTie + ' 日' : '') + '。' : '')
+             + '</div>';
+        }
+        // R100z158b：开盘前瞻三项分解（点位 81% 很准 / 倾向 44% / 量能 14%）
+        var op = (d && d.open) || {};
+        var opk = Object.keys(op).sort().slice(-5);
+        if (opk.length) {
+          var agg = { tendencyHit: [0, 0], bandHit: [0, 0], volHit: [0, 0] };
+          opk.forEach(function (k) {
+            var rr = op[k] || {};
+            ['tendencyHit', 'bandHit', 'volHit'].forEach(function (f) {
+              if (rr[f] !== null && rr[f] !== undefined) { agg[f][0] += rr[f]; agg[f][1]++; }
+            });
+          });
+          var pct = function (a) { return a[1] ? Math.round(a[0] / a[1] * 100) + '%（' + a[0] + '/' + a[1] + '）' : '—'; };
+          h += '<div class="pf-note" title="开盘前瞻按三项打分：倾向=预判方向是否对上上证涨跌；'
+             + '点位=收盘是否落在预判区间；量能=成交额环比是否符合预判（≥+10% 放量 / ≤−10% 缩量 / 界内平量）。">'
+             + '🎯 开盘前瞻兑现（近 ' + opk.length + ' 日）：倾向 ' + pct(agg.tendencyHit)
+             + ' · 点位 ' + pct(agg.bandHit) + ' · 量能 ' + pct(agg.volHit) + '</div>';
+        }
         box.innerHTML = h;
       } catch (e) { /* 台账坏了也不影响主看板 */ }
     };
@@ -2093,14 +2169,16 @@ function loadPortfolioCurve() {
           (s.totRetPct >= 0 ? '+' : '') + (s.totRetPct || 0).toFixed(2) + '%</span>' +
           '<span class="' + ((s.benchRetPct || 0) >= 0 ? 'up' : 'down') + '" title="基准净值：同期的市场基准（四指数涨跌幅中位数，全市场代理）累计涨跌幅，代表「不做预测、直接买市场」的结果，用来和组合对照。">基准 ' +
           (s.benchRetPct >= 0 ? '+' : '') + (s.benchRetPct || 0).toFixed(2) + '%</span>' +
+          (s.benchSectorCmpRetPct != null ? '<span class="' + ((s.benchSectorCmpRetPct || 0) >= 0 ? 'up' : 'down') + '" title="行业基准（同花顺一级行业涨跌幅中位数）累计涨跌幅——组合本身是一篮子行业板块，这才与预测对象同源。拿综合指数当尺子，普涨日会让每个板块都「轻松跑赢」、超额虚高。">行业基准 ' +
+          (s.benchSectorCmpRetPct >= 0 ? '+' : '') + (s.benchSectorCmpRetPct).toFixed(2) + '%</span>' : '') +
           (s.benchMainRetPct != null ? '<span class="' + ((s.benchMainRetPct || 0) >= 0 ? 'up' : 'down') + '" title="主板代理基准（上证+深成等权，低 beta 口径）累计涨跌幅；与「基准」对照可看创业板/小盘对本书组合的拖累程度。">主板基准 ' +
           (s.benchMainRetPct >= 0 ? '+' : '') + (s.benchMainRetPct).toFixed(2) + '%</span>' : '') +
-          '<span class="' + ((s.excessPct || 0) >= 0 ? 'up' : 'down') + '" title="超额收益 = 组合 − 基准。为正说明这套预测选股确实跑赢了市场，是预测含金量最直接的体现；为负说明选股反而拖了后腿。">超额 ' +
-          (s.excessPct >= 0 ? '+' : '') + (s.excessPct || 0).toFixed(2) + '%</span>' +
+          '<span class="' + ((s.excessSectorPct != null ? s.excessSectorPct : (s.excessPct || 0)) >= 0 ? 'up' : 'down') + '" title="权威超额 = 组合 − 行业基准（同源比较）。组合是一篮子行业板块，只有扣掉行业自身的平均表现才谈得上 alpha；为负说明这套预测选股反而跑输了行业。旧的「超额 − 综合指数」见 tooltip 对照。">超额 ' +
+          ((s.excessSectorPct != null ? s.excessSectorPct : (s.excessPct || 0)) >= 0 ? '+' : '') + ((s.excessSectorPct != null ? s.excessSectorPct : (s.excessPct || 0))).toFixed(2) + '%</span>' +
           '<span class="flat" title="最大回撤：持有期内净值从最高点回落的最大幅度（括号内为发生日期），衡量最不利情形下要忍受多大的浮亏。">最大回撤 ' + (s.maxDdPct || 0).toFixed(2) + '%（' + esc(s.maxDdDate || '') + '）</span>' +
           '<span class="flat" title="统计覆盖的交易日数量：样本越多，这组收益与胜率数据越有说服力；样本少时只作参考。">' + (s.days || 0) + ' 个交易快照</span></div>' +
           (s.assumptions ? '<div class="pf-note">假设：单边佣金 ' + (s.assumptions.feePerSide).toFixed(3) + '% / 卖出印花税 ' + (s.assumptions.stampDutySell).toFixed(3) + '% / 滑点 ' + (s.assumptions.slippagePerSide).toFixed(3) + '%（净值未扣，毛收益）；' +
-          (s.assumptions.sampleEnough ? '样本充足' : '⚠️ 样本仅 ' + s.days + ' 日（&lt;15）显著性不足，仅供观察') + '。基准=四指数中位；主板代理=上证+深成等权。</div>' : '');
+          (s.assumptions.sampleEnough ? '样本充足' : '⚠️ 样本仅 ' + s.days + ' 日（&lt;15）显著性不足，仅供观察') + '。权威基准=同花顺一级行业中位；指数基准=四指数中位；主板代理=上证+深成等权。</div>' : '');
         box.innerHTML = h;
         var el = document.getElementById('chart-pf');
         if (el && window.echarts) {
@@ -2114,10 +2192,12 @@ function loadPortfolioCurve() {
           c.setOption({
             grid: { left: 42, right: 10, top: 26, bottom: 22 },
             tooltip: { trigger: 'axis' },
-            legend: { data: (se[0] && se[0].benchMain != null ? ['组合', '基准', '主板基准'] : ['组合', '基准']), top: 0, textStyle: { fontSize: 10 } },
+            legend: { data: (se[0] && se[0].benchSec != null ? ['组合', '基准', '行业基准'] : ['组合', '基准']).concat(
+              se[0] && se[0].benchMain != null ? ['主板基准'] : []), top: 0, textStyle: { fontSize: 10 } },
             xAxis: { type: 'category', data: dates, axisLabel: { fontSize: 10 }, axisLine: { lineStyle: { color: '#bbb' } } },
             yAxis: { type: 'value', scale: true, axisLabel: { fontSize: 10, formatter: function (v) { return v.toFixed(2); } } },
             series: [ln('pf', '组合', '#f0435c'), ln('bench', '基准', '#8fa3b8')].concat(
+              (se[0] && se[0].benchSec != null) ? [ln('benchSec', '行业基准', '#5aa9d6')] : []).concat(
               (se[0] && se[0].benchMain != null) ? [ln('benchMain', '主板基准', '#c9a14a')] : [])
           });
           charts.push(c);

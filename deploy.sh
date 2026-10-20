@@ -106,6 +106,13 @@ echo "📅 生成宏观事件日历（macro_calendar.py）..."
 echo "🎯 生成盘前策略闭环（strategy_engine.py）..."
 "$PY" strategy_engine.py || true
 
+# ---------- R100z158：回填历史行业基准（零网络，读 git 历史 data.js，绝不阻断部署）----------
+# 回测口径改「同源行业基准」后（量纲错配修复），历史预测日的超额要拿当日的行业中位当尺子。
+# 每次部署顺手把缺的历史行业基准补进 market_bench.json[history]，保证回测台账随时可重算、
+# 不依赖手工补跑。同一 tradeDate 取最新提交、只补不改、幂等，异常 exit 0 兜底不阻断。
+echo "📐 回填历史行业基准（market_bench.py --backfill-bench）..."
+"$PY" market_bench.py --backfill-bench || true
+
 # ---------- R100z53：审计闸门下沉（一次性覆盖五条自动化）----------
 # 背景（子代理对账 P0-1）：此前只有 17:00 / 周末两条 automation 的 prompt 里手写了
 # 「deploy 前先跑 audit_pipeline」，07:00 / 08:30 / 09:45 三条没有 → 那三条改完代码可以直接 push，

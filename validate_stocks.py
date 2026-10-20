@@ -37,7 +37,6 @@
 import json
 import os
 import re
-import subprocess
 import sys
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -65,13 +64,20 @@ TIERS = {
 
 
 def load_data():
-    node = subprocess.run(
-        ['/Users/loccco/.workbuddy/binaries/run-node', '-e',
-         "const fs=require('fs');let s=fs.readFileSync('data.js','utf8');"
-         "let m=s.match(/window\\s*\\.\\s*DASHBOARD_DATA\\s*=\\s*(\\{[\\s\\S]*\\});?\\s*$/);"
-         "process.stdout.write(JSON.stringify(eval('('+m[1]+')')))"],
-        capture_output=True, text=True)
-    return json.loads(node.stdout)
+    """R100z158c：改走 common.load_dashboard_data —— 与 R100z156 同口径。
+
+    旧实现固定走 node eval 通道，JS 的 `JSON.stringify` 会把 31304.0 归一成 31304；
+    而本脚本在**非 --no-fix** 模式下会在 main 尾部把整份 D 重排写回 data.js（reorder 落盘），
+    于是「读-改-写」一次就把 12 万个成交量/整数价格从 `31304.0` 变成 `31304`，产生约
+    25 万字符的**纯格式 diff**（2026-10-20 22:32 手动跑一次实测 249,408 字符），把当天真改动
+    全淹掉、也让 git blame 失真。自动化链路都带 `--no-fix` 所以一直没暴露。
+
+    现在：优先 Python json.loads 直解（保留 int/float 字面量，加载→写回可字节级不变）；
+    仅当文本非纯 JSON（遗留 JS 字面量 / NaN / Infinity）才回退 node 通道，且 node 路径
+    由 common.find_node() 解析（不再硬编码 `run-node` 单一路径）。
+    """
+    import common
+    return common.load_dashboard_data(os.path.dirname(os.path.abspath(__file__)))
 
 
 def cat_of(note):
