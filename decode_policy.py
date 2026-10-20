@@ -27,7 +27,10 @@ def decode_issuer(text):
         return 5, "中共中央+国务院(联名)", "joint_top"
     if re.search(r"(中共中央|党中央|政治局|中央财经委|深改委|全国人大|人大常委会)", t):
         return 5, "党中央/全国人大(顶层)", "party_top"
-    if re.search(r"国务院", t):
+    # R100z154：国常会=国务院常务会议，是最高频的国务院政策口径；此前漏收，
+    # 导致「国常会…」类标题被 decode_issuer 判成「未识别」→ enrich_policy 直接丢弃
+    # → 全球要闻页政策面板恒空（2026-10-20 实证：当日唯一政策标题被丢，signals=0）。
+    if re.search(r"(国务院|国常会|国务院常务会议)", t):
         return 4, "国务院", "state_council"
     if re.search(r"(央行|中国人民银行)", t):
         return 3, "央行(金融加权)", "pboc"

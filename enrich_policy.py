@@ -51,7 +51,10 @@ def _decode_all(D):
     for mk, node in NEWS_NODES:
         sub = (D.get(mk) or {})
         arr = sub.get(node) or []
-        trade_date = sub.get("tradeDate") or D.get("updatedAt") or ""
+        # R100z154：us.tradeDate 带「（美东）」后缀（'2026-10-19（美东）'），直接透传会让
+        # 全球要闻页政策卡右上角日期渲染成「2026-10-19（美东）」。政策卡是统一口径，
+        # 日期一律去掉括号补充说明，只留 YYYY-MM-DD。
+        trade_date = re.sub(r"[（(][^）)]*[）)]", "", str(sub.get("tradeDate") or D.get("updatedAt") or "")).strip()
         for it in arr:
             if not isinstance(it, dict):
                 continue
