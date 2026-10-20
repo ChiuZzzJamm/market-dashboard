@@ -312,6 +312,23 @@ def load_bench(on_date=None):
         return None
     _has = (b.get('benchPct') is not None) or (b.get('benchSectorPct') is not None)
     if _has and (on_date is None or b.get('date') == on_date):
+        if not on_date:
+            return b
+        # R100z158c：实时块的字段可能**局部缺失**（典型：当日行业基准算不出来 →
+        # benchSectorPct=None / sectorN=None），而同一天的 history 条目恰好有该字段。
+        # 旧逻辑「只要实时块有一个基准字段就整个返回」，会让半残的实时块把更全的 history
+        # 条目整个遮掉 —— 实测 2026-10-20：实时块 benchSectorPct=None、history 有 0.94，
+        # 结果当天入账被静默降级成指数口径（excessPct 记成 2.93 而非 1.98，hit 也随之算错）。
+        # 现按**字段**回落补齐（同日同义，绝不跨日期套用），实时值永远优先。
+        h = ((b.get('history') or {}).get(on_date)) or {}
+        if isinstance(h, dict):
+            merged = dict(b)
+            for _k in ('benchPct', 'benchSectorPct'):
+                if merged.get(_k) is None and h.get(_k) is not None:
+                    merged[_k] = h[_k]
+            if merged.get('sectorN') is None and h.get('sectorN') is not None:
+                merged['sectorN'] = h['sectorN']
+            return merged
         return b
     if on_date:
         h = (b.get('history') or {}).get(on_date)
@@ -322,6 +339,38 @@ def load_bench(on_date=None):
                         'sectorN': h.get('sectorN'), 'names': h.get('names') or [],
                         'benchSrc': h.get('src') or 'history'}
     return None
+
+
+def fill_bench_from_history(log):
+    """R100z158c：把历史条目的基准按日期从 market_bench.json[history] 补齐（幂等）。
+
+    ★背景（2026-10-20 实测 bug）：这段「按日期补齐」原先只写在 `--recalc` 分支里，而
+      08:30 / 17:00 / 周日22:00 三条自动化调的都是**不带 --recalc** 的普通模式 —— 于是
+      每跑一次普通模式就把历史条目的 benchSecPct 抹成 null、excessPct 悄悄退回指数口径：
+      实测 sectorCmpDays 8→7、权威超额 −2.27%→−2.24%、10-20 那天的行业中位凭空丢失。
+      等于 R100z158 刚建立的「同源行业基准」会被第一次自动化运行自己拆掉。
+
+    非 --recalc 路径**不重算 hit**（那是 recalc 的职责），只补「尺子」本身 + 归一 conf；
+    幂等可反复跑（已填过的不再动），且仍然**绝不**把某天的基准套到另一天、绝不补 0。
+    返回 (补齐条数, conf 归一条数)。
+    """
+    hist = (load_bench() or {}).get('history') or {}
+    filled = conf_fixed = 0
+    for _dt, items in (log.get('log') or {}).items():
+        h = hist.get(_dt) or {}
+        for it in items:
+            if it.get('benchSecPct') is None and h.get('benchSectorPct') is not None:
+                it['benchSecPct'] = round(float(h['benchSectorPct']), 3)
+                filled += 1
+            if it.get('benchPct') is None and h.get('benchPct') is not None:
+                it['benchPct'] = round(float(h['benchPct']), 3)
+                filled += 1
+            c0 = it.get('conf')
+            c1 = norm_conf(c0)
+            if c0 != c1:
+                it['conf'] = c1
+                conf_fixed += 1
+    return filled, conf_fixed
 
 
 def avg_of(sc_list, sector, bench):
@@ -554,6 +603,15 @@ def main():
               if n.get('code') in ('sh000001', 'sz399001') and n.get('pct') is not None]
     bench_main = (sum(_maint) / len(_maint)) if _maint else None
 
+    # R100z158c：历史基准补齐上移为**公共前置** —— 凡会写盘的普通模式都必须先补齐。
+    # 08:30 / 17:00 / 周日22:00 三条自动化调的都是**不带 --recalc** 的普通模式，此前只有
+    # --recalc 分支做补齐 → 普通模式每跑一次就把历史条目的 benchSecPct 抹成 null、
+    # 权威超额悄悄退回指数口径（实测 sectorCmpDays 8→7、−2.27%→−2.24%）。
+    # --view / --json 保持纯只读，不做任何写盘。
+    _filled = _conffix = 0
+    if not a.view and not a.json:
+        _filled, _conffix = fill_bench_from_history(log)
+
     # --recalc：R100z52 方向词表修版后，历史上用「只认『承压』」坏口径算出的命中率
     # 全在台账里，不重算就永远带着偏高值往下滚。台账本身存了 predicted / actualPct /
     # excessPct，重算是纯函数回放、不依赖外部数据，幂等可反复跑。
@@ -561,27 +619,13 @@ def main():
         fixed = 0
         conf_fixed = 0
         bench_filled = 0
-        # R100z158：重算前先从 market_bench.json 的 history 层**按日期补齐基准**。
-        # 否则历史条目的 benchSecPct 全是 None（它们在行业基准出现之前入账），命中率永远
-        # 拿指数基准重算，等于没换尺子。补齐后：「当日实时值 → history[日期] → 保留条目旧值」。
-        _hist = (load_bench() or {}).get('history') or {}
+        # R100z158c：基准补齐已上移为公共前置；这里再调一次是幂等保险（唯一会漏的场景是
+        # `--recalc --json` 组合——那时上面的公共前置被跳过）。
+        _f2, _c2 = fill_bench_from_history(log)
+        bench_filled += _f2
+        conf_fixed += _c2
         for _dt, items in log.get('log', {}).items():
-            _h = _hist.get(_dt) or {}
             for it in items:
-                _nb = it.get('benchSecPct')
-                if _nb is None and _h.get('benchSectorPct') is not None:
-                    it['benchSecPct'] = round(float(_h['benchSectorPct']), 3)
-                    bench_filled += 1
-                # 顺带修正历史错算的指数基准（10-13 曾把 -0.18 记成 -0.08 之类的史前口径）
-                if it.get('benchPct') is None and _h.get('benchPct') is not None:
-                    it['benchPct'] = round(float(_h['benchPct']), 3)
-                    bench_filled += 1
-                # R100z157：顺带回填被写成「中等确信」一类的全称 conf（幂等）
-                _c0 = it.get('conf')
-                _c1 = norm_conf(_c0)
-                if _c0 != _c1:
-                    it['conf'] = _c1
-                    conf_fixed += 1
                 act = it.get('actualPct')
                 act = float(act) if isinstance(act, (int, float)) else None
                 # R100z158：超额一律从「实际值 − 基准」重算，而不是读存下来的 excessPct
@@ -698,6 +742,12 @@ def main():
                         else '基准缺失，本轮只落旧方向口径'))
                 print(f"[OK] 已并入台账：{pred['date']}（{len(items)} 条，基准={_bs}）")
 
+        # R100z158c：即便本轮没有新的预测日入账（pred 缺 date/dets），公共前置补齐的
+        # 历史基准也必须落盘——否则补了等于没补，下一次跑又被抹掉。
+        if _filled or _conffix:
+            save_log(log)
+            print(f"[OK] 历史基准补齐落盘：{_filled} 条基准（行业中位）+ {_conffix} 条 conf 归一")
+
     # ---------------- R100z59 止损台账：接上「只算不跟踪」的补丁 ----------------
     # 7 项硬约束里的止损纪律，此前只有 stop_tracker.py 在算、却从没被调用过（死脚本），
     # stop_ledger.json 永远是空的——等于止损位算出来没人回扫，纸面纪律。
@@ -738,7 +788,7 @@ def main():
         n = len([x for x in v if x['hit'] is not None])
         rate = round(got / n, 3) if n else None
         need = min_sample_for(k)
-        stat[k] = {'n': n, 'hit': got, 'rate': rate,
+        stat[k] = {'n': n, 'hit': round(got, 1), 'rate': rate,
                    'minSample': need, 'sampleEnough': n >= need,
                    'ci': ci_of(rate, n) if rate is not None else None}
 
