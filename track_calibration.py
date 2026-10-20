@@ -105,6 +105,31 @@ def load_prediction(path=DATA_JS):
 # 降温」这些同样明确看空的词时 up=True，一律算成看多 → 命中率被系统性抬高。
 # 实测口径：verification.details[].predicted 是极短文本（如「走强」/「承压」/「震荡偏弱」），
 # 词表按「最长/最特殊优先」匹配，命中多词时判中性，宁可漏判也不硬凑方向。
+# ---------------- R100z157：置信度归一（BUG-1 修复） ----------------
+# 台账 conf 只允许 高/中/低 三态。2026-10-13 有 2 条被写成全称「中等确信」（R100z152h
+# 「全站统一中等确信」改造漏了台账侧），落进 conf_rank 的 unknown(9) → 被当成最差置信档，
+# 污染 build_curve「当日取最高置信档」的组合口径。这里做**写入端归一 + 读取端容错**双保险：
+# 历史条目已坏，靠 --recalc 回填；未来写入在 build_items 就归一，前端/闸门永远看不到全称。
+CONF_ENUM = ('高', '中', '低')
+
+
+def norm_conf(v):
+    """把任意写法的置信度归一为 高/中/低/unknown（唯一出口，勿在别处再写映射）。"""
+    s = str(v if v is not None else '').strip().replace('\u3000', ' ')
+    if not s:
+        return 'unknown'
+    if s in CONF_ENUM:
+        return s
+    low = s.lower()
+    if '高' in s or low in ('high', 'h'):
+        return '高'
+    if '中' in s or low in ('medium', 'mid', 'm', 'normal'):
+        return '中'
+    if '低' in s or low in ('low', 'l'):
+        return '低'
+    return 'unknown'
+
+
 DIR_FLAT = ('震荡', '横盘', '胶着', '犹豫', '整理', '分歧', '观望', '僵持', '拉锯', '中性')
 DIR_UP = ('走强', '上行', '上涨', '偏强', '看多', '走高', '提振', '回暖', '反弹',
           '突破', '扩张', '接力', '活跃', '走俏', '领涨')
@@ -236,7 +261,7 @@ def build_items(date, dets, conf_map, bench, sc_list, bench_main=None):
                       'benchPct': bench, 'excessPct': ex,
                       'benchMainPct': bench_main,
                       'result': d.get('result'),
-                      'conf': conf_map.get(nm, 'unknown'),
+                      'conf': norm_conf(conf_map.get(nm)),
                       'avgPct': avg, 'excessAvg': ex_avg,
                       'hit': score(d.get('predicted'), act, ex),
                       'hitAbs': score_abs(d.get('predicted'), act),
@@ -254,8 +279,9 @@ def build_curve(log):
         # ——当日无「高」则降档取当日最高置信档（中→低），保证曲线连续；不再用全部 48 只
         # （旧实现①只取第一板块 avgPct，②临时修成 6 板块全等权，均非用户想要的口径）
         conf_rank = {'高': 0, '中': 1, '低': 2, 'unknown': 9}
-        best_rank = min((conf_rank.get(x.get('conf'), 9) for x in items), default=9)
-        pool = [x for x in items if conf_rank.get(x.get('conf'), 9) == best_rank] or items
+        # R100z157：读取端也归一（历史台账里有「中等确信」这类全称，不归一就会落 unknown）
+        best_rank = min((conf_rank.get(norm_conf(x.get('conf')), 9) for x in items), default=9)
+        pool = [x for x in items if conf_rank.get(norm_conf(x.get('conf')), 9) == best_rank] or items
         avgs = [float(x['avgPct']) for x in pool
                 if isinstance(x.get('avgPct'), (int, float))]
         if avgs:
@@ -282,7 +308,7 @@ def build_curve(log):
         series.append({'date': dt, 'avgPct': round(avg, 3), 'pf': round(pf, 4),
                        'bench': round(bn, 4), 'benchMain': round(bn_main, 4), 'dd': dd,
                        'nSec': len(pool), 'nStocks': len(pool) * 8,
-                       'poolConf': pool[0].get('conf') if pool else ''})
+                       'poolConf': norm_conf(pool[0].get('conf')) if pool else ''})
     if not series:
         return None
     max_dd = min(series, key=lambda x: x['dd'])
@@ -346,8 +372,15 @@ def main():
     # excessPct，重算是纯函数回放、不依赖外部数据，幂等可反复跑。
     if a.recalc:
         fixed = 0
+        conf_fixed = 0
         for _dt, items in log.get('log', {}).items():
             for it in items:
+                # R100z157：顺带回填被写成「中等确信」一类的全称 conf（幂等）
+                _c0 = it.get('conf')
+                _c1 = norm_conf(_c0)
+                if _c0 != _c1:
+                    it['conf'] = _c1
+                    conf_fixed += 1
                 act = it.get('actualPct')
                 act = float(act) if isinstance(act, (int, float)) else None
                 ex = it.get('excessPct')
@@ -359,7 +392,7 @@ def main():
                 if (it.get('hit'), it.get('hitAbs')) != before:
                     fixed += 1
         save_log(log)
-        print(f"[OK] --recalc 完成：{fixed} 条命中分被修正，其余本就一致；"
+        print(f"[OK] --recalc 完成：{fixed} 条命中分被修正，{conf_fixed} 条 conf 归一为 高/中/低；"
               f"台账共 {sum(len(v) for v in log['log'].values())} 条已按新词表重算")
         return 0
 
@@ -458,7 +491,7 @@ def main():
     buckets = {'高': [], '中': [], '低': [], 'unknown': []}
     for dt in dates:
         for it in log['log'][dt]:
-            buckets.setdefault(str(it.get('conf') or 'unknown'), []).append(it)
+            buckets.setdefault(norm_conf(it.get('conf')), []).append(it)
 
     stat = {}
     for k, v in buckets.items():

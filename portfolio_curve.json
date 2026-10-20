@@ -47,22 +47,22 @@
   },
   {
    "date": "2026-10-13",
-   "avgPct": 0.11,
-   "pf": 0.958,
+   "avgPct": -0.012,
+   "pf": 0.9569,
    "bench": 0.9606,
    "benchMain": 0.988,
-   "dd": -4.2,
-   "nSec": 4,
-   "nStocks": 32,
+   "dd": -4.31,
+   "nSec": 6,
+   "nStocks": 48,
    "poolConf": "中"
   },
   {
    "date": "2026-10-15",
    "avgPct": -3.015,
-   "pf": 0.9291,
+   "pf": 0.928,
    "bench": 0.9606,
    "benchMain": 0.988,
-   "dd": -7.09,
+   "dd": -7.2,
    "nSec": 2,
    "nStocks": 16,
    "poolConf": "高"
@@ -70,10 +70,10 @@
   {
    "date": "2026-10-19",
    "avgPct": 0.78,
-   "pf": 0.9364,
+   "pf": 0.9352,
    "bench": 0.9624,
    "benchMain": 0.9906,
-   "dd": -6.36,
+   "dd": -6.48,
    "nSec": 6,
    "nStocks": 48,
    "poolConf": "中"
@@ -81,10 +81,10 @@
   {
    "date": "2026-10-20",
    "avgPct": 0.932,
-   "pf": 0.9451,
+   "pf": 0.944,
    "bench": 0.9623,
    "benchMain": 0.9905,
-   "dd": -5.49,
+   "dd": -5.6,
    "nSec": 6,
    "nStocks": 48,
    "poolConf": "中"
@@ -92,12 +92,12 @@
  ],
  "stat": {
   "days": 8,
-  "totRetPct": -5.49,
+  "totRetPct": -5.6,
   "benchRetPct": -3.77,
-  "excessPct": -1.72,
+  "excessPct": -1.83,
   "benchMainRetPct": -0.95,
-  "benchMainExcessPct": -4.54,
-  "maxDdPct": -7.09,
+  "benchMainExcessPct": -4.65,
+  "maxDdPct": -7.2,
   "maxDdDate": "2026-10-15",
   "assumptions": {
    "feePerSide": 0.025,

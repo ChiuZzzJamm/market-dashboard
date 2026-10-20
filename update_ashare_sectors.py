@@ -677,16 +677,50 @@ def _ths_to_item(x):
         it["downCount"] = x["down"]
     return it
 
+def _pick6(rows):
+    """从原始排行行里取第 6 名（前 5 已展示，第 6 名即「被截断的第一名」），
+    供前端标注「第 6 名被谁顶掉」。rows 元素支持 dict(f14/f3) 或 (name,pct)。"""
+    if not rows or len(rows) < 6:
+        return None
+    r = rows[5]
+    if isinstance(r, dict):
+        nm, pct = r.get("f14") or r.get("name"), (to_f(r.get("f3")) if "f3" in r else r.get("pct"))
+    elif isinstance(r, (list, tuple)) and len(r) >= 2:
+        nm, pct = r[0], r[1]
+    else:
+        return None
+    if not nm or pct is None:
+        return None
+    return {"name": nm, "pct": round(float(pct), 2)}
+
+
+def _annotate_ranks(ups, downs):
+    """给 TOP5 条目打 rank（1..5），供前端标「第 N 名」。"""
+    for i, s in enumerate(ups or [], 1):
+        if isinstance(s, dict):
+            s["rank"] = i
+    for i, s in enumerate(downs or [], 1):
+        if isinstance(s, dict):
+            s["rank"] = i
+
+
 def build_sectors_unified(prev_up, prev_down, prev_all, ths_list=None):
     """行业板块统一构建：同花顺(主)→东财push2delay(备)→新浪(备)→保留上一轮(R91m)。
-    返回 (sectorsUp, sectorsDown, allBoards, source)；source∈{ths,em,prev}。
+    返回 (sectorsUp, sectorsDown, allBoards, source, cut)；source∈{ths,em,sina,prev}。
+    cut = {"basis": 排序口径说明, "poolN": 参与排序的板块数, "up6"/"down6": 第 6 名（被截断的第一名）}。
     ths_list: 可选预取的同花顺行业列表（避免重复请求）。"""
     # 1) 同花顺主源
     ths = ths_list if ths_list is not None else fetch_ths_industries()
     if len(ths) >= 10:
         ranked = sorted(ths, key=lambda x: -x["pct"])
+        asc = sorted(ths, key=lambda x: x["pct"])
         ups = [_ths_to_item(x) for x in ranked[:5]]
-        downs = [_ths_to_item(x) for x in sorted(ths, key=lambda x: x["pct"])[:5]]
+        downs = [_ths_to_item(x) for x in asc[:5]]
+        _annotate_ranks(ups, downs)
+        cut = {"basis": "同花顺行业一级行业按当日涨跌幅降序",
+               "poolN": len(ths),
+               "up6": ({"name": ranked[5]["name"], "pct": ranked[5]["pct"]} if len(ranked) > 5 else None),
+               "down6": ({"name": asc[5]["name"], "pct": asc[5]["pct"]} if len(asc) > 5 else None)}
         # R98d：领涨/领跌板块补齐成分股 TOP5（详情页 desc/asc），失败保留单条领涨股
         enrich_ths_tops(ups, downs)
         all_b = [{"code": x["code"], "name": x["name"], "pct": x["pct"],
@@ -699,7 +733,7 @@ def build_sectors_unified(prev_up, prev_down, prev_all, ths_list=None):
         except Exception as _e:
             print(f"[warn] allBoards 富化异常（保留基础字段）：{_e}")
         print(f"[info] 行业板块主源=同花顺（{len(ths)} 个行业）")
-        return ups, downs, all_b, "ths"
+        return ups, downs, all_b, "ths", cut
     # 2) 东财 push2delay 备源（原有逻辑）
     print("[info] 同花顺不可达/不足，回退东财 push2delay 行业板块")
     up_rows = fetch_boards("f3", 1)
@@ -710,18 +744,27 @@ def build_sectors_unified(prev_up, prev_down, prev_all, ths_list=None):
         if r[0] is not None and r[1] is not None:
             all_b = build_all_boards()
             if all_b:
-                return r[0], r[1], all_b, "em"
+                _annotate_ranks(r[0], r[1])
+                cut = {"basis": "东财行业板块按当日涨跌幅降序", "poolN": len(all_b),
+                       "up6": _pick6(up_rows), "down6": _pick6(down_rows)}
+                return r[0], r[1], all_b, "em", cut
     # 3) 新浪备源
     r2 = build_sectors_sina()
     if r2[0] is not None and r2[1] is not None:
         sb = fetch_sina_boards()
         all_b = [{"code": (b.get("code") or n), "name": n, "pct": round(b["pct"], 2)}
                  for n, b in sb.items() if isinstance(b, dict) and b.get("pct") is not None][:120]
+        _annotate_ranks(r2[0], r2[1])
+        _srt = sorted(all_b, key=lambda x: -x["pct"])
+        cut = {"basis": "新浪行业板块按当日涨跌幅降序", "poolN": len(_srt),
+               "up6": (_srt[5] if len(_srt) > 5 else None),
+               "down6": (_srt[-6] if len(_srt) > 5 else None)}
         print(f"[info] 行业板块回退新浪口径（{len(all_b)} 个板块）")
-        return r2[0], r2[1], all_b, "sina"
+        return r2[0], r2[1], all_b, "sina", cut
     # 4) 保留上一轮（R91m）
     print("[warn] 行业板块全部源失败，保留上一轮数据")
-    return (prev_up or []), (prev_down or []), (prev_all or []), "prev"
+    return (prev_up or []), (prev_down or []), (prev_all or []), "prev", None
+
 
 
 # ---------- R99h: 板块异动胶囊内嵌板块日K线（同花顺行业口径，供前端弹窗直读） ----------
@@ -817,6 +860,36 @@ def _ths_lbc_of(item):
             lbc = 1
     return lbc
 
+# ---------------- R100z157：主板口径 + 连板 hybk 兜底 ----------------
+MAIN_BOARD_PREFIX = ("60", "00")
+
+
+def is_main_board(code):
+    """沪深主板判定（60/00），与 validate_stocks.py 第 4 条硬约束同口径。
+    禁：688/689（科创）、300/301/302（创业）、4/8/92（北交）、200/900（B股）。"""
+    c = str(code or "").strip()
+    return len(c) == 6 and c.startswith(MAIN_BOARD_PREFIX)
+
+
+_sector_map_cache = {}
+
+
+def load_sector_map_fallback():
+    """读 data.js 的 sectorMap（个股代码→同花顺行业名，embed_klines.py 产出）作 hybk 兜底。
+    只在东财涨停池 hybk 未命中时才查；读失败返回 {}（不阻塞连板产出）。进程内缓存。"""
+    if _sector_map_cache:
+        return _sector_map_cache
+    try:
+        from common import load_dashboard_data
+        D = load_dashboard_data(BASE) or {}
+        sm = D.get("sectorMap") or {}
+        if isinstance(sm, dict):
+            _sector_map_cache.update({str(k): str(v) for k, v in sm.items() if v})
+    except Exception as e:
+        print("[warn] sectorMap 兜底读取失败（连板 hybk 可能留空）：" + str(e))
+    return _sector_map_cache
+
+
 def fetch_ths_limit_up(date=None):
     """同花顺涨停池 JSON。返回 (items, total)；失败返回 (None, None)。
     items: [{code,name,pct,lbc,reason,high_days,open_num,limit_up_type,hybk}]。"""
@@ -847,26 +920,45 @@ def fetch_ths_limit_up(date=None):
             "high_days": str(it.get("high_days") or ""),
             "open_num": it.get("open_num"),
             "limit_up_type": str(it.get("limit_up_type") or ""),
+            # R100z157：THS 涨停池不含行业字段（field 参数里没有），先留 None，
+            # 由 fetch_ths_lianban 按 code 用东财 hybk / sectorMap 回填。别在这里硬写空值后就算完。
             "hybk": None,
         })
     return out, total
 
 def fetch_ths_lianban(date=None):
-    """连板梯队：同花顺涨停池中 lbc>=2 的标的，按 lbc 降序、pct 降序。失败返回 None。
+    """连板梯队：同花顺涨停池中 lbc>=2 的**沪深主板**标的，按 lbc 降序、pct 降序。失败返回 None。
     R100z5e：THS high_days_value 高16位是「X天Y板」的**累计板数**而非连板数，断续板会虚高
     （实证：澳弘电子 2026-09-29 12天8板 → 旧解码 lbc=8，真实连板=1——9/28 跌停断档、
     当日首板）。用东财涨停池 lbc（标准连板数）按 code 覆写后**重过滤 lbc>=2 + 重排序**；
-    东财池失败（None）时保留 THS 解码值并在日志打 [warn]（此时断续板仍可能虚标）。"""
+    东财池失败（None）时保留 THS 解码值并在日志打 [warn]（此时断续板仍可能虚标）。
+
+    R100z157（用户拍板「连板只留主板」）：
+      ① **主板过滤下沉到本函数**——旧实现只过滤 lbc>=2，导致 301313 凡拓数创（创业板 20cm，
+         2 连板）混进 ashare.lianban，与 validate_stocks 第 4 条「只许 60/00」硬约束打架，
+         且是「既没过滤也没豁免」的灰色地带。现与全站口径统一：只留 60/00。
+      ② **hybk（板块归类）回填**——旧实现 fetch_ths_limit_up 里写死 `"hybk": None`，
+         前端 stkSecOf 拿不到 → 连板弹窗无板块徽章、题材聚合失效。现按 code 从东财涨停池
+         回填（东财自带 hybk），东财不可达时用 data.js 的 sectorMap（个股→同花顺行业）兜底。
+    """
     items, _ = fetch_ths_limit_up(date)
     if items is None:
         return None
     lb = [x for x in items if (x.get("lbc") or 1) >= 2]
     em_pool = fetch_zt_pool_raw(date)
     em_map = {}
+    em_hy = {}
+    em_fund = {}
     if em_pool:
         for p in em_pool:
             try:
-                em_map[str(p.get("c"))] = int(p.get("lbc") or 1)
+                c = str(p.get("c"))
+                em_map[c] = int(p.get("lbc") or 1)
+                h = str(p.get("hybk") or "").strip()
+                if h:
+                    em_hy[c] = h
+                if p.get("fund") is not None:
+                    em_fund[c] = p.get("fund")
             except Exception:
                 continue
     if em_map:
@@ -876,8 +968,72 @@ def fetch_ths_lianban(date=None):
                 x["lbc"] = em_map[c]
     elif em_pool is None:
         print("[warn] 东财涨停池不可达，连板数保留THS「X天Y板」累计板数解码（断续板可能虚标）")
-    lb = [x for x in lb if (x.get("lbc") or 1) >= 2]
+    _n_before = len(lb)
+    lb = [x for x in lb if (x.get("lbc") or 1) >= 2 and is_main_board(x.get("code"))]
+    _dropped = _n_before - len(lb)
+    if _dropped > 0:
+        print(f"[info] 连板梯队剔除 {_dropped} 只非沪深主板标的（创业板/科创/北交，R100z157 口径）")
+    # hybk 回填（东财优先 → sectorMap 兜底）；缺数据时留空串，前端按无徽章降级处理
+    if any(not x.get("hybk") for x in lb):
+        sm = load_sector_map_fallback()
+    else:
+        sm = {}
+    for x in lb:
+        if x.get("hybk"):
+            continue
+        c = str(x.get("code") or "")
+        x["hybk"] = em_hy.get(c) or sm.get(c) or ""
+    _missing = sum(1 for x in lb if not x.get("hybk"))
+    if _missing:
+        print(f"[warn] 仍有 {_missing}/{len(lb)} 只连板标的板块归类缺失（东财 hybk 与 sectorMap 均未命中）")
+    # 封单资金（东财 fund，单位元）一并回填——弹窗「封单资金」此前恒为空
+    for x in lb:
+        if x.get("fund") in (None, ""):
+            x["fund"] = em_fund.get(str(x.get("code") or ""))
     lb.sort(key=lambda x: (-(x["lbc"] or 1), -fpct_of(x)))
+
+    # ---------------- R100z157：连板角色 / 情绪阶段结构化 ----------------
+    # 用户问「连板逻辑、资金情绪、炒作风格是否分析透彻」——此前这三项只存在于 AI 写的 story
+    # 文本里，不可排序、不可聚合、无法追问「谁是龙头」。这里补两个**确定性**字段
+    # （AI 只保留语义复核，不给判定权）：
+    #   role  龙头/卡位/跟风：最高板梯队里封单资金最大者为龙头，其余同梯队为卡位，低板为跟风
+    #   phase 一致/换手/分歧：按当日开板次数 open_num（0 = 封板一致，1~2 = 换手，≥3 = 分歧）
+    # ⚠️ 字段名刻意不用 sentiment——该名在全站已被 duanban 占用为 bull/bear/neutral，
+    #    复用会污染前端 stkSentiment 的方向判定（连板没有方向语义）。
+    def _fund_of(x):
+        try:
+            return float(em_fund.get(str(x.get("code") or "")))
+        except Exception:
+            return -1.0
+
+    _top_lbc = lb[0]["lbc"] if lb else 0
+    _top = [x for x in lb if (x.get("lbc") or 1) == _top_lbc]
+    _second = [x for x in lb if (x.get("lbc") or 1) == _top_lbc - 1]
+    _top_sorted = sorted(_top, key=_fund_of, reverse=True)
+    _role_map = {}
+    for i, x in enumerate(_top_sorted):
+        _role_map[id(x)] = "龙头" if i == 0 else "卡位"
+    # 最高板只有 1 只（常见）时，卡位从次高板梯队里按封单资金取前 2——否则「卡位」永远不出现
+    if len(_top) < 2:
+        for x in sorted(_second, key=_fund_of, reverse=True)[:2]:
+            _role_map[id(x)] = "卡位"
+    for x in lb:
+        x["role"] = _role_map.get(id(x), "跟风")
+        try:
+            _on = int(x.get("open_num"))
+        except Exception:
+            _on = None
+        if _on is not None:
+            x["phase"] = "一致" if _on == 0 else ("换手" if _on <= 2 else "分歧")
+        else:
+            # 无开板次数（常见于同花顺缺字段）时用形态兜底：一字板=封板一致，T字/换手板=换手
+            _typ = str(x.get("limit_up_type") or "")
+            x["phase"] = ("一致" if "一字" in _typ else
+                          ("换手" if ("T字" in _typ or "换手" in _typ) else ""))
+    _roles = {}
+    for x in lb:
+        _roles[x.get("role") or "—"] = _roles.get(x.get("role") or "—", 0) + 1
+    print("[info] 连板角色：" + "、".join(f"{k}{v}只" for k, v in _roles.items()))
     return lb
 
 def fetch_ths_funds():
@@ -1048,7 +1204,8 @@ def main():
     prev_sec_up = (D.get("ashare") or {}).get("sectorsUp")
     prev_sec_down = (D.get("ashare") or {}).get("sectorsDown")
     prev_all = (D.get("ashare") or {}).get("allBoards")
-    sectors_up, sectors_down, all_boards, sector_src = build_sectors_unified(prev_sec_up, prev_sec_down, prev_all, ths_ind)
+    sectors_up, sectors_down, all_boards, sector_src, sector_cut = build_sectors_unified(
+        prev_sec_up, prev_sec_down, prev_all, ths_ind)
     if sector_src == "prev":
         em_failed.append("行业板块")
         print("[warn] 行业板块全部源失败，保留上一轮值")
@@ -1126,6 +1283,9 @@ def main():
             a["sectorsUp"] = sectors_up
             a["sectorsDown"] = sectors_down
             a["sectorSource"] = sector_src
+            # R100z157：排序口径 + 第 6 名（被前 5 截断的第一名），让「第 6 名被谁顶掉」可查证
+            if sector_cut:
+                a["sectorRank"] = sector_cut
             # R100z6：panorama 层镜像 sectorSource（原只在 ashare 层，行业全景排查口径时要翻两层）
             D.setdefault("panorama", {})["sectorSource"] = sector_src
             updated_parts.append("行业板块TOP5")

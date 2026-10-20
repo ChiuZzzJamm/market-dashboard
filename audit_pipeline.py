@@ -32,6 +32,9 @@
     G14 路径断裂      prompt 内脚本绝对路径必须含完整 dashboard/ 或走 cd 相对调用（禁「缺 dashboard/ 裸路径」）
     G16 叙事深度      防 AI 偷懒·叙事主字段字数硬下限（A 股≥240 / 美股≥200 / outlook≥300 等，低于即 FAIL 拦部署）
     G17 防模板复读    防 AI 偷懒·同一句 ≥14 字在 ≥3 个叙述字段复现 = 万能模板尾巴（R100z96：us 页 34 条统一收尾事故），FAIL 拦部署
+    G22 要闻等级噪音  五节要闻必须有 level（0重点/1关注/2常规）且标题不含盘面统计噪音（R100z157，WARN 级复核）
+    G23 跨票措辞复读  连板/断板 story 的同一句（≥14 字）在 ≥3 只票且 ≥30% 池内重复 = 同段模板化（R100z157，WARN 级；
+                      G17 只管「跨字段」，管不到「每票一个字段」的同段复用）
 """
 import ast
 import json
@@ -890,25 +893,32 @@ def g12_deadlinks(r):
         r.warn("G12", "prompt 里写死了闸门基线数字（PASS=N），闸门增项后必然误判，"
                       "应改为以脚本自报 + 退出码为准：" + "; ".join(hard_base))
 
-    # ③ 脚本孤儿：prompt 与「其它 py 的源码」都不出现该模块名。
+    # ③ 脚本孤儿：prompt / 其它 py 源码 / shell 脚本 三处都不出现该模块名。
     # 注意必须比模块名（去 .py）——代码里写的是 `import kline_cache`，拿 'kline_cache.py'
     # 去 substr 匹配必然失败，会把满地引用的热脚本误报成孤儿。
+    # R100z157：补 shell 层——deploy.sh 是 enrich_policy / sweep_news / market_structure 这类
+    # 「零网络确定性脚本」的唯一调用方，只扫 py + prompt 会把它们全部误报成孤儿。
     pyfiles = sorted(f for f in os.listdir(HERE) if f.endswith(".py"))
     srcs = {f: open(os.path.join(HERE, f), encoding="utf-8", errors="ignore").read()
             for f in pyfiles}
+    for f in sorted(x for x in os.listdir(HERE) if x.endswith(".sh")):
+        try:
+            srcs[f] = open(os.path.join(HERE, f), encoding="utf-8", errors="ignore").read()
+        except Exception:                                    # noqa: BLE001
+            pass
     orphan = []
     for f in pyfiles:
         mod = f[:-3]
         if mod in allp:
             continue                                  # 自动化 prompt 直接点名
         if any(mod in s for n, s in srcs.items() if n != f):
-            continue                                  # 别处 import / subprocess 引用
+            continue                                  # 别处 import / subprocess / shell 引用
         orphan.append(f)
     if orphan:
-        r.warn("G12", f"疑似孤儿脚本（prompt 与各 py 源码均无引用，动态引用 ex.submit/ex.map 需人工确认）："
+        r.warn("G12", f"疑似孤儿脚本（prompt / py 源码 / shell 三处均无引用，动态引用 ex.submit/ex.map 需人工确认）："
                       f"{', '.join(sorted(orphan))}")
     else:
-        r.ok("G12", f"{len(pyfiles)} 个 py 全部有调用方（prompt 点名或代码引用）")
+        r.ok("G12", f"{len(pyfiles)} 个 py 全部有调用方（prompt 点名或 py/shell 引用）")
 
 
 def g13_holiday_table(r):
@@ -1503,6 +1513,119 @@ def g21_failpool_disjoint(r):
         r.ok("G21", "四模块 failPool 与各自在池 code 完全互斥（无重叠）")
 
 
+def g22_news_level_noise(r):
+    """G22 要闻信息等级 + 盘面杂音闸门（R100z157，WARN 级）。
+
+    背景：用户一直以为要闻「按信息等级排列」，实测五节组内完全按 AI 写入顺序渲染，
+    没有任何 level 维度；杂音正则（NEWS_STATS_PAT）也只护个股新闻抓取层，AI 把
+    「N只股涨停/附股/炸板」写成要闻时无人拦。清洗+打级由 sweep_news.py 在 deploy.sh
+    里完成（幂等、零网络）。本闸只做**复核**：
+      · 存在盘面统计类标题 → WARN（说明 sweep_news 没跑到或跑失败，或 AI 刚写回新条目）
+      · 存在缺 level 的条目 → WARN（同上，16:00/17:00 步骤在部署前跑本闸属正常态）
+    刻意设为 WARN 而不 FAIL：17:00 的 prompt 先跑 audit 再 deploy，而 sweep 在 deploy.sh 里，
+    若做成 FAIL 会让「AI 刚写好、还没到部署」的正常态直接卡死叙事步。
+    """
+    try:
+        from sweep_news import NEWS_KEYS, is_noise
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G22", f"无法导入 sweep_news 口径（{e}），跳过要闻等级复核")
+        return
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G22", f"data.js 解析失败：{e}")
+        return
+    total = missing = 0
+    noise = []
+    for mk in ("ashare", "us"):
+        sec = D.get(mk) or {}
+        for key in NEWS_KEYS:
+            for it in (sec.get(key) or []):
+                if not isinstance(it, dict):
+                    continue
+                total += 1
+                if it.get("level") not in (0, 1, 2):
+                    missing += 1
+                if is_noise(it.get("title")):
+                    noise.append(f"{mk}.{key}: {str(it.get('title'))[:36]}")
+    if not total:
+        r.ok("G22", "五节要闻为空（非交易日/待写），跳过等级复核")
+        return
+    if noise:
+        r.warn("G22", f"要闻仍含盘面统计类噪音 {len(noise)} 条（deploy.sh 的 sweep_news 会自动剔除）："
+               + "；".join(noise[:4]) + ("…" if len(noise) > 4 else ""))
+    if missing:
+        r.warn("G22", f"{missing}/{total} 条要闻无 level（0重点/1关注/2常规）——"
+               "部署前 sweep_news.py 会补齐；若已部署仍缺，说明该跳没跑")
+    if not noise and not missing:
+        lv = {0: 0, 1: 0, 2: 0}
+        for mk in ("ashare", "us"):
+            sec = D.get(mk) or {}
+            for key in NEWS_KEYS:
+                for it in (sec.get(key) or []):
+                    if isinstance(it, dict) and it.get("level") in lv:
+                        lv[it["level"]] += 1
+        r.ok("G22", f"要闻等级齐备且无盘面噪音（{total} 条：重点 {lv[0]} / 关注 {lv[1]} / 常规 {lv[2]}）")
+
+
+def g23_cross_stock_phrasing(r):
+    """G23 跨标的措辞复读软闸（R100z157，WARN 级）。
+
+    背景（审查报告「优化-5」）：G17 拦的是「同一句被 ≥3 个**字段**共用」，而连板 story 的
+    【风险】段、断板 story 的尾巴句属于「每只票各有一个独立字段」，同一条模板句在 13 只票里
+    各出现一次，G17 的跨字段口径扫不到——整池票的叙事会退化成「只换名字的同一篇文章」。
+
+    判定：把 story 按句切分（。；！？），归一化去空白/标点后统计「同一句出现在几只票」，
+    当某句在 ≥3 只票重复且占比 ≥30% 时，判为模板化措辞并 WARN（只提示、不拦部署——
+    真实场景里同一板块多只票共享行业背景句是合理的，硬拦会逼 AI 编造差异）。
+
+    只扫两个池：ashare.lianban（连板）与 duanban.confirmed/watching（断板反包）。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G23", f"data.js 解析失败：{e}")
+        return
+
+    def sentences(txt):
+        out = []
+        for seg in re.split(r"[。；！？\n]", str(txt or "")):
+            s = re.sub(r"[\s\u3000]", "", seg)
+            if len(s) >= 14:
+                out.append(s)
+        return out
+
+    pools = []
+    lb = [x for x in ((D.get("ashare") or {}).get("lianban") or []) if isinstance(x, dict)]
+    if lb:
+        pools.append(("连板 story", lb))
+    db = D.get("duanban") or {}
+    dp = [x for x in (db.get("confirmed") or []) + (db.get("watching") or []) if isinstance(x, dict)]
+    if dp:
+        pools.append(("断板 story", dp))
+
+    hits, scanned = [], 0
+    for label, items in pools:
+        cnt = {}
+        for it in items:
+            txt = it.get("story") or ""
+            for s in set(sentences(txt)):
+                cnt[s] = cnt.get(s, 0) + 1
+                scanned += 1
+        n = len(items)
+        for s, c in cnt.items():
+            if c >= 3 and c / n >= 0.3:
+                hits.append(f"{label}「{s[:26]}…」{c}/{n} 只共用")
+    if not scanned:
+        r.ok("G23", "连板/断板池为空，跳过跨标的措辞复核")
+        return
+    if hits:
+        r.warn("G23", f"同段措辞在多只票间重复（模板化倾向，{len(hits)} 处）：" + "；".join(hits[:4])
+               + ("…" if len(hits) > 4 else ""))
+    else:
+        r.ok("G23", f"连板/断板故事逐票措辞无跨票模板复用（扫描 {scanned} 句次）")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -1539,6 +1662,8 @@ def main():
     g19_summary_freshness(r)
     g20_sector_deduce_no_template(r)
     g21_failpool_disjoint(r)
+    g22_news_level_noise(r)
+    g23_cross_stock_phrasing(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))

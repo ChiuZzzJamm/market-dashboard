@@ -81,6 +81,42 @@ def _curve_excess():
         return None
 
 
+def _clip(t, limit):
+    """截到 limit 内并落到句子边界（避免出现「若今日成交额不能回到 1.45 万亿上方，」这种半句）。"""
+    t = str(t or "").strip()
+    if len(t) <= limit:
+        return t
+    cut = t[:limit]
+    idx = max(cut.rfind("。"), cut.rfind("；"), cut.rfind("！"), cut.rfind("？"))
+    if idx >= 40:
+        return cut[:idx + 1]
+    return cut.rstrip("，、,;；:： ") + "…"
+
+
+def _a_share_clause(text, limit=120):
+    """从「美股隔夜驱动 + A股映射」两段式 logic 里取 **A 股那半段**（R100z157，BUG 修复）。
+
+    旧实现 `(s.get('reason') or s.get('logic') or '')[:80]`：AI 预测 sector 根本没有 reason 键，
+    于是恒定走 logic[:80]——而 logic 是「隔夜费半收涨 1.73%…西部数据 +6.09%」＋「对应 A 股…」
+    两段式，80 字恰好把**A 股映射那段结论截掉**，用户看到的永远是美股隔夜行情。
+    这里按显式标记切段；没有标记时按分句取最后一个含「A股/A 股」的句子；都没有才退回前缀。
+    截断一律落到句末标点，不出半句。
+    """
+    t = str(text or "").strip()
+    if not t:
+        return ""
+    for mark in ("A股映射", "A股对应", "对应A股", "映射A股", "A股受益", "A股方面",
+                 "国内映射", "对应标的", "A 股映射", "对应 A 股"):
+        i = t.find(mark)
+        if i > 0:
+            return _clip(t[i:], limit)
+    parts = [p.strip() for p in re.split(r"[；;。]", t) if p.strip()]
+    for p in reversed(parts):
+        if "A股" in p or "A 股" in p:
+            return _clip(p, limit)
+    return _clip(t, limit)
+
+
 def main():
     path = os.path.join(HERE, 'data.js')
     if not os.path.exists(path):
@@ -137,6 +173,7 @@ def main():
                 'confidence': conf,
                 'logic': '力度分 %s（%s）；%s' % (ps.get('score'), ps.get('signalClass'), ps.get('binding') or ''),
                 'catalyst': '受益板块盘面验证：' + (secs[0] if secs else '—') + sec_str,
+                'invalidate': '次日受益板块未进入两市涨幅前 20%，或政策细则一周内未落地即视为证伪',
             })
 
         # 2) AI 高确信板块
@@ -149,8 +186,12 @@ def main():
                 'source': 'AI预测',
                 'name': s.get('sector') or '',
                 'confidence': conf,
-                'logic': (s.get('reason') or s.get('logic') or '')[:80],
+                # R100z157：取 A 股映射段，不再被美股隔夜的 80 字吃掉结论
+                'logic': _a_share_clause(s.get('logic') or s.get('reason')),
                 'catalyst': '次日板块强弱兑现',
+                # R100z157：与断板 falsify 对称的**引擎层反证条件**——主推不是只说好，
+                # 必须写明「什么情况下算被推翻」，否则事后无法归因是运气还是判断。
+                'invalidate': '次日该板块超额收益 ≤ 0（未跑赢上证/深成/创业板/中证1000 中位数）即视为证伪',
             })
 
         # 3) 断板反包确认池：利好/中性进关注、利空进风险

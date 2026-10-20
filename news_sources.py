@@ -13,6 +13,8 @@
   4) 数据服务商 + 券商研报/投行观点
 """
 
+import re
+
 # (关键词, 类别) —— 命中任一关键词即视为白名单内来源；判定用「包含」而非全等，
 # 因为 AI 会写「中国证监会」「上海证券交所」这类变体，全等会天天误报。
 SOURCES = [
@@ -58,13 +60,25 @@ SOURCES = [
 FORBIDDEN = ["彭博新闻社", "路透通讯社", "WSJ"]
 
 
+def _kw_hit(kw, t):
+    """关键词命中判定（R100z157：短英文关键词改词边界，治「FT 命中 software/after」的误判）。
+
+    中文关键词用包含匹配（AI 会写「中国证监会」这类变体，全等会天天误报）；
+    但**纯英文且长度 ≤2** 的关键词（FT）用子串匹配会随机命中任意含 ft 的英文单词，
+    实测 "software"/"after"/"left" 都会被判成「金融时报」。这类词改词边界匹配。
+    """
+    if kw.isascii() and len(kw) <= 2:
+        return re.search(r'(?<![A-Za-z])' + re.escape(kw) + r'(?![A-Za-z])', t, re.I) is not None
+    return kw.lower() in t.lower()
+
+
 def source_allowed(s):
     """来源字符串是否落在白名单内。返回 (bool, 命中的类别或空串)。"""
     t = str(s or "").strip()
     if not t:
         return False, ""
     for kw, cat in SOURCES:
-        if kw.lower() in t.lower():
+        if _kw_hit(kw, t):
             return True, cat
     return False, ""
 
@@ -93,6 +107,9 @@ if __name__ == "__main__":
         ("彭博社", True), ("路透社", True), ("华尔街日报", True), ("CNBC", True),
         ("彭博新闻社", False), ("路透通讯社", False), ("WSJ", False),
         ("某个财经自媒体", False), ("", False), (None, False),
+        # R100z157：短英文关键词词边界（FT 不该命中含 ft 的普通单词）
+        ("FT", True), ("金融时报", True), ("a software company", False),
+        ("Market after close", False),
     ]
     bad = 0
     for s, expect in self_test:

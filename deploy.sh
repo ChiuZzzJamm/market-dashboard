@@ -65,6 +65,30 @@ PY
 echo "🔍 校验 data.js 语法..."
 "$NODE" --check data.js
 
+# ---------- R100z157：要闻信息等级 + 盘面杂音剔除（确定性脚本，零网络，绝不阻断部署）----------
+# 背景：用户以为「要闻按信息等级排列」，实际组内完全按 AI 写入顺序渲染；杂音正则也只护个股层。
+# sweep_news.py 给五节要闻逐条打 level（重点/关注/常规）并组内稳定排序，同时剔除
+# 「N只股涨停/附股/炸板」这类盘面统计噪音。放在 enrich_policy 之前：政策解码读的是清洗后的要闻。
+# 幂等、异常 exit 0，绝不阻断部署。
+echo "🗞️ 要闻等级排序与杂音剔除（sweep_news.py）..."
+"$PY" sweep_news.py || true
+
+# ---------- R100z157：市场结构面（宽度/拥挤度/连板空间，确定性脚本，零网络，绝不阻断部署）----------
+# 背景：A 股收盘只有「涨跌家数 + 涨停跌停」一行平铺，没有结构性判断；美股侧有 outlook 风险维度，
+# A 股侧缺对称的量化小节。market_structure.py 从 ashare.breadth/lianban 确定性推导涨跌比区间、
+# 涨跌停比、连板高度、高位分歧率、接力拥挤度，并用 market_structure.json 台账算 5 个交易日趋势。
+# 位置在部署前、审计前：structure 参与 audit 的 data 契约检查。幂等（同 tradeDate 覆盖），异常 exit 0。
+echo "📐 生成市场结构面（market_structure.py）..."
+"$PY" market_structure.py || true
+
+# ---------- R100z157：机械候选 vs 自选补位标注（确定性脚本，零网络，绝不阻断部署）----------
+# 背景：08:30 的 AI 预测吃的是前一交易日 16:00 入库的 stock_pool.json，实测 6 板块候选只有
+# 1/1/0/6/0/2 只，AI 大量「自选补位」在页面上与机械候选长得一模一样，用户无法核验。
+# annotate_pool_meta.py 给每只标的打 poolHit、给 aiPrediction 加 poolMeta（快照日期/候选数/
+# 命中数/有效期），让「哪些是机械选的、快照什么时候失效」在页面直接可见。异常 exit 0。
+echo "🧷 标注机械候选与自选补位（annotate_pool_meta.py）..."
+"$PY" annotate_pool_meta.py || true
+
 # ---------- R100z111：政策信号解码前置刷新（一次接入全部自动化）----------
 # 背景：此前只有 17:00 叙事步在 prompt 里手动调用 enrich_policy.py；07:00 美股收盘 /
 # 周日 22:00 周末汇总同样会整体替换五节要闻，但 policySignals 不刷新 → 政策面板要滞后到

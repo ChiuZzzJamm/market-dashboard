@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610202014"></script>
+<script src="data.js?v=202610202148"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -75,6 +75,12 @@
   .up { color: var(--up); } .down { color: var(--down); } .flat { color: var(--ink2); }
   .breadth { display: flex; flex-wrap: wrap; gap: 18px; font-size: 13.5px; align-items: center; color: var(--ink2); margin-top: 14px; }
   .breadth b { font-size: 16px; }
+  /* R100z157：市场结构面（宽度/拥挤度/连板空间），由 market_structure.py 确定性生成 */
+  .struct { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; font-size: 13px; color: var(--ink2); margin-top: 11px; padding-top: 11px; border-top: 1px dashed var(--line); }
+  .struct b { font-size: 14.5px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .struct .s-tag { background: var(--accent-deep); color: #fff; border-radius: 999px; padding: 2px 9px; font-size: 11.5px; font-weight: 700; letter-spacing: .5px; }
+  .struct .s-zone { background: var(--accent-soft); color: var(--accent-deep); border-radius: 6px; padding: 1px 7px; font-size: 11.5px; font-weight: 700; }
+  .struct .s-judge { flex-basis: 100%; color: var(--ink); font-size: 13.5px; line-height: 1.75; }
   .chart { width: 100%; height: 340px; }
   .chart-tall { width: 100%; height: 380px; }
   .reason-block { background: var(--accent-soft); border-left: 4px solid var(--accent-deep); border-radius: 12px; padding: 13px 16px; margin-bottom: 12px; }
@@ -83,6 +89,11 @@
   .reason-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 8px; }
   .reason-head .date-tag { background: var(--accent-deep); color: #fff; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; }
   .reason-head .kw { font-size: 16px; font-weight: 800; color: var(--ink); }
+  /* R100z157：机械候选 / 自选补位标识（数据来自 annotate_pool_meta.py 的 poolMeta + 每只标的 poolHit） */
+  .pool-line { font-size: 12.5px; color: var(--ink2); line-height: 1.75; margin: 2px 0 10px; padding: 8px 11px; background: var(--accent-soft); border-radius: 10px; }
+  .pool-tag { font-size: 11px; color: var(--ink2); border: 1px dashed var(--line); border-radius: 999px; padding: 1px 7px; }
+  .self-tag { font-size: 10.5px; color: var(--accent-deep); background: #fff; border: 1px solid var(--line); border-radius: 5px; padding: 0 4px; margin-left: 4px; white-space: nowrap; }
+  .sec-rank { font-size: 11.5px; color: var(--ink2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
   .reason-head .sec { font-size: 12px; color: var(--ink); font-weight: 700; background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; }
   .reason-head .pct { font-size: 12px; font-weight: 800; color: #fff; border-radius: 999px; padding: 3px 12px; }
   .reason-head .pct.u { background: var(--up); }
@@ -309,6 +320,15 @@
   .nc-theme .dir-badge.dir-up { background: var(--up); color: #fff; }
   .nc-theme .dir-badge.dir-down { background: var(--down); color: #fff; }
   .nc-theme .dir-badge.dir-flat { background: #9aa4af; color: #fff; }
+  /* R100z157：要闻信息等级徽标（0=重点 / 1=关注；2=常规不戴标）——此前要闻无等级维度，
+     重要条目会跟着 AI 写入顺序沉底。等级由 sweep_news.py 确定性打标，前端兜底同口径计算。 */
+  .lv-badge { font-size: 10px; font-weight: 700; border-radius: 999px; padding: 1.5px 7px; margin-left: 6px; line-height: 1.45; white-space: nowrap; border: 1px solid currentColor; }
+  .lv-badge.lv0 { color: #fff; background: var(--accent-deep); border-color: var(--accent-deep); }
+  .lv-badge.lv1 { color: var(--accent-deep); background: rgba(240, 67, 92, .08); }
+  /* R100z157：连板梯队角色徽标（龙头=红底 / 卡位=淡红底；跟风不戴标，避免全屏都是标） */
+  .lb-role { font-size: 9.5px; font-weight: 700; border-radius: 3px; padding: 0 4px; margin-left: 4px; line-height: 1.5; white-space: nowrap; }
+  .lb-role.lr-lead { color: #fff; background: var(--up); }
+  .lb-role.lr-side { color: var(--accent-deep); background: rgba(240, 67, 92, .1); }
   .nc-time { font-size: 10.5px; font-weight: 600; color: var(--ink2); background: rgba(0,0,0,.05); border: 1px solid currentColor; border-radius: 999px; padding: 1.5px 8px; margin-left: 6px; white-space: nowrap; line-height: 1.45; }
   .nc-time.today { color: #fff; background: var(--accent-deep); }
   .nc-stocks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: 6px; }
@@ -985,6 +1005,37 @@ function renderBreadth(b) {
     '<span style="color:var(--ink2)">' + esc(b.volumeText || '') + '</span></div>';
 }
 
+// R100z157：市场结构面（宽度/拥挤度/连板空间）。数据由 market_structure.py 确定性生成，
+// 前端只做展示，不再自行推导（避免与脚本口径漂移）。缺字段时整行不渲染。
+function renderStructure(s) {
+  if (!s || (!s.text && !s.brief)) return '';
+  var chips = [];
+  if (s.upDownRatio !== null && s.upDownRatio !== undefined) {
+    chips.push('涨跌比 <b class="' + (s.upDownRatio >= 1 ? 'up' : 'down') + '">' + s.upDownRatio + '</b>' +
+      (s.zone ? ' <span class="s-zone">' + esc(s.zone) + '</span>' : ''));
+  }
+  if (s.ztDtRatio !== null && s.ztDtRatio !== undefined) {
+    chips.push('涨跌停比 <b>' + s.ztDtRatio + ':1</b>');
+  }
+  if (s.lianbanCount) {
+    chips.push('连板 <b>' + s.lianbanCount + '</b> 只 · 最高 <b>' + s.maxLb + '</b> 板' +
+      (s.maxLbName ? '（' + esc(s.maxLbName) + '）' : ''));
+  }
+  if (s.divRatio !== null && s.divRatio !== undefined && s.lianbanCount) {
+    chips.push('高位分歧 <b' + (s.divRatio >= 0.4 ? ' class="down"' : '') + '>' + Math.round(s.divRatio * 100) + '%</b>');
+  }
+  if (s.trendN) {
+    var seg = [];
+    if (s.ratio5 !== null && s.ratio5 !== undefined) seg.push('涨跌比 ' + (s.ratio5 > 0 ? '+' : '') + s.ratio5.toFixed(2));
+    if (s.height5 !== null && s.height5 !== undefined) seg.push('连板高度 ' + (s.height5 > 0 ? '+' : '') + s.height5 + ' 板');
+    if (s.amt5 !== null && s.amt5 !== undefined) seg.push('成交额 ' + (s.amt5 > 0 ? '+' : '') + Math.round(s.amt5) + ' 亿');
+    if (seg.length) chips.push('较 ' + s.trendN + ' 个交易日前：' + seg.join('、'));
+  }
+  return '<div class="struct" title="' + esc(s.basis || '') + '"><span class="s-tag">结构面</span>' +
+    chips.map(function (c) { return '<span>' + c + '</span>'; }).join('') +
+    (s.brief ? '<div class="s-judge">' + esc(s.brief) + '</div>' : '') + '</div>';
+}
+
 // 板块成分股 TOP 列表：A股 tops 含成分股 TOP5（涨前5/跌前5），美股 tops 含代表标的（1-2只）。
 // 兼容旧数据：仅有 leader 字段时按旧规则归一化。
 /* R100n→R100p：全站 code→板块 映射（stkSecOf）：来源=断板双池 / 谐波池 / 开盘精选 / 连板梯队 /
@@ -1159,6 +1210,17 @@ function renderTops(s, isUp) {
   return '<div class="reason-tops"><span class="tops-h">' + label + '</span>' + chips + '</div>';
 }
 
+// R100z157：板块 TOP5 的排序口径行——说明按什么指标排序、共几个板块参与、第 6 名是谁，
+// 让「为什么这块进来了、第 6 名被谁顶掉」可查证（数据来自 ashare.sectorRank）。
+function sectorRankLine(rk, isUp) {
+  if (!rk) return '';
+  var alt = isUp ? rk.up6 : rk.down6;
+  var t = '排序：' + esc(rk.basis || '按当日涨跌幅降序');
+  if (rk.poolN) t += ' · 共 ' + rk.poolN + ' 个板块参与排序 · 展示前 5';
+  if (alt) t += '（第 6 名 ' + esc(alt.name) + ' ' + fmtPct(alt.pct) + ' 未展示）';
+  return '<div class="src-line">' + t + '</div>';
+}
+
 function renderReasons(list, tradeDate, isUp, market) {
   list = list || [];
   var html = '';
@@ -1176,6 +1238,7 @@ function renderReasons(list, tradeDate, isUp, market) {
       : '<span class="sec"' + klAttr + '>' + esc(s.name) + '</span>';
     html += '<div class="reason-block ' + (isUp === false ? 'rz-down' : 'rz-up') + '"><div class="reason-head">' +
       pctHtml +
+      (s.rank ? '<span class="sec-rank">第 ' + s.rank + ' 名</span>' : '') +
       (hasReason ? '<span class="kw">' + esc(s.reason.title) + '</span>' : '') +
       '</div>' +
       renderTops(s, isUp) +
@@ -1398,7 +1461,7 @@ function render(market) {
   var html = '';
   html += '<div class="card"><div class="status-line">' + esc(d.tradeDate) + ' · ' + esc(d.status) + '</div><div class="summary">' + esc(d.summary) + '</div></div>';
 
-  html += '<div class="card"><h2>大盘指数' + h2Date(d) + '</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + '</div>';
+  html += '<div class="card"><h2>大盘指数' + h2Date(d) + '</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + renderStructure(d.structure) + '</div>';
 
   // R100z82：预测验证块按用户要求移回 AI 预测卡（renderAiPrediction 内渲染）；
   // 大盘趋势研判卡恢复为纯研判内容（2026-10-08 用户反馈：验证块应放在 AI 预测下面）
@@ -1406,9 +1469,10 @@ function render(market) {
 
   var _ssMap = {'ths': '同花顺行业口径', 'em': '东财行业口径', 'prev': '上一轮数据'};
   var _ssTag = _ssMap[d.sectorSource] ? ' <span class="src-tag">' + _ssMap[d.sectorSource] + '</span>' : '';
-  html += '<div class="card"><h2>领涨板块' + _ssTag + h2Date(d) + '</h2>' + renderReasons(d.sectorsUp, d.tradeDate, true, market) + '</div>';
+  html += '<div class="card"><h2>领涨板块' + _ssTag + h2Date(d) + '</h2>' + sectorRankLine(d.sectorRank, true) + renderReasons(d.sectorsUp, d.tradeDate, true, market) + '</div>';
 
   html += '<div class="card"><h2>调整 / 领跌板块' + _ssTag + h2Date(d) + '</h2>' +
+    sectorRankLine(d.sectorRank, false) +
     (d.sectorNote ? '<div class="src-line">' + esc(d.sectorNote) + '</div>' : '') +
     renderReasons(d.sectorsDown, d.tradeDate, false, market) + '</div>';
 
@@ -2104,6 +2168,13 @@ function strategyDisciplineHtml() {
   return html;
 }
 
+// R100z157：机械候选快照说明行（数据由 annotate_pool_meta.py 确定性写入 aiPrediction.poolMeta）。
+// 目的：让「这批 8 只是机械池选出来的、还是 AI 自选补位」在页面直接可查，并写明候选集有效期。
+function poolMetaLine(pm) {
+  if (!pm || !pm.note) return '';
+  return '<div class="pool-line">🔧 ' + esc(pm.note) + '</div>';
+}
+
 function renderAiPrediction() {
   var p = window.DASHBOARD_DATA.aiPrediction;
   var box = document.getElementById('ai-prediction');
@@ -2117,6 +2188,7 @@ function renderAiPrediction() {
   // R100f：「谐波共振」横幅已按用户要求移除（2026-09-28），谐波交叉徽标保留在谐波模块内
   var html = '<div class="ai-card"><div class="ai-head"><h2>AI 预测分析' + (p.date ? '<span class="h2-date">' + esc(p.date) + '</span>' : '') + '</h2></div>' +
     '<div class="ai-summary">' + (p.indexLine ? esc(p.indexLine) + '。' : '') + '通过隔夜美股各板块涨跌推导今日 A 股强弱方向：' + esc(p.summary) + '</div>' +
+    poolMetaLine(p.poolMeta) +
     '<div id="cal-hist" class="cal-hist"></div>' +
     '<div id="pf-box" class="pf-box"></div>' +
     '<div id="st-track-box"></div>' +
@@ -2129,14 +2201,19 @@ function renderAiPrediction() {
   if (p.verification && p.verification.stockCheck && p.verification.stockCheck.length) {
     p.verification.stockCheck.forEach(function (sc) { if (sc && sc.sector) _scMap[sc.sector] = sc; });
   }
+  // R100z157：机械候选命中情况按板块建索引（poolMeta.sectors 与 sectors 同名）
+  var _pmMap = {};
+  ((p.poolMeta && p.poolMeta.sectors) || []).forEach(function (r) { if (r && r.sector) _pmMap[r.sector] = r; });
   _sortedSectors.forEach(function (s) {
     var isUp = String(s.direction || '').indexOf('承压') === -1;
     var conf = String(s.confidence || '');
     var confCls = conf.indexOf('高') >= 0 ? 'conf-high' : (conf.indexOf('中') >= 0 ? 'conf-mid' : 'conf-low');
+    var _pm = _pmMap[s.sector] || null;
     html += '<div class="ai-item"><div class="row1">' +
       '<span class="sec-nm">' + esc(s.sector) + '</span>' +
       '<span class="dir-badge ' + (isUp ? 'dir-up' : 'dir-down') + '">预计' + esc(s.direction) + '</span>' +
       '<span class="conf-badge ' + confCls + '">' + esc(confZh(s.confidence)) + '</span>' +
+      (_pm ? '<span class="pool-tag" title="机械池该板块候选 ' + _pm.poolN + ' 只，本板块 8 只中 ' + _pm.hit + ' 只来自机械候选">机械 ' + _pm.hit + '/' + _pm.picked + '</span>' : '') +
       expBadge(s.exp) +
       quadPill(s) +
       '</div>' +
@@ -2149,7 +2226,8 @@ function renderAiPrediction() {
         // R100n：技术池边框描边（修复 R100m 漏给 AI 预测候选打标的问题）+ 所属板块胶囊
         var _t1 = st.name + ' ' + st.code + (st.note ? ' · ' + st.note : '') + '（点击查看K线）';
         html += '<span class="stock-chip' + stkGoldCls(st.code) + '" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (st.note || '')) + '" title="' + escAttr(_t1) + '"><b>' + esc(st.name) + '</b><span class="cd">' + esc(st.code) + '</span>' +
-          (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
+          (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') +
+          (st.poolHit === false ? '<span class="self-tag" title="该板块机械候选不足或未覆盖，此票由 AI 按四类配比自选">自选</span>' : '') + '</span>';
       });
       html += '</div>';
       // R100z20：板块下方不再重复罗列退出纪律——同板块的多只标的挤在一起既长又和胶囊标签重复，
@@ -2327,7 +2405,11 @@ function newsEntryInner(it, showSrc, tag, tradeDate) {
   var perspTag = tag ? '<span class="persp-tag">' + esc(tag) + '</span>' : '';
   // R100c：利好/利空卡（短线·盘面）把确信度徽章从主推行挪到标题行；宏观/国际/投行条目徽章整体移除
   var confHead = (tag === '短线·盘面') ? deduceConfBadge(it.deduce) : '';
-  var s = '<div class="nc-theme"><span class="nc-tt">' + esc(it.sector || '') + '</span>' + dirBadge + perspTag + confHead + '</div>'; // R100x：标题包 nc-tt 保留省略号，整行 flex 垂直居中
+  // R100z157：信息等级徽标（0=重点 / 1=关注 / 2=常规不戴标）——配合 newsSort 让等级可见
+  var _lv = newsLevelOf(it);
+  var lvBadge = _lv === 0 ? '<span class="lv-badge lv0">重点</span>'
+    : (_lv === 1 ? '<span class="lv-badge lv1">关注</span>' : '');
+  var s = '<div class="nc-theme"><span class="nc-tt">' + esc(it.sector || '') + '</span>' + lvBadge + dirBadge + perspTag + confHead + '</div>'; // R100x：标题包 nc-tt 保留省略号，整行 flex 垂直居中
   // R100z114b（用户 2026-10-10）：nc-dtl 原生 title 悬停提示已删——摘要本就默认全文展开，tooltip 纯属遮挡（全球要闻页截图反馈）
   s += '<div class="nc-dtl"><b>' + esc(it.title || '') + '</b> — ' + esc(it.summary || '') + '</div>';
   // R100z81：同 theme 的 impacts 合并渲染（数据层碎片化兜底——一条新闻被拆成多个同 theme
@@ -2380,18 +2462,65 @@ function newsUpdatedDate(d) {
   return best;
 }
 
+/* R100z157：要闻信息等级（0=重点 / 1=关注 / 2=常规）——sweep_news.py 词表的 JS 镜像。
+   数据层已打 level 时直接用；16:00 数据步刚写完、还没到部署前 sweep_news 那一跳时，
+   这里兜底算一遍，保证「重要要闻靠前」在任何时刻都成立（含本地预演）。
+   判定必须是确定性的（只认关键词），不能靠 AI 自评——否则同一条新闻换个模型就换等级。 */
+var NEWS_LV0 = ['国常会', '国务院', '政治局', '中央经济工作会议', '中央金融工作会议', '两会', '十五五',
+  '证监会', '央行', '中国人民银行', '金融监管总局', '财政部', '发改委', '工信部', '商务部', '国资委',
+  '统计局', '海关总署', '国家能源局', '外汇局', '中央汇金', '汇金',
+  '降准', '降息', '加息', 'LPR', 'MLF', '逆回购', '公开市场操作', '印花税', '注册制', '退市',
+  '减持新规', '市值管理', '平准基金', '暂停IPO', '全面注册制',
+  'CPI', 'PPI', 'GDP', '社融', '新增信贷', 'PMI', '非农', '失业率', '零售销售', '工业增加值',
+  '固定资产投资', '外汇储备', '贸易顺差', '进出口总额',
+  '美联储', 'FOMC', '议息', '欧洲央行', '日本央行', '关税', '制裁', '出口管制', '实体清单', 'OPEC', '地缘政治'];
+var NEWS_LV1 = ['中标', '订单', '大单', '并购', '收购', '重组', '增持', '回购', '定增', '配股', '扩产',
+  '投产', '量产', '涨价', '提价', '涨价函', '业绩预告', '业绩快报', '扭亏', '预增', '预亏', '出货量',
+  '装机', '销量', '出口额', '渗透率', '产能利用率', '库存', '获批', '临床', '三期', '首台',
+  '国产替代', '技术突破', '专利', '认证', '高盛', '摩根士丹利', '大摩', '摩根大通', '小摩', '花旗',
+  '瑞银', '美银', '汇丰', '中金', '中信证券', '中信建投', '招商证券', '华泰证券', '国泰君安',
+  '海通证券', '英伟达', '台积电', '苹果', '特斯拉', '微软', '谷歌', '亚马逊', '三星', '海力士',
+  '美光', 'ASML', 'OpenAI'];
+function newsLevelOf(it) {
+  if (!it) return 2;
+  if (it.__lv != null) return it.__lv;
+  var lv = 2;
+  if (it.level === 0 || it.level === 1 || it.level === 2) {
+    lv = it.level;
+  } else {
+    var t = String(it.title || '') + '|' + String(it.sector || '') + '|' + String(it.summary || '').slice(0, 120);
+    for (var i = 0; i < NEWS_LV0.length; i++) { if (t.indexOf(NEWS_LV0[i]) >= 0) { lv = 0; break; } }
+    if (lv === 2) { for (var j = 0; j < NEWS_LV1.length; j++) { if (t.indexOf(NEWS_LV1[j]) >= 0) { lv = 1; break; } } }
+  }
+  try { it.__lv = lv; } catch (e) {}
+  return lv;
+}
+function newsDirRank(x) {
+  if (typeof x !== 'string') return 1;
+  return x.indexOf('看涨') >= 0 ? 0 : (x.indexOf('看跌') >= 0 ? 2 : 1);
+}
+/* 组内稳定排序：等级优先（重要的上去），同等级内再看方向（看涨→中性→看跌），
+   最后保持 AI 原写入顺序——不用不稳定排序，否则同等级条目每次刷新都在跳。 */
+function newsSort(arr) {
+  return (arr || []).slice().sort(function (a, b) {
+    var d = newsLevelOf(a) - newsLevelOf(b);
+    if (d) return d;
+    return newsDirRank(a && a.direction) - newsDirRank(b && b.direction);
+  });
+}
+
 function renderNewsCard(d, market) {
   // R100z109（用户 2026-10-10）：A股/美股要闻卡迁入「📄 全球要闻」独立页；
   // 原利好/利空两栏紧凑卡（news-cols/news-cell）废除，五节统一为通栏展开卡（wk-item，
   // 与宏观/媒体视角/投行条目同款：标题+长叙事+板块chips+主推/反证/候选+来源行）。
   if (!d) return '';
-  var bn = d.bullNews||[], be = d.bearNews||[];
+  // R100z157：要闻按信息等级排序（等级优先、同级看方向），不再按 AI 写入顺序原样渲染
+  var bn = newsSort(d.bullNews), be = newsSort(d.bearNews);
   // R99d：宏观/财经/投行三栏按方向排序——看涨靠前、中性居中、看跌靠后（稳定排序，同向保持原序）
-  function dirRank(d){ return d === '看涨' ? 0 : (d === '看跌' ? 2 : 1); }
-  function dirSort(a, b){ return dirRank(a.direction) - dirRank(b.direction); }
-  var intl = (d.intlNews||[]).slice().sort(dirSort);
-  var bank = (d.bankViews||[]).slice().sort(dirSort);
-  var macro = (d.macroNews||[]).slice().sort(dirSort);
+  // R100z157：现由 newsSort 统一接管——等级优先，同等级内再按方向序（原 dirSort 已并入 newsDirRank）
+  var intl = newsSort(d.intlNews);
+  var bank = newsSort(d.bankViews);
+  var macro = newsSort(d.macroNews);
   if (!bn.length && !be.length && !intl.length && !bank.length && !macro.length) return '';
   var mkTitle = market === 'us' ? '🇺🇸 美股 · 全球要闻' : '🇨🇳 A股 · 全球要闻';
   // R100z118：角标对齐要闻实际更新日（见 newsUpdatedDate）。交易日与要闻更新日不同时并列显示。
@@ -3349,9 +3478,14 @@ function renderLianban(list) {
       var idx = LB_LIST.indexOf(st);
       var pct = (typeof st.pct === 'number') ? (st.pct > 0 ? '+' : '') + st.pct.toFixed(1) + '%' : '';
       var ctx = st.reason || st.hybk || '';
-      var title = (st.name || '') + ' ' + (st.code || '') + (st.hybk ? ' · ' + st.hybk : '') + (st.reason ? ' ｜ ' + st.reason : '') + '（点击查看深度解读）';
-      // R100n：技术池边框描边 + 所属板块胶囊
-      s += '<span class="stock-chip lb-click' + stkGoldCls(st.code) + '" title="' + escAttr(title) + '" onclick="lbShow(' + idx + ')"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' + (pct ? '<span class="rt">' + pct + '</span>' : '') + (ctx ? '<span class="nt">' + esc(ctx) + '</span>' : '') + '</span>';
+  // R100z157：梯队角色徽标（龙头/卡位）——角色由脚本按封单资金确定性判定，AI 不参与
+  var roleBadge = st.role === '龙头' ? '<span class="lb-role lr-lead">龙头</span>'
+    : (st.role === '卡位' ? '<span class="lb-role lr-side">卡位</span>' : '');
+  var title = (st.name || '') + ' ' + (st.code || '') + (st.hybk ? ' · ' + st.hybk : '')
+    + (st.role ? ' ｜ ' + st.role + (st.phase ? '·' + st.phase : '') : '')
+    + (st.reason ? ' ｜ ' + st.reason : '') + '（点击查看深度解读）';
+  // R100n：技术池边框描边 + 所属板块胶囊
+  s += '<span class="stock-chip lb-click' + stkGoldCls(st.code) + '" title="' + escAttr(title) + '" onclick="lbShow(' + idx + ')"><b>' + esc(st.name || '') + '</b>' + roleBadge + '<span class="cd">' + esc(st.code || '') + '</span>' + (pct ? '<span class="rt">' + pct + '</span>' : '') + (ctx ? '<span class="nt">' + esc(ctx) + '</span>' : '') + '</span>';
     });
     s += '</div></div>';
   });
@@ -3401,6 +3535,9 @@ function lbShow(idx) {
     '<button class="db-modal-close" onclick="lbClose()">×</button>' +
     '<div class="m-badge-row">' + stkSecBadge(st.code) + stkTechBadgeHtml(st.code) + stkPoolBadge(st.code) + '</div>'; // R100s：徽标统一第二行，池徽章最后
   var meta = // R100v2：板块行删除（徽标第二行已承载），仅留封单资金/涨停原因
+    // R100z157：梯队角色 + 情绪阶段（脚本确定性产出：龙头/卡位/跟风 · 一致/换手/分歧）
+    ((st.role || st.phase) ? '<span class="lab">梯队角色：</span>' + esc(st.role || '—')
+      + (st.phase ? '（' + esc(st.phase) + '）' : '') + '<br>' : '') +
     (fundStr ? '<span class="lab">封单资金：</span>' + fundStr : '') +
     (st.reason ? '<br><span class="lab">涨停原因：</span>' + esc(st.reason) : '');
   document.getElementById('lb-modal-head').innerHTML = head;
