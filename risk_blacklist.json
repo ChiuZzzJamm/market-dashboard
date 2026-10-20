@@ -2,7 +2,7 @@
  "ok": true,
  "nameSrc": "local",
  "date": "2026-10-20",
- "checked": 356,
+ "checked": 360,
  "liftWindow": [
   2,
   5
@@ -10,34 +10,6 @@
  "watchPledgeWithin": 365,
  "cutDays": 30,
  "blacklist": {
-  "600184": {
-   "name": "光电股份",
-   "reasons": [
-    "2026-10-14 减持公告"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 0.6%（截至 2025-10-24）"
-   ],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
-  "601901": {
-   "name": "方正证券",
-   "reasons": [
-    "2026-09-24 减持公告"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 0.5%（截至 2026-06-05）"
-   ],
-   "severity": "red",
-   "progress": [
-    "减持实施中"
-   ]
-  },
   "002869": {
    "name": "金溢科技",
    "reasons": [
@@ -123,6 +95,30 @@
    "watch": [
     "参考·质押 0.0%（截至 2026-06-05）"
    ],
+   "severity": "red",
+   "progress": [
+    "减持实施中"
+   ]
+  },
+  "600186": {
+   "name": "莲花控股",
+   "reasons": [
+    "解禁 2026-10-26（股权激励限售股份，占总股本 0.1%）"
+   ],
+   "count": 1,
+   "watch": [
+    "参考·质押 2.9%（截至 2026-06-05）"
+   ],
+   "severity": "orange",
+   "progress": []
+  },
+  "600686": {
+   "name": "金龙汽车",
+   "reasons": [
+    "2026-10-21 减持公告"
+   ],
+   "count": 1,
+   "watch": [],
    "severity": "red",
    "progress": [
     "减持实施中"
