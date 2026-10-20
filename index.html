@@ -477,10 +477,16 @@
   #duanban-view { display: none; }
   body.db-open .wrap > *:not(#duanban-view) { display: none !important; }
   body.db-open #duanban-view { display: block; }
-  .db-topbar { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; position: relative; }
+  .db-topbar { display: flex; align-items: center; justify-content: center; gap: 2px 14px; margin-bottom: 14px; flex-wrap: wrap; position: relative; }
   .db-title { font-size: 22px; font-weight: 900; letter-spacing: 2px; }
-  .db-date { font-size: 12px; color: var(--ink2); position: absolute; right: 0; }
-  @media (max-width: 700px) { .db-date { position: static; width: 100%; text-align: center; } }
+  /* R100z159：修「日期文字压在标题上」——旧版 .db-date 用 position:absolute; right:0 贴右，
+     而 .db-title 是 .db-topbar 里**唯一在流内**的子项（被 justify-content:center 居中）。
+     技术看板日期串宽 515px + 标题 96px = 611px，内容宽 1036px 时居中标题右缘必然越过日期左缘：
+     无头实测 ≥1100px 视口水平重叠 45px、≤1100px 重叠 96px（整条标题），垂直重叠 21px，
+     即「数据生成：…」直接印在「技术看板」上（用户 2026-10-20 深夜截图实报）。
+     改为换行后独占一行居中（与旧 ≤700px 行为一致）——标题保持居中，不再有任何重叠。
+     ⚠️ 别再改回 absolute/right:0：只要日期串比「内容宽/2 − 标题宽/2」更长就会再次重叠。 */
+  .db-date { font-size: 12px; color: var(--ink2); flex: 1 1 100%; text-align: center; }
   /* R100z4v：.db-note 已删——断板页口径说明改静态 hz-sub（与谐波/九门/吸筹子页同款），不再读 db.note */
   .db-pool { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
   .db-pool h2 { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 9px; margin: 0 0 4px; }
