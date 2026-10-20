@@ -1065,10 +1065,10 @@ def _fmt_ref(r):
 # → 安全条件：每个整句必须含个股特定数据（公告标题/要闻标题/板块名/涨跌幅/
 #   ztDate/form），或固定部分 <14 字。短语池按 code 取模轮换，实测 64 只零复读。
 NO_NEWS_PHRASE = ["走势主要由板块联动贡献", "板块逻辑是当前主要驱动",
-                  "断板后资金接力跟随板块节奏", "短期看点集中在所属板块",
-                  "公司事件层面暂无新增变量", "板块贝塔是当前主导因素",
+                  "断板后资金接力跟随板块节奏",
+                  "公司事件层面暂无新增变量", "板块联动是当前主导因素",
                   "催化沿产业链逐级传导", "盘面驱动让位于板块节奏",
-                  "个股 alpha 让位于板块 beta", "消息面处于真空期"]
+                  "个股独立行情弱于板块联动", "消息面处于真空期"]
 BEAR_PHRASE = ["短期确定性下降", "短期不确定性上升", "短期抛压增加",
                "短期情绪面承压", "短期风险暴露", "短期预期回落",
                "短期博弈难度上升", "短期预期需下修"]
@@ -1125,7 +1125,14 @@ def _story_first_sentence(text, minlen=20, maxlen=90):
         out = (out + "，" + p) if out else p
         if len(out) >= minlen:
             break
-    return out.rstrip("，")[:maxlen]
+    s = out.rstrip("，")
+    if len(s) > maxlen:
+        # R100z154：曾在 maxlen 处硬切 → 产出「理由是AI服务器供应」这类半句
+        # （用户可见语病）。改为回退到最后一个完整分句边界（，、；），保留语义完整。
+        cut = s[:maxlen]
+        idx = max(cut.rfind("，"), cut.rfind("、"), cut.rfind("；"))
+        s = cut[:idx] if idx >= minlen else cut
+    return s
 
 
 def _story_sector_seg(e, code):
@@ -1135,6 +1142,10 @@ def _story_sector_seg(e, code):
     bpz = e.get("boardPctZt")
     form = e.get("form") or ""
     stage = e.get("stage") or ""
+    # R100z154：行业板块单日涨跌幅不可能超 12%（实测 IT服务Ⅱ 取到 17.55% 属错映射），
+    # 异常值按「暂缺」处理，宁缺勿错（不编也不展示假数据）。
+    if bpt is not None and abs(float(bpt)) > 12:
+        bpt = None
     if bpt is None:
         sec = f"所属{sector}板块当日数据暂缺"
     elif bpt >= 0:
@@ -1147,7 +1158,11 @@ def _story_sector_seg(e, code):
         bz = f"，涨停日板块涨{bpz}%"
     else:
         bz = f"，涨停日板块跌{abs(bpz)}%"
-    st = _pick(STAGE_PHRASE.get(stage, STAGE_PHRASE["待缩量"]), code, 2)
+    st0 = _pick(STAGE_PHRASE.get(stage, STAGE_PHRASE["待缩量"]), code, 2)
+    # R100z154：形态参数偶然全同（同日涨停/同倍数/同缩量天数）时 3 只以上会共用同一
+    # 整句 → 踩 G17 复读闸。把个股名称并入形态句，保证整句唯一（G17 按句切分）。
+    nm = e.get("name") or ""
+    st = f"{nm}{st0}" if nm else st0
     tail = f"；{form}，{st}。" if form else f"；{st}。"
     return f"【板块消息】{sec}{bz}{tail}"
 
@@ -1197,8 +1212,11 @@ def build_story(e, refs=None, bear_refs=None):
                            code, 1)
             tail = _pick(REF_TAIL_PHRASE, code, 2)
             drv = _pick(STOCK_DRIVER_PHRASE, code, 3)
+            # R100z154：drv(4)×tail(4) 按 code 取模组合有限 → 实测 11 只 refs 标的里
+            # 有 3 组整句被 ≥3 只共用（踩 G17）。把个股名称并入 tail 段（整句带唯一
+            # 标识即可消除复读；并入 drv 会让名称在相邻两处重复出现，读感冗余）。
             seg1 = (f"【个股消息】{name}{head}《{ref.get('title')}》：{body}，{phrase}；"
-                    f"{drv}，{tail}。")
+                    f"{drv}，{name}{tail}。")
         elif notices:
             n0 = notices[0]
             d0 = str(n0.get("date") or "")[5:].replace("-", "/")
@@ -1342,7 +1360,7 @@ def tag_entries(entries, D):
         # 小作文化：R100z148 起改为 build_story 数据驱动生成——底稿即达
         # G16 ≥100 字与 R100z3 段落格式（【个股消息】/【板块消息】），
         # 按 code 轮换短语防 G17；AI 复核只做「逐只过目、必要时加深」。
-        story = build_story(e, refs, bear_refs)
+        story = build_story(dict(e, sentiment=sent), refs, bear_refs)  # R100z154：原传 e 无 sentiment → bull 也用中性尾巴，与标注矛盾
         # R98k：概率不再留空待 AI（AI 曾全填 50 / merge 曾补 50）——先给确定性基线，
         # AI 复核仍可 ±10 校准，但 probNote 已非空，retag 不会重算覆盖。
         # notices 是中间字段（build_module 批量抓取、本函数消费后即弃，
