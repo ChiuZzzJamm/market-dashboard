@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610202148"></script>
+<script src="data.js?v=202610202157"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1007,8 +1007,12 @@ function renderBreadth(b) {
 
 // R100z157：市场结构面（宽度/拥挤度/连板空间）。数据由 market_structure.py 确定性生成，
 // 前端只做展示，不再自行推导（避免与脚本口径漂移）。缺字段时整行不渲染。
-function renderStructure(s) {
+function renderStructure(s, tradeDate) {
   if (!s || (!s.text && !s.brief)) return '';
+  // 新鲜度守卫：结构面由 deploy.sh 的 market_structure.py 按 ashare.tradeDate 计算并落台账。
+  // 若 16:00 数据步已换日、而 17:00 还没 deploy，structure.date 会滞后一天——此时宁可不显示，
+  // 也不能拿昨天的连板高度/分歧率去配今天的大盘。
+  if (s.date && tradeDate && s.date !== tradeDate) return '';
   var chips = [];
   if (s.upDownRatio !== null && s.upDownRatio !== undefined) {
     chips.push('涨跌比 <b class="' + (s.upDownRatio >= 1 ? 'up' : 'down') + '">' + s.upDownRatio + '</b>' +
@@ -1461,7 +1465,7 @@ function render(market) {
   var html = '';
   html += '<div class="card"><div class="status-line">' + esc(d.tradeDate) + ' · ' + esc(d.status) + '</div><div class="summary">' + esc(d.summary) + '</div></div>';
 
-  html += '<div class="card"><h2>大盘指数' + h2Date(d) + '</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + renderStructure(d.structure) + '</div>';
+  html += '<div class="card"><h2>大盘指数' + h2Date(d) + '</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + renderStructure(d.structure, d.tradeDate) + '</div>';
 
   // R100z82：预测验证块按用户要求移回 AI 预测卡（renderAiPrediction 内渲染）；
   // 大盘趋势研判卡恢复为纯研判内容（2026-10-08 用户反馈：验证块应放在 AI 预测下面）
