@@ -19,9 +19,11 @@
 产物（★文件名不带点：GitHub Pages 不发布 dotfile）：
     stock_pool.json { ok, date, bySector:{板块:[8 只]}, coverage, meta, fail }
 
-校验器：validate_stocks.py 的 check_stock_pool —— 板块**有机械候选时 AI 必须照抄**，
-    照抄 ≠ 全等（候选不足 8 只时允许少于 8），且**池给不满 8 只时，缺口内的池外票算规则内
-    补位**（R100z160：allow = 8 - 候选数，超出缺口的上限才 FAIL）。
+校验器：validate_stocks.py 的 check_stock_pool —— **只约束「④ 断板反包」这一类槽位**：
+    池内有断板达标候选时，断板槽位必须取自池内（一只都不用 → FAIL；用得少 → WARN 问取舍）。
+    **①②③ 板块龙头 / 相关概念股 / 小盘人气股 本来就由 AI 按四类配比表自选，不属于违规**
+    （R100z160c，2026-10-21 用户指出：池子给不满 8 只时就用这三类补满，这是设计）。
+    历史口径「8 只整组照抄 / 池外 ≥2 只即 FAIL」已作废——它与「每板块恰好 8 只」互斥。
 
 用法：
     python3 build_stock_pool.py                 # 干跑，打印每个板块的机械池与覆盖率
