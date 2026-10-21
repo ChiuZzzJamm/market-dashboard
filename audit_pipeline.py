@@ -37,6 +37,8 @@
                       G17 只管「跨字段」，管不到「每票一个字段」的同段复用）
     G24 未核查披露    黑名单维度没取到数据（verdict != full）时，渲染文本里不得出现
                       「已核查无风险」「黑名单全部通过」等绝对安全表述（R100z160，FAIL）
+    G25 记忆层体检    工作区 MEMORY.md 是「注入层」，超限会被 inject 截断导致硬约束读不全
+                      （2026-10-21 实测 19.9KB 已被截断）→ 超 8KB 或路由表缺失即 WARN（R100z161）
 """
 import ast
 import json
@@ -1719,6 +1721,39 @@ def g24_unchecked_disclosure(r):
         # 真正要拦的是「把缺失说成安全」，故判 PASS 但把口径写进输出，方便汇报照抄。
         r.ok("G24", f"黑名单维度未全核查（{detail}）——本次文本无绝对表述；"
                     f"但汇报（微信/HANDOVER）必须原样点名未核查维度，严禁写「已核查无风险」")
+
+
+def g25_memory_hygiene(r):
+    """G25 记忆注入层体检（R100z161）。
+
+    事故（2026-10-21）：`.workbuddy/memory/MEMORY.md` 自称「故意写短」，实际涨到
+    **19,929 字节 / 52 行**，其中「维护」4 行占 27%（全是 changelog）。宿主注入时
+    **静默截断**，硬约束读不全 —— 当天我就把「8 只四类配比」这条早已写在事实源里的
+    规则判成"没写过"，连错两版判据。记忆层不设闸，就会「越优化越读不到」。
+
+    只查两件事：① 体积（>8KB 说明又在堆 changelog）；② 路由表在位（否则不知道去读哪节）。
+    只 WARN 不 FAIL —— 记忆臃肿不影响 data.js 正确性，但必须响亮提示。
+    """
+    path = os.path.join(HERE, ".workbuddy", "memory", "MEMORY.md")
+    if not os.path.exists(path):
+        r.ok("G25", "本工作区无 MEMORY.md，跳过")
+        return
+    try:
+        raw = open(path, "rb").read()
+        txt = raw.decode("utf-8", "ignore")
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G25", f"MEMORY.md 读取失败：{e}")
+        return
+    size, hard = len(raw), 8192
+    probs = []
+    if size > hard:
+        probs.append(f"{size} 字节 > {hard} 上限（超 {size - hard}）——长段结论迁去 PROJECT-MEMORY.md")
+    if "先读那一节" not in txt:
+        probs.append("缺「要动这块，先读那一节」路由表（没有它就只能凭印象 grep）")
+    if probs:
+        r.warn("G25", "记忆注入层需整治：" + "；".join(probs) + "（R100z161）")
+    else:
+        r.ok("G25", f"MEMORY.md {size} 字节，路由表在位")
 
 
 def main():
