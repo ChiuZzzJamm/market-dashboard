@@ -42,7 +42,7 @@ NEWS_CACHE_DIR = os.path.join(ROOT, '.news_cache')
 NEWS_API = "https://search-api-web.eastmoney.com/search/jsonp"
 NEWS_DAYS = 14          # 个股新闻回看天数
 NEWS_PAGE_SIZE = 20     # 单只搜索条数（再按相关性与日期过滤）
-NEWS_MAX_KEEP = 3       # 单只最多保留条数（体积优先：data.js 已 5MB+，小程序 60s 超时）
+NEWS_MAX_KEEP = 3       # 单只最多保留条数（体积优先：data.js 已 5MB+，全站要 4G 网络首屏可开）
 NOTICE_MAX_KEEP = 3     # 单只最多保留公告条数
 SUMMARY_MAX = 180       # 新闻摘要字数上限。东财 content 原文实测 p90=147 / max=154，
                         # 取 180 可完整保留（原 72 字把 1251/1513 条砍成半句，用户实报「显示不全」）

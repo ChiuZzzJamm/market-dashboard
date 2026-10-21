@@ -76,6 +76,10 @@ def ceil_of(label):
         return 500
     if label in ("openOutlook", "aiPrediction.openOutlook"):
         return 650   # 08:30 写 content 450-650 / 周日22:00 写 400-600 → 取并集上限
+    if label == "duanban.star.pushText":
+        return 700   # 9:45 prompt 写死 300-700（页面🌟模块与微信推送共用）
+    if label == "duanban.star.sentiment":
+        return 200   # 9:45 prompt 写死 120-200
     if label.startswith("deduce#"):
         if label.endswith(".main"):
             return 120

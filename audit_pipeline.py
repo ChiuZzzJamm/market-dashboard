@@ -226,7 +226,7 @@ PRODUCT_OWNERSHIP = {
         "require": ("stock_news.py", "个股消息库", "stockNews"),
         "note": "R100z149：stock_news.py 抓东财个股公告 + 资讯搜索，按 code 汇总成 {code:{name,notices,news}}，"
                 "覆盖断板（含失效池）/谐波/吸筹/九门/连板/板块成分/AI预测/要闻影响标的；"
-                "前端弹窗（网页 db-modal、小程序 stock-modal）统一渲染「个股消息」段。"
+                "前端弹窗（网页 db-modal）统一渲染「个股消息」段。"
                 "16:00 数据步点名（取数后、断板主生成前跑）。",
     },
 }
@@ -1131,7 +1131,7 @@ def collect_g16_checks(D):
             add(f"ashare.lianban[{i}].story", s.get("story"), 120)
 
     # 断板反包 confirmed/watching story（R100z148：检查面从 ashare.duanban 改到顶层
-    # duanban——ashare.duanban 是 2026-10-14 后无任何读写方的死节点（前端/小程序/
+    # duanban——ashare.duanban 是 2026-10-14 后无任何读写方的死节点（前端/
     # 脚本均只读写顶层 D.duanban），已从 data.js 剔除；顶层才是真实渲染的数据源）
     db = D.get("duanban") or {}
     for pool in ("confirmed", "watching"):
@@ -1140,10 +1140,26 @@ def collect_g16_checks(D):
                 add(f"duanban.{pool}[{i}].story", e.get("story"), 100)
 
     # 吸筹 scored/strong/watch note
+    # R100z161c：路径修正——吸筹节点在**顶层** `accumulation`，`ashare` 里根本没有这个键
+    #   （2026-10-21 实测 ashare 子键 27 个、无 accumulation；顶层 accum 有 scored 20 + strong 2
+    #   + watch 18 = 40 条 note）。旧写法读 ashare.accumulation → 恒空 → **90 字地板从未生效**，
+    #   是 R100z148 把断板从 ashare.duanban 改到顶层 duanban 时漏改的孪生兄弟。
+    #   保留 ashare 兜底只为兼容万一回迁，正常走顶层。
+    _acc = D.get("accumulation") or (D.get("ashare") or {}).get("accumulation") or {}
     for grp in ("scored", "strong", "watch"):
-        for i, e in enumerate(((D.get("ashare") or {}).get("accumulation") or {}).get(grp) or []):
+        for i, e in enumerate(_acc.get(grp) or []):
             if isinstance(e, dict):
-                add(f"ashare.accumulation.{grp}[{i}].note", e.get("note"), 90)
+                add(f"accumulation.{grp}[{i}].note", e.get("note"), 90)
+
+    # 9:45 开盘精选「深度分析」（R100z161c 补闸）。二节速查表早写着 pushText 300-700 /
+    #   sentiment 120-200，但 G16/G17 都不扫 duanban.star → 两个字段长期零保护。
+    #   只加地板不加上限（超上限归 check_narrative 的 OVER 清单，硬拦会逼 AI 删内容）。
+    _star = (D.get("duanban") or {}).get("star") or {}
+    if isinstance(_star, dict):
+        if _star.get("pushText"):
+            add("duanban.star.pushText", _star.get("pushText"), 300)
+        if _star.get("sentiment"):
+            add("duanban.star.sentiment", _star.get("sentiment"), 120)
 
     # deduce 三候选推演（全站任意条目，R100z96：main/counter 曾被 prompt 定为「一句话」口径）
     def _deduce_walk(o, k=[0]):
@@ -1259,10 +1275,16 @@ def collect_g17_owners(D):
         for i, e in enumerate(dbsec.get(pool) or []):
             if isinstance(e, dict):
                 put(e.get("story"), f"duanban.{pool}[{i}]")
-    for grp in ("scored", "strong", "watch"):
-        for i, e in enumerate(((D.get("ashare") or {}).get("accumulation") or {}).get(grp) or []):
-            if isinstance(e, dict):
-                put(e.get("note"), f"ashare.accumulation.{grp}[{i}]")
+    # ⚠️ 吸筹 note **刻意不纳入 G17**（R100z161c 实测后决定，别再"补进来"）：
+    #   它的 90 字地板在 G16 里补了（此前读错路径恒空），但 note 正文由
+    #   accumulation_score.py 按形态分支**脚本拼装**，同一形态必然同句——
+    #   2026-10-21 试纳入 G17 立即报 8 句复读（最高「3日缩量连跌后已收复过半跌幅；」×40 处），
+    #   全部只落在 accumulation 域内。这不是 AI 偷懒，硬拦会天天 FAIL 且 AI 无从修。
+    #   要治只能改脚本文案多样性（见 PROJECT-MEMORY 三节），不归 G17 管。
+    # R100z161c：9:45 深度分析纳入复读面（AI 手工文本，与 outlook/要闻常出自同一批措辞）
+    _star17 = (D.get("duanban") or {}).get("star") or {}
+    if isinstance(_star17, dict) and _star17.get("pushText"):
+        put(_star17.get("pushText"), "duanban.star.pushText")
     # 全站 deduce
     def _ded_walk(o):
         if isinstance(o, dict):
