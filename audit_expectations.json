@@ -117,7 +117,8 @@
     "embed_klines.py",
     "us.macroNews",
     "保持该字段原值不动",
-    "price-in→已计价"
+    "price-in→已计价",
+    "R100z160"
    ],
    "forbidden": [
     "①",
@@ -318,7 +319,8 @@
     "openOutlook.pos",
     "sectors[].exp",
     "check_stock_pool",
-    "price-in 写作「已计价」"
+    "price-in 写作「已计价」",
+    "R100z160"
    ],
    "forbidden": [
     "①",
@@ -649,7 +651,8 @@
     "KLINE_DEADLINE=900",
     "SKIP_AUDIT",
     "tdx",
-    "price-in→已计价"
+    "price-in→已计价",
+    "R100z160"
    ],
    "forbidden": [
     "①",
@@ -926,7 +929,8 @@
     "verification.stockCheck[].fund",
     "narrative_patch.json",
     "check_narrative.py",
-    "price-in→已计价"
+    "price-in→已计价",
+    "R100z160"
    ],
    "forbidden": [
     "①",
@@ -1198,7 +1202,8 @@
     "embed_klines.py",
     "ashare 全部字段不变",
     "run_push.sh weekend",
-    "price-in→已计价"
+    "price-in→已计价",
+    "R100z160"
    ],
    "forbidden": [
     "①",

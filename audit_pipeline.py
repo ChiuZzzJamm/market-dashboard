@@ -35,6 +35,8 @@
     G22 要闻等级噪音  五节要闻必须有 level（0重点/1关注/2常规）且标题不含盘面统计噪音（R100z157，WARN 级复核）
     G23 跨票措辞复读  连板/断板 story 的同一句（≥14 字）在 ≥3 只票且 ≥30% 池内重复 = 同段模板化（R100z157，WARN 级；
                       G17 只管「跨字段」，管不到「每票一个字段」的同段复用）
+    G24 未核查披露    黑名单维度没取到数据（verdict != full）时，渲染文本里不得出现
+                      「已核查无风险」「黑名单全部通过」等绝对安全表述（R100z160，FAIL）
 """
 import ast
 import json
@@ -1062,6 +1064,18 @@ def g15_interp_bins(r):
         r.ok("G15", f"{len(autos)} 份 prompt 引用的解释器入口均可用（run-node/run-python 自修复生效）")
 
 
+def _content_of(v):
+    """顶层 openOutlook 是对象 {date, content, source, pos}（R100z13 起）。
+
+    R100z160：此前 G16/G17 直接对它取 str() —— 量出来的是「dict 的 repr」（含键名与 pos
+    子对象），openOutlook 的 300 字地板因此形同虚设（实测 str=1528 而正文 1359），
+    字数区间也无法核对。统一改为取 content 正文；非 dict 时原样返回（兼容旧数据/纯字符串）。
+    """
+    if isinstance(v, dict):
+        return str(v.get("content") or "")
+    return v
+
+
 def collect_g16_checks(D):
     """G16 叙事深度字段清单采集（R100z136 从 g16_narrative_depth 拆出）。
 
@@ -1099,9 +1113,9 @@ def collect_g16_checks(D):
         if isinstance(s, dict):
             add(f"aiPrediction.sectors[{i}].logic", s.get("logic"), 200)
     if D.get("openOutlook"):
-        add("openOutlook", D.get("openOutlook"), 300)
+        add("openOutlook", _content_of(D.get("openOutlook")), 300)
     if isinstance(ap, dict) and ap.get("openOutlook"):
-        add("aiPrediction.openOutlook", ap.get("openOutlook"), 300)
+        add("aiPrediction.openOutlook", _content_of(ap.get("openOutlook")), 300)
 
     # A 股题材掘金 logic（R100z129 补齐：docstring 早已声明 240，但代码一直漏检，
     # 只靠 17:00 prompt 软约束 240-420 —— 用户 2026-10-13 拍板补机器闸）
@@ -1204,7 +1218,10 @@ def collect_g17_owners(D):
     owner = {}  # sentence -> set(field label)
 
     def put(text, label):
-        for s in re.split(r"(?<=[。！？])", str(text or "")):
+        # R100z160：分句符补 `；`，与 G23 的 sentences() 对齐。此前只按 。！？ 切，
+        # AI 用「；」把多个整句串成一段长句时，被复用的**后半截**落在同一"句"里就躲过检测
+        # （2026-10-21 实测：4 只电力股共用同一条 bearRef，板块段写同一句只在 ； 后重复）。
+        for s in re.split(r"(?<=[。！？；])", str(text or "")):
             s = s.strip()
             if len(s) >= 14:
                 owner.setdefault(s, set()).add(label)
@@ -1228,9 +1245,9 @@ def collect_g17_owners(D):
     for i, t in enumerate((D.get("ashare") or {}).get("themePicks") or []):   # R100z129：与 G16 扫描面保持一致
         if isinstance(t, dict):
             put(t.get("logic"), f"ashare.themePicks[{i}]")
-    put(D.get("openOutlook"), "openOutlook")
+    put(_content_of(D.get("openOutlook")), "openOutlook")
     if isinstance(ap, dict) and ap.get("openOutlook"):
-        put(ap.get("openOutlook"), "aiPrediction.openOutlook")
+        put(_content_of(ap.get("openOutlook")), "aiPrediction.openOutlook")
     for i, s in enumerate((D.get("ashare") or {}).get("lianban") or []):
         if isinstance(s, dict):
             put(s.get("story"), f"ashare.lianban[{i}]")
@@ -1626,6 +1643,84 @@ def g23_cross_stock_phrasing(r):
         r.ok("G23", f"连板/断板故事逐票措辞无跨票模板复用（扫描 {scanned} 句次）")
 
 
+def g24_unchecked_disclosure(r):
+    """G24 未核查维度不得写成「已核查无风险」（R100z160）。
+
+    事故（2026-10-21 08:30 实报）：报告里写「黑名单已核查无风险」，而当日
+    risk_blacklist.json 实测 nameSrc=local（push2 不可达 → ST/退市维度没判）、
+    unknown 188 条全是 np-anotice HTTP 567（减持/业绩预减维度整批没取到）——
+    三个维度根本没过数据，却给出了绝对结论。把「未知」当「安全」卖是这类闸门最坏的失效模式：
+    黑名单本来就拦不住坏票的「漏网」，再叠一句"已核查"就等于把兜底也拆了。
+
+    判据：risk_blacklist.json 的 verdict != full（或 dims 里存在 unchecked/partial）时，
+    data.js 任何渲染文本出现绝对化安全表述即 FAIL；verdict=full 时该表述合法，不拦。
+    文本模式取窄（只认明确的"已核查+无风险"组合），避免误伤「无风险偏好」「风险可控」这类正常措辞。
+    """
+    path = os.path.join(HERE, "risk_blacklist.json")
+    if not os.path.exists(path):
+        r.ok("G24", "未找到 risk_blacklist.json，跳过未核查披露复核（黑名单未跑，G-黑名单闸自行提示）")
+        return
+    try:
+        bl = json.load(open(path, encoding="utf-8"))
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G24", f"risk_blacklist.json 解析失败：{e}")
+        return
+    if not isinstance(bl, dict):
+        r.fail("G24", "risk_blacklist.json 结构异常（须为对象）")
+        return
+
+    dims = bl.get("dims") or {}
+    verdict = bl.get("verdict")
+    if verdict is None:          # 旧版 JSON 没有 verdict：按 unknown/failed 推断，不静默放行
+        verdict = "full" if not (bl.get("unknown") or bl.get("failed")) else "partial"
+    bad_dims = [k for k, v in dims.items()
+                if isinstance(v, dict) and v.get("status") not in (None, "ok")]
+    if verdict == "full" and not bad_dims:
+        r.ok("G24", f"黑名单 {bl.get('checked', 0)} 只各维度均已核查（verdict=full），"
+                    f"允许「已核查」表述")
+        return
+
+    ABS_PAT = re.compile(
+        r"已核查无风险|核查无风险|经核查无风险|核查后无风险|确认无风险"
+        r"|黑名单.{0,4}?(?:全部|均已|已)?(?:核查)?(?:通过|完毕|无风险)"
+        r"|硬风险(?:已)?全部排除")
+    NEG = re.compile(r"(未|没|尚未|无法|不能|不应|不等于|并非)")
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G24", f"data.js 解析失败：{e}")
+        return
+
+    hits = set()
+    for p, v in walk_paths(D):
+        # walk_paths 对每个标量会产出两次（父键一次、递归叶子一次），这里用集合去重
+        if not isinstance(v, str):
+            continue
+        for m in ABS_PAT.finditer(v):
+            pre = v[max(0, m.start() - 4):m.start()]
+            if NEG.search(pre):          # 「尚未通过」「不是因为…」属如实/否定表述
+                continue
+            if re.search(r"未|没|尚未", m.group(0)):   # 「黑名单未全部通过」是如实披露，不算违规
+                continue
+            hits.add(f"{p}：{m.group(0)}")
+    hits = sorted(hits)
+
+    un = bl.get("uncheckedDims") or []
+    detail = ("；".join(un[:4]) if un else
+              f"verdict={verdict}，未达 ok 的维度："
+              f"{'、'.join(bad_dims) or '见 unknown（旧版 JSON 无 dims 字段）'}")
+    if hits:
+        r.fail("G24", f"黑名单维度未核查（{detail}）却出现绝对安全表述"
+                      f"（{len(hits)} 处）：" + "；".join(hits[:4])
+                      + (" …" if len(hits) > 4 else "")
+                      + "——须改为原样点名未核查维度（R100z160）")
+    else:
+        # 不占 WARN 基线：维度缺失是数据源问题（每日都会发生），它本身不该成为常态告警；
+        # 真正要拦的是「把缺失说成安全」，故判 PASS 但把口径写进输出，方便汇报照抄。
+        r.ok("G24", f"黑名单维度未全核查（{detail}）——本次文本无绝对表述；"
+                    f"但汇报（微信/HANDOVER）必须原样点名未核查维度，严禁写「已核查无风险」")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -1664,6 +1759,7 @@ def main():
     g21_failpool_disjoint(r)
     g22_news_level_noise(r)
     g23_cross_stock_phrasing(r)
+    g24_unchecked_disclosure(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))

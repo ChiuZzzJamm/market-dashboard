@@ -802,8 +802,10 @@ def check_stock_pool(D):
     体检实测：断板池 42 确认 + 32 观察 = 74 只候选，48 只预测标的里只有 6 只（12.5%）来自断板池，
     剩下 42 只是 AI 看 note 手写——而硬风险黑名单拦掉的 4 只恰好全在这批手写票里。
     黑名单能拦坏票，拦不住「好票是瞎挑的」，所以这里把选择权机械化：
-        机械池里有货 → AI 选的必须是它的子集（候选不足 8 只时允许给少，但绝不许塞池外的票）
-        机械池里没货 → WARN（应补 SECTOR_ALIAS 或换板块），不硬拦
+        机械池里有货 → AI 选的必须是它的子集；池给不满 8 只时，缺口内的池外票算规则内补位
+                        （R100z160：allow = 8 - 候选数，超出 allow 才硬拦）
+        机械池里没货 → WARN（应补 SECTOR_ALIAS 或换板块），不硬拦；整轮全部没货时升为
+                        「机械池完全空转」醒目告警
     """
     root = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(root, 'stock_pool.json')
@@ -828,9 +830,24 @@ def check_stock_pool(D):
     except Exception:
         bsp = None
 
+    def _segs(x):
+        """板块名 → 段列表（按 ·、/，切）。用于段级精确匹配。"""
+        return [y.strip() for y in re.split(r'[·、/／,，\s]+', str(x or '')) if y.strip()]
+
     def find_pool(sector):
         if sector in by:
             return sector, by[sector]
+        # R100z160：段级精确匹配（字符 Jaccard 的结构性盲区）。
+        # 预测板块名常写「大类」而池键是「大类·细分」——'半导体设备' vs '半导体设备·国产替代'
+        # 去噪后 Jaccard 只有 0.375 < 0.5，'通信设备' vs '通信设备·光模块' 0.333 < 0.5，
+        # 于是两个板块明明有机械候选却被判「无该板块候选」→ 照抄约束对它们整轮失明。
+        # 只做**整段相等**（不做子串，避免 '消费电子' 被 '消费·食品加工' 的 '消费' 误牵）。
+        ss = _segs(sector)
+        if ss:
+            for k, v in by.items():
+                ks = _segs(k)
+                if ks and (ss[0] == ks[0] or ss[0] in ks or ks[0] in ss):
+                    return k, v
         if bsp:
             al = aliases_of.get(sector, [])
             best, bs = None, 0.0
@@ -861,6 +878,14 @@ def check_stock_pool(D):
                      f"下一交易日的 07:00/08:30/周日校验仍按同一规则硬拦（R100z17 时序闸）")
         return [], warns
 
+    # R100z160：修「照抄 vs 恰好 8 只」的结构性冲突（2026-10-21 08:30 实报，屡次触发）。
+    # build_stock_pool 的 FILL_CAP=2 + STRONG/WEAK 阈值卡，实测当日 6 个板块只给
+    # 1/1/0/6/0/2 只 → 「每板块必须凑 8 只」与「池外标的 ≥2 只即 FAIL」两条款互斥，
+    # 照抄必然踩线。现口径：缺口内的池外票＝规则内补位（allow = 8 - len(cand)），
+    # 只有超出缺口才算「另起炉灶」硬拦；同时把「机械池整轮空转」升为醒目告警。
+    PER_SECTOR = 8          # 与 build_stock_pool.py 的 quota_fill=8 同口径
+    idle, filled = [], 0     # idle=无候选板块；filled=真·有机械候选的板块数
+
     for s in ((D.get('aiPrediction') or {}).get('sectors') or []):
         if not isinstance(s, dict):
             continue
@@ -873,30 +898,44 @@ def check_stock_pool(D):
             if isinstance(st, dict) and st.get('code'):
                 chosen.add(str(st['code']).replace('.SH', '').replace('.SZ', '').zfill(6))
         if lst is None:
+            idle.append(sector)
             warns.append(f"aiPrediction.{sector}: 机械选股池无该板块候选"
                          f"{'（补 SECTOR_ALIAS 或换板块）' if bsp else ''}"
                          f"——有候选时必须照抄，不许自己点名")
             continue
         cand = set(str(x.get('code') or '').replace('.SH', '').replace('.SZ', '').zfill(6) for x in lst)
+        cand.discard('')
+        if not cand:
+            idle.append(sector)
+            warns.append(f"aiPrediction.{sector}: 机械池该板块候选为 0 只——AI 自选 {len(chosen)} 只，"
+                         f"须在 note 说明当日机械池为何无货（build_stock_pool 四池空产出）")
+            continue
+        filled += 1
         if not chosen:
             continue
         outside = chosen - cand
-        if outside and (len(chosen) - len(chosen & cand)) >= 2:
-            # 只差 1 只视为「机械候选里有但漏抄」，提示；差 ≥2 视为自己另起炉灶，硬拦
-            if len(outside) >= 2:
-                hards.append(f"aiPrediction.{sector}: 选了 {len(chosen)} 只，其中 {len(outside)} 只不在机械选股池"
-                             f"（{'、'.join(sorted(outside)[:5])}）——机械池里有货就必须照抄，"
-                             f"AI 只保留解释权、交出选择权（R100z15）")
-            else:
-                warns.append(f"aiPrediction.{sector}: 有 {len(outside)} 只漏抄机械选股池"
-                             f"（{'、'.join(sorted(outside))}），请核对")
-            continue
-        if chosen and not (chosen & cand):
-            hards.append(f"aiPrediction.{sector}: 8 只标的与机械选股池（{len(cand)} 只）零交集——"
+        allow = max(0, PER_SECTOR - len(cand))   # 机械池缺口的合法补位上限
+        if not (chosen & cand):
+            hards.append(f"aiPrediction.{sector}: {len(chosen)} 只标的与机械选股池（{len(cand)} 只）零交集——"
                          f"和候选池完全无关（R100z15）")
-        elif len(cand) and len(chosen) < len(cand):
+        elif len(outside) > allow:
+            hards.append(f"aiPrediction.{sector}: 选了 {len(chosen)} 只，其中 {len(outside)} 只不在机械选股池"
+                         f"（{'、'.join(sorted(outside)[:5])}）——机械池给 {len(cand)} 只，"
+                         f"缺口上限 {allow} 只，超出即另起炉灶；池里有货就必须照抄，"
+                         f"AI 只保留解释权、交出选择权（R100z15）")
+        elif outside:
+            warns.append(f"aiPrediction.{sector}: 池内 {len(chosen & cand)} 只 + 补位 {len(outside)} 只"
+                         f"（机械池仅 {len(cand)} 只 < {PER_SECTOR}，缺口上限 {allow}）——"
+                         f"属规则内补位，note 须标 [补位] 并写清理由（R100z160 豁免）")
+        elif len(cand) > len(chosen):
             warns.append(f"aiPrediction.{sector}: 机械候选 {len(cand)} 只，只采用了 {len(chosen)} 只"
                          f"（未抄满不算错，但须在 note 说明取舍理由）")
+
+    if idle and filled == 0:
+        warns.append(f"⚠️ 机械池本轮完全空转：{len(idle)} 个板块全部无候选"
+                     f"（{'、'.join(idle)}）——R100z15 的照抄约束整轮失效、全部标的均为 AI 自选；"
+                     f"须核查 build_stock_pool.py 的板块名匹配与当日四池产出"
+                     f"（stock_pool.json date={pool_date}）")
     return hards, warns
 
 

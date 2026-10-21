@@ -20,7 +20,8 @@
     stock_pool.json { ok, date, bySector:{板块:[8 只]}, coverage, meta, fail }
 
 校验器：validate_stocks.py 的 check_stock_pool —— 板块**有机械候选时 AI 必须照抄**，
-    照抄 ≠ 全等（候选不足 8 只时允许少于 8），但出现机械池以外的 code 一律 FAIL。
+    照抄 ≠ 全等（候选不足 8 只时允许少于 8），且**池给不满 8 只时，缺口内的池外票算规则内
+    补位**（R100z160：allow = 8 - 候选数，超出缺口的上限才 FAIL）。
 
 用法：
     python3 build_stock_pool.py                 # 干跑，打印每个板块的机械池与覆盖率

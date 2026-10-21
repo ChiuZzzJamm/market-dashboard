@@ -28,6 +28,8 @@ import argparse
 import json
 import os
 import sys
+import time
+import urllib.error
 import urllib.request
 from datetime import date, datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
@@ -87,7 +89,12 @@ EM_PUSH2 = 'https://push2.eastmoney.com/api/qt/ulist.np/get'
 EM_ANN = 'https://np-anotice-stock.eastmoney.com/api/security/ann'
 
 
-def http_json(url, referer=None, timeout=12, params=None):
+def http_json(url, referer=None, timeout=12, params=None, retries=1):
+    """取 JSON。retries=1 表示最多 2 次尝试——**只对网络类抖动重试**。
+
+    R100z160：此前无重试，一次并发抖动就把整维度判成「不可达」。但 np-anotice 的
+    HTTP 567 是站点/WAF 层拒绝，重试纯属浪费，故 HTTPError 直接抛出、不进重试循环。
+    """
     if params:
         sep = '&' if ('?' in url) else '?'
         url = url + sep + params
@@ -95,8 +102,26 @@ def http_json(url, referer=None, timeout=12, params=None):
     if referer:
         headers['Referer'] = referer
     req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read().decode('utf-8', 'ignore'))
+    last = None
+    for att in range(max(1, retries + 1)):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return json.loads(r.read().decode('utf-8', 'ignore'))
+        except urllib.error.HTTPError:
+            raise                      # 状态码类拒绝（如 567）重试无意义
+        except Exception as e:         # noqa: BLE001  超时/连接重置等
+            last = e
+            if att < retries:
+                time.sleep(0.4 * (att + 1))
+    raise last
+
+
+# R100z160：公告源熔断器。2026-10-21 实测 np-anotice 对全部 343 只连续返回 567，
+# 旧逻辑会打 343 次请求并在 unknown 里堆 188 条近似重复行（报告里只看到「大面积 567」，
+# 既看不出「哪些维度没核查」，又白等几十秒）。连续失败达阈值即整体熔断，
+# 把「这一维度整体未核查」变成一条可机读结论。
+ANN_BREAK = {'run': 0, 'open': False, 'msg': '', 'limit': 8, 'skipped': 0}
+ANN_BREAK_TAG = '__ANN_BREAKER__'
 
 
 def to_secid(code):
@@ -206,13 +231,24 @@ def fetch_ann(code, days=30):
     """公告源：一次取最近 50 条，按关键词拆成 减持 / 业绩预减 两类。源不可达返回 None。
 
     ★np-anotice 在部分网络下会被拦（沙箱实测 http 567），不可达时进 unknown 明确写
-    「未下结论」——绝不因为取不到就当这只票没风险。
+    「未下结论」——绝不因为取不到就当这只票没风险。连续失败满 8 只即整体熔断（ANN_BREAK），
+    余下标的直接返回熔断标记，不再白打请求。
     """
+    if ANN_BREAK['open']:
+        ANN_BREAK['skipped'] += 1
+        return None, ANN_BREAK_TAG
     try:
-        js = http_json(EM_ANN, referer='https://data.eastmoney.com/', params=(
+        js = http_json(EM_ANN, referer='https://data.eastmoney.com/', retries=1, params=(
             'sr=-1&page_size=50&page_index=1&ann_type=A&client_source=web&stock_list=' + str(code)))
     except Exception as e:
-        return None, repr(e)[:100]
+        err = repr(e)[:100]
+        ANN_BREAK['run'] += 1
+        if not ANN_BREAK['msg']:
+            ANN_BREAK['msg'] = err
+        if ANN_BREAK['run'] >= ANN_BREAK['limit']:
+            ANN_BREAK['open'] = True
+        return None, err
+    ANN_BREAK['run'] = 0            # 有成功即清零（偶发抖动不该熔断整轮）
     rows = (js.get('data') or {}).get('list') or []
     if not isinstance(rows, list) or not rows:
         return [], None
@@ -304,6 +340,7 @@ def main():
         names.setdefault(c, local_names.get(c, ''))
 
     blacklist, unknown, failed = {}, [], []
+    stat = {'ann_ok': 0, 'ann_fail': 0, 'lift_fail': 0, 'pledge_fail': 0}
 
     def one(code):
         lift, e1 = fetch_lift(code, args.lift_lo, args.lift_hi, today)
@@ -315,16 +352,22 @@ def main():
         for code, lift, e1, ple, e2, ann, e3 in ex.map(one, codes):
             reasons, watch = [], []
             if e1:
+                stat['lift_fail'] += 1
                 failed.append('%s 解禁源：%s' % (code, e1))
             else:
                 reasons += (lift or [])
             if e2:
+                stat['pledge_fail'] += 1
                 failed.append('%s 质押源：%s' % (code, e2))
             else:
                 watch += (ple or [])
-            if e3:
+            if e3 == ANN_BREAK_TAG:
+                stat['ann_fail'] += 1        # 熔断后不再逐只堆 unknown，出口统一成一条
+            elif e3:
+                stat['ann_fail'] += 1
                 unknown.append('%s 公告源不可达（np-anotice %s），减持/业绩预减未下结论' % (code, e3))
             else:
+                stat['ann_ok'] += 1
                 reasons += (ann or [])
             nm = names.get(code, '')
             if nm and ('ST' in nm.upper() or '退' in nm):
@@ -339,6 +382,40 @@ def main():
         unknown.append('行情名源（东财 push2）不可达：ST/退市判定已回退 data.js 名称'
                        '（AI 写回的可能是更名前旧名，会漏判 ST），该维度本次不判安全')
 
+    if ANN_BREAK['open']:
+        unknown.append('公告源（np-anotice）本轮熔断：前 %d 只连续失败（%s），'
+                       '剩余 %d 只未请求——减持/业绩预减维度**整体未核查**'
+                       % (ANN_BREAK['run'], ANN_BREAK['msg'], ANN_BREAK['skipped']))
+
+    # ---------------- 维度核查台账（R100z160） ----------------
+    # 用户 2026-10-21 实报：push2 与 np-anotice 同时不可达，报告却写成「已核查无风险」。
+    # 根因是脚本只给 unknown 明细、不给「哪些维度整体没核查」的结论层，报告层就自由发挥了。
+    # 现在把每个维度显式标 ok / partial / unchecked，并给总口径 verdict，
+    # 汇报必须照抄 uncheckedDims 原话，禁止绝对化表述（audit G24 会按 data.js 文本拦）。
+    n_all = len(codes)
+    ann_ok = stat['ann_ok']
+    ann_cov = 'ok' if ann_ok >= n_all else ('partial' if ann_ok > 0 else 'unchecked')
+    lift_ok = n_all - stat['lift_fail']
+    lift_cov = 'ok' if lift_ok >= n_all else ('partial' if lift_ok > 0 else 'unchecked')
+    ple_ok = n_all - stat['pledge_fail']
+    ple_cov = 'ok' if ple_ok >= n_all else ('partial' if ple_ok > 0 else 'unchecked')
+    dims = {
+        'st': {'status': 'ok' if name_src == 'em' else 'unchecked',
+               'cover': '行情名源（东财 push2）%s' % ('可用' if name_src == 'em' else '不可达')},
+        'cut': {'status': ann_cov, 'cover': '公告源 %d/%d 只取到' % (ann_ok, n_all)},
+        'loss': {'status': ann_cov, 'cover': '公告源 %d/%d 只取到' % (ann_ok, n_all)},
+        'lift': {'status': lift_cov, 'cover': '解禁源 %d/%d 只取到' % (lift_ok, n_all)},
+        'pledge': {'status': ple_cov, 'cover': '质押源 %d/%d 只取到（仅供参考）' % (ple_ok, n_all)},
+    }
+    core = [dims[k]['status'] for k in ('st', 'cut', 'loss', 'lift')]
+    verdict = ('full' if all(x == 'ok' for x in core)
+               else ('none' if all(x == 'unchecked' for x in core) else 'partial'))
+    label = {'st': 'ST/退市（行情名源）', 'cut': '减持公告', 'loss': '业绩预减/预亏',
+             'lift': '限售解禁', 'pledge': '股东质押（参考）'}
+    unchecked = ['%s——%s' % (label[k], dims[k]['cover'])
+                 for k in ('st', 'cut', 'loss', 'lift', 'pledge')
+                 if dims[k]['status'] != 'ok']
+
     res = {
         'ok': True,
         'nameSrc': name_src,
@@ -347,12 +424,15 @@ def main():
         'liftWindow': [args.lift_lo, args.lift_hi],
         'watchPledgeWithin': 365,
         'cutDays': args.cut_days,
+        'dims': dims,
+        'verdict': verdict,
+        'uncheckedDims': unchecked,
         'blacklist': blacklist,
         'unknown': sorted(set(unknown)),
         'failed': sorted(set(failed)),
         'note': '硬风险黑名单（R100z76-④ severity 分级）：red=硬剔(ST/退市·业绩预减/预亏·减持实施中)、'
                  'orange=警示可保留(减持预披露/计划·限售解禁窗口)、yellow=参考(质押≥%.0f%%)；'
-                 'ST/退市、T+%d~T+%d 解禁、减持公告 %d 日内；源不可达不判安全' % (
+                 'ST/退市、T+%d~T+%d 解禁、减持公告 %d 日内；源不可达不判安全（verdict=full 才算各维度全核查）' % (
             args.pledge, args.lift_lo, args.lift_hi, args.cut_days),
     }
 
@@ -363,17 +443,32 @@ def main():
     if args.json:
         print(json.dumps(res, ensure_ascii=False))
     else:
-        print('标的 %d 只 / 硬风险命中 %d 只' % (len(codes), len(blacklist)))
+        print('标的 %d 只 / 硬风险命中 %d 只 ｜ 维度核查 verdict=%s'
+              % (len(codes), len(blacklist), res['verdict']))
+        print('[维度] ' + '｜'.join('%s=%s' % (k, v['status']) for k, v in res['dims'].items()))
         for c, v in sorted(blacklist.items()):
             sev = v.get('severity', 'red')
             prog = (' · ' + '、'.join(v.get('progress') or [])) if v.get('progress') else ''
             print('  [%s] %s %s → %s%s' % (sev.upper(), c, v['name'], '；'.join(v['reasons']), prog))
+        if res['verdict'] != 'full':
+            print('=' * 72)
+            print('[!] 本次未真正核查的维度（汇报必须原样点名，'
+                  '严禁写「已核查无风险」「黑名单全部通过」这类绝对表述）：')
+            for u in res['uncheckedDims']:
+                print('    - ' + u)
+            print('    verdict=%s —— 黑名单结论只覆盖已核查维度，其余维度「未核查」≠「无风险」'
+                  % res['verdict'])
+            print('=' * 72)
         if res['unknown']:
             print('[UNKNOWN] ' + '；'.join(res['unknown']))
         if res['failed']:
             print('[FAILED] ' + '；'.join(res['failed']))
         if not blacklist:
-            print('  本次无确定性硬风险命中（但见上方 UNKNOWN：源不可达不等于安全）')
+            if res['verdict'] == 'full':
+                print('  各维度均已核查，本次无确定性硬风险命中')
+            else:
+                print('  本次无命中，但 verdict=%s：未核查维度不得当作「无风险」，须按上方清单原样汇报'
+                      % res['verdict'])
     return 0
 
 
