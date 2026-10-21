@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610212144"></script>
+<script src="data.js?v=202610212238"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -2113,18 +2113,24 @@ function riskBadge(code0, poolMode) {
   // 缺字段默认 red（与校验器默认一致，不静默放行）。
   var sev = hit.severity || 'red';
   var rs = (hit.reasons || []).join('；');
-  var cls, tip;
+  var cls, tip, sym;
+  // R100z170（用户 2026-10-21 问「徽章颜色怎么不一样」）：原先三档**只有背景色不同、
+  // 符号一律 ⚠️**，颜色成了唯一编码通道 —— 色弱/夜间模式下看起来就像随机变色。
+  // 现改为「颜色 + 符号」双通道：⚠️硬风险 / ！警示 / ？参考，并在断板页口径块给出图例。
   if (sev === 'red') {
     cls = ' sev-red';
+    sym = '⚠️';
     tip = (poolMode ? '硬风险提示（技术观察池仅打标不剔除）：' : '硬风险（不进 8 只池）：') + rs;
   } else if (sev === 'orange') {
     cls = ' sev-orange';
+    sym = '！';
     tip = '警示（可保留但需重点关注）：' + rs;
   } else {  // yellow / none
     cls = ' sev-yellow';
+    sym = '？';
     tip = '风险参考（如股东质押）：' + rs;
   }
-  return '<span class="risk-dot' + cls + '" title="' + escAttr(tip) + '">⚠️</span>';
+  return '<span class="risk-dot' + cls + '" title="' + escAttr(tip) + '">' + sym + '</span>';
 }
 
 /* R100z87（用户 2026-10-08）：标的弹窗内的**可见**风险提示徽章——原 ⚠️ 角标信息全在 title 悬停里，
@@ -3860,7 +3866,9 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
   var shrink = mS ? mS[1] + ' 日' : (/已缩量/.test(form) ? '已缩量' : (/待缩量/.test(form) ? '待缩量' : '—'));
   var prob = (e.probability !== null && e.probability !== undefined) ? e.probability : null;
   var sCls = e.sentiment === 'bull' ? 'up' : (e.sentiment === 'bear' ? 'down' : '');
-  var bCls = e.boardPctToday > 0 ? 'up' : (e.boardPctToday < 0 ? 'down' : '');
+  var bpNow = boardPctOf(e); // R100z170：三级取值，取不到才是 null
+  var bpZt = boardPctZtOf(e);
+  var bCls = bpNow > 0 ? 'up' : (bpNow < 0 ? 'down' : '');
   var foot = '<span class="xt">' + esc(form.replace(/^.*?断板/, '断板').replace(/·/, '：')) + '</span>';
   // R100z44：断板模块数据日取 generatedAt（该模块无 tradeDate 字段）
   var modD = String(((window.DASHBOARD_DATA || {}).duanban || {}).generatedAt || '').slice(0, 10);
@@ -3901,7 +3909,7 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
   } else if (star) {
     // 断板反包（src=pool 或未标记）：维持 R100z104 口径
     cells = [
-      tcCell('板块涨幅', e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday), bCls),
+      tcCell('板块涨幅', bpNow == null ? '—' : fmtPct(bpNow), bCls),
       tcCell('上涨概率', prob === null ? '—' : prob + '%', sCls),
       tcCell('建议买入价', (function () {
         var ma5 = stkMa5Of(e.code, e.kline);
@@ -3915,7 +3923,7 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
     cells = [
       tcCell('反包概率', prob === null ? '—' : prob + '%', sCls),
       tcCell('缩量天数', shrink, ''),
-      tcCell('板块涨幅', e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday), bCls),
+      tcCell('板块涨幅', bpNow == null ? '—' : fmtPct(bpNow), bCls),
       tcStopCell(e.code)
     ];
   }
@@ -3927,8 +3935,8 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
     foot: foot,
     attrs: ' data-k="' + escAttr(key) + '"',
     title: e.name + ' ' + e.code + '（' + (e.sector || '') + '）\n' + (done ? '确认池 · 全流程达标' : '观察池 · ' + e.stage) +
-      '\n今日：' + fmtPct(e.pct) + ' · 板块今日：' + (e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday)) +
-      '\n涨停日板块：' + (e.boardPctZt == null ? '—' : fmtPct(e.boardPctZt)) +
+      '\n今日：' + fmtPct(e.pct) + ' · 板块今日：' + (bpNow == null ? '—' : fmtPct(bpNow)) +
+      '\n涨停日板块：' + (bpZt == null ? '—' : fmtPct(bpZt)) +
       (star ? '\n' + ({
         hz: '建议买入区＝PRZ 潜在反转区（回踩入区企稳介入）· 止损＝D 点结构失效位 · T1＝一级目标位',
         acc: '吸筹评分＝六项特征加权（命中越多分越高）· 止损＝全站统一纪律位（最近收盘 −2.5%，非形态位）',
@@ -4006,6 +4014,10 @@ function renderDuanban() {
     '<div><b>标签与概率</b>：按当日要闻/AI 预测自动标注利好（红）/利空（绿）/中性（灰）；上涨概率＝脚本确定性基线＋AI 复核校准（16:00 数据步生成，次日 07:00 复核）</div>' +
     '<div class="lg-hr"></div>' +
     '<div><b>失效与归档</b>：跌破 T 日最低点或 MA5（破位）、或 5 个交易日内没走完反包（超期）→ 移入失败池，5 个交易日后自动清理</div>' +
+    // R100z170：风险徽章图例（用户 2026-10-21 问「徽章颜色怎么不一样」——三档原先只有颜色差异，无从得知含义）
+    '<div><b>风险徽章三档</b>：<span class="risk-dot sev-red" style="margin:0 2px;">⚠️</span>硬风险（减持实施中/ST/预亏/立案等，须换股、不进 8 只池）　' +
+    '<span class="risk-dot sev-orange" style="margin:0 2px;">！</span>警示（减持预披露等，可保留但重点关注）　' +
+    '<span class="risk-dot sev-yellow" style="margin:0 2px;">？</span>参考（股东质押等，仅提示）。悬停可见具体事由与日期</div>' +
     '<div class="lg-tip">下一步：缩量不破位只算「跌不动」，反包日放量收复断板日最高价 / 站回 MA5 才算真确认；破位无条件走，不摊平不扛单。此页与「谐波 / 九门 / 吸筹」同为技术面观察器，仓位按中等及以下确信度给。</div>' +
     '</div></details>';
   var conf = (db && db.confirmed) || [], watch = (db && db.watching) || [];
@@ -4174,19 +4186,43 @@ function failPoolLatest(failPool) {
    与断板卡（反包概率/缩量天数/板块涨幅/止损）视觉对齐；「反包概率」格固定写「失效」
    ——失效标的已无反包概率可言，写「失效」比写「—」更能一眼区分归档标的。
    谐波失效池字段口径不同（无 form/缩量语义），仍走下方紧凑 chip。 */
-function failBoardPct(e) {
-  if (e && typeof e.boardPctToday === 'number') return e.boardPctToday; // 生成侧字段优先
+/* R100z170：板块涨幅的**三级取值**统一入口——生成侧字段 → 断板池同码条目 → allBoards 同名板块。
+   用户 2026-10-21 反馈「部分标的获取不到板块」：根因是生成侧字段缺失时前端只有一个「—」出口，
+   而精选/失效池条目的 sector 未必带 boardPctToday。三级回落让「同一个板块」在任何池子里
+   都能取到同一个数；三级全空才显示「—」，绝不编数字。 */
+function dbPoolItemOf(code) {
+  var db = (window.DASHBOARD_DATA || {}).duanban || {};
+  var arr = [].concat(db.confirmed || [], db.watching || []);
+  for (var i = 0; i < arr.length; i++) {
+    if (arr[i] && String(arr[i].code) === String(code)) return arr[i];
+  }
+  return null;
+}
+function boardPctOf(e) {
+  if (e && typeof e.boardPctToday === 'number') return e.boardPctToday; // ① 生成侧字段优先
+  var it = dbPoolItemOf(e && e.code);                                  // ② 断板池同码条目
+  if (it && typeof it.boardPctToday === 'number') return it.boardPctToday;
   var D = window.DASHBOARD_DATA || {};
   var sec = (e && e.sector) || '';
   if (!sec) return null;
-  // ashare.allBoards 是 90 个同花顺行业全量（带 pct），比 sectorsUp/Down 的涨跌 TOP5 覆盖得广；
-  // 其 endsWith 兜底 sectorsUp/Down（同名命中但只 10 个板块）。取不到显示「—」，不编数字。
+  // ③ ashare.allBoards 是 90 个同花顺行业全量（带 pct），比 sectorsUp/Down 的涨跌 TOP5 覆盖得广；
+  // 其 endsWith 兜底 sectorsUp/Down（同名命中但只 10 个板块）。取不到返回 null，不编数字。
   var arr = (D.ashare || {}).allBoards || [];
   if (!arr.length) arr = [].concat((D.ashare || {}).sectorsUp || [], (D.ashare || {}).sectorsDown || []);
   for (var i = 0; i < arr.length; i++) {
     if (arr[i] && arr[i].name === sec && typeof arr[i].pct === 'number') return arr[i].pct;
   }
   return null;
+}
+/* 涨停日板块涨幅同理：生成侧字段 → 断板池同码条目（精选条目不写这个字段）。 */
+function boardPctZtOf(e) {
+  if (e && typeof e.boardPctZt === 'number') return e.boardPctZt;
+  var it = dbPoolItemOf(e && e.code);
+  if (it && typeof it.boardPctZt === 'number') return it.boardPctZt;
+  return null;
+}
+function failBoardPct(e) {
+  return boardPctOf(e); // 失效池与确认/观察池同源，不再各自实现一套
 }
 function failTcHtml(e, i, latestD) {
   var form = String(e.form || '');
@@ -4661,10 +4697,13 @@ function openDbModal(key) {
   var probCls = e.sentiment === 'bear' ? 'down' : (e.sentiment === 'neutral' ? '' : 'up');
   // R100z4t：池内标的带涨停日/板块涨幅；精选技术池标的无这些字段（原样渲染两行「—」像坏了）——
   // 无 ztDate 且无 pct 时隐藏这两行，改显示 note（9:45 写入的竞价/现涨观察）。
+  // R100z170：两个板块涨幅改走 boardPctOf/boardPctZtOf 三级取值——精选里的断板来源条目
+  // 由「断板池同码条目」补上，不再因 picks 没搬字段而整片「—」。
+  var mBpNow = boardPctOf(e), mBpZt = boardPctZtOf(e);
   document.getElementById('db-modal-meta').innerHTML =
     (e.ztDate || e.pct != null
       ? '<div><span class="lab">涨停日：</span>' + esc(e.ztDate || '') + '　<span class="lab">今日：</span><b class="' + (e.pct >= 0 ? 'up' : 'down') + '">' + fmtPct(e.pct) + '</b></div>' +
-        '<div><span class="lab">涨停日板块涨幅：</span><b class="' + (e.boardPctZt >= 0 ? 'up' : 'down') + '">' + (e.boardPctZt == null ? '—' : fmtPct(e.boardPctZt)) + '</b>　<span class="lab">今日板块涨幅：</span><b class="' + (e.boardPctToday >= 0 ? 'up' : 'down') + '">' + (e.boardPctToday == null ? '—' : fmtPct(e.boardPctToday)) + '</b></div>'
+        '<div><span class="lab">涨停日板块涨幅：</span><b class="' + (mBpZt >= 0 ? 'up' : 'down') + '">' + (mBpZt == null ? '—' : fmtPct(mBpZt)) + '</b>　<span class="lab">今日板块涨幅：</span><b class="' + (mBpNow >= 0 ? 'up' : 'down') + '">' + (mBpNow == null ? '—' : fmtPct(mBpNow)) + '</b></div>'
       : '') +
     '<div><span class="lab">形态：</span>' + esc((e.form || '').replace(/·/, '：')) + '</div>' + // R100z4e：仅首个 ·→：
     (e.note ? '<div><span class="lab">盘面观察：</span>' + esc(e.note) + '</div>' : '') +
@@ -4777,8 +4816,24 @@ function openDbModal(key) {
 }
 function closeDbModal() { DB_CURR = null; DB_NAV = null; document.getElementById('db-modal').classList.remove('open'); }
 function dbStep(delta) {
-  var ord = DB_NAV || DB_ORDER; // R100z84：失效池弹窗在失效组内循环，其余走确认/观察/精选主序列
-  if (!ord.length) return;
+  // R100z170（用户 2026-10-21 反馈）：左右箭头原先一律走 DB_ORDER（确认/观察/精选合并主序列），
+  // 于是「开盘精选」弹窗能翻到断板反包、「断板反包」弹窗能翻到开盘精选 —— 两个区块互相串票。
+  // 现按 key 前缀分组，只在**同一个区块**内循环：
+  //   s| = 🌟开盘精选（含技术池并入项）  c| / w| = 断板反包确认池+观察池（同区合并）  f| = 失效归档池（DB_NAV 自带顺序）
+  var ord;
+  if (DB_NAV) {
+    ord = DB_NAV;
+  } else {
+    var pre = String(DB_CURR || '').charAt(0);
+    if (pre === 's') {
+      ord = DB_ORDER.filter(function (k) { return k.charAt(0) === 's'; });
+    } else if (pre === 'c' || pre === 'w') {
+      ord = DB_ORDER.filter(function (k) { var c = k.charAt(0); return c === 'c' || c === 'w'; });
+    } else {
+      ord = DB_ORDER;
+    }
+  }
+  if (!ord || !ord.length) return;
   var i = ord.indexOf(DB_CURR);
   if (i < 0) i = 0; else i = (i + delta + ord.length) % ord.length;
   openDbModal(ord[i]);

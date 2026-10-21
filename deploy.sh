@@ -152,6 +152,20 @@ if [ "${SKIP_AUDIT:-0}" != "1" ]; then
         exit 1
     fi
     echo "✅ 审计闸门通过。"
+    # 自动化体检（R100z169 新增，**非阻断**）：查的是 7 条自动化 prompt / 排程 / 死链 / 基线漂移，
+    # 不是 data.js 内容。故意加 `|| true`——它是元层面体检，若哪天它自己判错，
+    # 不应该把当天的行情部署一起拖死（那会变成新的单点故障）。
+    # 需要它当闸门时手工跑：python3 check_automations.py；退出码 1=有 FAIL。
+    if [ -f check_automations.py ]; then
+        echo "🩺 自动化体检（check_automations.py，不阻断部署）..."
+        "$PY" check_automations.py 2>&1 | tail -3 || true
+    fi
+    # 记忆体检（M0–M8，同样非阻断）：查 MEMORY.md 体积/路由可达/假未来陈述/归档索引对账。
+    # 记忆坏了不会报错，只会安静返回错答案——这类问题只能靠固定判据定期扫。
+    if [ -f check_memory.py ]; then
+        echo "🧠 记忆体检（check_memory.py，不阻断部署）..."
+        "$PY" check_memory.py --quiet 2>&1 | tail -6 || true
+    fi
 else
     echo "⚠️ SKIP_AUDIT=1 —— 已跳过审计闸门（非紧急请勿使用，失败会被追责）。"
 fi

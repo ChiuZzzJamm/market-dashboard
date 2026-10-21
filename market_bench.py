@@ -184,6 +184,7 @@ def backfill_history(limit=0):
     _tmp = OUT + '.tmp'
     with open(_tmp, 'w', encoding='utf-8') as f:
         json.dump(cur, f, ensure_ascii=False, indent=1)
+    os.replace(_tmp, OUT)          # ← 少了这一行，回填永远不落地（R100z170 修）
     print('[OK] 历史行业基准已回填 %d 天 → market_bench.json[history]' % len(got))
     for k in sorted(got):
         print('      %s  行业中位 %+.2f%%  (%d 个行业)' % (k, got[k]['benchSectorPct'], got[k]['sectorN']))
@@ -248,9 +249,13 @@ def main():
         if hist:
             res['history'] = {k: hist[k] for k in sorted(hist)}
         # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace
-    _tmp = OUT + '.tmp'
-    with open(_tmp, 'w', encoding='utf-8') as f:
+        # ★R100z170 修：原代码这两行缩进掉到 if 之外（不带 --write 也会写盘），
+        #   且**漏了 os.replace** —— 每次都只写 market_bench.json.tmp，正式文件永不更新。
+        #   后果：10-21 起市场基准/行业基准全部冻结在 10-20，组合净值曲线当天行业基准断线。
+        _tmp = OUT + '.tmp'
+        with open(_tmp, 'w', encoding='utf-8') as f:
             json.dump(res, f, ensure_ascii=False, indent=1)
+        os.replace(_tmp, OUT)
 
     if a.json:
         print(json.dumps(res, ensure_ascii=False))

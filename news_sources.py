@@ -13,6 +13,7 @@
   4) 数据服务商 + 券商研报/投行观点
 """
 
+import argparse
 import re
 
 # (关键词, 类别) —— 命中任一关键词即视为白名单内来源；判定用「包含」而非全等，
@@ -99,7 +100,52 @@ def check_source(s):
     return None, None
 
 
+CAT_LABEL = {
+    "official": "① 监管机构",
+    "exchange": "① 交易所/登记结算",
+    "media": "② 国内主流财经媒体",
+    "gov": "③ 部委 / 央行 / 宏观部门",
+    "data": "④ 数据服务商（含一手公告）",
+    "ib": "⑤ 券商研报 / 投行观点",
+    "intl": "⑥ 国际通讯社 / 外媒",
+}
+
+
+def render_list():
+    """把白名单按类别打印出来 —— 供 prompt 指路 `python3 news_sources.py --list`。
+
+    R100z169：prompt 里原先逐份手抄 ①②③④⑤ 五行清单（7 份 × 约 370 字），
+    与本文件的机器口径长期双轨。改为「只指路」，清单只在这里维护一份。
+    """
+    out, cur = [], None
+    for kw, cat in SOURCES:
+        if cat != cur:
+            cur = cat
+            out.append('')
+            out.append('%s：' % CAT_LABEL.get(cat, cat))
+        out.append('  - ' + kw)
+    out.append('')
+    out.append('禁用写法（必须改用全称）：' + ' / '.join(FORBIDDEN))
+    return '\n'.join(out).lstrip('\n')
+
+
 if __name__ == "__main__":
+    ap_ = argparse.ArgumentParser(description='新闻来源白名单（唯一事实源）')
+    ap_.add_argument('--list', action='store_true', help='打印分类白名单')
+    ap_.add_argument('--check', metavar='SOURCE', default=None,
+                     help='校验某个 source 字符串是否合规')
+    a = ap_.parse_args()
+    if a.check is not None:
+        why, hint = check_source(a.check)
+        if why:
+            print('✗ %s —— %s' % (why, hint))
+            raise SystemExit(1)
+        print('✓ 白名单内（类别：%s）' % source_allowed(a.check)[1])
+        raise SystemExit(0)
+    if a.list:
+        print(render_list())
+        raise SystemExit(0)
+
     self_test = [
         ("证监会", True), ("中国证监会", True), ("上交所", True), ("深圳证券交易所", True),
         ("财联社", True), ("华尔街见闻", True), ("证券时报", True), ("第一财经", True),

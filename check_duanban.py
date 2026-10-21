@@ -358,7 +358,9 @@ def fetch_ths_board_map():
 
 def fetch_ths_board_pct_on(ths_code, date_iso):
     """同花顺行业板块在 date_iso(涨停日) 当日涨幅%。失败返回 None。"""
-    if not ths_code:
+    if not ths_code or not date_iso:
+        # date_iso 为空（ztDate 缺失）时必须早退：否则下方 .replace 抛
+        # AttributeError 把整条订正链带崩（R100z170 实测踩过）
         return None
     cache_key = f"{ths_code}_{date_iso}"
     if cache_key in _THS_KLINE_CACHE:
@@ -451,7 +453,7 @@ def match_ths_industry(hybk, ths_names):
         "出版": "文化传媒", "广告营销": "文化传媒",
         "证券Ⅱ": "证券", "装修装饰Ⅱ": "建筑装饰", "其他电子Ⅱ": "其他电子",
         "军工电子Ⅱ": "军工电子", "商用车": "汽车整车", "休闲食品": "食品加工制造",
-        "旅游及景区": "旅游及酒店", "风电设备": "光伏设备", "电机Ⅱ": "通用设备",
+        "旅游及景区": "旅游及酒店", "风电设备": "光伏设备", "电机Ⅱ": "电机",
         "装修建材": "建筑材料", "塑料": "塑料制品", "家居用品": "家居用品",
         "化学制药": "化学制药", "汽车零部件": "汽车零部件", "化学制品": "化学制品",
         "通用设备": "通用设备", "医疗服务": "医疗服务", "计算机设备": "计算机设备",
@@ -473,6 +475,16 @@ def match_ths_industry(hybk, ths_names):
         "其他电源设备": "其他电源设备", "化学纤维": "化学纤维",
         "白色家电": "白色家电", "建筑材料": "建筑材料", "军工电子": "军工电子",
         "旅游及酒店": "旅游及酒店", "饮料制造": "饮料制造",
+        # R100z170：申万二级 → 同花顺一级的语义归并（原来缺这 5 条，整只标的连板块涨幅都取不到）。
+        # 依据申万行业分类：机场归「航空机场」、按摩椅/清洁电器归「小家电」、
+        # 专业工程与工程咨询服务业归「建筑装饰」、家电零部件随整机归「小家电」。
+        "航空机场": "机场航运", "其他家电": "小家电", "专业工程": "建筑装饰",
+        "工程咨询": "建筑装饰", "家电零部": "小家电",
+        # R100z170 补：申万国防军工二级「地面兵装」→ 同花顺「军工装备」；
+        # 申万传媒二级「数字媒体」→ 同花顺「文化传媒」（同花顺 90 一级无对应细分，
+        # 归入其上位大类）。缺这两条时二者只能退回东财板块口径，且东财板块日K
+        # 接口已失效（实测 BK1382/BK1221/BK1471 全返回 None），涨停日板块涨幅长期空。
+        "地面兵装": "军工装备", "数字媒体": "文化传媒",
     }
     if clean in SPECIAL and SPECIAL[clean] in ths_names:
         return SPECIAL[clean]
@@ -1411,9 +1423,16 @@ def build_module(pairs, D):
                         / float(kl[-2].get("close")) * 100, 2)
         # R98: 优先同花顺行业口径
         ths_name = match_ths_industry(p["hybk"], ths_names)
-        # R100z4k：截断护栏——匹配名是东财 hybk 的严格前缀（如「计算机设」⊂「计算机设备」）
-        # 说明同花顺匹配可疑，回退用完整东财行业名，杜绝池内 sector 存截断值。
-        if ths_name and p["hybk"] and p["hybk"].startswith(ths_name) and ths_name != p["hybk"]:
+        # R100z4k：截断护栏——**东财 hybk 被截断**（如「计算机设」⊂ 同花顺「计算机设备」）
+        # 说明匹配是拿残缺名硬套，回退用完整东财行业名，杜绝池内 sector 存截断值。
+        #
+        # ★R100z170 修：原判据写反了方向（`hybk.startswith(ths_name)`），后果是
+        #   ① 真正要拦的截断名（hybk 比 ths_name 短）完全拦不住 → R100z4k 等于没修；
+        #   ② 反过来把**带申万二级后缀**的正当匹配全部误杀：
+        #      电机Ⅱ / IT服务Ⅱ / 贸易Ⅱ / 白酒Ⅱ / 燃气Ⅱ 全部 'XⅡ'.startswith('X') → 置 None，
+        #      退回东财口径后一批标的连板块涨幅都取不到（用户 2026-10-21 截图「板块涨幅 —」）。
+        #   正确方向：只有 ths_name 是 hybk 的**延长**才算截断。
+        if ths_name and p["hybk"] and ths_name.startswith(p["hybk"]) and ths_name != p["hybk"]:
             ths_name = None
         if ths_name:
             bpt = round(ths_map[ths_name]["pct"], 2)

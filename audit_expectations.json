@@ -1200,7 +1200,7 @@
     "build_stock_pool.py --json",
     "track_calibration.py --json",
     "embed_klines.py",
-    "ashare 全部字段不变",
+    "全部字段未被改动",
     "run_push.sh weekend",
     "price-in→已计价",
     "R100z160"

@@ -233,6 +233,11 @@ def build_star(D, base=None):
             continue
     sectors = [s for s in sectors if s["name"]]
     sectors.sort(key=lambda s: -s["pct"])
+    # R100z170：技术池标的（谐波/九门/吸筹）身上只有 sector 名、没有板块涨幅字段，
+    # 结果「开盘精选」里来自技术池的条目板块涨幅整片「—」。这里按同花顺一级行业名
+    # 精确命中一次补上；名字不属同花顺一级（例如主题名「创新药·CXO」）就留空，
+    # 由前端 boardPctOf 三级回落兜底，绝不硬套。
+    sec_map = {s["name"]: s for s in sectors}
     try:
         fund_in, fund_out = uas.fetch_ths_funds()
     except Exception:
@@ -298,7 +303,13 @@ def build_star(D, base=None):
         q = quotes.get(str(e.get("code"))) or {}
         cand.append({"code": str(e.get("code")), "name": e.get("name"),
                      "sector": sec, "sentiment": sent, "probability": round(p, 1),
-                     "pctLive": q.get("pct"), "openPct": q.get("openPct")})
+                     "pctLive": q.get("pct"), "openPct": q.get("openPct"),
+                     # R100z170：双池标的的板块涨幅必须跟着搬过去。此前只搬 sector，
+                     # 导致 picks 里 boardPctToday/boardPctZt 全是 None，前端整齐显示「—」
+                     # （用户 2026-10-21 截图：中京电子/澳弘电子「板块涨幅 —」而池里同票有值）。
+                     "boardPctToday": e.get("boardPctToday"),
+                     "boardPctZt": e.get("boardPctZt"),
+                     "bkCode": e.get("bkCode")})
 
     cand.sort(key=lambda x: (-x["probability"], sent_rank.get(x["sentiment"], 1)))
     picks = []
@@ -311,7 +322,10 @@ def build_star(D, base=None):
             note += f"·现涨{c['pctLive']:+.1f}%"
         picks.append({"code": c["code"], "name": c["name"], "sector": c["sector"],
                       "sentiment": c["sentiment"], "probability": c["probability"],
-                      "note": note, "src": "pool"})
+                      "note": note, "src": "pool",
+                      "boardPctToday": c.get("boardPctToday"),
+                      "boardPctZt": c.get("boardPctZt"),
+                      "bkCode": c.get("bkCode")})
 
     # ---- R100m（需求7）：技术池候选并入精选（排在断板池之后）——开盘现价深跌(<-2%)的剔除，宁缺勿滥 ----
     pool_codes = {p["code"] for p in picks}
@@ -331,6 +345,9 @@ def build_star(D, base=None):
             note += f"·现涨{live:+.1f}%"
         picks.append({"code": t["code"], "name": t["name"], "sector": t["sector"],
                       "sentiment": "neutral", "probability": None,
+                      # R100z170：技术池标的补板块涨幅（名字精确命中同花顺一级行业才写）
+                      "boardPctToday": (sec_map.get(t["sector"]) or {}).get("pct"),
+                      "bkCode": (sec_map.get(t["sector"]) or {}).get("code"),
                       "note": note, "src": t["src"]})
 
     # ---- 文案模板（AI 复核改写 sentiment/pushText） ----

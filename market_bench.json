@@ -1,32 +1,35 @@
 {
- "date": "2026-10-20",
- "benchPct": -0.01,
+ "date": "2026-10-21",
+ "benchPct": -0.71,
  "benchSrc": "gtimg",
  "benchFormula": "上证指数/深证成指/创业板指/中证1000 涨跌幅**中位数**",
+ "benchSectorPct": -0.305,
+ "sectorN": 90,
+ "benchSectorFormula": "同花顺一级行业（allBoards）当日涨跌幅**中位数**",
  "names": [
   {
    "code": "sh000001",
    "name": "上证指数",
-   "pct": 0.12
+   "pct": -0.6
   },
   {
    "code": "sz399001",
    "name": "深证成指",
-   "pct": -0.14
+   "pct": -0.82
   },
   {
    "code": "sz399006",
    "name": "创业板指",
-   "pct": -0.26
+   "pct": -1.62
   },
   {
    "code": "sh000852",
    "name": "中证1000",
-   "pct": 1.02
+   "pct": 0.2
   }
  ],
  "errors": [],
- "note": "超额 = 板块(或8只组合)实际涨幅 − benchPct；命中判定改用超额（R100z15）",
+ "note": "基准双轨：benchPct=四指数中位数（描述大盘）；benchSectorPct=全行业中位数。★板块方向与组合的超额判定以 benchSectorPct 为准（同源比较），benchPct 仅作大盘参照；benchSectorPct 缺失时退回 benchPct 并在台账标注。",
  "history": {
   "2026-09-30": {
    "date": "2026-09-30",
@@ -96,7 +99,14 @@
    "benchPct": null,
    "benchSectorPct": 0.94,
    "sectorN": 90,
-   "src": "git-backfill:16d0576"
+   "src": "git-backfill:f7fbda4"
+  },
+  "2026-10-21": {
+   "date": "2026-10-21",
+   "benchPct": null,
+   "benchSectorPct": -0.305,
+   "sectorN": 90,
+   "src": "git-backfill:ddb747c"
   }
  }
 }
