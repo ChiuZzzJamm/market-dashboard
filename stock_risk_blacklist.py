@@ -153,23 +153,38 @@ def load_stocks(path=DATA_JS):
 
 
 def fetch_names(codes):
-    """行情名（判 ST 用），一次批量；失败返回 {}（此时用 data.js 内的 name 兜底）。"""
+    """行情名（判 ST 用）。分批 + 每批重试一次。
+
+    R100z160：原实现把所有代码拼成一个超长 secids 一次请求、且**无重试**。2026-10-21 实测
+    push2 会偶发整批失败（同一批代码立刻重试就成功，100/100），一次抖动就把整轮 ST/退市维度
+    降级成「本维度不判安全」，报告层只能照抄。现在按 80 只一批（URL 控制在 ~900 字符，避免
+    343 只时拼到 ~3.4KB 被回绝）+ 单批重试 1 次（间隔 0.8s，只重试网络类异常，见 http_json）。
+    """
     if not codes:
         return {}
-    secids = ','.join(to_secid(c) for c in codes)
-    try:
-        js = http_json(EM_PUSH2, referer='https://quote.eastmoney.com/',
-                       params='fields=f12,f14&secids=' + secids)
-        rows = (js.get('data') or {}).get('diff') or []
-        out = {}
-        for r in rows:
-            if r.get('f12'):
-                out[str(r['f12']).replace('.', '')] = r.get('f14') or ''
-        if out:
-            return out
-    except Exception as e:
-        print('[EM_NAMES_FAIL] push2 取名失败：' + repr(e)[:120])
-    return {}
+    out, CHUNK = {}, 80
+    for i in range(0, len(codes), CHUNK):
+        part = codes[i:i + CHUNK]
+        secids = ','.join(to_secid(c) for c in part)
+        for attempt in (0, 1):
+            try:
+                js = http_json(EM_PUSH2, referer='https://quote.eastmoney.com/',
+                               params='fields=f12,f14&secids=' + secids)
+                rows = (js.get('data') or {}).get('diff') or []
+                got = {}
+                for r in rows:
+                    if r.get('f12'):
+                        got[str(r['f12']).replace('.', '')] = r.get('f14') or ''
+                if got:
+                    out.update(got)
+                    break
+            except Exception as e:                                  # noqa: BLE001
+                if attempt == 1:
+                    print('[EM_NAMES_FAIL] push2 取名失败（第 %d 批，%d 只）：%s'
+                          % (i // CHUNK + 1, len(part), repr(e)[:110]))
+                else:
+                    time.sleep(0.8)
+    return out
 
 
 def fetch_lift(code, lo, hi, today):
@@ -335,7 +350,8 @@ def main():
         return 1
 
     names = fetch_names(codes)
-    name_src = 'em' if names else 'local'   # R100z129：区分「行情名」与「data.js 旧名」，后者判 ST 不可靠
+    em_names_cnt = len(names)              # R100z160：先记真实覆盖率，再补兜底名
+    name_src = 'em' if names else 'local'  # R100z129：区分「行情名」与「data.js 旧名」，后者判 ST 不可靠
     for c in codes:   # 兜底仅用于显示名称；此时 ST 判定降级为存疑（见下方 unknown，绝不静默当安全）
         names.setdefault(c, local_names.get(c, ''))
 
@@ -381,6 +397,10 @@ def main():
     if name_src == 'local':   # R100z129：行情名源不可达时不得静默给「无 ST 命中」的假阴性
         unknown.append('行情名源（东财 push2）不可达：ST/退市判定已回退 data.js 名称'
                        '（AI 写回的可能是更名前旧名，会漏判 ST），该维度本次不判安全')
+    elif em_names_cnt < len(codes):   # R100z160：只取到一部分时，余下静默回退旧名 = 假阴性
+        unknown.append('行情名源（东财 push2）仅取到 %d/%d 只：余下 %d 只的 ST/退市判定'
+                       '回退 data.js 旧名，该部分不判安全'
+                       % (em_names_cnt, len(codes), len(codes) - em_names_cnt))
 
     if ANN_BREAK['open']:
         unknown.append('公告源（np-anotice）本轮熔断：前 %d 只连续失败（%s），'
@@ -399,9 +419,11 @@ def main():
     lift_cov = 'ok' if lift_ok >= n_all else ('partial' if lift_ok > 0 else 'unchecked')
     ple_ok = n_all - stat['pledge_fail']
     ple_cov = 'ok' if ple_ok >= n_all else ('partial' if ple_ok > 0 else 'unchecked')
+    st_cov = ('ok' if em_names_cnt >= n_all
+              else ('partial' if em_names_cnt > 0 else 'unchecked'))
     dims = {
-        'st': {'status': 'ok' if name_src == 'em' else 'unchecked',
-               'cover': '行情名源（东财 push2）%s' % ('可用' if name_src == 'em' else '不可达')},
+        'st': {'status': st_cov,
+               'cover': '行情名源（东财 push2）%d/%d 只取到' % (em_names_cnt, n_all)},
         'cut': {'status': ann_cov, 'cover': '公告源 %d/%d 只取到' % (ann_ok, n_all)},
         'loss': {'status': ann_cov, 'cover': '公告源 %d/%d 只取到' % (ann_ok, n_all)},
         'lift': {'status': lift_cov, 'cover': '解禁源 %d/%d 只取到' % (lift_ok, n_all)},
