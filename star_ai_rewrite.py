@@ -5,6 +5,7 @@
 纪律：唯一写入口 duanban.star；其余字段（ashare/us/断板池/谐波/九门/吸筹/fullScan…）
 一律按原样 round-trip 回去，不做任何加工。
 """
+import datetime
 import json
 import os
 import subprocess
@@ -14,7 +15,9 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data.js")
 NODE = "/Users/loccco/.workbuddy/binaries/run-node"
 
-TODAY = "2026-10-21"
+# R100z162：原为硬编码日期，每天必须由 AI 手改，忘了就撞下面的日期断言、白耗一个回合。
+# 改为系统日期：守卫（star.date 必须等于今天）照旧生效，但不再需要人工维护。
+TODAY = datetime.date.today().isoformat()
 
 SENTIMENT = (
     "开盘情绪偏暖但结构集中：通信设备+2.79%、影视院线+2.61%、养殖业+2.59%领涨，"

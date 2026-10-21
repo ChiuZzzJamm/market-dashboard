@@ -742,10 +742,14 @@ def check_logic_depth(D):
 
     体检实测（2026-10-01）：aiPrediction.sectors[].logic 只有 32~55 字，
     而 R98p 定的标准是 110-160 字；更关键的是 validate 里**没有任何闸管字数**——
-    写多短全靠 AI 自觉，偷懒了照样上线。这里补上：
-        logic < 40 字 → FAIL（这不是「写得短」，是没写完）
-        logic < 80 字 → WARN（离 110 字下限还差一截）
-        deduce.main < 30 字 → WARN
+    写多短全靠 AI 自觉，偷懒了照样上线。这里补上。
+
+    R100z162（2026-10-21）：阈值与提示文案统一到现行 G16 口径（logic 200 / main 60）。
+    旧版阈值 40/80 与「写满 110-160 字」是 R98p 时代的数字，照着写 160 字反而会被
+    G16 拦下——两套口径打架，等于把 AI 往 FAIL 上引导。现与 audit_pipeline 同源。
+        logic < 200 字 → FAIL（G16 地板，低于即拦部署）
+        logic < 240 字 → WARN（离 200-260 区间上沿还差一截）
+        deduce.main < 60 字 → FAIL（G16 地板）
     """
     hards, warns = [], []
     ai = D.get('aiPrediction') or {}
@@ -754,16 +758,17 @@ def check_logic_depth(D):
             continue
         nm = str(s.get('sector') or '')[:16]
         lg = str(s.get('logic') or '').strip()
-        if len(lg) < 40:
-            hards.append(f"aiPrediction.{nm}.logic 仅 {len(lg)} 字（<40，等于没写完）——"
-                         f"须按 R98p 写满 110-160 字的映射推演（R100z15 硬闸）")
-        elif len(lg) < 80:
-            warns.append(f"aiPrediction.{nm}.logic 仅 {len(lg)} 字（<80，下限 110 字）——内容偏薄")
+        if len(lg) < 200:
+            hards.append(f"aiPrediction.{nm}.logic 仅 {len(lg)} 字（<200，G16 地板）——"
+                         f"须按 200-260 字写足映射推演（驱动链/受益环节/验证信号）")
+        elif len(lg) < 240:
+            warns.append(f"aiPrediction.{nm}.logic 仅 {len(lg)} 字（目标 200-260 字）——偏薄")
         dd = s.get('deduce') or {}
         if isinstance(dd, dict):
             mm = str(dd.get('main') or '').strip()
-            if len(mm) < 30:
-                warns.append(f"aiPrediction.{nm}.deduce.main 仅 {len(mm)} 字（<30）——主推理由未说清")
+            if len(mm) < 60:
+                hards.append(f"aiPrediction.{nm}.deduce.main 仅 {len(mm)} 字（<60，G16 地板）——"
+                             f"主推理由未说清")
     return hards, warns
 
 

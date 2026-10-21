@@ -227,7 +227,8 @@ PRODUCT_OWNERSHIP = {
         "note": "R100z149：stock_news.py 抓东财个股公告 + 资讯搜索，按 code 汇总成 {code:{name,notices,news}}，"
                 "覆盖断板（含失效池）/谐波/吸筹/九门/连板/板块成分/AI预测/要闻影响标的；"
                 "前端弹窗（网页 db-modal）统一渲染「个股消息」段。"
-                "16:00 数据步点名（取数后、断板主生成前跑）。",
+                "16:00 数据步第 4.5 步点名（四模块之后、汇报之前；R100z162 更正：旧注记为「断板主生成前」，"
+                "与 16:00 实际步骤顺序（2 断板 → 3 要闻 → 4 四模块 → 4.5 个股消息）不符）。",
     },
 }
 
@@ -604,6 +605,12 @@ def g8_g9_g10_data(r):
             skipped.add(path)
             continue
         if path.endswith((".bullRefs", ".bearRefs")):   # 无对应方向新闻即空数组
+            skipped.add(path)
+            continue
+        # R100z162：check_duanban 的 nd()/add_bull_code() 对 aiPrediction 来源的 ref 刻意留
+        #   time=""（_fmt_ref 用 `if x` 跳过、前端完全不读 bullRefs/bearRefs），属结构性空值。
+        #   不豁免则每天固定报 5 条「bullRefs[1].time=空串」假 WARN，久而久之闸门被无视。
+        if re.search(r"\.(?:bull|bear)Refs\[\d+\]\.time$", path):
             skipped.add(path)
             continue
         if v == "":
