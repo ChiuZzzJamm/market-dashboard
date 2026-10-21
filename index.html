@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610212238"></script>
+<script src="data.js?v=202610212257"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -649,12 +649,19 @@
   .pw-grd { font-size:10.5px; font-weight:800; border-radius:999px; padding:1px 8px; flex-shrink:0; font-variant-numeric:tabular-nums; color:#fff; background:linear-gradient(135deg,#e35d5d,#c0392b); }
   /* R100m：全站标的池角标（谐波🌟/吸筹👀/九门💡/断板❗️），可叠加 */
   .stk-tag { font-size:10px; line-height:1; margin-left:2px; flex-shrink:0; }
-  /* R100z13：个股硬风险角标（减持/解禁/ST/业绩预减）——红底白字，hover 看原因 */
-  .risk-dot { font-size:10px; line-height:1; margin-left:2px; padding:1px 4px; border-radius:999px;
-    color:#fff; background:#c0392b; flex-shrink:0; cursor:help; }
-  /* R100z76-④：severity 分级着色——red 硬剔(默认红) / orange 警示(琥珀黄) / yellow 参考(灰) */
-  .risk-dot.sev-orange { color:#7a4a00; background:#f59e0b; }
-  .risk-dot.sev-yellow { color:#555; background:#d9d9d9; }
+  /* R100z13：个股硬风险角标（减持/解禁/ST/业绩预减）——hover 看原因 */
+  .risk-dot { font-size:11px; line-height:1; margin-left:3px; padding:2px 5px; border-radius:999px;
+    color:#fff; background:#111; flex-shrink:0; cursor:help; border:1px solid transparent;
+    box-shadow:0 0 0 1px rgba(0,0,0,.05); }
+  /* R100z171（用户 2026-10-21 晚：「还是改回 ⚠️，严重的黑底、其次深灰、再轻淡灰」）：
+     三档**符号统一 ⚠️**，只用底色深浅分档 —— 黑底=严重 / 深灰底=警示 / 淡灰底=参考。
+     上一版（彩底 + ！/？）被用户否掉：橙黄圆点太跳、且与 A 股涨红跌绿的语义打架。
+     实测教训：底色调再深也会被 ⚠️ emoji 盖住，所以三档**必须把亮度跨度拉满**
+     （#111 / #8c8c8c / #ececec），并把胶囊从 10px/padding 1px4px 放大到 11px/2px5px，
+     否则 10px 小圆点上黑与深灰肉眼不可分，等于又退回「只有一个通道」。 */
+  .risk-dot.sev-red { background:#111111; color:#fff; }
+  .risk-dot.sev-orange { background:#8c8c8c; color:#fff; border-color:#7a7a7a; }
+  .risk-dot.sev-yellow { background:#ececec; color:#333; border-color:#c9c9c9; }
   .risk-line { font-size:11.5px; color:#a5342a; margin:4px 0 2px; line-height:1.6; }
   /* R100z87：弹窗内可见风险提示徽章（「风险提示 · 2026-09-25 减持公告」）——
      R100z88：按用户指定配色重做=字黄、底棕（暗红棕），前置 ⚠️，与用户参考图一致；
@@ -2114,21 +2121,21 @@ function riskBadge(code0, poolMode) {
   var sev = hit.severity || 'red';
   var rs = (hit.reasons || []).join('；');
   var cls, tip, sym;
-  // R100z170（用户 2026-10-21 问「徽章颜色怎么不一样」）：原先三档**只有背景色不同、
-  // 符号一律 ⚠️**，颜色成了唯一编码通道 —— 色弱/夜间模式下看起来就像随机变色。
-  // 现改为「颜色 + 符号」双通道：⚠️硬风险 / ！警示 / ？参考，并在断板页口径块给出图例。
+  // R100z171（用户 2026-10-21 晚）：符号统一回 ⚠️，取消 ！/？ —— 彩底+怪符号「太丑」。
+  // 三档改为**黑底 / 深灰底 / 淡灰底**，深浅就是严重度；含义在 title 与断板页图例里写明。
   if (sev === 'red') {
     cls = ' sev-red';
     sym = '⚠️';
-    tip = (poolMode ? '硬风险提示（技术观察池仅打标不剔除）：' : '硬风险（不进 8 只池）：') + rs;
+    tip = '严重（须换股、不进 8 只池）：' + rs;
+    if (poolMode) tip = '严重风险提示（技术观察池仅打标不剔除）：' + rs;
   } else if (sev === 'orange') {
     cls = ' sev-orange';
-    sym = '！';
+    sym = '⚠️';
     tip = '警示（可保留但需重点关注）：' + rs;
   } else {  // yellow / none
     cls = ' sev-yellow';
-    sym = '？';
-    tip = '风险参考（如股东质押）：' + rs;
+    sym = '⚠️';
+    tip = '参考（如股东质押，仅提示）：' + rs;
   }
   return '<span class="risk-dot' + cls + '" title="' + escAttr(tip) + '">' + sym + '</span>';
 }
@@ -4014,10 +4021,11 @@ function renderDuanban() {
     '<div><b>标签与概率</b>：按当日要闻/AI 预测自动标注利好（红）/利空（绿）/中性（灰）；上涨概率＝脚本确定性基线＋AI 复核校准（16:00 数据步生成，次日 07:00 复核）</div>' +
     '<div class="lg-hr"></div>' +
     '<div><b>失效与归档</b>：跌破 T 日最低点或 MA5（破位）、或 5 个交易日内没走完反包（超期）→ 移入失败池，5 个交易日后自动清理</div>' +
-    // R100z170：风险徽章图例（用户 2026-10-21 问「徽章颜色怎么不一样」——三档原先只有颜色差异，无从得知含义）
-    '<div><b>风险徽章三档</b>：<span class="risk-dot sev-red" style="margin:0 2px;">⚠️</span>硬风险（减持实施中/ST/预亏/立案等，须换股、不进 8 只池）　' +
-    '<span class="risk-dot sev-orange" style="margin:0 2px;">！</span>警示（减持预披露等，可保留但重点关注）　' +
-    '<span class="risk-dot sev-yellow" style="margin:0 2px;">？</span>参考（股东质押等，仅提示）。悬停可见具体事由与日期</div>' +
+    // R100z170/171：风险徽章图例。符号统一 ⚠️，三档只用**底色深浅**区分：
+    // 黑底=严重 / 深灰底=警示 / 淡灰底=参考（用户 2026-10-21 指定的配色）。
+    '<div><b>风险徽章（⚠️ 底色越深越严重）</b>：<span class="risk-dot sev-red" style="margin:0 2px;">⚠️</span>黑底＝严重（减持实施中/ST/预亏/立案等，须换股、不进 8 只池）　' +
+    '<span class="risk-dot sev-orange" style="margin:0 2px;">⚠️</span>深灰底＝警示（减持预披露等，可保留但重点关注）　' +
+    '<span class="risk-dot sev-yellow" style="margin:0 2px;">⚠️</span>淡灰底＝参考（股东质押等，仅提示）。悬停可见具体事由与日期</div>' +
     '<div class="lg-tip">下一步：缩量不破位只算「跌不动」，反包日放量收复断板日最高价 / 站回 MA5 才算真确认；破位无条件走，不摊平不扛单。此页与「谐波 / 九门 / 吸筹」同为技术面观察器，仓位按中等及以下确信度给。</div>' +
     '</div></details>';
   var conf = (db && db.confirmed) || [], watch = (db && db.watching) || [];

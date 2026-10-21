@@ -1,4 +1,4 @@
-# 全链路检查清单（L0–L15）
+# 全链路检查清单（L0–L16）
 
 > **这份清单的存在原因**：用户每次的指令都是「7 个自动化 + 全链路所有问题」，范围从没缩过。
 > 我反复把「全链路」私自替换成「读一遍代码」，再用「仔细检查」把缩水申报成完成。
@@ -259,13 +259,55 @@ G2 承诺的「prompt 漂移可发现」实际是空话。
 
 ---
 
+## L16 视觉与观感（闸门看不见的那一层）
+
+**为什么单列一层**：`audit_pipeline` 的每条 gate 都是「可编程判据」——字段在不在、class 对不对、数值合不合法。
+**审美不在判据里**。R100z170 我把风险徽章三档从 ⚠️ 改成 `⚠️ / ！ / ？` 加彩底，51 条 gate 全绿，
+用户一眼「好丑啊」。这不是逻辑错，是**验收维度缺失**（详见 `PROJECT-MEMORY.md` 24.21）。
+
+| 什么时候必须走这一层 | 动作 |
+|---|---|
+| 改了 `index.html` 的 CSS / 渲染函数 / 徽章 / 颜色 / 字号 | ① 截图 ② 核对 DOM ③ 回答下面三问 |
+| 改了文案模板（含「—」占位、单位、中文映射） | 截一张带该字段的真实卡片 |
+| 只是改 Python 数据生成、不碰展示 | 可跳过，但要在汇报里写「L16 未覆盖：未改展示层」 |
+
+**① 截图（本机 headless Chromium，无需装包）**
+```bash
+HS="$HOME/Library/Caches/ms-playwright/chromium_headless_shell-1246/chrome-headless-shell-mac-arm64/chrome-headless-shell"
+"$HS" --disable-gpu --no-sandbox --no-zygote --allow-file-access-from-files \
+      --virtual-time-budget=7000 --window-size=1400,1700 \
+      --screenshot=/tmp/shot.png "file:///Users/loccco/WorkBuddy/market dashboard/index.html"
+```
+> ⚠️ `--allow-file-access-from-files` 不能省：`file://` 下 XHR 被 CORS 拦，
+> `risk_blacklist.json` / `portfolio_curve.json` 拉不到 → 徽章和净值曲线**根本不渲染**，
+> 截出来是一张「假绿」的图。
+
+**② 核对 DOM（查「有没有」比看图更可靠）**
+```bash
+"$HS" --disable-gpu --no-sandbox --allow-file-access-from-files --virtual-time-budget=7000 \
+      --dump-dom "file:///Users/loccco/WorkBuddy/market dashboard/index.html" > /tmp/dom.html
+grep -o 'class="risk-dot sev-[a-z]*"' /tmp/dom.html | sort | uniq -c   # 三档各渲染了几处
+```
+
+**③ 三问（答不上就是没验）**
+1. **小尺寸下还分得出吗？** 颜色深浅/字重/边框这类「弱信号」，在真实字号（10–11px）下会不会糊成一样？
+   —— 本轮实测：10px 胶囊上 `#141414` 与 `#6e6e6e` 肉眼不可分，配色等于白做。
+2. **新符号/新颜色和既有语义打架吗？** 橙黄圆点 vs A 股涨红跌绿；`！` vs 页面别处已有的感叹号徽章。
+3. **我看的是真图，还是我以为的图？** 没截图 = 没看过。
+
+**G30 已经机器化的部分**（`audit_pipeline.py`）：徽章符号统一 ⚠️、三档底色亮度单调且跨度 ≥35、
+徽章字号 ≥11px、涨红跌绿常量在、图例三档齐。
+**G30 覆盖不到、只能靠眼睛的**：留白与密度、字体层级、长标题换行、弹窗对齐、暗色语境下的可读性。
+
+---
+
 ## 汇报格式（强制）
 
 不许写「检查完了」「已仔细检查」。必须写：
 
 ```
-跑了 L0–L15 共 16 层 + M0–M8（记忆）共 9 层
-L0 PASS / L1 PASS / L2 修了 n 处 / L3 PASS / … / L15 PASS
+跑了 L0–L16 共 17 层 + M0–M10（记忆）共 11 层
+L0 PASS / L1 PASS / L2 修了 n 处 / L3 PASS / … / L16 PASS（视觉层：贴图 + 三问）
 自动化体检：check_automations.py → FAIL=0（33 项，报「哪类几项」不报 PASS 总数）
 闸门：FAIL=0 exit=0（WARN 条数 + 逐条性质，不写 PASS 数字——WARN 随时段浮动）
 未覆盖：<哪一层没跑、为什么、风险是什么>

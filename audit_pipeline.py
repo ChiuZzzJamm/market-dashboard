@@ -53,6 +53,11 @@
                       ST 却看不出来）；② 硬风险 red 标的不得留在推荐位（603330 在 10-09
                       就公告减持，到 10-21 还挂在断板确认池和量化筛选里）——
                       分别由 sync_names.py / risk_gate.py 保证，本闸复验（R100z168）
+    G30 展示硬偏好     把用户说过的审美红线机器化，避免「闸门全绿但截图上很丑」再发生：
+                      ① 风险徽章三档符号必须统一 ⚠️（上一版自作主张改成 ！/？ 被否）；
+                      ② 三档底色必须**亮度单调递减**且相邻差 ≥35（10px 小圆点上黑与深灰不可分，
+                         「颜色分档」会退化成「一个通道」）；③ 徽章字号 ≥11px；
+                      ④ 涨红跌绿两色常量必须在；⑤ 断板页徽章图例三档必须齐（R100z171）
 """
 import ast
 import json
@@ -1811,8 +1816,13 @@ def g25_memory_hygiene(r):
     probs = []
     if size > hard:
         probs.append(f"{size} 字节 > {hard} 上限（超 {size - hard}）——长段结论迁去 PROJECT-MEMORY.md")
-    if "先读那一节" not in txt:
-        probs.append("缺「要动这块，先读那一节」路由表（没有它就只能凭印象 grep）")
+    # R100z171：原判据是字面量 `"先读那一节" in txt`，我把小节标题改写成「动之前先读哪节」
+    # 就直接失明（WARN 报「缺路由表」其实表还在）——凡是**判文案字面量**的 gate 都会这样断。
+    # 改为结构判据：`## 0.` 小节 + 「先读」语义 + 紧跟一张「要动什么 / 读哪节」表。
+    if not re.search(r"(?m)^##\s*0\..*(先读|读哪节)", txt):
+        probs.append("缺「## 0. 要动这块，先读那一节」路由小节（没有它就只能凭印象 grep）")
+    elif "| 要动什么" not in txt:
+        probs.append("「## 0.」路由小节里没有「| 要动什么 |」表格（标题在、表没了＝空转）")
     if probs:
         r.warn("G25", "记忆注入层需整治：" + "；".join(probs) + "（R100z161）")
     else:
@@ -2269,6 +2279,116 @@ def g29_name_and_risk_hygiene(r):
         r.ok("G29", "要闻「非利空段」impacts 无 ST/退市型标的（利空段 bearNews/bearish 不设限）")
 
 
+def _hex_lum(h):
+    """#rgb / #rrggbb → 感知亮度 0~255（0.299R+0.587G+0.114B）。"""
+    h = (h or "").lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    if len(h) != 6:
+        return None
+    try:
+        rr, gg, bb = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    except ValueError:
+        return None
+    return 0.299 * rr + 0.587 * gg + 0.114 * bb
+
+
+def g30_display_prefs(r):
+    """G30 展示硬偏好：把用户说过的审美红线机器化（R100z171，2026-10-21 深夜）。
+
+    由来：用户连问两轮「检查报告」之后仍然一眼看出「徽章好丑」——
+    根因不是逻辑错，而是**审美不在可编程判据里**：我把三档符号从 ⚠️ 改成 ！/？，
+    `audit_pipeline` 51 条全绿，因为没有任何一条 gate 会因为「符号选得丑」FAIL。
+    本闸的作用就是把用户**已经明确表达过**的展示偏好固化成判据，
+    让「下一次谁（包括我自己）再改坏」在 deploy 前就撞墙，而不是等用户截图。
+
+    判据（全部只看 index.html 源码，不跑浏览器，稳且快）：
+      a) `riskBadge()` 内三档 `sym` 必须都是 ⚠️ —— 用户 2026-10-21 明确「还是改回 ⚠️」。
+      b) `.risk-dot.sev-red/orange/yellow` 三档 `background` 必须**亮度单调递减**
+         （红=最深 → 橙=中 → 黄=最浅），且相邻差 ≥35。
+         这条是防「又一次只有一个编码通道」：实测 10px 胶囊上 `#141414` 与 `#6e6e6e`
+         肉眼不可分，配色写了等于没写。
+      c) `.risk-dot` 字号 ≥11px（同上，10px 时 emoji 会把底色盖满）。
+      d) 涨红 `#f0435c` / 跌绿 `#0f9d78` 两个常量必须在（A 股惯例，别反）。
+      e) 断板页图例三档 span 必须齐（写了图例却漏一档，等于图例本身在骗人）。
+    """
+    p = os.path.join(HERE, "index.html")
+    try:
+        s = open(p, encoding="utf-8").read()
+    except Exception as e:                                    # noqa: BLE001
+        r.warn("G30", "index.html 读不到，本次无法校验展示偏好：%s" % e)
+        return
+
+    # ---- a) 徽章符号统一 ⚠️ ----
+    mb = re.search(r"function riskBadge\([\s\S]{0,4000}?\n\}", s)
+    if not mb:
+        r.warn("G30", "index.html 里找不到 riskBadge() 函数体，跳过符号校验")
+    else:
+        syms = re.findall(r"sym\s*=\s*'([^']*)'", mb.group(0))
+        bad = [x for x in syms if x != "⚠️"]
+        if not syms:
+            r.fail("G30", "riskBadge() 里没有可识别的 sym 赋值 —— 徽章符号已脱离统一口径，"
+                          "用户 2026-10-21 定稿为三档统一 ⚠️")
+        elif bad:
+            r.fail("G30", "风险徽章符号不统一：%s（应为全部 ⚠️，底色深浅分档）—— "
+                          "用户明确否掉 ！/？ 那一版，见 24.21④" % "、".join(bad))
+        else:
+            r.ok("G30", "风险徽章三档符号统一 ⚠️（%d 处）" % len(syms))
+
+    # ---- b) 三档底色亮度单调 + 跨度 ----
+    lum, missing = {}, []
+    for k in ("red", "orange", "yellow"):
+        mk = re.search(r"\.risk-dot\.sev-%s\s*\{([^}]*)\}" % k, s)
+        bgs = re.search(r"background:\s*(#[0-9a-fA-F]{3,8})", mk.group(1)) if mk else None
+        if not bgs:
+            missing.append(k)
+            continue
+        v = _hex_lum(bgs.group(1))
+        if v is None:
+            missing.append(k)
+        else:
+            lum[k] = v
+    if missing:
+        r.fail("G30", "风险徽章缺底色定义：%s —— 三档必须 黑底/深灰底/淡灰底 齐全"
+                      "（用户 2026-10-21 指定，见 24.21④）" % "、".join(missing))
+    else:
+        a, b, c = lum["red"], lum["orange"], lum["yellow"]
+        if not (a < b < c):
+            r.fail("G30", "风险徽章底色亮度未「深→浅」递减：red=%.0f orange=%.0f yellow=%.0f —— "
+                          "严重度靠底色深浅表达，顺序反了就是误导" % (a, b, c))
+        elif min(b - a, c - b) < 35:
+            r.fail("G30", "风险徽章相邻档亮度差过小（red=%.0f orange=%.0f yellow=%.0f，"
+                          "最小差 %.0f < 35）—— 小尺寸下肉眼分不出，等于又退回单通道"
+                   % (a, b, c, min(b - a, c - b)))
+        else:
+            r.ok("G30", "风险徽章三档底色深→浅递减且跨度足够（%.0f / %.0f / %.0f）" % (a, b, c))
+
+    # ---- c) 徽章字号 ----
+    md = re.search(r"\.risk-dot\s*\{([^}]*)\}", s)
+    fs = re.search(r"font-size:\s*(\d+(?:\.\d+)?)px", md.group(1)) if md else None
+    if not fs:
+        r.warn("G30", ".risk-dot 未声明 font-size，无法判断徽章是否过小")
+    elif float(fs.group(1)) < 11:
+        r.fail("G30", "风险徽章 font-size=%spx < 11px —— emoji 会盖满胶囊、底色不可辨，"
+                      "三档配色失效（实测教训，见 24.21④）" % fs.group(1))
+
+    # ---- d) 涨红跌绿 ----
+    lack = [c for c in ("#f0435c", "#0f9d78") if c.lower() not in s.lower()]
+    if lack:
+        r.fail("G30", "涨跌色常量缺失：%s —— A 股惯例涨红（#f0435c）跌绿（#0f9d78），别反"
+                      % "、".join(lack))
+
+    # ---- e) 图例三档齐 ----
+    if "风险徽章" not in s:
+        r.fail("G30", "断板页缺少「风险徽章」图例 —— 只靠底色深浅分档、却没文字说明，"
+                      "等于让人猜（用户 2026-10-21 问「颜色怎么不一样」就是这个原因）")
+    else:
+        lg = s[s.find("风险徽章"):s.find("风险徽章") + 900]
+        gone = [k for k in ("red", "orange", "yellow") if ("sev-" + k) not in lg]
+        if gone:
+            r.fail("G30", "风险徽章图例缺档：%s —— 图例必须三档齐全" % "、".join(gone))
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -2313,6 +2433,7 @@ def main():
     g27_memory_reachability(r)
     g28_freshness_consistency(r)
     g29_name_and_risk_hygiene(r)
+    g30_display_prefs(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
