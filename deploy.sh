@@ -121,6 +121,23 @@ echo "📐 回填历史行业基准（market_bench.py --backfill-bench）..."
 echo "🕒 归一时间戳（refresh_stamp.py）..."
 "$PY" refresh_stamp.py || true
 
+# ---------- R100z168：个股简称对齐 + 硬风险 red 清出推荐位 ----------
+# 背景（用户第二次问「怎么那么多遗留问题」后浮出来的两层）：
+#   ① 简称层：AI 写要闻凭记忆填 name，实测 7 只已更名（韦尔股份→豪威集团、银泰黄金→
+#      山金国际、郑煤机→中创智领…），其中 600079 人福医药→ST人福、600311 荣华实业→
+#      *ST荣华 已戴帽却显示成正常公司，还被摆在「板块受益标的」里。sync_names.py 以
+#      行情源为准校正（清洗空白/全角/除权前缀后再比，不误改「粤 传 媒」「XD工商银」）。
+#   ② 风险层：stock_risk_blacklist 每天算 red，但只有 update_star 会过滤；
+#      check_duanban / power_screener / accumulation_score 不读 → 603330 天洋新材
+#      10-09 就公告减持，到 10-21 仍挂在「断板确认池」「量化筛选」里当推荐标的。
+#      risk_gate.py 把 red 清出四个推荐池（公告日晚于交易日的「盘后新披露」保留：
+#      当日盘中不可知，指标有效，次日 09:45 自动剔）。
+# 两个脚本都幂等、原子写、异常 exit 0（真拦截交给 G29，避免外部源抖动阻断部署）。
+echo "🏷️  对齐个股简称（sync_names.py）..."
+"$PY" sync_names.py --write || true
+echo "🛡️  硬风险 red 清出推荐位（risk_gate.py）..."
+"$PY" risk_gate.py --write || true
+
 # ---------- R100z53：审计闸门下沉（一次性覆盖五条自动化）----------
 # 背景（子代理对账 P0-1）：此前只有 17:00 / 周末两条 automation 的 prompt 里手写了
 # 「deploy 前先跑 audit_pipeline」，07:00 / 08:30 / 09:45 三条没有 → 那三条改完代码可以直接 push，

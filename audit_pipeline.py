@@ -48,6 +48,11 @@
                       实测 A股 17:20 已更新、页头还停在 16:01）；ashare.updatedAt 必须与
                       tradeDate 同日（该格原先由 AI 手写，长期挂着 10-20 的旧值）；
                       分格清单与 refresh_stamp.py 的 SLOTS 逐项一致（R100z167，FAIL 拦部署）
+    G29 名称与风险卫生 ① data.js 里每只个股的简称必须与行情源一致（AI 凭记忆写，实测挂着
+                      韦尔股份/银泰黄金/郑煤机/人福医药/荣华实业等 7 个旧名，两只已戴帽
+                      ST 却看不出来）；② 硬风险 red 标的不得留在推荐位（603330 在 10-09
+                      就公告减持，到 10-21 还挂在断板确认池和量化筛选里）——
+                      分别由 sync_names.py / risk_gate.py 保证，本闸复验（R100z168）
 """
 import ast
 import json
@@ -2156,6 +2161,114 @@ def g28_freshness_consistency(r):
                       f"——16:00 数据步漏跑或未换日，页面对应板块展示的是旧交易日")
 
 
+def _run_tool(script, *args, timeout=180):
+    """跑维护/校验类小工具，返回 (rc, out, err)；找不到解释器或异常 → rc=-1。"""
+    path = os.path.join(HERE, script)
+    if not os.path.exists(path):
+        return -1, "", "缺文件 %s" % script
+    try:
+        p = subprocess.run([sys.executable, path] + list(args), cwd=HERE,
+                           capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout or "", p.stderr or ""
+    except subprocess.TimeoutExpired:
+        return -1, "", "%s 超时（%ds）" % (script, timeout)
+    except Exception as e:                                   # noqa: BLE001
+        return -1, "", "%s 执行异常：%s" % (script, e)
+
+
+def _tail(out, n=3):
+    lines = [x.strip() for x in (out or "").splitlines() if x.strip()]
+    return "；".join(lines[-n:])
+
+
+def g29_name_and_risk_hygiene(r):
+    """G29 个股简称一致性 + 硬风险 red 不得留在推荐位（R100z168，2026-10-21）。
+
+    由来（用户第二次贴截图问「怎么那么多遗留问题」之后又浮出来的一层）：
+      · 名字层：AI 写要闻/精选时凭记忆填简称，实测 7 只已更名（韦尔股份→豪威集团、
+        银泰黄金→山金国际、郑煤机→中创智领、金贵银业→湖南白银…），其中
+        `600079 人福医药→ST人福`、`600311 荣华实业→*ST荣华` 是最危险的 ——
+        **已戴帽 ST 却显示成正常公司，还被摆在「板块受益标的」里**。
+        黑名单自己取的是实时行情名，两边不一致 → 同一只票两套名字。
+      · 风险层：`stock_risk_blacklist.py` 每天都在算 red，但只有 `update_star.py` 会过滤；
+        `check_duanban` / `power_screener` / `accumulation_score` 压根不读 →
+        603330 天洋新材 10-09 就公告减持，到 10-21 仍挂在「断板确认池」和「量化筛选」里。
+
+    分工：`sync_names.py` 负责校正、`risk_gate.py` 负责清理（均幂等，deploy.sh 已内置）；
+    本闸只做**复验**，保证有人绕过 deploy 直接改数据时能被拦住。
+
+    判据：
+      a) `sync_names.py --check` rc=1（有差异）→ FAIL；rc=2（行情源不可达，不可判定）→ WARN。
+      b) `risk_gate.py --check` rc≠0（red 仍在推荐位）→ FAIL。
+      c) ST/退市型 red 出现在要闻 impacts 的 stocks 里 → WARN（语义提示：利空位放 ST 股
+         是合理的，受益位不合理；名字已带 ST 前缀，由人工确认语义）。
+    """
+    # ---- a) 简称一致性 ----
+    rc, out, err = _run_tool("sync_names.py", "--check")
+    if rc == 0:
+        r.ok("G29", "个股简称与行情源全部一致（%s）" % (_tail(out, 1) or "幂等"))
+    elif rc == 1:
+        detail = "；".join(ln.strip() for ln in (out or "").splitlines() if "→" in ln)
+        r.fail("G29", "个股简称与行情源不一致（AI 写了旧名/旧帽）：%s —— "
+                      "跑 sync_names.py --write（deploy.sh 已内置）" % (detail[:400] or _tail(out, 3)))
+    elif rc == 2:
+        r.warn("G29", "行情名源不可达，无法核对简称新鲜度（本次不可判定，非「已对齐」）：%s"
+                      % (_tail(out, 2) or err))
+    else:
+        r.warn("G29", "sync_names.py 执行异常（rc=%s）：%s" % (rc, _tail(err, 2) or _tail(out, 2)))
+
+    # ---- b) 推荐位不得留 red ----
+    rc, out, err = _run_tool("risk_gate.py", "--check")
+    if rc == 0:
+        r.ok("G29", "四个推荐池（断板确认/观察、开盘精选、量化筛选、吸筹三池）无硬风险 red 标的")
+    elif rc == 1:
+        hits = [ln.strip() for ln in (out or "").splitlines() if "✂" in ln or "仍有" in ln]
+        r.fail("G29", "硬风险 red 标的仍留在推荐位：%s —— 跑 risk_gate.py --write"
+                      "（deploy.sh 已内置）" % ("；".join(hits[:4]) or _tail(out, 3)))
+    else:
+        r.warn("G29", "risk_gate.py 执行异常（rc=%s）：%s" % (rc, _tail(err, 2) or _tail(out, 2)))
+
+    # ---- c) ST 股出现在要闻 impacts（语义提示，不拦部署）----
+    try:
+        bl = json.load(open(os.path.join(HERE, "risk_blacklist.json"), encoding="utf-8"))
+        st_red = {str(c) for c, v in ((bl.get("blacklist") or {})).items()
+                  if (v or {}).get("severity") == "red"
+                  and any("ST/退市" in str(x) for x in (v.get("reasons") or []))}
+    except Exception:                                        # noqa: BLE001
+        st_red = set()
+    if not st_red:
+        return
+    try:
+        D = load_data_json()
+    except Exception:                                        # noqa: BLE001
+        return
+    where = []
+
+    def walk(o, path):
+        if isinstance(o, dict):
+            c = o.get("code")
+            if isinstance(c, str) and c in st_red:
+                where.append("%s(%s)" % (path, c))
+            for k, v in o.items():
+                walk(v, path + "." + k)
+        elif isinstance(o, list):
+            for i, v in enumerate(o):
+                walk(v, "%s[%d]" % (path, i))
+
+    for mkt in ("ashare", "us"):
+        node = D.get(mkt) or {}
+        for sec in ("intlNews", "news", "policyNews", "annNews", "chipNews",
+                    "bullNews", "bullish"):
+            if sec in node:
+                walk(node[sec], "%s.%s" % (mkt, sec))
+    if where:
+        r.warn("G29", "ST/退市型标的出现在要闻「非利空段」impacts %d 处：%s —— "
+                      "受益位不得放 ST/退市股，请让 AI 换同板块非 ST 替代（名字已带 ST 前缀）" %
+                      (len(where), "、".join(where[:6])))
+    else:
+        r.ok("G29", "要闻「非利空段」impacts 无 ST/退市型标的（利空段 bearNews/bearish 不设限）")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -2199,6 +2312,7 @@ def main():
     g26_pool_sector_keys(r)
     g27_memory_reachability(r)
     g28_freshness_consistency(r)
+    g29_name_and_risk_hygiene(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
