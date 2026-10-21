@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610212257"></script>
+<script src="data.js?v=202610212311"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -663,14 +663,19 @@
   .risk-dot.sev-orange { background:#8c8c8c; color:#fff; border-color:#7a7a7a; }
   .risk-dot.sev-yellow { background:#ececec; color:#333; border-color:#c9c9c9; }
   .risk-line { font-size:11.5px; color:#a5342a; margin:4px 0 2px; line-height:1.6; }
-  /* R100z87：弹窗内可见风险提示徽章（「风险提示 · 2026-09-25 减持公告」）——
+  /* R100z87：弹窗内可见风险提示徽章（「⚠️ 风险提示 · 2026-09-25 减持公告」）——
      R100z88：按用户指定配色重做=字黄、底棕（暗红棕），前置 ⚠️，与用户参考图一致；
-     severity 三档仅保留在 hover title 里（视觉统一为警示款） */
+     R100z172（用户 2026-10-21 23:04「底色也按三档改，字体还是黄色」）：
+     底色并入灰阶三档（黑 / 深灰 / 淡灰），**字保持黄**。
+     三档取值不是拍脑袋：#ffd54a 压在全灰阶上对比度只有 2.4:1（WCAG AA 要 4.5），
+     所以警示档取 #4a4a4a 而非小徽章那种 #8c8c8c；参考档换成暗金 #7a5c00
+     （仍是黄色系，且在 #ececec 上 5.3:1 可读）。G30 已把「对比度 ≥4.5」机器化。 */
   .risk-tip { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1.5px 8px 1.5px 6px; line-height: 1.5;
     white-space: nowrap; flex-shrink: 0; display: inline-block; cursor: help;
-    background: #7a2b1f; color: #ffd54a; border: 1px solid #5f2117; }
-  .risk-tip.sev-orange { background: #8a4a17; color: #ffd54a; border-color: #6d3a12; }
-  .risk-tip.sev-yellow { background: #6e5a1e; color: #ffe082; border-color: #57471a; }
+    background: #111111; color: #ffd54a; border: 1px solid #000000; }
+  .risk-tip.sev-red { background: #111111; color: #ffd54a; border-color: #000000; }
+  .risk-tip.sev-orange { background: #4a4a4a; color: #ffd54a; border-color: #3a3a3a; }
+  .risk-tip.sev-yellow { background: #ececec; color: #7a5c00; border-color: #c9c9c9; }
   /* R100p：弧色标注（.tk-chip 边框渐变描边）按用户要求整体删除，胶囊恢复统一背景 */
   /* R100n：通用标的板块小胶囊——R100p 起仅用于弹窗标题行（stkSecBadge），主页胶囊不再显示 */
   .chip-sec { font-size:11px; font-weight:700; color:var(--accent-deep); background:var(--accent-soft); border:1px solid currentColor; border-radius:4px; padding:1px 7px; line-height:1.5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:96px; flex-shrink:0; }

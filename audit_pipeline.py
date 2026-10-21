@@ -2293,6 +2293,29 @@ def _hex_lum(h):
     return 0.299 * rr + 0.587 * gg + 0.114 * bb
 
 
+def _wcag_contrast(fg, bg):
+    """WCAG 2.1 对比度（含 sRGB gamma 校正）。返回值 ≈1~21，AA 正文要求 ≥4.5。"""
+    def lin(h):
+        h = (h or "").lstrip("#")
+        if len(h) == 3:
+            h = "".join(c * 2 for c in h)
+        if len(h) != 6:
+            return None
+        out = []
+        for i in (0, 2, 4):
+            try:
+                c = int(h[i:i + 2], 16) / 255.0
+            except ValueError:
+                return None
+            out.append(c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4)
+        return 0.2126 * out[0] + 0.7152 * out[1] + 0.0722 * out[2]
+    a, b = lin(fg), lin(bg)
+    if a is None or b is None:
+        return None
+    hi, lo = max(a, b), min(a, b)
+    return (hi + 0.05) / (lo + 0.05)
+
+
 def g30_display_prefs(r):
     """G30 展示硬偏好：把用户说过的审美红线机器化（R100z171，2026-10-21 深夜）。
 
@@ -2310,7 +2333,11 @@ def g30_display_prefs(r):
          肉眼不可分，配色写了等于没写。
       c) `.risk-dot` 字号 ≥11px（同上，10px 时 emoji 会把底色盖满）。
       d) 涨红 `#f0435c` / 跌绿 `#0f9d78` 两个常量必须在（A 股惯例，别反）。
-      e) 断板页图例三档 span 必须齐（写了图例却漏一档，等于图例本身在骗人）。
+      e) `.risk-tip`（弹窗内长条风险提示）同样三档灰阶，且**字色对比度 ≥4.5:1**（WCAG AA）。
+         用户 2026-10-21 23:04：「底色也按三档改，字体还是黄色字体」。
+         这条必须同时管「深浅单调」和「对比度」——#ffd54a 黄字压 #8c8c8c 只有 2.4:1，
+         只判单调的话照样做出一版看不清的东西。
+      f) 断板页图例三档 span 必须齐（写了图例却漏一档，等于图例本身在骗人）。
     """
     p = os.path.join(HERE, "index.html")
     try:
@@ -2371,14 +2398,54 @@ def g30_display_prefs(r):
     elif float(fs.group(1)) < 11:
         r.fail("G30", "风险徽章 font-size=%spx < 11px —— emoji 会盖满胶囊、底色不可辨，"
                       "三档配色失效（实测教训，见 24.21④）" % fs.group(1))
+    else:
+        r.ok("G30", "风险徽章字号 %spx ≥ 11px（emoji 不会盖满胶囊）" % fs.group(1))
 
     # ---- d) 涨红跌绿 ----
     lack = [c for c in ("#f0435c", "#0f9d78") if c.lower() not in s.lower()]
     if lack:
         r.fail("G30", "涨跌色常量缺失：%s —— A 股惯例涨红（#f0435c）跌绿（#0f9d78），别反"
                       % "、".join(lack))
+    else:
+        r.ok("G30", "涨跌色常量在位（涨红 #f0435c / 跌绿 #0f9d78，A 股惯例）")
 
-    # ---- e) 图例三档齐 ----
+    # ---- e) 长条风险提示徽章（.risk-tip）也走三档灰阶，且黄字必须读得清 ----
+    # 用户 2026-10-21 23:04：「底色也按三档改，字体还是黄色字体」。
+    # 这条不是抄 spec 就完事：#ffd54a 压在全灰阶上对比度只有 2.4:1（AA 要求 4.5），
+    # 淡灰底更是 0.8:1（等于白底黄字）。所以判据必须**同时**管「深浅单调」和「对比度」——
+    # 只管前者，做出来的东西用户照样看不清。
+    if ".risk-tip" in s:
+        t_lum, t_miss, t_low = {}, [], []
+        for k in ("red", "orange", "yellow"):
+            mk = re.search(r"\.risk-tip\.sev-%s\s*\{([^}]*)\}" % k, s)
+            body = mk.group(1) if mk else ""
+            bg = re.search(r"background:\s*(#[0-9a-fA-F]{3,8})", body)
+            fg = re.search(r"color:\s*(#[0-9a-fA-F]{3,8})", body)
+            if not bg or not fg:
+                t_miss.append(k)
+                continue
+            v = _hex_lum(bg.group(1))
+            if v is None:
+                t_miss.append(k)
+                continue
+            t_lum[k] = v
+            cr = _wcag_contrast(fg.group(1), bg.group(1))
+            if cr is not None and cr < 4.5:
+                t_low.append("%s 档 %s/%s 对比度 %.1f:1" % (k, fg.group(1), bg.group(1), cr))
+        if t_miss:
+            r.fail("G30", "风险提示长条徽章缺档或配色不全：%s —— 三档须 黑底/深灰底/淡灰底 + 黄字"
+                          "（用户 2026-10-21 23:04 指定）" % "、".join(t_miss))
+        elif not (t_lum["red"] < t_lum["orange"] < t_lum["yellow"]):
+            r.fail("G30", "风险提示长条徽章底色亮度未「深→浅」：red=%.0f orange=%.0f yellow=%.0f"
+                   % (t_lum["red"], t_lum["orange"], t_lum["yellow"]))
+        elif t_low:
+            r.fail("G30", "风险提示长条徽章字色对比度不足 WCAG AA（<4.5:1）：%s —— "
+                          "黄字压不住这么浅的底，换更深底或改暗金字" % "；".join(t_low))
+        else:
+            r.ok("G30", "风险提示长条徽章三档灰阶 + 黄字对比度均 ≥4.5:1（亮度 %.0f/%.0f/%.0f）"
+                   % (t_lum["red"], t_lum["orange"], t_lum["yellow"]))
+
+    # ---- f) 图例三档齐 ----
     if "风险徽章" not in s:
         r.fail("G30", "断板页缺少「风险徽章」图例 —— 只靠底色深浅分档、却没文字说明，"
                       "等于让人猜（用户 2026-10-21 问「颜色怎么不一样」就是这个原因）")
@@ -2387,6 +2454,8 @@ def g30_display_prefs(r):
         gone = [k for k in ("red", "orange", "yellow") if ("sev-" + k) not in lg]
         if gone:
             r.fail("G30", "风险徽章图例缺档：%s —— 图例必须三档齐全" % "、".join(gone))
+        else:
+            r.ok("G30", "断板页风险徽章图例三档齐全（⚠️ 底色越深越严重）")
 
 
 def main():
