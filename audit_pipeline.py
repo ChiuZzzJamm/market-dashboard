@@ -1859,6 +1859,119 @@ def g26_pool_sector_keys(r):
     r.warn("G26", "机械池板块键与预测板块错位：" + "；".join(parts) + "（R100z163）")
 
 
+def g27_memory_reachability(r):
+    """G27 记忆可达性 / 时效 / 积压（R100z166，2026-10-21）。
+
+    事故一（可达性，当天真实发生）：`PROJECT-MEMORY.md` 的 `24.11` / `24.12` 被写成
+    `## 二十四·十一、` / `## 二十四·十二、`（中文编号 + 误用二级），而 `MEMORY.md`
+    路由表写的是阿拉伯数字 `24.11` / `24.12`。结果 `grep 24.11` 只命中 `### 24.11a`，
+    **主标题命不中** —— 该节对检索者等于不存在。我当天正是靠记忆里「只看断板槽位」
+    那半句去改代码，而同一节的完整判据读不到。
+    G25 只数「路由表行数 ≥ N」，**不验证路由指向的目标是否真实存在**，这里补上。
+
+    事故二（时效）：运行期记忆里 7 处「下一个 A 股交易日：2026-10-08，届时…」
+    在 13 天后仍以未来时态陈述。记忆是追加式的，**旧条目的「届时」永远停在未来**，
+    读到会误判当前状态（以为节后还没开盘）。
+
+    判据（可达性）：`MEMORY.md` 里每个 `24.x` 必须在 `PROJECT-MEMORY.md` 有 `24.x` 开头标题。
+      FAIL —— 确定性强、零误报，修法 30 秒（给标题补阿拉伯数字），
+      不修就等于「记忆里有一条我永远读不到的规则」。
+    判据（时效）：`届时 / 下一个 / 下次` **前 30 字符内**有日期、该日期 < 今天、且整行未带
+      快照类标记（`已过期/快照/勿当现状/已作废/已自愈`）→ 陈旧叙述。WARN。
+      ⚠️ 窗口必须收窄到 30 字符。首版按「整行任一处过期日期」判，8 条命中里 5 条误报：
+        · 常驻提醒「**下次放假前**只需复查这一条还在不在」（旧日期在 500 字外）
+        · 已带标记「以下整条是 2026-10-16 深夜的**快照**…勿当现状读」
+        · changelog「部署：未提交，延续「等**下次**自动化跑」」（R100zNNN 条目，日期天然在行首）
+      真正会让人误判当前状态的只有「日期紧贴关键字」这一种，例如
+      「下一个 A 股交易日：**2026-10-08**（国庆休市），届时…」。
+    判据（积压）：日志 >30 天未蒸馏 → WARN。本闸顺便充当蒸馏的**执行者**
+      （此前该规则只写在记忆里，全项目零执行点，属空转型）。
+    """
+    base = os.path.join(HERE, ".workbuddy", "memory")
+    mem = os.path.join(base, "MEMORY.md")
+    pm = os.path.join(base, "PROJECT-MEMORY.md")
+    import glob                                              # noqa: PLC0415
+    from datetime import date as dt_date                     # noqa: PLC0415
+    if not os.path.exists(mem) or not os.path.exists(pm):
+        r.ok("G27", "本工作区无 MEMORY.md / PROJECT-MEMORY.md，跳过")
+        return
+    try:
+        mtxt = open(mem, encoding="utf-8", errors="ignore").read()
+        ptxt = open(pm, encoding="utf-8", errors="ignore").read()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G27", f"记忆文件读取失败：{e}")
+        return
+
+    # ---- 1) 路由可达性：MEMORY.md 引用的 24.x 必须有同名标题 ----
+    # ⚠️ 必须要求「标题里的节号与引用**完全相等**」：首版用 `24\.13(?![0-9])`，
+    #    结果 MEMORY.md 引 `24.13` 时，`#### 24.13a` 这种子项标题就能满足它 ——
+    #    故障注入（把 `### 24.13` 改回 `### 二十四·十三、`）居然仍然 PASS。
+    #    而原版 24.11 事故正是这个形状（主标题中文、子标题 24.11a 在）。
+    #    收尾改成 `(?![0-9A-Za-z])`，子标题不再冒充主标题。
+    refs = sorted({m.group(0) for m in re.finditer(r"24\.\d+[a-z]?", mtxt)})
+    missing = [x for x in refs
+               if not re.search(r"^#{2,4}\s*" + re.escape(x) + r"(?![0-9A-Za-z])", ptxt, re.M)]
+    if missing:
+        r.fail("G27", f"MEMORY.md 路由指向的节在 PROJECT-MEMORY.md 里 grep 不到："
+                      f"{('、'.join(missing))}——给标题补阿拉伯数字（如「## 二十四·十一」→「### 24.11」）"
+                      f"，否则该节等于不存在（R100z166）")
+    else:
+        r.ok("G27", f"路由可达：MEMORY.md 引用 {len(refs)} 个 24.x，全部命中标题")
+
+    # ---- 2) 时效：关键字前 30 字符内的日期是否已过 ----
+    today = dt_date.today()
+    KW = ("届时", "下一个", "下次")
+    SNAP = ("已过期", "快照", "勿当现状", "已作废", "已自愈")
+    DATE_RE = re.compile(r"20\d{2}-\d{2}-\d{2}")
+    stale = []
+
+    def stale_in(label, txt):
+        for i, line in enumerate(txt.split("\n"), 1):
+            if any(s in line for s in SNAP):
+                continue
+            for kw in KW:
+                pos = line.find(kw)
+                if pos < 0:
+                    continue
+                near = DATE_RE.findall(line[max(0, pos - 30):pos])
+                m2 = re.match(r"[^0-9]{0,10}(20\d{2}-\d{2}-\d{2})", line[pos:])
+                cand = near[-1] if near else (m2.group(1) if m2 else None)
+                if cand:
+                    try:
+                        if dt_date.fromisoformat(cand) < today:
+                            stale.append(f"{label}:{i}（{cand}）")
+                    except ValueError:
+                        pass
+                break
+
+    stale_in("MEMORY.md", mtxt)
+    stale_in("PROJECT-MEMORY.md", ptxt)
+    for p in sorted(glob.glob(os.path.join(base, "automations", "*", "memory.md"))):
+        try:
+            stale_in(os.path.basename(os.path.dirname(p))[:8],
+                     open(p, encoding="utf-8", errors="ignore").read())
+        except Exception:                                    # noqa: BLE001
+            continue
+    if stale:
+        r.warn("G27", f"{len(stale)} 处「届时/下一个」紧贴已过日期却仍以未来时态陈述"
+                      f"（{('、'.join(stale[:6]))}{'…' if len(stale) > 6 else ''}）"
+                      f"——行尾加「（⏳ 已过期：…）」，别删原文（R100z166）")
+
+    # ---- 3) 积压：>30 天日志未蒸馏 ----
+    olds = []
+    for p in sorted(glob.glob(os.path.join(base, "20*.md"))):
+        try:
+            d = dt_date.fromisoformat(os.path.basename(p)[:-3])
+        except ValueError:
+            continue
+        age = (today - d).days
+        if age > 30:
+            olds.append(f"{os.path.basename(p)[:-3]}({age}天)")
+    if olds:
+        r.warn("G27", f"{len(olds)} 份日志超 30 天未蒸馏（{('、'.join(olds[:6]))}）"
+                      f"——结论并入 PROJECT-MEMORY.md 后删除，否则检索边界无限扩大（R100z166）")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -1900,6 +2013,7 @@ def main():
     g24_unchecked_disclosure(r)
     g25_memory_hygiene(r)
     g26_pool_sector_keys(r)
+    g27_memory_reachability(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
