@@ -113,6 +113,14 @@ echo "🎯 生成盘前策略闭环（strategy_engine.py）..."
 echo "📐 回填历史行业基准（market_bench.py --backfill-bench）..."
 "$PY" market_bench.py --backfill-bench || true
 
+# ---------- R100z167：页头时间戳归一（必须在审计闸门之前）----------
+# 背景：顶层 updatedAt 原先被 5 个脚本各自覆盖（谁最后跑谁赢），实测 A股 17:20 已更新、
+# 页头还停在「16:01（韩股/日经）」。此脚本从各分格戳（ashare/us/panorama/四模块/stopTrack）
+# 取最大时间戳，生成唯一来源的页头文案；幂等、只改一个字段、异常 exit 0 不阻断。
+# 放在审计之前是为了让 G28（数据新鲜度一致性）看到归一后的结果。
+echo "🕒 归一时间戳（refresh_stamp.py）..."
+"$PY" refresh_stamp.py || true
+
 # ---------- R100z53：审计闸门下沉（一次性覆盖五条自动化）----------
 # 背景（子代理对账 P0-1）：此前只有 17:00 / 周末两条 automation 的 prompt 里手写了
 # 「deploy 前先跑 audit_pipeline」，07:00 / 08:30 / 09:45 三条没有 → 那三条改完代码可以直接 push，

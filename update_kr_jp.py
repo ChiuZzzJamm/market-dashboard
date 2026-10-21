@@ -436,6 +436,10 @@ def main():
             parts.append(f"{nm} {date_display} 已更新")
     ts = datetime.now(TZ8).strftime('%Y-%m-%d %H:%M')
     D['updatedAt'] = f"{ts}（{'；'.join(parts)}）"
+    # R100z167：韩日这一格由脚本自己维护，供 refresh_stamp.py 取最大时间戳生成页头。
+    # 两地都休市时数据没动，不写这格（否则页头会自称「已更新」）。
+    if not (kr_holiday and jp_holiday):
+        D.setdefault('panorama', {})['updatedAt'] = D['updatedAt']
 
     # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace
     _tmp = 'data.js.tmp'

@@ -1366,8 +1366,13 @@ def main():
                 updated_parts.append("连板梯队")
             else:
                 print("[info] 连板梯队空池，保留原值")
-        a["tradeDate"] = now
-        a["status"] = "收盘"
+        # R100z167：tradeDate/status 与 updatedAt 必须同进同退。原先这两行在
+        # `if updated_parts:` 之外，一旦所有源都返回 None（但没到 4 项全失败的红线）
+        # 就会出现「tradeDate 已翻到今日、updatedAt 还是昨天」——新鲜度谎报，
+        # G28 会把它判成 FAIL，所以这里顺手收口。
+        if updated_parts:
+            a["tradeDate"] = now
+            a["status"] = "收盘"
         if updated_parts:
             note = f"（A股收盘已自动更新：{'/'.join(updated_parts)}）"
             if em_failed:
@@ -1377,6 +1382,10 @@ def main():
             if notes_extra:
                 note += "；" + "/".join(notes_extra)
             D["updatedAt"] = datetime.now(TZ8).strftime('%Y-%m-%d %H:%M') + note
+            # R100z167：A股这一格由脚本自己维护。原先 ashare.updatedAt 只有 AI 手写，
+            # 于是长期出现「脚本已刷 17:20、ashare.updatedAt 还挂在昨天 17:22」，
+            # 且 refresh_stamp.py 取不到这格就永远算不出真正最新的时间。
+            a["updatedAt"] = D["updatedAt"]
         out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ";\n"
         # R100z165（L10 写盘原子化）：原为单行 open(...).write()，无 with、无关闭保证
         _tmp = "data.js.tmp"

@@ -23,6 +23,36 @@ def http_get(url, timeout=15, retries=3, decode='utf-8'):
     return None
 
 
+def fetch_names(codes, timeout=8):
+    """腾讯行情批量取股票名 → {code: name}（R100z167）。
+
+    背景：powerScreen.failPool 里出现过 4 条 `name=空串`（600860/603009/603418/603179），
+    前端失效池渲染成空行 —— 根因是 `collect_pool_names` 的 code→name 反查只覆盖
+    「池内 + stkKlineNames」标的，九门/吸筹扩展扫描域里的标的天然查不到名。
+    这里用腾讯行情（GBK，60 只/批，实测 75/80 命中）补一次，失败返回已取到的部分，
+    调用方负责「取不到就降级」——绝不写空串进 data.js。
+    """
+    out = {}
+    cs = [str(c).strip() for c in (codes or []) if str(c).strip()]
+    for i in range(0, len(cs), 60):
+        chunk = cs[i:i + 60]
+        q = ','.join(('sh' if c.startswith(('6', '9')) else 'sz') + c for c in chunk)
+        txt = http_get('https://qt.gtimg.cn/q=' + q, timeout=timeout, retries=1, decode='gb18030')
+        if not txt:
+            continue
+        for line in txt.split(';'):
+            if '="' not in line:
+                continue
+            try:
+                f = line.split('="', 1)[1].rstrip('"').split('~')
+                code, nm = f[2].strip(), f[1].strip()
+                if code and nm:
+                    out[code] = nm
+            except Exception:                                # noqa: BLE001
+                continue
+    return out
+
+
 def find_node():
     """优先 PATH，其次 workbuddy 管理的多版本目录，最后兜底系统路径。"""
     p = shutil.which('node')
@@ -35,6 +65,109 @@ def find_node():
         if os.path.exists(c):
             return c
     raise RuntimeError('node not found in PATH or known locations')
+
+
+# ---------- 美股交易日历（R100z167：从 update_us_from_quotes.py 下沉，单一来源） ----------
+# 原表只活在 07:00 的取数脚本里，audit G10 想核对「美股最新收盘日」只能另抄一份 —— 
+# 这正是 G13（A股节假日表两份手工副本）踩过的坑，故此处收口：谁需要就 import。
+def _nth_weekday(year, month, weekday, n):
+    """返回 year 年 month 月第 n 个 weekday（0=周一…6=周日）的日期"""
+    d = _dt.datetime(year, month, 1)
+    offset = (weekday - d.weekday()) % 7
+    d = d + _dt.timedelta(days=offset) + _dt.timedelta(days=7 * (n - 1))
+    return d.date()
+
+
+def _last_weekday(year, month, weekday):
+    if month == 12:
+        nxt = _dt.datetime(year + 1, 1, 1)
+    else:
+        nxt = _dt.datetime(year, month + 1, 1)
+    d = nxt - _dt.timedelta(days=1)
+    offset = (d.weekday() - weekday) % 7
+    return (d - _dt.timedelta(days=offset)).date()
+
+
+def _easter(year):
+    a = year % 19
+    b = year // 100
+    c = year % 100
+    d = b // 4
+    e = b % 4
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i = c // 4
+    k = c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    month = (h + l - 7 * m + 114) // 31
+    day = ((h + l - 7 * m + 114) % 31) + 1
+    return _dt.datetime(year, month, day).date()
+
+
+def us_holidays(year):
+    """返回该年度美股休市日期集合（NYSE 规则，含周末顺延）"""
+    h = set()
+    jan1 = _dt.datetime(year, 1, 1).date()
+    if jan1.weekday() == 5:
+        h.add(jan1 - _dt.timedelta(days=1))
+    elif jan1.weekday() == 6:
+        h.add(jan1 + _dt.timedelta(days=1))
+    else:
+        h.add(jan1)
+    h.add(_nth_weekday(year, 1, 0, 3))              # 马丁路德金日（1月第3周一）
+    h.add(_nth_weekday(year, 2, 0, 3))              # 总统日（2月第3周一）
+    h.add(_easter(year) - _dt.timedelta(days=2))        # 耶稣受难日
+    h.add(_last_weekday(year, 5, 0))                # 阵亡将士纪念日（5月最后周一）
+    j6 = _dt.datetime(year, 6, 19).date()               # 六月节
+    if j6.weekday() == 5:
+        h.add(j6 - _dt.timedelta(days=1))
+    elif j6.weekday() == 6:
+        h.add(j6 + _dt.timedelta(days=1))
+    else:
+        h.add(j6)
+    j4 = _dt.datetime(year, 7, 4).date()                # 独立日
+    if j4.weekday() == 5:
+        h.add(j4 - _dt.timedelta(days=1))
+    elif j4.weekday() == 6:
+        h.add(j4 + _dt.timedelta(days=1))
+    else:
+        h.add(j4)
+    h.add(_nth_weekday(year, 9, 0, 1))              # 劳动节（9月第1周一）
+    h.add(_nth_weekday(year, 11, 3, 4))             # 感恩节（11月第4周四）
+    d25 = _dt.datetime(year, 12, 25).date()             # 圣诞
+    if d25.weekday() == 5:
+        h.add(d25 - _dt.timedelta(days=1))
+    elif d25.weekday() == 6:
+        h.add(d25 + _dt.timedelta(days=1))
+    else:
+        h.add(d25)
+    return h
+
+
+_HOLIDAYS = {}
+def _holidays_for(year):
+    if year not in _HOLIDAYS:
+        _HOLIDAYS[year] = us_holidays(year)
+        _HOLIDAYS[year + 1] = us_holidays(year + 1)
+    return _HOLIDAYS[year]
+
+
+def is_us_trading_day(d):
+    if d.weekday() >= 5:
+        return False
+    return d not in _holidays_for(d.year)
+
+
+def prior_us_trading_day(from_date):
+    """返回 from_date 之前（不含 from_date 当天）最近的一个美股交易日"""
+    d = from_date - _dt.timedelta(days=1)
+    for _ in range(14):
+        if is_us_trading_day(d):
+            return d
+        d -= _dt.timedelta(days=1)
+    return None
 
 
 def load_dashboard_data(base):
@@ -146,7 +279,8 @@ def trading_days_between(d0, d1):
     return n
 
 
-def roll_fail_pool(old_fail, new_entries, today, keep_days=5, exclude_codes=None):
+def roll_fail_pool(old_fail, new_entries, today, keep_days=5, exclude_codes=None,
+                   name_map=None):
     """失效归档池滚动窗口（R100z56，用户 2026-10-04 要求「失效当天入池、5 个交易日后剔除」）。
 
     - 保留：自 entryDate 起 keep_days 个交易日内的旧归档 + 今日新失效（同 code 以新条目为准）；
@@ -158,6 +292,7 @@ def roll_fail_pool(old_fail, new_entries, today, keep_days=5, exclude_codes=None
       「已失效 **且当前不在池**」，故在池 code 一律从失效池移除。
     - ⚠️ 一律用上面节假日感知的 trading_days_between，不许自己数周一~周五
       （国庆/春节会被数成交易日，节后首日跑就把窗口内归档提前清空了）。
+    - name_map（可选 code→name）：补空名字用；补不到的条目直接丢弃（R100z167）。
     返回新列表（不改动入参）。old_fail/new_entries 元素均为 dict，非 dict 一律跳过。
     """
     excl = {str(c) for c in (exclude_codes or set()) if str(c)}
@@ -186,7 +321,22 @@ def roll_fail_pool(old_fail, new_entries, today, keep_days=5, exclude_codes=None
         new_codes = {str(x.get('code')) for x in new_list}
         out = [f for f in out if str(f.get('code')) not in new_codes]
         out += new_list
-    return out
+
+    # R100z167：失效池空名字治理（用户截图实报的空行根因）。
+    # 旧归档 name 可能是空串（源头查名失败），前端照渲染成空行。这里统一：
+    #   ① name 空 → 用 name_map（code→name）补；② 补不到的整条丢弃（无名归档对读者零信息）。
+    # 丢弃是「宁缺毋滥」：失效池是归档展示位，缺一条不影响任何硬约束。
+    fixed = []
+    for f in out:
+        nm = str(f.get('name') or '').strip()
+        if not nm and name_map:
+            nm = str(name_map.get(str(f.get('code'))) or '').strip()
+        if not nm:
+            continue
+        if nm != f.get('name'):
+            f = dict(f, name=nm)
+        fixed.append(f)
+    return fixed
 
 
 # ---------- R100z6: 同花顺抓取统一收口 ----------

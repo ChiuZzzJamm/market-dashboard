@@ -247,104 +247,7 @@ def fetch_trade_date():
 
 
 # ---------- 美股节假日历（脚本级判定，避免休市/旧文件把旧收盘误写为新交易日数据） ----------
-def _nth_weekday(year, month, weekday, n):
-    """返回 year 年 month 月第 n 个 weekday（0=周一…6=周日）的日期"""
-    d = datetime(year, month, 1)
-    offset = (weekday - d.weekday()) % 7
-    d = d + timedelta(days=offset) + timedelta(days=7 * (n - 1))
-    return d.date()
-
-
-def _last_weekday(year, month, weekday):
-    if month == 12:
-        nxt = datetime(year + 1, 1, 1)
-    else:
-        nxt = datetime(year, month + 1, 1)
-    d = nxt - timedelta(days=1)
-    offset = (d.weekday() - weekday) % 7
-    return (d - timedelta(days=offset)).date()
-
-
-def _easter(year):
-    a = year % 19
-    b = year // 100
-    c = year % 100
-    d = b // 4
-    e = b % 4
-    f = (b + 8) // 25
-    g = (b - f + 1) // 3
-    h = (19 * a + b - d - g + 15) % 30
-    i = c // 4
-    k = c % 4
-    l = (32 + 2 * e + 2 * i - h - k) % 7
-    m = (a + 11 * h + 22 * l) // 451
-    month = (h + l - 7 * m + 114) // 31
-    day = ((h + l - 7 * m + 114) % 31) + 1
-    return datetime(year, month, day).date()
-
-
-def us_holidays(year):
-    """返回该年度美股休市日期集合（NYSE 规则，含周末顺延）"""
-    h = set()
-    jan1 = datetime(year, 1, 1).date()
-    if jan1.weekday() == 5:
-        h.add(jan1 - timedelta(days=1))
-    elif jan1.weekday() == 6:
-        h.add(jan1 + timedelta(days=1))
-    else:
-        h.add(jan1)
-    h.add(_nth_weekday(year, 1, 0, 3))              # 马丁路德金日（1月第3周一）
-    h.add(_nth_weekday(year, 2, 0, 3))              # 总统日（2月第3周一）
-    h.add(_easter(year) - timedelta(days=2))        # 耶稣受难日
-    h.add(_last_weekday(year, 5, 0))                # 阵亡将士纪念日（5月最后周一）
-    j6 = datetime(year, 6, 19).date()               # 六月节
-    if j6.weekday() == 5:
-        h.add(j6 - timedelta(days=1))
-    elif j6.weekday() == 6:
-        h.add(j6 + timedelta(days=1))
-    else:
-        h.add(j6)
-    j4 = datetime(year, 7, 4).date()                # 独立日
-    if j4.weekday() == 5:
-        h.add(j4 - timedelta(days=1))
-    elif j4.weekday() == 6:
-        h.add(j4 + timedelta(days=1))
-    else:
-        h.add(j4)
-    h.add(_nth_weekday(year, 9, 0, 1))              # 劳动节（9月第1周一）
-    h.add(_nth_weekday(year, 11, 3, 4))             # 感恩节（11月第4周四）
-    d25 = datetime(year, 12, 25).date()             # 圣诞
-    if d25.weekday() == 5:
-        h.add(d25 - timedelta(days=1))
-    elif d25.weekday() == 6:
-        h.add(d25 + timedelta(days=1))
-    else:
-        h.add(d25)
-    return h
-
-
-_HOLIDAYS = {}
-def _holidays_for(year):
-    if year not in _HOLIDAYS:
-        _HOLIDAYS[year] = us_holidays(year)
-        _HOLIDAYS[year + 1] = us_holidays(year + 1)
-    return _HOLIDAYS[year]
-
-
-def is_us_trading_day(d):
-    if d.weekday() >= 5:
-        return False
-    return d not in _holidays_for(d.year)
-
-
-def prior_us_trading_day(from_date):
-    """返回 from_date 之前（不含 from_date 当天）最近的一个美股交易日"""
-    d = from_date - timedelta(days=1)
-    for _ in range(14):
-        if is_us_trading_day(d):
-            return d
-        d -= timedelta(days=1)
-    return None
+from common import is_us_trading_day, prior_us_trading_day  # noqa: E402  （R100z167：美股节假日表已下沉 common.py，与 audit G10 同源，消除第三份手工副本）
 
 
 def us_market_open(now_utc):
@@ -578,6 +481,9 @@ else:
             m['date'] = f"{trade_md} 收盘（美东）" if trade_md != "未知" else "未知日期"
             m['items'] = sorted(pano_items, key=lambda x: (x.get('pct') is None, -(x.get('pct') or 0)))
     D['updatedAt'] = f"{datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d %H:%M')}（美股收盘数据已自动更新）"
+    # R100z167：美股这一格由脚本自己维护，供 refresh_stamp.py 取最大时间戳生成页头。
+    # 休市/过期分支刻意**不写**这格——数据没更新就不该自称已更新。
+    us_obj['updatedAt'] = D['updatedAt']
     print(f"updated us/panorama.us for {trade_iso}")
 
 # 写回 data.js（--dry-run 仅打印，不写盘）

@@ -27,9 +27,11 @@
 import argparse
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import date, datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
@@ -87,6 +89,8 @@ UA = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit
 EM_DC = 'https://datacenter-web.eastmoney.com/api/data/v1/get'
 EM_PUSH2 = 'https://push2.eastmoney.com/api/qt/ulist.np/get'
 EM_ANN = 'https://np-anotice-stock.eastmoney.com/api/security/ann'
+TX_Q = 'https://qt.gtimg.cn/q='                      # R100z167：行情名主源（GBK）
+SINA_Q = 'https://hq.sinajs.cn/list='                # R100z167：行情名备源（GBK，必须带 Sina Referer）
 
 
 def http_json(url, referer=None, timeout=12, params=None, retries=1):
@@ -116,11 +120,31 @@ def http_json(url, referer=None, timeout=12, params=None, retries=1):
     raise last
 
 
+def http_text(url, referer=None, timeout=12, encoding='utf-8', retries=1):
+    """取纯文本（腾讯 qt.gtimg / 新浪 hq.sinajs 都是 GBK 文本，不是 JSON）。"""
+    headers = dict(UA)
+    if referer:
+        headers['Referer'] = referer
+    req = urllib.request.Request(url, headers=headers)
+    last = None
+    for att in range(max(1, retries + 1)):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read().decode(encoding, 'ignore')
+        except urllib.error.HTTPError:
+            raise
+        except Exception as e:         # noqa: BLE001
+            last = e
+            if att < retries:
+                time.sleep(0.4 * (att + 1))
+    raise last
+
+
 # R100z160：公告源熔断器。2026-10-21 实测 np-anotice 对全部 343 只连续返回 567，
 # 旧逻辑会打 343 次请求并在 unknown 里堆 188 条近似重复行（报告里只看到「大面积 567」，
 # 既看不出「哪些维度没核查」，又白等几十秒）。连续失败达阈值即整体熔断，
 # 把「这一维度整体未核查」变成一条可机读结论。
-ANN_BREAK = {'run': 0, 'open': False, 'msg': '', 'limit': 8, 'skipped': 0}
+ANN_BREAK = {'run': 0, 'open': False, 'msg': '', 'limit': 5, 'skipped': 0, 'src': 'em'}
 ANN_BREAK_TAG = '__ANN_BREAKER__'
 
 
@@ -152,38 +176,98 @@ def load_stocks(path=DATA_JS):
     return json.loads(pr.stdout)
 
 
-def fetch_names(codes):
-    """行情名（判 ST 用）。分批 + 每批重试一次。
+def _pref(code):
+    """6 位代码 → 腾讯/新浪的交易所前缀（sh/sz/bj）。"""
+    c = str(code).strip().replace('.', '')[-6:]
+    if c.startswith(('60', '68', '90')):
+        return 'sh' + c
+    if c.startswith(('00', '30', '20')):
+        return 'sz' + c
+    if c.startswith(('4', '8')):
+        return 'bj' + c
+    return 'sh' + c
 
-    R100z160：原实现把所有代码拼成一个超长 secids 一次请求、且**无重试**。2026-10-21 实测
-    push2 会偶发整批失败（同一批代码立刻重试就成功，100/100），一次抖动就把整轮 ST/退市维度
-    降级成「本维度不判安全」，报告层只能照抄。现在按 80 只一批（URL 控制在 ~900 字符，避免
-    343 只时拼到 ~3.4KB 被回绝）+ 单批重试 1 次（间隔 0.8s，只重试网络类异常，见 http_json）。
+
+NAME_SRC_STAT = {'tx': 0, 'sina': 0, 'em': 0}
+
+
+def _names_tx(part):
+    """腾讯 qt.gtimg.cn（GBK）：v_sh600000="1~浦发银行~600000~…" """
+    txt = http_text(TX_Q + ','.join(_pref(c) for c in part),
+                    referer='https://gu.qq.com/', encoding='gbk')
+    got = {}
+    for seg in txt.split(';'):
+        if '="' not in seg:
+            continue
+        f = seg.split('="', 1)[1].strip().rstrip('"').split('~')
+        if len(f) > 2 and f[1].strip() and f[2].strip().isdigit():
+            got[f[2].strip()[-6:]] = f[1].strip()
+    return got
+
+
+def _names_sina(part):
+    """新浪 hq.sinajs.cn（GBK，必须带 Sina Referer，否则 Forbidden）：
+    var hq_str_sh600000="浦发银行,9.72,…" """
+    txt = http_text(SINA_Q + ','.join(_pref(c) for c in part),
+                    referer='https://finance.sina.com.cn/', encoding='gbk')
+    got = {}
+    for seg in txt.split(';'):
+        if 'hq_str_' not in seg or '="' not in seg:
+            continue
+        head, body = seg.split('="', 1)
+        code = head.strip().split('hq_str_')[-1][-6:]
+        nm = body.split(',')[0].strip().strip('"')
+        if code.isdigit() and nm:
+            got[code] = nm
+    return got
+
+
+def _names_em(part):
+    """东财 push2（末位兜底）。2026-10-21 起本机对 push2 全断（RemoteDisconnected）。"""
+    secids = ','.join(to_secid(c) for c in part)
+    js = http_json(EM_PUSH2, referer='https://quote.eastmoney.com/',
+                   params='fields=f12,f14&secids=' + secids)
+    rows = (js.get('data') or {}).get('diff') or []
+    return {str(r['f12']).replace('.', '')[-6:]: (r.get('f14') or '')
+            for r in rows if r.get('f12')}
+
+
+def fetch_names(codes):
+    """行情名（判 ST 用）：腾讯 gtimg 主源 → 新浪备源 → 东财 push2 末位。
+
+    R100z167（2026-10-21 用户实报「怎么那么多遗留问题」）：
+        旧实现**只用东财 push2**。push2 已在本机整段被封（连续 3 次
+        RemoteDisconnected），于是每轮 ST/退市都是 0/365，报告只能写「该维度未核查」——
+        这不是数据源抖一下，是**唯一源死了没有备源**，把兜底做成了装饰。
+        实测：腾讯 qt.gtimg.cn 单批 80 只秒回（有名 75/80，缺的是退市/停牌代码）、
+        新浪 hq.sinajs.cn 80/80 全回（两者都需 GBK 解码，新浪还需 Sina Referer）。
+    逐批补漏：一批里谁缺就换下一个源补，三个源都缺才回退 data.js 旧名并如实标未核查。
     """
     if not codes:
         return {}
-    out, CHUNK = {}, 80
+    out, CHUNK = {}, 60
     for i in range(0, len(codes), CHUNK):
         part = codes[i:i + CHUNK]
-        secids = ','.join(to_secid(c) for c in part)
-        for attempt in (0, 1):
-            try:
-                js = http_json(EM_PUSH2, referer='https://quote.eastmoney.com/',
-                               params='fields=f12,f14&secids=' + secids)
-                rows = (js.get('data') or {}).get('diff') or []
-                got = {}
-                for r in rows:
-                    if r.get('f12'):
-                        got[str(r['f12']).replace('.', '')] = r.get('f14') or ''
-                if got:
-                    out.update(got)
-                    break
-            except Exception as e:                                  # noqa: BLE001
-                if attempt == 1:
-                    print('[EM_NAMES_FAIL] push2 取名失败（第 %d 批，%d 只）：%s'
-                          % (i // CHUNK + 1, len(part), repr(e)[:110]))
-                else:
-                    time.sleep(0.8)
+        for src, fn in (('tx', _names_tx), ('sina', _names_sina), ('em', _names_em)):
+            miss = [c for c in part if str(c)[-6:] not in out]
+            if not miss:
+                break
+            for attempt in (0, 1):
+                try:
+                    got = fn(miss)
+                except Exception as e:                              # noqa: BLE001
+                    if attempt == 1:
+                        print('[NAME_SRC_FAIL] %s 取名失败（第 %d 批，%d 只）：%s'
+                              % (src, i // CHUNK + 1, len(miss), repr(e)[:100]))
+                    else:
+                        time.sleep(0.6)
+                    continue
+                for c, nm in got.items():
+                    c6 = str(c)[-6:]
+                    if nm and c6 not in out:
+                        out[c6] = nm
+                        NAME_SRC_STAT[src] = NAME_SRC_STAT.get(src, 0) + 1
+                break
     return out
 
 
@@ -204,9 +288,15 @@ def fetch_lift(code, lo, hi, today):
     for r in rows:  # 只扫最新 60 条里最近的若干解禁 batches
         d = d8(r.get('FREE_DATE'))
         if d and lo_d <= d <= hi_d:
-            hits.append('解禁 %s（%s，占总股本 %.1f%%）' % (
-                d.isoformat(), r.get('FREE_SHARES_TYPE') or '限售股',
-                round(float(r.get('TOTAL_RATIO') or 0) * 100, 1)))
+            # R100z167：TOTAL_RATIO 缺失时旧版写「0.0%」——把「未披露」伪装成「解禁量为零」，
+            # 这种命中既无法量化也无法解释（2026-10-21 华勤技术实报）。缺就如实写未披露。
+            ratio = r.get('TOTAL_RATIO')
+            try:
+                ratio_txt = '占总股本 %.1f%%' % (float(ratio) * 100)
+            except (TypeError, ValueError):
+                ratio_txt = '占总股本比例未披露'
+            hits.append('解禁 %s（%s，%s）' % (
+                d.isoformat(), r.get('FREE_SHARES_TYPE') or '限售股', ratio_txt))
         if len(hits) >= 3:
             break
     return hits, None
@@ -242,43 +332,143 @@ def fetch_pledge(code, within_days=365):
     return ['参考·质押 %.1f%%（截至 %s）' % (maxv, newest.isoformat())], None
 
 
-def fetch_ann(code, days=30):
-    """公告源：一次取最近 50 条，按关键词拆成 减持 / 业绩预减 两类。源不可达返回 None。
+CNINFO = 'http://www.cninfo.com.cn/new/hisAnnouncement/query'
+CNINFO_ORG = 'http://www.cninfo.com.cn/new/information/topSearch/query'
+ANN_STAT = {'em_ok': 0, 'em_fail': 0, 'cn_ok': 0, 'cn_fail': 0}
+_ORG_CACHE = {}
 
-    ★np-anotice 在部分网络下会被拦（沙箱实测 http 567），不可达时进 unknown 明确写
-    「未下结论」——绝不因为取不到就当这只票没风险。连续失败满 8 只即整体熔断（ANN_BREAK），
-    余下标的直接返回熔断标记，不再白打请求。
+
+def http_post_form(url, data, referer=None, timeout=12, retries=1):
+    """表单 POST（巨潮公告查询只认 POST + 表单编码）。"""
+    headers = dict(UA)
+    headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
+    if referer:
+        headers['Referer'] = referer
+    last = None
+    for att in range(max(1, retries + 1)):
+        try:
+            req = urllib.request.Request(url, data=data.encode('utf-8'), headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read().decode('utf-8', 'ignore')
+        except urllib.error.HTTPError as e:
+            last = e
+            if att < retries and e.code in (429, 567):
+                time.sleep(1.0 * (att + 1))
+                continue
+            raise
+        except Exception as e:         # noqa: BLE001
+            last = e
+            if att < retries:
+                time.sleep(0.5 * (att + 1))
+    raise last
+
+
+def _ann_rows_cninfo(code, days):
+    """巨潮资讯（法定披露渠道）→ [(date, title)]。
+
+    R100z167：np-anotice 在本机实测 19/20 请求返回 HTTP 567（WAF 段封），
+    旧逻辑熔断后直接放弃 → 减持/业绩预减两个维度整轮未核查。巨潮是该数据的
+    **一手源**（沪深交易所指定披露平台），实测稳定，故作为 np-anotice 的接手源。
     """
-    if ANN_BREAK['open']:
-        ANN_BREAK['skipped'] += 1
-        return None, ANN_BREAK_TAG
-    try:
-        js = http_json(EM_ANN, referer='https://data.eastmoney.com/', retries=1, params=(
-            'sr=-1&page_size=50&page_index=1&ann_type=A&client_source=web&stock_list=' + str(code)))
-    except Exception as e:
-        err = repr(e)[:100]
-        ANN_BREAK['run'] += 1
-        if not ANN_BREAK['msg']:
-            ANN_BREAK['msg'] = err
-        if ANN_BREAK['run'] >= ANN_BREAK['limit']:
-            ANN_BREAK['open'] = True
-        return None, err
-    ANN_BREAK['run'] = 0            # 有成功即清零（偶发抖动不该熔断整轮）
-    rows = (js.get('data') or {}).get('list') or []
-    if not isinstance(rows, list) or not rows:
-        return [], None
+    c = str(code)[-6:]
+    col = 'sse' if c.startswith(('6', '9')) else 'szse'
+    org = _ORG_CACHE.get(c)
+    if not org:
+        try:
+            txt = http_post_form(CNINFO_ORG, urllib.parse.urlencode(
+                {'keyWord': c, 'maxNum': '10'}), referer='http://www.cninfo.com.cn/')
+            rows = json.loads(txt) or []
+            for r in rows:
+                if str(r.get('code')) == c and r.get('orgId'):
+                    org = r['orgId']
+                    break
+        except Exception:                                        # noqa: BLE001
+            org = None
+        if not org:                     # 兜底：市场前缀 + 补零（多数标的可用，个别 orgId 为纯数字）
+            org = ('gssh0' if col == 'sse' else 'gssz0') + c[:6]
+        _ORG_CACHE[c] = org
+    lo = (date.today() - timedelta(days=days)).isoformat()
+    hi = (date.today() + timedelta(days=1)).isoformat()   # 含次日预披露（晚间披露按次日计）
+    body = urllib.parse.urlencode({
+        'pageNum': '1', 'pageSize': '30', 'column': col, 'tabName': 'fulltext',
+        'plate': '', 'stock': '%s,%s' % (c, org), 'searchkey': '',
+        'seDate': '%s~%s' % (lo, hi), 'sortName': '', 'sortType': '',
+        'isHLtitle': 'false'})
+    txt = http_post_form(
+        CNINFO, body,
+        referer='http://www.cninfo.com.cn/new/commonUrl?url=disclosure/list/notice')
+    js = json.loads(txt)
+    out = []
+    for a in (js.get('announcements') or []):
+        title = re.sub(r'<[^>]+>', '', str(a.get('announcementTitle') or '')).strip()
+        ts = a.get('announcementTime')
+        d = None
+        if isinstance(ts, (int, float)) and ts > 0:
+            d = datetime.fromtimestamp(ts / 1000).date()
+        if d and title:
+            out.append((d, title))
+    return out
+
+
+def fetch_ann(code, days=30):
+    """公告源：np-anotice（快、易被 567）→ 连续失败即切巨潮（稳、一手）。
+
+    ★R100z167：旧逻辑把「熔断」当成「本维度放弃」（剩余标的直接返回标记），
+    结果减持/业绩预减永远 partial。熔断应该只是**换源**，不是弃查。
+    """
+    rows, err = None, None
+    if ANN_BREAK.get('src', 'em') == 'em':
+        if ANN_BREAK['open']:
+            ANN_BREAK['src'] = 'cninfo'
+        else:
+            try:
+                js = http_json(EM_ANN, referer='https://data.eastmoney.com/', retries=0, params=(
+                    'sr=-1&page_size=50&page_index=1&ann_type=A&client_source=web&stock_list='
+                    + str(code)))
+                ANN_BREAK['run'] = 0        # 有成功即清零（偶发抖动不该熔断整轮）
+                ANN_STAT['em_ok'] += 1
+                rows = []
+                for r in ((js.get('data') or {}).get('list') or []):
+                    d = d8(r.get('notice_date')) or d8(r.get('display_time'))
+                    rows.append((d, str(r.get('title') or '')))
+            except Exception as e:                                  # noqa: BLE001
+                err = repr(e)[:100]
+                ANN_STAT['em_fail'] += 1
+                ANN_BREAK['run'] += 1
+                if not ANN_BREAK['msg']:
+                    ANN_BREAK['msg'] = err
+                if ANN_BREAK['run'] >= ANN_BREAK['limit']:
+                    ANN_BREAK['open'] = True
+                    ANN_BREAK['src'] = 'cninfo'
+                    print('[ANN_SWITCH] np-anotice 连续 %d 只失败（%s）→ 本轮回退巨潮资讯'
+                          % (ANN_BREAK['run'], ANN_BREAK['msg']))
+
+    if rows is None and ANN_BREAK.get('src', 'em') == 'cninfo':
+        try:
+            rows = _ann_rows_cninfo(code, days)
+            ANN_STAT['cn_ok'] += 1
+            err = None
+        except Exception as e:                                      # noqa: BLE001
+            err = repr(e)[:100]
+            ANN_STAT['cn_fail'] += 1
+
+    if rows is None:
+        return None, err or '公告源不可达'
+
     CUT_KW = ('减持', '减仓', '减持计划', '减持股份')
+    PLAN_KW = ('减持计划', '预披露', '拟减持', '减持股份计划')
     LOSS_KW = ('业绩预减', '预亏', '首亏', '业绩下滑', '净利润较上年同期下降',
                '归母净利润为负值', '业绩预告为亏损', '净利润同比下降')
     cutoff = d8(date.today()) - timedelta(days=days)
     cuts, losses = [], []
-    for r in rows[:50]:
-        title = str(r.get('title') or '')
-        d = d8(r.get('notice_date')) or d8(r.get('display_time'))
+    for d, title in rows[:50]:
         if d is None or d < cutoff:
             continue
         if any(k in title for k in CUT_KW):
-            cuts.append('%s 减持公告' % d.isoformat())
+            # R100z167：必须保留「计划 / 实施」区别。旧版一律写成「减持公告」，
+            # grade_reasons 认不出「减持计划」→ 预披露被误判 red 硬剔（把好票杀掉）。
+            tag = '减持计划（预披露）' if any(k in title for k in PLAN_KW) else '减持公告'
+            cuts.append('%s %s' % (d.isoformat(), tag))
         elif any(k in title for k in LOSS_KW):
             losses.append('%s 业绩预减公告' % d.isoformat())
         if len(cuts) + len(losses) >= 4:
@@ -349,11 +539,15 @@ def main():
             print(json.dumps({'ok': False, 'reason': msg}, ensure_ascii=False))
         return 1
 
+    NAME_SRC_STAT.update({'tx': 0, 'sina': 0, 'em': 0})     # R100z167：逐轮重计
     names = fetch_names(codes)
-    em_names_cnt = len(names)              # R100z160：先记真实覆盖率，再补兜底名
-    name_src = 'em' if names else 'local'  # R100z129：区分「行情名」与「data.js 旧名」，后者判 ST 不可靠
+    em_names_cnt = len(names)              # R100z167：真实行情名覆盖率（已含腾讯/新浪）
+    if names:
+        name_src = max(NAME_SRC_STAT, key=lambda k: NAME_SRC_STAT[k]) or 'quote'
+    else:
+        name_src = 'local'
     for c in codes:   # 兜底仅用于显示名称；此时 ST 判定降级为存疑（见下方 unknown，绝不静默当安全）
-        names.setdefault(c, local_names.get(c, ''))
+        names.setdefault(str(c)[-6:], local_names.get(c, '') or local_names.get(str(c)[-6:], ''))
 
     blacklist, unknown, failed = {}, [], []
     stat = {'ann_ok': 0, 'ann_fail': 0, 'lift_fail': 0, 'pledge_fail': 0}
@@ -385,7 +579,7 @@ def main():
             else:
                 stat['ann_ok'] += 1
                 reasons += (ann or [])
-            nm = names.get(code, '')
+            nm = names.get(str(code)[-6:], '')
             if nm and ('ST' in nm.upper() or '退' in nm):
                 reasons.insert(0, 'ST/退市（当前名称 %s）' % nm)
             if reasons:
@@ -395,17 +589,19 @@ def main():
                                    'severity': sev, 'progress': prog}
 
     if name_src == 'local':   # R100z129：行情名源不可达时不得静默给「无 ST 命中」的假阴性
-        unknown.append('行情名源（东财 push2）不可达：ST/退市判定已回退 data.js 名称'
+        unknown.append('行情名源（腾讯 gtimg / 新浪 / 东财 push2 三源全不可达）'
+                       '：ST/退市判定已回退 data.js 名称'
                        '（AI 写回的可能是更名前旧名，会漏判 ST），该维度本次不判安全')
     elif em_names_cnt < len(codes):   # R100z160：只取到一部分时，余下静默回退旧名 = 假阴性
-        unknown.append('行情名源（东财 push2）仅取到 %d/%d 只：余下 %d 只的 ST/退市判定'
-                       '回退 data.js 旧名，该部分不判安全'
+        unknown.append('行情名源（腾讯 gtimg / 新浪 / 东财 push2）仅取到 %d/%d 只：'
+                       '余下 %d 只的 ST/退市判定回退 data.js 旧名，该部分不判安全'
                        % (em_names_cnt, len(codes), len(codes) - em_names_cnt))
 
     if ANN_BREAK['open']:
-        unknown.append('公告源（np-anotice）本轮熔断：前 %d 只连续失败（%s），'
-                       '剩余 %d 只未请求——减持/业绩预减维度**整体未核查**'
-                       % (ANN_BREAK['run'], ANN_BREAK['msg'], ANN_BREAK['skipped']))
+        unknown.append('公告源（np-anotice）本轮连续 %d 只失败（%s）→ 已切巨潮资讯；'
+                       '巨潮成功 %d 只 / 失败 %d 只，失败部分减持·业绩预减维度未核查'
+                       % (ANN_BREAK['run'], ANN_BREAK['msg'],
+                          ANN_STAT['cn_ok'], ANN_STAT['cn_fail']))
 
     # ---------------- 维度核查台账（R100z160） ----------------
     # 用户 2026-10-21 实报：push2 与 np-anotice 同时不可达，报告却写成「已核查无风险」。
@@ -423,9 +619,15 @@ def main():
               else ('partial' if em_names_cnt > 0 else 'unchecked'))
     dims = {
         'st': {'status': st_cov,
-               'cover': '行情名源（东财 push2）%d/%d 只取到' % (em_names_cnt, n_all)},
-        'cut': {'status': ann_cov, 'cover': '公告源 %d/%d 只取到' % (ann_ok, n_all)},
-        'loss': {'status': ann_cov, 'cover': '公告源 %d/%d 只取到' % (ann_ok, n_all)},
+               'cover': '行情名源（腾讯%s/新浪%s/东财%s）%d/%d 只取到' % (
+                   NAME_SRC_STAT['tx'], NAME_SRC_STAT['sina'], NAME_SRC_STAT['em'],
+                   em_names_cnt, n_all)},
+        'cut': {'status': ann_cov,
+                'cover': '公告源 %d/%d 只取到（东财%d/巨潮%d）' % (
+                    ann_ok, n_all, ANN_STAT['em_ok'], ANN_STAT['cn_ok'])},
+        'loss': {'status': ann_cov,
+                 'cover': '公告源 %d/%d 只取到（东财%d/巨潮%d）' % (
+                     ann_ok, n_all, ANN_STAT['em_ok'], ANN_STAT['cn_ok'])},
         'lift': {'status': lift_cov, 'cover': '解禁源 %d/%d 只取到' % (lift_ok, n_all)},
         'pledge': {'status': ple_cov, 'cover': '质押源 %d/%d 只取到（仅供参考）' % (ple_ok, n_all)},
     }
@@ -441,6 +643,7 @@ def main():
     res = {
         'ok': True,
         'nameSrc': name_src,
+        'nameSrcDetail': dict(NAME_SRC_STAT),
         'date': date_tag or today.isoformat(),
         'checked': len(codes),
         'liftWindow': [args.lift_lo, args.lift_hi],

@@ -42,6 +42,12 @@
     G26 机械池键对齐   stock_pool.json 的 bySector 键集必须与 aiPrediction.sectors 的板块名对得上；
                       对不上时 check_stock_pool 对该板块整轮失明，「④ 断板必须取自机械池」
                       静默降级为提示（R100z163，WARN）
+    G27 记忆可达性     MEMORY.md 路由指向的 24.x 节必须真能 grep 到标题；「届时」紧贴过期日期
+                      仍以未来时态陈述；>30 天日志未蒸馏（R100z166）
+    G28 新鲜度一致性   页头 updatedAt 必须 = 各分格戳的最大值（顶层字段曾被 5 个脚本互相覆盖，
+                      实测 A股 17:20 已更新、页头还停在 16:01）；ashare.updatedAt 必须与
+                      tradeDate 同日（该格原先由 AI 手写，长期挂着 10-20 的旧值）；
+                      分格清单与 refresh_stamp.py 的 SLOTS 逐项一致（R100z167，FAIL 拦部署）
 """
 import ast
 import json
@@ -680,13 +686,33 @@ def g8_g9_g10_data(r):
         ("aiPrediction.date", (D.get("aiPrediction") or {}).get("date")),
         ("openOutlook.date", (D.get("openOutlook") or {}).get("date")),
         ("ashare.tradeDate", (D.get("ashare") or {}).get("tradeDate")),
-        ("us.tradeDate", (D.get("us") or {}).get("tradeDate")),
     ]
     stale = [f"{k}={v}" for k, v in checks if v and last and v < last]
     if stale:
         r.warn("G10", f"日期早于最近交易日 {last}：{'; '.join(stale)}（休市期正常，换日前需复核）")
     else:
         r.ok("G10", f"各模块日期均 ≥ 最近交易日 {last}")
+
+    # 美股单独口径（R100z167）：美东收盘落在北京时间次日凌晨，美股交易日历又与 A 股不同。
+    # 旧写法把 us.tradeDate 塞进上面那张表与 A 股最近交易日比 —— 结果**每天晚上必然命中**
+    # 「us.tradeDate 早于最近交易日」（北京 21:00 时美东 10-21 还没收盘，最新只能是 10-20），
+    # 一条永远为真的 WARN，等于训练人忽略 G10。现改为与「最近已收盘美股交易日」比：
+    # 期望值 = prior_us_trading_day(北京今天)（当天收盘尚未发生，故取前一个交易日）。
+    # 交易日历已下沉 common.py（与 07:00 取数脚本同源，不再有第三份手工副本）。
+    try:
+        import common as _common                               # noqa: PLC0415
+        us_td = str((D.get("us") or {}).get("tradeDate") or "")[:10]
+        exp = _common.prior_us_trading_day(datetime.now().date())
+        if us_td and exp:
+            if us_td == exp.isoformat():
+                r.ok("G10", f"us.tradeDate={us_td} = 最近已收盘美股交易日")
+            elif us_td > exp.isoformat():
+                r.ok("G10", f"us.tradeDate={us_td} 不早于最近已收盘美股交易日 {exp.isoformat()}")
+            else:
+                r.warn("G10", f"us.tradeDate={us_td} 早于最近已收盘美股交易日 {exp.isoformat()}"
+                              f"——07:00 取数步未跑，或美股数据未换日")
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G10", f"美股交易日历核对跳过：{e}")
 
     # openOutlook.pos 闭环（R100z13 → 17:00 score_openoutlook 打分依赖）
     # 分流：① 前瞻已为「下一交易日」写了但缺 pos → 真缺陷（当天 17:00 必然 [SKIP]）
@@ -1848,15 +1874,23 @@ def g26_pool_sector_keys(r):
         r.ok("G26", f"机械池键与预测板块一一对齐（{len(names)} 个板块，候选数据日 "
                     f"{pool.get('candidateDate') or pool.get('date') or '未知'}）")
         return
+    # R100z167：池键漂移本身**不再是缺陷**——check_stock_pool 已改为「键没对上就用全池
+    # 断板候选核对」，硬约束永不失明。这里只判定还有没有可核对的断板候选：
+    # 有 → ok（记明漂移数量，不给运维派活）；一只都没有 → 那才是真·无货，WARN。
+    db_all = [it for v in (pool.get("bySector") or {}).values() for it in (v or [])
+              if str(it.get("src") or "").startswith("断板")]
+    if db_all:
+        r.ok("G26", f"池键与预测板块有 {len(missing)} 个不同名（{('、'.join(missing))}），"
+                    f"但全池 {len(db_all)} 只断板候选已兜底核对，「④ 断板取自池内」不失明；"
+                    f"08:30 重键（--sectors）可恢复板块级精确核对")
+        return
     parts = []
     if missing:
-        parts.append(f"{len(missing)} 个预测板块在池里没有键（{('、'.join(missing))}）——"
-                     f"这些板块的「④ 断板必须取自机械池」整轮失明")
+        parts.append(f"{len(missing)} 个预测板块在池里没有键（{('、'.join(missing))}）")
     if extra:
-        parts.append(f"池里还有 {len(extra)} 个已不用的旧键（{('、'.join(extra))}）")
-    parts.append('修法：build_stock_pool.py --write --sectors "%s"（只重键不换股）'
-                 % "，".join(missing or names))
-    r.warn("G26", "机械池板块键与预测板块错位：" + "；".join(parts) + "（R100z163）")
+        parts.append(f"池里有 {len(extra)} 个已不用的旧键（{('、'.join(extra))}）")
+    r.warn("G26", "机械池键与预测板块错位，且**全池无任何断板候选**："
+                  + "；".join(parts) + "——断板槽位整轮只能自选，须在汇报点名（R100z167）")
 
 
 def g27_memory_reachability(r):
@@ -1972,6 +2006,156 @@ def g27_memory_reachability(r):
                       f"——结论并入 PROJECT-MEMORY.md 后删除，否则检索边界无限扩大（R100z166）")
 
 
+# G28 分格时间戳表：与 refresh_stamp.py 的 SLOTS **必须逐项一致**，G28 会跨文件并排比。
+# 历史 bug 类型就是这类「两处各写一份清单」——只在一边加字段，另一边静默漏取。
+STAMP_SLOTS = [
+    (("ashare", "updatedAt"), "A股收盘"),
+    (("us", "updatedAt"), "美股收盘"),
+    (("panorama", "updatedAt"), "全球市场全景"),
+    (("harmonic", "updatedAt"), "谐波形态"),
+    (("accumulation", "updatedAt"), "吸筹打分"),
+    (("powerScreen", "updatedAt"), "量化筛选"),
+    (("fullScan", "updatedAt"), "全量扫描"),
+    (("stopTrack", "updatedAt"), "止损跟踪"),
+]
+
+
+def _stamp_slots_from_script():
+    """从 refresh_stamp.py 源码里取 SLOTS 字面量（不 import，避免执行副作用）。"""
+    p = os.path.join(HERE, "refresh_stamp.py")
+    try:
+        tree = ast.parse(open(p, encoding="utf-8").read())
+    except Exception:                                        # noqa: BLE001
+        return None
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+                isinstance(t, ast.Name) and t.id == "SLOTS" for t in node.targets):
+            try:
+                return [(tuple(pth), lbl) for pth, lbl in ast.literal_eval(node.value)]
+            except Exception:                                # noqa: BLE001
+                return None
+    return None
+
+
+def g28_freshness_consistency(r):
+    """G28 数据新鲜度一致性（R100z167，2026-10-21，用户实报「怎么那么多遗留问题」）。
+
+    事故一（页头撒谎）：页面头部「数据更新」读 data.js **顶层** `updatedAt`，而这一个字段
+    被 5 个脚本各自覆盖 —— 谁最后跑谁赢。实测当天 A股 17:20 已更新，页头还停在
+    `16:01（韩股 10/21 收盘 已更新）`；第二天更糟，页头写 10-20 而数据已是 10-21。
+    根因不是「某个脚本忘了写」，而是**这个字段没有单一主人**。
+    修法：各市场/模块只写自己那一格（`ashare.updatedAt` / `us.updatedAt` /
+    `panorama.updatedAt` / 四模块 / `stopTrack`），部署时由 `refresh_stamp.py` 取**最大
+    时间戳**生成顶层文案 —— 单一来源、幂等。本闸守的就是这件事有没有真的发生。
+
+    事故二（ashare 那格没人写）：`ashare.updatedAt` 长期由 AI 手写，脚本只写 tradeDate。
+    于是出现「`ashare.updatedAt` 仍显示 10-20 17:22」被当成免责声明挂在报告里好几天。
+    现在 `update_ashare_sectors.py` 与 tradeDate/status **同进同退**，本闸校验同日。
+
+    判据：
+      a) 顶层 `updatedAt` 的时间戳 == 各分格里的最大值。不等 → FAIL，
+         修法一行：跑 `refresh_stamp.py`（deploy.sh 已内置，说明有人绕过 deploy 直接改了数据）。
+      b) `ashare.updatedAt` 的日期 == `ashare.tradeDate`。缺/不同日 → FAIL。
+      c) 各分格戳日期早于 `ashare.tradeDate` → WARN（该格是旧交易日的货，但页面照挂着）。
+      d) `refresh_stamp.py` 的 SLOTS 与本地 STAMP_SLOTS 不一致 → FAIL（清单漂移＝静默漏取）。
+      e) `duanban.generatedAt` / 四模块 `tradeDate` 早于 `ashare.tradeDate` → WARN。
+    非交易日（status 含「休市」）或 tradeDate 不可解析时整条跳过 —— 休市期数据不动是正常的。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G28", f"data.js 解析失败，跳过新鲜度一致性核对：{e}")
+        return
+
+    # ---- d) 清单漂移（先查，后面两条判据都依赖它）----
+    script_slots = _stamp_slots_from_script()
+    if script_slots is None:
+        r.warn("G28", "读不到 refresh_stamp.py 的 SLOTS（文件缺失或写法变了），"
+                      "无法并排比对各格清单，请确认该脚本仍在部署链里")
+    else:
+        mine = {tuple(p) for p, _ in STAMP_SLOTS}
+        theirs = {tuple(p) for p, _ in script_slots}
+        if mine != theirs:
+            only_a = sorted(".".join(p) for p in mine - theirs)
+            only_b = sorted(".".join(p) for p in theirs - mine)
+            r.fail("G28", f"分格清单漂移：audit 有而 refresh_stamp 没有 {only_a or '无'}；"
+                          f"refresh_stamp 有而 audit 没有 {only_b or '无'} —— "
+                          f"两处必须逐项一致，否则新加的那一格永远进不了页头（R100z167）")
+        else:
+            r.ok("G28", f"分格清单一致：{len(mine)} 格（ashare/us/panorama/四模块/stopTrack）")
+
+    a = D.get("ashare") or {}
+    td = str(a.get("tradeDate") or "").strip()[:10]
+    status = str(a.get("status") or "")
+    if ("休市" in status) or ("非交易日" in status) or not re.match(r"^20\d{2}-\d{2}-\d{2}$", td):
+        r.ok("G28", f"非交易日/休市（status={status or '空'}，tradeDate={td or '空'}），"
+                    f"跳过新鲜度一致性核对")
+        return
+
+    TS = re.compile(r"(20\d{2}-\d{2}-\d{2})\s+(\d{2}:\d{2})")
+
+    def dig(path):
+        cur = D
+        for k in path:
+            if not isinstance(cur, dict):
+                return None
+            cur = cur.get(k)
+        return cur
+
+    # ---- b) ashare 那格必须与 tradeDate 同日 ----
+    m = TS.search(str(a.get("updatedAt") or ""))
+    if not m:
+        r.fail("G28", "ashare.updatedAt 缺失或没有可解析时间戳 —— "
+                      "update_ashare_sectors.py 必须与 tradeDate/status 同时写入该格（R100z167）")
+    elif m.group(1) != td:
+        r.fail("G28", f"ashare.updatedAt 停在 {m.group(1)}，而 tradeDate 已是 {td} —— "
+                      f"该格只能由脚本写，AI 手写/漏写都会造成新鲜度谎报（R100z167）")
+
+    # ---- a) 顶层 = 各格最大值 ----
+    rows, old_slots = [], []
+    for path, label in STAMP_SLOTS:
+        v = dig(path)
+        mm = TS.search(str(v or ""))
+        if not mm:
+            continue
+        rows.append(("%s %s" % (mm.group(1), mm.group(2)), label))
+        if mm.group(1) < td:
+            old_slots.append(f"{label}={mm.group(1)}")
+    if not rows:
+        r.warn("G28", "各分格都没有可解析的 updatedAt，无法核对页头权威值")
+    else:
+        best_ts, best_label = max(rows, key=lambda x: x[0])
+        top = TS.search(str(D.get("updatedAt") or ""))
+        if not top:
+            r.fail("G28", "顶层 updatedAt 缺失/不可解析 —— 页头「数据更新」会空白")
+        else:
+            top_ts = "%s %s" % (top.group(1), top.group(2))
+            if top_ts != best_ts:
+                r.fail("G28", f"页头时间戳 {top_ts} ≠ 各格最新 {best_ts}（{best_label}）—— "
+                              f"顶层 updatedAt 被某个脚本覆盖成自己的时间了。"
+                              f"修法：跑 refresh_stamp.py（deploy.sh 已内置该步）（R100z167）")
+            else:
+                r.ok("G28", f"页头时间戳 = 各格最新 {top_ts}（{best_label}）")
+
+    # ---- c) 分格戳落后于当日交易日 ----
+    if old_slots:
+        r.warn("G28", f"{len(old_slots)} 格戳早于交易日 {td}：{'、'.join(old_slots[:5])}"
+                      f"——该格内容是旧交易日的货，页面照挂着（非交易日误标时属正常）")
+
+    # ---- e) 四模块/断板 快照日期落后 ----
+    lag = []
+    for key in ("harmonic", "accumulation", "powerScreen", "fullScan"):
+        v = str((D.get(key) or {}).get("tradeDate") or "")[:10]
+        if v and v < td:
+            lag.append(f"{key}.tradeDate={v}")
+    dg = str((D.get("duanban") or {}).get("generatedAt") or "")[:10]
+    if re.match(r"^20\d{2}-\d{2}-\d{2}$", dg) and dg < td:
+        lag.append(f"duanban.generatedAt={dg}")
+    if lag:
+        r.warn("G28", f"模块快照落后于交易日 {td}：{'、'.join(lag)}"
+                      f"——16:00 数据步漏跑或未换日，页面对应板块展示的是旧交易日")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -2014,6 +2198,7 @@ def main():
     g25_memory_hygiene(r)
     g26_pool_sector_keys(r)
     g27_memory_reachability(r)
+    g28_freshness_consistency(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))

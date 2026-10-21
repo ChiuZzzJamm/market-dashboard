@@ -219,6 +219,26 @@ def main():
             item['acc'] = True
         passed.append(item)
     passed.sort(key=lambda x: (-x['score'], -x['pct']))
+
+    # R100z167：名缺失兜底（用户截图实报「失效池出现空行」的根因）。
+    # collect_pool_names 只覆盖「池内 + stkKlineNames」，本脚本扩展扫描域（断板池/全量
+    # stkKlines 的 60/00）里有些标的查不到名 → name='' → passed 与 failPool 都带空名。
+    # 只在**确实缺名**的标的上补一次腾讯行情（60 只/批），失败就沿用空名并由
+    # roll_fail_pool 丢弃该归档条目（绝不写空串进 data.js 让前端渲染空行）。
+    _miss = sorted({str(i.get('code') or '') for i in passed if not str(i.get('name') or '').strip()})
+    _old_ps = (D.get('powerScreen') or {})
+    for _k in ('failPool', 'passed'):
+        _miss += sorted({str(x.get('code') or '') for x in (_old_ps.get(_k) or [])
+                         if isinstance(x, dict) and not str(x.get('name') or '').strip()})
+    _miss = [c for c in dict.fromkeys(_miss) if c]
+    if _miss:
+        _got = common.fetch_names(_miss) or {}
+        for i in passed:
+            if not str(i.get('name') or '').strip():
+                i['name'] = _got.get(str(i.get('code') or ''), '')
+        names.update(_got)
+        print(f"[POWER] 补名：需要 {len(_miss)} 只，取到 {len(_got)} 只"
+              f"（仍无名 {len(_miss) - len(_got)} 只，其失效归档条目会被丢弃）")
     # ⚠️ R100z57：不许拿 date.today() 当交易日——周末/长假跑一次就会把假日期写进
     # tradeDate 与 entryDate（页面标题印「周六收盘」+ 全池误挂「新」徽章）。
     today = common.today_trade_date()
@@ -258,7 +278,7 @@ def main():
         if not _c or _c in _new_codes:
             continue
         new_fails.append({'code': _c,
-                          'name': _oi.get('name') or '',
+                          'name': (_oi.get('name') or '').strip() or (names.get(_c) or ''),
                           'sector': _oi.get('sector') or '',
                           'score': _oi.get('score'),
                           'reason': f"本轮未过九门阈值（上一轮 {_oi.get('score')}/9 门，阈值不再满足）",
@@ -267,14 +287,15 @@ def main():
         print('[POWER] 本轮无达标标的，保留既有池（R91n 不清场）')
         old['note'] = (old.get('note') or '') + f"｜{today} 本轮无新命中"
         old['failPool'] = common.roll_fail_pool(old.get('failPool') or [], [], today,
-                                                exclude_codes=_new_codes)
+                                                exclude_codes=_new_codes, name_map=names)
         new_field = old
     elif not passed and not old:
         print('[POWER] 无达标且无旧值，写空结构')
     else:
         _existed = len(new_fails)
         new_field['failPool'] = common.roll_fail_pool(
-            (old or {}).get('failPool') or [], new_fails, today, exclude_codes=_new_codes)
+            (old or {}).get('failPool') or [], new_fails, today, exclude_codes=_new_codes,
+            name_map=names)
         if _existed:
             print(f"[POWER] 失效池新增 {_existed} 只（5 交易日滚动窗口后共 "
                   f"{len(new_field['failPool'])} 只）")

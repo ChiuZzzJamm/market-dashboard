@@ -692,7 +692,16 @@ def check_risk_blacklist(D, scope='all'):
 
     bl_map = bl.get('blacklist') or {}
 
-    def scan(stocks, where):
+    def scan(stocks, where, hard=True, asof=None):
+        """hard=True → 这是**选股池**（要买的东西），red 命中即 FAIL「须换股」。
+        hard=False → 这是**要闻引用**（只是提到这只票），red 命中降级 WARN：
+        新闻里出现 ST 股是事实，要求「换股」是错的口径 —— 真正要拦的是
+        「把 ST 股写成受益/推荐标的」（R100z167：600079/600311 被 ST 命中后
+        一直以「须换股，不得留在 8 只池」挂在审计里，而它们只在 intlNews/bearNews
+        的 impacts 里，根本不在 8 只池 —— 假 FAIL 会训练人忽略真 FAIL）。
+        asof=成稿日（仅 star.picks 用）：命中公告日期晚于成稿日 = 事后新增信息，
+        当日精选按 prompt 硬约束**不可改写**，降 WARN 并点名「下一交易日自动剔除」。
+        """
         for st in (stocks or []):
             if not isinstance(st, dict):
                 continue
@@ -706,8 +715,21 @@ def check_risk_blacklist(D, scope='all'):
             reasons = '；'.join(hit.get('reasons') or [])
             nm = hit.get('name') or st.get('name') or ''
             if sev == 'red':
-                out.append(f"个股硬风险黑名单命中(红/硬剔)：{code} {nm}"
-                           f"（{reasons}）——须换股，不得留在 8 只池（R100z13 硬闸）")
+                if hard:
+                    late = [ds for ds in re.findall(r"(20\d{2}-\d{2}-\d{2})", reasons)
+                            if asof and ds > asof]
+                    if late:
+                        warns_out.append(
+                            f"开盘精选事后新增风险(红)：{code} {nm}（{reasons}）@ {where}"
+                            f"——命中公告日期 {max(late)} 晚于精选成稿日 {asof}，属成稿后才披露的信息；"
+                            f"当日精选不可改写（prompt 硬约束），下一交易日 09:45 用刷新后的黑名单自动剔除")
+                    else:
+                        out.append(f"个股硬风险黑名单命中(红/硬剔)：{code} {nm}"
+                                   f"（{reasons}）——须换股，不得留在 8 只池（R100z13 硬闸）")
+                else:
+                    warns_out.append(f"要闻引用黑名单标的(红)：{code} {nm}（{reasons}）@ {where}"
+                                     f"——引用事实可以，但不得作为受益/推荐标的；"
+                                     f"若在 impacts/池里充当受益股，请换非 ST 的同板块替代")
             elif sev == 'orange':
                 warns_out.append(f"个股硬风险黑名单命中(橙/警示)：{code} {nm}"
                                  f"（{reasons}）——可保留但需重点关注，不强制换股")
@@ -726,14 +748,20 @@ def check_risk_blacklist(D, scope='all'):
                 for nw in (sec.get(key) or []):
                     if not isinstance(nw, dict):
                         continue
-                    scan(nw.get('stocks'), f"{mk}.{key}")
+                    scan(nw.get('stocks'), f"{mk}.{key}", hard=False)
                     for imp in (nw.get('impacts') or []):
                         if isinstance(imp, dict):
-                            scan(imp.get('stocks'), f"{mk}.{key}.impacts")
+                            scan(imp.get('stocks'), f"{mk}.{key}.impacts", hard=False)
     if scope in ('all', 'star'):
         # R100z41：🌟开盘精选的 picks 是本任务自己挑的，不许池外补股，
         # 那就必须自己过闸——否则 9:45 整条链路完全没有硬风险拦截面。
-        scan(((D.get('duanban') or {}).get('star') or {}).get('picks'), 'duanban.star.picks')
+        star = (D.get('duanban') or {}).get('star') or {}
+        scan(star.get('picks'), 'duanban.star.picks', asof=str(star.get('date') or '')[:10] or None)
+        # R100z167：断板确认池/观察池也要过一遍。它们是 check_duanban 的机械产物，
+        # 没法「要求它换股」（会天天误报），但读者会当反包候选看 —— 命中就 WARN 让人看见。
+        db = D.get('duanban') or {}
+        for key in ('confirmed', 'watching'):
+            scan(db.get(key), f'duanban.{key}', hard=False)
     return out, warns_out
 
 
@@ -907,18 +935,33 @@ def check_stock_pool(D):
         if not sector:
             continue
         key, lst = find_pool(sector)
+        via_global = False
         stocks = [st for st in (s.get('stocks') or []) if isinstance(st, dict)]
         chosen = {_code(st.get('code')) for st in stocks if st.get('code')}
         # 断板槽位＝note 以「断板反包」开头的那几只（与 check_tiered 同一套 cat_of 识别）
         db_chosen = {_code(st.get('code')) for st in stocks
                      if st.get('code') and cat_of(st.get('note')) == 'D'}
         if lst is None:
-            idle.append(sector)
-            warns.append(f"aiPrediction.{sector}: 机械池内无同名板块（板块名未对齐）——"
-                         f"断板槽位按四类配比表自选，属设计内；但**先按当日板块名重键再说**："
-                         f"build_stock_pool.py --write --sectors \"{sector}\"（R100z163，"
-                         f"重键仍为 0 只才算「真没货」，在汇报逐条点名）")
-            continue
+            # R100z167（2026-10-21 用户实报「怎么那么多遗留问题」）：
+            # 旧逻辑在这里 WARN 一句「板块名未对齐，属设计内」就 continue —— 等于
+            # 「④ 断板必须取自池内」对这批板块**整轮失明**，而页面看上去一切正常。
+            # 池键是 AI 自由文本板块名、与同花顺行业名天然会漂移，靠人每天手动重键不是修法。
+            # 兜底改为「全池断板候选」：范围比单板块大，但**绝不会把 AI 凭空捏的票当成池内票**，
+            # 硬约束因此永不失明；键对上时仍走上面的板块级精确核对。
+            gl = [it for v in by.values() for it in (v or [])
+                  if str(it.get('src') or '').startswith('断板')]
+            if not gl:
+                idle.append(sector)
+                warns.append(f"aiPrediction.{sector}: 机械池内无同名板块（板块名未对齐），"
+                             f"且全池无任何断板候选——断板槽位按四类配比表自选，须在汇报点名")
+                continue
+            lst = gl
+            via_global = True
+            warns.append(f"aiPrediction.{sector}: 板块名与池键未对齐（池按上一交易日板块建键）"
+                         f"——已改用**全池 {len(gl)} 只断板候选**核对，「④ 断板必须取自池内」照常生效；"
+                         f"08:30 定完板块名后按当日名重键可恢复板块级精确核对"
+                         f"（build_stock_pool.py --write --sectors \"…\"）")
+        tag = '（池键未对齐，按全池断板候选核对）' if via_global else ''
         cand = {_code(x.get('code')) for x in lst}
         cand.discard('000000')
         if not cand:
@@ -945,11 +988,11 @@ def check_stock_pool(D):
         need_db = min(len(db_pool), len(db_chosen)) or 0
 
         if db_pool and not used_db:
-            hards.append(f"aiPrediction.{sector}: 机械池有 {len(db_pool)} 只断板反包达标候选"
+            hards.append(f"aiPrediction.{sector}: 机械池{tag}有 {len(db_pool)} 只断板反包达标候选"
                          f"（{'、'.join(sorted(db_pool)[:5])}），断板槽位却 {len(db_chosen)} 只全部自选"
                          f"——断板这一类必须取自池内，AI 只保留解释权、交出选择权（R100z15）")
         elif len(db_pool) >= 2 and len(used_db) < need_db:
-            warns.append(f"aiPrediction.{sector}: 机械池断板候选 {len(db_pool)} 只，"
+            warns.append(f"aiPrediction.{sector}: 机械池{tag}断板候选 {len(db_pool)} 只，"
                          f"断板槽位只用了 {len(used_db)} 只"
                          f"（{'、'.join(sorted(db_pool - used_db)[:4])} 未用）——"
                          f"须在 note 说明取舍理由（黑名单换股可接受）")
