@@ -39,6 +39,9 @@
                       「已核查无风险」「黑名单全部通过」等绝对安全表述（R100z160，FAIL）
     G25 记忆层体检    工作区 MEMORY.md 是「注入层」，超限会被 inject 截断导致硬约束读不全
                       （2026-10-21 实测 19.9KB 已被截断）→ 超 8KB 或路由表缺失即 WARN（R100z161）
+    G26 机械池键对齐   stock_pool.json 的 bySector 键集必须与 aiPrediction.sectors 的板块名对得上；
+                      对不上时 check_stock_pool 对该板块整轮失明，「④ 断板必须取自机械池」
+                      静默降级为提示（R100z163，WARN）
 """
 import ast
 import json
@@ -1785,6 +1788,77 @@ def g25_memory_hygiene(r):
         r.ok("G25", f"MEMORY.md {size} 字节，路由表在位")
 
 
+def g26_pool_sector_keys(r):
+    """G26 机械池板块键对齐（R100z163）。
+
+    事故（2026-10-21）：机械池在**前一交易日 17:00** 按当时的 `aiPrediction.sectors` 建键，
+    次日 08:30 盘前重新定板块、改几个名字，整批键就对不上——当天实测 6 个板块里 4 个
+    「无同名板块」（医疗保健 / 消费电子 / 计算机设备 / 航空运输）。而 `check_stock_pool`
+    是按板块名找池的，找不到就只 WARN「点名即可」→ **「④ 断板反包必须取自机械池」
+    这条硬约束对这 4 个板块整轮失明**，页面看上去一切正常。
+    prompt 当时还写着「严禁带 --write，本任务不重建机械池」，等于把错位锁死一整天。
+
+    修法：08:30 定完板块名后跑一次
+        build_stock_pool.py --write --sectors "板块1,板块2,…"
+    （只换键不换股，候选仍由四个引擎机械产出）。本闸只做核对，WARN 不拦部署——
+    真正的硬拦在 check_stock_pool：键对齐了它才有数据可判。
+    """
+    pool_path = os.path.join(HERE, "stock_pool.json")
+    if not os.path.exists(pool_path):
+        r.warn("G26", "未找到 stock_pool.json（build_stock_pool.py 未跑）——机械池没进决策链")
+        return
+    try:
+        pool = json.load(open(pool_path, encoding="utf-8"))
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G26", f"stock_pool.json 解析失败：{e}")
+        return
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G26", f"data.js 读取失败，跳过键对齐复核：{e}")
+        return
+    keys = [k for k in (pool.get("bySector") or {}) if str(k).strip()]
+    names = [str((s or {}).get("sector") or "").strip()
+             for s in ((D.get("aiPrediction") or {}).get("sectors") or [])
+             if str((s or {}).get("sector") or "").strip()]
+    if not keys or not names:
+        r.warn("G26", f"机械池键 {len(keys)} 个 / 预测板块 {len(names)} 个——有一侧为空，无法对齐")
+        return
+
+    def segs(x):
+        """段级切分（·、/／),与 validate_stocks.check_stock_pool 同一口径。
+        不做子串，避免「消费电子」被「消费·食品加工」误牵。"""
+        return [y.strip() for y in re.split(r"[·、/／,，\s]+", str(x or "")) if y.strip()]
+
+    def hit(name):
+        if name in keys:
+            return name
+        ss = segs(name)
+        if ss:
+            for k in keys:
+                ks = segs(k)
+                if ks and (ss[0] == ks[0] or ss[0] in ks or ks[0] in ss):
+                    return k
+        return None
+
+    missing = [n for n in names if not hit(n)]
+    used = {hit(n) for n in names if hit(n)}
+    extra = [k for k in keys if k not in used]
+    if not missing and not extra:
+        r.ok("G26", f"机械池键与预测板块一一对齐（{len(names)} 个板块，候选数据日 "
+                    f"{pool.get('candidateDate') or pool.get('date') or '未知'}）")
+        return
+    parts = []
+    if missing:
+        parts.append(f"{len(missing)} 个预测板块在池里没有键（{('、'.join(missing))}）——"
+                     f"这些板块的「④ 断板必须取自机械池」整轮失明")
+    if extra:
+        parts.append(f"池里还有 {len(extra)} 个已不用的旧键（{('、'.join(extra))}）")
+    parts.append('修法：build_stock_pool.py --write --sectors "%s"（只重键不换股）'
+                 % "，".join(missing or names))
+    r.warn("G26", "机械池板块键与预测板块错位：" + "；".join(parts) + "（R100z163）")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -1825,6 +1899,7 @@ def main():
     g23_cross_stock_phrasing(r)
     g24_unchecked_disclosure(r)
     g25_memory_hygiene(r)
+    g26_pool_sector_keys(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))

@@ -100,6 +100,11 @@ def build_meta(ap, pool):
         picked_total += hit + outside
     meta = {
         "poolDate": (pool or {}).get("date"),
+        # R100z163：date 是「建键所对的预测日」，08:30 按当日板块名重键后会等于当日，
+        # 单看它会把「昨天收盘算出来的候选」说成今天的快照。candidateDate（候选数据源的
+        # 交易日）才是「这批票基于哪天的收盘」，有就优先展示它。
+        "candidateDate": (pool or {}).get("candidateDate"),
+        "sectorsSource": (pool or {}).get("sectorsSource"),
         "generatedAt": (pool or {}).get("generatedAt"),
         "sectors": rows,
         "hitTotal": hit_total,
@@ -114,7 +119,9 @@ def build_meta(ap, pool):
     dist = "/".join(str(r["poolN"]) for r in rows)
     thin = [r["sector"] for r in rows if r["poolN"] < 3]
     meta["level"] = "full" if out_total == 0 else ("self" if hit_total == 0 else "partial")
-    parts = ["机械候选快照：%s" % (meta["poolDate"] or "日期缺失")]
+    parts = ["机械候选快照：%s" % (meta.get("candidateDate") or meta["poolDate"] or "日期缺失")]
+    if meta.get("candidateDate") and meta.get("poolDate") and meta["candidateDate"] != meta["poolDate"]:
+        parts[-1] += "（候选源自 %s 收盘，已按 %s 板块名重键）" % (meta["candidateDate"], meta["poolDate"])
     if meta.get("generatedAt"):
         parts[-1] += "（%s 生成）" % meta["generatedAt"]
     parts.append("%d 个预测板块的候选数依次为 %s" % (len(rows), dist or "—"))

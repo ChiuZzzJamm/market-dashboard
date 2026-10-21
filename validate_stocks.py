@@ -874,17 +874,23 @@ def check_stock_pool(D):
     hards, warns = [], []
 
     # R100z17 时序闸（2026-10-01 体检发现的结构性缺陷）：
-    # 机械池 stock_pool.json 由 17:00 叙事步在第 3 步 `--write` 当日重建，而顶层 aiPrediction
-    # 是同日 08:30 定稿的（17:00 叙事步只补 verification、不整改盘前 sectors 预测）。因此 17:00 叙事步用「当日收盘
-    # 重算出的机械池」去考「当日早上写死的预测」，必然大面积零交集 —— 这不是 AI 自选违规，
-    # 是检验时序错位。此类场景降级为提示，真正的照抄约束留给下一个交易日的 07:00/08:30/周日
-    # 校验（那时 pool.date < pred.date，比对有效）。
+    # 机械池若用「比预测更新的收盘数据」重算，再拿去考当日早上写死的预测，必然零交集——
+    # 那不是 AI 自选违规，是检验时序错位。
+    # R100z163（2026-10-21）修正判据：原来拿 pool['date'] 比 pred_date，而 date 是
+    # **建键所对的预测日**（= aiPrediction.date）。08:30 盘前按当日板块名重键后
+    # （build_stock_pool.py --sectors），date 直接等于 pred_date → 时序闸每天误触发，
+    # 「④ 断板必须取自池内」这条硬约束整天降级成提示 —— 又一个「规则看着在、其实从不执行」。
+    # 改用新增的 candidateDate（候选数据源的交易日 ashare.tradeDate）：
+    #   08:30 重键 → candidateDate = 前一交易日 < pred_date → 照抄约束**生效**（这是本意）
+    #   17:00（16:00 数据步已更新当日收盘）→ candidateDate = 当日 = pred_date → 降级为提示
+    # 旧快照无 candidateDate 时回落到 date，行为与改动前完全一致。
     pred_date = str((D.get('aiPrediction') or {}).get('date') or '')
     pool_date = str(pool.get('date') or '')
-    if pred_date and pool_date and pool_date >= pred_date:
-        warns.append(f"stock_pool.json(date={pool_date}) 不早于 aiPrediction(date={pred_date})："
-                     f"机械池在本任务周期内被重建，08:30 定稿的预测无从照抄，照抄约束降级为提示；"
-                     f"下一交易日的 07:00/08:30/周日校验仍按同一规则硬拦（R100z17 时序闸）")
+    pool_src_date = str(pool.get('candidateDate') or pool_date or '')
+    if pred_date and pool_src_date and pool_src_date >= pred_date:
+        warns.append(f"stock_pool.json 的候选数据日({pool_src_date}) 不早于 aiPrediction(date={pred_date})："
+                     f"机械池是用不早于预测日的收盘数据重算的，08:30 定稿的预测无从照抄，"
+                     f"照抄约束降级为提示；下一交易日的 07:00/08:30/周日校验仍按同一规则硬拦（R100z17 时序闸）")
         return [], warns
 
     # R100z160c：判据改为「断板槽位是否取自池内」，不再拿 8 只整体算池外数。
@@ -909,7 +915,9 @@ def check_stock_pool(D):
         if lst is None:
             idle.append(sector)
             warns.append(f"aiPrediction.{sector}: 机械池内无同名板块（板块名未对齐）——"
-                         f"断板槽位按四类配比表自选，属设计内；须在汇报点名该板块本轮无机械候选")
+                         f"断板槽位按四类配比表自选，属设计内；但**先按当日板块名重键再说**："
+                         f"build_stock_pool.py --write --sectors \"{sector}\"（R100z163，"
+                         f"重键仍为 0 只才算「真没货」，在汇报逐条点名）")
             continue
         cand = {_code(x.get('code')) for x in lst}
         cand.discard('000000')
@@ -949,9 +957,11 @@ def check_stock_pool(D):
 
     if idle and filled == 0:
         warns.append(f"⚠️ 机械池本轮对该批板块整体无候选：{len(idle)} 个板块（{'、'.join(idle)}）"
-                     f"在 stock_pool.json(date={pool_date}) 里找不到同名板块——"
+                     f"在 stock_pool.json(建键日={pool_date}/候选数据日={pool_src_date}) 里找不到同名板块——"
                      f"断板槽位整轮只能按四类配比表自选（①②③ 本就自选，受影响的是 ④ 断板一类）；"
-                     f"须核查 build_stock_pool.py 的板块名匹配（段级匹配/SECTOR_ALIAS）")
+                     f"若只是板块名对不上（池按上一交易日板块建键），**按当日板块名重键即可**："
+                     f"build_stock_pool.py --write --sectors \"{'，'.join(idle[:6])}\"（R100z163）；"
+                     f"若重键后仍为 0 只，才是候选真没货（须在汇报逐条点名）")
     return hards, warns
 
 
