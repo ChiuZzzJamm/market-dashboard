@@ -75,12 +75,24 @@ def harvest(D):
         if isinstance(n, str) and n.strip() and CODE_RE.match(str(c)) \
                 and not str(c).startswith(('81', '88')):
             out.append((str(c), n.strip(), 'stkKlineNames.%s' % c))
+    # stockNews 是 {code: {name, news[]}} 结构 —— dict 里没有 code 字段，
+    # 上面的 walk 收不到（R100z168 线上实测漏了 601717/001248/601567 三条）。
+    for c, v in (D.get('stockNews') or {}).items():
+        if CODE_RE.match(str(c)) and isinstance(v, dict):
+            n = v.get('name')
+            if isinstance(n, str) and n.strip():
+                out.append((str(c), n.strip(), 'stockNews.%s' % c))
     return out
 
 
 def apply(D, fixes):
     """就地把 name 换成新名；返回改动条数。"""
     n = 0
+    # 旧名 → 新名（只用于「name 字段没有 code」的孤立条目，如 harmonic.failPool[39]）
+    old2new = {}
+    for _c, old, _p in harvest(D):
+        if _c in fixes:
+            old2new[old] = fixes[_c]
 
     def walk(o):
         nonlocal n
@@ -89,6 +101,10 @@ def apply(D, fixes):
             if isinstance(c, str) and c in fixes and isinstance(nm, str) \
                     and nm.strip() != fixes[c]:
                 o['name'] = fixes[c]
+                n += 1
+            elif c is None and isinstance(nm, str) and nm.strip() in old2new \
+                    and nm.strip() != old2new[nm.strip()]:
+                o['name'] = old2new[nm.strip()]      # 精确整值匹配，不碰正文
                 n += 1
             for v in o.values():
                 walk(v)
@@ -101,6 +117,12 @@ def apply(D, fixes):
     for c, new in fixes.items():
         if c in kn and isinstance(kn[c], str) and kn[c].strip() != new:
             kn[c] = new
+            n += 1
+    sn = D.get('stockNews') or {}
+    for c, new in fixes.items():
+        if isinstance(sn.get(c), dict) and isinstance(sn[c].get('name'), str) \
+                and sn[c]['name'].strip() != new:
+            sn[c]['name'] = new
             n += 1
     return n
 
