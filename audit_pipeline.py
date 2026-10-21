@@ -1795,6 +1795,7 @@ def main():
     g22_news_level_noise(r)
     g23_cross_stock_phrasing(r)
     g24_unchecked_disclosure(r)
+    g25_memory_hygiene(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
