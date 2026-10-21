@@ -1,4 +1,4 @@
-# 全链路检查清单（L0–L16）
+# 全链路检查清单（L0–L17）
 
 > **这份清单的存在原因**：用户每次的指令都是「7 个自动化 + 全链路所有问题」，范围从没缩过。
 > 我反复把「全链路」私自替换成「读一遍代码」，再用「仔细检查」把缩水申报成完成。
@@ -296,8 +296,30 @@ grep -o 'class="risk-dot sev-[a-z]*"' /tmp/dom.html | sort | uniq -c   # 三档�
 3. **我看的是真图，还是我以为的图？** 没截图 = 没看过。
 
 **G30 已经机器化的部分**（`audit_pipeline.py`）：徽章符号统一 ⚠️、三档底色亮度单调且跨度 ≥35、
-徽章字号 ≥11px、涨红跌绿常量在、图例三档齐。
+徽章字号 ≥11px、涨红跌绿常量在、图例三档齐、**`.risk-tip` 长条徽章三档 + 字色 WCAG 对比度 ≥4.5:1**。
 **G30 覆盖不到、只能靠眼睛的**：留白与密度、字体层级、长标题换行、弹窗对齐、暗色语境下的可读性。
+
+---
+
+## L17 部署后线上复验（`deploy.sh` 成功 ≠ 上线成功）
+
+**为什么单列一层**：R100z172（2026-10-21 23:11）`./deploy.sh` 报「✅ 推送成功」，远端 `git ls-remote` 也是新 commit，
+但**线上 13 分钟仍是旧版**——GitHub Pages 没有自动重建。不 curl 就永远发现不了（刷新页面看到旧样式会以为是自己没改对）。
+
+| 步骤 | 命令 | 判据 |
+|---|---|---|
+| ① 远端确实收到 | `git ls-remote origin \| head -1` | HEAD = 本地 HEAD |
+| ② 线上抓到**本轮独有标记** | `curl -s "$URL/index.html?nc=$(date +%s)" \| grep -c R100z172` | ≥1 |
+| ③ 超过 5 分钟还是旧 → 区分「缓存」还是「没重建」 | 换**另一个本轮也改过的文件**（如 `audit_pipeline.py`）再 grep 独有字符串 | 两个都旧 = 整站没重建；只有 html 旧 = CDN 缓存，再等 |
+| ④ 确认没重建 | `git commit --allow-empty -m "chore: 触发 Pages 重建"` + `.deploy_key` push | 2 分钟内生效 |
+
+```bash
+git commit --allow-empty -m "chore: 触发 GitHub Pages 重建"
+GIT_SSH_COMMAND="ssh -i .deploy_key -o StrictHostKeyChecking=no -p 443" git push origin main
+```
+
+> ⚠️ 复验必须 grep **本轮独有**的字符串（注释里的 `R100z编号` 最省事）。
+> 只比对「文件大小变了」不够——data.js 每天在变，大小变化不证明 CSS 上线了。
 
 ---
 
@@ -306,8 +328,8 @@ grep -o 'class="risk-dot sev-[a-z]*"' /tmp/dom.html | sort | uniq -c   # 三档�
 不许写「检查完了」「已仔细检查」。必须写：
 
 ```
-跑了 L0–L16 共 17 层 + M0–M10（记忆）共 11 层
-L0 PASS / L1 PASS / L2 修了 n 处 / L3 PASS / … / L16 PASS（视觉层：贴图 + 三问）
+跑了 L0–L17 共 18 层 + M0–M10（记忆）共 11 层
+L0 PASS / L1 PASS / L2 修了 n 处 / L3 PASS / … / L16 PASS（视觉层：贴图 + 三问）/ L17 PASS（线上独有标记已上）
 自动化体检：check_automations.py → FAIL=0（33 项，报「哪类几项」不报 PASS 总数）
 闸门：FAIL=0 exit=0（WARN 条数 + 逐条性质，不写 PASS 数字——WARN 随时段浮动）
 未覆盖：<哪一层没跑、为什么、风险是什么>
