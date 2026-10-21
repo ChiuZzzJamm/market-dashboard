@@ -513,8 +513,11 @@ def main():
            'generatedAt': date.today().isoformat()}
 
     if a.write:
-        with open(OUT, 'w', encoding='utf-8') as f:
+        # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace，避免半截 stock_pool.json
+        _tmp = OUT + '.tmp'
+        with open(_tmp, 'w', encoding='utf-8') as f:
             json.dump(res, f, ensure_ascii=False, indent=1)
+        os.replace(_tmp, OUT)
 
     if a.json:
         print(json.dumps({k: res[k] for k in ('ok', 'date', 'candidateDate', 'sectorsSource',

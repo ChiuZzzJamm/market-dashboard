@@ -185,8 +185,11 @@ def main():
         return
     out = 'window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False,
                                                   separators=(',', ':')) + ';\n'
-    with open(data_path, 'w', encoding='utf-8') as f:
+    # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace
+    _tmp = data_path + '.tmp'
+    with open(_tmp, 'w', encoding='utf-8') as f:
         f.write(out)
+    os.replace(_tmp, data_path)
     subprocess.run([NODE, '--check', data_path], check=True, timeout=30)
     print('[FULLSCAN] data.js 写回完成，node --check 通过')
 

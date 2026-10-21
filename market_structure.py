@@ -402,8 +402,12 @@ def main():
     if not new_raw:
         return 0
     try:
-        with open(os.path.join(BASE, "data.js"), "w", encoding="utf-8") as f:
+        # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace
+        _p = os.path.join(BASE, "data.js")
+        _tmp = _p + ".tmp"
+        with open(_tmp, "w", encoding="utf-8") as f:
             f.write(new_raw)
+        os.replace(_tmp, _p)
     except Exception as e:
         print("[warn] 写 data.js 失败：%s" % e)
         return 0

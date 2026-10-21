@@ -481,8 +481,12 @@ def main():
 
     out = 'window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False,
                                                   separators=(',', ':')) + ';\n'
-    with open(os.path.join(BASE, 'data.js'), 'w', encoding='utf-8') as f:
+    # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace，避免中途被杀留下半截 data.js
+    _p = os.path.join(BASE, 'data.js')
+    _tmp = _p + ".tmp"
+    with open(_tmp, 'w', encoding='utf-8') as f:
         f.write(out)
+    os.replace(_tmp, _p)
     print(f"[ACC] 写回 data.js：命中 {len(scored)} 只（强 {len(strong)} / 观察 {len(watch)}）｜tradeDate={trade_date}")
 
 

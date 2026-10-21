@@ -146,8 +146,11 @@ def save_data(D):
     """与 merge_duanban/embed_klines 等脚本一致的紧凑格式落盘 + 双重校验。"""
     out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False,
                                                   separators=(",", ":")) + ";\n"
-    with open(DATA_JS, "w", encoding="utf-8") as f:
+    # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace，node --check 校验的是最终文件
+    _tmp = DATA_JS + ".tmp"
+    with open(_tmp, "w", encoding="utf-8") as f:
         f.write(out)
+    os.replace(_tmp, DATA_JS)
     # ① node 语法校验
     node = common.find_node()
     p = subprocess.run([node, "--check", DATA_JS], capture_output=True, text=True)

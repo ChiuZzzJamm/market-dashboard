@@ -1378,7 +1378,11 @@ def main():
                 note += "；" + "/".join(notes_extra)
             D["updatedAt"] = datetime.now(TZ8).strftime('%Y-%m-%d %H:%M') + note
         out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ";\n"
-        open("data.js", "w", encoding="utf-8").write(out)
+        # R100z165（L10 写盘原子化）：原为单行 open(...).write()，无 with、无关闭保证
+        _tmp = "data.js.tmp"
+        with open(_tmp, "w", encoding="utf-8") as f:
+            f.write(out)
+        os.replace(_tmp, "data.js")
         # 语法校验：定位 node（与 deploy.sh/run_push.sh/push_notify.py 一致，避免自动化环境
         # PATH 缺失 node 而崩溃）。node 实在不可用时跳过校验（json.dumps 已保证结构有效），
         # 仅当 node 可用且校验确实失败时仍报错，防止推送坏数据。

@@ -520,7 +520,11 @@ def write_stop_track_to_datajs(st):
         head = head[:m] + '"stopTrack": ' + obj + head[e:]
     else:
         head = head + ', "stopTrack": ' + obj
-    open(DATA_JS, 'w', encoding='utf-8').write(head + tail)
+    # R100z165（L10 写盘原子化）：原为单行 open(...).write()，无 with、无关闭保证
+    _tmp = DATA_JS + '.tmp'
+    with open(_tmp, 'w', encoding='utf-8') as f:
+        f.write(head + tail)
+    os.replace(_tmp, DATA_JS)
     print('[OK] 统计已写入 data.js 的 DASHBOARD_DATA.stopTrack（扁平对象，文件仍以 } 收尾）')
 
 

@@ -936,7 +936,13 @@ def check_stock_pool(D):
         db_pool.discard('000000')
         used_db = db_chosen & cand          # 断板槽位里取自池内的
         used_all = chosen & cand            # 任意槽位里取自池内的（谐波/吸筹/强势被用上也算）
-        need_db = min(len(db_pool), 5)      # 分层表断板上限 5
+        # R100z165（2026-10-21 全链路体检·L4 未撞型）：原来 need_db = min(len(db_pool), 5)，
+        #   拿「池内候选数」当应使用数。只要池里断板候选多于今日断板槽位数就必然误报：
+        #   实测造 3 只池内候选、AI 断板槽位只有 1 个（TIERS[1]=(2,2,3) 合规），
+        #   却报「断板候选 3 只，只用了 1 只」——槽位只有 1 个，物理上不可能用 3 只。
+        #   槽位数 = len(db_chosen)（note 以「断板反包」开头的只数），应使用数不能超过它。
+        #   池内 3/槽位 1/用 1 → 不报；池内 2/槽位 2/用 1 → 才报（那才是真的漏用）。
+        need_db = min(len(db_pool), len(db_chosen)) or 0
 
         if db_pool and not used_db:
             hards.append(f"aiPrediction.{sector}: 机械池有 {len(db_pool)} 只断板反包达标候选"
@@ -1295,8 +1301,11 @@ def main():
     duanban_changed, duanban_warns = (fix_duanban_inplace(D) if not no_fix else (False, []))
     if (not no_fix) and ('--no-fix-order' not in sys.argv or duanban_changed):
         reorder_inplace(D)
-        with open('data.js', 'w', encoding='utf-8') as f:
+        # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace
+        _tmp = 'data.js.tmp'
+        with open(_tmp, 'w', encoding='utf-8') as f:
             f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';\n')
+        os.replace(_tmp, 'data.js')
 
     violations = []
     imp_cnt_warns = check_impact_count(D)

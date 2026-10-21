@@ -349,8 +349,11 @@ def main():
                                 'date': f"{int(TODAY[5:7])}/{int(TODAY[8:10])} 休市"})
         D['updatedAt'] = (f"{datetime.now(TZ8).strftime('%Y-%m-%d %H:%M')}"
                           f"（韩日 {date_display} 休市，保留上一交易日数据）")
-        with open('data.js', 'w', encoding='utf-8') as f:
+        # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace
+        _tmp = 'data.js.tmp'
+        with open(_tmp, 'w', encoding='utf-8') as f:
             f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';\n')
+        os.replace(_tmp, 'data.js')
         print('[info] 韩日均休市，date 标注休市，保留上一交易日数据')
         return
 
@@ -434,8 +437,11 @@ def main():
     ts = datetime.now(TZ8).strftime('%Y-%m-%d %H:%M')
     D['updatedAt'] = f"{ts}（{'；'.join(parts)}）"
 
-    with open('data.js', 'w', encoding='utf-8') as f:
+    # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace
+    _tmp = 'data.js.tmp'
+    with open(_tmp, 'w', encoding='utf-8') as f:
         f.write('window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';\n')
+    os.replace(_tmp, 'data.js')
     print('[info] data.js 已更新')
 
 

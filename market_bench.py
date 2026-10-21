@@ -180,7 +180,9 @@ def backfill_history(limit=0):
     hist = cur.get('history') or {}
     hist.update(got)
     cur['history'] = {k: hist[k] for k in sorted(hist)}
-    with open(OUT, 'w', encoding='utf-8') as f:
+    # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace
+    _tmp = OUT + '.tmp'
+    with open(_tmp, 'w', encoding='utf-8') as f:
         json.dump(cur, f, ensure_ascii=False, indent=1)
     print('[OK] 历史行业基准已回填 %d 天 → market_bench.json[history]' % len(got))
     for k in sorted(got):
@@ -245,7 +247,9 @@ def main():
                 hist = {}
         if hist:
             res['history'] = {k: hist[k] for k in sorted(hist)}
-        with open(OUT, 'w', encoding='utf-8') as f:
+        # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace
+    _tmp = OUT + '.tmp'
+    with open(_tmp, 'w', encoding='utf-8') as f:
             json.dump(res, f, ensure_ascii=False, indent=1)
 
     if a.json:

@@ -439,8 +439,11 @@ def main():
         for k, v in old.items():
             if k not in D['stockNews'] and k in targets:
                 D['stockNews'][k] = v
-    with open(DATA_JS, 'w', encoding='utf-8') as f:
+    # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace
+    _tmp = DATA_JS + '.tmp'
+    with open(_tmp, 'w', encoding='utf-8') as f:
         f.write(head + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';\n')
+    os.replace(_tmp, DATA_JS)
     print(f'[stock_news] 已写回 data.js（stockNews {len(D["stockNews"])} 只）')
 
 

@@ -74,7 +74,14 @@ def load_data():
 
 def save_data(D):
     out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ";\n"
-    open(f"{BASE}/data.js", "w", encoding="utf-8").write(out)
+    # R100z165（全链路体检·L10 写盘原子化）：原为 open(...,'w').write(out)，
+    # 无 with、无复验——进程被 kill 时 data.js 已被 truncate，留下半截文件毁全站。
+    # 改先写同目录 .tmp 再 os.replace（同分区原子重命名），失败时旧 data.js 完好。
+    _p = f"{BASE}/data.js"
+    _tmp = _p + ".tmp"
+    with open(_tmp, "w", encoding="utf-8") as f:
+        f.write(out)
+    os.replace(_tmp, _p)
 
 
 def is_ashare_code(code):
