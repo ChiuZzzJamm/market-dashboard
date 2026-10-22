@@ -59,8 +59,24 @@ else:
 # ---------------- M2 路由可达
 pm = rd(PM)
 heads = set()
-for m in re.finditer(r"(?m)^#{2,4}\s*(\d+\.\d+[a-z]?)(?![0-9A-Za-z])", pm):
-    heads.add(m.group(1))
+bad_level = []
+for m in re.finditer(r"(?m)^(#{2,4})\s*(\d+\.\d+[a-z]?)(?![0-9A-Za-z])", pm):
+    lvl, key = m.group(1), m.group(2)
+    heads.add(key)
+    # 24.13e / 2026-10-22 复发：24.15–24.24 十个主干节被写成 `##`，把「二十四」章切碎。
+    # 旧判据 `#{2,4}` 明确允许 `##`，所以层级错了也永远 PASS —— 判据本身是缺陷。
+    # 规则：纯数字节（24.N）必须是 `###`；带字母子节可用 ###/####（24.11a 历来是 ###），
+    # 但任何 24.x 都不许是 `##`（二级 = 新章，编号断层）。
+    if lvl == "##":
+        bad_level.append((key, "##"))
+    elif lvl == "###" and re.fullmatch(r"\d+\.\d+", key) is None:
+        pass  # 子节用 ### 是历史形态，允许
+    elif lvl == "####" and re.fullmatch(r"\d+\.\d+", key) is not None:
+        bad_level.append((key, "####"))
+if bad_level:
+    fail("M2 24.x 标题层级错位（必须是 ### 主干 / #### 子节）：%s —— "
+         "写成 ## 会把「二十四」章切碎、编号断层"
+         % ", ".join("%s=%s" % x for x in bad_level[:6]))
 cnsec = set(re.findall(r"(?m)^##\s*([〇一二三四五六七八九十]+)、", pm))
 mm = rd(MM)
 miss21 = []
@@ -139,18 +155,25 @@ else:
     ok("M5 无 >30 天未蒸馏日志（共 %d 份，最老 %s）"
        % (len(logs), os.path.basename(logs[0])[:-3] if logs else "-"))
 # 蒸馏执行者
+# 旧判据「脚本含 memory 且含 glob|listdir」是自我指涉：check_memory.py 自己读一次 memory
+# 目录就把自己算成执行者，于是「空转型」永远 PASS（2026-10-22 实测发现）。
+# 精确判据：必须在同一个文件里同时具备三件事 —— ① 按 `20*.md` 扫日志目录 ② 解析日期
+# ③ 有 30 天阈值。三缺一都不算「会提醒你的执行者」。
 exec_hit = []
 for p in glob.glob(os.path.join(HERE, "*.py")) + glob.glob(os.path.join(HERE, "*.sh")):
     try:
         s = rd(p)
     except Exception:
         continue
-    if "memory" in s and re.search(r"glob|listdir", s):
+    scan_logs = re.search(r'glob\.glob\([^)]*"20\*\.md"', s) or re.search(r'20\*\.md', s)
+    parse_day = re.search(r"date\.fromisoformat|strptime", s)
+    thirty = re.search(r"days\s*>\s*30|>\s*30\s*\)", s)
+    if "memory" in s and scan_logs and parse_day and thirty:
         exec_hit.append(os.path.basename(p))
 if exec_hit:
-    ok("M5 蒸馏规则有执行者：%s" % ", ".join(exec_hit))
+    ok("M5 蒸馏规则有执行者（扫日志+解析日期+30 天阈值三者齐备）：%s" % ", ".join(exec_hit))
 else:
-    warn("M5 蒸馏规则无执行者（grep 无脚本读日志目录）—— 属空转型，越线那天没人提醒")
+    warn("M5 蒸馏规则无执行者 —— 属空转型，越线那天没人提醒")
 
 # ---------------- M6 automation memory
 am = glob.glob(os.path.join(MEM, "automations", "*", "memory.md"))
@@ -237,8 +260,11 @@ LEDGER = os.path.join(PM)
 rows19 = []
 if os.path.exists(PM):
     s19 = rd(PM)
-    # 取到下一个**二级**标题为止（节内的 ### 小标题不能截断，台账表在下层小标题里）
-    m19 = re.search(r"(?m)^#{2,4}\s*24\.19[^\n]*\n([\s\S]{0,6000}?)(?=\n##\s|\Z)", s19)
+    # 结束锚点不能写「下一个二级标题」：2026-10-22 把 24.15–24.24 从 ## 改回 ### 后，
+    # 24.19 之后直到文件尾都没有 ## 了，{0,6000} 窗口到不了 \Z → 正则整体失败 →
+    # 误报「缺 24.19」。锚点必须是「下一个 24.x 或中文章」，与层级解耦。
+    m19 = re.search(r"(?m)^#{2,4}\s*24\.19[^\n]*\n([\s\S]{0,6000}?)"
+                    r"(?=\n#{2,4}\s*(?:24\.\d|[〇一二三四五六七八九十]+、)|\Z)", s19)
     if not m19:
         fail("M9 缺 24.19「MEMORY.md 压缩搬运台账」—— 压缩无记录，等同于允许静默丢内容")
     else:
