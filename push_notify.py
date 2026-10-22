@@ -2,7 +2,7 @@
 # 固化微信推送脚本：从 data.js 读最新数据，按模块空行排版，推送给 .notify-config.json 中所有人
 # 用法: python3 push_notify.py [ashare|us|weekend]
 import json, sys, urllib.request, time, os, re
-from common import find_node, load_dashboard_data
+from common import find_node, load_dashboard_data, strip_dd_prefix
 
 # R100z6 防护：本脚本为模块级流程脚本（无 main 函数），被 import 会直接执行微信推送
 # （2026-09-29 排查时 import 冒烟测试误触发过一次重复推送）。自动化一律以命令行调用，
@@ -110,7 +110,7 @@ def fmt_ai_line(ap, label):
         c = (s.get('confidence') or '').strip()
         items.append(f"{sec}{d}({c})" if c else f"{sec}{d}")
         if s.get('counter'):
-            notes.append(f"{sec}:{str(s['counter'])[:20]}")
+            notes.append(f"{sec}:{strip_dd_prefix(s['counter'])[:20]}")
         elif s.get('deduce') and s['deduce'].get('main'):
             notes.append(f"{sec}:{str(s['deduce']['main'])[:20]}")
     if not items:
@@ -134,7 +134,8 @@ def fmt_deduce_brief(dd, max_main=26, max_counter=22):
             m += '（' + str(dd['conf']) + '）'
         parts.append('推演：' + m)
     if dd.get('counter'):
-        parts.append('反证：' + str(dd['counter'])[:max_counter])
+        # R100z173：AI 常自写「反证是…」，不清洗会推成「反证：反证是…」
+        parts.append('反证：' + strip_dd_prefix(dd['counter'])[:max_counter])
     return ' '.join(parts)
 
 def fmt_bullish(t, idx):

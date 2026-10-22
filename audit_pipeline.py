@@ -2458,6 +2458,158 @@ def g30_display_prefs(r):
             r.ok("G30", "断板页风险徽章图例三档齐全（⚠️ 底色越深越严重）")
 
 
+def g31_deduce_prefix(r):
+    """G31 deduce 双标签「反证：反证是…」（R100z173，2026-10-22）。
+
+    由来：用户截图圈出板块卡的 `反证：反证是资金涨2.10%却净流出4.71亿元`。
+    根因**不是**渲染层去重失效——是清洗只认 `反证[:：]`（带冒号），而 AI 实测写了
+    19 条 `反证是…`（无冒号）→ 剥不掉 → 渲染层再补一个「反证：」= 双标签。
+    这类问题闸门一直看不见，因为它是「数据内容形态」而不是结构错误。
+
+    判据（三处都查，缺一处就等于留一条复发路径）：
+      a) data.js 的 `deduce.main` / `deduce.counter` **不得**自带
+         「主推：/反证：/主推是/反证是」前缀——数据层不带标签是既定口径，标签一律渲染层加。
+      b) index.html 的 `_ddClean()` 前缀正则必须**同时认冒号与「是」**两种变体
+         （渲染层兜底：即便数据脏了，页面也不该出现双标签）。
+      c) 每处 `dd-counter` 拼接若直接取对象字段（`esc(x.counter)`）必须过 `_ddClean`。
+         2026-10-22 实测就漏了一处（2330 行的降级路径），改了三处里的两处不算改完。
+    """
+    # ---- a) 数据层不得自带前缀 ----
+    # R100z174：判据不再自带一套正则（旧版只认「：/是」，`反证在资金：` 因此漏检），
+    # 谓语白名单直接复用 common 的 _DD_KEEP——三套正则各写一遍、改一处漏两处，
+    # 就是这次「19 条修好了、第 20 条还在」的直接原因。
+    # ⚠️ 必须判**原始值**，不能判「清洗后」：清洗函数正常工作的话，剥完当然不带前缀，
+    # 那这条判据就永远绿了（反向测试当场发现过一次，别改回去）。
+    from common import _DD_KEEP
+    dirty = re.compile(r"^(?:主推|反证)(?!\s*" + _DD_KEEP + r")")
+    viol, tot = [], 0
+
+    def walk(o, path=""):
+        nonlocal tot
+        if isinstance(o, dict):
+            for k, v in o.items():
+                if k in ("main", "counter") and isinstance(v, str) and v.strip():
+                    tot += 1
+                    if dirty.match(v.strip()):
+                        viol.append("%s.%s「%s…」" % (path or "?", k, v.strip()[:14]))
+                else:
+                    walk(v, path + "/" + k)
+        elif isinstance(o, list):
+            for i, x in enumerate(o):
+                walk(x, path + "[%d]" % i)
+
+    # ⚠️ 这里**不用 load_data_json()**：它靠 node 在当前工作目录读 data.js，
+    # 反向测试（把改动写进临时目录再跑）会静默读回真实文件 → 假绿。
+    # 自己按 HERE 解析，闸门在任意 cwd 下都测的是同一份文件。
+    try:
+        with open(os.path.join(HERE, "data.js"), encoding="utf-8") as f:
+            txt = f.read()
+        _i = txt.index("{", txt.index("window.DASHBOARD_DATA"))
+        D = json.loads(txt[_i:].rstrip().rstrip(";"))
+    except Exception as e:                                    # noqa: BLE001
+        r.warn("G31", "data.js 读不到，跳过数据层前缀校验：%s" % e)
+    else:
+        walk(D)
+        if viol:
+            r.fail("G31", "data.js 有 %d 处 deduce 自带「主推/反证」前缀（渲染层会再补一次 → "
+                          "页面显示「反证：反证是…」）：%s；跑 `python3 fix_dd_prefix.py --write` 清洗"
+                   % (len(viol), "；".join(viol[:3])))
+        else:
+            r.ok("G31", "data.js 的 %d 处 deduce.main/counter 均无自前缀（标签只在渲染层加）" % tot)
+
+    p = os.path.join(HERE, "index.html")
+    try:
+        s = open(p, encoding="utf-8").read()
+    except Exception as e:                                    # noqa: BLE001
+        r.warn("G31", "index.html 读不到，跳过渲染层兜底校验：%s" % e)
+        return
+
+    # ---- b) _ddClean 的三种前缀形态 + 谓语白名单必须都在 ----
+    mb = re.search(r"function _ddClean\([\s\S]{0,2000}?\n\}", s)
+    if not mb:
+        r.fail("G31", "index.html 里找不到 _ddClean() —— 渲染层去重入口没了，"
+                      "任何人写「反证是…」都会直接显示成双标签")
+        return
+    body = mb.group(0)
+    need = [("[:：]", "冒号型「反证：」"), ("是", "「反证是」型"),
+            ("在", "「反证在资金：」型"), ("成立", "谓语白名单（防「反证成立」被削成「成立」）")]
+    miss = [lab for tok, lab in need if tok not in body]
+    if miss:
+        r.fail("G31", "_ddClean() 缺前缀形态：%s —— 缺一种，AI 写那种就会原样漏到页面"
+               % "、".join(miss))
+    else:
+        r.ok("G31", "_ddClean() 覆盖 冒号/是/在<标记词> 三种前缀 + 谓语白名单")
+
+    # ---- c) 每个渲染点都必须过 _ddClean ----
+    naked = []
+    for ln, line in enumerate(s.splitlines(), 1):
+        if "dd-counter" not in line:
+            continue
+        for expr in re.findall(r"esc\(\s*([A-Za-z_$][\w$]*\s*\.\s*counter)\s*\)", line):
+            naked.append("L%d esc(%s)" % (ln, expr))
+    if naked:
+        r.fail("G31", "有 %d 处 dd-counter 直接渲染原始 counter 字段、没过 _ddClean：%s —— "
+                      "只要数据脏就成了双标签（2026-10-22 实测漏过一处降级路径）"
+               % (len(naked), "、".join(naked)))
+    else:
+        r.ok("G31", "全部 dd-counter 渲染点均经 _ddClean 清洗")
+
+    # ---- d) 三方口径一致性：真跑 Python 与 JS，逐例比对（不看字面量） ----
+    # 教训：b) 只看「正则里有没有某个字符」，改坏了分支顺序/断言语义它照样绿。
+    # 这里把同一个样例集喂给两边，输出必须逐字相同，且等于期望值。
+    cases = [
+        ("反证在资金：涨2.10%却净流出4.71亿元", "涨2.10%却净流出4.71亿元"),
+        ("反证是去化要等2027年才反映到出栏", "去化要等2027年才反映到出栏"),
+        ("反证：反证是资金已经用脚投票", "资金已经用脚投票"),
+        ("主推资金避险切换至红利低波", "资金避险切换至红利低波"),
+        ("反证证券跌1.21%，非银净流出", "证券跌1.21%，非银净流出"),
+        ("反证在于业绩：三季度预亏", "三季度预亏"),
+        ("主推：核心是平台补贴", "核心是平台补贴"),
+        ("反证成立，因为量能没跟上", "反证成立，因为量能没跟上"),      # 谓语例外：不许剥
+        ("主推不成立，属于误读", "主推不成立，属于误读"),              # 谓语例外：不许剥
+        ("反证已被证伪，别再提", "反证已被证伪，别再提"),              # 谓语例外：不许剥
+    ]
+    from common import strip_dd_prefix
+    py = [strip_dd_prefix(c) for c, _ in cases]
+    py_bad = [c for (c, want), got in zip(cases, py) if got != want]
+    if py_bad:
+        r.fail("G31", "common.strip_dd_prefix 剥离结果与期望不符：%s —— 推送给微信的文案会带双标签"
+               % "；".join("「%s」" % c[:18] for c in py_bad[:2]))
+    try:
+        from common import find_node
+        node = find_node()
+    except Exception as e:                                    # noqa: BLE001
+        node = None
+        r.warn("G31", "找不到 node，跳过 JS 侧实测比对（只校验了 Python 侧）：%s" % e)
+
+    if node:
+        import tempfile
+        try:
+            d = tempfile.mkdtemp()
+            js = os.path.join(d, "ddcheck.js")
+            with open(js, "w", encoding="utf-8") as f:
+                f.write(body + "\nvar CASES = " + json.dumps([c for c, _ in cases], ensure_ascii=False) + ";\n")
+                f.write("console.log(JSON.stringify(CASES.map(function(c){return _ddClean(c);})));\n")
+            out = subprocess.run([str(node), js], capture_output=True, text=True, timeout=30)
+            js_res = json.loads((out.stdout or "null").strip() or "null")
+        except Exception as e:                                # noqa: BLE001
+            r.warn("G31", "JS 侧 _ddClean 跑不起来（%s），渲染层口径未经实测" % e)
+        else:
+            diff = [(c, a, b) for (c, _), a, b in zip(cases, py, js_res or []) if a != b]
+            if not js_res or len(js_res) != len(cases):
+                r.warn("G31", "JS 侧返回 %s 条结果（期望 %d），比对不完整"
+                       % (len(js_res or []), len(cases)))
+            elif diff:
+                r.fail("G31", "渲染层 _ddClean 与 common.strip_dd_prefix 口径不一致（%d/%d 例）：%s —— "
+                              "网页与微信推送会出现两种文案"
+                       % (len(diff), len(cases),
+                          "；".join("「%s」py=「%s」js=「%s」" % (c[:12], a[:12], b[:12])
+                                   for c, a, b in diff[:2])))
+            else:
+                r.ok("G31", "Python/JS 两侧剥离结果逐例一致（%d 例，含 3 条谓语反例未被误剥）"
+                     % len(cases))
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -2503,6 +2655,7 @@ def main():
     g28_freshness_consistency(r)
     g29_name_and_risk_hygiene(r)
     g30_display_prefs(r)
+    g31_deduce_prefix(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
