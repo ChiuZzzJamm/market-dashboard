@@ -170,6 +170,26 @@ def prior_us_trading_day(from_date):
     return None
 
 
+# ---------- R100z173：deduce 文本自前缀清洗（「反证是…」变体） ----------
+# 背景：AI 写 counter 时约三成写成「反证是…」（无冒号），渲染层只在前面补「反证：」
+# → 页面出现「反证：反证是…」。旧清洗只认 `反证[:：]`，剥不掉。
+# 约束：「反证/主推」后面**必须**紧跟冒号或「是」才剥，绝不裸剥二字——否则
+# 「反证成立」「主推逻辑不成立」这类正常句会被削成「成立」「逻辑不成立」。
+# 与 index.html 的 _ddClean() 同口径，两边改动必须同步（G31 会校验）。
+_DD_PREFIX_RE = re.compile(r'^[\s\u3000\u200b]*(?:主推|反证)\s*(?:[:：]|是)\s*')
+
+
+def strip_dd_prefix(t, rounds=4):
+    """剥掉 deduce 文本自带的「主推：/反证：/主推是/反证是」前缀（循环剥，防叠标签）。"""
+    s = str(t or '')
+    for _ in range(rounds):
+        before = s
+        s = _DD_PREFIX_RE.sub('', s.strip())
+        if s == before:
+            break
+    return s.strip()
+
+
 def load_dashboard_data(base):
     """把 data.js 解析为 Python dict。
 
