@@ -46,6 +46,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # 判定口径单一来源 news_sources.py（prompt 只指路，不再各写一份免得口径漂移）。
 import news_sources
 
+# R100z175：deduce 前缀判定**复用 common 的单一事实源**，不许在本文件再写一份。
+# 事故：本文件一度自带 `(主推|反证)\s*([:：]|是)`，只认冒号与「是」→ 实际出现的
+# 「反证在资金：」与裸拼「反证证券跌1.21%」都被**静默放行**（第五份副本没跟上）。
+# 判据必须与清洗器逐字一致：清洗器会剥的形态，校验器就必须拦，否则脏数据合法通过。
+from common import _DD_PREFIX_RE
+
 BAD_PREFIX = ('688', '689', '300', '301', '302', '4', '8', '92')
 
 VALID_DIR = ('看涨', '看跌', '中性')
@@ -327,14 +333,15 @@ def _dd_validate(d, tag, hards, warns):
     for key in ('main', 'counter'):
         v = d.get(key)
         if isinstance(v, str):
-            # R100z173：前缀判定从「只认冒号」扩到「冒号或『是』」——AI 实测大量写
-            # 「反证是…」（无冒号），只认冒号时漏拦，页面就渲染成「反证：反证是…」。
-            # 要求紧跟冒号/是，禁裸剥（「反证成立」是正常句）。
-            _pm = re.match(r'^[\s\u3000\u200b]*(主推|反证)\s*([:：]|是)', v)
+            # R100z173/R100z175：前缀判定改用 common._DD_PREFIX_RE（单一事实源），
+            # 覆盖 冒号 / 「是」 / 「在<标记词>：」 / 裸拼 四种真实形态，
+            # 谓语白名单（成立/不成立/已被证伪…）不误伤。禁止在本文件另写正则。
+            _pm = _DD_PREFIX_RE.match(v)
             if _pm:
-                hards.append(f"{tag}: deduce.{key} 自带「{_pm.group(0).strip()}」前缀"
-                             f"（R100z173：渲染层会补「{_pm.group(1)}：」→ 页面重复成"
-                             f"「{_pm.group(1)}：{_pm.group(1)}{_pm.group(2)}…」）")
+                _lbl = '主推' if _pm.group(0).strip().startswith('主推') else '反证'
+                hards.append(f"{tag}: deduce.{key} 自带「{_pm.group(0).strip()[:12]}」前缀"
+                             f"（R100z175：渲染层会补「{_lbl}：」→ 页面重复成"
+                             f"「{_lbl}：{_lbl}…」）")
             if len(v.strip()) < 6:
                 warns.append(f"{tag}: deduce.{key} 过短（{len(v.strip())} 字），推演信息量不足")
 

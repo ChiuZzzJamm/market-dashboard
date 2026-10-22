@@ -2540,6 +2540,27 @@ def g31_deduce_prefix(r):
     else:
         r.ok("G31", "_ddClean() 覆盖 冒号/是/在<标记词> 三种前缀 + 谓语白名单")
 
+    # ---- b2) 校验器必须复用同一份正则，不许自带副本 ----
+    # 事故（2026-10-22 R100z175）：validate_stocks.py 曾自带 `(主推|反证)\s*([:：]|是)`，
+    # 只认冒号与「是」，「反证在资金：」「反证证券跌1.21%」在**数据层被静默放行**，
+    # 全靠部署前的本闸门兜住。五份副本 = 必改三漏一，这里把「不许再开第六份」钉死。
+    vp = os.path.join(HERE, "validate_stocks.py")
+    try:
+        vs = open(vp, encoding="utf-8").read()
+    except Exception as e:                                    # noqa: BLE001
+        r.warn("G31", "validate_stocks.py 读不到，跳过校验器口径核对：%s" % e)
+    else:
+        code_lines = [ln for ln in vs.splitlines() if not ln.strip().startswith("#")]
+        own = [ln.strip()[:60] for ln in code_lines if "主推|反证" in ln]
+        if "from common import _DD_PREFIX_RE" not in vs:
+            r.fail("G31", "validate_stocks.py 未复用 common._DD_PREFIX_RE —— 校验器自带副本"
+                          "必然与清洗器漂移（曾漏掉「在资金：」与裸拼两种形态）")
+        elif own:
+            r.fail("G31", "validate_stocks.py 里仍有自写的「主推|反证」正则：%s —— "
+                          "删掉它，只认 common._DD_PREFIX_RE" % own[0])
+        else:
+            r.ok("G31", "校验器复用 common._DD_PREFIX_RE（无自写副本）")
+
     # ---- c) 每个渲染点都必须过 _ddClean ----
     naked = []
     for ln, line in enumerate(s.splitlines(), 1):
