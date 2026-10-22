@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610221011"></script>
+<script src="data.js?v=202610221202"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1704,13 +1704,27 @@ function psClose() { document.getElementById('ps-modal').classList.remove('open'
    AI 若已写「反证：反证：…」（或夹不可见字符/换行）会漏剥 → 页面出现「反证：反证：…」双标签。
    任一轮无变化即收手，最多 4 轮防死循环。
    R100z173：AI 还大量写过「反证是…」（无冒号，19 条实测命中）。只认冒号时剥不掉 →
-   页面显示成「反证：反证是…」。故前缀判定改为 `(?:[:：]|是)`，且「反证」后必须紧跟
-   冒号/是，绝不裸剥（否则「反证成立」会被剥成「成立」）。 */
+   页面显示成「反证：反证是…」。故前缀判定加入「是」分支。
+   R100z174（用户 2026-10-22 截图「反证：反证在资金：…」）：还有「反证在<标记词>：」变体，
+   必须整段剥（连标记词一起）——只剥「反证在」会剩「资金：…」，变成双冒号，更丑。
+   再兜一层「裸拼」：除谓语用法的白名单（成立/不成立/失效/站得住/证伪）外，
+   「主推/反证」出现在值开头一律只剥标签二字。因为外层无条件补同名标签，
+   内层留着必然重复（「反证证券跌1.21%」→「反证：反证证券跌1.21%」）。
+   白名单不能省：「反证成立」剥成「反证：成立」句子就废了。
+   ⚠️ 本函数与 common.py 的 _DD_PREFIX_RE、fix_dd_prefix.py 的 PAT 三处同口径，
+   改一处必须三处同改（audit_pipeline G31 拿同一组样例跑三方比对 + 扫数据残留）。 */
 function _ddClean(t) {
   var s = String(t || '');
+  var LABELS = '(?:资金面?|逻辑|基本面|业绩|估值|情绪|技术面?|板块|消息面|催化|盘面|量能|价格|供给|需求|数据|行业|政策|节奏|筹码|事实|现实)';
+  var KEEP = '(?:成立|不成立|失效|已失效|站得住|证伪|已被证伪|并未?成立|难以?成立)';
+  var RE = new RegExp('^[\\s\\u3000\\u200b]*(?:' +
+    '(?:主推|反证)\\s*在(?:于)?\\s*' + LABELS + '?\\s*[:：]' +
+    '|(?:主推|反证)\\s*(?:[:：]|是)' +
+    '|(?:主推|反证)(?!\\s*' + KEEP + ')' +
+    ')\\s*');
   for (var i = 0; i < 4; i++) {
     var before = s;
-    s = s.trim().replace(/^[\s\u3000\u200b]*(?:主推|反证)\s*(?:[:：]|是)\s*/, '');
+    s = s.trim().replace(RE, '');
     if (s === before) break;
   }
   return s.trim();
