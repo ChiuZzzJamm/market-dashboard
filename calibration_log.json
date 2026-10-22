@@ -1433,6 +1433,170 @@
      "volExpect": "平量"
     }
    }
+  ],
+  "2026-10-22": [
+   {
+    "date": "2026-10-22",
+    "sector": "电力",
+    "sectorKey": "电力",
+    "predicted": "走强",
+    "dirClass": "up",
+    "actualPct": -2.46,
+    "benchPct": -2.97,
+    "benchSecPct": -2.71,
+    "benchUsed": "sector",
+    "excessPct": 0.25,
+    "excessPctIdx": 0.51,
+    "benchMainPct": -2.2199999999999998,
+    "result": "未命中",
+    "conf": "中",
+    "avgPct": -2.36,
+    "excessAvg": 0.35,
+    "hit": 1,
+    "hitAbs": 0,
+    "hitStock": 1,
+    "pos": {
+     "tendency": "偏强",
+     "bandLo": 3690,
+     "bandHi": 3760,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-10-22",
+    "sector": "半导体设备",
+    "sectorKey": "半导体设备",
+    "predicted": "偏强",
+    "dirClass": "up",
+    "actualPct": -2.96,
+    "benchPct": -2.97,
+    "benchSecPct": -2.71,
+    "benchUsed": "sector",
+    "excessPct": -0.25,
+    "excessPctIdx": 0.01,
+    "benchMainPct": -2.2199999999999998,
+    "result": "部分兑现",
+    "conf": "中",
+    "avgPct": -0.39,
+    "excessAvg": 2.32,
+    "hit": 0,
+    "hitAbs": 0,
+    "hitStock": 1,
+    "pos": {
+     "tendency": "偏强",
+     "bandLo": 3690,
+     "bandHi": 3760,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-10-22",
+    "sector": "航空运输",
+    "sectorKey": "航空运输",
+    "predicted": "偏强",
+    "dirClass": "up",
+    "actualPct": -1.45,
+    "benchPct": -2.97,
+    "benchSecPct": -2.71,
+    "benchUsed": "sector",
+    "excessPct": 1.26,
+    "excessPctIdx": 1.52,
+    "benchMainPct": -2.2199999999999998,
+    "result": "未命中",
+    "conf": "中",
+    "avgPct": -1.72,
+    "excessAvg": 0.99,
+    "hit": 1,
+    "hitAbs": 0,
+    "hitStock": 1,
+    "pos": {
+     "tendency": "偏强",
+     "bandLo": 3690,
+     "bandHi": 3760,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-10-22",
+    "sector": "军工装备",
+    "sectorKey": "军工装备",
+    "predicted": "偏强",
+    "dirClass": "up",
+    "actualPct": -2.22,
+    "benchPct": -2.97,
+    "benchSecPct": -2.71,
+    "benchUsed": "sector",
+    "excessPct": 0.49,
+    "excessPctIdx": 0.75,
+    "benchMainPct": -2.2199999999999998,
+    "result": "部分兑现",
+    "conf": "中",
+    "avgPct": -0.25,
+    "excessAvg": 2.46,
+    "hit": 1,
+    "hitAbs": 0,
+    "hitStock": 1,
+    "pos": {
+     "tendency": "偏强",
+     "bandLo": 3690,
+     "bandHi": 3760,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-10-22",
+    "sector": "影视院线",
+    "sectorKey": "影视院线",
+    "predicted": "承压",
+    "dirClass": "down",
+    "actualPct": -6.52,
+    "benchPct": -2.97,
+    "benchSecPct": -2.71,
+    "benchUsed": "sector",
+    "excessPct": -3.81,
+    "excessPctIdx": -3.55,
+    "benchMainPct": -2.2199999999999998,
+    "result": "命中",
+    "conf": "中",
+    "avgPct": -3.85,
+    "excessAvg": -1.14,
+    "hit": 1,
+    "hitAbs": 1,
+    "hitStock": 1,
+    "pos": {
+     "tendency": "偏强",
+     "bandLo": 3690,
+     "bandHi": 3760,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-10-22",
+    "sector": "数据中心",
+    "sectorKey": "数据中心",
+    "predicted": "承压",
+    "dirClass": "down",
+    "actualPct": -3.11,
+    "benchPct": -2.97,
+    "benchSecPct": -2.71,
+    "benchUsed": "sector",
+    "excessPct": -0.4,
+    "excessPctIdx": -0.14,
+    "benchMainPct": -2.2199999999999998,
+    "result": "命中",
+    "conf": "中",
+    "avgPct": -2.94,
+    "excessAvg": -0.23,
+    "hit": 1,
+    "hitAbs": 1,
+    "hitStock": 1,
+    "pos": {
+     "tendency": "偏强",
+     "bandLo": 3690,
+     "bandHi": 3760,
+     "volExpect": "平量"
+    }
+   }
   ]
  },
  "open": {
@@ -1641,6 +1805,29 @@
    "volHit": 1,
    "score": 0.5,
    "verdict": "部分兑现",
+   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；★量能口径 R100z158b 起 = 成交额环比（≥+10% 放量 / ≤−10% 缩量 / 界内平量），环比基准取台账内上一交易日成交额（首日无前值时该项不计入）；口径固定不可调"
+  },
+  "2026-10-22": {
+   "date": "2026-10-22",
+   "openDate": "2026-10-22",
+   "tendency": "偏强",
+   "bandLo": 3690,
+   "bandHi": 3760,
+   "volExpect": "平量",
+   "actual": {
+    "point": 3658.03,
+    "changePct": -1.48,
+    "upRate": 0.0967,
+    "volumeText": "成交约 1.53 万亿",
+    "amountYi": 14300,
+    "amountPrevYi": 14600,
+    "amountChgPct": -2.05
+   },
+   "tendencyHit": 0,
+   "bandHit": 0.5,
+   "volHit": 1,
+   "score": 0.35,
+   "verdict": "未命中",
    "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；★量能口径 R100z158b 起 = 成交额环比（≥+10% 放量 / ≤−10% 缩量 / 界内平量），环比基准取台账内上一交易日成交额（首日无前值时该项不计入）；口径固定不可调"
   }
  }
