@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610220840"></script>
+<script src="data.js?v=202610221011"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1702,12 +1702,15 @@ function psClose() { document.getElementById('ps-modal').classList.remove('open'
 /* R99o：AI 生成值偶发自带「主推：/反证：」前缀，统一剥掉防重复；全空 deduce 返回空串不渲染 */
 /* R100z18：改为**循环全剥**——外层由来渲染层补「主推：/反证：」标签，只剥一层时
    AI 若已写「反证：反证：…」（或夹不可见字符/换行）会漏剥 → 页面出现「反证：反证：…」双标签。
-   任一轮无变化即收手，最多 4 轮防死循环。 */
+   任一轮无变化即收手，最多 4 轮防死循环。
+   R100z173：AI 还大量写过「反证是…」（无冒号，19 条实测命中）。只认冒号时剥不掉 →
+   页面显示成「反证：反证是…」。故前缀判定改为 `(?:[:：]|是)`，且「反证」后必须紧跟
+   冒号/是，绝不裸剥（否则「反证成立」会被剥成「成立」）。 */
 function _ddClean(t) {
   var s = String(t || '');
   for (var i = 0; i < 4; i++) {
     var before = s;
-    s = s.trim().replace(/^[\s\u3000\u200b]*主推[:：]\s*/, '').replace(/^[\s\u3000\u200b]*反证[:：]\s*/, '');
+    s = s.trim().replace(/^[\s\u3000\u200b]*(?:主推|反证)\s*(?:[:：]|是)\s*/, '');
     if (s === before) break;
   }
   return s.trim();
@@ -2327,7 +2330,7 @@ function renderAiPrediction() {
       '</div>' +
       '<div class="drv">隔夜驱动：' + esc(s.usDriver) + '</div>' +
       '<div class="lgc">映射逻辑：' + esc(s.logic) + '</div>' +
-      (s.deduce ? renderDeduce(s.deduce, true) : (s.counter ? '<div class="dd-box"><div class="dd-counter">反证：' + esc(s.counter) + '</div></div>' : ''));
+      (s.deduce ? renderDeduce(s.deduce, true) : (s.counter ? '<div class="dd-box"><div class="dd-counter">反证：' + esc(_ddClean(s.counter)) + '</div></div>' : ''));
     if (s.stocks && s.stocks.length) {
       html += '<div class="stock-chips">';
       s.stocks.forEach(function (st) {

@@ -327,9 +327,14 @@ def _dd_validate(d, tag, hards, warns):
     for key in ('main', 'counter'):
         v = d.get(key)
         if isinstance(v, str):
-            for bad in ('主推：', '反证：'):
-                if v.startswith(bad):
-                    hards.append(f"{tag}: deduce.{key} 自带「{bad}」前缀（R99o：前端会重复渲染成「{bad}{bad}」）")
+            # R100z173：前缀判定从「只认冒号」扩到「冒号或『是』」——AI 实测大量写
+            # 「反证是…」（无冒号），只认冒号时漏拦，页面就渲染成「反证：反证是…」。
+            # 要求紧跟冒号/是，禁裸剥（「反证成立」是正常句）。
+            _pm = re.match(r'^[\s\u3000\u200b]*(主推|反证)\s*([:：]|是)', v)
+            if _pm:
+                hards.append(f"{tag}: deduce.{key} 自带「{_pm.group(0).strip()}」前缀"
+                             f"（R100z173：渲染层会补「{_pm.group(1)}：」→ 页面重复成"
+                             f"「{_pm.group(1)}：{_pm.group(1)}{_pm.group(2)}…」）")
             if len(v.strip()) < 6:
                 warns.append(f"{tag}: deduce.{key} 过短（{len(v.strip())} 字），推演信息量不足")
 
