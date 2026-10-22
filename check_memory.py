@@ -195,9 +195,15 @@ elif am:
 else:
     warn("M6 未找到运行期记忆目录")
 
-# ---------------- M7 归档索引第 1 列
+# ---------------- M7 归档层（2026-10-22 用户拍板「全部清理掉，不要归档」→ 空层是正常态）
 idx = os.path.join(MEM, "归档索引.md")
-if os.path.exists(idx):
+_archived = glob.glob(os.path.join(MEM, "归档-*.md"))
+if not os.path.exists(idx) and not _archived:
+    ok("M7 归档层已清空（0 归档件 / 0 索引，2026-10-22 用户拍板整层删除，见 24.26）")
+elif not os.path.exists(idx):
+    warn("M7 有 %d 份 归档-*.md 但无 归档索引.md —— 要么补索引，要么按 24.26 删干净（别留半层）"
+         % len(_archived))
+else:
     s = rd(idx)
     col1 = []
     for ln in s.split("\n"):
@@ -207,7 +213,7 @@ if os.path.exists(idx):
                 c = cells[0].strip("`").strip()
                 if re.match(r"归档-[^\s]+\.md$", c):
                     col1.append(c)
-    on_disk = [os.path.basename(x) for x in glob.glob(os.path.join(MEM, "归档-*.md"))]
+    on_disk = [os.path.basename(x) for x in _archived]
     miss = [c for c in col1 if not os.path.exists(os.path.join(MEM, c))]
     extra = [c for c in on_disk if c not in col1]
     if miss or extra:
@@ -215,8 +221,6 @@ if os.path.exists(idx):
              % (len(miss), len(extra), (miss + extra)[:4]))
     else:
         ok("M7 归档索引第1列 %d 条 ↔ 实际文件 %d 条，双向 0 差异" % (len(col1), len(on_disk)))
-else:
-    warn("M7 缺归档索引.md")
 
 # ---------------- M8 数字对账
 import importlib.util
