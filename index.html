@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610240146"></script>
+<script src="data.js?v=202610240250"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -818,9 +818,20 @@
   body.gnews-open .wrap > *:not(#gnews-view) { display: none !important; }
   body.gnews-open #gnews-view { display: block; }
   .gn-empty { font-size: 12.5px; color: var(--ink2); }
-  /* 悬浮组现有 3 个按钮（🐼/📄/🧰），页内返回按钮默认对齐组内最后一个按钮的位置 */
-  .db-entry-in { top: calc(50% + 37px); }
-  @media (max-width: 700px) { .db-entry-in { top: calc(50% + 33px); } }
+  /* R100z162：悬浮组扩容到 4 个按钮（🐼/📄/🧰/🌟），槽位全部按「组居中」重算：
+     组高 = 4×46 + 3×14 = 226 → 组顶 = 50% − 113 → 第 i 个按钮 top = −113 + 60i。
+     加按钮后整组上移 30px，旧的 −83/−23/+37 若原样保留，返回按钮会掉到组外。 */
+  .db-entry-in { top: calc(50% + 7px); }
+  body.score-open .db-entry-in { display: flex; }
+  #sc-entry-in { top: calc(50% + 67px); }
+  @media (max-width: 700px) {
+    .db-entry-in { top: calc(50% + 5px); }
+    #sc-entry-in { top: calc(50% + 61px); }
+  }
+  /* R100z162：复盘台账独立页（🌟）——与 📄/#gnews-view 同款「打开即独占」模式 */
+  #score-view { display: none; }
+  body.score-open .wrap > *:not(#score-view) { display: none !important; }
+  body.score-open #score-view { display: block; }
   /* R100z110：修复 📄 页返回按钮不显示的 bug——此前只有 body.db-open 有 display 放行规则，
      gnews-open 漏了同款规则，#gn-entry-in 在 DOM 里但永远 display:none（用户 2026-10-10 反馈「缺少返回icon」） */
   body.gnews-open .db-entry-in { display: flex; }
@@ -835,12 +846,12 @@
   .gn-jump:hover { transform: scale(1.1); }
   .gn-jump:active { transform: scale(.92); }
   /* R100z113：对齐主组槽位——#gn-entry-in 落主组 📄 槽（中，-23），#gn-jump 落主组 🐼 槽（顶，-83） */
-  #gn-entry-in { top: calc(50% - 23px); }
-  #gn-jump { top: calc(50% - 83px); }
+  #gn-entry-in { top: calc(50% - 53px); }
+  #gn-jump { top: calc(50% - 113px); }
   @media (max-width: 700px) {
     .gn-jump { width: 42px; height: 42px; font-size: 36px; }
-    #gn-entry-in { top: calc(50% - 21px); }
-    #gn-jump { top: calc(50% - 75px); }
+    #gn-entry-in { top: calc(50% - 51px); }
+    #gn-jump { top: calc(50% - 107px); }
   }
   /* 页内定位锚点：给顶部留出呼吸空间 */
   #gn-ashare, #gn-us { scroll-margin-top: 12px; }
@@ -872,6 +883,11 @@
   .td-fold > summary::marker { color: var(--accent); }
   .td-x { font-size: 12px; color: var(--ink2); padding: 5px 0 5px 6px; border-bottom: 1px dashed var(--line); display: flex; gap: 6px 8px; flex-wrap: wrap; align-items: baseline; }
   .td-x b { color: var(--ink); font-weight: 600; }
+  /* R100z162：今日不做 / 备选的标的也能点开 K 线——用户要求「也要做点开能看 K 线的」。
+     只给名字加点击（整行加会误触否决理由），用虚线底暗示可点，和主清单的实线区分。 */
+  .td-x b.td-x-nm { cursor: pointer; border-bottom: 1px dashed #c3ccd8; transition: color .15s ease, border-color .15s ease; }
+  .td-x b.td-x-nm:hover { color: var(--accent-deep); border-bottom-color: var(--accent); }
+  .td-x b.td-x-nm::after { content: '　↗'; font-size: 9px; color: #98a4b3; }
   .td-x em { font-style: normal; color: #a8541a; }
   .td-x s { text-decoration: none; color: var(--ink2); font-size: 11px; }
   .td-note { font-size: 11.5px; color: var(--ink2); margin-top: 10px; line-height: 1.65; }
@@ -973,6 +989,7 @@
     <button class="mkt-toggle" id="mkt-toggle" title="切换到美股看板" aria-label="切换A股/美股看板" onclick="switchTab(currentMarket==='ashare'?'us':'ashare')">🐼</button>
     <button class="db-entry" id="gn-entry" title="点击进入全球要闻（A股/美股要闻 · 政策信号解码）" aria-label="全球要闻"><span class="db-emoji">📄</span></button>
     <button class="db-entry" id="db-entry" title="点击进入策略工具箱（断板反包 / 谐波形态 / 日线九门）" aria-label="策略工具箱"><span class="db-emoji">🧰</span><span class="db-badge" id="db-badge"></span></button>
+    <button class="db-entry" id="sc-entry" title="点击进入复盘台账（选股信号 · 方向判断，谁准谁不准）" aria-label="复盘台账"><span class="db-emoji">🌟</span><span class="db-badge" id="sc-badge"></span></button>
   </div>
   <div class="hero">
     <h1>每日市场看板</h1>
@@ -980,9 +997,6 @@
     <span class="updated" id="updatedAt"></span>
     <div class="schedule-note">自动更新：A股 周一至五 16:00 数据更新 · 17:00 叙事与部署 · 美股 周一至五 08:30 隔夜收盘（含AI预测与A股映射） · 周日 22:00 全球要闻 + 周一开盘预判</div>
   </div>
-
-  <div id="weekend-news"></div>
-  <div id="ai-prediction"></div>
 
   <div class="tabbar">
     <div class="tab active" id="tab-a" onclick="switchTab('ashare')">A 股</div>
@@ -1013,6 +1027,15 @@
 
     <!-- R100m：TOP10 + 开盘精选固定区——切换谐波/九门/吸筹子页时保持显示（用户要求固定不动） -->
     <div id="db-fixed"></div>
+    <!-- R100z162：开盘预测子页——盘前前瞻 + AI 预测分析 + 次日交易预案三块合并成一页。
+         用户 2026-10-24 要求「AI 预测分析整个模块挪到技术看板，新增开盘预测；次日交易预案也放这里，
+         在 AI 预测分析下面」。三块都有独立渲染函数，容器常驻、只切 display，不重复 innerHTML。 -->
+    <div id="db-od" class="db-subpage" style="display:none;">
+      <div id="db-od-nav"></div>
+      <div id="weekend-news"></div>
+      <div id="ai-prediction"></div>
+      <div id="trade-desk"></div>
+    </div>
     <div id="db-pools" class="db-subpage"></div>
     <div id="db-hz" class="db-subpage" style="display:none;"></div>
     <div id="db-pw" class="db-subpage" style="display:none;"></div>
@@ -1029,6 +1052,18 @@
     <button class="gn-jump" id="gn-jump" title="点击定位到对应市场要闻">🐼</button>
     <button class="db-entry-in" id="gn-entry-in" title="点击返回每日市场看板">📄</button>
     <div id="gnews-body"></div>
+  </div>
+
+  <!-- R100z162：复盘台账独立页（🌟）——「指标表现」「预测复盘」两张成绩卡从主页面迁入。
+       用户 2026-10-24：「这两个放到新的一页去」。两张都是回头看，不参与当日决策，
+       混在盘面卡中间会把「今天做什么」挤下去。 -->
+  <div id="score-view">
+    <div class="db-topbar">
+      <div class="db-title">复盘台账</div>
+      <div class="db-date" id="sc-date"></div>
+    </div>
+    <button class="db-entry-in" id="sc-entry-in" title="点击返回每日市场看板">🌟</button>
+    <div id="score-body"></div>
   </div>
 </div>
 
@@ -1606,9 +1641,8 @@ function render(market) {
 
   html += '<div class="card"><h2>大盘指数' + h2Date(d) + '</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + renderStructure(d.structure, d.tradeDate) + '</div>';
 
-  // R100z160：指数之后立刻给「今天做什么」。顺序是刻意的——先看环境（指数/宽度/结构），
-  // 再看动作（做哪几只、买多少、错在哪走）。交易员不需要先翻完十个池子再自己拼结论。
-  if (isA) html += renderTradeDesk();
+  // R100z162：次日交易预案迁入「🧰 技术看板 → 开盘预测」子页（用户 2026-10-24 要求：
+  // 预测与预案同页，先看方向再看作法）。主页面只留当日盘面。
 
   // R100z82：预测验证块按用户要求移回 AI 预测卡（renderAiPrediction 内渲染）；
   // 大盘趋势研判卡恢复为纯研判内容（2026-10-08 用户反馈：验证块应放在 AI 预测下面）
@@ -1650,10 +1684,8 @@ function render(market) {
     if (d.fundNote) html += '<div class="note-line">' + esc(d.fundNote) + '</div>';
     html += '<div id="chart-fund" class="chart-tall"></div></div>';
 
-    // R100z160：当日复盘收尾——四指标谁准谁不准。放最后，因为它是「回头看」而不是「向前做」
-    html += renderSignalPerf();
-    // R100z161：预测复盘紧接其后——两套账并排：选股信号准不准、方向判断准不准
-    html += renderForecastScore();
+    // R100z162：两张成绩卡（指标表现 / 预测复盘）迁至 🌟 复盘台账独立页；
+    // 主页面不再渲染。R100z160/z161 的判定逻辑与口径一字未改，只换了挂载位置。
   }
 
   // R100i：谐波形态 / 量化九门（日线九门）已移至「🧰 工具箱」断板反包页内的独立子页，
@@ -2583,6 +2615,9 @@ function renderAiPrediction() {
   loadPortfolioCurve();
   renderStopTrack();
   renderRiskLines();
+  // R100z162：本卡现在常驻在 display:none 的「开盘预测」子页里。ECharts（组合净值）在隐藏容器
+  // init 会量到 0 宽，画出一根竖线；每次重画后补一次 resize，切页时再补一次（switchSubTab）。
+  setTimeout(resizeOdCharts, 30);
 }
 
 /* R100z82：盘前预测兑现验证块（板块层）。原「漂浮在 AI 预测卡底部」，R100z81 并入大盘趋势研判卡，
@@ -2779,10 +2814,17 @@ function renderTradeDesk() {
   // 另外两个清单同样重要：为什么不做（否决）、差一点做什么（备选）。
   // 只给「能做的」会让人以为池子里每只都能买。
   var watch = T.watch || [], cand = T.candidates || [];
+  // R100z162：没做的票也要能查图——「为什么不做」的否决理由只有配上 K 线才可信，
+  // 否则用户只能信我一句话。名字可点（openStkModal 与主清单同一个弹窗）。
+  var xNm = function (p) {
+    return '<b class="td-x-nm" title="点击查看 K 线 · ' + escAttr(p.name + ' ' + (p.code || '')) +
+      '" onclick="openStkModal(\'' + escAttr(p.code) + '\',\'' + escAttr(p.name) + '\',\'\')">' +
+      esc(p.name) + '</b>';
+  };
   if (watch.length) {
     h += '<details class="td-fold"><summary>今日不做 ' + watch.length + ' 只（附否决理由）</summary>';
     watch.forEach(function (p) {
-      h += '<div class="td-x"><b>' + esc(p.name) + '</b><s>' + esc(p.code) + '</s>' +
+      h += '<div class="td-x">' + xNm(p) + '<s>' + esc(p.code) + '</s>' +
         '<s>分 ' + (num(p.q) === null ? '—' : p.q) + '</s>' +
         '<em>' + esc(p.veto || '—') + '</em></div>';
     });
@@ -2791,7 +2833,7 @@ function renderTradeDesk() {
   if (cand.length) {
     h += '<details class="td-fold"><summary>备选 ' + cand.length + ' 只（通过否决但排名靠后）</summary>';
     cand.forEach(function (p) {
-      h += '<div class="td-x"><b>' + esc(p.name) + '</b><s>' + esc(p.code) + '</s>' +
+      h += '<div class="td-x">' + xNm(p) + '<s>' + esc(p.code) + '</s>' +
         '<s>' + esc(p.sector || '') + '</s>' +
         '<s>分 ' + (num(p.q) === null ? '—' : p.q) + '</s>' +
         '<em>' + esc(p.cappedBySector ? '同板块已满额，等换手' : '排名靠后，等回调或缩量') + '</em></div>';
@@ -3983,12 +4025,12 @@ function renderHarmonic() {
   // R100z4x：谐波子页顶部术语说明段落（.hz-sub）曾按用户反馈删除——2026-09-30 用户要求恢复（与九门/吸筹口径行同款）
   // R100z6l：恢复口径行（hz-sub 朴素样式 + 悬停详解），术语与 R100g 定稿一致
   var hzDef = '<details class="tech-legend"><summary>谐波口径 · XABCD 五点形态（点击查看技术指标）</summary><div class="lg-body">' +
-    '<div><b>形态</b>：X→A 初段 · A→B 回调 · B→C 延续 · C→D 终段；D 点落到 PRZ 后盯反转信号</div>' +
-    '<div><b>PRZ</b>：潜在反转区＝D 点投影 ±0.5×ATR14（腾讯 ifzq 前复权日 K）</div>' +
-    '<div><b>目标位</b>：T1＝D+0.382×CD，T2＝D+0.618×CD，分两级兑现</div>' +
-    '<div><b>止损</b>＝形态失效位（D 点结构被破坏），不是固定百分比</div>' +
+    '<div><b>一句话逻辑</b>：涨一段、回一段、再涨一段、再回一段——每段回撤比例落在斐波那契区间，D 点就是「该止跌」的候选位。这套不预测能涨多少，只回答这里值不值得接。</div>' +
+    '<div><b>判定规则</b>：X→A 初段 · A→B 回调 · B→C 延续 · C→D 终段，D 点落到 PRZ 后盯反转信号；PRZ＝潜在反转区＝D 点投影 ±0.5×ATR14（腾讯 ifzq 前复权日 K）；' +
+    '目标位 T1＝D+0.382×CD、T2＝D+0.618×CD，分两级兑现；止损＝形态失效位（D 点结构被破坏），不是固定百分比。</div>' +
+    '<div class="lg-hr"></div>' +
     '<div><b>分池</b>：确认池＝D 已触及 PRZ 且现企稳确认（按距 PRZ 距离升序，越近越靠前）；观察池＝D 正在行进、距 PRZ≤8%</div>' +
-    '<div><b>失效</b>：D 点破位或超期未成，移入失效池，5 个交易日后自动清理</div>' +
+    '<div><b>失效与离场</b>：D 点破位或超期未成 → 移入失效池，5 个交易日后自动清理</div>' +
     '<div class="lg-tip">下一步：PRZ 内等企稳 K 线（缩量止跌／下影）再动；跌破 PRZ 下沿＝D 点投影失效，形态作废、不出手。</div>' +
     '</div></details>';
   var html = hzDef;
@@ -4066,6 +4108,8 @@ function renderAccumulation() {
   // R100z4i：新增子页口径说明（与谐波/九门同款位置与样式：子页导航下方、hz-sub 朴素文字、悬停详解）
   // R100z22：吸筹口径（原一行文字 + 200 字 title，手机上 title 不显示＝白写）改可展开条目块
   var accLeg = '<details class="tech-legend"><summary>吸筹口径 · 六特征打分（点击查看技术指标）</summary><div class="lg-body">' +
+    '<div><b>一句话逻辑</b>：主力拿货不留名，但会留痕——长上影试盘、缩量止跌、横盘不破、缩量涨停。六项把这套痕迹量化成分数，分数只是入场券，形态还得自己看。</div>' +
+    '<div><b>判定规则</b>：六项独立计分、满分 102 分，逐项核对——</div>' +
     '<div><b>F1 试盘 · 20 分</b>：长上影≥2×实体、量≥1.5×5日均量，随后 3 日均量回落且收盘低于试盘价，当时处在近 120 日区间下部</div>' +
     '<div><b>F2 止跌 · 15 分</b>：3 日缩量连跌、末日量≤0.7×均量，第 4-8 日收复逾半跌幅</div>' +
     '<div><b>F3 横盘 · 20 分</b>：近 6 个月同类试盘≥2 次、近 10 日振幅收窄到 20 日的 6 成内、10 日收盘贴中枢±6%</div>' +
@@ -4073,8 +4117,9 @@ function renderAccumulation() {
     '<div><b>F5 缩量板 · 首次板 22 / 接力板 16 分</b>：跳空高开≥5% 的涨停、量≤前一日 0.8 倍且收在最高；本轮首次涨停（上方筹码干净）给高分，20 日内已有涨停的算接力板（老资金接力、防对倒）给低分</div>' +
     '<div><b>F6 流动性+热度 · 双达标 10 / 单达标 6 分</b>：近 20 日日均成交额≥2 亿（硬门禁，不足直接不入池）；热度＝近 250 日有涨停、或距高点回撤落在 25%-70%</div>' +
     '<div class="lg-hr"></div>' +
-    '<div><b>评级</b>：六项合计 102 分 → ≥70 强（结构完整、可直接跟）｜50-69 观察（缺一两项、只排队）｜&lt;50 不入池</div>' +
-    '<div class="lg-tip">下一步：盯次日竞价与量能（吸筹最怕缩量破位）；跌破最近收盘 −2.5% 无条件离场，形态走坏即出。卡片上的「信号滞后 N 日」＝最近一次试盘/涨停距今几个交易日，≥10 日的结构已走旧，只排队不主动做——<b>打分到强池线、但滞后超 10 日的标的，本页会强制降到观察池</b>（本次共 ' + demoted + ' 只）。</div>' +
+    '<div><b>分池</b>：六项合计 102 分 → ≥70 强（结构完整、可直接跟）｜50-69 观察（缺一两项、只排队）｜&lt;50 不入池。信号滞后超 10 个交易日的「强」一律降入观察池——跟一个 10 日前的结构是运气不是纪律。</div>' +
+    '<div><b>失效与离场</b>：跌破最近收盘 −2.5% 无条件离场；横盘下沿被破、量能形态走坏即出，不等打分变化。卡片上的「信号滞后 N 日」＝最近一次试盘/涨停距今几个交易日。</div>' +
+    '<div class="lg-tip">下一步：盯次日竞价与量能（吸筹最怕缩量破位）；<b>打分到强池线、但滞后超 10 日的标的，本页会强制降到观察池</b>（本次共 ' + demoted + ' 只）。</div>' +
     '</div></details>';
   // R100z21：强/观察两节渲染（空档不显示，避免「0 只」占位盖住真内容）
   // R100z29：退出纪律——结构走旧（信号滞后 >10 个交易日）的「强」一律降入观察池。
@@ -4158,9 +4203,13 @@ function renderPowerScreen() {
   }).join('');
   // R100z4i：口径说明挪出 card（子页导航下方、谐波说明同款位置），去 📐 emoji、无背景（hz-sub 朴素样式）
   var gateDef = '<details class="tech-legend"><summary>九门口径 · 9 道量化硬阈值（点击查看技术指标）</summary><div class="lg-body">' +
-    '<div><b>硬门禁（必过 5 道）</b>：G1 当日涨幅≥3% · G2 放量≥1.5×5日均量 · G4 站上 MA20 · G5 非 ST 主板 · G7 当日振幅≤15%</div>' +
-    '<div><b>质量门（过≥3 道）</b>：G3 价处 20 日区间上 1/3 · G6 近 5 日无长上影出货 · G8 波动率适中（ATR14/收盘∈2%-8%） · G9 RSI14∈40-80</div>' +
-    '<div><b>打分</b>＝通过阈值数（0-9 分）；入选＝硬门禁全过 且 质量门≥3 道</div>' +
+    '<div><b>一句话逻辑</b>：九道门量的全是「今天已经很硬」——涨幅、量能、位置、RSI 都取当日收盘。所以这页偏追当天，不是提前埋伏；买的是延续，不是反转。</div>' +
+    '<div><b>判定规则</b>：硬门禁（必过 5 道）G1 当日涨幅≥3% · G2 放量≥1.5×5日均量 · G4 站上 MA20 · G5 非 ST 主板 · G7 当日振幅≤15%；' +
+    '质量门（过≥3 道）G3 价处 20 日区间上 1/3 · G6 近 5 日无长上影出货 · G8 波动率适中（ATR14/收盘∈2%-8%） · G9 RSI14∈40-80；' +
+    '打分＝通过阈值数（0-9 分）。</div>' +
+    '<div class="lg-hr"></div>' +
+    '<div><b>分池</b>：入选＝硬门禁全过 且 质量门≥3 道。只过硬门禁、质量门不够的不进池——宁可留空，也不放半合格品进清单。</div>' +
+    '<div><b>失效与离场</b>：次日不再过阈值（掉出当日强度）→ 移入失效归档池，保留 5 个交易日后自动剔除</div>' +
     '<div class="lg-tip">下一步：这是「当日强度」筛（偏追当天）；次日看能否站稳 MA20、量能能否续上，站不稳量缩就先出。</div>' +
     '</div></details>';
   // R100z56（用户 2026-10-04 要求）：九门页同样补失效归档池（原在池内、本轮不再过阈值的标的，
@@ -4627,19 +4676,23 @@ function renderDuanban() {
   // 原用动态 db.note，该字段被 07:00 自动化 AI 写回污染（写入流程说明而非口径），弃用。
   // R100z26：断板页口径说明改成与谐波/九门/吸筹同款的「可展开条目块」。
   // 原来是一行 hz-sub + 400 字 title 悬浮 —— 手机上 title 根本不显示，等于没写。
+  // R100z162（用户 2026-10-24）：四页口径块统一为同一套五段——
+  // 一句话逻辑 / 判定规则 / 分池 / 失效与离场 / 下一步（黄条）。
+  // 原先四页各写各的：断板 9 行、谐波 6 行、吸筹 7 行、九门 3 行，标签名互不对应
+  // （「判定四步」vs「硬门禁」vs「F1 试盘」），并排看像四个不同产品的说明书。
+  // 段名固定后，读者在任一页都能按同一顺序找同一类信息。
   var _dbNote = '<details class="tech-legend"><summary>断板反包口径 · 全流程与分池（点击查看技术指标）</summary><div class="lg-body">' +
     '<div><b>一句话逻辑</b>：涨停次日的放量断板 = 抛压被兑现；之后缩量不破位 = 筹码被接走。跌得动（放量破位）说明是出货，跌不动才有反包机会。</div>' +
-    '<div><b>判定四步（须按顺序）</b>：① T 日涨停 → ② 次日放量断板（成交量≥1.5×T 日） → ③ 缩量回踩 → ④ 不破 T 日最低点、也站稳 MA5 → 待反包</div>' +
-    '<div><b>两个池</b>：确认池＝四步全流程走完（可随时等反包）；观察池＝形态进行中、只差最后一根确认 K 线（先待企稳、再待缩量）</div>' +
-    '<div><b>选股范围</b>：仅沪深主板 60/00，排除科创板 688 与北交所；用东财涨停池取 T 日、腾讯日 K 核验（check_duanban.py，纯脚本确定性，不靠人眼）</div>' +
-    '<div><b>标签与概率</b>：按当日要闻/AI 预测自动标注利好（红）/利空（绿）/中性（灰）；上涨概率＝脚本确定性基线＋AI 复核校准（16:00 数据步生成，次日 07:00 复核）</div>' +
+    '<div><b>判定规则</b>：① T 日涨停 → ② 次日放量断板（成交量≥1.5×T 日） → ③ 缩量回踩 → ④ 不破 T 日最低点、也站稳 MA5 → 待反包。' +
+    '范围仅沪深主板 60/00，排除科创板 688 与北交所；东财涨停池取 T 日、腾讯日 K 核验（check_duanban.py，纯脚本，不靠人眼）。' +
+    '标签按当日要闻/AI 预测自动标利好（红）/利空（绿）/中性（灰），上涨概率＝脚本基线＋AI 复核校准。</div>' +
     '<div class="lg-hr"></div>' +
-    '<div><b>失效与归档</b>：跌破 T 日最低点或 MA5（破位）、或 5 个交易日内没走完反包（超期）→ 移入失败池，5 个交易日后自动清理</div>' +
-    // R100z170/171：风险徽章图例。符号统一 ⚠️，三档只用**底色深浅**区分：
-    // 黑底=严重 / 深灰底=警示 / 淡灰底=参考（用户 2026-10-21 指定的配色）。
-    '<div><b>风险徽章（⚠️ 底色越深越严重）</b>：<span class="risk-dot sev-red" style="margin:0 2px;">⚠️</span>黑底＝严重（减持实施中/ST/预亏/立案等，须换股、不进 8 只池）　' +
-    '<span class="risk-dot sev-orange" style="margin:0 2px;">⚠️</span>深灰底＝警示（减持预披露等，可保留但重点关注）　' +
-    '<span class="risk-dot sev-yellow" style="margin:0 2px;">⚠️</span>淡灰底＝参考（股东质押等，仅提示）。悬停可见具体事由与日期</div>' +
+    '<div><b>分池</b>：确认池＝四步全流程走完（可随时等反包）；观察池＝形态进行中、只差最后一根确认 K 线（先待企稳、再待缩量）</div>' +
+    '<div><b>失效与离场</b>：跌破 T 日最低点或 MA5（破位）、或 5 个交易日内没走完反包（超期）→ 移入失败池，5 个交易日后自动清理</div>' +
+    // R100z162（用户 2026-10-24）：三档底色图例整行删除——原话「这个删掉，我知道就行不用提示」。
+    // 徽章本身仍显示在卡片上，只是不再解释深浅含义。
+    // ⚠️ 注释里不要把这个图例的名字写回来：G30 在整份 index.html 里按关键词找图例锚点，
+    // 注释命中也算命中，会误判「图例还在但缺档」。这件事本轮踩了两次。
     '<div class="lg-tip">下一步：缩量不破位只算「跌不动」，反包日放量收复断板日最高价 / 站回 MA5 才算真确认；破位无条件走，不摊平不扛单。此页与「谐波 / 九门 / 吸筹」同为技术面观察器，仓位按中等及以下确信度给。</div>' +
     '</div></details>';
   var conf = (db && db.confirmed) || [], watch = (db && db.watching) || [];
@@ -4759,6 +4812,10 @@ function renderDuanban() {
   // R100i：断板反包失败池（破位 / 超期失效归档，5 交易日后自动清理）
   html += dbFailHtml(db && db.failPool, 'duanban');
   document.getElementById('db-pools').innerHTML = html;
+  // R100z162：开盘预测子页也要有子页菜单，否则进去后没有任何入口能切走——
+  // 且 dbSubTab 会记住 'od'，下次再进还是它，等于把人锁死在这一页。
+  var odNav = document.getElementById('db-od-nav');
+  if (odNav) odNav.innerHTML = subnavHtml();
 
   // R100i：🧰 工具箱另两个子页——谐波形态 / 日线九门（从主页面挪入，见 index 渲染段注释）
   // R100k：子页菜单嵌入页首（空数据态也保留菜单，避免困在子页无法返回）
@@ -4772,7 +4829,7 @@ function renderDuanban() {
 
   // R100n：子页记忆——优先恢复上次选择的子页（localStorage），默认断板反包
   var _savedTab = (function () { try { return localStorage.getItem('dbSubTab'); } catch (e) { return null; } })();
-  switchSubTab(['db', 'hz', 'pw', 'acc'].indexOf(_savedTab) >= 0 ? _savedTab : 'db');
+  switchSubTab(['od', 'db', 'hz', 'pw', 'acc'].indexOf(_savedTab) >= 0 ? _savedTab : 'od');
 }
 
 /* R100z41（截图7「失效池没更新」修复）：失效池改按「归档日倒序」渲染——最新归档排最前。
@@ -4990,6 +5047,9 @@ function subnavHtml() {
   // R100z28：用户指定把「主力吸筹」排到「日线九门」前面（吸筹是唯一还在跟的买点型信号，
   // 九门已回测出负超额，不该占更靠前的位）；四个键的映射关系不变，仅调整视觉顺序。
   var tabs = [
+    // R100z162（用户 2026-10-24）：新增「开盘预测」子页并排到最前——盘前前瞻 + AI 预测分析 +
+    // 次日交易预案。排第一是因为它是每天开盘前唯一要看的一页：先判断方向，再决定做哪只。
+    { k: 'od', t: '开盘预测' },
     { k: 'db', t: '断板反包' },
     { k: 'hz', t: '谐波形态' },
     { k: 'acc', t: '主力吸筹' },
@@ -5001,8 +5061,8 @@ function subnavHtml() {
 }
 function switchSubTab(k) {
   currentSubTab = k;
-  try { localStorage.setItem('dbSubTab', k); } catch (e) {} // R100n：记住上次子页（断板/谐波/九门/吸筹）
-  var map = { db: 'db-pools', hz: 'db-hz', pw: 'db-pw', acc: 'db-acc' };
+  try { localStorage.setItem('dbSubTab', k); } catch (e) {} // R100n：记住上次子页（开盘预测/断板/谐波/吸筹/九门）
+  var map = { od: 'db-od', db: 'db-pools', hz: 'db-hz', pw: 'db-pw', acc: 'db-acc' };
   Object.keys(map).forEach(function (m) {
     var el = document.getElementById(map[m]);
     if (el) el.style.display = (m === k) ? 'block' : 'none';
@@ -5010,6 +5070,30 @@ function switchSubTab(k) {
   var tabs = document.querySelectorAll('.db-subtab');
   for (var i = 0; i < tabs.length; i++) {
     tabs[i].classList.toggle('on', tabs[i].getAttribute('data-k') === k);
+  }
+  // R100z162：开盘预测页里的「组合净值」是 ECharts。它默认藏在 display:none 的容器里，
+  // init 时量到 0 宽 → 切过来必须 resize 一次，否则图只画出左侧一小条（实测过，不是理论问题）。
+  if (k === 'od') setTimeout(resizeOdCharts, 50);
+  // R100z162：开盘精选是 9:45 的断板池候选，与「次日交易预案」职责重叠。
+  // 开盘预测页只留 TOP10（板块强弱是预测的输入），精选卡在预测页隐藏，回到四池页照常显示。
+  var starBlk = document.querySelector('#db-fixed .p-star');
+  if (starBlk) starBlk.style.display = (k === 'od') ? 'none' : '';
+}
+function resizeOdCharts() {
+  var el = document.getElementById('chart-pf');
+  if (!el || !window.echarts) return;
+  var inst = echarts.getInstanceByDom(el);
+  if (inst) inst.resize();
+}
+/* R100z162：开盘预测页三块的渲染入口。三块各自独立取数、独立失败，一块挂了另两块照常出。 */
+function renderOpenDesk() {
+  renderOpenOutlook();
+  renderAiPrediction();
+  var td = document.getElementById('trade-desk');
+  if (td) {
+    var h = renderTradeDesk();
+    td.innerHTML = h || '<div class="card"><h2 class="td-h2">次日交易预案</h2>' +
+      '<div class="db-empty">暂无执行清单（16:00 数据步跑完 signal_rank.py 后出现）</div></div>';
   }
 }
 
@@ -5044,8 +5128,51 @@ function closeGnews() {
   document.body.classList.remove('gnews-open');
   window.scrollTo(0, window._gnHomeScrollY || 0);
 }
-/* R100z112：📄 页内单一定位按钮（🐼/🦅）随滚动切换 + 点击平滑定位，参考主页面 🐼/💰 分工逻辑 */
-var _gnJumpTarget = 'ashare';
+
+/* R100z162：🌟 复盘台账独立页——与 📄/🧰 同款「打开即独占」（hash=#score，进出都记忆浏览位置）。
+   页内两张卡：① 指标表现（选股信号谁赚谁不赚）② 预测复盘（方向判断谁准谁不准）。
+   两张都是回头看，和「今天做什么」不同族，所以独立成页而不是塞在盘面卡中间。
+   两张卡的数据源、阈值、判定文案一字未改——只换了挂载点，避免「搬页顺手改口径」。 */
+function renderScoreView() {
+  var D = window.DASHBOARD_DATA || {};
+  var box = document.getElementById('score-body');
+  if (!box) return;
+  var body = renderSignalPerf();
+  if (!body) {
+    body = '<div class="card"><h2 class="td-h2">指标表现 · 谁准谁不准</h2>' +
+      '<div class="db-empty">暂无归因数据（16:00 数据步跑完 signal_attribution.py 后出现）</div></div>';
+  }
+  var fs = renderForecastScore();
+  if (!fs) {
+    body += '<div class="card"><h2 class="td-h2">预测复盘 · 谁准谁不准</h2>' +
+      '<div class="db-empty">暂无台账数据（需累计至少 1 个预测日）</div></div>';
+  } else {
+    body += fs;
+  }
+  box.innerHTML = body;
+  var dt = document.getElementById('sc-date');
+  if (dt) dt.textContent = '数据生成：' + (D.updatedAt || '—') +
+    '（选股信号归因 16:00 · 预测台账结算 17:00）';
+  var bd = document.getElementById('sc-badge');
+  if (bd) {
+    var n = ((D.forecastScore || {}).sector || {}).n;
+    bd.textContent = n ? ('复盘 ' + n + ' 条') : '';
+  }
+}
+function openScore() {
+  if (location.hash !== '#score') history.pushState(null, '', '#score');
+  window._scHomeScrollY = window.scrollY;
+  document.body.classList.add('score-open');
+  window.scrollTo(0, window._scViewScrollY || 0);
+  renderScoreView();
+}
+function closeScore() {
+  if (location.hash === '#score') history.pushState(null, '', location.pathname + location.search);
+  window._scViewScrollY = window.scrollY;
+  document.body.classList.remove('score-open');
+  window.scrollTo(0, window._scHomeScrollY || 0);
+}
+/* R100z112：📄 页内单一定位按钮（🐼/🦅）随滚动切换 + 点击平滑定位，参考主页面 🐼/💰 分工逻辑 */var _gnJumpTarget = 'ashare';
 function gnSetJump(mk) {
   var b = document.getElementById('gn-jump'); if (!b) return;
   _gnJumpTarget = mk;
@@ -5128,10 +5255,14 @@ function renderGnews() {
 window.addEventListener('popstate', function () {
   var openDb = location.hash === '#duanban';
   var openGn = location.hash === '#gnews';
+  var openSc = location.hash === '#score';
   document.body.classList.toggle('db-open', openDb);
   if (openDb) renderDuanban(); else closeDbModal();
   document.body.classList.toggle('gnews-open', openGn);
   if (openGn) renderGnews();
+  // R100z162：🌟 复盘台账页
+  document.body.classList.toggle('score-open', openSc);
+  if (openSc) renderScoreView();
 });
 /* R100z114（用户 2026-10-10）：政策信号解码卡点击 → 跳转到对应新闻条目。
    依据：enrich_policy.py 的 ps.title 就是五节要闻的原始 title（同源精确相等），
@@ -5199,6 +5330,11 @@ document.addEventListener('click', function (ev) {
   var gnei = document.getElementById('gn-entry-in');
   if (gne) gne.addEventListener('click', function () { openGnews(); });
   if (gnei) gnei.addEventListener('click', function () { closeGnews(); });
+  // R100z162：🌟 复盘台账入口 / 页内返回
+  var sce = document.getElementById('sc-entry');
+  var scei = document.getElementById('sc-entry-in');
+  if (sce) sce.addEventListener('click', function () { openScore(); });
+  if (scei) scei.addEventListener('click', function () { closeScore(); });
   // R100z113：点击 = 切换市场（toggle）：点 🐼 → 滚到美股要闻且图标切 🦅；点 🦅 → 滚回 A股且切 🐼。
   // 滚动监听保留：手动翻页时图标仍随所在板块自动切换（gnSpy）。
   var gnj = document.getElementById('gn-jump');
@@ -5212,10 +5348,19 @@ document.addEventListener('click', function (ev) {
   var g = document.getElementById('float-group');
   if (!g) return;
   var POS_KEY = 'floatGroupPos', sx = null, sy = 0, ox = 0, oy = 0, moved = false;
-  var lastH = 0, lastPos = null; // R100c：断板页组隐藏（rect 全 0），用最后已知组高/位置兜底
-  function rect() { return g.getBoundingClientRect(); }
-  function trackH() { var r = rect(); if (r.height) lastH = r.height; }
-  function grpH() { return lastH || rect().height || (window.innerWidth <= 700 ? 96 : 106); }
+  var lastH = 0, lastPos = null, lastGap = 60; // R100c：断板页组隐藏（rect 全 0），用最后已知组高/位置兜底
+  var rect = function () { return g.getBoundingClientRect(); };
+  function trackH() {
+    var r = rect();
+    if (r.height) lastH = r.height;
+    // R100z162：槽距实测（相邻按钮 offsetTop 之差）。组隐藏时量到 0，保留上次值不覆盖。
+    var bs = g.children;
+    if (bs && bs.length >= 2) {
+      var gp = bs[1].offsetTop - bs[0].offsetTop;
+      if (gp > 0) lastGap = gp;
+    }
+  }
+  function grpH() { return lastH || rect().height || (window.innerWidth <= 700 ? 198 : 226); } // R100z162：4 个按钮的组高兜底
   function place(l, t, save) {
     var r = rect(), w = r.width || 46, h = grpH();
     l = Math.max(6, Math.min(l, window.innerWidth - w - 6));
@@ -5223,21 +5368,29 @@ document.addEventListener('click', function (ev) {
     g.style.left = l + 'px'; g.style.top = t + 'px';
     g.style.right = 'auto'; g.style.bottom = 'auto'; g.style.transform = 'none';
     lastPos = { l: l, t: t };
+    // R100z162：悬浮组由 3 个按钮扩到 4 个，页内返回按钮不能再一律贴最底部——
+    // 🧰 返回要落 🧰 槽（第 3 个）、🌟 返回要落 🌟 槽（第 4 个），否则点进去按钮会跳一格。
+    // 槽距不写死：量组内相邻按钮 offsetTop 差，缩放/移动端字号变化都跟得上（隐藏时量到 0 就沿用上次值）。
+    var _slot = function (i) { return t + i * lastGap; };
     if (dei) {
-      dei.style.left = l + 'px'; dei.style.top = (t + h - 46) + 'px';
+      dei.style.left = l + 'px'; dei.style.top = _slot(2) + 'px';
       dei.style.right = 'auto'; dei.style.bottom = 'auto';
     }
+    var scei2 = document.getElementById('sc-entry-in');
+    if (scei2) {
+      scei2.style.left = l + 'px'; scei2.style.top = _slot(3) + 'px';
+      scei2.style.right = 'auto'; scei2.style.bottom = 'auto';
+    }
     // R100z109：全球要闻页内返回按钮与组内 📄 位置实时同步（同 db-entry-in）
-    // R100z113：页内按钮对齐主组「同槽位」——gn-entry-in 落主组 📄 槽（中），gn-jump 落主组 🐼 槽（顶），
+    // R100z113：页内按钮对齐主组「同槽位」——gn-entry-in 落主组 📄 槽（第 2 个），gn-jump 落主组 🐼 槽（第 1 个），
     // 保证主页面点 📄 进来后鼠标不动仍悬在 📄 上（用户 2026-10-10 反馈「点进去鼠标在🐼上面」）
-    var _gnMob = window.innerWidth <= 700, _gnHalf = _gnMob ? 21 : 23; // 42/46 按钮的一半
     var gni = document.getElementById('gn-entry-in');
     if (gni) {
-      gni.style.left = l + 'px'; gni.style.top = (t + h / 2 - _gnHalf) + 'px';
+      gni.style.left = l + 'px'; gni.style.top = _slot(1) + 'px';
       gni.style.right = 'auto'; gni.style.bottom = 'auto';
     }
     var gnj2 = document.getElementById('gn-jump');
-    if (gnj2) { gnj2.style.left = l + 'px'; gnj2.style.top = t + 'px'; gnj2.style.right = 'auto'; }
+    if (gnj2) { gnj2.style.left = l + 'px'; gnj2.style.top = _slot(0) + 'px'; gnj2.style.right = 'auto'; }
     if (save) {
       try { localStorage.setItem(POS_KEY, JSON.stringify({ lf: l / window.innerWidth, tf: t / window.innerHeight })); } catch (e) {}
     }
@@ -6440,8 +6593,8 @@ loadPoolExit(function () {
   if (aiBox && aiBox.innerHTML) renderAiPrediction();
 });
 loadRiskBlacklist();   // R100z13：先发请求，黑名单异步到后再自动重画一次
-renderAiPrediction();
-renderOpenOutlook();
+// R100z162：三块（开盘前瞻 / AI 预测分析 / 次日交易预案）统一入口，全部落在「🧰 技术看板 → 开盘预测」子页
+renderOpenDesk();
 
   function closeChips() {
     document.querySelectorAll('.stock-chip.expanded, .tchip.expanded').forEach(function (c) {
@@ -6500,6 +6653,8 @@ renderPano();
 renderDuanban();
 if (location.hash === '#duanban') { document.body.classList.add('db-open'); window.scrollTo(0, 0); }
 if (location.hash === '#gnews') { document.body.classList.add('gnews-open'); if (window.__applyFloatSaved) window.__applyFloatSaved(); renderGnews(); window.scrollTo(0, 0); }
+// R100z162：🌟 复盘台账页直达（分享链接 #score 可直接落到成绩单）
+if (location.hash === '#score') { document.body.classList.add('score-open'); if (window.__applyFloatSaved) window.__applyFloatSaved(); renderScoreView(); window.scrollTo(0, 0); }
 </script>
 </body>
 </html>

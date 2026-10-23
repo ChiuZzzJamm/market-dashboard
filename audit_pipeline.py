@@ -58,6 +58,11 @@
                       ② 三档底色必须**亮度单调递减**且相邻差 ≥35（10px 小圆点上黑与深灰不可分，
                          「颜色分档」会退化成「一个通道」）；③ 徽章字号 ≥11px；
                       ④ 涨红跌绿两色常量必须在；⑤ 断板页徽章图例三档必须齐（R100z171）
+    G39 开盘预测子页  三块齐全 + DOM 顺序（前瞻→AI预测→预案）+ od 为默认子页且子页自带
+                      tab 菜单（否则 dbSubTab 记住 od 后整页无入口可切走）（R100z162，FAIL）
+    G40 复盘页与槽位  🌟 复盘台账独占页（两卡 + 独占 CSS + hash 直达）与悬浮组四槽位对齐
+                      （返回按钮按槽位落位、槽距 offsetTop 实测；旧贴底写法会让第 4 个按钮
+                      掉出组外）（R100z162，FAIL）
 """
 import ast
 import json
@@ -2545,16 +2550,24 @@ def g30_display_prefs(r):
                    % (t_lum["red"], t_lum["orange"], t_lum["yellow"]))
 
     # ---- f) 图例三档齐 ----
-    if "风险徽章" not in s:
-        r.fail("G30", "断板页缺少「风险徽章」图例 —— 只靠底色深浅分档、却没文字说明，"
-                      "等于让人猜（用户 2026-10-21 问「颜色怎么不一样」就是这个原因）")
-    else:
+    # R100z162（2026-10-24）：用户明确要求删掉「风险徽章（⚠️ 底色越深越严重）」这行图例，
+    # 原话「这个删掉，我知道就行不用提示」。所以「图例必须存在」这条不再成立——
+    # 但仍要拦住真正的坏情况：三档 class 若在渲染层被删/改名，徽章会全变成同一种颜色，
+    # 那才是真正让人猜（用户 2026-10-21 问「颜色怎么不一样」就是那次）。
+    if "风险徽章" in s:
         lg = s[s.find("风险徽章"):s.find("风险徽章") + 900]
         gone = [k for k in ("red", "orange", "yellow") if ("sev-" + k) not in lg]
         if gone:
             r.fail("G30", "风险徽章图例缺档：%s —— 图例必须三档齐全" % "、".join(gone))
         else:
             r.ok("G30", "断板页风险徽章图例三档齐全（⚠️ 底色越深越严重）")
+    else:
+        used = [k for k in ("red", "orange", "yellow") if ("sev-" + k) in s]
+        if len(used) < 3:
+            r.fail("G30", "风险徽章只渲染 %d 档（%s）—— 图例可删，但三档底色必须仍在，"
+                          "否则严重/警示/参考全同色，等于没分级" % (len(used), "、".join(used) or "无"))
+        else:
+            r.ok("G30", "风险徽章三档仍在渲染（图例已按用户 2026-10-24 要求删除）")
 
 
 def g31_deduce_prefix(r):
@@ -3262,6 +3275,212 @@ def g38_flags_respected(r):
              % (FL.get("maxHighConf"), FL.get("requireBand"), FL.get("dirAsym") or "无"))
 
 
+def g39_open_desk_page(r):
+    """G39 开盘预测子页：三块齐全 + 顺序正确 + 进得去也走得掉（R100z162，2026-10-24）。
+
+    由来：用户 2026-10-24 要求「AI 预测分析整个模块挪到技术看板，新增开盘预测；
+    次日交易预案也放这里，在 AI 预测分析下面」。三块顺序是**有语义的**——
+    先看方向（盘前前瞻）→ 再看依据（AI 预测）→ 最后看作法（次日预案）。
+    顺序反了就是「先看买什么、再补为什么」，决策链是倒的。
+
+    这类「搬页」改动最典型的故障不是报错，是**静默降级**：容器在、渲染函数也在，
+    但某一块忘了挂上去，页面照样能开、闸门照样绿，只是用户少看一块内容。
+    更隐蔽的是子页没有自己的 tab 菜单——`dbSubTab` 记住 'od' 之后整页无入口可走，
+    用户被锁死在开盘预测页，下次进来还是它。
+
+    判据（只看源码，不跑浏览器）：
+      a) #db-od 内四个容器齐全：db-od-nav / weekend-news / ai-prediction / trade-desk；
+      b) 顺序必须 nav → weekend-news → ai-prediction → trade-desk；
+      c) subnavHtml() 的 tabs 里 'od' 存在且排第一（盘前唯一要看的一页）；
+      d) switchSubTab 的 map 里有 od → 'db-od'（否则切过去白屏）；
+      e) renderOpenDesk() 真的依次调用三个渲染函数；
+      f) renderDuanban() 给 #db-od-nav 塞过 subnavHtml()（否则进得去出不来）。
+    """
+    p = os.path.join(HERE, "index.html")
+    try:
+        s = open(p, encoding="utf-8").read()
+    except Exception as e:                                    # noqa: BLE001
+        r.warn("G39", "index.html 读不到，跳过开盘预测子页校验：%s" % e)
+        return
+
+    bad = []
+
+    # ---- a) b) 容器齐全 + 顺序 ----
+    # R100z162：切片到下一个子页容器为止。用 DOM 顺序而不是「函数里有调度」判顺序——
+    # 用户说的「放到下面」是**视觉顺序**，只有 DOM 顺序能保证它。
+    i0 = s.find('<div id="db-od"')
+    if i0 < 0:
+        bad.append('找不到 #db-od 容器（开盘预测子页整块没了）')
+    else:
+        i1 = s.find('<div id="db-pools"', i0)
+        seg = s[i0:i1 if i1 > 0 else i0 + 4000]
+        want = ["db-od-nav", "weekend-news", "ai-prediction", "trade-desk"]
+        pos = {}
+        for key in want:
+            j = seg.find('id="%s"' % key)
+            if j < 0:
+                bad.append("开盘预测子页缺 #%s" % key)
+            else:
+                pos[key] = j
+        if len(pos) == 4:
+            seq = sorted(pos, key=lambda k: pos[k])
+            if seq != want:
+                bad.append("子页块顺序 %s，应为 盘前前瞻→AI预测→次日预案（用户要求预案在预测下面）"
+                           % "→".join(seq))
+
+    # ---- c) tabs 里 od 排第一 ----
+    mt = re.search(r"var tabs = \[([\s\S]{0,1500}?)\];", s)
+    if not mt:
+        bad.append("subnavHtml() 里找不到 tabs 定义——子页菜单结构已变，无法确认 od 入口")
+    else:
+        tb = mt.group(1)
+        ks = re.findall(r"k:\s*'([a-z]+)'", tb)
+        if "od" not in ks:
+            bad.append("子页菜单缺 od（开盘预测进不去）")
+        elif ks[0] != "od":
+            bad.append("子页菜单第一个是 '%s'，应为 od（开盘预测是盘前第一页）" % ks[0])
+
+    # ---- d) switchSubTab 的映射 ----
+    # R100z162：必须在 switchSubTab() 函数体内找。全文找 `var map = {` 会命中别处
+    # （首页有一处 `var map = { '加确认': 'add' ... }`），那是本闸自己写错的第一版。
+    ms = re.search(r"function switchSubTab\(k\)\s*\{([\s\S]{0,2000}?)\n\}", s)
+    if not ms:
+        bad.append("找不到 switchSubTab() —— 子页切换逻辑已变")
+    else:
+        mm = re.search(r"var map = \{([^}]*)\};", ms.group(1))
+        if not mm:
+            bad.append("switchSubTab() 里找不到子页 map —— 切页逻辑已变")
+        elif not re.search(r"od:\s*'db-od'", mm.group(1)):
+            bad.append("switchSubTab 的 map 缺 od → 'db-od'（点开盘预测会白屏）")
+
+    # ---- e) 三块渲染入口齐全 ----
+    mf = re.search(r"function renderOpenDesk\(\)\s*\{([\s\S]{0,1200}?)\n\}", s)
+    if not mf:
+        bad.append("找不到 renderOpenDesk()——三块没有统一渲染入口（搬页后谁来画？）")
+    else:
+        fb = mf.group(1)
+        miss = [fn for fn in ("renderOpenOutlook", "renderAiPrediction", "renderTradeDesk")
+                if fn not in fb]
+        if miss:
+            bad.append("renderOpenDesk() 未调用 %s（该块搬进子页后没人画＝空白）"
+                       % "、".join(miss))
+        # R100z162：只查「函数名出现过」是不够的——第一版埋雷实测漏过一颗：
+        # 把 `var td = getElementById('trade-desk')` 改成 `= null`，`renderTradeDesk()`
+        # 这行还在源码里（只是拿不到容器、画不出去），闸门照样绿。所以还要查
+        # 「拿到容器 + 写回容器」这两步，缺任一步就等于那块永远白着。
+        if "getElementById('trade-desk')" not in fb:
+            bad.append("renderOpenDesk() 没去取 #trade-desk 容器——预案渲染出来无处可写")
+        elif "td.innerHTML" not in fb:
+            bad.append("renderOpenDesk() 取了 #trade-desk 却没写回（td.innerHTML）——预案那块永远空")
+
+    # ---- f) 子页自带菜单 ----
+    if 'id="db-od-nav"' in s and not re.search(
+            r"getElementById\('db-od-nav'\)[\s\S]{0,200}?innerHTML\s*=\s*subnavHtml\(\)", s):
+        bad.append("#db-od-nav 从未被塞入 subnavHtml()——dbSubTab 记住 od 后整页无入口可切走")
+
+    if bad:
+        r.fail("G39", "；".join(bad[:4]))
+    else:
+        r.ok("G39", "开盘预测子页三块齐全且顺序正确（前瞻→AI预测→预案），od 为默认子页且可切走")
+
+
+def g40_score_page_and_slots(r):
+    """G40 🌟 复盘台账页 + 悬浮组四槽位对齐（R100z162，2026-10-24）。
+
+    由来：用户 2026-10-24 把两张成绩卡（指标表现 / 预测复盘）指出来说「这两个放到
+    新的一页去」，并指定入口 icon 用 🌟、「逻辑和其他几个保持一致」。
+    「一致」的具体含义是四条：点进去独占、页内有返回按钮、离开记住浏览位置、hash 可直达。
+
+    另一条独立风险在**悬浮组槽位**：组从 3 个按钮扩到 4 个后，页内返回按钮若仍按
+    「贴组底」定位（旧写法 `t + h - 46`），🌟 返回会落进组外或压到 🧰 上——
+    这正是用户 2026-10-10 反馈过的「点进去鼠标跑到别的图标上」。所以返回按钮必须
+    按槽位（第 i 个 = t + i×槽距）落位，槽距取组内相邻按钮 offsetTop 差实测值，
+    不写死 60（缩放/移动端字号变化会变）。
+
+    判据：
+      a) #score-view / #score-body / #sc-date / #sc-entry / #sc-entry-in 五个锚点齐全；
+      b) CSS 三件套齐（容器默认隐藏 + body.score-open 隐藏其余 + 显示本页）；
+      c) renderScoreView() 同时调用 renderSignalPerf 与 renderForecastScore（少一张＝用户要的丢一半）；
+      d) hash '#score' 至少两处（初始直达 + popstate 返回）；
+      e) place() 用槽位：sc-entry-in→_slot(3)、dei→_slot(2)、gn-entry-in→_slot(1)、
+         gn-jump→_slot(0)，且不再出现旧的贴底写法；
+      f) 槽距来自 offsetTop 实测（lastGap），不是硬编码常量。
+    """
+    p = os.path.join(HERE, "index.html")
+    try:
+        s = open(p, encoding="utf-8").read()
+    except Exception as e:                                    # noqa: BLE001
+        r.warn("G40", "index.html 读不到，跳过复盘台账页校验：%s" % e)
+        return
+
+    bad = []
+
+    # ---- a) 页骨架 ----
+    for anchor in ('id="score-view"', 'id="score-body"', 'id="sc-date"',
+                   'id="sc-entry"', 'id="sc-entry-in"'):
+        if anchor not in s:
+            bad.append("缺 %s" % anchor.replace('id="', '#').rstrip('"'))
+
+    # ---- b) CSS 三件套 ----
+    if not re.search(r"#score-view\s*\{\s*display:\s*none", s):
+        bad.append("#score-view 没有默认 display:none（未进入时就占位，主页面会被顶下去）")
+    if "body.score-open .wrap > *:not(#score-view)" not in s:
+        bad.append("缺 `body.score-open .wrap > *:not(#score-view){display:none}`——"
+                   "进页后主页面仍显示，不是「独占」")
+    if not re.search(r"body\.score-open\s+#score-view\s*\{[^}]*display:\s*block", s):
+        bad.append("缺 `body.score-open #score-view{display:block}`——进去是空白页")
+
+    # ---- c) 两张卡都在 ----
+    mf = re.search(r"function renderScoreView\(\)\s*\{([\s\S]{0,2500}?)\n\}", s)
+    if not mf:
+        bad.append("找不到 renderScoreView()——复盘页没有渲染入口")
+    else:
+        fb = mf.group(1)
+        miss = [fn for fn in ("renderSignalPerf", "renderForecastScore") if fn not in fb]
+        if miss:
+            bad.append("renderScoreView() 未渲染 %s（用户要的两张成绩卡少一张）"
+                       % "、".join(miss))
+
+    # ---- d) hash 直达 ----
+    nh = s.count("'#score'") + s.count('"#score"')
+    if nh < 2:
+        bad.append("hash '#score' 只出现 %d 处——初始直达与 popstate 返回须各一处" % nh)
+
+    # ---- e) 槽位落位 ----
+    ip = s.find("function place(")
+    if ip < 0:
+        bad.append("找不到 place()——悬浮组定位逻辑没了")
+    else:
+        pb = s[ip:ip + 2200]
+        if re.search(r"t\s*\+\s*h\s*-\s*46", pb):
+            bad.append("place() 仍用贴底写法（t + h - 46）——4 个按钮时返回键会掉出组外")
+        for var, slot, name in (("sc-entry-in", 3, "🌟"), ("dei", 2, "🧰"),
+                                ("gn-entry-in", 1, "📄"), ("gn-jump", 0, "🐼")):
+            # R100z162：定位到**赋值点**而不是裸字符串——place() 里有一句注释同时提到
+            # gn-entry-in 与 gn-jump，按裸字符串找会命中注释，于是把 📄 的 _slot(1)
+            # 当成 🐼 的槽位，误报「🐼 没落第 1 槽」。第一版就是这么错了一次。
+            key = "if (dei)" if var == "dei" else "getElementById('%s')" % var
+            j = pb.find(key)
+            if j < 0:
+                bad.append("place() 未同步 %s（%s 页内按钮不跟随悬浮组）" % (var, name))
+                continue
+            if ("_slot(%d)" % slot) not in pb[j:j + 260]:
+                bad.append("%s 未落在第 %d 槽（应 _slot(%d)，否则点进去按钮跳一格）"
+                           % (var, slot + 1, slot))
+
+    # ---- f) 槽距实测 ----
+    if "lastGap" not in s:
+        bad.append("缺 lastGap——槽距写死，缩放或移动端字号一变就错位")
+    elif "offsetTop" not in s:
+        bad.append("槽距未从 offsetTop 实测（写死的槽距在移动端会漂）")
+
+    if bad:
+        r.fail("G40", "；".join(bad[:4]))
+    else:
+        r.ok("G40", "🌟 复盘台账页齐全（两张卡 + hash 直达 + 独占 CSS），"
+                    "悬浮组四槽位按实测槽距对齐")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -3315,6 +3534,8 @@ def main():
     g36_desk_exec_plan(r)
     g37_forecast_score_truth(r)
     g38_flags_respected(r)
+    g39_open_desk_page(r)
+    g40_score_page_and_slots(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
