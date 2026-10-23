@@ -178,8 +178,32 @@ def backfill_history(limit=0):
         except Exception:
             cur = {}
     hist = cur.get('history') or {}
-    hist.update(got)
+    # R100z179（2026-10-23）：**只补不改**，不是 `hist.update(got)`。
+    # 原实现每次 deploy 都覆盖一遍：deploy.sh 在 git commit **之前**跑本脚本，
+    # 于是每次部署都把当日 history 的 src 从「上次提交」改成「上上次提交」，
+    # 最近 6 次部署 6 次都改了 market_bench.json（实测）——两个后果：
+    #   ① `git diff --cached --quiet`（无变更就不提交）永远失效，每次部署必产 commit；
+    #   ② 部署完工作区立刻又变脏，AI 看到脏文件会再跑一次 deploy.sh（10-23 07:18/07:20
+    #      就是这么来的两次部署），把「各步骤只跑一遍」的纪律冲掉。
+    # 语义上 src 是「这行基准取自哪个提交」，一旦取定就不该漂移；只有缺该日、
+    # 或原来只有空值时补，才算「补」。注释里写的「只补不改」现在才是真的。
+    filled = []
+    for k, v in got.items():
+        old = hist.get(k)
+        if old is None:
+            hist[k] = v
+            filled.append(k)
+        elif old.get('benchSectorPct') is None and v.get('benchSectorPct') is not None:
+            old['benchSectorPct'] = v['benchSectorPct']
+            old['sectorN'] = v['sectorN']
+            filled.append(k)
     cur['history'] = {k: hist[k] for k in sorted(hist)}
+    if not filled:
+        # 全部已有值 → 一个字节都不写（连 mtime 都不动），这才是真幂等。
+        # 否则每天每次部署都会留下 market_bench.json 的 diff。
+        print('[OK] 历史行业基准已齐（%d 天），本次无需回填' % len(hist))
+        return 0
+    got = {k: hist[k] for k in filled}        # 后面只打印真正改动的天，别谎报「回填 N 天」
     # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace
     _tmp = OUT + '.tmp'
     with open(_tmp, 'w', encoding='utf-8') as f:
