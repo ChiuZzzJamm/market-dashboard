@@ -14,6 +14,7 @@ CHECKLIST.md 的 L1/L2/L5 早就写明「抽 .py 逐个 test -f」「按变体�
                   （**按整行否定语境过滤**；references 会到 skill 目录里找）
   C 命令 flag     code block 里的 `xxx.py --flag` 是否被该脚本源码支持
   D 死步骤        「第 N 步」引用是否有定义（**带 markdown 排版变体集**）
+                  + 括号步号序列是否与基线 stepOrder 一致（整步被删只有这层能抓）
   E 口径对账      prompt 给 AI 的字数下限 ≥ G16 地板、上限 ≤ check_narrative 的 ceil_of
                   —— 「prompt 让写的、闸门判 FAIL」那类分裂（PROJECT-MEMORY 24.10 第四层）
   F 时间戳契约    每条任务是否知道自己负责哪一格 updatedAt（R100z167 后）
@@ -83,6 +84,14 @@ STEP_DEF = re.compile(
     r'(\d+(?:\.\d+)?)[ \t]*[)）.．、]'                    # 6) 6. 6、 6）
 )
 STEP_REF = re.compile(r'第\s*(\d+(?:\.\d+)?)\s*步')
+
+# 步号序列（D2 用）：只认**括号编号** `6)` `5.11)` `4a)` —— 点号 `1.` 一律当子项。
+# 为什么必须区分：07:00 的 5.6 内部有 `1. 2. 3.` 三个复核子项、22:00 附录 A 有
+# `1.`-`8.` 兜底子步，混进来会让「步数」凭空多出 8-11 个，任何对账都必然假报。
+STEP_SEQ = re.compile(
+    r'(?m)^[ \t>]*(?:[-*+][ \t]*)?\**\**[ ]*'
+    r'(\d+(?:\.\d+)?|\d+[a-z](?:-\d+)?)[ \t]*[)）]'
+)
 
 FLAG_DEF = re.compile(r'[\'"](-{2}[A-Za-z][\w-]*)[\'"]')       # 脚本源码里的 flag 字面量
 CMD_LINE = re.compile(r'([A-Za-z_][\w]*\.(?:py|sh))\b([^\n`|]*)')  # 脚本名 + 同行后文
@@ -345,6 +354,17 @@ def chk_baseline(T, r):
         return
     exp = json.load(open(exp_path, encoding='utf-8'))
     by_id = {t['id']: t for t in T}
+
+    # 覆盖率（R100z180）：库里每一条看板自动化都必须有基线条目。
+    # 21:00 曾整条漏登记 —— G2/G3/G4/B5 全都按 exp['automations'] 循环，
+    # 它不在表里 = 四道闸门对它零覆盖，规则被删改也不会有人发现（全量核查时揪出）。
+    exp_ids = {e.get('id') for e in exp.get('automations', [])}
+    uncovered = [t['key'] for t in T if t['id'] not in exp_ids]
+    if uncovered:
+        r.fail('B5', '%s 在 audit_expectations.json 里没有基线条目 —— 该任务的脚本引用/参数/'
+                     'mustContain 全在闸门覆盖之外；补一条 id + schedule + scripts + mustContain'
+                     % ','.join(uncovered))
+
     checked = miss = 0
     missmsg, extramsg = [], []
     for e in exp.get('automations', []):
@@ -374,9 +394,9 @@ def chk_baseline(T, r):
         r.fail('B5', m + ' —— 规则被删/改弱则补 prompt；仅措辞变了则同步改基线（二选一，不能放着）')
     for m in extramsg:
         r.warn('B5', m + ' —— 该任务已删/改名，基线应同步清理')
-    if not miss:
-        r.ok('B5', '基线 %d 条短语与线上 prompt 逐字一致（%d 条任务对账）'
-             % (checked, len(by_id)))
+    if not miss and not uncovered:
+        r.ok('B5', '基线 %d 条短语与线上 prompt 逐字一致（%d 条任务对账、%d 条均有基线条目）'
+             % (checked, len(by_id), len(by_id) - len(uncovered)))
 
 
 # ---------------------------------------------------------------- D 死步骤
@@ -395,6 +415,36 @@ def chk_steps(T, r):
                    % (key, miss, ','.join(defined)))
     else:
         r.ok('D1', '「第 N 步」引用全部有定义（变体集：N) / - **N) / N. / N、）')
+
+    # D2 基线步号对账（R100z180）：B5 是**短语**级对账，抓不到「整步被删」——
+    # 删掉一步后剩下的短语全在，B5 照样绿。stepOrder 一直是「只登记不校验」的
+    # 装饰性字段（全仓没有任何闸门读它），2026-10-23 全量核查时才发现。
+    # 判据：线上括号编号序列 == 基线 stepOrder（增删/改名都会露出来）。
+    exp_path = os.path.join(HERE, 'audit_expectations.json')
+    if not os.path.exists(exp_path):
+        r.fail('D2', '缺少 audit_expectations.json，步号基线无法对账')
+        return
+    exp = json.load(open(exp_path, encoding='utf-8'))
+    by_id = {t['id']: t for t in T}
+    drift, checked = [], 0
+    for e in exp.get('automations', []):
+        t = by_id.get(e.get('id'))
+        want = [str(x) for x in (e.get('stepOrder') or [])]
+        if t is None or not want:
+            continue
+        checked += 1
+        got = STEP_SEQ.findall(t['prompt'])
+        gone = [x for x in want if x not in got]      # 基线有、线上没了 = 步骤被删/改名
+        new = [x for x in got if x not in want]       # 线上有、基线没有 = 基线该补
+        if gone or new:
+            drift.append('%s 基线有线上无 %s；线上有基线无 %s'
+                         % (t['key'], ','.join(gone) or '无', ','.join(new) or '无'))
+    for m in drift:
+        r.fail('D2', m + ' —— 步骤增删是**结构变更**：确认是有意为之再同步 stepOrder'
+                        '（B5 只比短语，整步被删它查不出来）')
+    if not drift:
+        r.ok('D2', '%d 条任务的括号步号序列与基线 stepOrder 完全一致（点号子项已排除）' % checked)
+
 
 
 # ---------------------------------------------------------------- E 口径对账
