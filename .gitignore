@@ -15,6 +15,9 @@ router-wol-schedule.sh
 # 临时文件
 *.log
 *.tmp
+# 原子写盘的临时文件必须带 .js 才能被 node --check 校验（node 22 拒绝未知扩展名），
+# 所以 *.tmp 规则盖不住它，单独排除，否则 deploy.sh 的 git add -A 会把半成品推上去
+*.tmp.js
 .pipeline-*.lock
 .pipeline-*.lock.stale-*
 draft.json

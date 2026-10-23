@@ -427,9 +427,19 @@ def main():
     s, D = load_data(data_path)
     D.setdefault("duanban", {})["star"] = star
     out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ";\n"
-    with open(data_path, "w", encoding="utf-8") as f:
+    # R100z179（L11 硬约束）：先写临时文件、node --check 通过再 os.replace。
+    # 原写法 open(data_path,'w') 先截断再写、写完才 check——进程若在 write 中途被杀
+    # （平台 90 分钟硬上限 / 超时重试），留下的是残缺 data.js，而 check 这一步
+    # 根本没机会执行。临时名必须带 .js，node 22 拒绝未知扩展名。
+    _tmp = data_path + ".tmp.js"
+    with open(_tmp, "w", encoding="utf-8") as f:
         f.write(out)
-    subprocess.run([NODE, "--check", data_path], check=True, timeout=30)
+    _chk = subprocess.run([NODE, "--check", _tmp], capture_output=True, text=True, timeout=30)
+    if _chk.returncode != 0:
+        os.remove(_tmp)
+        raise SystemExit("[FAIL] star 写回未通过 node --check，已丢弃、data.js 保持原样：\n"
+                         + (_chk.stderr or "")[:800])
+    os.replace(_tmp, data_path)
     print("[star] data.js 写回完成，node --check 通过")
 
 

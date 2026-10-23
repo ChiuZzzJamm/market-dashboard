@@ -16,6 +16,7 @@ R100z148 两处变化：① 抓取池内标的近 7 日东财公告（盘后发�
 """
 import json
 import os
+import subprocess
 import sys
 from datetime import datetime
 
@@ -26,6 +27,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import check_duanban as cd  # noqa: E402
 
 TZ8 = cd.TZ8 if hasattr(cd, "TZ8") else None
+
+# R100z179：原子写盘前要先 node --check 临时文件，node 路径与其它脚本同源。
+_NODE_CAND = "/Users/loccco/.workbuddy/binaries/run-node"
+NODE_BIN = _NODE_CAND if os.path.exists(_NODE_CAND) else "node"
 
 # R100z60 清理：BAND（区间判定版）定义后零引用——该方案中途放弃、改用下面的 DEFAULT_P 单点阈值，
 # 残留的死常量会让下一个人以为「区间档位」还在用，删掉。
@@ -102,15 +107,39 @@ def main():
                     and len(old_story) >= 100 and old_story.startswith("【")):
                 new["story"] = old_story
         db[pool] = retagged
-    db["generatedAt"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+    # R100z179（2026-10-23）：**不准改写 generatedAt**。
+    # generatedAt 的语义是「这个断板池是哪次扫描生成的」，它被三处当判据用：
+    #   ① index.html 断板卡「数据生成：<时间>」直接展示给用户；
+    #   ② index.html 池内标的 entryDate 时效比对；
+    #   ③ audit_pipeline G28「断板是否当日生成」（R100z178 已升级为 FAIL）。
+    # 重打标只改 sentiment/story/probability，池成员一个都没重算（实测 34/26 只
+    # 前后完全一致），却把 generatedAt 刷成当前时间 → 休市日沿用旧池时也会显示
+    # 「今天生成」，G28 的 FAIL 永远触发不了（判据被自己人喂了假数据）。
+    # 打标时间另有去处：retaggedAt，仅供追溯，不参与任何闸门。
+    db["retaggedAt"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+    db.setdefault("generatedAt", db["retaggedAt"])
     db["note"] = db.get("note") or ""
     out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ";\n"
-    with open(data_path, "w", encoding="utf-8") as f:
+    # R100z179（L11 硬约束）：先写 .tmp、node --check 通过后再 os.replace。
+    # 原来是 open(data_path,'w') 直接截断——进程被杀（平台 90 分钟硬上限/超时重试）
+    # 就留下 0 字节 data.js，全站白屏，而 node --check 在写完之后已经来不及。
+    # ⚠️ 临时文件名必须是 `.tmp.js` 而不是 `.tmp`：node 22 对未知扩展名直接抛
+    # ERR_UNKNOWN_FILE_EXTENSION（rc=1），用 `.tmp` 会让「校验」永远失败、
+    # 打标永远落不了盘（2026-10-23 实测踩到）。
+    _tmp = data_path + ".tmp.js"
+    with open(_tmp, "w", encoding="utf-8") as f:
         f.write(out)
+    _chk = subprocess.run([NODE_BIN, "--check", _tmp], capture_output=True, text=True)
+    if _chk.returncode != 0:
+        os.remove(_tmp)
+        print("[FAIL] 重打标结果未通过 node --check，已丢弃、data.js 保持原样：")
+        print(_chk.stderr[:800])
+        return 1
+    os.replace(_tmp, data_path)
     print(f"[info] 重打标完成：{len(changed)} 只改判")
     for pool, code, name, o, n, rw, bw in changed:
         print(f"  [{pool}] {code} {name}: {o} -> {n}（bull加权 {rw} vs bear加权 {bw}）")
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
