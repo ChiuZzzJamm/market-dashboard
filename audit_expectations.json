@@ -1,32 +1,33 @@
 {
- "generatedAt": "2026-10-16T18:45:03",
+ "generatedAt": "2026-10-23T23:42:09",
  "projectDir": "/Users/loccco/WorkBuddy/market dashboard",
  "automations": [
   {
    "id": "automation-1788494481298",
    "schedule": "TU,WE,TH,FR 07:00",
    "stepOrder": [
-    0,
-    1,
-    2,
-    2.5,
-    2.6,
-    3,
-    3.5,
-    3.6,
-    3.7,
-    3.8,
-    3.85,
-    3.87,
-    3.9,
-    3.95,
-    4,
-    5,
-    5.5,
-    5.6,
-    5.7,
-    6,
-    7
+    "0",
+    "1",
+    "2",
+    "2.5",
+    "2.6",
+    "3",
+    "3.5",
+    "3.6",
+    "3.7",
+    "3.8",
+    "3.85",
+    "3.87",
+    "3.9",
+    "3.95",
+    "4",
+    "5",
+    "5.2",
+    "5.5",
+    "5.6",
+    "5.7",
+    "6",
+    "7"
    ],
    "scripts": [
     {
@@ -226,25 +227,26 @@
    "id": "db3b5a70-b990-43f5-9ca8-e261b2005841",
    "schedule": "MO,TU,WE,TH,FR 08:30",
    "stepOrder": [
-    0,
-    1,
-    2,
-    3,
-    3.4,
-    3.5,
-    4,
+    "0",
+    "1",
+    "2",
+    "3",
+    "3.4",
+    "3.5",
+    "4",
     "4a",
     "4a-2",
     "4b",
     "4c",
-    5,
-    5.5,
-    5.6,
-    5.11,
-    5.1,
-    6,
-    7,
-    8
+    "5",
+    "5.2",
+    "5.5",
+    "5.6",
+    "5.10",
+    "5.11",
+    "6",
+    "7",
+    "8"
    ],
    "scripts": [
     {
@@ -449,11 +451,11 @@
    "id": "44d9708b-ce74-440d-91e6-1b8d51df6576",
    "schedule": "MO,TU,WE,TH,FR 09:45",
    "stepOrder": [
-    0,
-    1,
-    2,
-    3,
-    4
+    "0",
+    "1",
+    "2",
+    "3",
+    "4"
    ],
    "scripts": [
     {
@@ -561,14 +563,15 @@
    "id": "a140dfda-b878-4c9d-9a03-448d0d55a58b",
    "schedule": "MO,TU,WE,TH,FR 16:00",
    "stepOrder": [
-    0,
-    1,
-    1.5,
-    2,
-    3,
-    4,
-    5,
-    6
+    "0",
+    "1",
+    "1.5",
+    "2",
+    "3",
+    "4",
+    "4.5",
+    "5",
+    "6"
    ],
    "scripts": [
     {
@@ -711,19 +714,19 @@
    "id": "automation-1788494481279",
    "schedule": "MO,TU,WE,TH,FR 17:00",
    "stepOrder": [
-    0,
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    11,
-    12
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12"
    ],
    "scripts": [
     {
@@ -1067,25 +1070,202 @@
    ]
   },
   {
+   "id": "ae2fc623-5d44-458c-82cf-a9ba28e54cee",
+   "schedule": "SU 21:00",
+   "stepOrder": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10"
+   ],
+   "scripts": [
+    {
+     "cmd": "python3 cal_factor.py",
+     "flags": [
+      "--json"
+     ],
+     "file": "cal_factor.py",
+     "step": "0"
+    },
+    {
+     "cmd": "python3 update_us_from_quotes.py",
+     "flags": [],
+     "file": "update_us_from_quotes.py",
+     "step": "1"
+    },
+    {
+     "cmd": "python3 check_duanban.py",
+     "flags": [
+      "--days",
+      "7",
+      "--limit",
+      "300",
+      "--json"
+     ],
+     "file": "check_duanban.py",
+     "step": "3"
+    },
+    {
+     "cmd": "python3 stock_risk_blacklist.py",
+     "flags": [
+      "--write"
+     ],
+     "file": "stock_risk_blacklist.py",
+     "step": "4"
+    },
+    {
+     "cmd": "python3 stock_risk_blacklist.py",
+     "flags": [
+      "--write"
+     ],
+     "file": "stock_risk_blacklist.py",
+     "step": "8"
+    },
+    {
+     "cmd": "python3 validate_stocks.py",
+     "flags": [
+      "--no-fix",
+      "--scope",
+      "us"
+     ],
+     "file": "validate_stocks.py",
+     "step": "9"
+    },
+    {
+     "cmd": "python3 check_narrative.py",
+     "flags": [],
+     "file": "check_narrative.py",
+     "step": "9"
+    },
+    {
+     "cmd": "python3 apply_narrative.py",
+     "flags": [],
+     "file": "apply_narrative.py",
+     "step": "7"
+    },
+    {
+     "cmd": "python3 pipeline_lock.py",
+     "flags": [
+      "acquire",
+      "--task",
+      "a2100-weekend",
+      "--wait",
+      "300"
+     ],
+     "file": "pipeline_lock.py",
+     "step": "0"
+    },
+    {
+     "cmd": "python3 pipeline_lock.py",
+     "flags": [
+      "beat",
+      "--task",
+      "a2100-weekend"
+     ],
+     "file": "pipeline_lock.py",
+     "step": "2"
+    },
+    {
+     "cmd": "python3 pipeline_lock.py",
+     "flags": [
+      "release",
+      "--task",
+      "a2100-weekend"
+     ],
+     "file": "pipeline_lock.py",
+     "step": "汇报前"
+    }
+   ],
+   "scriptsMissing": [],
+   "mustContain": [
+    "cal_factor.py --json",
+    "update_us_from_quotes.py",
+    "check_duanban.py --days 7 --limit 300 --json",
+    "stock_risk_blacklist.py --write",
+    "validate_stocks.py --no-fix --scope us",
+    "check_narrative.py",
+    "apply_narrative.py",
+    "news_sources.py --list",
+    "pipeline_lock.py acquire --task a2100-weekend --wait 300",
+    "pipeline_lock.py release --task a2100-weekend",
+    "pipeline_lock.py beat --task a2100-weekend",
+    "本任务无需生成 us.themePicks",
+    "严禁写 aiPrediction / openOutlook / duanban / stkKlines",
+    "下没有 `us` 键，只有 `markets` 数组",
+    "us.outlook",
+    "保持 `ashare` 全部字段不变",
+    "本步不部署不推送"
+   ],
+   "forbidden": [
+    "①",
+    "②",
+    "③",
+    "④",
+    "⑤",
+    "⑥",
+    "⑦",
+    "⑧",
+    "⑨",
+    "⑩"
+   ],
+   "forbiddenGap": [],
+   "dataFields": [
+    "us.bullNews",
+    "us.bearNews",
+    "us.macroNews",
+    "us.intlNews",
+    "us.bankViews",
+    "us.outlook",
+    "us.sectorsUp",
+    "us.sectorsDown",
+    "weekendNews",
+    "updatedAt"
+   ],
+   "writesFields": [
+    "us 五节要闻（含 deduce）",
+    "us.outlook",
+    "us.sectorsUp/sectorsDown 各板块 reason（含 deduce）",
+    "weekendNews"
+   ],
+   "neverWrites": [
+    "aiPrediction",
+    "openOutlook",
+    "duanban",
+    "stkKlines",
+    "ashare",
+    "harmonic",
+    "accumulation",
+    "powerScreen",
+    "strategy",
+    "macroCalendar"
+   ],
+   "notes": "R100z180 补登记：此前该任务没有基线条目，G2/G3/G4/B5 四道闸门对它零覆盖。"
+  },
+  {
    "id": "dcdf30c0-7d3b-4354-944d-085df91553ea",
    "schedule": "SU 22:00",
    "stepOrder": [
-    0,
-    1,
-    2,
-    2.5,
-    2.6,
-    3,
-    3.4,
-    4,
-    4.5,
-    4.7,
-    4.8,
-    5,
-    5.5,
-    6,
-    7,
-    8
+    "0",
+    "1",
+    "2",
+    "2.4",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12"
    ],
    "scripts": [
     {

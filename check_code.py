@@ -28,6 +28,9 @@
   K6 字段契约     7 份 prompt 里出现的 `a.b.c` 路径，逐个对着 data.js 下钻
                  （`panorama.us` / `aiPrediction.source` 这类「看着合理但不存在」的路径，
                  会让 AI 白跑一步或写出野字段 —— L18 的自动化版）
+  K7 工序锁       会写 data.js 的自动化必须 `pipeline_lock.py acquire` + `release`
+                 （R100z180 实撞：周日 21:00/22:00 两条都漏了锁，60 分钟间隔 + 整份读改写
+                 = 互相覆盖；「谁该持锁」以前只写在记忆里没有判据 → 现在有 exit code）
 
 ★ 写规则时踩过的两个坑（别重犯）：
   1. **`s.get(...)` 不是网络调用**：`s` 在多数脚本里是 dict，`s.get('f5Tier')` 是 dict.get。
@@ -38,7 +41,7 @@
 用法:
     python3 check_code.py            # 全部检查（FAIL 时 exit 1）
     python3 check_code.py --verbose  # 附明细（谁引用了谁、每个写者的原子实现位置）
-    python3 check_code.py --only K3  # 只跑某一类（K1-K6）
+    python3 check_code.py --only K3  # 只跑某一类（K1-K7）
 """
 import argparse
 import ast
@@ -580,6 +583,53 @@ def k6_contract(r, verbose=False):
         r.ok('K6', '7 份 prompt 的 %d 条字段路径全部能下钻到真实数据（已过滤禁令语境与斜杠简写）' % total)
 
 
+# ---------------------------------------------------------------- K7
+def k7_lock(r, verbose=False):
+    """K7 工序锁覆盖：会写 data.js 的自动化必须持锁。
+
+    R100z180 实撞：21:00 与 22:00 两条都没接 pipeline_lock —— 周日 21:00 预计 55-70 分钟、
+    22:00 只隔 60 分钟，两条都对 data.js 做整份读-改-写，重叠即互相覆盖（对方刚落的整段
+    字段被抹掉，症状是「某模块突然变回旧值」，日志里查不出谁干的）。16:00/17:00 早在
+    24.27 就接了锁，周日这两条整条漏了 —— 因为「谁该持锁」一直只写在记忆里，没有判据。
+
+    判据（宽进严出，只看「写不写」和「有没有 acquire/release」）：
+      prompt 出现 `apply_narrative` 或「写回 … data.js」→ 必须同时出现
+      `pipeline_lock.py acquire` 与 `pipeline_lock.py release`。
+    """
+    try:
+        con = sqlite3.connect(DB)
+        con.row_factory = sqlite3.Row
+        rows = [(x['name'], x['prompt'] or '') for x in con.execute(
+            "select name,prompt from automations where cwds like '%market dashboard%'")]
+        con.close()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn('K7', '读不到自动化库（%s），跳过工序锁覆盖检查' % e)
+        return
+    if not rows:
+        r.warn('K7', '库里没有看板自动化，跳过工序锁覆盖检查')
+        return
+
+    bad, held = [], 0
+    for nm, pm in rows:
+        writes = ('apply_narrative' in pm) or bool(re.search(r'写回[^\n]{0,60}data\.js', pm))
+        if not writes:
+            continue
+        has_a = 'pipeline_lock.py acquire' in pm
+        has_r = 'pipeline_lock.py release' in pm
+        if has_a and has_r:
+            held += 1
+            if verbose:
+                print('      %-34s 持锁 ✓' % nm)
+        else:
+            bad.append('%s（acquire=%s / release=%s）' % (nm, '有' if has_a else '缺',
+                                                        '有' if has_r else '缺'))
+    for x in bad:
+        r.fail('K7', '%s 会写 data.js 却没有完整工序锁 —— 与相邻任务重叠时整份覆盖，'
+                     '字段会莫名变回旧值' % x)
+    if not bad:
+        r.ok('K7', '会写 data.js 的 %d 条自动化全部持锁（acquire + release 都在 prompt 里）' % held)
+
+
 # ---------------------------------------------------------------- K5
 def k5_dead(r, verbose=False):
     # 1) 引用语料：7 份 prompt + deploy.sh + 所有脚本源码
@@ -644,6 +694,8 @@ def main():
         k5_dead(r, a.verbose)
     if not only or only == 'K6':
         k6_contract(r, a.verbose)
+    if not only or only == 'K7':
+        k7_lock(r, a.verbose)
     return r.dump()
 
 
