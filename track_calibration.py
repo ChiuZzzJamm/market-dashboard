@@ -51,6 +51,9 @@ from datetime import date
 
 import stop_tracker  # R100z59：止损台账接线（见 main() 内「R100z59 止损台账」段）
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from common import write_json_atomic  # noqa: E402
+
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA_JS = os.path.join(ROOT, 'data.js')
 # ★R100z13：一律不带点的文件名——GitHub Pages 不发布 dotfile，前端要 fetch('calibration_log.json')
@@ -399,8 +402,7 @@ def save_log(log):
     """R100z13：供 score_openoutlook.py 直接 import 本模块后落盘（避免重复实现）。"""
     log.setdefault('log', {})
     log.setdefault('open', {})
-    with open(LOG_FILE, 'w', encoding='utf-8') as f:
-        json.dump(log, f, ensure_ascii=False, indent=1)
+    write_json_atomic(LOG_FILE, log, label='[track_calibration.save_log]')
 
 
 def build_items(date, dets, conf_map, bench, sc_list, bench_main=None, bench_sec=None):
@@ -712,7 +714,7 @@ def main():
             except Exception:
                 continue
         if added:
-            json.dump(log, open(LOG_FILE, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+            write_json_atomic(LOG_FILE, log, label='[track_calibration.main]')
             if not a.json:
                 print(f"[OK] 回填 {added} 个历史交易日入账")
     if not a.view:
@@ -816,8 +818,7 @@ def main():
 
     gates = {k: gate_for(k) for k in ('高', '中', '低')}
     state = {'generatedAt': date.today().isoformat(), 'window': dates, 'stat': stat, 'gates': gates}
-    with open(STATE_FILE, 'w', encoding='utf-8') as f:
-        json.dump(state, f, ensure_ascii=False, indent=1)
+    write_json_atomic(STATE_FILE, state, label='[track_calibration.calib]')
 
     if a.json:
         print(json.dumps(state, ensure_ascii=False))
@@ -863,8 +864,7 @@ def main():
     # 缺口④：组合净值曲线（高置信板块标的等权 vs 基准，R100z97 口径见 build_curve）
     curve = build_curve(log)
     if curve:
-        with open(CURVE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(curve, f, ensure_ascii=False, indent=1)
+        write_json_atomic(CURVE_FILE, curve, label='[track_calibration.curve]')
         s = curve['stat']
         print('  组合净值：%d 个交易日，累计 %+.2f%%（指数基准 %+.2f%%）'
               % (s['days'], s['totRetPct'], s['benchRetPct']))

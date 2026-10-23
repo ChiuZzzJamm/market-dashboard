@@ -246,6 +246,31 @@ def write_data_js(path_or_base, D, label=''):
     return path
 
 
+def write_json_atomic(path, obj, label='', indent=1):
+    """原子写「关键 JSON 状态文件」（R100z179c）。
+
+    为什么也要收口：硬约束 11 只点了 `data.js` / `stock_pool.json`，但 24.29 全量扫发现
+    `calibration_state.json` / `portfolio_curve.json` / `calibration_log.json` /
+    `strategy_feedback.json` 共 5 处仍是裸 `open(...,'w')`。它们被杀不会白屏，却会变成
+    **静默降级**：`_cal_factor()` 读到半截 JSON → 走 except → 用默认阈值 1.0 继续跑，
+    于是「后验校准」这个功能安静地不再生效 —— 比白屏更难发现。
+    纯 JSON 不需要 `node --check`（`json.dump` 产物本身就是合法 JSON），`os.replace` 即足够。
+    """
+    _tmp = path + '.tmp'
+    try:
+        with open(_tmp, 'w', encoding='utf-8') as f:
+            json.dump(obj, f, ensure_ascii=False, indent=indent)
+        os.replace(_tmp, path)
+    except Exception:
+        if os.path.exists(_tmp):
+            try:
+                os.remove(_tmp)
+            except OSError:
+                pass
+        raise
+    return path
+
+
 def load_dashboard_data(base):
     """把 data.js 解析为 Python dict。
 
