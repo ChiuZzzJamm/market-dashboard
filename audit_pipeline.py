@@ -131,6 +131,12 @@ EMPTY_WHITELIST = [
      "R100z107b：政策解码无识别到受益板块/量化目标时为空数组，前端按 '-' 显示"),
     (r"^policySignals$",
      "R100z107b：当日无政策源新闻时 policySignals 为空数组（正常）"),
+    (r"atrStops\.skipped$",
+     "R100z160：atr_stops 没有「K 线不足被跳过」的标的时为空数组（正常日度状态，不是漏跑）；"
+     "被跳过的票根本不会进 atrStops.items，前端只读 items、不引用 skipped"),
+    (r"tradeDesk\.portfolio\.warn$",
+     "R100z160：组合仓位既没超单板块上限、也没超组合目标仓位时为空数组（这正是想要的状态）；"
+     "前端 renderTradeDesk 用 (pf.warn||[]).forEach 兜底，空数组不渲染任何预警条"),
 ]
 
 DATA_KEYS_REQUIRED = [
@@ -248,6 +254,22 @@ PRODUCT_OWNERSHIP = {
                 "前端弹窗（网页 db-modal）统一渲染「个股消息」段。"
                 "16:00 数据步第 4.5 步点名（四模块之后、汇报之前；R100z162 更正：旧注记为「断板主生成前」，"
                 "与 16:00 实际步骤顺序（2 断板 → 3 要闻 → 4 四模块 → 4.5 个股消息）不符）。",
+    },
+    "atrStops": {
+        "require": ("atrStops", "atr_stop", "ATR"),
+        "note": "R100z160：atr_stop.py 逐票算 ATR(14) 自适应止损（20 日结构位、k 系数、2.5%~10% 宽度钳制、"
+                "风险预算仓位、R 倍数目标），是**全站止损口径的唯一权威源**；16:00 数据步点名运行，"
+                "前端弹窗退出纪律（exitForCode → atrExitOf）与交易执行台共用同一份数字。",
+    },
+    "tradeDesk": {
+        "require": ("tradeDesk", "signal_rank"),
+        "note": "R100z160：signal_rank.py 五因子打分（动量/趋势/量能/位置/波动）+ 三项硬性否决 + 排名取前 8，"
+                "16:00 数据步点名运行；前端「今日交易执行台」卡渲染（renderTradeDesk）。",
+    },
+    "signalPerf": {
+        "require": ("signalPerf", "signal_attribution"),
+        "note": "R100z160：signal_attribution.py 按指标来源回算 T+1/3/5/10 收益与超额、给建议权重，"
+                "16:00 数据步点名运行；前端「指标表现 · 谁准谁不准」卡渲染（renderSignalPerf）。",
     },
 }
 
@@ -2772,6 +2794,231 @@ def g32_stop_ledger_truth(r):
                 ("%+.2f%%" % (sum(p5) / len(p5))) if p5 else "样本不足"))
 
 
+def g33_atr_stop_consistency(r):
+    """G33 止损口径唯一性：同一只票在 atrStops 与 tradeDesk 里必须是同一个止损价（R100z160）。
+
+    为什么需要（2026-10-24）：页面现在有两处会显示止损价——弹窗「退出纪律」读
+    `atrStops`，交易执行台的清单行读 `tradeDesk`。两个节点由两个脚本分别写，
+    如果各自算一套，页面对同一只票会给出**两个不同的止损价**，而且两边都自洽、
+    都不报错。这类「看起来对、实际互相打脸」的错误，只能靠跨节点对账发现。
+
+    同时校验三条内部自洽（都比"看起来合理"更强）：
+      ① stop < close（止损必须在收盘价下方，否则不是止损）；
+      ② stopWidPct 与 (close-stop)/close 一致（防宽度字段与价位脱节）；
+      ③ posPct ≈ min(20, 0.5% ÷ 宽度)（防仓位不是按风险预算算的，而是拍脑袋）。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                     # noqa: BLE001
+        r.fail("G33", "读 data.js 失败：%s" % e)
+        return
+    A = D.get("atrStops") or {}
+    T = D.get("tradeDesk") or {}
+    items = A.get("items") or {}
+    if not items:
+        r.fail("G33", "atrStops.items 为空 —— 止损权威源缺失，弹窗退出纪律会整体退回固定百分比口径")
+        return
+    params = A.get("params") or {}
+    risk_budget = float(params.get("riskBudgetPct") or 0.5)
+    max_pos = float(params.get("maxPosPct") or 20.0)
+
+    bad_rel, bad_wid, bad_pos = [], [], []
+    for code, it in items.items():
+        c, s = it.get("close"), it.get("stop")
+        w, p = it.get("stopWidPct"), it.get("posPct")
+        if not isinstance(c, (int, float)) or not isinstance(s, (int, float)) or c <= 0:
+            bad_rel.append("%s(价%d/%d)" % (code, c if isinstance(c, (int, float)) else -1,
+                                            s if isinstance(s, (int, float)) else -1))
+            continue
+        if not (0 < s < c):
+            bad_rel.append("%s(%.2f→%.2f)" % (code, c, s))
+            continue
+        real_w = (c - s) / c * 100.0
+        if w is None:
+            bad_wid.append("%s(缺宽度)" % code)
+        elif abs(float(w) - real_w) > 0.3:
+            bad_wid.append("%s 标%.2f/实%.2f" % (code, float(w), real_w))
+        if w and p is not None:
+            want = min(max_pos, risk_budget / (float(w) / 100.0))
+            if abs(float(p) - want) > 0.9:
+                bad_pos.append("%s 标%.1f/应%.1f" % (code, float(p), want))
+
+    # 跨节点对账：执行清单里的每一只，止损必须与 atrStops 同值
+    drift = []
+    not_in = []
+    for pk in (T.get("picks") or []):
+        code = str(pk.get("code") or "")
+        src = items.get(code)
+        if not src:
+            not_in.append(code)
+            continue
+        ps, ss = pk.get("stop"), src.get("stop")
+        if ps is None or ss is None or abs(float(ps) - float(ss)) > 0.005:
+            drift.append("%s 执行台 %s vs atrStops %s"
+                         % (code, ("%.2f" % float(ps)) if ps is not None else "空",
+                            ("%.2f" % float(ss)) if ss is not None else "空"))
+
+    if bad_rel:
+        r.fail("G33", "atrStops 有 %d 只止损不在收盘价下方（不是止损）：%s"
+               % (len(bad_rel), "; ".join(bad_rel[:6])))
+    if bad_wid:
+        r.fail("G33", "atrStops 宽度字段与价位不符 %d 只（标 vs 实）：%s"
+               % (len(bad_wid), "; ".join(bad_wid[:6])))
+    if bad_pos:
+        r.fail("G33", "atrStops 仓位不是按风险预算算的 %d 只（标 vs 应）：%s"
+               % (len(bad_pos), "; ".join(bad_pos[:6])))
+    if drift:
+        r.fail("G33", "同一只票两处止损不一致（弹窗读 atrStops、执行台读 tradeDesk）：%s"
+               % "; ".join(drift[:6]))
+    if not_in:
+        r.warn("G33", "执行清单 %d 只不在 atrStops 里（K 线不足被跳过？）：%s"
+               % (len(not_in), ", ".join(not_in[:6])))
+    if not (bad_rel or bad_wid or bad_pos or drift):
+        r.ok("G33", "止损口径唯一：%d 只价位/宽度/仓位自洽，执行清单与 atrStops 逐只同值"
+                    "（风险预算 %.1f%%、仓位上限 %.0f%%）" % (len(items), risk_budget, max_pos))
+
+
+def g34_desk_structure(r):
+    """G34 执行清单结构：数量、单板块集中度、价位关系、仓位合计必须与声明一致。
+
+    为什么需要：`tradeDesk.picks` 是「今天买什么」的唯一入口，一旦这里悄悄多了
+    单板块第 3 只，散户就会把同一个赌注下三遍，而页面上看不出任何异常——
+    「8 只清单」看着依然分散。所以单板块上限必须由闸门校验，不能只写在脚本里。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                     # noqa: BLE001
+        r.fail("G34", "读 data.js 失败：%s" % e)
+        return
+    T = D.get("tradeDesk") or {}
+    picks = T.get("picks") or []
+    if not picks:
+        r.warn("G34", "tradeDesk.picks 为空（池子当日无通过否决的标的，或脚本未跑）")
+        return
+    tiers = T.get("tiers") or {}
+    pf = T.get("portfolio") or {}
+    bad = []
+
+    if len(picks) > 8:
+        bad.append("清单 %d 只 > 上限 8 只" % len(picks))
+    if tiers.get("desk") not in (None, len(picks)):
+        bad.append("tiers.desk=%s 与 picks 实际 %d 只不符" % (tiers.get("desk"), len(picks)))
+
+    sec_n = {}
+    for p in picks:
+        sec_n[p.get("sector") or "未分类"] = sec_n.get(p.get("sector") or "未分类", 0) + 1
+    # 「未分类」是板块映射缺失的占位符，不是一个板块——把浙商银行、赤峰黄金、汇顶科技
+    # 合并计数会得出「同板块超 2 只」的假 FAIL。上游 signal_rank 也不给它配额，
+    # 这里必须同步，否则闸门与脚本口径打架（一方放行、一方判 FAIL）。
+    over = {k: v for k, v in sec_n.items() if v > 2 and k != "未分类"}
+    if over:
+        bad.append("单板块超 2 只：" + ", ".join("%s×%d" % (k, v) for k, v in over.items()))
+    # 但「未分类」不能无限放行：它占掉的仓位是真实的，只数多到一定程度说明
+    # 板块映射大面积缺失，这套「单板块 ≤2」的分散逻辑已经名存实亡，必须报出来。
+    unc_n = sec_n.get("未分类", 0)
+    if unc_n > 4:
+        bad.append("板块缺失 %d 只 > 4：映射大面积缺失，同板块上限实际未生效" % unc_n)
+
+    for p in picks:
+        code, c, s, t = (str(p.get("code") or ""), p.get("close"),
+                         p.get("stop"), p.get("target"))
+        if not all(isinstance(x, (int, float)) for x in (c, s, t)) or not c:
+            bad.append("%s 价位缺失" % code)
+            continue
+        if not (0 < s < c):
+            bad.append("%s 止损 %s 不在收盘 %s 下方" % (code, s, c))
+        if t <= c:
+            bad.append("%s 目标 %s 不高于收盘 %s" % (code, t, c))
+        q = p.get("q")
+        if not isinstance(q, (int, float)) or not (0 <= q <= 100):
+            bad.append("%s 量化分异常 %s" % (code, q))
+
+    # 仓位合计：没压缩时 = 单票加总；压缩过时 = cappedPosPct
+    ps = [p.get("posPct") for p in picks if isinstance(p.get("posPct"), (int, float))]
+    summed = round(sum(ps), 1) if ps else 0.0
+    stated = pf.get("cappedPosPct")
+    stated = float(stated) if isinstance(stated, (int, float)) else float(pf.get("sumPosPct") or 0)
+    if abs(summed - stated) > 0.4:
+        bad.append("单票仓位加总 %.1f%% ≠ 组合声明 %.1f%%" % (summed, stated))
+
+    if bad:
+        r.fail("G34", "执行清单结构有问题：" + "; ".join(bad[:6]))
+    else:
+        r.ok("G34", "执行清单 %d 只、%d 个板块（单板块 ≤2）、价位关系正确、仓位加总 %.1f%% 与组合声明一致"
+             % (len(picks), len(sec_n), summed))
+
+
+def g35_atr_evidence_truth(r):
+    """G35 ATR 证据必须由回测产出，且句子里每个数字都跟 evidenceRows 对得上。
+
+    为什么需要：`atrStops.evidence` 曾是一句**手写字符串**（"9,060 个入场点、68.7%"），
+    K 线每天在长、回测结果会漂移，页面却永远显示那组旧数字——用户看到的是
+    「实测证据」，实际是三天前的一次人工转录。这类错误不会报错、只会安静地骗人。
+
+    现在 atr_stop.build() 每次实时回测并同时写 evidenceRows（结构化）与 evidence（句子），
+    本闸门把两者锁成同一份数字：句子里的百分比必须能在行数据里找到，
+    样本数必须三行一致（「同条件」回测的前提），否则说明有人又改了句子。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                     # noqa: BLE001
+        r.fail("G35", "读 data.js 失败：%s" % e)
+        return
+    A = D.get("atrStops") or {}
+    ev = str(A.get("evidence") or "")
+    rows = A.get("evidenceRows") or []
+    if not ev and not rows:
+        r.warn("G35", "atrStops.evidence 与 evidenceRows 均为空（atr_stop.py 未跑？）")
+        return
+    bad = []
+    if not rows:
+        bad.append("有 evidence 句但缺 evidenceRows（数字无法核对）")
+    elif len(rows) < 2:
+        bad.append("evidenceRows 仅 %d 行（至少要有旧口径与新口径两行可比）" % len(rows))
+    if not ev:
+        bad.append("有 evidenceRows 但 evidence 句为空（页面会缺说明）")
+
+    if rows:
+        ns = {x.get("n") for x in rows}
+        if len(ns) != 1:
+            bad.append("三行样本数不一致 %s——「同条件回测」的前提是同一批入场点" % sorted(ns))
+        if rows[0].get("key") != "fixed":
+            bad.append("首行不是旧口径 fixed（%s），对比表会把新口径当基准" % rows[0].get("key"))
+        for x in rows:
+            for fld in ("touchRate", "winRate"):
+                v = x.get(fld)
+                if not isinstance(v, (int, float)) or not (0 <= v <= 1):
+                    bad.append("%s.%s=%s 不是 0-1 比例" % (x.get("key"), fld, v))
+                else:
+                    want = "%.1f%%" % (v * 100)
+                    if ev and want not in ev:
+                        bad.append("evidence 句里找不到 %s=%s（句子与行数据脱节）"
+                                   % (x.get("key"), want))
+            if not (isinstance(x.get("retPct"), (int, float))):
+                bad.append("%s.retPct 缺失" % x.get("key"))
+        if rows[0].get("n"):
+            nstr = "{:,}".format(rows[0]["n"])
+            if ev and nstr not in ev:
+                bad.append("evidence 句样本数与 evidenceRows 不符（句里无 %s）" % nstr)
+        # 方向性自洽：新口径的触及率必须低于旧口径，否则「换口径」这件事本身就是错的。
+        # （如果哪天数据真的翻了，应该让闸门报警去人工看，而不是让页面继续宣称更好。）
+        if len(rows) >= 2:
+            if not rows[-1]["touchRate"] < rows[0]["touchRate"]:
+                bad.append("新口径触及率 %.1f%% 不低于旧口径 %.1f%%——换口径的收益不成立，需人工复核"
+                           % (rows[-1]["touchRate"] * 100, rows[0]["touchRate"] * 100))
+            if not rows[-1]["winRate"] > rows[0]["winRate"]:
+                bad.append("新口径胜率 %.1f%% 不高于旧口径 %.1f%%——同样需复核"
+                           % (rows[-1]["winRate"] * 100, rows[0]["winRate"] * 100))
+
+    if bad:
+        r.fail("G35", "ATR 证据与回测行不自洽：" + "; ".join(bad[:6]))
+    else:
+        r.ok("G35", "ATR 证据句与 %d 行回测数据逐项一致（%s 个入场点：触及 %.1f%% → %.1f%%、胜率 %.1f%% → %.1f%%）"
+             % (len(rows), "{:,}".format(rows[0]["n"]),
+                rows[0]["touchRate"] * 100, rows[-1]["touchRate"] * 100,
+                rows[0]["winRate"] * 100, rows[-1]["winRate"] * 100))
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -2819,6 +3066,9 @@ def main():
     g30_display_prefs(r)
     g31_deduce_prefix(r)
     g32_stop_ledger_truth(r)
+    g33_atr_stop_consistency(r)
+    g34_desk_structure(r)
+    g35_atr_evidence_truth(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))

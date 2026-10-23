@@ -66,6 +66,7 @@ DATA_WRITERS = [
     'accumulation_score.py',    # 吸筹打分写 pool / 分数
     'annotate_pool_meta.py',    # 池元信息
     'apply_narrative.py',       # AI 叙事写回
+    'atr_stop.py',              # R100z160：atrStops（全站唯一权威止损源）
     'build_stock_pool.py',      # 机械选股池
     'common.py',                # write_data_js() 本体（唯一入口，自身即实现）
     'embed_klines.py',          # 内嵌 stkKlines
@@ -81,6 +82,8 @@ DATA_WRITERS = [
     'refresh_stamp.py',         # updatedAt 单一主人（正则手术式改写）
     'retag_duanban.py',         # 断板重打标
     'risk_gate.py',             # 个股风险闸
+    'signal_attribution.py',    # R100z160：signalPerf（指标归因台账）
+    'signal_rank.py',           # R100z160：tradeDesk（五因子排名与执行清单）
     'star_ai_rewrite.py',       # 09:45 精选文案
     'stock_news.py',            # stockNews
     'stop_tracker.py',          # 止损跟踪

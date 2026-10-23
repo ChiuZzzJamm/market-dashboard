@@ -46,7 +46,7 @@ LEDGER = os.path.join(ROOT, 'stop_ledger.json')
 
 DEFAULT_STOP_PCT = 0.03   # 机械池兜底止损：最近收盘 −3%（与 08:30 对自选股口径一致）
 LOOKAHEAD = 5             # 「触及后 5 日表现」的窗口（交易日）
-SRC_PRIORITY = ('harmonic', 'ai-exit', 'default')
+SRC_PRIORITY = ('harmonic', 'ai-exit', 'atr', 'default')
 
 NODE_BIN = ('/Users/loccco/.workbuddy/binaries/run-node'
             if os.path.exists('/Users/loccco/.workbuddy/binaries/run-node')
@@ -180,9 +180,38 @@ def collect_entries(D):
         _st, _src = mech_stop(x, lc)
         out[c] = {'code': c, 'name': x.get('name') or '', 'sector': x.get('sector') or '',
                   'stop': _st, 'stopSrc': _src, 'lastClose': lc, 'from': src}
+    # R100z160（2026-10-24）：ATR 自适应止损接管台账 —— 上面三条口径（谐波几何位 /
+    # 断板 T 日低点 / entryClose−3%）全是固定百分比，与个股波动率无关。现在全站唯一
+    # 权威止损源是 atrStops（atr_stop.py），台账必须跟着走；否则「页面弹窗显示 ATR 止损、
+    # 台账按 −3% 记账」，同一只票两个止损位，触及率统计也永远停在旧口径（实测 68.7%）。
+    # 形态位不无条件让位：比 ATR 位更靠上、且距收盘留足 0.8×ATR 时才采纳——
+    # 与 index.html 的 atrVsForm 同一条规则（两边都改了要同步，G33 会核对台账里的 atr 名目）。
+    ax_items = ((D.get('atrStops') or {}).get('items') or {})
+    if ax_items:
+        for code, e in out.items():
+            ax = ax_items.get(code)
+            if not ax:
+                continue
+            c, s = _f(ax.get('close')), _f(ax.get('stop'))
+            atr = _f(ax.get('atr14')) or 0.0
+            if not c or not s or c <= 0:
+                continue
+            form, fsrc = e.get('stop'), e.get('stopSrc')
+            form = _f(form)
+            if form and form > s and atr > 0 and (c - form) >= 0.8 * atr:
+                e['stopSrc'] = str(fsrc) + '+atr'   # 形态位更好，保留，但已与 ATR 对账
+            else:
+                e['stop'] = s
+                e['stopSrc'] = 'atr'
+            e['atrStop'] = s
+
     vals = list(out.values())
-    vals.sort(key=lambda v: (SRC_PRIORITY.index(v['stopSrc'])
-                             if v['stopSrc'] in SRC_PRIORITY else 99, v['code']))
+    def _pri(v):
+        # stopSrc 现在可能是 'harmonic+atr' 这种「形态位已与 ATR 对账」的复合标签，
+        # 按 '+' 前半段取排序位，别让复合标签掉进 99
+        base = str(v.get('stopSrc') or '').split('+')[0]
+        return SRC_PRIORITY.index(base) if base in SRC_PRIORITY else 99
+    vals.sort(key=lambda v: (_pri(v), v['code']))
     return vals
 
 
@@ -373,6 +402,43 @@ def self_test():
     r2 = track_one(ent, bars2, '2026-09-30')
     print(('  OK   ' if r2.get('touched') is False else '  FAIL ') + '止损之上不误判触及')
     ok = ok and r2.get('touched') is False
+
+    # ---- R100z160：ATR 接管台账止损的三种情形（反向断言：不该被 ATR 抢的不能被抢）----
+    axD = {
+        'atrStops': {'items': {
+            '600001': {'close': 10.0, 'stop': 9.2, 'atr14': 0.4},
+            '600002': {'close': 10.0, 'stop': 9.2, 'atr14': 0.4},
+            '600003': {'close': 10.0, 'stop': 9.2, 'atr14': 0.4},
+        }},
+        'duanban': {'confirmed': [
+            # ① 兜底 −3% 得 9.7：比 ATR 位 9.2 靠上，但距收盘仅 0.30 < 0.8×ATR(0.32) → 会被波动打掉
+            {'code': '600001', 'name': 'A', 'lastClose': 10.0},
+            # ② entryClose 9.0 → 8.73，比 ATR 位更低（要扛更多亏损）→ 用 ATR
+            {'code': '600002', 'name': 'B', 'lastClose': 10.0, 'entryClose': 9.0},
+            # ③ entryClose 9.85 → 9.5545，比 ATR 位靠上且距收盘 0.4455 ≥ 0.32 → 保留形态位
+            {'code': '600003', 'name': 'C', 'lastClose': 10.0, 'entryClose': 9.85},
+            # ④ 不在 atrStops 里 → 老实走旧口径，不许被凭空改
+            {'code': '600004', 'name': 'D', 'lastClose': 10.0, 'entryClose': 9.0},
+        ]},
+    }
+    got = {}
+    for v in collect_entries(axD):
+        got[v['code']] = v
+    def axchk(name, cond):
+        nonlocal ok
+        print(('  OK   ' if cond else '  FAIL ') + name)
+        ok = ok and bool(cond)
+    axchk('形态位贴脸（0.30<0.8×ATR）→ 改用 ATR 9.2（实测 %s）'
+          % (got.get('600001') or {}).get('stop'), (got.get('600001') or {}).get('stop') == 9.2)
+    axchk('形态位低于 ATR → 用 ATR（实测 %s）'
+          % (got.get('600002') or {}).get('stop'), (got.get('600002') or {}).get('stop') == 9.2)
+    axchk('形态位 9.55 靠上且有缓冲 → 保留形态位（实测 %s）'
+          % (got.get('600003') or {}).get('stop'), (got.get('600003') or {}).get('stop') == 9.55)
+    axchk('保留形态位时标签标 +atr（实测 %s）'
+          % (got.get('600003') or {}).get('stopSrc'), '+atr' in str((got.get('600003') or {}).get('stopSrc')))
+    axchk('不在 atrStops 的票不被改口径（600004 = 8.73）',
+          (got.get('600004') or {}).get('stop') == 8.73 and 'atr' not in str((got.get('600004') or {}).get('stopSrc')))
+
     print('[SELF-TEST] ' + ('OK' if ok else 'FAIL'))
     return 0 if ok else 1
 
