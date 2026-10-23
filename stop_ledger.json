@@ -30031,55 +30031,55 @@
  },
  "stats": {
   "total": 720,
-  "touched": 0,
-  "touchRate": 0.0,
-  "avgP5Pct": null,
-  "avgAfter5Pct": null,
-  "avgRebound5Pct": null,
-  "hitThenUp": null,
-  "hitThenUpRate": null,
+  "touched": 306,
+  "touchRate": 0.425,
+  "avgP5Pct": -0.12,
+  "avgAfter5Pct": -2.67,
+  "avgRebound5Pct": 2.54,
+  "hitThenUp": 33,
+  "hitThenUpRate": 0.258,
   "bySrc": {
    "harmonic": {
     "n": 117,
-    "p5": null
+    "p5": 2.35
    },
    "ai-exit": {
     "n": 420,
-    "p5": null
+    "p5": 0.72
    },
    "T日低点": {
     "n": 113,
-    "p5": null
+    "p5": -1.63
    },
    "default-3.0%": {
     "n": 70,
-    "p5": null
+    "p5": -1.7
    }
   },
   "bySrcTouch": {
    "harmonic": {
     "n": 117,
-    "touched": 0,
-    "rate": 0.0
+    "touched": 2,
+    "rate": 0.017
    },
    "ai-exit": {
     "n": 420,
-    "touched": 0,
-    "rate": 0.0
+    "touched": 153,
+    "rate": 0.364
    },
    "T日低点": {
     "n": 113,
-    "touched": 0,
-    "rate": 0.0
+    "touched": 103,
+    "rate": 0.912
    },
    "default-3.0%": {
     "n": 70,
-    "touched": 0,
-    "rate": 0.0
+    "touched": 48,
+    "rate": 0.686
    }
   },
   "pending": 1147,
   "noKline": 33
  },
- "updatedAt": "2026-10-23 21:40:06"
+ "updatedAt": "2026-10-24 00:17:56"
 }

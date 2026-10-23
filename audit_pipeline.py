@@ -2701,6 +2701,77 @@ def g31_deduce_prefix(r):
                      % len(cases))
 
 
+def g32_stop_ledger_truth(r):
+    """G32 止损台账自证：页面上的汇总不得与台账明细矛盾（专治「假 0」）。
+
+    为什么需要（R100z181c，2026-10-24）：`stop_tracker.summarize()` 曾直接读
+    `e.get('touched')` / `e['p5Pct']`，而台账把结果存在 `e['res']` 里 —— 三个键全取到
+    None，汇总恒为「命中 0 条 / 0% / 5 日均值 —」，同一屏下面的逐日明细却是另一条
+    代码路径算的、加起来 306 条。**汇总与明细自相矛盾，却没有任何闸门报警**，于是
+    页面把「止损从未被触及」当成了正常态：这是最需要被否证的一条纪律
+    （止损位到底设得对不对），被伪装成了已验证。
+
+    判据只取「结构上不可能」的那一条：明细里存在 touched=True，而汇总报 0。
+    不比较 total/均值 —— 页面是快照、台账每天更新，差一两天属正常滞后，
+    拿它当 FAIL 会变成每天必现的噪音（24.16d：假信号比没闸更危险）。
+    """
+    led_p = os.path.join(HERE, "stop_ledger.json")
+    if not os.path.exists(led_p):
+        r.warn("G32", "缺 stop_ledger.json，止损有效性无法自证（跳过）")
+        return
+    try:
+        led = json.load(open(led_p, encoding="utf-8"))
+        entries = led.get("entries") or {}
+    except Exception as e:                                     # noqa: BLE001
+        r.fail("G32", "stop_ledger.json 解析失败：%s" % e)
+        return
+    if not entries:
+        r.warn("G32", "台账 entries 为空，止损有效性无样本（跳过）")
+        return
+
+    done = hit = 0
+    p5 = []
+    for _dt, rows in entries.items():
+        for e in rows:
+            res = e.get("res") or {}
+            if res.get("noKline") is False and not res.get("pending"):
+                done += 1
+                if res.get("touched"):
+                    hit += 1
+                if res.get("p5Pct") is not None:
+                    p5.append(res["p5Pct"])
+    if done == 0:
+        r.warn("G32", "台账尚无可判定样本（全部 pending / 缺 K 线）")
+        return
+    rate = hit / done
+
+    try:
+        D = load_data_json()
+        st = D.get("stopTrack") or {}
+    except Exception as e:                                     # noqa: BLE001
+        r.fail("G32", "读 data.js 的 stopTrack 失败：%s" % e)
+        return
+
+    shown_t, shown_rate = st.get("touched"), st.get("touchRate")
+    if not st:
+        r.warn("G32", "data.js 无 stopTrack 节点，页面不展示止损有效性（跳过）")
+        return
+    if (shown_t in (0, None)) and hit > 0:
+        r.fail("G32", "页面 stopTrack 报「触及 %s 条 / %s」，但台账明细实为 %d/%d = %.1f%% —— "
+                      "汇总与明细取数路径不一致，前端把「止损常年不被触及」当正常态展示。"
+                      "修 stop_tracker.summarize 的 res 取值后重跑 16:00"
+               % (shown_t, shown_rate, hit, done, rate * 100))
+        return
+    # 方向性检查：比率偏差超过 5 个百分点才提示（快照滞后属正常）
+    if shown_rate is not None and abs(float(shown_rate) - rate) > 0.05:
+        r.warn("G32", "页面触及率 %.1f%% 与台账 %.1f%% 相差 >5pp —— 页面快照偏旧，"
+                      "下次 16:00/17:00 会自动刷新" % (float(shown_rate) * 100, rate * 100))
+    else:
+        r.ok("G32", "止损台账汇总与明细一致（触及 %d/%d = %.1f%%，5 日均值 %s，页面同步）"
+             % (hit, done, rate * 100,
+                ("%+.2f%%" % (sum(p5) / len(p5))) if p5 else "样本不足"))
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -2747,6 +2818,7 @@ def main():
     g29_name_and_risk_hygiene(r)
     g30_display_prefs(r)
     g31_deduce_prefix(r)
+    g32_stop_ledger_truth(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
