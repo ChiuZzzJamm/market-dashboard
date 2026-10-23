@@ -1384,7 +1384,11 @@ def g18_policy_signals(r):
     """G18 政策信号解码闸门（R100z107b）：policySignals 若存在则必须结构合法。
 
     由 enrich_policy.py 在 17:00 叙事步写回。非 17:00 叙事步部署时该节点可能尚未生成
-    （由前一次 17:00 叙事步持久化在 data.js 中），缺失属预期 → WARN 不拦。"""
+    （由前一次 17:00 叙事步持久化在 data.js 中），缺失属预期 → WARN 不拦。
+
+    R100z178（2026-10-23）：加「合法但过期」判据 —— policySignals 非空、结构合法，但全部
+    `date` 早于 `ashare.tradeDate` → WARN。这是 enrich_policy 降级保留上一版时的痕迹
+    （旧脚本异常会静默写空、G18 全绿，页面政策卡空着也没人报警，本条同时修了那个洞）。"""
     try:
         D = load_data_json()
     except Exception as e:                                   # noqa: BLE001
@@ -1413,10 +1417,25 @@ def g18_policy_signals(r):
             bad.append(f"[{i}] tier 非法 {it.get('tier')}")
     if bad:
         r.fail("G18", "policySignals 结构异常：" + "; ".join(bad[:8]))
+        return
+    tiers = {t: sum(1 for x in ps if x.get("tier") == t) for t in "SABC"}
+    if not ps:
+        r.ok("G18", "policySignals 结构合法（0 条）—— 今日要闻标题均无发文主体、按 R100z111 口径"
+                    "正确过滤时属正常；真降级（解码/写盘异常）enrich_policy 会打 [DEGRADED] 并 exit 2，"
+                    "不会走到这里")
     else:
-        tiers = {t: sum(1 for x in ps if x.get("tier") == t) for t in "SABC"}
         r.ok("G18", f"policySignals 结构合法（{len(ps)} 条，"
                     f"S{tiers['S']}/A{tiers['A']}/B{tiers['B']}/C{tiers['C']}）")
+    # R100z178（2026-10-23）降级痕迹检测：enrich_policy 异常时会**保留上一版 policySignals**
+    # 而不是静默清空，此时列表结构完全合法、上面那条 ok 照发，页面却挂着旧交易日的政策卡。
+    # 用 date 与 ashare.tradeDate 比对，把「合法但过期」这一类打出来。
+    td = str((D.get("ashare") or {}).get("tradeDate") or "")[:10]
+    dates = [str(x.get("date") or "")[:10] for x in ps if isinstance(x, dict)]
+    dates = [d for d in dates if re.match(r"^20\d{2}-\d{2}-\d{2}$", d)]
+    if ps and dates and re.match(r"^20\d{2}-\d{2}-\d{2}$", td) and max(dates) < td:
+        r.warn("G18", f"policySignals {len(ps)} 条全是 {max(dates)} 及更早的解码结果，"
+                      f"落后于交易日 {td} —— 多为 enrich_policy 降级保留（见该脚本 [DEGRADED] 输出），"
+                      f"页面政策卡展示的是旧交易日；补跑 enrich_policy.py，或核对 decode_policy 主体词表")
 
 
 def g19_summary_freshness(r):
@@ -2073,7 +2092,12 @@ def g28_freshness_consistency(r):
       b) `ashare.updatedAt` 的日期 == `ashare.tradeDate`。缺/不同日 → FAIL。
       c) 各分格戳日期早于 `ashare.tradeDate` → WARN（该格是旧交易日的货，但页面照挂着）。
       d) `refresh_stamp.py` 的 SLOTS 与本地 STAMP_SLOTS 不一致 → FAIL（清单漂移＝静默漏取）。
-      e) `duanban.generatedAt` / 四模块 `tradeDate` 早于 `ashare.tradeDate` → WARN。
+      e) `duanban.generatedAt` 早于 `ashare.tradeDate` → **FAIL**（断板是本看板核心模块，
+         陈旧断板一路部署上线＝产品事故；prompt 侧 17:00 第 0 步的核验此前查的是两个不存在的键，
+         闸门这边若再只给 WARN，就是双重不设防 —— R100z178）。
+         四模块 `tradeDate` 早于 `ashare.tradeDate` → WARN（full_scan 失败不清场是 16:00
+         prompt 显式允许的降级，不是漏跑，所以不升级）。
+         `duanban.generatedAt` 缺失/不可解析 → WARN（无法判断，不拦；但要点出来）。
     非交易日（status 含「休市」）或 tradeDate 不可解析时整条跳过 —— 休市期数据不动是正常的。
     """
     try:
@@ -2158,17 +2182,29 @@ def g28_freshness_consistency(r):
                       f"——该格内容是旧交易日的货，页面照挂着（非交易日误标时属正常）")
 
     # ---- e) 四模块/断板 快照日期落后 ----
-    lag = []
+    # R100z178（2026-10-23）：断板与四模块**分级**处理。此前两者合并成一条 WARN，等于
+    # 「断板是昨天的」这件事上，prompt 侧的保险丝（17:00 第 0 步核验）查的字段名根本不存在、
+    # 闸门这边又只给黄灯 —— **双重不设防**，陈旧的断板可以一路部署上线。断板是本看板的核心模块，
+    # 所以升级为 FAIL。四模块保持 WARN：16:00 prompt 显式允许 full_scan 失败时「不写 fullScan、
+    # 继续跑后三脚本即可」，判 FAIL 会与既有容错设计正面冲突（那是有意为之的降级，不是漏跑）。
+    lag_mod = []
     for key in ("harmonic", "accumulation", "powerScreen", "fullScan"):
         v = str((D.get(key) or {}).get("tradeDate") or "")[:10]
         if v and v < td:
-            lag.append(f"{key}.tradeDate={v}")
+            lag_mod.append(f"{key}.tradeDate={v}")
     dg = str((D.get("duanban") or {}).get("generatedAt") or "")[:10]
-    if re.match(r"^20\d{2}-\d{2}-\d{2}$", dg) and dg < td:
-        lag.append(f"duanban.generatedAt={dg}")
-    if lag:
-        r.warn("G28", f"模块快照落后于交易日 {td}：{'、'.join(lag)}"
-                      f"——16:00 数据步漏跑或未换日，页面对应板块展示的是旧交易日")
+    if not re.match(r"^20\d{2}-\d{2}-\d{2}$", dg):
+        r.warn("G28", "duanban.generatedAt 缺失或不可解析（%s）—— 无法判断断板是否为当日；"
+                      "注意 duanban 没有 `date`/`updatedAt` 这两个键，唯一时效字段就是 generatedAt"
+                      "（R100z178）" % (dg or "空"))
+    elif dg < td:
+        r.fail("G28", f"断板快照落后于交易日：duanban.generatedAt={dg} < ashare.tradeDate={td} "
+                      f"—— 页面上整个断板反包模块展示的是旧交易日的货，属产品事故级。"
+                      f"修法：补跑 check_duanban.py + merge_duanban.py（16:00 数据步第 2 步）")
+    if lag_mod:
+        r.warn("G28", f"模块快照落后于交易日 {td}：{'、'.join(lag_mod)}"
+                      f"——16:00 数据步漏跑或未换日，页面对应板块展示的是旧交易日"
+                      f"（四模块保持 WARN：full_scan 失败不清场是 16:00 prompt 显式允许的降级）")
 
 
 def _run_tool(script, *args, timeout=180):
