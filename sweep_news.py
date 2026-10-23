@@ -34,6 +34,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from common import write_data_js  # noqa: E402
+
 # 与 stock_news 共用同一份盘面统计正则（单一事实源，别在别处再抄一遍）
 try:
     from stock_news import NEWS_STATS_PAT
@@ -160,9 +163,8 @@ def load_data(path=DATA_JS):
 
 
 def save_data(D, path=DATA_JS):
-    with open(path, "w", encoding="utf-8") as f:
-        f.write("window.DASHBOARD_DATA = "
-                + json.dumps(D, ensure_ascii=False, separators=(",", ":")) + ";\n")
+    # R100z179b：原来直接 open(path,"w")，与硬约束 11 相悖（17:00 链会调本脚本）。
+    write_data_js(path, D, label="[sweep_news]")
 
 
 def main():
