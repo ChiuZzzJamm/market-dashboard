@@ -30,6 +30,9 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from common import write_data_js  # noqa: E402
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 CAL_STATE = os.path.join(HERE, 'calibration_state.json')
 CURVE_FILE = os.path.join(HERE, 'portfolio_curve.json')
@@ -45,9 +48,9 @@ def _load(path):
 
 
 def _dump(path, D):
-    with open(path, 'w', encoding='utf-8') as f:
-        f.write('window.DASHBOARD_DATA = ' +
-                json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';\n')
+    # R100z179b：原来直接 open(path,'w')，而本脚本在 deploy.sh 链条中间跑 ——
+    # 被 kill 即 0 字节 data.js。改走 common 的唯一写盘入口。
+    write_data_js(path, D, label='[strategy_engine]')
 
 
 def _cal_factor():

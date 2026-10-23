@@ -19,6 +19,9 @@ import json
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from common import write_data_js  # noqa: E402
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 HORIZON_DAYS = 45
 
@@ -147,9 +150,9 @@ def re_search(s):
 
 
 def _dump(path, D):
-    with open(path, 'w', encoding='utf-8') as f:
-        f.write('window.DASHBOARD_DATA = ' +
-                json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';\n')
+    # R100z179b：原来这里直接 open(path,'w') —— 与硬约束 11 相悖，且本脚本在 deploy.sh
+    # 链条中间运行，进程被杀即 0 字节 data.js（全站白屏、无日志、闸门全绿）。改走唯一入口。
+    write_data_js(path, D, label='[macro_calendar]')
 
 
 def main():

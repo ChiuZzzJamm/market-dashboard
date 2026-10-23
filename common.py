@@ -205,6 +205,47 @@ def strip_dd_prefix(t, rounds=4):
     return s.strip()
 
 
+def write_data_js(path_or_base, D, label=''):
+    """原子写 data.js —— 全项目唯一写盘入口（R100z179b）。
+
+    为什么收口：硬约束 11 写的是「必须 `_tmp`+`os.replace`」，但一直是**每个脚本各写一遍**，
+    于是「谁漏了」只能靠人看。2026-10-23 全量扫出来 3 个漏的（`macro_calendar` /
+    `strategy_engine` / `sweep_news`），其中前两个就在 deploy.sh 的链条中间 ——
+    进程被杀即 0 字节 data.js，全站白屏、日志一行字、闸门全绿。
+    现在所有新老写者都可以只调这一个函数，`check_code.py` 的 K3 会反过来盯「谁没调」。
+
+    参数：path_or_base 传 base 目录或 data.js 路径都行（历史上两种写法都有）。
+    校验：落盘前用 `node --check` 验语法（data.js 是 JS 包裹，JSON 合法不代表 JS 合法）；
+    临时名必须是 `*.tmp.js` —— Node 22 对未知扩展名直接 `ERR_UNKNOWN_FILE_EXTENSION`，
+    写成 `*.tmp` 会变成「每天静默失败、永不落盘」（24.28e 实测）。
+    """
+    path = path_or_base
+    if os.path.isdir(path) or not path.endswith('.js'):
+        path = os.path.join(path, 'data.js')
+    out = ('window.DASHBOARD_DATA = '
+           + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';\n')
+    _tmp = path + '.tmp.js'
+    with open(_tmp, 'w', encoding='utf-8') as f:
+        f.write(out)
+    try:
+        node = find_node()
+    except Exception as e:                      # node 缺失：显式降级，不静默（不阻断部署链）
+        node = None
+        print('[WARN] %s node 不可用（%s），跳过语法校验' % (label or '[write_data_js]', e))
+    if node:
+        try:
+            p = subprocess.run([node, '--check', _tmp], capture_output=True, text=True)
+        except Exception as e:
+            p = None
+            print('[WARN] %s node 调用失败（%s），跳过语法校验' % (label or '[write_data_js]', e))
+        if p is not None and p.returncode != 0:
+            os.remove(_tmp)
+            raise RuntimeError('%s data.js 语法校验失败（未落盘）：%s'
+                               % (label or '[write_data_js]', (p.stderr or '')[:300]))
+    os.replace(_tmp, path)
+    return path
+
+
 def load_dashboard_data(base):
     """把 data.js 解析为 Python dict。
 
