@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610240250"></script>
+<script src="data.js?v=202610240252"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -5074,10 +5074,10 @@ function switchSubTab(k) {
   // R100z162：开盘预测页里的「组合净值」是 ECharts。它默认藏在 display:none 的容器里，
   // init 时量到 0 宽 → 切过来必须 resize 一次，否则图只画出左侧一小条（实测过，不是理论问题）。
   if (k === 'od') setTimeout(resizeOdCharts, 50);
-  // R100z162：开盘精选是 9:45 的断板池候选，与「次日交易预案」职责重叠。
-  // 开盘预测页只留 TOP10（板块强弱是预测的输入），精选卡在预测页隐藏，回到四池页照常显示。
-  var starBlk = document.querySelector('#db-fixed .p-star');
-  if (starBlk) starBlk.style.display = (k === 'od') ? 'none' : '';
+  // R100z162b：开盘精选卡不隐藏。初版曾在 od 页把它 display:none（理由是「与次日预案重叠」），
+  // 但 #db-fixed 是用户 2026-09 明确拍板的「固定区」——「切换子页时保持显示」。为了一个我自己
+  // 觉得重叠的问题去违反用户明说过的偏好，是本末倒置：精选是 9:45 的候选、预案是 8 只带价位的执行参数，
+  // 粒度不同、并不重复。恢复常显。
 }
 function resizeOdCharts() {
   var el = document.getElementById('chart-pf');
