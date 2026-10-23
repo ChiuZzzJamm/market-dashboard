@@ -271,6 +271,13 @@ PRODUCT_OWNERSHIP = {
         "note": "R100z160：signal_attribution.py 按指标来源回算 T+1/3/5/10 收益与超额、给建议权重，"
                 "16:00 数据步点名运行；前端「指标表现 · 谁准谁不准」卡渲染（renderSignalPerf）。",
     },
+    "forecastScore": {
+        "require": ("forecastScore", "forecast_scorecard"),
+        "note": "R100z161：forecast_scorecard.py 把 calibration_log.json 的板块预判台账（log）与开盘前瞻台账（open）"
+                "结算成跨日命中率：按置信度、按方向、近 5 日分层，并**按阈值自动生成使用建议**（不许人手写结论）。"
+                "16:00 数据步点名运行；前端「预测复盘 · 谁准谁不准」卡渲染（renderForecastScore）。"
+                "存在理由：此前页面只有 AI 自己写的当日总结，没有累计命中率，用户无从判断该信几分。",
+    },
 }
 
 
@@ -3019,6 +3026,242 @@ def g35_atr_evidence_truth(r):
                 rows[0]["winRate"] * 100, rows[-1]["winRate"] * 100))
 
 
+def g36_desk_exec_plan(r):
+    """G36 次日执行参数自洽 —— 「明天怎么下单」不能自相矛盾。
+
+    为什么需要：R100z161 给每只票加了 plan（进场区间 / 追高上限 / 放弃线），
+    这张表才从「收盘排名」变成「能照着做的预案」。但四个价位一旦算错，
+    用户会照着错误指令下单——比没有指令更糟：
+      · 放弃线比止损还低  → 等于让人多亏一截才认错
+      · 追高上限高于目标  → 追进去就是负期望
+      · 区间倒序          → 页面显示「11.40~10.80」这种没法执行的区间
+    这些都不会报错，只会安静地害人，所以必须逐只对账。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                     # noqa: BLE001
+        r.fail("G36", "读 data.js 失败：%s" % e)
+        return
+    T = D.get("tradeDesk") or {}
+    picks = T.get("picks") or []
+    if not picks:
+        r.warn("G36", "tradeDesk.picks 为空（signal_rank.py 未跑？）")
+        return
+
+    bad, noPlan = [], []
+    for p in picks:
+        code = p.get("code") or "?"
+        pl = p.get("plan")
+        if not pl:
+            noPlan.append(code)
+            continue
+        a, lo, hi, ch = (pl.get("abandon"), pl.get("entryLo"),
+                         pl.get("entryHi"), pl.get("chase"))
+        stop, close, tgt = p.get("stop"), p.get("close"), p.get("target")
+        vals = [a, lo, hi, ch]
+        if any(not isinstance(v, (int, float)) for v in vals):
+            bad.append("%s 执行参数不全是数字 %s" % (code, vals))
+            continue
+        if not (a < lo < hi < ch):
+            bad.append("%s 四档顺序错乱 abandon=%s entryLo=%s entryHi=%s chase=%s"
+                       % (code, a, lo, hi, ch))
+        if isinstance(stop, (int, float)) and a < stop - 0.005:
+            bad.append("%s 放弃线 %.2f 低于止损 %.2f——等于让人多亏一截才认错"
+                       % (code, a, stop))
+        if isinstance(tgt, (int, float)) and ch >= tgt:
+            bad.append("%s 追高上限 %.2f ≥ 目标 %.2f——追进去是负期望" % (code, ch, tgt))
+        if isinstance(close, (int, float)) and not (a <= close <= ch):
+            bad.append("%s 收盘价 %.2f 不在执行区间 [%s, %s] 内" % (code, close, a, ch))
+        if not (pl.get("ifGapUp") and pl.get("ifInBand") and pl.get("ifGapDown")):
+            bad.append("%s 三档情景文案不全（高开/区间内/低开）" % code)
+
+    # 有效期：清单是给**下一个交易日**用的，过期没重算就会误导人
+    td, vu = str(T.get("tradeDate") or "")[:10], str(T.get("validUntil") or "")[:10]
+    if not vu:
+        bad.append("tradeDesk.validUntil 缺失——页面无法说明这张表什么时候作废")
+    elif td and vu <= td:
+        bad.append("validUntil(%s) 不晚于 tradeDate(%s)" % (vu, td))
+
+    # 个别票缺 plan 只 WARN（数据不全时宁可不展示）；超过一半才 FAIL
+    if len(noPlan) * 2 > len(picks):
+        bad.append("%d/%d 只缺执行参数——这张表会退回「只有收盘价的排名」"
+                   % (len(noPlan), len(picks)))
+
+    if bad:
+        r.fail("G36", "；".join(bad[:6]))
+    else:
+        r.ok("G36", "%d 只执行参数自洽（放弃线 ≤ 止损、追高 < 目标、四档有序），有效期至 %s"
+             % (len(picks) - len(noPlan), vu or "—"))
+
+
+def g37_forecast_score_truth(r):
+    """G37 预测成绩单必须与台账逐项对得上 —— 不许「AI 自己给自己打分」。
+
+    为什么需要：这张卡的价值全在「数字可信」。如果 data.js 里的命中率
+    与 calibration_log.json 算出来的不一致，那它就退化成了又一段 AI 自述，
+    比没有更糟（因为它看起来像客观统计）。
+    所以本闸门**重算一遍台账**，逐项比对；并且要求 usage 非空——
+    有一堆数字却不给「该怎么用」，读者仍然不知道该信几分。
+    """
+    import json as _json
+    try:
+        D = load_data_json()
+    except Exception as e:                                     # noqa: BLE001
+        r.fail("G37", "读 data.js 失败：%s" % e)
+        return
+    F = D.get("forecastScore") or {}
+    if not F:
+        r.warn("G37", "forecastScore 为空（forecast_scorecard.py 未跑？）")
+        return
+
+    logp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "calibration_log.json")
+    if not os.path.exists(logp):
+        r.warn("G37", "缺 calibration_log.json，无法核对成绩单")
+        return
+    try:
+        with open(logp, encoding="utf-8") as f:
+            L = _json.load(f) or {}
+    except Exception as e:                                     # noqa: BLE001
+        r.fail("G37", "读 calibration_log.json 失败：%s" % e)
+        return
+
+    log = L.get("log") or {}
+    op = L.get("open") or {}
+    rows = [x for d in log for x in (log.get(d) or [])]
+    n = len(rows)
+    hit = sum(1 for x in rows if x.get("result") == "命中")
+    want_strict = round(hit * 100.0 / n, 1) if n else None
+
+    S = F.get("sector") or {}
+    bad = []
+    if S.get("n") != n:
+        bad.append("成绩单 n=%s 而台账 %d 条" % (S.get("n"), n))
+    if want_strict is not None and abs((S.get("strictHit") or 0) - want_strict) > 0.05:
+        bad.append("严格命中 %s%% 与台账重算 %s%% 不一致" % (S.get("strictHit"), want_strict))
+    if S.get("days") != len(log):
+        bad.append("覆盖 %s 日而台账 %d 日" % (S.get("days"), len(log)))
+    if (F.get("forward") or {}).get("days") != len(op):
+        bad.append("开盘前瞻 %s 天而台账 %d 天" % ((F.get("forward") or {}).get("days"), len(op)))
+
+    # 结论必须随数据走：样本够却没给 usage = 有账不解读；样本不够却给一堆结论 = 拿噪声装结论
+    usage = F.get("usage") or []
+    if F.get("enough") and not usage:
+        bad.append("样本已够但 usage 为空——只报数不解读，读者仍不知该信几分")
+    if (not F.get("enough")) and len(usage) > 1:
+        bad.append("样本不足却给出 %d 条结论——样本不够时任何结论都是噪声" % len(usage))
+    if not str(F.get("verdict") or ""):
+        bad.append("verdict 为空")
+    elif n and ("%d 条" % n) not in str(F.get("verdict")):
+        bad.append("verdict 未提及样本数 %d 条（结论应能追溯到样本量）" % n)
+
+    # 分层样本之和必须等于总数：漏一组说明分组键有拼写差异（如「看涨」vs「up」）
+    for key in ("byConf", "byDir"):
+        ss = sum((x.get("n") or 0) for x in (F.get(key) or []))
+        if ss and ss != n:
+            bad.append("%s 分组样本合计 %d ≠ 总数 %d（分组键不一致）" % (key, ss, n))
+
+    if bad:
+        r.fail("G37", "；".join(bad[:5]))
+    else:
+        r.ok("G37", "成绩单与台账一致（%d 条 / %d 日 / 前瞻 %d 天），结论 %d 条由阈值生成"
+             % (n, len(log), len(op), len(usage)))
+
+
+def g38_flags_respected(r):
+    """G38 forecastScore.flags 必须被下一次预测真的执行 —— 否则成绩单只是张统计表。
+
+    为什么需要：R100z161 之前，命中率只出现在页面上，AI 生成预测时读不读
+    全凭自觉。结果就是「明明高置信 11%、页面白纸黑字写着反向指标，
+    第二天照标 3 条高确信」。这里把 flags 变成硬约束：
+
+      ① flags 必须能被 byConf/byDir/forward 复算出来（防手改）；
+      ② maxHighConf=0 → 预测里一条「高」都不许有；=1 → 最多 1 条；
+      ③ requireBand=True → openOutlook.pos 必须带 bandLo/bandHi 且 lo<hi
+         （倾向判词只有 18% 命中，靠它下注等于抛硬币）。
+
+    不约束方向条数：看涨弱是「怎么用」的问题，不是「不许看涨」。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                     # noqa: BLE001
+        r.fail("G38", "读 data.js 失败：%s" % e)
+        return
+    F = D.get("forecastScore") or {}
+    if not F:
+        r.warn("G38", "forecastScore 为空，flags 无从校验")
+        return
+    FL = F.get("flags") or {}
+    if not FL:
+        r.fail("G38", "forecastScore.flags 缺失——预测生成读不到任何约束开关")
+        return
+
+    bad = []
+    conf = F.get("byConf") or []
+    dirs = F.get("byDir") or []
+    fwd = F.get("forward") or {}
+    S = F.get("sector") or {}
+
+    # ① 复算：flags 与分层数据必须自洽
+    if S.get("n", 0) >= 30 and S.get("days", 0) >= 5:
+        hi = next((c for c in conf if c.get("conf") == "高"), None)
+        mid = next((c for c in conf if c.get("conf") == "中"), None)
+        want_inv = bool(hi and mid and hi.get("n", 0) >= 5 and mid.get("n", 0) >= 10
+                        and ((mid.get("strictHit") or 0) - (hi.get("strictHit") or 0)) >= 10.0)
+        if bool(FL.get("confInverted")) != want_inv:
+            bad.append("confInverted=%s 与分层数据复算 %s 不一致（flags 被手改？）"
+                       % (FL.get("confInverted"), want_inv))
+        if want_inv and FL.get("maxHighConf") != 0:
+            bad.append("confInverted=True 但 maxHighConf=%s（应强制 0）" % FL.get("maxHighConf"))
+        if not want_inv and FL.get("maxHighConf") == 0:
+            bad.append("分层数据不支持反向，maxHighConf 却被压成 0（冤枉正常预测）")
+        up = next((x for x in dirs if x.get("dir") == "up"), None)
+        dn = next((x for x in dirs if x.get("dir") == "down"), None)
+        want_asym = None
+        if up and dn and up.get("n", 0) >= 15 and dn.get("n", 0) >= 8:
+            g = (dn.get("strictHit") or 0) - (up.get("strictHit") or 0)
+            if g >= 15.0:
+                want_asym = "upWeak"
+            elif -g >= 15.0:
+                want_asym = "downWeak"
+        if FL.get("dirAsym") != want_asym:
+            bad.append("dirAsym=%s 与方向分层复算 %s 不一致" % (FL.get("dirAsym"), want_asym))
+    bAny, tr = fwd.get("bandAnyRate"), fwd.get("tendencyRate")
+    if bAny is not None and tr is not None:
+        want_band = bool(bAny >= 70.0 and tr < 40.0)
+        if bool(FL.get("requireBand")) != want_band:
+            bad.append("requireBand=%s 与前瞻复算 %s 不一致"
+                       % (FL.get("requireBand"), want_band))
+
+    # ② 高置信条数上限：这是「承诺强度」，不是语气
+    ap = D.get("aiPrediction") or {}
+    secs = ap.get("sectors") or []
+    if secs:
+        nh = sum(1 for s in secs if s.get("confidence") == "高")
+        cap = FL.get("maxHighConf")
+        if cap is not None and nh > cap:
+            bad.append("aiPrediction 标了 %d 条「高」置信，上限 %d（成绩单：高置信 %d 条命中 %s%%）%s"
+                       % (nh, cap,
+                          next((c.get("n") for c in conf if c.get("conf") == "高"), 0),
+                          next((c.get("strictHit") for c in conf if c.get("conf") == "高"), "—"),
+                          "——禁标高已生效，请改「中」" if cap == 0 else ""))
+
+    # ③ 前瞻必须给区间：倾向判词 18% 命中，单独用等于抛硬币
+    if FL.get("requireBand"):
+        pos = (D.get("openOutlook") or {}).get("pos") or {}
+        lo, hi = pos.get("bandLo"), pos.get("bandHi")
+        if lo is None or hi is None:
+            bad.append("requireBand=True 但 openOutlook.pos 缺 bandLo/bandHi（倾向命中仅 %s%%）"
+                       % (tr if tr is not None else "—"))
+        elif not (isinstance(lo, (int, float)) and isinstance(hi, (int, float)) and lo < hi):
+            bad.append("openOutlook.pos 区间无效：bandLo=%s bandHi=%s" % (lo, hi))
+
+    if bad:
+        r.fail("G38", "；".join(bad[:4]))
+    else:
+        r.ok("G38", "flags 已生效（高置信上限 %s / 区间强制 %s / 方向提示 %s）"
+             % (FL.get("maxHighConf"), FL.get("requireBand"), FL.get("dirAsym") or "无"))
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -3069,6 +3312,9 @@ def main():
     g33_atr_stop_consistency(r)
     g34_desk_structure(r)
     g35_atr_evidence_truth(r)
+    g36_desk_exec_plan(r)
+    g37_forecast_score_truth(r)
+    g38_flags_respected(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))

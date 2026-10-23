@@ -72,6 +72,7 @@ DATA_WRITERS = [
     'embed_klines.py',          # 内嵌 stkKlines
     'enrich_policy.py',         # policySignals 解码
     'fix_dd_prefix.py',         # 去掉「DD」前缀
+    'forecast_scorecard.py',    # R100z161：forecastScore（预测成绩单；只读 calibration_log.json）
     'full_scan.py',             # 全市场扫描
     'harmonic_detect.py',       # 谐波形态
     'macro_calendar.py',        # macroCalendar（走 write_data_js）

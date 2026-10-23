@@ -303,6 +303,85 @@ def select_desk(qualified, max_pick=MAX_PICK, sector_max_n=SECTOR_MAX_N):
     return desk, sec_n
 
 
+def exec_plan(close, stop, target, atr):
+    """次日执行参数（R100z161）—— 把「收盘价 + 止损 + 目标」翻成「明天怎么下单」。
+
+    为什么必须有这一步：清单是收盘后算的，止损/目标全部锚定在**今天收盘价**上。
+    明天若跳空 +6%，那套数字整体失真：止损离得太远（亏得比计划多）、目标一下就到（追在最高点）。
+    原来的执行台只给 close/stop/target，等于让用户在开盘时自己心算——
+    而他算的时候，价格已经在动。专业做法是把它们换算成**相对区间 + 追高上限 + 放弃线**，
+    开盘照着执行即可，不需要临场判断。
+
+    带宽用「止损宽度」做比例基准，不用 ATR 绝对值：
+    宽度 2.5% 的票给 ±1% 的区间，宽度 10% 的票给 ±4%——区间宽窄自动跟着这只票的脾气走。
+
+        abandon  −0.60×宽度  跌破就放弃（比止损更早，别等打到止损才认错）
+        entryLo  −0.35×宽度  回踩买点下限
+        entryHi  +0.15×宽度  现价附近可买上限
+        chase    +0.50×宽度  超过此价不追（追进去风险收益比已经不对）
+
+    返回 None 表示数据不全，调用方不展示这一块（宁可没有，不要编）。
+    """
+    c, s = _f(close), _f(stop)
+    if not c or not s or c <= 0 or s <= 0 or s >= c:
+        return None
+    wid = (c - s) / c
+    atr_v = _f(atr) or 0.0
+
+    abandon = max(round(s, 2), round(c * (1 - 0.60 * wid), 2))
+    lo = round(c * (1 - 0.35 * wid), 2)
+    hi = round(c * (1 + 0.15 * wid), 2)
+    chase = round(c * (1 + 0.50 * wid), 2)
+    tgt = _f(target)
+
+    # 自洽兜底：极端输入下别让四个值挤在一起或倒序（宁可拉开，也不要在页面上给矛盾指令）
+    if lo <= abandon:
+        lo = round(abandon + max(0.01, c * 0.002), 2)
+    if hi <= lo:
+        hi = round(lo + max(0.01, c * 0.004), 2)
+    if chase <= hi:
+        chase = round(hi + max(0.01, c * 0.006), 2)
+    if tgt and chase >= tgt:
+        chase = round(max(hi + 0.01, tgt * 0.98), 2)
+
+    # 一句话场景指令：开盘看到什么价，该做什么。前端直接贴这一行。
+    if tgt and tgt > c:
+        rr = (tgt - c) / (c - s)
+        note = '盈亏比 %.1f:1，目标 %.2f' % (rr, tgt)
+    else:
+        note = ''
+
+    return {
+        'abandon': abandon, 'entryLo': lo, 'entryHi': hi, 'chase': chase,
+        'widPct': round(wid * 100, 2),
+        'atr14': round(atr_v, 2) if atr_v else None,
+        'note': note,
+        # 明天开盘三档走法，各自怎么做。这才是「过时数据」的正解：
+        # 不预测明天开在哪，而是把三种开法都写清楚。
+        'ifGapUp': '开在 %.2f 以上不追，等回踩 %.2f~%.2f 再说' % (chase, lo, hi),
+        'ifInBand': '开在 %.2f~%.2f 之间可按计划建仓' % (lo, hi),
+        'ifGapDown': '开在 %.2f 以下放弃，破位说明昨日的多头结构没成立' % (abandon),
+    }
+
+
+def next_trade_day(d):
+    """下一交易日（用于标注清单有效期）。失败时返回 None，不猜。"""
+    from datetime import date, timedelta
+    try:
+        y, m, dd = [int(x) for x in str(d).split('-')]
+        cur = date(y, m, dd)
+    except Exception:
+        return None
+    for _ in range(15):
+        cur = cur + timedelta(days=1)
+        try:
+            if common.is_trade_day(cur):
+                return cur.isoformat()
+        except Exception:
+            return None
+    return None
+
+
 def build(D):
     K = D.get('stkKlines') or {}
     ctx = market_ctx(K)
@@ -335,6 +414,7 @@ def build(D):
         wid = st.get('stopWidPct')
         close_v = st.get('close') or bars[-1][2]
         ok, veto = judge(det, atr_pct, wid, close_v)
+        plan = exec_plan(close_v, st.get('stop'), st.get('target'), atr)
         raw_picks.append({
             'code': code, 'name': c['name'], 'sector': norm_sector(c['sector']),
             'q': q, 'qBase': round(q - bonus, 1), 'bonus': bonus,
@@ -342,6 +422,9 @@ def build(D):
             'close': close_v,
             'stop': st.get('stop'), 'stopWidPct': wid,
             'target': st.get('target'), 'posPct': st.get('posPct'),
+            # R100z161：次日执行参数。没有它，这张表就只是「今天的收盘排名」，
+            # 明天开盘价格一变全部作废——用户的原话是「对我而言是过时的」。
+            'plan': plan,
             'atrPct': atr_pct, 'atrEnough': enough,
             'resonance': len(c['srcs']), 'srcs': c['srcs'],
             'factors': {k: det.get(k) for k in
@@ -403,10 +486,18 @@ def build(D):
                          '已按比例压缩到 %.1f%%'
                          % (sum_pos, cap_txt or '上限', target, scaled))
 
+    _td = str((D.get('ashare') or {}).get('tradeDate')
+              or (D.get('aiPrediction') or {}).get('date') or '')[:10]
+    _next = next_trade_day(_td)
     return {
         'updatedAt': _now(),
-        'tradeDate': str((D.get('ashare') or {}).get('tradeDate')
-                         or (D.get('aiPrediction') or {}).get('date') or '')[:10],
+        'tradeDate': _td,
+        # 清单是收盘后算的，只对**下一个交易日**有效。过了这天，价位、止损、
+        # 进场区间全部要重算——页头必须写清楚，否则用户周一还在用周五的表。
+        'validUntil': _next,
+        'planNote': '以下价位均以 %s 收盘价为锚点，仅对 %s 开盘有效；'
+                    '每日收盘后重算。开盘跳空超过追高价就不要追，'
+                    '跌破放弃线就承认「昨日那个多头结构没成立」。' % (_td, _next or '下一交易日'),
         'method': '五因子量化分 0-100：动量%d/趋势%d/量能%d/位置%d/波动%d，'
                   '信号共振每多一个来源 +2（封顶 +6）；三项硬性否决：空头排列'
                   '（收盘<MA20<MA60）、ATR%%>%.0f、股价<%.1f 元（面值退市风险）；'
@@ -570,6 +661,35 @@ def self_test():
     # ⑨ 反向：max_pick 上限本身仍生效（别为了修未分类把总量上限也放开）
     d4, _ = select_desk(_qs(), max_pick=3, sector_max_n=2)
     chk('max_pick=3 → 只进 3 只（实测 %d）' % len(d4), len(d4) == 3)
+
+    # ⑩ 次日执行参数（R100z161）：顺序、边界、缺失三条底线
+    p = exec_plan(11.26, 10.13, 14.08, 0.68)
+    chk('执行参数非空', p is not None)
+    if p:
+        chk('四档顺序 abandon<lo<close<hi<chase（实测 %s<%s<%s<%s<%s）'
+            % (p['abandon'], p['entryLo'], 11.26, p['entryHi'], p['chase']),
+            p['abandon'] < p['entryLo'] < 11.26 < p['entryHi'] < p['chase'])
+        chk('放弃线不低于止损（实测 %.2f ≥ 10.13）' % p['abandon'], p['abandon'] >= 10.13)
+        chk('追高上限低于目标（实测 %.2f < 14.08）' % p['chase'], p['chase'] < 14.08)
+        chk('三档场景文案齐全',
+            all(p.get(k) for k in ('ifGapUp', 'ifInBand', 'ifGapDown')))
+        # 宽度 10.04% → 区间应明显张开（lo 低于 close 约 3.5%），不是 ±0.1% 的假区间
+        chk('区间宽度跟随止损宽度（lo 距收盘 %.1f%%）'
+            % ((11.26 - p['entryLo']) / 11.26 * 100),
+            (11.26 - p['entryLo']) / 11.26 * 100 > 2.5)
+
+    # 反向：缺数据必须给 None，不许编一个看起来像样的计划
+    chk('缺 stop → None', exec_plan(11.26, None, 14.08, 0.68) is None)
+    chk('缺 close → None', exec_plan(None, 10.13, 14.08, 0.68) is None)
+    chk('止损在收盘上方（数据错）→ None',
+        exec_plan(11.26, 12.00, 14.08, 0.68) is None)
+
+    # 反向：低波动小票（宽度仅 2.5%）区间也必须可比，不能挤成一条线
+    p2 = exec_plan(10.00, 9.75, 11.50, 0.10)
+    chk('窄止损仍有可操作区间（lo=%.2f hi=%.2f chase=%.2f）'
+        % (p2['entryLo'], p2['entryHi'], p2['chase']),
+        p2['entryHi'] - p2['entryLo'] >= 0.08
+        and p2['abandon'] < p2['entryLo'] < p2['entryHi'] < p2['chase'])
 
     print('[SELF-TEST] ' + ('OK' if ok else 'FAIL'))
     return 0 if ok else 1
