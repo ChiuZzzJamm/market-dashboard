@@ -268,13 +268,29 @@ def track_one(entry, bars, ref_day=None):
     return res
 
 
+def _res(e):
+    """取回算结果：持久化把结果放在 `e['res']`，而自检/内存态可能已摊平在 e 本身。
+
+    ⚠️ R100z181c（2026-10-24）：本函数是修一个**静默假 0** 的产物。原 summarize()
+    直接 `e.get('touched')` / `e['p5Pct']`，但 main() 传进来的是台账原始条目
+    （结果在 e['res'] 里）→ 三个键全取到 None → 汇总恒为
+    「命中 0 条 / 0% / 5 日均值 —」，而同一屏下面的逐日明细是**另一条路径**算的、
+    加起来 306 条。汇总与明细自相矛盾却没人报警：页面把「止损从未被触及」
+    当成了正常态，等于把最需要否证的一条纪律伪装成已验证。
+    """
+    r = e.get('res')
+    return r if isinstance(r, dict) else e
+
+
 def summarize(entries):
-    """按台账entries算统计。entries 为已完成回算的条目列表。"""
-    done = [e for e in entries if not e.get('noKline') and not e.get('pending')]
-    touched = [e for e in done if e.get('touched')]
-    p5 = [e['p5Pct'] for e in done if e.get('p5Pct') is not None]
-    a5 = [e['after5Pct'] for e in touched if e.get('after5Pct') is not None]
-    r5 = [e['rebound5Pct'] for e in touched if e.get('rebound5Pct') is not None]
+    """按台账entries算统计。entries 为已完成回算的条目列表（原始条目，结果在 res 内）。"""
+    pairs = [(e, _res(e)) for e in entries]
+    done = [(e, r) for e, r in pairs if not r.get('noKline') and not r.get('pending')]
+    rs = [r for _, r in done]
+    touched = [r for r in rs if r.get('touched')]
+    p5 = [r['p5Pct'] for r in rs if r.get('p5Pct') is not None]
+    a5 = [r['after5Pct'] for r in touched if r.get('after5Pct') is not None]
+    r5 = [r['rebound5Pct'] for r in touched if r.get('rebound5Pct') is not None]
     return {
         'total': len(done),
         'touched': len(touched),
@@ -291,9 +307,10 @@ def summarize(entries):
 
 
 def _by_src(done):
+    """done 为 [(原始条目, 回算结果)] —— stopSrc 在条目上、p5Pct 在结果里，不能混用。"""
     g = {}
-    for e in done:
-        g.setdefault(e.get('stopSrc') or 'unknown', []).append(e)
+    for e, r in done:
+        g.setdefault(e.get('stopSrc') or 'unknown', []).append(r)
     return {k: {'n': len(v), 'p5': round(sum([x['p5Pct'] for x in v if x.get('p5Pct') is not None]) /
                                          len([x for x in v if x.get('p5Pct') is not None]), 2)
                 if any(x.get('p5Pct') is not None for x in v) else None}
@@ -302,8 +319,8 @@ def _by_src(done):
 
 def _by_src_touch(done):
     g = {}
-    for e in done:
-        g.setdefault(e.get('stopSrc') or 'unknown', []).append(e)
+    for e, r in done:
+        g.setdefault(e.get('stopSrc') or 'unknown', []).append(r)
     out = {}
     for k, v in g.items():
         t = [x for x in v if x.get('touched')]
@@ -542,13 +559,21 @@ def _print(st, ledger):
     if st.get('bySrcTouch'):
         print('  分组（src: 样本/触及/触及率）：')
         for k, v in st['bySrcTouch'].items():
-            print(f"    {k}: {v['n']} / {v['touched']} / "
-                  f"{(v['rate'] * 100 if v['rate'] is not None else '—')}%")
+            rate = '—' if v['rate'] is None else '%.1f' % (v['rate'] * 100)
+            print(f"    {k}: {v['n']} / {v['touched']} / {rate}%")
     for dt in sorted(ledger.keys()):
         n = len(ledger[dt])
         t = len([e for e in ledger[dt] if e.get('res', {}).get('touched')])
         p = len([e for e in ledger[dt] if e.get('res', {}).get('pending')])
         print(f"  [{dt}] 登记 {n} 条，止损失命中 {t} 条，待跟踪 {p} 条")
+    # R100z181c 自证：汇总行必须等于逐日明细之和。两者走不同代码路径，
+    # 2026-10-24 就因为「汇总读扁平键、明细读 res」而出现汇总 0 / 明细 306，
+    # 同屏矛盾却无人报警。这里把矛盾变成**显式 WARN**，别再靠人眼看。
+    day_hit = sum(len([e for e in ledger[dt] if e.get('res', {}).get('touched')])
+                  for dt in ledger)
+    if st.get('touched') != day_hit:
+        print(f"  [WARN] 汇总命中 {st.get('touched')} ≠ 逐日明细合计 {day_hit} —— "
+              f"两侧取数路径不一致，本卡数字不可信，先修代码再拿去决策")
     print(f"  待跟踪 {st.get('pending')} 条 = 入场日之后还没出下一根 K 线，"
           f"下一个交易日跑一次即可判定；K 线缺失 {st.get('noKline')} 条（如实不计入统计）")
 
