@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610232142"></script>
+<script src="data.js?v=202610240102"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -844,6 +844,78 @@
   }
   /* 页内定位锚点：给顶部留出呼吸空间 */
   #gn-ashare, #gn-us { scroll-margin-top: 12px; }
+
+  /* ===== 今日交易执行台（R100z160）——从「今天能不能做、做哪只、买多少、错在哪止损」四问出发排布 ===== */
+  .td-mkt { font-size: 12.5px; color: var(--ink2); background: var(--accent-soft); border-radius: 12px; padding: 8px 12px; margin-bottom: 10px; }
+  .td-mkt b { color: var(--ink); }
+  .td-port { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+  .td-port span { font-size: 12px; background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; color: var(--ink2); }
+  .td-port span b { color: var(--ink); font-weight: 700; }
+  .td-warn { font-size: 12px; color: #a8541a; background: #fff4e8; border: 1px solid #ffe0c2; border-radius: 10px; padding: 7px 11px; margin-bottom: 8px; }
+  .td-item { border: 1px solid var(--line); border-radius: 14px; padding: 9px 11px; margin-bottom: 7px; background: var(--paper); }
+  .td-h { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .td-rank { width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 6px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .td-name { font-size: 14px; font-weight: 700; color: var(--ink); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .td-name:hover { color: var(--accent-deep); }
+  .td-name em { font-style: normal; font-size: 11px; color: var(--ink2); font-weight: 400; margin-left: 4px; }
+  .td-sec { font-size: 11px; color: var(--accent-deep); background: var(--accent-soft); border-radius: 7px; padding: 1px 7px; }
+  .td-q { margin-left: auto; font-size: 15px; font-weight: 800; color: var(--accent-deep); white-space: nowrap; }
+  .td-q i { font-style: normal; font-size: 11px; font-weight: 600; color: var(--ink2); margin-left: 3px; }
+  .td-kv { display: flex; flex-wrap: wrap; gap: 3px 14px; font-size: 12px; color: var(--ink2); margin-top: 5px; }
+  .td-kv b { font-weight: 700; color: var(--ink); }
+  .td-kv b.dn { color: var(--down); }
+  .td-kv b.up { color: var(--up); }
+  .td-kv i { font-style: normal; font-size: 11px; color: var(--ink2); margin-left: 4px; }
+  .td-why { font-size: 11.5px; color: var(--ink2); margin-top: 4px; }
+  .td-fold { margin-top: 9px; }
+  .td-fold > summary { cursor: pointer; font-size: 12.5px; color: var(--accent-deep); padding: 6px 0; -webkit-tap-highlight-color: transparent; }
+  .td-fold > summary::marker { color: var(--accent); }
+  .td-x { font-size: 12px; color: var(--ink2); padding: 5px 0 5px 6px; border-bottom: 1px dashed var(--line); display: flex; gap: 6px 8px; flex-wrap: wrap; align-items: baseline; }
+  .td-x b { color: var(--ink); font-weight: 600; }
+  .td-x em { font-style: normal; color: #a8541a; }
+  .td-x s { text-decoration: none; color: var(--ink2); font-size: 11px; }
+  .td-note { font-size: 11.5px; color: var(--ink2); margin-top: 10px; line-height: 1.65; }
+
+  /* ===== 指标表现（谁准谁不准） ===== */
+  .pf-row { display: grid; grid-template-columns: minmax(0,1.6fr) 74px 64px 64px 60px minmax(0,1.1fr); gap: 6px; align-items: center; padding: 7px 2px; border-bottom: 1px dashed var(--line); font-size: 12.5px; }
+  .pf-row.pf-head { border-bottom: 1px solid var(--line); color: var(--ink2); font-size: 11.5px; }
+  .pf-row .pf-nm { font-weight: 700; color: var(--ink); }
+  .pf-row .pf-nm s { text-decoration: none; font-weight: 400; font-size: 11px; color: var(--ink2); margin-left: 4px; }
+  .pf-row .pf-c { text-align: right; }
+  .pf-row.pf-head .pf-c { text-align: right; }
+  .pf-row .pf-vd { font-size: 11.5px; color: var(--ink2); text-align: right; }
+  .pf-row .pf-vd.bad { color: #a8541a; }
+  .pf-wbar { margin: 10px 0 4px; }
+  .pf-w { display: flex; height: 8px; border-radius: 5px; overflow: hidden; background: var(--line); }
+  .pf-w i { display: block; height: 100%; background: var(--accent); }
+  .pf-w i:nth-child(2) { background: var(--accent-deep); opacity: .8; }
+  .pf-w i:nth-child(3) { background: var(--accent-deep); opacity: .55; }
+  .pf-w i:nth-child(4) { background: var(--accent-deep); opacity: .35; }
+  .pf-wl { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--ink2); margin-top: 5px; }
+  .pf-wl b { color: var(--ink); }
+  /* 换止损口径前后对比：同一批入场点、同一持有窗口，只有止损规则不同 */
+  .pf-cmp { margin: 12px 0 4px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px 6px; }
+  .pf-cmp-h { font-size: 11.5px; color: var(--ink2); margin-bottom: 2px; }
+  .pf-cmp-r { display: grid; grid-template-columns: minmax(0,1.6fr) 88px 76px 88px; gap: 6px; align-items: center; padding: 5px 0; font-size: 12.5px; border-bottom: 1px dashed var(--line); }
+  .pf-cmp-r.pf-last { border-bottom: 0; }
+  .pf-cmp-r .pf-nm { font-weight: 700; color: var(--ink); }
+  .pf-cmp-r .pf-c { text-align: right; }
+  .pf-cmp-r.pf-new .pf-nm { color: var(--accent-deep); }
+  .pf-cmp-r.pf-cmp-cols { font-size: 11px; color: var(--ink2); border-bottom: 1px solid var(--line); padding-bottom: 3px; }
+  .pf-sub { font-size: 11.5px; color: var(--ink2); margin-top: 12px; padding-top: 8px; border-top: 1px dashed var(--line); }
+  .pf-tip { font-size: 11.5px; color: var(--ink2); margin: 7px 0 0; padding: 6px 10px; background: #f6fafd; border-left: 2px solid var(--accent); border-radius: 0 8px 8px 0; }
+  @media (max-width: 720px) {
+    /* 窄屏 h2：标题、日期、角标三者挤成三行会撑高第一屏。角标在窄屏信息价值最低，直接收起；
+       日期不折行（"2026-" / "10-23" 断在中间最难读）。 */
+    .td-h2 { font-size: 15.5px; gap: 6px; flex-wrap: nowrap; }
+    .td-h2 .td-tag { display: none; }
+    .td-h2 .h2-date { white-space: nowrap; margin-left: 4px; }
+    .td-port { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .td-port-wide { grid-column: 1 / -1; }
+    .pf-row { grid-template-columns: minmax(0,1.4fr) 60px minmax(0,.9fr); }
+    .pf-row .pf-hide { display: none; }
+    .pf-cmp-r { grid-template-columns: minmax(0,1.15fr) 60px 54px 64px; font-size: 12px; }
+  }
 </style>
 </head>
 <body>
@@ -1485,6 +1557,10 @@ function render(market) {
 
   html += '<div class="card"><h2>大盘指数' + h2Date(d) + '</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + renderStructure(d.structure, d.tradeDate) + '</div>';
 
+  // R100z160：指数之后立刻给「今天做什么」。顺序是刻意的——先看环境（指数/宽度/结构），
+  // 再看动作（做哪几只、买多少、错在哪走）。交易员不需要先翻完十个池子再自己拼结论。
+  if (isA) html += renderTradeDesk();
+
   // R100z82：预测验证块按用户要求移回 AI 预测卡（renderAiPrediction 内渲染）；
   // 大盘趋势研判卡恢复为纯研判内容（2026-10-08 用户反馈：验证块应放在 AI 预测下面）
   html += '<div class="card"><h2>大盘趋势研判' + h2Date(d) + '</h2><div class="outlook">' + formatOutlook(d.outlook) + '</div></div>';
@@ -1524,6 +1600,9 @@ function render(market) {
     html += '<div class="card"><h2>主力资金流向' + (d.tradeDate ? '<span class="h2-date">' + esc(d.tradeDate) + '</span>' : '') + '</h2>';
     if (d.fundNote) html += '<div class="note-line">' + esc(d.fundNote) + '</div>';
     html += '<div id="chart-fund" class="chart-tall"></div></div>';
+
+    // R100z160：当日复盘收尾——四指标谁准谁不准。放最后，因为它是「回头看」而不是「向前做」
+    html += renderSignalPerf();
   }
 
   // R100i：谐波形态 / 量化九门（日线九门）已移至「🧰 工具箱」断板反包页内的独立子页，
@@ -1838,13 +1917,77 @@ function loadPoolExit(cb) {
   } catch (e) { POOL_EXIT = false; cb && cb(); }
 }
 
+/* R100z160（2026-10-24）：ATR 自适应止损 —— 全站唯一权威止损源。
+   数据来自 16:00 的 atr_stop.py（data.js 顶层 atrStops：逐票 ATR(14) + 20 日结构低点 + k 系数），
+   前端**不重算任何公式**，只读 stop/target/posPct，避免页面里同时存在两套止损宽度。
+   与旧口径的差别：旧口径一律「最近收盘 −2.5%」，不看这只票的波动率——日振幅 3% 的票
+   和 8% 的票用同一个百分比，高波动的天天被打掉、低波动的止损又过宽。
+   实测（9,060 个同条件入场点）：固定 −3% 触及率 68.7%、胜率 27.9%；
+   ATR 收盘确认触及率 28.3%、胜率 46.9%。 */
+function atrExitOf(code0) {
+  var A = (window.DASHBOARD_DATA || {}).atrStops;
+  var it = (A && A.items) ? A.items[String(code0)] : null;
+  if (!it) return null;
+  var stop = Number(it.stop), close = Number(it.close), atr = Number(it.atr14);
+  if (!isFinite(stop) || !isFinite(close) || stop <= 0 || close <= 0) return null;
+  var tgt = Number(it.target), pos = Number(it.posPct);
+  return {
+    stop: stop,
+    target: isFinite(tgt) ? tgt : null,
+    posPct: isFinite(pos) ? pos : null,
+    stopWidPct: isFinite(Number(it.stopWidPct)) ? Number(it.stopWidPct) : null,
+    atr: isFinite(atr) ? atr : 0,
+    close: close,
+    falsify: '收盘跌破 ' + stop.toFixed(2) + ' 元（' + (it.trend || '') + ' 趋势 ' +
+             (it.k || '') + '×ATR 止损位）——按纪律离场，不摊不扛',
+    stopBasis: 'ATR 自适应：' + String(it.basis || ''),
+    src: 'atr'
+  };
+}
+
+/* R100z160：形态位（断板日最低价 / 谐波 D 点）与 ATR 位的仲裁。
+   形态位有交易含义（形态失败点），但不能无条件优先：
+     ① 形态位比 ATR 位更低 = 要扛的亏损更大，而它并没有更可靠 → 用 ATR 位；
+     ② 形态位距收盘不足 0.8×ATR = 会被日常波动打掉，止损形同虚设 → 用 ATR 位。
+   两条都不满足时才采纳形态位（此时它更靠上、有缓冲，是更好的止损）。
+   返回 null 表示「没有 ATR 数据，调用方按原形态口径」。 */
+function atrVsForm(ax, formStop, formTarget, formBasis, falsify) {
+  if (!ax) return null;
+  var fs = Number(formStop);
+  if (!isFinite(fs) || fs <= 0) return null;
+  var c = ax.close, atr = ax.atr, gap = c - fs;
+  if (fs > ax.stop && atr > 0 && gap >= 0.8 * atr) {
+    return { stop: fs, target: formTarget || ax.target, posPct: ax.posPct,
+             stopWidPct: (c > 0) ? Math.round((c - fs) / c * 10000) / 100 : null,
+             falsify: falsify,
+             stopBasis: formBasis + '（形态位，比 ATR 位 ' + ax.stop.toFixed(2) +
+                        ' 更靠上且留足 0.8×ATR 缓冲）',
+             src: 'form' };
+  }
+  var why;
+  if (fs <= ax.stop) {
+    why = '形态位 ' + fs.toFixed(2) + ' 比 ATR 位 ' + ax.stop.toFixed(2) + ' 更低、要扛更多亏损';
+  } else if (gap < 0) {
+    // 形态位在收盘之上 = 价格已经跌破形态位，这个形态早已失效，拿它当止损毫无意义
+    why = '形态位 ' + fs.toFixed(2) + ' 已高于收盘 ' + c.toFixed(2) + '（形态早已跌破、失效）';
+  } else {
+    why = '形态位距收盘仅 ' + gap.toFixed(2) + ' 元（< 0.8×ATR = ' + (0.8 * atr).toFixed(2) +
+          ' 元），会被日常波动打掉';
+  }
+  return { stop: ax.stop, target: ax.target, posPct: ax.posPct, stopWidPct: ax.stopWidPct,
+           falsify: ax.falsify,
+           stopBasis: ax.stopBasis + '；' + why + '，故采用 ATR 位', src: 'atr' };
+}
+
 /* R100z18：退出纪律统一取数（按码查，供 AI 预测行 / 个股弹窗 / 断板弹窗共用）。
-   优先级：机械选股池 exit（异步兜底）> AI 预测内嵌 st.exit（17:00 叙事步写回）> 谐波形态几何。
+   优先级：形态位与 ATR 位仲裁 > ATR 自适应 > 机械选股池 exit（异步兜底）> AI 预测内嵌
+   st.exit（17:00 叙事步写回）> 谐波形态几何 > 统一 −2.5% 兜底。
    谐波是**技术指标自带**的止损/目标（stop=形态失效位、target1=一级目标），
    使弹窗对谐波池标的无需任何写回也有退出纪律；实在取不到就整行不渲染，绝不编一个止损位糊上去。 */
 function exitForCode(code0, st, allowFb) {
   code0 = String(code0 || '').replace(/\D/g, '');
   if (!code0) return null;
+  var ax = atrExitOf(code0);   // ATR 自适应止损（权威源，覆盖 151 只主池标的）
   // ⓪ R100z27 断板池条目内嵌 K 线 —— **优先级高于机械池**。
   //   理由：断板反包自己的证伪条件就是「放量跌破断板日最低价」，止损位本就该取这个形态位，
   //   而不是机械池/兜底的「最近收盘 −2.5%」统一纪律口径（后者 basis 自述「非形态位」）。
@@ -1871,15 +2014,32 @@ function exitForCode(code0, st, allowFb) {
           }
         }
         if (stop0 === null || !isFinite(stop0) || stop0 <= 0) {
+          // 断板日形态位没取到时，ATR 位比「−2.5%」靠谱得多：后者与这只票的波动率无关。
+          if (ax) return ax;
           stop0 = lastC0 * 0.975;
           basis0 = '最近收盘 ' + lastC0.toFixed(2) + ' 的 −2.5%（全站统一止损纪律位，非形态位）';
         }
-        return { stop: stop0, target: Math.round(lastC0 * 1.06 * 100) / 100,
-                 falsify: '放量跌破断板日最低价，或反包日冲高回落收阴——断板反包形态失败，无条件离场',
+        var dbTarget = Math.round(lastC0 * 1.06 * 100) / 100;
+        var dbFalsify = '放量跌破断板日最低价，或反包日冲高回落收阴——断板反包形态失败，无条件离场';
+        return atrVsForm(ax, stop0, dbTarget, basis0, dbFalsify) ||
+               { stop: stop0, target: dbTarget, falsify: dbFalsify,
                  stopBasis: basis0, src: 'duanban', fb: true };
       }
     }
   }
+  // ③ 谐波形态（含失效池回退的「失效前」几何）：技术指标天然带止损/目标，是形态位
+  var hz = (typeof findHarmonic === 'function' ? findHarmonic(code0) : null) ||
+           (typeof hzFailOf === 'function' ? hzFailOf(code0) : null);
+  if (hz && hz.stop !== null && hz.stop !== undefined) {
+    var hzBasis = '谐波 D 点结构失效位（前复权）';
+    var hzFalsify = '跌破 ' + hz.stop + ' 元（D 点结构失效位）——谐波形态作废，无条件离场';
+    return atrVsForm(ax, hz.stop, hz.target1, hzBasis, hzFalsify) ||
+           { stop: hz.stop, target: hz.target1, falsify: hzFalsify,
+             stopBasis: hzBasis, src: 'harmonic' };
+  }
+  // ③.5 ATR 自适应：形态位都拿不到时，ATR 位优先于机械池/AI 内嵌的固定百分比口径
+  //     （后者一律 −3%~−2.5%，与这只票的波动率无关）。
+  if (ax) return ax;
   // ① 机械选股池（stock_pool.json 异步到货）
   if (POOL_EXIT && typeof POOL_EXIT === 'object') {
     var ex0 = POOL_EXIT[code0];
@@ -1895,14 +2055,9 @@ function exitForCode(code0, st, allowFb) {
           arr[j].exit && typeof arr[j].exit === 'object') return arr[j].exit;
     }
   }
-  // ③ 谐波形态（含失效池回退的「失效前」几何）：技术指标天然带止损/目标
-  var hz = (typeof findHarmonic === 'function' ? findHarmonic(code0) : null) ||
-           (typeof hzFailOf === 'function' ? hzFailOf(code0) : null);
-  if (hz && hz.stop !== null && hz.stop !== undefined) {
-    return { stop: hz.stop, target: hz.target1,
-             falsify: '跌破 ' + hz.stop + ' 元（D 点结构失效位）——谐波形态作废，无条件离场',
-             stopBasis: '谐波 D 点结构失效位（前复权）', src: 'harmonic' };
-  }
+  // ③ 谐波形态（含失效池回退的「失效前」几何）：技术指标天然带止损/目标。
+  //    R100z160：整块**上移**到机械池之前——谐波 D 点是形态失效位，比机械口径的 −3%
+  //    有交易含义，没道理排在它后面。同时与 ATR 位做仲裁（见 atrVsForm）。
   // ③④ 之间原是「断板条目兜底」，R100z27 已提到函数最前面（⓪ 分支，需优先于机械池），
   //    此处不再重复——断板票在 ⓪ 就已早退，走不到这里。
   // ④ R100z19 统一口径兜底（非断板标的：AI内嵌/九门/谐波以外仍无止损位的）：机械池/AI内嵌/谐波三级都拿不到时，用顶层内嵌 K 线最近收盘
@@ -1979,8 +2134,11 @@ function exitMetaLine(code) {
     return ex.falsify ? '<div class="exit-row exit-line"><span class="xs">✖</span> ' + esc(ex.falsify) + '</div>' : '';
   }
   var _tgt = Number(ex.target), _okTgt = (ex.target !== null && ex.target !== undefined && isFinite(_tgt));
+  // R100z160：ATR 口径还会给「这笔该买多少」——风险预算法反算的仓位（单笔亏 0.5%）
+  var _pos = Number(ex.posPct), _okPos = (ex.posPct !== null && ex.posPct !== undefined && isFinite(_pos));
   return '<div class="exit-row exit-line"><b>退出纪律</b> 止损 ' + _stop.toFixed(2) +
     (_okTgt ? ' · 目标 ' + '<span class="xt">' + _tgt.toFixed(2) + '</span>' : '') +
+    (_okPos ? ' · 仓位 ' + _pos.toFixed(1) + '%' : '') +
     ' <span class="xs">✖</span> ' + esc(ex.falsify) +
     (ex.stopBasis ? '<span class="xb">（' + esc(ex.stopBasis) + '）</span>' : '') + '</div>';
 }
@@ -2461,6 +2619,246 @@ function renderStopTrack() {
     cell(cls(st.avgRebound5Pct), '触后反弹均值 ' + pct(st.avgRebound5Pct)).replace('<span ', '<span title="仅统计触过止损的标的：触损后 5 日内相对最低点的平均反弹幅度。反弹越大 = 越容易割在半山腰，可结合止损位松紧来判断该收紧还是放宽。" ') +
     cell(cls(st.hitThenUpRate), '触后上涨率 ' + rate(st.hitThenUpRate)).replace('<span ', '<span title="触过止损的标的中、5 日后相对入场价收涨的比例。偏高 = 止损可能设得太近、容易被洗出去；偏低 = 触损的标的大概率继续走弱，止损位合理。" ') +
     '</div>';
+}
+
+/* R100z160（2026-10-24）：今日交易执行台 —— 从「今天做什么」倒推的信息组织。
+   数据来自 16:00 的 signal_rank.py（data.js 顶层 tradeDesk）。它自己不算止损、不算
+   波动率，全部消费 atrStops（atr_stop.py）的结果，保证全站止损口径唯一。
+   为什么补这张卡：旧页面把「池子里有哪些票」摆得很全，但交易员每天真正要的是
+   三件事——今天做哪几只、每只买多少、错在哪走。此前这三件事散在各池卡片里，得自己拼。 */
+function renderTradeDesk() {
+  var D = window.DASHBOARD_DATA || {};
+  var T = D.tradeDesk;
+  if (!T || !T.picks || !T.picks.length) return '';
+
+  var num = function (v) { var n = Number(v); return (v === null || v === undefined || v === '' || !isFinite(n)) ? null : n; };
+  var f2 = function (v) { var n = num(v); return n === null ? '—' : n.toFixed(2); };
+  var pct1 = function (v) { var n = num(v); return n === null ? '—' : (n > 0 ? '+' : '') + n.toFixed(1) + '%'; };
+  var mm = T.market || {}, tt = T.tiers || {}, pf = T.portfolio || {};
+
+  // 市场温度用**全市场 20 日涨幅中位数**，不用指数：指数被银行石油绑架，
+  // 涨指数跌个股是 A 股常态，用指数判断「今天该不该做」会说谎。
+  var med = num(mm.momMedian), mood = '中性，按计划执行';
+  if (med !== null) {
+    if (med <= -3) mood = '普跌，只做最强、不铺仓位';
+    else if (med < -0.5) mood = '偏弱，控制节奏、不追高';
+    else if (med > 3) mood = '普涨，注意追高风险';
+    else if (med > 0.5) mood = '偏强，可按计划做';
+  }
+
+  var h = '<div class="card"><h2 class="td-h2">今日交易执行台' +
+    (T.tradeDate ? ' <span class="h2-date">' + esc(T.tradeDate) + '</span>' : '') +
+    '<span class="src-tag td-tag">量化排名 · 上限 ' + (tt.desk || T.picks.length) + ' 只</span></h2>';
+
+  h += '<div class="td-mkt">全市场 <b>' + (mm.n || '—') + '</b> 只 20 日涨幅中位数 <b>' +
+    pct1(mm.momMedian) + '</b> → <b>' + mood + '</b>　·　通过硬性否决 <b>' +
+    (tt.qualified || 0) + '</b> 只（强 ' + (tt.strong || 0) + ' / 中 ' + (tt.mid || 0) +
+    '），被否决 <b>' + (tt.vetoed || 0) + '</b> 只，只取前 ' + T.picks.length + ' 名进清单</div>';
+
+  // 组合层：单票仓位加起来是多少、有没有被压缩、板块分布
+  var posTxt = num(pf.cappedPosPct) !== null
+    ? '<b>' + pf.cappedPosPct.toFixed(1) + '%</b>（已从 ' + (num(pf.sumPosPct) || 0).toFixed(1) + '% 压缩）'
+    : '<b>' + (num(pf.sumPosPct) === null ? '—' : pf.sumPosPct.toFixed(1) + '%') + '</b>';
+  var secTop = [];
+  var bs = pf.bySector || {};
+  Object.keys(bs).sort(function (a, b) { return (bs[b].pos || 0) - (bs[a].pos || 0); })
+    .slice(0, 3).forEach(function (k) { secTop.push(k + ' ' + (bs[k].pos || 0).toFixed(1) + '%'); });
+  h += '<div class="td-port">' +
+    '<span>执行清单 <b>' + T.picks.length + '</b> 只</span>' +
+    '<span>建议总仓位 ' + posTxt + '</span>' +
+    '<span>组合目标 <b>' + esc(pf.targetBand || '未设') + '</b></span>' +
+    (secTop.length ? '<span class="td-port-wide">板块集中度 ' + esc(secTop.join(' · ')) + '</span>' : '') +
+    '</div>';
+  // 板块缺失的票不占同板块配额（占位符不是板块），但必须说出来：
+  // 否则读者会以为这 8 只已经做完整板块分散，实际有 N 只没被这条规则覆盖。
+  if (num(pf.sectorUnknownN) > 0) {
+    h += '<div class="td-warn">⚠️ 其中 ' + pf.sectorUnknownN +
+      ' 只板块映射缺失，未参与「单板块 ≤2」的限制——这几只之间没有同涨同跌关系，' +
+      '所以不占配额；但也意味着它们的行业敞口没法在这里核对。</div>';
+  }
+  (pf.warn || []).forEach(function (w) { h += '<div class="td-warn">⚠️ ' + esc(w) + '</div>'; });
+
+  // 逐票：一行标题 + 一行价位 + 一行依据。不用 table——移动端表格必溢出。
+  T.picks.forEach(function (p) {
+    var close = num(p.close), stop = num(p.stop), tgt = num(p.target);
+    var rr = (close && stop && tgt && close > stop) ? (tgt - close) / (close - stop) : null;
+    var posRaw = num(p.posPctRaw);
+    var srcs = (p.srcs || []).map(function (s) {
+      return ({ ai: 'AI 预测', powerScreen: '九门强势', accumulation: '吸筹打分',
+                harmonic: '谐波形态', duanban: '断板反包' })[s] || s;
+    });
+    h += '<div class="td-item">' +
+      '<div class="td-h">' +
+        '<span class="td-rank">' + (p.rank || '·') + '</span>' +
+        '<span class="td-name" onclick="openStkModal(\'' + escAttr(p.code) + '\',\'' +
+            escAttr(p.name) + '\',\'\')">' + esc(p.name) + '<em>' + esc(p.code) + '</em></span>' +
+        '<span class="td-sec">' + esc(p.sector || '未分类') + '</span>' +
+        '<span class="td-q" title="五因子量化分（动量25/趋势20/量能20/位置20/波动15）' +
+            (p.bonus ? ' + 共振加分 ' + p.bonus : '') + '">' +
+            (num(p.q) === null ? '—' : p.q) + '<i>' + esc(p.strength || '') + '</i></span>' +
+      '</div>' +
+      '<div class="td-kv">' +
+        '<span>收盘 <b>' + f2(close) + '</b></span>' +
+        '<span title="ATR(14) 自适应止损，含 20 日结构位与 2.5%~10% 宽度钳制">止损 <b class="dn">' +
+          f2(stop) + '</b><i>' + (num(p.stopWidPct) === null ? '' : '−' + p.stopWidPct.toFixed(1) + '%') + '</i></span>' +
+        '<span title="R 倍数目标 = 收盘 + 2.5×(收盘−止损)">目标 <b class="up">' + f2(tgt) + '</b><i>' +
+          (rr === null ? '' : rr.toFixed(1) + 'R') + '</i></span>' +
+        '<span title="风险预算法：单笔风险 0.5% ÷ 止损宽度，上限 20%">仓位 <b>' +
+          (num(p.posPct) === null ? '—' : p.posPct.toFixed(1) + '%') + '</b>' +
+          (posRaw !== null ? '<i>（原 ' + posRaw.toFixed(1) + '%）</i>' : '') + '</span>' +
+        '<span title="' + escAttr(srcs.join(' / ')) + '">共振 <b>' + (p.resonance || 1) + '</b></span>' +
+      '</div>' +
+      (p.why ? '<div class="td-why">' + esc(p.why) + '</div>' : '') +
+      '</div>';
+  });
+
+  // 另外两个清单同样重要：为什么不做（否决）、差一点做什么（备选）。
+  // 只给「能做的」会让人以为池子里每只都能买。
+  var watch = T.watch || [], cand = T.candidates || [];
+  if (watch.length) {
+    h += '<details class="td-fold"><summary>今日不做 ' + watch.length + ' 只（附否决理由）</summary>';
+    watch.forEach(function (p) {
+      h += '<div class="td-x"><b>' + esc(p.name) + '</b><s>' + esc(p.code) + '</s>' +
+        '<s>分 ' + (num(p.q) === null ? '—' : p.q) + '</s>' +
+        '<em>' + esc(p.veto || '—') + '</em></div>';
+    });
+    h += '</details>';
+  }
+  if (cand.length) {
+    h += '<details class="td-fold"><summary>备选 ' + cand.length + ' 只（通过否决但排名靠后）</summary>';
+    cand.forEach(function (p) {
+      h += '<div class="td-x"><b>' + esc(p.name) + '</b><s>' + esc(p.code) + '</s>' +
+        '<s>' + esc(p.sector || '') + '</s>' +
+        '<s>分 ' + (num(p.q) === null ? '—' : p.q) + '</s>' +
+        '<em>' + esc(p.cappedBySector ? '同板块已满额，等换手' : '排名靠后，等回调或缩量') + '</em></div>';
+    });
+    h += '</details>';
+  }
+
+  // 止损换口径的效果：这里只给一组前后对比，明细（三口径、收益、样本）交给「指标表现」卡。
+  // 同一句长证据在两张卡上各贴一遍，读者会跳读，反而漏掉重点。
+  var ER = ((D.atrStops || {}).evidenceRows) || [];
+  var rt1 = function (v) { var n = num(v); return n === null ? '—' : (n * 100).toFixed(1) + '%'; };
+  var ev = ER.length >= 2
+    ? '固定 −3% 触及率 ' + rt1(ER[0].touchRate) + ' → ATR 收盘确认 ' + rt1(ER[ER.length - 1].touchRate) +
+      '、胜率 ' + rt1(ER[0].winRate) + ' → ' + rt1(ER[ER.length - 1].winRate) +
+      '（同一批 ' + (ER[0].n || 0).toLocaleString('en-US') + ' 个入场点，明细见「指标表现」卡）'
+    : '';
+  h += '<div class="td-note">' + esc(T.method || '') +
+    '<br>止损口径：ATR(14) 自适应 + 20 日结构低点，宽度钳制 2.5%~10%、收盘确认；' +
+    '宽度越宽仓位越小，单笔最大亏损恒为权益 0.5%。' +
+    (ev ? '<br>换口径实测：' + esc(ev) + '。' : '') +
+    '<br>清单只代表「按规则今天最优的几只」，不代表一定涨；被否决的票不等于会跌，只说明它不符合这套做多前提。</div>';
+  return h + '</div>';
+}
+
+/* R100z160：指标表现 —— 四个选股指标谁准谁不准。
+   数据来自 signal_attribution.py（顶层 signalPerf）。样本不足时**不给结论**，
+   并显式标出数据来源是历史台账（stop_ledger）还是新台账，避免把冷启动数据当成实时绩效。 */
+function renderSignalPerf() {
+  var D = window.DASHBOARD_DATA || {};
+  var P = D.signalPerf;
+  if (!P || !P.ranking || !P.ranking.length) return '';
+
+  var num = function (v) { var n = Number(v); return (v === null || v === undefined || v === '' || !isFinite(n)) ? null : n; };
+  var pc = function (v) { var n = num(v); return n === null ? '—' : (n > 0 ? '+' : '') + n.toFixed(2) + '%'; };
+  var rt = function (v) { var n = num(v); return n === null ? '—' : (n * 100).toFixed(1) + '%'; };
+  var sgn = function (v) { var n = num(v); return n === null ? 'flat' : (n > 0 ? 'up' : (n < 0 ? 'down' : 'flat')); };
+
+  var h = '<div class="card"><h2 class="td-h2">指标表现 · 谁准谁不准' +
+    (P.asOf ? ' <span class="h2-date">' + esc(P.asOf) + '</span>' : '') +
+    '<span class="src-tag td-tag">按来源归因</span></h2>';
+
+  h += '<div class="pf-row pf-head">' +
+    '<div>指标</div>' +
+    '<div class="pf-c pf-hide">样本</div>' +
+    '<div class="pf-c pf-hide">5日收益</div>' +
+    '<div class="pf-c">5日超额</div>' +
+    '<div class="pf-c pf-hide">止损触及</div>' +
+    '<div class="pf-vd">判定</div></div>';
+
+  P.ranking.forEach(function (r) {
+    var bad = /无效/.test(r.verdict || '');
+    h += '<div class="pf-row">' +
+      '<div class="pf-nm">' + esc(r.label) + (r.legacy ? '<s>历史台账</s>' : '') + '</div>' +
+      '<div class="pf-c pf-hide">' + (r.n || 0) + '条/' + (r.days || 0) + '日</div>' +
+      '<div class="pf-c pf-hide ' + sgn(r.ret5) + '">' + pc(r.ret5) + '</div>' +
+      '<div class="pf-c ' + sgn(r.exc5) + '">' + pc(r.exc5) + '</div>' +
+      '<div class="pf-c pf-hide">' + rt(r.touchRate) + '</div>' +
+      '<div class="pf-vd' + (bad ? ' bad' : '') + '">' + esc(r.verdict || '—') + '</div></div>';
+  });
+
+  // 普跌环境里「收益负、超额正」是有效而不是无效——不解释清楚，读者会把它当成失败。
+  var mixed = P.ranking.filter(function (r) {
+    var a = num(r.ret5), b = num(r.exc5);
+    return a !== null && b !== null && a < 0 && b > 0;
+  });
+  if (mixed.length) {
+    h += '<div class="pf-tip">注：' + mixed.length + ' 个指标的 5 日收益为负、超额为正——' +
+      '它们选的票这 5 天里也跌了，但跌得比全市场少。普跌环境里这算有效，不是无效；' +
+      '判定看的是超额（扣掉基准后还剩多少），不是绝对涨跌。</div>';
+  }
+
+  // 建议权重：超额为正才给权重，跑输基准的归零——不做「平均主义」配置
+  var ws = P.weights || {}, keys = Object.keys(ws);
+  if (keys.length) {
+    var bar = '', lbl = '';
+    keys.sort(function (a, b) { return ws[b] - ws[a]; });
+    keys.forEach(function (k) {
+      var lab = (P.bySrc && P.bySrc[k] && P.bySrc[k].label) || k;
+      bar += '<i style="width:' + (ws[k] * 100).toFixed(1) + '%"></i>';
+      lbl += '<span>' + esc(lab) + ' <b>' + (ws[k] * 100).toFixed(0) + '%</b></span>';
+    });
+    h += '<div class="pf-wbar"><div class="pf-w">' + bar + '</div><div class="pf-wl">' + lbl + '</div></div>';
+    if (P.weightNote) h += '<div class="pf-sub">权重依据：' + esc(P.weightNote) + '</div>';
+  }
+
+  // 换止损口径前后：同一批入场点、同一持有窗口，只有止损规则不同。
+  // 这是「止损位跟着波动率走到底有没有用」的唯一硬证据——数字由 atr_stop.py 实时回测产出，
+  // 不在前端算，也不写死（写死过一次：K 线一长就和实际脱节）。
+  var ER = ((D.atrStops || {}).evidenceRows) || [];
+  if (ER.length >= 2) {
+    var f0 = ER[0], ac = ER[ER.length - 1];
+    h += '<div class="pf-cmp"><div class="pf-cmp-h">换止损口径前后 · 同一批 ' +
+      (f0.n || 0).toLocaleString('en-US') + ' 个入场点、同样持有 10 个交易日，只有止损规则不同</div>' +
+      '<div class="pf-cmp-r pf-cmp-cols"><div></div>' +
+      '<div class="pf-c">触及</div><div class="pf-c">胜率</div><div class="pf-c">收益</div></div>';
+    ER.forEach(function (e, i) {
+      var cls = i === ER.length - 1 ? ' pf-new pf-last' : '';
+      h += '<div class="pf-cmp-r' + cls + '">' +
+        '<div class="pf-nm">' + esc(e.label) + '</div>' +
+        '<div class="pf-c">' + rt(e.touchRate) + '</div>' +
+        '<div class="pf-c">' + rt(e.winRate) + '</div>' +
+        '<div class="pf-c ' + sgn(e.retPct) + '">' + pc(e.retPct) + '</div></div>';
+    });
+    var dTouch = (f0.touchRate - ac.touchRate) * 100;
+    var dWin = (ac.winRate - f0.winRate) * 100;
+    h += '<div class="pf-sub">被止损打出场的比例 ' + rt(f0.touchRate) + ' → ' + rt(ac.touchRate) +
+      '（' + (dTouch >= 0 ? '降 ' : '升 ') + Math.abs(dTouch).toFixed(1) + ' 个百分点），' +
+      '胜率 ' + rt(f0.winRate) + ' → ' + rt(ac.winRate) +
+      '（' + (dWin >= 0 ? '升 ' : '降 ') + Math.abs(dWin).toFixed(1) + ' 个百分点）。' +
+      '差别全部来自「止损位按 ATR 与结构位定、且等收盘确认」：固定的 −3% 会把正常的日内波动当成破位，' +
+      '高波动的票几乎必然被打掉，低波动的票止损又形同虚设。</div></div>';
+  }
+
+  var se = P.stopEvidence;
+  if (se && se.rows && se.rows.length) {
+    var worst = se.rows.slice().sort(function (a, b) {
+      return (num(b.touchRate) || 0) - (num(a.touchRate) || 0);
+    })[0];
+    h += '<div class="pf-sub">止损口径实测（旧固定百分比口径的历史台账，' + (se.total || 0) + ' 条已完成跟踪、触及 ' +
+      (se.touched || 0) + ' 条）：' +
+      se.rows.map(function (x) {
+        return esc(x.label) + ' ' + (x.n || 0) + ' 条 / 触及 ' + rt(x.touchRate) +
+               ' / 入场后 5 日 ' + pc(x.p5);
+      }).join('　·　') + '。这是换口径<b>之前</b>入库的记录，正好交代旧口径有多糟' +
+      (worst ? '（最差的一档是' + esc(worst.label) + '，触及率 ' + rt(worst.touchRate) + '）' : '') +
+      '；自 R100z160 起页面弹窗与台账都已改用 ATR 止损，新口径的实测见上方对比表。' +
+      '此表量的是「止损位会不会被触及」，与上面的「指标选股赚不赚」也是两个口径。</div>';
+  }
+
+  if (P.dataSourceNote) h += '<div class="pf-sub">数据来源：' + esc(P.dataSourceNote) + '</div>';
+  return h + '</div>';
 }
 
 /* R100z13：把黑名单里的命中标的再点一遍（供 8 只池以外的胶囊兜底，不可用时静默） */
