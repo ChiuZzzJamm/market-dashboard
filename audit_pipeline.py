@@ -590,6 +590,39 @@ def g7_validate_scopes(r):
 
 
 # ---------------------------------------------------------------- G8/G9/G10 数据
+def us_last_closed(now=None):
+    """最近一个**已收盘**的美股交易日（美东口径，R100z181）。
+
+    为什么不能直接用 `prior_us_trading_day(北京今天)`：北京时间 00:00–05:00 这一段，
+    美东还停在前一天的盘中（北京 10-24 00:50 = 美东 10-23 12:50，周五未收盘），
+    当天收盘尚未发生，但北京日期已经翻页 → 期望值多算一天 → **每天凌晨必报一条假 WARN**
+    （「us.tradeDate 早于最近已收盘美股交易日」）。假 WARN 与假 FAIL 同罪（24.16d）：
+    它会训练人忽略 G10。
+
+    口径：换算到美东，16:00 收盘之后当天才算「已收盘」；否则取严格前一个交易日。
+    无 tzdata 时按 EDT（UTC-4）兜底；naive 输入一律按 Asia/Shanghai 解释（本项目只在京时区跑）。
+    """
+    import common as _c
+    if now is None:
+        now = datetime.now()
+    if now.tzinfo is None:
+        try:
+            from zoneinfo import ZoneInfo
+            now = now.replace(tzinfo=ZoneInfo("Asia/Shanghai"))
+        except Exception:                                    # noqa: BLE001
+            pass
+    try:
+        from zoneinfo import ZoneInfo
+        et = now.astimezone(ZoneInfo("America/New_York"))
+    except Exception:                                        # noqa: BLE001
+        from datetime import timedelta
+        et = now - timedelta(hours=12)
+    d = et.date()
+    if et.hour >= 16 and _c.is_us_trading_day(d):
+        return d
+    return _c.prior_us_trading_day(d)
+
+
 def g8_g9_g10_data(r):
     try:
         D = load_data_json()
@@ -703,16 +736,17 @@ def g8_g9_g10_data(r):
     else:
         r.ok("G10", f"各模块日期均 ≥ 最近交易日 {last}")
 
-    # 美股单独口径（R100z167）：美东收盘落在北京时间次日凌晨，美股交易日历又与 A 股不同。
+    # 美股单独口径（R100z167 / R100z181 修）：美东收盘落在北京时间次日凌晨，美股交易日历又与 A 股不同。
     # 旧写法把 us.tradeDate 塞进上面那张表与 A 股最近交易日比 —— 结果**每天晚上必然命中**
     # 「us.tradeDate 早于最近交易日」（北京 21:00 时美东 10-21 还没收盘，最新只能是 10-20），
-    # 一条永远为真的 WARN，等于训练人忽略 G10。现改为与「最近已收盘美股交易日」比：
-    # 期望值 = prior_us_trading_day(北京今天)（当天收盘尚未发生，故取前一个交易日）。
+    # 一条永远为真的 WARN，等于训练人忽略 G10。现改为与「最近已收盘美股交易日」比。
+    # ⚠️ R100z181：期望值曾取 `prior_us_trading_day(北京今天)`，在北京 00:00–05:00 会多算一天
+    # （北京 10-24 00:50 = 美东 10-23 12:50 盘中，当天收盘还没发生）→ 每天凌晨一条假 WARN。
+    # 已抽成模块级 `us_last_closed()`（美东口径 + 16:00 收盘判断），可直接单测。
     # 交易日历已下沉 common.py（与 07:00 取数脚本同源，不再有第三份手工副本）。
     try:
-        import common as _common                               # noqa: PLC0415
         us_td = str((D.get("us") or {}).get("tradeDate") or "")[:10]
-        exp = _common.prior_us_trading_day(datetime.now().date())
+        exp = us_last_closed()
         if us_td and exp:
             if us_td == exp.isoformat():
                 r.ok("G10", f"us.tradeDate={us_td} = 最近已收盘美股交易日")

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""记忆体检 M0–M8（只读，不改任何文件）
+"""记忆体检 M0–M12（只读，不改任何文件）
 
 用法：python3 check_memory.py          # exit 1 = 有 FAIL
       python3 check_memory.py --quiet  # 只打 WARN/FAIL 与汇总
 
-对应清单：.workbuddy/memory/MEMORY-CHECKLIST.md（M0–M8）。
+对应清单：.workbuddy/memory/MEMORY-CHECKLIST.md（M0–M12）。
 为什么需要它：记忆坏了**不报错**，只会安静返回错答案；靠人看「有没有问题」等于没查。
 每条判据都来自一次真实事故（见清单里的「实测」段）。
 """
@@ -307,6 +307,77 @@ elif sz10 > 6600:
 else:
     ok("M10 MEMORY.md %d 字节 ≤ 6600 目标线（到目标余 %dB / 到硬限余 %dB）"
        % (sz10, 6600 - sz10, 8192 - sz10))
+
+# ---------------- M11 目录一致性（R100z181）
+# 事故（2026-10-23 深夜，用户「记忆看下是否有问题」实测）：PROJECT-MEMORY 339KB / 25 章 / 44 个 24.x，
+# 但**没有任何目录**；MEMORY.md 的路由表只覆盖约 20 个关键节，剩下 20 多个子节只能靠猜编号去 grep
+# （当天找 24.29 就是这么摸进去的）。第二十四章独大 164,815 B = 全文 48.5%。
+# 为什么目录必须机检：本项目已有「登记了就当查过了」的前科（stepOrder 登记 7 天无人读，24.30d）。
+# 手写目录一定会漂 —— 所以 <!-- TOC-BEGIN --> 与 <!-- TOC-END --> 之间的章表 / 节表，
+# 键集合与**顺序**必须与正文标题逐一相等，改结构不重生成目录 = FAIL。
+TOC_A = "<!-- TOC-BEGIN -->"
+TOC_B = "<!-- TOC-END -->"
+CH_KEY = r"[〇一二三四五六七八九十]+(?:（[一二三四五六七八九十]+）)?"
+def m11_toc():
+    # ⚠️ 必须整行匹配：24.31b 正文用反引号引了 `<!-- TOC-BEGIN -->` 做说明，
+    #    用子串 find 会把正文那句当成目录起点（2026-10-24 实测：目录被插进 24.31b 句子中间）。
+    mt = re.search(r"(?m)^<!-- TOC-BEGIN -->\n([\s\S]*?)^<!-- TOC-END -->", pm)
+    if not mt:
+        fail("M11 PROJECT-MEMORY 缺机检目录（<!-- TOC-BEGIN --> / <!-- TOC-END --> 须各占一行）"
+             "—— 章与子节无地图，定位只能靠猜编号"); return
+    blk = mt.group(1)
+    toc_ch, toc_sec = [], []
+    for ln in blk.split("\n"):
+        if not ln.strip().startswith("|"):
+            continue
+        c = [x.strip() for x in ln.strip().strip("|").split("|")]
+        if not c:
+            continue
+        k = c[0].strip("`").strip()
+        if re.fullmatch(r"\d+\.\d+[a-z]?", k):
+            toc_sec.append(k)
+        elif re.fullmatch(CH_KEY, k):
+            toc_ch.append(k)
+    ch_act = re.findall(r"(?m)^##\s*(" + CH_KEY + r")、", pm)
+    sec_act = re.findall(r"(?m)^###\s*(\d+\.\d+[a-z]?)(?![0-9A-Za-z])", pm)
+    errs = []
+    for label, act, toc in (("章", ch_act, toc_ch), ("节", sec_act, toc_sec)):
+        miss = [k for k in act if k not in toc]
+        extra = [k for k in toc if k not in act]
+        if miss:
+            errs.append("%s表缺 %s" % (label, ",".join(miss[:6])))
+        if extra:
+            errs.append("%s表多 %s" % (label, ",".join(extra[:6])))
+        if act != toc and not (miss or extra):
+            d = [(a, t) for a, t in zip(act, toc) if a != t]
+            errs.append("%s表顺序与正文不一致（正文 %s / 表 %s）" % (label, d[0][0], d[0][1]))
+    if errs:
+        fail("M11 目录与正文不一致：%s —— 改结构/加节后必须同步重生成目录，"
+             "否则「按目录找」会指向不存在的节" % "；".join(errs))
+    else:
+        ok("M11 目录一致：%d 章 + %d 个编号子节，键与顺序全部对上" % (len(ch_act), len(sec_act)))
+
+# ---------------- M12 表头版本不落后（R100z181）
+# 事故（同上实测）：表头停在「R100z159 / 2026-10-21」，正文已写满 R100z180，落后 21 个版本。
+# 「先看表头判断这份记忆新不新」是人和 AI 都会做的事 —— 表头过期比没有表头更坏，
+# 它会让人直接认定「这份是两天前的」而不去读正文。判据：表头 N ≥ 正文出现的最大 N。
+HDR_RE = re.compile(r"最近更新\s*R100z(\d+)")
+def m12_head():
+    m = HDR_RE.search(pm)
+    ver = [int(x) for x in re.findall(r"R100z(\d+)", pm)]
+    if not m:
+        warn("M12 表头没有「最近更新 R100z<N>」—— 无法判断这份记忆新不新"); return
+    hv = int(m.group(1))
+    mv = max(ver) if ver else 0
+    if hv < mv:
+        fail("M12 表头写「最近更新 R100z%d」，正文已出现 R100z%d —— 落后 %d 版；"
+             "按表头判断新鲜度会误判成旧记忆，写新结论时顺手把表头推到最新"
+             % (hv, mv, mv - hv))
+    else:
+        ok("M12 表头版本 R100z%d ≥ 正文最大 R100z%d，未落后" % (hv, mv))
+
+m11_toc()
+m12_head()
 
 # 结论：最该删哪段
 print("=" * 78)
