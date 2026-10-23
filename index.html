@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610240102"></script>
+<script src="data.js?v=202610240146"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -875,6 +875,55 @@
   .td-x em { font-style: normal; color: #a8541a; }
   .td-x s { text-decoration: none; color: var(--ink2); font-size: 11px; }
   .td-note { font-size: 11.5px; color: var(--ink2); margin-top: 10px; line-height: 1.65; }
+  /* R100z161：次日执行参数。收盘后算的价位只对下一交易日有效，页头必须说清楚，
+     每只票也要给出「开盘落在哪就怎么做」，否则这张表就只是收盘排名。 */
+  .td-valid { font-size: 12px; color: #1f5c8b; background: #eaf3fb; border: 1px solid #cfe4f6; border-radius: 10px; padding: 7px 11px; margin-bottom: 9px; line-height: 1.65; }
+  .td-valid b { color: #16496e; font-variant-numeric: tabular-nums; }
+  .td-plan { display: flex; flex-wrap: wrap; gap: 3px 12px; align-items: baseline; font-size: 11.5px; color: var(--ink2); margin-top: 5px; padding: 5px 8px; background: var(--accent-soft); border-radius: 8px; }
+  .td-plan b { color: var(--accent-deep); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .td-plan em { font-style: normal; font-weight: 700; color: var(--ink); margin-right: 3px; }
+  .td-plan s { text-decoration: none; color: #a8541a; }
+  /* R100z161：预测复盘卡。基调是「报数」，不是「汇报成绩」——
+     所以坏数字用警示橙而不是红绿（红绿在本站是涨跌语义，别混用）。 */
+  .fc-hero { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 11px; }
+  .fc-hero > div { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 8px 11px; }
+  .fc-hero b { display: block; font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); line-height: 1.3; }
+  .fc-hero span { font-size: 11px; color: var(--ink2); }
+  .fc-hero .bad b { color: #a8541a; }
+  .fc-hero .good b { color: var(--accent-deep); }
+  .fc-row { display: grid; grid-template-columns: minmax(0, 1.25fr) 50px 74px 74px; gap: 6px;
+            align-items: center; padding: 6px 2px; border-bottom: 1px dashed var(--line);
+            font-size: 12.5px; color: var(--ink2); }
+  .fc-row.head { font-size: 11px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+  .fc-row:last-child { border-bottom: 0; }
+  .fc-row b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .fc-row .fc-dim { color: var(--ink); font-weight: 600; }
+  .fc-row .fc-flag { font-size: 10px; color: #a8541a; font-weight: 700; margin-left: 5px; white-space: nowrap; }
+  .fc-sec { font-size: 11.5px; font-weight: 700; color: var(--accent-deep); margin: 12px 0 4px; letter-spacing: .5px; }
+  .fc-use { margin-top: 11px; border-top: 1px dashed var(--line); padding-top: 9px; }
+  .fc-use > div { font-size: 12.5px; color: var(--ink); line-height: 1.75; padding: 6px 0 6px 20px; position: relative; }
+  .fc-use > div::before { content: '→'; position: absolute; left: 2px; color: var(--accent-deep); font-weight: 700; }
+  .fc-use b { color: var(--accent-deep); }
+  .fc-small { color: #a8541a; font-weight: 700; margin-left: 2px; }
+  .fc-note { font-size: 11px; color: var(--ink2); line-height: 1.65; padding: 5px 0 0 2px; }
+  /* 开关区：重点是「它咬住了下一次预测」，所以用实心浅底 + 左侧竖线，和上面那排结论区分开 */
+  .fc-flags { margin-top: 10px; padding: 8px 10px; background: var(--accent-soft);
+              border-left: 3px solid var(--accent-deep); border-radius: 8px; }
+  .fc-flags-t { display: block; font-size: 11px; font-weight: 700; color: var(--accent-deep); margin-bottom: 5px; }
+  .fc-chip { display: inline-block; font-size: 11.5px; color: var(--ink2); background: var(--paper);
+             border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; margin: 0 5px 5px 0; line-height: 1.5; }
+  .fc-chip em { font-style: normal; font-weight: 700; color: var(--accent-deep); margin-right: 5px; }
+  /* 窄屏：标题副句收起（否则挤成三行）、hero 改两列 + 第三张跨行。
+     三列各约 120px 时「严格命中 66 条 / 11 日」会被折断成三行，读不下去。 */
+  @media (max-width: 720px) {
+    .fc-h2 .fc-sub { display: none; }
+    .fc-hero { grid-template-columns: 1fr 1fr; }
+    .fc-hero > div:nth-child(3) { grid-column: 1 / -1; }
+    .fc-hero b { font-size: 17px; }
+    .fc-row { grid-template-columns: minmax(0, 1fr) 40px 62px 56px; font-size: 11.5px; gap: 4px; }
+    .fc-row.head { font-size: 10px; }
+    .fc-row .fc-flag { display: none; }
+  }
 
   /* ===== 指标表现（谁准谁不准） ===== */
   .pf-row { display: grid; grid-template-columns: minmax(0,1.6fr) 74px 64px 64px 60px minmax(0,1.1fr); gap: 6px; align-items: center; padding: 7px 2px; border-bottom: 1px dashed var(--line); font-size: 12.5px; }
@@ -1603,6 +1652,8 @@ function render(market) {
 
     // R100z160：当日复盘收尾——四指标谁准谁不准。放最后，因为它是「回头看」而不是「向前做」
     html += renderSignalPerf();
+    // R100z161：预测复盘紧接其后——两套账并排：选股信号准不准、方向判断准不准
+    html += renderForecastScore();
   }
 
   // R100i：谐波形态 / 量化九门（日线九门）已移至「🧰 工具箱」断板反包页内的独立子页，
@@ -2646,9 +2697,14 @@ function renderTradeDesk() {
     else if (med > 0.5) mood = '偏强，可按计划做';
   }
 
-  var h = '<div class="card"><h2 class="td-h2">今日交易执行台' +
-    (T.tradeDate ? ' <span class="h2-date">' + esc(T.tradeDate) + '</span>' : '') +
-    '<span class="src-tag td-tag">量化排名 · 上限 ' + (tt.desk || T.picks.length) + ' 只</span></h2>';
+  // 标题不再叫「今日交易执行台」：这张表的核心不是记录今天，而是给明天用。
+  // 用户 2026-10-24 的原话是「他是当日收盘后的产出，对我而言是过时的」——
+  // 所以标题点明「次日」，页头写清有效期，每只票给开盘三档走法。
+  var h = '<div class="card"><h2 class="td-h2">次日交易预案' +
+    (T.tradeDate ? ' <span class="h2-date">锚定 ' + esc(T.tradeDate) + ' 收盘</span>' : '') +
+    '<span class="src-tag td-tag">有效期 ' + esc(T.validUntil || '下一交易日') + '</span></h2>';
+
+  if (T.planNote) h += '<div class="td-valid">' + esc(T.planNote) + '</div>';
 
   h += '<div class="td-mkt">全市场 <b>' + (mm.n || '—') + '</b> 只 20 日涨幅中位数 <b>' +
     pct1(mm.momMedian) + '</b> → <b>' + mood + '</b>　·　通过硬性否决 <b>' +
@@ -2708,6 +2764,14 @@ function renderTradeDesk() {
           (posRaw !== null ? '<i>（原 ' + posRaw.toFixed(1) + '%）</i>' : '') + '</span>' +
         '<span title="' + escAttr(srcs.join(' / ')) + '">共振 <b>' + (p.resonance || 1) + '</b></span>' +
       '</div>' +
+      // 明日执行区间：收盘价算出来的止损/目标，明天开盘就变了。
+      // 这里把「买哪、追到哪为止、跌破哪就撤」提前写死，开盘不用临场算。
+      (p.plan ?
+        '<div class="td-plan"><em>明日</em>' +
+          '<span>进场 <b>' + f2(p.plan.entryLo) + '~' + f2(p.plan.entryHi) + '</b></span>' +
+          '<span>高于 <b>' + f2(p.plan.chase) + '</b> 不追</span>' +
+          '<span><s>跌破 ' + f2(p.plan.abandon) + ' 放弃</s></span>' +
+        '</div>' : '') +
       (p.why ? '<div class="td-why">' + esc(p.why) + '</div>' : '') +
       '</div>';
   });
@@ -2858,6 +2922,136 @@ function renderSignalPerf() {
   }
 
   if (P.dataSourceNote) h += '<div class="pf-sub">数据来源：' + esc(P.dataSourceNote) + '</div>';
+  return h + '</div>';
+}
+
+/* R100z161（2026-10-24）：预测复盘 —— 把台账算成成绩单。
+   起因：用户问「准确率不高，这部分要怎么优化」。在算这张卡之前，页面只有
+   AI 自己写的当日总结（「六条判断两条兑现」），没有跨日累计命中率，
+   于是「优化」无从谈——连基线是多少都不知道。
+   本卡只报数：N 条 / N 日、按置信度、按方向、近 5 日，逐条给「该怎么用」。
+   usage 与 verdict 全部由 forecast_scorecard.py 按阈值生成，不许人手写：
+   否则这段文字会永远停在我写它那天的判断，哪怕数据已经反转。
+   与「指标表现」的分工：那张量「选出来的票赚不赚」，这张量「方向判断准不准」。 */
+function renderForecastScore() {
+  var D = window.DASHBOARD_DATA || {};
+  var F = D.forecastScore;
+  if (!F || !F.sector || !F.sector.n) return '';
+
+  var num = function (v) { var n = Number(v); return (v === null || v === undefined || v === '' || !isFinite(n)) ? null : n; };
+  var p1 = function (v) { var n = num(v); return n === null ? '—' : n.toFixed(1) + '%'; };
+  var s = F.sector, fw = F.forward || {};
+  var byConf = F.byConf || [], byDir = F.byDir || [];
+
+  var h = '<div class="card"><h2 class="fc-h2">预测复盘<span class="fc-sub"> · 谁准谁不准</span>' +
+    (F.asOf ? ' <span class="h2-date">' + esc(F.asOf) + '</span>' : '') +
+    '<span class="src-tag">按台账结算</span></h2>';
+
+  // 三个大数字：坏就用警示橙，好就用深蓝。红绿在本站是涨跌语义，别借来表好坏。
+  var tone = function (v, th) { return num(v) === null ? '' : (v < th ? 'bad' : 'good'); };
+  var cell = function (label, val, klass, sub) {
+    return '<div class="' + klass + '"><b>' + val + '</b><span>' + label + '　' + sub + '</span></div>';
+  };
+  h += '<div class="fc-hero">' +
+    cell('严格命中', p1(s.strictHit), tone(s.strictHit, 40), s.n + ' 条 / ' + s.days + ' 日') +
+    cell('跑赢基准', p1(s.beatRate), tone(s.beatRate, 45),
+         '超额均值 ' + (num(s.excessAvg) === null ? '—' : (s.excessAvg > 0 ? '+' : '') + s.excessAvg + '%')) +
+    cell('开盘前瞻均分', num(fw.scoreAvg) === null ? '—' : fw.scoreAvg.toFixed(2),
+         tone(fw.scoreAvg, 0.5), '合格线 0.50 · 过线 ' + (fw.passDays || 0) + '/' + (fw.days || 0) + ' 天') +
+    '</div>';
+
+  var head = function (c1) {
+    return '<div class="fc-row head"><div>' + c1 + '</div><div>样本</div>' +
+      '<div>严格命中</div><div>宽口径</div></div>';
+  };
+  var row = function (dim, r, flag) {
+    // n<5 的组直接标 *：n=1 算出的 100% 不是能力，是巧合。
+    // 不标出来，读者会把「中性 1 条 100%」和「看跌 16 条 62.5%」当成同等可信。
+    var mark = r.small ? '<span class="fc-small" title="样本少于 5 条，百分比仅供参考">*</span>' : '';
+    return '<div class="fc-row"><div class="fc-dim">' + esc(dim) +
+      (flag ? '<span class="fc-flag">' + flag + '</span>' : '') + '</div>' +
+      '<div>' + (r.n || 0) + '</div>' +
+      '<div><b>' + p1(r.strictHit) + mark + '</b></div>' +
+      '<div>' + p1(r.wideHit) + '</div></div>';
+  };
+
+  // 置信度：如果「高」反而比「中」低，就地把这件事标出来——
+  // 这是过度自信的直接证据，也是本轮最反直觉的发现。
+  var hi = null, mid = null;
+  byConf.forEach(function (c) { if (c.conf === '高') hi = c; if (c.conf === '中') mid = c; });
+  var confBad = (hi && mid && (mid.strictHit || 0) - (hi.strictHit || 0) >= 10);
+  h += '<div class="fc-sec">按置信度（AI 自己标的把握程度）</div>' + head('置信度');
+  byConf.forEach(function (c) {
+    h += row(c.conf + '置信', c, (confBad && c.conf === '高') ? '反向指标' : '');
+  });
+
+  // 方向：看涨 vs 看跌的能力差，决定「哪些结论能当买入理由」
+  var up = null, dn = null;
+  byDir.forEach(function (c) { if (c.dir === 'up') up = c; if (c.dir === 'down') dn = c; });
+  var dirBad = (up && dn && (dn.strictHit || 0) - (up.strictHit || 0) >= 15);
+  h += '<div class="fc-sec">按方向（这套判断擅长哪边）</div>' + head('方向');
+  byDir.forEach(function (c) {
+    h += row(c.label || c.dir, c, (dirBad && c.dir === 'up') ? '明显偏弱' : '');
+  });
+
+  var r5 = s.recent5 || {};
+  if (r5.n) {
+    h += '<div class="fc-sec">近 ' + (F.criteria || {}).recentDays + ' 日' +
+      (r5.range && r5.range.length === 2 ? '（' + esc(r5.range[0]) + ' ~ ' + esc(r5.range[1]) + '）' : '') + '</div>' +
+      head('区间') + row('近 ' + (F.criteria || {}).recentDays + ' 日', r5, '');
+  }
+
+  // 开盘前瞻：三个分项的可信度差得很远——区间比方向判词可靠得多。
+  // 第四列只放最短的数字（「全6·半5」这种），长词组在 390px 宽的列里会被拆成
+  // 「全对 6 · 半 / 对 5」，读起来像坏掉；口径统一放到表格下面的注里说。
+  if (fw.days) {
+    h += '<div class="fc-sec">开盘前瞻三项拆分（权重 倾向0.5 / 点位0.3 / 量能0.2）</div>' +
+      '<div class="fc-row head"><div>分项</div><div>样本</div><div>命中</div><div>次数</div></div>';
+    h += '<div class="fc-row"><div class="fc-dim">方向判词</div><div>' + (fw.tendencyN || 0) + '</div>' +
+      '<div><b>' + p1(fw.tendencyRate) + '</b></div>' +
+      '<div>' + (fw.tendencyHit || 0) + ' 次</div></div>';
+    h += '<div class="fc-row"><div class="fc-dim">点位区间</div><div>' + (fw.bandN || 0) + '</div>' +
+      '<div><b>' + p1(fw.bandAnyRate) + '</b></div>' +
+      '<div>全' + (fw.bandFull || 0) + '半' + (fw.bandHalf || 0) + '</div></div>';
+    h += '<div class="fc-row"><div class="fc-dim">量能</div><div>' + (fw.volN || 0) + '</div>' +
+      '<div><b>' + p1(fw.volRate) + '</b></div>' +
+      '<div>' + (fw.volHit || 0) + ' 次</div></div>';
+    h += '<div class="fc-note">点位按「至少半对」计：落在区间内但偏离 &gt;1% 记半对，「全6半5」＝全对 6 天 + 半对 5 天。</div>';
+  }
+
+  if (F.enough && F.usage && F.usage.length) {
+    h += '<div class="fc-use">' + F.usage.map(function (u) { return '<div>' + u + '</div>'; }).join('') + '</div>';
+  } else {
+    h += '<div class="fc-use"><div>' + esc((F.usage || ['样本不足'])[0]) + '</div></div>';
+  }
+
+  // R100z161：光有结论没用，得看见它咬住了下一次预测。
+  // 这三条不是「建议」，是生成端必须执行的开关（G38 会拦部署）。
+  var FL = F.flags || {}, chips = [];
+  if (FL.maxHighConf === 0) {
+    chips.push(['禁标高置信', '下次 6 个板块一条「高」都不许标']);
+  } else if (typeof FL.maxHighConf === 'number') {
+    chips.push(['高置信上限 ' + FL.maxHighConf, '下次最多标 ' + FL.maxHighConf + ' 条「高」']);
+  }
+  if (FL.requireBand) chips.push(['必给点位区间', '前瞻不许只给「偏强／承压」']);
+  if (FL.dirAsym === 'upWeak') chips.push(['看涨降为观察级', '看涨结论不得当买入理由']);
+  if (FL.dirAsym === 'downWeak') chips.push(['看跌降为参考', '看跌结论不得单独当离场依据']);
+  if (chips.length) {
+    h += '<div class="fc-flags"><span class="fc-flags-t">下版预测已按此收紧</span>' +
+      chips.map(function (c) {
+        return '<span class="fc-chip"><em>' + esc(c[0]) + '</em>' + esc(c[1]) + '</span>';
+      }).join('') + '</div>';
+  }
+
+  // 最后一定要说清「这张卡不是给预测打分好看用的」，否则读者会把「无效」当成一句评价。
+  h += '<div class="pf-sub">判定：' + esc(F.verdict || '') +
+    '　结论文字由脚本按阈值自动生成——' +
+    '命中率变好它会自己变温和，变差会自己变严厉，不接受人工润色。</div>';
+  h += '<div class="pf-sub">口径：' + esc(((F.criteria || {}).strict) || '') +
+    '；' + esc(((F.criteria || {}).bench) || '') +
+    '。样本门槛 ' + ((F.criteria || {}).minN || 30) + ' 条且 ' + ((F.criteria || {}).minDays || 5) +
+    ' 个交易日，不足则不给结论；带 <b>*</b> 的分组样本少于 ' + ((F.criteria || {}).minGroupN || 5) +
+    ' 条，百分比只是巧合、不代表能力。与「指标表现」的分工：那张量选出来的票赚不赚，这张量方向判得准不准。</div>';
   return h + '</div>';
 }
 
