@@ -31,7 +31,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import write_data_js  # noqa: E402
+from common import write_data_js, write_json_atomic  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CAL_STATE = os.path.join(HERE, 'calibration_state.json')
@@ -227,8 +227,7 @@ def main():
         }
         # 把反馈落盘（供后续审计/人工复盘，亦是「跑输→写回」的确定性产物）
         try:
-            json.dump(feedback, open(FEEDBACK_FILE, 'w', encoding='utf-8'),
-                      ensure_ascii=False, indent=1)
+            write_json_atomic(FEEDBACK_FILE, feedback, label='[strategy_engine.feedback]')
         except Exception:
             pass
 

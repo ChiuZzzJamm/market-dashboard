@@ -405,6 +405,80 @@ def k3_atomic(r, verbose=False):
     else:
         r.ok('K3', '未发现绕过临时文件的 data.js 裸写')
 
+    k3b_json(r)
+
+
+# 关键 JSON 状态文件：被杀不会白屏，但会变成**静默降级**——
+# `_cal_factor()` 读到半截 JSON → 走 except → 用默认阈值继续跑，
+# 「后验校准」这个功能从此安静地不生效。比白屏更难发现，所以同样要机器盯。
+CRITICAL_JSON = (
+    'stock_pool.json',
+    'calibration_state.json',
+    'calibration_log.json',
+    'portfolio_curve.json',
+    'strategy_feedback.json',
+    'market_bench.json',
+)
+
+
+def _const_map(tree):
+    """模块级「常量名 → 值表达式文本」，用来把 `open(LOG_FILE, 'w')` 还原成真实文件名。"""
+    m = {}
+    for node in tree.body:
+        if (isinstance(node, ast.Assign) and len(node.targets) == 1
+                and isinstance(node.targets[0], ast.Name)):
+            m[node.targets[0].id] = ast.unparse(node.value)
+    return m
+
+
+def k3b_json(r):
+    """关键 JSON 的裸写扫描（全量 .py，不限登记表成员）。
+
+    为什么单列：硬约束 11 只点了 `data.js` / `stock_pool.json`，于是 2026-10-23 一扫发现
+    `calibration_state` / `calibration_log` / `portfolio_curve` / `strategy_feedback`
+    共 5 处仍是裸 `open(...,'w')`（`track_calibration` 4 处 + `strategy_engine` 1 处）。
+    规则本身不新，缺的是**覆盖面** —— 所以这里不按登记表扫，按「目标文件名」扫。
+    常量要穿透：源码里写的是 `open(LOG_FILE, 'w')`，字面只有 `LOG_FILE`。
+    """
+    bad = []
+    for p in _py_files():
+        base = os.path.basename(p)
+        src = _read(p)
+        if not any(t in src for t in CRITICAL_JSON):
+            continue
+        try:
+            tree = ast.parse(src)
+        except SyntaxError:
+            continue
+        cmap = _const_map(tree)
+        for node in ast.walk(tree):
+            if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                    and node.func.id == 'open' and node.args):
+                continue
+            mode = None
+            if len(node.args) >= 2 and isinstance(node.args[1], ast.Constant):
+                mode = node.args[1].value
+            for kw in node.keywords:
+                if kw.arg == 'mode' and isinstance(kw.value, ast.Constant):
+                    mode = kw.value.value
+            if not mode or not isinstance(mode, str) or not (set(mode) & set('wax')):
+                continue
+            tgt = ast.unparse(node.args[0])
+            real = cmap.get(tgt, tgt) if isinstance(node.args[0], ast.Name) else tgt
+            hit = [t for t in CRITICAL_JSON if t in real or t in tgt]
+            if not hit:
+                continue
+            if 'tmp' in tgt.lower() or 'tmp' in real.lower():
+                continue
+            bad.append('%s:%d open(%s, %r) → %s 未走临时文件'
+                       % (base, node.lineno, tgt, mode, hit[0]))
+    if bad:
+        for x in bad:
+            r.fail('K3', '关键 JSON 非原子写：%s —— 被杀留半截，下游 except 后静默降级'
+                         '（改用 common.write_json_atomic）' % x)
+    else:
+        r.ok('K3', '关键 JSON（%d 类）全部走原子写' % len(CRITICAL_JSON))
+
 
 # ---------------------------------------------------------------- K4
 def k4_timeout(r):
