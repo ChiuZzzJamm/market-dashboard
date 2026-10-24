@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610242121"></script>
+<script src="data.js?v=202610242215"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -659,6 +659,13 @@
   .db-pool.p-star .tc:hover { border-color: #e8a013; background: rgba(255,248,228,.9); }
   /* R100s：卡片 db-stage 阶段徽标（已确认/待企稳/待缩量）已删，对应 CSS 一并清理 */
   .db-pool .db-sub { font-size: var(--fs-base); color: var(--ink2); margin-bottom: 14px; }
+  /* R100z192：开盘精选·竞价跳空分布（只标注动作，不参与排序） */
+  .st-gap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px;
+    margin: -4px 0 12px; padding: 8px 11px; border: 1px dashed var(--line);
+    border-radius: var(--r-block); background: var(--bg-2); font-size: var(--fs-sm); color: var(--ink2); }
+  .st-gap-t { font-weight: 700; color: var(--ink); }
+  .st-gap-r { flex: 1 1 100%; font-size: var(--fs-xs); color: var(--ink3, var(--ink2)); opacity: .8; line-height: 1.6; }
+  @media (max-width: 720px) { .st-gap { font-size: var(--fs-xs); } }
   /* R91j: 近3日涨幅居前板块 TOP10 */
   .db-tb { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
   @media (max-width: 900px) { .db-tb { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -5127,6 +5134,12 @@ function renderDuanban() {
     var starPicks = starPool.concat(starTech);
     fixed += '<div class="db-pool p-star"><h2>🌟 开盘精选 · ' + starPicks.length + ' 只</h2>' +
       '<div class="db-sub">' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：断板池按「板块情绪正向+主力净流入正向」挂钩+上涨概率降序，并可从谐波/九门/吸筹池直接取标的；弹窗与池内一致）</div>' +
+      // R100z192：竞价跳空分布——「今天哪几只可接、哪几只不追」这件事以前只写在 note 里，
+      // 现在单列一行，因为回测证明它是这批标的上唯一过 t=2 的判据（1152 样本）。
+      (st.gapSummary && st.gapSummary.text
+        ? '<div class="st-gap"><span class="st-gap-t">竞价跳空</span>' + esc(String(st.gapSummary.text)) +
+          '<span class="st-gap-r">' + esc(String(st.gapSummary.rule || '')) + '</span></div>'
+        : '') +
       // R99c：页面只放深度分析（pushText），指数/情绪/集合竞价等均在其中，不再单列 marketLine/sentiment
       (st.pushText ? '<div style="font-size: var(--fs-base);color:var(--ink2);line-height:1.8;margin:6px 0 10px;white-space:pre-line;">' + esc(st.pushText) + '</div>' : '') +
       '<div class="db-chips">';
