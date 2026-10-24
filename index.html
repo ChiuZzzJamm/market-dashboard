@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610241945"></script>
+<script src="data.js?v=202610241955"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -4962,9 +4962,14 @@ function deskCheckHtml(st) {
   var zh = { cross: '已站上昨收', strong: '已过 +2%', weak: '未转强',
              limit: '涨停买不到', unknown: '待确认' };
   var col = { cross: 'var(--up)', strong: 'var(--up)' };
+  // A 股惯例：涨红跌绿。现价涨幅原来整段写死 ink-soft，涨停也在灰着显示，和页面其它地方不一致。
+  function pctColor(v) {
+    if (v == null || v === 0) return 'var(--ink-soft)';
+    return v > 0 ? 'var(--up)' : 'var(--down)';
+  }
   function pct(v, suffix) {
     if (v == null) return '—';
-    return '<b style="color:' + (v > 0 ? 'var(--up)' : (v < 0 ? 'var(--down)' : 'var(--ink2)')) +
+    return '<b style="color:' + pctColor(v) +
       '">' + (v > 0 ? '+' : '') + v + (suffix || '%') + '</b>';
   }
   var h = '<div style="margin:10px 0 8px;border-top:1px dashed var(--line);padding-top:8px;">' +
@@ -4995,17 +5000,19 @@ function deskCheckHtml(st) {
   }
   var rows = dc.orders || [];
   if (rows.length) {
-    h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(186px,1fr));' +
-      'gap:2px 12px;margin-top:6px;">';
+    // R100z186：原先用 minmax(186px)+nowrap+ellipsis，900px 桌面下挤出 4 列 → 每列 186px，
+    // 名称和追价被「…」裁掉（用户看不到票名＝看不到结论）。改成 250px 起、允许换行，宁多一行不裁字。
+    h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));' +
+      'gap:1px 14px;margin-top:6px;">';
     rows.forEach(function (o) {
-      h += '<div style="font-size:var(--fs-xs);color:var(--ink2);white-space:nowrap;' +
-        'overflow:hidden;text-overflow:ellipsis;" title="' + esc(String(o.note || '')) + '">' +
+      h += '<div style="font-size:var(--fs-xs);color:var(--ink2);line-height:1.6;' +
+        'word-break:break-word;" title="' + esc(String(o.note || '')) + '">' +
         '<span style="color:' + (col[o.state] || 'var(--ink-soft)') + ';font-weight:600;">' +
         esc(zh[o.state] || o.state || '') + '</span> ' +
         esc(String(o.code || '')) + ' ' + esc(String(o.name || '')) +
         '<span style="color:var(--ink-soft);"> 追 <b>' +
         (o.trig == null ? '—' : o.trig) + '</b></span>' +
-        (o.nowPct == null ? '' : '<span style="color:var(--ink-soft);"> ' +
+        (o.nowPct == null ? '' : ' <span style="color:' + pctColor(o.nowPct) + ';font-weight:600;">' +
           (o.nowPct > 0 ? '+' : '') + o.nowPct + '%</span>') + '</div>';
     });
     h += '</div>';
