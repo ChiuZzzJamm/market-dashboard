@@ -22,8 +22,8 @@
    title/summary 无关联、组内标的重复凑数（重复>2）、条目内标的复用>3 次、同 sector 跨节
    重复出现——均 WARNING 不阻断，由自动化 prompt 与 AI 自检负责修正。
 7) duanban 断板反包模块（R87，软闸门）：确认池/观察池全部标的须 60/00 开头沪深主板
-   （违规自动剔除 + WARNING）、probability 缺失/非法自动补 50 + WARNING、缺 bullRefs/
-   kline 输出 WARNING。模块整体缺失不检查（16:00 数据步职责）。
+   （违规自动剔除 + WARNING）、probability 缺失/非法**不再补值**（R100z197：留空、排序置末、
+   页面显示「—」，WARN 提示 AI 补齐）、缺 bullRefs/kline 输出 WARNING。模块整体缺失不检查（16:00 数据步职责）。
 
 类别按 note 前缀判定：断板反包→断板；板块龙头/龙头→龙头；相关概念/概念→概念；
 小盘→小盘；其余前缀视为无法识别（报违规）。
@@ -1227,7 +1227,7 @@ def reorder_inplace(D):
 
 def fix_duanban_inplace(D):
     """duanban 断板反包模块软闸门（R87 / R88 打标制）：非主板标的自动剔除、
-    sentiment 非法补 neutral、probability 补 50，缺 bullRefs/kline 告警。
+    sentiment 非法补 neutral、probability 缺失**留空不补**，缺 bullRefs/kline 告警。
     模块整体缺失不处理（属 16:00 数据步职责）。返回 (改动?, 告警列表)。"""
     db = D.get('duanban')
     if not isinstance(db, dict):
@@ -1250,9 +1250,15 @@ def fix_duanban_inplace(D):
                 changed = True
             p = e.get('probability')
             if not isinstance(p, (int, float)) or not (0 <= p <= 100):
-                e['probability'] = 50
-                warns.append(f"duanban.{pool}: {code} probability 缺失/非法（{p!r}）→ 自动补 50")
-                changed = True
+                # R100z197（2026-10-24 用户拍板）：**不再自动补 50**。
+                # 50 是一个凭空编出来的中位数，读者会把它当成「AI 认为五五开」，
+                # 而真相是「没人给过这个数」。缺失就留缺失：update_star 会把缺失排到
+                # 有值之后，前端渲染成「—」。WARN 保留——它是提示 AI 去补的唯一信号。
+                warns.append(f"duanban.{pool}: {code} probability 缺失/非法（{p!r}）"
+                             f"→ 不补值，留空（精选排序置末、页面显示「—」）。"
+                             f"请 AI 按形态完成度+题材热度给出 15-88 的基线")
+            else:
+                e['probability'] = round(float(p), 1)
             if e.get('sentiment') == 'bull' and not e.get('bullRefs'):
                 warns.append(f"duanban.{pool}: {code} {(e.get('name') or '')} 口径利好但无 bullRefs（请复核）")
             if e.get('sentiment') == 'bear' and not e.get('bearRefs'):

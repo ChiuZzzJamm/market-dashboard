@@ -1462,10 +1462,19 @@ def build_module(pairs, D):
     confirmed = [e for e in tagged if e["stage"] == "全流程达标"]
     watching = [e for e in tagged if e["stage"] != "全流程达标"]
     # R98k：池级微调——确认池走完全流程形态更完整 +4；观察池仍在形成中 -2
+    # R100z197（2026-10-24 用户拍板）：**只调 AI 真给过的值**。
+    # 原写法 `(e.get("probability") or 50) ± 4/2` 才是「基线 48%/54%」的真正产地——
+    # 池创建时 probability=None，一过这里就凭空变成 54/48，读者以为是 AI 判断，
+    # 其实是 50 的衍生物。实测 12 个交易日 27 个「基线」里绝大多数正是这两个数。
+    # 缺失一律留 None：精选排序置末、页面显示「—」，由 AI 按形态/题材自己填。
     for e in confirmed:
-        e["probability"] = max(15, min(88, round((e.get("probability") or 50) + 4)))
+        _p = e.get("probability")
+        if isinstance(_p, (int, float)):
+            e["probability"] = max(15, min(88, round(_p + 4)))
     for e in watching:
-        e["probability"] = max(15, min(88, round((e.get("probability") or 50) - 2)))
+        _p = e.get("probability")
+        if isinstance(_p, (int, float)):
+            e["probability"] = max(15, min(88, round(_p - 2)))
     # 观察池内更接近确认的（待企稳）排前，同阶段利空靠后
     watching.sort(key=lambda e: (0 if e["stage"] == "待企稳" else 1,
                                  {"bull": 0, "neutral": 1, "bear": 2}[e["sentiment"]]))

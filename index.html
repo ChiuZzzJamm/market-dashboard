@@ -5222,6 +5222,28 @@ function renderDuanban() {
     });
     starTech.sort(function (a, b) { return (b.score || b.probability || 0) - (a.score || a.probability || 0); });
     var starPicks = starPool.concat(starTech);
+    // R100z198（2026-10-24 用户拍板「先只展示不改逻辑」）：把「追高」这组回测数字挂到页面上。
+    // 依据 = 技术池 1174 条样本（2026-09-30~10-22，日聚类口径，见记忆 24.60）：
+    // 次日开盘涨超 +1% 的当日开→收 −1.34%（t=−2.90、日胜 31%），涨超 +3% 的 −1.71%。
+    // ⚠️ 这里**只标注是哪几只，不剔除、不参与排序**——观察一周后再由用户决定要不要变成规则。
+    // 加这条的目的不是好看：没有逐只标注，「追高」这个结论在页面上就无法被验证。
+    var _chaseList = starPicks.filter(function (p) {
+      if (p.openPct === null || p.openPct === undefined || p.openPct === '') return false;
+      var g = Number(p.openPct);
+      return isFinite(g) && g >= 1.0;
+    });
+    // 「没有追高票」和「开盘价没抓到」是两件事，不能都写成「无」——
+    // 前者是结论，后者是数据缺口，混在一起会让人以为今天真的没高开。
+    var _gapKnown = starPicks.some(function (p) {
+      if (p.openPct === null || p.openPct === undefined || p.openPct === '') return false;
+      return isFinite(Number(p.openPct));
+    });
+    var _chaseTxt = _chaseList.length
+      ? '开盘涨超 +1% 的 ' + _chaseList.length + ' 只：' + _chaseList.map(function (p) {
+          var g = Number(p.openPct);
+          return esc(String(p.name || p.code)) + ' ' + (g > 0 ? '+' : '') + g.toFixed(1) + '%';
+        }).join('、')
+      : (_gapKnown ? '今日精选无开盘涨超 +1% 的标的' : '开盘价缺失，今日无法判定');
     fixed += '<div class="db-pool p-star"><h2>🌟 开盘精选 · ' + starPicks.length + ' 只</h2>' +
       '<div class="db-sub">' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：断板池按「板块情绪正向+主力净流入正向」挂钩+上涨概率降序，并可从谐波/九门/吸筹池直接取标的；弹窗与池内一致）</div>' +
       // R100z193（2026-10-24 用户口径）：开盘价位置**不是强弱信号**，只是价格事实；
@@ -5234,6 +5256,12 @@ function renderDuanban() {
         ? '<div class="st-gap"><span class="st-gap-t">盘口结构</span>' + esc(String(st.tapeSummary.text)) +
           '<span class="st-gap-r">' + esc(String(st.tapeSummary.rule || '')) + '</span></div>'
         : '') +
+      // R100z198（2026-10-24 用户拍板「先只展示不改逻辑」）：追高区。
+      // 左半是「今天哪几只落在负期望区」，右半是回测出处。**没有加入任何筛选/排序逻辑**——
+      // 形态票开盘涨超 1% 目前只是被标出来，仍然照常进精选、照常展示。
+      '<div class="st-gap"><span class="st-gap-t">追高区</span>' + _chaseTxt +
+        '<span class="st-gap-r">回测（2026-09-30~10-22 · 技术池 1174 条）：次日开盘 ≥+1% 当日开→收 −1.34%' +
+        '（日聚类 t=−2.90、日胜 31%），≥+3% 更差 −1.71%。此处只标注，不剔除、不排序、不改选股。</span></div>' +
       // R99c：页面只放深度分析（pushText），指数/情绪/集合竞价等均在其中，不再单列 marketLine/sentiment
       (st.pushText ? '<div style="font-size: var(--fs-base);color:var(--ink2);line-height:1.8;margin:6px 0 10px;white-space:pre-line;">' + esc(st.pushText) + '</div>' : '') +
       '<div class="db-chips">';
