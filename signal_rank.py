@@ -559,9 +559,6 @@ def self_test():
             out.append((day, c, c, c + amp / 2, c - amp / 2, v))
         return out
 
-    def ctx_of(mom):
-        return {'momSorted': sorted([mom]), 'n': 1}
-
     # ① 强票动量必须落在分位顶端（横截面口径）
     b = mk(slope=0.5, vol_last=2.0)          # 70 天涨 34.5 元
     atr, _, _ = A.atr_wilder(b)

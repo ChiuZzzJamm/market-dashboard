@@ -205,6 +205,27 @@ def strip_dd_prefix(t, rounds=4):
     return s.strip()
 
 
+def int_ify(o):
+    """把「值一定是整数」的 float 写成 int —— 纯序列化瘦身，不动数值（R100z167）。
+
+    实测 2026-10-24 的 data.js：14 万个 `123.0`（成交量/股数最常见），每个白占 2 字节
+    = 274 KB。JS 里 `123.0 === 123` 且 JSON.parse 后两者同为 number，
+    所以前端读到的值逐位相同 —— 这是**唯一一处能改却绝对不改语义**的瘦身点。
+
+    判据极窄：只处理 `o.is_integer()` 且在 2^53 内（超了 int 会失真，原样返回）。
+    非整数浮点一律原样返回，不四舍五入 —— 精度归数据源负责，这里不碰。
+    """
+    if isinstance(o, float):
+        if o.is_integer() and -9007199254740992 <= o <= 9007199254740992:
+            return int(o)
+        return o
+    if isinstance(o, dict):
+        return {k: int_ify(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [int_ify(v) for v in o]
+    return o
+
+
 def write_data_js(path_or_base, D, label=''):
     """原子写 data.js —— 全项目唯一写盘入口（R100z179b）。
 
@@ -223,7 +244,7 @@ def write_data_js(path_or_base, D, label=''):
     if os.path.isdir(path) or not path.endswith('.js'):
         path = os.path.join(path, 'data.js')
     out = ('window.DASHBOARD_DATA = '
-           + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';\n')
+           + json.dumps(int_ify(D), ensure_ascii=False, separators=(',', ':')) + ';\n')
     _tmp = path + '.tmp.js'
     with open(_tmp, 'w', encoding='utf-8') as f:
         f.write(out)
