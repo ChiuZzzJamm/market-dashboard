@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610250251"></script>
+<script src="data.js?v=202610250257"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -4260,6 +4260,16 @@ function newsFaceBlock(code, opts) {
   // R100z209：口径判定用「净差」而不是「少数服从多数」（规则见 faceVerdict 上方注释）
   var win = faceVerdict(nB, nE, opts.tieBreak);
   var winMeta = { bull: ['利好口径', 'var(--up)'], bear: ['利空口径', 'var(--down)'], neutral: ['中性口径', 'var(--ink2)'] }[win];
+  // R100z211：把「为什么是这个口径」写进 title。动机：利好 2 / 利空 1 却显示「中性口径」，
+  //   不解释就像判定坏了（我自己在冰山冷热那票上就怀疑过一次）。桌面端悬停即见，零布局变更。
+  var nm = nB + nE, nd = nB - nE, why;
+  if (!nm) why = '全部条目为中性（中性不计票）';
+  else if (!nd) why = '利好与利空各 ' + nB + ' 条，净差 0';
+  else if (Math.abs(nd) >= 2) why = '净差 ' + Math.abs(nd) + ' 条（≥2，方向明确）';
+  else if (nm <= 2) why = '方向性条目仅 ' + nm + ' 条，小样本按方向定性';
+  else why = '方向性条目 ' + nm + ' 条但净差仅 ' + Math.abs(nd) + ' 条，不足定性，沿用该股 AI 方向判定';
+  var faceTip = '口径规则：中性条目不计票；净差≥2 或方向性条目≤2 条按方向定性，否则沿用该股 AI 方向判定。'
+    + '本次命中：' + why + '。';
   var cnt = ['公告 ' + notices.length + ' 条', '新闻 ' + news.length + ' 条'];
   if (sector.length) cnt.push('板块 ' + sector.length + ' 条');
   var rows = [];
@@ -4268,9 +4278,9 @@ function newsFaceBlock(code, opts) {
     rows.push('<div class="sn-grp">' + lst.map(function (x) { return x.html; }).join('') + '</div>');
   });
   return '<div class="sn-block">' +
-    '<div class="db-ref-p"><b style="color:' + winMeta[1] + '">' + winMeta[0] + '：</b>' +
+    '<div class="db-ref-p"><b style="color:' + winMeta[1] + '" title="' + escAttr(faceTip) + '">' + winMeta[0] + '：</b>' +
     '<span class="db-ref-sum" style="display:inline;margin-left:2px;">' + cnt.join(' · ') + '</span>' +
-    '<span class="db-ref-sum" style="display:inline;margin-left:6px;">（判定依据：利好 ' + nB +
+    '<span class="db-ref-sum" style="display:inline;margin-left:6px;" title="' + escAttr(faceTip) + '">（判定依据：利好 ' + nB +
     ' 条 · 利空 ' + nE + ' 条 · 中性 ' + (total - nB - nE) + ' 条）</span></div>' +
     rows.join('') + '</div>';
 }
