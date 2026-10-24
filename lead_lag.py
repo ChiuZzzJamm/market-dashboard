@@ -386,8 +386,10 @@ def compute(D, quotes=None, today=None, blacklist=None):
         #   ① 今日压根没有强板块 → 谈不上落后股（说「但里面没有…」是逻辑错位）
         #   ② 有强板块，但里面的落后股被某一道筛子挡住了 → 点名是哪道
         if not strong:
-            why = ('扫描 %d 个板块（%d 只主板成分股），今日没有板块开盘跳空 > +%.1f%%，'
-                   '没有强板块就谈不上落后股' % (len(groups), len(universe), SEC_GAP_MIN))
+            # 规则行已经写了「扫描 N 个板块 / M 只主板」，这里不再重复「扫描」二字
+            why = ('今日没有一个板块开盘跳空 > +%.1f%%，没有强板块就谈不上落后股'
+                   '（%d 只主板成分股归入 %d 个板块，全部没到门槛）'
+                   % (SEC_GAP_MIN, len(universe), len(groups)))
         else:
             st = skipped
             hit = []
@@ -684,9 +686,9 @@ def self_test():
     n7, _ = compute({'stkKlines': KL, 'sectorMap': SM}, quotes=no_gap,
                     today='2026-01-02', blacklist={})
     g7 = str(n7.get('gapNote') or '')
-    chk('强板块=0 的空仓文案不提「但里面没有」，改说「没有板块开盘跳空」（实测：%s）'
+    chk('强板块=0 的空仓文案不提「但里面没有」，改说「没有一个板块开盘跳空」（实测：%s）'
         % g7[:30],
-        bool(g7) and '但里面没有' not in g7 and '没有板块开盘跳空' in g7)
+        bool(g7) and '但里面没有' not in g7 and '没有一个板块开盘跳空' in g7)
     #   ② 有强板块但落后股被筛掉 → 文案必须点名是哪道筛子（n2：600001 昨日跌 → 「昨日没涨」）
     g2 = str(n2.get('gapNote') or '')
     chk('有强板块时空仓文案点名拦截原因（实测：%s）' % g2[:46],
