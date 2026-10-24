@@ -3925,6 +3925,105 @@ def g44_zombie_mirror_nodes(r):
     r.ok("G44", f"ashare 下无僵尸镜像节点（比对了 {sum(1 for k in D if isinstance(D.get(k), (dict, list)))} 个顶层容器键）")
 
 
+DESK_STATES = {"buy", "wait", "chase", "drop", "limit", "unknown"}
+
+
+def g45_desk_check(r):
+    """G45 预案对账台账自洽（R100z185，2026-10-24）。
+
+    由来：`tradeDesk` 从 R100z160 起就在写「今天买什么、什么价买、什么价止损」，但**没有任何环节
+    回头看它对不对**——它是「写」的终点，不是「用」的起点。项目里 `signalPerf` / `forecastScore` /
+    `stopTrack` 三套记分牌都有，唯独最贵的那个（真金白银的执行台）没有。用户 2026-10-24 当面指出：
+    「开盘精选正好能验证你交易预案里提供的标的……这个想法你作为一个专业交易员为什么没有想到？」
+
+    所以 `desk_verify.py` 补上闭环。但**闭环本身也会空转**：脚本静默失败 / 被 prompt 漏调 /
+    哪天有人改了口径，`deskCheck` 照样一份不落地躺在 data.js 里，谁都看不出它已经不再更新。
+    这道闸门只判「同一份产物内部对不对」，不去猜「今天该不该有」：
+
+      FAIL（自相矛盾，一定是 bug）：
+        ① `settledN` 与 `settledRows` 实长不符；② 胜率/平均净收益与明细实算不符；
+        ③ `retNet` ≠ `ret − 0.20`（成本模型四处各改一遍就会漂，这是唯一一处硬校验）；
+        ④ `buys` 里的标的在同一次 `verdicts` 里不是 `state=buy`（页面会显示「可买」却没判定依据）；
+        ⑤ `buys` 价位不满足 `stop < entry < target`；⑥ `state` 写出合法集合之外（前端静默渲染成灰块）。
+      WARN（正常会发生，不许拦部署）：
+        ⑦ `planDate` ≠ 当前 `tradeDesk.tradeDate`——09:45 写的是「昨收预案 → 今日开盘」，
+           16:00 重算预案后必然不同日；⑧ 判定只数与当前 picks 不同（预案换了一批，同理）；
+        ⑨ `deskCheck` 缺失——首次上线 / 非交易日 / 09:45 未跑。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                      # noqa: BLE001
+        r.fail("G45", f"读 data.js 失败：{e}")
+        return
+    T = D.get("tradeDesk") or {}
+    picks = T.get("picks") or []
+    st = ((D.get("duanban") or {}).get("star")) or {}
+    dc = st.get("deskCheck")
+    if not isinstance(dc, dict):
+        r.warn("G45", "duanban.star.deskCheck 缺失——09:45 步骤 1.5 未跑（首次上线/休市/脚本静默失败）；"
+                      "跑 `desk_verify.py --check --write-star` 可补，长期缺失说明闭环断了")
+        return
+
+    bad, note = [], []
+    verdicts = dc.get("verdicts") or []
+    buys = dc.get("buys") or []
+    rows = dc.get("settledRows") or []
+
+    for v in verdicts:
+        if not isinstance(v, dict):
+            bad.append("verdicts 里有非对象条目")
+            continue
+        if v.get("state") not in DESK_STATES:
+            bad.append(f"{v.get('code')} 的 state={v.get('state')!r} 不在合法集合"
+                       f"（{ '/'.join(sorted(DESK_STATES)) }）")
+    buy_state = {str(v.get("code")) for v in verdicts
+                 if isinstance(v, dict) and v.get("state") == "buy"}
+    for b in buys:
+        c = str(b.get("code"))
+        if c not in buy_state:
+            bad.append(f"{c} 出现在 buys 里但 verdicts 判的不是 buy——页面会显示「可买」却没有判定依据")
+        e, s, t = b.get("entry"), b.get("stop"), b.get("target")
+        if all(isinstance(x, (int, float)) for x in (e, s, t)) and e:
+            if not (0 < s < e < t):
+                bad.append(f"{c} 价位关系错：止损 {s} / 买入 {e} / 目标 {t}（应 stop<entry<target）")
+
+    sn = dc.get("settledN")
+    if isinstance(sn, int) and sn != len(rows):
+        bad.append(f"settledN={sn} 与 settledRows 实长 {len(rows)} 不符")
+    if rows:
+        wins = [x for x in rows if isinstance(x, dict) and x.get("win")]
+        win_pct = round(len(wins) / len(rows) * 100, 1)
+        mean_net = round(sum(float(x.get("retNet") or 0) for x in rows
+                             if isinstance(x, dict)) / len(rows), 2)
+        got_w, got_m = dc.get("settledWin"), dc.get("settledMeanNet")
+        if isinstance(got_w, (int, float)) and abs(got_w - win_pct) > 0.2:
+            bad.append(f"settledWin={got_w} 与明细实算 {win_pct} 不符")
+        if isinstance(got_m, (int, float)) and abs(got_m - mean_net) > 0.02:
+            bad.append(f"settledMeanNet={got_m} 与明细实算 {mean_net} 不符")
+        for x in rows:
+            if not isinstance(x, dict):
+                continue
+            rt, rn = x.get("ret"), x.get("retNet")
+            if isinstance(rt, (int, float)) and isinstance(rn, (int, float)) \
+                    and abs((rt - 0.2) - rn) > 0.011:
+                bad.append(f"{x.get('code')} ret={rt} / retNet={rn}：净收益不等于毛收益 −0.20%"
+                           f"（双边成本口径被改了？佣金+印花+滑点在别处也改了吗）")
+
+    if str(dc.get("planDate") or "")[:10] != str(T.get("tradeDate") or "")[:10]:
+        note.append(f"planDate={dc.get('planDate')} ≠ 当前 tradeDesk.tradeDate={T.get('tradeDate')}"
+                    f"（正常：对账的是上一份预案）")
+    if picks and len(verdicts) != len(picks):
+        note.append(f"判定 {len(verdicts)} 只 vs 当前 picks {len(picks)} 只（预案换批，正常）")
+
+    if bad:
+        r.fail("G45", "预案对账台账自相矛盾：" + "; ".join(bad[:6]) +
+                      "—— 台账错比没有更坏：它看起来像已核查过")
+        return
+    tail = ("；" + "；".join(note)) if note else ""
+    r.ok("G45", f"预案对账台账自洽：判定 {len(verdicts)} 只 / 可买 {len(buys)} 只 / "
+                f"结算 {len(rows)} 笔（净收益已扣 0.20% 双边成本，口径与脚本一致）{tail}")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -3984,6 +4083,7 @@ def main():
     g42_design_tokens(r)
     g43_stock_chip_layout(r)
     g44_zombie_mirror_nodes(r)
+    g45_desk_check(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
