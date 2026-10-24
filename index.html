@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610241217"></script>
+<script src="data.js?v=202610241223"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -147,6 +147,15 @@
     opacity: .85;
   }
   @media (max-width: 900px) { .schedule-note, .hero .updated, .db-date { white-space: normal; } }
+  /* R100z164b（线上实拍抓到）：窄屏下这行元信息会折成两行，胶囊里出现孤零零的「新）」——
+     一个会被折行的胶囊不是胶囊。手机端降为普通小字（与 .schedule-note 同款，无底色无边框），
+     页头因此只剩「标题 / 副标题 / 元信息小字 / 排程脚注」四层纯文本，不再有第二个框。 */
+  @media (max-width: 720px) {
+    .hero .updated, .db-date {
+      background: none; border: 0; border-radius: 0; padding: 0;
+      margin-top: 8px; line-height: 1.6;
+    }
+  }
 
   /* ===== Tabs（胶囊） ===== */
   .tabbar { display: flex; justify-content: center; gap: 6px; background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 6px; margin-bottom: 26px; width: fit-content; margin-left: auto; margin-right: auto; box-shadow: var(--shadow); }
