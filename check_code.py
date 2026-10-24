@@ -31,6 +31,10 @@
   K7 工序锁       会写 data.js 的自动化必须 `pipeline_lock.py acquire` + `release`
                  （R100z180 实撞：周日 21:00/22:00 两条都漏了锁，60 分钟间隔 + 整份读改写
                  = 互相覆盖；「谁该持锁」以前只写在记忆里没有判据 → 现在有 exit code）
+  K8 去噪哨兵     盘面统计类标题不许当个股消息（R100z204）
+  K9 环比闸门     池子轮换不许把内容悄悄带走（R100z208）
+  K10 消息面顺序  时间倒序 / 三段顺序 / 口径净差判定（R100z210）
+                 —— 这类退步**页面看起来还在**，只是顺序乱、口径错，肉眼很难发现
 
 ★ 写规则时踩过的两个坑（别重犯）：
   1. **`s.get(...)` 不是网络调用**：`s` 在多数脚本里是 dict，`s.get('f5Tier')` 是 dict.get。
@@ -41,7 +45,7 @@
 用法:
     python3 check_code.py            # 全部检查（FAIL 时 exit 1）
     python3 check_code.py --verbose  # 附明细（谁引用了谁、每个写者的原子实现位置）
-    python3 check_code.py --only K3  # 只跑某一类（K1-K8）
+    python3 check_code.py --only K3  # 只跑某一类（K1-K10）
 """
 import argparse
 import ast
@@ -975,10 +979,277 @@ def k9_depth_guard(r, verbose=False):
                  (re.search(r'^RATIO_PEAK_N\s*=\s*(\d+)', src, re.M) or [None, '?'])[1]))
 
 
+# ---------------------------------------------------------------- K10
+def _extract_js_fn(html, name):
+    """从 index.html 抽出一个具名函数（括号配平，跳过字符串 / 模板串 / 注释 / 正则）。
+
+    为什么不硬编码一份副本：副本会腐化 —— 改了 index.html 忘了改副本，闸门测的是尸体。
+    为什么不 eval 整块 <script>：30 万字符里全是 DOM 初始化，eval 直接炸。
+    """
+    m = re.search(r'\bfunction\s+' + re.escape(name) + r'\s*\(', html)
+    if not m:
+        return None
+    i = html.find('{', m.end())
+    if i < 0:
+        return None
+    depth, j, n, prev = 0, i, len(html), ''
+    while j < n:
+        c = html[j]
+        if c in ('"', "'", '`'):
+            q, j = c, j + 1
+            while j < n:
+                if html[j] == '\\':
+                    j += 2
+                    continue
+                if html[j] == q:
+                    break
+                j += 1
+        elif c == '/' and j + 1 < n and html[j + 1] == '/':
+            j = html.find('\n', j)
+            if j < 0:
+                return None
+        elif c == '/' and j + 1 < n and html[j + 1] == '*':
+            e = html.find('*/', j + 2)
+            if e < 0:
+                return None
+            j = e + 1
+        elif c == '/' and prev in '(,=:[!&|?{};':
+            j += 1
+            while j < n:
+                if html[j] == '\\':
+                    j += 2
+                    continue
+                if html[j] == '[':
+                    while j < n and html[j] != ']':
+                        j += 1
+                if html[j] == '/':
+                    break
+                j += 1
+        elif c == '{':
+            depth += 1
+        elif c == '}':
+            depth -= 1
+            if depth == 0:
+                return html[m.start():j + 1]
+        if not c.isspace():
+            prev = c
+        j += 1
+    return None
+
+
+def _find_node():
+    """找 node：PATH 优先，再兜底受管二进制（自动化环境 PATH 常常不全，deploy.sh 里同理）。"""
+    cands = ['node']
+    cands += sorted(glob.glob(os.path.expanduser(
+        '~/.workbuddy/binaries/node/versions/*/bin/node')))
+    cands += sorted(glob.glob('/Users/loccco/.nvm/versions/node/*/bin/node'))
+    for c in cands:
+        try:
+            subprocess.run([c, '--version'], capture_output=True, timeout=8, check=True)
+            return c
+        except Exception:
+            continue
+    return None
+
+
+def k10_news_order(r, verbose=False):
+    """K10 消息面顺序与口径自检（R100z210，用户 2026-10-25「不要每次等我确认」授权）。
+
+    要防的事故（R100z209 刚修完，最怕下一次重构又退回去，而且退回去**页面看起来还在**）：
+      ① `stock_news.py` 的 `rank()` 是**选取**排序（方向性 bull→bear→neutral 在前），
+         **不是展示排序** —— 落盘前漏了重排，弹窗就是「20:06 → 20:58 → 21:25 → 17:16」；
+      ② `merge_depth()` 把补回的旧条目 **append 到末尾** —— 它负责「不少」，不负责「有序」；
+      ③ 三段顺序（公告 → 新闻 → 板块）被改回平铺；
+      ④ 口径判定从「净差」退回「票数多数」—— 这条最阴：绝大多数场景结果一样，
+         只有「中性条目占多数」时才不同（冰山冷热 利好2/利空1/中性8 会被判成利好口径）。
+
+    四组检查，前两组看数据、第三组看结构、第四组**用假数据跑真函数**：
+      A 数据层源码 —— `merge_depth` / `fetch_stock_news` 里必须有 reverse 排序归一
+      B 真数据结果 —— `data.js` 里每只标的的 news/notices 必须严格非增（查结果，不查代码）
+      C 前端结构   —— `faceVerdict` 存在且被调用、三段字面量顺序、三处按时间倒序
+      D 口径语义   —— node 跑 12 组假数据（node 缺失降级 WARN：查不了 ≠ 有问题，不该拦部署）
+
+    ★ 为什么口径要抽成独立函数 `faceVerdict`：闸门没法测埋在渲染函数里的 if 链。
+      抽出纯函数后可以做**故障注入**（实测：退回票数多数拦 3 组 / 净差门槛放松拦 2 组 /
+      消费 tieBreak 拦 1 组 / 一律中性拦 7 组）。**没做过故障注入的闸门等于没做。**
+    """
+    bad = []
+    n_stocks = 0        # B 组查了多少只标的（成功消息里要报出总数，否则是抽样不是全量）
+
+    # ---- A 数据层源码：排序归一不许丢
+    #   ⚠️ 判据要匹配**语义**而不是**形状**：`merge_depth` 用一层 for 遍历
+    #   (('news','time'), ('notices','date')) 两个字段，一次 sorted(reverse=True) 就覆盖两处。
+    #   首版数「reverse=True 出现次数 >= 2」→ 真代码只有 1 处 → 误报。
+    #   正确判据：有 reverse 归一 + 两个字段名都出现在函数体里。
+    #   真正防「只给 news 排、忘了 notices」的是 B 组（真数据全量倒序），这里只防「整段被删」。
+    sp = os.path.join(HERE, 'stock_news.py')
+    if not os.path.exists(sp):
+        r.fail('K10', 'stock_news.py 不存在 —— 消息面顺序无生产者，闸门失效')
+        return
+    ssrc = _read(sp)
+    try:
+        stree = ast.parse(ssrc)
+    except Exception as e:
+        r.fail('K10', 'stock_news.py 语法错（%s），无法自检' % str(e)[:60])
+        return
+    #   fields 是「必须出现的字段名字面量」：merge_depth 里要覆盖 news 与 notices 两个键；
+    #   fetch_stock_news 里排的是变量 picked（不是字典键），所以不要求字段名，只要求 reverse 归一。
+    for fname, fields in (('merge_depth', ('news', 'notices')),
+                          ('fetch_stock_news', ())):
+        fn = next((n for n in ast.walk(stree)
+                   if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+                   and n.name == fname), None)
+        if fn is None:
+            bad.append('%s() 不见了 —— 没有它就没人做排序归一' % fname)
+            continue
+        seg = ast.get_source_segment(ssrc, fn) or ''
+        if not re.search(r'reverse\s*=\s*True', seg):
+            bad.append('%s() 里没有 reverse=True 排序 —— 选取排序（rank）会直接进展示，'
+                       '弹窗时间会乱' % fname)
+            continue
+        missing = [f for f in fields if ("'%s'" % f) not in seg and ('"%s"' % f) not in seg]
+        if missing:
+            bad.append('%s() 里没出现字段 %s —— 排序归一没覆盖它'
+                       % (fname, '/'.join(missing)))
+
+    # ---- B 真数据结果：每只标的必须严格非增
+    dp = os.path.join(HERE, 'data.js')
+    if not os.path.exists(dp):
+        r.warn('K10', 'data.js 不存在，跳过倒序结果校验')
+    else:
+        m = re.search(r'window\s*\.\s*DASHBOARD_DATA\s*=\s*(\{[\s\S]*\});?\s*$', _read(dp))
+        if not m:
+            bad.append('data.js 里找不到 window.DASHBOARD_DATA')
+        else:
+            try:
+                D = json.loads(m.group(1))
+            except Exception as e:
+                bad.append('data.js 不是合法 JSON（%s）' % str(e)[:60])
+                D = None
+            if D is not None:
+                sn = D.get('stockNews') or {}
+                n_stocks = len(sn)
+                n_bad, samples = 0, []
+                for code, v in sn.items():
+                    if not isinstance(v, dict):
+                        continue
+                    for field, key in (('news', 'time'), ('notices', 'date')):
+                        lst = v.get(field) or []
+                        ks = [str(x.get(key) or '') for x in lst if isinstance(x, dict)]
+                        if ks != sorted(ks, reverse=True):
+                            n_bad += 1
+                            if len(samples) < 3:
+                                samples.append('%s.%s %s' % (code, field, ks[:4]))
+                if n_bad:
+                    bad.append('data.js 里 %d 个数组没有严格倒序（共 %d 只标的）—— '
+                               '例：%s；用 stock_news.py 重跑或一次性重排'
+                               % (n_bad, len(sn), '；'.join(samples)))
+                elif verbose:
+                    print('      stockNews %d 只标的，news/notices 全部严格倒序' % len(sn))
+
+    # ---- C 前端结构：三段顺序 + 排序调用 + 口径函数被调用
+    hp = os.path.join(HERE, 'index.html')
+    if not os.path.exists(hp):
+        bad.append('index.html 不存在')
+    else:
+        html = _read(hp)
+        if 'function faceVerdict(' not in html:
+            bad.append('找不到 faceVerdict() —— 口径判定被内联回渲染函数，闸门再也测不到它'
+                       '（K10 的 D 组依赖它独立存在）')
+        body = _extract_js_fn(html, 'newsFaceBlock')
+        if not body:
+            bad.append('找不到 newsFaceBlock() —— 消息面渲染入口被改名或删除')
+        else:
+            if 'faceVerdict(nB, nE' not in body:
+                bad.append('newsFaceBlock 没有调用 faceVerdict —— 口径判定被绕开了')
+            if '[notices, news, sector]' not in body:
+                bad.append('三段字面量 [notices, news, sector] 不在 —— '
+                           '公告→新闻→板块的顺序被改（若是有意重构，同步更新 K10）')
+            n_sort = body.count('.sort(snByTsDesc)')
+            if n_sort < 3:
+                bad.append('newsFaceBlock 里按时间倒序只有 %d 处（需 3：公告/新闻/板块各一）'
+                           % n_sort)
+        # ⑤ story 里的【个股消息】段**不许丢弃**（R100z210 实撞）：
+        #   上一轮为了「剔除空的个股消息区块」，把 story 里同一标签的段也 return 掉了 ——
+        #   全库 56 条、每段 30-80 字的真实小作文随之消失，正是用户明令禁止的「以减内容为代价」。
+        #   用户说的「空」指的是 UI 里由要闻 impacts 拼出来的假区块，与 story 段是两回事。
+        for m_drop in re.finditer(
+                r"dbStoryParaKind\s*\(\s*p\s*\)\s*===\s*'stock'\s*\)\s*\{?\s*return", html):
+            line = html[:m_drop.start()].count('\n') + 1
+            bad.append('index.html:%d 把 story 的【个股消息】段丢弃了 —— '
+                       '那是真实内容（全库 56 条、每段 30-80 字），'
+                       '应归入「个股新闻」组（kind:news + ts:0）而不是 return' % line)
+
+    # ---- D 口径语义：用假数据跑真函数（node 缺失只降级，不阻断）
+    CASES = [
+        (2, 1, '', 'neutral', '冰山冷热反例 2:1（8 条中性）→ 中性'),
+        (0, 0, 'bull', 'neutral', '全中性不消费 tieBreak'),
+        (0, 0, '', 'neutral', '全中性 → 中性'),
+        (3, 0, '', 'bull', '净差 3 → 利好'),
+        (2, 0, '', 'bull', '小样本 2:0 → 利好'),
+        (1, 0, '', 'bull', '单条利好 → 利好'),
+        (0, 1, '', 'bear', '单条利空 → 利空'),
+        (2, 2, '', 'neutral', '贴脸 2:2 无 AI 判定 → 中性'),
+        (2, 2, 'bull', 'bull', '贴脸 2:2 有 AI 判定 → 沿用'),
+        (1, 1, 'bear', 'bear', '贴脸 1:1 有 AI 判定 → 沿用'),
+        (4, 3, '', 'neutral', '净差 1 且 m=7 → 贴脸 → 中性'),
+        (5, 3, '', 'bull', '净差 2 → 利好'),
+    ]
+    if os.path.exists(hp):
+        fn_src = _extract_js_fn(_read(hp), 'faceVerdict')
+        node = _find_node()
+        if not fn_src:
+            pass  # 上面 C 组已经报过，不重复
+        elif not node:
+            r.warn('K10', '找不到 node，口径语义测试跳过（12 组假数据未跑）—— '
+                          '这不是「没问题」，是「查不了」')
+        else:
+            js = fn_src + '\nvar C=' + json.dumps(
+                [[a, b, c, d, e] for a, b, c, d, e in CASES], ensure_ascii=False) + '''
+var bad = [];
+C.forEach(function (x) {
+  var got = faceVerdict(x[0], x[1], x[2]);
+  if (got !== x[3]) bad.push(x[4] + '：期望 ' + x[3] + '，实际 ' + got);
+});
+if (bad.length) { console.log('BAD'); bad.forEach(function (b) { console.log('  ' + b); }); }
+else console.log('OK');
+'''
+            tmp = None
+            try:
+                fd, tmp = tempfile.mkstemp(suffix='.js', prefix='k10_')
+                with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                    f.write(js)
+                pr = subprocess.run([node, tmp], capture_output=True, text=True, timeout=30)
+                out = (pr.stdout or '') + (pr.stderr or '')
+                if 'OK' not in out:
+                    for line in [x.strip() for x in out.split('\n') if x.strip()]:
+                        if line not in ('BAD',):
+                            bad.append('口径语义 %s' % line)
+                    if not any('口径语义' in b for b in bad):
+                        bad.append('口径语义测试异常退出：%s' % out.strip()[:120])
+            except Exception as e:
+                bad.append('口径语义测试跑不起来（%r）' % (e,))
+            finally:
+                if tmp and os.path.exists(tmp):
+                    try:
+                        os.unlink(tmp)
+                    except OSError:
+                        pass
+
+    if bad:
+        for x in bad:
+            r.fail('K10', x)
+        r.fail('K10', '消息面顺序/口径 %d 项不符 —— 这类退步**页面看起来还在**，'
+                      '只是顺序乱、口径错，肉眼很难发现，别关这条闸门' % len(bad))
+    else:
+        r.ok('K10', '消息面顺序与口径自检通过（源码排序归一 / %d 只标的严格倒序 / '
+                    '三段顺序+三处倒序 / 12 组口径语义）' % n_stocks)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--verbose', action='store_true')
-    ap.add_argument('--only', default='', help='只跑某一类，如 K3 / K8')
+    ap.add_argument('--only', default='', help='只跑某一类，如 K3 / K10')
     a = ap.parse_args()
 
     r = R()
@@ -1002,6 +1273,8 @@ def main():
         k8_noise_sentinel(r, a.verbose)
     if not only or only == 'K9':
         k9_depth_guard(r, a.verbose)
+    if not only or only == 'K10':
+        k10_news_order(r, a.verbose)
     return r.dump()
 
 
