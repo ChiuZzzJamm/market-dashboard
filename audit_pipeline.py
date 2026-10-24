@@ -63,6 +63,11 @@
     G40 复盘页与槽位  🌟 复盘台账独占页（两卡 + 独占 CSS + hash 直达）与悬浮组四槽位对齐
                       （返回按钮按槽位落位、槽距 offsetTop 实测；旧贴底写法会让第 4 个按钮
                       掉出组外）（R100z162，FAIL）
+    G41 视觉规范全链  标题/账户块/AI 关系行/四入口四返回可拖+拖后不吞点击/字体继承/字号 10 档
+    G42 设计令牌      字号/圆角必须走 --fs-* / --radius-* 变量，禁止硬编码（白名单里的也算）
+    G43 股票卡排版    「名称+代码」不可断（.nm 包裹）+ 机械池只标少数派且用压角圆点不占布局
+    G44 僵尸镜像节点  ashare 下不得存在与顶层同名的容器——旧副本没删干净时，它既不被渲染
+                      也不被校验（G12/G16 只查顶层），却可能被 prompt 继续喂着长大（R100z171，FAIL）
 """
 import ast
 import json
@@ -3875,6 +3880,51 @@ def g43_stock_chip_layout(r):
              % n_nm)
 
 
+def g44_zombie_mirror_nodes(r):
+    """G44 僵尸镜像节点：`ashare` 下不得存在与顶层同名的容器（R100z171，2026-10-24）。
+
+    由来（第三次踩同一个坑）：同一份数据被搬过一次家，旧位置的副本**没有任何代码删它**，
+    于是永久留在 data.js 里当僵尸——而闸门只查顶层键（G12 孤儿键 / G16 读顶层），
+    副本既不被读、也不被查，还能继续被 prompt 喂着长大。
+
+      ① `ashare.duanban`（2026-10-14 后无读写方）→ G16 改读顶层时才被发现；
+      ② `ashare.accumulation` → 吸筹 90 字地板**从未生效**（R100z161c 才发现），
+         因为 G16 读的是不存在的路径，恒空即恒过；
+      ③ `ashare.aiPrediction`（本轮）→ 19,511 字符副本，前端注释第 2859 行早写着
+         「只读顶层 aiPrediction.verification」，push_notify 也不读，**零读方零写方**；
+         可 17:00 prompt 仍以「研判/推送文案与兼容读取路径引用」为由要求每天同步写一份，
+         同一条 prompt 里却又写「严禁引用 ashare.aiPrediction 旧预测集」——写它、又不许读它。
+         危害不是那 33KB，而是**哪天 AI 只写了副本**：页面验证块不更新、四道闸门全绿。
+
+    判据（类级，不写死单个节点名）：对每个顶层容器键 K，若 `ashare[K]` 存在即 FAIL。
+    这样以后任何节点再搬家、旧副本没删干净，都会在第一次部署就被拦下，不靠人记得。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                  # noqa: BLE001
+        r.warn("G44", f"data.js 读取失败，跳过僵尸镜像校验：{e}")
+        return
+    ah = D.get("ashare")
+    if not isinstance(ah, dict):
+        r.ok("G44", "ashare 节点不存在或非字典，无镜像可比")
+        return
+    ghosts = []
+    for k in D.keys():
+        if k == "ashare" or not isinstance(D.get(k), (dict, list)):
+            continue
+        if k in ah:
+            size = len(json.dumps(ah[k], ensure_ascii=False))
+            ghosts.append((k, size))
+    if ghosts:
+        for k, size in ghosts:
+            r.fail("G44", f"ashare.{k} 是顶层 {k} 的僵尸镜像（{size} 字符）：全库零读方零写方，"
+                          f"G12/G16 只查顶层，所以它既不被渲染也不被校验，却可能被 prompt 喂着长大——"
+                          f"一旦哪天写回只落到副本，页面不更新而所有闸门全绿。"
+                          f"删副本前先 grep 一遍 prompt 里的 ashare.{k}，同步删掉写入指令")
+        return
+    r.ok("G44", f"ashare 下无僵尸镜像节点（比对了 {sum(1 for k in D if isinstance(D.get(k), (dict, list)))} 个顶层容器键）")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -3933,6 +3983,7 @@ def main():
     g41_visual_norms(r)
     g42_design_tokens(r)
     g43_stock_chip_layout(r)
+    g44_zombie_mirror_nodes(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
