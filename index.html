@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610241309"></script>
+<script src="data.js?v=202610241341"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1074,16 +1074,9 @@
   .td-x em { font-style: normal; color: #a8541a; }
   .td-x s { text-decoration: none; color: var(--ink2); font-size: var(--fs-sm); }
   .td-note { font-size: var(--fs-sm); color: var(--ink2); margin-top: 10px; line-height: 1.65; }
-  /* R100z163：账户与目标（把钱算出来）。R100z164：与 AI 关系块已上移重写（见「交易预案卡」一节）。 */
-  .td-acct { margin-top: 14px; border: 1px solid var(--line); border-radius: var(--r-block);
-    padding: 12px 14px; background: var(--bg-2); }
-  .td-acct-h { font-size: var(--fs-body); font-weight: 700; color: var(--ink); margin-bottom: 6px; }
-  .td-acct-h span { font-size: var(--fs-sm); font-weight: 400; color: var(--ink2); margin-left: 8px; }
-  .td-acct-kv { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: var(--fs-base); color: var(--ink2); }
-  .td-acct-kv b { color: var(--ink); font-variant-numeric: tabular-nums; }
-  .td-acct-txt { font-size: var(--fs-base); color: var(--ink2); line-height: 1.8; margin-top: 8px;
-    border-top: 1px dashed var(--line); padding-top: 8px; }
-  .td-acct-txt b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  /* R100z166：.td-acct 全套已删除（用户 2026-10-24 要求删掉「账户与目标」块）。
+     删除原因见 renderTradeDesk() 里那段注释——账没算错，是不该把「目标不成立」写成产品自述。
+     不要加回来。 */
   /* R100z161/R100z164：.td-valid 已并入 .td-scope（口径说明降为无底色一行小字）——
      当初它是「淡蓝底 + 边框 + 蓝字」的第三条色块，与 .td-mkt/.td-rel 抢同一档权重。 */
   .td-plan { display: flex; flex-wrap: wrap; gap: 3px 12px; align-items: baseline; font-size: var(--fs-sm); color: var(--ink2); margin-top: 6px; padding: 6px 10px; background: var(--accent-soft); border-radius: var(--r-note); }
@@ -3083,63 +3076,14 @@ function renderTradeDesk() {
     h += '</details>';
   }
 
-  // R100z163（用户 2026-10-24 给的账户快照：累计亏损 6.5 万、剩 3 万本金、目标 11-30 前翻倍）：
-  // 「建议总仓位 48.1%」这种百分比读起来很轻，换算成钱才知道每笔只能亏 150 元。
-  // 参数走 localStorage 的 acctProfile（{equity:30000, mult:2, deadline:'2026-11-30'}），
-  // 不写进 data.js——账户是私有状态，不能被 16:00 的脚本覆盖，也不该出现在公开仓库里。
-  var ACCT = { equity: 30000, mult: 2, deadline: '2026-11-30' };
-  try {
-    var _acct = JSON.parse(localStorage.getItem('acctProfile') || 'null');
-    if (_acct && isFinite(_acct.equity) && _acct.equity > 0) {
-      ACCT.equity = Number(_acct.equity);
-      if (_acct.mult) ACCT.mult = Number(_acct.mult);
-      if (_acct.deadline) ACCT.deadline = String(_acct.deadline);
-    }
-  } catch (e) {}
-  var _riskAmt = ACCT.equity * 0.005;
-  // 仓位取数与上方「组合层」同一口径：优先 cappedPosPct（压过的），没有就退回 sumPosPct 原始加总。
-  // 第一版只读 cappedPosPct，实测该日为空 → 显示「— ≈ 0 元」，比不显示还糟。
-  var _posPct = num(pf.cappedPosPct);
-  if (_posPct === null) _posPct = num(pf.sumPosPct);
-  var _posAmt = ACCT.equity * ((_posPct === null ? 0 : _posPct) / 100);
-  var _targetAmt = ACCT.equity * ACCT.mult;
-  // 剩余交易日：只扣周末，不扣节假日（国务院通知每年变，前端不维护第二份日历，量级判断够用）
-  var _nT = 0, _endD = new Date(ACCT.deadline + 'T23:59:59');
-  for (var _d0 = new Date(); _d0 <= _endD; _d0.setDate(_d0.getDate() + 1)) {
-    var _wd = _d0.getDay(); if (_wd !== 0 && _wd !== 6) _nT++;
-  }
-  // 清单平均 R：从本清单自己的收盘/止损/目标反算，不用外部常数
-  var _rs = [];
-  T.picks.forEach(function (p) {
-    var _c = num(p.close), _s = num(p.stop), _t = num(p.target);
-    if (_c && _s && _t && _c > _s) _rs.push((_t - _c) / (_c - _s));
-  });
-  var _avgR = _rs.length ? _rs.reduce(function (a, b) { return a + b; }, 0) / _rs.length : 2.5;
-  // 胜率 40%：现有两本台账都在这附近（方向严格命中 36%–39%、选股 47%），取中间偏保守
-  var _wr = 0.4;
-  var _k = _wr * _avgR - (1 - _wr);              // 每 1% 权益风险对应的期望收益
-  var _expPer = 0.5 * _k;                        // 单笔风险 0.5% 权益 → 每笔期望（% 权益）
-  var _final = ACCT.equity * (1 + _expPer / 100 * _nT);
-  var _needPer = (ACCT.mult - 1) * 100 / Math.max(1, _nT);
-  var _needRisk = _k > 0 ? _needPer / _k : null;
-  var _wan = function (v) { return (v / 10000).toFixed(2); };
-  h += '<div class="td-acct">' +
-    '<div class="td-acct-h">账户与目标<span>本金 ' + _wan(ACCT.equity) + ' 万 · 目标 ' + esc(ACCT.deadline) +
-      ' 前 ' + (ACCT.mult === 2 ? '翻倍' : ('×' + ACCT.mult)) + '（' + _wan(_targetAmt) + ' 万）</span></div>' +
-    '<div class="td-acct-kv">' +
-      '<span>单笔风险 0.5% ＝ <b>' + Math.round(_riskAmt) + ' 元</b></span>' +
-      '<span>建议总仓位 ' + (_posPct === null ? '—' : _posPct.toFixed(1) + '%') +
-        ' ≈ <b>' + Math.round(_posAmt) + ' 元</b></span>' +
-      '<span>清单平均 <b>' + _avgR.toFixed(1) + 'R</b></span>' +
-      '<span>剩余 <b>' + _nT + '</b> 个交易日</span>' +
-    '</div>' +
-    '<div class="td-acct-txt">按胜率 40%、平均 ' + _avgR.toFixed(1) + 'R、单笔风险 0.5% 权益算，每笔期望 <b>' +
-      (_expPer > 0 ? '+' : '') + _expPer.toFixed(2) + '%</b>；剩余 ' + _nT + ' 个交易日天天做满，期望落到 <b>' +
-      _wan(_final) + ' 万</b>，距目标还差 <b>' + _wan(Math.max(0, _targetAmt - _final)) + ' 万</b>。' +
-      '要在期限内补上，每笔得赚 ' + _needPer.toFixed(2) + '% 权益，对应单笔风险 <b>' +
-      (_needRisk === null ? '—</b>' : _needRisk.toFixed(1) + '%</b>（约 ' + Math.round(ACCT.equity * _needRisk / 100) + ' 元/笔）') +
-      '——按这个风险，连亏 5 笔就亏掉 ' + (100 - Math.pow(1 - (_needRisk || 0) / 100, 5) * 100).toFixed(0) + '% 本金。' +
-      '所以这张表能保证的是「别让 ' + _wan(ACCT.equity) + ' 万继续缩水」，翻倍要靠行情和仓位，不靠选股精度。</div>' +
+  // R100z166（2026-10-24 13:4x，用户：「这个删掉，你作为专业的交易员，从你做出的看板中都赚不到钱，
+  // 那这个看板有什么用？」）：整块「账户与目标」（本金 3 万 · 11-30 前翻倍 + 期望值外推）已删除。
+  // 那块把「40% 胜率、平均 2.5R、单笔风险 0.5%」摊成 26 个交易日的期望（3.16 万，距目标 2.84 万），
+  // 再反解出「要补上得单笔风险 9.6%（约 2889 元/笔），连亏 5 笔亏掉 40% 本金」，
+  // 结论写的是「这张表保证的是别让 3 万继续缩水」。
+  // 数字没算错，错在**把「目标不成立」写成了产品自述**：读者读到的不是风控，是「这产品自己都说赚不到钱」。
+  // 可执行的信息没有丢：单笔风险金额 = 个股行的「仓位 %」× 本金，总仓位金额 = 组合层的「建议总仓位 %」。
+  // 别再把它加回来；要再谈目标，谈「这个仓位下最坏亏多少」，不谈「多久能翻倍」。
     '</div>';
 
   // 止损换口径的效果：这里只给一组前后对比，明细（三口径、收益、样本）交给「指标表现」卡。
