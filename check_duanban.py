@@ -1057,17 +1057,6 @@ def collect_sentiment(D):
     return B
 
 
-def _fmt_ref(r):
-    """单条线索 → 小作文段落（kind 区分个股/板块消息；srcTag 标注来源）。"""
-    kind = "个股消息" if r.get("kind") == "stock" else \
-        f"板块消息（{r.get('kw') or r.get('sec') or ''}）"
-    tag = (" " + str(r["srcTag"])) if r.get("srcTag") else ""
-    head = " ".join(x for x in (r.get("time"), r.get("source") or r.get("src")) if x)
-    title = f"《{r['title']}》" if r.get("title") else ""
-    body = r.get("summary") or ""
-    return f"{kind}{tag}：{head}{title}" + (f"：{body}" if body else "")
-
-
 # ---- R100z148：story 小作文数据驱动生成（底稿即达 G16 ≥100 字 / G17 防复读）----
 # 治本背景：2026-10-16 周末档 AI 未逐只改写 story，54/58 只停留在 29 字默认句；
 # 且 retag_duanban 每次重打标都会用 tag_entries 拼装的短 story 覆盖已修复数据
