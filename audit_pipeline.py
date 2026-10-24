@@ -3771,6 +3771,77 @@ def g42_design_tokens(r):
         r.ok("G42", "设计令牌到位（字号全走 var(--fs-*) / 页面标题统一 --fs-page / 同级卡标题同款 / 圆角仅三档）")
 
 
+def g43_stock_chip_layout(r):
+    """G43 股票卡「名称+代码」不可断 + 徽章只标少数派（R100z168，2026-10-24）。
+
+    由来（用户原话）：「这个怎么歪七扭八的，一会代码换行，一会代码就在名称旁边，
+    已经标注自选的是什么意思，没标注的又是什么意思」。
+
+    ① 折行的根因不是字体，是排版没有「不可断的整体」：
+       <b>名称</b><span.cd>代码</span> 各自 nowrap，但**两个 inline 元素的边界仍然可以断行**。
+       实测「名称 4 字(50px) + 间距 3 + 代码(35.2~37.8px)」= 88.2~90.8px，而卡片内容宽正好 90.8px
+       → 代码里 1 多的窄、8 多的宽，**同一行文字只因数字组合不同就随机折行**（48 张卡折了 22 张，
+       3 字名 0/6 折、4 字名 22/42 折）。
+       修法：两者裹进 .nm（flex），名称 flex:0 1 auto + ellipsis（窄了就省略，绝不折行），代码 flex:none。
+
+    ② 徽章的根因是「标了多数派」：原判据 poolHit === false（= AI 补位）当天命中 43/48 = 90%，
+       等于没标注；且「自选」在股票软件里默认指「我的自选股」，读者会当成可点的收藏按钮。
+       改成只标 poolHit === true（机械池命中，当天 5/48）。
+
+    判据（反向锁死，防止下一轮把废弃写法补回来）：
+      a) 每个 .stock-chip 生成点必须紧接 <span class="nm"><b>，数量必须对上
+      b) .stock-chip .nm 必须 display:flex；.nm b 必须带 text-overflow:ellipsis
+      c) 徽章判据必须是 poolHit === true，源码里不许再出现 poolHit === false
+      d) ai-foot 必须有「机械池」图例 —— 只有徽章没有图例，读者仍不知道两种状态各是什么意思
+    """
+    p = os.path.join(HERE, "index.html")
+    try:
+        s = open(p, encoding="utf-8").read()
+    except Exception as e:                                    # noqa: BLE001
+        r.warn("G43", "index.html 读不到，跳过股票卡排版校验：%s" % e)
+        return
+    bad = []
+
+    # a) 生成点必须包 .nm
+    # 注意：class="stock-chips"（容器）与 class="stock-chip"（卡片）只差一个 s，必须用负向断言区分，
+    # 否则容器会被算成「没包 .nm 的卡片」（首次实现就踩了：6 处 vs 4 处）。
+    n_chip = len(re.findall(r'class="stock-chip(?!s)', s))
+    n_nm = s.count('<span class="nm"><b>')
+    if n_chip < 4:
+        bad.append("只找到 %d 处 .stock-chip 生成点（应 ≥4：AI 预测 / 开盘精选 / 谐波池 / 连板梯队）"
+                   "—— 少一处说明某个板块的卡片不再走统一排版" % n_chip)
+    elif n_nm != n_chip:
+        bad.append("%d 处 .stock-chip 只有 %d 处包了 <span class=\"nm\"><b> —— "
+                   "裸 <b>+<span.cd> 在临界宽度会随机折行（R100z168 根因）" % (n_chip, n_nm))
+
+    # b) CSS 契约
+    if not re.search(r"\.stock-chip \.nm \{[^}]*display:\s*flex", s):
+        bad.append(".stock-chip .nm 未设 display:flex —— 名称与代码不在同一行容器，折行会复发")
+    if not re.search(r"\.stock-chip \.nm b \{[^}]*text-overflow:\s*ellipsis", s):
+        bad.append(".stock-chip .nm b 缺 text-overflow:ellipsis —— 窄视口下名称会溢出到代码上")
+
+    # c) 徽章口径
+    if "poolHit === false" in s:
+        bad.append("徽章判据又回到 poolHit === false（标 AI 补位）—— 该口径当天会命中 90% 的卡片，"
+                   "等于没有标注；正确做法是标少数派 poolHit === true")
+    if "poolHit === true" not in s:
+        bad.append("找不到 poolHit === true 的徽章判据 —— 机械池命中的票没有任何标识")
+
+    # d) 图例
+    m_foot = re.search(r'class="ai-foot">([^\n]{0,1200})', s)
+    if not m_foot:
+        bad.append("找不到 .ai-foot 标的筛选口径段 —— 徽章没有图例可挂")
+    elif "机械池" not in m_foot.group(1):
+        bad.append(".ai-foot 未说明「机械池」徽章含义 —— 只有标记没有图例，读者无法区分两种状态")
+
+    if bad:
+        for b in bad:
+            r.fail("G43", b)
+    else:
+        r.ok("G43", "股票卡排版到位（.nm 包裹 %d/4 处 / 名称可省略代码不缩 / 徽章标少数派机械池 / 脚注有图例）"
+             % n_nm)
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -3828,6 +3899,7 @@ def main():
     g40_score_page_and_slots(r)
     g41_visual_norms(r)
     g42_design_tokens(r)
+    g43_stock_chip_layout(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
