@@ -232,6 +232,7 @@
     "2",
     "3",
     "3.4",
+    "3.45",
     "3.5",
     "4",
     "4a",
@@ -511,8 +512,9 @@
     "accumulation_score.py",
     "full_scan.py",
     "price-in→已计价",
-    "竞价跳空动作（R100z192，勿删勿改）",
-    "这类无动作的空话"
+    "盘口结构动作（R100z193，勿删勿改",
+    "这类无动作的空话",
+    "tapeSummary 的动作交代"
    ],
    "forbidden": [
     "①",
@@ -547,7 +549,11 @@
     "harmonic.watchPool",
     "powerScreen.passed",
     "accumulation.scored",
-    "fullScan"
+    "fullScan",
+    "duanban.star.gapSummary",
+    "duanban.star.tapeSummary",
+    "duanban.star.picks[].tape",
+    "duanban.star.picks[].gapTag"
    ],
    "writesFields": [
     "duanban.star",
@@ -782,6 +788,7 @@
     "1",
     "2",
     "3",
+    "3.5",
     "4",
     "5",
     "6",
@@ -816,6 +823,14 @@
      ],
      "file": "build_stock_pool.py",
      "step": "3"
+    },
+    {
+     "cmd": "python3 lhb.py",
+     "flags": [
+      "--write"
+     ],
+     "file": "lhb.py",
+     "step": "3.5"
     },
     {
      "cmd": "python3 stock_quotes.py",
@@ -999,7 +1014,9 @@
     "price-in→已计价",
     "R100z160",
     "G38（成绩单约束）",
-    "forecastScore.flags.maxHighConf"
+    "forecastScore.flags.maxHighConf",
+    "lhb.py --write",
+    "ashare.lhb"
    ],
    "forbidden": [
     "①",
@@ -1108,7 +1125,15 @@
     "calibration_state.json",
     "market_bench.json",
     "stock_pool.json",
-    "risk_blacklist.json"
+    "risk_blacklist.json",
+    "ashare.lhb",
+    "ashare.lhb.date",
+    "ashare.lhb.status",
+    "ashare.lhb.top[]",
+    "ashare.lhb.sell[]",
+    "ashare.lhb.seatRepeat[]",
+    "ashare.lhb.text",
+    "ashare.lhb.note"
    ],
    "writesFields": [
     "ashare.* 叙事字段（sectorsUp/Down.reason / 五节要闻 / themePicks / outlook / lianban story / updatedAt）",
@@ -1116,7 +1141,8 @@
     "openOutlook.verification",
     "stkKlines/stkKlineNames（embed_klines）",
     "risk_blacklist.json / stock_pool.json / market_bench.json / policySignals（脚本产物）",
-    "panorama.markets[ashare]（date 标签/items/indices）"
+    "panorama.markets[ashare]（date 标签/items/indices）",
+    "ashare.lhb"
    ],
    "neverWrites": [
     "us（全部字段，仅复核）",
@@ -1589,5 +1615,17 @@
     "cal_factor.py 还支持 --date 逐日试算以判定 NEXT_DAY，未在 scripts 中单独列调用。"
    ]
   }
- ]
+ ],
+ "pendingFields": {
+  "44d9708b-ce74-440d-91e6-1b8d51df6576": {
+   "until": "2026-10-26",
+   "why": "update_star.py 于 R100z192/R100z193 新增 gapSummary/gapTag/tape/tapeSummary，脚本未在交易日实跑过（本次改动落在 2026-10-24 周六），首个可落盘时点是 2026-10-26 09:45；过期仍缺 = 脚本根本没写，B6 转 FAIL",
+   "fields": [
+    "duanban.star.gapSummary",
+    "duanban.star.tapeSummary",
+    "duanban.star.picks[].tape",
+    "duanban.star.picks[].gapTag"
+   ]
+  }
+ }
 }
