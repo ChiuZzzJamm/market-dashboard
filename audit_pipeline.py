@@ -3564,13 +3564,22 @@ def g40_score_page_and_slots(r):
     if ig < 0:
         bad.append("缺 geom()——槽位几何没有单一计算入口")
     else:
-        gb = s[ig:ig + 900]
+        gb = s[ig:ig + 1200]
         for need, why in (("flexDirection", "未读 flex-direction，横排/竖排切换时槽位会错"),
                           ("rowGap", "未读 rowGap，竖排槽距写死"),
                           ("columnGap", "未读 columnGap，横排槽距写死"),
-                          ("getComputedStyle", "未从 computed style 取尺寸，display:none 时量不到")):
+                          ("getComputedStyle", "未从 computed style 取尺寸，display:none 时量不到"),
+                          # 手机端那排是有底色的胶囊条（padding 5px 7px），漏算内边距
+                          # 会让页内替身整体偏 8px —— 又是「点进去按钮跳一格」。
+                          ("paddingLeft", "未读 paddingLeft，容器一加内边距页内替身就整体偏移")):
             if need not in gb:
                 bad.append("geom() %s" % why)
+        # 读到 padding 还不够：必须真的加进槽位偏移（只读不用＝白读）
+        moff = re.search(r"off\.push\(\{[^}]*\}", gb)
+        if not moff:
+            bad.append("geom() 找不到 off.push({...})——槽位偏移没有落点")
+        elif 'pl' not in moff.group(0) or 'pt' not in moff.group(0):
+            bad.append("geom() 的 off.push 没用 pl/pt——容器有内边距时替身会整体偏移")
 
     if bad:
         r.fail("G40", "；".join(bad[:4]))
