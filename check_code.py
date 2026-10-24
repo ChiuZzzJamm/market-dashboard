@@ -1179,6 +1179,21 @@ def k10_news_order(r, verbose=False):
             bad.append('index.html:%d 把 story 的【个股消息】段丢弃了 —— '
                        '那是真实内容（全库 56 条、每段 30-80 字），'
                        '应归入「个股新闻」组（kind:news + ts:0）而不是 return' % line)
+        # ⑥ 反向兜底：⑤ 只拦「写成同一条 return」；若有人改成 filter 掉、或整块删掉
+        #   extra.push，⑤ 一条都拦不到（正则匹配的是形状）。所以这里改问正向语义：
+        #   **两个消息面渲染入口都得真的把 story 段输出出来，且按 isStk 归到新闻组**。
+        #   注意 `openDbModal` 里变量名是 isStk2 —— 判据用 `isStk` 前缀，两种命名都覆盖。
+        for fn_name in ('stkNewsHtml', 'openDbModal'):
+            fbody = _extract_js_fn(html, fn_name)
+            if not fbody:
+                bad.append('%s() 抽取失败或不存在 —— 该入口的 story 段渲染无法自检（K10 ⑥）'
+                           % fn_name)
+            elif 'dbStoryParaHtml(' not in fbody:
+                bad.append('%s() 没调用 dbStoryParaHtml —— story 里的段落被整块删了；'
+                           '「删 UI 假区块」不等于「删真实段落」（全库 56 条）' % fn_name)
+            elif 'isStk' not in fbody:
+                bad.append('%s() 没给 story 段分派 kind（isStk 缺失）—— '
+                           '它会掉出 公告/新闻/板块 三段结构' % fn_name)
 
     # ---- D 口径语义：用假数据跑真函数（node 缺失只降级，不阻断）
     CASES = [
