@@ -1286,8 +1286,10 @@ def main():
             # R100z157：排序口径 + 第 6 名（被前 5 截断的第一名），让「第 6 名被谁顶掉」可查证
             if sector_cut:
                 a["sectorRank"] = sector_cut
-            # R100z6：panorama 层镜像 sectorSource（原只在 ashare 层，行业全景排查口径时要翻两层）
-            D.setdefault("panorama", {})["sectorSource"] = sector_src
+            # R100z6 曾在 panorama 层镜像一份 sectorSource，理由是「行业全景排查口径时要翻两层」。
+            # R100z172 删除：`index.html` 只按 `ashare.sectorSource` 读（行 1999/2016），
+            # `panorama.sectorSource` 全库零读方——纯写不读的镜像，两处一旦漂移就是口径分裂。
+            # 这类「同值跨层镜像」由 G45 兜（忽略 tradeDate/date 等各模块必需的水位字段）。
             updated_parts.append("行业板块TOP5")
             # 全板块涨幅榜（同花顺/东财push2delay/新浪，供 17:00 叙事步 AI 预测验证按板块名匹配实际涨跌幅；不参与页面展示）
             all_b = all_boards
