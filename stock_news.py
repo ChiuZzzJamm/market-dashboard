@@ -48,6 +48,12 @@ NEWS_PAGE_SIZE = 20     # 单只搜索条数（再按相关性与日期过滤）
 # 「让你优化没让你减少要闻深度」。cap 提到 6 后同样 14 日窗口下真消息填得回 4-6 条。
 # 体积代价实测约 +0.3MB（data.js 7.0 → 7.3MB），比噪声换深度更划算。
 NEWS_MAX_KEEP = 6
+# R100z207：抓取阶段先多留一些当**候选**，等 build() 做完「跨标的去重」再截到 6。
+# 原因：跨标的去重（同一标题挂在 ≥3 只票上且不含本公司名 → 板块/统计稿）只有拿到
+#   全局视图才判得出，而它恰恰是最能抓干净的一类噪音 —— 正则可以穷举，盘点稿的
+#   标题模板穷举不完（实测漏了 448 条「概念涨X%，主力资金净流入这些股」这种）。
+#   如果先按 6 截断再去重，被删掉的名额就空着没人填 → 又变成「优化着深度变少」。
+NEWS_CAND_KEEP = 12
 NOTICE_MAX_KEEP = 3     # 单只最多保留公告条数
 SUMMARY_MAX = 180       # 新闻摘要字数上限。东财 content 原文实测 p90=147 / max=154，
                         # 取 180 可完整保留（原 72 字把 1251/1513 条砍成半句，用户实报「显示不全」）
@@ -173,6 +179,18 @@ NEWS_STOCK_ONLY = (
     #    而 G22 只查「要闻里还有没有噪音」，永远发现不了「真信号被删」。
     #    判据：主语是「一批票」（板块广度），不是市场指数，也不是这家公司。
     re.compile(r'多只(?:热门股|个股|概念股|业绩)|多股(?:涨停|大涨|爆发|逆市)'),
+    # ⚠️ R100z207 补漏（都是「主语是市场/一批票」但老正则写窄了漏掉的写法）。
+    #    每条都单独量过错杀：在现网 2259 条上命中数 vs 「标题含本公司名」的条数，
+    #    下面这四组误杀全为 0（唯一有风险的是龙虎榜，见下一行注释）。
+    re.compile(r'^\d{6}[，,][^，。]{0,12}(?:直线涨停|分钟涨停|涨停|跌停|复牌|封板|异动)'),
+    #    ↑ 「300296，三分钟直线涨停！两大板块，逆市大涨！」以**别人的代码**开头，挂 8 只票。
+    #      收紧到「代码开头 + 12 字内出现涨跌停/复牌」，不会碰到「600884，拟向海螺集团定增」这类真消息。
+    re.compile(r'主力资金净流入(?:这些股|\d+股|超\d+)'),                        # …概念涨4.45%，主力资金净流入70股
+    re.compile(r'(?:概念|板块)涨[\d.]+%'),                                    # 原规则只认「上涨/下跌」，单字「涨」全漏
+    re.compile(r'\d+\s*家公司?[^，。]{0,8}(?:预告|披露)|\d+\s*股净利润'),        # 168家公司预告前三季度业绩 / 72股净利润增幅翻倍
+    #    ⚠️ 龙虎榜**不能裸判**：「郑中设计(002811)龙虎榜数据(10-13)」是这只票自己的龙虎榜，
+    #       属正当消息（68 条）。只杀通用盘点稿「龙虎榜动向：7股获机构及北向资金集体净买入」。
+    re.compile(r'龙虎榜动向[：:]\s*\d+\s*股'),
 )
 
 
@@ -374,7 +392,7 @@ def fetch_stock_news(name, code, days=NEWS_DAYS):
             continue
         per_day[k] = per_day.get(k, 0) + 1
         picked.append(n)
-        if len(picked) >= NEWS_MAX_KEEP:
+        if len(picked) >= NEWS_CAND_KEEP:   # R100z207：先留候选，跨标的去重后再截到 NEWS_MAX_KEEP
             break
     out = picked
     # 写缓存：R100z149b —— 只在「请求确实成功拿到响应体」时落盘。
@@ -433,6 +451,50 @@ def collect_targets(D):
                     for st in im.get('stocks') or []:
                         add(st.get('code'), st.get('name'))
     return out
+
+
+def _drop_crossdup(out, min_stocks=3):
+    """跨标的去重：**同一标题挂在 ≥min_stocks 只票上、且标题里没有这家公司的名字** → 板块/统计稿。
+
+    为什么这条判据比正则根本（R100z207，2026-10-25 用户第二次问「还有没有噪音」时加的）：
+    正则只能穷举**已知**的标题模板，而东财的盘点稿模板是无穷的 —— 实测清完 608 条后
+    又冒出 448 条，全是这一类：「人形机器人概念涨1.46%，主力资金净流入这些股」挂在
+    24 只票上、「ChatGPT概念涨4.45%，主力资金净流入70股」挂 10 只、
+    「003021，直线涨停！5天3板」挂 8 只（连代码都是别人的）、
+    「10月23日晚间沪深上市公司重大事项公告最新快递」挂 8 只。
+    它们的共同点不是措辞，是**结构**：一篇稿子被搜索接口同时命中多只票，而稿子本身
+    根本没提其中任何一只。这个判据不需要维护词表，也不会随模板变化失效。
+
+    为什么阈值取 3 而不是 2：2 只共用可能真是巧合（关联公司同日发同一份公告、
+    同一事件被同一篇稿子提到两家），实测 ≥2 会删 827 条，开始碰到「宁德时代遭减持」
+    这类只该在一只票里留的稿子；≥3 删 448 条，抽检 20 条全是真的盘点稿。
+    标题含本公司名/代码的一律保留 —— 「宁德时代遭主力减持」挂在 8 只票上时，
+    宁德时代那一份是对的，删的是另外 7 只。
+    """
+    t2c = {}
+    for code, item in out.items():
+        for n in item.get('news') or []:
+            k = re.sub(r'\s+', '', str(n.get('title') or ''))
+            t2c.setdefault(k, set()).add(code)
+    n_drop = 0
+    for code, item in out.items():
+        lst = item.get('news')
+        if not lst:
+            continue
+        nm = _norm(item.get('name') or '')
+        keep = []
+        for n in lst:
+            k = re.sub(r'\s+', '', str(n.get('title') or ''))
+            ti = _norm(n.get('title') or '')
+            if len(t2c.get(k, ())) >= min_stocks and nm not in ti and code not in ti:
+                n_drop += 1
+                continue
+            keep.append(n)
+        if keep:
+            item['news'] = keep
+        else:
+            item.pop('news', None)
+    return n_drop
 
 
 def build(targets, days=NEWS_DAYS):
@@ -497,11 +559,39 @@ def build(targets, days=NEWS_DAYS):
         if nw:
             item['news'] = nw
         out[code] = item
+
+    # R100z207：先拿全局视图做跨标的去重（噪音不占名额），再截到 NEWS_MAX_KEEP。
+    # 顺序不能反 —— 先截断再去重，被删的名额就空着，深度又掉了。
+    n_drop = _drop_crossdup(out)
+    n_cut = 0
+    for item in out.values():
+        lst = item.get('news')
+        if lst and len(lst) > NEWS_MAX_KEEP:
+            n_cut += len(lst) - NEWS_MAX_KEEP
+            item['news'] = lst[:NEWS_MAX_KEEP]
+    if n_drop or n_cut:
+        print(f'[stock_news] 全局去噪：跨标的盘点稿丢 {n_drop} 条；'
+              f'候选 {NEWS_CAND_KEEP} 截到 {NEWS_MAX_KEEP} 裁掉 {n_cut} 条', flush=True)
+    # 新闻被删空的标的：只留 name 的摘掉（否则 audit G9「白名单外空内容」）
+    for code in [c for c, v in out.items() if not v.get('notices') and not v.get('news')]:
+        out.pop(code, None)
     return out
 
 
-def merge_depth(sn, old_sn, targets=None, days=NEWS_DAYS):
-    """把旧快照里**仍在回看窗口内**的条目并回 sn —— 深度只增不减（R100z205）。
+def _fresh(v, cutoff):
+    """旧标的里是否还有**回看窗口内**、且不是噪音的条目（news 比 time / notices 比 date）。"""
+    for field, tk in (('news', 'time'), ('notices', 'date')):
+        for x in (v.get(field) or []):
+            if str(x.get(tk) or '')[:10] < cutoff:
+                continue
+            if field == 'news' and is_stats_title(x.get('title')):
+                continue
+            return True
+    return False
+
+
+def merge_depth(sn, old_sn, days=NEWS_DAYS):
+    """把旧快照里**仍在回看窗口内**的条目并回 sn —— 深度只增不减（R100z205/206）。
 
     为什么需要（用户 2026-10-25 原话「让你优化没让你减少要闻深度」）：
     脚本一直是「本次抓取结果整份替换」。接口一抖动（限流/超时/单只无返回），某只票
@@ -513,18 +603,35 @@ def merge_depth(sn, old_sn, targets=None, days=NEWS_DAYS):
     规则：新抓到的排前面；旧条目按 (date/title) 去重后补位；各自不超过上限；
     **只补窗口内的**——否则一条旧闻会永远赖在弹窗里，从「深度」变成「陈旧」。
 
-    targets=None 时只填补**已存在**的标的（给 `--merge-depth 快照` 用，不复活空壳）；
-    传 targets 时允许把整只补回（每日正常流程，保持原行为）。
+    ⚠️ R100z206（2026-10-25 用户第二次追问「深度是不是和之前一致」时抓到的真 bug）：
+    整只补回的旧判据是「code 在今天的 targets 里」，**这是错的**。`targets` 的语义是
+    「今天要抓谁」（由断板池/谐波/吸筹/板块 tops 等**当天会轮换**的渲染面拼出来），
+    不是「今天该显示谁」。池子一轮换，36 只票当天没进 targets，整份替换一冲，它们
+    连同弹窗里的真公告一起消失 —— 赣锋锂业 3 条、三一重工 3 条、东方中科 3 条、
+    诺德股份 3 条、杉杉股份 3 条…全没了，标的数 533 → 530 还看不出问题（因为有
+    33 只是新进的），用户点开某只票才发现「内容变少了」。
+    改判据：**旧条目里还有窗口内、非噪音的内容**就整只补回，跟 targets 无关；
+    真空壳（两侧都空 / 全是 14 天前的）才不复活 —— 这才是 audit G9 想拦的东西。
+    附带：从旧快照恢复时，news 必须先过 `is_stats_title`，否则会把已清的噪音带回来。
+
+    返回 (补回的条目数, 整只复活的标的数)。
+    ⚠️ R100z207：**跨标的去重要在「补之前」做，不能补完再做**。
+    实测踩过「补-删循环」：补进来 → 因为同一标题现在挂到 3 只票上了 → 被判盘点稿删掉 →
+    下一轮又从同一份快照补回来，**永不幂等**（第二次跑报「补 319 条 / 去噪 315 条」）。
+    正确顺序：① 先清当前存量的跨标的重复；② 对**快照自身**过一遍（计数以快照为准，
+    快照不变 → 去重结果固定 → 补进来的一定不会再触发判定）；③ 逐条补，补完不再去重。
     """
     cutoff = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
-    n_fill = 0
+    n_dup = _drop_crossdup(sn)      # ① 存量先清
+    _drop_crossdup(old_sn)          # ② 快照自身去重（结果稳定，保证幂等）
+    n_fill = n_back = 0
     for code, ov in (old_sn or {}).items():
         nv = sn.get(code)
         if nv is None:
-            if targets is not None and code in targets:
-                nv = sn[code] = {'name': ov.get('name') or ''}
-            else:
+            if not _fresh(ov, cutoff):
                 continue
+            nv = sn[code] = {'name': ov.get('name') or ''}
+            n_back += 1
         if not nv.get('name'):
             nv['name'] = ov.get('name') or ''
         for field, cap, tk in (('news', NEWS_MAX_KEEP, 'time'),
@@ -538,6 +645,8 @@ def merge_depth(sn, old_sn, targets=None, days=NEWS_DAYS):
                     break
                 if str(x.get(tk) or '')[:10] < cutoff:
                     continue
+                if field == 'news' and is_stats_title(x.get('title')):
+                    continue     # 旧快照可能带噪音，恢复不等于回滚过滤规则
                 k = re.sub(r'\s+', '', str(x.get('title') or ''))
                 if not k or k in seen:
                     continue
@@ -550,7 +659,7 @@ def merge_depth(sn, old_sn, targets=None, days=NEWS_DAYS):
     for code in [c for c, v in sn.items()
                  if not v.get('notices') and not v.get('news')]:
         sn.pop(code, None)
-    return n_fill
+    return n_fill, n_back, n_dup
 
 
 def _snapshot_stock_news(path):
@@ -582,9 +691,12 @@ def purge_stats(D):
                 v.pop('news', None)
         if not v.get('notices') and not v.get('news'):
             emptied.append(code)
+    # R100z207：存量也要过一遍跨标的去重（抓取侧已做，但存量是旧管线产的）
+    n_dup = _drop_crossdup(sn)
+    emptied = [c for c in sn if not sn[c].get('notices') and not sn[c].get('news')]
     for c in emptied:
         sn.pop(c, None)
-    return n_del, n_hit, emptied
+    return n_del, n_hit, emptied, n_dup
 
 
 def main():
@@ -606,10 +718,11 @@ def main():
 
     if args.purge_stats:
         before = sum(len(v.get('news') or []) for v in (D.get('stockNews') or {}).values())
-        n_del, n_hit, emptied = purge_stats(D)
+        n_del, n_hit, emptied, n_dup = purge_stats(D)
         after = sum(len(v.get('news') or []) for v in (D.get('stockNews') or {}).values())
-        print(f'[stock_news] 存量清洗：删 {n_del} 条 / 涉及 {n_hit} 只 / '
-              f'清空并摘除 {len(emptied)} 只 / 新闻 {before} → {after} 条')
+        print(f'[stock_news] 存量清洗：正则类删 {n_del} 条（涉及 {n_hit} 只）/ '
+              f'跨标的盘点稿删 {n_dup} 条 / 清空并摘除 {len(emptied)} 只 / '
+              f'新闻 {before} → {after} 条')
         if emptied:
             print('[stock_news] 摘除：' + ','.join(sorted(emptied)[:30])
                   + (' …' if len(emptied) > 30 else ''))
@@ -626,12 +739,12 @@ def main():
         cur = D.get('stockNews') or {}
         b_n = sum(len(v.get('news') or []) for v in cur.values())
         b_t = sum(len(v.get('notices') or []) for v in cur.values())
-        n_fill = merge_depth(cur, old, None)
+        n_fill, n_back, n_dup = merge_depth(cur, old)
         a_n = sum(len(v.get('news') or []) for v in cur.values())
         a_t = sum(len(v.get('notices') or []) for v in cur.values())
         print(f'[stock_news] 深度并集（快照 {os.path.basename(args.merge_depth)}）：'
-              f'补 {n_fill} 条 / 新闻 {b_n} → {a_n} / 公告 {b_t} → {a_t} / '
-              f'标的 {len(cur)} 只')
+              f'补 {n_fill} 条 / 整只复活 {n_back} 只 / 去噪 {n_dup} 条 / 新闻 {b_n} → {a_n} / '
+              f'公告 {b_t} → {a_t} / 标的 {len(cur)} 只')
         if args.dry:
             return
         with open(DATA_JS + '.tmp', 'w', encoding='utf-8') as f:
@@ -663,9 +776,12 @@ def main():
         #    「187只股中线走稳」等盘面统计类，加严过滤后 news=0 却被兜底保留。
         # R100z205：从「整只兜底」升级成 merge_depth 的**逐条并集** —— 原因见函数注释
         #    （整只兜底救不了「公告 3 条变 0 条」这种半只残废，实测掉过 177 条）。
-        n_fill = merge_depth(D['stockNews'], old, targets)
-        if n_fill:
-            print(f'[stock_news] 深度并集：从旧快照补回 {n_fill} 条窗口内条目')
+        # R100z206：整只补回不再看 targets（池子轮换 ≠ 该清空弹窗），改看「旧条目是否还在窗口内」。
+        n_fill, n_back, n_dup = merge_depth(D['stockNews'], old)
+        if n_fill or n_back:
+            print(f'[stock_news] 深度并集：补回 {n_fill} 条窗口内条目、'
+                  f'整只复活 {n_back} 只（今天没进 targets 但旧内容仍有效）、'
+                  f'跨标的去噪 {n_dup} 条')
     # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace
     _tmp = DATA_JS + '.tmp'
     with open(_tmp, 'w', encoding='utf-8') as f:
