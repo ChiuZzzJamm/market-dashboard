@@ -466,7 +466,6 @@
    "stepOrder": [
     "0",
     "1",
-    "1.5",
     "2",
     "3",
     "4"
@@ -485,15 +484,6 @@
      "flags": [],
      "file": "update_star.py",
      "step": "1"
-    },
-    {
-     "cmd": "python3 desk_verify.py",
-     "flags": [
-      "--check",
-      "--write-star"
-     ],
-     "file": "desk_verify.py",
-     "step": "1.5"
     },
     {
      "cmd": "python3 validate_stocks.py",
@@ -520,15 +510,7 @@
     "power_screener.py",
     "accumulation_score.py",
     "full_scan.py",
-    "desk_verify.py --check --write-star",
-    "price-in→已计价",
-    "站上昨收",
-    "昨收×1.02",
-    "开盘 < 追价 且 当日最高 ≥ 追价",
-    "三档",
-    "不许把「竞价水下」当筛选条件",
-    "当日收盘净",
-    "摸到止盈参考"
+    "price-in→已计价"
    ],
    "forbidden": [
     "①",
@@ -559,7 +541,6 @@
     "duanban.star.picks[].src",
     "duanban.star.pushText",
     "duanban.star.generatedBy",
-    "duanban.star.deskCheck",
     "harmonic.confirmPool",
     "harmonic.watchPool",
     "powerScreen.passed",
@@ -570,8 +551,7 @@
     "duanban.star",
     "duanban.star.sentiment",
     "duanban.star.pushText",
-    "duanban.star.picks",
-    "duanban.star.deskCheck"
+    "duanban.star.picks"
    ],
    "neverWrites": [
     "ashare",
@@ -589,8 +569,7 @@
     "us.themePicks"
    ],
    "notes": [
-    "唯一写入口是 duanban.star；脚本产物（update_star.py）负责 picks，AI 只复核 sentiment/pushText 并可微调 picks（仅可删减或池内补入）。",
-    "R100z186：步骤 1.5 口径改为条件单——每只由昨收推出 站上昨收 / 追价 昨收×1.02 / 止盈参考 昨收×1.05，09:45 只判强弱五档；结算判据「开盘 < 追价 且 当日最高 ≥ 追价」，三档全记（当日收盘 / 次日开盘 / 摸到止盈）。原「用今日开盘价结算」口径已作废（A 股 T+1 当日卖不掉）。"
+    "唯一写入口是 duanban.star；脚本产物（update_star.py）负责 picks，AI 只复核 sentiment/pushText 并可微调 picks（仅可删减或池内补入）。"
    ]
   },
   {
