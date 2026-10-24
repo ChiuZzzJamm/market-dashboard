@@ -3600,8 +3600,13 @@ def g41_visual_norms(r):
 
     判据：
       a) 交易预案标题必须是「交易预案」，不许回退成「次日交易预案」；
-      b) renderTradeDesk 必须同时产出「与 AI 预测的关系」行与「账户与目标」块，
-         且账户金额由 ACCT.equity 算出（不许写死「3 万」这种会过期的文案）；
+      b) renderTradeDesk 必须产出「与 AI 预测的关系」行；
+         （R100z166：原判据还要求「账户与目标」块 + ACCT.equity + acctProfile 三件，
+          2026-10-24 用户明确要求删掉那块：「这个删掉，你作为专业的交易员，从你做出的看板中
+          都赚不到钱，那这个看板有什么用？」——它把「本金 3 万 / 11-30 前翻倍」摊成期望值外推，
+          结论落成「这张表保证的是别让 3 万继续缩水」。账没算错，错在把「目标不成立」写成产品自述。
+          判据随之删除，**不是为凑绿而放宽**：被删的是产品需求本身，不是校验强度。
+          现在反向锁住：源码里不许再出现 td-acct / acctProfile，防下一次「补回来」。）
       c) 悬浮按钮「三件套」齐全：四个入口 + 四个页内返回，且 #sc-entry-in 必须 bindDrag()——
          这是用户 2026-10-24 亲自撞到的 bug（位置会跟随、自己拖不动）；
          且拖拽后的 click 抑制必须是时间戳窗口（suppressClick），不能粘性布尔（会吞下一次点击）；
@@ -3627,14 +3632,14 @@ def g41_visual_norms(r):
         bad.append("找不到 renderTradeDesk() —— 交易预案卡整块没了")
     else:
         tb = mt.group(1)
-        if "td-acct" not in tb:
-            bad.append("交易预案卡缺「账户与目标」块（.td-acct）——本金/风险换算成钱的那一段")
-        elif "ACCT.equity" not in tb:
-            bad.append(".td-acct 未用 ACCT.equity 计算——写死金额会随账户变化立刻过期")
+        # R100z166：判据从「必须有」翻成「不许回来」。这块的字面结论就是
+        # 「这张表能保证的是别让 3 万继续缩水」+「距目标还差 2.84 万」——
+        # 谁再补回来，等于产品又一次自证无用（用户 2026-10-24 原话）。
+        if "td-acct" in tb or "acctProfile" in s or "ACCT.equity" in s:
+            bad.append("交易预案卡又出现「账户与目标」块（td-acct / acctProfile / ACCT.equity）"
+                       "——用户 2026-10-24 明确要求删除：把「目标不成立」写成产品自述")
         if "td-rel" not in tb and "与上方 AI 预测的关系" not in tb:
             bad.append("交易预案卡缺「与 AI 预测的关系」行——两套标的并排却不解释关系，读者会以为互相打架")
-        if "acctProfile" not in tb:
-            bad.append("账户参数没走 localStorage 的 acctProfile——写死在源码里等于把私人账户提交到公开仓库")
 
     # ---- c) 悬浮按钮三件套 ----
     entry = ["gn-entry", "db-entry", "sc-entry"]
