@@ -657,6 +657,26 @@ def us_last_closed(now=None):
     return _c.prior_us_trading_day(d)
 
 
+def us_expected_floor(exp, now=None):
+    """G10 用的**美股日期下限**：周末把期望退到「周五→周四」（R100z163）。
+
+    为什么需要它：07:00 任务排程是**周二至周五**（BYDAY=TU,WE,TH,FR），周六/周日不跑；
+    而周五美股收盘落在北京时间周六 04:00，由**周日 22:00 周末任务**补采
+    （08:30 prompt 原文：「周一 07:00 不排程，`us.tradeDate` 应为周五，由周日 22:00 周末任务抓取，属正常」）。
+    所以周六全天 + 周日补采前，data.js 里最新只能是**周四收盘**。
+    旧写法直接拿「最近已收盘美股交易日」（周五）去比 → 每个周末上午必报一条假 WARN，
+    又变回「永远为真的 WARN 训练人忽略 G10」（24.16d）。真失败由**周一**那次抓到。
+
+    抽成模块级函数是为了能单测（同 `us_last_closed()` 的做法）。
+    """
+    if now is None:
+        now = datetime.now()
+    if now.weekday() >= 5:                                   # 周六 / 周日
+        import common as _cc
+        return _cc.prior_us_trading_day(exp) or exp
+    return exp
+
+
 def g8_g9_g10_data(r):
     try:
         D = load_data_json()
@@ -781,11 +801,23 @@ def g8_g9_g10_data(r):
     try:
         us_td = str((D.get("us") or {}).get("tradeDate") or "")[:10]
         exp = us_last_closed()
-        if us_td and exp:
+        # R100z163（2026-10-24 排查第 6 条「7 条自动化是否有 bug」时撞到）：
+        #   07:00 任务排程是 **周二至周五**（BYDAY=TU,WE,TH,FR），周六/周日不跑；
+        #   周五美股收盘落在北京时间周六 04:00，**由周日 22:00 周末任务补采**
+        #   （08:30 prompt 里就是这么写的：「周一 07:00 不排程，us.tradeDate 应为周五，
+        #   由周日 22:00 周末任务抓取，属正常」）。
+        #   因此周六全天 + 周日补采前，data.js 里最新只能是**周四收盘** —— 旧写法拿周五去比，
+        #   每个周末上午必报一条假 WARN，又回到「永远为真的 WARN 训练人忽略 G10」。
+        #   周末把下限放到 `prior_us_trading_day(exp)`（周五→周四）；真失败由**周一**那次抓到。
+        floor = us_expected_floor(exp)
+        if us_td and floor:
             if us_td == exp.isoformat():
                 r.ok("G10", f"us.tradeDate={us_td} = 最近已收盘美股交易日")
             elif us_td > exp.isoformat():
                 r.ok("G10", f"us.tradeDate={us_td} 不早于最近已收盘美股交易日 {exp.isoformat()}")
+            elif us_td >= floor.isoformat() and floor < exp:
+                r.ok("G10", f"us.tradeDate={us_td}，周末 07:00 不排程，"
+                            f"最近收盘 {exp.isoformat()} 由周日 22:00 周末任务补采（符合设计）")
             else:
                 r.warn("G10", f"us.tradeDate={us_td} 早于最近已收盘美股交易日 {exp.isoformat()}"
                               f"——07:00 取数步未跑，或美股数据未换日")
