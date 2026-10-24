@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610241223"></script>
+<script src="data.js?v=202610241258"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -379,8 +379,10 @@
   .wk-head .date { font-size: var(--fs-base); color: var(--ink2); }
   /* 紧跟卡头的第一节：不再叠第二层线与上边距 */
   .wk-head + .wk-section { margin-top: 0; padding-top: 0; border-top: none; }
-  /* 卡片 h2 内日期角标（主力资金流向等，R98f；R99e 扩展到 AI 预测卡） */
-  .card h2 .h2-date, .ai-card h2 .h2-date, .wk-card h2 .h2-date, .mc-card h2 .h2-date { font-size: var(--fs-sm); color: var(--ink2); font-weight: 400; margin-left: 8px; }
+  /* 卡片 h2 内日期角标（主力资金流向等，R98f；R99e 扩展到 AI 预测卡）
+     R100z165：加 nowrap + 不收缩——窄屏下长标题（如「周五开盘前瞻（2026-10-23 周五版 · 周一盘前参考）」）
+     会把日期挤成「2026-」/「10-23」两行，日期断在中间比标题折行难读得多。 */
+  .card h2 .h2-date, .ai-card h2 .h2-date, .wk-card h2 .h2-date, .mc-card h2 .h2-date { font-size: var(--fs-sm); color: var(--ink2); font-weight: 400; margin-left: 8px; white-space: nowrap; flex: 0 0 auto; }
   /* R100z54：开盘前瞻结构化假设 pos 速览三格（倾向 / 点位区间 / 量能），
      08:30 写、17:00 打分用；此前前端完全不消费，只进台账不上页面。 */
   .oo-pos { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 16px; }
@@ -565,9 +567,10 @@
   .mkt-toggle:hover, .db-entry:hover { transform: scale(1.1); }
   .mkt-toggle:active, .db-entry:active { transform: scale(.92); }
   .db-entry .db-badge { display: none; }
-  /* 断板反包页内的返回 💰：默认位置与组内 💰 一致，拖拽组时由 JS 实时同步坐标 */
+  /* 独占页里的「同槽替身」按钮：视觉与组内完全一致，坐标由 JS（layout）写入。
+     CSS 只给一个兜底位置，避免脚本失败时按钮跑到屏幕外。 */
   .db-entry-in {
-    position: fixed; right: var(--float-x); top: calc(50% + 7px);
+    position: fixed; right: var(--float-x); top: 50%;
     width: 46px; height: 46px; border-radius: 50%;
     background: transparent; border: none; padding: 0; box-shadow: none;
     cursor: grab; z-index: 1200; touch-action: none; user-select: none;
@@ -578,10 +581,19 @@
   .db-entry-in:hover { transform: scale(1.1); }
   .db-entry-in:active { transform: scale(.92); cursor: grabbing; }
   body.db-open .db-entry-in { display: flex; }
-  @media (max-width: 700px) {
-    :root { --float-x: 10px; }
-    .float-group { gap: 12px; }
-    .mkt-toggle, .db-entry, .db-entry-in { width: 42px; height: 42px; font-size: var(--fs-emoji); }
+  @media (max-width: 700px), (max-height: 460px) {
+    :root { --float-x: 12px; }
+    /* R100z165：手机端（用户 2026-10-24 截图：4 个图标竖排压在正文上）——
+       不再垂直居中，改成贴右下角「横排工具条」。竖排在窄屏永远压在文字上；
+       横排只占底部一条 42px 高的安全区，正文可以绕开。
+       横排后槽位是水平方向，JS 的几何表会自动跟着 flex-direction 走，无需另写一套。
+       同时管横屏手机：844×390 时宽度过 700 但竖排 226px 会占掉半屏，按高度也降级。 */
+    .float-group {
+      top: auto; bottom: 14px; transform: none;
+      flex-direction: row; align-items: center; gap: 8px;
+    }
+    .mkt-toggle, .db-entry, .db-entry-in, .gn-jump { width: 42px; height: 42px; font-size: var(--fs-emoji); }
+    .wrap { padding-bottom: 92px; }
   }
   /* R99e：断板反包手机端不显示股票代码（窄屏下被挤没，无信息量） */
   /* R99e + R100z36：断板反包手机端不显示股票代码（窄屏下被挤没，无信息量） */
@@ -931,21 +943,20 @@
      组高 = 4×46 + 3×14 = 226 → 组顶 = 50% − 113 → 第 i 个按钮 top = −113 + 60i。
      加按钮后整组上移 30px，旧的 −83/−23/+37 若原样保留，返回按钮会掉到组外。
      R100z163：入口 icon 由 🌟 改 📋（用户 2026-10-24：🌟 与「开盘精选」的星号一符二义）。 */
-  .db-entry-in { top: calc(50% + 7px); }
-  body.score-open .db-entry-in { display: flex; }
-  #sc-entry-in { top: calc(50% + 67px); }
-  @media (max-width: 700px) {
-    /* 移动端：按钮 42、gap 12 → 组高 204、组顶 −102、槽距 54 → 槽位 −102/−48/6/60 */
-    .db-entry-in { top: calc(50% + 6px); }
-    #sc-entry-in { top: calc(50% + 60px); }
-  }
+  /* R100z165：页内替身按钮的坐标改由 JS 统一落位，CSS 不再写死 top。
+     旧写法把「槽位」抄了两份：CSS 一套 calc(50% ± N)、JS 一套 i×槽距。
+     默认对齐时看不出问题，但组一旦改成横排（手机端贴右下角）或按钮尺寸变了，
+     CSS 那套计算就整体作废——这正是 R100z162「点进去按钮跳一格」的同族隐患。
+     现在 CSS 只留一个兜底（right + top:50%），真实位置由 layout() 按实测几何写入。 */
+  body.db-open #db-entry-in { display: flex; }
+  body.score-open #sc-entry-in { display: flex; }
   /* R100z162：复盘台账独立页（🌟）——与 📄/#gnews-view 同款「打开即独占」模式 */
   #score-view { display: none; }
   body.score-open .wrap > *:not(#score-view) { display: none !important; }
   body.score-open #score-view { display: block; }
   /* R100z110：修复 📄 页返回按钮不显示的 bug——此前只有 body.db-open 有 display 放行规则，
      gnews-open 漏了同款规则，#gn-entry-in 在 DOM 里但永远 display:none（用户 2026-10-10 反馈「缺少返回icon」） */
-  body.gnews-open .db-entry-in { display: flex; }
+  body.gnews-open #gn-entry-in { display: flex; }
   /* R100z112：📄 页内单一定位按钮（🐼/🦅 二选一，随滚动切换）——置于返回按钮 📄 上方 60px */
   .gn-jump {
     position: fixed; right: var(--float-x); width: 46px; height: 46px; border-radius: 50%;
@@ -956,13 +967,10 @@
   body.gnews-open .gn-jump { display: flex; }
   .gn-jump:hover { transform: scale(1.1); }
   .gn-jump:active { transform: scale(.92); }
-  /* R100z113：对齐主组槽位——#gn-entry-in 落主组 📄 槽（第 2 个，−53），#gn-jump 落主组 🐼 槽（第 1 个，−113） */
-  #gn-entry-in { top: calc(50% - 53px); }
-  #gn-jump { top: calc(50% - 113px); }
+  /* R100z165：位置同样交给 JS（旧注释里那三个 −113/−53/+7 已迁到 layout() 的几何表） */
+  #gn-jump { z-index: 1200; }
   @media (max-width: 700px) {
     .gn-jump { width: 42px; height: 42px; font-size: var(--fs-emoji); }
-    #gn-entry-in { top: calc(50% - 48px); }
-    #gn-jump { top: calc(50% - 102px); }
   }
   /* 页内定位锚点：给顶部留出呼吸空间 */
   #gn-ashare, #gn-us { scroll-margin-top: 12px; }
@@ -1152,6 +1160,9 @@
     .td-h2 { font-size: var(--fs-h2); gap: 6px; flex-wrap: nowrap; }
     .td-h2 .td-tag { display: none; }
     .td-h2 .h2-date { white-space: nowrap; margin-left: 4px; }
+    /* R100z165：普通卡 h2 允许把角标整体换到下一行（日期本身 nowrap，不会断在中间），
+       否则长标题会把日期挤成两行——比标题折行难读得多。 */
+    .card h2, .ai-card h2, .wk-card h2, .mc-card h2 { flex-wrap: wrap; row-gap: 2px; }
     /* R100z164：.td-port 已并入 .td-mkt 内部，改成竖线分隔的键值流——
        窄屏再套 grid 2 列会把分隔线和文字割开，改用自然换行。 */
     .td-port { display: flex; flex-wrap: wrap; gap: 2px 0; }
@@ -5632,73 +5643,99 @@ document.addEventListener('click', function (ev) {
   try { localStorage.removeItem('dbFloatPos'); } catch (e) {} // 清理更早版本的位置键
   var g = document.getElementById('float-group');
   if (!g) return;
-  var POS_KEY = 'floatGroupPos', sx = null, sy = 0, ox = 0, oy = 0, moved = false;
-  var lastH = 0, lastPos = null, lastGap = 60; // R100c：断板页组隐藏（rect 全 0），用最后已知组高/位置兜底
-  var rect = function () { return g.getBoundingClientRect(); };
-  function trackH() {
-    var r = rect();
-    if (r.height) lastH = r.height;
-    // R100z162：槽距实测（相邻按钮 offsetTop 之差）。组隐藏时量到 0，保留上次值不覆盖。
-    var bs = g.children;
-    if (bs && bs.length >= 2) {
-      var gp = bs[1].offsetTop - bs[0].offsetTop;
-      if (gp > 0) lastGap = gp;
+  var POS_KEY = 'floatGroupPos', sx = null, sy = 0, ox = 0, oy = 0, moved = false, lastPos = null;
+
+  /* ===== R100z165：槽位体系重做（用户 2026-10-24：「这套槽位重做一遍」）=====
+     旧实现的两个病根：
+       ① 「槽位」抄了两份 —— CSS 里给每个页内替身写死 top: calc(50% ± N)，JS 里又算 i×槽距。
+          默认对齐时看不出来，可一旦组改成横排（手机端贴右下角）或按钮尺寸变（46→42），
+          CSS 那套整体作废，症状就是「点进去按钮跳一格」——R100z162 已经踩过一次。
+       ② 组在独占页里被 display:none 掉，量不到 rect，只能靠 lastH/lastGap 这些缓存兜底，
+          缓存一旦过期（旋转屏、缩放、改字号）就错。
+     新实现只有一条规则：**组内第 i 个按钮的实测偏移 = 页内替身的偏移**，
+     几何每次现算（读 flex-direction + gap + 按钮宽高，display:none 也读得到 computed），
+     不缓存像素、不写死槽距、CSS 不再参与定位。 */
+  var RAIL = [
+    { slot: g.children[0], iPage: gnj },   // 🐼 → 全球要闻页的 🐼/🦅 定位键
+    { slot: g.children[1], iPage: gnei },  // 📄 → 全球要闻返回
+    { slot: g.children[2], iPage: dei },   // 🧰 → 策略工具箱返回
+    { slot: g.children[3], iPage: scei }   // 📋 → 复盘台账返回
+  ];
+
+  function geom() {
+    var cs = getComputedStyle(g);
+    var row = cs.flexDirection.indexOf('row') === 0;
+    var gap = parseFloat(row ? cs.columnGap : cs.rowGap) || 0;
+    var off = [], x = 0, y = 0, w = 0, h = 0;
+    for (var i = 0; i < g.children.length; i++) {
+      var bcs = getComputedStyle(g.children[i]);
+      var bw = parseFloat(bcs.width) || 0, bh = parseFloat(bcs.height) || 0;
+      off.push({ x: x, y: y });
+      if (row) { x += bw + gap; w = x - gap; if (bh > h) h = bh; }
+      else { y += bh + gap; h = y - gap; if (bw > w) w = bw; }
     }
+    return { off: off, w: w, h: h };
   }
-  function grpH() { return lastH || rect().height || (window.innerWidth <= 700 ? 198 : 226); } // R100z162：4 个按钮的组高兜底
-  function place(l, t, save) {
-    var r = rect(), w = r.width || 46, h = grpH();
-    l = Math.max(6, Math.min(l, window.innerWidth - w - 6));
-    t = Math.max(6, Math.min(t, window.innerHeight - h - 6));
+  function clearInline() {
+    g.style.left = ''; g.style.top = ''; g.style.right = ''; g.style.bottom = ''; g.style.transform = '';
+  }
+  /* 默认位置不在这里抄第二份「右对齐 / 垂直居中 / 手机贴底」——清掉内联样式交给 CSS（含媒体查询）决定，
+     再把结果读成左上角坐标。这样改 CSS（比如手机端改横排贴底）不需要同步改 JS。 */
+  function defaultPos() {
+    clearInline();
+    var rr = g.getBoundingClientRect();
+    if (rr.width && rr.height) return { l: rr.left, t: rr.top };   // 可见时直接量，最准
+    // 独占页把 .wrap 其他子树 display:none 了，量不到 rect → 按 computed 反推
+    var gm = geom(), cs = getComputedStyle(g), tp = cs.top;
+    var l = (cs.right !== 'auto') ? (window.innerWidth - (parseFloat(cs.right) || 0) - gm.w)
+                                  : (parseFloat(cs.left) || 0);
+    var t;
+    if (cs.bottom !== 'auto' && tp === 'auto') t = window.innerHeight - (parseFloat(cs.bottom) || 0) - gm.h;
+    else if (tp && tp.indexOf('%') >= 0) t = window.innerHeight * parseFloat(tp) / 100 - gm.h / 2;  // top:50% + translateY(-50%)
+    else t = parseFloat(tp) || 0;
+    return { l: l, t: t };
+  }
+  function layout(l, t, save) {
+    var gm = geom();
+    l = Math.max(6, Math.min(l, window.innerWidth - gm.w - 6));
+    t = Math.max(6, Math.min(t, window.innerHeight - gm.h - 6));
     g.style.left = l + 'px'; g.style.top = t + 'px';
     g.style.right = 'auto'; g.style.bottom = 'auto'; g.style.transform = 'none';
     lastPos = { l: l, t: t };
-    // R100z162：悬浮组由 3 个按钮扩到 4 个，页内返回按钮不能再一律贴最底部——
-    // 🧰 返回要落 🧰 槽（第 3 个）、🌟 返回要落 🌟 槽（第 4 个），否则点进去按钮会跳一格。
-    // 槽距不写死：量组内相邻按钮 offsetTop 差，缩放/移动端字号变化都跟得上（隐藏时量到 0 就沿用上次值）。
-    var _slot = function (i) { return t + i * lastGap; };
-    if (dei) {
-      dei.style.left = l + 'px'; dei.style.top = _slot(2) + 'px';
-      dei.style.right = 'auto'; dei.style.bottom = 'auto';
+    for (var i = 0; i < RAIL.length; i++) {
+      var el = RAIL[i].iPage;
+      if (!el) continue;
+      el.style.left = (l + (gm.off[i] ? gm.off[i].x : 0)) + 'px';
+      el.style.top = (t + (gm.off[i] ? gm.off[i].y : 0)) + 'px';
+      el.style.right = 'auto'; el.style.bottom = 'auto';
     }
-    var scei2 = document.getElementById('sc-entry-in');
-    if (scei2) {
-      scei2.style.left = l + 'px'; scei2.style.top = _slot(3) + 'px';
-      scei2.style.right = 'auto'; scei2.style.bottom = 'auto';
-    }
-    // R100z109：全球要闻页内返回按钮与组内 📄 位置实时同步（同 db-entry-in）
-    // R100z113：页内按钮对齐主组「同槽位」——gn-entry-in 落主组 📄 槽（第 2 个），gn-jump 落主组 🐼 槽（第 1 个），
-    // 保证主页面点 📄 进来后鼠标不动仍悬在 📄 上（用户 2026-10-10 反馈「点进去鼠标在🐼上面」）
-    var gni = document.getElementById('gn-entry-in');
-    if (gni) {
-      gni.style.left = l + 'px'; gni.style.top = _slot(1) + 'px';
-      gni.style.right = 'auto'; gni.style.bottom = 'auto';
-    }
-    var gnj2 = document.getElementById('gn-jump');
-    if (gnj2) { gnj2.style.left = l + 'px'; gnj2.style.top = _slot(0) + 'px'; gnj2.style.right = 'auto'; }
     if (save) {
       try { localStorage.setItem(POS_KEY, JSON.stringify({ lf: l / window.innerWidth, tf: t / window.innerHeight })); } catch (e) {}
     }
   }
-  function applySaved() {
-    trackH();
+  function savedPos() {
     try {
       var p = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
-      if (p && isFinite(p.lf) && isFinite(p.tf)) place(p.lf * window.innerWidth, p.tf * window.innerHeight, false);
+      if (p && isFinite(p.lf) && isFinite(p.tf)) return p;
     } catch (e) {}
+    return null;
+  }
+  function applySaved() {
+    var p = savedPos(), pos;
+    pos = p ? { l: p.lf * window.innerWidth, t: p.tf * window.innerHeight } : defaultPos();
+    layout(pos.l, pos.t, false);
   }
   function onMove(e) {
     if (sx === null) return;
     var dx = e.clientX - sx, dy = e.clientY - sy;
     if (!moved && Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
     moved = true;
-    place(ox + dx, oy + dy, false);
+    layout(ox + dx, oy + dy, false);
   }
   // R100z163b（2026-10-24 线上实测发现）：拖拽后「下一次点击被吞」。
   //   旧写法只在 click 回调里把 moved 复位 —— 但指针落在按钮外松手时浏览器**不补发 click**，
   //   moved 就永久留在 true，用户下一次正常点击先被吃掉一次（要连点两下才生效）。
   //   改成时间戳抑制：onUp 里盖一个 300ms 的戳，click 只要在这个窗口内就拦，过期自动失效。
-  //   既保住「拖完不误触」，也不依赖 click 一定到来。
   var suppressClick = 0;
   function onUp() {
     window.removeEventListener('pointermove', onMove);
@@ -5708,48 +5745,37 @@ document.addEventListener('click', function (ev) {
     sx = null;
     if (moved) {
       suppressClick = Date.now() + 300;
-      if (lastPos) place(lastPos.l, lastPos.t, true); // 组隐藏时 rect() 为 0，用内存位置保存
+      if (lastPos) layout(lastPos.l, lastPos.t, true);
     }
   }
-  // R100c：g（🐼+💰 整组）与 dei（断板页返回💰）共用同一套拖拽；拖 dei 时换算为组左上角坐标，两页共享 floatGroupPos
-  // R100z111：📄 全球要闻页返回按钮(#gn-entry-in)接入同一套拖拽（用户反馈「不能拖拽」）， Panda/鹰 定位按钮随 place() 跟随
-  // R100z163（用户 2026-10-24：「我让你参考别的 icon，他怎么不能拖拽？！」）：
-  //   复盘页的 📋 返回键只接了 place() 同步、漏了 bindDrag() —— 位置会跟随整组，但自己拖不动。
-  //   这是「新增悬浮按钮三件套」缺一环的典型故障：① place() 槽位同步 ② bindDrag() ③ 点击处理。
-  //   顺带把旧的贴底换算（grpH()-46 / grpH()/2-23）换成按槽位算——4 个按钮后组高 226 ≠ 3×60，
-  //   老公式会让 🧰/📄 返回键一拖就跳 60px。
-  var SLOTS = [g, gnei, dei, scei]; // 槽位序号 = 下标（🐼 / 📄 / 🧰 / 📋）
-  var slotIndex = function (el) {
-    for (var i = 0; i < SLOTS.length; i++) { if (SLOTS[i] === el) return i; }
-    return 0;
-  };
-  function bindDrag(el) {
+  /* 拖任意一个替身 = 拖整组：用「组内第 idx 槽的几何偏移」反推组左上角，横排竖排同一套算法。
+     R100z163 的教训：新增悬浮按钮必须三件套齐全 —— ① 进 RAIL 表 ② bindDrag ③ 点击处理，缺一个就是「拖不动」。 */
+  function bindDrag(el, idx) {
     if (!el) return;
     el.addEventListener('pointerdown', function (e) {
       if (e.button) return;
       sx = e.clientX; sy = e.clientY;
-      var r = el.getBoundingClientRect();
-      // 页内按钮代表组内第 i 槽 → 反推「组左上角」：top − i×槽距（槽距取实测 lastGap，缩放/字号变化跟得上）
-      ox = r.left; oy = r.top - slotIndex(el) * lastGap;
-      moved = false; trackH();
+      var gm = geom(), r = el.getBoundingClientRect(), o = gm.off[idx] || { x: 0, y: 0 };
+      ox = r.left - o.x; oy = r.top - o.y;
+      moved = false;
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
       window.addEventListener('pointercancel', onUp);
     });
-    // 拖拽结束后拦截随后派发的 click，避免误触 🐼/💰
-    // 判据用时间戳（onUp 里盖的 suppressClick），不用粘性 moved —— 见 onUp 注释
+    // 拖拽结束后拦截随后派发的 click，避免误触（判据用时间戳，不用粘性 moved）
     el.addEventListener('click', function (e) {
       if (Date.now() < suppressClick) { e.stopPropagation(); e.preventDefault(); }
     }, true);
   }
-  bindDrag(g);
-  bindDrag(dei);
-  if (typeof gnei !== 'undefined' && gnei) bindDrag(gnei);
-  if (typeof gnj !== 'undefined' && gnj) bindDrag(gnj); // R100z163：📄 页的 🐼/🦅 定位键也归组，一并可拖
-  if (typeof scei !== 'undefined' && scei) bindDrag(scei); // R100z163：复盘页 📋 返回键（此前漏绑＝拖不动）
+  bindDrag(g, 0);
+  bindDrag(gnj, 0);
+  bindDrag(gnei, 1);
+  bindDrag(dei, 2);
+  bindDrag(scei, 3);
   window.addEventListener('resize', applySaved);
+  window.addEventListener('orientationchange', applySaved);
   applySaved();
-  window.__applyFloatSaved = applySaved; // R100z112：供 openGnews / 初始 #gnews 加载时重同步页内按钮到已记忆位置
+  window.__applyFloatSaved = applySaved; // 供 openGnews / openScore / 初始 hash 重同步页内按钮到同一槽位
 })();
 
 function openDbModal(key) {

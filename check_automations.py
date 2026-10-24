@@ -399,6 +399,141 @@ def chk_baseline(T, r):
              % (checked, len(by_id), len(by_id) - len(uncovered)))
 
 
+# ---------------------------------------------------------------- B6 字段台账
+# `dataFields` / `writesFields` / `neverWrites` 三个字段从 2026-10 起就登记在
+# audit_expectations.json 里，但**从来没有闸门读它们**（本脚本搜不到这三个键）——
+# 和 B5 注释里「15 条 mustContain 与线上脱节二十天」是同一类病：写进基线就以为算核查过了。
+# 三个字段真正的用处只有一个：AI 拿到 prompt 时，哪些 data.js 节点该读、该写、绝不能碰。
+# 路径写错 = AI 去读一个不存在的节点，然后**编**（这正是 CHECKLIST L18 要求下钻验的原因）。
+#
+# 所以 B6 只做三件可判定的事，不做语义判断：
+#   ① 台账里能解析成路径的条目，必须在 data.js 里真走得通（逐段下钻，报出断在哪一节）；
+#   ② `.json` 结尾的当**文件**校验存在性（stock_pool.json 等不是 data.js 节点）；
+#   ③ 同一任务的 writesFields 与 neverWrites 不许有同一字段（自相矛盾）。
+# 散文条目（含中文/空格/通配 `*`）跳过并计数——不是漏洞，是台账允许写人话。
+CLEAN_PATH = re.compile(r'^[A-Za-z_]\w*(?:(?:\.\w+)|(?:\[\w*\]))*$')
+CJK_RE = re.compile(r'[\u4e00-\u9fff]')
+PAREN_RE = re.compile(r'[（(][^）)]*[）)]')
+
+
+def _field_paths(raw):
+    """台账条目 → 可校验路径列表；散文/通配返回 []。
+
+    台账是人写的，混着四种写法，必须在**解析层**归一，不能靠改文字（改文字就失去台账意义）：
+      `ashare.sectorsUp[]/sectorsDown[]/allBoards[]`  并列省略前缀：第二段无点 → 继承上段前缀
+      `panorama.markets[us].date`                    数组按元素 `key` 取值（markets 是数组不是字典）
+      `stock_pool.json`                              文件名，不是 data.js 节点
+      `duanban（merge_duanban 合并，…）`              括号里是注释，剥掉后才是路径
+    """
+    t = PAREN_RE.sub('', raw).replace(' / ', '/').strip()
+    if not t or CJK_RE.search(t) or ' ' in t or '*' in t:
+        return []
+    out, prefix = [], ''
+    for seg in t.split('/'):
+        seg = seg.strip()
+        if not seg:
+            continue
+        full = seg if ('.' in seg or not prefix) else prefix + seg
+        if CLEAN_PATH.match(full):
+            out.append(full)
+            # 段落带 `.json` 是**文件**，不是命名空间：后面并列的 `policySignals`
+            # 若继承 `market_bench.` 就成了幽灵路径（2026-10-24 实测误报）。
+            prefix = '' if full.endswith('.json') else (full[:full.rfind('.') + 1] if '.' in full else '')
+    return out
+
+
+def _resolve_field(D, path):
+    """在 data.js 里走一遍路径。返回 (状态, 说明)，状态 = ok / empty / bad。"""
+    if path.endswith('.json'):
+        if os.path.exists(os.path.join(HERE, path)):
+            return 'ok', ''
+        return 'bad', '%s 文件不存在（台账登记了但盘上没有）' % path
+    cur, parts = D, path.split('.')
+    for i, seg in enumerate(parts):
+        m = re.match(r'^(\w+)((?:\[[^\]]*\])*)$', seg)
+        if not m:
+            return 'bad', '%s 第 %d 节写法不认识' % (path, i + 1)
+        key, brs = m.group(1), m.group(2) or ''
+        if not isinstance(cur, dict):
+            return 'bad', '%s 的父节点不是对象（%s）' % ('.'.join(parts[:i + 1]), type(cur).__name__)
+        if key not in cur:
+            where = '顶层缺 %s' % key if i == 0 else '%s 下没有 %s' % ('.'.join(parts[:i]), key)
+            return 'bad', '%s → %s' % (path, where)
+        cur = cur[key]
+        for br in re.findall(r'\[([^\]]*)\]', brs):
+            if not isinstance(cur, list):
+                return 'bad', '%s 不是数组，没法用 [%s] 取元素' % ('.'.join(parts[:i + 1]), br)
+            if not cur:
+                return 'empty', '%s 当前是空数组' % '.'.join(parts[:i + 1])
+            if br == '':
+                cur = cur[0]
+            else:
+                hit = [x for x in cur if isinstance(x, dict) and str(x.get('key', '')) == br]
+                if not hit:
+                    return 'bad', '%s 里没有 key=%s 的元素' % ('.'.join(parts[:i + 1]), br)
+                cur = hit[0]
+    return 'ok', ''
+
+
+def chk_fields(T, r, verbose=False):
+    exp_path = os.path.join(HERE, 'audit_expectations.json')
+    if not os.path.exists(exp_path):
+        r.fail('B6', '缺少 audit_expectations.json，字段台账无法对账')
+        return
+    exp = json.load(open(exp_path, encoding='utf-8'))
+    dj = os.path.join(HERE, 'data.js')
+    try:
+        raw = open(dj, encoding='utf-8').read()
+        D = json.loads(raw[raw.index('{'):raw.rindex('}') + 1])
+    except Exception as e:
+        r.fail('B6', '读不了 data.js（%s）—— 字段路径无从校验' % e)
+        return
+
+    by_id = {t['id']: t for t in T}
+    n_ok = n_skip = n_empty = 0
+    bad = []
+    for e in exp.get('automations', []):
+        t = by_id.get(e.get('id'))
+        key = t['key'] if t else (e.get('schedule') or '?')[:16]
+        led = {k: [v for v in (e.get(k) or []) if isinstance(v, str)]
+               for k in ('dataFields', 'writesFields', 'neverWrites')}
+        lack = [k for k, v in led.items() if not v]
+        if lack:
+            bad.append('%s 台账缺 %s —— 该任务的字段归属没有登记，AI 只能靠猜'
+                       % (key, '/'.join(lack)))
+        # ③ 自相矛盾：同一任务声称「必写」又「绝不写」
+        w = {p for v in led['writesFields'] for p in _field_paths(v)}
+        nw = set()
+        for v in led['neverWrites']:
+            nw.update(_field_paths(v))
+        for f in sorted(w & nw):
+            bad.append('%s 的 writesFields 与 neverWrites 同时登记了 %s —— 台账自相矛盾'
+                       % (key, f))
+        for kind in ('dataFields', 'writesFields', 'neverWrites'):
+            for v in led[kind]:
+                ps = _field_paths(v)
+                if not ps:
+                    n_skip += 1
+                    continue
+                for p in ps:
+                    st, why = _resolve_field(D, p)
+                    if st == 'ok':
+                        n_ok += 1
+                    elif st == 'empty':
+                        n_empty += 1
+                    else:
+                        bad.append('%s 的 %s 指向不存在的字段：%s —— %s'
+                                   % (key, kind, why,
+                                      'AI 照着写会往空处落盘' if kind == 'writesFields'
+                                      else 'AI 会读到 undefined 然后自己编'))
+    for m in bad:
+        r.fail('B6', m)
+    if not bad:
+        r.ok('B6', '字段台账 %d 条路径在 data.js/%s 里走得通（空数组 %d 条暂不可验、'
+                   '散文 %d 条跳过）—— 7 条任务的读写边界与线上数据一致'
+             % (n_ok, '盘上文件', n_empty, n_skip))
+
+
 # ---------------------------------------------------------------- D 死步骤
 def chk_steps(T, r):
     bad = []
@@ -703,6 +838,7 @@ def main():
     run('A', lambda: chk_meta(T, r))
     run('B', lambda: chk_deadlink(T, r))
     run('B', lambda: chk_baseline(T, r))
+    run('B', lambda: chk_fields(T, r, a.verbose))
     run('D', lambda: chk_steps(T, r))
     run('E', lambda: chk_coverage(T, r, a.verbose))
     run('F', lambda: chk_stamp_contract(T, r))
