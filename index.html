@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610250051"></script>
+<script src="data.js?v=202610250112"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -4307,6 +4307,13 @@ function stkNewsHtml(code) {
   });
   var h = '';
   if (hzIt && hzIt.story) h += '<div class="db-ref-p"><b>【谐波形态】</b>' + esc(hzIt.story) + '</div>';
+  // R100z203（用户 2026-10-25：「新闻相关利好相关，公告相关都没有吗？」）：
+  // 池外标的（回测出手里只有名字的那些、板块领涨 TOP 成分股等）既不在断板池（e=null），
+  // 也不在当日五节要闻的 impacts 里（hits=[]）。它们的公告/新闻虽然已经塞进 groups，
+  // 但下面的三口径块只在 `e || hits.length` 时才渲染 → **整个消息面区返回空串**，
+  // 这就是「只有一根 K 线」的最后一层原因（数据层 stockNews 明明是齐的）。
+  // 这里直接补一整块「个股公告与新闻」（自带条数统计与利好/利空方向色），不再依赖断板条目。
+  if (!e && !hits.length) h += stockNewsHtml(code);
   // R100z：【日线九门】【主力吸筹】两块上移到 K 线上方（openStkModal techPanel），消息面区不再重复展示
   if (e || hits.length) {
     // R100z：参考断板反包判定方式——按条数定综合口径，只显示占优口径的消息
@@ -7081,6 +7088,53 @@ function stkStep(delta) {
   var it = STK_GRP[STK_IDX];
   openStkModal(it.c, it.n, it.t);
 }
+/* R100z203（用户 2026-10-25：「这里面标的页面内容怎么那么少？只有k线？其他的新闻相关利好相关，
+   公告相关都没有吗？」）：从「回测出手」这类清单点进来时，清单里只有股票名、没有代码
+   （`bt.recent[].names` 是字符串数组），openStkModal 拿到的 code 是空的：标题行、徽标行、
+   meta（技术指标 + 退出纪律）、消息面**全都按空 code 渲染过一遍**——stkNewsHtml('') 直接返回空串。
+   等 `stkResolveByName` 反查出 sz002813 时，老代码只补了标题与徽章，**meta 与 #stk-news 再没人重渲染**，
+   于是用户看到的就是「只有一根 K 线」。这不是数据缺失：`stockNews['002813']` 里公告是齐的。
+   修法：把「拿到代码之后要补的东西」收成一个函数，两条回填路径（内嵌映射 / 名称反查）都调它。
+   注意：**不要**在这里调 stkSyncNav —— 名称组的 `c` 本来就是空串，按真实代码重判会把箭头关掉。 */
+function stkApplyResolvedCode(fullCode, note) {
+  fullCode = String(fullCode || '').trim();
+  if (!fullCode) return;
+  // stkResolveByName 回的是带市场前缀的 `sz002813`，而 stockNews / _TECH_MAP / lhb / 池归属
+  // 全部按 6 位码建键（stkTechMeta、stkLhbOf、stkPoolBadge 都是 `/^\d{6}$/` 开头就 return）。
+  // 不归一化的话，补出来的消息面依旧是空——这正是「只有 K 线」的第二层原因。
+  var m6 = /(\d{6})/.exec(fullCode);
+  var c6 = m6 ? m6[1] : fullCode;
+  var hd = document.getElementById('stk-modal-head');
+  if (hd) {
+    var cd = hd.querySelector('.cd2');
+    if (!cd) {
+      cd = document.createElement('span'); cd.className = 'cd2';
+      hd.insertBefore(cd, hd.querySelector('.db-modal-close'));
+    }
+    cd.textContent = c6;
+    var row = hd.querySelector('.m-badge-row');
+    if (row) {
+      row.innerHTML = stkSecBadge(c6) + stkTechBadgeHtml(c6) + stkPoolBadge(c6) +
+        stkLhbBadge(c6) + riskTipBadge(c6) +
+        (stkTechMeta(c6) ? sentBadgeHtml(c6) : '');
+    }
+    // 谐波条：入口处 code 为空时 findHarmonic('') 必然 null，这里补一次（与 openStkModal 顶部同款结构）
+    var hz = findHarmonic(c6) || hzFailOf(c6);
+    if (hz && !hd.querySelector('.hz-strip')) {
+      var strip = document.createElement('div'); strip.className = 'hz-strip';
+      strip.innerHTML = hzSideHtml(hz) + hzMiniWrap(hz);
+      hd.appendChild(strip);
+    }
+  }
+  // meta：note（清单定位）+ 技术指标 + 退出纪律，重新按真实代码渲染一遍
+  var meta = document.getElementById('stk-modal-meta');
+  if (meta) meta.innerHTML = (note ? esc(note) + '<br>' : '') + techMetaLines(c6) + exitMetaLine(c6);
+  // 消息面：个股公告/新闻 + 板块要闻映射 + 池归属（此前这一步缺失 → 弹窗只剩 K 线）
+  var nw = document.getElementById('stk-news');
+  if (nw) nw.innerHTML = stkNewsHtml(c6);
+  // 顺手把代码缓存进导航组：翻出去再翻回来不必重新反查一次（每次反查都是一次网络往返）
+  if (STK_GRP && STK_GRP[STK_IDX] && !STK_GRP[STK_IDX].c) STK_GRP[STK_IDX].c = c6;
+}
 function openStkModal(code, name, note) {
   code = (code || '').trim();
   name = (name || '').trim();
@@ -7146,24 +7200,16 @@ function openStkModal(code, name, note) {
     // R98c: 名称 → 代码映射已由 embed_klines.py 内嵌（板块领涨TOP 等无 code 标的），命中则免 smartbox 反查
     var mapped = ((window.DASHBOARD_DATA || {}).stkKlineNames || {})[name];
     if (mapped) {
-      var hd0 = document.getElementById('stk-modal-head');
-      var cd0 = hd0.querySelector('.cd2');
-      if (!cd0) { cd0 = document.createElement('span'); cd0.className = 'cd2'; hd0.insertBefore(cd0, hd0.querySelector('.db-modal-close')); }
-      cd0.textContent = mapped;
-      var row0 = hd0.querySelector('.m-badge-row'); // R100s：反查回填后补第二行徽标（板块+技术+池归属）
-      if (row0) row0.innerHTML = stkSecBadge(mapped) + stkTechBadgeHtml(mapped) + stkPoolBadge(mapped) + stkLhbBadge(mapped) + riskTipBadge(mapped) + (stkTechMeta(mapped) ? sentBadgeHtml(mapped) : ''); // R100z87：补风险提示徽章
+      // R100z203：标题/徽章/meta/消息面一次补齐（原来只补标题与徽章，消息面永远空白）
+      stkApplyResolvedCode(mapped, note);
       stkFetchKline(mapped, render);
       return;
     }
     stkResolveByName(name, function (fullCode, nm) {
       if (done) return;
       if (!fullCode) { render(null, '未找到该标的的证券代码，无法获取K线'); return; }
-      var hd = document.getElementById('stk-modal-head');
-      var cdSpan = hd.querySelector('.cd2');
-      if (!cdSpan) { cdSpan = document.createElement('span'); cdSpan.className = 'cd2'; hd.insertBefore(cdSpan, hd.querySelector('.db-modal-close')); }
-      cdSpan.textContent = fullCode;
-      var row1 = hd.querySelector('.m-badge-row'); // R100s：反查回填后补第二行徽标（板块+技术+池归属）
-      if (row1) row1.innerHTML = stkSecBadge(fullCode) + stkTechBadgeHtml(fullCode) + stkPoolBadge(fullCode) + stkLhbBadge(fullCode) + riskTipBadge(fullCode) + (stkTechMeta(fullCode) ? sentBadgeHtml(fullCode) : ''); // R100z87：补风险提示徽章
+      // R100z203：反查出代码后必须把 meta 与消息面一起补（原来只补标题徽章 → 弹窗只剩一根 K 线）
+      stkApplyResolvedCode(fullCode, note);
       stkFetchKline(fullCode, render);
     });
     return;
