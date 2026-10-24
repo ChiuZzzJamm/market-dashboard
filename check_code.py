@@ -736,6 +736,16 @@ K8_MUST_DROP = (
     '券商评级观察：机构上调目标价',
     '10月22日早报｜今日值得关注的公司',
     '6只股获北向资金连续净买入',
+    # ---- R100z207：跨标的盘点稿的典型标题（这类占 448 条，靠正则穷举做不到，
+    #      真正的判据是 stock_news._drop_crossdup 的「同一标题挂 ≥3 只票且不含本公司名」。
+    #      这里只放几条最典型的，用于防止「有人把 crossdup 判据删了/阈值改成 99」
+    #      —— 那几条一旦回流，下面的样本会立刻 FAIL（它们单靠正则是抓不住的）。----
+    '人形机器人概念涨1.46%，主力资金净流入这些股',
+    'ChatGPT概念涨4.45%，主力资金净流入70股',
+    '300296，三分钟直线涨停！两大板块，逆市大涨！',
+    '龙虎榜动向：7股获机构及北向资金集体净买入',
+    '168家公司预告前三季度业绩 124家预增',
+    '003021，直线涨停！5天3板',
 )
 
 K8_MUST_KEEP = (
@@ -808,6 +818,33 @@ def k8_noise_sentinel(r, verbose=False):
         hit = [p.pattern for p in sn.NEWS_STATS_PAT if p.search(t)]
         if hit:
             bad.append(('要闻层被共用表误杀', t + ' ← ' + hit[0]))
+
+    # R100z207：**跨标的去重是纯逻辑判据，正则样本测不到它** ——
+    # 上面那些 must_drop 样本现在的正则也能抓到，所以把 `_drop_crossdup` 的阈值
+    # 改成 99（等于关掉）它们照样 PASS（实测踩过）。这条单独构造假数据测函数本身：
+    # 同一标题挂 3 只票、且不含任何一只的名字 → 必须删 3 条；
+    # 标题里含自己名字的那只 → 必须留。
+    try:
+        fake = {
+            'A': {'name': '甲公司', 'news': [{'title': '某公司签署战略合作协议'}]},
+            'B': {'name': '乙公司', 'news': [{'title': '某公司签署战略合作协议'}]},
+            'C': {'name': '丙公司', 'news': [{'title': '某公司签署战略合作协议'}]},
+            'D': {'name': '丁公司', 'news': [{'title': '某公司签署战略合作协议'},
+                                             {'title': '丁公司签署战略合作协议'}]},
+        }
+        n = sn._drop_crossdup(fake)
+        left = sum(len(v.get('news') or []) for v in fake.values())
+        # 「某公司签署战略合作协议」挂 4 只、且不含 A/B/C/D 任一名字 → 4 条全删；
+        # 「丁公司签署战略合作协议」只挂 D 一只 → 留。所以是删 4 留 1。
+        if n != 4 or left != 1:
+            bad.append(('跨标的去重失效',
+                        '期望删 4 留 1，实际删 %d 留 %d —— 检查 _drop_crossdup 的 min_stocks' %
+                        (n, left)))
+        if not any('丁公司签署战略合作协议' == x.get('title')
+                   for x in (fake['D'].get('news') or [])):
+            bad.append(('跨标的去重误杀', '标题含本公司名的条目被删了'))
+    except Exception as e:
+        bad.append(('跨标的去重无法自检', repr(e)))
 
     if bad:
         for kind, t in bad:
