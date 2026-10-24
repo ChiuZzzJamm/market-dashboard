@@ -1153,7 +1153,7 @@ def check_star_module(D):
     star = db.get('star')
     if star is not None:
         if not isinstance(star, dict):
-            warns.append("duanban.star 非对象（应为 {date,time,marketLine,sentiment,picks,pushText}）")
+            warns.append("duanban.star 非对象（应为 {date,time,marketLine,sentiment,picks,pushText,deskCheck}）")
         else:
             pool_codes = {str(e.get('code')) for e in entries}
             picks = star.get('picks') or []
@@ -1175,6 +1175,26 @@ def check_star_module(D):
                     warns.append(f"duanban.star.picks {c} {p.get('name')} 不在断板反包双池内且非合规来源标的（精选只能从双池/板块动量/技术池筛）")
             if not str(star.get('pushText') or '').strip():
                 warns.append("duanban.star.pushText 为空（微信推送深度分析缺失，10:00 自动化 AI 须补写）")
+            # R100z185：交易预案对账（09:45 步骤 1.5 由 desk_verify.py 写入）。
+            # 缺失合法（没跑或非交易日），但**存在就必须结构完整**——页面直接按 state 上色，
+            # 状态值写出界会静默渲染成灰块，比不显示更坏。
+            dc = star.get('deskCheck')
+            if dc is not None:
+                if not isinstance(dc, dict):
+                    warns.append("duanban.star.deskCheck 非对象（应为 desk_verify.py 写的 payload）")
+                else:
+                    if not str(dc.get('planDate') or '').strip():
+                        warns.append("duanban.star.deskCheck.planDate 为空——页面标题会显示「预案 → 开盘」但看不出是哪天的预案")
+                    ok_states = {'buy', 'wait', 'chase', 'drop', 'limit', 'unknown'}
+                    vs = dc.get('verdicts')
+                    if not isinstance(vs, list) or not vs:
+                        warns.append("duanban.star.deskCheck.verdicts 缺失或为空——对账块会整块不渲染")
+                    else:
+                        bad_state = [f"{v.get('code')}→{v.get('state')}" for v in vs
+                                     if isinstance(v, dict) and v.get('state') not in ok_states]
+                        if bad_state:
+                            warns.append("duanban.star.deskCheck.verdicts 出现非法 state %s（合法值 %s）"
+                                         % ('、'.join(bad_state[:4]), '/'.join(sorted(ok_states))))
     return warns
 
 

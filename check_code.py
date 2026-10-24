@@ -69,6 +69,7 @@ DATA_WRITERS = [
     'atr_stop.py',              # R100z160：atrStops（全站唯一权威止损源）
     'build_stock_pool.py',      # 机械选股池
     'common.py',                # write_data_js() 本体（唯一入口，自身即实现）
+    'desk_verify.py',           # R100z185：duanban.star.deskCheck（预案对账，走 write_data_js）
     'embed_klines.py',          # 内嵌 stkKlines
     'enrich_policy.py',         # policySignals 解码
     'fix_dd_prefix.py',         # 去掉「DD」前缀
@@ -518,6 +519,14 @@ NEG_RE = re.compile(r'严禁|禁止|不得|勿写|禁写|不写|别写|不可写
 # 只影响「该行是否跳过」，不改变下钻判据。
 PATH_RE = re.compile(r'(?<![\w.])([A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*){1,4})(?![\w.])')
 
+# 「运行时字段」白名单：静态 data.js 里本来就没有、由某条自动化跑到那一步才写进去的路径。
+# 单一事实源在 common.RUNTIME_FIELDS（B6 也要用同一份，否则两道闸门互相打脸）——
+# 加进去的每一条都必须写明「谁写 / 何时写」，写不出这两句就是真野字段。
+# 不加这张表会得到「循环依赖」式的假 FAIL：prompt 让你写 X，闸门又说 X 不存在，
+# 于是永远修不完（R100z185 实撞：duanban.star.deskCheck 由 09:45 步骤 1.5 才生成）。
+sys.path.insert(0, HERE)
+from common import RUNTIME_FIELDS                       # noqa: E402
+
 
 def _drill(D, parts):
     cur = D
@@ -564,12 +573,15 @@ def k6_contract(r, verbose=False):
         r.warn('K6', '读不到自动化库（%s），跳过字段契约下钻' % e)
         return
 
-    total = bad_total = 0
+    total = bad_total = runtime_hit = 0
     for nm, pm in rows:
         bad = []
         for mm in PATH_RE.finditer(pm):
             path_txt = mm.group(1)
             parts = path_txt.split('.')
+            if any(path_txt == k or path_txt.startswith(k + '.') for k in RUNTIME_FIELDS):
+                runtime_hit += 1
+                continue
             if parts[0] not in top:
                 continue
             if pm[mm.end():mm.end() + 1] == '/':          # 斜杠简写
@@ -588,7 +600,8 @@ def k6_contract(r, verbose=False):
         if verbose:
             print('      %-28s 路径 %d 条' % (nm, total))
     if not bad_total:
-        r.ok('K6', '7 份 prompt 的 %d 条字段路径全部能下钻到真实数据（已过滤禁令语境与斜杠简写）' % total)
+        r.ok('K6', '7 份 prompt 的 %d 条字段路径全部能下钻到真实数据（已过滤禁令语境、斜杠简写、'
+                    '%d 条运行时字段）' % (total, runtime_hit))
 
 
 # ---------------------------------------------------------------- K7

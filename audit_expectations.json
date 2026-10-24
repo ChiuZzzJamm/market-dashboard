@@ -466,6 +466,7 @@
    "stepOrder": [
     "0",
     "1",
+    "1.5",
     "2",
     "3",
     "4"
@@ -484,6 +485,15 @@
      "flags": [],
      "file": "update_star.py",
      "step": "1"
+    },
+    {
+     "cmd": "python3 desk_verify.py",
+     "flags": [
+      "--check",
+      "--write-star"
+     ],
+     "file": "desk_verify.py",
+     "step": "1.5"
     },
     {
      "cmd": "python3 validate_stocks.py",
@@ -510,6 +520,7 @@
     "power_screener.py",
     "accumulation_score.py",
     "full_scan.py",
+    "desk_verify.py --check --write-star",
     "price-in→已计价"
    ],
    "forbidden": [
@@ -541,6 +552,7 @@
     "duanban.star.picks[].src",
     "duanban.star.pushText",
     "duanban.star.generatedBy",
+    "duanban.star.deskCheck",
     "harmonic.confirmPool",
     "harmonic.watchPool",
     "powerScreen.passed",
@@ -551,7 +563,8 @@
     "duanban.star",
     "duanban.star.sentiment",
     "duanban.star.pushText",
-    "duanban.star.picks"
+    "duanban.star.picks",
+    "duanban.star.deskCheck"
    ],
    "neverWrites": [
     "ashare",
@@ -569,7 +582,8 @@
     "us.themePicks"
    ],
    "notes": [
-    "唯一写入口是 duanban.star；脚本产物（update_star.py）负责 picks，AI 只复核 sentiment/pushText 并可微调 picks（仅可删减或池内补入）。"
+    "唯一写入口是 duanban.star；脚本产物（update_star.py）负责 picks，AI 只复核 sentiment/pushText 并可微调 picks（仅可删减或池内补入）。",
+    "R100z185：步骤 1.5 由 desk_verify.py 用真实开盘价判定 tradeDesk 8 只、并以今日开盘价结算上一日「可买」清单，写 duanban.star.deskCheck（静态 data.js 里不存在该字段，属运行时字段）。"
    ]
   },
   {
