@@ -60,6 +60,7 @@ STOP_LEDGER = os.path.join(ROOT, 'stop_ledger.json')
 HORIZONS = (1, 3, 5, 10)
 MIN_N = 30          # 出结论最少样本数
 MIN_DAYS = 5        # 出结论最少覆盖交易日
+REVERSE_T = -2.0    # 1 日期望的 t 值低于此 → 判「负期望」，不是「运气差」
 
 SRC_LABEL = {
     'harmonic': '谐波形态',
@@ -68,6 +69,7 @@ SRC_LABEL = {
     'duanban': '断板反包',
     'ai': 'AI 预测',
     'mech': '机械池（吸筹+九门）',
+    'leadLag': '强板块落后股',
 }
 
 # stop_ledger 的 stopSrc → 主台账键名。stop_ledger 无法区分吸筹与九门
@@ -162,8 +164,87 @@ def bench_ret(bench, entry_day, n):
     return round((acc - 1) * 100, 3)
 
 
+def exec_ret(bars, entry_day, h):
+    """**可执行口径**：T+1 开盘买入 → T+h 收盘卖出（%）。h=1 即当日收盘卖。
+
+    ## 为什么必须另算一套
+
+    原来的 `fwd_ret` 是「登记日收盘买入」——那是 16:00 复盘写完的时刻，
+    **用户根本买不到**（收盘了）。真实能下单的最早价格是次日开盘。
+
+    这不是学术洁癖：实测（1,303 条真实选股 × T→T+1）隔夜跳空均值 −0.465%、
+    胜率 31%，而全市场是 −0.181%、34%——**系统选出来的票比市场更容易跳空低开**。
+    用「收盘买」记账等于把这 0.28pp 的额外损失算进成绩，页面显示的胜率被系统性压低；
+    反过来，真实买入价平均比收盘价低，所以可执行口径的胜率反而更高。
+
+    两套口径并列显示，谁都不许单独充当结论。
+    """
+    idx = None
+    for i, b in enumerate(bars):
+        if b[0] == entry_day:
+            idx = i
+            break
+    if idx is None:
+        return None
+    i0, i1 = idx + 1, idx + h        # 买入 = 次日开盘；卖出 = 第 h 日收盘
+    if i1 >= len(bars) or i0 >= len(bars):
+        return None
+    op = bars[i0][1]
+    c1 = bars[i1][2]
+    if not op or op <= 0 or c1 is None:
+        return None
+    return round((c1 - op) / op * 100, 3)
+
+
+def tstat(xs):
+    """均值的 t 值。样本 <5 或方差为 0 → None（不假装有显著性）。"""
+    n = len(xs)
+    if n < 5:
+        return None
+    m = sum(xs) / n
+    var = sum((x - m) ** 2 for x in xs) / (n - 1)
+    if var <= 0:
+        return None
+    return round(m / (var / n) ** 0.5, 2)
+
+
+def win_rate(xs):
+    return round(len([x for x in xs if x > 0]) / len(xs), 3) if xs else None
+
+
+def _xstat(rets, by_day):
+    """可执行口径的统计块。
+
+    ## t 值为什么要按日聚类
+
+    同一天选出的 40 只票不是 40 个独立观测——它们共享同一个大盘、同一批板块。
+    直接对 300 个「股票×日」求 t 值会把有效样本量高估十几倍，得出「t=−2.4、
+    显著负期望、应停用」这种**过度自信**的结论（2026-10-24 实测就是差点这么写）。
+
+    正确做法：先把当日所有票压成 1 个日收益，再对「日」求 t。这样
+    t 的自由度 = 交易日数 − 1，样本少就自动不显著——这正是我们要的。
+    `t`（逐票）保留作参考，判定只用 `tDaily`。
+    """
+    rets = rets or []
+    daily = [sum(v) / len(v) for v in (by_day or {}).values() if v]
+    return {
+        'n': len(rets),
+        'days': len(daily),
+        'ret': round(sum(rets) / len(rets), 2) if rets else None,
+        'win': win_rate(rets),
+        't': tstat(rets),               # 逐票，仅参考
+        'tDaily': tstat(daily),         # 按日聚类，判定用这个
+        'dayWin': win_rate(daily),      # 按日口径的胜率（一天整体赚没赚）
+    }
+
+
 def compute(L, D):
-    """回算全台账，按指标 × 持有期出统计。"""
+    """回算全台账，按指标 × 持有期 × 两套入场口径出统计。
+
+    两套口径并列（R100z186）：
+      h   台账口径：登记日收盘买入 → T+h 收盘（旧口径，用户买不到，但可算超额）
+      x   可执行口径：T+1 开盘买入 → T+h 收盘（真实能下单，只报绝对收益与胜率）
+    """
     K = D.get('stkKlines') or {}
     bench = market_bench(K)
     stats = {}
@@ -172,6 +253,7 @@ def compute(L, D):
             st = stats.setdefault(src, {
                 'n': 0, 'days': set(),
                 'h': {str(h): {'rets': [], 'excs': []} for h in HORIZONS},
+                'x': {str(h): {'rets': [], 'byday': {}} for h in HORIZONS},
             })
             st['days'].add(day)
             for it in items:
@@ -188,6 +270,10 @@ def compute(L, D):
                     b = bench_ret(bench, day, h)
                     if b is not None:
                         st['h'][str(h)]['excs'].append(r - b)
+                    xr = exec_ret(bars, day, h)
+                    if xr is not None:
+                        st['x'][str(h)]['rets'].append(xr)
+                        st['x'][str(h)]['byday'].setdefault(day, []).append(xr)
                 if got:
                     st['n'] += 1
     return stats, bench
@@ -198,7 +284,7 @@ def summarize(stats):
     out = {}
     for src, st in stats.items():
         rec = {'label': SRC_LABEL.get(src, src), 'n': st['n'], 'days': len(st['days']),
-               'h': {}}
+               'h': {}, 'x': {}}
         for h in HORIZONS:
             d = st['h'][str(h)]
             rets, excs = d['rets'], d['excs']
@@ -206,10 +292,12 @@ def summarize(stats):
                 'n': len(rets),
                 'ret': round(sum(rets) / len(rets), 2) if rets else None,
                 'exc': round(sum(excs) / len(excs), 2) if excs else None,
-                'win': round(len([x for x in rets if x > 0]) / len(rets), 3) if rets else None,
-                'winExc': (round(len([x for x in excs if x > 0]) / len(excs), 3)
-                           if excs else None),
+                'win': win_rate(rets),
+                'winExc': win_rate(excs),
+                't': tstat(rets),
             }
+            xd = (st.get('x') or {}).get(str(h), {})
+            rec['x'][str(h)] = _xstat(xd.get('rets') or [], xd.get('byday') or {})
         rec['sampleEnough'] = (rec['n'] >= MIN_N and rec['days'] >= MIN_DAYS)
         out[src] = rec
     return out
@@ -264,6 +352,55 @@ def stop_evidence():
             'touched': st.get('touched'), 'rows': rows}
 
 
+def verdict_of(r):
+    """一个指标的判定。**先看可执行口径，再看超额**。
+
+    排序理由：用户关心的是「照这个指标买，第二天赚不赚钱」，不是「跑没跑赢基准」。
+
+    分级刻意保守（R100z186）：
+      · t 值一律用**按日聚类**的那一个。同一天 40 只票不是 40 个独立样本，
+        用逐票 t 值会得出「t=−2.4、应停用」这种过度自信的结论。
+      · 日数不够时只说「疑似」，不说「应停用」——只有 6-7 个交易日就宣判一个
+        指标死刑，是拿噪声当证据；这也正是用户质问的「复盘到底有没有用」的同一类错误。
+
+    文字刻意短（R100z191）：判定列只有约 270px，把收益/胜率/日数全塞进去会折成两行、
+    右对齐读起来散架。收益、胜率、t、样本都各有专列，判定**只负责给结论**；
+    但「应停用 / 可交易」这种重话必须自带证据（t 与日数），不让读者去别处核。
+    """
+    e5 = (r.get('h') or {}).get('5', {}).get('exc')
+    x1 = (r.get('x') or {}).get('1') or {}
+    t1, w1, nd = x1.get('tDaily'), x1.get('win'), x1.get('days') or 0
+    n1 = x1.get('n') or 0
+    if not r['sampleEnough']:
+        return '积累中（%d 条/%d 日）' % (r['n'], r['days'])
+    if t1 is not None and t1 <= REVERSE_T:
+        if nd >= 10:
+            return '负期望·应停用（t=%.1f、%d 日）' % (t1, nd)
+        return '疑似负期望·观察中（t=%.1f，仅 %d 日）' % (t1, nd)
+    if t1 is not None and t1 >= 2.0 and (w1 or 0) >= 0.60 and nd >= 10:
+        return '可交易（t=%.1f、胜率 %.0f%%、%d 日）' % (t1, w1 * 100, nd)
+    # 可执行口径有足够样本、但结论落在「既不显著正、也不显著负」的中间地带。
+    #
+    # 这一档**必须**留在这里、且不许掉回去用 5 日超额定生死。原因：5 日超额是
+    # 「登记日收盘价买入」算出来的，而那个价格在复盘写完时已经不存在了。
+    # 实测踩过：断板反包 1 日 +0.34%（买得到的价格是赚的），5 日超额 −0.78%，
+    # 旧逻辑判「无效（跑输基准）」——页面上同一行里 +0.34% 与「无效」并排，
+    # 读者只能得出「这张表是乱的」。买不到的价格不能用来宣判买得到的策略。
+    if t1 is not None and n1 >= MIN_N:
+        return '未定（%d 日%s）' % (nd, '，样本还少' if nd < 10 else '')
+    # 兜底：连可执行口径都算不出来（K 线不够）时，才退回 5 日超额。
+    # 这一档天然偏弱，且日数越少越不可信——把「几日的样本」直接挂在判定后面，
+    # 不许只给结论不给样本量。
+    tag = '' if (r.get('days') or 0) >= 10 else '（仅 %d 日·不可据此停用）' % (r.get('days') or 0)
+    if e5 is None:
+        return '不可判（5 日超额缺失）'
+    if e5 > 0.5 and (r['h']['5'].get('winExc') or 0.5) > 0.5:
+        return '弱有效（跑赢基准但绝对收益不一定为正）' + tag
+    if e5 > 0:
+        return '弱有效' + tag
+    return '无效（跑输基准）' + tag
+
+
 def build(D, do_snapshot=True):
     L = load_ledger()
     ent = L.setdefault('entries', {})
@@ -303,37 +440,40 @@ def build(D, do_snapshot=True):
                 'label': SRC_LABEL.get(key, key),
                 'n': r['n'], 'days': r['days'],
                 'h': {str(h): {'n': r['n'], 'ret': None, 'exc': None,
-                               'win': None, 'winExc': None} for h in HORIZONS},
+                               'win': None, 'winExc': None, 't': None} for h in HORIZONS},
+                'x': r.get('x') or {},
                 'sampleEnough': r['n'] >= MIN_N and r['days'] >= MIN_DAYS,
                 'legacy': True,
                 'touchRate': r['touchRate'],
             }
             summ[key]['h']['5'] = {'n': r['n'], 'ret': r['ret5'], 'exc': r['exc5'],
-                                   'win': r['win5'], 'winExc': None}
+                                   'win': r['win5'], 'winExc': None,
+                                   't': r['x'].get('2', {}).get('t') if r.get('x') else None}
 
     weights, wmsg = suggest_weights(summ)
 
     ranking = []
     for s, r in summ.items():
         e5 = r['h']['5'].get('exc')
-        if not r['sampleEnough']:
-            verdict = '积累中（%d 条/%d 日）' % (r['n'], r['days'])
-        elif e5 is None:
-            verdict = '不可判（5 日超额缺失）'
-        elif e5 > 0.5 and (r['h']['5'].get('winExc') or 0.5) > 0.5:
-            verdict = '有效'
-        elif e5 > 0:
-            verdict = '弱有效'
-        else:
-            verdict = '无效（跑输基准）'
+        x1 = (r.get('x') or {}).get('1') or {}
+        x2 = (r.get('x') or {}).get('2') or {}
         ranking.append({'src': s, 'label': r['label'], 'n': r['n'], 'days': r['days'],
                         'ret5': r['h']['5'].get('ret'), 'exc5': e5,
                         'win5': r['h']['5'].get('winExc'),
+                        # 可执行口径：1 日（当日收盘卖）/ 2 日（次日收盘卖）
+                        'ret1': x1.get('ret'), 'win1': x1.get('win'),
+                        't1': x1.get('tDaily'), 't1raw': x1.get('t'),
+                        'days1': x1.get('days'),
+                        'ret2': x2.get('ret'), 'win2': x2.get('win'),
+                        't2': x2.get('tDaily'),
                         'touchRate': r.get('touchRate'),
-                        'verdict': verdict, 'sampleEnough': r['sampleEnough'],
+                        'verdict': verdict_of(r), 'sampleEnough': r['sampleEnough'],
                         'legacy': bool(r.get('legacy')),
                         'weight': weights.get(s)})
-    ranking.sort(key=lambda x: (-(x['exc5'] if x['exc5'] is not None else -99), -x['n']))
+    # 排序：能交易的排前面（t1 降序），没 t1 的按 5 日超额，最后按样本
+    ranking.sort(key=lambda x: (-(x['t1'] if x['t1'] is not None else -99),
+                                -(x['exc5'] if x['exc5'] is not None else -99),
+                                -x['n']))
 
     if do_snapshot and ent:
         L['updatedAt'] = _now()
@@ -343,9 +483,11 @@ def build(D, do_snapshot=True):
         'updatedAt': _now(),
         'asOf': trade_date,
         'horizons': list(HORIZONS),
-        'criteria': {'minN': MIN_N, 'minDays': MIN_DAYS,
+        'criteria': {'minN': MIN_N, 'minDays': MIN_DAYS, 'reverseT': REVERSE_T,
                      'bench': '全市场等权（1300+ 只当日涨幅中位数累乘）',
-                     'excess': '标的收益 − 同期基准收益'},
+                     'excess': '标的收益 − 同期基准收益（仅「收盘买入」口径有）',
+                     'hBasis': '收盘买入：登记日收盘 → T+h 收盘（旧口径，复盘写完时已收盘，买不到）',
+                     'xBasis': '可执行：T+1 开盘 → T+h 收盘（1 日 = 当日收盘卖，2 日 = 次日收盘卖）'},
         'bySrc': summ,
         'ranking': ranking,
         'weights': weights,
@@ -403,10 +545,18 @@ def stats_from_stops(D, bench):
             if r5 is None:
                 continue
             b5 = bench_ret(bench, day, 5)
-            a = acc.setdefault(src, {'rets': [], 'excs': [], 'touch': 0, 'n': 0, 'days': set()})
+            a = acc.setdefault(src, {'rets': [], 'excs': [], 'touch': 0, 'n': 0, 'days': set(),
+                                     'x1': [], 'x2': [], 'x1d': {}, 'x2d': {}})
             a['rets'].append(r5)
             if b5 is not None:
                 a['excs'].append(r5 - b5)
+            # 冷启动路径也必须给可执行口径——否则页面上最重要的两列全是「—」，
+            # 等于把这个模块的核心问题（「照它买能不能赚」）又藏起来了。
+            for _h, _k, _dk in ((1, 'x1', 'x1d'), (2, 'x2', 'x2d')):
+                xr = exec_ret(bars, day, _h)
+                if xr is not None:
+                    a[_k].append(xr)
+                    a[_dk].setdefault(day, []).append(xr)
             a['n'] += 1
             a['days'].add(day)
             if (it.get('res') or {}).get('touched'):
@@ -422,6 +572,7 @@ def stats_from_stops(D, bench):
             'win5': round(len([x for x in a['rets'] if x > 0]) / len(a['rets']), 3)
             if a['rets'] else None,
             'touchRate': round(a['touch'] / a['n'], 3) if a['n'] else None,
+            'x': {'1': _xstat(a['x1'], a['x1d']), '2': _xstat(a['x2'], a['x2d'])},
         }
     return out, L.get('updatedAt'), len(all_days)
 
@@ -487,6 +638,81 @@ def self_test():
         abs(sum(w2.values()) - 1.0) < 0.01)
     chk('零权说明里点名了该指标', '吸筹打分' in msg2)
 
+    # ⑤ 可执行口径：T+1 开盘买入
+    b2 = [('2026-10-01', 100, 100, 101, 99, 1e6),      # 登记日：收 100
+          ('2026-10-02', 90, 99, 100, 89, 1e6),        # 次日：开 90（低开 10%）、收 99
+          ('2026-10-03', 99, 108, 109, 98, 1e6)]       # 再次日：收 108
+    b2 = A.norm_bars(b2)
+    chk('可执行 1 日 = 90→99 = +10.0（实测 %s）' % exec_ret(b2, '2026-10-01', 1),
+        exec_ret(b2, '2026-10-01', 1) == 10.0)
+    chk('可执行 2 日 = 90→108 = +20.0（实测 %s）' % exec_ret(b2, '2026-10-01', 2),
+        exec_ret(b2, '2026-10-01', 2) == 20.0)
+    # 关键区分：同一段行情，收盘买入是 −1%（100→99），开盘买入是 +10%（90→99）。
+    # 隔夜低开 10% 被「收盘买」记成亏损、被「开盘买」记成利润——这正是两套口径必须并列的原因。
+    chk('同段行情收盘口径 = −1.0（实测 %s）' % fwd_ret(b2, '2026-10-01', 1),
+        fwd_ret(b2, '2026-10-01', 1) == -1.0)
+    chk('未来不足 → 可执行口径也返回 None', exec_ret(b2, '2026-10-03', 1) is None)
+
+    # ⑥ 显著性
+    chk('t 值：恒 +1% 序列方差为 0 → None（不假装显著）', tstat([1.0] * 10) is None)
+    chk('t 值：样本 <5 → None', tstat([1.0, 2.0, 3.0]) is None)
+    chk('t 值：+1/−1 交替 → 均值 0、t≈0（实测 %s）' % tstat([1.0, -1.0] * 20),
+        abs(tstat([1.0, -1.0] * 20)) < 0.001)
+    chk('胜率：3/4 = 0.75（实测 %s）' % win_rate([1, -1, 2, 3]), win_rate([1, -1, 2, 3]) == 0.75)
+
+    # ⑦ 判定优先级：负期望必须压过「5 日超额为正」
+    neg = {'n': 300, 'days': 10, 'sampleEnough': True,
+           'h': {str(h): {'n': 300, 'ret': -1.0, 'exc': 2.0, 'win': 0.3, 'winExc': 0.55}
+                 for h in HORIZONS},
+           'x': {'1': {'n': 300, 'ret': -0.5, 'win': 0.42, 't': -3.1, 'tDaily': -3.1, 'days': 12},
+                 '2': {'n': 300, 'ret': -1.2, 'win': 0.38, 't': -4.0, 'tDaily': -4.0, 'days': 12}}}
+    chk('1 日 t=−3.1 → 判「负期望·应停用」（实测 %s）' % verdict_of(neg),
+        '负期望' in verdict_of(neg))
+    good1 = {'n': 300, 'days': 10, 'sampleEnough': True,
+             'h': {str(h): {'n': 300, 'ret': 1.0, 'exc': 0.2, 'win': 0.6, 'winExc': 0.55}
+                   for h in HORIZONS},
+             'x': {'1': {'n': 200, 'ret': 1.29, 'win': 0.68, 't': 3.4, 'tDaily': 3.4, 'days': 12},
+                   '2': {'n': 150, 'ret': 1.5, 'win': 0.66, 't': 2.9, 'tDaily': 2.9, 'days': 12}}}
+    chk('1 日 t=+3.4 且胜率 68%% → 判「可交易」（实测 %s）' % verdict_of(good1),
+        '可交易' in verdict_of(good1))
+    thin2 = {'n': 5, 'days': 1, 'sampleEnough': False,
+             'h': {str(h): {'n': 5, 'ret': -5.0, 'exc': -5.0, 'win': 0.0, 'winExc': 0.0}
+                   for h in HORIZONS},
+             'x': {'1': {'n': 5, 'ret': -5.0, 'win': 0.0, 't': -9.0, 'tDaily': -9.0, 'days': 1}}}
+    chk('样本不足时即便 t 很负也不判负期望（实测 %s）' % verdict_of(thin2),
+        '积累中' in verdict_of(thin2))
+
+    # ⑦b 日数不够时不许说「应停用」——这是本项目最贵的教训：
+    # 只有 7 个交易日、每天几十只票高度相关，算出 t=−2.4 也不能宣判死刑。
+    thin3 = {'n': 248, 'days': 7, 'sampleEnough': True,
+             'h': {str(h): {'n': 248, 'ret': -3.88, 'exc': 0.43, 'win': 0.35, 'winExc': 0.52}
+                   for h in HORIZONS},
+             'x': {'1': {'n': 248, 'ret': -0.44, 'win': 0.41, 't': -2.4, 'tDaily': -2.4, 'days': 7}}}
+    v3 = verdict_of(thin3)
+    chk('248 条但只有 7 日 → 说「疑似」不说「应停用」（实测 %s）' % v3,
+        ('疑似' in v3) and ('应停用' not in v3))
+    # 兜底档（按 5 日超额判）也必须报出样本日数，否则读者不知道这个结论有多虚。
+    weak4 = {'n': 300, 'days': 7, 'sampleEnough': True,
+             'h': {str(h): {'n': 300, 'ret': 0.5, 'exc': 0.6, 'win': 0.5, 'winExc': 0.55}
+                   for h in HORIZONS},
+             'x': {'1': {'n': 300, 'ret': None, 'win': None, 't': None, 'tDaily': None, 'days': 0}}}
+    chk('兜底档判定标注了「仅 N 日」（实测 %s）' % verdict_of(weak4), '仅 7 日' in verdict_of(weak4))
+
+    # ⑦c 中间地带：1 日买得到的价格是赚的、5 日超额是负的——不许判「无效」。
+    # 实测就是断板反包那一行（1 日 +0.34% / 5 日超额 −0.78%），旧逻辑判「无效（跑输基准）」，
+    # 页面上同一行 +0.34% 与「无效」并排，读者只会认为这张表坏了。
+    mid = {'n': 334, 'days': 6, 'sampleEnough': True,
+           'h': {str(h): {'n': 334, 'ret': -5.17, 'exc': -0.78, 'win': 0.35, 'winExc': 0.45}
+                 for h in HORIZONS},
+           'x': {'1': {'n': 334, 'ret': 0.34, 'win': 0.473, 't': 1.28, 'tDaily': 0.43, 'days': 6}}}
+    vm = verdict_of(mid)
+    chk('1 日 +0.34%% 但 5 日超额 −0.78%% → 判「未定」不判「无效」（实测 %s）' % vm,
+        ('未定' in vm) and ('无效' not in vm))
+    # 判定列只有 ~270px：结论要短，样本少要说出来，但收益/胜率/t 不许再重复进这一格
+    # （旁边就有专列）。写长了会折成两行、右对齐散架。
+    chk('「未定」带上样本日数、且不再重复收益数字（实测 %s）' % vm,
+        ('6 日' in vm) and ('%' not in vm))
+
     print('[SELF-TEST] ' + ('OK' if ok else 'FAIL'))
     return 0 if ok else 1
 
@@ -515,16 +741,28 @@ def main():
         print('[来源] ' + out['dataSourceNote'])
     print('本台账 %d 个交易日 / %d 条记录｜判定门槛 ≥%d 条且 ≥%d 日'
           % (out['ledger']['dates'], out['ledger']['entries'], MIN_N, MIN_DAYS))
-    print('\n  指标  样本  覆盖  5日收益  5日超额  超额胜率  止损触及  判定')
+    print('\n  【可执行口径】T+1 开盘买入（这是唯一买得到的价格）')
+    print('  指标             样本  覆盖    1日(当日收盘卖)      2日(次日收盘卖)     判定')
+    for r in out['ranking']:
+        print('  %-14s %4d条/%2d日  %s 胜%3s t=%5s  %s 胜%3s  %s'
+              % (r['label'], r['n'], r['days'],
+                 '  —   ' if r['ret1'] is None else '%+6.2f%%' % r['ret1'],
+                 '—' if r['win1'] is None else '%.0f%%' % (r['win1'] * 100),
+                 '—' if r['t1'] is None else '%+.1f' % r['t1'],
+                 # t 值按日聚类，自由度 = 交易日数−1；逐票 t 会严重高估显著性
+                 '  —   ' if r['ret2'] is None else '%+6.2f%%' % r['ret2'],
+                 '—' if r['win2'] is None else '%.0f%%' % (r['win2'] * 100),
+                 r['verdict']))
+    print('\n  【台账原口径】登记日收盘买入（复盘写完时已收盘，买不到；仅用于和历史对比）')
+    print('  指标             样本  5日收益  5日超额  超额胜率  止损触及')
     for r in out['ranking']:
         h5 = (out['bySrc'].get(r['src']) or {}).get('h', {}).get('5', {})
-        print('  %s  %d 条/%d 日  %s  %s  %s  %s  %s'
-              % (r['label'], r['n'], r['days'],
-                 '—' if h5.get('ret') is None else '%+.2f%%' % h5['ret'],
-                 '—' if r['exc5'] is None else '%+.2f%%' % r['exc5'],
+        print('  %-14s %4d  %s  %s  %s  %s'
+              % (r['label'], r['n'],
+                 '  —    ' if h5.get('ret') is None else '%+6.2f%%' % h5['ret'],
+                 '—' if r['exc5'] is None else '%+6.2f%%' % r['exc5'],
                  '—' if r['win5'] is None else '%.0f%%' % (r['win5'] * 100),
-                 '—' if r.get('touchRate') is None else '%.1f%%' % (r['touchRate'] * 100),
-                 r['verdict']))
+                 '—' if r.get('touchRate') is None else '%.1f%%' % (r['touchRate'] * 100)))
     print('\n  建议权重：' + (', '.join('%s %.2f' % (SRC_LABEL.get(k, k), v)
                                      for k, v in out['weights'].items()) or '— 未定'))
     print('  依据：' + out['weightNote'])

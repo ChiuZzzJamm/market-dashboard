@@ -139,6 +139,10 @@ EMPTY_WHITELIST = [
      "；前端 dbFailHtml/谐波失效区统一走 if(!x.length) 兜底显示『暂无失效标的』"),
     (r"policySignals\[\d+\]\.(sectors|targets)",
      "R100z107b：政策解码无识别到受益板块/量化目标时为空数组，前端按 '-' 显示"),
+    # R100z190：强板块落后股——「今天没有强板块」是这套规则的正常输出，不是脚本漏跑。
+    (r"duanban\.leadLag\.(picks|sectors)$",
+     "R100z190：lead_lag 约六成交易日无候选（回测 34/90 日有信号），picks/sectors 为空属正常；"
+     "前端 renderDuanban 里 `if ((LL.picks||[]).length) ... else 空仓文案` 双向兜底，sectors 前端未引用"),
     (r"^policySignals$",
      "R100z107b：当日无政策源新闻时 policySignals 为空数组（正常）"),
     (r"atrStops\.skipped$",
