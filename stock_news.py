@@ -90,13 +90,90 @@ NEWS_COMMENTARY = ('侃股', '时评', '观察家', '记者观察', '编后语',
 # 显示在弹窗「个股消息」段就是噪音。标题命中即丢弃（与个股真实动态无关）。
 # R100z150 补强：「27只涨停股」「78只跌停股」「午间涨跌停股分析」——原 `\d+\s*只股`
 # 要求「只股」连续，「只涨停股」中间隔字所以漏网（用户实报 8 条残留）。
+# R100z204（用户 2026-10-25「好的，去噪音」）：实测库里 1547 条新闻里 556 条（36%）是纯盘面统计，
+# 标题里既没有「N只股」也没有「附股」，全从旧正则的缝里漏过去。四轮扫出四个家族：
+#   ① 统计：今日盘中突破半年线个股(11 次) / XX行业资金流入榜(27 条) / 主力动向：…特大单净流入95.56亿元
+#   ② 栏目：A股收评 / 午报 / 盘前情报 / 公告避雷针 / 投资日历 / 四点半观市 / 中证快报（136 条）
+#   ③ 产品：化工ETF汇添富(159093)标的指数涨超1%（基金营销稿 126 条）
+#   ④ 综述：超4800只个股飘红 / 昨日行情回顾 / 15只概念股低估值且大幅回调
+# 统一判据：**主语是市场/行业/概念/产品，而不是这家公司**。三条保守边界（都是真消息，必须留）：
+#   · 「慕思股份连收3个涨停板」「天威视讯涨停走出2连板」——个股涨跌停动态是真消息，
+#     所以只丢「N股/N只个股+涨停」这种带计数的市场统计，不丢「涨停」本身；
+#   · 「300198，被立案调查！机构龙虎榜抢筹名单出炉」是立案利空，不能因「名单出炉」丢，
+#     所以名单类只认括注形式（`(名单)`/`（附名单）`）与前缀明确的「潜力股/受益股/高股息名单」；
+#   · 「长鑫科技市值重回3万亿，再登A股榜首」是公司消息，所以榜类不写 `股榜`（会命中「A股榜首」）。
+# ⚠️ 两层词表（别合并）：
+#   `NEWS_STATS_PAT`   **共用**核心 —— sweep_news.py 直接 `from stock_news import NEWS_STATS_PAT`
+#                      去清洗「五节要闻」，所以这里只能放「个股与要闻都不该出现」的东西：
+#                      榜单/统计/复盘栏目（主语是市场，不是任何一条事件）。
+#   `NEWS_STOCK_ONLY`  **个股层专有** —— 指数点位、ETF 基金营销稿、涨停潮、N股飘红这类，
+#                      在「要闻」里恰恰是资金面/板块热度的正经信号（例如
+#                      「四家头部基金各出2亿自购 宽基ETF净流入1900亿」是宏观要闻），
+#                      只有在「某只票的弹窗」里才是「跟我没关系」。R100z204 第一版把这两类
+#                      混进共用表，G22 立刻报「要闻含噪音 2 条」——那是要闻层被误伤，已拆开。
 NEWS_STATS_PAT = (
     re.compile(r'\d+\s*只(?:涨停|跌停|上涨|下跌)?股'),     # 185只股 / 27只涨停股 / 78只跌停股
     re.compile(r'附股'),
     re.compile(r'连板股|涨停股复盘|炸板|涨跌停股'),
     re.compile(r'(?:午间|收盘|早盘|盘中|尾盘)[^，。]{0,6}(?:分析|盘点|速递|播报)'),
     re.compile(r'^\s*\d+\.\d+亿元资金'),
+    # —— R100z204 盘面统计家族（个股与要闻都不该有） ——
+    re.compile(r'(?:突破|站上|失守)[^，。]{0,10}(?:均线|年线|半年线|季线)'),  # 今日盘中突破半年线个股
+    re.compile(r'资金(?:流入|流出)榜|资金流向日报|主力动向'),                # XX行业资金流入榜 / 主力动向：
+    re.compile(r'特大单净(?:流入|流出)'),                                   # N股特大单净流入资金超2亿元
+    re.compile(r'(?:概念|板块)[^，。]{0,16}(?:上涨|下跌)[\d.]+%'),            # 固态电池概念下跌1.25%，主力资金净流出202股
+    re.compile(r'[万亿]元?主力资金'),                                       # 14.32亿主力资金净流入，航空发动机概念涨2.92%
+    re.compile(r'行业今日净(?:流入|流出)资金'),                              # 汽车行业今日净流入资金9.64亿元…
+    re.compile(r'涨跌停情况梳理|揭秘涨停|涨停分析|涨跌停统计'),               # 10月23日A股涨跌停情况梳理
+    re.compile(r'\d+\s*(?:只|多只)?(?:个股|股)[^，。]{0,6}(?:涨停|跌停)'),     # 沪指涨0.12% 机械设备板块10股涨停！
+    re.compile(r'[（(【][^）)】]{0,10}名单[）)】]'),                            # 107家公司获机构调研（附名单）
+    re.compile(r'潜力股名单|受益股名单|高股息名单|概念股名单|牛股名单'),       # 业绩潜力股名单来了
+    re.compile(r'排行榜|牛股榜|人气榜|成交活跃股'),                            # 北交所成交活跃股排行榜
+    re.compile(r'一览[：:]|\d+股[^。]{0,12}一览|一览$'),                        # A股股票回购一览：149家公司…
+    re.compile(r'停复牌汇总|停复牌一览'),                                     # 10月14日盘前停复牌汇总
+    # —— R100z204 第二家族：报刊栏目/资讯汇总 ——
+    # 实测「去噪音」第二轮发现的更大一族（136 条）：标题是栏目名，正文把几十只票罗列一遍，
+    # 相关性判据（摘要前 60 字含名称或代码）必然命中，于是每只被列到的票都吃进同一条聚合文。
+    # 判据：标题里带「固定栏目名」。**只列明确的栏目名，不写「快报」「名单」「复盘」这种泛词**——
+    # `快报` 会吃掉「【调研快报】XX接待…」（单只票的调研，有价值），
+    # `复盘` 会吃掉「涨停股复盘」（另有规则），所以这里逐个点名。
+    re.compile(r'早报|午报|晚报|收评|午评|盘前情报|盘前必读|盘前速览|公告集锦|盘后公告'),
+    re.compile(r'投资日历|避雷针|焦点复盘|牛股复盘|四点半观市|重点速递|机会速递|中证快报'),
+    re.compile(r'券商评级观察|盘后固定价格交易'),                            # 10月23日盘后固定价格交易额9.15亿元
+    # 筹码/成交统计（第三家族里与「产品」无关的那半）
+    # ⚠️ 必须写成 `筹码新动向|筹码趋向集中`，不能写裸 `筹码集中` ——
+    #    「星源材质…前十大流通股东换仓后筹码集中度提升」是公司真消息，会被误杀。
+    re.compile(r'筹码新动向|筹码趋向集中|每笔成交量|平均股价|营业部最青睐|融资客青睐'),
+    # —— R100z204 第五批：栏目名点名（收尾 52 条；库里剩下的最后一批聚合文） ——
+    # 「45只A股筹码大换手（10月19日）」「上证早知道｜600110，…；300006，…」（一篇列三只票）
+    # 「晚间公告｜10月23日这些公告有看头」「10月22日早间新闻精选」「深沪北百元股数量达172只」
+    re.compile(r'筹码大换手|上证早知道|早间新闻精选|晚间公告[|｜]|这些公告有看头|公告精选'),
+    re.compile(r'百元股|家公司(?:公布|披露)(?:三季报|年报|业绩)|强势股追踪|预喜率'),
+    re.compile(r'多只(?:热门股|个股|概念股|业绩)|多股(?:涨停|大涨|爆发|逆市)'),   # 多只个股逆市爆发
 )
+
+# 个股弹窗专有：这些在「要闻」里是正经信号（资金面/板块热度/指数位置），只在个股层算噪音
+NEWS_STOCK_ONLY = (
+    re.compile(r'ETF'),                                                     # 基金/ETF 营销稿（126 条）
+    re.compile(r'沪指|上证指数|深证成指|创业板指|科创50|三大指数'),           # 指数点位复盘
+    re.compile(r'杠杆资金|两融余额'),                                        # 两融余额缩水…杠杆资金大幅加仓165股
+    re.compile(r'涨停潮'),                                                   # 人形机器人板块掀涨停潮
+    re.compile(r'\d+\s*(?:只)?(?:个股|股)\s*(?:飘红|翻绿|收红|收绿|上涨|下跌)'),  # 超4800只个股飘红
+    re.compile(r'\d+只(?:概念股|成分股|受益股|低价股|滞涨股)'),                # 15只概念股低估值且大幅回调
+    re.compile(r'一图看懂|行情回顾|机构研判'),                                # 昨日行情回顾 / 一图看懂回购公司
+    re.compile(r'概念(?:盘初|盘中|午后|尾盘)(?:活跃|走强|走弱|拉升|回调|异动)'),  # 创新药概念盘初活跃
+)
+
+
+def is_stats_title(title):
+    """个股消息层的噪音判定 = 共用核心 + 个股专有（R100z204）。
+
+    抽成函数是给「清洗存量」用的：库里已有的 noise 只能用同一套判据删，
+    两处各写一份正则会漂移（改了一处忘了另一处，噪音清了半年又长回来）。
+    用法见 `--purge-stats`。要闻层只用 `NEWS_STATS_PAT`（见文件头的两层说明）。
+    """
+    t = str(title or '')
+    return any(p.search(t) for p in NEWS_STATS_PAT) or any(p.search(t) for p in NEWS_STOCK_ONLY)
 
 
 def _norm(s):
@@ -175,7 +252,10 @@ def fetch_stock_news(name, code, days=NEWS_DAYS):
             if os.path.exists(cp):
                 cached = json.load(open(cp, encoding='utf-8'))
                 if cached.get('date') == today:
-                    return cached.get('list') or []
+                    # R100z204：读缓存也过一遍判定 —— 改规则当天，缓存里还是旧口径，
+                    # 直接用会让新规则「当天不生效」，第二天又被下一次写入固化。
+                    return [n for n in (cached.get('list') or [])
+                            if not is_stats_title(n.get('title'))]
         except Exception:
             pass
 
@@ -236,8 +316,8 @@ def fetch_stock_news(name, code, days=NEWS_DAYS):
         tm = str(x.get('date') or '').strip()
         if not title or not tm or tm[:10] < cutoff:
             continue
-        # 盘面统计类标题（"56只股涨停" / "…(附股)"）：正文列出代码 ≠ 个股消息，直接丢
-        if any(p.search(title) for p in NEWS_STATS_PAT):
+        # 盘面统计类标题（"56只股涨停" / "…(附股)" / "XX行业资金流入榜"）：正文列出代码 ≠ 个股消息，直接丢
+        if is_stats_title(title):
             continue
         head = _norm(title) + '｜' + summary[:60]
         if nm not in head and code not in head:
@@ -405,16 +485,65 @@ def build(targets, days=NEWS_DAYS):
     return out
 
 
+def purge_stats(D):
+    """把 data.js 里**已入库**的盘面统计类条目按 is_stats_title 删掉（纯本地、不联网）。
+
+    为什么单独一个入口：过滤规则只在抓取时生效，改完规则若跑 `NEWS_FORCE=1` 全量重抓
+    要几百次 HTTP（还有被限流的风险）；而存量清洗是确定性字符串判定，本地一条命令就完了。
+    顺带把「删空了的标的」整个摘掉 —— 否则会留下一堆只有 `{name}` 的空壳，
+    audit G9「白名单外空内容」会刷屏。
+    """
+    sn = D.get('stockNews') or {}
+    n_del = n_hit = 0
+    emptied = []
+    for code, v in sn.items():
+        lst = v.get('news') or []
+        keep = [n for n in lst if not is_stats_title(n.get('title'))]
+        if len(keep) != len(lst):
+            n_hit += 1
+            n_del += len(lst) - len(keep)
+            if keep:
+                v['news'] = keep
+            else:
+                v.pop('news', None)
+        if not v.get('notices') and not v.get('news'):
+            emptied.append(code)
+    for c in emptied:
+        sn.pop(c, None)
+    return n_del, n_hit, emptied
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--limit', type=int, default=0, help='只处理前 N 只（联调）')
     ap.add_argument('--days', type=int, default=NEWS_DAYS)
     ap.add_argument('--dry', action='store_true', help='只统计不写文件')
+    ap.add_argument('--purge-stats', action='store_true',
+                    help='只按现行规则清洗 data.js 里已有的盘面统计类噪音（不联网），'
+                         '改完 NEWS_STATS_PAT 后用它清存量')
     args = ap.parse_args()
 
     s = open(DATA_JS, encoding='utf-8').read()
     head = 'window.DASHBOARD_DATA = '
     D = json.loads(s[s.index('{'):s.rindex('}') + 1])
+
+    if args.purge_stats:
+        before = sum(len(v.get('news') or []) for v in (D.get('stockNews') or {}).values())
+        n_del, n_hit, emptied = purge_stats(D)
+        after = sum(len(v.get('news') or []) for v in (D.get('stockNews') or {}).values())
+        print(f'[stock_news] 存量清洗：删 {n_del} 条 / 涉及 {n_hit} 只 / '
+              f'清空并摘除 {len(emptied)} 只 / 新闻 {before} → {after} 条')
+        if emptied:
+            print('[stock_news] 摘除：' + ','.join(sorted(emptied)[:30])
+                  + (' …' if len(emptied) > 30 else ''))
+        if args.dry:
+            return
+        with open(DATA_JS + '.tmp', 'w', encoding='utf-8') as f:
+            f.write(head + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';\n')
+        os.replace(DATA_JS + '.tmp', DATA_JS)
+        print(f'[stock_news] 已写回 data.js（stockNews {len(D["stockNews"])} 只）')
+        return
+
     targets = collect_targets(D)
     if args.limit:
         targets = dict(list(targets.items())[:args.limit])

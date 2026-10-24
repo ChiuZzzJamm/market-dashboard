@@ -38,6 +38,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import write_data_js  # noqa: E402
 
 # 与 stock_news 共用同一份盘面统计正则（单一事实源，别在别处再抄一遍）
+# ⚠️ R100z204 起 stock_news 的词表拆了两层：这里 import 的 `NEWS_STATS_PAT` 是**共用核心**
+#    （榜单/统计/复盘栏目——要闻里也不该有）；它另有一份 `NEWS_STOCK_ONLY`
+#    （ETF 基金稿/指数点位/涨停潮/N股飘红）只在个股弹窗层生效 —— 那些在要闻里
+#    恰恰是资金面与板块热度的正经信号（「宽基ETF净流入1900亿」是宏观要闻）。
+#    **别为了「统一」把两层合并**：合并当天 G22 就报「要闻含噪音」，那是误伤。
 try:
     from stock_news import NEWS_STATS_PAT
 except Exception:  # stock_news 依赖较多，导入失败时退化为最小规则，不阻断部署
