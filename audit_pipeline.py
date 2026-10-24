@@ -60,7 +60,7 @@
                       ④ 涨红跌绿两色常量必须在；⑤ 断板页徽章图例三档必须齐（R100z171）
     G39 开盘预测子页  三块齐全 + DOM 顺序（前瞻→AI预测→预案）+ od 为默认子页且子页自带
                       tab 菜单（否则 dbSubTab 记住 od 后整页无入口可切走）（R100z162，FAIL）
-    G40 复盘页与槽位  🌟 复盘台账独占页（两卡 + 独占 CSS + hash 直达）与悬浮组四槽位对齐
+    G40 复盘页与槽位  🌟 复盘台账独占页（三卡 + 独占 CSS + hash 直达）与悬浮组四槽位对齐
                       （返回按钮按槽位落位、槽距 offsetTop 实测；旧贴底写法会让第 4 个按钮
                       掉出组外）（R100z162，FAIL）
     G41 视觉规范全链  标题/账户块/AI 关系行/四入口四返回可拖+拖后不吞点击/字体继承/字号 10 档
@@ -68,6 +68,9 @@
     G43 股票卡排版    「名称+代码」不可断（.nm 包裹）+ 机械池只标少数派且用压角圆点不占布局
     G44 僵尸镜像节点  ashare 下不得存在与顶层同名的容器——旧副本没删干净时，它既不被渲染
                       也不被校验（G12/G16 只查顶层），却可能被 prompt 继续喂着长大（R100z171，FAIL）
+    G45 弹窗导航分组  列表点开的 K 线弹窗必须**先建组再开**（stkOpenIn），openStkModal 入口须
+                      兜底关箭头（stkSyncNav）；内联 onclick 直开弹窗一律禁止——那会让 ←/→
+                      翻上一个读者点过的清单（R100h 犯过一次、R100z200 又犯一次，FAIL）
 """
 import ast
 import json
@@ -3479,7 +3482,9 @@ def g40_score_page_and_slots(r):
     判据：
       a) #score-view / #score-body / #sc-date / #sc-entry / #sc-entry-in 五个锚点齐全；
       b) CSS 三件套齐（容器默认隐藏 + body.score-open 隐藏其余 + 显示本页）；
-      c) renderScoreView() 同时调用 renderSignalPerf 与 renderForecastScore（少一张＝用户要的丢一半）；
+      c) renderScoreView() 同时调用 renderSignalPerf / renderLeadLag / renderForecastScore
+         （少一张＝用户要的丢一半）；且 renderLeadLag() 全页**只有一个调用点**——
+         R100z199 把它从断板页搬到复盘页，两处各挂一份就会出现「同一张卡两个页面数字不同步」；
       d) hash '#score' 至少两处（初始直达 + popstate 返回）；
       e) 槽位表 RAIL 把 4 个页内替身按「🐼→📄→🧰→📋」顺序指到组内第 0..3 个按钮；
          layout() 用实测偏移 gm.off[i] 落位，且 CSS 里不再出现 calc(50% ± N) 的槽位副本；
@@ -3513,16 +3518,23 @@ def g40_score_page_and_slots(r):
     if not re.search(r"body\.score-open\s+#score-view\s*\{[^}]*display:\s*block", s):
         bad.append("缺 `body.score-open #score-view{display:block}`——进去是空白页")
 
-    # ---- c) 两张卡都在 ----
+    # ---- c) 三张卡都在 ----
     mf = re.search(r"function renderScoreView\(\)\s*\{([\s\S]{0,2500}?)\n\}", s)
     if not mf:
         bad.append("找不到 renderScoreView()——复盘页没有渲染入口")
     else:
         fb = mf.group(1)
-        miss = [fn for fn in ("renderSignalPerf", "renderForecastScore") if fn not in fb]
+        miss = [fn for fn in ("renderSignalPerf", "renderLeadLag", "renderForecastScore")
+                if fn not in fb]
         if miss:
-            bad.append("renderScoreView() 未渲染 %s（用户要的两张成绩卡少一张）"
+            bad.append("renderScoreView() 未渲染 %s（复盘页的成绩卡少一张）"
                        % "、".join(miss))
+    # R100z199：搬页只能搬一次。调用点 >1 说明断板页那份没删干净，两处各渲染一份，
+    # 将来改一边忘另一边，两个页面的同一个数字会不一致（而且没人会去对照）。
+    ncall = len(re.findall(r"(?<!function )renderLeadLag\(\)", s))
+    if ncall != 1:
+        bad.append("renderLeadLag() 有 %d 个调用点（应 1 个，只在复盘页）——"
+                   "断板页那份没删干净，同一个卡会出现两套数字" % ncall)
 
     # ---- d) hash 直达 ----
     nh = s.count("'#score'") + s.count('"#score"')
@@ -3593,8 +3605,8 @@ def g40_score_page_and_slots(r):
     if bad:
         r.fail("G40", "；".join(bad[:4]))
     else:
-        r.ok("G40", "🌟 复盘台账页齐全（两张卡 + hash 直达 + 独占 CSS），"
-                    "悬浮组四槽位按实测槽距对齐")
+        r.ok("G40", "🌟 复盘台账页齐全（指标表现 + 强板块落后股 + 预测复盘三张卡、"
+                    "hash 直达、独占 CSS、落后股仅此一处），悬浮组四槽位按实测槽距对齐")
 
 
 def g41_visual_norms(r):
@@ -3929,6 +3941,56 @@ def g44_zombie_mirror_nodes(r):
     r.ok("G44", f"ashare 下无僵尸镜像节点（比对了 {sum(1 for k in D if isinstance(D.get(k), (dict, list)))} 个顶层容器键）")
 
 
+def g45_modal_nav_group(r):
+    """G45 弹窗导航分组（R100z200，2026-10-25）。
+
+    事故：用户 2026-10-25 截图指出「标的页面的左右按钮不是跟着交易预案里面标的切换的」。
+    根因是同一个坑犯了第二次（第一次 R100h，吸筹/九门卡片）：`openStkModal()` 只认全局
+    `STK_GRP`，而任何**内联 onclick 直接开弹窗**的列表都从不设置分组，于是箭头翻的是
+    「上一位读者点过的那个列表」的残留顺序——点交易预案的票能翻到龙虎榜去。
+
+    为什么必须上闸门而不是靠记性：这个坑的特点是**功能完全不报错**。箭头在、能翻、能看 K 线，
+    只是翻错了清单；只有用户逐票核对才会发现。而且新增任何一张可点列表都会重新引入它。
+
+    判据（三条都要，缺一条就挡不住）：
+      a) `openStkModal()` 函数体里有 `stkSyncNav(code)` —— 兜住所有仍走内联 onclick 的旧调用点：
+         代码不在当前分组里就关箭头，宁可没箭头，也不给一个会翻到别处的箭头；
+      b) 全文不得有 `onclick="openStkModal(` —— 列表点击必须走 `stkOpenIn(list, idx)` 先建组；
+      c) 三处「清单型」列表的生成串必须显式带 `stkOpenIn(`：龙虎榜 `.lhb-go`、
+         交易预案 `.td-name`、今日不做/备选 `.td-x-nm`。
+    """
+    p = os.path.join(HERE, "index.html")
+    try:
+        s = open(p, encoding="utf-8").read()
+    except Exception as e:                                    # noqa: BLE001
+        r.warn("G45", "index.html 读不到，跳过弹窗导航校验：%s" % e)
+        return
+
+    bad = []
+    i = s.find("function openStkModal(")
+    if i < 0:
+        bad.append("找不到 openStkModal()——K 线弹窗入口没了")
+    else:
+        body = s[i:i + 2400]
+        if "stkSyncNav(code)" not in body:
+            bad.append("openStkModal() 入口没调 stkSyncNav(code)——旧调用点会沿用上一组残留顺序，"
+                       "点交易预案能翻到龙虎榜")
+    n = s.count('onclick="openStkModal(') + s.count("onclick=\\\"openStkModal(")
+    if n:
+        bad.append("还有 %d 处内联 onclick 直开 openStkModal——必须先 stkOpenIn(list, idx) 建组" % n)
+    for need, why in (("stkOpenIn(window._LHB_GRP,", "龙虎榜行"),
+                      ("stkOpenIn(window._TD_GRP.p,", "交易预案主清单"),
+                      ("stkOpenIn(window._TD_GRP.' + kind + '", "今日不做/备选折叠区")):
+        if need not in s:
+            bad.append("%s 未走 stkOpenIn（箭头会跟着上一位读者点过的清单翻）" % why)
+
+    if bad:
+        r.fail("G45", "；".join(bad[:3]))
+    else:
+        r.ok("G45", "弹窗导航分组一致：openStkModal 兜底 stkSyncNav、无内联直开、"
+                    "龙虎榜/交易预案/今日不做·备选三处清单均先建组再开")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -3988,6 +4050,7 @@ def main():
     g42_design_tokens(r)
     g43_stock_chip_layout(r)
     g44_zombie_mirror_nodes(r)
+    g45_modal_nav_group(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))

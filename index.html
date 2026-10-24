@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610242348"></script>
+<script src="data.js?v=202610250021"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -267,6 +267,9 @@
   .lhb-nm b { font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden;
     text-overflow: ellipsis; }
   .lhb-nm i { font-style: normal; font-size: var(--fs-xs); color: var(--ink2); flex: 0 0 auto; }
+  /* R100z200：标的名可点开 K 线弹窗——用下划虚线做可点提示，不改成蓝色（页面里蓝色另有含义） */
+  .lhb-nm b.lhb-go { cursor: pointer; border-bottom: 1px dashed var(--line); }
+  .lhb-nm b.lhb-go:hover { color: var(--accent-deep); border-bottom-color: var(--accent-deep); }
   .lhb-net { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
   .lhb-net.up { color: var(--up); }
   .lhb-net.down { color: var(--down); }
@@ -733,6 +736,9 @@
   .pool-badge.done { background:var(--up-soft); color:var(--up); }
   .pool-badge.hold { background:var(--accent-soft); color:var(--accent-deep); }
   .pool-badge.star { background:rgba(232,160,19,.14); color:#a86f0e; }  /* R100z125：开盘精选池徽章（金）——并入 .pool-badge 几何，借此补齐 line-height:1.5（原内联样式缺之，比同级徽章偏高） */
+  /* R100z201：弹窗「龙虎榜」归属徽章。净买用红、净卖用绿（A 股惯例，别反），与池徽章同几何 */
+  .pool-badge.lhb-up { background: rgba(240,67,92,.13); color: var(--up); }
+  .pool-badge.lhb-down { background: rgba(15,157,120,.13); color: var(--down); }
   /* R100z120 Q3：弹窗「新」徽章——与卡片 .tc .nb 同口径（poolFresh：entryDate === 模块交易日），
      覆盖断板/谐波/九门/吸筹的池内标的 + 四模块失效归档池（与卡片 fail-chip.fail-new 同口径）。 */
   .m-nb { display:inline-block; font-size: var(--fs-xs); font-weight:800; color:#6b4a00; background:#ffc93c; border:1px solid #e3a008; border-radius:4px; padding:0.5px 3px; line-height:1.5; flex-shrink:0; }
@@ -1238,6 +1244,11 @@
      两个数字必须同时在场——只给候选不给胜率，就是用户质问的「只汇报今天的情况」；
      只给胜率不给候选，又无法验收规则到底怎么落到票上。 */
   .ll-wrap { margin: 12px 0 0; border: 1px solid var(--line); border-radius: var(--r-block); background: #fcfdfe; }
+  /* R100z199：整块搬进复盘台账后，外层已有 .card 的白底+阴影，内层再套一层边框会出现「双框」。
+     内层各行的左右 padding 是 12px，所以卡片外壳给 14px（合计 26px，与其他卡的正文左对齐）。
+     断板页旧挂载点已删除，无需兼容。 */
+  .card.ll-card { padding: 22px 14px; }
+  .card.ll-card > .ll-wrap { margin: 0; border: 0; border-radius: 0; background: transparent; }
   .ll-hd { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; padding: 9px 12px 6px; }
   .ll-hd b { font-size: var(--fs-h2); color: var(--ink); }
   .ll-hd .ll-date { font-size: var(--fs-sm); color: var(--ink2); }
@@ -1657,6 +1668,38 @@ function stkPoolBadge(code) {
   }
   if (!P[code]) return '';
   return '<span class="pool-badge star">开盘精选</span>'; // R100z125：改用 .pool-badge 统一几何（含 line-height:1.5），修徽章偏高
+}
+/* R100z201（用户 2026-10-25：「如果页面给到的标的如果是龙虎榜里的，也要在标的页面里面写」）：
+   命中当日龙虎榜（净买前 N / 净卖前 N）就在弹窗徽章行挂一枚，带净额与上榜原因。
+   只认 data.js 里已落盘的当日榜单——抓空/未披露时说「无」是撒谎，所以直接不显示（并给 tooltip 说明不给的理由）。 */
+function stkLhbOf(code) {
+  var c = String(code || '');
+  if (!/^\d{6}$/.test(c)) return null;
+  var l = ((window.DASHBOARD_DATA || {}).ashare || {}).lhb || {};
+  var hit = null;
+  ['top', 'sell'].forEach(function (k) {
+    (l[k] || []).forEach(function (it) {
+      if (String(it.code || '') === c) hit = { it: it, sell: k === 'sell', date: l.date, status: l.status };
+    });
+  });
+  return hit;
+}
+function stkLhbBadge(code) {
+  var h = stkLhbOf(code);
+  if (!h) return '';
+  var v = Number(h.it.netAmt);
+  if (!isFinite(v)) return '';
+  var up = v > 0;
+  var rs = (h.it.reasons && h.it.reasons.length) ? h.it.reasons.join('/') : (h.it.reason || '触发披露阈值');
+  var seat = '';
+  if (h.it.seatTop && h.it.seatTop.length) {
+    var s0 = h.it.seatTop[0];
+    seat = (up ? '买方首位 ' : '卖方首位 ') + (s0.s || s0.n) + ' ' + (Number(s0.v) > 0 ? '+' : '') + Number(s0.v).toFixed(2) + '亿';
+  }
+  var tip = '龙虎榜 ' + (h.date || '') + '｜' + rs + (seat ? '｜' + seat : '') +
+    '｜净额是席位合计买卖差，不是明天涨跌的方向依据';
+  return '<span class="pool-badge ' + (up ? 'lhb-up' : 'lhb-down') + '" title="' + escAttr(tip) + '">龙虎榜 ' +
+    (up ? '净买 +' : '净卖 ') + v.toFixed(2) + '亿</span>';
 }
 
 function renderTops(s, isUp) {
@@ -3131,7 +3174,16 @@ function renderTradeDesk() {
   }
 
   // 逐票：一行标题 + 一行价位 + 一行依据。不用 table——移动端表格必溢出。
-  T.picks.forEach(function (p) {
+  // R100z200：先把三份清单登记成弹窗导航组——箭头必须跟着「你点的那份清单」翻，
+  // 而不是翻上一组残留（用户 2026-10-25 截图 6 的原话：「不是跟着交易预案里面标的切换的」）。
+  window._TD_GRP = {
+    p: (T.picks || []).map(function (x) {
+      return { c: x.code, n: x.name, t: '交易预案 ' + (x.rank || '') + '/' + (T.picks || []).length };
+    }),
+    w: (T.watch || []).map(function (x) { return { c: x.code, n: x.name, t: '今日不做：' + (x.veto || '—') }; }),
+    c: (T.candidates || []).map(function (x) { return { c: x.code, n: x.name, t: '备选：' + (x.sector || '') }; })
+  };
+  T.picks.forEach(function (p, pi) {
     var close = num(p.close), stop = num(p.stop), tgt = num(p.target);
     var rr = (close && stop && tgt && close > stop) ? (tgt - close) / (close - stop) : null;
     var posRaw = num(p.posPctRaw);
@@ -3142,8 +3194,7 @@ function renderTradeDesk() {
     h += '<div class="td-item">' +
       '<div class="td-h">' +
         '<span class="td-rank">' + (p.rank || '·') + '</span>' +
-        '<span class="td-name" onclick="openStkModal(\'' + escAttr(p.code) + '\',\'' +
-            escAttr(p.name) + '\',\'\')">' + esc(p.name) + '<em>' + esc(p.code) + '</em></span>' +
+        '<span class="td-name" title="点击看 K 线 · 同清单内可用 ←/→ 切换" onclick="stkOpenIn(window._TD_GRP.p,' + pi + ')">' + esc(p.name) + '<em>' + esc(p.code) + '</em></span>' +
         '<span class="td-sec">' + esc(p.sector || '未分类') + '</span>' +
         '<span class="td-q" title="五因子量化分（动量25/趋势20/量能20/位置20/波动15）' +
             (p.bonus ? ' + 共振加分 ' + p.bonus : '') + '">' +
@@ -3177,15 +3228,16 @@ function renderTradeDesk() {
   var watch = T.watch || [], cand = T.candidates || [];
   // R100z162：没做的票也要能查图——「为什么不做」的否决理由只有配上 K 线才可信，
   // 否则用户只能信我一句话。名字可点（openStkModal 与主清单同一个弹窗）。
-  var xNm = function (p) {
+  // R100z200：今日不做 / 备选 也按各自的清单做导航组（用户 2026-10-25 截图 5 要求这两个折叠区同样能翻）
+  var xNm = function (p, kind, idx) {
     return '<b class="td-x-nm" title="点击查看 K 线 · ' + escAttr(p.name + ' ' + (p.code || '')) +
-      '" onclick="openStkModal(\'' + escAttr(p.code) + '\',\'' + escAttr(p.name) + '\',\'\')">' +
+      ' · 可用 ←/→ 在本清单内切换" onclick="stkOpenIn(window._TD_GRP.' + kind + ',' + idx + ')">' +
       esc(p.name) + '</b>';
   };
   if (watch.length) {
     h += '<details class="td-fold"><summary>今日不做 ' + watch.length + ' 只（附否决理由）</summary>';
-    watch.forEach(function (p) {
-      h += '<div class="td-x">' + xNm(p) + '<s>' + esc(p.code) + '</s>' +
+    watch.forEach(function (p, wi) {
+      h += '<div class="td-x">' + xNm(p, 'w', wi) + '<s>' + esc(p.code) + '</s>' +
         '<s>分 ' + (num(p.q) === null ? '—' : p.q) + '</s>' +
         '<em>' + esc(p.veto || '—') + '</em></div>';
     });
@@ -3193,8 +3245,8 @@ function renderTradeDesk() {
   }
   if (cand.length) {
     h += '<details class="td-fold"><summary>备选 ' + cand.length + ' 只（通过否决但排名靠后）</summary>';
-    cand.forEach(function (p) {
-      h += '<div class="td-x">' + xNm(p) + '<s>' + esc(p.code) + '</s>' +
+    cand.forEach(function (p, ci) {
+      h += '<div class="td-x">' + xNm(p, 'c', ci) + '<s>' + esc(p.code) + '</s>' +
         '<s>' + esc(p.sector || '') + '</s>' +
         '<s>分 ' + (num(p.q) === null ? '—' : p.q) + '</s>' +
         '<em>' + esc(p.cappedBySector ? '同板块已满额，等换手' : '排名靠后，等回调或缩量') + '</em></div>';
@@ -3270,7 +3322,7 @@ function renderSignalPerf() {
       '「1 日胜率」= T+1 开盘买入、当日收盘卖出，只看方向对没对，未扣交易成本；' +
       '这是唯一买得到的价格（登记日收盘价在复盘写完时已经不存在）。' +
       '四个池的共同问题是<b>都在买「已经涨过的票」</b>，而回测里追强的次日超额是负的；' +
-      '正期望在对面：同一板块里落后 2pp 以上的那只（见断板页「🎯 强板块落后股」，1 日胜率 66%）。</div>';
+      '正期望在对面：同一板块里落后 2pp 以上的那只（见本页下方「🎯 强板块落后股」，1 日胜率 66%）。</div>';
   }
 
   h += '<div class="pf-row pf-head">' +
@@ -4638,7 +4690,7 @@ var LB_LIST = [];
 /* 龙虎榜席位结构（R100z195）：只渲染既有事实，不做「明天会怎样」的推断。
    数据来自 lhb.py 写进 ashare.lhb —— 席位性质（机构/北向/游资/拉萨系）是这一块的全部意义，
    所以每行必须带「谁在买」，只有净额就退回成用户批评过的「大数」了。 */
-function lhbRow(it) {
+function lhbRow(it, gi) {
   var up = Number(it.netAmt || 0) > 0;
   var net = (up ? '+' : '') + Number(it.netAmt || 0).toFixed(2) + '亿';
   var ratio = (it.ratio === null || it.ratio === undefined) ? '—' : ('占成交' + it.ratio + '%');
@@ -4649,8 +4701,13 @@ function lhbRow(it) {
     seat = (up ? '买方首位 ' : '卖方首位 ') + (s0.s || s0.n) +
       ' ' + (Number(s0.v) > 0 ? '+' : '') + Number(s0.v).toFixed(2) + '亿';
   }
+  // R100z200：标的名可点 → 打开 K 线弹窗，并在**本榜内**用 ←/→ 连续翻（用户 2026-10-25 截图 3 要求）
+  var nm = gi === undefined || gi === null
+    ? '<b>' + esc(it.name || '') + '</b>'
+    : '<b class="lhb-go" title="点击查看 K 线 · 可用 ←/→ 在本榜内切换" onclick="stkOpenIn(window._LHB_GRP,' + gi + ')">' +
+      esc(it.name || '') + '</b>';
   return '<div class="lhb-row">' +
-    '<span class="lhb-nm"><b>' + esc(it.name || '') + '</b><i>' + esc(it.code || '') + '</i></span>' +
+    '<span class="lhb-nm">' + nm + '<i>' + esc(it.code || '') + '</i></span>' +
     '<span class="lhb-net ' + (up ? 'up' : 'down') + '">' + net + '</span>' +
     '<span class="lhb-ratio">' + esc(ratio) + '</span>' +
     '<span class="lhb-rs" title="' + escAttr(rs) + '">' + esc(rs) + '</span>' +
@@ -4660,6 +4717,16 @@ function lhbRow(it) {
 function renderLhb(l) {
   if (!l || !l.total) return '';
   var ST = { complete: '当日已全', partial: '披露未完成', prev: '上一交易日' };
+  // R100z200：净买榜 + 净卖榜拼成一个导航组（榜单顺序 = 阅读顺序），弹窗箭头在此组内循环。
+  // 只放进了已披露的 top/sell，不补「榜单之外的票」——箭头翻不到没上榜的标的才符合直觉。
+  window._LHB_GRP = [].concat(l.top || [], l.sell || []).map(function (x) {
+    var v = Number(x.netAmt || 0);
+    return {
+      c: String(x.code || ''), n: x.name || '',
+      t: '龙虎榜 · ' + (v > 0 ? '净买 +' : '净卖 ') + v.toFixed(2) + '亿 · ' +
+         ((x.reasons && x.reasons.length) ? x.reasons.join('/') : (x.reason || ''))
+    };
+  });
   var s = '<div class="lhb"><div class="lhb-hd"><b>龙虎榜 · 席位结构</b>' +
     '<span class="lhb-d">' + esc(l.date || '') + '</span>' +
     '<span class="lhb-tag">' + esc(ST[l.status] || l.status || '') + ' · 主板 ' +
@@ -4667,11 +4734,11 @@ function renderLhb(l) {
   if (l.text) s += '<div class="lhb-sum">' + esc(l.text) + '</div>';
   if (l.top && l.top.length) {
     s += '<div class="lhb-sub">净买前 ' + l.top.length + '（主板）：</div>';
-    l.top.forEach(function (it) { s += lhbRow(it); });
+    l.top.forEach(function (it, i) { s += lhbRow(it, i); });
   }
   if (l.sell && l.sell.length) {
     s += '<div class="lhb-sub">净卖前 ' + l.sell.length + '（主板）：</div>';
-    l.sell.forEach(function (it) { s += lhbRow(it); });
+    l.sell.forEach(function (it, i) { s += lhbRow(it, (l.top || []).length + i); });
   }
   if (l.seatRepeat && l.seatRepeat.length) {
     var seg = l.seatRepeat.map(function (r) {
@@ -5298,94 +5365,6 @@ function renderDuanban() {
     });
     fixed += '</div></div>';
   }
-  // 强板块落后股（lead_lag.py → duanban.leadLag）：与开盘精选同一块固定区，
-  // 因为它是「次日买什么」这条问题在数据上唯一站得住的答案——四个池都在追强，
-  // 回测里追强是负期望；同板块里落后 2pp 以上的那只才是正期望的那一边。
-  var LL = db && db.leadLag;
-  if (LL && (LL.picks || LL.bt)) {
-    var _ln = function (v) { var n = Number(v); return (v === null || v === undefined || v === '' || !isFinite(n)) ? null : n; };
-    var _lp = function (v) { var n = _ln(v); return n === null ? '—' : (n > 0 ? '+' : '') + n.toFixed(2) + '%'; };
-    var _lr = function (v) { var n = _ln(v); return n === null ? '—' : (n * 100).toFixed(1) + '%'; };
-    var _ls = function (v) { var n = _ln(v); return n === null ? 'flat' : (n > 0 ? 'up' : (n < 0 ? 'down' : 'flat')); };
-    var bt = LL.bt || {}, ex = LL.exit || {};
-    var mainEx = ex.main || bt.main || {}, altEx = ex.alt || bt.alt || {};
-    var rule = LL.rule || {}, sc = LL.scanned || {};
-    var isReplay = LL.mode === 'replay';
-
-    fixed += '<div class="ll-wrap">';
-    fixed += '<div class="ll-hd"><b>🎯 强板块落后股 · ' + ((LL.picks || []).length) + ' 只</b>' +
-      '<span class="ll-date">' + esc(String(LL.date || '')) + ' ' + esc(String(LL.time || '')) + '</span>' +
-      (isReplay ? '<span class="ll-mode warn">回放校验</span>' : '<span class="ll-mode">9:45 实时</span>') +
-      '</div>';
-
-    fixed += '<div class="ll-rule">规则：<em>板块开盘跳空 &gt; +' + (rule.secGapMin != null ? rule.secGapMin.toFixed(1) : '1.0') + '%</em>' +
-      '（成分股开盘价均值，剔掉单只 |跳空|&gt;12% 的退市整理股） · ' +
-      '<em>该股落后板块 &gt; ' + (rule.lagMin != null ? rule.lagMin.toFixed(1) : '2.0') + 'pp</em> · ' +
-      '<em>昨日还在涨</em>（不买破位股） · <em>现价不高于开盘 +' +
-      (rule.liveVsOpen ? rule.liveVsOpen[1].toFixed(1) : '0.4') + '%</em>（追高即失效） · ' +
-      '扫描 ' + (sc.sectors || 0) + ' 个板块 / ' + (sc.universe || 0) + ' 只主板 → 强板块 ' + (sc.strongSectors || 0) + ' 个</div>';
-
-    if ((LL.picks || []).length) {
-      fixed += '<div class="ll-row ll-head"><div>标的</div>' +
-        '<div class="ll-c">落后板块</div><div class="ll-c">板块跳空</div>' +
-        '<div class="ll-c ll-hide">本股跳空</div><div class="ll-c ll-hide">昨日</div></div>';
-      LL.picks.forEach(function (p) {
-        fixed += '<div class="ll-row">' +
-          '<div class="ll-nm">' + esc(p.name || p.code) + '<s>' + esc(String(p.code || '')) + '　' + esc(p.sector || '') + '</s></div>' +
-          '<div class="ll-lag">' + (p.lag != null ? p.lag.toFixed(1) + 'pp' : '—') + '</div>' +
-          '<div class="ll-c ' + _ls(p.secGap) + '">' + _lp(p.secGap) + '</div>' +
-          '<div class="ll-c ll-hide ' + _ls(p.openGap) + '">' + _lp(p.openGap) + '</div>' +
-          '<div class="ll-c ll-hide ' + _ls(p.yPct) + '">' + _lp(p.yPct) + '</div></div>';
-      });
-    } else {
-      fixed += '<div class="ll-empty"><b>今日 0 只，空仓。</b> ' +
-        esc(String(LL.gapNote || '没有板块同时满足「强 + 有落后股」，不出手。')) + '</div>';
-    }
-
-    if (bt.main) {
-      fixed += '<div class="ll-bt">' +
-        '<div><div class="ll-bt-k">' + esc(String(mainEx.name || '')) + '（首选）</div>' +
-        '<div class="ll-bt-v ' + _ls(mainEx.ret) + '">' + _lp(mainEx.ret) + '<small>胜率 ' + _lr(mainEx.win) + '</small></div></div>' +
-        '<div><div class="ll-bt-k">' + esc(String(altEx.name || '')) + '（备选）</div>' +
-        '<div class="ll-bt-v ' + _ls(altEx.ret) + '">' + _lp(altEx.ret) + '<small>胜率 ' + _lr(altEx.win) + '</small></div></div>' +
-        '<div><div class="ll-bt-k">日聚类 t 值</div>' +
-        '<div class="ll-bt-v">' + (mainEx.tDaily != null ? mainEx.tDaily.toFixed(2) : '—') +
-        '<small>' + (mainEx.days || 0) + ' 个信号日</small></div></div>' +
-        '<div><div class="ll-bt-k">有信号的天数</div>' +
-        '<div class="ll-bt-v">' + (bt.signalDays || 0) + '<small>/ ' + (bt.days || 0) + ' 日</small></div></div>' +
-        '</div>';
-
-      var mo = (bt.byMonth || []).map(function (m) {
-        return esc(String(m.month || '').slice(5)) + ' ' + _lp(m.ret) + '/胜' + _lr(m.win);
-      }).join('　·　');
-      var rc = bt.recent || [];
-      if (rc.length) {
-        fixed += '<div class="ll-rc"><div class="ll-rc-h">最近 ' + rc.length +
-          ' 次出手 · 当日开盘买、当日收盘卖（含亏的那几天）</div>';
-        rc.slice().reverse().forEach(function (x) {
-          fixed += '<div class="ll-rc-r"><div class="ll-rc-d">' + esc(String(x.date || '').slice(5)) + '</div>' +
-            '<div class="ll-rc-v ' + _ls(x.ret) + '">' + _lp(x.ret) + '</div>' +
-            '<div class="ll-rc-n">' + (x.n || 0) + '只' + (x.up != null ? x.up + '涨' : '') +
-            (x.names && x.names.length ? '　' + esc(x.names.join('、')) : '') + '</div></div>';
-        });
-        fixed += '</div>';
-      }
-      fixed += '<div class="ll-foot">' +
-        '回测口径：' + esc(String((bt.window || ['', ''])[0])) + ' ~ ' + esc(String((bt.window || ['', ''])[1])) +
-        '，共 <b>' + (bt.days || 0) + ' 个交易日</b>、样本 <b>' + (bt.samples || 0) + ' 条</b>，' +
-        '入场 = 当日开盘价，双边成本 ' + (bt.cost != null ? bt.cost.toFixed(2) : '0.20') + '%。' +
-        '<b>' + (bt.signalDays || 0) + ' 天有信号、' + ((bt.days || 0) - (bt.signalDays || 0)) + ' 天一只都没有</b>——' +
-        '空仓是这套规则的常态（' + _lr(bt.flatRate) + ' 的交易日不出手），不是故障；' +
-        '它的价值在于「出手就有六成以上胜率」，而不是每天都有票。' +
-        '<br>逐月：' + mo + '。' +
-        '日聚类 t=' + (mainEx.tDaily != null ? mainEx.tDaily.toFixed(2) : '—') +
-        ' 说明<b>方向明确但离「统计显著」还差一点</b>（门槛 2.0）——所以它是加分项，不是可以押注的理由。' +
-        (LL.replayNote ? '<br>' + esc(LL.replayNote) : '') +
-        (LL.gapNote && (LL.picks || []).length ? '<br>⚠️ ' + esc(LL.gapNote) : '') +
-        '</div>';
-    }
-    fixed += '</div>';
-  }
   // R100m：固定区（TOP10 + 开盘精选）写入独立容器——切换子页时保持显示
   document.getElementById('db-fixed').innerHTML = fixed;
   // R100k：子页菜单移到内容流——断板页位于「开盘精选」与确认池说明之间（用户指定红框位置）
@@ -5714,10 +5693,108 @@ function closeGnews() {
   window.scrollTo(0, window._gnHomeScrollY || 0);
 }
 
+/* 强板块落后股（lead_lag.py → duanban.leadLag）—— R100z199（2026-10-25 用户拍板）：
+   「这个是复盘吧？复盘要放在复盘台账这个页面」。原挂在断板页「开盘精选」下方，
+   但它回答的是「这套规则过去赚不赚」，不是「今天买什么」，与断板页的当日决策不同族。
+   整块**一字未改**搬进 📋 复盘台账（#score），只换了挂载点——搬页顺手改口径是这类改动最容易犯的错。 */
+function renderLeadLag() {
+  // 为什么不删掉这块：它是「次日买什么」这条问题在数据上唯一站得住的答案——四个池都在追强，
+  // 回测里追强是负期望；同板块里落后 2pp 以上的那只才是正期望的那一边。
+  var D = window.DASHBOARD_DATA || {};
+  var db = D.duanban || {};
+  var LL = db.leadLag;
+  var out = '';
+  if (LL && (LL.picks || LL.bt)) {
+    var _ln = function (v) { var n = Number(v); return (v === null || v === undefined || v === '' || !isFinite(n)) ? null : n; };
+    var _lp = function (v) { var n = _ln(v); return n === null ? '—' : (n > 0 ? '+' : '') + n.toFixed(2) + '%'; };
+    var _lr = function (v) { var n = _ln(v); return n === null ? '—' : (n * 100).toFixed(1) + '%'; };
+    var _ls = function (v) { var n = _ln(v); return n === null ? 'flat' : (n > 0 ? 'up' : (n < 0 ? 'down' : 'flat')); };
+    var bt = LL.bt || {}, ex = LL.exit || {};
+    var mainEx = ex.main || bt.main || {}, altEx = ex.alt || bt.alt || {};
+    var rule = LL.rule || {}, sc = LL.scanned || {};
+    var isReplay = LL.mode === 'replay';
+
+    out += '<div class="ll-wrap">';
+    out += '<div class="ll-hd"><b>🎯 强板块落后股 · ' + ((LL.picks || []).length) + ' 只</b>' +
+      '<span class="ll-date">' + esc(String(LL.date || '')) + ' ' + esc(String(LL.time || '')) + '</span>' +
+      (isReplay ? '<span class="ll-mode warn">回放校验</span>' : '<span class="ll-mode">9:45 实时</span>') +
+      '</div>';
+
+    out += '<div class="ll-rule">规则：<em>板块开盘跳空 &gt; +' + (rule.secGapMin != null ? rule.secGapMin.toFixed(1) : '1.0') + '%</em>' +
+      '（成分股开盘价均值，剔掉单只 |跳空|&gt;12% 的退市整理股） · ' +
+      '<em>该股落后板块 &gt; ' + (rule.lagMin != null ? rule.lagMin.toFixed(1) : '2.0') + 'pp</em> · ' +
+      '<em>昨日还在涨</em>（不买破位股） · <em>现价不高于开盘 +' +
+      (rule.liveVsOpen ? rule.liveVsOpen[1].toFixed(1) : '0.4') + '%</em>（追高即失效） · ' +
+      '扫描 ' + (sc.sectors || 0) + ' 个板块 / ' + (sc.universe || 0) + ' 只主板 → 强板块 ' + (sc.strongSectors || 0) + ' 个</div>';
+
+    if ((LL.picks || []).length) {
+      out += '<div class="ll-row ll-head"><div>标的</div>' +
+        '<div class="ll-c">落后板块</div><div class="ll-c">板块跳空</div>' +
+        '<div class="ll-c ll-hide">本股跳空</div><div class="ll-c ll-hide">昨日</div></div>';
+      LL.picks.forEach(function (p) {
+        out += '<div class="ll-row">' +
+          '<div class="ll-nm">' + esc(p.name || p.code) + '<s>' + esc(String(p.code || '')) + '　' + esc(p.sector || '') + '</s></div>' +
+          '<div class="ll-lag">' + (p.lag != null ? p.lag.toFixed(1) + 'pp' : '—') + '</div>' +
+          '<div class="ll-c ' + _ls(p.secGap) + '">' + _lp(p.secGap) + '</div>' +
+          '<div class="ll-c ll-hide ' + _ls(p.openGap) + '">' + _lp(p.openGap) + '</div>' +
+          '<div class="ll-c ll-hide ' + _ls(p.yPct) + '">' + _lp(p.yPct) + '</div></div>';
+      });
+    } else {
+      out += '<div class="ll-empty"><b>今日 0 只，空仓。</b> ' +
+        esc(String(LL.gapNote || '没有板块同时满足「强 + 有落后股」，不出手。')) + '</div>';
+    }
+
+    if (bt.main) {
+      out += '<div class="ll-bt">' +
+        '<div><div class="ll-bt-k">' + esc(String(mainEx.name || '')) + '（首选）</div>' +
+        '<div class="ll-bt-v ' + _ls(mainEx.ret) + '">' + _lp(mainEx.ret) + '<small>胜率 ' + _lr(mainEx.win) + '</small></div></div>' +
+        '<div><div class="ll-bt-k">' + esc(String(altEx.name || '')) + '（备选）</div>' +
+        '<div class="ll-bt-v ' + _ls(altEx.ret) + '">' + _lp(altEx.ret) + '<small>胜率 ' + _lr(altEx.win) + '</small></div></div>' +
+        '<div><div class="ll-bt-k">日聚类 t 值</div>' +
+        '<div class="ll-bt-v">' + (mainEx.tDaily != null ? mainEx.tDaily.toFixed(2) : '—') +
+        '<small>' + (mainEx.days || 0) + ' 个信号日</small></div></div>' +
+        '<div><div class="ll-bt-k">有信号的天数</div>' +
+        '<div class="ll-bt-v">' + (bt.signalDays || 0) + '<small>/ ' + (bt.days || 0) + ' 日</small></div></div>' +
+        '</div>';
+
+      var mo = (bt.byMonth || []).map(function (m) {
+        return esc(String(m.month || '').slice(5)) + ' ' + _lp(m.ret) + '/胜' + _lr(m.win);
+      }).join('　·　');
+      var rc = bt.recent || [];
+      if (rc.length) {
+        out += '<div class="ll-rc"><div class="ll-rc-h">最近 ' + rc.length +
+          ' 次出手 · 当日开盘买、当日收盘卖（含亏的那几天）</div>';
+        rc.slice().reverse().forEach(function (x) {
+          out += '<div class="ll-rc-r"><div class="ll-rc-d">' + esc(String(x.date || '').slice(5)) + '</div>' +
+            '<div class="ll-rc-v ' + _ls(x.ret) + '">' + _lp(x.ret) + '</div>' +
+            '<div class="ll-rc-n">' + (x.n || 0) + '只' + (x.up != null ? x.up + '涨' : '') +
+            (x.names && x.names.length ? '　' + esc(x.names.join('、')) : '') + '</div></div>';
+        });
+        out += '</div>';
+      }
+      out += '<div class="ll-foot">' +
+        '回测口径：' + esc(String((bt.window || ['', ''])[0])) + ' ~ ' + esc(String((bt.window || ['', ''])[1])) +
+        '，共 <b>' + (bt.days || 0) + ' 个交易日</b>、样本 <b>' + (bt.samples || 0) + ' 条</b>，' +
+        '入场 = 当日开盘价，双边成本 ' + (bt.cost != null ? bt.cost.toFixed(2) : '0.20') + '%。' +
+        '<b>' + (bt.signalDays || 0) + ' 天有信号、' + ((bt.days || 0) - (bt.signalDays || 0)) + ' 天一只都没有</b>——' +
+        '空仓是这套规则的常态（' + _lr(bt.flatRate) + ' 的交易日不出手），不是故障；' +
+        '它的价值在于「出手就有六成以上胜率」，而不是每天都有票。' +
+        '<br>逐月：' + mo + '。' +
+        '日聚类 t=' + (mainEx.tDaily != null ? mainEx.tDaily.toFixed(2) : '—') +
+        ' 说明<b>方向明确但离「统计显著」还差一点</b>（门槛 2.0）——所以它是加分项，不是可以押注的理由。' +
+        (LL.replayNote ? '<br>' + esc(LL.replayNote) : '') +
+        (LL.gapNote && (LL.picks || []).length ? '<br>⚠️ ' + esc(LL.gapNote) : '') +
+        '</div>';
+    }
+    out += '</div>';
+  }
+  return out;
+}
+
 /* R100z162：🌟 复盘台账独立页——与 📄/🧰 同款「打开即独占」（hash=#score，进出都记忆浏览位置）。
-   页内两张卡：① 指标表现（选股信号谁赚谁不赚）② 预测复盘（方向判断谁准谁不准）。
-   两张都是回头看，和「今天做什么」不同族，所以独立成页而不是塞在盘面卡中间。
-   两张卡的数据源、阈值、判定文案一字未改——只换了挂载点，避免「搬页顺手改口径」。 */
+   页内三张卡：① 指标表现（选股信号谁赚谁不赚）② 强板块落后股（回放校验，R100z199 迁入）③ 预测复盘（方向判断谁准谁不准）。
+   三张都是回头看，和「今天做什么」不同族，所以独立成页而不是塞在盘面卡中间。
+   三张卡的数据源、阈值、判定文案一字未改——只换了挂载点，避免「搬页顺手改口径」。 */
 function renderScoreView() {
   var D = window.DASHBOARD_DATA || {};
   var box = document.getElementById('score-body');
@@ -5726,6 +5803,13 @@ function renderScoreView() {
   if (!body) {
     body = '<div class="card"><h2 class="td-h2">指标表现 · 谁准谁不准</h2>' +
       '<div class="db-empty">暂无归因数据（16:00 数据步跑完 signal_attribution.py 后出现）</div></div>';
+  }
+  // R100z199：🎯 强板块落后股整块从断板页搬到这里（用户 2026-10-25：「复盘要放在复盘台账这个页面」）。
+  // 它给的是「这套规则历史胜率 + 最近几次出手」，属于回头看，与「今天买什么」不同族。
+  // 卡片自带 .ll-hd 标题，所以外层 .card 不再重复写 h2；`.card > .ll-wrap` 已去掉内层边框（见 CSS）。
+  var ll = renderLeadLag();
+  if (ll) {
+    body += '<div class="card ll-card">' + ll + '</div>';
   }
   var fs = renderForecastScore();
   if (!fs) {
@@ -6099,6 +6183,7 @@ function openDbModal(key) {
       if (isFail) return tb + '<span class="pool-badge fail">' + failKindCn(kindFail) + '失效归档池</span>';
       return tb || ('<span class="pool-badge ' + (done ? 'done' : 'hold') + '">' + (done ? '确认池' : ('观察池 · ' + esc(e.stage))) + '</span>');
     })() +
+    stkLhbBadge(String(e.code)) + // R100z201：当日龙虎榜归属（用户：标的页面里要写）
     riskTipBadge(String(e.code)) + // R100z87：可见风险提示徽章（手机端也能看到，原 ⚠️ 悬停信息不可达）
     dbSentBadge(e, 'font-size: var(--fs-sm);padding:1px 7px;border-radius:4px;') +
     '</div>' +
@@ -6818,8 +6903,29 @@ function stkResolveByName(name, cb) {
     cb(null);
   });
 }
-// R94b：同组箭头切换——STK_GRP 为点击芯片所在内容分组（同一影响组/同一题材/同一板块TOP等）的标的列表
+// R100z200（用户 2026-10-25 截图 6：「标的页面的左右按钮不是跟着交易预案里面标的切换的」）：
+// 根因与 R100h 同一类——`openStkModal()` 只认全局 STK_GRP，而交易预案/龙虎榜的行是**内联 onclick 直接开弹窗**，
+// 从不设置分组，于是箭头翻的是「上一位读者点过的那个列表」残留顺序（点交易预案能翻到龙虎榜的票）。
+// 现在两组约定：
+//   ① 任何列表开弹窗前调 `stkOpenIn(list, idx)`，把分组和下标一起定下来；
+//   ② `openStkModal` 入口处调 `stkSyncNav(code)`：代码不在当前分组里就**关掉箭头**，
+//      宁可没有箭头，也不给一个会翻到别处的箭头（这条兜住所有还走内联 onclick 的旧调用点）。
 var STK_GRP = null, STK_IDX = 0;
+function stkSyncNav(code) {
+  var c = String(code || '');
+  if (!c || !STK_GRP || !STK_GRP.length) return;
+  var i = -1;
+  for (var k = 0; k < STK_GRP.length; k++) { if (String(STK_GRP[k].c) === c) { i = k; break; } }
+  if (i >= 0) { STK_IDX = i; return; }
+  STK_GRP = null; STK_IDX = 0;
+}
+function stkOpenIn(list, idx) {
+  if (!list || !list.length) return;
+  STK_GRP = list.map(function (x) { return { c: String(x.c || ''), n: String(x.n || ''), t: String(x.t || '') }; });
+  STK_IDX = Math.max(0, Math.min(Number(idx) || 0, STK_GRP.length - 1));
+  var it = STK_GRP[STK_IDX];
+  openStkModal(it.c, it.n, it.t);
+}
 function stkStep(delta) {
   if (!STK_GRP || STK_GRP.length < 2) return;
   STK_IDX = (STK_IDX + delta + STK_GRP.length) % STK_GRP.length;
@@ -6829,6 +6935,7 @@ function stkStep(delta) {
 function openStkModal(code, name, note) {
   code = (code || '').trim();
   name = (name || '').trim();
+  stkSyncNav(code); // R100z200：不在当前分组就关箭头，别拿上一组的顺序翻票
   note = String(note || '').trim().replace(/·/, '：'); // R100z4e：仅首个 ·→：（与卡片/断板弹窗同口径）
   TB_OPEN = false; TB_MODE = ''; tbShowArrows(); // R98g：标的模式隐藏板块箭头
   var nav = STK_GRP && STK_GRP.length > 1;
@@ -6846,6 +6953,7 @@ function openStkModal(code, name, note) {
     (nav ? '<span class="cd2">' + (STK_IDX + 1) + '/' + STK_GRP.length + '</span>' : '') + // R100s：数量紧跟代码
     '<button class="db-modal-close" onclick="stkClose()">×</button>' +
     '<div class="m-badge-row">' + stkSecBadge(code) + stkTechBadgeHtml(code) + stkPoolBadge(code) +
+    stkLhbBadge(code) + // R100z201：当日龙虎榜归属（净买红/净卖绿 + 净额）
     riskTipBadge(code) + // R100z87：可见风险提示徽章（手机端可达，置于情绪徽章前）
     (stkTechMeta(code) ? sentBadgeHtml(code) : '') + // R100z4c：九门/谐波/吸筹标的徽标行末尾加 利好/中性/利空（非技术池标的不显示）
     '</div>' +
@@ -6894,7 +7002,7 @@ function openStkModal(code, name, note) {
       if (!cd0) { cd0 = document.createElement('span'); cd0.className = 'cd2'; hd0.insertBefore(cd0, hd0.querySelector('.db-modal-close')); }
       cd0.textContent = mapped;
       var row0 = hd0.querySelector('.m-badge-row'); // R100s：反查回填后补第二行徽标（板块+技术+池归属）
-      if (row0) row0.innerHTML = stkSecBadge(mapped) + stkTechBadgeHtml(mapped) + stkPoolBadge(mapped) + riskTipBadge(mapped) + (stkTechMeta(mapped) ? sentBadgeHtml(mapped) : ''); // R100z87：补风险提示徽章
+      if (row0) row0.innerHTML = stkSecBadge(mapped) + stkTechBadgeHtml(mapped) + stkPoolBadge(mapped) + stkLhbBadge(mapped) + riskTipBadge(mapped) + (stkTechMeta(mapped) ? sentBadgeHtml(mapped) : ''); // R100z87：补风险提示徽章
       stkFetchKline(mapped, render);
       return;
     }
@@ -6906,7 +7014,7 @@ function openStkModal(code, name, note) {
       if (!cdSpan) { cdSpan = document.createElement('span'); cdSpan.className = 'cd2'; hd.insertBefore(cdSpan, hd.querySelector('.db-modal-close')); }
       cdSpan.textContent = fullCode;
       var row1 = hd.querySelector('.m-badge-row'); // R100s：反查回填后补第二行徽标（板块+技术+池归属）
-      if (row1) row1.innerHTML = stkSecBadge(fullCode) + stkTechBadgeHtml(fullCode) + stkPoolBadge(fullCode) + riskTipBadge(fullCode) + (stkTechMeta(fullCode) ? sentBadgeHtml(fullCode) : ''); // R100z87：补风险提示徽章
+      if (row1) row1.innerHTML = stkSecBadge(fullCode) + stkTechBadgeHtml(fullCode) + stkPoolBadge(fullCode) + stkLhbBadge(fullCode) + riskTipBadge(fullCode) + (stkTechMeta(fullCode) ? sentBadgeHtml(fullCode) : ''); // R100z87：补风险提示徽章
       stkFetchKline(fullCode, render);
     });
     return;
