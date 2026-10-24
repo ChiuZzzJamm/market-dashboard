@@ -382,11 +382,32 @@ def compute(D, quotes=None, today=None, blacklist=None):
         node['gapNote'] = ('个股快照仅取到 %d/%d 只（<50%%），板块开盘跳空样本不足，'
                            '本次候选仅供参考' % (len(q), len(universe)))
     if not picks:
+        # 空仓只有两种成因，必须说清是哪一种：
+        #   ① 今日压根没有强板块 → 谈不上落后股（说「但里面没有…」是逻辑错位）
+        #   ② 有强板块，但里面的落后股被某一道筛子挡住了 → 点名是哪道
+        if not strong:
+            why = ('扫描 %d 个板块（%d 只主板成分股），今日没有板块开盘跳空 > +%.1f%%，'
+                   '没有强板块就谈不上落后股' % (len(groups), len(universe), SEC_GAP_MIN))
+        else:
+            st = skipped
+            hit = []
+            if st.get('lag'):
+                hit.append('落后不足 %.1fpp 的 %d 只' % (LAG_MIN, st['lag']))
+            if st.get('yday'):
+                hit.append('昨日没涨的 %d 只' % st['yday'])
+            if st.get('live'):
+                hit.append('已冲高或跌破下限的 %d 只' % st['live'])
+            if st.get('risk'):
+                hit.append('风险剔除（ST/停牌/涨跌停/黑名单）的 %d 只' % st['risk'])
+            why = ('今日强板块 %d 个（%s），但里面的落后股被筛掉了：%s'
+                   % (len(strong),
+                      '、'.join('%s %+.1f%%' % (s['name'], s['gap']) for s in
+                               sorted([{'name': s, 'gap': g} for s, g in strong.items()],
+                                      key=lambda x: -x['gap'])[:3]),
+                      '；'.join(hit) or '无一只进入候选'))
         node['gapNote'] = node['gapNote'] or (
-            '没有标的满足条件：开盘跳空>+%.1f%% 的强板块今日有 %d 个，'
-            '但里面没有「落后 >%.1fpp 且昨日还在涨」的票。'
-            '这条规则「空仓」是常态而非故障——回测里约六成交易日一只都没有，'
-            '强板块与落后股同时出现才出手。' % (SEC_GAP_MIN, len(strong), LAG_MIN))
+            '%s。这条规则「空仓」是常态而非故障——回测里约六成交易日一只都没有，'
+            '强板块与落后股同时出现才出手。' % why)
     return node, None
 
 
@@ -653,6 +674,23 @@ def self_test():
     n6, _ = compute({'stkKlines': KL, 'sectorMap': SM6}, quotes=QU,
                     today='2026-01-02', blacklist={})
     chk('成分股 <6 只的板块不参与（实测 %d 只）' % len(n6['picks']), not n6['picks'])
+
+    # 反向测试⑥：空仓文案必须说清「是哪一种空仓」
+    #   ① 强板块=0 → 不许出现「但里面没有」（连强板块都没有，何来“里面”）
+    no_gap = json.loads(json.dumps(QU))
+    for _c in no_gap:
+        no_gap[_c]['open'] = no_gap[_c]['prevClose']      # 全体平开 → 板块跳空=0 → 无强板块
+        no_gap[_c]['price'] = no_gap[_c]['open']
+    n7, _ = compute({'stkKlines': KL, 'sectorMap': SM}, quotes=no_gap,
+                    today='2026-01-02', blacklist={})
+    g7 = str(n7.get('gapNote') or '')
+    chk('强板块=0 的空仓文案不提「但里面没有」，改说「没有板块开盘跳空」（实测：%s）'
+        % g7[:30],
+        bool(g7) and '但里面没有' not in g7 and '没有板块开盘跳空' in g7)
+    #   ② 有强板块但落后股被筛掉 → 文案必须点名是哪道筛子（n2：600001 昨日跌 → 「昨日没涨」）
+    g2 = str(n2.get('gapNote') or '')
+    chk('有强板块时空仓文案点名拦截原因（实测：%s）' % g2[:46],
+        bool(g2) and ('昨日没涨' in g2 or '落后不足' in g2))
 
     print('[SELF-TEST] ' + ('OK' if ok else 'FAIL'))
     return 0 if ok else 1
