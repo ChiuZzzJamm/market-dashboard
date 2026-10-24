@@ -3925,30 +3925,37 @@ def g44_zombie_mirror_nodes(r):
     r.ok("G44", f"ashare 下无僵尸镜像节点（比对了 {sum(1 for k in D if isinstance(D.get(k), (dict, list)))} 个顶层容器键）")
 
 
-DESK_STATES = {"buy", "wait", "chase", "drop", "limit", "unknown"}
+DESK_STATES = {"cross", "strong", "weak", "limit", "unknown"}
+DESK_TRIG, DESK_TP, DESK_COST = 1.02, 1.05, 0.20
 
 
 def g45_desk_check(r):
-    """G45 预案对账台账自洽（R100z185，2026-10-24）。
+    """G45 预案对账台账自洽（R100z186，2026-10-24 改条件单口径）。
 
     由来：`tradeDesk` 从 R100z160 起就在写「今天买什么、什么价买、什么价止损」，但**没有任何环节
-    回头看它对不对**——它是「写」的终点，不是「用」的起点。项目里 `signalPerf` / `forecastScore` /
-    `stopTrack` 三套记分牌都有，唯独最贵的那个（真金白银的执行台）没有。用户 2026-10-24 当面指出：
+    回头看它对不对**——它是「写」的终点，不是「用」的起点。用户 2026-10-24 当面指出：
     「开盘精选正好能验证你交易预案里提供的标的……这个想法你作为一个专业交易员为什么没有想到？」
 
-    所以 `desk_verify.py` 补上闭环。但**闭环本身也会空转**：脚本静默失败 / 被 prompt 漏调 /
-    哪天有人改了口径，`deskCheck` 照样一份不落地躺在 data.js 里，谁都看不出它已经不再更新。
-    这道闸门只判「同一份产物内部对不对」，不去猜「今天该不该有」：
+    而 v1（R100z185）判的是「开盘价落在 entryLo..entryHi 就买」，用户明确指出这是错的：
+    他的打法是「盘中由弱转强、摸到昨收×1.02 才买」，不是开盘一锤定音。v2 改成条件单口径，
+    台账结构从 `verdicts/buys` 换成 `orders/settle`，本闸门同步重写。
+
+    只判「同一份产物内部对不对」，不猜「今天该不该有」：
 
       FAIL（自相矛盾，一定是 bug）：
-        ① `settledN` 与 `settledRows` 实长不符；② 胜率/平均净收益与明细实算不符；
-        ③ `retNet` ≠ `ret − 0.20`（成本模型四处各改一遍就会漂，这是唯一一处硬校验）；
-        ④ `buys` 里的标的在同一次 `verdicts` 里不是 `state=buy`（页面会显示「可买」却没判定依据）；
-        ⑤ `buys` 价位不满足 `stop < entry < target`；⑥ `state` 写出合法集合之外（前端静默渲染成灰块）。
+        ① `state` 不在合法集合（前端静默渲染成灰块）；
+        ② 站上价 ≠ 昨收、追价 ≠ 昨收×1.02、止盈参考 ≠ 昨收×1.05 ——
+           **这三个倍数是全项目的口径锚点**，任一处漂了，回测与实盘就再也对不上；
+        ③ 价位顺序不满足 站上 ≤ 追价 ≤ 止盈；④ 价位只填一半（页面会出现「追 —」）；
+        ⑤ `retNetClose` ≠ `retClose − 0.20`（成本模型多处各改一遍就会漂）；
+        ⑥ `retClose` 与 (当日收盘 / 追价) 实算不符 —— 收益造假，或 K 线取错了字段位；
+        ⑦ 标了成交但「开盘 < 追价 且 最高 ≥ 追价」不成立 —— 成交判据被改过；
+        ⑧ `nFilled` / `winClose` / `meanClose` / `hitTpRate` 与明细实算不符；
+        ⑨ `cum.nFilled` < 当日 `settle.nFilled`（累计不该比一天还少）。
       WARN（正常会发生，不许拦部署）：
-        ⑦ `planDate` ≠ 当前 `tradeDesk.tradeDate`——09:45 写的是「昨收预案 → 今日开盘」，
-           16:00 重算预案后必然不同日；⑧ 判定只数与当前 picks 不同（预案换了一批，同理）；
-        ⑨ `deskCheck` 缺失——首次上线 / 非交易日 / 09:45 未跑。
+        ⑩ `planDate` ≠ 当前 `tradeDesk.tradeDate`——09:45 挂的是「昨收预案」的价，
+           16:00 重算预案后必然不同日；⑪ 挂单只数与当前 picks 不同（预案换批）；
+        ⑫ `settleFrom` 为空（首日台账）；⑬ `deskCheck` 缺失（首次上线/休市/未跑）。
     """
     try:
         D = load_data_json()
@@ -3965,63 +3972,94 @@ def g45_desk_check(r):
         return
 
     bad, note = [], []
-    verdicts = dc.get("verdicts") or []
-    buys = dc.get("buys") or []
-    rows = dc.get("settledRows") or []
+    orders = dc.get("orders") or []
+    srows = dc.get("settleRows") or []
+    s = dc.get("settle") or {}
+    cum = dc.get("cum") or {}
 
-    for v in verdicts:
-        if not isinstance(v, dict):
-            bad.append("verdicts 里有非对象条目")
+    if not orders:
+        bad.append("orders 为空——页面会渲染出一块没有内容的对账区")
+    for o in orders:
+        if not isinstance(o, dict):
+            bad.append("orders 里有非对象条目")
             continue
-        if v.get("state") not in DESK_STATES:
-            bad.append(f"{v.get('code')} 的 state={v.get('state')!r} 不在合法集合"
-                       f"（{ '/'.join(sorted(DESK_STATES)) }）")
-    buy_state = {str(v.get("code")) for v in verdicts
-                 if isinstance(v, dict) and v.get("state") == "buy"}
-    for b in buys:
-        c = str(b.get("code"))
-        if c not in buy_state:
-            bad.append(f"{c} 出现在 buys 里但 verdicts 判的不是 buy——页面会显示「可买」却没有判定依据")
-        e, s, t = b.get("entry"), b.get("stop"), b.get("target")
-        if all(isinstance(x, (int, float)) for x in (e, s, t)) and e:
-            if not (0 < s < e < t):
-                bad.append(f"{c} 价位关系错：止损 {s} / 买入 {e} / 目标 {t}（应 stop<entry<target）")
+        c = o.get("code")
+        if o.get("state") not in DESK_STATES:
+            bad.append(f"{c} 的 state={o.get('state')!r} 不在合法集合"
+                       f"（{'/'.join(sorted(DESK_STATES))}）")
+        pc, an, tr, tp = (o.get("prevClose"), o.get("anchor"),
+                          o.get("trig"), o.get("tp"))
+        vals = (pc, an, tr, tp)
+        if all(isinstance(x, (int, float)) and x for x in vals):
+            if abs(an - pc) > 0.011:
+                bad.append(f"{c} 站上价 {an} ≠ 昨收 {pc}（「站上昨收」的锚点只能是昨收）")
+            if abs(tr - pc * DESK_TRIG) > 0.011:
+                bad.append(f"{c} 追价 {tr} ≠ 昨收×{DESK_TRIG}={round(pc * DESK_TRIG, 2)}"
+                           f"——这是回测与实盘的共同锚点，改一处就全对不上")
+            if abs(tp - pc * DESK_TP) > 0.011:
+                bad.append(f"{c} 止盈参考 {tp} ≠ 昨收×{DESK_TP}={round(pc * DESK_TP, 2)}")
+            if not (an <= tr <= tp):
+                bad.append(f"{c} 价位顺序错：站上 {an} / 追 {tr} / 止盈 {tp}"
+                           f"（应 站上≤追≤止盈）")
+        elif any(isinstance(x, (int, float)) for x in vals):
+            bad.append(f"{c} 价位残缺：昨收 {pc} / 站上 {an} / 追 {tr} / 止盈 {tp}"
+                       f"——要么全给要么全不给，页面不做缺省填充")
 
-    sn = dc.get("settledN")
-    if isinstance(sn, int) and sn != len(rows):
-        bad.append(f"settledN={sn} 与 settledRows 实长 {len(rows)} 不符")
-    if rows:
-        wins = [x for x in rows if isinstance(x, dict) and x.get("win")]
-        win_pct = round(len(wins) / len(rows) * 100, 1)
-        mean_net = round(sum(float(x.get("retNet") or 0) for x in rows
-                             if isinstance(x, dict)) / len(rows), 2)
-        got_w, got_m = dc.get("settledWin"), dc.get("settledMeanNet")
-        if isinstance(got_w, (int, float)) and abs(got_w - win_pct) > 0.2:
-            bad.append(f"settledWin={got_w} 与明细实算 {win_pct} 不符")
-        if isinstance(got_m, (int, float)) and abs(got_m - mean_net) > 0.02:
-            bad.append(f"settledMeanNet={got_m} 与明细实算 {mean_net} 不符")
-        for x in rows:
-            if not isinstance(x, dict):
-                continue
-            rt, rn = x.get("ret"), x.get("retNet")
-            if isinstance(rt, (int, float)) and isinstance(rn, (int, float)) \
-                    and abs((rt - 0.2) - rn) > 0.011:
-                bad.append(f"{x.get('code')} ret={rt} / retNet={rn}：净收益不等于毛收益 −0.20%"
-                           f"（双边成本口径被改了？佣金+印花+滑点在别处也改了吗）")
+    filled = [x for x in srows if isinstance(x, dict) and x.get("filled")]
+    if isinstance(s.get("nFilled"), int) and s["nFilled"] != len(filled):
+        bad.append(f"settle.nFilled={s['nFilled']} 与 settleRows 实长 {len(filled)} 不符")
+    if isinstance(s.get("nOrders"), int) and s["nOrders"] != len(srows):
+        bad.append(f"settle.nOrders={s['nOrders']} 与 settleRows 实长 {len(srows)} 不符")
+
+    for x in filled:
+        c, tr = x.get("code"), x.get("trig")
+        op, hi, cl = x.get("dayOpen"), x.get("dayHigh"), x.get("dayClose")
+        rc, rn = x.get("retClose"), x.get("retNetClose")
+        if isinstance(rc, (int, float)) and isinstance(rn, (int, float)) \
+                and abs((rc - DESK_COST) - rn) > 0.011:
+            bad.append(f"{c} retClose={rc} / retNetClose={rn}：净收益不等于毛收益 −"
+                       f"{DESK_COST}%（双边成本口径被改了？佣金+印花+滑点在别处也改了吗）")
+        if all(isinstance(v, (int, float)) and v for v in (tr, cl)) \
+                and isinstance(rc, (int, float)):
+            calc = round((cl / tr - 1) * 100, 2)
+            if abs(calc - rc) > 0.02:
+                bad.append(f"{c} 当日收盘收益 {rc} 与 (收盘 {cl} / 追价 {tr}) 实算 {calc} 不符"
+                           f"——收益与 K 线不自洽，可能取错了 bar 的字段位")
+        if all(isinstance(v, (int, float)) and v for v in (op, hi, tr)):
+            if not (op < tr and hi >= tr):
+                bad.append(f"{c} 标了成交但开盘 {op} / 最高 {hi} 不满足"
+                           f"「开盘<追价 且 盘中摸到追价」——成交判据被改过")
+
+    if filled:
+        n = len(filled)
+        mc = round(sum(float(x.get("retNetClose") or 0) for x in filled) / n, 2)
+        wc = round(len([x for x in filled if (x.get("retNetClose") or 0) > 0]) / n * 100, 1)
+        hr = round(len([x for x in filled if x.get("hitTp")]) / n * 100, 1)
+        if isinstance(s.get("meanClose"), (int, float)) and abs(s["meanClose"] - mc) > 0.02:
+            bad.append(f"settle.meanClose={s['meanClose']} 与明细实算 {mc} 不符")
+        if isinstance(s.get("winClose"), (int, float)) and abs(s["winClose"] - wc) > 0.2:
+            bad.append(f"settle.winClose={s['winClose']} 与明细实算 {wc} 不符")
+        if isinstance(s.get("hitTpRate"), (int, float)) and abs(s["hitTpRate"] - hr) > 0.2:
+            bad.append(f"settle.hitTpRate={s['hitTpRate']} 与明细实算 {hr} 不符")
+        if isinstance(cum.get("nFilled"), int) and cum["nFilled"] < n:
+            bad.append(f"cum.nFilled={cum['nFilled']} 小于当日成交 {n}"
+                       f"——累计比一天还少，累计口径算反了")
 
     if str(dc.get("planDate") or "")[:10] != str(T.get("tradeDate") or "")[:10]:
         note.append(f"planDate={dc.get('planDate')} ≠ 当前 tradeDesk.tradeDate={T.get('tradeDate')}"
-                    f"（正常：对账的是上一份预案）")
-    if picks and len(verdicts) != len(picks):
-        note.append(f"判定 {len(verdicts)} 只 vs 当前 picks {len(picks)} 只（预案换批，正常）")
+                    f"（正常：挂的是上一份预案的价）")
+    if picks and len(orders) != len(picks):
+        note.append(f"挂单 {len(orders)} 只 vs 当前 picks {len(picks)} 只（预案换批，正常）")
+    if not dc.get("settleFrom"):
+        note.append("settleFrom 为空（首日台账，没有上一日可结算）")
 
     if bad:
         r.fail("G45", "预案对账台账自相矛盾：" + "; ".join(bad[:6]) +
                       "—— 台账错比没有更坏：它看起来像已核查过")
         return
     tail = ("；" + "；".join(note)) if note else ""
-    r.ok("G45", f"预案对账台账自洽：判定 {len(verdicts)} 只 / 可买 {len(buys)} 只 / "
-                f"结算 {len(rows)} 笔（净收益已扣 0.20% 双边成本，口径与脚本一致）{tail}")
+    r.ok("G45", f"预案对账台账自洽：挂单 {len(orders)} 只 / 昨日成交 {len(filled)} 笔 / "
+                f"累计 {cum.get('nFilled', 0)} 笔（三档口径、成本 {DESK_COST}% 与脚本一致）{tail}")
 
 
 def main():
