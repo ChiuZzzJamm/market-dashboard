@@ -3472,9 +3472,13 @@ def g40_score_page_and_slots(r):
       b) CSS 三件套齐（容器默认隐藏 + body.score-open 隐藏其余 + 显示本页）；
       c) renderScoreView() 同时调用 renderSignalPerf 与 renderForecastScore（少一张＝用户要的丢一半）；
       d) hash '#score' 至少两处（初始直达 + popstate 返回）；
-      e) place() 用槽位：sc-entry-in→_slot(3)、dei→_slot(2)、gn-entry-in→_slot(1)、
-         gn-jump→_slot(0)，且不再出现旧的贴底写法；
-      f) 槽距来自 offsetTop 实测（lastGap），不是硬编码常量。
+      e) 槽位表 RAIL 把 4 个页内替身按「🐼→📄→🧰→📋」顺序指到组内第 0..3 个按钮；
+         layout() 用实测偏移 gm.off[i] 落位，且 CSS 里不再出现 calc(50% ± N) 的槽位副本；
+      f) 几何每次现算（读 flex-direction + gap + 按钮宽高），不缓存槽距、不写死常量。
+     R100z165（2026-10-24 用户：「这套槽位重做一遍」）把原来「CSS 一套 calc、JS 一套 i×槽距」
+     的双份来源合并成一份：CSS 只管外观，定位全归 layout()。因此本闸门也从「查 place() 里有没有
+     _slot(2)」改成「查槽位表顺序 + 落位是否走实测偏移」——判据必须跟着实现走，
+     但查的是行为（谁落哪一槽、偏移从哪来），不是函数名。
     """
     p = os.path.join(HERE, "index.html")
     try:
@@ -3516,33 +3520,57 @@ def g40_score_page_and_slots(r):
     if nh < 2:
         bad.append("hash '#score' 只出现 %d 处——初始直达与 popstate 返回须各一处" % nh)
 
-    # ---- e) 槽位落位 ----
-    ip = s.find("function place(")
-    if ip < 0:
-        bad.append("找不到 place()——悬浮组定位逻辑没了")
+    # ---- e) 槽位表顺序（页内替身 → 组内第 i 个按钮）----
+    mrail = re.search(r"var RAIL = \[([\s\S]{0,900}?)\];", s)
+    if not mrail:
+        bad.append("找不到槽位表 RAIL——页内替身与组内按钮的对应关系没有单一来源")
     else:
-        pb = s[ip:ip + 2200]
-        if re.search(r"t\s*\+\s*h\s*-\s*46", pb):
-            bad.append("place() 仍用贴底写法（t + h - 46）——4 个按钮时返回键会掉出组外")
-        for var, slot, name in (("sc-entry-in", 3, "🌟"), ("dei", 2, "🧰"),
-                                ("gn-entry-in", 1, "📄"), ("gn-jump", 0, "🐼")):
-            # R100z162：定位到**赋值点**而不是裸字符串——place() 里有一句注释同时提到
-            # gn-entry-in 与 gn-jump，按裸字符串找会命中注释，于是把 📄 的 _slot(1)
-            # 当成 🐼 的槽位，误报「🐼 没落第 1 槽」。第一版就是这么错了一次。
-            key = "if (dei)" if var == "dei" else "getElementById('%s')" % var
-            j = pb.find(key)
-            if j < 0:
-                bad.append("place() 未同步 %s（%s 页内按钮不跟随悬浮组）" % (var, name))
-                continue
-            if ("_slot(%d)" % slot) not in pb[j:j + 260]:
-                bad.append("%s 未落在第 %d 槽（应 _slot(%d)，否则点进去按钮跳一格）"
-                           % (var, slot + 1, slot))
+        rb = mrail.group(1)
+        # 表的条目是 `{ slot: g.children[N], iPage: 变量 }`；变量名是实现细节，
+        # 先用 `var 变量 = getElementById('id')` 反解成 id 再比，改名不会误报。
+        amap = dict(re.findall(r"var\s+(\w+)\s*=\s*document\.getElementById\('([\w-]+)'\)", s))
+        pairs = re.findall(r"slot:\s*g\.children\[(\d+)\]\s*,\s*iPage:\s*(\w+)", rb)
+        want = {"gn-jump": 0, "gn-entry-in": 1, "db-entry-in": 2, "sc-entry-in": 3}
+        names = {"gn-jump": "🐼", "gn-entry-in": "📄", "db-entry-in": "🧰", "sc-entry-in": "📋"}
+        got = {}
+        for idx, var in pairs:
+            got[amap.get(var, var)] = int(idx)
+        for el_id, idx in want.items():
+            if el_id not in got:
+                bad.append("RAIL 缺 %s（%s 页内按钮不跟随悬浮组）" % (el_id, names[el_id]))
+            elif got[el_id] != idx:
+                bad.append("RAIL 把 %s 指到第 %d 槽（应为第 %d 槽）——点进去按钮会跳一格"
+                           % (el_id, got[el_id] + 1, idx + 1))
+        if len(pairs) > 4:
+            bad.append("RAIL 有 %d 条（应 4 条）——多出的槽位没有对应按钮" % len(pairs))
 
-    # ---- f) 槽距实测 ----
-    if "lastGap" not in s:
-        bad.append("缺 lastGap——槽距写死，缩放或移动端字号一变就错位")
-    elif "offsetTop" not in s:
-        bad.append("槽距未从 offsetTop 实测（写死的槽距在移动端会漂）")
+    # ---- e2) 落位必须走实测偏移，CSS 不许再抄一份槽位 ----
+    il = s.find("function layout(")
+    if il < 0:
+        bad.append("找不到 layout()——悬浮组定位逻辑没了")
+    else:
+        lb = s[il:il + 1800]
+        if "gm.off[i]" not in lb:
+            bad.append("layout() 未按实测偏移 gm.off[i] 落位——页内替身会与组内按钮错开")
+        if re.search(r"t\s*\+\s*h\s*-\s*46", lb):
+            bad.append("layout() 仍用贴底写法（t + h - 46）——4 个按钮时返回键会掉出组外")
+        if re.search(r"\*\s*60\b|\*\s*lastGap", lb):
+            bad.append("layout() 里还有硬编码槽距（×60 / ×lastGap）——应统一用 gm.off[i]")
+    if re.search(r"top:\s*calc\(50%\s*[+-]", s):
+        bad.append("CSS 里仍有 calc(50% ± N) 槽位——槽位一旦抄两份，改布局必错一份")
+
+    # ---- f) 几何现算（flex-direction + gap + 按钮宽高）----
+    ig = s.find("function geom(")
+    if ig < 0:
+        bad.append("缺 geom()——槽位几何没有单一计算入口")
+    else:
+        gb = s[ig:ig + 900]
+        for need, why in (("flexDirection", "未读 flex-direction，横排/竖排切换时槽位会错"),
+                          ("rowGap", "未读 rowGap，竖排槽距写死"),
+                          ("columnGap", "未读 columnGap，横排槽距写死"),
+                          ("getComputedStyle", "未从 computed style 取尺寸，display:none 时量不到")):
+            if need not in gb:
+                bad.append("geom() %s" % why)
 
     if bad:
         r.fail("G40", "；".join(bad[:4]))
@@ -3605,11 +3633,19 @@ def g41_visual_norms(r):
     for i in entry + back:
         if ('id="%s"' % i) not in s:
             bad.append("缺悬浮按钮 #%s" % i)
-    if "bindDrag(scei)" not in s:
-        bad.append("复盘页 📋 返回键(#sc-entry-in) 没接 bindDrag()——位置会跟随、自己拖不动"
-                   "（用户 2026-10-24 原话「他怎么不能拖拽」）")
-    if "slotIndex" not in s:
-        bad.append("拖拽坐标没按槽位换算——页内按钮一拖就会跳 60px")
+    # R100z165：槽位体系重做后不再有 slotIndex()，改成「每个页内替身都必须 bindDrag(变量, 槽号)」。
+    # 判据走 id→变量名解析，不写死变量名（变量名属于实现细节，改个名不该让闸门误报）。
+    alias = dict(re.findall(r"var\s+(\w+)\s*=\s*document\.getElementById\('([\w-]+)'\)", s))
+    id2var = {v: k for k, v in alias.items()}
+    for iid, nm in (("gn-jump", "🐼"), ("gn-entry-in", "📄"),
+                    ("db-entry-in", "🧰"), ("sc-entry-in", "📋")):
+        var = id2var.get(iid)
+        if not var:
+            bad.append("#%s 没有绑定到变量（三件套第一环就断了）" % iid)
+            continue
+        if not re.search(r"bindDrag\(\s*%s\s*,\s*\d+\s*\)" % re.escape(var), s):
+            bad.append("%s 页内键(#%s) 没接 bindDrag()——位置会跟随、自己拖不动"
+                       "（用户 2026-10-24 原话「他怎么不能拖拽」）" % (nm, iid))
     # 拖拽后的 click 抑制必须是「时间戳窗口」，不能是粘性布尔：
     # 指针落在按钮外松手时浏览器不补发 click，粘性标记会永久留 true，下一次正常点击先被吃掉
     # （2026-10-24 线上实测踩到：拖完 📋 想返回，第一下没反应）。
