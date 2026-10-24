@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610241451"></script>
+<script src="data.js?v=202610241513"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -79,7 +79,7 @@
      同一行里「确认池」「预计走强」「高」三个徽章高低差 1–2px。
      只统一对齐，不动各自底色与尺寸——改尺寸会牵动这个已经调平的布局。 */
   .pool-badge, .dir-badge, .conf-badge, .exp-badge, .quad-badge, .src-tag, .td-tag,
-  .date-tag, .self-tag, .pool-tag, .stk-tag, .hz-badge, .lv-badge, .lb-tag, .dd-tag,
+  .date-tag, .pool-tag, .stk-tag, .hz-badge, .lv-badge, .lb-tag, .dd-tag,
   .db-src-tag, .db-sec-pill, .db-stage, .fc-chip, .fail-chip, .tag, .subtag, .s-tag,
   .tchip, .tk-chip, .chip-pop, .chip-sec, .persp-tag {
     display: inline-flex; align-items: center; justify-content: center;
@@ -206,11 +206,22 @@
   /* R100z157：机械候选 / 自选补位标识（数据来自 annotate_pool_meta.py 的 poolMeta + 每只标的 poolHit） */
   .pool-line { font-size: var(--fs-base); color: var(--ink2); line-height: 1.75; margin: 2px 0 10px; padding: 8px 11px; background: var(--accent-soft); border-radius: var(--r-note); }
   .pool-tag { font-size: var(--fs-sm); color: var(--ink2); border: 1px dashed var(--line); border-radius: 999px; padding: 1px 7px; }
-  /* R100z168：徽章反转为「只标少数派」。原实现标 poolHit===false（=AI 补位），实测当日 43/48 都是 false
-     （机械池四池当日只有 132 只候选，覆盖不到 AI 挑的 6 个板块里的 4 个）→ **标注了 90% 的卡片等于没标注**。
-     改成只标 poolHit===true 的机械池命中票（5/48），多数派留白，一眼能看出「哪几只是机器选的」。
-     flex 下需独占一行：flex-basis:100% + max-width:fit-content 让它自己占一行又不拉满背景。 */
-  .self-tag { font-size: var(--fs-xs); color: var(--accent-deep); background: var(--paper); border: 1px solid var(--line); border-radius: 5px; padding: 0 4px; white-space: nowrap; align-self: flex-start; margin-left: 0; }
+  /* R100z169（2026-10-24，用户：「能不能把机械池这个徽章删掉，换成在标的右上角增加一个小蓝圆圈…
+     这样所有标的方块的尺寸就是一样的了」）：
+     徽章是卡片高度不一致的**唯一**原因——实测无徽章 51px、有徽章 68px（+17px 的整行），
+     家电家居 / 光模块 两个板块因此出现两种高度，同一行里没徽章的卡被 grid stretch 拉出一段空白。
+     改成右上角一个 6px 圆点，不占任何布局宽度，所有卡片回到同一高度。
+     为什么必须「压角」而不是画在框内：预测卡内容宽只有 90.8px，「华瓷股份 001216」
+     （名 50 + 间隙 3 + 码 36.7 = 89.7）右端距边框只剩 4px —— 圆点放框内要么盖住代码末位，
+     要么挤掉名称末尾变省略号（等于把 R100z168 刚修好的折行问题换一种形式复发）。
+     top/right = -2px 让半个圆出界，正落在卡片圆角上（用户参考图圈的就是这个位置）：
+     圆点内沿只占 4px < 左内边距 6px，实测不碰任何文字；与上一行卡片的 gap 是 6px，也不相撞。 */
+  .stock-chip.pool-hit { overflow: visible; }
+  .stock-chip.pool-hit::after {
+    content: ''; position: absolute; top: -2px; right: -2px;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent-deep); box-shadow: 0 0 0 3px rgba(43, 108, 176, .16); z-index: 5;
+  }
   .sec-rank { font-size: var(--fs-sm); color: var(--ink2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
   .reason-head .sec { font-size: var(--fs-base); color: var(--ink); font-weight: 700; background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; }
   .reason-head .pct { font-size: var(--fs-base); font-weight: 800; color: #fff; border-radius: 999px; padding: 3px 12px; }
@@ -2808,16 +2819,15 @@ function renderAiPrediction() {
       html += '<div class="stock-chips">';
       s.stocks.forEach(function (st) {
         // R100n：技术池边框描边（修复 R100m 漏给 AI 预测候选打标的问题）+ 所属板块胶囊
-        var _t1 = st.name + ' ' + st.code + (st.note ? ' · ' + st.note : '') + '（点击查看K线）';
-        html += '<span class="stock-chip' + stkGoldCls(st.code) + '" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (st.note || '')) + '" title="' + escAttr(_t1) + '"><span class="nm"><b>' + esc(st.name) + '</b><span class="cd">' + esc(st.code) + '</span></span>' +
-          (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') +
-          // R100z168（2026-10-24，用户：「已经标注自选的是什么意思，没标注的又是什么意思」）：
-          // 原判据是 poolHit===false 才标（= 机械池没货、这票是 AI 补的）。问题是当日 43/48 都是 false
-          // —— 机械池四池共 132 只候选，覆盖不到 AI 挑的 6 个板块里的 4 个（石油开采/军工装备/食品饮料/半导体设备
-          // 当日 poolN 全为 0）→ 90% 的卡片都挂一个「自选」，等于没有信息，而且「自选」二字在股票软件里默认指
-          // 「我的自选股」，读者会以为是可点的收藏按钮。
-          // 改成只标少数派：poolHit===true 的机械池命中票（当日 5/48）。不标 = 该板块机械池没货、由 AI 按四类配比补位。
-          (st.poolHit === true ? '<span class="self-tag" title="来自当日机械池候选（断板反包 / 谐波 / 吸筹 / 强势 四池之一），不是 AI 自由挑选">机械池</span>' : '') + '</span>';
+        // R100z169：机械池命中不再用文字徽章（那会多出 17px 的一行，同板块卡片高度就不一致了），
+        // 改成 .pool-hit 类 → CSS 在右上角压角画一个不占布局的圆点。
+        // 语义靠两处兜住：脚注图例（.ai-foot）+ 悬停 title（触屏看不到 title，所以图例是必须的）。
+        var _hit = st.poolHit === true;
+        var _t1 = st.name + ' ' + st.code + (st.note ? ' · ' + st.note : '') +
+          (_hit ? '｜右上角蓝点：来自当日机械池候选（断板反包 / 谐波 / 吸筹 / 强势 四池之一），不是 AI 自由挑选' : '') +
+          '（点击查看K线）';
+        html += '<span class="stock-chip' + stkGoldCls(st.code) + (_hit ? ' pool-hit' : '') + '" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (st.note || '')) + '" title="' + escAttr(_t1) + '"><span class="nm"><b>' + esc(st.name) + '</b><span class="cd">' + esc(st.code) + '</span></span>' +
+          (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
       });
       html += '</div>';
       // R100z20：板块下方不再重复罗列退出纪律——同板块的多只标的挤在一起既长又和胶囊标签重复，
@@ -2832,7 +2842,7 @@ function renderAiPrediction() {
   // R100z82：盘前预测兑现验证块移回 AI 预测卡底部（用户 2026-10-08：应放在 AI 预测下面）；
   // 板块层 details 在这里渲染，标的层 stockCheck 已下沉到上方各板块卡内。
   var _vblk = renderVerificationBlock();
-  html += '</div>' + _vblk + '<div class="ai-foot">标的筛选口径：每个板块 8 只 A 股，按「2 只板块龙头 + 2 只相关概念股 + 2 只游资/机构偏好小盘人气股（涨停基因好）+ 2 只断板反包图形股（1-5 日前涨停、次日放量倍量、随后缩量回调）」搭配，已排除科创板（688 开头）及北交所。带「机械池」标记的标的来自当日四个机械池候选（断板反包 / 谐波 / 吸筹 / 强势）；未标记的表示该板块当日机械池无候选或候选不足，由 AI 按上述四类配比补位——与板块标题旁的「机械 N/8」同一口径。<br>' + esc(p.riskNote) + '</div>';
+  html += '</div>' + _vblk + '<div class="ai-foot">标的筛选口径：每个板块 8 只 A 股，按「2 只板块龙头 + 2 只相关概念股 + 2 只游资/机构偏好小盘人气股（涨停基因好）+ 2 只断板反包图形股（1-5 日前涨停、次日放量倍量、随后缩量回调）」搭配，已排除科创板（688 开头）及北交所。<b>右上角带蓝色圆点</b>的标的来自当日四个机械池候选（断板反包 / 谐波 / 吸筹 / 强势）；无圆点表示该板块当日机械池无候选或候选不足，由 AI 按上述四类配比补位——与板块标题旁的「机械 N/8」同一口径。<br>' + esc(p.riskNote) + '</div>';
   html += '</div>';
   box.innerHTML = html;
   renderCalHistory();
