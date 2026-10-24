@@ -49,3 +49,7 @@ _weekend_*.py
 
 # 个股资讯搜索缓存（R100z149：stock_news.py 生成，TTL 当日，不应进仓库）
 .news_cache/
+
+# 通用运行时状态（R100z208：K9 环比基线 stocknews_stats.json / 告警 k9_alert.json）
+# 是「随时间滚动的本机状态」，不是事实源；提交进仓库会让每次运行都产生 diff
+.cache/

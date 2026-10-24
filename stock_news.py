@@ -64,6 +64,24 @@ BUDGET = float(os.environ.get('STOCK_NEWS_BUDGET', '600'))  # 全流程秒级预
 # NEWS_FORCE=1 python3 stock_news.py
 NEWS_FORCE = os.environ.get('NEWS_FORCE', '0') == '1'
 
+# ---------------------------------------------------------------- K9 环比闸门
+# R100z208（用户 2026-10-25 授权「做吧」）：为什么需要这个闸门 ——
+#   2026-10-25 那次「深度恢复」里我自引了一个 bug：`merge_depth` 用「code 在今天的
+#   targets 里」判是否整只补回，池子一轮换，36 只票连同弹窗里的真公告一起消失。
+#   **标的数 533 → 530，只掉了 0.6%，我盯着数字看了半天没看出来**，是用户点开某只
+#   票发现「内容变少了」才抓到的。结论：总数量这个指标，人眼对「少 30 条」不敏感，
+#   但对「少 30%」敏感。所以把判断交给机器：**不看具体少了什么，只看少了多少**。
+#
+# 双基线，缺一不可：
+#   ① 日环比  vs 上一次存盘值 → 抓断崖（池子轮换 / 接口整片超时 / 去噪规则写宽了）
+#   ② 五日峰  vs 近 5 次写盘的最高值 → 抓慢性流失（每天掉 7%，日环比永不报警，
+#      但 3 天累计 -20%，弹窗内容一天比一天薄，同样没人发现）
+RATIO_MAX_DROP = 0.10        # 单项跌幅 > 10% 判异常（改大等于关闸门，check_code K9 会拦）
+RATIO_MIN_BASE = 50          # 基数 < 50 不判：8 条掉到 7 条是 -12.5%，纯抖动
+RATIO_PEAK_N = 5             # 五日峰的窗口（次）
+STATS_HIST = os.path.join(ROOT, '.cache', 'stocknews_stats.json')
+ALERT_JS = os.path.join(ROOT, '.cache', 'k9_alert.json')
+
 # 新闻是自由文本，公告那套「整词命中」不够用（"三日即终止的跨界收购"命中不了
 # 「终止收购」）。这里用「事件词 + 对象词」同时出现判定，仍然保守：
 # 只有两个词都在同一段（标题或摘要头 80 字）出现才判方向。
@@ -578,6 +596,106 @@ def build(targets, days=NEWS_DAYS):
     return out
 
 
+def _sn_stats(sn):
+    """三项指标：标的数 / 新闻条数 / 公告条数。K9 只跟这三个数打交道。"""
+    sn = sn or {}
+    return {
+        'stocks': len(sn),
+        'news': sum(len(v.get('news') or []) for v in sn.values()),
+        'notices': sum(len(v.get('notices') or []) for v in sn.values()),
+    }
+
+
+RATIO_FIELDS = (('stocks', '标的数'), ('news', '新闻数'), ('notices', '公告数'))
+
+
+def _load_stats_hist():
+    """读最近若干次**成功写盘**的统计值（给五日峰当基线）。读不到就当没有，不影响日环比。"""
+    try:
+        with open(STATS_HIST, encoding='utf-8') as f:
+            h = json.load(f)
+        return h if isinstance(h, list) else []
+    except Exception:
+        return []
+
+
+def _save_stats_hist(hist, cur, keep=10):
+    """写盘**成功后**才调用 —— 被闸门拦下的那次绝不能进历史，否则基线被自己拉低，
+    明天就比今天这个低值算了，等于闸门自己把门槛拆了。"""
+    hist = (hist or [])[-keep:]
+    row = dict(cur)
+    row['at'] = datetime.now().strftime('%Y-%m-%d %H:%M')
+    hist.append(row)
+    try:
+        os.makedirs(os.path.dirname(STATS_HIST), exist_ok=True)
+        tmp = STATS_HIST + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(hist[-keep:], f, ensure_ascii=False, indent=1)
+        os.replace(tmp, STATS_HIST)
+    except Exception as e:
+        print(f'[stock_news] K9 基线写入失败（不影响本次写盘）：{e}', flush=True)
+    return hist
+
+
+def guard_ratio(new, old, peak=None, max_drop=None, min_base=None, allow=False):
+    """环比闸门：把「掉了多少」和「掉了什么」解耦，只认数量。
+
+    返回 (breaches, rows)：
+      breaches  超阈值且未豁免的项 [{'key','label','base','cur','pct','why'}]
+      rows      全量对照表，给日志/审计用
+
+    ⚠️ `max_drop` / `min_base` 必须能外部注入（默认才取常量）—— 否则 check_code 的
+    K9 只能验「常量写对了」，验不出「判定真的用了这个常量」。踩过的坑：K8 把
+    `_drop_crossdup(min_stocks=99)` 等于关掉，而样本照样全 PASS。
+    """
+    max_drop = RATIO_MAX_DROP if max_drop is None else max_drop
+    min_base = RATIO_MIN_BASE if min_base is None else min_base
+    peak = peak if isinstance(peak, dict) else {}
+    rows, breaches = [], []
+    for key, label in RATIO_FIELDS:
+        base_d = int((old or {}).get(key) or 0)
+        base_p = int(peak.get(key) or 0)
+        cur = int((new or {}).get(key) or 0)
+        row = {'key': key, 'label': label, 'prev': base_d, 'peak': base_p, 'cur': cur,
+               'pct': 0.0, 'why': ''}
+        if base_d <= 0:
+            row['why'] = '无基线（首次/上份为空）'
+            rows.append(row)
+            continue
+        # 拿两个基线里**更高的那个**做分母：既要防断崖，也要防慢性流失
+        base = max(base_d, base_p)
+        row['base'] = base
+        if base < min_base:
+            row['why'] = f'基数 {base} < {min_base}，不判'
+            rows.append(row)
+            continue
+        pct = (cur - base) / float(base)
+        row['pct'] = pct
+        if cur >= base * (1 - max_drop):
+            row['why'] = '正常'
+            rows.append(row)
+            continue
+        src = '五日峰' if base_p > base_d else '上次'
+        row['why'] = f'{src} {base} → {cur}'
+        if allow:
+            row['why'] += '（已豁免）'
+            rows.append(row)
+            continue
+        breaches.append({'key': key, 'label': label, 'base': base, 'cur': cur,
+                         'pct': pct, 'why': row['why']})
+        rows.append(row)
+    return breaches, rows
+
+
+def _fmt_rows(rows):
+    out = []
+    for r in rows:
+        pct = r.get('pct') or 0
+        out.append('  %-4s 上次 %5d / 峰值 %5d → 本次 %5d  %+6.1f%%  %s' %
+                   (r['label'], r['prev'], r['peak'], r['cur'], pct * 100, r['why']))
+    return '\n'.join(out)
+
+
 def _fresh(v, cutoff):
     """旧标的里是否还有**回看窗口内**、且不是噪音的条目（news 比 time / notices 比 date）。"""
     for field, tk in (('news', 'time'), ('notices', 'date')):
@@ -710,11 +828,38 @@ def main():
     ap.add_argument('--merge-depth', default='',
                     help='把指定 data.js 快照里仍在窗口内的 stockNews 条目并回当前 data.js'
                          '（不联网）。用于接口抖动导致深度掉下去后的《只增不减》修补')
+    ap.add_argument('--allow-drop', action='store_true',
+                    help='显式放行 K9 环比闸门（单项跌幅 >10% 也写盘）。只在确认下降合法时用，'
+                         '如收紧过滤规则后的首次全量重抓')
+    ap.add_argument('--stats', action='store_true',
+                    help='只打印 current data.js 的三项统计与历史基线（不联网、不写盘）')
     args = ap.parse_args()
 
     s = open(DATA_JS, encoding='utf-8').read()
     head = 'window.DASHBOARD_DATA = '
     D = json.loads(s[s.index('{'):s.rindex('}') + 1])
+
+    if args.stats:
+        cur = _sn_stats(D.get('stockNews'))
+        hist = _load_stats_hist()
+        print('[stock_news] 当前 data.js：标的 %d / 新闻 %d / 公告 %d' %
+              (cur['stocks'], cur['news'], cur['notices']))
+        if not hist:
+            print('[stock_news] 无历史基线（%s 不存在）' % STATS_HIST)
+        else:
+            print('[stock_news] 最近 %d 次写盘：' % len(hist))
+            for row in hist[-RATIO_PEAK_N:]:
+                print('  %s  标的 %4d / 新闻 %5d / 公告 %4d' %
+                      (row.get('at', '?'), row.get('stocks', 0),
+                       row.get('news', 0), row.get('notices', 0)))
+            _peak = {}
+            for row in hist[-RATIO_PEAK_N:]:
+                for k, _l in RATIO_FIELDS:
+                    _peak[k] = max(int(_peak.get(k) or 0), int(row.get(k) or 0))
+            print('[stock_news] 近 %d 次峰值：标的 %d / 新闻 %d / 公告 %d' %
+                  (RATIO_PEAK_N, _peak.get('stocks', 0), _peak.get('news', 0),
+                   _peak.get('notices', 0)))
+        return
 
     if args.purge_stats:
         before = sum(len(v.get('news') or []) for v in (D.get('stockNews') or {}).values())
@@ -767,6 +912,10 @@ def main():
         return
 
     old = D.get('stockNews') or {}
+    # ⚠️ K9 顺序硬约束：基线必须在 merge_depth **之前**取。
+    #    merge_depth 头一句就是 `_drop_crossdup(old_sn)`，会**就地**删掉旧快照里的
+    #    跨标的盘点稿；取晚了基线偏低，该报的断崖就报不出来（和「先截断再去重」同类的坑）。
+    base_stats = _sn_stats(old)
     D['stockNews'] = news
     if old and not NEWS_FORCE:
         # 合并：本次抓到的覆盖旧值；本次没抓到但有旧值的保留（接口抖动不至于清空）。
@@ -782,13 +931,65 @@ def main():
             print(f'[stock_news] 深度并集：补回 {n_fill} 条窗口内条目、'
                   f'整只复活 {n_back} 只（今天没进 targets 但旧内容仍有效）、'
                   f'跨标的去噪 {n_dup} 条')
+
+    # ---- K9 环比闸门：宁可少一天新内容，也不让弹窗集体变空 ----
+    after = _sn_stats(D['stockNews'])
+    hist = _load_stats_hist()
+    peak = {}
+    for row in hist[-RATIO_PEAK_N:]:
+        for k, _l in RATIO_FIELDS:
+            peak[k] = max(int(peak.get(k) or 0), int(row.get(k) or 0))
+    waive = ''
+    if args.allow_drop:
+        waive = '--allow-drop'
+    elif NEWS_FORCE:
+        waive = 'NEWS_FORCE=1（全量重抓，本来就会变）'
+    elif args.limit:
+        waive = '--limit 联调'
+    breach, rows = guard_ratio(after, base_stats, peak=peak, allow=bool(waive))
+    if base_stats['stocks']:
+        print('[stock_news] K9 环比：\n' + _fmt_rows(rows))
+        if waive:
+            print(f'[stock_news] K9 已豁免（{waive}）')
+    if breach:
+        n_txt = sum(1 for b in breach if b['key'] == 'news')
+        n_tot = sum(b['base'] - b['cur'] for b in breach)
+        print('[stock_news] ================= K9 环比闸门：拦下本次写盘 ================',
+              flush=True)
+        for b in breach:
+            print('  ✗ %s %d → %d（%+.1f%%）'
+                  % (b['label'], b['base'], b['cur'], b['pct'] * 100), flush=True)
+        print(f'  合计比基线少 {n_tot} 条，单项超阈值 {RATIO_MAX_DROP:.0%}'
+              f'{"（其中新闻类 %d 项）" % n_txt if n_txt else ""}', flush=True)
+        print('  data.js 保持上一版不动 —— 这是有意的：宁可一天没新内容，'
+              '也不让所有弹窗一起变空（用户实报过「内容变少」）。', flush=True)
+        print('  常见原因：① 池子轮换把整只标的带走 ② 接口整片超时/限流 '
+              '③ 过滤规则写宽了（误杀真消息）', flush=True)
+        print('  处置：先 `python3 stock_news.py --stats` 看基线，确认下降合法后加 '
+              '--allow-drop 重跑：', flush=True)
+        print('        STOCK_NEWS_BUDGET=600 python3 stock_news.py --allow-drop', flush=True)
+        print('  报告：%s' % ALERT_JS, flush=True)
+        try:
+            os.makedirs(os.path.dirname(ALERT_JS), exist_ok=True)
+            with open(ALERT_JS, 'w', encoding='utf-8') as f:
+                json.dump({'at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                           'base': base_stats, 'peak': peak, 'after': after,
+                           'breaches': breach, 'rows': rows, 'waived': waive},
+                          f, ensure_ascii=False, indent=1)
+        except Exception as e:
+            print(f'  （告警文件写入失败：{e}）', flush=True)
+        return 3        # 与「抓取失败」区分：闸门拦截是确定性判断，不是网络问题
+
     # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace
     _tmp = DATA_JS + '.tmp'
     with open(_tmp, 'w', encoding='utf-8') as f:
         f.write(head + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';\n')
     os.replace(_tmp, DATA_JS)
+    _save_stats_hist(hist, after)   # 只在写盘成功后记基线（拦下的那次不能进历史）
     print(f'[stock_news] 已写回 data.js（stockNews {len(D["stockNews"])} 只）')
 
 
 if __name__ == '__main__':
-    main()
+    # ⚠️ 必须传 sys.exit：K9 拦截时 main() 返回 3，裸 `main()` 会把退出码扔掉，
+    #    自动化那边永远看到 exit 0 —— 闸门报了半天，「失败」这件事却传不出去。
+    sys.exit(main())
