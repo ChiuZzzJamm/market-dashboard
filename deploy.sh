@@ -65,6 +65,21 @@ PY
 echo "🔍 校验 data.js 语法..."
 "$NODE" --check data.js
 
+# ---------- R100z205：index.html 内联 JS 语法闸门（**阻断**）----------
+# 背景（2026-10-25）：此前只校验 data.js。而白屏有两种坏法——data.js 语法坏（已拦）、
+# index.html 的 30 万字符内联 <script> 语法坏（**从来没拦过**）。后者更隐蔽：
+# 改渲染代码少一个括号、删死函数多留一个 `}`，data.js 依旧完美，audit 75 项全绿
+# （它查数据契约与字符串，不做 JS 解析），check_code 的 K1 也只查 py/sh 与 data.js，
+# 于是闸门全绿 → 直接推上线 → 用户打开白屏。
+# 那天删 newsTag/shortDate 是我手工抽出来验过才敢推的——「靠人记得验」的环节不能留。
+echo "🔍 校验 index.html 内联 JS 语法（check_inline_js.py）..."
+# ⚠️ 与 check_code 一样：不能写成 `if ! "$PY" x.py | tail`（管道退出码取 tail，恒 0）。
+if ! "$PY" check_inline_js.py; then
+    echo "❌ index.html 内联 JS 语法未通过，已阻断部署（推上去就是白屏）。"
+    echo "   处理办法：按上面给的行号修 index.html；确需紧急推送用 SKIP_AUDIT=1 ./deploy.sh"
+    exit 1
+fi
+
 # ---------- R100z157：要闻信息等级 + 盘面杂音剔除（确定性脚本，零网络，绝不阻断部署）----------
 # 背景：用户以为「要闻按信息等级排列」，实际组内完全按 AI 写入顺序渲染；杂音正则也只护个股层。
 # sweep_news.py 给五节要闻逐条打 level（重点/关注/常规）并组内稳定排序，同时剔除

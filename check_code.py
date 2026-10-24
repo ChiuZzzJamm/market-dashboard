@@ -41,7 +41,7 @@
 用法:
     python3 check_code.py            # 全部检查（FAIL 时 exit 1）
     python3 check_code.py --verbose  # 附明细（谁引用了谁、每个写者的原子实现位置）
-    python3 check_code.py --only K3  # 只跑某一类（K1-K7）
+    python3 check_code.py --only K3  # 只跑某一类（K1-K8）
 """
 import argparse
 import ast
@@ -683,11 +683,152 @@ def k5_dead(r, verbose=False):
             print('      %-32s ← %s' % (k, ','.join(sorted(refs[k]))))
 
 
+# ---------------------------------------------------------------- K8
+# 去噪哨兵（R100z205）。**这是唯一一条能发现「真消息被误删」的判据。**
+#
+# 为什么必须有（用户 2026-10-25 原话「让你优化没让你减少要闻深度」）：
+#   `stock_news.NEWS_STATS_PAT` 被 `sweep_news.py` 反过来 import 去清洗「五节要闻」，
+#   于是「两张表能不能合并」成了悬在要闻层头上的刀：合并当天，`sweep_news` 会静默
+#   删掉 ETF 资金面、涨停潮、板块广度这类**真信号**，而 audit 的 G22 只查
+#   「要闻里还有没有噪音」——删干净了它反而报 PASS。**没有任何闸门能发现少东西。**
+#   同一天我还撞出第二类：把判断写宽了（`多只个股走强` 写在共用表里），
+#   要闻层连「机器人概念午后拉升，多只个股走强」都吃掉。
+#
+# 判据是双向的，缺一半就没意义：
+#   ① must_drop  个股层必须丢（40 条真实噪音标题，来自四轮清理的实测样本）
+#   ② must_keep  个股层必须留（真公司消息；含四条被踩过的误杀边界）
+#   ③ ashare_keep 要闻层（只过 NEWS_STATS_PAT）必须留 —— **专治「两层合并」**
+# 任何一条不符 → FAIL，deploy.sh 阻断。
+K8_MUST_DROP = (
+    '56只股涨停 最大封单资金19.88亿元',
+    '45只股上午收盘涨停(附股)',
+    '10月23日A股涨跌停情况梳理',
+    '汽车行业今日净流入资金9.64亿元，比亚迪获净买入',
+    '主力动向：10月23日特大单净流入95.56亿元',
+    '机械设备行业资金流入榜：三一重工等净流入资金居前',
+    '今日盘中突破半年线个股',
+    '107家公司获机构调研（附名单）',
+    '北交所成交活跃股排行榜',
+    'A股股票回购一览：149家公司实施回购',
+    '10月14日盘前停复牌汇总',
+    'A股收评：三大指数集体收涨',
+    '午报｜沪指涨0.3% 创业板指走强',
+    '盘前情报丨美股三大指数收涨',
+    '公告避雷针：多家公司披露减持计划',
+    '投资日历：下周关注这些大事',
+    '10月23日盘后固定价格交易额9.15亿元',
+    '45只A股筹码大换手（10月19日）',
+    '晚间公告｜10月23日这些公告有看头',
+    '10月22日早间新闻精选',
+    '深沪北百元股数量达172只',
+    '业绩潜力股名单来了',
+    '筹码新动向：机构增仓这些股',
+    '涨停股复盘：16股封单超亿元',
+    '涨跌停统计：涨停家数创月内新高',
+    '强势股追踪：5连阳个股曝光',
+    '化工ETF汇添富(159093)标的指数涨超1%',
+    '15只概念股低估值且大幅回调',
+    '超4800只个股飘红',
+    '人形机器人板块掀涨停潮',
+    '昨日行情回顾：三大指数普涨',
+    '两融余额缩水，杠杆资金大幅加仓165股',
+    '多只个股逆市爆发',
+    '券商评级观察：机构上调目标价',
+    '10月22日早报｜今日值得关注的公司',
+    '6只股获北向资金连续净买入',
+)
+
+K8_MUST_KEEP = (
+    # ① 公司自己的涨跌停动态（不是「N只股涨停」那种市场统计）
+    '慕思股份连收3个涨停板',
+    '天威视讯涨停走出2连板',
+    # ② 立案 + 名单（名单类只丢括注形式，不能因「名单出炉」丢利空）
+    '300198，被立案调查！机构龙虎榜抢筹名单出炉',
+    # ③ 公司上榜 ≠ 排行榜栏目（`股榜` 会误杀「A股榜首」）
+    '长鑫科技市值重回3万亿，再登A股榜首',
+    # ④ 筹码集中度是公司消息（裸 `筹码集中` 会误杀）
+    '星源材质：前十大流通股东换仓后筹码集中度提升',
+    # ⑤ 栏目里的公司实质动作（业绩/定增/回购/中标…）
+    '杉杉股份拟向海螺集团定增募资不超40亿元',
+    '东百集团：终止收购江西东百100%股权',
+    '宁德时代前三季度净利润同比增长36%',
+    '贵州茅台：拟回购股份用于注销',
+    '比亚迪10月新能源汽车销量同比增长21%',
+    '中国平安获摩根大通增持H股',
+    '立讯精密：签订重大合同 金额约23亿元',
+    '中际旭创：1.6T光模块已批量出货',
+    '【调研快报】立讯精密接待3家机构调研',
+    '紫金矿业：拟收购海外金矿资产',
+    '隆基绿能：BC二代组件量产进度符合预期',
+    '赛力斯：8月销量同比增长',
+    '工业富联涨停 成交额超50亿元',
+    '爱尔眼科：三季度门诊量恢复至疫情前',
+    '中国中免：海南离岛免税销售额环比回升',
+)
+
+# 要闻层必须留（只过共用表 NEWS_STATS_PAT）。这三类正是「个股层噪音、要闻层真信号」
+K8_ASHARE_KEEP = (
+    '超危漏洞叠加AI新政 软件板块涨停潮',
+    '四家头部基金各出2亿自购 宽基ETF净流入1900亿',
+    '沪指收复4100点 两市成交额重回2万亿',
+    '证监会：扩大ETF互联互通标的范围',
+    '央行开展5000亿元MLF操作 中标利率持平',
+    '人形机器人概念午后拉升 多只个股走强',
+    '机器人概念多股涨停 产业链公司密集披露订单',
+    '三大指数集体收涨 创业板指涨超2%',
+    '杠杆资金加仓 两融余额重返1.9万亿',
+)
+
+
+def _load_stock_news():
+    """导入 stock_news 取词表与判定函数（不用 import 语句：避免 check_code 自身被 K2 审视）。"""
+    import importlib.util
+    p = os.path.join(HERE, 'stock_news.py')
+    spec = importlib.util.spec_from_file_location('_k8_stock_news', p)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def k8_noise_sentinel(r, verbose=False):
+    try:
+        sn = _load_stock_news()
+    except Exception as e:
+        r.fail('K8', '无法导入 stock_news 词表（%s）—— 哨兵失效等于没有哨兵' % e)
+        return
+
+    bad = []
+    for t in K8_MUST_DROP:
+        if not sn.is_stats_title(t):
+            bad.append(('漏网（应丢未丢）', t))
+    for t in K8_MUST_KEEP:
+        if sn.is_stats_title(t):
+            bad.append(('误杀（应留被丢）', t))
+    for t in K8_ASHARE_KEEP:
+        hit = [p.pattern for p in sn.NEWS_STATS_PAT if p.search(t)]
+        if hit:
+            bad.append(('要闻层被共用表误杀', t + ' ← ' + hit[0]))
+
+    if bad:
+        for kind, t in bad:
+            r.fail('K8', '%s：%s' % (kind, t))
+        r.fail('K8', '去噪哨兵 %d/%d 条不符 —— 改词表前先读 '
+                     'stock_news.py 文件头「两层词表别合并」' %
+               (len(bad), len(K8_MUST_DROP) + len(K8_MUST_KEEP) + len(K8_ASHARE_KEEP)))
+    else:
+        n = len(K8_MUST_DROP) + len(K8_MUST_KEEP) + len(K8_ASHARE_KEEP)
+        r.ok('K8', '去噪哨兵 %d 条样本全部符合（丢弃 %d / 个股保留 %d / 要闻保留 %d）' %
+             (n, len(K8_MUST_DROP), len(K8_MUST_KEEP), len(K8_ASHARE_KEEP)))
+    if verbose:
+        print('      NEWS_STATS_PAT %d 条 / NEWS_STOCK_ONLY %d 条' %
+              (len(sn.NEWS_STATS_PAT), len(sn.NEWS_STOCK_ONLY)))
+
+
 # ---------------------------------------------------------------- main
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--verbose', action='store_true')
-    ap.add_argument('--only', default='', help='只跑某一类，如 K3')
+    ap.add_argument('--only', default='', help='只跑某一类，如 K3 / K8')
     a = ap.parse_args()
 
     r = R()
@@ -707,6 +848,8 @@ def main():
         k6_contract(r, a.verbose)
     if not only or only == 'K7':
         k7_lock(r, a.verbose)
+    if not only or only == 'K8':
+        k8_noise_sentinel(r, a.verbose)
     return r.dump()
 
 
