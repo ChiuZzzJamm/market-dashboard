@@ -12,7 +12,7 @@
   - 可删除 excluded 复核后认为不应进池的标的；也可把 excluded 中有明确利好
     语义依据的标的移入 confirmed/watching（须同步补 probability/bullRefs）
 合并时机械校验：全部标的 60/00 开头沪深主板、code/name/sector/form/kline 齐全、
-probability 为 0-100 数值（缺失时补 50 并告警）。写回后自动 node --check。
+probability 为 0-100 数值（R100z197：缺失**留空不补**、只告警——不许编中位数）。写回后自动 node --check。
 """
 import argparse
 import json
@@ -48,13 +48,14 @@ def sanitize(mod):
                 warns.append(f"[WARN] {pool}.{code} 缺 kline（前端无K线图可画）")
             p = e.get("probability")
             if not isinstance(p, (int, float)) or not (0 <= p <= 100):
-                # R98k：不再一律补 50（曾致全池 50%）——按情绪补确定性基线
-                _d = {"bull": 69, "neutral": 50, "bear": 31}.get(
-                    e.get("sentiment") or "neutral", 50)
-                e["probability"] = _d
-                if not str(e.get("probNote") or "").strip():
-                    e["probNote"] = "脚本补基线（原值缺失，AI 可校准）"
-                warns.append(f"[WARN] {pool}.{code} probability 缺失/非法，已按情绪补基线 {_d}")
+                # R100z197（2026-10-24 用户拍板）：**不再编任何基线**。
+                # R98k 曾把「一律补 50」改成按情绪补 69/50/31，但 neutral→50 依旧是
+                # 凭空的中位数：读者看到「基线 50%」会以为 AI 判过，其实没人给过。
+                # 现在缺失就留 None：update_star 排到有值之后、前端渲染「—」。
+                # WARN 保留，它是提示 AI 补这个数的唯一信号。
+                e["probability"] = None
+                warns.append(f"[WARN] {pool}.{code} probability 缺失/非法，留空不补"
+                             f"（精选排序置末、页面显示「—」；请 AI 给出 15-88 的基线）")
             else:
                 e["probability"] = round(float(p), 1)
             if not isinstance(e.get("story"), str):

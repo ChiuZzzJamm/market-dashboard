@@ -358,13 +358,20 @@ def build_star(D, base=None):
         sec = str(e.get("sector") or "")
         if not _linked(sec):
             continue  # R99b：板块不挂钩的不进精选
+        # R100z197（2026-10-24 用户拍板）：缺失**不再兜底成 50**。
+        # 原写法 `float(e.get("probability") or 50)` 等于往排序里注入一个伪中位数：
+        # 实测池内真实基线最低是 48，而「不知道」被排到了比 48 更靠前的位置。
+        # 现在缺失一律 None，排序排到所有有值之后（前端 index.html 的 starPool 排序
+        # 本来就是 `probability == null → -1`，这里只是让脚本与前端口径一致）。
         try:
-            p = float(e.get("probability") or 50)
+            _raw_p = e.get("probability")
+            p = float(_raw_p) if _raw_p not in (None, "") else None
         except Exception:
-            p = 50.0
+            p = None
         q = quotes.get(str(e.get("code"))) or {}
         cand.append({"code": str(e.get("code")), "name": e.get("name"),
-                     "sector": sec, "sentiment": sent, "probability": round(p, 1),
+                     "sector": sec, "sentiment": sent,
+                     "probability": (round(p, 1) if p is not None else None),
                      "pctLive": q.get("pct"), "openPct": q.get("openPct"),
                      # R100z170：双池标的的板块涨幅必须跟着搬过去。此前只搬 sector，
                      # 导致 picks 里 boardPctToday/boardPctZt 全是 None，前端整齐显示「—」
@@ -373,11 +380,16 @@ def build_star(D, base=None):
                      "boardPctZt": e.get("boardPctZt"),
                      "bkCode": e.get("bkCode")})
 
-    cand.sort(key=lambda x: (-x["probability"], sent_rank.get(x["sentiment"], 1)))
+    # R100z197：缺失（None）排最后，其次是概率降序，再按情绪。与前端 starPool 排序同口径。
+    cand.sort(key=lambda x: (x["probability"] is None,
+                             -(x["probability"] if x["probability"] is not None else 0.0),
+                             sent_rank.get(x["sentiment"], 1)))
     picks = []
-    for c in cand:  # 按上涨概率降序（概率同则利好优先）
+    for c in cand:  # 有基线概率的降序在前，无基线的排后（概率同则利好优先）
         sent_cn = {"bull": "利好", "neutral": "中性"}.get(c["sentiment"], c["sentiment"])
-        note = f"{c['sector']}·{sent_cn}·基线{c['probability']:.0f}%"
+        # R100z197：无基线时写「基线未给」，不再编一个 50% 出来冒充概率。
+        note = f"{c['sector']}·{sent_cn}·" + (
+            f"基线{c['probability']:.0f}%" if c["probability"] is not None else "基线未给")
         _gt, _gzh = gap_tag(c.get("openPct"))
         if c.get("openPct") is not None:
             note += f"·开盘{c['openPct']:+.1f}%({_gzh})"
@@ -517,7 +529,9 @@ def main():
         sys.exit(1)
     print(f"[star] {star['date']} {star['time']} | 精选 {len(star['picks'])} 只:")
     for p in star["picks"]:
-        print(f"  {p['code']} {p['name']} | {p['note']} | score源概率 {p['probability']}%")
+        _pv = p["probability"]
+        print(f"  {p['code']} {p['name']} | {p['note']} | "
+              + (f"score源概率 {_pv}%" if _pv is not None else "score源概率 未给"))
     print("[star] marketLine:", star["marketLine"])
     if args.dry:
         print("[DRY-RUN] 未写回")
