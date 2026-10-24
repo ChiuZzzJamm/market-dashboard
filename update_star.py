@@ -37,6 +37,62 @@ NODE = _NODE_CAND if os.path.exists(_NODE_CAND) else "node"
 IDX_QT = "https://qt.gtimg.cn/q=sh000001,sz399001,sz399006"
 IDX_NAMES = {"sh000001": "上证指数", "sz399001": "深证成指", "sz399006": "创业板指"}
 
+# R100z192（2026-10-24）：竞价跳空门槛。数字全部来自 24.50 的回测，**不在这里写结论**。
+# 回测（1152 个「断板确认池股票-日」样本、开盘买当日收盘卖、扣 0.20%）：
+#   竞价跳空 < −2%  → +0.99%、中位 +0.06%、胜率 50.8%、日聚类 t=+2.15  ← 唯一 t>2 的档
+#   −2~−1%          → +0.14%、中位 −0.07%、胜率 50.0%、t=+0.55
+#   −1~0%           → +0.03%、中位 −0.46%、胜率 45.4%、t=+0.36
+#   0~+1%           → −0.16%、中位 −0.25%、胜率 46.9%、t=−0.37
+#   +1~+2%          → −0.45%、中位 −0.94%、胜率 40.0%、t=−1.31  ← 最差
+#   > +2%           → −0.33%、中位 −0.18%、胜率 48.8%、t=−1.05
+# 注意：−5~−3% 那档只有 +0.18%/中位 −0.69%/t=0.04，**所以不是「越低越好」**，
+#      这里只做「≥0 不追、≤−2% 可接」的两端标注，中间档如实写「中性」，禁止拿它排序。
+GAP_REPAIR = -2.0   # ≤ 此值：低开修复档（唯一过 t=2 的一档）
+GAP_NOCHASE = 0.0   # ≥ 此值：高开档（回测全负，最差 +1~+2%）
+
+
+def gap_tag(open_pct):
+    """竞价跳空 → (tag, 中文说明)。None 表示拿不到竞价，必须显式说「未知」不猜。"""
+    if open_pct is None:
+        return "unknown", "跳空未知"
+    if open_pct <= GAP_REPAIR:
+        return "repair", "低开修复"
+    if open_pct >= GAP_NOCHASE:
+        return "nochase", "高开不追"
+    return "neutral", "平开中性"
+
+
+def _gap_summary(picks):
+    """竞价跳空分布：给 AI 写【操作】段一个数得出来的底，不让它凭感觉说「可低吸」。
+
+    只统计**断板池**（src=pool）——跳空结论是在断板确认池上测出来的，技术池买点
+    逻辑不同（形态确认），混进去算比例等于偷换样本。
+    """
+    pool = [p for p in picks if p.get("src") == "pool"]
+    cnt = {"repair": 0, "neutral": 0, "nochase": 0, "unknown": 0}
+    for p in pool:
+        cnt[p.get("gapTag") or "unknown"] = cnt.get(p.get("gapTag") or "unknown", 0) + 1
+    if not pool:
+        text = "断板池本次无入选标的（板块不挂钩或均被剔除），无跳空分布可言。"
+    else:
+        parts = []
+        if cnt["repair"]:
+            parts.append(f"低开 {abs(GAP_REPAIR):.0f}% 以上 {cnt['repair']} 只（可接档）")
+        if cnt["neutral"]:
+            parts.append(f"平开 {cnt['neutral']} 只（无优势，等回踩不追）")
+        if cnt["nochase"]:
+            parts.append(f"开盘即涨 {cnt['nochase']} 只（这一档历史全负，不追）")
+        if cnt["unknown"]:
+            parts.append(f"竞价取不到 {cnt['unknown']} 只（不许猜方向）")
+        text = f"断板池 {len(pool)} 只：" + "；".join(parts) + "。"
+    return {"repairN": cnt["repair"], "neutralN": cnt["neutral"],
+            "nochaseN": cnt["nochase"], "unknownN": cnt["unknown"],
+            "poolN": len(pool),
+            "rule": f"竞价跳空低开 {abs(GAP_REPAIR):.0f}% 以上为可接档（回测 1152 样本 t=+2.15，唯一过 2 的档）；"
+                    "开盘不跌（≥0%）回测全负（最差 +1~+2% 档胜率 40%）；"
+                    "−5~−3% 档中位 −0.69% 不单调，禁止「越低越好」排序",
+            "text": text}
+
 
 def load_data(data_path):
     with open(data_path, encoding="utf-8") as f:
@@ -316,12 +372,16 @@ def build_star(D, base=None):
     for c in cand:  # 按上涨概率降序（概率同则利好优先）
         sent_cn = {"bull": "利好", "neutral": "中性"}.get(c["sentiment"], c["sentiment"])
         note = f"{c['sector']}·{sent_cn}·基线{c['probability']:.0f}%"
+        _gt, _gzh = gap_tag(c.get("openPct"))
         if c.get("openPct") is not None:
-            note += f"·竞价{c['openPct']:+.1f}%"
+            note += f"·竞价{c['openPct']:+.1f}%({_gzh})"
         if c.get("pctLive") is not None:
             note += f"·现涨{c['pctLive']:+.1f}%"
         picks.append({"code": c["code"], "name": c["name"], "sector": c["sector"],
                       "sentiment": c["sentiment"], "probability": c["probability"],
+                      # R100z192：竞价跳空标注——只做「接 / 不追」的动作提示，不参与排序
+                      # （回测证明不单调：−5~−3% 档中位 −0.69%，拿它排序会把差票推到前面）。
+                      "gapTag": _gt, "gapZh": _gzh, "openPct": c.get("openPct"),
                       "note": note, "src": "pool",
                       "boardPctToday": c.get("boardPctToday"),
                       "boardPctZt": c.get("boardPctZt"),
@@ -339,12 +399,16 @@ def build_star(D, base=None):
         if live is not None and live >= 9.5:
             continue  # 开盘即涨停（买不进），推荐无意义
         note = f"{t['label']}·前日16:00筛选"
+        _gt, _gzh = gap_tag(q.get("openPct"))
         if q.get("openPct") is not None:
-            note += f"·竞价{q['openPct']:+.1f}%"
+            note += f"·竞价{q['openPct']:+.1f}%({_gzh})"
         if live is not None:
             note += f"·现涨{live:+.1f}%"
         picks.append({"code": t["code"], "name": t["name"], "sector": t["sector"],
                       "sentiment": "neutral", "probability": None,
+                      # R100z192：技术池同样标注跳空——但**它不是断板池那套结论**（买点逻辑不同），
+                      # 所以只标注、不据此剔除；`src` 让前端/推送能区分两种口径。
+                      "gapTag": _gt, "gapZh": _gzh, "openPct": q.get("openPct"),
                       # R100z170：技术池标的补板块涨幅（名字精确命中同花顺一级行业才写）
                       "boardPctToday": (sec_map.get(t["sector"]) or {}).get("pct"),
                       "bkCode": (sec_map.get(t["sector"]) or {}).get("code"),
@@ -400,8 +464,9 @@ def build_star(D, base=None):
         "marketLine": market_line,
         "sentiment": sentiment,
         "picks": picks,
+        "gapSummary": _gap_summary(picks),
         "pushText": push_text,
-        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波/九门/吸筹池直接取标的；R100z85：技术池按池配额 九门3/谐波3/吸筹2 防单池量纲垄断；R100z156：行业/资金接口抓空重试+显式降级） + 自动化 AI 复核",
+        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波/九门/吸筹池直接取标的；R100z85：技术池按池配额 九门3/谐波3/吸筹2 防单池量纲垄断；R100z156：行业/资金接口抓空重试+显式降级；R100z192：picks 增 gapTag 竞价跳空标注 + star.gapSummary 跳空分布，只标注不排序） + 自动化 AI 复核",
     }
     return star, None
 

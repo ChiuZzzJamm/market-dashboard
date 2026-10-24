@@ -510,7 +510,9 @@
     "power_screener.py",
     "accumulation_score.py",
     "full_scan.py",
-    "price-in→已计价"
+    "price-in→已计价",
+    "竞价跳空动作（R100z192，勿删勿改）",
+    "这类无动作的空话"
    ],
    "forbidden": [
     "①",
