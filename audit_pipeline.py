@@ -2434,6 +2434,24 @@ def _css_color(s, body, prop="background"):
     return v
 
 
+def _css_px(s, body, prop="font-size"):
+    """从一段 CSS 声明里取 px 数值，支持 `var(--x)` 回查 `:root`。
+
+    R100z164（2026-10-24）：把 255 处写死的 font-size 接到 --fs-* 令牌之后，
+    G30 的「徽章字号过小」检查立刻把 `.risk-dot` 判成「未声明」——因为它只认 `font-size: 11.5px`。
+    这和上一轮统一背景色时 `_css_color()` 遇到的是同一个坑：**实现变写法，闸门没跟上**。
+    取不到（var 在 :root 里没定义）仍返回 None，让调用方按 WARN/FAIL 处理——放宽写法，不放宽标准。
+    """
+    m = re.search(r"%s:\s*([\d.]+)px" % re.escape(prop), body)
+    if m:
+        return float(m.group(1))
+    m = re.search(r"%s:\s*var\((--[\w-]+)\)" % re.escape(prop), body)
+    if not m:
+        return None
+    mv = re.search(re.escape(m.group(1)) + r"\s*:\s*([\d.]+)px", s)
+    return float(mv.group(1)) if mv else None
+
+
 def _hex_lum(h):
     """#rgb / #rrggbb → 感知亮度 0~255（0.299R+0.587G+0.114B）。"""
     h = (h or "").lstrip("#")
@@ -2547,14 +2565,15 @@ def g30_display_prefs(r):
 
     # ---- c) 徽章字号 ----
     md = re.search(r"\.risk-dot\s*\{([^}]*)\}", s)
-    fs = re.search(r"font-size:\s*(\d+(?:\.\d+)?)px", md.group(1)) if md else None
-    if not fs:
-        r.warn("G30", ".risk-dot 未声明 font-size，无法判断徽章是否过小")
-    elif float(fs.group(1)) < 11:
-        r.fail("G30", "风险徽章 font-size=%spx < 11px —— emoji 会盖满胶囊、底色不可辨，"
-                      "三档配色失效（实测教训，见 24.21④）" % fs.group(1))
+    fs = _css_px(s, md.group(1)) if md else None
+    if fs is None:
+        r.warn("G30", ".risk-dot 未声明 font-size（或 var 指向的令牌在 :root 里没有 px 值），"
+                      "无法判断徽章是否过小")
+    elif fs < 11:
+        r.fail("G30", "风险徽章 font-size=%.1fpx < 11px —— emoji 会盖满胶囊、底色不可辨，"
+                      "三档配色失效（实测教训，见 24.21④）" % fs)
     else:
-        r.ok("G30", "风险徽章字号 %spx ≥ 11px（emoji 不会盖满胶囊）" % fs.group(1))
+        r.ok("G30", "风险徽章字号 %.1fpx ≥ 11px（emoji 不会盖满胶囊）" % fs)
 
     # ---- d) 涨红跌绿 ----
     lack = [c for c in ("#f0435c", "#0f9d78") if c.lower() not in s.lower()]
@@ -3622,6 +3641,86 @@ def g41_visual_norms(r):
         r.ok("G41", "视觉规范与悬浮按钮全链路完整（标题/账户块/AI 关系行/四入口四返回可拖+拖后不吞点击/字体继承/字号 10 档）")
 
 
+def g42_design_tokens(r):
+    """G42 设计令牌强制：字号/圆角必须走变量（R100z164，2026-10-24）。
+
+    由来：R100z163 我已经建好了 --fs-* 全套令牌，并在 G41 里断言「字号只有 10 档」——
+    但只断言了**取值**，没断言**写法**。实际那 255 处全是裸 px，只有 3 处用了变量。
+    结果用户切四页看到「几个标题大小都不一样」：首页 32px、其余三页 20px，
+    而两边都「在白名单里」，G41 全绿。
+    → 教训：白名单管得住「有没有跑偏的值」，管不住「值是不是同源」。
+       只要还是各写各的 px，改一处就不会带动其他地方，「统一」只是这一次的巧合。
+
+    判据（全部落在会随 bug 变形的表达式上）：
+      a) 全文不允许出现 `font-size: <数字>px` —— 必须 var(--fs-*)
+      b) 四个页面标题（.hero h1 / .db-title）必须是 var(--fs-page)
+      c) .status-line 与 .card h2 必须同字号档 + 同色 + 都带圆点标记
+      d) border-radius 的字面值只允许 999px / 50% / ≤8px（小徽章、圆点），
+         10/12/14/16/20 这类容器圆角必须走 --r-note / --r-block / --r-card
+    """
+    p = os.path.join(HERE, "index.html")
+    try:
+        s = open(p, encoding="utf-8").read()
+    except Exception as e:                                    # noqa: BLE001
+        r.warn("G42", "index.html 读不到，跳过设计令牌校验：%s" % e)
+        return
+    bad = []
+
+    # a) 裸字号
+    raw_fs = re.findall(r"font-size:\s*([\d.]+)px", s)
+    if raw_fs:
+        from collections import Counter
+        c = Counter(raw_fs)
+        bad.append("仍有 %d 处写死 font-size（%s）——必须走 var(--fs-*)，否则改一档不会联动"
+                   % (len(raw_fs), ", ".join("%spx×%d" % (k, v) for k, v in c.most_common(4))))
+
+    # b) 页面标题档位
+    if not re.search(r"\.hero h1,\s*\.db-title\s*\{[^}]*font-size:\s*var\(--fs-page\)", s):
+        bad.append("页面标题（.hero h1 / .db-title）未使用 var(--fs-page) —— 四页标题会各走各的档位")
+    if "--fs-page:" not in s:
+        bad.append(":root 未定义 --fs-page —— 页面级标题没有独立档位")
+
+    # c) 同级卡标题同款
+    m_st = re.search(r"\.status-line\s*\{([^}]*)\}", s)
+    m_h2 = re.search(r"\.card h2[^{]*\{([^}]*)\}", s)
+    if not m_st or not m_h2:
+        bad.append("找不到 .status-line 或 .card h2 定义 —— 同级标题一致性无法核对")
+    else:
+        if "var(--fs-h2)" not in m_st.group(1):
+            bad.append(".status-line 字号未对齐 .card h2（应同为 var(--fs-h2)）—— 同卡不同标题档")
+        if m_st.group(1).count("var(--ink)") == 0:
+            bad.append(".status-line 颜色未对齐 .card h2（应为 var(--ink)）—— 一个蓝一个黑")
+        if ".status-line::before" not in s:
+            bad.append(".status-line 缺标题圆点标记（.card h2 有）—— 两张卡并排不是一个体系")
+
+    # d) 圆角字面值
+    # 豁免：echarts 的 extraCssText 是图表 tooltip 的内联样式串，不属于页面设计系统。
+    allowed_small = {"999px", "50%", "0"}
+    offenders = {}
+    for line in s.split("\n"):
+        if "extraCssText" in line:
+            continue
+        for m in re.finditer(r"border-radius:\s*([^;]+);", line):
+            v = m.group(1).strip()
+            vals = [x.strip() for x in v.split()]
+            for x in vals:
+                if x.startswith("var(") or x in allowed_small:
+                    continue
+                num = re.match(r"([\d.]+)px$", x)
+                if num and float(num.group(1)) <= 8:
+                    continue
+                offenders[v] = offenders.get(v, 0) + 1
+    if offenders:
+        bad.append("圆角仍有非令牌值：%s —— 容器圆角只允许 --r-card/--r-block/--r-note"
+                   % ", ".join("%s×%d" % (k, v) for k, v in list(offenders.items())[:4]))
+
+    if bad:
+        for b in bad:
+            r.fail("G42", b)
+    else:
+        r.ok("G42", "设计令牌到位（字号全走 var(--fs-*) / 页面标题统一 --fs-page / 同级卡标题同款 / 圆角仅三档）")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -3678,6 +3777,7 @@ def main():
     g39_open_desk_page(r)
     g40_score_page_and_slots(r)
     g41_visual_norms(r)
+    g42_design_tokens(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
