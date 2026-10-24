@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610241125"></script>
+<script src="data.js?v=202610241134"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -5560,13 +5560,22 @@ document.addEventListener('click', function (ev) {
     moved = true;
     place(ox + dx, oy + dy, false);
   }
+  // R100z163b（2026-10-24 线上实测发现）：拖拽后「下一次点击被吞」。
+  //   旧写法只在 click 回调里把 moved 复位 —— 但指针落在按钮外松手时浏览器**不补发 click**，
+  //   moved 就永久留在 true，用户下一次正常点击先被吃掉一次（要连点两下才生效）。
+  //   改成时间戳抑制：onUp 里盖一个 300ms 的戳，click 只要在这个窗口内就拦，过期自动失效。
+  //   既保住「拖完不误触」，也不依赖 click 一定到来。
+  var suppressClick = 0;
   function onUp() {
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
     window.removeEventListener('pointercancel', onUp);
     if (sx === null) return;
     sx = null;
-    if (moved && lastPos) place(lastPos.l, lastPos.t, true); // 组隐藏时 rect() 为 0，用内存位置保存
+    if (moved) {
+      suppressClick = Date.now() + 300;
+      if (lastPos) place(lastPos.l, lastPos.t, true); // 组隐藏时 rect() 为 0，用内存位置保存
+    }
   }
   // R100c：g（🐼+💰 整组）与 dei（断板页返回💰）共用同一套拖拽；拖 dei 时换算为组左上角坐标，两页共享 floatGroupPos
   // R100z111：📄 全球要闻页返回按钮(#gn-entry-in)接入同一套拖拽（用户反馈「不能拖拽」）， Panda/鹰 定位按钮随 place() 跟随
@@ -5594,8 +5603,9 @@ document.addEventListener('click', function (ev) {
       window.addEventListener('pointercancel', onUp);
     });
     // 拖拽结束后拦截随后派发的 click，避免误触 🐼/💰
+    // 判据用时间戳（onUp 里盖的 suppressClick），不用粘性 moved —— 见 onUp 注释
     el.addEventListener('click', function (e) {
-      if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; }
+      if (Date.now() < suppressClick) { e.stopPropagation(); e.preventDefault(); }
     }, true);
   }
   bindDrag(g);
