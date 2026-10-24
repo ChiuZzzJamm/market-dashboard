@@ -334,7 +334,8 @@
     "forecast_scorecard.py --view",
     "生成约束 flags",
     "maxHighConf",
-    "requireBand"
+    "requireBand",
+    "`panorama.markets` 中 `key=kr` / `key=jp` 的条目"
    ],
    "forbidden": [
     "①",
@@ -1262,7 +1263,8 @@
     "下没有 `us` 键，只有 `markets` 数组",
     "us.outlook",
     "保持 `ashare` 全部字段不变",
-    "本步不部署不推送"
+    "本步不部署不推送",
+    "`panorama.markets` 中 `key=us` 的条目"
    ],
    "forbidden": [
     "①",
@@ -1456,7 +1458,8 @@
     "forecast_scorecard.py --view",
     "生成约束 flags",
     "maxHighConf",
-    "requireBand"
+    "requireBand",
+    "`panorama.markets` 中 `key=kr` / `key=jp` 的条目"
    ],
    "forbidden": [
     "①",
