@@ -3929,6 +3929,34 @@ DESK_STATES = {"cross", "strong", "weak", "limit", "unknown"}
 DESK_TRIG, DESK_TP, DESK_COST = 1.02, 1.05, 0.20
 
 
+def desk_expect_state(o):
+    """由价位反推 state（与 desk_verify.plan_order 同源逻辑，供闸门对账用）。
+
+    plan_order 的判定顺序：涨停附近 → 现价≥追价 → 现价≥站上 → 其余。
+    这里容差 0.004（半分钱）吸收入库时的 round(x,2)，state 未知的条目返回 None 跳过。
+    """
+    if not isinstance(o, dict) or not o.get("state"):
+        return None
+    an, tr = o.get("anchor"), o.get("trig")
+    now, npct = o.get("now"), o.get("nowPct")
+    if now is None and npct is None:
+        return "unknown"
+    if isinstance(npct, (int, float)) and npct >= 9.45:
+        return "limit"
+    if isinstance(now, (int, float)):
+        if isinstance(tr, (int, float)) and now >= tr - 0.004:
+            return "strong"
+        if isinstance(an, (int, float)) and now >= an - 0.004:
+            return "cross"
+        return "weak"
+    # 只有涨幅、没有现价（极少见）：按涨幅粗判，留 ±0.05 缓冲防四舍五入误伤
+    if npct >= 1.95:
+        return "strong"
+    if npct >= -0.05:
+        return "cross"
+    return "weak"
+
+
 def g45_desk_check(r):
     """G45 预案对账台账自洽（R100z186，2026-10-24 改条件单口径）。
 
@@ -3951,7 +3979,9 @@ def g45_desk_check(r):
         ⑥ `retClose` 与 (当日收盘 / 追价) 实算不符 —— 收益造假，或 K 线取错了字段位；
         ⑦ 标了成交但「开盘 < 追价 且 最高 ≥ 追价」不成立 —— 成交判据被改过；
         ⑧ `nFilled` / `winClose` / `meanClose` / `hitTpRate` 与明细实算不符；
-        ⑨ `cum.nFilled` < 当日 `settle.nFilled`（累计不该比一天还少）。
+        ⑨ `cum.nFilled` < 当日 `settle.nFilled`（累计不该比一天还少）；
+        ⑭ `state` 与现价不符（状态是拿现价算的：涨停→现价≥追价→现价≥站上→未转强，
+           标签反了等于页面说反话，且不报错）。
       WARN（正常会发生，不许拦部署）：
         ⑩ `planDate` ≠ 当前 `tradeDesk.tradeDate`——09:45 挂的是「昨收预案」的价，
            16:00 重算预案后必然不同日；⑪ 挂单只数与当前 picks 不同（预案换批）；
@@ -4004,6 +4034,15 @@ def g45_desk_check(r):
         elif any(isinstance(x, (int, float)) for x in vals):
             bad.append(f"{c} 价位残缺：昨收 {pc} / 站上 {an} / 追 {tr} / 止盈 {tp}"
                        f"——要么全给要么全不给，页面不做缺省填充")
+
+        # ⑭ state 必须与现价自洽（R100z186 补）。plan_order 的状态**完全**由「现价 vs 站上/追价」
+        # 推出来，所以标签本身是可验算的。一旦某处比较符被改反，页面会把「已经涨 9% 的票」
+        # 标成「未转强」——不报错、不崩溃，只是安静地说反话，这是最坏的一类 bug。
+        exp = desk_expect_state(o)
+        if exp and o.get("state") != exp and {o.get("state"), exp} != {"limit", "strong"}:
+            bad.append(f"{c} state={o.get('state')} 与现价不符（现价 {o.get('now')} / 现价幅 "
+                       f"{o.get('nowPct')}% / 昨收 {pc} / 追 {tr} → 应为 {exp}）"
+                       f"——状态是拿现价算的，标签错了页面就在说反话")
 
     filled = [x for x in srows if isinstance(x, dict) and x.get("filled")]
     if isinstance(s.get("nFilled"), int) and s["nFilled"] != len(filled):
