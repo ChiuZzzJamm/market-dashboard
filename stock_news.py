@@ -412,7 +412,11 @@ def fetch_stock_news(name, code, days=NEWS_DAYS):
         picked.append(n)
         if len(picked) >= NEWS_CAND_KEEP:   # R100z207：先留候选，跨标的去重后再截到 NEWS_MAX_KEEP
             break
-    out = picked
+    # R100z209（用户 2026-10-25 截图：「个股公告和个股新闻的时间顺序有点乱」）：
+    # 上面 rank() 是**选取**用的排序（方向性在前），不是**展示**顺序 ——
+    # 直接落盘会让弹窗里出现「10-22 22:16 → 10-22 23:20 → 10-23 09:04 → 10-22 21:00」。
+    # 选取仍按 rank（保证方向性消息不被时间挤掉），落盘前再按时间倒序重排一次。
+    out = sorted(picked, key=lambda n: n['time'], reverse=True)
     # 写缓存：R100z149b —— 只在「请求确实成功拿到响应体」时落盘。
     # 背景：8 并发下偶发超时/限流 → raw='' → out=[] → 空列表被 TTL 当日缓存，
     #       这只票当天永久显示「暂无个股消息」，且重跑也读缓存不重试。
@@ -552,7 +556,9 @@ def build(targets, days=NEWS_DAYS):
     out = {}
     for code, name in targets.items():
         nl = []
-        for x in (notices.get(code) or [])[:NOTICE_MAX_KEEP]:
+        # R100z209：公告同样按日期倒序取前 N —— 原实现依赖 API 返回顺序，实测个别标的会串。
+        for x in sorted((notices.get(code) or []),
+                        key=lambda y: str(y.get('date') or ''), reverse=True)[:NOTICE_MAX_KEEP]:
             title = str(x.get('title') or '')
             # 公告 API 的 title 常带公司名前缀（「东百集团关于…」/「东百集团股票交易…」），
             # 与弹窗已显示的公司名重复，剥掉省体积
@@ -777,6 +783,13 @@ def merge_depth(sn, old_sn, days=NEWS_DAYS):
     for code in [c for c, v in sn.items()
                  if not v.get('notices') and not v.get('news')]:
         sn.pop(code, None)
+    # R100z209：补进来的旧条目是**追加在末尾**的（新条目在前 + 旧条目补位），
+    # 落盘顺序就不是时间序了 —— 用户 2026-10-25 截图看到 20:06 → 20:58 → 21:25 → 17:16
+    # 正是这个原因。落盘前统一按时间倒序重排一次（幂等：已排好的再排不变）。
+    for v in sn.values():
+        for field, tk in (('news', 'time'), ('notices', 'date')):
+            if v.get(field):
+                v[field] = sorted(v[field], key=lambda x: str(x.get(tk) or ''), reverse=True)
     return n_fill, n_back, n_dup
 
 
