@@ -377,7 +377,7 @@ def main():
         lag_txt = (f"信号新鲜度：池内均无线索类强信号（试盘/涨停），全部按滞后规则降级处理"
                    f"（≤{STRONG_MAX_LAG} 日才进强池，≥{POOL_MAX_LAG} 日不入池）。")
     summary = (f"六特征打分：强 {len(strong)} 只 / 观察 {len(watch)} 只（共 {len(scored)} 只）。"
-               f"强池=结构完整、且信号在 {STRONG_MAX_LAG} 个交易日内、可直接跟（盯量能与次日竞价）；"
+               f"强池=结构完整、且信号在 {STRONG_MAX_LAG} 个交易日内、可直接跟（盯量能与次日开盘盘口结构）；"
                f"观察池=缺一两项或信号走旧的候选，只排队。"
                f"F5 分层：首次板 {n_first} 只（底部启动，筹码干净，高分）、"
                f"接力板 {len(scored) - n_first} 只（老资金接力，防对倒）。" + lag_txt)

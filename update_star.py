@@ -52,45 +52,51 @@ GAP_NOCHASE = 0.0   # ≥ 此值：高开档（回测全负，最差 +1~+2%）
 
 
 def gap_tag(open_pct):
-    """竞价跳空 → (tag, 中文说明)。None 表示拿不到竞价，必须显式说「未知」不猜。"""
+    """开盘价相对昨收的位置 → (tag, 中文)。
+
+    R100z193（2026-10-24 用户口径）：**只描述价格事实，不再做「接/不追」判断**。
+    9:15–9:20 的竞价参考价可撤单、是假的；但 9:25 的成交价是真成交，所以 openPct
+    本身是可靠的事实，不可靠的是「用开盘高低去推断强弱」这个用法。动作交给 tape.py。
+    """
     if open_pct is None:
-        return "unknown", "跳空未知"
+        return "unknown", "开盘价缺失"
     if open_pct <= GAP_REPAIR:
-        return "repair", "低开修复"
-    if open_pct >= GAP_NOCHASE:
-        return "nochase", "高开不追"
-    return "neutral", "平开中性"
+        return "repair", "低开"
+    if open_pct > GAP_NOCHASE:
+        return "nochase", "高开"
+    return "neutral", "平开"
 
 
 def _gap_summary(picks):
-    """竞价跳空分布：给 AI 写【操作】段一个数得出来的底，不让它凭感觉说「可低吸」。
+    """开盘价位置分布（低开/平开/高开各几只）。
 
-    只统计**断板池**（src=pool）——跳空结论是在断板确认池上测出来的，技术池买点
-    逻辑不同（形态确认），混进去算比例等于偷换样本。
+    R100z193 起**不再承载动作结论**——2026-10-24 用户明确反对「拿竞价定强弱」，
+    动作口径移到 tapeSummary（分时盘口结构）。这里只留一个可核对的价格事实分布，
+    并配一条 rule 把「不许据此下结论」写死，防止 AI 拿它编「低开可接」。
     """
     pool = [p for p in picks if p.get("src") == "pool"]
     cnt = {"repair": 0, "neutral": 0, "nochase": 0, "unknown": 0}
     for p in pool:
         cnt[p.get("gapTag") or "unknown"] = cnt.get(p.get("gapTag") or "unknown", 0) + 1
     if not pool:
-        text = "断板池本次无入选标的（板块不挂钩或均被剔除），无跳空分布可言。"
+        text = "断板池本次无入选标的（板块不挂钩或均被剔除），无开盘价分布可言。"
     else:
         parts = []
         if cnt["repair"]:
-            parts.append(f"低开 {abs(GAP_REPAIR):.0f}% 以上 {cnt['repair']} 只（可接档）")
+            parts.append(f"低开 {cnt['repair']} 只")
         if cnt["neutral"]:
-            parts.append(f"平开 {cnt['neutral']} 只（无优势，等回踩不追）")
+            parts.append(f"平开 {cnt['neutral']} 只")
         if cnt["nochase"]:
-            parts.append(f"开盘即涨 {cnt['nochase']} 只（这一档历史全负，不追）")
+            parts.append(f"高开 {cnt['nochase']} 只")
         if cnt["unknown"]:
-            parts.append(f"竞价取不到 {cnt['unknown']} 只（不许猜方向）")
-        text = f"断板池 {len(pool)} 只：" + "；".join(parts) + "。"
+            parts.append(f"开盘价取不到 {cnt['unknown']} 只（不许猜方向）")
+        text = f"断板池 {len(pool)} 只开盘价位置：" + "；".join(parts) + "。"
     return {"repairN": cnt["repair"], "neutralN": cnt["neutral"],
             "nochaseN": cnt["nochase"], "unknownN": cnt["unknown"],
             "poolN": len(pool),
-            "rule": f"竞价跳空低开 {abs(GAP_REPAIR):.0f}% 以上为可接档（回测 1152 样本 t=+2.15，唯一过 2 的档）；"
-                    "开盘不跌（≥0%）回测全负（最差 +1~+2% 档胜率 40%）；"
-                    "−5~−3% 档中位 −0.69% 不单调，禁止「越低越好」排序",
+            "rule": "本段只是开盘价相对昨收的位置（低开/平开/高开），是价格事实、不是强弱信号，"
+                    "禁止用它给标的排序，也禁止用「低开=可接、高开=不追」这类结论——"
+                    "R100z193 起动作口径改由 tapeSummary 的盘口结构决定",
             "text": text}
 
 
@@ -374,13 +380,13 @@ def build_star(D, base=None):
         note = f"{c['sector']}·{sent_cn}·基线{c['probability']:.0f}%"
         _gt, _gzh = gap_tag(c.get("openPct"))
         if c.get("openPct") is not None:
-            note += f"·竞价{c['openPct']:+.1f}%({_gzh})"
+            note += f"·开盘{c['openPct']:+.1f}%({_gzh})"
         if c.get("pctLive") is not None:
             note += f"·现涨{c['pctLive']:+.1f}%"
         picks.append({"code": c["code"], "name": c["name"], "sector": c["sector"],
                       "sentiment": c["sentiment"], "probability": c["probability"],
-                      # R100z192：竞价跳空标注——只做「接 / 不追」的动作提示，不参与排序
-                      # （回测证明不单调：−5~−3% 档中位 −0.69%，拿它排序会把差票推到前面）。
+                      # R100z192：开盘价位置标注；R100z193 起它**不再是动作依据**
+                      # （用户 2026-10-24：竞价可撤单、不可信；动作交给 picks[].tape）。
                       "gapTag": _gt, "gapZh": _gzh, "openPct": c.get("openPct"),
                       "note": note, "src": "pool",
                       "boardPctToday": c.get("boardPctToday"),
@@ -401,7 +407,7 @@ def build_star(D, base=None):
         note = f"{t['label']}·前日16:00筛选"
         _gt, _gzh = gap_tag(q.get("openPct"))
         if q.get("openPct") is not None:
-            note += f"·竞价{q['openPct']:+.1f}%({_gzh})"
+            note += f"·开盘{q['openPct']:+.1f}%({_gzh})"
         if live is not None:
             note += f"·现涨{live:+.1f}%"
         picks.append({"code": t["code"], "name": t["name"], "sector": t["sector"],
@@ -414,10 +420,36 @@ def build_star(D, base=None):
                       "bkCode": (sec_map.get(t["sector"]) or {}).get("code"),
                       "note": note, "src": t["src"]})
 
+    # ---- R100z193（2026-10-24）：分时量价结构诊断 ----
+    # 用户原话：「竞价往往都是虚的，9:25 之前都可以撤单……可以看开盘的分时量：
+    # 下跌有量且没有承接就不看好；下跌无量、跌破分时线有承接可以观察；开盘爆量拉升也可观察」。
+    # 上一版把「竞价跳空」当动作依据（gapTag/gapSummary），用户明确反对，故把解释权
+    # 交给 tape.py：用腾讯 1 分钟分时算均价线、跌破次数、下跌分钟量占比、爆量倍数，
+    # 输出「此刻的盘口结构 + 纪律档位」。gapTag 保留但降级为价格事实，不再定动作。
+    # 失败不阻断选股：picks 只是不带 tape 字段，AI 侧按「结构未知」处理。
+    tape_summary = None
+    try:
+        import tape as TAPE
+        tm = TAPE.diagnose_codes([p["code"] for p in picks])
+        for p in picks:
+            t = tm.get(str(p["code"]))
+            if t:
+                p["tape"] = {k: v for k, v in t.items() if k != "name"}
+                p["note"] += f"·分时[{t['zh']}]"
+        tape_summary = TAPE.summarize(tm, picks)
+        miss = [p["code"] for p in picks if str(p["code"]) not in tm]
+        if miss:
+            tape_summary["missing"] = miss
+            tape_summary["text"] += (f"（{len(miss)} 只分时抓空：{'、'.join(miss)}，"
+                                     "未给结构判定，严禁猜方向）")
+        print(f"[tape] {tape_summary['text']}")
+    except Exception as e:                                  # noqa: BLE001
+        print(f"[tape][WARN] 分时诊断失败，picks 不带 tape 字段：{type(e).__name__}: {e}")
+
     # ---- 文案模板（AI 复核改写 sentiment/pushText） ----
     now = datetime.now()
     market_line = "，".join(
-        (f"{x['name']}{x['pct']:+.2f}%（竞价{x['openPct']:+.2f}%）"
+        (f"{x['name']}{x['pct']:+.2f}%（开盘{x['openPct']:+.2f}%）"
          if x.get("openPct") is not None else f"{x['name']}{x['pct']:+.2f}%")
         for x in idx) if idx else "指数快照获取失败"
     if idx:
@@ -465,8 +497,9 @@ def build_star(D, base=None):
         "sentiment": sentiment,
         "picks": picks,
         "gapSummary": _gap_summary(picks),
+        "tapeSummary": tape_summary,
         "pushText": push_text,
-        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波/九门/吸筹池直接取标的；R100z85：技术池按池配额 九门3/谐波3/吸筹2 防单池量纲垄断；R100z156：行业/资金接口抓空重试+显式降级；R100z192：picks 增 gapTag 竞价跳空标注 + star.gapSummary 跳空分布，只标注不排序） + 自动化 AI 复核",
+        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波/九门/吸筹池直接取标的；R100z85：技术池按池配额 九门3/谐波3/吸筹2 防单池量纲垄断；R100z156：行业/资金接口抓空重试+显式降级；R100z192：picks 增 gapTag 开盘价位置标注 + star.gapSummary 分布，只标注不排序；R100z193：接入 tape.py 分时量价结构（均价线/跌破次数/下跌分钟量占比/爆量倍数），picks 增 tape 字段 + star.tapeSummary，动作口径由盘口结构决定，gapTag 降级为价格事实） + 自动化 AI 复核",
     }
     return star, None
 

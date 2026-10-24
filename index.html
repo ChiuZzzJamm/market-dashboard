@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610242215"></script>
+<script src="data.js?v=202610242252"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -247,6 +247,43 @@
   .reason-body b.label { display: block; margin-bottom: 2px; color: var(--ink2); }
   .src-line { font-size: var(--fs-base); color: var(--ink2); margin-top: 10px; }
   .note-line { font-size: var(--fs-base); color: var(--ink2); margin-bottom: 10px; }
+  /* ===== 龙虎榜席位结构（R100z195）=====
+     用户在 2026-10-24 提出「主力资金只有大数」——原有卡片只有 fundNote + 6 根柱子（行业净流入），
+     不回答「钱是谁的钱」。这一块补的是席位性质（机构/北向/游资/拉萨系）。
+     字号只走 --fs-* 档；涨红跌绿同全站。 */
+  .lhb { margin-top: 14px; border-top: 1px dashed var(--line); padding-top: 12px; }
+  .lhb-hd { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .lhb-hd b { font-size: var(--fs-md); color: var(--ink); }
+  .lhb-d { font-size: var(--fs-sm); color: var(--ink2); }
+  .lhb-tag { font-size: var(--fs-xs); color: var(--ink2); border: 1px solid var(--line);
+    border-radius: var(--r-block); padding: 1px 8px; background: var(--accent-soft); white-space: nowrap; }
+  .lhb-sum { font-size: var(--fs-base); color: var(--ink); line-height: 1.75; margin-bottom: 10px; }
+  .lhb-sub { font-size: var(--fs-sm); color: var(--ink2); margin: 10px 0 4px; }
+  .lhb-row { display: grid; grid-template-columns: 128px 74px 88px 122px minmax(0, 1fr);
+    gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--line);
+    font-size: var(--fs-base); }
+  .lhb-row:last-child { border-bottom: 0; }
+  .lhb-nm { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+  .lhb-nm b { font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; }
+  .lhb-nm i { font-style: normal; font-size: var(--fs-xs); color: var(--ink2); flex: 0 0 auto; }
+  .lhb-net { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+  .lhb-net.up { color: var(--up); }
+  .lhb-net.down { color: var(--down); }
+  .lhb-ratio { font-size: var(--fs-sm); color: var(--ink2); text-align: right;
+    font-variant-numeric: tabular-nums; }
+  .lhb-rs { font-size: var(--fs-sm); color: var(--ink2); white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; }
+  .lhb-seat { font-size: var(--fs-sm); color: var(--ink2); min-width: 0; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  .lhb-seat b { color: var(--ink); font-weight: 600; }
+  .lhb-rep { margin-top: 10px; font-size: var(--fs-base); background: var(--accent-soft);
+    border-radius: var(--r-block); padding: 8px 12px; color: var(--ink); line-height: 1.7; }
+  .lhb-rep b { font-weight: 700; }
+  @media (max-width: 720px) {
+    .lhb-row { grid-template-columns: minmax(0, 1fr) auto auto; }
+    .lhb-rs, .lhb-seat { grid-column: 1 / -1; white-space: normal; }
+  }
   .outlook { font-size: var(--fs-md); background: var(--accent-soft); border: 1px solid var(--line); border-radius: var(--r-block); padding: 16px 18px; }
 
   /* ===== AI 预测 ===== */
@@ -1957,7 +1994,10 @@ function render(market) {
   if (isA) {
     html += '<div class="card"><h2>主力资金流向' + (d.tradeDate ? '<span class="h2-date">' + esc(d.tradeDate) + '</span>' : '') + '</h2>';
     if (d.fundNote) html += '<div class="note-line">' + esc(d.fundNote) + '</div>';
-    html += '<div id="chart-fund" class="chart-tall"></div></div>';
+    html += '<div id="chart-fund" class="chart-tall"></div>';
+    // R100z195：龙虎榜席位结构接在同一张卡里（用户 2026-10-24：原有只有行业级「大数」）
+    html += renderLhb(d.lhb);
+    html += '</div>';
 
     // R100z162：两张成绩卡（指标表现 / 预测复盘）迁至 🌟 复盘台账独立页；
     // 主页面不再渲染。R100z160/z161 的判定逻辑与口径一字未改，只换了挂载位置。
@@ -4595,6 +4635,56 @@ function renderPowerScreen() {
 // R100h：必带数据清单（renderChecklist）已整体下线（2026-09-28 用户要求），data_checklist.py 同步删除
 
 var LB_LIST = [];
+/* 龙虎榜席位结构（R100z195）：只渲染既有事实，不做「明天会怎样」的推断。
+   数据来自 lhb.py 写进 ashare.lhb —— 席位性质（机构/北向/游资/拉萨系）是这一块的全部意义，
+   所以每行必须带「谁在买」，只有净额就退回成用户批评过的「大数」了。 */
+function lhbRow(it) {
+  var up = Number(it.netAmt || 0) > 0;
+  var net = (up ? '+' : '') + Number(it.netAmt || 0).toFixed(2) + '亿';
+  var ratio = (it.ratio === null || it.ratio === undefined) ? '—' : ('占成交' + it.ratio + '%');
+  var rs = (it.reasons && it.reasons.length) ? it.reasons.join('/') : (it.reason || '');
+  var seat = '';
+  if (it.seatTop && it.seatTop.length) {
+    var s0 = it.seatTop[0];
+    seat = (up ? '买方首位 ' : '卖方首位 ') + (s0.s || s0.n) +
+      ' ' + (Number(s0.v) > 0 ? '+' : '') + Number(s0.v).toFixed(2) + '亿';
+  }
+  return '<div class="lhb-row">' +
+    '<span class="lhb-nm"><b>' + esc(it.name || '') + '</b><i>' + esc(it.code || '') + '</i></span>' +
+    '<span class="lhb-net ' + (up ? 'up' : 'down') + '">' + net + '</span>' +
+    '<span class="lhb-ratio">' + esc(ratio) + '</span>' +
+    '<span class="lhb-rs" title="' + escAttr(rs) + '">' + esc(rs) + '</span>' +
+    '<span class="lhb-seat">' + esc(seat) + '</span></div>';
+}
+
+function renderLhb(l) {
+  if (!l || !l.total) return '';
+  var ST = { complete: '当日已全', partial: '披露未完成', prev: '上一交易日' };
+  var s = '<div class="lhb"><div class="lhb-hd"><b>龙虎榜 · 席位结构</b>' +
+    '<span class="lhb-d">' + esc(l.date || '') + '</span>' +
+    '<span class="lhb-tag">' + esc(ST[l.status] || l.status || '') + ' · 主板 ' +
+    esc(String(l.mainN || 0)) + '/' + esc(String(l.total || 0)) + ' 只</span></div>';
+  if (l.text) s += '<div class="lhb-sum">' + esc(l.text) + '</div>';
+  if (l.top && l.top.length) {
+    s += '<div class="lhb-sub">净买前 ' + l.top.length + '（主板）：</div>';
+    l.top.forEach(function (it) { s += lhbRow(it); });
+  }
+  if (l.sell && l.sell.length) {
+    s += '<div class="lhb-sub">净卖前 ' + l.sell.length + '（主板）：</div>';
+    l.sell.forEach(function (it) { s += lhbRow(it); });
+  }
+  if (l.seatRepeat && l.seatRepeat.length) {
+    var seg = l.seatRepeat.map(function (r) {
+      return '<b>' + esc(r.s || r.n) + '</b> ' + r.names.length + ' 只 合计' +
+        (Number(r.net) > 0 ? '+' : '') + Number(r.net).toFixed(2) + '亿（' +
+        esc(r.names.slice(0, 4).join('、')) + '）';
+    });
+    s += '<div class="lhb-rep"><b>同一营业部席位同时净买多只</b>：' + seg.join('；') + '</div>';
+  }
+  if (l.note) s += '<div class="src-line">' + esc(l.note) + '</div>';
+  return s + '</div>';
+}
+
 function renderLianban(list) {
   if (!list || !list.length) return '';
   // 连板（lbc>=2）作为梯队展示；首板仅统计数量（避免卡片过长）
@@ -5134,11 +5224,15 @@ function renderDuanban() {
     var starPicks = starPool.concat(starTech);
     fixed += '<div class="db-pool p-star"><h2>🌟 开盘精选 · ' + starPicks.length + ' 只</h2>' +
       '<div class="db-sub">' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：断板池按「板块情绪正向+主力净流入正向」挂钩+上涨概率降序，并可从谐波/九门/吸筹池直接取标的；弹窗与池内一致）</div>' +
-      // R100z192：竞价跳空分布——「今天哪几只可接、哪几只不追」这件事以前只写在 note 里，
-      // 现在单列一行，因为回测证明它是这批标的上唯一过 t=2 的判据（1152 样本）。
+      // R100z193（2026-10-24 用户口径）：开盘价位置**不是强弱信号**，只是价格事实；
+      // 动作口径下移到「盘口结构」那一行（tape.py 的分时量价诊断）。
       (st.gapSummary && st.gapSummary.text
-        ? '<div class="st-gap"><span class="st-gap-t">竞价跳空</span>' + esc(String(st.gapSummary.text)) +
-          '<span class="st-gap-r">' + esc(String(st.gapSummary.rule || '')) + '</span></div>'
+        ? '<div class="st-gap"><span class="st-gap-t">开盘价位置</span>' + esc(String(st.gapSummary.text)) + '</div>'
+        : '') +
+      // R100z193：盘口结构——均价线、跌破次数、下跌分钟量占比、爆量倍数，脚本算，只读。
+      (st.tapeSummary && st.tapeSummary.text
+        ? '<div class="st-gap"><span class="st-gap-t">盘口结构</span>' + esc(String(st.tapeSummary.text)) +
+          '<span class="st-gap-r">' + esc(String(st.tapeSummary.rule || '')) + '</span></div>'
         : '') +
       // R99c：页面只放深度分析（pushText），指数/情绪/集合竞价等均在其中，不再单列 marketLine/sentiment
       (st.pushText ? '<div style="font-size: var(--fs-base);color:var(--ink2);line-height:1.8;margin:6px 0 10px;white-space:pre-line;">' + esc(st.pushText) + '</div>' : '') +

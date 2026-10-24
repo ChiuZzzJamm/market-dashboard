@@ -48,6 +48,7 @@ import os
 import re
 import sqlite3
 import sys
+from datetime import date
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DB = os.path.expanduser('~/.workbuddy/workbuddy.db')
@@ -410,6 +411,14 @@ def chk_baseline(T, r):
 #   ① 台账里能解析成路径的条目，必须在 data.js 里真走得通（逐段下钻，报出断在哪一节）；
 #   ② `.json` 结尾的当**文件**校验存在性（stock_pool.json 等不是 data.js 节点）；
 #   ③ 同一任务的 writesFields 与 neverWrites 不许有同一字段（自相矛盾）。
+#   ④ **首跑豁免**（R100z194 起）：脚本新增的产出字段，要等下一次排程真跑完才落盘，
+#      在那之前台账指向的是一个「代码里已经会写、data.js 里还没有」的路径。
+#      两条路都不能走：删条目 = 放弃登记（正是 B5 那种「不登记就当查过」的病）；
+#      无条件放行 = 闸门失守。所以做成**带到期日**的豁免 `pendingFields`：
+#        未到期   → WARN（列出来，不装看不见）
+#        已到期仍缺 → FAIL（说明脚本压根没写，不是时序问题）
+#        已落盘   → WARN 提醒把豁免删掉（自清理，不留永久后门）
+#      到期日写**预期的下一次落盘日**，不写「+7 天」这种模糊值。
 # 散文条目（含中文/空格/通配 `*`）跳过并计数——不是漏洞，是台账允许写人话。
 CLEAN_PATH = re.compile(r'^[A-Za-z_]\w*(?:(?:\.\w+)|(?:\[\w*\]))*$')
 CJK_RE = re.compile(r'[\u4e00-\u9fff]')
@@ -490,8 +499,14 @@ def chk_fields(T, r, verbose=False):
         return
 
     by_id = {t['id']: t for t in T}
-    n_ok = n_skip = n_empty = 0
+    n_ok = n_skip = n_empty = n_pend = 0
     bad = []
+    # 首跑豁免：{(任务id, 路径): (到期日, 原因)}
+    pend = {}
+    for aid, v in (exp.get('pendingFields') or {}).items():
+        for f in (v.get('fields') or []):
+            pend[(aid, f)] = (str(v.get('until') or ''), str(v.get('why') or ''))
+    today = date.today().isoformat()
     for e in exp.get('automations', []):
         t = by_id.get(e.get('id'))
         key = t['key'] if t else (e.get('schedule') or '?')[:16]
@@ -517,21 +532,34 @@ def chk_fields(T, r, verbose=False):
                     continue
                 for p in ps:
                     st, why = _resolve_field(D, p)
+                    ex = pend.get((e.get('id'), p))
                     if st == 'ok':
                         n_ok += 1
                     elif st == 'empty':
                         n_empty += 1
+                    elif ex and ex[0] and today <= ex[0]:
+                        n_pend += 1
+                        r.warn('B6', '%s 的 %s 尚未落盘（首跑豁免至 %s）：%s'
+                               % (key, p, ex[0], ex[1] or '脚本下一次排程后写入'))
+                        continue
                     else:
-                        bad.append('%s 的 %s 指向不存在的字段：%s —— %s'
+                        note = ''
+                        if ex and ex[0] and today > ex[0]:
+                            note = '（首跑豁免 %s 已过期：脚本没写，不是时序问题）' % ex[0]
+                        bad.append('%s 的 %s 指向不存在的字段：%s —— %s%s'
                                    % (key, kind, why,
                                       'AI 照着写会往空处落盘' if kind == 'writesFields'
-                                      else 'AI 会读到 undefined 然后自己编'))
+                                      else 'AI 会读到 undefined 然后自己编', note))
+                        continue
+                    if ex:
+                        r.warn('B6', '%s 的 %s 已能走通 —— 首跑豁免应从 pendingFields 删掉（否则豁免长期化）'
+                               % (key, p))
     for m in bad:
         r.fail('B6', m)
     if not bad:
         r.ok('B6', '字段台账 %d 条路径在 data.js/%s 里走得通（空数组 %d 条暂不可验、'
-                   '散文 %d 条跳过）—— 7 条任务的读写边界与线上数据一致'
-             % (n_ok, '盘上文件', n_empty, n_skip))
+                   '首跑豁免 %d 条、散文 %d 条跳过）—— 7 条任务的读写边界与线上数据一致'
+             % (n_ok, '盘上文件', n_empty, n_pend, n_skip))
 
 
 # ---------------------------------------------------------------- D 死步骤
