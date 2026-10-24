@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610241258"></script>
+<script src="data.js?v=202610241309"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -590,7 +590,15 @@
        同时管横屏手机：844×390 时宽度过 700 但竖排 226px 会占掉半屏，按高度也降级。 */
     .float-group {
       top: auto; bottom: 14px; transform: none;
-      flex-direction: row; align-items: center; gap: 8px;
+      flex-direction: row; align-items: center; gap: 6px;
+      /* R100z165b（2026-10-24 线上实拍）：贴底横排只是「不再竖着压半屏」，
+         图标本身仍是透明 emoji，滚动到正文中途会与文字互相压着看——
+         截图里 🐼📄🧰📋 正好坐在「电力跌0.38%、元件」这行字上。
+         给容器一层不透明底 + 细边 + 投影，让它读起来是一条**工具条**而不是浮字；
+         padding 会被 geom() 计入偏移（R100z165b 同步改了 JS）。 */
+      padding: 5px 7px; border-radius: 999px;
+      background: var(--paper); border: 1px solid var(--line);
+      box-shadow: 0 6px 18px rgba(17, 17, 26, .14);
     }
     .mkt-toggle, .db-entry, .db-entry-in, .gn-jump { width: 42px; height: 42px; font-size: var(--fs-emoji); }
     .wrap { padding-bottom: 92px; }
@@ -5666,15 +5674,23 @@ document.addEventListener('click', function (ev) {
     var cs = getComputedStyle(g);
     var row = cs.flexDirection.indexOf('row') === 0;
     var gap = parseFloat(row ? cs.columnGap : cs.rowGap) || 0;
-    var off = [], x = 0, y = 0, w = 0, h = 0;
-    for (var i = 0; i < g.children.length; i++) {
+    /* 容器的内边距/边框必须计入：手机端那排是带底色的胶囊条（R100z165b），
+       若只按按钮宽高累加，页内替身会整体偏移 padding 那么多像素——
+       症状就是老问题「点进去按钮跳一格」。 */
+    var pl = parseFloat(cs.paddingLeft) || 0, pt = parseFloat(cs.paddingTop) || 0;
+    var pr = parseFloat(cs.paddingRight) || 0, pb = parseFloat(cs.paddingBottom) || 0;
+    var bw2 = (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0);
+    var bh2 = (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
+    var off = [], x = 0, y = 0, cw = 0, ch = 0, n = g.children.length;
+    for (var i = 0; i < n; i++) {
       var bcs = getComputedStyle(g.children[i]);
       var bw = parseFloat(bcs.width) || 0, bh = parseFloat(bcs.height) || 0;
-      off.push({ x: x, y: y });
-      if (row) { x += bw + gap; w = x - gap; if (bh > h) h = bh; }
-      else { y += bh + gap; h = y - gap; if (bw > w) w = bw; }
+      off.push({ x: pl + (parseFloat(cs.borderLeftWidth) || 0) + x,
+                 y: pt + (parseFloat(cs.borderTopWidth) || 0) + y });
+      if (row) { x += bw + gap; if (x - gap > cw) cw = x - gap; if (bh > ch) ch = bh; }
+      else { y += bh + gap; if (y - gap > ch) ch = y - gap; if (bw > cw) cw = bw; }
     }
-    return { off: off, w: w, h: h };
+    return { off: off, w: cw + pl + pr + bw2, h: ch + pt + pb + bh2 };
   }
   function clearInline() {
     g.style.left = ''; g.style.top = ''; g.style.right = ''; g.style.bottom = ''; g.style.transform = '';
