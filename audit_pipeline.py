@@ -3516,6 +3516,7 @@ def g41_visual_norms(r):
          且账户金额由 ACCT.equity 算出（不许写死「3 万」这种会过期的文案）；
       c) 悬浮按钮「三件套」齐全：四个入口 + 四个页内返回，且 #sc-entry-in 必须 bindDrag()——
          这是用户 2026-10-24 亲自撞到的 bug（位置会跟随、自己拖不动）；
+         且拖拽后的 click 抑制必须是时间戳窗口（suppressClick），不能粘性布尔（会吞下一次点击）；
       d) 字体：button/input/select/textarea 显式继承 var(--font)（控件默认不继承 body 字体）；
       e) 字号档位必须落在白名单内——防「下次再加一个 13px」把 6 档阶梯重新打散。
     """
@@ -3558,6 +3559,17 @@ def g41_visual_norms(r):
                    "（用户 2026-10-24 原话「他怎么不能拖拽」）")
     if "slotIndex" not in s:
         bad.append("拖拽坐标没按槽位换算——页内按钮一拖就会跳 60px")
+    # 拖拽后的 click 抑制必须是「时间戳窗口」，不能是粘性布尔：
+    # 指针落在按钮外松手时浏览器不补发 click，粘性标记会永久留 true，下一次正常点击先被吃掉
+    # （2026-10-24 线上实测踩到：拖完 📋 想返回，第一下没反应）。
+    # 判据必须查「判定式 + 盖戳」两处，只查字符串存在会被一行 `var suppressClick = 0;` 蒙过去
+    # —— 埋雷实测：把判定改回粘性 moved、把盖戳删掉，只查存在性的版本两颗雷全漏。
+    if not re.search(r"if\s*\(\s*Date\.now\(\)\s*<\s*suppressClick\s*\)", s):
+        bad.append("拖拽后的 click 抑制不是时间戳窗口（应判 Date.now() < suppressClick）——"
+                   "粘性 moved 在指针落于按钮外时会残留，下一次正常点击被吞一次")
+    if not re.search(r"suppressClick\s*=\s*Date\.now\(\)\s*\+", s):
+        bad.append("拖拽结束时没盖抑制戳（suppressClick = Date.now() + N）——"
+                   "没有这行，判定式永远为假，拖完会误触按钮本身")
 
     # ---- d) 字体继承 ----
     if not re.search(r"button,\s*input,\s*select,\s*textarea[^{]*\{[^}]*font-family:\s*var\(--font\)", s):
@@ -3575,7 +3587,7 @@ def g41_visual_norms(r):
     if bad:
         r.fail("G41", "；".join(bad[:4]))
     else:
-        r.ok("G41", "视觉规范与悬浮按钮全链路完整（标题/账户块/AI 关系行/四入口四返回可拖/字体继承/字号 10 档）")
+        r.ok("G41", "视觉规范与悬浮按钮全链路完整（标题/账户块/AI 关系行/四入口四返回可拖+拖后不吞点击/字体继承/字号 10 档）")
 
 
 def main():
