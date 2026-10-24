@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610241920"></script>
+<script src="data.js?v=202610241945"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -4955,45 +4955,72 @@ function dbPoolHtml(title, cls, sub, list, done, poolKey) {
 function deskCheckHtml(st) {
   var dc = st && st.deskCheck;
   if (!dc || !dc.planDate) return '';
-  var zh = { buy: '可买', wait: '等回踩', chase: '追高不追', drop: '破位放弃',
-             limit: '一字板买不到', unknown: '待确认' };
-  var col = { buy: 'var(--up)', drop: 'var(--down)' };
+  // R100z186（用户 2026-10-24）：口径从「开盘价落在建仓区间就买」改成他的真实打法——
+  // 「盘中由弱转强、摸到昨收×1.02 才买，昨收×1.05 是止盈参考」。
+  // 所以状态只描述「09:45 这一刻强不强」，成交与否交给盘中（结算按全天最高价判）。
+  // 三档收益并列显示，不许只挑对自己有利的那一档（当日收盘 / 次日开盘 / 摸到止盈）。
+  var zh = { cross: '已站上昨收', strong: '已过 +2%', weak: '未转强',
+             limit: '涨停买不到', unknown: '待确认' };
+  var col = { cross: 'var(--up)', strong: 'var(--up)' };
+  function pct(v, suffix) {
+    if (v == null) return '—';
+    return '<b style="color:' + (v > 0 ? 'var(--up)' : (v < 0 ? 'var(--down)' : 'var(--ink2)')) +
+      '">' + (v > 0 ? '+' : '') + v + (suffix || '%') + '</b>';
+  }
   var h = '<div style="margin:10px 0 8px;border-top:1px dashed var(--line);padding-top:8px;">' +
     '<div style="font-size:var(--fs-sm);color:var(--ink2);font-weight:600;">' +
     '交易预案对账 · ' + esc(String(dc.planDate)) + ' 预案 → ' +
-    esc(String(dc.checkedAt || '').slice(5, 10)) + ' 开盘</div>';
-  if (dc.settledN) {
-    var sm = dc.settledMeanNet, sw = dc.settledWin;
-    h += '<div style="font-size:var(--fs-xs);color:var(--ink-soft);margin-top:3px;">' +
-      '昨日「可买」' + dc.settledN + ' 只 · 今日开盘卖 · 胜率 ' +
-      (sw == null ? '—' : sw + '%') + ' · 平均净 ' +
-      '<b style="color:' + ((sm || 0) > 0 ? 'var(--up)' : 'var(--down)') + '">' +
-      ((sm || 0) > 0 ? '+' : '') + sm + '%</b>' +
-      '<span style="color:var(--ink-soft);">（已扣 0.2% 双边成本）</span></div>';
-  } else if (dc.settledFrom === '') {
-    h += '<div style="font-size:var(--fs-xs);color:var(--ink-soft);margin-top:3px;">' +
-      '昨日无可买标的，无结算样本</div>';
+    esc(String(dc.checkedAt || '').slice(5, 10)) + ' 挂单</div>';
+  var s = dc.settle || {};
+  if (dc.settleFrom) {
+    if (s.nFilled) {
+      h += '<div style="font-size:var(--fs-xs);color:var(--ink-soft);margin-top:3px;">' +
+        '昨日成交 ' + s.nFilled + '/' + s.nOrders + ' 笔 · 当日收盘净 ' + pct(s.meanClose) +
+        '（胜率 ' + (s.winClose == null ? '—' : s.winClose + '%') + '）· 次日开盘净 ' +
+        pct(s.meanNextOpen) + ' · 摸到止盈 ' +
+        (s.hitTpRate == null ? '—' : s.hitTpRate + '%') + '</div>';
+    } else {
+      h += '<div style="font-size:var(--fs-xs);color:var(--ink-soft);margin-top:3px;">' +
+        '昨日 ' + (s.nOrders || 0) + ' 只挂单无一成交（开盘就在 +2% 上方，或全天没摸到）' +
+        '　空仓也是一种结果</div>';
+    }
   }
-  var rows = dc.verdicts || [];
+  var c = dc.cum || {};
+  if (c.nFilled) {
+    h += '<div style="font-size:var(--fs-xs);color:var(--ink-soft);margin-top:2px;">' +
+      '累计 ' + c.days + ' 天 · 成交 ' + c.nFilled + ' 笔 · 当日收盘 ' + pct(c.meanClose) +
+      ' · 次日开盘 ' + pct(c.meanNextOpen) + ' · 摸到止盈 ' +
+      (c.hitTpRate == null ? '—' : c.hitTpRate + '%') +
+      '<span style="color:var(--ink-soft);">（已扣 0.2% 双边成本）</span></div>';
+  }
+  var rows = dc.orders || [];
   if (rows.length) {
-    h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));' +
+    h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(186px,1fr));' +
       'gap:2px 12px;margin-top:6px;">';
-    rows.forEach(function (v) {
+    rows.forEach(function (o) {
       h += '<div style="font-size:var(--fs-xs);color:var(--ink2);white-space:nowrap;' +
-        'overflow:hidden;text-overflow:ellipsis;">' +
-        '<span style="color:' + (col[v.state] || 'var(--ink-soft)') + ';font-weight:600;">' +
-        esc(zh[v.state] || v.state || '') + '</span> ' +
-        esc(String(v.code || '')) + ' ' + esc(String(v.name || '')) +
-        '<span style="color:var(--ink-soft);"> ' +
-        (v.openPct == null ? '—' : (v.openPct > 0 ? '+' : '') + v.openPct + '%') + '</span></div>';
+        'overflow:hidden;text-overflow:ellipsis;" title="' + esc(String(o.note || '')) + '">' +
+        '<span style="color:' + (col[o.state] || 'var(--ink-soft)') + ';font-weight:600;">' +
+        esc(zh[o.state] || o.state || '') + '</span> ' +
+        esc(String(o.code || '')) + ' ' + esc(String(o.name || '')) +
+        '<span style="color:var(--ink-soft);"> 追 <b>' +
+        (o.trig == null ? '—' : o.trig) + '</b></span>' +
+        (o.nowPct == null ? '' : '<span style="color:var(--ink-soft);"> ' +
+          (o.nowPct > 0 ? '+' : '') + o.nowPct + '%</span>') + '</div>';
     });
     h += '</div>';
   }
-  if (dc.buys && dc.buys.length) {
-    h += '<div style="font-size:var(--fs-xs);color:var(--up);margin-top:5px;">今日可买：' +
-      dc.buys.map(function (b) {
-        return esc(String(b.code)) + ' ' + esc(String(b.name || '')) + ' @' + b.entry;
-      }).join('　') + '（次日开盘卖出）</div>';
+  var buy = rows.filter(function (o) { return o.state === 'cross' || o.state === 'strong'; });
+  if (buy.length) {
+    h += '<div style="font-size:var(--fs-xs);color:var(--up);margin-top:5px;">' +
+      '已转强可动手（' + buy.length + ' 只）：' +
+      buy.map(function (o) {
+        return esc(String(o.code)) + ' ' + esc(String(o.name || '')) + ' 追价 <b>' + o.trig +
+          '</b>（止盈参考 ' + (o.tp == null ? '—' : o.tp) + '）';
+      }).join('　') + '</div>';
+  } else if (rows.length) {
+    h += '<div style="font-size:var(--fs-xs);color:var(--ink-soft);margin-top:5px;">' +
+      '09:45 这 ' + rows.length + ' 只都还没站上昨收 —— 全部挂条件单等转强，不提前接</div>';
   }
   return h + '</div>';
 }

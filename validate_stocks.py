@@ -1175,26 +1175,45 @@ def check_star_module(D):
                     warns.append(f"duanban.star.picks {c} {p.get('name')} 不在断板反包双池内且非合规来源标的（精选只能从双池/板块动量/技术池筛）")
             if not str(star.get('pushText') or '').strip():
                 warns.append("duanban.star.pushText 为空（微信推送深度分析缺失，10:00 自动化 AI 须补写）")
-            # R100z185：交易预案对账（09:45 步骤 1.5 由 desk_verify.py 写入）。
+            # R100z186：交易预案对账（09:45 步骤 1.5 由 desk_verify.py 写入）。
             # 缺失合法（没跑或非交易日），但**存在就必须结构完整**——页面直接按 state 上色，
             # 状态值写出界会静默渲染成灰块，比不显示更坏。
+            # 口径已从 v1「开盘价落在建仓区间」换成 v2「条件单：站上昨收 / 追价 昨收×1.02 /
+            # 止盈参考 昨收×1.05」，台账字段 verdicts/buys → orders/settle/settleRows。
             dc = star.get('deskCheck')
             if dc is not None:
                 if not isinstance(dc, dict):
                     warns.append("duanban.star.deskCheck 非对象（应为 desk_verify.py 写的 payload）")
                 else:
                     if not str(dc.get('planDate') or '').strip():
-                        warns.append("duanban.star.deskCheck.planDate 为空——页面标题会显示「预案 → 开盘」但看不出是哪天的预案")
-                    ok_states = {'buy', 'wait', 'chase', 'drop', 'limit', 'unknown'}
-                    vs = dc.get('verdicts')
-                    if not isinstance(vs, list) or not vs:
-                        warns.append("duanban.star.deskCheck.verdicts 缺失或为空——对账块会整块不渲染")
+                        warns.append("duanban.star.deskCheck.planDate 为空——页面标题会显示「预案 → 挂单」但看不出是哪天的预案")
+                    ok_states = {'cross', 'strong', 'weak', 'limit', 'unknown'}
+                    orders = dc.get('orders')
+                    if not isinstance(orders, list) or not orders:
+                        warns.append("duanban.star.deskCheck.orders 缺失或为空——对账块会整块不渲染")
                     else:
-                        bad_state = [f"{v.get('code')}→{v.get('state')}" for v in vs
+                        bad_state = [f"{v.get('code')}→{v.get('state')}" for v in orders
                                      if isinstance(v, dict) and v.get('state') not in ok_states]
                         if bad_state:
-                            warns.append("duanban.star.deskCheck.verdicts 出现非法 state %s（合法值 %s）"
+                            warns.append("duanban.star.deskCheck.orders 出现非法 state %s（合法值 %s）"
                                          % ('、'.join(bad_state[:4]), '/'.join(sorted(ok_states))))
+                        bad_price = []
+                        for v in orders:
+                            if not isinstance(v, dict):
+                                continue
+                            pc, tr, tp = v.get('prevClose'), v.get('trig'), v.get('tp')
+                            if not all(isinstance(x, (int, float)) and x for x in (pc, tr, tp)):
+                                continue
+                            if abs(tr - round(pc * 1.02, 2)) > 0.011 or abs(tp - round(pc * 1.05, 2)) > 0.011:
+                                bad_price.append(f"{v.get('code')} 追价 {tr}/止盈 {tp} vs 昨收 {pc}")
+                        if bad_price:
+                            warns.append("duanban.star.deskCheck.orders 价位与「昨收×1.02 / ×1.05」不符：%s"
+                                         % ('；'.join(bad_price[:3])))
+                    sf = dc.get('settleRows')
+                    if sf is not None and not isinstance(sf, list):
+                        warns.append("duanban.star.deskCheck.settleRows 非数组——昨日结算区无法渲染")
+                    if not isinstance(dc.get('cum'), dict):
+                        warns.append("duanban.star.deskCheck.cum 缺失——累计战绩行不显示（三档对账的长期依据）")
     return warns
 
 
