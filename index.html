@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610250021"></script>
+<script src="data.js?v=202610250051"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1301,6 +1301,80 @@
     .pf-row .pf-hide { display: none; }
     .pf-cmp-r { grid-template-columns: minmax(0,1.15fr) 60px 54px 64px; font-size: var(--fs-base); }
   }
+
+  /* ===== R100z202：复盘台账图表化 =====
+     用户 2026-10-25：「看着有点太乱了，文字有点太多了，可以做成饼状图或者树状图之类的」。
+     这里不用 echarts 而用纯 CSS 条形，三个理由：
+       ① 这三张卡在手机首屏，等图表库加载会先塌一块空白（CDN 挂了就整卡消失）；
+       ② 要读的是「谁过线」不是趋势，条形 + 阈值竖线比饼图信息密度高（饼图只适合占比=100% 的场景）；
+       ③ 每条都带 title，鼠标停上去仍能看到样本/t值/止损率——信息没删，只是不再默认铺在脸上。 */
+  .rv-hero { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px;
+             padding: 9px 12px; margin: 2px 0 10px; background: var(--accent-soft); border-radius: var(--r-note); }
+  .rv-hero b { font-size: var(--fs-h1); font-weight: 800; color: var(--accent-deep); font-variant-numeric: tabular-nums; }
+  .rv-hero > span { font-size: var(--fs-base); font-weight: 700; color: var(--ink); }
+  .rv-hero em { font-style: normal; color: var(--accent-deep); }
+  .rv-hero i { flex: 1 1 100%; font-style: normal; font-size: var(--fs-xs); color: var(--ink2); }
+  .rv-bars { margin: 2px 0 4px; }
+  /* 5 列：名称 / 条形 / 命中率 / 5日超额 / 判定。窄屏只砍「超额」一列（判定比它重要）。 */
+  .rv-bar { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,1.4fr) 54px 58px 56px;
+            gap: 8px; align-items: center; padding: 6px 2px;
+            border-bottom: 1px dashed var(--line); font-size: var(--fs-sm); }
+  .rv-bar.g4 { grid-template-columns: minmax(0,1.2fr) minmax(0,1.5fr) 56px 74px; }
+  .rv-bar:last-child { border-bottom: 0; }
+  .rv-nm { font-weight: 700; color: var(--ink); font-size: var(--fs-base); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rv-nm s { text-decoration: none; font-weight: 400; font-size: var(--fs-xs); color: var(--ink2); margin-left: 4px; }
+  .rv-nm small { display: block; font-weight: 400; font-size: var(--fs-xs); color: var(--ink2); }
+  .rv-track { position: relative; height: 15px; background: #eef2f6; border-radius: 8px; overflow: hidden; }
+  .rv-track > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 8px;
+                  background: linear-gradient(90deg, #86b8da, #4a90c4); }
+  .rv-track > i.ok { background: linear-gradient(90deg, #6fc2a4, #0f9d78); }
+  /* 阈值/零轴竖线：60%（指标胜率门槛）或 50%（抛硬币基线），由使用方语义决定。 */
+  .rv-track > u { position: absolute; top: 0; bottom: 0; left: 60%; width: 1px; background: #a8541a; opacity: .6; }
+  .rv-bar.g4 .rv-track > u { left: 50%; }
+  .rv-v { text-align: right; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .rv-v em { font-style: normal; color: var(--up); }
+  .rv-x { text-align: right; font-variant-numeric: tabular-nums; font-size: var(--fs-sm); color: var(--ink2); }
+  .rv-vd { text-align: right; font-size: var(--fs-xs); color: var(--ink2); }
+  .rv-vd.bad { color: #a8541a; font-weight: 700; }
+  .rv-bar.rv-na .rv-track { background: repeating-linear-gradient(135deg,#f3f6f9,#f3f6f9 4px,#e9eef3 4px,#e9eef3 8px); }
+  .rv-bar.rv-na .rv-v { color: var(--ink2); }
+  .rv-legend { font-size: var(--fs-xs); color: var(--ink2); line-height: 1.65; padding: 6px 2px 0; }
+  /* 长注收纳：默认收起，summary 就是那句「点开看口径」。details 自带的三角在各端渲染不一，统一换成 ▸/▾。 */
+  .rv-det { margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 8px; }
+  .rv-det > summary { cursor: pointer; font-size: var(--fs-sm); font-weight: 700; color: var(--accent-deep); list-style: none; }
+  .rv-det > summary::-webkit-details-marker { display: none; }
+  .rv-det > summary::before { content: '▸ '; }
+  .rv-det[open] > summary::before { content: '▾ '; }
+  .rv-det > summary span { font-weight: 400; color: var(--ink2); }
+  /* 条件胶囊：把一段连排的规则文字拆成 4 个可扫的阈值 —— 规则长什么样，一眼就看完。 */
+  .rv-chip { display: inline-block; font-size: var(--fs-sm); color: var(--ink); background: var(--paper);
+             border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; line-height: 1.6; white-space: nowrap; }
+  .rv-chip.dim { color: var(--ink2); background: transparent; }
+  .ll-rule { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+  .ll-rule-note { flex: 1 1 100%; font-size: var(--fs-xs); color: var(--ink2); line-height: 1.6; padding-top: 2px; }
+  /* 回测逐日的零轴迷你条：从中线往两边长，正红负绿（A 股惯例，别反）。 */
+  .ll-rc-track { height: 12px; }
+  .ll-rc-track > .rv-fill { left: 50%; top: 0; bottom: 0; border-radius: 0 6px 6px 0; background: var(--up); }
+  .ll-rc-track > .rv-fill.dn { left: auto; right: 50%; border-radius: 6px 0 0 6px; background: var(--down); }
+  .ll-rc-r { grid-template-columns: 44px 104px 56px minmax(0,1fr); align-items: center; }
+  /* R100z202：名字从「省略号截断」改成「换行」——本来这一列就是为了让你看见是哪几只，
+     现在它们还是可点的（点开 K 线），截断等于把一半标的藏起来。 */
+  .ll-rc-r .ll-rc-n { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.75; }
+  .rv-bar.rv-hd { border-bottom: 1px solid var(--line); padding: 0 2px 4px; }
+  .rv-bar.rv-hd .rv-nm, .rv-bar.rv-hd .rv-v { font-weight: 400; font-size: var(--fs-xs); color: var(--ink2); }
+  .ll-det { margin: 8px 12px 4px; padding-bottom: 2px; }
+  /* 可点的股票名（回测记录 / 候选行）——与龙虎榜 .lhb-go 同一套视觉语言：虚线下划线 + 悬停变色。 */
+  .stk-go { cursor: pointer; font-weight: 700; border-bottom: 1px dashed var(--line); }
+  .stk-go:hover { color: var(--accent-deep); border-bottom-color: var(--accent-deep); }
+  @media (max-width: 720px) {
+    .rv-hero b { font-size: var(--fs-h2); }
+    .rv-bar, .rv-bar.g4 { grid-template-columns: minmax(0,1.25fr) minmax(0,1fr) 44px 44px; gap: 6px; }
+    .rv-bar .rv-x { display: none; }
+    /* 窄屏先把「历史台账」这个后缀让出来：它只说明数据从哪来，不值得挤掉指标名。 */
+    .rv-bar .rv-nm s { display: none; }
+    .ll-rc-r { grid-template-columns: 40px minmax(0,1fr) 52px; gap: 5px 8px; }
+    .ll-rc-r .ll-rc-n { grid-column: 1 / -1; }
+  }
 </style>
 </head>
 <body>
@@ -1700,6 +1774,35 @@ function stkLhbBadge(code) {
     '｜净额是席位合计买卖差，不是明天涨跌的方向依据';
   return '<span class="pool-badge ' + (up ? 'lhb-up' : 'lhb-down') + '" title="' + escAttr(tip) + '">龙虎榜 ' +
     (up ? '净买 +' : '净卖 ') + v.toFixed(2) + '亿</span>';
+}
+/* R100z202（用户 2026-10-25：「龙虎榜统一一下，要么在技术指标上面要么在技术指标下面，
+   不要一会在谐波指标下面，到下一个标的又是在九门指标上面」）：
+   根因不在龙虎榜自己，在 `openStkModal(code, name, note)` 的 note —— 从龙虎榜列表点进来的行，
+   我把榜单标题「龙虎榜 · 净买 +X亿 · 原因」当 note 传了进去，而 note 永远印在 meta 的第一行：
+   有谐波的标的，谐波参数在 head（note 之后）→ 看起来「在谐波下面」；
+   只有九门/吸筹的标的，那两行在 meta（note 之后）→ 看起来「在九门上面」。
+   同一个字段，位置随标的技术面构成而变 —— 这正是用户截图里「一会在上一会在下」的机制。
+   修法：龙虎榜明细改成 `techMetaLines()` 的**最后一行**，与九门/吸筹同一根 DOM 顺序，
+   任何标的都排在技术指标下面；note 只留「交易预案 3/8」这类清单定位，不再夹龙虎榜文案。 */
+function stkLhbLine(code) {
+  var h = stkLhbOf(code);
+  if (!h) return '';
+  var v = Number(h.it.netAmt);
+  if (!isFinite(v)) return '';
+  var up = v > 0;
+  var rs = (h.it.reasons && h.it.reasons.length) ? h.it.reasons.join('/') : (h.it.reason || '触发披露阈值');
+  // 净额已经由徽章行（「龙虎榜 净买 +4.51亿」，红买绿卖）表达，这一行只补徽章装不下的两件事：
+  // **为什么上榜**（三日累计20% / 涨幅偏离7%…）和**谁在买**（席位首位）。同一句话写两遍比不写更吵。
+  var seat = '';
+  if (h.it.seatTop && h.it.seatTop.length) {
+    var s0 = h.it.seatTop[0];
+    var sv = Number(s0.v);
+    seat = (up ? '买方首位 ' : '卖方首位 ') + (s0.s || s0.n) + (isFinite(sv) ? ' ' + (sv > 0 ? '+' : '') + sv.toFixed(2) + '亿' : '');
+  }
+  var tip = '龙虎榜 ' + (h.date || '') + '｜' + (up ? '净买 +' : '净卖 ') + v.toFixed(2) + '亿｜' + rs +
+    '｜净额是席位合计买卖差，不是明天涨跌的方向依据';
+  return '<div title="' + escAttr(tip) + '"><span class="lab">龙虎榜：</span>' +
+    esc(rs) + (seat ? ' · ' + esc(seat) : '') + '</div>';
 }
 
 function renderTops(s, isUp) {
@@ -3291,6 +3394,12 @@ function renderTradeDesk() {
    而复盘写完时已经收盘）；真正回答「照它买赚不赚」的是 T+1 开盘买、当日收盘卖。
    所以这张表现在先给可执行口径，再给旧口径，并且把 60% 这条线画出来。 */
 function renderSignalPerf() {
+  /* R100z202（用户 2026-10-25：「复盘台账页面…看着有点太乱了，文字有点太多了，
+     可以做成饼状图或者树状图之类的」）：
+     这张卡原来是一张 8 列表格 + 四段长注。要回答的问题其实只有一个——「哪个指标过 60%」，
+     而表格逼着读者横向扫 8 列数字自己比。现在改成「一句结论 + 胜率条（含 60% 及格线）+ 判定胶囊」，
+     长注全部收进 <details>：口径一个字没改，只是从「默认展开」变成「点开才看」。
+     条形是纯 CSS（.rv-track），不用 echarts——这张卡在手机首屏，等图表库加载会先空一块。 */
   var D = window.DASHBOARD_DATA || {};
   var P = D.signalPerf;
   if (!P || !P.ranking || !P.ranking.length) return '';
@@ -3300,70 +3409,51 @@ function renderSignalPerf() {
   var rt = function (v) { var n = num(v); return n === null ? '—' : (n * 100).toFixed(1) + '%'; };
   var sgn = function (v) { var n = num(v); return n === null ? 'flat' : (n > 0 ? 'up' : (n < 0 ? 'down' : 'flat')); };
   var WIN_BAR = 0.60;
+  // 判定列只留「未定 / 无效 / 积累中」这几个词头，括号里的样本说明进 title——
+  // 原句「未定（6 日，样本还少）」占掉整整一列，只为说「还早」。
+  var vdShort = function (v) { v = String(v || '').trim(); var k = v.indexOf('（'); return k > 0 ? v.slice(0, k) : (v || '—'); };
+
+  var withX = P.ranking.filter(function (r) { return num(r.win1) !== null; });
+  var passed = withX.filter(function (r) { return num(r.win1) >= WIN_BAR; });
+  var best = withX.slice().sort(function (a, b) { return num(b.win1) - num(a.win1); })[0];
 
   var h = '<div class="card"><h2 class="td-h2">指标表现 · 谁准谁不准' +
     (P.asOf ? ' <span class="h2-date">' + esc(P.asOf) + '</span>' : '') +
     '<span class="src-tag td-tag">按来源归因</span></h2>';
 
-  // 先回答那个问题：有几个指标 1 日胜率过 60%。
-  var withX = P.ranking.filter(function (r) { return num(r.win1) !== null; });
-  var passed = withX.filter(function (r) { return num(r.win1) >= WIN_BAR; });
-  var sortedW = withX.slice().sort(function (a, b) { return num(b.win1) - num(a.win1); });
-  var best = sortedW[0];
-  if (withX.length) {
-    var rest = sortedW.slice(1);
-    var lo = rest.length ? num(rest[rest.length - 1].win1) : null;
-    h += '<div class="pf-tip">' +
-      (passed.length
-        ? '<b>' + passed.length + '/' + withX.length + ' 个指标 1 日胜率过 60%</b>：' +
-          passed.map(function (r) { return esc(r.label) + ' ' + rt(r.win1); }).join('、') + '。'
-        : '<b>没有一个指标 1 日胜率到 60%</b>——最高的 ' + esc(best.label) + ' 只有 ' + rt(best.win1) +
-          (rest.length ? '，其余 ' + rt(lo) + ' ~ ' + rt(rest[0].win1) : '') + '。') +
-      '「1 日胜率」= T+1 开盘买入、当日收盘卖出，只看方向对没对，未扣交易成本；' +
-      '这是唯一买得到的价格（登记日收盘价在复盘写完时已经不存在）。' +
-      '四个池的共同问题是<b>都在买「已经涨过的票」</b>，而回测里追强的次日超额是负的；' +
-      '正期望在对面：同一板块里落后 2pp 以上的那只（见本页下方「🎯 强板块落后股」，1 日胜率 66%）。</div>';
-  }
+  // 一句话结论：从原来那段 pf-tip 里取出唯一需要「读」的那半句，其余下沉到 details。
+  h += '<div class="rv-hero"><b>' + passed.length + ' / ' + withX.length + '</b>' +
+    '<span>个指标 1 日胜率过 <em>60%</em>' +
+    (withX.length && !passed.length ? '，最高 ' + esc(best.label) + ' ' + rt(best.win1) : '') + '</span>' +
+    '<i>条＝1 日胜率　竖线＝60% 及格线　右侧＝5 日超额（相对全市场等权）</i></div>';
 
-  h += '<div class="pf-row pf-head">' +
-    '<div>指标</div>' +
-    '<div class="pf-c pf-hide">样本</div>' +
-    '<div class="pf-c">1日胜率</div>' +
-    '<div class="pf-c pf-hide">1日均值</div>' +
-    '<div class="pf-c pf-hide">日聚类t</div>' +
-    '<div class="pf-c">5日超额</div>' +
-    '<div class="pf-c pf-hide">止损触及</div>' +
-    '<div class="pf-vd">判定</div></div>';
-
+  h += '<div class="rv-bars">';
+  // 表头：右侧三列没有表头就得靠 hero 那行图例去猜，加一行 11px 的标题最省事。
+  h += '<div class="rv-bar rv-hd"><div class="rv-nm">指标</div><div></div>' +
+    '<div class="rv-v">1日胜率</div><div class="rv-x">5日超额</div><div class="rv-vd">判定</div></div>';
   P.ranking.forEach(function (r) {
-    var bad = /无效|负期望/.test(r.verdict || '');
     var w1 = num(r.win1);
-    var wcls = w1 === null ? 'flat' : (w1 >= WIN_BAR ? 'up' : '');
-    h += '<div class="pf-row">' +
-      '<div class="pf-nm">' + esc(r.label) + (r.legacy ? '<s>历史台账</s>' : '') + '</div>' +
-      '<div class="pf-c pf-hide">' + (r.n || 0) + '条/' + (r.days || 0) + '日</div>' +
-      '<div class="pf-c ' + wcls + '">' + rt(w1) + (w1 !== null && w1 >= WIN_BAR ? ' ✓' : '') + '</div>' +
-      '<div class="pf-c pf-hide ' + sgn(r.ret1) + '">' + pc(r.ret1) + '</div>' +
-      '<div class="pf-c pf-hide">' + (num(r.t1) === null ? '—' : num(r.t1).toFixed(2)) + '</div>' +
-      '<div class="pf-c ' + sgn(r.exc5) + '">' + pc(r.exc5) + '</div>' +
-      '<div class="pf-c pf-hide">' + rt(r.touchRate) + '</div>' +
-      '<div class="pf-vd' + (bad ? ' bad' : '') + '">' + esc(r.verdict || '—') + '</div></div>';
+    var w = w1 === null ? null : Math.max(0, Math.min(100, w1 * 100));
+    var ok = w1 !== null && w1 >= WIN_BAR;
+    var bad = /无效|负期望/.test(r.verdict || '');
+    var tip = r.label + '｜样本 ' + (r.n || 0) + ' 条 / ' + (r.days || 0) + ' 日' +
+      '｜1 日均值 ' + pc(r.ret1) +
+      '｜日聚类 t ' + (num(r.t1) === null ? '—' : num(r.t1).toFixed(2)) +
+      '｜止损触及 ' + rt(r.touchRate) +
+      '｜判定 ' + (r.verdict || '—');
+    h += '<div class="rv-bar' + (w === null ? ' rv-na' : '') + '" title="' + escAttr(tip) + '">' +
+      '<div class="rv-nm">' + esc(r.label) + (r.legacy ? '<s>历史台账</s>' : '') +
+        '<small>' + (r.n || 0) + ' 条 / ' + (r.days || 0) + ' 日</small></div>' +
+      '<div class="rv-track"><i class="rv-fill' + (ok ? ' ok' : '') + '" style="width:' +
+        (w === null ? 0 : w).toFixed(1) + '%"></i><u class="rv-mark"></u></div>' +
+      '<div class="rv-v">' + rt(w1) + (ok ? '<em>✓</em>' : '') + '</div>' +
+      '<div class="rv-x ' + sgn(r.exc5) + '">' + pc(r.exc5) + '</div>' +
+      '<div class="rv-vd' + (bad ? ' bad' : '') + '">' + esc(vdShort(r.verdict)) + '</div></div>';
   });
-  h += '<div class="pf-sub">「日聚类t」是判定用的那一个：同一天选出 40 只票不是 40 个独立样本，' +
-    '它们共享同一个大盘，按「日」压成 1 个收益再求 t 才不虚高。逐票 t 值只作参考，' +
-    '旧版曾用它得出「t=−2.4、应停用」，而按日聚类其实是 −1.0、不显著——这正是拿噪声当证据。' +
-    '样本不足 10 个交易日时，判定只写「疑似」，不写「应停用」。</div>';
-
-  // 普跌环境里「收益负、超额正」是有效而不是无效——不解释清楚，读者会把它当成失败。
-  var mixed = P.ranking.filter(function (r) {
-    var a = num(r.ret5), b = num(r.exc5);
-    return a !== null && b !== null && a < 0 && b > 0;
-  });
-  if (mixed.length) {
-    h += '<div class="pf-tip">注：' + mixed.length + ' 个指标的 5 日收益为负、超额为正——' +
-      '它们选的票这 5 天里也跌了，但跌得比全市场少。普跌环境里这叫相对强弱，不叫无效。' +
-      '但「判定」那一列<b>不看这一列</b>：它看的是可执行口径（T+1 开盘买、当日收盘卖）的' +
-      '1 日胜率与日聚类 t——因为 5 日收益用的是「登记日收盘价」，那个价格复盘写完时已经不存在了。</div>';
+  h += '</div>';
+  if (withX.length && !passed.length) {
+    h += '<div class="rv-legend">没有一条过线——这条结论本身是信息：四个池都在买「已经涨过的票」，' +
+      '而回测里追强的次日超额是负的；正期望在对面（同板块落后 2pp 以上的那只，见下方 🎯 卡）。</div>';
   }
 
   // 建议权重：超额为正才给权重，跑输基准的归零——不做「平均主义」配置
@@ -3377,7 +3467,27 @@ function renderSignalPerf() {
       lbl += '<span>' + esc(lab) + ' <b>' + (ws[k] * 100).toFixed(0) + '%</b></span>';
     });
     h += '<div class="pf-wbar"><div class="pf-w">' + bar + '</div><div class="pf-wl">' + lbl + '</div></div>';
-    if (P.weightNote) h += '<div class="pf-sub">权重依据：' + esc(P.weightNote) + '</div>';
+    if (P.weightNote) h += '<div class="rv-legend">权重依据：' + esc(P.weightNote) + '</div>';
+  }
+
+  // ---- 以下全部下沉到折叠区：需要核对口径时才展开，不再抢占首屏 ----
+  h += '<details class="rv-det"><summary>口径与证据 <span>· 日聚类 t / 换止损口径前后 / 旧止损实测 / 数据来源</span></summary>';
+
+  h += '<div class="pf-sub">「日聚类t」是判定用的那一个：同一天选出 40 只票不是 40 个独立样本，' +
+    '它们共享同一个大盘，按「日」压成 1 个收益再求 t 才不虚高。逐票 t 值只作参考，' +
+    '旧版曾用它得出「t=−2.4、应停用」，而按日聚类其实是 −1.0、不显著——这正是拿噪声当证据。' +
+    '样本不足 10 个交易日时，判定只写「疑似」，不写「应停用」。</div>';
+
+  // 普跌环境里「收益负、超额正」是有效而不是无效——不解释清楚，读者会把它当成失败。
+  var mixed = P.ranking.filter(function (r) {
+    var a = num(r.ret5), b = num(r.exc5);
+    return a !== null && b !== null && a < 0 && b > 0;
+  });
+  if (mixed.length) {
+    h += '<div class="pf-sub">注：' + mixed.length + ' 个指标的 5 日收益为负、超额为正——' +
+      '它们选的票这 5 天里也跌了，但跌得比全市场少。普跌环境里这叫相对强弱，不叫无效。' +
+      '但「判定」那一列<b>不看这一列</b>：它看的是可执行口径（T+1 开盘买、当日收盘卖）的' +
+      '1 日胜率与日聚类 t——因为 5 日收益用的是「登记日收盘价」，那个价格复盘写完时已经不存在了。</div>';
   }
 
   // 换止损口径前后：同一批入场点、同一持有窗口，只有止损规则不同。
@@ -3425,6 +3535,7 @@ function renderSignalPerf() {
   }
 
   if (P.dataSourceNote) h += '<div class="pf-sub">数据来源：' + esc(P.dataSourceNote) + '</div>';
+  h += '</details>';
   return h + '</div>';
 }
 
@@ -3437,6 +3548,10 @@ function renderSignalPerf() {
    否则这段文字会永远停在我写它那天的判断，哪怕数据已经反转。
    与「指标表现」的分工：那张量「选出来的票赚不赚」，这张量「方向判断准不准」。 */
 function renderForecastScore() {
+  /* R100z202：同样图表化——三张「样本 / 严格命中 / 宽口径」表并成一组条形，
+     回答「高置信是不是反而更差」「看涨和看跌谁更可信」这两个问题只要看条高矮。
+     判定与口径两段长文字进 <details>，正文只留「怎么用」那三条可执行结论。
+     条形还在 50% 处画了一条虚线＝抛硬币基线：命中率低于它的分组，条子会明显短于线。 */
   var D = window.DASHBOARD_DATA || {};
   var F = D.forecastScore;
   if (!F || !F.sector || !F.sector.n) return '';
@@ -3463,63 +3578,57 @@ function renderForecastScore() {
          tone(fw.scoreAvg, 0.5), '合格线 0.50 · 过线 ' + (fw.passDays || 0) + '/' + (fw.days || 0) + ' 天') +
     '</div>';
 
-  var head = function (c1) {
-    return '<div class="fc-row head"><div>' + c1 + '</div><div>样本</div>' +
-      '<div>严格命中</div><div>宽口径</div></div>';
-  };
-  var row = function (dim, r, flag) {
-    // n<5 的组直接标 *：n=1 算出的 100% 不是能力，是巧合。
-    // 不标出来，读者会把「中性 1 条 100%」和「看跌 16 条 62.5%」当成同等可信。
-    var mark = r.small ? '<span class="fc-small" title="样本少于 5 条，百分比仅供参考">*</span>' : '';
-    return '<div class="fc-row"><div class="fc-dim">' + esc(dim) +
-      (flag ? '<span class="fc-flag">' + flag + '</span>' : '') + '</div>' +
-      '<div>' + (r.n || 0) + '</div>' +
-      '<div><b>' + p1(r.strictHit) + mark + '</b></div>' +
-      '<div>' + p1(r.wideHit) + '</div></div>';
+  // 一条 bar：左边维度名（+样本数），中间命中率条，右边宽口径。flag 是「这组数据本身有问题」的标记，
+  // 例如「高置信反而比中置信低 10 个百分点」——那是过度自信的直接证据，必须贴在名字后面。
+  var bar = function (dim, r, flag) {
+    var hit = num(r.strictHit);
+    var w = hit === null ? 0 : Math.max(0, Math.min(100, hit));
+    var mark = r.small ? '<em class="fc-small" title="样本少于 5 条，百分比仅供参考">*</em>' : '';
+    var tip = dim + '｜样本 ' + (r.n || 0) + ' 条｜严格命中 ' + p1(r.strictHit) +
+      '｜宽口径 ' + p1(r.wideHit) + (r.small ? '｜样本不足 5 条' : '');
+    return '<div class="rv-bar g4' + (hit === null ? ' rv-na' : '') + '" title="' + escAttr(tip) + '">' +
+      '<div class="rv-nm">' + esc(dim) +
+        (flag ? '<span class="fc-flag">' + esc(flag) + '</span>' : '') +
+        '<small>' + (r.n || 0) + ' 条</small></div>' +
+      '<div class="rv-track"><i class="rv-fill' + (hit !== null && hit >= 50 ? ' ok' : '') +
+        '" style="width:' + w.toFixed(1) + '%"></i><u class="rv-mark"></u></div>' +
+      '<div class="rv-v">' + p1(hit) + mark + '</div>' +
+      '<div class="rv-x">' + (num(r.wideHit) === null ? '' : '宽 ' + p1(r.wideHit)) + '</div></div>';
   };
 
-  // 置信度：如果「高」反而比「中」低，就地把这件事标出来——
-  // 这是过度自信的直接证据，也是本轮最反直觉的发现。
+  // 置信度：如果「高」反而比「中」低，就地把这件事标出来。
   var hi = null, mid = null;
   byConf.forEach(function (c) { if (c.conf === '高') hi = c; if (c.conf === '中') mid = c; });
   var confBad = (hi && mid && (mid.strictHit || 0) - (hi.strictHit || 0) >= 10);
-  h += '<div class="fc-sec">按置信度（AI 自己标的把握程度）</div>' + head('置信度');
-  byConf.forEach(function (c) {
-    h += row(c.conf + '置信', c, (confBad && c.conf === '高') ? '反向指标' : '');
-  });
+  h += '<div class="fc-sec">按置信度（AI 自己标的把握程度）</div>';
+  byConf.forEach(function (c) { h += bar(c.conf + '置信', c, (confBad && c.conf === '高') ? '反向指标' : ''); });
 
   // 方向：看涨 vs 看跌的能力差，决定「哪些结论能当买入理由」
   var up = null, dn = null;
   byDir.forEach(function (c) { if (c.dir === 'up') up = c; if (c.dir === 'down') dn = c; });
   var dirBad = (up && dn && (dn.strictHit || 0) - (up.strictHit || 0) >= 15);
-  h += '<div class="fc-sec">按方向（这套判断擅长哪边）</div>' + head('方向');
-  byDir.forEach(function (c) {
-    h += row(c.label || c.dir, c, (dirBad && c.dir === 'up') ? '明显偏弱' : '');
-  });
+  h += '<div class="fc-sec">按方向（这套判断擅长哪边）</div>';
+  byDir.forEach(function (c) { h += bar(c.label || c.dir, c, (dirBad && c.dir === 'up') ? '明显偏弱' : ''); });
 
   var r5 = s.recent5 || {};
   if (r5.n) {
     h += '<div class="fc-sec">近 ' + (F.criteria || {}).recentDays + ' 日' +
       (r5.range && r5.range.length === 2 ? '（' + esc(r5.range[0]) + ' ~ ' + esc(r5.range[1]) + '）' : '') + '</div>' +
-      head('区间') + row('近 ' + (F.criteria || {}).recentDays + ' 日', r5, '');
+      bar('近 ' + (F.criteria || {}).recentDays + ' 日', r5, '');
+  }
+  if (byConf.length || byDir.length) {
+    h += '<div class="rv-legend">竖线＝50%（抛硬币）；条子短于它＝这组判断不如随机。带 * 的样本 &lt; 5 条，百分比只是巧合。</div>';
   }
 
   // 开盘前瞻：三个分项的可信度差得很远——区间比方向判词可靠得多。
-  // 第四列只放最短的数字（「全6·半5」这种），长词组在 390px 宽的列里会被拆成
-  // 「全对 6 · 半 / 对 5」，读起来像坏掉；口径统一放到表格下面的注里说。
   if (fw.days) {
-    h += '<div class="fc-sec">开盘前瞻三项拆分（权重 倾向0.5 / 点位0.3 / 量能0.2）</div>' +
-      '<div class="fc-row head"><div>分项</div><div>样本</div><div>命中</div><div>次数</div></div>';
-    h += '<div class="fc-row"><div class="fc-dim">方向判词</div><div>' + (fw.tendencyN || 0) + '</div>' +
-      '<div><b>' + p1(fw.tendencyRate) + '</b></div>' +
-      '<div>' + (fw.tendencyHit || 0) + ' 次</div></div>';
-    h += '<div class="fc-row"><div class="fc-dim">点位区间</div><div>' + (fw.bandN || 0) + '</div>' +
-      '<div><b>' + p1(fw.bandAnyRate) + '</b></div>' +
-      '<div>全' + (fw.bandFull || 0) + '半' + (fw.bandHalf || 0) + '</div></div>';
-    h += '<div class="fc-row"><div class="fc-dim">量能</div><div>' + (fw.volN || 0) + '</div>' +
-      '<div><b>' + p1(fw.volRate) + '</b></div>' +
-      '<div>' + (fw.volHit || 0) + ' 次</div></div>';
-    h += '<div class="fc-note">点位按「至少半对」计：落在区间内但偏离 &gt;1% 记半对，「全6半5」＝全对 6 天 + 半对 5 天。</div>';
+    h += '<div class="fc-sec">开盘前瞻三项拆分（权重 倾向0.5 / 点位0.3 / 量能0.2）</div>';
+    h += bar('方向判词（0.5）', { n: fw.tendencyN, strictHit: fw.tendencyRate, wideHit: null }, '');
+    h += bar('点位区间（0.3）', { n: fw.bandN, strictHit: fw.bandAnyRate, wideHit: null }, '');
+    h += bar('量能（0.2）', { n: fw.volN, strictHit: fw.volRate, wideHit: null }, '');
+    h += '<div class="fc-note">点位按「至少半对」计：落在区间内但偏离 &gt;1% 记半对，' +
+      '「全' + (fw.bandFull || 0) + '半' + (fw.bandHalf || 0) + '」＝全对 ' + (fw.bandFull || 0) +
+      ' 天 + 半对 ' + (fw.bandHalf || 0) + ' 天。</div>';
   }
 
   if (F.enough && F.usage && F.usage.length) {
@@ -3546,7 +3655,8 @@ function renderForecastScore() {
       }).join('') + '</div>';
   }
 
-  // 最后一定要说清「这张卡不是给预测打分好看用的」，否则读者会把「无效」当成一句评价。
+  // 「这张卡不是给预测打分好看用的」必须说清，否则读者会把「无效」当成一句评价——收进折叠区。
+  h += '<details class="rv-det"><summary>判定与口径 <span>· 结论怎么算出来的、样本门槛</span></summary>';
   h += '<div class="pf-sub">判定：' + esc(F.verdict || '') +
     '　结论文字由脚本按阈值自动生成——' +
     '命中率变好它会自己变温和，变差会自己变严厉，不接受人工润色。</div>';
@@ -3555,6 +3665,7 @@ function renderForecastScore() {
     '。样本门槛 ' + ((F.criteria || {}).minN || 30) + ' 条且 ' + ((F.criteria || {}).minDays || 5) +
     ' 个交易日，不足则不给结论；带 <b>*</b> 的分组样本少于 ' + ((F.criteria || {}).minGroupN || 5) +
     ' 条，百分比只是巧合、不代表能力。与「指标表现」的分工：那张量选出来的票赚不赚，这张量方向判得准不准。</div>';
+  h += '</details>';
   return h + '</div>';
 }
 
@@ -4443,6 +4554,8 @@ function techMetaLines(code) {
   var out = '';
   if (pwTop && pwTop.reasons) out += '<div><span class="lab">日线九门：</span>通过 ' + esc(String(pwTop.reasons).split(';').filter(Boolean).join(' · ')) + '</div>';
   if (accTop && accTop.note) out += '<div><span class="lab">主力吸筹：</span>' + esc(accTop.note) + '</div>';
+  // R100z202：龙虎榜固定排在技术指标**之后**（见 stkLhbLine 注释：位置必须与标的技术面构成无关）
+  out += stkLhbLine(code);
   return out;
 }
 
@@ -4720,12 +4833,10 @@ function renderLhb(l) {
   // R100z200：净买榜 + 净卖榜拼成一个导航组（榜单顺序 = 阅读顺序），弹窗箭头在此组内循环。
   // 只放进了已披露的 top/sell，不补「榜单之外的票」——箭头翻不到没上榜的标的才符合直觉。
   window._LHB_GRP = [].concat(l.top || [], l.sell || []).map(function (x) {
-    var v = Number(x.netAmt || 0);
-    return {
-      c: String(x.code || ''), n: x.name || '',
-      t: '龙虎榜 · ' + (v > 0 ? '净买 +' : '净卖 ') + v.toFixed(2) + '亿 · ' +
-         ((x.reasons && x.reasons.length) ? x.reasons.join('/') : (x.reason || ''))
-    };
+    // R100z202：t 不再夹「龙虎榜 · 净买 +X亿」——那句话是弹窗 meta 的第一行 note，
+    // 会把龙虎榜挤到技术指标**上面**（与固定排在下面的 stkLhbLine 打架）。榜单信息已由
+    // 徽章行（龙虎榜 净买/净卖）与 techMetaLines 末行承担，这里只保留「从哪个榜单点进来的」。
+    return { c: String(x.code || ''), n: x.name || '', t: '' };
   });
   var s = '<div class="lhb"><div class="lhb-hd"><b>龙虎榜 · 席位结构</b>' +
     '<span class="lhb-d">' + esc(l.date || '') + '</span>' +
@@ -5700,6 +5811,11 @@ function closeGnews() {
 function renderLeadLag() {
   // 为什么不删掉这块：它是「次日买什么」这条问题在数据上唯一站得住的答案——四个池都在追强，
   // 回测里追强是负期望；同板块里落后 2pp 以上的那只才是正期望的那一边。
+  /* R100z202（用户 2026-10-25）：两处改版——
+     ① 「规则」原本是一段 90 字连排，现在拆成 4 个条件胶囊（条件本身就是规则，扫一眼就懂）；
+     ② 「最近 6 次出手」加零轴迷你条 + **股票名可点开标的页**（用户：「这一部分标的也增加标的页面」）。
+        名字在回测记录里只有名称没有代码（`bt.recent[].names`），所以点击走 openStkModal 的
+        名称反查路径，分组按「同一批出手」建——←/→ 只在这一天的票里翻，不串到别的日期。 */
   var D = window.DASHBOARD_DATA || {};
   var db = D.duanban || {};
   var LL = db.leadLag;
@@ -5720,20 +5836,31 @@ function renderLeadLag() {
       (isReplay ? '<span class="ll-mode warn">回放校验</span>' : '<span class="ll-mode">9:45 实时</span>') +
       '</div>';
 
-    out += '<div class="ll-rule">规则：<em>板块开盘跳空 &gt; +' + (rule.secGapMin != null ? rule.secGapMin.toFixed(1) : '1.0') + '%</em>' +
-      '（成分股开盘价均值，剔掉单只 |跳空|&gt;12% 的退市整理股） · ' +
-      '<em>该股落后板块 &gt; ' + (rule.lagMin != null ? rule.lagMin.toFixed(1) : '2.0') + 'pp</em> · ' +
-      '<em>昨日还在涨</em>（不买破位股） · <em>现价不高于开盘 +' +
-      (rule.liveVsOpen ? rule.liveVsOpen[1].toFixed(1) : '0.4') + '%</em>（追高即失效） · ' +
-      '扫描 ' + (sc.sectors || 0) + ' 个板块 / ' + (sc.universe || 0) + ' 只主板 → 强板块 ' + (sc.strongSectors || 0) + ' 个</div>';
+    // 规则四条件：每条一个胶囊，值全是数据里的阈值（不许写死）；完整句子在 title 里留着。
+    var c1 = '板块开盘跳空 &gt; +' + (rule.secGapMin != null ? rule.secGapMin.toFixed(1) : '1.0') + '%';
+    var c2 = '落后板块 &gt; ' + (rule.lagMin != null ? rule.lagMin.toFixed(1) : '2.0') + 'pp';
+    var c3 = '昨日还在涨';
+    var c4 = '现价 ≤ 开盘 +' + (rule.liveVsOpen ? rule.liveVsOpen[1].toFixed(1) : '0.4') + '%';
+    out += '<div class="ll-rule"><span class="rv-chip">' + c1 + '</span>' +
+      '<span class="rv-chip">' + c2 + '</span><span class="rv-chip">' + c3 + '</span>' +
+      '<span class="rv-chip">' + c4 + '</span>' +
+      '<span class="rv-chip dim">扫描 ' + (sc.sectors || 0) + ' 板块 / ' + (sc.universe || 0) +
+        ' 只主板 → 强板块 ' + (sc.strongSectors || 0) + '</span>' +
+      '<div class="ll-rule-note">跳空＝成分股开盘价均值，剔掉单只 |跳空|&gt;12% 的退市整理股；' +
+      '「昨日还在涨」＝不买破位股；「现价不高于开盘」＝追高即失效。</div></div>';
 
     if ((LL.picks || []).length) {
+      // 候选行也建导航组：同一天的候选就是一份清单，箭头在这几只里翻。
+      window._LL_PICK_GRP = (LL.picks || []).map(function (p) {
+        return { c: String(p.code || ''), n: p.name || '', t: '强板块落后股 · ' + (p.sector || '') };
+      });
       out += '<div class="ll-row ll-head"><div>标的</div>' +
         '<div class="ll-c">落后板块</div><div class="ll-c">板块跳空</div>' +
         '<div class="ll-c ll-hide">本股跳空</div><div class="ll-c ll-hide">昨日</div></div>';
-      LL.picks.forEach(function (p) {
+      (LL.picks || []).forEach(function (p, pi) {
         out += '<div class="ll-row">' +
-          '<div class="ll-nm">' + esc(p.name || p.code) + '<s>' + esc(String(p.code || '')) + '　' + esc(p.sector || '') + '</s></div>' +
+          '<div class="ll-nm"><b class="stk-go" title="点击查看 K 线" onclick="stkOpenIn(window._LL_PICK_GRP,' + pi + ')">' +
+            esc(p.name || p.code) + '</b><s>' + esc(String(p.code || '')) + '　' + esc(p.sector || '') + '</s></div>' +
           '<div class="ll-lag">' + (p.lag != null ? p.lag.toFixed(1) + 'pp' : '—') + '</div>' +
           '<div class="ll-c ' + _ls(p.secGap) + '">' + _lp(p.secGap) + '</div>' +
           '<div class="ll-c ll-hide ' + _ls(p.openGap) + '">' + _lp(p.openGap) + '</div>' +
@@ -5757,22 +5884,44 @@ function renderLeadLag() {
         '<div class="ll-bt-v">' + (bt.signalDays || 0) + '<small>/ ' + (bt.days || 0) + ' 日</small></div></div>' +
         '</div>';
 
-      var mo = (bt.byMonth || []).map(function (m) {
-        return esc(String(m.month || '').slice(5)) + ' ' + _lp(m.ret) + '/胜' + _lr(m.win);
-      }).join('　·　');
       var rc = bt.recent || [];
       if (rc.length) {
+        // 零轴迷你条：以最差那天为满格，正红负绿（A 股惯例），一眼看出「哪几天亏、亏多大」。
+        var maxAbs = 0;
+        rc.forEach(function (x) { var a = Math.abs(_ln(x.ret) || 0); if (a > maxAbs) maxAbs = a; });
+        if (maxAbs <= 0) maxAbs = 1;
+        window._LL_GRP = rc.map(function (x) {
+          return (x.names || []).map(function (nm) {
+            return { c: '', n: String(nm), t: '回测出手 ' + String(x.date || '') + ' · 当日开盘买、当日收盘卖' };
+          });
+        });
         out += '<div class="ll-rc"><div class="ll-rc-h">最近 ' + rc.length +
           ' 次出手 · 当日开盘买、当日收盘卖（含亏的那几天）</div>';
         rc.slice().reverse().forEach(function (x) {
-          out += '<div class="ll-rc-r"><div class="ll-rc-d">' + esc(String(x.date || '').slice(5)) + '</div>' +
-            '<div class="ll-rc-v ' + _ls(x.ret) + '">' + _lp(x.ret) + '</div>' +
+          var idx = rc.indexOf(x);
+          var v = _ln(x.ret), half = Math.min(50, Math.abs(v || 0) / maxAbs * 50);
+          var nmHtml = (x.names || []).map(function (nm, k) {
+            return '<b class="stk-go" title="点击查看 K 线" onclick="stkOpenIn(window._LL_GRP[' + idx + '],' + k + ')">' +
+              esc(String(nm)) + '</b>';
+          }).join('、');
+          out += '<div class="ll-rc-r">' +
+            '<div class="ll-rc-d">' + esc(String(x.date || '').slice(5)) + '</div>' +
+            '<div class="rv-track ll-rc-track"><i class="rv-fill' + (v < 0 ? ' dn' : '') +
+              '" style="width:' + half.toFixed(1) + '%"></i></div>' +
+            '<div class="ll-rc-v ' + _ls(v) + '">' + _lp(v) + '</div>' +
             '<div class="ll-rc-n">' + (x.n || 0) + '只' + (x.up != null ? x.up + '涨' : '') +
-            (x.names && x.names.length ? '　' + esc(x.names.join('、')) : '') + '</div></div>';
+            (nmHtml ? '　' + nmHtml : '') + '</div></div>';
         });
         out += '</div>';
       }
-      out += '<div class="ll-foot">' +
+
+      // 回测口径与逐月记录：核数时才需要，收进折叠区（正文只留「+1.19% / 66.3% / 34 个信号日」）。
+      var mo = (bt.byMonth || []).map(function (m) {
+        return esc(String(m.month || '').slice(5)) + ' ' + _lp(m.ret) + '/胜' + _lr(m.win);
+      }).join('　·　');
+      out += '<details class="rv-det ll-det"><summary>回测口径与逐月 <span>· ' +
+        esc(String((bt.window || ['', ''])[0])) + ' ~ ' + esc(String((bt.window || ['', ''])[1])) + '</span></summary>' +
+        '<div class="ll-foot">' +
         '回测口径：' + esc(String((bt.window || ['', ''])[0])) + ' ~ ' + esc(String((bt.window || ['', ''])[1])) +
         '，共 <b>' + (bt.days || 0) + ' 个交易日</b>、样本 <b>' + (bt.samples || 0) + ' 条</b>，' +
         '入场 = 当日开盘价，双边成本 ' + (bt.cost != null ? bt.cost.toFixed(2) : '0.20') + '%。' +
@@ -5784,7 +5933,7 @@ function renderLeadLag() {
         ' 说明<b>方向明确但离「统计显著」还差一点</b>（门槛 2.0）——所以它是加分项，不是可以押注的理由。' +
         (LL.replayNote ? '<br>' + esc(LL.replayNote) : '') +
         (LL.gapNote && (LL.picks || []).length ? '<br>⚠️ ' + esc(LL.gapNote) : '') +
-        '</div>';
+        '</div></details>';
     }
     out += '</div>';
   }
