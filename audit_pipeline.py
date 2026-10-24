@@ -2383,6 +2383,25 @@ def g29_name_and_risk_hygiene(r):
         r.ok("G29", "要闻「非利空段」impacts 无 ST/退市型标的（利空段 bearNews/bearish 不设限）")
 
 
+def _css_color(s, body, prop="background"):
+    """从一段 CSS 声明里取颜色实值，支持 `var(--x)` 回查 `:root`。
+
+    R100z163（2026-10-24）：视觉规范把 6 种近似背景色统一成 var(--bg-2) / var(--accent-soft)
+    之后，原先只认字面 hex 的 G30 立刻误判「缺底色定义」——闸门必须跟着实现走，
+    否则「统一配色」和「配色闸门」天然对撞，下一次谁都不敢动颜色。
+    取不到（var 在 :root 里没定义）仍返回 None，让调用方按缺档 FAIL——放宽的是写法，不是标准。
+    """
+    m = re.search(r"%s:\s*(#[0-9a-fA-F]{3,8}|var\(--[\w-]+\))" % prop, body)
+    if not m:
+        return None
+    v = m.group(1)
+    if v.startswith("var("):
+        name = v[6:-1].strip()
+        mv = re.search(re.escape(name) + r"\s*:\s*(#[0-9a-fA-F]{3,8})", s)
+        return mv.group(1) if mv else None
+    return v
+
+
 def _hex_lum(h):
     """#rgb / #rrggbb → 感知亮度 0~255（0.299R+0.587G+0.114B）。"""
     h = (h or "").lstrip("#")
@@ -2470,11 +2489,11 @@ def g30_display_prefs(r):
     lum, missing = {}, []
     for k in ("red", "orange", "yellow"):
         mk = re.search(r"\.risk-dot\.sev-%s\s*\{([^}]*)\}" % k, s)
-        bgs = re.search(r"background:\s*(#[0-9a-fA-F]{3,8})", mk.group(1)) if mk else None
+        bgs = _css_color(s, mk.group(1)) if mk else None
         if not bgs:
             missing.append(k)
             continue
-        v = _hex_lum(bgs.group(1))
+        v = _hex_lum(bgs)
         if v is None:
             missing.append(k)
         else:
@@ -2523,19 +2542,19 @@ def g30_display_prefs(r):
         for k in ("red", "orange", "yellow"):
             mk = re.search(r"\.risk-tip\.sev-%s\s*\{([^}]*)\}" % k, s)
             body = mk.group(1) if mk else ""
-            bg = re.search(r"background:\s*(#[0-9a-fA-F]{3,8})", body)
-            fg = re.search(r"color:\s*(#[0-9a-fA-F]{3,8})", body)
+            bg = _css_color(s, body)
+            fg = _css_color(s, body, "color")
             if not bg or not fg:
                 t_miss.append(k)
                 continue
-            v = _hex_lum(bg.group(1))
+            v = _hex_lum(bg)
             if v is None:
                 t_miss.append(k)
                 continue
             t_lum[k] = v
-            cr = _wcag_contrast(fg.group(1), bg.group(1))
+            cr = _wcag_contrast(fg, bg)
             if cr is not None and cr < 4.5:
-                t_low.append("%s 档 %s/%s 对比度 %.1f:1" % (k, fg.group(1), bg.group(1), cr))
+                t_low.append("%s 档 %s/%s 对比度 %.1f:1" % (k, fg, bg, cr))
         if t_miss:
             r.fail("G30", "风险提示长条徽章缺档或配色不全：%s —— 三档须 黑底/深灰底/淡灰底 + 黄字"
                           "（用户 2026-10-21 23:04 指定）" % "、".join(t_miss))
@@ -3481,6 +3500,84 @@ def g40_score_page_and_slots(r):
                     "悬浮组四槽位按实测槽距对齐")
 
 
+def g41_visual_norms(r):
+    """G41 视觉规范与悬浮按钮全链路（R100z163，2026-10-24）。
+
+    由来：用户这一轮连着三条都是「看起来不对」，没有一条是逻辑错——
+      ① 「次日交易预案改成交易预案」（标题冗余，锚定日/有效期已在同一行）
+      ② 「📋 怎么不能拖拽？？？你的记忆又有问题了？」（新按钮只接了 place()，漏 bindDrag()）
+      ③ 「以产品经理视角统一全页面视觉规范」（248 处 font-size 有 23 种取值、控件不继承字体）
+    闸门全绿但用户一眼看出不对，说明判据只管了「功能在不在」，没管「一致不一致」。
+    这一条把可感知的一致性也锁住。
+
+    判据：
+      a) 交易预案标题必须是「交易预案」，不许回退成「次日交易预案」；
+      b) renderTradeDesk 必须同时产出「与 AI 预测的关系」行与「账户与目标」块，
+         且账户金额由 ACCT.equity 算出（不许写死「3 万」这种会过期的文案）；
+      c) 悬浮按钮「三件套」齐全：四个入口 + 四个页内返回，且 #sc-entry-in 必须 bindDrag()——
+         这是用户 2026-10-24 亲自撞到的 bug（位置会跟随、自己拖不动）；
+      d) 字体：button/input/select/textarea 显式继承 var(--font)（控件默认不继承 body 字体）；
+      e) 字号档位必须落在白名单内——防「下次再加一个 13px」把 6 档阶梯重新打散。
+    """
+    p = os.path.join(HERE, "index.html")
+    try:
+        s = open(p, encoding="utf-8").read()
+    except Exception as e:                                    # noqa: BLE001
+        r.warn("G41", "index.html 读不到，跳过视觉规范校验：%s" % e)
+        return
+    bad = []
+
+    # ---- a) 标题 ----
+    if "次日交易预案" in s:
+        # 注释里也不许出现：这条标题被用户点名简化过一次，留一句就能被下一次复制回去
+        bad.append("源码里仍有「次日交易预案」字样——用户 2026-10-24 要求标题就叫「交易预案」")
+
+    # ---- b) 交易预案里的两块 ----
+    mt = re.search(r"function renderTradeDesk\(\)\s*\{([\s\S]*?)\n\}", s)
+    if not mt:
+        bad.append("找不到 renderTradeDesk() —— 交易预案卡整块没了")
+    else:
+        tb = mt.group(1)
+        if "td-acct" not in tb:
+            bad.append("交易预案卡缺「账户与目标」块（.td-acct）——本金/风险换算成钱的那一段")
+        elif "ACCT.equity" not in tb:
+            bad.append(".td-acct 未用 ACCT.equity 计算——写死金额会随账户变化立刻过期")
+        if "td-rel" not in tb and "与上方 AI 预测的关系" not in tb:
+            bad.append("交易预案卡缺「与 AI 预测的关系」行——两套标的并排却不解释关系，读者会以为互相打架")
+        if "acctProfile" not in tb:
+            bad.append("账户参数没走 localStorage 的 acctProfile——写死在源码里等于把私人账户提交到公开仓库")
+
+    # ---- c) 悬浮按钮三件套 ----
+    entry = ["gn-entry", "db-entry", "sc-entry"]
+    back = ["db-entry-in", "gn-entry-in", "sc-entry-in"]
+    for i in entry + back:
+        if ('id="%s"' % i) not in s:
+            bad.append("缺悬浮按钮 #%s" % i)
+    if "bindDrag(scei)" not in s:
+        bad.append("复盘页 📋 返回键(#sc-entry-in) 没接 bindDrag()——位置会跟随、自己拖不动"
+                   "（用户 2026-10-24 原话「他怎么不能拖拽」）")
+    if "slotIndex" not in s:
+        bad.append("拖拽坐标没按槽位换算——页内按钮一拖就会跳 60px")
+
+    # ---- d) 字体继承 ----
+    if not re.search(r"button,\s*input,\s*select,\s*textarea[^{]*\{[^}]*font-family:\s*var\(--font\)", s):
+        bad.append("button/input/select/textarea 没显式继承 var(--font)——表单控件默认用浏览器 UA 字体，"
+                   "全站字体就不统一了")
+
+    # ---- e) 字号档位白名单 ----
+    allowed = {"10.5", "11.5", "12.5", "13.5", "15", "16", "20", "32", "36", "42"}
+    used = set(re.findall(r"font-size:\s*([0-9.]+)px", s))
+    extra = sorted(used - allowed, key=float)
+    if extra:
+        bad.append("字号跑出阶梯白名单：%s（应为 %s）——每多一档，并排两张卡就多一分不像同一个产品"
+                   % ("、".join(extra) + "px", "/".join(sorted(allowed, key=float))))
+
+    if bad:
+        r.fail("G41", "；".join(bad[:4]))
+    else:
+        r.ok("G41", "视觉规范与悬浮按钮全链路完整（标题/账户块/AI 关系行/四入口四返回可拖/字体继承/字号 10 档）")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -3536,6 +3633,7 @@ def main():
     g38_flags_respected(r)
     g39_open_desk_page(r)
     g40_score_page_and_slots(r)
+    g41_visual_norms(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
