@@ -348,7 +348,7 @@ def fill_bench_from_history(log):
     """R100z158c：把历史条目的基准按日期从 market_bench.json[history] 补齐（幂等）。
 
     ★背景（2026-10-20 实测 bug）：这段「按日期补齐」原先只写在 `--recalc` 分支里，而
-      08:30 / 17:00 / 周日22:00 三条自动化调的都是**不带 --recalc** 的普通模式 —— 于是
+      08:30 / 19:30 / 周日22:00 三条自动化调的都是**不带 --recalc** 的普通模式 —— 于是
       每跑一次普通模式就把历史条目的 benchSecPct 抹成 null、excessPct 悄悄退回指数口径：
       实测 sectorCmpDays 8→7、权威超额 −2.27%→−2.24%、10-20 那天的行业中位凭空丢失。
       等于 R100z158 刚建立的「同源行业基准」会被第一次自动化运行自己拆掉。
@@ -606,7 +606,7 @@ def main():
     bench_main = (sum(_maint) / len(_maint)) if _maint else None
 
     # R100z158c：历史基准补齐上移为**公共前置** —— 凡会写盘的普通模式都必须先补齐。
-    # 08:30 / 17:00 / 周日22:00 三条自动化调的都是**不带 --recalc** 的普通模式，此前只有
+    # 08:30 / 19:30 / 周日22:00 三条自动化调的都是**不带 --recalc** 的普通模式，此前只有
     # --recalc 分支做补齐 → 普通模式每跑一次就把历史条目的 benchSecPct 抹成 null、
     # 权威超额悄悄退回指数口径（实测 sectorCmpDays 8→7、−2.27%→−2.24%）。
     # --view / --json 保持纯只读，不做任何写盘。
@@ -706,7 +706,7 @@ def main():
                 log['log'][pd['date']] = build_items(
                     pd['date'], pd['verification']['details'], conf_map, _bi,
                     pd.get('stockCheck') or [], _bm, _bsec)
-                # R100z13：开盘前瞻兑现打分一并入账（17:00 叙事步已打分的才并入，没打分的跳过）
+                # R100z13：开盘前瞻兑现打分一并入账（19:30 叙事步已打分的才并入，没打分的跳过）
                 ov = pd.get('openVerification')
                 if ov:
                     log.setdefault('open', {})[pd['date']] = ov

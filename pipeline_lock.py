@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""pipeline_lock.py — 16:00 数据步 / 17:00 叙事步的工序锁（R100z178，2026-10-23）。
+"""pipeline_lock.py — 16:00 数据步 / 19:30 叙事步的工序锁（R100z178，2026-10-23）。
 
 为什么需要这把锁（两个都真实发生过/随时会发生的场景）：
 
@@ -25,7 +25,7 @@
 死锁治理：锁文件带心跳时间戳，超过 --ttl（默认 2700 秒＝45 分钟）无心跳即判定持有者已死，
 下一个 acquire 会打印 `[LOCK][STALE-STOLEN]` 抢占并把旧锁留档。45 分钟这个值是算出来的：
 平台硬上限 90 分钟、两段最大无心跳间隔（full_scan→accumulation→harmonic→power 四模块）
-运行账实测约 43 分钟 —— 45 分钟既能覆盖正常的长步骤，又不会让一个崩掉的任务把 17:00
+运行账实测约 43 分钟 —— 45 分钟既能覆盖正常的长步骤，又不会让一个崩掉的任务把 19:30
 永久挡在门外。
 
 反向自检（改判据后必须证明它真会拦）见文件末尾 __main__ 下面的注释说明。
@@ -190,7 +190,7 @@ def cmd_status(name):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="流水线工序锁（16:00/17:00 互斥）")
+    ap = argparse.ArgumentParser(description="流水线工序锁（16:00/19:30 互斥）")
     ap.add_argument("action", choices=["acquire", "beat", "release", "status"])
     ap.add_argument("--name", default=DEFAULT_NAME)
     ap.add_argument("--task", default="", help="持有者标签，例如 a1600-data / a1700-narrative")

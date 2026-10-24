@@ -325,7 +325,7 @@ GIT_SSH_COMMAND="ssh -i .deploy_key -o StrictHostKeyChecking=no -p 443" git push
 
 ## L18 prompt 与代码的「字段名对账」（R100z178，2026-10-23）
 
-**为什么单列一层**：17:00 第 0 步核验写着「`duanban` 的 date 与 updatedAt 是否为当日」，
+**为什么单列一层**：19:30 第 0 步核验写着「`duanban` 的 date 与 updatedAt 是否为当日」，
 而全库**没有任何一行代码读写这两个键**，真实键是 `generatedAt`。这一条错误的代价是双层的：
 ① 照字面执行必然判「缺失」→ 白跑 check_duanban + AI 逐只复核的重分支；
 ② 更快的是，闸门那边对断板陈旧只给 WARN —— **保险丝查错了字段、闸门又只给黄灯**，

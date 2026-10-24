@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """enrich_policy.py — 把新闻标题确定性解码为政策信号，写回 data.js 顶层 policySignals。
 
-零网络、纯函数（复用 decode_policy.policy_score）。由 17:00 叙事步在新闻写回后、校验前调用：
+零网络、纯函数（复用 decode_policy.policy_score）。由 19:30 叙事步在新闻写回后、校验前调用：
     cd /Users/loccco/WorkBuddy/market dashboard && run-python enrich_policy.py
 
 产出：data.js 顶层 policySignals = [
@@ -15,7 +15,7 @@
   而 G18 只校结构 —— 空数组结构完全合法，于是解码器哪天真的坏了，页面政策面板空着、
   日志有一行字、闸门全绿、**没有任何东西会报警**。这与项目硬规则「抓不到 ≠ 没有，必须显式降级打标」
   相反。现在：解码/写盘异常 → **保留上一版 `policySignals` 不清空**、打印 `[enrich_policy][DEGRADED]`、
-  exit 2，由 17:00 叙事步在汇报里点名（deploy.sh 里是 `|| true`，所以不会阻断部署）。
+  exit 2，由 19:30 叙事步在汇报里点名（deploy.sh 里是 `|| true`，所以不会阻断部署）。
   「解码成功但 0 条」仍是正常结果（今日要闻标题无发文主体，R100z111 口径），照常写空并打印扫描条数。
 - 写盘原子化（R100z178）：`.tmp` + 落盘前往返自校验 + `os.replace`。旧版直接 `open(path,'w')`，
   进程被杀就留下 0 字节 data.js、整条流水线断（项目硬约束 11 踩过一次的坑）。

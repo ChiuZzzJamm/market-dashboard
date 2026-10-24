@@ -45,12 +45,12 @@ def ceil_of(label):
 
     来源逐条可查（prompt 原文 → 区间）：
       08:30 / 周日22:00  aiPrediction.sectors[].logic   200-260
-      17:00              ashare.themePicks[].logic      240-420
-      17:00              ashare.lianban[].story         120-260
+      19:30              ashare.themePicks[].logic      240-420
+      19:30              ashare.lianban[].story         120-260
       16:00 / 07:00 / 周日22:00  duanban.*[].story      100-180
       07:00 / 周日21:00  us.sectorsUp/Down[].reason.detail  220-400
       07:00 / 周日21:00  us 五节要闻[].summary           220-400
-      17:00              ashare.outlook                 300-500
+      19:30              ashare.outlook                 300-500
       07:00              us.outlook                     600-900（周日21:00 写 300-500，口径不一
                                                         → 取并集上限，只挡明显超长，不误报）
       08:30 / 周日22:00  openOutlook                    400-600

@@ -294,7 +294,7 @@ if mode == 'ashare':
         if lianban_line:
             desp_parts.append(lianban_line)
         desp_parts.append(build_panorama_line(D.get('panorama')))
-        # R100z4f：17:00 推送定稿清单=💡研判/💰资金/📈领涨/📉领跌/🔥连板/🌏日韩，删除「🧩 题材掘金」独立段（页面模块与 deduce 内嵌保留）
+        # R100z4f：19:30 推送定稿清单=💡研判/💰资金/📈领涨/📉领跌/🔥连板/🌏日韩，删除「🧩 题材掘金」独立段（页面模块与 deduce 内嵌保留）
         desp = '\n\n'.join(desp_parts)
 
 elif mode == 'us':

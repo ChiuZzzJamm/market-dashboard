@@ -90,9 +90,9 @@ echo "🧷 标注机械候选与自选补位（annotate_pool_meta.py）..."
 "$PY" annotate_pool_meta.py || true
 
 # ---------- R100z111：政策信号解码前置刷新（一次接入全部自动化）----------
-# 背景：此前只有 17:00 叙事步在 prompt 里手动调用 enrich_policy.py；07:00 美股收盘 /
+# 背景：此前只有 19:30 叙事步在 prompt 里手动调用 enrich_policy.py；07:00 美股收盘 /
 # 周日 22:00 周末汇总同样会整体替换五节要闻，但 policySignals 不刷新 → 政策面板要滞后到
-# 下一个交易日 17:00 才更新（用户 2026-10-10 反馈「包含央行的内容没进政策解码」链路缺口之一）。
+# 下一个交易日 19:30 才更新（用户 2026-10-10 反馈「包含央行的内容没进政策解码」链路缺口之一）。
 # enrich_policy 零网络纯函数、任何异常兜底写空数组并 exit 0，绝不阻断部署；幂等可重复执行。
 echo "📜 刷新政策信号解码（enrich_policy.py）..."
 "$PY" enrich_policy.py || true
@@ -139,7 +139,7 @@ echo "🛡️  硬风险 red 清出推荐位（risk_gate.py）..."
 "$PY" risk_gate.py --write || true
 
 # ---------- R100z53：审计闸门下沉（一次性覆盖五条自动化）----------
-# 背景（子代理对账 P0-1）：此前只有 17:00 / 周末两条 automation 的 prompt 里手写了
+# 背景（子代理对账 P0-1）：此前只有 19:30 / 周末两条 automation 的 prompt 里手写了
 # 「deploy 前先跑 audit_pipeline」，07:00 / 08:30 / 09:45 三条没有 → 那三条改完代码可以直接 push，
 # 闸门等于没有。下沉到 deploy.sh 后，不管哪条任务调它，闸口都在同一处。
 # 退出码：audit_pipeline.py 0=无 FAIL，1=有 FAIL。WARN 不拦（WARN 是历史遗留归对应任务处理）。
