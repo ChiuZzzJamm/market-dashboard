@@ -67,8 +67,10 @@ TARGETS = [
          rrule_want='FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=9;BYMINUTE=45', slots=['duanban']),
     dict(key='A1600', match='每日A股数据更新',
          rrule_want='FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=16;BYMINUTE=0', slots=['ashare']),
+    # R100z196（2026-10-24 用户拍板）：叙事步由 17:00 推迟到 19:30 —— 龙虎榜 18:00 后才披露完。
+    # 别按「16:00 之后一小时」的旧记忆改回来，A 股收盘到榜单发布就是 3 小时。
     dict(key='A1700', match='每日A股叙事与部署',
-         rrule_want='FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=17;BYMINUTE=0', slots=[]),
+         rrule_want='FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=19;BYMINUTE=30', slots=[]),
     dict(key='W2100', match='周末要闻与美股研判',
          rrule_want='FREQ=WEEKLY;BYDAY=SU;BYHOUR=21;BYMINUTE=0', slots=['us', 'weekendNews']),
     dict(key='W2200', match='周末AI预测与部署',

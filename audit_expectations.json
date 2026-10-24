@@ -767,9 +767,9 @@
     "weekendNews",
     "aiPrediction",
     "openOutlook",
-    "ashare.reason / 五节要闻 / themePicks / outlook 等叙述字段（17:00 叙事步职责）",
+    "ashare.reason / 五节要闻 / themePicks / outlook 等叙述字段（19:30 叙事步职责）",
     "duanban.star",
-    "stkKlines（17:00 叙事步 embed_klines 职责）",
+    "stkKlines（19:30 叙事步 embed_klines 职责）",
     "strategy/macroCalendar 顶层键（deploy.sh 自动生成）"
    ],
    "notes": [
@@ -782,7 +782,7 @@
   },
   {
    "id": "automation-1788494481279",
-   "schedule": "MO,TU,WE,TH,FR 17:00",
+   "schedule": "MO,TU,WE,TH,FR 19:30",
    "stepOrder": [
     "0",
     "1",
@@ -1156,7 +1156,8 @@
    "notes": [
     "R100z138（2026-10-16）：原 16:00 任务拆分为 16:00 数据步 + 17:00 叙事步两条自动化，本条目为叙事步（原 automation-1788494481279 改 rrule 到 17:00；R100z139 由 16:30 提前至 16:15、R100z140 再提前至 17:00）。",
     "第 0 步核验 16:00 数据步产物当日性，缺失则补跑对应脚本（scripts 里标注「补跑分支」）。",
-    "第 10 步先 node --check data.js，再 validate_stocks.py --no-fix --scope ai 与 --scope us 二跑，check_narrative 预检后 audit_pipeline FAIL=0 才 deploy.sh + run_push.sh ashare。"
+    "第 10 步先 node --check data.js，再 validate_stocks.py --no-fix --scope ai 与 --scope us 二跑，check_narrative 预检后 audit_pipeline FAIL=0 才 deploy.sh + run_push.sh ashare。",
+    "R100z196（2026-10-24 用户拍板）：rrule 由 17:00 推迟到 19:30。原因：第 3.5 步龙虎榜席位数据 18:00 后才披露完，17:00 抓到的大多是 partial；推迟后当日页面即完整席位。代价是叙事与推送晚 2.5 小时（已知取舍，非缺陷）。同步改动：prompt 内 3 处 17:00 口径 + 锁等待逻辑（19:30 时 16:00 早已收工，等待上限由 5 次 45 分钟降为 2 次 18 分钟，并新增「先看 status 再决定等不等」）。check_automations.py 的 A1700 rrule_want 与 check_code/各脚本注释里的时间引用一并对齐。"
    ]
   },
   {

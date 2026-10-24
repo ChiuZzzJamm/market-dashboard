@@ -99,7 +99,7 @@ _PYF_CANDS = (
 #   ② 前端引用处全部带真值兜底（if/三元/|| ''/typeof==='string' 等）
 # 以后若要新增豁免，必须同时补一条 G9b 能验证的理由，不许只往表里塞名字。
 EMPTY_WHITELIST = [
-    # --- 被动技术池：脚本只出形态/量化，AI 叙事由 17:00 叙事步 AI 写回，脚本阶段天然空 ---
+    # --- 被动技术池：脚本只出形态/量化，AI 叙事由 19:30 叙事步 AI 写回，脚本阶段天然空 ---
     (r"harmonic\.(confirmPool|watchPool|failPool)\[\d+\]\.(story|deduce)",
      "R100z4q：harmonic_detect 从旧池继承叙事，新形态条目脚本阶段无叙事，等 AI 写回"),
     (r"(accumulation|powerScreen)\.(scored|passed|strong|watch)\[\d+\]\.(story|deduce)",
@@ -183,7 +183,7 @@ VALIDATE_SCOPES = ("all", "ai", "us", "star")
 PRODUCT_OWNERSHIP = {
     "aiPrediction": {
         "require": ("aiPrediction", "AI 预测", "预测卡"),
-        "note": "17:00 叙事步写回 AI 叙事/概率，前端 AI 预测卡直接用",
+        "note": "19:30 叙事步写回 AI 叙事/概率，前端 AI 预测卡直接用",
     },
     "ashare": {
         "require": ("ashare", "A 股", "A股", "大盘"),
@@ -248,7 +248,7 @@ PRODUCT_OWNERSHIP = {
     },
     "policySignals": {
         "require": ("policySignals", "政策解码", "政策信号", "enrich_policy"),
-        "note": "R100z107b：enrich_policy.py 解码新闻标题为政策信号，17:00 叙事步在新闻写回后调用写回；前端政策信号解码面板渲染",
+        "note": "R100z107b：enrich_policy.py 解码新闻标题为政策信号，19:30 叙事步在新闻写回后调用写回；前端政策信号解码面板渲染",
     },
     "macroCalendar": {
         "require": (),
@@ -833,8 +833,8 @@ def g8_g9_g10_data(r):
     except Exception as e:                                   # noqa: BLE001
         r.warn("G10", f"美股交易日历核对跳过：{e}")
 
-    # openOutlook.pos 闭环（R100z13 → 17:00 score_openoutlook 打分依赖）
-    # 分流：① 前瞻已为「下一交易日」写了但缺 pos → 真缺陷（当天 17:00 必然 [SKIP]）
+    # openOutlook.pos 闭环（R100z13 → 19:30 score_openoutlook 打分依赖）
+    # 分流：① 前瞻已为「下一交易日」写了但缺 pos → 真缺陷（当天 19:30 必然 [SKIP]）
     #      ② 前瞻尚未为下一交易日写 → 属正常未到期，INFO 不告警
     def next_trading_day(start):
         d = start
@@ -855,11 +855,11 @@ def g8_g9_g10_data(r):
     pos_bad = (not isinstance(oo.get("pos"), dict)
                or not {"tendency", "bandLo", "bandHi", "volExpect"} <= set(oo["pos"]))
     if not pos_bad:
-        r.ok("G10", f"openOutlook.pos 完整（date={oo_date}，17:00 前瞻打分闭环可用）")
+        r.ok("G10", f"openOutlook.pos 完整（date={oo_date}，19:30 前瞻打分闭环可用）")
     elif nxt and oo_date and oo_date >= nxt:
         r.fail("G10", f"openOutlook(date={oo_date}) 已为下一交易日 {nxt} 写了前瞻却缺结构化 pos"
-                      f"（tendency/bandLo/bandHi/volExpect）→ 当日 17:00 score_openoutlook 将 [SKIP]。"
-                      f"本条硬拦 deploy：08:30 当次就该发现，不许拖到 17:00")
+                      f"（tendency/bandLo/bandHi/volExpect）→ 当日 19:30 score_openoutlook 将 [SKIP]。"
+                      f"本条硬拦 deploy：08:30 当次就该发现，不许拖到 19:30")
     elif nxt:
         r.ok("G10", f"openOutlook 尚未为下一交易日 {nxt} 写入前瞻（date={oo_date}）"
                     f"——08:30 自动化到期后补写；届时 audit 会校验 pos 是否完整，缺 pos 即 FAIL")
@@ -1037,7 +1037,7 @@ def g12_deadlinks(r):
         r.ok("G12", f"{len(autos)} 条看板自动化 cwds 均为合法 JSON 数组且指向本项目、rrule 非空")
 
     # ②c 流程纪律：会 deploy.sh 上线的自动化必须接审计闸门；prompt 不得写死闸门基线数字。
-    # R100z65：此前 audit_pipeline 只接在 17:00 与周日 22:00 两条上，07:00/08:30/9:45
+    # R100z65：此前 audit_pipeline 只接在 19:30 与周日 22:00 两条上，07:00/08:30/9:45
     # 三条都会 deploy.sh 上线却绕过闸门——「闸门只长在部分任务身上」也是半死链路。
     # 而写死 PASS=24 这类基线数字，闸门一增项就必然误判（现自报 27）。
     miss_gate = [a["name"] for a in autos
@@ -1133,7 +1133,7 @@ def g14_prompt_broken_path(r):
     相对文件名是否存在于磁盘，扫不到 prompt 内写死的绝对路径，故补本闸固化。
 
     注意：本闸只拦「缺 dashboard/ 的裸路径签名」，不拦「cd /WorkBuddy/market dashboard && python3 ...」
-    这种未引号 cd 形式——后者在自动化执行器内能正确运行（17:00/08:30/09:45 及本任务内
+    这种未引号 cd 形式——后者在自动化执行器内能正确运行（19:30/08:30/09:45 及本任务内
     多行正确调用均为该形式，已实证可部署），本地裸 shell 测出的 cd 报错属执行上下文差异。"""
     autos = load_auto_prompts()
     bad = []
@@ -1275,7 +1275,7 @@ def collect_g16_checks(D):
         add("aiPrediction.openOutlook", _content_of(ap.get("openOutlook")), 300)
 
     # A 股题材掘金 logic（R100z129 补齐：docstring 早已声明 240，但代码一直漏检，
-    # 只靠 17:00 prompt 软约束 240-420 —— 用户 2026-10-13 拍板补机器闸）
+    # 只靠 19:30 prompt 软约束 240-420 —— 用户 2026-10-13 拍板补机器闸）
     for i, t in enumerate((D.get("ashare") or {}).get("themePicks") or []):
         if isinstance(t, dict):
             add(f"ashare.themePicks[{i}].logic", t.get("logic"), 240)
@@ -1492,8 +1492,8 @@ def g17_template_tails(r):
 def g18_policy_signals(r):
     """G18 政策信号解码闸门（R100z107b）：policySignals 若存在则必须结构合法。
 
-    由 enrich_policy.py 在 17:00 叙事步写回。非 17:00 叙事步部署时该节点可能尚未生成
-    （由前一次 17:00 叙事步持久化在 data.js 中），缺失属预期 → WARN 不拦。
+    由 enrich_policy.py 在 19:30 叙事步写回。非 19:30 叙事步部署时该节点可能尚未生成
+    （由前一次 19:30 叙事步持久化在 data.js 中），缺失属预期 → WARN 不拦。
 
     R100z178（2026-10-23）：加「合法但过期」判据 —— policySignals 非空、结构合法，但全部
     `date` 早于 `ashare.tradeDate` → WARN。这是 enrich_policy 降级保留上一版时的痕迹
@@ -1505,8 +1505,8 @@ def g18_policy_signals(r):
         return
     ps = D.get("policySignals")
     if ps is None:
-        r.warn("G18", "policySignals 尚未生成（应由 17:00 叙事步 enrich_policy.py 写回）——"
-                     "非 17:00 叙事步部署时为预期，17:00 后会补齐")
+        r.warn("G18", "policySignals 尚未生成（应由 19:30 叙事步 enrich_policy.py 写回）——"
+                     "非 19:30 叙事步部署时为预期，19:30 后会补齐")
         return
     if not isinstance(ps, list):
         r.fail("G18", "policySignals 不是数组")
@@ -1552,7 +1552,7 @@ def g19_summary_freshness(r):
 
     事故：2026-10-12 的 ashare.tradeDate 已更新为当日，但 ashare.summary 仍是 10/9 的
     旧收盘综述（含「10月9日」「沪指3813.79点涨0.05%」等陈旧点位），上线即「日期更新、
-    内容没更新」。本闸检测两类陈旧信号，FAIL 拦部署，强迫 17:00 每轮用当日数据重写：
+    内容没更新」。本闸检测两类陈旧信号，FAIL 拦部署，强迫 19:30 每轮用当日数据重写：
       ① summary 里出现「M月D日」日期字面量且 ≠ tradeDate 的月日（说明在讲旧交易日）；
       ② summary 里出现收盘型点位（数字须紧贴「点/涨/跌」信号，排除成交额/市值等「X亿元」
          类非指数数值误伤）且数值与当日任一指数 point 偏差 > 2.0（说明在引用旧收盘点位）。
@@ -1736,8 +1736,8 @@ def g22_news_level_noise(r):
     「N只股涨停/附股/炸板」写成要闻时无人拦。清洗+打级由 sweep_news.py 在 deploy.sh
     里完成（幂等、零网络）。本闸只做**复核**：
       · 存在盘面统计类标题 → WARN（说明 sweep_news 没跑到或跑失败，或 AI 刚写回新条目）
-      · 存在缺 level 的条目 → WARN（同上，16:00/17:00 步骤在部署前跑本闸属正常态）
-    刻意设为 WARN 而不 FAIL：17:00 的 prompt 先跑 audit 再 deploy，而 sweep 在 deploy.sh 里，
+      · 存在缺 level 的条目 → WARN（同上，16:00/19:30 步骤在部署前跑本闸属正常态）
+    刻意设为 WARN 而不 FAIL：19:30 的 prompt 先跑 audit 再 deploy，而 sweep 在 deploy.sh 里，
     若做成 FAIL 会让「AI 刚写好、还没到部署」的正常态直接卡死叙事步。
     """
     try:
@@ -1960,7 +1960,7 @@ def g25_memory_hygiene(r):
 def g26_pool_sector_keys(r):
     """G26 机械池板块键对齐（R100z163）。
 
-    事故（2026-10-21）：机械池在**前一交易日 17:00** 按当时的 `aiPrediction.sectors` 建键，
+    事故（2026-10-21）：机械池在**前一交易日 19:30** 按当时的 `aiPrediction.sectors` 建键，
     次日 08:30 盘前重新定板块、改几个名字，整批键就对不上——当天实测 6 个板块里 4 个
     「无同名板块」（医疗保健 / 消费电子 / 计算机设备 / 航空运输）。而 `check_stock_pool`
     是按板块名找池的，找不到就只 WARN「点名即可」→ **「④ 断板反包必须取自机械池」
@@ -2202,7 +2202,7 @@ def g28_freshness_consistency(r):
       c) 各分格戳日期早于 `ashare.tradeDate` → WARN（该格是旧交易日的货，但页面照挂着）。
       d) `refresh_stamp.py` 的 SLOTS 与本地 STAMP_SLOTS 不一致 → FAIL（清单漂移＝静默漏取）。
       e) `duanban.generatedAt` 早于 `ashare.tradeDate` → **FAIL**（断板是本看板核心模块，
-         陈旧断板一路部署上线＝产品事故；prompt 侧 17:00 第 0 步的核验此前查的是两个不存在的键，
+         陈旧断板一路部署上线＝产品事故；prompt 侧 19:30 第 0 步的核验此前查的是两个不存在的键，
          闸门这边若再只给 WARN，就是双重不设防 —— R100z178）。
          四模块 `tradeDate` 早于 `ashare.tradeDate` → WARN（full_scan 失败不清场是 16:00
          prompt 显式允许的降级，不是漏跑，所以不升级）。
@@ -2292,7 +2292,7 @@ def g28_freshness_consistency(r):
 
     # ---- e) 四模块/断板 快照日期落后 ----
     # R100z178（2026-10-23）：断板与四模块**分级**处理。此前两者合并成一条 WARN，等于
-    # 「断板是昨天的」这件事上，prompt 侧的保险丝（17:00 第 0 步核验）查的字段名根本不存在、
+    # 「断板是昨天的」这件事上，prompt 侧的保险丝（19:30 第 0 步核验）查的字段名根本不存在、
     # 闸门这边又只给黄灯 —— **双重不设防**，陈旧的断板可以一路部署上线。断板是本看板的核心模块，
     # 所以升级为 FAIL。四模块保持 WARN：16:00 prompt 显式允许 full_scan 失败时「不写 fullScan、
     # 继续跑后三脚本即可」，判 FAIL 会与既有容错设计正面冲突（那是有意为之的降级，不是漏跑）。
@@ -2886,7 +2886,7 @@ def g32_stop_ledger_truth(r):
     # 方向性检查：比率偏差超过 5 个百分点才提示（快照滞后属正常）
     if shown_rate is not None and abs(float(shown_rate) - rate) > 0.05:
         r.warn("G32", "页面触及率 %.1f%% 与台账 %.1f%% 相差 >5pp —— 页面快照偏旧，"
-                      "下次 16:00/17:00 会自动刷新" % (float(shown_rate) * 100, rate * 100))
+                      "下次 16:00/19:30 会自动刷新" % (float(shown_rate) * 100, rate * 100))
     else:
         r.ok("G32", "止损台账汇总与明细一致（触及 %d/%d = %.1f%%，5 日均值 %s，页面同步）"
              % (hit, done, rate * 100,
@@ -3896,7 +3896,7 @@ def g44_zombie_mirror_nodes(r):
          因为 G16 读的是不存在的路径，恒空即恒过；
       ③ `ashare.aiPrediction`（本轮）→ 19,511 字符副本，前端注释第 2859 行早写着
          「只读顶层 aiPrediction.verification」，push_notify 也不读，**零读方零写方**；
-         可 17:00 prompt 仍以「研判/推送文案与兼容读取路径引用」为由要求每天同步写一份，
+         可 19:30 prompt 仍以「研判/推送文案与兼容读取路径引用」为由要求每天同步写一份，
          同一条 prompt 里却又写「严禁引用 ashare.aiPrediction 旧预测集」——写它、又不许读它。
          危害不是那 33KB，而是**哪天 AI 只写了副本**：页面验证块不更新、四道闸门全绿。
 

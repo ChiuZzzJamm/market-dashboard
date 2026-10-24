@@ -163,7 +163,7 @@ def load_data(path=DATA_JS):
 
 
 def save_data(D, path=DATA_JS):
-    # R100z179b：原来直接 open(path,"w")，与硬约束 11 相悖（17:00 链会调本脚本）。
+    # R100z179b：原来直接 open(path,"w")，与硬约束 11 相悖（19:30 链会调本脚本）。
     write_data_js(path, D, label="[sweep_news]")
 
 

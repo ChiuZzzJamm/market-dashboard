@@ -287,7 +287,7 @@ def check_horizon(D):
 
 # ── R100z152g（2026-10-19）：叙事型 deduce 白名单 + scope 分派 ─────────────────────
 # 实发事故：ashare.fundNote_deduce.conf='中确信'（应为「中等确信」）溜过原闸门并上线——
-# 原 check_deduce 只扫 aiPrediction.sectors，17:00 run 照它的报错修掉了 sectors 内 5 处同错、
+# 原 check_deduce 只扫 aiPrediction.sectors，19:30 run 照它的报错修掉了 sectors 内 5 处同错、
 # 唯独漏掉闸门外的这 1 处（git 实证：「中确信」6→1、「中等确信」61→66）。
 # 分派原则 =「写它的任务跑哪个 scope」，与 check_logic_depth(ai) / check_reason_depth(us) 对齐：
 #   ai 组 = 决策链（aiPrediction + A股利好/利空卡）
@@ -416,7 +416,7 @@ def check_stockcheck(D):
     """R100z11：verification.stockCheck —— 验证颗粒度下移到标的层面（方向对但 8 只全选错必须被检出）。
     hitN 须 0~8 整数、alignRate 须 = hitN/8、avgPct 须数值，details 条数对齐 sectors → WARN。"""
     ap = D.get('aiPrediction') or {}
-    # R100z12 闸门口径修正：verification 由 17:00 叙事步填写，08:30（盘前）与周日（date=下周一）
+    # R100z12 闸门口径修正：verification 由 19:30 叙事步填写，08:30（盘前）与周日（date=下周一）
     # 按设计就是 null，此时「stockCheck 缺失」属正常，绝不能报成每日必现的假 WARN
     #（否则 08:30 的 5.5 校验会出现一个永远修不好的 WARN，逼 AI 反复绕）。
     if not isinstance(ap.get('verification'), dict):
@@ -592,7 +592,7 @@ def check_openoutlook_loop(D):
     与 check_openoutlook（深度）并存，两个都在 main 里调用。
 
     用户拍板口径：T 日 08:30 写 openOutlook（含结构化假设 openOutlook.pos），
-    T 日 17:00 叙事步打分开进 openOutlook.verification，T+1 08:30 新前瞻整字段覆盖旧的。
+    T 日 19:30 叙事步打分开进 openOutlook.verification，T+1 08:30 新前瞻整字段覆盖旧的。
     因此只有「pos 与 verification 不同时出现」才算漏项（单看缺失会每天必报假 WARN）。"""
     warns = []
     oo = D.get('openOutlook')
@@ -603,7 +603,7 @@ def check_openoutlook_loop(D):
     has_ver = isinstance(ver, dict)
     if has_pos and not has_ver:
         warns.append("openOutlook.pos 已写但 openOutlook.verification 缺失"
-                     "（17:00 叙事步未跑 score_openoutlook.py 打分，或没把结果写回：前瞻兑现闭环断了一天）")
+                     "（19:30 叙事步未跑 score_openoutlook.py 打分，或没把结果写回：前瞻兑现闭环断了一天）")
     elif has_ver and not has_pos:
         warns.append("openOutlook.verification 存在但 openOutlook.pos 缺失"
                      "（08:30 未写结构化假设 {tendency,bandLo,bandHi,volExpect}，事后没法核对这份前瞻该不该被判命中）")
@@ -614,7 +614,7 @@ def check_openoutlook_loop(D):
                 break
         for k in ('score', 'verdict'):
             if ver.get(k) in (None, ''):
-                warns.append(f"openOutlook.verification.{k} 缺失（17:00 叙事步打分结果没写全）")
+                warns.append(f"openOutlook.verification.{k} 缺失（19:30 叙事步打分结果没写全）")
                 break
     return warns
 
@@ -677,10 +677,10 @@ def check_risk_blacklist(D, scope='all'):
     旧版 JSON 缺 severity 字段时默认按 red 处理（保持硬闸语义，不静默放行）。
 
     R100z16：scope 决定扫哪些节点——
-      all / ai  → aiPrediction.sectors（17:00、08:30、周日任务职责）
+      all / ai  → aiPrediction.sectors（19:30、08:30、周日任务职责）
       all / us  → us + ashare 五节与 bullish/bearish（07:00、周日任务职责；
                   这两个任务自己就是这些标的的选股者，必须自己过闸，不能
-                  把黑名单推给 17:00 叙事步去背，否则等于没闸）
+                  把黑名单推给 19:30 叙事步去背，否则等于没闸）
       all / star→ duanban.star.picks（9:45 职责；star 同样由本任务自己挑，
                   9:45 又禁止池外补股，若不过闸就等于 star 这一支完全没有硬闸）
 
@@ -922,7 +922,7 @@ def check_stock_pool(D):
     # 「④ 断板必须取自池内」这条硬约束整天降级成提示 —— 又一个「规则看着在、其实从不执行」。
     # 改用新增的 candidateDate（候选数据源的交易日 ashare.tradeDate）：
     #   08:30 重键 → candidateDate = 前一交易日 < pred_date → 照抄约束**生效**（这是本意）
-    #   17:00（16:00 数据步已更新当日收盘）→ candidateDate = 当日 = pred_date → 降级为提示
+    #   19:30（16:00 数据步已更新当日收盘）→ candidateDate = 当日 = pred_date → 降级为提示
     # 旧快照无 candidateDate 时回落到 date，行为与改动前完全一致。
     pred_date = str((D.get('aiPrediction') or {}).get('date') or '')
     pool_date = str(pool.get('date') or '')
@@ -1380,7 +1380,7 @@ def main():
     lb_warns = check_lianban_notes(D)
     tb_warns = check_top_boards(D)
     # R100z81：碎片化 / 深度 / 英文泄漏 机器闸（按 scope 决定谁负责：新闻+outlook+reason 归 us 职责，
-    # verification.note 泄漏归 ai 职责——与 17:00 叙事步「先 --scope ai 再 --scope us」两次校验口径一致）
+    # verification.note 泄漏归 ai 职责——与 19:30 叙事步「先 --scope ai 再 --scope us」两次校验口径一致）
     imp_merge_warns = check_impact_merge(D) if scope in ('all', 'us') else []
     outlook_warns = check_outlook_depth(D) if scope in ('all', 'us') else []
     reason_warns = check_reason_depth(D) if scope in ('all', 'us') else []

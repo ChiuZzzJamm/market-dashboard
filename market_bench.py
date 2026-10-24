@@ -247,7 +247,7 @@ def main():
             print(json.dumps(res, ensure_ascii=False))
         else:
             print('[FAIL] 基准源全部不可达：' + '；'.join(errs))
-            print('       超额口径本轮不下结论（market_bench.json 不写），17:00 校验按「基准缺失」WARN 处理。')
+            print('       超额口径本轮不下结论（market_bench.json 不写），19:30 校验按「基准缺失」WARN 处理。')
         return 0
 
     bench = median(pcts)
