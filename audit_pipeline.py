@@ -3788,11 +3788,21 @@ def g43_stock_chip_layout(r):
        等于没标注；且「自选」在股票软件里默认指「我的自选股」，读者会当成可点的收藏按钮。
        改成只标 poolHit === true（机械池命中，当天 5/48）。
 
+    ③ R100z169（2026-10-24，用户：「能不能把机械池这个徽章删掉，换成在标的右上角增加一个小蓝圆圈…
+       这样所有标的方块的尺寸就是一样的了」）：文字徽章本身是**卡片高度不一致的唯一原因**
+       —— 实测无徽章 51px、有徽章 68px（多出整整一行 17px），家电家居 / 光模块 两个板块因此
+       同时存在两种高度。改成右上角 6px 圆点（.pool-hit::after），不占任何布局宽度。
+       圆点**必须压角**（top/right:-2px）而不能画在框内：预测卡内容宽只有 90.8px，
+       「华瓷股份 001216」= 名 50 + 间隙 3 + 码 36.7 = 89.7，右端距边框只剩 4px，
+       圆点进框内要么盖住代码末位、要么把名称挤成省略号（折行问题换形式复发）。
+
     判据（反向锁死，防止下一轮把废弃写法补回来）：
       a) 每个 .stock-chip 生成点必须紧接 <span class="nm"><b>，数量必须对上
       b) .stock-chip .nm 必须 display:flex；.nm b 必须带 text-overflow:ellipsis
-      c) 徽章判据必须是 poolHit === true，源码里不许再出现 poolHit === false
-      d) ai-foot 必须有「机械池」图例 —— 只有徽章没有图例，读者仍不知道两种状态各是什么意思
+      c) 判据必须是 poolHit === true（不许回到 false）；不许再出现 class="self-tag" 文字徽章；
+         生成点必须拼 ' pool-hit'；::after 必须 absolute + 圆形；基础规则必须 overflow:visible
+         且**不得加 padding**（内缩腾位会把折行弄回来）
+      d) ai-foot 必须用文字说明「圆点」—— 圆点没有文字，图例是它唯一的解释
     """
     p = os.path.join(HERE, "index.html")
     try:
@@ -3820,25 +3830,48 @@ def g43_stock_chip_layout(r):
     if not re.search(r"\.stock-chip \.nm b \{[^}]*text-overflow:\s*ellipsis", s):
         bad.append(".stock-chip .nm b 缺 text-overflow:ellipsis —— 窄视口下名称会溢出到代码上")
 
-    # c) 徽章口径
+    # c) 圆点口径（R100z169：文字徽章 → 右上角压角圆点）
+    m_base = re.search(r"\.stock-chip\.pool-hit\s*\{([^}]*)\}", s)
+    m_dot = re.search(r"\.stock-chip\.pool-hit::after\s*\{([^}]*)\}", s)
+    if "self-tag" in s:
+        bad.append("源码里又出现 self-tag 文字徽章（CSS 或生成串任一）—— 它会独占一行，"
+                   "同板块卡片高度立刻不一致（实测无徽章 51px / 有徽章 68px），R100z169 已改成右上角圆点")
     if "poolHit === false" in s:
-        bad.append("徽章判据又回到 poolHit === false（标 AI 补位）—— 该口径当天会命中 90% 的卡片，"
+        bad.append("判据又回到 poolHit === false（标 AI 补位）—— 该口径当天会命中 90% 的卡片，"
                    "等于没有标注；正确做法是标少数派 poolHit === true")
     if "poolHit === true" not in s:
-        bad.append("找不到 poolHit === true 的徽章判据 —— 机械池命中的票没有任何标识")
+        bad.append("找不到 poolHit === true 的判据 —— 机械池命中的票没有任何标识")
+    if "' pool-hit'" not in s:
+        bad.append("生成点没有拼 ' pool-hit' 类 —— 圆点不会渲染出来")
+    if not m_base:
+        bad.append("缺 .stock-chip.pool-hit 基础规则 —— 无法保证 overflow:visible，半个圆会被裁掉")
+    elif "overflow:visible" not in m_base.group(1).replace(" ", ""):
+        bad.append(".stock-chip.pool-hit 没设 overflow:visible —— top/right:-2px 的半个圆会被裁掉")
+    elif "padding" in m_base.group(1):
+        bad.append(".stock-chip.pool-hit 里加了 padding —— 内缩腾位会把「名称+代码」重新挤到折行"
+                   "（R100z168 的折行会以另一种形式复发）")
+    if not m_dot:
+        bad.append("缺 .stock-chip.pool-hit::after 规则 —— 右上角圆点没有样式")
+    else:
+        css = m_dot.group(1).replace(" ", "")
+        if "position:absolute" not in css:
+            bad.append("圆点不是 position:absolute —— 它会占掉 6px 布局宽度，名称+代码重新折行")
+        if "border-radius:50%" not in css:
+            bad.append("圆点缺 border-radius:50% —— 会显示成方块")
 
-    # d) 图例
-    m_foot = re.search(r'class="ai-foot">([^\n]{0,1200})', s)
+    # d) 图例：圆点没有文字，图例是它唯一的解释
+    m_foot = re.search(r'class="ai-foot">([^\n]{0,1600})', s)
     if not m_foot:
-        bad.append("找不到 .ai-foot 标的筛选口径段 —— 徽章没有图例可挂")
-    elif "机械池" not in m_foot.group(1):
-        bad.append(".ai-foot 未说明「机械池」徽章含义 —— 只有标记没有图例，读者无法区分两种状态")
+        bad.append("找不到 .ai-foot 标的筛选口径段 —— 圆点没有图例可挂")
+    elif "圆点" not in m_foot.group(1):
+        bad.append(".ai-foot 没用文字说明「右上角圆点」的含义 —— 圆点本身不带文字，"
+                   "触屏上又没有 title 提示，缺图例读者无从判断")
 
     if bad:
         for b in bad:
             r.fail("G43", b)
     else:
-        r.ok("G43", "股票卡排版到位（.nm 包裹 %d/4 处 / 名称可省略代码不缩 / 徽章标少数派机械池 / 脚注有图例）"
+        r.ok("G43", "股票卡排版到位（.nm 包裹 %d/4 处 / 名称可省略代码不缩 / 圆点标少数派机械池且不占布局 / 脚注有图例）"
              % n_nm)
 
 
