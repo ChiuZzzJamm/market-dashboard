@@ -426,6 +426,46 @@ def main():
         return
     s, D = load_data(data_path)
     D.setdefault("duanban", {})["star"] = star
+
+    # R100z190：强板块落后股（lead_lag.py）。与精选同一时点、同一份盘面快照，
+    # 但选股方向相反：精选买「已经强、概率高」的，这里买「同一强势板块里还没跟上」的。
+    # 为什么要并进 9:45 这一步：这条规则的入场条件（开盘跳空 + 现价偏离）只在
+    # 开盘半小时内成立，晚一步买入滑点就吃掉全部超额（回测：+0.8% 滑点 → 期望归零）。
+    # 失败不能连累 star：精选已经算完了，这块只是加分项。
+    ll = None
+    try:
+        import lead_lag as LL
+        ll, llerr = LL.compute(D)
+        if llerr:
+            print(f"[leadLag][WARN] {llerr}")
+            ll = None
+    except Exception as e:                                  # noqa: BLE001
+        print(f"[leadLag][WARN] 计算失败，跳过（不影响精选）：{type(e).__name__}: {e}")
+        ll = None
+    if ll:
+        bt, bterr, hit = LL.backtest_cached(D)
+        if bt:
+            m, al = bt["main"], bt["alt"]
+            better = al if (al.get("tDaily") or -99) > (m.get("tDaily") or -99) else m
+            ll["bt"] = bt
+            ll["exit"] = {"main": better, "alt": (m if better is al else al)}
+            ll["span"] = {"days": bt["days"], "samples": bt["samples"],
+                          "signalDays": bt["signalDays"]}
+            print(f"[leadLag] 回测{'(缓存)' if hit else '(已重算)'} "
+                  f"{bt['signalDays']}/{bt['days']} 日有信号，"
+                  f"{better['name']} {better['ret']:+.2f}% 胜率 {better['win']*100:.0f}% "
+                  f"t日聚类={better['tDaily']}")
+        else:
+            print(f"[leadLag][WARN] 回测未完成：{bterr}")
+        ll["mode"] = "live"
+        D.setdefault("duanban", {})["leadLag"] = ll
+        print(f"[leadLag] {ll['date']} {ll['time']} | 候选 {len(ll['picks'])} 只"
+              f"（强板块 {ll['scanned']['strongSectors']} 个 / 扫描 {ll['scanned']['quoted']} 只）")
+        for p in ll["picks"]:
+            print(f"  {p['code']} {p['name']} | {p['note']}")
+        if not ll["picks"]:
+            print(f"  （空仓）{ll.get('gapNote') or ''}")
+
     out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ";\n"
     # R100z179（L11 硬约束）：先写临时文件、node --check 通过再 os.replace。
     # 原写法 open(data_path,'w') 先截断再写、写完才 check——进程若在 write 中途被杀
@@ -441,6 +481,15 @@ def main():
                          + (_chk.stderr or "")[:800])
     os.replace(_tmp, data_path)
     print("[star] data.js 写回完成，node --check 通过")
+    # 台账登记放在写盘成功之后：登记了却没上页面 = 台账里多出一批「用户没见过的票」，
+    # 后面算胜率时会把它们算成「规则的表现」，其实一次都没出场。
+    if ll:
+        try:
+            import lead_lag as LL
+            n = LL.register(ll)
+            print(f"[leadLag] 台账登记 {n} 条（signal_ledger.entries.{ll['date']}.leadLag）")
+        except Exception as e:                              # noqa: BLE001
+            print(f"[leadLag][WARN] 台账登记失败（不影响页面）：{type(e).__name__}: {e}")
 
 
 if __name__ == "__main__":

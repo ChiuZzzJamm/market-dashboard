@@ -75,6 +75,7 @@ DATA_WRITERS = [
     'forecast_scorecard.py',    # R100z161：forecastScore（预测成绩单；只读 calibration_log.json）
     'full_scan.py',             # 全市场扫描
     'harmonic_detect.py',       # 谐波形态
+    'lead_lag.py',              # R100z190：duanban.leadLag（强板块落后股；走 write_data_js）
     'macro_calendar.py',        # macroCalendar（走 write_data_js）
     'market_bench.py',          # 行业基准回填
     'market_structure.py',      # 市场结构
