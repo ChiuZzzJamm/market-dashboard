@@ -53,12 +53,6 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DB = os.path.expanduser('~/.workbuddy/workbuddy.db')
 DUMP_DIR = '/tmp/ap'
 
-# 运行时字段白名单：单一事实源在 common.RUNTIME_FIELDS（check_code K6 用同一份）。
-# 台账/ prompt 里出现的这类路径在静态 data.js 里**本就不存在**，写进去的是某条自动化
-# 跑到那一步才生成。B6 拿静态快照当基准，不排除它就会报假 FAIL 且永远修不完。
-sys.path.insert(0, HERE)
-from common import RUNTIME_FIELDS                       # noqa: E402
-
 # ---------------------------------------------------------------- 期望定义
 # match 用子串匹配（自动化名字里的空格/全角/括号变过好几次，全等太脆）。
 # rrule 只校 FREQ/BYDAY/BYHOUR/BYMINUTE，避免 BYSECOND 之类噪声。
@@ -496,7 +490,7 @@ def chk_fields(T, r, verbose=False):
         return
 
     by_id = {t['id']: t for t in T}
-    n_ok = n_skip = n_empty = n_runtime = 0
+    n_ok = n_skip = n_empty = 0
     bad = []
     for e in exp.get('automations', []):
         t = by_id.get(e.get('id'))
@@ -522,9 +516,6 @@ def chk_fields(T, r, verbose=False):
                     n_skip += 1
                     continue
                 for p in ps:
-                    if any(p == k or p.startswith(k + '.') for k in RUNTIME_FIELDS):
-                        n_runtime += 1
-                        continue
                     st, why = _resolve_field(D, p)
                     if st == 'ok':
                         n_ok += 1
@@ -539,9 +530,8 @@ def chk_fields(T, r, verbose=False):
         r.fail('B6', m)
     if not bad:
         r.ok('B6', '字段台账 %d 条路径在 data.js/%s 里走得通（空数组 %d 条暂不可验、'
-                   '散文 %d 条跳过、运行时字段 %d 条按 common.RUNTIME_FIELDS 豁免）'
-                   '—— 7 条任务的读写边界与线上数据一致'
-             % (n_ok, '盘上文件', n_empty, n_skip, n_runtime))
+                   '散文 %d 条跳过）—— 7 条任务的读写边界与线上数据一致'
+             % (n_ok, '盘上文件', n_empty, n_skip))
 
 
 # ---------------------------------------------------------------- D 死步骤

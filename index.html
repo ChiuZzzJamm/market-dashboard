@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610241955"></script>
+<script src="data.js?v=202610242018"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -4949,89 +4949,6 @@ function dbPoolHtml(title, cls, sub, list, done, poolKey) {
   return h + '</div>';
 }
 
-// R100z185：交易预案对账（09:45 由 desk_verify.py --check --write-star 写入 duanban.star.deskCheck）。
-// 回答两个问题：① 昨天说「能买」的那几只，今天开盘卖了是赚是亏；② 今天这 8 只里哪几只真能买。
-// 数据缺失时整块不渲染——宁可没有，也不要拿旧判定冒充今日结论。
-function deskCheckHtml(st) {
-  var dc = st && st.deskCheck;
-  if (!dc || !dc.planDate) return '';
-  // R100z186（用户 2026-10-24）：口径从「开盘价落在建仓区间就买」改成他的真实打法——
-  // 「盘中由弱转强、摸到昨收×1.02 才买，昨收×1.05 是止盈参考」。
-  // 所以状态只描述「09:45 这一刻强不强」，成交与否交给盘中（结算按全天最高价判）。
-  // 三档收益并列显示，不许只挑对自己有利的那一档（当日收盘 / 次日开盘 / 摸到止盈）。
-  var zh = { cross: '已站上昨收', strong: '已过 +2%', weak: '未转强',
-             limit: '涨停买不到', unknown: '待确认' };
-  var col = { cross: 'var(--up)', strong: 'var(--up)' };
-  // A 股惯例：涨红跌绿。现价涨幅原来整段写死 ink-soft，涨停也在灰着显示，和页面其它地方不一致。
-  function pctColor(v) {
-    if (v == null || v === 0) return 'var(--ink-soft)';
-    return v > 0 ? 'var(--up)' : 'var(--down)';
-  }
-  function pct(v, suffix) {
-    if (v == null) return '—';
-    return '<b style="color:' + pctColor(v) +
-      '">' + (v > 0 ? '+' : '') + v + (suffix || '%') + '</b>';
-  }
-  var h = '<div style="margin:10px 0 8px;border-top:1px dashed var(--line);padding-top:8px;">' +
-    '<div style="font-size:var(--fs-sm);color:var(--ink2);font-weight:600;">' +
-    '交易预案对账 · ' + esc(String(dc.planDate)) + ' 预案 → ' +
-    esc(String(dc.checkedAt || '').slice(5, 10)) + ' 挂单</div>';
-  var s = dc.settle || {};
-  if (dc.settleFrom) {
-    if (s.nFilled) {
-      h += '<div style="font-size:var(--fs-xs);color:var(--ink-soft);margin-top:3px;">' +
-        '昨日成交 ' + s.nFilled + '/' + s.nOrders + ' 笔 · 当日收盘净 ' + pct(s.meanClose) +
-        '（胜率 ' + (s.winClose == null ? '—' : s.winClose + '%') + '）· 次日开盘净 ' +
-        pct(s.meanNextOpen) + ' · 摸到止盈 ' +
-        (s.hitTpRate == null ? '—' : s.hitTpRate + '%') + '</div>';
-    } else {
-      h += '<div style="font-size:var(--fs-xs);color:var(--ink-soft);margin-top:3px;">' +
-        '昨日 ' + (s.nOrders || 0) + ' 只挂单无一成交（开盘就在 +2% 上方，或全天没摸到）' +
-        '　空仓也是一种结果</div>';
-    }
-  }
-  var c = dc.cum || {};
-  if (c.nFilled) {
-    h += '<div style="font-size:var(--fs-xs);color:var(--ink-soft);margin-top:2px;">' +
-      '累计 ' + c.days + ' 天 · 成交 ' + c.nFilled + ' 笔 · 当日收盘 ' + pct(c.meanClose) +
-      ' · 次日开盘 ' + pct(c.meanNextOpen) + ' · 摸到止盈 ' +
-      (c.hitTpRate == null ? '—' : c.hitTpRate + '%') +
-      '<span style="color:var(--ink-soft);">（已扣 0.2% 双边成本）</span></div>';
-  }
-  var rows = dc.orders || [];
-  if (rows.length) {
-    // R100z186：原先用 minmax(186px)+nowrap+ellipsis，900px 桌面下挤出 4 列 → 每列 186px，
-    // 名称和追价被「…」裁掉（用户看不到票名＝看不到结论）。改成 250px 起、允许换行，宁多一行不裁字。
-    h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));' +
-      'gap:1px 14px;margin-top:6px;">';
-    rows.forEach(function (o) {
-      h += '<div style="font-size:var(--fs-xs);color:var(--ink2);line-height:1.6;' +
-        'word-break:break-word;" title="' + esc(String(o.note || '')) + '">' +
-        '<span style="color:' + (col[o.state] || 'var(--ink-soft)') + ';font-weight:600;">' +
-        esc(zh[o.state] || o.state || '') + '</span> ' +
-        esc(String(o.code || '')) + ' ' + esc(String(o.name || '')) +
-        '<span style="color:var(--ink-soft);"> 追 <b>' +
-        (o.trig == null ? '—' : o.trig) + '</b></span>' +
-        (o.nowPct == null ? '' : ' <span style="color:' + pctColor(o.nowPct) + ';font-weight:600;">' +
-          (o.nowPct > 0 ? '+' : '') + o.nowPct + '%</span>') + '</div>';
-    });
-    h += '</div>';
-  }
-  var buy = rows.filter(function (o) { return o.state === 'cross' || o.state === 'strong'; });
-  if (buy.length) {
-    h += '<div style="font-size:var(--fs-xs);color:var(--up);margin-top:5px;">' +
-      '已转强可动手（' + buy.length + ' 只）：' +
-      buy.map(function (o) {
-        return esc(String(o.code)) + ' ' + esc(String(o.name || '')) + ' 追价 <b>' + o.trig +
-          '</b>（止盈参考 ' + (o.tp == null ? '—' : o.tp) + '）';
-      }).join('　') + '</div>';
-  } else if (rows.length) {
-    h += '<div style="font-size:var(--fs-xs);color:var(--ink-soft);margin-top:5px;">' +
-      '09:45 这 ' + rows.length + ' 只都还没站上昨收 —— 全部挂条件单等转强，不提前接</div>';
-  }
-  return h + '</div>';
-}
-
 function renderDuanban() {
   DB_INDEX = {}; DB_ORDER = [];
   var db = duanbanData();
@@ -5131,7 +5048,6 @@ function renderDuanban() {
       '<div class="db-sub">' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：断板池按「板块情绪正向+主力净流入正向」挂钩+上涨概率降序，并可从谐波/九门/吸筹池直接取标的；弹窗与池内一致）</div>' +
       // R99c：页面只放深度分析（pushText），指数/情绪/集合竞价等均在其中，不再单列 marketLine/sentiment
       (st.pushText ? '<div style="font-size: var(--fs-base);color:var(--ink2);line-height:1.8;margin:6px 0 10px;white-space:pre-line;">' + esc(st.pushText) + '</div>' : '') +
-      deskCheckHtml(st) +
       '<div class="db-chips">';
     window._STAR_LIST = [];
     starPicks.forEach(function (p) {

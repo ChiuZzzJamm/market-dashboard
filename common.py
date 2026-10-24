@@ -325,17 +325,6 @@ process.stdout.write(JSON.stringify(eval('(' + m[1] + ')')));
     return json.loads(p.stdout)
 
 
-# ---------- 运行时字段白名单（R100z185）：静态 data.js 里没有、跑到某一步才写进去的路径 ----------
-# 两道闸门都要用它，所以放在 common 作单一事实源（check_code K6 + check_automations B6）：
-#   K6 扫 prompt 里的 `a.b.c`、B6 扫 audit_expectations.json 的 dataFields/writesFields，
-#   两者都是「拿静态快照当基准」——遇到运行时字段会报假 FAIL，而且**修不完**：
-#   prompt 让你写 X，闸门又说 X 不存在，来回改。这不是漏洞补丁，是基准选错了。
-# 进这张表的两句话必须能写出来：**谁写 / 什么时候写**。写不出就是真野字段。
-RUNTIME_FIELDS = {
-    'duanban.star.deskCheck': '09:45 步骤 1.5，desk_verify.py --write-star 写入（交易预案对账）',
-}
-
-
 # ---------- R100z44：节假日感知的交易日计数（失效池「自失效日起保留 5 个交易日」窗口专用） ----------
 # 与 cal_factor.HOLIDAYS 同源（★年度维护项：跨年须对照国务院放假通知同步更新两处）。
 # 原 _trading_days_between 只数周一~周五，国庆/春节这类长假会被数成交易日，
