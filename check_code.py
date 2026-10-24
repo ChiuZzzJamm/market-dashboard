@@ -862,6 +862,119 @@ def k8_noise_sentinel(r, verbose=False):
 
 
 # ---------------------------------------------------------------- main
+def k9_depth_guard(r, verbose=False):
+    """K9 环比闸门自检 —— 专治「少东西没人发现」（R100z208，用户 2026-10-25 授权）。
+
+    要防的事故（真实发生过）：池子轮换把 36 只标的连同弹窗公告一起带走，
+    标的数 533 → 530（-0.6%），人眼盯着数字看不出来，是用户点开某只票才发现的。
+    数量指标对「少 30 条」不敏感，对「少 30%」才敏感 —— 所以判断交给机器。
+
+    这条闸门本身最容易失效的三种方式，逐个设卡：
+      ① 函数还在，但 main 里没人调（重构时被摘掉）→ AST 查调用点
+      ② 阈值被偷偷放松（10% 改成 90%）→ 查常量 + **注入式假数据**验证判定真的用了阈值
+      ③ 拦下来还照写（`return` 丢了）→ 查 if breach 块内有无 Return
+    外加一条顺序约束：基线必须在 merge_depth **之前**取，否则被就地删除的旧条目
+    会把基线拉低，该报的断崖报不出来（本人 2026-10-25 实际踩过这个顺序）。
+    """
+    p = os.path.join(HERE, 'stock_news.py')
+    try:
+        src = open(p, encoding='utf-8').read()
+        tree = ast.parse(src)
+    except Exception as e:
+        r.fail('K9', '无法解析 stock_news.py（%s）—— 深度闸门自检失效' % e)
+        return
+
+    bad = []
+
+    # ① 必须挂在 main 的写盘路径上
+    main_fn = next((n for n in tree.body
+                    if isinstance(n, (ast.FunctionDef,)) and n.name == 'main'), None)
+    if main_fn is None:
+        bad.append('找不到 main()')
+    else:
+        names = {n.func.id for n in ast.walk(main_fn)
+                 if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
+        if 'guard_ratio' not in names:
+            bad.append('main() 没调用 guard_ratio —— 闸门被摘掉了（等于没有闸门）')
+        # ③ 拦下必须 return，不能继续写盘
+        ret_inside = False
+        for n in ast.walk(main_fn):
+            if isinstance(n, ast.If):
+                th = n.test
+                if (isinstance(th, ast.Name) and th.id == 'breach') or \
+                   (isinstance(th, ast.UnaryOp) and isinstance(th.operand, ast.Name)
+                        and th.operand.id == 'breach'):
+                    if any(isinstance(x, ast.Return) for x in ast.walk(n)):
+                        ret_inside = True
+        if not ret_inside:
+            bad.append('拦下分支里没有 return —— 会「报警照写盘」，等于没拦')
+
+    # ② 阈值不许放松
+    m = re.search(r'^RATIO_MAX_DROP\s*=\s*([\d.]+)', src, re.M)
+    if not m:
+        bad.append('找不到 RATIO_MAX_DROP 常量')
+    elif float(m.group(1)) > 0.15:
+        bad.append('RATIO_MAX_DROP=%s 被放松（> 0.15 等于关闸门）' % m.group(1))
+
+    # 顺序：基线取在 merge_depth 之前
+    i_base = src.find('base_stats = _sn_stats(old)')
+    i_merge = src.find('merge_depth(D[\'stockNews\'], old)')
+    if i_base < 0:
+        bad.append('找不到 base_stats 基线取值')
+    elif i_merge > 0 and i_base > i_merge:
+        bad.append('基线取在 merge_depth 之后 —— merge 会就地删旧条目，基线偏低会漏报')
+
+    # ④ 注入式假数据：判定本身必须正确（不是只验常量）
+    try:
+        sn = _load_stock_news()
+        cases = [
+            # (旧, 新, 期望是否拦, 说明)
+            ({'news': 1000}, {'news': 890}, True, '-11% 应拦'),
+            ({'news': 1000}, {'news': 910}, False, '-9% 应放'),
+            ({'news': 1000}, {'news': 900}, False, '恰好 -10% 应放（「超过」才拦）'),
+            ({'stocks': 20, 'news': 30, 'notices': 10},
+             {'stocks': 2, 'news': 3, 'notices': 1}, False, '小基数（<50）不判'),
+            ({'stocks': 545, 'news': 2205, 'notices': 783},
+             {'stocks': 545, 'news': 1200, 'notices': 783}, True, '单项新闻掉 45% 必须拦'),
+            ({'stocks': 545, 'news': 2205, 'notices': 783},
+             {'stocks': 400, 'news': 2205, 'notices': 783}, True, '池子轮换少 145 只必须拦'),
+        ]
+        for old_d, new_d, want, label in cases:
+            b, _rows = sn.guard_ratio(new_d, old_d)
+            if bool(b) != want:
+                bad.append('%s：期望%s，实际%s' % (label, '拦' if want else '放',
+                                                 '拦' if b else '放'))
+        # allow 通道
+        b, _ = sn.guard_ratio({'news': 500}, {'news': 1000}, allow=True)
+        if b:
+            bad.append('--allow-drop 没生效（显式豁免通道断了）')
+        # 反向自检：把阈值注入成 0.90，同一组数据必须放行
+        #   —— 若这行也「拦」，说明判定写死了 0.10，常量是摆设
+        b, _ = sn.guard_ratio({'news': 890}, {'news': 1000}, max_drop=0.90)
+        if b:
+            bad.append('max_drop 注入无效 —— 判定没用传入的阈值（写死了？）')
+        # 双基线：峰值高于上次时，分母取峰值
+        b, _ = sn.guard_ratio({'news': 800}, {'news': 840}, peak={'news': 1000})
+        if not b:
+            bad.append('五日峰基线失效 —— 慢速流失（每天 -7%）会一路漏过去')
+    except Exception as e:
+        bad.append('假数据自检无法运行（%r）' % e)
+
+    if bad:
+        for x in bad:
+            r.fail('K9', x)
+        r.fail('K9', '环比闸门 %d 项不符 —— 它是唯一能自动发现「池子轮换把内容带走」的'
+                     '机制，别关' % len(bad))
+    else:
+        r.ok('K9', '环比闸门自检通过（三项指标 / 双基线 / 拦截不写盘 / 6 组假数据 + '
+                   'allow 豁免 + 阈值注入）')
+    if verbose:
+        print('      RATIO_MAX_DROP=%s  RATIO_MIN_BASE=%s  RATIO_PEAK_N=%s'
+              % (m.group(1) if m else '?',
+                 (re.search(r'^RATIO_MIN_BASE\s*=\s*(\d+)', src, re.M) or [None, '?'])[1],
+                 (re.search(r'^RATIO_PEAK_N\s*=\s*(\d+)', src, re.M) or [None, '?'])[1]))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--verbose', action='store_true')
@@ -887,6 +1000,8 @@ def main():
         k7_lock(r, a.verbose)
     if not only or only == 'K8':
         k8_noise_sentinel(r, a.verbose)
+    if not only or only == 'K9':
+        k9_depth_guard(r, a.verbose)
     return r.dump()
 
 
