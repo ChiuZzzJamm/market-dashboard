@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610260017"></script>
+<script src="data.js?v=202610260023"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -2696,8 +2696,14 @@ function chenAtrNote(code) {
   if (!ex || typeof ex !== 'object') return '';
   var stop = Number(ex.stop);
   if (ex.stop === null || ex.stop === undefined || !isFinite(stop)) return '';
+  // stopBasis 是 atr_stop.py 写的完整推导（ATR14 → 2.0×ATR → 结构位为何不采纳 → 宽度钳制 → 形态位会被打掉），
+  // 原样塞进弹窗要 5~7 行，且与本模块自己那套数字并列时喧宾夺主——用户要的是「内容丰富」，
+  // 不是「同屏两套推导」。只留前两段（口径 + 波动倍数），其余一句话指向 ATR 模块。
+  var basis = String(ex.stopBasis || ''), segs = basis.split('；'), more = false;
+  if (segs.length > 2) { basis = segs.slice(0, 2).join('；'); more = true; }
   return '<div class="exit-row exit-line"><b>通用风控参照</b> ATR(14) 止损 ' + stop.toFixed(2) +
-    (ex.stopBasis ? '<span class="xb">（' + esc(ex.stopBasis) + '）</span>' : '') +
+    (basis ? '<span class="xb">（' + esc(basis) + (more ? '…' : '') + '）</span>' : '') +
+    (more ? '<span class="xb">完整推导见交易执行台的 ATR 止损。</span>' : '') +
     '<span class="xb">—— 目标 / 止损 / 仓位以上面的本模块口径为准（两者不叠加）。</span></div>';
 }
 
