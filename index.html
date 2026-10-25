@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610260150"></script>
+<script src="data.js?v=202610260156"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -6463,13 +6463,21 @@ function renderLeadLag(mode) {
     if (wantBt && !wantPicks && !bt.main) return '';
 
     out += '<div class="ll-wrap">';
+    // R100z223：复盘页那半的标题从「强板块落后股 · 规则回测」改成「落后股复盘 · 规则回测」——
+    // 同一页四张卡里前三张都已叫「X复盘」，只有它顶着策略原名，扫下来像另一族的东西。
+    // 清单那半（断板页）保持「强板块落后股」不动：那是**今天买什么**，策略名本身是信息。
     out += '<div class="ll-hd"><b>' + (wantPicks
         ? ('🎯 强板块落后股 · ' + ((LL.picks || []).length) + ' 只')
-        : '🎯 强板块落后股 · 规则回测') + '</b>' +
+        : '🎯 落后股复盘 · 规则回测') + '</b>' +
       (wantPicks
         ? '<span class="ll-date">' + esc(String(LL.date || '')) + ' ' + esc(String(LL.time || '')) + '</span>' +
           (isReplay ? '<span class="ll-mode warn">回放校验</span>' : '<span class="ll-mode">9:45 实时</span>')
-        : '') +
+        // 回测那半原先没有任何时间锚点，并排看比前三张卡少一截。样本窗口与末笔信号日
+        // 都来自 lead_lag.py（bt.days / bt.lastSignalDay），不是写死的。
+        : ('<span class="ll-date">' +
+            (bt.days ? '近 ' + esc(String(bt.days)) + ' 个交易日' : '') +
+            (bt.lastSignalDay ? (bt.days ? ' · ' : '') + '末笔 ' + esc(String(bt.lastSignalDay)) : '') +
+            '</span>')) +
       '</div>';
 
     // 规则四条件：每条一个胶囊，值全是数据里的阈值（不许写死）；完整句子在 title 里留着。
