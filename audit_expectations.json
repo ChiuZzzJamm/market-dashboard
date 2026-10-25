@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-10-23T23:42:09",
+ "generatedAt": "2026-10-25 21:30",
  "projectDir": "/Users/loccco/WorkBuddy/market dashboard",
  "automations": [
   {
@@ -119,7 +119,9 @@
     "us.macroNews",
     "保持该字段原值不动",
     "price-in→已计价",
-    "R100z160"
+    "R100z160",
+    "第 1 组＝主组恰好 8 只四类 A 股",
+    "第 2~4 组＝次生组各 2~4 只"
    ],
    "forbidden": [
     "①",
@@ -1016,7 +1018,9 @@
     "G38（成绩单约束）",
     "forecastScore.flags.maxHighConf",
     "lhb.py --write",
-    "ashare.lhb"
+    "ashare.lhb",
+    "第 1 组＝主组恰好 8 只四类 A 股",
+    "第 2~4 组＝次生组各 2~4 只"
    ],
    "forbidden": [
     "①",
@@ -1293,7 +1297,9 @@
     "us.outlook",
     "保持 `ashare` 全部字段不变",
     "本步不部署不推送",
-    "`panorama.markets` 中 `key=us` 的条目"
+    "`panorama.markets` 中 `key=us` 的条目",
+    "第 1 组＝主组恰好 8 只四类 A 股",
+    "第 2~4 组＝次生组各 2~4 只"
    ],
    "forbidden": [
     "①",
@@ -1488,7 +1494,9 @@
     "生成约束 flags",
     "maxHighConf",
     "requireBand",
-    "`panorama.markets` 中 `key=kr` / `key=jp` 的条目"
+    "`panorama.markets` 中 `key=kr` / `key=jp` 的条目",
+    "第 1 组＝主组恰好 8 只四类 A 股",
+    "第 2~4 组＝次生组各 2~4 只"
    ],
    "forbidden": [
     "①",

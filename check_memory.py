@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""记忆体检 M0–M12（只读，不改任何文件）
+"""记忆体检 M0–M13（只读，不改任何文件）
 
 用法：python3 check_memory.py          # exit 1 = 有 FAIL
       python3 check_memory.py --quiet  # 只打 WARN/FAIL 与汇总
 
-对应清单：.workbuddy/memory/MEMORY-CHECKLIST.md（M0–M12）。
+对应清单：.workbuddy/memory/MEMORY-CHECKLIST.md（M0–M13）。
 为什么需要它：记忆坏了**不报错**，只会安静返回错答案；靠人看「有没有问题」等于没查。
 每条判据都来自一次真实事故（见清单里的「实测」段）。
 """
@@ -376,8 +376,40 @@ def m12_head():
     else:
         ok("M12 表头版本 R100z%d ≥ 正文最大 R100z%d，未落后" % (hv, mv))
 
+# ---------------- M13 禁「划线 / 标红」式废弃标记（R100z217，2026-10-25 用户要求）
+# 用户原话：「不要的记忆不要划线，不要标红，直接删除，不然占着字节」。
+# 事故：PROJECT-MEMORY 的「历史观察项」把一条已完成的待办用 ~~…~~ 保留了 5 个月痕迹 ——
+# 划线①占字节（删除线还要多养一对标记符）②渲染后视觉上仍是一行正文，容易被当成现行内容
+# ③让 M3 的「文字失效标记」体系多出一套视觉方言，同一件事有两种表达方式。
+# 判据：记忆目录（含 automations/*/memory.md）任意 .md 出现 ~~ / <s> / <del> / <strike> /
+# <mark> / <font color 即 FAIL。正确做法：废弃内容直接删；确要留的演进记录用文字标记（见 M3）。
+STRIKE_RE = re.compile(r"~~|</?s>|</?del>|</?strike>|<mark>|<font\s+color", re.I)
+
+
+def m13_no_strike():
+    # 唯一豁免：MEMORY-CHECKLIST.md 本体 —— 它必须能原样引用这些模式来写规则与反向测试，
+    # 否则「怎么判」这句话本身就写不出来。豁免只给这一个文件，别处一律不许。
+    SKIP = {os.path.basename(MC)}
+    hits = []
+    for f in sorted(glob.glob(os.path.join(MEM, "**", "*.md"), recursive=True)):
+        if os.path.basename(f) in SKIP:
+            continue
+        try:
+            for i, ln in enumerate(rd(f).split("\n"), 1):
+                if STRIKE_RE.search(ln):
+                    hits.append("%s L%d" % (os.path.relpath(f, MEM), i))
+        except Exception:
+            continue
+    if hits:
+        fail("M13 记忆里出现删除线/标红标记 %d 处：%s —— 废弃内容直接删（用户 2026-10-25 要求："
+             "划线标红占字节、渲染后还会被当成现行内容）；确要留的演进记录改用文字标记（见 M3）"
+             % (len(hits), ", ".join(hits[:6])))
+    else:
+        ok("M13 记忆 0 处删除线/标红（废弃内容一律直接删，演进记录只用文字标记）")
+
 m11_toc()
 m12_head()
+m13_no_strike()
 
 # 结论：最该删哪段
 print("=" * 78)

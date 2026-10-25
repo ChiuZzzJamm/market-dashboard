@@ -111,6 +111,7 @@ DATA_WRITERS = [
 NON_DATA_WRITERS = {
     'kline_cache.py': '原子写的是 K 线缓存文件，只是顺带解析 data.js',
     'pipeline_lock.py': '原子写的是锁文件 / 心跳',
+    'backtest_indicators.py': '原子写的是 .bt_cache K线缓存 + backtest_report.md/result.json，从不碰 data.js',
 }
 
 # 死脚本白名单：合法的「手工跑、不进自动化」工具，写明用途才准留
@@ -121,6 +122,7 @@ DEAD_OK = {
     'stock_fundflow.py': '个股资金流对照，手工触发',
     'decode_policy.py': '政策词表纯函数，被 enrich_policy import',
     'kline_cache.py': 'K 线缓存模块，被 accumulation_score import',
+    'backtest_indicators.py': '四指标 2 年滚动回测（信号归因+组合年化），纯本地、手工触发',
 }
 
 NET_CALLS = {

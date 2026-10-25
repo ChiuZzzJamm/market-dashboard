@@ -6,7 +6,7 @@
 >
 > 用法：从 L0 往上逐层跑，**前一层不绿不要往下走**（上层失败会让下层结论全是假的）。
 > 每层跑完记一行：`L<n> PASS/WARN×m/FAIL`，不许只写「检查过了」。
-> **记忆层L6 展开为独立清单**：`.workbuddy/memory/MEMORY-CHECKLIST.md`（M0–M12），记忆相关检查一律走那份。
+> **记忆层L6 展开为独立清单**：`.workbuddy/memory/MEMORY-CHECKLIST.md`（M0–M13），记忆相关检查一律走那份。
 
 ---
 
@@ -100,11 +100,11 @@
 
 ## L6 记忆层（不许截断）
 
-> **详细判据已独立成 `.workbuddy/memory/MEMORY-CHECKLIST.md`（M0–M12）。**
+> **详细判据已独立成 `.workbuddy/memory/MEMORY-CHECKLIST.md`（M0–M13）。**
 > 原因：记忆层的失效方式与代码层完全不同——**代码坏了会报错，记忆坏了只会安静地返回错答案**，
 > 然后我拿它去写代码。L6 这 5 条只是体检项，查不出「读不到」「读到过期的」这两类。
-> **接「记忆检查 / 记忆优化」→ 直接开 M0–M12，别只报体积。**
-> **一条命令跑完 M0–M12**：`python3 check_memory.py`（`--quiet` 只打 WARN/FAIL + 汇总；
+> **接「记忆检查 / 记忆优化」→ 直接开 M0–M13，别只报体积。**
+> **一条命令跑完 M0–M13**：`python3 check_memory.py`（`--quiet` 只打 WARN/FAIL + 汇总；
 > exit 1 = 有 FAIL）。已挂在 `deploy.sh` 审计闸门之后、**不阻断部署**——理由同 L12：
 > 它查的是记忆文件，不该把当天行情部署一起拖死。
 
@@ -374,7 +374,7 @@ GIT_SSH_COMMAND="ssh -i .deploy_key -o StrictHostKeyChecking=no -p 443" git push
 不许写「检查完了」「已仔细检查」。必须写：
 
 ```
-跑了 L0–L19 共 20 层 + M0–M12（记忆）共 13 层
+跑了 L0–L19 共 20 层 + M0–M13（记忆）共 13 层
 L0 PASS / L1 PASS / L2 修了 n 处 / L3 PASS / … / L16 PASS（视觉层：贴图 + 三问）/ L17 PASS（线上独有标记已上）/ L18 PASS（prompt 字段名对账）/ L19 PASS（写盘自证：两侧各跑一次 + 哈希对比）
 自动化体检：check_automations.py → FAIL=0（报「哪类几项」与总数，不写死项数——闸门随时会加）
 闸门：FAIL=0 exit=0（WARN 条数 + 逐条性质，不写 PASS 数字——WARN 随时段浮动）
