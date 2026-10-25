@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610260029"></script>
+<script src="data.js?v=202610260047"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1010,6 +1010,9 @@
   .tc-cell.vwrap .v { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.2; }
   .tc-cell .k { display: block; font-size: var(--fs-xs); color: var(--ink2); line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tc-cell .v { display: block; font-size: var(--fs-body); font-weight: 800; line-height: 1.25; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* R100z220：合成格里的每一段单独 nowrap —— 窄卡放不下时只在段与段之间折行，
+     不会把「倍」这种尾字甩到第三行（用户 2026-10-26：连板与放量要同一行，中间留一个空格）。 */
+  .tc-cell .v .nw { white-space: nowrap; }
   .tc-cell .v.up { color: var(--up); }
   .tc-cell .v.down { color: var(--down); }
   .tc-cell .v.flat { color: var(--ink2); }
@@ -5246,7 +5249,9 @@ function sortByReso(arr) {
 function tcCard(o) {
   var pills = '';
   (o.pills || []).forEach(function (p) { if (p) pills += '<span class="db-sec-pill">' + esc(p) + '</span>'; });
-  var sent = o.sent === false ? '' : sentBadgeHtml(o.code);
+  // R100z220：sentKind 给「条目自带结论」的池用（陈学长条目直接带 sentiment 字段）——
+  // 不传时仍按全站口径 stkSentiment(code) 从要闻 impacts 推，两者渲染同一套 DB_SENT 文案/配色。
+  var sent = o.sent === false ? '' : (o.sentKind ? dbSentBadge({ sentiment: o.sentKind }, 'margin-left:4px') : sentBadgeHtml(o.code));
   var nb = o.fresh ? '<span class="nb">新</span>' : '';
   return '<div class="tc' + stkGoldCls(o.code) + (o.dim ? ' dim' : '') + (o.fresh ? ' fresh' : '') + '"' + (o.attrs || '') + (o.onclick ? ' onclick="' + escAttr(o.onclick) + '"' : '') +
     (o.title ? ' title="' + escAttr(o.title) + '"' : '') + '>' +
@@ -5684,46 +5689,56 @@ function chenDataDay(c) {
 }
 
 /* 口径说明（可折叠）：把「他的规则 / 我的取舍 / 日线缺口 / 交易参数」一次讲清，
-   避免读者以为这是断板反包的参数微调。 */
+   避免读者以为这是断板反包的参数微调。
+   R100z220（用户 2026-10-26 截图 8）：内容与版式向另外四个技术指标看齐——
+   R100z162 定的五段固定顺序「一句话逻辑 / 判定规则 / (lg-hr) / 分池 / 失效与离场 / lg-tip 下一步」，
+   陈学长这页原先是 6 个 .lg-p 大段（该类比全站没有 CSS，等于纯 div 堆叠）：没有分隔线、没有黄条结论、
+   每段一坨 200 字，和断板/谐波/九门/吸筹并排看像两种产品的说明书。本轮改成同一套五段，
+   原文的每个事实（v1→v2 修正、三档梯度、不采纳三条、日线缺口、交易参数与仓位警告）一条不删，
+   只按新段落归位，并补上另外四页都有、这页缺的「分期与离场」与「下一步」。 */
 function chenLegendHtml(c) {
   var v = esc(c.ruleVersion || 'v1'), fd = esc(c.ruleFrozenAt || '');
   // c.note 是生成侧写的口径摘要（一句话版），正文里已展开，故只挂 title 供悬停速览——
   // 挂上去顺便让它有读者（无读者字段＝僵尸字段，24.45 的教训）。
   return '<details class="tech-legend"' + (c.note ? ' title="' + escAttr(c.note) + '"' : '') +
-    '><summary>陈学长口径 · 全流程、不采纳项与日线缺口' +
-    '（点击查看：这是和断板反包并列的第二套指标，不是它的升级版）</summary><div class="lg-body">' +
-    '<div class="lg-p"><b>一句话区别：</b>断板反包筛的是「形态长完了没有」；他筛的是「谁在坐庄」。' +
-    '形态是他最后一道关，在断板反包里却是唯一一道关。</div>' +
-    '<div class="lg-p"><b>硬结构（严格池与放宽池都要过）：</b>' +
-    '① 沪深主板、股价 ≥ 4 元（他说「四块钱以下是心电图票」）；' +
-    '② T 日涨停——<b>首板也算</b>；' +
-    '③ <b>不要求连板</b>：他的原方法里没有这道门槛（2026-10-25 按此修正，v1 误把它当准入门槛）。' +
-    '连板数仍然算出来、写在卡片和标的页上、并按它排序——实测首板触 +3.5% 36.2%、2 连板 50.9%、' +
-    '3 连板 61.5%，这个梯度是真的，所以「几板」是你自己再筛一遍的抓手，不是门票；' +
-    '④ <b>断板日放量 ≥ 2 倍且不设上限</b>——他说「量要越大越好」，实测 1.1~3.5 倍之间毫无区别，' +
-    '3.5 倍以上才是信息所在（5~8 倍触 +3.5% 49.7%），断板反包卡的 3.5 倍上限正好砍掉最好一档；' +
-    '⑤ T+2 起缩量；⑥ 洗盘 ≤ 3 日（「洗个七八天？没道理」）；' +
-    '⑦ 收盘不破 T 日最低价；⑧ 站稳 5 日线。</div>' +
-    '<div class="lg-p"><b>软条件（只有严格池要）：</b>' +
-    '⑨ T 日缩量（当日量 ÷ 前 5 日均量 ≤ 1.0，「缩量代表高度控盘」，实测单调跨 16 个点）；' +
-    '⑩ 断板日跌 ≥ 3%（「砸得越深越好」；−3~0% 那种磨蹭是实测唯一均值为负的一档）。' +
-    '<b>拆两个池就是为了回答「他这两条到底值不值」</b>——单测叠加越多越好，历史回测已经证伪过一次。</div>' +
-    '<div class="lg-p"><b>不采纳的三条（他的原话，但数据方向相反，写在这里防后人再补上）：</b>' +
-    '① 「三十五十亿市值」→ 实测 >100 亿反而更好（触 +3.5% 44.0% 对 33.6%），他那句的语境是「成交量好算」；' +
-    '② 「最上面的不做」→ 实测高位组 41.9% 对低位组 32.4%，他指的是没连板前情的那种高位；' +
-    '③ 「反过一次的不做」→ 实测已反过 52.7% 对 36.8%，数据里多数是还在连板中的强势票。' +
-    '这三条是「配他的执行方式才成立」，当筛选用会反向。</div>' +
-    '<div class="lg-p"><b>日线做不到、这里不假装实现的：</b>分时单根量 ≥ 流通市值 0.5%、量额双放、' +
-    '量能递增、盘口撤单、量化特征（九十度角/锯齿分时）、板块内角色（将军·元帅·气氛组）、' +
-    '自选池熟悉度。<b>这些才是他真正的决策依据</b>，免费源拿不到历史分时。</div>' +
-    '<div class="lg-p"><b>交易参数（断板反包页完全没有的部分）：</b>' +
-    '买点=确认日次日开盘（确认式，等洗盘走完再进，不追涨）；' +
-    '卖点=+3.5% 当天兑现或持仓满 2 日无条件走（「抓一只羊不超过两天」）；' +
-    '止损=洗盘段最低价（「破了第一天小阴的支撑位就是止损的时候」）；' +
-    '仓位=单笔最大亏总仓 1.5% ÷ 止损距离（他 146 的「高 4 低 6」）。' +
-    '⚠️ 仓位不是建议项：实测放开连板/爆量后亏超 −5% 的比例从 8.4% 升到 14.3%，' +
+    '><summary>陈学长口径 · 全流程、不采纳项与日线缺口（点击查看技术指标）</summary><div class="lg-body">' +
+    '<div><b>一句话逻辑</b>：断板反包筛的是「形态长完了没有」，他筛的是「谁在坐庄」——形态在他那儿只是最后一道关，' +
+    '在断板反包页却是唯一一道关。所以这是<b>并列的第二套指标，不是断板反包的升级版</b>：两池同口径留痕，一周后比胜率。</div>' +
+    '<div><b>判定规则</b>：硬结构 8 条（严格池与放宽池都要过），逐条核对——</div>' +
+    '<div><b>① 主板且股价 ≥ 4 元</b>：60/00 开头；他说「四块钱以下是心电图票」</div>' +
+    '<div><b>② T 日涨停</b>：<b>首板也算</b>——v2 的修正点，v1 误把「连板 ≥2」当成准入门槛</div>' +
+    '<div><b>③ 不要求连板</b>：他的原方法里没有这道门槛。连板数仍然算出来、写在卡片和标的页上、并按它排序——' +
+    '实测首板触 +3.5% 36.2%、2 连板 50.9%、3 连板 61.5%，这个梯度是真的，所以「几板」是你自己再筛一遍的抓手，不是门票</div>' +
+    '<div><b>④ 断板日放量 ≥ 2 倍、不设上限</b>：他说「量要越大越好」。实测 1.1~3.5 倍之间毫无区别，' +
+    '3.5 倍以上才是信息所在（5~8 倍触 +3.5% 49.7%）——断板反包卡的 3.5 倍上限正好砍掉最好一档</div>' +
+    '<div><b>⑤ T+2 起缩量</b>：断板后第 2 个交易日的量要小于断板日那根（只比一根，不看趋势）· ' +
+    '<b>⑥ 洗盘 ≤ 3 日</b>：「洗个七八天？没道理」</div>' +
+    '<div><b>⑦ 收盘不破 T 日最低价</b>：容忍 2%，盘中破不算 · <b>⑧ 站稳 5 日线</b>：容忍 3%</div>' +
+    '<div><b>软条件 ⑨ T 日缩量</b>：当日量 ÷ 前 5 日均量 ≤ 1.0，「缩量代表高度控盘」，实测单调跨 16 个点</div>' +
+    '<div><b>⑩ 断板日跌 ≥ 3%</b>：「砸得越深越好」；−3~0% 那种磨蹭是实测唯一均值为负的一档。' +
+    '<b>拆两个池就是为了回答「他这两条到底值不值」</b>——单测叠加越多越好，历史回测已经证伪过一次</div>' +
+    '<div><b>数据与标签</b>：东财涨停池取 T 日、腾讯日 K 核验（chen_pool.py，纯脚本，不靠人眼）；' +
+    '利好 / 利空 / 中性按当日要闻与个股公告打标，与断板反包同一套词表、同一个位置（卡片右上角）</div>' +
+    '<div><b>不采纳 ①「三十五十亿市值」</b>：实测 >100 亿反而更好（触 +3.5% 44.0% 对 33.6%），他那句的语境是「成交量好算」</div>' +
+    '<div><b>不采纳 ②「最上面的不做」</b>：实测高位组 41.9% 对低位组 32.4%，他指的是没连板前情的那种高位</div>' +
+    '<div><b>不采纳 ③「反过一次的不做」</b>：实测已反过 52.7% 对 36.8%，数据里多数是还在连板中的强势票。' +
+    '这三条是「配他的执行方式才成立」，当筛选用会反向——写在这里防后人再补上</div>' +
+    '<div><b>日线做不到、这里不假装实现的</b>：分时单根量 ≥ 流通市值 0.5%、量额双放、量能递增、盘口撤单、' +
+    '量化特征（九十度角 / 锯齿分时）、板块内角色（将军·元帅·气氛组）、自选池熟悉度。' +
+    '<b>这些才是他真正的决策依据</b>，免费源拿不到历史分时</div>' +
+    '<div class="lg-hr"></div>' +
+    '<div><b>分池</b>：严格池＝硬 8 条 + 软 2 条全过（他本人的口径）；' +
+    '放宽池＝只过硬 8 条（用来单独检验那两条软条件到底值不值钱）；' +
+    '形态进行中＝硬结构已走到「放量断板 + 未破位」，只差缩量 / 收复 5 日线这一根确认 K 线。</div>' +
+    '<div><b>失效与离场</b>：收盘跌破 T 日最低价 ×0.98（破位）、洗盘超 3 日仍在跌、' +
+    '或不再满足「放量断板 + 缩量站稳」结构 → 移入失效归档池，自失效日起保留 5 个交易日后自动清理</div>' +
+    '<div class="lg-tip">下一步：买点＝确认日次日开盘（确认式，等洗盘走完再进，不追涨）；' +
+    '卖点＝+3.5% 当天兑现或持仓满 2 日无条件走（「抓一只羊不超过两天」）；' +
+    '止损＝洗盘段最低价（「破了第一天小阴的支撑位就是止损的时候」）；' +
+    '仓位＝单笔最大亏总仓 1.5% ÷ 止损距离（他 146 的「高 4 低 6」）。' +
+    '⚠️ 仓位不是建议项：实测放开连板 / 爆量后亏超 −5% 的比例从 8.4% 升到 14.3%，' +
     '只改筛选不改纪律 = 拿胜率换爆仓概率。</div>' +
-    '<div class="lg-p" style="opacity:.85"><b>口径版本 ' + v + '（冻结于 ' + fd + '，数据日 ' +
+    '<div style="opacity:.85"><b>口径版本 ' + v + '（冻结于 ' + fd + '，数据日 ' +
     esc(chenDataDay(c)) + (c.generatedAt ? '，生成于 ' + esc(String(c.generatedAt).slice(11, 16)) : '') +
     '）：</b>参数在回测出结果之前定死，出结果后不调参——' +
     '否则就是拿未来数据凑好看的数字。实盘样本从留痕起始日开始累积。</div>' +
@@ -5824,22 +5839,29 @@ function chenPoolBlock(title, cls, sub, list, tierTag) {
     DB_INDEX[key] = e;            // 弹窗取数（openDbModal → DB_INDEX[key]），漏了就是点开空白
     if (DB_ORDER.indexOf(key) < 0) DB_ORDER.push(key);
     var t = e.trade || {}, m = e.metrics || {};
+    // R100z220（用户 2026-10-26 截图4）：连板与放量放同一行、中间一个空格（「2 板 2.52 倍」）。
+    // 原来折成两行，读者会当成两个互不相干的指标；两段各自 nowrap，窄卡只在段间折、不把「倍」甩到第三行。
+    var lbcTxt = m.lbc ? (m.lbc === 1 ? '首板' : m.lbc + ' 板') : '—';
+    var volTxt = m.volRatio ? m.volRatio + ' 倍' : '—';
     var cells = [
       tcCell('目标 +' + (t.targetPct || 3.5) + '%', t.targetPrice ? t.targetPrice.toFixed(2) : '—', 'up'),
       tcCell('止损', t.stopPrice ? '<span class="xt" title="洗盘段最低价；破位按收盘算">' + t.stopPrice.toFixed(2) + '</span>' : '—', 'down'),
       tcCell('仓位', t.posPct ? t.posPct + '%' : '—', ''),
-      // R100z219c：折成两行（连板 / 放量），窄屏 164px 卡片下不再被截成「2 板 · …」
-      tcCell('连板 / 放量', (m.lbc ? (m.lbc === 1 ? '首板' : m.lbc + ' 板') : '—') +
-        '<br>' + (m.volRatio ? m.volRatio + ' 倍' : '—'), '', false, true)
+      tcCell('连板 / 放量', '<span class="nw">' + lbcTxt + '</span> <span class="nw">' + volTxt + '</span>', '', false, true)
     ];
     var foot = '<span class="xt">' + esc(String(e.form || '').replace(/·/, '：')) + '</span>';
+    // R100z220（用户 2026-10-26 截图1/2）：删掉卡上「严格 / 放宽 / 观察」徽章——池名已由所在区块标题给出，
+    // 同一枚徽章与左侧板块 pill 撞成两个同色蓝标（.pool-badge.hold 与 .chip-sec 配色完全一致）。
+    // 这个位置改标注利好 / 利空 / 中性，与断板反包 / 谐波 / 九门卡片同一位置、同一套 DB_SENT 文案。
+    // 池归属不丢：挪进 title（悬停可读），弹窗徽章行照旧写「陈学长·严格池」。
+    var tierCn = tierTag === 'strict' ? '严格池' : (tierTag === 'loose' ? '放宽池' : '形态观察中');
     return tcCard({
       code: e.code, name: e.name, chg: e.pct, dim: tierTag === 'watch',
       fresh: !!(e.entryDate && modD && String(e.entryDate) === modD),
-      pills: [e.sector || '其他', tierTag === 'strict' ? '严格' : (tierTag === 'loose' ? '放宽' : '观察')],
-      sent: false, cells: cells, foot: foot,
+      pills: [e.sector || '其他'],
+      sentKind: e.sentiment || 'neutral', cells: cells, foot: foot,
       attrs: ' data-k="' + escAttr(key) + '"',
-      title: e.name + ' ' + e.code + '（' + (e.sector || '') + '）\n' + (e.form || '') +
+      title: e.name + ' ' + e.code + '（' + (e.sector || '') + ' · 陈学长·' + tierCn + '）\n' + (e.form || '') +
         '\n目标 ' + (t.targetPrice || '—') + '（+' + (t.targetPct || 3.5) + '%）｜止损 ' + (t.stopPrice || '—') +
         '｜仓位 ' + (t.posPct || '—') + '%｜持仓 ≤' + (t.holdDays || 2) + ' 日' +
         '\n止损距离 ' + (t.stopPct || '—') + '%（' + (t.riskNote || '') + '）' +
@@ -6753,7 +6775,13 @@ function openDbModal(key) {
       if (isFail) return tb + '<span class="pool-badge fail">' + failKindCn(kindFail) + '失效归档池</span>';
       // R100z218：先判身份再谈技术徽章——陈学长条目即使同时躺在断板池里，
       //   也要先把自己是哪个池说清楚（tb 若命中断板池仍追加在后面，读者能看到「两边都在」）。
-      if (isChen) return '<span class="pool-badge ' + (e.tier === 'strict' ? 'hold' : 'done') + '">陈学长·' +
+      // R100z220（用户 2026-10-26 截图5/6/7）：徽章颜色与断板反包 / 日线九门 / 谐波统一。
+      //   原来走 .pool-badge.hold/.done：hold 是浅蓝（与左侧板块徽章 .chip-sec 同色，两枚蓝标贴在一起读不出区别）、
+      //   done 是涨色红（与「利好」撞色，还被误读成利好）。三类技术徽章统一用 .hz-badge（金），
+      //   池子差别由文案（严格池/放宽池/观察中）承担，不再靠颜色。
+      if (isChen) return '<span class="hz-badge" title="陈学长口径（与断板反包并列的第二套指标）：' +
+        escAttr('陈学长·' + (e.tier === 'strict' ? '严格池' : (e.tier === 'loose' ? '放宽池' : '观察中'))) +
+        '">陈学长·' +
         (e.tier === 'strict' ? '严格池' : (e.tier === 'loose' ? '放宽池' : '观察中')) + '</span>' + tb;
       return tb || ('<span class="pool-badge ' + (done ? 'done' : 'hold') + '">' + (done ? '确认池' : ('观察池 · ' + esc(e.stage))) + '</span>');
     })() +
