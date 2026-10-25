@@ -17,17 +17,24 @@
 `/Users/loccco/WorkBuddy/2026-10-25-16-47-48/陈学长断板反包/` 的实证结论。
 
 ================================================================================
-v1 口径（2026-10-25 冻结；回测出结果前不许改这些数字，否则就是拿未来调参）
+v2 口径（2026-10-25 冻结；回测出结果前不许改这些数字，否则就是拿未来调参）
 ================================================================================
+v2 相对 v1 的唯一变化：**删掉「T 日连板数 ≥ 2」这道门槛**。
+  用户 2026-10-25 纠正：「陈学长没有要求连板≥2，首板也可以。」
+  他确实说过 001「你连板都没有，你反包什么呢兄弟」，但那是**偏好/打分**语境，不是准入条件；
+  把它当硬门槛是我方的取舍（v1 里我自己也写过「这是单一条件里边际最大的一条」= 统计结论，
+  不是他的规则）。首板进池后连板数仍然算出来、仍然显示在卡片与弹窗上、仍然参与排序 ——
+  「有连板前情」是他的加分项，不是门票。这条改动同时把「断板池 87% 是首板」这个
+  两池差异的主因拆掉了，所以 v2 起两个池的重合度会明显上升，差异主要来自「爆量断板」这一层。
+
 硬结构 —— strict 严格池与 loose 放宽池都要求：
 
   S1 沪深主板 60/00，最新收盘 ≥ 4 元
        他 041：「四块钱以下的不要」。这条没被数据反驳，照做。
   S2 T 日涨停（涨幅 ≥ 9.8%，主板口径）
-  S3 T 日连板数 ≥ 2
-       他 001：「你连板都没有，你反包什么呢兄弟。」——单一条件里边际最大的一条：
-       实测 首板 触+3.5% 36.2% → 2 连板 50.9% → 3 连板 61.5%。
-       看板池 87% 是首板，正是他明确不做的。
+  S3 T 日连板数 —— **只计算、只展示、只排序，不做门槛**（v2 起；见上）
+       实测边际仍在（首板 触+3.5% 36.2% → 2 连板 50.9% → 3 连板 61.5%），
+       所以卡片上照样写「N 板」，读者能自己按这个维度再筛一遍。
        ⚠️ 连板数由 K 线自算（calc_lbc），不用涨停池 lbc 字段——涨停池只回看 5 天，
        且东财兜底源根本没有该字段，靠字段会在降级时把全池误杀。
   S4 T+1 断板（未续板）且量比 V(T+1)/V(T) ≥ 2.0，**不设上限**
@@ -56,6 +63,11 @@ v1 口径（2026-10-25 冻结；回测出结果前不许改这些数字，否则
 ⭐ 为什么拆 strict / loose 两个池：单测「叠加越多越好」在记忆里已被证伪——
    ⑦⑧ 两条叠加后样本从 1105 掉到 132，边际只剩 2~3 个点。所以两个池都留痕，
    一周后能直接回答「他这两条软条件到底值不值」。这是本模块存在的意义。
+
+⭐ 为什么 v2 删了漏斗（用户 2026-10-25「这个删掉」）：
+   漏斗解释的是「为什么只剩这几只」，但它把「一天的分层统计」放到了用户每天要看的位置，
+   而且连板那道门（v1 拦下 110 只）本身是错的。判定逻辑没变，只是不再向 data.js 输出 funnel。
+   判据的可解释性改由「口径折叠块 + 卡片脚注的形态串」承担。
 
 ================================================================================
 明确不采纳的三条（他的原话，但数据方向相反）—— 不许后人再「补上」
@@ -92,7 +104,6 @@ v1 口径（2026-10-25 冻结；回测出结果前不许改这些数字，否则
 ================================================================================
   python3 chen_pool.py --module --out chen_draft.json   # 只出草稿（不写 data.js）
   python3 chen_pool.py --merge                          # 出草稿并合并进 data.js（含留痕结算）
-  python3 chen_pool.py --funnel                         # 只看漏斗：今天卡在哪一关
   python3 chen_pool.py --settle-only                    # 只结算留痕，不动池
 
 退出码恒为 0（池空是合法状态）。抓取失败会在 stderr 明确告警，并保留既有 chenPool。
@@ -117,10 +128,9 @@ DATA_JS = os.path.join(HERE, "data.js")
 LEDGER = os.path.join(HERE, "chen_ledger.json")
 
 # ---------------------------------------------------------------- 冻结参数
-RULE_VERSION = "v1"
+RULE_VERSION = "v2"
 RULE_FROZEN_AT = "2026-10-25"
 PRICE_MIN = 4.0          # S1 股价下限（元）
-LBC_MIN = 2              # S3 连板数下限
 VOL_UP_MIN = 2.0         # S4 断板日放量倍数下限（无上限）
 SHRINK_MAX = 1.0         # S9 T 日缩量上限 V(T)/前5日均量
 BIGDROP_MAX = -3.0       # S10 T+1 涨跌幅上限（%），≤ -3 才算大阴
@@ -131,20 +141,8 @@ TARGET_PCT = 3.5         # 卖点 +3.5%
 STOP_PCT_FALLBACK = -3.0  # 止损兜底（无洗盘段最低价时）
 HOLD_DAYS = 2            # 持仓上限（交易日）
 RISK_BUDGET = 1.5        # 单笔最大亏总仓 %
-
-# 漏斗关名（顺序 = 判定顺序；前端按此顺序画漏斗）
-FUNNEL_STEPS = [
-    ("base", "涨停池候选"),
-    ("mainboard", "主板+股价≥4元"),
-    ("zt", "T日涨停"),
-    ("lbc", "连板≥2（他的核心）"),
-    ("break", "T+1断板"),
-    ("volup", "断板日放量≥2倍"),
-    ("low", "未破T日低点"),
-    ("shrink", "T+2缩量"),
-    ("stand", "站稳MA5"),
-    ("soft", "软条件不足→放宽池"),
-]
+# v2 删除：LBC_MIN（连板门槛）。连板数仍由 calc_lbc 算出，只展示/排序，不拦截。
+# 用户 2026-10-25：「陈学长没有要求连板≥2，首板也可以」。
 
 
 def _now():
@@ -173,27 +171,33 @@ def calc_lbc(kl, iT, th):
     return cnt
 
 
-def chen_stage(code, kl, zt_iso, fn=None):
-    """单只候选的陈学长 v1 口径判定。
+def _lbc_txt(lbc):
+    """连板数的中文写法。v2 起首板是合法候选，写成「1板」会让人以为门槛还在。"""
+    n = int(lbc or 0)
+    if n <= 0:
+        return "涨停"
+    return "首板" if n == 1 else ("%d板" % n)
+
+
+def chen_stage(code, kl, zt_iso):
+    """单只候选的陈学长 v2 口径判定。
 
     返回 dict：
       {pool:'confirmed'|'watch', tier:'strict'|'loose'|None, stage, form,
        metrics, days_ago, stop_price, wash_low}
-    或 None（不成立 / 窗口外）。fn 为漏斗计数器（失败时记最后一关）。
-    """
-    def _f(step):
-        if fn is not None:
-            fn[step] = fn.get(step, 0) + 1
-        return None
+    或 None（不成立 / 窗口外）。
 
+    v2 起不再有 fn（漏斗计数器）：用户 2026-10-25 要求删掉漏斗。
+    连板数只算不拦（见文件头 S3）。
+    """
     n = len(kl)
     if n < 12:
-        return _f("base")
+        return None
     if not re.match(r"^(60|00)\d{4}$", str(code)):
-        return _f("mainboard")
+        return None
     iT = next((i for i, k in enumerate(kl) if str(k.get("day")) == zt_iso), None)
     if iT is None:
-        return _f("base")
+        return None
 
     def CL(i):
         return float(kl[i].get("close") or 0)
@@ -217,45 +221,43 @@ def chen_stage(code, kl, zt_iso, fn=None):
 
     # S1 股价
     if CL(n - 1) < PRICE_MIN:
-        return _f("mainboard")
+        return None
     # S2 T 日涨停
     th = CD.limit_ratio(code)
     if PC(iT) < th:
-        return _f("zt")
+        return None
     vT = VO(iT)
     if vT <= 0:
-        return _f("zt")
-    # S3 连板 ≥ 2
+        return None
+    # S3 连板数（v2：只算不拦。首板同样是合法候选——用户 2026-10-25 纠正）
     lbc = calc_lbc(kl, iT, th)
-    if lbc < LBC_MIN:
-        return _f("lbc")
     days_ago = n - 1 - iT
     if days_ago < 2 or days_ago > MAX_WASH_DAYS:
-        return _f("break")
+        return None
     # S4 T+1 断板放量
     i1 = iT + 1
     r1 = VO(i1) / vT
     if PC(i1) >= th:
-        return _f("break")
+        return None
     if r1 < VOL_UP_MIN:
-        return _f("volup")
+        return None
     # S7 不破 T 日低点（先查，破了直接失效，不再进观察池）
     lowT = LO(iT)
     wash_low = min([LO(i) for i in range(i1, n)] or [0])
     if lowT > 0 and min(CL(i) for i in range(i1, n)) < lowT * LOW_TOL:
-        return _f("low")
+        return None
     # S5 T+2 缩量
     i2 = iT + 2
     if i2 > n - 1:
-        return _f("shrink")          # 还没到 T+2 = 待缩量
+        return None                  # 还没到 T+2 = 待缩量
     shrunk = 0 < VO(i2) < VO(i1)
     # S8 站稳 MA5
     ma5 = sum(CL(i) for i in range(n - 5, n)) / 5.0 if n >= 5 else 0.0
     stand = ma5 > 0 and CL(n - 1) >= ma5 * MA5_TOL
     if not shrunk:
-        return _f("shrink")
+        return None
     if not stand:
-        return _f("stand")
+        return None
 
     # ---- 软条件（只影响 strict / loose 分档）
     v5 = [VO(i) for i in range(max(0, iT - 5), iT)]
@@ -267,8 +269,8 @@ def chen_stage(code, kl, zt_iso, fn=None):
 
     zt_md = "%s/%s" % (zt_iso[5:7], zt_iso[8:10])
     wash = days_ago - 1
-    form = "%s %d板涨停→次%.1f倍量收%+.1f%%→%d日缩量·站稳MA5" % (
-        zt_md, lbc, r1, drop1, wash)
+    form = "%s %s涨停→次%.1f倍量收%+.1f%%→%d日缩量·站稳MA5" % (
+        zt_md, _lbc_txt(lbc), r1, drop1, wash)
     if shrink_t is not None:
         form += "（T日量%.2f倍均量）" % shrink_t
     metrics = {
@@ -284,10 +286,11 @@ def chen_stage(code, kl, zt_iso, fn=None):
             "metrics": metrics, "days_ago": days_ago, "stop_price": wash_low}
 
 
-def chen_watch(code, kl, zt_iso, fn=None):
+def chen_watch(code, kl, zt_iso):
     """观察池：硬结构已走到「断板放量 + 未破位」，只差缩量/企稳。
 
     与 chen_stage 共用前置判定，避免两套口径（这是 24.10 那类死链的典型来源）。
+    v2：连板不再是门槛（首板也进），与 chen_stage 保持同一口径。
     """
     n = len(kl)
     if n < 12 or not re.match(r"^(60|00)\d{4}$", str(code)):
@@ -319,8 +322,6 @@ def chen_watch(code, kl, zt_iso, fn=None):
     if vT <= 0:
         return None
     lbc = calc_lbc(kl, iT, th)
-    if lbc < LBC_MIN:
-        return None
     days_ago = n - 1 - iT
     if days_ago < 1 or days_ago > MAX_WASH_DAYS:
         return None
@@ -336,11 +337,11 @@ def chen_watch(code, kl, zt_iso, fn=None):
     zt_md = "%s/%s" % (zt_iso[5:7], zt_iso[8:10])
     wash_low = min([LO(i) for i in range(i1, n)] or [0])
     if i1 == n - 1:
-        stage, form = "待缩量", "%s %d板→次%.1f倍量断板·待缩量" % (zt_md, lbc, r1)
+        stage, form = "待缩量", "%s %s→次%.1f倍量断板·待缩量" % (zt_md, _lbc_txt(lbc), r1)
     else:
         ma5 = sum(CL(i) for i in range(n - 5, n)) / 5.0 if n >= 5 else 0.0
         if ma5 > 0 and CL(n - 1) < ma5 * MA5_TOL:
-            stage, form = "待企稳", "%s %d板→次%.1f倍量断板→已缩量·待收复MA5" % (zt_md, lbc, r1)
+            stage, form = "待企稳", "%s %s→次%.1f倍量断板→已缩量·待收复MA5" % (zt_md, _lbc_txt(lbc), r1)
         else:
             return None
     return {"pool": "watch", "tier": None, "stage": stage, "form": form,
@@ -406,18 +407,19 @@ def collect_candidates(dates, limit):
     return cand, failed
 
 
-def eval_candidate(code, rec, kl, fn=None):
+def eval_candidate(code, rec, kl):
     """对候选的每个涨停日做判定，确认池优先于观察池。
 
-    漏斗只对**最新涨停日**计数（fn 只传一次）：否则连板票会在窗口内每个涨停日各记一次，
-    「卡在连板 151」看着像 151 只、其实只有 ~70 只，漏斗就不可读了。
+    v2 起不再带漏斗计数器（用户要求删漏斗）：每个涨停日都按同一口径判，
+    取「最好的那个涨停日」作为该票的阶段——连板票在窗口内可能有多个涨停日，
+    它究竟从哪一波起算，取决于哪个涨停日走到了最后一步。
     """
     best = None
-    for k, d in enumerate(sorted(rec["zt"], reverse=True)):
+    for d in sorted(rec["zt"], reverse=True):
         iso = "%s-%s-%s" % (d[:4], d[4:6], d[6:])
         st = None
         try:
-            st = chen_stage(code, kl, iso, fn if k == 0 else None)
+            st = chen_stage(code, kl, iso)
         except Exception:
             st = None
         if not st:
@@ -442,6 +444,9 @@ def load_ledger():
         if not isinstance(d, dict):
             raise ValueError("ledger 不是 dict")
         d.setdefault("entries", [])
+        # R100z219：口径升级后 version 必须跟着走。旧写法只 setdefault（文件已存在就永远停在 v1），
+        # 于是台账头顶写着 v1、条目却是 v2 选出来的——回测时按这个字段分组会整组错位。
+        d["version"] = RULE_VERSION
         return d
     except Exception as e:
         print("[warn] 留痕台账读取失败（%s），按空台账继续" % e, file=sys.stderr)
@@ -462,9 +467,20 @@ def settle_one(e, kl):
       · 都没触 → 窗口末收盘平（expired，按实际收益计）
     """
     days = [str(k.get("day")) for k in kl]
-    try:
-        idx = days.index(str(e.get("entryDate")))
-    except ValueError:
+    key = str(e.get("entryDate") or "")
+    if not key:
+        return None
+    # R100z219：原来是 days.index(entryDate) 精确匹配。踩过一次——脚本在周日 23:5x 跑，
+    # entryDate 写成「周日」这个非交易日，index() 抛 ValueError → 返回 None →
+    # 那 13 条样本永远不会结算，而且**不报错**（胜率表永远 0 样本、看着像"还没到期"）。
+    # 改成「≤ entryDate 的最后一根 K 线」：确认日恰好是交易日时行为与 index() 完全一致；
+    # 落在周末/节假日时就近回落到上一个交易日，买价仍是它之后那根的开盘——
+    # 这才是实盘能成交的时点（周五收盘确认、周一开盘买）。
+    idx = -1
+    for i, d in enumerate(days):
+        if d <= key:
+            idx = i
+    if idx < 0:
         return None
     if idx + 1 > len(kl) - 1:
         return None
@@ -555,6 +571,10 @@ def record_entries(ledger, pool_key, entries, today, tier=None):
             continue          # 该票已有一条未结算记录，不重复记
         ledger["entries"].append({
             "pool": pool_key, "tier": tier, "code": code,
+            # R100z219：每条带口径版本——v1/v2 的差别只在筛选（连板门槛），结算算法相同，
+            # 但回测若把两种口径的样本混在一张表里，等于用改过的规则解释旧结果。
+            # 老条目没有该字段 → 按 v1 处理（build_compare 里可不分组，写在记忆即可）。
+            "ruleVersion": RULE_VERSION,
             "name": e.get("name") or "", "entryDate": ed,
             "ztDate": e.get("ztDate") or "",
             # 止损价必须与页面展示的、能成交的那个一致（trade.stopPrice 含 2% 最小距离），
@@ -668,7 +688,12 @@ def build_module(args):
     dates = CD.recent_trade_dates(args.days)
     cand, failed_dates = collect_candidates(dates, args.limit)
     if not cand:
-        return None, {"failedDates": failed_dates}
+        # 抓空必须显式说出来（项目铁律：抓不到 ≠ 当天没有标的）。
+        # 原来这条信息只在漏斗卡片底部显示，漏斗删掉后改走 stderr，避免静默降级。
+        if failed_dates:
+            print("[warn] %d 个交易日的涨停池没抓到（%s）—— 保留既有 chenPool"
+                  % (len(failed_dates), "、".join(failed_dates)), file=sys.stderr)
+        return None
 
     cands = sorted(cand.items(), key=lambda kv: max(kv[1]["zt"]), reverse=True)[:args.limit]
     t0 = time.time()
@@ -677,7 +702,6 @@ def build_module(args):
     except ValueError:
         deadline = 300.0
 
-    funnel_count = {}
     hits, failed_kl = [], []
     lock = threading.Lock()
 
@@ -698,12 +722,9 @@ def build_module(args):
                 with lock:
                     failed_kl.append(code)
             else:
-                local = {}
-                hit = eval_candidate(code, rec, kl, local)
-                with lock:
-                    for k, v in local.items():
-                        funnel_count[k] = funnel_count.get(k, 0) + v
-                    if hit:
+                hit = eval_candidate(code, rec, kl)
+                if hit:
+                    with lock:
                         hits.append(hit)
             if done % 80 == 0:
                 print("[info] 已判定 %d/%d 只，用时 %.0fs" % (done, len(cands), time.time() - t0),
@@ -727,18 +748,28 @@ def build_module(args):
             if not kl:
                 continue
             rec = cand.get(code) or {}
-            local = {}
-            hit = eval_candidate(code, rec, kl, local)
-            with lock:
-                for k, v in local.items():
-                    funnel_count[k] = funnel_count.get(k, 0) + v
-                if hit:
+            hit = eval_candidate(code, rec, kl)
+            if hit:
+                with lock:
                     hits.append(hit)
             time.sleep(0.4)
 
     hits = [h for h in hits if str(h["code"]).startswith(("60", "00"))]
     print("[info] 候选 %d 只 → 命中 %d 只（用时 %.0fs）"
           % (len(cands), len(hits), time.time() - t0), file=sys.stderr)
+
+    # 数据日 = 最新一根 K 线的日期，不是脚本运行时间。
+    # 实测过：周日 23:5x 起跑、跨到周一 00:02，generatedAt 写成 10-26，而数据其实是 10-23 收盘的。
+    # 页面上「数据日 2026-10-26」会让读者以为周一的盘已经出来（与 19:30 跨午夜那类坑同源）。
+    trade_date = ""
+    for h in hits:
+        d = str((h.get("kl") or [{}])[-1].get("day") or "")
+        if d > trade_date:
+            trade_date = d
+    if not trade_date and dates:
+        # dates 是 YYYYMMDD 降序（check_duanban.recent_trade_dates），转成与 K 线 day 一致的 ISO
+        d = dates[0]
+        trade_date = "%s-%s-%s" % (d[:4], d[4:6], d[6:]) if len(d) == 8 else d
 
     D = {}
     try:
@@ -750,44 +781,18 @@ def build_module(args):
     loose = build_entries([h for h in hits if h["stage_info"].get("tier") == "loose"], D)
     watch = build_entries([h for h in hits if h["stage_info"]["pool"] == "watch"], D)
 
-    # 漏斗：按判定顺序累计（数字 = 「最后一关卡在这一步的候选数」）
-    funnel = [{"step": k, "label": lab, "n": funnel_count.get(k, 0)}
-              for k, lab in FUNNEL_STEPS]
-    funnel[0]["n"] = len(cands)     # 分母 = 实际判定的候选数，不是分页前的池子大小
-    # 末关「软条件不足→放宽池」在 chen_stage 里数不准：漏斗只对**最新涨停日**计数
-    # （见 eval_candidate 注释），而一只票可能是在更早那个涨停日走完全程的，
-    # 于是它进了放宽池、却不经过带计数器的路径。实测就差了 1（降档 2 只 vs 放宽池 3 只），
-    # 页面上一眼能看出自相矛盾。这一行本来就是「放宽池有几只」，直接取放宽池长度，
-    # 既定义精确又不会和下面的卡片打架。
-    # of = 这一行的分母（进池数）而不是候选总数：3/4 说的是「进了池的 4 只里 3 只被降档，
-    # 严格池只剩 1 只」，3/196 说的是「占全部候选 1.5%」——后者一点用都没有，
-    # 而前者正是「这两条软条件到底有多严」的唯一度量。
-    _passed = len(strict) + len(loose) + len(watch)
-    for f in funnel:
-        if f["step"] == "soft":
-            f["n"] = len(loose)
-            f["of"] = _passed
-    # 自洽校验：分母 = 八道淘汰关之和 + 进池数。不平就是计数器漏加了一步
-    # （R100z218b 实测抓到过：末关 soft 从来没累加，放宽池 3 只却显示 0，
-    #  读者会以为那 3 只是硬结构走出来的，恰好把「软条件值不值」的证据抹掉）。
-    # soft 是降档不是淘汰，不计入这个恒等式——它统计的是「进池的里面有几只被降档」。
-    _lost = sum(f["n"] for f in funnel[1:] if f["step"] != "soft")
-    if _lost + _passed != funnel[0]["n"]:
-        print("[warn] 漏斗不自洽：分母 %d ≠ 各关 %d + 进池 %d（差 %d）"
-              % (funnel[0]["n"], _lost, _passed,
-                 funnel[0]["n"] - _lost - _passed), file=sys.stderr)
     mod = {
         "generatedAt": _now(),
+        "tradeDate": trade_date,
         "ruleVersion": RULE_VERSION,
         "ruleFrozenAt": RULE_FROZEN_AT,
         "note": (
-            "陈学长口径 v1（2026-10-25 冻结）：主板股价≥4元 → T日涨停 → 连板≥2 → "
+            "陈学长口径 v2（2026-10-25）：主板股价≥4元 → T日涨停（首板或连板都算，连板只作排序加分）→ "
             "T+1放量≥2倍断板（无上限）→ 未破T日低点 → T+2缩量 → 站稳MA5；"
             "严格池另加「T日缩量≤1.0 + T+1跌≥3%」两条软条件。"
             "买点=确认日次日开盘，卖点=+3.5%当天兑现或持仓2日，止损=洗盘段最低价，"
             "仓位=单笔亏总仓1.5%。分时量能/盘口/板块角色是日线缺口，未假装实现。"
         ),
-        "funnel": funnel,
         "strict": strict,
         "loose": loose,
         "watching": watch,
@@ -795,7 +800,7 @@ def build_module(args):
         "compare": {},
         "track": {},
     }
-    return mod, {"cand": cand, "funnel": funnel_count}
+    return mod
 
 
 def main():
@@ -805,7 +810,6 @@ def main():
     ap.add_argument("--module", action="store_true", help="输出 chenPool 模块 JSON")
     ap.add_argument("--out", default=None, help="模块 JSON 同时写入该文件")
     ap.add_argument("--merge", action="store_true", help="合并进 data.js（含留痕结算）")
-    ap.add_argument("--funnel", action="store_true", help="只打印漏斗（今天卡在哪一关）")
     ap.add_argument("--settle-only", action="store_true", help="只结算留痕，不动池")
     ap.add_argument("--dashboard", default=None, help="data.js 路径（默认同目录）")
     args = ap.parse_args()
@@ -830,15 +834,7 @@ def main():
         print("[settle] 结算 %d 条（open %d 条未到期）" % (n, len(codes) - n))
         return
 
-    mod, extra = build_module(args)
-
-    if args.funnel:
-        funnel = (mod or {}).get("funnel") or []
-        print("\n陈学长 v1 漏斗（%d 日窗口，候选 %d 只）"
-              % (args.days, len((extra or {}).get("cand") or {})))
-        for f in funnel:
-            print("  %-24s %4d" % (f["label"], f["n"]))
-        return
+    mod = build_module(args)
 
     if mod is None:
         # 抓取全败：保留既有 chenPool，绝不清空（与 check_duanban 的 R91m 防护同思路）
@@ -901,7 +897,7 @@ def main():
             continue
         new_fails.append({"code": c, "name": e.get("name") or "",
                           "sector": e.get("sector") or "", "form": e.get("form") or "",
-                          "reason": "形态失效（不再满足连板+放量断板+缩量站稳结构）",
+                          "reason": "形态失效（不再满足放量断板+缩量站稳结构）",
                           "entryDate": today})
     mod["failPool"] = roll_fail_pool(old_mod.get("failPool") or [], new_fails, today,
                                      exclude_codes=cur_codes)
@@ -911,12 +907,16 @@ def main():
     record_entries(ledger, "chen_strict", mod["strict"], today, tier="strict")
     record_entries(ledger, "chen_loose", mod["loose"], today, tier="loose")
     # 断板反包对照：只读它的池，不写它。
-    # ⚠️ 只记**今天新入池**的（entryDate == today）。历史条目不能补记——它们的止损位
-    # 只能用今天的 K 线倒推，那是前视偏差；宁可样本少，也不许台账里混进用未来算的止损。
+    # ⚠️ 只记**它自己本次新入池**的（entryDate == 断板模块的数据日）。历史条目不能补记——
+    # 它们的止损位只能用今天的 K 线倒推，那是前视偏差；宁可样本少，也不许台账里混进用未来算的止损。
+    # R100z219：基准原来写的是本脚本的 `today`，跨午夜就一条也记不进来
+    # （16:00 跑断板、00:0x 跑陈学长 → entryDate 差一天）→ 胜率表第三行永远是 0 样本。
+    # 改成「断板模块自己的 generatedAt 日期」：同日跑时与今天完全等价，跨午夜时才对得上。
+    _db_day = str(db_mod.get("generatedAt") or "")[:10] or today
     db_entries = []
     for e in (db_mod.get("confirmed") or []):
-        _ed = e.get("entryDate") or today
-        if _ed != today:
+        _ed = e.get("entryDate") or _db_day
+        if _ed != _db_day:
             continue
         db_entries.append({"code": e.get("code"), "name": e.get("name"),
                            "ztDate": e.get("ztDate"), "entryDate": _ed,
