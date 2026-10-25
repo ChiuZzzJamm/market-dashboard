@@ -1,5 +1,4 @@
 {
- "version": "v2",
  "entries": [
   {
    "pool": "chen_strict",
@@ -9,8 +8,7 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-21",
    "stopPrice": 9.22,
-   "result": null,
-   "ruleVersion": "v1"
+   "result": null
   },
   {
    "pool": "chen_loose",
@@ -20,8 +18,7 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-20",
    "stopPrice": 31.0,
-   "result": null,
-   "ruleVersion": "v1"
+   "result": null
   },
   {
    "pool": "chen_loose",
@@ -31,8 +28,7 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-21",
    "stopPrice": 52.67,
-   "result": null,
-   "ruleVersion": "v1"
+   "result": null
   },
   {
    "pool": "chen_loose",
@@ -42,8 +38,7 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-20",
    "stopPrice": 13.45,
-   "result": null,
-   "ruleVersion": "v1"
+   "result": null
   },
   {
    "pool": "chen_strict",
@@ -53,8 +48,7 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-21",
    "stopPrice": 8.63,
-   "result": null,
-   "ruleVersion": "v2"
+   "result": null
   },
   {
    "pool": "chen_strict",
@@ -64,8 +58,7 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-21",
    "stopPrice": 7.26,
-   "result": null,
-   "ruleVersion": "v2"
+   "result": null
   },
   {
    "pool": "chen_loose",
@@ -75,8 +68,7 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-19",
    "stopPrice": 39.02,
-   "result": null,
-   "ruleVersion": "v2"
+   "result": null
   },
   {
    "pool": "chen_loose",
@@ -86,8 +78,7 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-19",
    "stopPrice": 67.51,
-   "result": null,
-   "ruleVersion": "v2"
+   "result": null
   },
   {
    "pool": "chen_loose",
@@ -97,8 +88,7 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-19",
    "stopPrice": 9.05,
-   "result": null,
-   "ruleVersion": "v2"
+   "result": null
   },
   {
    "pool": "chen_loose",
@@ -108,8 +98,7 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-21",
    "stopPrice": 7.25,
-   "result": null,
-   "ruleVersion": "v2"
+   "result": null
   },
   {
    "pool": "chen_loose",
@@ -119,8 +108,7 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-21",
    "stopPrice": 13.8,
-   "result": null,
-   "ruleVersion": "v2"
+   "result": null
   },
   {
    "pool": "chen_loose",
@@ -130,8 +118,7 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-20",
    "stopPrice": 22.93,
-   "result": null,
-   "ruleVersion": "v2"
+   "result": null
   },
   {
    "pool": "chen_loose",
@@ -141,8 +128,7 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-20",
    "stopPrice": 52.5,
-   "result": null,
-   "ruleVersion": "v2"
+   "result": null
   }
  ],
  "updatedAt": "2026-10-26 00:14"

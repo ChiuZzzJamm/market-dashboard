@@ -17,22 +17,22 @@
 `/Users/loccco/WorkBuddy/2026-10-25-16-47-48/陈学长断板反包/` 的实证结论。
 
 ================================================================================
-v2 口径（2026-10-25 冻结；回测出结果前不许改这些数字，否则就是拿未来调参）
+口径（2026-10-25 冻结；回测出结果前不许改这些数字，否则就是拿未来调参）
 ================================================================================
-v2 相对 v1 的唯一变化：**删掉「T 日连板数 ≥ 2」这道门槛**。
+连板数不是门槛 —— 只有一套规则，「T 日连板数 ≥ 2」不作准入门槛。
   用户 2026-10-25 纠正：「陈学长没有要求连板≥2，首板也可以。」
   他确实说过 001「你连板都没有，你反包什么呢兄弟」，但那是**偏好/打分**语境，不是准入条件；
-  把它当硬门槛是我方的取舍（v1 里我自己也写过「这是单一条件里边际最大的一条」= 统计结论，
-  不是他的规则）。首板进池后连板数仍然算出来、仍然显示在卡片与弹窗上、仍然参与排序 ——
+  把它当硬门槛是我方早期的取舍（当时的注释写过「这是单一条件里边际最大的一条」= 统计结论，
+  不是他的规则），已删。首板进池后连板数仍然算出来、仍然显示在卡片与弹窗上、仍然参与排序 ——
   「有连板前情」是他的加分项，不是门票。这条改动同时把「断板池 87% 是首板」这个
-  两池差异的主因拆掉了，所以 v2 起两个池的重合度会明显上升，差异主要来自「爆量断板」这一层。
+  两池差异的主因拆掉了，所以两个池的重合度会明显上升，差异主要来自「爆量断板」这一层。
 
 硬结构 —— strict 严格池与 loose 放宽池都要求：
 
   S1 沪深主板 60/00，最新收盘 ≥ 4 元
        他 041：「四块钱以下的不要」。这条没被数据反驳，照做。
   S2 T 日涨停（涨幅 ≥ 9.8%，主板口径）
-  S3 T 日连板数 —— **只计算、只展示、只排序，不做门槛**（v2 起；见上）
+  S3 T 日连板数 —— **只计算、只展示、只排序，不做门槛**（见上）
        实测边际仍在（首板 触+3.5% 36.2% → 2 连板 50.9% → 3 连板 61.5%），
        所以卡片上照样写「N 板」，读者能自己按这个维度再筛一遍。
        ⚠️ 连板数由 K 线自算（calc_lbc），不用涨停池 lbc 字段——涨停池只回看 5 天，
@@ -64,9 +64,9 @@ v2 相对 v1 的唯一变化：**删掉「T 日连板数 ≥ 2」这道门槛**�
    ⑦⑧ 两条叠加后样本从 1105 掉到 132，边际只剩 2~3 个点。所以两个池都留痕，
    一周后能直接回答「他这两条软条件到底值不值」。这是本模块存在的意义。
 
-⭐ 为什么 v2 删了漏斗（用户 2026-10-25「这个删掉」）：
+⭐ 为什么没有漏斗（用户 2026-10-25「这个删掉」）：
    漏斗解释的是「为什么只剩这几只」，但它把「一天的分层统计」放到了用户每天要看的位置，
-   而且连板那道门（v1 拦下 110 只）本身是错的。判定逻辑没变，只是不再向 data.js 输出 funnel。
+   而且连板那道门（当时拦下 110 只）本身是错的。判定逻辑没变，只是不再向 data.js 输出 funnel。
    判据的可解释性改由「口径折叠块 + 卡片脚注的形态串」承担。
 
 ================================================================================
@@ -128,7 +128,14 @@ DATA_JS = os.path.join(HERE, "data.js")
 LEDGER = os.path.join(HERE, "chen_ledger.json")
 
 # ---------------------------------------------------------------- 冻结参数
-RULE_VERSION = "v2"
+# R100z221（用户 2026-10-26）：「不要有什么 v1v2，就只有一个版本」。
+# 原先这里挂着 RULE_VERSION="v2"、台账每一条都写 ruleVersion、页面口径块里写「v2 的修正点，
+# v1 误把连板≥2 当成准入门槛」——三处都在解释一段已经不存在的历史，读者要花力气才能确认
+# 「我现在看的到底是哪一版」。现在只留冻结日期：参数在回测出结果之前定死、出结果后不调参，
+# 这个承诺用日期表达就够了，不需要版本号（只有一个版本时，版本号是噪音）。
+# ⚠️ 台账里已有的 13 条样本**不删**：旧口径（要求连板≥2）选出来的票是新口径的子集，
+#    它们同样满足今天的全部条件，混在一起不构成污染；删掉等于凭空减少样本量。
+#    这也与审核意见 §6「清掉 v1 从零计数」不同——那条建议假定两版规则互斥，实际是包含关系。
 RULE_FROZEN_AT = "2026-10-25"
 PRICE_MIN = 4.0          # S1 股价下限（元）
 VOL_UP_MIN = 2.0         # S4 断板日放量倍数下限（无上限）
@@ -141,7 +148,15 @@ TARGET_PCT = 3.5         # 卖点 +3.5%
 STOP_PCT_FALLBACK = -3.0  # 止损兜底（无洗盘段最低价时）
 HOLD_DAYS = 2            # 持仓上限（交易日）
 RISK_BUDGET = 1.5        # 单笔最大亏总仓 %
-# v2 删除：LBC_MIN（连板门槛）。连板数仍由 calc_lbc 算出，只展示/排序，不拦截。
+# R100z222（审核意见 §19.4）：次新股硬门槛。Tencent 主源回 70 根、新浪备用回 40 根，
+# 上市不足 35 个交易日的票两根源都会短于这个数——用它判「次新」比任何日期字段都可靠
+# （get_kline 只回 K 线，拿不到上市日）。他明确不做新股：首板要「横盘吸筹」之后，
+# 新股没有横盘；而 calc_lbc 会把上市首日的 +44% 当成「涨停 + 1 板」。
+NEW_STOCK_MIN_BARS = 35
+# 审核意见 §8：止损距离 > 10% 且只持 2 天 = 止损在窗口内几乎不可能触发，
+# 实际是「裸持两天收盘平」。不剔除（那会改变选股，属于策略决策），只标记。
+STOP_FAR_PCT = 10.0
+# 已删除 LBC_MIN（连板门槛）：连板数仍由 calc_lbc 算出，只展示/排序，不拦截。
 # 用户 2026-10-25：「陈学长没有要求连板≥2，首板也可以」。
 
 
@@ -172,26 +187,40 @@ def calc_lbc(kl, iT, th):
 
 
 def _lbc_txt(lbc):
-    """连板数的中文写法。v2 起首板是合法候选，写成「1板」会让人以为门槛还在。"""
+    """连板数的中文写法。首板是合法候选，写成「1板」会让人以为门槛还在。"""
     n = int(lbc or 0)
     if n <= 0:
         return "涨停"
     return "首板" if n == 1 else ("%d板" % n)
 
 
-def chen_stage(code, kl, zt_iso):
-    """单只候选的陈学长 v2 口径判定。
+def _ma5(kl, j):
+    """第 j 根（含）往前 5 根收盘均值。j < 4 时返回 0（不够 5 根不算站稳）。"""
+    if j < 4:
+        return 0.0
+    s = 0.0
+    for i in range(j - 4, j + 1):
+        c = float(kl[i].get("close") or 0)
+        if c <= 0:
+            return 0.0
+        s += c
+    return s / 5.0
 
-    返回 dict：
-      {pool:'confirmed'|'watch', tier:'strict'|'loose'|None, stage, form,
-       metrics, days_ago, stop_price, wash_low}
-    或 None（不成立 / 窗口外）。
 
-    v2 起不再有 fn（漏斗计数器）：用户 2026-10-25 要求删掉漏斗。
-    连板数只算不拦（见文件头 S3）。
+def _structure(code, kl, zt_iso, min_days_ago):
+    """chen_stage / chen_watch 共用的前置硬结构（S1/S2/S4/S7）。
+
+    R100z222（审核意见 §18）：原先两个函数把这套判定逐行复制了两遍，注释还写着
+    「共用前置判定，避免两套口径」——那正是 24.10 那类死链的标准来源：下次只改一处
+    （VOL_UP_MIN / LOW_TOL），新增的票就按老规则判，而你看不出来。
+    现在只有这一份实现，两个池的差异被压缩成「min_days_ago 传 1 还是 2」和
+    后面各自的收尾（确认 vs 待缩量/待企稳）。
+
+    返回 dict（键见 return）或 None（不成立 / 窗口外）。
     """
     n = len(kl)
-    if n < 12:
+    # 次新股门槛（§19.4）：K 线不足 35 根 → 上市太近，他明确不做（首板要有横盘吸筹）
+    if n < NEW_STOCK_MIN_BARS:
         return None
     if not re.match(r"^(60|00)\d{4}$", str(code)):
         return None
@@ -201,12 +230,6 @@ def chen_stage(code, kl, zt_iso):
 
     def CL(i):
         return float(kl[i].get("close") or 0)
-
-    def OP(i):
-        return float(kl[i].get("open") or 0)
-
-    def HI(i):
-        return float(kl[i].get("high") or 0)
 
     def LO(i):
         return float(kl[i].get("low") or 0)
@@ -229,134 +252,148 @@ def chen_stage(code, kl, zt_iso):
     vT = VO(iT)
     if vT <= 0:
         return None
-    # S3 连板数（v2：只算不拦。首板同样是合法候选——用户 2026-10-25 纠正）
+    # S3 连板数（只算不拦：首板同样是合法候选——用户 2026-10-25 纠正）
     lbc = calc_lbc(kl, iT, th)
     days_ago = n - 1 - iT
-    if days_ago < 2 or days_ago > MAX_WASH_DAYS:
+    if days_ago < min_days_ago or days_ago > MAX_WASH_DAYS:
         return None
     # S4 T+1 断板放量
-    i1 = iT + 1
-    r1 = VO(i1) / vT
-    if PC(i1) >= th:
-        return None
-    if r1 < VOL_UP_MIN:
-        return None
-    # S7 不破 T 日低点（先查，破了直接失效，不再进观察池）
-    lowT = LO(iT)
-    wash_low = min([LO(i) for i in range(i1, n)] or [0])
-    if lowT > 0 and min(CL(i) for i in range(i1, n)) < lowT * LOW_TOL:
-        return None
-    # S5 T+2 缩量
-    i2 = iT + 2
-    if i2 > n - 1:
-        return None                  # 还没到 T+2 = 待缩量
-    shrunk = 0 < VO(i2) < VO(i1)
-    # S8 站稳 MA5
-    ma5 = sum(CL(i) for i in range(n - 5, n)) / 5.0 if n >= 5 else 0.0
-    stand = ma5 > 0 and CL(n - 1) >= ma5 * MA5_TOL
-    if not shrunk:
-        return None
-    if not stand:
-        return None
-
-    # ---- 软条件（只影响 strict / loose 分档）
-    v5 = [VO(i) for i in range(max(0, iT - 5), iT)]
-    avg5 = (sum(v5) / len(v5)) if v5 else 0.0
-    shrink_t = (vT / avg5) if avg5 > 0 else None
-    drop1 = PC(i1)
-    soft_ok = (shrink_t is not None and shrink_t <= SHRINK_MAX and drop1 <= BIGDROP_MAX)
-    tier = "strict" if soft_ok else "loose"
-
-    zt_md = "%s/%s" % (zt_iso[5:7], zt_iso[8:10])
-    wash = days_ago - 1
-    form = "%s %s涨停→次%.1f倍量收%+.1f%%→%d日缩量·站稳MA5" % (
-        zt_md, _lbc_txt(lbc), r1, drop1, wash)
-    if shrink_t is not None:
-        form += "（T日量%.2f倍均量）" % shrink_t
-    metrics = {
-        "lbc": lbc,
-        "volRatio": round(r1, 2),
-        "shrinkT": round(shrink_t, 2) if shrink_t is not None else None,
-        "drop1": round(drop1, 2),
-        "washDays": wash,
-        "stopPrice": round(wash_low, 2) if wash_low > 0 else None,
-        "tailRisk": r1 > 8.0,
-    }
-    return {"pool": "confirmed", "tier": tier, "stage": "缩量确认", "form": form,
-            "metrics": metrics, "days_ago": days_ago, "stop_price": wash_low}
-
-
-def chen_watch(code, kl, zt_iso):
-    """观察池：硬结构已走到「断板放量 + 未破位」，只差缩量/企稳。
-
-    与 chen_stage 共用前置判定，避免两套口径（这是 24.10 那类死链的典型来源）。
-    v2：连板不再是门槛（首板也进），与 chen_stage 保持同一口径。
-    """
-    n = len(kl)
-    if n < 12 or not re.match(r"^(60|00)\d{4}$", str(code)):
-        return None
-    iT = next((i for i, k in enumerate(kl) if str(k.get("day")) == zt_iso), None)
-    if iT is None:
-        return None
-
-    def CL(i):
-        return float(kl[i].get("close") or 0)
-
-    def LO(i):
-        return float(kl[i].get("low") or 0)
-
-    def VO(i):
-        return float(kl[i].get("volume") or 0)
-
-    def PC(i):
-        if i < 1 or CL(i - 1) <= 0:
-            return 0.0
-        return (CL(i) - CL(i - 1)) / CL(i - 1) * 100
-
-    if CL(n - 1) < PRICE_MIN:
-        return None
-    th = CD.limit_ratio(code)
-    if PC(iT) < th:
-        return None
-    vT = VO(iT)
-    if vT <= 0:
-        return None
-    lbc = calc_lbc(kl, iT, th)
-    days_ago = n - 1 - iT
-    if days_ago < 1 or days_ago > MAX_WASH_DAYS:
-        return None
     i1 = iT + 1
     if i1 > n - 1:
         return None
     r1 = VO(i1) / vT
     if PC(i1) >= th or r1 < VOL_UP_MIN:
         return None
+    # S7 不破 T 日低点（先查，破了直接失效，不再进观察池）
     lowT = LO(iT)
+    wash_low = min([LO(i) for i in range(i1, n)] or [0])
     if lowT > 0 and min(CL(i) for i in range(i1, n)) < lowT * LOW_TOL:
         return None
-    zt_md = "%s/%s" % (zt_iso[5:7], zt_iso[8:10])
-    wash_low = min([LO(i) for i in range(i1, n)] or [0])
+
+    # 软条件用到的量能基准（S9：T 日量 / 前 5 日均量）
+    v5 = [VO(i) for i in range(max(0, iT - 5), iT)]
+    avg5 = (sum(v5) / len(v5)) if v5 else 0.0
+    return {
+        "n": n, "iT": iT, "i1": i1, "i2": iT + 2, "lbc": lbc, "th": th,
+        "r1": r1, "drop1": PC(i1), "days_ago": days_ago, "wash_low": wash_low,
+        "shrink_t": (vT / avg5) if avg5 > 0 else None,
+        "zt_md": "%s/%s" % (zt_iso[5:7], zt_iso[8:10]),
+        "CL": CL, "VO": VO,
+    }
+
+
+def chen_stage(code, kl, zt_iso):
+    """单只候选的陈学长口径判定（确认池）。
+
+    返回 dict：
+      {pool:'confirmed', tier:'strict'|'loose', stage, form, metrics,
+       days_ago, stop_price, confirm_idx, since_confirm}
+    或 None（不成立 / 窗口外）。
+
+    R100z222（审核意见 §1/§2/§4）：**确认日不再等于「T+2 那一天」**。
+    S5（缩量）钉死在 T+2，但 S8（站稳 MA5）原来只看最后一根——于是
+      · 一只票在 T+2 确认后，只要形态不破就会连着挂 T+3、T+4，页面把「确认后第 3 天」
+        当今天的买入信号，台账却只记第一天（§2）；
+      · form 里写「N日缩量」，而 N 实际是「涨停日距今几天」，且最后一根的量从没验过（§4）。
+    现在从 T+2 起逐根找**第一根站上 MA5 的交易日**，那就是它真实的确认日；
+    `since_confirm = 0` 表示今天就是确认日，>0 表示这只票是几天前该买的。
+    判定只用 confirm_idx 及其之前的数据，不含任何前视。
+    """
+    st = _structure(code, kl, zt_iso, 2)
+    if not st:
+        return None
+    n, i2, VO, CL = st["n"], st["i2"], st["VO"], st["CL"]
+    if i2 > n - 1:
+        return None                  # 还没到 T+2 = 待缩量（走 chen_watch）
+    if not (0 < VO(i2) < VO(st["i1"])):
+        return None                  # S5 缩量未过
+
+    # S8 站稳 MA5 → 从 T+2 起第一根站上的交易日 = 确认日
+    confirm_i = None
+    for j in range(i2, n):
+        m = _ma5(kl, j)
+        if m > 0 and CL(j) >= m * MA5_TOL:
+            confirm_i = j
+            break
+    if confirm_i is None:
+        return None
+
+    # ---- 软条件（只影响 strict / loose 分档）
+    shrink_t = st["shrink_t"]
+    drop1 = st["drop1"]
+    soft_ok = (shrink_t is not None and shrink_t <= SHRINK_MAX and drop1 <= BIGDROP_MAX)
+    tier = "strict" if soft_ok else "loose"
+
+    lbc, r1, wash_low = st["lbc"], st["r1"], st["wash_low"]
+    lag = confirm_i - st["i1"]              # 断板日 → 确认日 间隔（交易日）
+    since = n - 1 - confirm_i               # 确认后已过几个交易日（0 = 今天确认）
+    lag_txt = "次日缩量确认" if lag == 1 else ("%d日缩量确认" % lag)
+    form = "%s %s涨停→次%.1f倍量收%+.1f%%→%s·站稳MA5" % (
+        st["zt_md"], _lbc_txt(lbc), r1, drop1, lag_txt)
+    if shrink_t is not None:
+        form += "（T日量%.2f倍均量）" % shrink_t
+    if since > 0:
+        # 老票必须自曝：否则读者会把它当今天的买入信号（§2 的核心问题）
+        form += "（确认后第%d日·非当日新信号）" % (since + 1)
+
+    metrics = {
+        "lbc": lbc,
+        "volRatio": round(r1, 2),
+        "shrinkT": round(shrink_t, 2) if shrink_t is not None else None,
+        "drop1": round(drop1, 2),
+        # §4：washDays 的字面意思被误读成「缩量了几天」。改成两个语义明确的字段：
+        "confirmLag": lag,          # 断板日到确认日隔了几个交易日
+        "sinceConfirm": since,      # 确认后又过了几个交易日（0 = 今天确认）
+        "washDays": since,          # 兼容旧读者，值同 sinceConfirm（确认后第 N 天）
+        "stopPrice": round(wash_low, 2) if wash_low > 0 else None,
+        "tailRisk": r1 > 8.0,
+    }
+    return {"pool": "confirmed", "tier": tier, "stage": "缩量确认", "form": form,
+            "metrics": metrics, "days_ago": st["days_ago"], "stop_price": wash_low,
+            "confirm_day": str(kl[confirm_i].get("day") or ""),
+            "confirm_idx": confirm_i, "since_confirm": since}
+
+
+def chen_watch(code, kl, zt_iso):
+    """观察池：硬结构已走到「断板放量 + 未破位」，只差缩量/企稳。
+
+    R100z222：前置判定改调 `_structure`（原先两个函数是逐行复制，§18）。
+    """
+    st = _structure(code, kl, zt_iso, 1)
+    if not st:
+        return None
+    n, i1, CL = st["n"], st["i1"], st["CL"]
+    lbc, r1, wash_low = st["lbc"], st["r1"], st["wash_low"]
     if i1 == n - 1:
-        stage, form = "待缩量", "%s %s→次%.1f倍量断板·待缩量" % (zt_md, _lbc_txt(lbc), r1)
+        stage, form = "待缩量", "%s %s→次%.1f倍量断板·待缩量" % (st["zt_md"], _lbc_txt(lbc), r1)
     else:
-        ma5 = sum(CL(i) for i in range(n - 5, n)) / 5.0 if n >= 5 else 0.0
-        if ma5 > 0 and CL(n - 1) < ma5 * MA5_TOL:
-            stage, form = "待企稳", "%s %s→次%.1f倍量断板→已缩量·待收复MA5" % (zt_md, _lbc_txt(lbc), r1)
+        m = _ma5(kl, n - 1)
+        if m > 0 and CL(n - 1) < m * MA5_TOL:
+            stage, form = "待企稳", "%s %s→次%.1f倍量断板→已缩量·待收复MA5" % (
+                st["zt_md"], _lbc_txt(lbc), r1)
         else:
             return None
     return {"pool": "watch", "tier": None, "stage": stage, "form": form,
             "metrics": {"lbc": lbc, "volRatio": round(r1, 2),
                         "stopPrice": round(wash_low, 2) if wash_low > 0 else None},
-            "days_ago": days_ago, "stop_price": wash_low}
+            "days_ago": st["days_ago"], "stop_price": wash_low,
+            "confirm_day": "", "confirm_idx": None, "since_confirm": None}
 
 
 # ---------------------------------------------------------------- 交易参数
 def trade_params(ref_close, stop_price):
-    """买点/卖点/止损/仓位 —— 全部由 v1 口径推出，不含任何主观调速。
+    """买点/卖点/止损/仓位 —— 全部由冻结口径推出，不含任何主观调速。
 
     ref_close：确认日收盘价（买价基准用它的次日开盘，这里先给参考值）。
     止损：洗盘段最低价；缺失时用 -3% 兜底（不编更宽的数）。
     仓位：RISK_BUDGET / 止损距离，上限 30%（三条线不可能全仓一只）。
+
+    R100z222（审核意见 §8）：`stopFar` / `riskBreach` 两个标记位。
+    实测池里出现过止损距 26.4% 的票——HOLD_DAYS=2 时，两天跌 26% 需要两个跌停连板，
+    止损在持仓窗口内几乎不可能触发，实际是「裸持两天收盘平」。页面上写「止损」会让人
+    以为有保护。**不剔除**（那会改选股，属于策略决策），只在卡上标出来：
+      · stopFar     = 止损距离 > STOP_FAR_PCT（10%），标记「止损形同虚设」
+      · riskBreach  = 5% 的仓位下限把 1.5% 的风险预算顶破了（dist > 30% 时才可能）
     """
     buy = float(ref_close or 0)
     stop = float(stop_price or 0)
@@ -371,6 +408,18 @@ def trade_params(ref_close, stop_price):
         stop = round(buy * 0.98, 2)
     dist = (buy - stop) / buy * 100
     pos = min(30, max(5, round(RISK_BUDGET / dist * 100))) if dist > 0.2 else 5
+    risk = round(pos * dist / 100, 2)
+    # 只有「5% 的仓位下限」真的把预算顶破才算 breach：dist=26% 时 5.77→6 只是取整（1.56%），
+    # 不值得报警；dist≥35% 才会变成 1.75% 以上，那才是预算失效。
+    breach = risk > RISK_BUDGET * 1.15
+    note = "单笔最大亏总仓 %.1f%%：仓位 %d%% × 止损 %.1f%%（他 146 的高4低6）" % (
+        RISK_BUDGET, pos, dist)
+    if breach:
+        note += "｜⚠️ 止损 %.1f%% 过宽，%d%% 的仓位下限已顶破预算（实际单笔亏 %.2f%%）" % (
+            dist, pos, risk)
+    if dist > STOP_FAR_PCT:
+        note += "｜⚠️ 止损距离 >%.0f%% 且只持 %d 日：窗口内几乎不可能触发，实质是到日收盘平" % (
+            STOP_FAR_PCT, HOLD_DAYS)
     return {
         "refClose": round(buy, 2),
         "buyRule": "确认日次日开盘买入（等洗盘缩量走完再进，不追涨）",
@@ -380,8 +429,10 @@ def trade_params(ref_close, stop_price):
         "stopPct": round(dist, 2),
         "holdDays": HOLD_DAYS,
         "posPct": pos,
-        "riskNote": "单笔最大亏总仓 %.1f%%：仓位 %d%% × 止损 %.1f%%（他 146 的高4低6）"
-                    % (RISK_BUDGET, pos, dist),
+        "riskPct": risk,
+        "stopFar": dist > STOP_FAR_PCT,
+        "riskBreach": breach,
+        "riskNote": note,
     }
 
 
@@ -410,7 +461,7 @@ def collect_candidates(dates, limit):
 def eval_candidate(code, rec, kl):
     """对候选的每个涨停日做判定，确认池优先于观察池。
 
-    v2 起不再带漏斗计数器（用户要求删漏斗）：每个涨停日都按同一口径判，
+    不带漏斗计数器（用户要求删漏斗）：每个涨停日都按同一口径判，
     取「最好的那个涨停日」作为该票的阶段——连板票在窗口内可能有多个涨停日，
     它究竟从哪一波起算，取决于哪个涨停日走到了最后一步。
     """
@@ -438,19 +489,31 @@ def eval_candidate(code, rec, kl):
 # ---------------------------------------------------------------- 留痕与结算
 def load_ledger():
     if not os.path.exists(LEDGER):
-        return {"version": RULE_VERSION, "entries": [], "updatedAt": ""}
+        return {"entries": [], "updatedAt": ""}
     try:
         d = json.load(open(LEDGER, encoding="utf-8"))
         if not isinstance(d, dict):
             raise ValueError("ledger 不是 dict")
         d.setdefault("entries", [])
-        # R100z219：口径升级后 version 必须跟着走。旧写法只 setdefault（文件已存在就永远停在 v1），
-        # 于是台账头顶写着 v1、条目却是 v2 选出来的——回测时按这个字段分组会整组错位。
-        d["version"] = RULE_VERSION
+        # R100z221：原先这里每次强制写 d["version"]=RULE_VERSION（旧写法只 setdefault，
+        # 文件已存在就永远停在 v1，台账头顶与条目会对不上）。现在只有一个口径、没有版本号，
+        # 这个字段连同条目级的 ruleVersion 一起删除；读到旧台账时顺手清掉，避免僵尸字段
+        # 又被人当成分组维度（无读者字段＝僵尸字段，24.45 的教训）。
+        d.pop("version", None)
+        # R100z222（审核意见 §1）：旧条目只有 entryDate，读进来时就地补齐两个新字段——
+        # confirmDate 沿用原 entryDate（不改变已结算样本的买价，历史结果可复现），
+        # firstSeenDate 同样沿用。这样下游只读新字段，不必到处写 `or entryDate`。
+        for x in d.get("entries") or []:
+            if not isinstance(x, dict):
+                continue
+            if not x.get("confirmDate"):
+                x["confirmDate"] = x.get("entryDate") or ""
+            if not x.get("firstSeenDate"):
+                x["firstSeenDate"] = x.get("entryDate") or x.get("confirmDate") or ""
         return d
     except Exception as e:
         print("[warn] 留痕台账读取失败（%s），按空台账继续" % e, file=sys.stderr)
-        return {"version": RULE_VERSION, "entries": [], "updatedAt": ""}
+        return {"entries": [], "updatedAt": ""}
 
 
 def settle_one(e, kl):
@@ -465,9 +528,17 @@ def settle_one(e, kl):
         盘中最低价破位就出局等于用噪音选股，会把两边胜率一起压低）。
       · 同一日先判止损（保守）
       · 都没触 → 窗口末收盘平（expired，按实际收益计）
+      · 开盘价已 ≤ 止损 → **不进场**（notExecuted，不计入胜负）
+
+    R100z222（审核意见 §9）：实测 2,479 个事件里 226 笔（9.1%）开盘价已在止损位之下。
+    真实操作里「跌破止损位不接」是纪律，不是可选项；原来这些被记成正常交易，
+    等于把「你根本不会下的单」也算进胜率。改成 notExecuted 并单独计数（skip），
+    分母里不含它们——它们既不是赢也不是亏，是没做。
     """
     days = [str(k.get("day")) for k in kl]
-    key = str(e.get("entryDate") or "")
+    # R100z222（审核意见 §1）：结算基准改成 confirmDate（数据日）——买入永远是它的
+    # 下一根开盘，语义与「看到信号之后才买」一致；entryDate 只作旧台账的兼容回退。
+    key = str(e.get("confirmDate") or e.get("entryDate") or "")
     if not key:
         return None
     # R100z219：原来是 days.index(entryDate) 精确匹配。踩过一次——脚本在周日 23:5x 跑，
@@ -488,6 +559,11 @@ def settle_one(e, kl):
     if buy <= 0:
         return None
     stop = float(e.get("stopPrice") or 0)
+    if stop > 0 and buy <= stop:
+        # §9：开盘就在止损位之下 → 纪律上不进场。记为 notExecuted，不进胜负分母。
+        return {"status": "settled", "result": "notExecuted", "exitDay": days[idx + 1],
+                "exitPrice": round(buy, 2), "buyPrice": round(buy, 2), "retPct": 0.0,
+                "note": "开盘价 %.2f 已跌破止损位 %.2f，按纪律不进场" % (buy, stop)}
     tgt = buy * (1 + TARGET_PCT / 100)
     last = min(idx + HOLD_DAYS, len(kl) - 1)
     for j in range(idx + 1, last + 1):
@@ -514,22 +590,42 @@ def settle_one(e, kl):
 
 
 def pool_stats(entries):
-    done = [e for e in entries if (e.get("result") or {}).get("status") == "settled"]
+    """胜率统计。`n = win + loss + expired`，`skip` 是「开盘破止损没进场」的条数。
+
+    R100z222（审核意见 §11）：notExecuted 单列 `skip`，**不进 n**——它们不是输赢，
+    是没做。混进分母会把胜率稀释成「包含你根本不会下的单」的数。
+    """
+    settled = [e for e in entries if (e.get("result") or {}).get("status") == "settled"]
+    skip = sum(1 for e in settled if (e["result"] or {}).get("result") == "notExecuted")
+    # §7：止损位取不到（stopPrice ≤ 0）的条目**不进同一张表**——没有止损时只有止盈和到期，
+    # 亏的那一档被系统性抹掉，胜率天然偏高；而缺止损的恰恰多是对照组。
+    nostop = sum(1 for e in settled
+                 if (e["result"] or {}).get("result") != "notExecuted"
+                 and not float(e.get("stopPrice") or 0))
+    done = [e for e in settled
+            if (e["result"] or {}).get("result") != "notExecuted"
+            and float(e.get("stopPrice") or 0)]
     if not done:
-        return {"n": 0, "win": 0, "loss": 0, "expired": 0, "winRate": None,
-                "avgRet": None, "avgWin": None, "avgLoss": None}
+        return {"n": 0, "win": 0, "loss": 0, "expired": 0, "skip": skip,
+                "noStop": nostop, "winRate": None,
+                "avgRet": None, "avgWin": None, "avgLoss": None, "odds": None}
     rets = [float((e["result"] or {}).get("retPct") or 0) for e in done]
     win = sum(1 for e in done if (e["result"] or {}).get("result") == "win")
     loss = sum(1 for e in done if (e["result"] or {}).get("result") == "loss")
     exp = len(done) - win - loss
     wl = [r for r in rets if r > 0]
     ll = [r for r in rets if r <= 0]
+    avg_win = round(sum(wl) / len(wl), 2) if wl else None
+    avg_loss = round(sum(ll) / len(ll), 2) if ll else None
+    odds = round(abs(avg_win / avg_loss), 2) if (avg_win and avg_loss) else None
     return {
-        "n": len(done), "win": win, "loss": loss, "expired": exp,
+        "n": len(done), "win": win, "loss": loss, "expired": exp, "skip": skip,
+        "noStop": nostop,
         "winRate": round(win / len(done) * 100, 1),
         "avgRet": round(sum(rets) / len(rets), 2),
-        "avgWin": round(sum(wl) / len(wl), 2) if wl else None,
-        "avgLoss": round(sum(ll) / len(ll), 2) if ll else None,
+        "avgWin": avg_win,
+        "avgLoss": avg_loss,
+        "odds": odds,
     }
 
 
@@ -549,14 +645,21 @@ def settle_ledger(ledger, kl_cache):
     return n_settled
 
 
-def record_entries(ledger, pool_key, entries, today, tier=None):
-    """把当日池内标的写入台账。同一 (pool, code, entryDate) 只记一次。
+def record_entries(ledger, pool_key, entries, today, tier=None, cross=None):
+    """把当日池内标的写入台账。同一 (pool, code, confirmDate) 只记一次。
 
-    已在池的老标的沿用原 entryDate（不重复记），新标的记今天。
+    R100z222（审核意见 §1/§10）：字段拆成语义明确的两个日期 ——
+      · `confirmDate`  结算基准（= 数据日；买入永远是它的下一根开盘）
+      · `firstSeenDate` 页面展示用（这只票第一次出现在池子里的那天）
+    原来只有一个 `entryDate`，同时承担「入池日」和「确认日」两个含义，
+    结果结算买在了确认信号出现**之前**那根 K 线的开盘（实测把胜率虚高约 12 个点）。
+    `entryDate` 保留 = confirmDate，只为兼容历史台账与还没更新的前端。
     """
-    have = {(x.get("pool"), str(x.get("code")), x.get("entryDate"))
+    have = {(x.get("pool"), str(x.get("code")), x.get("confirmDate") or x.get("entryDate"))
             for x in ledger.get("entries") or []}
-    # 已在池但结果未结算的旧条目，把 stopPrice 更新为最新（止损位随洗盘低点移动）
+    # R100z222：原注释写「已在池但结果未结算的旧条目，把 stopPrice 更新为最新」，
+    # 但下面只有 continue、没有任何更新动作（审核意见 §10）。实际行为是**止损价在
+    # 入池日冻结**——这是对的（回测必须可复现），所以把注释改成事实，别再让人以为它会动。
     live = {str(x.get("code")) for x in ledger.get("entries") or []
             if (x.get("result") or {}).get("status") != "settled"}
     added = 0
@@ -564,18 +667,22 @@ def record_entries(ledger, pool_key, entries, today, tier=None):
         code = str(e.get("code") or "")
         if not code:
             continue
-        ed = e.get("entryDate") or today
-        if (pool_key, code, ed) in have:
+        cd = e.get("confirmDate") or today
+        if (pool_key, code, cd) in have:
             continue
-        if code in live and ed != today:
-            continue          # 该票已有一条未结算记录，不重复记
+        if code in live:
+            continue          # 该票已有一条未结算记录，不重复记（同一波形态只算一次）
         ledger["entries"].append({
             "pool": pool_key, "tier": tier, "code": code,
-            # R100z219：每条带口径版本——v1/v2 的差别只在筛选（连板门槛），结算算法相同，
-            # 但回测若把两种口径的样本混在一张表里，等于用改过的规则解释旧结果。
-            # 老条目没有该字段 → 按 v1 处理（build_compare 里可不分组，写在记忆即可）。
-            "ruleVersion": RULE_VERSION,
-            "name": e.get("name") or "", "entryDate": ed,
+            # R100z221：条目级 ruleVersion 已删——只有一套口径，这个字段恒为同一个值，
+            # 却会诱使后人按它分组做「v1 vs v2」对比（样本各只剩几条，比出来的差异全是噪音）。
+            "name": e.get("name") or "",
+            "confirmDate": cd,
+            "firstSeenDate": e.get("firstSeenDate") or cd,
+            "entryDate": cd,
+            # §19.1：记账当时的两池交集标签（both / chen / db）——事后按今天的池子反推
+            # 会把历史样本标错，标签必须一次定死。批次内有混合时由条目自带的 `_cross` 覆盖。
+            "cross": e.get("_cross") or cross,
             "ztDate": e.get("ztDate") or "",
             # 止损价必须与页面展示的、能成交的那个一致（trade.stopPrice 含 2% 最小距离），
             # 否则会出现「页面写 30、回测按 31 结算」的静默口径分叉。
@@ -589,7 +696,15 @@ def record_entries(ledger, pool_key, entries, today, tier=None):
 
 # ---------------------------------------------------------------- 元信息装配
 def build_entries(hits, D, tier_filter=None):
-    """把命中记录装配成前端要的卡片结构（含 K 线/板块/情绪/交易参数）。"""
+    """把命中记录装配成前端要的卡片结构（含 K 线/板块/情绪/交易参数）。
+
+    R100z222（审核意见 §17）：**调用方只调一次**。原先 main() 里对 strict / loose / watch
+    各调一遍，而这里每次都会跑 fetch_ths_board_map / fetch_board_map / _stock_clist_agg /
+    fetch_notices_batch / tag_entries + 每只票一次 fetch_ths_board_pct_on —— 同一天的同三份
+    数据被拉三遍，公告拉三遍，打标跑三遍。16 只票时看不出来，断板池那种 50+ 只的规模
+    就会顶到 300s 预算。现在一次装配全部命中，调用方按 tier / pool 切三份。
+    `tier_filter` 保留只为兼容外部调用，正常路径不传。
+    """
     ths_map = CD.fetch_ths_board_map()
     ths_names = set(ths_map.keys())
     board_map = CD.fetch_board_map()
@@ -639,6 +754,10 @@ def build_entries(hits, D, tier_filter=None):
             "code": p["code"], "name": p["name"], "sector": sector,
             "ztDate": p["ztDate"], "stage": si["stage"], "form": si["form"],
             "tier": si.get("tier"), "metrics": si.get("metrics") or {},
+            # R100z222：两个日期由判定层带回（观察池没有确认日，留空由 main 兜底）。
+            # 页面「新入池」高亮读 firstSeenDate，台账结算读 confirmDate。
+            "confirmDate": si.get("confirm_day") or "",
+            "firstSeenDate": "",
             "pct": pct, "boardPctToday": bpt, "boardPctZt": bpz, "bkCode": bk_code,
             "probability": None, "probNote": "",
             "trade": tp, "kline": bars,
@@ -665,19 +784,33 @@ def build_entries(hits, D, tier_filter=None):
 
 
 def build_compare(chen_codes, db_codes, ledger):
-    """当日池差异 + 历史胜率对比。"""
+    """当日池差异 + 历史胜率对比。
+
+    R100z222（审核意见 §14）：`chen_codes` / `db_codes` 由调用方统一传**确认池**，
+    不再一边含观察池、一边不含——那种不对称会把「同时在陈学长观察池和断板确认池里」的票
+    错标成「只有断板选中」，who-picked-who 这张图就失真了。
+
+    §19.1：除了按 pool 分组，再按 `cross`（两池都选中 / 只有陈学长 / 只有断板）分组。
+    这才是「谁更准」真正要回答的问题，而 `cross` 在**记账当时**就打好了标签
+    （见 record_entries 的 cross 参数），所以历史样本不会因为今天的池子变了而漂移。
+    """
     chen_s, db_s = set(chen_codes), set(db_codes)
     ents = ledger.get("entries") or []
-    groups = {}
+    groups, cross = {}, {}
     for e in ents:
         groups.setdefault(e.get("pool") or "?", []).append(e)
+        if e.get("cross"):
+            cross.setdefault(e["cross"], []).append(e)
+    stats = {k: pool_stats(v) for k, v in groups.items()}
+    for k, v in cross.items():
+        stats["cross_" + k] = pool_stats(v)
     return {
         "today": {
             "both": sorted(chen_s & db_s),
             "chenOnly": sorted(chen_s - db_s),
             "duanbanOnly": sorted(db_s - chen_s),
         },
-        "stats": {k: pool_stats(v) for k, v in groups.items()},
+        "stats": stats,
         "ledgerN": len(ents),
         "settledN": sum(1 for e in ents if (e.get("result") or {}).get("status") == "settled"),
     }
@@ -747,6 +880,11 @@ def build_module(args):
             kl = CD.get_kline(code, sym)
             if not kl:
                 continue
+            # R100z222（审核意见 §5）：重试成功必须把它从 failed_kl 里删掉，
+            # 否则「抓到了」和「没抓到」同时出现在 failedCodes 里，前端会报一条假告警。
+            with lock:
+                if code in failed_kl:
+                    failed_kl.remove(code)
             rec = cand.get(code) or {}
             hit = eval_candidate(code, rec, kl)
             if hit:
@@ -777,17 +915,20 @@ def build_module(args):
     except Exception as e:
         print("[warn] data.js 解析失败（%s），情绪一律按 neutral 标注" % e, file=sys.stderr)
 
-    strict = build_entries([h for h in hits if h["stage_info"].get("tier") == "strict"], D)
-    loose = build_entries([h for h in hits if h["stage_info"].get("tier") == "loose"], D)
-    watch = build_entries([h for h in hits if h["stage_info"]["pool"] == "watch"], D)
+    # §17：只装配一次，三份按 tier / pool 切——原先调三次＝三份网络抓取 + 三遍公告 + 三遍打标
+    _all = build_entries(hits, D)
+    strict = [e for e in _all if e.get("tier") == "strict"]
+    loose = [e for e in _all if e.get("tier") == "loose"]
+    watch = [e for e in _all if not e.get("tier")]
 
     mod = {
         "generatedAt": _now(),
         "tradeDate": trade_date,
-        "ruleVersion": RULE_VERSION,
+        # R100z221：ruleVersion 已删（用户 2026-10-26：「不要有什么 v1v2，就只有一个版本」）；
+        # 只留冻结日期——「参数在回测出结果之前定死」这个承诺用日期表达，不需要版本号。
         "ruleFrozenAt": RULE_FROZEN_AT,
         "note": (
-            "陈学长口径 v2（2026-10-25）：主板股价≥4元 → T日涨停（首板或连板都算，连板只作排序加分）→ "
+            "陈学长口径（冻结于 2026-10-25）：主板股价≥4元 → T日涨停（首板或连板都算，连板只作排序加分）→ "
             "T+1放量≥2倍断板（无上限）→ 未破T日低点 → T+2缩量 → 站稳MA5；"
             "严格池另加「T日缩量≤1.0 + T+1跌≥3%」两条软条件。"
             "买点=确认日次日开盘，卖点=+3.5%当天兑现或持仓2日，止损=洗盘段最低价，"
@@ -797,6 +938,10 @@ def build_module(args):
         "loose": loose,
         "watching": watch,
         "failedDates": failed_dates,
+        # R100z222（审核意见 §5）：failed_kl 原来只 print 一句就没了——一只票今天 K 线没抓到
+        # 就进不了 hits，于是被失效池滚动写成「形态失效」，而页面上看不出任何异常
+        # （违反「抓不到 ≠ 没有」）。现在给它出口：落盘 + 前端显式告警 + 不进失效池。
+        "failedCodes": sorted(set(failed_kl)),
         "compare": {},
         "track": {},
     }
@@ -805,7 +950,9 @@ def build_module(args):
 
 def main():
     ap = argparse.ArgumentParser(description="陈学长断板反包独立技术指标（chenPool）")
-    ap.add_argument("--days", type=int, default=5, help="回看交易日数（默认5）")
+    ap.add_argument("--days", type=int, default=7,
+                    help="回看交易日数（默认 7，与 check_duanban.py 的 --days 7 对齐；"
+                         "两个池的候选全集不同会让 A/B 的 both/only 统计带噪，审核意见 §16）")
     ap.add_argument("--limit", type=int, default=300, help="最多判定候选数")
     ap.add_argument("--module", action="store_true", help="输出 chenPool 模块 JSON")
     ap.add_argument("--out", default=None, help="模块 JSON 同时写入该文件")
@@ -873,19 +1020,31 @@ def main():
         print("[warn] 旧 data.js 读取失败（%s），按全新建池" % e, file=sys.stderr)
     old_mod = (old.get("chenPool") or {})
 
-    # 入池日沿用（首日新入池高亮，与断板页同口径）
-    prev_entry = {}
+    # R100z222（审核意见 §1/§13）：一个日期拆成两个，页面只出现「数据日」和「确认日」。
+    #   confirmDate  = 数据日（tradeDate）——结算买价永远是它的下一根 K 线开盘，
+    #                  即「看到今天这张卡片、明天开盘买」，与页面承诺一致，不可能偷看未来；
+    #   firstSeenDate= 这只票第一次出现在池子里的那天（沿用上一版，供「新入池」高亮）。
+    # 原先只有一个 entryDate：观察池→确认池升级时它会沿用 D1（断板当天），
+    # 结算就在 D2 开盘成交——而 D2 收盘才确认。实测这条把胜率虚高约 12 个点。
+    _data_day = str(mod.get("tradeDate") or "") or today
+    prev_seen = {}
     for pool in ("strict", "loose", "watching"):
         for e in old_mod.get(pool) or []:
-            if e.get("code") and e.get("entryDate"):
-                prev_entry[str(e["code"])] = e["entryDate"]
+            if e.get("code"):
+                prev_seen[str(e["code"])] = (e.get("firstSeenDate")
+                                             or e.get("entryDate") or "")
     for pool in ("strict", "loose", "watching"):
         for e in mod[pool]:
             c = str(e["code"])
-            e["entryDate"] = prev_entry.get(c) or today
+            if not e.get("confirmDate"):
+                e["confirmDate"] = _data_day       # 观察池没有确认日 → 用数据日占位
+            e["firstSeenDate"] = prev_seen.get(c) or today
+            e["entryDate"] = e["confirmDate"]      # 兼容旧前端/旧台账读取方
 
     # 失效池滚动
     cur_codes = {str(e["code"]) for p in ("strict", "loose", "watching") for e in mod[p]}
+    # §5：K 线抓取失败的票「状态未知」，不能判形态失效——单独挑出来，不进失效池。
+    _failed = set(mod.get("failedCodes") or [])
     prev_all = {}
     for pool in ("strict", "loose", "watching"):
         for e in old_mod.get(pool) or []:
@@ -893,35 +1052,43 @@ def main():
                 prev_all[str(e["code"])] = e
     new_fails = []
     for c, e in prev_all.items():
-        if c in cur_codes:
+        if c in cur_codes or c in _failed:
             continue
         new_fails.append({"code": c, "name": e.get("name") or "",
                           "sector": e.get("sector") or "", "form": e.get("form") or "",
                           "reason": "形态失效（不再满足放量断板+缩量站稳结构）",
-                          "entryDate": today})
-    mod["failPool"] = roll_fail_pool(old_mod.get("failPool") or [], new_fails, today,
-                                     exclude_codes=cur_codes)
+                          "entryDate": _data_day})
+    mod["failPool"] = roll_fail_pool(old_mod.get("failPool") or [], new_fails, _data_day,
+                                     exclude_codes=cur_codes | _failed)
 
-    # 台账：记录当日池
+    # 台账：记录当日池。
+    # §19.1：先把「今天谁选中了谁」算出来，记进条目的 cross 标签——标签必须记账当时定死，
+    # 事后按今天的池子反推会把历史样本标错。
     db_mod = old.get("duanban") or {}
+    _db_set = {str(e.get("code")) for e in (db_mod.get("confirmed") or [])}
+    for e in mod["strict"] + mod["loose"]:
+        e["_cross"] = "both" if str(e.get("code")) in _db_set else "chen"
     record_entries(ledger, "chen_strict", mod["strict"], today, tier="strict")
     record_entries(ledger, "chen_loose", mod["loose"], today, tier="loose")
     # 断板反包对照：只读它的池，不写它。
-    # ⚠️ 只记**它自己本次新入池**的（entryDate == 断板模块的数据日）。历史条目不能补记——
-    # 它们的止损位只能用今天的 K 线倒推，那是前视偏差；宁可样本少，也不许台账里混进用未来算的止损。
-    # R100z219：基准原来写的是本脚本的 `today`，跨午夜就一条也记不进来
-    # （16:00 跑断板、00:0x 跑陈学长 → entryDate 差一天）→ 胜率表第三行永远是 0 样本。
-    # 改成「断板模块自己的 generatedAt 日期」：同日跑时与今天完全等价，跨午夜时才对得上。
-    _db_day = str(db_mod.get("generatedAt") or "")[:10] or today
+    # R100z222（审核意见 §3）：判断「新入池」不能看 entryDate == 今天——entryDate 是会被沿用的
+    # 入池日，这个等式几乎永远不成立（实测 40 只票的 entryDate 全在 10-19~10-22，没有一只等于
+    # 断板模块的 10-25）→ 对照组 40 只全员被 continue，「谁更准」的另一半样本永远是 0。
+    # 改成「台账里有没有这个 (pool, code)」——台账本身就是判据。
+    known = {(x.get("pool"), str(x.get("code"))) for x in ledger.get("entries") or []}
     db_entries = []
     for e in (db_mod.get("confirmed") or []):
-        _ed = e.get("entryDate") or _db_day
-        if _ed != _db_day:
+        c = str(e.get("code"))
+        if ("duanban", c) in known:
             continue
-        db_entries.append({"code": e.get("code"), "name": e.get("name"),
-                           "ztDate": e.get("ztDate"), "entryDate": _ed,
+        db_entries.append({"code": c, "name": e.get("name"),
+                           "ztDate": e.get("ztDate"),
+                           "confirmDate": _data_day, "firstSeenDate": _data_day,
+                           "_cross": "db",
                            "metrics": {"stopPrice": _db_stop(e)}})
-    record_entries(ledger, "duanban", db_entries, today)
+    record_entries(ledger, "duanban", db_entries, today, cross="db")
+    for e in mod["strict"] + mod["loose"]:
+        e.pop("_cross", None)
 
     # 结算（并发抓 open 记录的 K 线）
     open_codes = sorted({str(e.get("code")) for e in ledger.get("entries") or []
@@ -943,18 +1110,20 @@ def main():
     ledger["updatedAt"] = _now()
     write_json_atomic(LEDGER, ledger, label="[chen]")
 
-    # 对比
+    # 对比（§14：两侧都用**确认池**口径，不再一边含观察池一边不含）
     chen_codes = [e["code"] for e in mod["strict"] + mod["loose"]]
-    db_codes = [e.get("code") for e in (db_mod.get("confirmed") or []) + (db_mod.get("watching") or [])]
+    db_codes = [e.get("code") for e in (db_mod.get("confirmed") or [])]
     mod["compare"] = build_compare(chen_codes, db_codes, ledger)
     mod["track"] = {
-        "since": min([e.get("entryDate") for e in ledger.get("entries") or []
-                      if e.get("entryDate")] or [today]),
+        "since": min([e.get("confirmDate") or e.get("entryDate")
+                      for e in ledger.get("entries") or []
+                      if (e.get("confirmDate") or e.get("entryDate"))] or [today]),
         "settledN": mod["compare"].get("settledN", 0),
         "openN": len(open_codes) - n_settled,
         "justSettled": n_settled,
-        "settleRule": ("买价=确认日次一交易日开盘；窗口 %d 个交易日；止盈按盘中触 +3.5%% 算（可挂单），"
-                       "止损按收盘跌破止损位算（盘中不算），都不触按窗口末收盘计。"
+        "settleRule": ("买价=确认日（数据日）次一交易日开盘；窗口 %d 个交易日；"
+                       "止盈按盘中触 +3.5%% 算（可挂单），止损按收盘跌破止损位算（盘中不算），"
+                       "开盘即破止损视为不进场（不进胜负分母），都不触按窗口末收盘计。"
                        "两个池用同一口径，胜率才可比。" % HOLD_DAYS),
     }
 
@@ -967,12 +1136,34 @@ def main():
 
 
 def _db_stop(e):
-    """断板池标的的止损位：优先用前端同口径（T 日最低价），退而用其 kline 末 5 根最低。"""
+    """断板池标的的止损位。**与陈学长同源**：洗盘段（T+1..最新）最低价。
+
+    R100z222（审核意见 §7）：原来取「K 线末 5 根最低」，和陈学长的「洗盘段最低价」不是一回事
+    → 两边的「亏」门槛不同 → 胜率不可直接比（而这张表存在的唯一目的就是比）。
+    `duanban.confirmed` 没有 stop 字段，但有 `ztDate` + kline，能算出同一口径：
+    T 日 = ztDate 那根，洗盘段 = 它之后的每一根，取 low 最小。
+
+    算出 ≤0 或落在最后一根之后时回退到「末 5 根最低」；仍取不到就返回 0——
+    0 会在 pool_stats 里被单列成 `noStop`（不进胜负分母），不会被当成「没有止损的盈利单」。
+    """
     try:
         kl = e.get("kline") or []
         if not kl:
             return 0
-        lows = [float(b[4]) for b in kl[-5:] if isinstance(b, list) and len(b) >= 5]
+        bars = [b for b in kl if isinstance(b, list) and len(b) >= 6]
+        if not bars:
+            return 0
+        ztd = str(e.get("ztDate") or "")
+        iT = None
+        for i, b in enumerate(bars):
+            if str(b[0]) == ztd:
+                iT = i
+                break
+        if iT is not None and iT + 1 <= len(bars) - 1:
+            lows = [float(b[4]) for b in bars[iT + 1:]]
+            if lows and min(lows) > 0:
+                return round(min(lows), 2)
+        lows = [float(b[4]) for b in bars[-5:]]
         return round(min(lows), 2) if lows else 0
     except Exception:
         return 0
