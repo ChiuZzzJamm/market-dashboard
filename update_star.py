@@ -276,8 +276,10 @@ def build_star(D, base=None):
     # 按 score 降序取前 8，但九门量纲 score×10（8~10分=80~100）结构性碾压 谐波(确认65/观察55)
     # 与 吸筹(60~76)——实测九门前 10 全为 90/80，top8 被九门垄断，谐波 12 只/吸筹 6 只候选
     # 一个都进不了终选，AI 映射段随之只写断板+九门。改为**按池配额保底**：九门≤3、谐波≤3、
-    # 吸筹≤2（配额决定入选资格，合并后分数只决定展示顺序），总量仍 ≤8；跨池去重按
-    # 九门→谐波→吸筹优先级（多池命中取先处理池的 label）；-2% 深跌/≥9.5% 涨停剔除守卫不变。
+    # 吸筹≤2、陈学长≤2（配额决定入选资格，合并后分数只决定展示顺序），总量 10；
+    # 跨池去重按 九门→谐波→吸筹→陈学长 优先级（多池命中取先处理池的 label）；
+    # -2% 深跌/≥9.5% 涨停剔除守卫不变。R100z221 新增陈学长池，因此总量从 8 提到 10
+    # （原因见下面「配额合计必须 ≤ 切片上限」那段）。
     hz_list, pw_list, acc_list = [], [], []
     hz = D.get("harmonic") or {}
     _seen_hz = set()
@@ -307,24 +309,46 @@ def build_star(D, base=None):
         if sc >= 60 and c.startswith(("60", "00")):
             acc_list.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
                              "src": "acc", "label": f"吸筹{sc}分", "score": sc})
-    tech, _used = [], set()
-    for _lst, _quota in ((pw_list, 3), (hz_list, 3), (acc_list, 2)):
-        _cnt = 0
-        for _t in _lst:
-            if _cnt >= _quota:
-                break
-            if _t["code"] in _used:
+    # ---- R100z221：陈学长池并入技术池 ----
+    # 用户 2026-10-26：「开盘精选池子里也记得加入陈学长技术指标池，因为对胜率有帮助」。
+    # 取严格池优先、放宽池次之；**观察中不进**——那是「还差一根确认 K 线」的票，
+    # 当下没有可成交的买点，与断板观察池不进精选同一条理由。
+    # 为什么这不是重复计一遍断板池：断板反包的放量上限是 3.5 倍，而实测 5~8 倍那一档
+    # 触 +3.5% 的概率最高（49.7%）；这批票被断板口径砍掉、却正好落在陈学长口径
+    # （断板日放量 ≥2 倍、无上限）里。重叠部分由下面的 pool_codes 去重兜住。
+    chen_list = []
+    ch = D.get("chenPool") or {}
+    _seen_ch = set()
+    for _tier, _arr, _base_sc in (("strict", ch.get("strict") or [], 80),
+                                  ("loose", ch.get("loose") or [], 70)):
+        for it in _arr:
+            c = str(it.get("code") or "")
+            if not c.startswith(("60", "00")) or c in _seen_ch:
                 continue
-            if blacklist.get(_t["code"]) == "red":
-                continue  # R100z9y：硬风险黑名单不进精选，且不占配额（顺位递补）
-            _used.add(_t["code"])
-            tech.append(_t)
-            _cnt += 1
-    tech.sort(key=lambda x: -x["score"])
-    tech = tech[:8]
+            if (it.get("sentiment") or "") == "bear":
+                continue  # 利空标的不进精选（与断板池同一条：sent == 'bear' 直接跳过）
+            _seen_ch.add(c)
+            _m = it.get("metrics") or {}
+            try:
+                _lbs = max(1, int(_m.get("lbc") or 1))
+            except Exception:
+                _lbs = 1
+            # 排序分只在池内用：口径档位（严格 80 / 放宽 70）+ 每板 +4（最多算 3 板）。
+            # 不与九门 ×10 的量纲混比——配额已经保证各池的上车名额，分数只决定展示顺序。
+            chen_list.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
+                              "src": "chen", "sentiment": it.get("sentiment") or "neutral",
+                              "label": ("陈学长·严格池·" if _tier == "strict" else "陈学长·放宽池·")
+                                       + (f"{_lbs}板" if _lbs > 1 else "首板"),
+                              "score": _base_sc + 4 * min(_lbs, 3)})
+    # ⚠️ 配额装配挪到 picks 定稿之后（R100z221）——理由见下面 `pool_codes` 那一段。
+    # 这里只先把四个池的候选代码汇总出来，供下面批量抓个股快照用。
+    _tech_codes = []
+    for _l in (pw_list, hz_list, acc_list, chen_list):
+        _tech_codes.extend([t["code"] for t in _l])
+    _tech_codes = list(dict.fromkeys(_tech_codes))
 
-    if not pools and not tech:
-        return None, "断板反包双池与技术池（谐波/九门/吸筹）均为空"
+    if not pools and not _tech_codes:
+        return None, "断板反包双池与四个技术池（谐波/九门/吸筹/陈学长）均为空"
 
     # ---- 盘面：指数 / 行业涨幅 / 资金 ----
     idx = fetch_open_indices()
@@ -354,8 +378,10 @@ def build_star(D, base=None):
                              "同花顺行业资金接口抓空（主力净流入判据缺失）")
     degraded = gap_reason is not None
 
-    # ---- 个股快照（当日实时涨幅）：断板池 + 技术池一并快照 ----
-    quotes = fetch_stock_quotes([str(e.get("code")) for e in pools] + [t["code"] for t in tech])
+    # ---- 个股快照（当日实时涨幅）：断板池 + 四个技术池候选一并快照 ----
+    # R100z221：原来抓的是「配额装配后那 10 只」，而装配已挪到后面（要看断板池选走了谁），
+    # 所以这里改成抓四个池的全部候选——多抓十几只，换来装配阶段能按实时涨幅顺位递补。
+    quotes = fetch_stock_quotes([str(e.get("code")) for e in pools] + _tech_codes)
 
     # ---- R99c：确定性筛选——仅「板块情绪正向 + 主力净流入正向」板块挂钩的池内标的 ----
     # 合格板块：涨幅>0 且 主力净流入>0；池内板块与合格板块名互含即视为挂钩。
@@ -448,17 +474,47 @@ def build_star(D, base=None):
                       "boardPctZt": c.get("boardPctZt"),
                       "bkCode": c.get("bkCode")})
 
-    # ---- R100m（需求7）：技术池候选并入精选（排在断板池之后）——开盘现价深跌(<-2%)的剔除，宁缺勿滥 ----
+    # ---- 技术池配额装配（R100z221 重排：必须晚于 picks 定稿）----
+    # 原实现把配额装配放在 picks 之前，去重只用 `_used`（技术池内部），**看不到断板池已经选走了谁**；
+    # 而陈学长严格池 16 只里有 13 只同时命中断板池 → 配额给它的 2 个座位几乎每次都被
+    # 合并段那句 `if t["code"] in pool_codes: continue` 挡掉，实际贡献 0 席
+    # （用户 2026-10-26「开盘精选池子里也记得加入陈学长技术指标池，因为对胜率有帮助」＝没兑现）。
+    # 现在先剔掉断板池已选走的票，再按 九门→谐波→吸筹→陈学长 的顺序填配额，配额才真能兑现。
+    # 开盘深跌(<-2%)/涨停(≥9.5%)的剔除也一起上移：原来被剔的票仍然占着一个配额位、不顺位递补，
+    # 等于同一个池的座位凭空少几个（行情一差就整池消失）。
     pool_codes = {p["code"] for p in picks}
+    tech, _used = [], set()
+    # ⚠️ 配额合计必须 ≤ 下面切片上限：R100z85 的教训是「合并后按 score 降序取前 N」会让
+    # 量纲最大的九门垄断名额，配额等于白写。所以这里配额和 = 10，切片也必须是 [:10]；
+    # 加池要同时改这两个数，只改一个就会静默把最后一个池全砍掉。
+    for _lst, _quota in ((pw_list, 3), (hz_list, 3), (acc_list, 2), (chen_list, 2)):
+        _cnt = 0
+        for _t in _lst:
+            if _cnt >= _quota:
+                break
+            if _t["code"] in _used or _t["code"] in pool_codes:
+                continue
+            if blacklist.get(_t["code"]) == "red":
+                continue  # R100z9y：硬风险黑名单不进精选，且不占配额（顺位递补）
+            _lv = (quotes.get(_t["code"]) or {}).get("pct")
+            if _lv is not None and _lv < -2.0:
+                continue  # 开盘深跌的形态标的暂不进精选（不占配额，顺位递补）
+            if _lv is not None and _lv >= 9.5:
+                continue  # 开盘即涨停（买不进），推荐无意义（不占配额，顺位递补）
+            _used.add(_t["code"])
+            tech.append(_t)
+            _cnt += 1
+    tech.sort(key=lambda x: -x["score"])
+    tech = tech[:10]
+
+    # ---- R100m（需求7）：技术池候选并入精选（排在断板池之后）----
     for t in tech:
         if t["code"] in pool_codes or len(picks) >= 12:
             continue
         q = quotes.get(t["code"]) or {}
         live = q.get("pct")
-        if live is not None and live < -2.0:
-            continue  # 开盘深跌的形态标的暂不进精选
-        if live is not None and live >= 9.5:
-            continue  # 开盘即涨停（买不进），推荐无意义
+        # 深跌(<-2%) / 涨停(≥9.5%) 的剔除已在上面装配段做过（那里才有顺位递补），
+        # 这里不再重复判一遍——同一条件写两处，改一处就会静默分叉。
         note = f"{t['label']}·前日16:00筛选"
         _gt, _gzh = gap_tag(q.get("openPct"))
         if q.get("openPct") is not None:
@@ -466,7 +522,10 @@ def build_star(D, base=None):
         if live is not None:
             note += f"·现涨{live:+.1f}%"
         picks.append({"code": t["code"], "name": t["name"], "sector": t["sector"],
-                      "sentiment": "neutral", "probability": None,
+                      # R100z221：技术池条目自带情绪（陈学长池有 sentiment，谐波/九门/吸筹没有 →
+                      # 落到 neutral）。以前这里写死 "neutral"，会把陈学长的利空票也标成中性；
+                      # 利空票在 chen_list 构造时已经剔除，这里只是不覆盖真值。
+                      "sentiment": t.get("sentiment") or "neutral", "probability": None,
                       # R100z192：技术池同样标注跳空——但**它不是断板池那套结论**（买点逻辑不同），
                       # 所以只标注、不据此剔除；`src` 让前端/推送能区分两种口径。
                       "gapTag": _gt, "gapZh": _gzh, "openPct": q.get("openPct"),

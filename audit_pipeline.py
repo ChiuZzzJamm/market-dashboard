@@ -3495,9 +3495,12 @@ def g40_score_page_and_slots(r):
     判据：
       a) #score-view / #score-body / #sc-date / #sc-entry / #sc-entry-in 五个锚点齐全；
       b) CSS 三件套齐（容器默认隐藏 + body.score-open 隐藏其余 + 显示本页）；
-      c) renderScoreView() 同时调用 renderSignalPerf / renderLeadLag / renderForecastScore
-         （少一张＝用户要的丢一半）；且 renderLeadLag() 全页**只有一个调用点**——
+      c) renderScoreView() 同时渲染 renderSignalPerf / renderForecastScore / chenCompareHtml /
+         renderLeadLag('bt')（少一张＝用户要的丢一半）；且 renderLeadLag 只允许两个
+         **带 mode 的**调用点：'picks' 在断板页、'bt' 在复盘台账，**禁止无参调用**——
          R100z199 把它从断板页搬到复盘页，两处各挂一份就会出现「同一张卡两个页面数字不同步」；
+         R100z221 又按「今天买什么 / 这套口径能不能信」拆成两半，无参调用会把两半同时塞进两个页面。
+         （闸门查的是「每个 mode 恰好一个调用点」，不是函数名——将来再拆第三半只需同步这张表。）
       d) hash '#score' 至少两处（初始直达 + popstate 返回）；
       e) 槽位表 RAIL 把 4 个页内替身按「🐼→📄→🧰→📋」顺序指到组内第 0..3 个按钮；
          layout() 用实测偏移 gm.off[i] 落位，且 CSS 里不再出现 calc(50% ± N) 的槽位副本；
@@ -3537,17 +3540,26 @@ def g40_score_page_and_slots(r):
         bad.append("找不到 renderScoreView()——复盘页没有渲染入口")
     else:
         fb = mf.group(1)
-        miss = [fn for fn in ("renderSignalPerf", "renderLeadLag", "renderForecastScore")
+        miss = [fn for fn in ("renderSignalPerf", "renderForecastScore", "chenCompareHtml",
+                              "renderLeadLag")
                 if fn not in fb]
         if miss:
             bad.append("renderScoreView() 未渲染 %s（复盘页的成绩卡少一张）"
                        % "、".join(miss))
     # R100z199：搬页只能搬一次。调用点 >1 说明断板页那份没删干净，两处各渲染一份，
     # 将来改一边忘另一边，两个页面的同一个数字会不一致（而且没人会去对照）。
-    ncall = len(re.findall(r"(?<!function )renderLeadLag\(\)", s))
-    if ncall != 1:
-        bad.append("renderLeadLag() 有 %d 个调用点（应 1 个，只在复盘页）——"
-                   "断板页那份没删干净，同一个卡会出现两套数字" % ncall)
+    # R100z221：改成「按 mode 各一个」——'picks' 归断板页、'bt' 归复盘页；无参调用直接判死。
+    # ⚠️ 与 G30 同一条规矩：**注释命中也算命中**。写代码注释时不要把这几个字面量原样抄进去，
+    #    要么说「mode 取 'bt'」，要么走 prose；否则闸门会把注释数成调用点（本轮踩过一次）。
+    bare = re.findall(r"(?<!function )renderLeadLag\(\s*\)", s)
+    if bare:
+        bad.append("renderLeadLag() 有 %d 个无参调用——必须显式写 'picks'（断板页）"
+                   "或 'bt'（复盘台账）；无参会把清单+回测整块塞进两个页面，"
+                   "同一个胜率数字两页显示不同步" % len(bare))
+    modes = sorted(re.findall(r"(?<!function )renderLeadLag\(\s*['\"]([a-z]+)['\"]\s*\)", s))
+    if modes != ["bt", "picks"]:
+        bad.append("renderLeadLag 的调用点应为 ['bt', 'picks'] 各一处，实际 %s"
+                   % (modes or "无"))
 
     # ---- d) hash 直达 ----
     nh = s.count("'#score'") + s.count('"#score"')
@@ -3618,8 +3630,8 @@ def g40_score_page_and_slots(r):
     if bad:
         r.fail("G40", "；".join(bad[:4]))
     else:
-        r.ok("G40", "🌟 复盘台账页齐全（指标表现 + 强板块落后股 + 预测复盘三张卡、"
-                    "hash 直达、独占 CSS、落后股仅此一处），悬浮组四槽位按实测槽距对齐")
+        r.ok("G40", "🌟 复盘台账页齐全（指标复盘→预测复盘→反包复盘→落后股回测四段顺序、"
+                    "hash 直达、独占 CSS、落后股 picks/bt 两半各一处），悬浮组四槽位按实测槽距对齐")
 
 
 def g41_visual_norms(r):

@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610260104"></script>
+<script src="data.js?v=202610260147"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -681,7 +681,6 @@
      6 档字号，不许出现中间值），背景只用 --paper / --accent-soft（全站三层背景）。
      涨跌色沿用 A 股惯例：涨红 --up、跌绿 --down（.cc-tbl 的 up/down 列同此）。
      ========================================================================== */
-  .cf-hint { font-size: var(--fs-sm); color: var(--ink2); font-weight: 400; }
   /* 数据缺口告警（R100z219：漏斗删掉后承接「抓不到 ≠ 没有标的」的显式降级位） */
   .chen-warn { margin: 0 0 12px; padding: 7px 11px; border: 1px solid #f0dcaa;
                border-radius: var(--r-note); background: var(--paper);
@@ -697,6 +696,17 @@
   .cc-chip b { font-weight: 600; }
   .cc-chip .cd { font-size: var(--fs-xs); color: var(--ink2); }
   .cc-more { font-size: var(--fs-sm); color: var(--ink2); }
+  /* R100z221：chip 可点（用户 2026-10-26：「标的点击要能打开看 k 线…以及左右切换按钮」）。
+     交互写法与全站 .stk-go 一致（悬停变深 + 虚线下划线），不新增一套「可点击」语汇；
+     光标手势必须有——否则读者不知道这枚胶囊和旁边那枚不是一回事。 */
+  .cc-chip.go { cursor: pointer; }
+  .cc-chip.go b { border-bottom: 1px dashed transparent; }
+  .cc-chip.go:hover { background: #e8f2fb; }
+  .cc-chip.go:hover b { color: var(--accent-deep); border-bottom-color: var(--accent-deep); }
+  /* R100z221：口径表从 6 列涨到 7 列（补「平」），375px 屏会顶出卡片边框。
+     给一层横向滚动壳，不缩字号——缩到 10px 的表格等于没有。 */
+  .cc-tbl-w { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .cc-tbl { min-width: 330px; }
   .cc-note { margin-top: 10px; font-size: var(--fs-sm); color: var(--ink2); line-height: 1.8; }
   .cc-note b { color: var(--ink); font-weight: 600; }
   .cc-tbl { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: var(--fs-sm); }
@@ -965,6 +975,9 @@
   /* 信号滞后灰标（R100z22）：吸筹是历史 K 线模型，同样分数信号新旧不同，滞后 ≥10 日转告警色 */
   /* R100z36：卡片内的价格/目标位强调（.exit-line .xt 只在退出纪律行内生效，tc 卡片需单列） */
   .tc .xt { font-weight: 800; font-variant-numeric: tabular-nums; }
+  /* R100z222：脚注里的「⚠ 确认后第 N 天·非当日新信号」告警段（陈学长池专用）。
+     只上色不加粗——这行和后面的形态串是同一句话，加粗会让「非当日新信号」比票名还显眼。 */
+  .tc-foot .xt.warn { color: #b3541e; font-weight: 600; }
   .tc-foot .up { color: var(--up); }
   .tc-foot .down { color: var(--down); }
 
@@ -1243,10 +1256,11 @@
   .fc-chip { display: inline-block; font-size: var(--fs-sm); color: var(--ink2); background: var(--paper);
              border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; margin: 0 5px 5px 0; line-height: 1.5; }
   .fc-chip em { font-style: normal; font-weight: 700; color: var(--accent-deep); margin-right: 5px; }
-  /* 窄屏：标题副句收起（否则挤成三行）、hero 改两列 + 第三张跨行。
-     三列各约 120px 时「严格命中 66 条 / 11 日」会被折断成三行，读不下去。 */
+  /* 窄屏：hero 改两列 + 第三张跨行。
+     三列各约 120px 时「严格命中 66 条 / 11 日」会被折断成三行，读不下去。
+     （R100z221 删掉 .fc-h2/.fc-sub 的窄屏收起规则：标题副句「· 谁准谁不准」已整句删除，
+       标题改用与另两张卡同款的 .td-h2，全局窄屏规则在 1337 行统一管。） */
   @media (max-width: 720px) {
-    .fc-h2 .fc-sub { display: none; }
     .fc-hero { grid-template-columns: 1fr 1fr; }
     .fc-hero > div:nth-child(3) { grid-column: 1 / -1; }
     .fc-hero b { font-size: var(--fs-h2); }
@@ -1296,8 +1310,19 @@
      断板页旧挂载点已删除，无需兼容。 */
   .card.ll-card { padding: 22px 14px; }
   .card.ll-card > .ll-wrap { margin: 0; border: 0; border-radius: 0; background: transparent; }
+  /* R100z221：清单那半挂回断板页，外壳借 .db-pool 的框（白底/阴影/圆角），
+     但左右 padding 给 12px——内层 .ll-row 自带 12px，凑成 24px 正好与确认池正文左对齐。
+     （.db-pool 默认 24px，直接用会变成 36px，两张块并排看会错位一条。） */
+  .db-pool.ll-pool { padding: 22px 12px; }
+  .db-pool.ll-pool > .ll-wrap { margin: 0; border: 0; border-radius: 0; background: transparent; }
   .ll-hd { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; padding: 9px 12px 6px; }
-  .ll-hd b { font-size: var(--fs-h2); color: var(--ink); }
+  .ll-hd b { font-size: var(--fs-h2); color: var(--ink); display: inline-flex; align-items: center; gap: 9px; }
+  /* R100z221：标题补前置圆点。原来 .ll-hd 的标题没有圆点，与同页其他卡（.card h2::before /
+     .db-pool h2::before 都是一枚 9px 小圆点）并排看像缺了个头。圆点画在标题上、按容器取色：
+     断板页那块跟随「开盘精选」的金色系，复盘页那块跟随全站的 --accent。 */
+  .ll-hd b::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--accent);
+                     box-shadow: 0 0 0 4px var(--accent-soft); flex-shrink: 0; }
+  .db-pool.ll-pool .ll-hd b::before { background: #e8a013; box-shadow: 0 0 0 4px rgba(232,160,19,.16); }
   .ll-hd .ll-date { font-size: var(--fs-sm); color: var(--ink2); }
   .ll-hd .ll-mode { font-size: var(--fs-xs); padding: 1px 6px; border-radius: 999px; background: rgba(74,168,224,.13); color: var(--accent-deep); }
   .ll-hd .ll-mode.warn { background: rgba(232,160,19,.16); color: #a86f0e; }
@@ -3491,7 +3516,7 @@ function renderSignalPerf() {
   var passed = withX.filter(function (r) { return num(r.win1) >= WIN_BAR; });
   var best = withX.slice().sort(function (a, b) { return num(b.win1) - num(a.win1); })[0];
 
-  var h = '<div class="card"><h2 class="td-h2">指标表现 · 谁准谁不准' +
+  var h = '<div class="card"><h2 class="td-h2">指标复盘' +
     (P.asOf ? ' <span class="h2-date">' + esc(P.asOf) + '</span>' : '') +
     '<span class="src-tag td-tag">按来源归因</span></h2>';
 
@@ -3635,9 +3660,12 @@ function renderForecastScore() {
   var s = F.sector, fw = F.forward || {};
   var byConf = F.byConf || [], byDir = F.byDir || [];
 
-  var h = '<div class="card"><h2 class="fc-h2">预测复盘<span class="fc-sub"> · 谁准谁不准</span>' +
+  // R100z221：标题统一为「预测复盘」+ .h2-date + 口径来源标签，与「指标复盘 / 反包复盘」
+  // 三张卡同一处字样、同一处日期位置（原先是 .fc-h2 + 「· 谁准谁不准」副标，
+  // 三张卡各写各的，并排看像三份文档）。
+  var h = '<div class="card"><h2 class="td-h2">预测复盘' +
     (F.asOf ? ' <span class="h2-date">' + esc(F.asOf) + '</span>' : '') +
-    '<span class="src-tag">按台账结算</span></h2>';
+    '<span class="src-tag td-tag">按台账结算</span></h2>';
 
   // 三个大数字：坏就用警示橙，好就用深蓝。红绿在本站是涨跌语义，别借来表好坏。
   var tone = function (v, th) { return num(v) === null ? '' : (v < th ? 'bad' : 'good'); };
@@ -5193,16 +5221,23 @@ function stkMa5Of(code0, embKline) {
   }
   return s / 5;
 }
-/* R100z105：开盘精选技术池标的（src=hz/acc/pw）回源查池内条目。
-   四格渲染需要来源池的专属字段（谐波 prz/stop/target1、吸筹 score/f5Tier/hitCount、九门 score/volRatio/rsi），
+/* R100z105：开盘精选技术池标的（src=hz/acc/pw/chen）回源查池内条目。
+   四格渲染需要来源池的专属字段（谐波 prz/stop/target1、吸筹 score/f5Tier/hitCount、九门 score/volRatio/rsi、
+   陈学长 trade.targetPrice/stopPrice/posPct + metrics.lbc/volRatio），
    star 循环合成的 e2 只带了 score/grade/story/deduce，不够用——按 src 回原池查全量条目，查不到返回 null。 */
 function starTechOf(code0, src) {
   var c = String(code0 || '').replace(/\D/g, '');
   if (!c) return null;
   if (src === 'hz') return findHarmonic(c);
   var D = window.DASHBOARD_DATA || {};
+  // R100z221：陈学长池分三档（严格/放宽/观察），按池展示优先级找——严格池的条目信息最全，
+  // 同一只票同时满足两档时以严格池那条为准（与 chenNameOf / chenPoolBlock 的口径一致）。
   var arr = src === 'acc' ? ((D.accumulation || {}).scored || [])
-          : src === 'pw' ? ((D.powerScreen || {}).passed || []) : null;
+          : src === 'pw' ? ((D.powerScreen || {}).passed || [])
+          : src === 'chen' ? [].concat(((D.chenPool || {}).strict) || [],
+                                       ((D.chenPool || {}).loose) || [],
+                                       ((D.chenPool || {}).watching) || [])
+          : null;
   if (!arr) return null;
   for (var i = 0; i < arr.length; i++) {
     if (String((arr[i] || {}).code || '').replace(/\D/g, '') === c) return arr[i];
@@ -5217,7 +5252,10 @@ function hzPatCn(p) { return HZ_PAT_CN[p] || p; }
    R100z44：fresh=true → 整卡淡黄+「新」徽章（新入池首日高亮，次日恢复）。 */
 /* R100z76-③→R100z80：四技术池跨池共振——同票命中≥2个技术池（吸筹/谐波/九门/断板反包）即高确信共振。
    全局 memoized 计算 code→命中池名列表（resoMap），仅供 sortByReso 排序共振目标页使用；
-   全站边框分级由 stkGoldCls 直接基于 stkTechMeta 渲染，不再依赖共振徽标。 */
+   全站边框分级由 stkGoldCls 直接基于 stkTechMeta 渲染，不再依赖共振徽标。
+   ⚠️ 陈学长池**故意不并入**：它与断板反包是同一族形态的两套口径（16 只里 13 只同时命中断板池），
+   计进共振等于把「同一件事」数两遍——全部断板票边框会被整体提一档，共振信号随即失去区分度。
+   它的独立价值走「开盘精选配额（2 席）」和「反包复盘对比卡」体现，不走共振。 */
 var _RESO_MAP = null;
 function resoMap() {
   if (_RESO_MAP) return _RESO_MAP;
@@ -5330,7 +5368,7 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
   // 改为按来源分派四格：断板=板块涨幅/上涨概率/建议买入价(MA5)/止损；谐波=买入区(PRZ)/距PRZ/止损(D点)/T1；
   // 吸筹=吸筹评分/信号阶段/特征命中/止损(纪律位)；九门=九门评分/量比/RSI/止损(纪律位)。取不到如实「—」，绝不编数。
   var cells;
-  if (star && (e.src === 'hz' || e.src === 'acc' || e.src === 'pw')) {
+  if (star && (e.src === 'hz' || e.src === 'acc' || e.src === 'pw' || e.src === 'chen')) {
     var te = starTechOf(e.code, e.src);
     if (e.src === 'hz' && te && te.prz) {
       var hzDist = (typeof te.distToPrzPct === 'number') ? te.distToPrzPct : null;
@@ -5355,6 +5393,21 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
         tcCell('RSI', (te.rsi == null || !isFinite(Number(te.rsi))) ? '—' : Number(te.rsi).toFixed(1), ''),
         tcStopCell(e.code) // 九门无形态止损位 → 统一纪律位兜底
       ];
+    } else if (e.src === 'chen' && te) {
+      // R100z222（用户 2026-10-26「开盘精选池子里也记得加入陈学长技术指标池，因为对胜率有帮助」）：
+      // 四格与陈学长池卡片（chenPoolBlock.oneCard）逐格同源同文案——同一只票在两个页面显示两套数字，
+      // 是最容易让人放弃看板的错。止损走 trade.stopPrice（含 2% 最小距离的「能成交的那个」），
+      // 不是 metrics.stopPrice（形态原始洗盘低点），与 chen_pool.py 结算口径对齐。
+      var _ct = te.trade || {}, _cm = te.metrics || {};
+      var _lbc = _cm.lbc ? (_cm.lbc === 1 ? '首板' : _cm.lbc + ' 板') : '—';
+      var _vol = _cm.volRatio ? _cm.volRatio + ' 倍' : '—';
+      cells = [
+        tcCell('目标 +' + (_ct.targetPct || 3.5) + '%', _ct.targetPrice ? Number(_ct.targetPrice).toFixed(2) : '—', 'up'),
+        tcCell('止损', _ct.stopPrice ? '<span class="xt" title="洗盘段最低价；破位按收盘算">' + Number(_ct.stopPrice).toFixed(2) + '</span>' : '—', 'down'),
+        tcCell('仓位', _ct.posPct ? _ct.posPct + '%' : '—', ''),
+        tcCell('连板 / 放量', '<span class="nw">' + _lbc + '</span> <span class="nw">' + _vol + '</span>', '', false, true)
+      ];
+      foot = '<span class="xt">' + esc(String(te.form || form || '').replace(/·/, '：')) + '</span>';
     } else {
       // 来源池已找不到该标的（数据日错位等）——如实「—」，止损仍走纪律位兜底，绝不用 MA5 冒充
       cells = [tcCell('评分', '—', 'flat'), tcCell('信号', '—', 'flat'), tcStopCell(e.code), tcCell('参考位', '—', 'flat')];
@@ -5393,7 +5446,8 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
       (star ? '\n' + ({
         hz: '建议买入区＝PRZ 潜在反转区（回踩入区企稳介入）· 止损＝D 点结构失效位 · T1＝一级目标位',
         acc: '吸筹评分＝六项特征加权（命中越多分越高）· 止损＝全站统一纪律位（最近收盘 −2.5%，非形态位）',
-        pw: '九门评分＝量化九门通过数（满分 9）· 止损＝全站统一纪律位（最近收盘 −2.5%，非形态位）'
+        pw: '九门评分＝量化九门通过数（满分 9）· 止损＝全站统一纪律位（最近收盘 −2.5%，非形态位）',
+        chen: '目标 +3.5% 次日冲高兑现 · 止损＝洗盘段最低价（破位按收盘算）· 仓位＝1.5% 风险预算 ÷ 止损宽度 · 持仓 ≤2 日'
       }[e.src] || '建议买入价＝MA5（回踩5日线企稳介入）· 止损＝断板日最低价') : '') +
       '\n点击查看K线与利好依据'
   });
@@ -5535,6 +5589,10 @@ function renderDuanban() {
     ((D0.powerScreen || {}).passed || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
     [].concat((D0.harmonic || {}).confirmPool || [], (D0.harmonic || {}).watchPool || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
     ((D0.accumulation || {}).scored || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
+    // R100z222：陈学长池也进映射表（严格先于放宽，与 starTechOf 同序）。精选条目是 update_star.py
+    // 合成的精简版（只有 code/name/sector/src/sentiment/label/score），story / probability / 形态原文
+    // 全在池条目里——不挂进来，弹窗「个股消息」和利好依据就是空白，这正是 R100z4t 当初加 _techMap 的原因。
+    [].concat(((D0.chenPool || {}).strict) || [], ((D0.chenPool || {}).loose) || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
     starTech.forEach(function (p) { var tp = _techMap[String(p.code)]; if (tp) { if (tp.score != null) p.score = tp.score; if (tp.grade) p.grade = tp.grade; } });
     starPool.sort(function (a, b) {
       var ea = poolByCode[String(a.code)], eb = poolByCode[String(b.code)];
@@ -5601,7 +5659,7 @@ function renderDuanban() {
         e2 = { code: code, name: p.name || '', sector: p.sector || '', stage: '精选',
                sentiment: p.sentiment || 'neutral', probability: p.probability,
                src: p.src || '',
-               form: ({ hz: '谐波形态', pw: '日线九门', acc: '主力吸筹' }[p.src] || '技术池候选'), note: p.note || '' };
+               form: ({ hz: '谐波形态', pw: '日线九门', acc: '主力吸筹', chen: '陈学长断板反包' }[p.src] || '技术池候选'), note: p.note || '' };
         if (p.score != null) e2.score = p.score;
         if (p.grade) e2.grade = p.grade;
         // R100z4t：合并技术池条目字段——story/deduce（AI 写回后弹窗可见）、sector 补全。
@@ -5612,13 +5670,21 @@ function renderDuanban() {
             if (tp.story) e2.story = tp.story;
             if (tp.deduce) e2.deduce = tp.deduce;
             if (tp.sector && !e2.sector) e2.sector = tp.sector;
+            // 陈学长池条目自带上涨概率与形态原文（form），精选合成体没有——补上，
+            // 否则弹窗里「形态」一栏写的是我们自己的池名，而不是他的形态原文。
+            if (p.src === 'chen') {
+              if (tp.probability != null && e2.probability == null) e2.probability = tp.probability;
+              if (tp.form) e2.form = tp.form;
+              if (tp.boardPctToday != null) e2.boardPctToday = tp.boardPctToday;
+              if (tp.boardPctZt != null) e2.boardPctZt = tp.boardPctZt;
+            }
           }
         })();
       }
       DB_INDEX[key] = e2;
       DB_ORDER.push(key);
       if (code.length === 6) { window._STAR_LIST.push(code); }
-      fixed += dbCardHtml(e2, key, false, true, false, true); // R100z36：与四子页同一套 T2 卡片；R100z105：star=true → 四格按来源分派（断板=板块涨幅/上涨概率/MA5买入/止损；谐波=买入区PRZ/距PRZ/D点止损/T1；吸筹=评分/阶段/命中/纪律止损；九门=评分/量比/RSI/纪律止损）
+      fixed += dbCardHtml(e2, key, false, true, false, true); // R100z36：与四子页同一套 T2 卡片；R100z105：star=true → 四格按来源分派（断板=板块涨幅/上涨概率/MA5买入/止损；谐波=买入区PRZ/距PRZ/D点止损/T1；吸筹=评分/阶段/命中/纪律止损；九门=评分/量比/RSI/纪律止损；陈学长=目标/止损/仓位/连板·放量）
     });
     fixed += '</div></div>';
   }
@@ -5628,6 +5694,21 @@ function renderDuanban() {
   html += subnavHtml();
   // R100j/R100z4v：断板页口径说明置于确认池上方（TOP10 与 开盘精选 保持置顶不动）；R100z4v 起为静态 HTML，不再 esc
   html += _dbNote;
+  // R100z221（用户 2026-10-26 截图 7）：「他只是告诉我出手后的回测，我也没看到你提前一天
+  // 提醒我要买入哪只标的」——这块的**今日清单一直是有的**（lead_lag.py 每日 9:45 写
+  // duanban.leadLag.picks），但过去一年它挂在 📋 复盘台账（一个纯「回头看」的页面）上，
+  // 读者只会把它当成绩单，不会当指令。清单归位到「今天做什么」这一族：
+  // 放在确认池上方、与开盘精选同一时点产出，出门前扫一眼就知道今天有没有票。
+  // 规则回测那半仍在复盘台账（mode 取 'bt'），两半各只有一个调用点（G40 盯）。
+  var _llPicks = renderLeadLag('picks');
+  if (_llPicks) {
+    html += '<div class="db-pool ll-pool">' + _llPicks + '</div>';
+  } else {
+    // 抓不到 ≠ 没有（项目硬约束）：lead_lag.py 没跑 / 数据被清时显式说明，
+    // 不留一个白框，也不让这一整块无声消失。
+    html += '<div class="db-pool ll-pool"><h2>🎯 强板块落后股 · 今日清单</h2>' +
+      '<div class="db-empty">暂无清单（lead_lag.py 每个交易日 9:45 产出；非交易日不更新是常态）</div></div>';
+  }
   html += dbPoolHtml('确认池', 'p-conf', '已走完「涨停 → 放量断板 → 缩量 → 不破T日低点与MA5」全流程', conf, true, 'c');
   html += dbPoolHtml('观察池', 'p-watch', '形态进行中、只差最后一根确认K线（待企稳 ＞ 待缩量）', watch, false, 'w');
   // R100i：断板反包失败池（破位 / 超期失效归档，5 交易日后自动清理）
@@ -5694,10 +5775,14 @@ function chenDataDay(c) {
    R100z162 定的五段固定顺序「一句话逻辑 / 判定规则 / (lg-hr) / 分池 / 失效与离场 / lg-tip 下一步」，
    陈学长这页原先是 6 个 .lg-p 大段（该类比全站没有 CSS，等于纯 div 堆叠）：没有分隔线、没有黄条结论、
    每段一坨 200 字，和断板/谐波/九门/吸筹并排看像两种产品的说明书。本轮改成同一套五段，
-   原文的每个事实（v1→v2 修正、三档梯度、不采纳三条、日线缺口、交易参数与仓位警告）一条不删，
+   原文的每个事实（首板与连板的口径、三档梯度、不采纳三条、日线缺口、交易参数与仓位警告）一条不删，
    只按新段落归位，并补上另外四页都有、这页缺的「分期与离场」与「下一步」。 */
 function chenLegendHtml(c) {
-  var v = esc(c.ruleVersion || 'v1'), fd = esc(c.ruleFrozenAt || '');
+  // R100z221（用户 2026-10-26：「不要有什么 v1v2，就只有一个版本」）：原先这里取 ruleVersion
+  // 并在脚注写「口径版本 v2」、正文写「v2 的修正点，v1 误把连板 ≥2 当成门槛」。
+  // 只有一套口径时，版本号是噪音：读者要花力气才能确认「我看的是哪一版」，而答案永远是同一版。
+  // 现在只保留冻结日期（那才是真正的承诺：参数在回测出结果前定死、出结果后不调参）。
+  var fd = esc(c.ruleFrozenAt || '');
   // c.note 是生成侧写的口径摘要（一句话版），正文里已展开，故只挂 title 供悬停速览——
   // 挂上去顺便让它有读者（无读者字段＝僵尸字段，24.45 的教训）。
   return '<details class="tech-legend"' + (c.note ? ' title="' + escAttr(c.note) + '"' : '') +
@@ -5705,8 +5790,10 @@ function chenLegendHtml(c) {
     '<div><b>一句话逻辑</b>：断板反包筛的是「形态长完了没有」，他筛的是「谁在坐庄」——形态在他那儿只是最后一道关，' +
     '在断板反包页却是唯一一道关。所以这是<b>并列的第二套指标，不是断板反包的升级版</b>：两池同口径留痕，一周后比胜率。</div>' +
     '<div><b>判定规则</b>：硬结构 8 条（严格池与放宽池都要过），逐条核对——</div>' +
-    '<div><b>① 主板且股价 ≥ 4 元</b>：60/00 开头；他说「四块钱以下是心电图票」</div>' +
-    '<div><b>② T 日涨停</b>：<b>首板也算</b>——v2 的修正点，v1 误把「连板 ≥2」当成准入门槛</div>' +
+    '<div><b>① 主板且股价 ≥ 4 元</b>：60/00 开头；他说「四块钱以下是心电图票」。' +
+    '另加一道<b>次新股门槛</b>：K 线不足 35 根的不进池——他要求首板之前有「横盘吸筹」，' +
+    '新股没有横盘，而连板数会把上市首日的 +44% 当成「涨停」</div>' +
+    '<div><b>② T 日涨停</b>：<b>首板也算</b>——「连板 ≥2」不是他的准入门槛</div>' +
     '<div><b>③ 不要求连板</b>：他的原方法里没有这道门槛。连板数仍然算出来、写在卡片和标的页上、并按它排序——' +
     '实测首板触 +3.5% 36.2%、2 连板 50.9%、3 连板 61.5%，这个梯度是真的，所以「几板」是你自己再筛一遍的抓手，不是门票</div>' +
     '<div><b>④ 断板日放量 ≥ 2 倍、不设上限</b>：他说「量要越大越好」。实测 1.1~3.5 倍之间毫无区别，' +
@@ -5738,7 +5825,7 @@ function chenLegendHtml(c) {
     '仓位＝单笔最大亏总仓 1.5% ÷ 止损距离（他 146 的「高 4 低 6」）。' +
     '⚠️ 仓位不是建议项：实测放开连板 / 爆量后亏超 −5% 的比例从 8.4% 升到 14.3%，' +
     '只改筛选不改纪律 = 拿胜率换爆仓概率。</div>' +
-    '<div style="opacity:.85"><b>口径版本 ' + v + '（冻结于 ' + fd + '，数据日 ' +
+    '<div style="opacity:.85"><b>口径冻结于 ' + fd + '（数据日 ' +
     esc(chenDataDay(c)) + (c.generatedAt ? '，生成于 ' + esc(String(c.generatedAt).slice(11, 16)) : '') +
     '）：</b>参数在回测出结果之前定死，出结果后不调参——' +
     '否则就是拿未来数据凑好看的数字。实盘样本从留痕起始日开始累积。</div>' +
@@ -5752,7 +5839,9 @@ function chenLegendHtml(c) {
 function chenTradeMeta(e) {
   var t = e.trade || {}, m = e.metrics || {};
   if (!t.targetPrice) return '';
-  var lbcTxt = m.lbc ? (m.lbc === 1 ? '首板（v2 起首板也算，连板只作排序加分）' : m.lbc + ' 板') : '—';
+  // R100z221：原先写「首板（v2 起首板也算，连板只作排序加分）」——版本号已全站删除，
+  // 这里只留读者真正需要的那半句：首板算数，板数只是排序抓手，不是门票。
+  var lbcTxt = m.lbc ? (m.lbc === 1 ? '首板（连板数只作排序加分，不是门票）' : m.lbc + ' 板') : '—';
   return '<div><span class="lab">买点：</span>' + esc(t.buyRule || '确认日次日开盘') + '</div>' +
     '<div><span class="lab">目标：</span><b class="up">' + Number(t.targetPrice).toFixed(2) +
     '（+' + (t.targetPct || 3.5) + '%）</b>　<span class="lab">止损：</span><b class="down">' +
@@ -5762,9 +5851,21 @@ function chenTradeMeta(e) {
     '<span class="lab">风控口径：</span>' + esc(t.riskNote || '') + '</div>' +
     '<div><span class="lab">结构：</span>连板 ' + lbcTxt + '　断板日放量 ' + (m.volRatio || '—') + ' 倍' +
     ((m.shrinkT === null || m.shrinkT === undefined) ? '' : '　T日量 ' + m.shrinkT + ' 倍均量') +
-    '　洗盘 ' + (m.washDays || 0) + ' 日</div>' +
+    '　' + chenSinceTxt(m) + '</div>' +
+    (t.stopFar ? '<div style="color:#b3541e"><span class="lab">止损形同虚设：</span>止损距 ' +
+      (t.stopPct || 0) + '%，而持仓只有 ' + (t.holdDays || 2) + ' 个交易日——两天跌 ' +
+      (t.stopPct || 0) + '% 需要两个跌停连板，止损在窗口内几乎不可能触发，实质是到日收盘平</div>' : '') +
     (m.tailRisk ? '<div style="color:#b3541e"><span class="lab">尾部风险：</span>断板日放量 ' +
       m.volRatio + ' 倍（>8 倍均收转负，仓位已按风险预算压缩）</div>' : '');
+}
+
+/* R100z222（审核意见 §4）：`washDays` 的字面意思被读成「缩量了几天」，实际算的是
+   「确认后又过了几天」。这里统一成一个不歧义的写法，四张卡和弹窗共用。 */
+function chenSinceTxt(m) {
+  var s = (m && m.sinceConfirm);
+  if (s === null || s === undefined) return '确认待定';
+  if (s <= 0) return '今日确认';
+  return '确认后第 ' + (s + 1) + ' 天·非当日新信号';
 }
 
 /* 两套指标的差异 + 历史胜率。这是本模块存在的理由。
@@ -5776,40 +5877,104 @@ function chenCompareHtml(c) {
   var cmp = c.compare || {}, tdy = cmp.today || {}, stats = cmp.stats || {}, tr = c.track || {};
   var chenN = (c.strict || []).length + (c.loose || []).length;
   var both = tdy.both || [], co = tdy.chenOnly || [], doOnly = tdy.duanbanOnly || [];
+  /* R100z221（用户 2026-10-26 截图 2）：「陈学长模块…标的点击要能打开看k线和丰富的内容以及左右切换按钮」。
+     原来这段是纯文本 chip，点不动——同一页的「强板块落后股」回测名单早就可点了，两块并列看就是两套待遇。
+     做法与 .ll-rc 完全一致：渲染时把三段（两个都选中 / 只有陈学长 / 只有断板）**按显示顺序**灌进同一个
+     导航组，onclick 传下标走 stkOpenIn——←/→ 就在这份复盘清单里顺着翻，不串到别的页面残留的分组。
+     组名挂在 window._CC_GRP，因为 onclick 是内联字符串，闭包拿不到局部变量。 */
+  var _grp = [];
   var lab = function (code) {
     var nm = chenNameOf(code);
-    return '<span class="cc-chip"><b>' + esc(nm || code) + '</b><span class="cd">' + esc(code) + '</span></span>';
+    var i = _grp.length;
+    _grp.push({ c: String(code), n: String(nm || ''), t: '反包复盘 · ' + (nm || code) });
+    return '<span class="cc-chip go" title="点击查看 K 线与个股消息" onclick="stkOpenIn(window._CC_GRP,' +
+      i + ')"><b>' + esc(nm || code) + '</b><span class="cd">' + esc(code) + '</span></span>';
   };
   var doShow = doOnly.slice(0, 14).map(lab).join('') +
     (doOnly.length > 14 ? '<span class="cc-more">…等 ' + doOnly.length + ' 只</span>' : '');
   var poolName = { chen_strict: '陈学长·严格池', chen_loose: '陈学长·放宽池', duanban: '断板反包·确认池' };
-  var statRows = Object.keys(poolName).map(function (k) {
-    var s = stats[k] || {};
+  /* R100z222（审核意见 §11 / §7）：把「平 / 跳过 / 无止损」三件事说清楚——
+     样本 = 赢 + 亏 + 平；`skip`＝开盘就破止损按纪律没进场；`noStop`＝止损位取不到、
+     只有止盈没有止损的条目（已排除在胜负之外，否则那条腿是白送的）。
+     后两个不做成列（手机端 7 列已经是极限），挂在「样本」的 title 里 + 表下一行脚注。 */
+  var skipTotal = 0, noStopTotal = 0;
+  var rowOf = function (name, s) {
+    s = s || {};
     var wr = (s.winRate === null || s.winRate === undefined) ? '—' : s.winRate + '%';
     var ar = (s.avgRet === null || s.avgRet === undefined) ? '—' : (s.avgRet > 0 ? '+' : '') + s.avgRet + '%';
-    return '<tr><td>' + poolName[k] + '</td><td>' + (s.n || 0) + '</td><td>' + (s.win || 0) + '</td>' +
-      '<td>' + (s.loss || 0) + '</td><td><b>' + wr + '</b></td><td class="' + (s.avgRet > 0 ? 'up' : (s.avgRet < 0 ? 'down' : '')) + '">' + ar + '</td></tr>';
-  }).join('');
-  return '<div class="card cc-card"><h2 class="td-h2">断板反包和陈学长复盘 ' +
-    '<span class="cf-hint">（数据日 ' + esc(chenDataDay(c)) + '）</span></h2>' +
+    // R100z221（审核意见 §11）：原来只有「赢 / 亏」，但结算有第三种结局——持仓满 2 日两个价位都没触，
+    // 按窗口末收盘平（result=expired，收益照算进均值）。少了这一列，「样本 12 = 赢 5 + 亏 3」看起来像算错，
+    // 实际是 4 条走完了却没触发任何一条线。补「平」列后三列相加必等于样本。
+    // 均赢/均亏塞进均值列的 title：赔率是这张表最该看的第二个数，但再加一列会把手机端挤爆。
+    var avgTip = '均赢 ' + ((s.avgWin === null || s.avgWin === undefined) ? '—' : '+' + s.avgWin + '%') +
+      ' ／ 均亏 ' + ((s.avgLoss === null || s.avgLoss === undefined) ? '—' : s.avgLoss + '%') +
+      ((s.odds !== null && s.odds !== undefined) ? '（赔率 ' + s.odds + '）'
+        : ((s.avgWin && s.avgLoss) ? '（赔率 ' + Math.abs(s.avgWin / s.avgLoss).toFixed(2) + '）' : ''));
+    if (s.skip) skipTotal += s.skip;
+    if (s.noStop) noStopTotal += s.noStop;
+    var nTip = '已结算 ' + ((s.n || 0) + (s.skip || 0) + (s.noStop || 0)) + ' 条：' +
+      (s.n || 0) + ' 条参与胜负' +
+      (s.skip ? '，' + s.skip + ' 条开盘即破止损、按纪律没进场（不算赢也不算亏）' : '') +
+      (s.noStop ? '，' + s.noStop + ' 条止损位取不到、已排除（否则只输时间不输钱，胜率会虚高）' : '');
+    return '<tr><td>' + esc(name) + '</td><td title="' + escAttr(nTip) + '">' + (s.n || 0) + '</td>' +
+      '<td>' + (s.win || 0) + '</td><td>' + (s.loss || 0) + '</td><td>' + (s.expired || 0) + '</td>' +
+      '<td><b>' + wr + '</b></td>' +
+      '<td class="' + (s.avgRet > 0 ? 'up' : (s.avgRet < 0 ? 'down' : '')) + '" title="' + escAttr(avgTip) + '">' +
+      ar + '</td></tr>';
+  };
+  // §19.1：「交集分组」才是回答「谁更准」的关键。cross 标签是记账当时打死的（见 chen_pool.py
+  // record_entries），不会因为今天的池子变了而漂移。样本为 0 时不渲染，免得表里排一堆 0。
+  var crossName = { cross_both: '两个都选中', cross_chen: '只有陈学长选中', cross_db: '只有断板选中' };
+  var crossRows = Object.keys(crossName).filter(function (k) {
+    var s = stats[k] || {};
+    return (s.n || 0) + (s.skip || 0) + (s.noStop || 0) > 0;
+  });
+  var statRows = Object.keys(poolName).map(function (k) { return rowOf(poolName[k], stats[k]); }).join('') +
+    crossRows.map(function (k) {
+      return rowOf(crossName[k] + '（交集）', stats[k]);
+    }).join('');
+  // R100z221（用户 2026-10-26 截图 4）：标题「断板反包和陈学长复盘」→「反包复盘」，
+  // 日期从 .cf-hint（自带括号、字号与另两张卡不同）换成 .h2-date，
+  // 与「指标复盘 / 预测复盘」逐字同款——三张卡并排时标题只有名词不同。
+  var out = '<div class="card cc-card"><h2 class="td-h2">反包复盘' +
+    (chenDataDay(c) ? ' <span class="h2-date">' + esc(chenDataDay(c)) + '</span>' : '') +
+    '<span class="src-tag td-tag">两套口径对比</span></h2>' +
     '<div class="cc-sum">今日：陈学长 <b>' + chenN + '</b> 只 ｜ 断板反包 <b>' + (both.length + doOnly.length) +
     '</b> 只 ｜ 两个都选中 <b class="up">' + both.length + '</b> 只 ｜ 只有陈学长选中 <b>' + co.length + '</b> 只</div>' +
     '<div class="cc-sec"><div class="cc-t">两个都选中（' + both.length + '）</div><div class="cc-list">' +
       (both.length ? both.map(lab).join('') : '<span class="cc-more">无</span>') + '</div></div>' +
-    '<div class="cc-sec"><div class="cc-t">只有陈学长选中（' + co.length + '）— 他多做的那一层：断板日爆量（≥2 倍、无上限）</div>' +
+    // R100z221（审核意见 §15）：这两句归因原来把 6 处差异简写成「爆量」一条，
+    // 读者会以为陈学长 = 断板反包 + 一个成交量阈值。实际是两套独立规则，差异至少五条，
+    // 而且方向不全是「他更严」——他放开放量上限、只比一根缩量，这两条比断板反包**更松**。
+    '<div class="cc-sec"><div class="cc-t">只有陈学长选中（' + co.length + '）— 他多做的几层，' +
+      '不止「爆量」一条：首板也算 ／ 断板日放量 ≥2 倍且<b>不设上限</b>（断板卡砍在 3.5 倍）／ ' +
+      '只比 T+2 一根缩量、不看趋势 ／ 洗盘 ≤3 日 ／ 破位与 MA5 各给容忍度（2% / 3%）</div>' +
       '<div class="cc-list">' + (co.length ? co.map(lab).join('') : '<span class="cc-more">无</span>') + '</div></div>' +
-    '<div class="cc-sec"><div class="cc-t">只有断板反包选中（' + doOnly.length + '）— 被他剔掉的那一批（断板日量能不够 / 未缩量站稳）</div>' +
+    '<div class="cc-sec"><div class="cc-t">只有断板反包选中（' + doOnly.length + '）— 被他剔掉的：' +
+      '放量不足 2 倍 ／ 洗盘超 3 日 ／ 收盘破了 T 日最低价 2% ／ 站不稳 5 日线（任一不满足即剔）</div>' +
       '<div class="cc-list">' + (doOnly.length ? doShow : '<span class="cc-more">无</span>') + '</div></div>' +
     '<div class="cc-sec"><div class="cc-t">留痕回测进度</div>' +
       '<div class="cc-note">起始日 <b>' + esc(tr.since || '—') + '</b> ｜ 已结算 <b>' + (tr.settledN || 0) +
       '</b> 条 ｜ 待结算 <b>' + (tr.openN || 0) + '</b> 条' +
       (tr.justSettled ? '（本次新增结算 ' + tr.justSettled + ' 条）' : '') +
       '<br>' + esc(tr.settleRule || '') + '</div></div>' +
-    '<table class="cc-tbl"><thead><tr><th>口径</th><th>样本</th><th>赢</th><th>亏</th><th>胜率</th><th>均值</th></tr></thead>' +
-    '<tbody>' + statRows + '</tbody></table>' +
+    // 表头顺序与结算三结局对齐：赢 + 亏 + 平 = 样本（平＝持仓满 2 日两条线都没触，按窗口末收盘平）。
+    '<div class="cc-tbl-w"><table class="cc-tbl"><thead><tr><th>口径</th><th>样本</th><th>赢</th><th>亏</th>' +
+      '<th title="持仓满 2 日未触目标也未破止损，按窗口末收盘平；收益仍计入均值">平</th>' +
+      '<th title="赢 ÷ 样本（平不算赢）">胜率</th><th>均值</th></tr></thead>' +
+    '<tbody>' + statRows + '</tbody></table></div>' +
+    ((skipTotal || noStopTotal)
+      ? '<div class="cc-note">另：<b>' + skipTotal + '</b> 条开盘价已跌破止损、按纪律没进场（不计胜负）；' +
+        '<b>' + noStopTotal + '</b> 条止损位取不到、已排除在胜负之外——两边止损口径已统一为「洗盘段最低价」，' +
+        '胜率可直接横比。</div>'
+      : '') +
     '<div class="cc-note">样本为 0 是正常的——留痕从本模块上线那天才开始，之前的历史不补记' +
     '（补记要用今天的 K 线倒推止损位，那是前视偏差，宁可样本少）。一周后这张表才有意义。</div>' +
     '</div>';
+  // 组必须在整串拼完之后才挂到 window：_grp 是在拼字符串过程中逐只 push 的，
+  // 提前挂会挂上一份长度还在变的数组引用（虽然 JS 里引用同一份也对，但显式放末尾读起来更清楚）。
+  window._CC_GRP = _grp;
+  return out;
 }
 
 /* 池区块：严格 / 放宽 / 观察。卡片四格与他给的交易参数一一对应。
@@ -5823,11 +5988,19 @@ function chenPoolBlock(title, cls, sub, list, tierTag) {
     '<div class="db-sub">' + esc(sub) + '</div>';
   if (!list.length) return h + '<div class="db-empty">暂无标的（要同时满足爆量断板 + 缩量 + 站稳，空池是常态，不代表数据没跑）</div></div>';
   var D = window.DASHBOARD_DATA || {};
-  var modD = String(((D.chenPool || {}).generatedAt) || '').slice(0, 10);
+  // R100z222（审核意见 §12）：原来取 generatedAt（脚本运行时刻），跨午夜跑批时它比数据日晚一天，
+  // `entryDate === modD` 永远不成立 → 「新入池」高亮全灭。改用 chenDataDay（优先 tradeDate）。
+  var modD = chenDataDay(D.chenPool || {});
   var sentRank = function (e) { return e.sentiment === 'bull' ? 0 : (e.sentiment === 'bear' ? 2 : 1); };
   // 排序（也是他自己给的优先顺序）：连板多 → 放量倍数大 → 利好优先。
-  // v2 起连板不再是门槛，但它仍然是最好的排序变量之一（首板 36.2% / 2 板 50.9% / 3 板 61.5%）。
+  // 连板不是门槛，但它仍然是最好的排序变量之一（首板 36.2% / 2 板 50.9% / 3 板 61.5%）。
+  // R100z222（审核意见 §19.3）：`tailRisk`（断板日放量 >8 倍，实测均值转负 −0.35%）沉到同组末尾。
+  // 原排序按 volRatio 降序 → 爆量票 volRatio 最大 → **永远排第一格**，等于把最该回避的一档
+  // 放在最显眼的位置。爆量仍然进池（他的口径是「越大越好」，>8 倍只是标注不排除），只是不占 C 位。
+  var tailOf = function (e) { return ((e.metrics || {}).tailRisk) ? 1 : 0; };
   var stockCmp = function (x, y) {
+    var t = tailOf(x) - tailOf(y);
+    if (t !== 0) return t;
     var a = ((x.metrics || {}).lbc || 0) - ((y.metrics || {}).lbc || 0);
     if (a !== 0) return -a;
     var b = ((x.metrics || {}).volRatio || 0) - ((y.metrics || {}).volRatio || 0);
@@ -5850,6 +6023,13 @@ function chenPoolBlock(title, cls, sub, list, tierTag) {
       tcCell('连板 / 放量', '<span class="nw">' + lbcTxt + '</span> <span class="nw">' + volTxt + '</span>', '', false, true)
     ];
     var foot = '<span class="xt">' + esc(String(e.form || '').replace(/·/, '：')) + '</span>';
+    // R100z222（审核意见 §2）：确认后第 ≥2 天才进池的票必须自曝——页面原来把「确认后第 3 天」
+    // 当今天的买入信号展示，而目标价/止损是按今天收盘重算的，等于让人在一个已经走完 2 天的
+    // 形态上重新开仓。这里加一条前置提醒，卡片不隐藏（形态确实还在），但读者一眼知道它不是新信号。
+    var _sc = m.sinceConfirm;
+    if (_sc !== null && _sc !== undefined && _sc > 0) {
+      foot = '<span class="xt warn">⚠ ' + chenSinceTxt(m) + '　</span>' + foot;
+    }
     // R100z220（用户 2026-10-26 截图1/2）：删掉卡上「严格 / 放宽 / 观察」徽章——池名已由所在区块标题给出，
     // 同一枚徽章与左侧板块 pill 撞成两个同色蓝标（.pool-badge.hold 与 .chip-sec 配色完全一致）。
     // 这个位置改标注利好 / 利空 / 中性，与断板反包 / 谐波 / 九门卡片同一位置、同一套 DB_SENT 文案。
@@ -5857,7 +6037,8 @@ function chenPoolBlock(title, cls, sub, list, tierTag) {
     var tierCn = tierTag === 'strict' ? '严格池' : (tierTag === 'loose' ? '放宽池' : '形态观察中');
     return tcCard({
       code: e.code, name: e.name, chg: e.pct, dim: tierTag === 'watch',
-      fresh: !!(e.entryDate && modD && String(e.entryDate) === modD),
+      // R100z222：新入池高亮改看 firstSeenDate（首次见到），不再看被沿用的 entryDate
+      fresh: !!(e.firstSeenDate && modD && String(e.firstSeenDate) === modD),
       pills: [e.sector || '其他'],
       sentKind: e.sentiment || 'neutral', cells: cells, foot: foot,
       attrs: ' data-k="' + escAttr(key) + '"',
@@ -5865,6 +6046,7 @@ function chenPoolBlock(title, cls, sub, list, tierTag) {
         '\n目标 ' + (t.targetPrice || '—') + '（+' + (t.targetPct || 3.5) + '%）｜止损 ' + (t.stopPrice || '—') +
         '｜仓位 ' + (t.posPct || '—') + '%｜持仓 ≤' + (t.holdDays || 2) + ' 日' +
         '\n止损距离 ' + (t.stopPct || '—') + '%（' + (t.riskNote || '') + '）' +
+        '\n确认日 ' + (e.confirmDate || '—') + '｜首次见到 ' + (e.firstSeenDate || '—') +
         '\n点击查看K线与个股消息'
     });
   };
@@ -5911,6 +6093,14 @@ function renderChen() {
   if (fd.length) {
     h += '<div class="chen-warn">⚠️ 有 ' + fd.length + ' 个交易日的涨停池没抓到（' +
       esc(fd.join('、')) + '），这些日子的候选未参与判定——是数据缺口，不是当天没有标的。</div>';
+  }
+  // R100z222（审核意见 §5）：K 线抓取失败的票原来「静默」——进不了池、被写成形态失效，
+  // 页面上看不出任何异常（违反「抓不到 ≠ 没有」）。现在显式告警，并且它们不进失效池。
+  var fc = c.failedCodes || [];
+  if (fc.length) {
+    h += '<div class="chen-warn">⚠️ 有 ' + fc.length + ' 只候选的 K 线没抓到（' +
+      esc(fc.slice(0, 12).join('、')) + (fc.length > 12 ? ' 等' : '') +
+      '），这些票状态未知、已排除在失效判定之外——不是形态失效。</div>';
   }
   h += chenLegendHtml(c);
   // 对比与胜率表已搬到 📋 复盘台账（用户 2026-10-25：复盘要放在复盘台账页）。
@@ -6240,7 +6430,15 @@ function closeGnews() {
    「这个是复盘吧？复盘要放在复盘台账这个页面」。原挂在断板页「开盘精选」下方，
    但它回答的是「这套规则过去赚不赚」，不是「今天买什么」，与断板页的当日决策不同族。
    整块**一字未改**搬进 📋 复盘台账（#score），只换了挂载点——搬页顺手改口径是这类改动最容易犯的错。 */
-function renderLeadLag() {
+function renderLeadLag(mode) {
+  /* R100z221：拆两半，各归其位（用户 2026-10-26 截图 7：「他只是告诉我出手后的回测，
+     我也没看到你提前一天提醒我要买入哪只标的」）——
+       mode='picks' → 只出「今日清单」：挂断板页，紧贴确认池上方，回答「今天买哪只」；
+       mode='bt'    → 只出「规则回测」：留复盘台账，回答「这套口径能不能信」。
+     两半各只有一个调用点（audit_pipeline 的 G40 会拦无参调用和重复调用）——
+     一旦有人图省事写不带 mode 的调用，两个页面各渲染一份完整块，
+     将来改一边忘另一边，同一个胜率数字会在两页显示不同值，而且没人会去对照。 */
+  var wantPicks = (mode !== 'bt'), wantBt = (mode !== 'picks');
   // 为什么不删掉这块：它是「次日买什么」这条问题在数据上唯一站得住的答案——四个池都在追强，
   // 回测里追强是负期望；同板块里落后 2pp 以上的那只才是正期望的那一边。
   /* R100z202（用户 2026-10-25）：两处改版——
@@ -6261,14 +6459,22 @@ function renderLeadLag() {
     var mainEx = ex.main || bt.main || {}, altEx = ex.alt || bt.alt || {};
     var rule = LL.rule || {}, sc = LL.scanned || {};
     var isReplay = LL.mode === 'replay';
+    // 回测那半没有回测结果就整块不出——否则复盘页会多出一张只有标题和规则胶囊的空卡。
+    if (wantBt && !wantPicks && !bt.main) return '';
 
     out += '<div class="ll-wrap">';
-    out += '<div class="ll-hd"><b>🎯 强板块落后股 · ' + ((LL.picks || []).length) + ' 只</b>' +
-      '<span class="ll-date">' + esc(String(LL.date || '')) + ' ' + esc(String(LL.time || '')) + '</span>' +
-      (isReplay ? '<span class="ll-mode warn">回放校验</span>' : '<span class="ll-mode">9:45 实时</span>') +
+    out += '<div class="ll-hd"><b>' + (wantPicks
+        ? ('🎯 强板块落后股 · ' + ((LL.picks || []).length) + ' 只')
+        : '🎯 强板块落后股 · 规则回测') + '</b>' +
+      (wantPicks
+        ? '<span class="ll-date">' + esc(String(LL.date || '')) + ' ' + esc(String(LL.time || '')) + '</span>' +
+          (isReplay ? '<span class="ll-mode warn">回放校验</span>' : '<span class="ll-mode">9:45 实时</span>')
+        : '') +
       '</div>';
 
     // 规则四条件：每条一个胶囊，值全是数据里的阈值（不许写死）；完整句子在 title 里留着。
+    // 两半都带规则——清单那半解释「今天这 4 只是怎么筛出来的」，回测那半解释「测的是哪条规则」；
+    // 末尾「扫描 N 板块」是**当日**的漏斗数，只对清单那半有意义。
     var c1 = '板块开盘跳空 &gt; +' + (rule.secGapMin != null ? rule.secGapMin.toFixed(1) : '1.0') + '%';
     var c2 = '落后板块 &gt; ' + (rule.lagMin != null ? rule.lagMin.toFixed(1) : '2.0') + 'pp';
     var c3 = '昨日还在涨';
@@ -6276,12 +6482,12 @@ function renderLeadLag() {
     out += '<div class="ll-rule"><span class="rv-chip">' + c1 + '</span>' +
       '<span class="rv-chip">' + c2 + '</span><span class="rv-chip">' + c3 + '</span>' +
       '<span class="rv-chip">' + c4 + '</span>' +
-      '<span class="rv-chip dim">扫描 ' + (sc.sectors || 0) + ' 板块 / ' + (sc.universe || 0) +
-        ' 只主板 → 强板块 ' + (sc.strongSectors || 0) + '</span>' +
+      (wantPicks ? '<span class="rv-chip dim">扫描 ' + (sc.sectors || 0) + ' 板块 / ' + (sc.universe || 0) +
+        ' 只主板 → 强板块 ' + (sc.strongSectors || 0) + '</span>' : '') +
       '<div class="ll-rule-note">跳空＝成分股开盘价均值，剔掉单只 |跳空|&gt;12% 的退市整理股；' +
       '「昨日还在涨」＝不买破位股；「现价不高于开盘」＝追高即失效。</div></div>';
 
-    if ((LL.picks || []).length) {
+    if (wantPicks && (LL.picks || []).length) {
       // 候选行也建导航组：同一天的候选就是一份清单，箭头在这几只里翻。
       window._LL_PICK_GRP = (LL.picks || []).map(function (p) {
         return { c: String(p.code || ''), n: p.name || '', t: '强板块落后股 · ' + (p.sector || '') };
@@ -6298,12 +6504,14 @@ function renderLeadLag() {
           '<div class="ll-c ll-hide ' + _ls(p.openGap) + '">' + _lp(p.openGap) + '</div>' +
           '<div class="ll-c ll-hide ' + _ls(p.yPct) + '">' + _lp(p.yPct) + '</div></div>';
       });
-    } else {
+    } else if (wantPicks) {
+      // 只有清单那半才写「今日 0 只，空仓」——回测那半没有「今日」这个概念，
+      // 之前两半共用这一支，导致复盘页上会冒出一句和回测无关的空仓提示。
       out += '<div class="ll-empty"><b>今日 0 只，空仓。</b> ' +
         esc(String(LL.gapNote || '没有板块同时满足「强 + 有落后股」，不出手。')) + '</div>';
     }
 
-    if (bt.main) {
+    if (wantBt && bt.main) {
       out += '<div class="ll-bt">' +
         '<div><div class="ll-bt-k">' + esc(String(mainEx.name || '')) + '（首选）</div>' +
         '<div class="ll-bt-v ' + _ls(mainEx.ret) + '">' + _lp(mainEx.ret) + '<small>胜率 ' + _lr(mainEx.win) + '</small></div></div>' +
@@ -6373,38 +6581,58 @@ function renderLeadLag() {
 }
 
 /* R100z162：🌟 复盘台账独立页——与 📄/🧰 同款「打开即独占」（hash=#score，进出都记忆浏览位置）。
-   页内四张卡：① 指标表现（选股信号谁赚谁不赚）② 断板反包和陈学长复盘（R100z219 从技术看板迁入）
-   ③ 强板块落后股（回放校验，R100z199 迁入）④ 预测复盘（方向判断谁准谁不准）。
-   四张都是回头看，和「今天做什么」不同族，所以独立成页而不是塞在盘面卡中间。
-   四张卡的数据源、阈值、判定文案一字未改——只换了挂载点，避免「搬页顺手改口径」。 */
+   四张卡都是回头看，和「今天做什么」不同族，所以独立成页而不是塞在盘面卡中间。
+   四张卡的数据源、阈值、判定文案一字未改——只换了挂载点，避免「搬页顺手改口径」。
+
+   R100z221（用户 2026-10-26 截图 1）：「目前几个模块的顺序我觉得不合理，指标后面怎么是
+   断板陈学长然后怎么又是板块和复盘？」——原顺序是
+   「指标表现 → 反包复盘 → 强板块落后股 → 预测复盘」，中间那块「强板块落后股」是**另一套选股口径**
+   的回测，把「指数标准不准」和「方向判断准不准」这两张同族卡硬生生撕开，扫下来没有主线。
+   新顺序只按一个问题分两段：先「准不准」（指标复盘 → 预测复盘），再「哪套选股口径更准」
+   （反包复盘 → 落后股回测）。标题按用户要求统一为「指标复盘 / 反包复盘 / 预测复盘」，
+   日期一律用 .h2-date（与全站其他卡同一处样式，见 CSS 455 行），不再各写各的。
+
+   R100z221 第二件事（截图 7）：「这个模块要不要删掉，他只是告诉我出手后的回测，
+   我也没看到你提前一天提醒我要买入哪只标的」。查证结论：这块**今日清单一直有**
+   （duanban.leadLag.picks，9:45 实时产出，含 4 只以内的可执行名单），问题是它被挂在
+   一个「回头看」的页面上——读者只会把它当成绩单，永远不会照着买。所以不是删模块，
+   是**拆两半、各归其位**：
+     · 今日清单 → 断板页（mode 取 'picks'），紧贴确认池上方，归「今天做什么」那一族；
+     · 规则回测 → 留在这里排最后（mode 取 'bt'），归「这套口径能不能信」。
+   这其实是 R100z199 之前的原始设计（CSS 里 .ll-wrap 的注释就写着「紧贴开盘精选下方」），
+   本轮把它拆回去，不是新发明。 */
 function renderScoreView() {
   var D = window.DASHBOARD_DATA || {};
   var box = document.getElementById('score-body');
   if (!box) return;
   var body = renderSignalPerf();
   if (!body) {
-    body = '<div class="card"><h2 class="td-h2">指标表现 · 谁准谁不准</h2>' +
+    body = '<div class="card"><h2 class="td-h2">指标复盘</h2>' +
       '<div class="db-empty">暂无归因数据（16:00 数据步跑完 signal_attribution.py 后出现）</div></div>';
   }
-  // R100z219：断板反包 vs 陈学长复盘——用户 2026-10-25 两条要求：
-  //   ① 「这个（两套指标对比卡）放到这里（📋 复盘台账）」② 标题改成「断板反包和陈学长复盘」。
-  // 与 R100z199 强板块落后股同一类搬法：整块只换挂载点，判定口径一字未改。
-  // 它回答的是「过去两周谁更准」，属于回头看，与陈学长子页的「今天买什么」不同族。
-  var cp = D.chenPool || {};
-  if (cp.generatedAt) body += chenCompareHtml(cp);
-  // R100z199：🎯 强板块落后股整块从断板页搬到这里（用户 2026-10-25：「复盘要放在复盘台账这个页面」）。
-  // 它给的是「这套规则历史胜率 + 最近几次出手」，属于回头看，与「今天买什么」不同族。
-  // 卡片自带 .ll-hd 标题，所以外层 .card 不再重复写 h2；`.card > .ll-wrap` 已去掉内层边框（见 CSS）。
-  var ll = renderLeadLag();
-  if (ll) {
-    body += '<div class="card ll-card">' + ll + '</div>';
-  }
+  // R100z221：预测复盘提到第二位——它和指标复盘回答同一个问题（准不准），
+  // 一个是「选出来的票赚不赚」、一个是「方向判断对不对」，中间不该夹第三套选股口径。
   var fs = renderForecastScore();
   if (!fs) {
-    body += '<div class="card"><h2 class="td-h2">预测复盘 · 谁准谁不准</h2>' +
+    body += '<div class="card"><h2 class="td-h2">预测复盘</h2>' +
       '<div class="db-empty">暂无台账数据（需累计至少 1 个预测日）</div></div>';
   } else {
     body += fs;
+  }
+  // 后段＝「哪套选股口径更准」：反包复盘（断板反包 vs 陈学长）在前，落后股规则回测在后。
+  // R100z219：用户 2026-10-25 要求把这块放进复盘台账、标题写成两套指标的对比——
+  // 整块只换挂载点，判定口径一字未改。
+  var cp = D.chenPool || {};
+  if (cp.generatedAt) {
+    body += chenCompareHtml(cp);
+  } else {
+    body += '<div class="card cc-card"><h2 class="td-h2">反包复盘</h2>' +
+      '<div class="db-empty">暂无对比数据（16:00 数据步跑完 chen_pool.py 后出现）</div></div>';
+  }
+  // 卡片自带 .ll-hd 标题，所以外层 .card 不再重复写 h2；`.card > .ll-wrap` 已去掉内层边框（见 CSS）。
+  var lb = renderLeadLag('bt');
+  if (lb) {
+    body += '<div class="card ll-card">' + lb + '</div>';
   }
   box.innerHTML = body;
   var dt = document.getElementById('sc-date');
