@@ -17,10 +17,11 @@
 5) macroNews/intlNews/bankViews 每条要闻卡应含 direction 字段（看涨/看跌/中性）；缺失或非法值
    在写回 data.js 时自动补为 中性（前端渲染为中性灰，降级表现与旧版一致），并输出 WARNING 日志，
    但不阻断部署（避免单一装饰字段卡死整轮更新）。bullNews/bearNews 无 direction，不处理。
-6) 五节要闻 impacts 分组数 1~4（R90b B方案：theme 必须与新闻传导链相关、宁少勿凑，允许只挂
-   1~2 组；仅 >4 超上限输出 WARNING 不阻断部署）。另含要闻质量软闸门（R90b）：theme 与
-   title/summary 无关联、组内标的重复凑数（重复>2）、条目内标的复用>3 次、同 sector 跨节
-   重复出现——均 WARNING 不阻断，由自动化 prompt 与 AI 自检负责修正。
+6) 五节要闻 impacts（R100z216 双段口径）：第 1 组＝主组恰好 8 只、四类配比按 N 分层与顺序硬约束；
+   第 2~4 组＝次生组各 2~4 只、只装小盘人气/断板反包；跨组同一 code 不得重复。整条合计 8~20 只。
+   次生组表达「同一事件的第二条传导链」，theme 必须与新闻传导链相关、宁少勿凑（R90b B 方案）。
+   另含要闻质量软闸门（R90b）：theme 与 title/summary 无关联、组内标的重复凑数（重复>2）、
+   同 sector 跨节重复出现——均 WARNING 不阻断，由自动化 prompt 与 AI 自检负责修正。
 7) duanban 断板反包模块（R87，软闸门）：确认池/观察池全部标的须 60/00 开头沪深主板
    （违规自动剔除 + WARNING）、probability 缺失/非法**不再补值**（R100z197：留空、排序置末、
    页面显示「—」，WARN 提示 AI 补齐）、缺 bullRefs/kline 输出 WARNING。模块整体缺失不检查（16:00 数据步职责）。
@@ -152,6 +153,79 @@ def check_tiered(stocks, where, violations):
             f"{where}: 顺序不合规（应为 龙头→概念→小盘人气→断板反包），实际序列 {' '.join(seq)}")
 
 
+# ==== R100z216：要闻 impacts 改为「主组 8 只 + 次生组 2~4 只」双段结构 ====
+# 起因：R90b 允许 1~4 组是为了「一条新闻挂多个相关板块」，但 866bf30 把闸门改成
+# 「整条扁平合计 8 只」后，多组只能把 8 只切稀（6+2/5+3），A 股侧实测 0 条用多组，
+# 多板块传导实际死亡；而 prompt 仍写「每组恰好 8 只」，导致 AI 每天先写 N×8 再被
+# 闸门打回返工。现改为：主组（第 0 组）必须 8 只四类配比完整，次生组 2~4 只只装
+# 小盘人气/断板反包（龙头/概念名额归主组），整条合计 8 + 2~12 只。
+MAIN_GROUP_N = 8               # 主组必须恰好 8 只
+SUB_MIN_N, SUB_MAX_N = 2, 4    # 次生组只数区间
+MAX_IMPACT_GROUPS = 4          # 主组 1 + 次生组最多 3
+SUB_CATS = ('X', 'D')          # 次生组只允许 小盘人气 / 断板反包
+
+
+def check_sub_group(stocks, where, violations):
+    """次生组：2~4 只、只装小盘人气/断板反包、主板过滤、组内 code 互异、组内顺序 X→D。"""
+    if not isinstance(stocks, list) or not stocks:
+        violations.append(f"{where}: stocks 缺失或为空（次生组应为 {SUB_MIN_N}~{SUB_MAX_N} 只）")
+        return
+    n = len(stocks)
+    if not (SUB_MIN_N <= n <= SUB_MAX_N):
+        violations.append(
+            f"{where}: 次生组共 {n} 只（应为 {SUB_MIN_N}~{SUB_MAX_N} 只；主组已占 8 只四类名额，"
+            f"次生组只装小盘人气/断板反包）")
+        return
+    for s in stocks:
+        if not isinstance(s, dict):
+            violations.append(f"{where}: stocks 含非对象元素")
+            return
+        if board_bad(s.get('code')):
+            violations.append(f"{where}: 含非沪深主板标的 {s.get('code')} {s.get('name', '')}")
+    codes = [str((s or {}).get('code')) for s in stocks]
+    if len(set(codes)) != n:
+        violations.append(f"{where}: 组内标的 code 存在重复（{len(set(codes))} 只互异，应为 {n} 只互不相同）")
+        return
+    seq = [cat_of((s or {}).get('note', '')) for s in stocks]
+    if '?' in seq:
+        violations.append(
+            f"{where}: {seq.count('?')} 只标的 note 前缀无法识别四类身份"
+            f"（须以 断板反包/板块龙头/相关概念/小盘 开头）")
+        return
+    bad = [c for c in seq if c not in SUB_CATS]
+    if bad:
+        violations.append(
+            f"{where}: 次生组含 {len(bad)} 只非「小盘人气/断板反包」标的"
+            f"（龙头 L{seq.count('L')}/概念 C{seq.count('C')} 名额归主组，次生组只做补充分支）")
+        return
+    ORDER = {'L': 0, 'C': 1, 'X': 2, 'D': 3}
+    if seq != sorted(seq, key=lambda c: ORDER[c]):
+        violations.append(f"{where}: 次生组顺序不合规（应为 小盘人气→断板反包），实际序列 {' '.join(seq)}")
+
+
+def check_impacts(nw, where, violations):
+    """五节要闻 impacts 统一校验（R100z216）：主组 8 只四类配比 + 次生组各 2~4 只。"""
+    imps = [im for im in (nw.get('impacts') or []) if isinstance(im, dict)]
+    if not imps:
+        violations.append(f"{where}: impacts 缺失或为空")
+        return
+    if len(imps) > MAX_IMPACT_GROUPS:
+        violations.append(
+            f"{where}: impacts 分组数 {len(imps)}（上限 {MAX_IMPACT_GROUPS} 组＝主组 1 + 次生组最多 3）")
+        return
+    check_tiered(imps[0].get('stocks'),
+                 f"{where}.impacts[0]({(imps[0].get('theme') or '')[:14]})", violations)
+    for j in range(1, len(imps)):
+        check_sub_group(imps[j].get('stocks'),
+                        f"{where}.impacts[{j}]({(imps[j].get('theme') or '')[:14]})", violations)
+    # 跨组复用硬闸：同一 code 不得同时出现在主组与任一次生组（同一只票挂两个板块）
+    codes = [str((s or {}).get('code')) for im in imps
+             for s in (im.get('stocks') or []) if isinstance(s, dict)]
+    dup = sorted({c for c in codes if codes.count(c) > 1})
+    if dup:
+        violations.append(f"{where}: 同一标的跨 impacts 分组重复出现 {dup[:5]}（同一只票不得挂两个板块）")
+
+
 def check4(stocks, where, violations):
     """bullish/bearish 每主题恰好 4 只 + 主板过滤（note 为自由文本，不要求四类前缀/顺序）。"""
     if not isinstance(stocks, list) or not stocks:
@@ -196,7 +270,7 @@ def check_impact_count(D):
                 if n_imp > 4:
                     warns.append(
                         f"{mk}.{key}[{i}]({(nw.get('sector') or '')[:14]}): impacts 分组数 {n_imp}"
-                        f"（上限 4 组，应精简为实际受影响板块）")
+                        f"（上限 4 组＝主组 1 + 次生组最多 3，应精简为实际受影响板块）")
     return warns
 
 
@@ -209,7 +283,8 @@ def check_news_quality(D):
     """R90b B/C 方案软闸门（全部 WARN，不阻断部署）：
     a) theme 相关性：impact theme 与该条 title+summary 无任何二字片段交集 → 可能凑板块；
     b) 组内重复凑数：同一 impact 组内同 code 出现 >1 次，超额（重复只数）>2 → WARN；
-    c) 条目级复用：同一条要闻内同一标的跨组出现 >3 次 → WARN；
+    c) 条目级复用：同一条要闻内同一标的跨组出现（R100z216：已升为 `check_impacts` 硬闸，
+       此处仅保留兜底 WARN，正常数据不会触发）；
     d) 跨节同主题重复：同一卡内同一 sector 出现在 ≥2 节 → WARN（美债既看涨又中性类问题）。
     e) 主角板块（R91e）：第一组 theme 与 title/summary 无二字交集 → WARN（主角板块缺席、只挂外围板块类问题）。"""
     warns = []
@@ -246,7 +321,7 @@ def check_news_quality(D):
                             entry_cnt[str(s.get('code'))] = entry_cnt.get(str(s.get('code')), 0) + 1
                 over = {k: v for k, v in entry_cnt.items() if v > 3}
                 if over:
-                    warns.append(f"{label}: 同一标的在条目内跨组复用超限 {over}（>3 次，请轮换其他标的）")
+                    warns.append(f"{label}: 同一标的在条目内跨组复用 {over}（R100z216 起硬闸已禁跨组重复，此条仅作兜底提示）")
                 sector_secs.setdefault(str(nw.get('sector') or ''), set()).add(key)
         for sv, keys in sector_secs.items():
             if sv and len(keys) >= 2:
@@ -1418,36 +1493,11 @@ def main():
                 for i, nw in enumerate(sec.get(key) or []):
                     if not isinstance(nw, dict):
                         continue
-                    # 五节要闻的 8 只口径是**整条新闻扁平合计8 只**（N 分层表本身就是
-                    # 按 8 只的总数定义的，如 N≥5 → 1/1/1/5），不是「每个 impacts 分组各8 只」。
-                    # 此前这里按分组逐个调check_tiered，导致每组只有 1~5 只被硬判FAIL——
-                    # 与 check_impact_count / 前端渲染的扁平口径自相矛盾，且会让 --scope us 永久红。
-                    # 现改为：①逐组校验「非空 + 主板过滤」；②整条新闻扁平合计走 check_tiered 全套。
-                    for j, imp in enumerate(nw.get('impacts') or []):
-                        if not isinstance(imp, dict):
-                            continue
-                        g = imp.get('stocks')
-                        gname = f"{mk}.{key}[{i}].impacts[{j}]({(imp.get('theme') or '')[:14]})"
-                        if not isinstance(g, list) or not g:
-                            violations.append(f"{gname}: stocks 缺失或为空")
-                            continue
-                        for s in g:
-                            if isinstance(s, dict) and board_bad(s.get('code')):
-                                violations.append(
-                                    f"{gname}: 含非沪深主板标的 {s.get('code')} {s.get('name', '')}")
-                    flat = [s for imp in (nw.get('impacts') or []) if isinstance(imp, dict)
-                            for s in (imp.get('stocks') or []) if isinstance(s, dict)]
-                    # 扁平口径下同一 code 可跨组复用（上限 2 次，见 check_news_quality 的 C 口径），
-                    # 故先按 code 去重再做「恰好 8 只互异」判定，避免与设计意图冲突。
-                    seen = {}
-                    for s in flat:
-                        seen.setdefault(str(s.get('code')), s)
-                    uniq = list(seen.values())
-                    if len(uniq) != len(flat):
-                        # 有跨组复用时按去重口径校验，并单独提示复用情况（不判FAIL）
-                        check_tiered(uniq, f"{mk}.{key}[{i}]({(nw.get('sector') or '')[:14]})", violations)
-                    else:
-                        check_tiered(flat, f"{mk}.{key}[{i}]({(nw.get('sector') or '')[:14]})", violations)
+                    # R100z216：双段口径——主组（impacts[0]）必须 8 只四类配比完整；
+                    # 次生组（impacts[1:]）各 2~4 只、只装小盘人气/断板反包。
+                    # 取代 866bf30 的「整条扁平合计 8 只」——那版让多组只能切稀 8 只，
+                    # 多板块传导实际死亡（A 股侧 0 条用多组）。
+                    check_impacts(nw, f"{mk}.{key}[{i}]({(nw.get('sector') or '')[:14]})", violations)
             for key in ('bullish', 'bearish'):
                 for i, g in enumerate(sec.get(key) or []):
                     if isinstance(g, dict):
@@ -1549,8 +1599,9 @@ def main():
         for v in violations:
             print("  -", v)
         sys.exit(1)
-    print("ALL OK: 全部 impacts/aiPrediction 恰好 8 只且配比符合 N 分层表、"
-          "顺序为龙头→概念→小盘人气→断板反包，bullish/bearish 恰好 4 只，全部标的为沪深主板；"
+    print("ALL OK: 五节要闻每条 impacts 主组（第 1 组）恰好 8 只且配比符合 N 分层表、"
+          "顺序为龙头→概念→小盘人气→断板反包；次生组（第 2~4 组）各 2~4 只、只装小盘人气/断板反包；"
+          "aiPrediction 每板块恰好 8 只，bullish/bearish 恰好 4 只，全部标的为沪深主板；"
           "macroNews/intlNews/bankViews 均含合法 direction（看涨/看跌/中性）。")
 
 
