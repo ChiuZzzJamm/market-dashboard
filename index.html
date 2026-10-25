@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610260147"></script>
+<script src="data.js?v=202610260150"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -3473,7 +3473,7 @@ function renderTradeDesk() {
   var ev = ER.length >= 2
     ? '固定 −3% 触及率 ' + rt1(ER[0].touchRate) + ' → ATR 收盘确认 ' + rt1(ER[ER.length - 1].touchRate) +
       '、胜率 ' + rt1(ER[0].winRate) + ' → ' + rt1(ER[ER.length - 1].winRate) +
-      '（同一批 ' + (ER[0].n || 0).toLocaleString('en-US') + ' 个入场点，明细见「指标表现」卡）'
+      '（同一批 ' + (ER[0].n || 0).toLocaleString('en-US') + ' 个入场点，明细见「指标复盘」卡）'
     : '';
   h += '<div class="td-note">' + esc(T.method || '') +
     '<br>止损口径：ATR(14) 自适应 + 20 日结构低点，宽度钳制 2.5%~10%、收盘确认；' +
@@ -3766,7 +3766,7 @@ function renderForecastScore() {
     '；' + esc(((F.criteria || {}).bench) || '') +
     '。样本门槛 ' + ((F.criteria || {}).minN || 30) + ' 条且 ' + ((F.criteria || {}).minDays || 5) +
     ' 个交易日，不足则不给结论；带 <b>*</b> 的分组样本少于 ' + ((F.criteria || {}).minGroupN || 5) +
-    ' 条，百分比只是巧合、不代表能力。与「指标表现」的分工：那张量选出来的票赚不赚，这张量方向判得准不准。</div>';
+    ' 条，百分比只是巧合、不代表能力。与「指标复盘」的分工：那张量选出来的票赚不赚，这张量方向判得准不准。</div>';
   h += '</details>';
   return h + '</div>';
 }
