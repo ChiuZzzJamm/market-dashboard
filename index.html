@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610260023"></script>
+<script src="data.js?v=202610260029"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1003,6 +1003,11 @@
   /* R100z92：跨两列合并格（谐波失效池「结构状态」＝原 T1/T2 两框位置合一） */
   .tc-cell.wide { grid-column: span 2; }
   .tc-cell.wide .v { white-space: normal; line-height: 1.3; font-size: var(--fs-base); }
+  /* R100z219c：两行取值格。窄屏（430）下「连板 / 放量」这类合成格会被 ellipsis 截成「2 板 · …」，
+     把放量倍数——这一池最核心的筛选量——整段吞掉（同 24.75 的教训：解释性内容不许用 ellipsis 兜底）。
+     ⚠️ 类名不能叫 .wrap —— 那是页面级布局容器（.wrap{max-width:1080px;padding:32px 22px 80px}），
+     加到 70px 的格子上等于给它套 44px 水平内边距，整格内容被挤成 0 宽、看着像空白。故用 vwrap。 */
+  .tc-cell.vwrap .v { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.2; }
   .tc-cell .k { display: block; font-size: var(--fs-xs); color: var(--ink2); line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tc-cell .v { display: block; font-size: var(--fs-body); font-weight: 800; line-height: 1.25; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tc-cell .v.up { color: var(--up); }
@@ -5153,9 +5158,11 @@ function tcStopOf(code) {
   if (!ex || ex.stop === null || ex.stop === undefined || !isFinite(Number(ex.stop))) return null;
   return Number(ex.stop);
 }
-function tcCell(k, v, cls, wide) {
+function tcCell(k, v, cls, wide, wrap) {
   // R100z92：wide=true → 跨两列（谐波失效池「结构状态」合并格用）
-  return '<div class="tc-cell' + (wide ? ' wide' : '') + '"><span class="k">' + esc(k) + '</span><span class="v ' + (cls || '') + '">' + v + '</span></div>';
+  // R100z219c：wrap=true → 取值允许折行（合成格在窄屏上别被 ellipsis 截掉后半段）
+  // ⚠️ 类名用 vwrap 不是 wrap —— .wrap 是页面级布局容器（见 CSS 注释），撞名会把整格内容挤没。
+  return '<div class="tc-cell' + (wide ? ' wide' : '') + (wrap ? ' vwrap' : '') + '"><span class="k">' + esc(k) + '</span><span class="v ' + (cls || '') + '">' + v + '</span></div>';
 }
 function tcChgHtml(pct) {
   if (pct === null || pct === undefined || !isFinite(pct)) return '<span class="tc-chg flat">—</span>';
@@ -5821,7 +5828,9 @@ function chenPoolBlock(title, cls, sub, list, tierTag) {
       tcCell('目标 +' + (t.targetPct || 3.5) + '%', t.targetPrice ? t.targetPrice.toFixed(2) : '—', 'up'),
       tcCell('止损', t.stopPrice ? '<span class="xt" title="洗盘段最低价；破位按收盘算">' + t.stopPrice.toFixed(2) + '</span>' : '—', 'down'),
       tcCell('仓位', t.posPct ? t.posPct + '%' : '—', ''),
-      tcCell('连板 / 放量', (m.lbc ? (m.lbc === 1 ? '首板' : m.lbc + ' 板') : '—') + ' · ' + (m.volRatio ? m.volRatio + ' 倍' : '—'), '')
+      // R100z219c：折成两行（连板 / 放量），窄屏 164px 卡片下不再被截成「2 板 · …」
+      tcCell('连板 / 放量', (m.lbc ? (m.lbc === 1 ? '首板' : m.lbc + ' 板') : '—') +
+        '<br>' + (m.volRatio ? m.volRatio + ' 倍' : '—'), '', false, true)
     ];
     var foot = '<span class="xt">' + esc(String(e.form || '').replace(/·/, '：')) + '</span>';
     return tcCard({
