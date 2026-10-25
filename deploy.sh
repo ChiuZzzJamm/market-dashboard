@@ -181,7 +181,7 @@ if [ "${SKIP_AUDIT:-0}" != "1" ]; then
         echo "🧠 记忆体检（check_memory.py，不阻断部署）..."
         "$PY" check_memory.py --quiet 2>&1 | tail -6 || true
     fi
-    # 脚本层体检（K1–K10，R100z179b **阻断**）：查的是「脚本怎么写盘」，不是 data.js 内容也不是 prompt。
+    # 脚本层体检（K1–K11，R100z179b **阻断**）：查的是「脚本怎么写盘」，不是 data.js 内容也不是 prompt。
     # 前四轮修的 bug 全在这一层（非原子写 / 非幂等回填 / 时间戳污染），而 audit 与 check_automations
     # 都看不见它 —— 于是同类问题换个脚本又冒出来。这里 FAIL 必须拦：语法错/裸写 data.js 的脚本
     # 推到线上就是白屏，没有「先上线再说」的余地。
@@ -190,7 +190,7 @@ if [ "${SKIP_AUDIT:-0}" != "1" ]; then
         # ⚠️ 不能写成 `if ! "$PY" x.py | tail`：管道退出码取的是 tail 的（恒 0），
         #    闸门会变成永不触发。必须不带管道直接判。
         if ! "$PY" check_code.py; then
-            echo "❌ 脚本层体检未通过（K1–K10 有 FAIL），已阻断部署。"
+            echo "❌ 脚本层体检未通过（K1–K11 有 FAIL），已阻断部署。"
             echo "   处理办法：按上面提示修脚本；确需紧急推送用 SKIP_AUDIT=1 ./deploy.sh"
             exit 1
         fi

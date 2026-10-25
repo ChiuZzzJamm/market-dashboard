@@ -45,7 +45,7 @@
 用法:
     python3 check_code.py            # 全部检查（FAIL 时 exit 1）
     python3 check_code.py --verbose  # 附明细（谁引用了谁、每个写者的原子实现位置）
-    python3 check_code.py --only K3  # 只跑某一类（K1-K10）
+    python3 check_code.py --only K3  # 只跑某一类（K1-K11）
 """
 import argparse
 import ast
@@ -1264,6 +1264,94 @@ else console.log('OK');
                     '三段顺序+三处倒序 / 12 组口径语义）' % n_stocks)
 
 
+def k11_tape_degrade(r, verbose=False):
+    """K11 分时降级占位与 tape.diagnose 同构自检（R100z221）。
+
+    要防的事故（2026-10-26 实际踩到）：`tape.diagnose_codes` 的约定是「抓不到的不进结果，
+    **调用方须显式降级**」，而调用方当时只在 `if t:` 里赋值 —— 抓空时 `picks[i]` 上**没有 tape 键**。
+    两个后果都不是「跑一次就看得见」的：
+      - B6 台账的 `duanban.star.picks[].tape` 只下钻**首元素**，首只票抓空即 FAIL，
+        报错文案却写「指向不存在的字段」，会误导成台账写错，实际是开盘半小时接口抖动；
+      - AI 在 data.js 里看到一只「看不出异常」的票，会照涨跌写「盘口平稳/无明显抛压」——
+        **缺键 = 鼓励编**，正是「抓不到≠没有」的反面。
+
+    本条闸门管的是「补了键、但补得不同构」这种更隐蔽的复发：tape.py 将来加字段、
+    降级对象不跟 → AI 读 `actZh` 拿到 undefined，比缺键更容易让它自己编。
+    判定三条，全部静态/瞬间可判、零联网：
+      ① 降级对象必须覆盖 diagnose 的全部返回键；
+      ② `state/zh/act/actZh` 必须与 `tape.STATE['unknown']` 同源（prompt 已写死
+         「unknown 分时抓空 → 不下结论」，脚本另造文案就会出现三种说法）；
+      ③ 数值项必须是 `None`（0 是「测到 0」，None 才是「没测到」）。
+    外加自律一条：`_tape_unknown` 必须在 update_star.py 里被真实调用（防函数在、无人用）。
+    """
+    import importlib.util
+    bad = []
+
+    def _load(fname, alias):
+        spec = importlib.util.spec_from_file_location(alias, os.path.join(HERE, fname))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    try:
+        tape_mod = _load('tape.py', '_k11_tape')
+        us_src = open(os.path.join(HERE, 'update_star.py'), encoding='utf-8').read()
+        us_mod = _load('update_star.py', '_k11_us')
+    except Exception as e:                                   # noqa: BLE001
+        r.fail('K11', '无法载入 tape.py / update_star.py（%s）—— 降级同构自检失效' % e)
+        return
+
+    # diagnose 的返回键集（AST 取字面量，不依赖联网）
+    tree = ast.parse(open(os.path.join(HERE, 'tape.py'), encoding='utf-8').read())
+    diag_keys = None
+    for n in ast.walk(tree):
+        if isinstance(n, ast.FunctionDef) and n.name == 'diagnose':
+            for sub in ast.walk(n):
+                if (isinstance(sub, ast.Return) and isinstance(sub.value, ast.Call)
+                        and getattr(sub.value.func, 'id', '') == 'dict'):
+                    diag_keys = [k.arg for k in sub.value.keywords if k.arg]
+    if not diag_keys:
+        r.fail('K11', 'tape.diagnose 里找不到 return dict(...) —— 闸门判定依据消失，先修闸门')
+        return
+
+    ph = us_mod._tape_unknown('K11 自检')
+    miss = [k for k in diag_keys if k not in ph]
+    if miss:
+        bad.append('降级占位缺 %d 个 diagnose 字段（%s）—— AI 读到的会是 undefined，'
+                   '比缺键更容易编；tape.py 加字段时必须同步 _tape_unknown'
+                   % (len(miss), '/'.join(miss)))
+
+    # ② 四元组同源
+    exp = tuple(tape_mod.STATE['unknown'])
+    got = (ph.get('zh'), ph.get('act'), ph.get('actZh'))
+    if ph.get('state') != 'unknown':
+        bad.append("降级占位 state=%r，必须是 'unknown'" % ph.get('state'))
+    if got != exp:
+        bad.append('降级占位 zh/act/actZh=%r 与 tape.STATE["unknown"]=%r 不同源'
+                   '—— prompt 已按 unknown 写死口径，脚本另造文案会让页面/AI/prompt 三种说法'
+                   % (got, exp))
+
+    # ③ 数值项必须 None
+    nums = [k for k in diag_keys if k not in ('state', 'zh', 'act', 'actZh', 'text')]
+    filled = {k: ph.get(k) for k in nums if ph.get(k) is not None}
+    if filled:
+        bad.append('降级占位的「没测到」被填了值（%s）—— 0 是「测到 0」，null 才是「没测到」'
+                   % ', '.join('%s=%r' % kv for kv in filled.items()))
+
+    # 自律：函数必须在调用方真实被调用（防「函数在、无人用」）
+    if us_src.count('_tape_unknown(') < 3:
+        bad.append('_tape_unknown 在 update_star.py 里只有 %d 处引用（定义 1 + 调用至少 2）'
+                   '—— 两条补键路径（单只抓空 / 整体异常）必须都在'
+                   % us_src.count('_tape_unknown('))
+
+    for m in bad:
+        r.fail('K11', m)
+    if not bad:
+        r.ok('K11', '分时降级占位与 tape.diagnose 同构（%d 个字段全覆盖 / '
+                    'unknown 三元组与 STATE 同源 / 数值项全 null / 两条补键路径都在）'
+             % len(diag_keys))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--verbose', action='store_true')
@@ -1293,6 +1381,8 @@ def main():
         k9_depth_guard(r, a.verbose)
     if not only or only == 'K10':
         k10_news_order(r, a.verbose)
+    if not only or only == 'K11':
+        k11_tape_degrade(r, a.verbose)
     return r.dump()
 
 

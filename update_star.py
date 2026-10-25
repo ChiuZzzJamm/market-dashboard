@@ -107,10 +107,28 @@ def _tape_unknown(why):
     很容易写成「盘口平稳/无明显抛压」——那是**把取数故障读成利好**。缺键还会让
     B6 台账的 `duanban.star.picks[].tape` 断在第一个元素上转 FAIL（实测闸门只下钻 [0]），
     即一次接口抖动就会拦住 19:30 的部署。所以键必须存在，值必须是「未知」。
+
+    **字段必须与 tape.diagnose 的返回值同构**（16 个键）：prompt 写的是
+    「`picks[].tape` 是每只明细（`state/zh/act/actZh/text`…）」，只补齐 state 而缺 act/actZh 的话，
+    AI 读 `actZh` 会拿到 undefined，反而更容易自己编。数值项一律 `None`（= 没测到），
+    不补 0 —— 0 是"测出来是 0"，与"没测"是两回事。
+
+    `state/zh/act/actZh` 直接取 `tape.STATE['unknown']`（= 分时缺失 / wait / 不下结论），
+    **不在这里另造文案**：prompt 已写死「unknown 分时抓空 → 不下结论，严禁猜方向」，
+    口径必须同源才不会出现「脚本说抓空、prompt 说不下结论、页面说平稳」三种说法。
+    tape 不可用时用同值硬编码兜底（except 分支正是它坏了的情况）。
     """
-    return {"zh": "抓空", "state": "unknown", "degraded": True,
-            "why": why,
-            "text": f"分时结构未知（{why}）",
+    try:
+        import tape as _T
+        zh, act, act_zh = _T.STATE["unknown"]
+    except Exception:                                       # noqa: BLE001
+        zh, act, act_zh = "分时缺失", "wait", "不下结论"
+    return {"state": "unknown", "zh": zh, "act": act, "actZh": act_zh,
+            "text": f"开盘与此刻价格未取到（{why}）。结构＝{zh}",
+            "openPct": None, "livePct": None, "vsOpen": None, "vsVwap": None,
+            "downVolShare": None, "breaks": None, "reclaim": None,
+            "burst": None, "slope": None, "auctionShare": None, "nBars": None,
+            "degraded": True, "why": why,
             "rule": "「未知」是取数故障、不是盘口正常：禁止据此判断强弱，"
                     "禁止写成「无明显抛压」「量能平稳」这类结论"}
 
@@ -119,9 +137,9 @@ def _tape_summary_unknown(picks, why):
     """分时整体失败时的摘要占位（与 tape.summarize 同构，前端读 text/rule）。"""
     return {"byState": {"unknown": len(picks)},
             "poolByState": {"unknown": sum(1 for p in picks if p.get("src") == "pool")},
-            "text": f"本次精选 {len(picks)} 只均未取到分时数据（{why}）——结构未知，不构成任何强弱结论。",
+            "text": f"本次精选 {len(picks)} 只均未取到分时数据（{why}）——结构缺失，不构成任何强弱结论。",
             "missing": [p.get("code") for p in picks],
-            "rule": "结构未知是取数故障、不是「盘口正常」：只说明没数据，"
+            "rule": "结构缺失是取数故障、不是「盘口正常」：只说明没数据，"
                     "禁止当成无抛压或走势平稳"}
 
 
