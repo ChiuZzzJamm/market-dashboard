@@ -9,6 +9,7 @@ risk_gate.py —— 把「个股硬风险黑名单 red」落到四个推荐池�
 
 清理范围（只动「推荐位」，不动研究/跟踪位）：
     duanban.confirmed / watching / star.picks
+    chenPool.strict / loose（R100z218：第二套断板反包口径，同为推荐位）
     powerScreen.passed
     accumulation.scored / strong / watch
 刻意不动：
@@ -48,6 +49,10 @@ TARGETS = [
     (('duanban', 'confirmed'), '断板确认池'),
     (('duanban', 'watching'), '断板观察池'),
     (('duanban', 'star', 'picks'), '开盘精选'),
+    # R100z218：陈学长池是第二个「断板反包」推荐位，同一条理由必须同样生效——
+    # 它每天给出的也是「可以买」的卡片，漏接这一步就等于 R100z168 修过的问题在第二套口径里复活。
+    (('chenPool', 'strict'), '陈学长·严格池'),
+    (('chenPool', 'loose'), '陈学长·放宽池'),
     (('powerScreen', 'passed'), '量化筛选'),
     (('accumulation', 'scored'), '吸筹打分'),
     (('accumulation', 'strong'), '吸筹强化'),

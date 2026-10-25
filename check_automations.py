@@ -465,6 +465,13 @@ def _resolve_field(D, path):
         if not m:
             return 'bad', '%s 第 %d 节写法不认识' % (path, i + 1)
         key, brs = m.group(1), m.group(2) or ''
+        if cur is None:
+            # R100z218：父节点是 null 不等于「字段不存在」，要按「今天没落值」处理（= empty，暂不可验）。
+            # 实证（2026-10-25 周日 22:00 跑批后）：aiPrediction.date 已指向 2026-10-26，六条板块的
+            # exp 全为 null（R100z11 设计：非预期型板块不落 exp）；verification / stockCheck 要等
+            # 交易日 08:30 才有内容。旧写法一律判 bad → 每个周末固定 23 条假 FAIL，
+            # 又把「闸门永远在报错」变回常态，与 G10 当年那条假 WARN 同一类病。
+            return 'empty', '%s 当前为 null（尚未落值，属正常）' % '.'.join(parts[:i + 1])
         if not isinstance(cur, dict):
             return 'bad', '%s 的父节点不是对象（%s）' % ('.'.join(parts[:i + 1]), type(cur).__name__)
         if key not in cur:

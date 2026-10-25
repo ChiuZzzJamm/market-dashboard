@@ -1,0 +1,46 @@
+{
+ "version": "v1",
+ "entries": [
+  {
+   "pool": "chen_strict",
+   "tier": "strict",
+   "code": "002696",
+   "name": "百洋股份",
+   "entryDate": "2026-10-25",
+   "ztDate": "2026-10-21",
+   "stopPrice": 9.22,
+   "result": null
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "605488",
+   "name": "福莱新材",
+   "entryDate": "2026-10-25",
+   "ztDate": "2026-10-20",
+   "stopPrice": 31.0,
+   "result": null
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "002929",
+   "name": "润建股份",
+   "entryDate": "2026-10-25",
+   "ztDate": "2026-10-21",
+   "stopPrice": 52.67,
+   "result": null
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "600267",
+   "name": "海正药业",
+   "entryDate": "2026-10-25",
+   "ztDate": "2026-10-20",
+   "stopPrice": 13.45,
+   "result": null
+  }
+ ],
+ "updatedAt": "2026-10-25 23:35"
+}
