@@ -100,6 +100,31 @@ def _gap_summary(picks):
             "text": text}
 
 
+def _tape_unknown(why):
+    """分时拿不到时的**显式占位**（R100z221）。
+
+    为什么不留空：`p["tape"]` 缺键时，AI 在 data.js 里看到的是一只看不出异常的票，
+    很容易写成「盘口平稳/无明显抛压」——那是**把取数故障读成利好**。缺键还会让
+    B6 台账的 `duanban.star.picks[].tape` 断在第一个元素上转 FAIL（实测闸门只下钻 [0]），
+    即一次接口抖动就会拦住 19:30 的部署。所以键必须存在，值必须是「未知」。
+    """
+    return {"zh": "抓空", "state": "unknown", "degraded": True,
+            "why": why,
+            "text": f"分时结构未知（{why}）",
+            "rule": "「未知」是取数故障、不是盘口正常：禁止据此判断强弱，"
+                    "禁止写成「无明显抛压」「量能平稳」这类结论"}
+
+
+def _tape_summary_unknown(picks, why):
+    """分时整体失败时的摘要占位（与 tape.summarize 同构，前端读 text/rule）。"""
+    return {"byState": {"unknown": len(picks)},
+            "poolByState": {"unknown": sum(1 for p in picks if p.get("src") == "pool")},
+            "text": f"本次精选 {len(picks)} 只均未取到分时数据（{why}）——结构未知，不构成任何强弱结论。",
+            "missing": [p.get("code") for p in picks],
+            "rule": "结构未知是取数故障、不是「盘口正常」：只说明没数据，"
+                    "禁止当成无抛压或走势平稳"}
+
+
 def load_data(data_path):
     with open(data_path, encoding="utf-8") as f:
         s = f.read()
@@ -454,9 +479,20 @@ def build_star(D, base=None):
             tape_summary["missing"] = miss
             tape_summary["text"] += (f"（{len(miss)} 只分时抓空：{'、'.join(miss)}，"
                                      "未给结构判定，严禁猜方向）")
+            # R100z221：抓空的票也落 tape 键（= 未知），不留空键（见 _tape_unknown 注释）。
+            # 同样用 setdefault：tm 里没有该票时正常不会走到覆盖，但保持与异常分支同一写法，
+            # 将来 tape.py 若改成「有结果但为 None」，这里也不会把真值冲掉。
+            for p in picks:
+                if str(p["code"]) in miss:
+                    p.setdefault("tape", _tape_unknown("分时接口未返回该票数据"))
         print(f"[tape] {tape_summary['text']}")
     except Exception as e:                                  # noqa: BLE001
-        print(f"[tape][WARN] 分时诊断失败，picks 不带 tape 字段：{type(e).__name__}: {e}")
+        # R100z221：整体失败时也要显式降级 —— 以前是 picks 不带 tape、tapeSummary=None，
+        # 前端整块「盘口结构」直接消失（用户看不出是故障），AI 也读不到「未知」两个字。
+        print(f"[tape][WARN] 分时诊断失败，按「结构未知」显式降级：{type(e).__name__}: {e}")
+        for p in picks:
+            p.setdefault("tape", _tape_unknown(f"分时诊断失败：{type(e).__name__}"))
+        tape_summary = _tape_summary_unknown(picks, f"{type(e).__name__}")
 
     # ---- 文案模板（AI 复核改写 sentiment/pushText） ----
     now = datetime.now()
