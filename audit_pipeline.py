@@ -146,6 +146,12 @@ EMPTY_WHITELIST = [
     (r"duanban\.leadLag\.(picks|sectors)$",
      "R100z190：lead_lag 约六成交易日无候选（回测 34/90 日有信号），picks/sectors 为空属正常；"
      "前端 renderDuanban 里 `if ((LL.picks||[]).length) ... else 空仓文案` 双向兜底，sectors 前端未引用"),
+    # R100z218：陈学长池——他的口径比断板反包严得多（连板≥2 + 断板日放量≥2 倍），空池是常态。
+    (r"chenPool\.(watching|failPool|failedDates)$",
+     "R100z218：观察池「今天没有走到差一根K线的标的」、失效池「今天没有标的失效」都是正常日度状态；"
+     "failedDates 为空＝没有 K 线缺口（有值才渲染⚠️行，空值不渲染，是正确方向）。"
+     "前端 chenPoolBlock 用 `if (!list.length) return ... 暂无标的` 兜底，dbFailHtml 用 "
+     "`if (!failPool.length)` 兜底显示『暂无失效标的』——三条路径都不渲染空白"),
     (r"^policySignals$",
      "R100z107b：当日无政策源新闻时 policySignals 为空数组（正常）"),
     (r"atrStops\.skipped$",
@@ -203,6 +209,13 @@ PRODUCT_OWNERSHIP = {
     "duanban": {
         "require": ("duanban", "断板"),
         "note": "断板反包确认池/观察池/失效池",
+    },
+    "chenPool": {
+        "require": ("chenPool", "陈学长"),
+        "note": ("R100z218：陈学长断板反包**第二套并列口径**（chen_pool.py 产出，严格池/放宽池/观察池）。"
+                 "与 duanban 并列而非取代——用户 2026-10-25 明确要求「建一个陈学长技术指标，"
+                 "而不是更新断板反包」，目的是让两套指标用同一结算口径并行留痕，一周后比胜率。"
+                 "禁把它改写成 duanban 的参数分支。"),
     },
     "harmonic": {
         "require": ("harmonic", "谐波"),
