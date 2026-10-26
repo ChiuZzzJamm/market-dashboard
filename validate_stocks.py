@@ -1503,6 +1503,15 @@ def main():
     duanban_changed, duanban_warns = (fix_duanban_inplace(D) if not no_fix else (False, []))
     if (not no_fix) and ('--no-fix-order' not in sys.argv or duanban_changed):
         reorder_inplace(D)
+        # R100z224（2026-10-26）：写盘前必须**自报家门**。本脚本默认就是「自动修复 + 重写整份
+        # data.js」模式（补 direction / 剔非主板 / probability 归一成 round(float(p),1) / 统一重排），
+        # 只有 --no-fix 才是纯只读。7 条自动化全带 --no-fix，所以平时看不到这层；
+        # 但手跑一次不带参数，就会**静默**改写线上数据 —— 2026-10-26 09:2x 我复跑检查时就踩了：
+        # 56 个 probability 由 int 变 float、整份文件被重写（R100z156 之后 churn 只剩这类归一化，
+        # 早先是 node eval 通道造成的 24 万字符重排）。校验器不该默默写盘：把「谁动了数据」印出来。
+        print('[validate_stocks] ⚠ 非 --no-fix 模式：本次将重写 data.js'
+              '（自动补 direction / 剔非主板 / probability 归一 / 统一重排）。'
+              '只读校验请加 --no-fix。')
         # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace
         _tmp = 'data.js.tmp'
         with open(_tmp, 'w', encoding='utf-8') as f:
