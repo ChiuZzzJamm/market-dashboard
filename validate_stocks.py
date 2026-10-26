@@ -35,6 +35,7 @@
 用法: python3 validate_stocks.py [--json]
 退出码: 0 = 全部合规(输出 ALL OK)；1 = 有违规。
 """
+import difflib
 import json
 import os
 import re
@@ -1411,6 +1412,71 @@ def check_selection_modules(D):
     return warns
 
 
+def check_sector_board(D, scope='all'):
+    """R100z224：`aiPrediction.sectors[].sector` 必须能被 `ashare.allBoards` 解析。
+
+    事故（2026-10-22 / 10-23 / 10-26 实测，每周重演）：AI 写的是**主题名**
+    （创新药 / 光模块 / 半导体设备 / 石油开采），而 allBoards 里是**同花顺行业名**
+    （化学制药 / 通信设备 / 半导体 / 油气开采及服务）。对不上的后果：
+
+      - `entry_zone.py` 按名精确匹配 → 找不到 → 不补 `fundCheck`/`entry`
+        → 该板块**没有承接/不追/证伪三个买点**（6 个板块里曾有 3~5 个是空的）；
+      - 前端涨幅走 `pctAlias` 别名 → **照常显示**。
+
+    两个加在一起就是「坏得看不见」：页面不报错、涨幅有数，只是买点区安静地空着。
+    而 prompt 明写「你只负责选对板块名」—— 这是可避免的写法错误，不是数据源不可抗力，
+    所以在 22:00 写回时就该拦（此时 allBoards 是上一交易日的，90 个名字齐全；周末也在）。
+
+    三级判定：
+      ① 逐字命中 → 过；
+      ② 命中 board_alias.json 的别名 → WARN（涨幅取均值、买点取主板块，两条指数可能不同，
+         写明比含糊好；建议下次直接写行业名）；
+      ③ 都不可解析 → FAIL，附最接近的 3 个行业名 + 一行修法（不许只说「错了」，
+         不给修法的闸门等于把死循环从 08:30 挪到 22:00）。
+    """
+    fails, warns = [], []
+    if scope not in ('all', 'ai'):
+        return fails, warns
+    boards = [str(b.get('name')) for b in ((D.get('ashare') or {}).get('allBoards') or [])
+              if isinstance(b, dict) and b.get('name')]
+    boards = list(dict.fromkeys(boards))     # 去重保序：近似候选不许出现三个同名
+    if len(boards) < 20:
+        # 16:00 板块抓取失败时 allBoards 会空/短，此时**不能**判 FAIL：那会把
+        # 「数据源没抓到」变成「AI 写错了名字」，逼它去改本来正确的名字。
+        warns.append('allBoards 只有 %d 个板块，无法校验预测板块名（多半是 16:00 抓取失败，'
+                     '不是名字错）' % len(boards))
+        return fails, warns
+    bset = set(boards)
+    try:
+        from board_alias import load_aliases
+        alias = load_aliases()
+    except Exception:                                        # noqa: BLE001
+        alias = {}
+    for i, s in enumerate(((D.get('aiPrediction') or {}).get('sectors') or [])):
+        if not isinstance(s, dict):
+            continue
+        nm = str(s.get('sector') or '').strip()
+        if not nm:
+            fails.append(f'aiPrediction.sectors[{i}]: sector 为空')
+            continue
+        if nm in bset:
+            continue
+        cand = [x for x in (alias.get(nm) or []) if x in bset]
+        if cand:
+            warns.append(f'aiPrediction.sectors[{i}]({nm}): 是主题名不是行业名 —— '
+                         f'买点按「{cand[0]}」算、'
+                         + ('涨幅也按同一条算，' if len(cand) == 1
+                            else f'涨幅按「{"/".join(cand)}」均值算，')
+                         + f'建议直接把 sector 写成「{cand[0]}」')
+            continue
+        near = difflib.get_close_matches(nm, boards, n=3, cutoff=0.0)
+        fails.append(f'aiPrediction.sectors[{i}]({nm}): 不在 ashare.allBoards 的 {len(boards)} 个'
+                     f'行业板块里、也不在别名表 → entry_zone 算不出买点，页面只能显示「—」。'
+                     f'最接近：{"、".join(near)}；改成上面某个真实行业名，'
+                     f'或 python3 board_alias.py --add \'{nm}=<行业名>\'')
+    return fails, warns
+
+
 def main():
     as_json = '--json' in sys.argv
     # R100z16 --no-fix：纯只读校验，不自动补 direction / 不剔 duanban / 不重排 / 不写盘。
@@ -1472,6 +1538,7 @@ def main():
     oo_warns = check_openoutlook(D)                    # R100z13：开盘前瞻六维度深度
     ooloop_warns = check_openoutlook_loop(D)           # R100z13：前瞻兑现闭环两头闸
     risk_fails, risk_warns = check_risk_blacklist(D, scope=scope)   # R100z76-④：个股硬风险黑名单（red=FAIL / orange=WARN / yellow=跳过）
+    board_fails, board_warns = check_sector_board(D, scope=scope)   # R100z224：预测板块名必须能落到 allBoards（否则买点整块缺失）
     logic_hards, logic_warns = check_logic_depth(D)    # R100z15：内容深度机器闸
     exit_warns = check_exit(D)                         # R100z15：退出纪律（止损/目标/证伪）
     pool_hards, pool_warns = check_stock_pool(D)       # R100z15：机械选股池是否真进决策链
@@ -1504,6 +1571,7 @@ def main():
                         check4(g.get('stocks'), f"{mk}.{key}[{i}]({(g.get('theme') or '')[:14]})", violations)
 
     if scope in ('all', 'ai'):
+        violations.extend(board_fails)
         ai = D.get('aiPrediction') or {}
         for i, s in enumerate(ai.get('sectors') or []):
             if isinstance(s, dict):
@@ -1529,6 +1597,8 @@ def main():
                           'openoutlook_loop_warnings': ooloop_warns,
                           'risk_blacklist_violations': risk_fails,
                           'risk_blacklist_warnings': risk_warns,
+                          'sector_board_violations': board_fails,
+                          'sector_board_warnings': board_warns,
                           'logic_depth_warnings': logic_warns,
                           'impact_merge_warnings': imp_merge_warns,
                           'outlook_depth_warnings': outlook_warns,
@@ -1580,6 +1650,8 @@ def main():
         print("[WARN] 选股扩展模块:", w)
     for w in risk_warns:
         print("[WARN] 硬风险黑名单(警示):", w)
+    for w in board_warns:
+        print("[WARN] 预测板块名:", w)
     for w in logic_warns:
         print("[WARN] 内容深度:", w)
     for w in imp_merge_warns:

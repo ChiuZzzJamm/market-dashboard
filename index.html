@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610260838"></script>
+<script src="data.js?v=202610260915"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -322,6 +322,12 @@
   .q-avoid { color: var(--down); }  /* ④ 回避 */
   .ai-item .drv { font-size: var(--fs-base); color: var(--ink2); margin-bottom: 3px; }
   .ai-item .lgc { font-size: var(--fs-base); color: var(--ink); margin-bottom: 8px; }
+  /* R100z224：板块买点行（承接 / 不追 / 证伪）。三条都是「位」不是「涨跌幅」，
+     所以统一用中性色 + 等宽数字，不套涨红跌绿，免得读者把 -1.2% 当成今天跌了 1.2%。 */
+  .ai-item .ez { font-size: var(--fs-sm); color: var(--ink2); margin: -2px 0 8px; padding: 3px 8px;
+    border-radius: 6px; background: rgba(74,144,217,.07); border-left: 2px solid #4a90d9; line-height: 1.65; }
+  .ai-item .ez b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .ai-item .ez .ez-d { color: var(--ink3, var(--ink2)); }
   .stock-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--line); }
   /* R100z168（2026-10-24，用户：「这个怎么歪七扭八的，一会代码换行，一会代码就在名称旁边」）：
      原实现把 <b>名称</b><span.cd>代码</span> 直接放在块级流里，两者各自 nowrap 但**元素边界可断行**，
@@ -2057,6 +2063,7 @@ function renderPolicySignals(list) {
     '交通运输': ['公路铁路运输', '港口航运', '机场航运', '物流'],
     '传媒': ['文化传媒', '影视院线', '游戏'],
     '光伏': ['光伏设备'],
+    '光模块': ['通信设备', '光学光电子'],
     '公用事业': ['燃气', '环境治理'],
     '农林牧渔': ['种植业与林业', '养殖业', '农产品加工'],
     '创新药': ['化学制药', '生物制品'],
@@ -2064,14 +2071,17 @@ function renderPolicySignals(list) {
     '化工': ['化学制品', '化学原料', '化学纤维'],
     '医药': ['化学制药', '生物制品', '中药'],
     '医药生物': ['化学制药', '生物制品', '中药'],
+    '半导体设备': ['半导体', '专用设备'],
     '商贸零售': ['零售', '贸易'],
     '国防军工': ['军工电子', '军工装备'],
     '基建': ['建筑装饰', '建筑材料'],
     '基础化工': ['化学原料', '化学制品'],
     '家电': ['白色家电', '黑色家电', '小家电', '厨卫电器'],
+    '家电家居': ['白色家电', '黑色家电', '小家电', '厨卫电器'],
     '工业母机': ['通用设备', '专用设备', '自动化设备'],
     '建材': ['建筑材料'],
     '建筑': ['建筑装饰'],
+    '数据中心': ['IT服务', '通信服务'],
     '数据安全': ['软件开发', 'IT服务'],
     '旅游': ['旅游及酒店'],
     '有色金属': ['工业金属', '小金属', '贵金属', '能源金属'],
@@ -2082,9 +2092,11 @@ function renderPolicySignals(list) {
     '环保': ['环境治理', '环保设备'],
     '电力设备': ['电网设备', '电机', '其他电源设备', '风电设备'],
     '电子': ['半导体', '元件', '光学光电子', '消费电子', '其他电子', '电子化学品'],
+    '石油开采': ['油气开采及服务'],
     '石油石化': ['油气开采及服务', '石油加工贸易'],
     '社会服务': ['旅游及酒店', '教育', '其他社会服务'],
     '纺织服饰': ['服装家纺', '纺织制造'],
+    '航空运输': ['机场航运'],
     '芯片': ['半导体', '元件'],
     '计算机': ['软件开发', 'IT服务', '计算机设备'],
     '软件': ['软件开发'],
@@ -2092,7 +2104,7 @@ function renderPolicySignals(list) {
     '锂电': ['电池'],
     '非银金融': ['证券', '保险', '多元金融'],
     '风电': ['风电设备'],
-    '食品饮料': ['食品加工制造', '饮料制造', '白酒']
+    '食品饮料': ['食品加工制造', '饮料制造', '白酒'],
   };
   function pctOf(name) {
     if (typeof pctMap[name] === 'number') return pctMap[name];
@@ -3101,6 +3113,32 @@ function poolMetaLine(pm) {
   return '<div class="pool-line">🔧 ' + esc(pm.note) + '</div>';
 }
 
+/* R100z224（2026-10-26）：板块买点行。
+   背景：`entry_zone.py` 每周把 `fundCheck` / `entry`（承接价 / 不追上限 / 证伪位）算进
+   data.js，而前端**一行都没渲染**——全站 grep `supportPct` / `chaseCeilPct` / `invalidPct`
+   零命中。于是那三件套每周算完就扔：读者只看到方向、逻辑和 8 只候选，看不到
+   「跌到哪买、涨多少别追、跌破哪算错」。买点才是一张板块卡能不能下单的分界线。
+
+   数字不做任何加工：ATR 是脚本算的，页面只负责翻译成人话。
+   只有 fundCheck 没有 entry（板块日线没取到）时**显式写「待补」**而不是整行消失——
+   静默消失正是这个问题能被藏 8 天的原因（页面看着正常，买点其实空着）。 */
+function entryLineHtml(s) {
+  var f = (s && s.fundCheck) || {}, e = s && s.entry;
+  if (!e || typeof e.supportPct !== 'number') {
+    return (f.passed != null)
+      ? '<div class="ez" title="板块指数日线未取到，entry_zone.py 算不出 ATR；下一轮部署会自动补，此处不编造数值">' +
+          '买点待补<span class="ez-d">：板块日线未取到，暂不编造承接 / 不追 / 证伪</span></div>'
+      : '';
+  }
+  function p(v) { return (Number(v) > 0 ? '+' : '') + Number(v).toFixed(2) + '%'; }
+  var conf = (f.passed != null)
+    ? '<span class="ez-d">（资金三重确认 ' + Number(f.passed) + '/3' + (f.verdict ? '：' + esc(f.verdict) : '') + '）</span>'
+    : '';
+  return '<div class="ez" title="' + escAttr(e.basis || '') + '">买点：回踩 <b>' + p(e.supportPct) +
+    '</b> 有承接 · 涨过 <b>' + p(e.chaseCeilPct) + '</b> 不追 · 跌破 <b>' + p(e.invalidPct) +
+    '</b> 逻辑失效' + conf + '</div>';
+}
+
 function renderAiPrediction() {
   var p = window.DASHBOARD_DATA.aiPrediction;
   var box = document.getElementById('ai-prediction');
@@ -3149,6 +3187,7 @@ function renderAiPrediction() {
       '</div>' +
       '<div class="drv">隔夜驱动：' + esc(s.usDriver) + '</div>' +
       '<div class="lgc">映射逻辑：' + esc(s.logic) + '</div>' +
+      entryLineHtml(s) +
       (s.deduce ? renderDeduce(s.deduce, true) : (s.counter ? '<div class="dd-box"><div class="dd-counter">反证：' + esc(_ddClean(s.counter)) + '</div></div>' : ''));
     if (s.stocks && s.stocks.length) {
       html += '<div class="stock-chips">';

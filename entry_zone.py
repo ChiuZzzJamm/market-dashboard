@@ -175,31 +175,65 @@ def analyze(board):
 
 
 def build(D):
-    """→ {板块名: {fundCheck, entry}}，按 aiPrediction.sectors 的板块名。"""
+    """→ ({板块名: {fundCheck, entry, board}}, miss)。
+
+    R100z224（2026-10-26）：**按名精确匹配改成「精确优先 + 别名回退」**。
+    事故：AI 每周写的是主题名（创新药 / 光模块 / 半导体设备），而 allBoards 里是同花顺
+    行业名（化学制药 / 通信设备 / 半导体）。原来 `boards.get(nm)` 找不到就 `continue`，
+    只是把这几个名字塞进 miss 打一行 WARN —— 结果 6 个预测板块里 3~5 个**没有买点**，
+    而前端照样能显示涨幅（走 pctAlias 别名），所以这个洞**看不见**：页面不报错，只是
+    板块卡上少了「承接/不追/证伪」那一块，读者以为这板块就是没给买点。
+
+    别名表在 board_alias.json（单一事实源，前端 pctAlias 由它生成）。
+    多对一时（电子 → 半导体/元件/光学光电子…）取**列表里第一个命中的板块**当主板块：
+    支撑位不能平均（均价算出来的支撑位谁都不是），必须落在一条真实指数上，并在 basis
+    里写明「按 X 板块近似」，让读者知道这个数是哪条指数算的。
+    """
+    try:
+        from board_alias import load_aliases
+        alias = load_aliases()
+    except Exception:                                        # noqa: BLE001
+        alias = {}
     boards = {str(b.get('name')): b for b in (D.get('ashare', {}).get('allBoards') or [])}
     out = {}
     miss = []
     for s in (D.get('aiPrediction', {}).get('sectors') or []):
         nm = str(s.get('sector') or '')
         b = boards.get(nm)
+        via = None
+        if not b:
+            for alt in (alias.get(nm) or []):
+                if alt in boards:
+                    b, via = boards[alt], alt
+                    break
         if not b:
             miss.append(nm)
             continue
         fund, entry = analyze(b)
-        out[nm] = dict(fundCheck=fund, entry=entry)
+        if via and entry:
+            entry['basis'] = (f'按「{via}」板块指数近似（「{nm}」无同名行业板块）：'
+                              + str(entry.get('basis') or ''))
+        out[nm] = dict(fundCheck=fund, entry=entry, board=via or nm)
     return out, miss
 
 
 def write_back(D, res):
-    """只补 fundCheck/entry 两个字段，其余一字不动（含 direction/logic/exp/stocks）。"""
+    """只补 fundCheck/entry 两个字段，其余一字不动（含 direction/logic/exp/stocks）。
+
+    R100z224：`entry` 算不出来（板块日线拿不到）时**删掉旧值**，不留上一次的数。
+    留着的后果是幽灵数据：昨天按旧 ATR 算出的「承接 -1.2%」今天还挂在页面上，
+    读者会当成当日买点用。宁可显示「—」，也不给一个过期数字（与「抓不到≠没有」同一条纪律）。
+    """
     n = 0
     for s in (D.get('aiPrediction', {}).get('sectors') or []):
         r = res.get(str(s.get('sector') or ''))
         if not r:
             continue
         s['fundCheck'] = r['fundCheck']
-        if r['entry']:
+        if r.get('entry'):
             s['entry'] = r['entry']
+        else:
+            s.pop('entry', None)
         n += 1
     return n
 
@@ -245,6 +279,23 @@ def selftest():
     chk('support 封顶 2.0', e4['supportPct'] >= -2.0, str(e4['supportPct']))
     chk('chase 封顶 1.2', e4['chaseCeilPct'] <= 1.2, str(e4['chaseCeilPct']))
 
+    # R100z224：别名回退——AI 写「创新药」，allBoards 里只有「化学制药」，必须仍能算出买点
+    klA = [[f'd{i}', 100, 100 + i * 0.5, 101 + i * 0.5, 99 + i * 0.5, 1000.0] for i in range(20)]
+    DA = {'ashare': {'allBoards': [dict(name='化学制药', code='881140', netInflow=5.0,
+                                        upCount=60, downCount=20, kline=klA)]},
+          'aiPrediction': {'sectors': [{'sector': '创新药'}, {'sector': '不存在的主题'}]}}
+    resA, missA = build(DA)
+    chk('别名回退命中', '创新药' in resA, str(missA))
+    chk('别名回退带 entry', bool(resA.get('创新药', {}).get('entry')))
+    chk('别名 basis 注明近似板块',
+        '化学制药' in str(resA.get('创新药', {}).get('entry', {}).get('basis', '')))
+    chk('两处都没有 → miss', missA == ['不存在的主题'], str(missA))
+
+    # write_back：entry 算不出来时必须删旧值，不许留昨天的数（幽灵数据）
+    DB = {'aiPrediction': {'sectors': [{'sector': '创新药', 'entry': {'supportPct': -9.9}}]}}
+    write_back(DB, {'创新药': dict(fundCheck=f, entry=None, board='化学制药')})
+    chk('entry=None 时删旧值', 'entry' not in DB['aiPrediction']['sectors'][0])
+
     # write_back 只动两个字段
     D = {'aiPrediction': {'sectors': [{'sector': '测试板', 'direction': '走强',
                                        'logic': '原文不许动', 'exp': {'layer': 'F'}}]}}
@@ -276,9 +327,17 @@ def main():
         n = write_back(D, res)
         common.write_data_js(BASE, D, label='entry_zone')
         print(f'[entry_zone] 已补 {n} 个板块的 fundCheck/entry')
+        # R100z224：走别名的那几个必须点名——否则「买点算出来了」看着一切正常，
+        # 读者不知道这条支撑位其实是另一条板块指数算的。
+        vias = [(k, v['board']) for k, v in res.items() if v.get('board') and v['board'] != k]
+        if vias:
+            print('[entry_zone] 别名映射 %d 个：%s（basis 已注明按哪条板块指数算，未编造）'
+                  % (len(vias), '、'.join('%s→%s' % (k, b) for k, b in vias)))
         if miss:
-            print(f'[entry_zone][WARN] {len(miss)} 个预测板块在 allBoards 里找不到同名板块：'
+            print(f'[entry_zone][WARN] {len(miss)} 个预测板块在 allBoards 与别名表里都找不到：'
                   f'{"、".join(miss)}（不补，前端显示「—」，严禁编造数值）')
+            print('[entry_zone][WARN] 修法：python3 board_alias.py --add \'%s=<真实行业名>\'，'
+                  '或把 sector 直接写成行业名（全表见 board_alias.py --json）' % miss[0])
         # 复验落盘
         D2 = common.load_dashboard_data(BASE)
         got = {str(s.get('sector')): bool(s.get('entry')) for s in

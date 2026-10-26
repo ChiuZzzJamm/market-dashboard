@@ -153,6 +153,16 @@ echo "🏷️  对齐个股简称（sync_names.py）..."
 echo "🛡️  硬风险 red 清出推荐位（risk_gate.py）..."
 "$PY" risk_gate.py --write || true
 
+# ---------- R100z224：板块买点（承接/不追/证伪）补齐 ----------
+# 背景：entry_zone.py 原本只在 08:30 的 prompt 里被调 `--write`。而 aiPrediction.sectors 是
+# 周日 22:00 写完并部署的 → 周日晚上到周一早上这一段，6 个预测板块**没有 fundCheck/entry**，
+# 要等周一 08:30 才补上。买点是最该在「下单前」就有的东西，不该晚 10 小时。
+# 下沉到 deploy.sh 后，任何一次部署（22:00 / 08:30 / 09:45）都会补齐，且幂等。
+# 异常 exit 0 不阻断：板块日线抓不到时它只删掉过期 entry、不编造数字（显式降级交给页面）。
+# 放在审计之前，让审计看到的是补齐后的终态。
+echo "🎯 补齐板块买点（entry_zone.py --write）..."
+"$PY" entry_zone.py --write || true
+
 # ---------- R100z53：审计闸门下沉（一次性覆盖五条自动化）----------
 # 背景（子代理对账 P0-1）：此前只有 19:30 / 周末两条 automation 的 prompt 里手写了
 # 「deploy 前先跑 audit_pipeline」，07:00 / 08:30 / 09:45 三条没有 → 那三条改完代码可以直接 push，

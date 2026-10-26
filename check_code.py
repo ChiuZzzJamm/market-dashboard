@@ -113,6 +113,8 @@ NON_DATA_WRITERS = {
     'kline_cache.py': '原子写的是 K 线缓存文件，只是顺带解析 data.js',
     'pipeline_lock.py': '原子写的是锁文件 / 心跳',
     'backtest_indicators.py': '原子写的是 .bt_cache K线缓存 + backtest_report.md/result.json，从不碰 data.js',
+    'board_alias.py': 'R100z224：原子写的是 index.html 里的 pctAlias 段（从 board_alias.json 生成），'
+                      '读 data.js 只为 --add 校验目标板块是否存在',
 }
 
 # 死脚本白名单：合法的「手工跑、不进自动化」工具，写明用途才准留
