@@ -92,7 +92,6 @@ DATA_WRITERS = [
     'retag_duanban.py',         # 断板重打标
     'risk_gate.py',             # 个股风险闸
     'signal_attribution.py',    # R100z160：signalPerf（指标归因台账）
-    'signal_rank.py',           # R100z160：tradeDesk（五因子排名与执行清单）
     'star_ai_rewrite.py',       # 09:45 精选文案
     'stock_news.py',            # stockNews
     'stop_tracker.py',          # 止损跟踪

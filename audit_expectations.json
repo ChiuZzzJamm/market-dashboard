@@ -686,12 +686,6 @@
           "step": "4.6"
         },
         {
-          "cmd": "python3 signal_rank.py",
-          "flags": [],
-          "file": "signal_rank.py",
-          "step": "4.6"
-        },
-        {
           "cmd": "python3 signal_attribution.py",
           "flags": [],
           "file": "signal_attribution.py",
@@ -718,12 +712,10 @@
         "tdx",
         "price-in→已计价",
         "R100z160",
-        "4.6) 止损与执行台三件套",
+        "4.6) 止损与归因两件套",
         "/Users/loccco/.workbuddy/binaries/run-python atr_stop.py",
-        "/Users/loccco/.workbuddy/binaries/run-python signal_rank.py",
         "/Users/loccco/.workbuddy/binaries/run-python signal_attribution.py",
         "atrStops",
-        "tradeDesk",
         "signalPerf",
         "止损口径只由 atr_stop.py 产出",
         "4.7) 预测成绩单",
@@ -768,7 +760,6 @@
         "breakoutPool",
         "panorama.markets[kr]/markets[jp]",
         "atrStops",
-        "tradeDesk",
         "signalPerf",
         "forecastScore",
         "chenPool（tradeDate/strict/loose/watching/failPool/compare/track）"
@@ -779,7 +770,6 @@
         "panorama.markets[kr]/markets[jp]（update_kr_jp）",
         "fullScan/harmonic/accumulation/breakoutPool（四模块脚本产物）",
         "atrStops（atr_stop.py：全站唯一权威止损源，151 只 ATR 止损位 + 宽度 + 风险预算仓位）",
-        "tradeDesk（signal_rank.py：五因子排名执行清单 + 备选 + 否决 + 组合仓位与板块集中度）",
         "signalPerf（signal_attribution.py：按指标来源的 T+1/3/5/10 收益归因与建议权重）",
         "forecastScore（forecast_scorecard.py：把 calibration_log.json 的板块预判与开盘前瞻台账结算成跨日命中率，按置信度/方向/近5日分层，usage 与 verdict 由阈值自动生成）",
         "chenPool（chen_pool.py：陈学长第二套断板反包口径，与 duanban 并列不互相覆盖；含 compare 两池差异；留痕写 chen_ledger.json）"
@@ -798,12 +788,12 @@
         "R100z138（2026-10-16）：由原 16:00 任务（automation-1788494481279）拆分出的数据步，rrule 16:00（R100z139 由 15:30 提前至 15:15、R100z140 再提前至 16:00——涨停池 15:30 后才发布，16:00 跑确保当日池就绪）。",
         "本步不部署不推送（休市分支除外：SKIP_AUDIT=1 bash deploy.sh 上线休市状态）。",
         "第 2 步断板 story 由脚本基于 check_duanban 真实字段数据驱动填充，AI 逐只复核 sentiment/格式/probability。",
-        "R100z160（2026-10-24）：新增第 4.6 步「止损与执行台三件套」（atr_stop → signal_rank → signal_attribution），止损口径由固定百分比改为 ATR(14) 自适应 + 结构位，产出 atrStops/tradeDesk/signalPerf 三个顶层节点。结构变更已同步 stepOrder/scripts/dataFields/writesFields。",
         "R100z161（2026-10-24）：新增第 4.7 步「预测成绩单」（forecast_scorecard.py），把既有台账 calibration_log.json 结算成 forecastScore 顶层节点。此前页面只有当日 verification、第二天被覆盖，用户无从判断累积准确率。已同步 stepOrder/scripts/dataFields/writesFields/mustContain。",
         "R100z218（2026-10-25）：新增第 2.5 步「陈学长断板反包」——用户在技术看板「断板反包」之后要求**新建**一个并列指标（不是改断板反包），目的是两套口径并行留痕、一周后比胜率。产出 data.js 顶层 chenPool，口径 v1 冻结于 2026-10-25，回测出结果前不许调参。已同步 stepOrder/scripts/mustContain/dataFields/writesFields。",
         "chen_pool.py 对 duanban 节点**只读不写**（只取 confirmed/watching 做当日差异对比）；这条是脚本行为，不登记进 neverWrites——B6 的路径解析会把「duanban（…）」的首词当成字段路径，与 writesFields 的 duanban 撞成「台账自相矛盾」。",
         "R100z219（2026-10-25）：口径升 v2——用户指出「陈学长没有要求连板≥2，首板也可以」，删掉连板门槛（连板数仍算、仍展示、仍排序）；同时按要求删掉 funnel 漏斗字段（dataFields/writesFields 已同步）。本步命令与步骤号不变，无需 reorder。",
-        "R100z219b（2026-10-26 00:09）：chenPool 新增 tradeDate（= 命中票最新一根 K 线的日期）。跨午夜跑批时 generatedAt 会写成第二天、行情仍是上一交易日收盘，页面「数据日」照抄 generatedAt 会误导。同时修两处口径 bug：① settle_one 由 days.index(entryDate) 改「≤ entryDate 的最后一根 K 线」，否则 entryDate 落在周末/节假日时永远结算不了且不报错（实测 13 条样本全是周日入口）；② 断板反包对照的「今日新入池」基准由本脚本运行日改为 duanban 模块自己的 generatedAt 日期，否则跨午夜时一条也记不进来、胜率表第三行永远 0 样本。"
+        "R100z219b（2026-10-26 00:09）：chenPool 新增 tradeDate（= 命中票最新一根 K 线的日期）。跨午夜跑批时 generatedAt 会写成第二天、行情仍是上一交易日收盘，页面「数据日」照抄 generatedAt 会误导。同时修两处口径 bug：① settle_one 由 days.index(entryDate) 改「≤ entryDate 的最后一根 K 线」，否则 entryDate 落在周末/节假日时永远结算不了且不报错（实测 13 条样本全是周日入口）；② 断板反包对照的「今日新入池」基准由本脚本运行日改为 duanban 模块自己的 generatedAt 日期，否则跨午夜时一条也记不进来、胜率表第三行永远 0 样本。",
+        "R100z234（2026-10-26）：用户拍板删掉「交易预案」（signal_rank.py / data.js tradeDesk）。原因是它与开盘精选同日给出两套几乎不重叠的执行清单（精选 10 只 / 预案 8 只 / 交集 1 只），两套止损与仓位并存等于任何一套都无法照做。第 4.6 步由「三件套」缩为「两件套」（atr_stop → signal_attribution），signal_rank.py 已退役到 _retired/。"
       ]
     },
     {
