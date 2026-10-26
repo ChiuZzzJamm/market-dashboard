@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610261704"></script>
+<script src="data.js?v=202610261708"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1614,6 +1614,15 @@ var charts = [];
 var currentMarket = 'ashare';
 function cls(v) { return v > 0 ? "up" : (v < 0 ? "down" : "flat"); }
 function fmtPct(v) { if (v === null || v === undefined) return "—"; return (v > 0 ? "+" : "") + v.toFixed(2) + "%"; }
+/* R100z233：`distTop` 不是涨跌幅，是「现价距箱顶还差多少」——breakout_pool.py 里
+   `(箱顶 / 收盘 − 1) × 100`，**正数代表现价还在箱顶下方**。套 fmtPct 会渲染成「+0.89%」，
+   读起来像「已经涨过箱顶 0.89%」，语义正好反了（2026-10-26 上线当天截图核对时发现的）。
+   这里只换显示方向词，不动任何数据。 */
+function fmtDistTop(v) {
+  if (v === null || v === undefined || v === '' || !isFinite(Number(v))) return '—';
+  var n = Number(v);
+  return n >= 0 ? ('下方 ' + n.toFixed(1) + '%') : ('上方 ' + Math.abs(n).toFixed(1) + '%');
+}
 function esc(s) { if (s === null || s === undefined) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 function escAttr(s){ return esc(s).replace(/"/g, '&quot;'); }
 // R100z81：清洗 AI 写回时泄漏的内部变量名（cal_factor / alignRate=0.xxx），避免大盘研判/
@@ -5034,9 +5043,9 @@ function renderBreakoutPool() {
       cells: [
         tcCell('买入区间', zone, ''),
         tcCell('证伪价', en.stop ? '<span class="xt">' + en.stop.toFixed(2) + '</span>' : '—', 'down'),
-        // 「距箱顶」是距离，不是涨跌幅：写正数（+1.2% = 还差 1.2% 到箱顶），
-        // 别用 -dist 变成负号，读者会误读成「箱顶在下面 1.2%」。
-        tcCell('距箱顶', isFinite(dist) ? fmtPct(dist) : '—', distCls),
+        // R100z233：「距箱顶」是方向，不是涨跌幅。原来套 fmtPct → 显示「+0.89%」，
+        // 读者会当成已经突破箱顶；改走 fmtDistTop（正数=还在箱顶下方，负数=已在上方）。
+        tcCell('距箱顶', fmtDistTop(dist), distCls),
         tcCell('箱体振幅', isFinite(Number(it.boxPct)) ? Number(it.boxPct).toFixed(0) + '%' : '—', '')
       ],
       foot: foot,
@@ -5502,7 +5511,7 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
         tcCell('买入区间', (_be.low && _be.high)
           ? '<span class="xt">' + _be.low.toFixed(2) + '~' + _be.high.toFixed(2) + '</span>' : '—', ''),
         tcCell('证伪价', _be.stop ? '<span class="xt" title="平台下沿×0.99：收盘跌破即横盘前提作废，不是百分比止损">' + _be.stop.toFixed(2) + '</span>' : '—', 'down'),
-        tcCell('距箱顶', isFinite(_bd) ? fmtPct(_bd) : '—', (isFinite(_bd) && _bd <= 1.0) ? 'up' : ''),
+        tcCell('距箱顶', fmtDistTop(_bd), (isFinite(_bd) && _bd <= 1.0) ? 'up' : ''),
         tcCell('箱体振幅', isFinite(Number(te.boxPct)) ? Number(te.boxPct).toFixed(0) + '%' : '—', '')
       ];
       foot = '<span class="xt">横盘启动 ' + (te.score == null ? '—' : te.score + ' 分') +
