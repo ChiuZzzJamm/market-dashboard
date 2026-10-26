@@ -13,10 +13,10 @@ from collections import defaultdict
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from nshape_backtest import (load_all, find_setups, summarize, fmt,
                              limit_pct, BASE)
-from nshape_bt_v2 import sim2
+from nshape_bt import sim2
 
 TP, SL, HOLD = 0.03, 0.05, 5
-ENTRY = 'open'   # 次日开盘买：v2 实测优于当日收盘买
+ENTRY = 'open'   # 次日开盘买：实测优于当日收盘买
 
 
 def features(st, t, d, t0, ctx):

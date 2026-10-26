@@ -789,9 +789,9 @@
         "本步不部署不推送（休市分支除外：SKIP_AUDIT=1 bash deploy.sh 上线休市状态）。",
         "第 2 步断板 story 由脚本基于 check_duanban 真实字段数据驱动填充，AI 逐只复核 sentiment/格式/probability。",
         "R100z161（2026-10-24）：新增第 4.7 步「预测成绩单」（forecast_scorecard.py），把既有台账 calibration_log.json 结算成 forecastScore 顶层节点。此前页面只有当日 verification、第二天被覆盖，用户无从判断累积准确率。已同步 stepOrder/scripts/dataFields/writesFields/mustContain。",
-        "R100z218（2026-10-25）：新增第 2.5 步「陈学长断板反包」——用户在技术看板「断板反包」之后要求**新建**一个并列指标（不是改断板反包），目的是两套口径并行留痕、一周后比胜率。产出 data.js 顶层 chenPool，口径 v1 冻结于 2026-10-25，回测出结果前不许调参。已同步 stepOrder/scripts/mustContain/dataFields/writesFields。",
+        "R100z218（2026-10-25）：新增第 2.5 步「陈学长断板反包」——用户在技术看板「断板反包」之后要求**新建**一个并列指标（不是改断板反包），目的是两套口径并行留痕、一周后比胜率。产出 data.js 顶层 chenPool，口径冻结于 2026-10-25，回测出结果前不许调参。已同步 stepOrder/scripts/mustContain/dataFields/writesFields。",
         "chen_pool.py 对 duanban 节点**只读不写**（只取 confirmed/watching 做当日差异对比）；这条是脚本行为，不登记进 neverWrites——B6 的路径解析会把「duanban（…）」的首词当成字段路径，与 writesFields 的 duanban 撞成「台账自相矛盾」。",
-        "R100z219（2026-10-25）：口径升 v2——用户指出「陈学长没有要求连板≥2，首板也可以」，删掉连板门槛（连板数仍算、仍展示、仍排序）；同时按要求删掉 funnel 漏斗字段（dataFields/writesFields 已同步）。本步命令与步骤号不变，无需 reorder。",
+        "R100z219（2026-10-25）：口径修订——用户指出「陈学长没有要求连板≥2，首板也可以」，删掉连板门槛（连板数仍算、仍展示、仍排序）；同时按要求删掉 funnel 漏斗字段（dataFields/writesFields 已同步）。本步命令与步骤号不变，无需 reorder。",
         "R100z219b（2026-10-26 00:09）：chenPool 新增 tradeDate（= 命中票最新一根 K 线的日期）。跨午夜跑批时 generatedAt 会写成第二天、行情仍是上一交易日收盘，页面「数据日」照抄 generatedAt 会误导。同时修两处口径 bug：① settle_one 由 days.index(entryDate) 改「≤ entryDate 的最后一根 K 线」，否则 entryDate 落在周末/节假日时永远结算不了且不报错（实测 13 条样本全是周日入口）；② 断板反包对照的「今日新入池」基准由本脚本运行日改为 duanban 模块自己的 generatedAt 日期，否则跨午夜时一条也记不进来、胜率表第三行永远 0 样本。",
         "R100z234（2026-10-26）：用户拍板删掉「交易预案」整块（与开盘精选同日给出两套几乎不重叠的执行清单：精选 10 只 / 预案 8 只 / 交集 1 只，两套止损与仓位并存等于任何一套都无法照做）。第 4.6 步为「止损与归因两件套」（atr_stop → signal_attribution）。"
       ]

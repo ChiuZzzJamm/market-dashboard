@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """N 字形态的「右侧」：突破确认日买入 + 突破成功率统计。
 
-补齐 v1/v2 的缺口：前面所有回测都是「整理期左侧买」（T0 后第 d 天），
+补齐前面的缺口：之前所有回测都是「整理期左侧买」（T0 后第 d 天），
 没有回答「等它真的反包了再买」这件事值不值。
 
 定义：
@@ -18,7 +18,7 @@ from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from nshape_backtest import load_all, limit_pct, BASE
-from nshape_bt_v2 import sim2, detail, line
+from nshape_bt import sim2, detail, line
 
 
 def setups_right(st, max_wait=10):

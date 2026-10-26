@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""v3 口径终选（R100z232 第四步）：把前四步的发现压成可上线的参数，逐组验证。
+"""口径终选（R100z232 第四步）：把前四步的发现压成可上线的参数，逐组验证。
 
 ## 断板反包（duanban）前四步的结论
 
@@ -64,16 +64,16 @@ def duanban():
             out.append(DT.sim(smp, 'zt_low', tp, hold))
         return out
 
-    print('=== 断板反包 v3 候选 ===')
+    print('=== 断板反包候选 ===')
     print('  %-44s %-6s %6s %7s %8s %6s' % ('口径', '区间', '笔数', '胜率', '均收益', '盈亏比'))
     cands = [
-        ('v2 现状：zt_low/TP3/H5，无过滤', dict(), 0.03, 5, None),
-        ('v3-a：+市值100+前20≤10+站上MA5，TP5/H10', dict(mc=100, pre=10, dm=0.0), 0.05, 10, None),
-        ('v3-b：a + 距MA5≥2%，TP5/H10', dict(mc=100, pre=10, dm=2.0), 0.05, 10, None),
-        ('v3-c：a + 距MA5≥3%，TP5/H10', dict(mc=100, pre=10, dm=3.0), 0.05, 10, None),
-        ('v3-d：a + 止损钳 −10%，TP5/H10', dict(mc=100, pre=10, dm=0.0), 0.05, 10, -0.10),
-        ('v3-e：a，TP5/H5（保守持有）', dict(mc=100, pre=10, dm=0.0), 0.05, 5, None),
-        ('v3-f：a，TP3/H10（薄止盈）', dict(mc=100, pre=10, dm=0.0), 0.03, 10, None),
+        ('改前：zt_low/TP3/H5，无过滤', dict(), 0.03, 5, None),
+        ('候选 a：+市值100+前20≤10+站上MA5，TP5/H10', dict(mc=100, pre=10, dm=0.0), 0.05, 10, None),
+        ('候选 b：a + 距MA5≥2%，TP5/H10', dict(mc=100, pre=10, dm=2.0), 0.05, 10, None),
+        ('候选 c：a + 距MA5≥3%，TP5/H10', dict(mc=100, pre=10, dm=3.0), 0.05, 10, None),
+        ('候选 d：a + 止损钳 −10%，TP5/H10', dict(mc=100, pre=10, dm=0.0), 0.05, 10, -0.10),
+        ('候选 e：a，TP5/H5（保守持有）', dict(mc=100, pre=10, dm=0.0), 0.05, 5, None),
+        ('候选 f：a，TP3/H10（薄止盈）', dict(mc=100, pre=10, dm=0.0), 0.03, 10, None),
     ]
     for nm, kw, tp, hold, clamp in cands:
         sub = [s for s in smps if F(s, **kw)]
@@ -97,19 +97,19 @@ def chen():
         return out
 
     print()
-    print('=== 陈学长 v3 候选 ===')
+    print('=== 陈学长候选 ===')
     print('  %-44s %-6s %6s %7s %8s %6s' % ('口径', '区间', '笔数', '胜率', '均收益', '盈亏比'))
     cands = [
-        ('v2 现状：wash_low/TP3.5/H2', lambda s: True, 0.035, 2, 'wash_low'),
-        ('v3-a：zt_low/TP3.5/H2', lambda s: True, 0.035, 2, 'zt_low'),
-        ('v3-b：zt_low/TP5/H2', lambda s: True, 0.05, 2, 'zt_low'),
-        ('v3-c：zt_low/TP5/H5', lambda s: True, 0.05, 5, 'zt_low'),
-        ('v3-d：zt_low/TP5/H5 + 距MA5≥3%', lambda s: s['feat']['dist_ma5'] >= 3.0, 0.05, 5, 'zt_low'),
-        ('v3-e：zt_low/TP5/H5 + 距MA5≥3% + 市值≥100',
+        ('改前：wash_low/TP3.5/H2', lambda s: True, 0.035, 2, 'wash_low'),
+        ('候选 a：zt_low/TP3.5/H2', lambda s: True, 0.035, 2, 'zt_low'),
+        ('候选 b：zt_low/TP5/H2', lambda s: True, 0.05, 2, 'zt_low'),
+        ('候选 c：zt_low/TP5/H5', lambda s: True, 0.05, 5, 'zt_low'),
+        ('候选 d：zt_low/TP5/H5 + 距MA5≥3%', lambda s: s['feat']['dist_ma5'] >= 3.0, 0.05, 5, 'zt_low'),
+        ('候选 e：zt_low/TP5/H5 + 距MA5≥3% + 市值≥100',
          lambda s: s['feat']['dist_ma5'] >= 3.0 and s['feat']['mcap'] >= 100, 0.05, 5, 'zt_low'),
-        ('v3-f：zt_low/TP3.5/H5 + 距MA5≥3%',
+        ('候选 f：zt_low/TP3.5/H5 + 距MA5≥3%',
          lambda s: s['feat']['dist_ma5'] >= 3.0, 0.035, 5, 'zt_low'),
-        ('v3-g：zt_low/TP5/H10 + 距MA5≥3%',
+        ('候选 g：zt_low/TP5/H10 + 距MA5≥3%',
          lambda s: s['feat']['dist_ma5'] >= 3.0, 0.05, 10, 'zt_low'),
     ]
     for nm, f, tp, hold, sm in cands:
@@ -122,7 +122,7 @@ def chen():
     days = len({s['sig_day'] for s in smps})
     sub = [s for s in smps if s['feat']['dist_ma5'] >= 3.0]
     print()
-    print('  陈学长 v3-d 密度：%d 笔 / %d 个信号日 = %.2f 只/交易日'
+    print('  陈学长候选 D 密度：%d 笔 / %d 个信号日 = %.2f 只/交易日'
           % (len(sub), len({s['sig_day'] for s in sub}), len(sub) / float(days or 1)))
     return smps
 

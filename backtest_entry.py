@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""断板反包 · 买点口径 v2 回测（用户 2026-10-26 指定口径）
+"""断板反包 · 买点口径回测（用户 2026-10-26 指定口径）
 
 时序定义（严格按用户描述）：
   T0  涨停                        = 第 1 天
@@ -236,9 +236,9 @@ def main():
                     VOL_UP_MIN=VOL_UP_MIN, VOL_UP_MAX=VOL_UP_MAX, ZT_PCT=ZT_PCT),
         result={k: v for k, v in R.items() if v},
     )
-    with open('backtest_v2_result.json', 'w', encoding='utf-8') as f:
+    with open('backtest_entry_result.json', 'w', encoding='utf-8') as f:
         json.dump(out, f, ensure_ascii=False, indent=2)
-    print('\n结果已写入 backtest_v2_result.json')
+    print('\n结果已写入 backtest_entry_result.json')
 
 
 if __name__ == '__main__':
