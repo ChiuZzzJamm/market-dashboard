@@ -660,6 +660,38 @@ def check_calibration(D):
     return warns
 
 
+def _verif_not_due_yet(day, now=None):
+    """该日的 verification 还没到产出时点？→ True（此时缺失属正常，不许报）。
+
+    2026-10-26（用户截图 2「需要修复吗」）：`aiPrediction.verification` /
+    `openOutlook.verification` 的产出时点是 **T 日 19:30**（叙事步打分写回）。
+    而 08:30 一开市就写了新的前瞻——`pos` 有了、`verification` 还是 null，
+    于是校验器每天早上必报一次「前瞻兑现闭环断了一天」。
+
+    实测 git 里 14 个 data.js 版本，规律干净得没有例外：
+      · `aiPrediction.date` = 当日、且当日 19:30 还没跑（10-26 00:18 / 01:51 / 08:37 / 08:39）
+        → verification 一律 null；
+      · `aiPrediction.date` = 2026-10-23（19:30 已跑）→ verification 一律是对象（score 0.35）。
+    也就是说这不是数据坏了，是**在还没到这个时点就问它**。每晚必报一次的 WARN 等于训练读者
+    忽略 WARN——真断的那天会被当成噪音跳过，所以这里必须静默，而不是降级。
+
+    判据（不猜交易日历，只认时点）：日期在未来 → 未到；日期是今天且现在 < 19:30 → 未到；
+    其余（日期已过去还缺）→ 真断，照报。解析不出日期时按「已到点」处理（宁可报，不可漏）。
+    """
+    s = str(day or '')[:10]
+    if len(s) != 10:
+        return False
+    try:
+        import datetime as _dt
+        d = _dt.date.fromisoformat(s)
+        now = now or _dt.datetime.now()
+    except Exception:                                       # noqa: BLE001
+        return False
+    if d > now.date():
+        return True
+    return d == now.date() and (now.hour, now.minute) < (19, 30)
+
+
 def check_openoutlook_loop(D):
     """R100z13：开盘前瞻兑现闭环的两头闸门（WARN 级）。
 
@@ -669,7 +701,8 @@ def check_openoutlook_loop(D):
 
     用户拍板口径：T 日 08:30 写 openOutlook（含结构化假设 openOutlook.pos），
     T 日 19:30 叙事步打分开进 openOutlook.verification，T+1 08:30 新前瞻整字段覆盖旧的。
-    因此只有「pos 与 verification 不同时出现」才算漏项（单看缺失会每天必报假 WARN）。"""
+    因此只有「pos 与 verification 不同时出现」才算漏项（单看缺失会每天必报假 WARN）。
+    R100z225：这把尺还不够——「同时不出现」在 19:30 之前是必然的，见 _verif_not_due_yet。"""
     warns = []
     oo = D.get('openOutlook')
     if not isinstance(oo, dict):
@@ -678,8 +711,10 @@ def check_openoutlook_loop(D):
     has_pos = isinstance(pos, dict)
     has_ver = isinstance(ver, dict)
     if has_pos and not has_ver:
-        warns.append("openOutlook.pos 已写但 openOutlook.verification 缺失"
-                     "（19:30 叙事步未跑 score_openoutlook.py 打分，或没把结果写回：前瞻兑现闭环断了一天）")
+        # R100z225：19:30 之前这份前瞻本来就没打分，缺失是必然的，不报（见 _verif_not_due_yet）。
+        if not _verif_not_due_yet(oo.get('date')):
+            warns.append("openOutlook.pos 已写但 openOutlook.verification 缺失"
+                         "（19:30 叙事步未跑 score_openoutlook.py 打分，或没把结果写回：前瞻兑现闭环断了一天）")
     elif has_ver and not has_pos:
         warns.append("openOutlook.verification 存在但 openOutlook.pos 缺失"
                      "（08:30 未写结构化假设 {tendency,bandLo,bandHi,volExpect}，事后没法核对这份前瞻该不该被判命中）")
@@ -702,7 +737,11 @@ def check_verification(D):
     ap = D.get('aiPrediction') or {}
     v = ap.get('verification')
     if v is None:
-        return ["顶层 aiPrediction.verification 缺失（R99j：须为对象 {total,hit,miss,summary,details}，命中验证闭环失效）"]
+        # R100z225：19:30 之前（以及 date 还是明天时）本来就没有这份验证，不算漏（见 _verif_not_due_yet）。
+        if _verif_not_due_yet(ap.get('date')):
+            return warns
+        return ["顶层 aiPrediction.verification 缺失（R99j：须为对象 {total,hit,miss,summary,details}，"
+                "命中验证闭环失效）——该日 19:30 已过仍为空，说明叙事步只写了新预测、没回写打分"]
     if isinstance(v, str):
         return ["顶层 aiPrediction.verification 是字符串，必须是对象（R99j 硬口径）"]
     if not isinstance(v, dict):
