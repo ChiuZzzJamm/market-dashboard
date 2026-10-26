@@ -4,13 +4,13 @@
 risk_gate.py —— 把「个股硬风险黑名单 red」落到四个推荐池（R100z168）
 
 背景：stock_risk_blacklist.py 每天都在算 red 名单，但只有 update_star.py 会过滤。
-      check_duanban / power_screener / accumulation_score 压根不读 → 10-09 就公告减持的
+      check_duanban / breakout_pool / accumulation_score 压根不读 → 10-09 就公告减持的
       603330 天洋新材，到 10-21 还挂在「断板确认池」和「量化筛选」里当推荐标的。
 
 清理范围（只动「推荐位」，不动研究/跟踪位）：
     duanban.confirmed / watching / star.picks
     chenPool.strict / loose（R100z218：第二套断板反包口径，同为推荐位）
-    powerScreen.passed
+    breakoutPool.passed
     accumulation.scored / strong / watch
 刻意不动：
     *.failPool（失败池本来就该列出来）、fullScan.candidates（全量扫描研究用）、
@@ -53,7 +53,7 @@ TARGETS = [
     # 它每天给出的也是「可以买」的卡片，漏接这一步就等于 R100z168 修过的问题在第二套口径里复活。
     (('chenPool', 'strict'), '陈学长·严格池'),
     (('chenPool', 'loose'), '陈学长·放宽池'),
-    (('powerScreen', 'passed'), '量化筛选'),
+    (('breakoutPool', 'passed'), '横盘启动'),
     (('accumulation', 'scored'), '吸筹打分'),
     (('accumulation', 'strong'), '吸筹强化'),
     (('accumulation', 'watch'), '吸筹观察'),

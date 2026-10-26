@@ -2,7 +2,7 @@
 """机械选股池（R100z15 缺口②）——把「断板池 / 谐波池 / 吸筹池 / 强势池」接回决策链。
 
 为什么需要它（2026-10-01 体检实测的最根本问题）：
-    项目自己造了四个选股引擎（check_duanban / harmonic_detect / accumulation_score / power_screener），
+    项目自己造了四个选股引擎（check_duanban / harmonic_detect / accumulation_score / breakout_pool），
     旧 16:00 单步任务那个交易日里却只有 6/48 只（12.5%）来自断板池，剩下 42 只是 AI 看 note 手写的
     「板块龙头 / CPO概念 / 换手活跃」。而刚上的个股硬风险黑名单拦掉的 4 只（恒邦股份、豫光金铅、
     华钰矿业、立昂微），恰好全都是这类主观 pick——**黑名单拦得住坏票，却拦不住「好票是 AI 瞎挑的」**。
@@ -12,7 +12,7 @@
     配额（写死，AI 不得改）：
         断板确认池最多 4 只（按 probability 降序）
         谐波确认池最多 2 只（确认池优先于观察池；谐波自带形态失效位，直接当止损）
-        吸筹/强势池最多 2 只（accumulation 分数 / powerScreen 分数 降序）
+        吸筹/横盘启动池最多 2 只（accumulation 分数 / breakoutPool 分数 降序）
         以上凑不满 8 只才允许「全局补位」，且补位≤2 只并强制标 [补位]
     板块匹配：精确同名 → 显式别名表 → 字符 Jaccard≥0.34 → 子串包含，逐级放宽。
 
@@ -76,7 +76,7 @@ process.stdout.write(JSON.stringify({
   },
   harmonic: d.harmonic || {},
   accumulation: d.accumulation || {},
-  powerScreen: d.powerScreen || {}
+  breakoutPool: d.breakoutPool || {}
 }));
 """
 
@@ -110,7 +110,7 @@ NOISE_WORDS = ('行业', '设备', '制造', '材料', '装置', '器件', '服�
 # 为什么需要：accumulation.scored 的字段只有 {code,name,sector,score,grade,features,…}，
 # **完全不带价格**（无 lastClose、无 kline），单靠它 mk() 算出来的 stop/target 全是 None
 # → 机械池交出去的就是「止损 — / 目标 —」的空纪律位，AI 照抄必被 exit 三件套判 FAIL。
-# 同一只票通常也在 powerScreen / harmonic / 断板里出现并带价，故用别的池兜底，零网络。
+# 同一只票通常也在 breakoutPool / harmonic / 断板里出现并带价，故用别的池兜底，零网络。
 PX = {}
 
 
@@ -196,7 +196,7 @@ def pick_for(sector, pools, quota_duan=4, quota_harm=2, quota_acc=2, quota_fill=
     duan = pools.get('duanban') or []
     harm = pools.get('harmonic') or []
     acc = pools.get('accumulation') or []
-    pow_ = pools.get('power') or []
+    bp_ = pools.get('bp') or []
     aliases = SECTOR_ALIAS.get(sector, [])
 
     def match(pool):
@@ -234,7 +234,7 @@ def pick_for(sector, pools, quota_duan=4, quota_harm=2, quota_acc=2, quota_fill=
     (m_d, w_d, o_d) = match(duan)
     (m_h, w_h, o_h) = match(harm)
     (m_a, w_a, o_a) = match(acc)
-    (m_p, w_p, o_p) = match(pow_)
+    (m_p, w_p, o_p) = match(bp_)
     weak_all = w_d + w_h + w_a + w_p
     orphans = o_d + o_h + o_a + o_p
     got, notes = [], []
@@ -449,7 +449,7 @@ def main():
     du = d.get('duanban') or {}
     hm = d.get('harmonic') or {}
     ac = d.get('accumulation') or {}
-    ps = d.get('powerScreen') or {}
+    ps = d.get('breakoutPool') or {}
 
     def flat(pool):
         out = []
@@ -466,7 +466,7 @@ def main():
         'duanban': flat(du.get('confirmed')) + flat(du.get('watching')),
         'harmonic': flat(hm.get('confirmPool')) + flat(hm.get('watchPool')),
         'accumulation': flat(ac.get('scored')),
-        'power': flat(ps.get('passed')),
+        'bp': flat(ps.get('passed')),
     }
 
     PX.clear()
@@ -537,9 +537,9 @@ def main():
         print('重键 diff：沿用 %d / 新增 %d / 丢弃旧键 %d' % (len(kept), len(added), len(dropped)))
         if dropped:
             print('   丢弃（已不再预测的旧键）：' + '、'.join(dropped))
-    print('候选池规模：断板 %d / 谐波 %d / 吸筹 %d / 强势 %d' %
+    print('候选池规模：断板 %d / 谐波 %d / 吸筹 %d / 横盘启动 %d' %
           (len(pools['duanban']), len(pools['harmonic']),
-           len(pools['accumulation']), len(pools['power'])))
+           len(pools['accumulation']), len(pools['bp'])))
     for c in coverage:
         print('\n【%s】机械候选 %d 只' % (c['sector'], c['picked']))
         for it in by_sector.get(c['sector'], []):

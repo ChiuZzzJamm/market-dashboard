@@ -81,7 +81,7 @@ for (const st of (hz.confirmPool || [])) add(st);
 for (const st of (hz.watchPool || [])) add(st);
 const acc = d.accumulation || {};
 for (const st of (acc.scored || [])) add(st);
-for (const st of (((d.powerScreen || {}).passed) || [])) add(st);
+for (const st of (((d.breakoutPool || {}).passed) || [])) add(st);
 process.stdout.write(JSON.stringify({ date: (d.aiPrediction || {}).date || null, codes: codes, names: names }));
 """
 

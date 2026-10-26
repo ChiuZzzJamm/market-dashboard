@@ -65,14 +65,14 @@ REVERSE_T = -2.0    # 1 日期望的 t 值低于此 → 判「负期望」，不
 SRC_LABEL = {
     'harmonic': '谐波形态',
     'accumulation': '吸筹打分',
-    'powerScreen': '九门强势',
+    'breakoutPool': '横盘启动',
     'duanban': '断板反包',
     'ai': 'AI 预测',
-    'mech': '机械池（吸筹+九门）',
+    'mech': '机械池（吸筹+横盘启动）',
     'leadLag': '强板块落后股',
 }
 
-# stop_ledger 的 stopSrc → 主台账键名。stop_ledger 无法区分吸筹与九门
+# stop_ledger 的 stopSrc → 主台账键名。stop_ledger 无法区分吸筹与横盘启动
 # （两者都落进 default-3%），所以合成一个 'mech'，不硬拆成两个假精度。
 SRC_LEGACY_MAP = {'harmonic': 'harmonic', 'ai-exit': 'ai',
                   'T日低点': 'duanban', 'default-3.0%': 'mech', 'default-3%': 'mech'}
@@ -627,12 +627,12 @@ def self_test():
 
     # ④ 权重：超额为正的才有权重，负的归零；合计为 1
     good = {}
-    for s, e in (('harmonic', 2.0), ('accumulation', -1.5), ('powerScreen', 1.0)):
+    for s, e in (('harmonic', 2.0), ('accumulation', -1.5), ('breakoutPool', 1.0)):
         good[s] = {'label': s, 'n': 100, 'days': 10, 'sampleEnough': True,
                    'h': {str(h): {'n': 100, 'ret': e, 'exc': e, 'win': 0.6, 'winExc': 0.6}
                          for h in HORIZONS}}
     w2, msg2 = suggest_weights(good)
-    chk('超额为正的指标有权重', 'harmonic' in w2 and 'powerScreen' in w2)
+    chk('超额为正的指标有权重', 'harmonic' in w2 and 'breakoutPool' in w2)
     chk('超额为负的指标权重归零（不在表里）', 'accumulation' not in w2)
     chk('权重合计 = 1.0（实测 %s）' % round(sum(w2.values()), 3),
         abs(sum(w2.values()) - 1.0) < 0.01)

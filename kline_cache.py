@@ -147,8 +147,20 @@ def _day_window():
 
     expected = 昨天往前回溯到的最后一个交易日（收盘后跑时今日 K 线可能也已入库，
     所以允许 last_day 落在 [expected, today] 区间内都算新鲜）。
+
+    R100z240（2026-10-26 实盘发现）：上面这条「允许昨收缓存」在**收盘后**是有害的——
+    16:00 数据步实测腾讯 K 线源全线返回空（fetch_kline_tencent 对 600000/002241/603341
+    均 None），一份早盘抓的缓存末根停在上一交易日（10-23），`_EXPECTED_DAY <= last` 判它
+    「新鲜」直接复用，于是 full_scan 预抓形同虚设、accumulation/harmonic/power 三个模块
+    整池用上一交易日的 K 线算指标，只在 tradeDate 上留个「2026-10-23」——读者看不出这是
+    滞后一天的结果。故 15:45（收盘 + 数据入库缓冲）之后、且今天是交易日时，expected 收紧为
+    今天：缓存末根不是今天就不算新鲜，逼主流程走新浪备源重抓（实测 20 只 2.6s，664 只够快）。
+    早盘/盘中（<15:45）与休市日行为不变。
     """
     today = datetime.date.today()
+    now = datetime.datetime.now()
+    if is_trade_day(today) and (now.hour, now.minute) >= (15, 45):
+        return today.strftime('%Y-%m-%d'), today.strftime('%Y-%m-%d')
     d = today - datetime.timedelta(days=1)
     for _ in range(15):
         if is_trade_day(d):
@@ -507,7 +519,7 @@ def collect_sectors(D, use_sina=True, node_deadline=180):
     for sct in ((D or {}).get('aiPrediction') or {}).get('sectors') or []:
         for st in sct.get('stocks') or []:
             put(st.get('code'), sct.get('sector'))
-    for key, field in (('powerScreen', 'passed'), ('accumulation', 'scored')):
+    for key, field in (('breakoutPool', 'passed'), ('accumulation', 'scored')):
         for e in ((D or {}).get(key) or {}).get(field) or []:
             put(e.get('code'), e.get('sector'))
 

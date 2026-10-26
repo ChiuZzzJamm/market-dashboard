@@ -16,7 +16,7 @@
   - harmonic.confirmPool / watchPool 的几何 stop（形态位，最可信）；
   - aiPrediction.sectors[].stocks[].exit.stop（08:30 任务给自选股写的止损，
     口径为「最近收盘 −3%」）；
-  - 机械池 duanban.confirmed/watching、powerScreen.passed、accumulation.scored
+  - 机械池 duanban.confirmed/watching、breakoutPool.passed、accumulation.scored
     **本身没有止损字段** → 按 DEFAULT_STOP_PCT（最近收盘 −3%，与 08:30 对自选股的
     口径一致）补齐，并在台账 stopSrc 标成 default-3% 以便回看时区分「真形态位」与「兜底值」。
 
@@ -67,7 +67,7 @@ process.stdout.write(JSON.stringify({
       return { code: t.code, name: t.name, lastClose: t.lastClose, exit: t.exit || null }; }) };
   }),
   duanban: { confirmed: (d.duanban || {}).confirmed || [], watching: (d.duanban || {}).watching || [] },
-  power: (d.powerScreen || {}).passed || [],
+  bp: (d.breakoutPool || {}).passed || [],
   accum: (d.accumulation || {}).scored || []
 }));
 """
@@ -150,8 +150,8 @@ def collect_entries(D):
         plain.append((x, 'duanban'))
     for x in (D.get('duanban') or {}).get('watching') or []:
         plain.append((x, 'duanban'))
-    for x in D.get('power') or []:
-        plain.append((x, 'powerScreen'))
+    for x in D.get('bp') or []:
+        plain.append((x, 'breakoutPool'))
     for x in D.get('accum') or []:
         plain.append((x, 'accumulation'))
     for x, src in plain:

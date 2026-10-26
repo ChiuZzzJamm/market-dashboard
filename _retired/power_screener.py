@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# ⛔ 已退役（R100z232，2026-10-26）—— 九门模块下线，产品链路里不再有任何消费方。
+#   本文件迁移到 _retired/，只为 `backtest_indicators.py` 的「四指标年化对照」留一份历史口径，
+#   让「横盘启动 vs 九门」的对照能复现（横盘启动 t=0.41 / 九门 t=−5.02 就是用它跑出来的）。
+#   已经在 main() 里禁掉 --write：谁把它移回根目录再跑，也写不出 data.js 的 powerScreen 节点，
+#   杜绝「退役脚本复活一个前端已不渲染的顶层节点」这类半死链路（G12 会 FAIL）。
 """量化强势筛选（2026-09-26 新增 · 方向②，分时条件已取消 → 纯日线收盘筛选）。
 
 方法论：fin-strategy-engine skill 选股扩展（数据清单方向②）。全部为日级确定性阈值，
@@ -17,12 +22,20 @@
 """
 import sys, json, os, datetime
 
+# R100z232：本文件已移到 _retired/，同级目录里没有兄弟模块；把上级（项目根）加进
+# sys.path，这样 `python3 _retired/power_screener.py` 也能跑（BASE 同步指回项目根，
+# load_dashboard_data 才不会去 _retired/ 里找 data.js）。
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_ROOT = os.path.dirname(_HERE)
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
+
 import kline_cache as K
 # R100z56：失效归档池滚动窗口走 common.roll_fail_pool（节假日感知 5 交易日），
 # 旧实现只数周一~周五，长假会被数错、导致节后首日误清空归档池。
 # R100z64：原顶层 `import common` 从未被顶层使用（调用点在 main 内 import），属死 import，已删。
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+BASE = _ROOT
 
 # 硬门禁（必过）
 HARD = ['g1', 'g2', 'g4', 'g5', 'g7']
@@ -165,6 +178,11 @@ def self_test():
 # ---------------- 主流程 ----------------
 def main():
     args = sys.argv[1:]
+    # R100z232：退役脚本**永不允许写盘**。--write 直接拒绝，默认也改成 dry。
+    if '--write' in args:
+        print('[POWER] ⛔ 本脚本已退役（九门下线），不再写 data.js。'
+              '需要重算九门口径请只做回测（backtest_indicators.py --ind power）。')
+        return 2
     if '--self-test' in args:
         sys.exit(0 if self_test() else 1)
     # R100z27：本脚本没用 argparse，`--help` 会直接跑一遍 651 只全扫描（慢且易被误当成语法检查）。
@@ -177,8 +195,8 @@ def main():
         return
 
     import common
-    # 注意：默认**写回**（16:00 数据步直接调本脚本无参数即落盘），只有 --dry-run 不写。
-    dry = '--dry-run' in args
+    # R100z232：退役后恒为 dry（上面的 --write 已被拒绝，这里再兜一层，防止将来有人改回去）。
+    dry = True
 
     D = common.load_dashboard_data(BASE)
     names = K.collect_pool_names(D)  # R100g：池内 code→name（stkKlineNames 缺名兜底）
@@ -319,4 +337,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

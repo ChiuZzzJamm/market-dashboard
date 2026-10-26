@@ -92,9 +92,14 @@
 ================================================================================
   买点：确认日**次日开盘**买入（确认式：等洗盘缩量走完再进，不追涨）。
         他 149：「我的目的就是今天要走，我想要的就是 3、4、5 厘米。」
-  卖点：+3.5% 当天兑现（TARGET_PCT），或持仓满 2 个交易日无条件走（HOLD_DAYS）。
-        他 006：「抓一只羊一般不超过两天。」
+  卖点：+5% 当天兑现（TARGET_PCT），或持仓满 10 个交易日无条件走（HOLD_DAYS）。
+        他 006：「抓一只羊一般不超过两天。」（原法 +3.5% / 2 日，已按实测改为 +5% / 10 日）
   止损：洗盘段（T+1..确认日）最低价。他 269：「破了第一天小阴的支撑位……就是止损的时候。」
+
+  ⚠️ R100z233（2026-10-26）：上面三条是**他本人的原法**，实测已改为 +5% / 持 10 日 /
+      止损锚=T 日最低价（原法 +0.701% → 实测 +3.054%）。**这是对原法的主动偏离，
+      不是我读错了他的规则**——原话引文保留在这里，就是为了让读者能一眼看出差在哪、
+      以及为什么改（原因见 RULE_FROZEN_AT 上方的分解表）。
   仓位：RISK_BUDGET / 止损距离 —— 单笔最大亏总仓 1.5%（他的原话是「高 4 低 6」那套
         按位置分档的量法，但那一档没在视频里量化到可复现，所以这里只用能算的部分：
         亏多少由「仓位 × 止损距离」决定，止损越宽仓位越小，1.5% 封顶）。
@@ -138,7 +143,16 @@ LEDGER = os.path.join(HERE, "chen_ledger.json")
 # ⚠️ 台账里已有的 13 条样本**不删**：旧口径（要求连板≥2）选出来的票是新口径的子集，
 #    它们同样满足今天的全部条件，混在一起不构成污染；删掉等于凭空减少样本量。
 #    这也与审核意见 §6「清掉 v1 从零计数」不同——那条建议假定两版规则互斥，实际是包含关系。
-RULE_FROZEN_AT = "2026-10-25"
+#
+# R100z233（2026-10-26）：**冻结被解除了，日期随之更新到 2026-10-26**。
+# 2026-10-25 那次冻结的承诺是「回测出结果前不调参」；现在 829 笔样本已跑完
+# （`chen_study.py` 基线 → `rule_v3_check.py` 八组候选 → 训练/样本外分段验证），
+# 按用户当日「深度优化陈学长」的指令，把实测更优的口径换进来，并重新冻结。
+# 改了三处、只这三处：入场加「距MA5≥3%」、止盈 3.5%→5%、持有 2→10 日、止损锚
+# 洗盘段最低价→T日最低价。逐项分解与反直觉说明见下方 R100z233 常量块。
+# 解冻不是「随手调参」：新口径的样本外（2026-01~）是 +2.972%，训练段 +3.090%，
+# 两段一致；而原法样本外只有 +0.770%。没有这条对比就不该解冻。
+RULE_FROZEN_AT = "2026-10-26"
 PRICE_MIN = 4.0          # S1 股价下限（元）
 VOL_UP_MIN = 2.0         # S4 断板日放量倍数下限（无上限）
 SHRINK_MAX = 1.0         # S9 T 日缩量上限 V(T)/前5日均量
@@ -146,17 +160,48 @@ BIGDROP_MAX = -3.0       # S10 T+1 涨跌幅上限（%），≤ -3 才算大阴
 MAX_WASH_DAYS = 4        # S6 T 日距今最多 4 个交易日（洗盘 ≤3 日）
 LOW_TOL = 0.98           # S7 破位容忍 2%
 MA5_TOL = 0.97           # S8 站稳容忍 3%
-TARGET_PCT = 3.5         # 卖点 +3.5%
-STOP_PCT_FALLBACK = -3.0  # 止损兜底（无洗盘段最低价时）
-HOLD_DAYS = 2            # 持仓上限（交易日）
+TARGET_PCT = 5.0         # 卖点 +5%（v3：原 3.5% 见下方 R100z233 说明）
+STOP_PCT_FALLBACK = -3.0  # 止损兜底（无 T 日最低价时）
+HOLD_DAYS = 10           # 持仓上限（交易日；v3：原 2 日）
 RISK_BUDGET = 1.5        # 单笔最大亏总仓 %
+# R100z233b：**旧口径的数值必须留在代码里**，不是为了兼容旧代码，而是为了让台账里
+# 换版前就开仓的样本能按它自己的参数结算。settle_one 改读条目自带的 tgtPct/holdDays 之后，
+# 这两个常量是「历史条目的缺省值」——删掉它们，那 9 条 2026-10-25 的样本会被 5%/10 日
+# 重新结算，等于换版那天把历史胜率悄悄改写一遍（这正是我差点犯的错：第一次跑 --merge
+# 时它们已经被按 +5% 记成 win 了）。
+TARGET_PCT_PREV = 3.5    # v3 之前的止盈（只给台账旧条目用）
+HOLD_DAYS_PREV = 2       # v3 之前的持有上限（同上）
+
+# ---------------------------------------------------------------- R100z233（2026-10-26）v3 口径
+# 出处：`chen_study.py` / `rule_v3_check.py`，全市场 829 笔基线样本，
+# 训练 2024-01~2025-12 / 样本外 2026-01~ 分开验（冻结参数不动，只改这三处）。
+#
+#   口径                                        全样本      训练      样本外    胜率
+#   原法（wash_low 止损 / +3.5% / 持 2 日）    +0.701%   +0.671%   +0.770%   59.6%
+#   v3-g（zt_low 止损 / +5% / 持 10 日 / 本过滤） +3.054%   +3.090%   +2.972%   83.9%
+#
+# 三处改动各自单独测过的效果（不是可加关系，每一项都是和原法比）：
+#   · 止损锚 wash_low → zt_low（T 日最低价）：59.6% → 67.6%，+0.701% → +1.010%
+#     原因：洗盘段最低价常常只比买价低 2~3%，等于把止损挂在噪声里，日内正常
+#     波动就被打掉；T 日最低价是形态的**定义边界**，破了才说明反包失败。
+#   · 止盈/持有 +3.5%/2 日 → +5%/10 日：+1.446%（原法只持 2 天，走不完反包的第二段）
+#   · 距 MA5 ≥ 3%（MA5_GAP_MIN）：这是最强的一条，见下。
+#
+# ⚠️ 反直觉但实测，别「好心」改回去：距 MA5 **越远越好**。
+#      0~2%：45.4% 胜率 / +0.018%      2~5%：过渡段
+#      >5% ：68.6% 胜率 / +1.078%
+#   直觉以为「刚站上 MA5 就买最便宜」，实测相反——刚贴住 MA5 说明反包还没被
+#   资金确认，只是止跌；真正要走的那一波，确认日收盘就已经明显脱离 MA5 了。
+#
+# 密度：1.50 只/交易日（602 笔 / 341 个信号日），池子不会空转也不会灌水。
+MA5_GAP_MIN = 3.0        # 确认日收盘相对 MA5 的最小溢价（%）
 # R100z222（审核意见 §19.4）：次新股硬门槛。Tencent 主源回 70 根、新浪备用回 40 根，
 # 上市不足 35 个交易日的票两根源都会短于这个数——用它判「次新」比任何日期字段都可靠
 # （get_kline 只回 K 线，拿不到上市日）。他明确不做新股：首板要「横盘吸筹」之后，
 # 新股没有横盘；而 calc_lbc 会把上市首日的 +44% 当成「涨停 + 1 板」。
 NEW_STOCK_MIN_BARS = 35
-# 审核意见 §8：止损距离 > 10% 且只持 2 天 = 止损在窗口内几乎不可能触发，
-# 实际是「裸持两天收盘平」。不剔除（那会改变选股，属于策略决策），只标记。
+# 审核意见 §8：止损距离 > 10% 的票单独标记（v3 持有 10 日，宽止损是可达的，
+# 标记含义已从「止损形同虚设」改为「止损偏远、仓位压到底仍偏险」，见 trade_params）。
 STOP_FAR_PCT = 10.0
 # 已删除 LBC_MIN（连板门槛）：连板数仍由 calc_lbc 算出，只展示/排序，不拦截。
 # 用户 2026-10-25：「陈学长没有要求连板≥2，首板也可以」。
@@ -278,6 +323,10 @@ def _structure(code, kl, zt_iso, min_days_ago):
     return {
         "n": n, "iT": iT, "i1": i1, "i2": iT + 2, "lbc": lbc, "th": th,
         "r1": r1, "drop1": PC(i1), "days_ago": days_ago, "wash_low": wash_low,
+        # v3（R100z233）：止损锚改用 T 日最低价。它固定在 T 日、不随后续走势移动，
+        # 是「反包失败」的定义边界；wash_low 会随着确认后的K线滚滚下移，
+        # 同一笔交易昨天和今天算出的止损价不一样，台账没法复现。
+        "zt_low": lowT,
         "shrink_t": (vT / avg5) if avg5 > 0 else None,
         "zt_md": "%s/%s" % (zt_iso[5:7], zt_iso[8:10]),
         "CL": CL, "VO": VO,
@@ -320,6 +369,14 @@ def chen_stage(code, kl, zt_iso):
     if confirm_i is None:
         return None
 
+    # S8b（v3，R100z233）：确认日必须**明显脱离** MA5，不能只是贴住。
+    # 用 confirm_i 当天的收盘与 MA5 比，只用当天及之前的数据，无前视。
+    # 这条把期望从 +0.70% 拉到 +3.05%（详见文件头 R100z233 表的 0~2% vs >5% 对比）。
+    _m5c = _ma5(kl, confirm_i)
+    gap_ma5 = ((CL(confirm_i) / _m5c - 1) * 100) if _m5c > 0 else -99.0
+    if gap_ma5 < MA5_GAP_MIN:
+        return None
+
     # ---- 软条件（只影响 strict / loose 分档）
     shrink_t = st["shrink_t"]
     drop1 = st["drop1"]
@@ -327,6 +384,8 @@ def chen_stage(code, kl, zt_iso):
     tier = "strict" if soft_ok else "loose"
 
     lbc, r1, wash_low = st["lbc"], st["r1"], st["wash_low"]
+    # v3：止损锚 = T 日最低价（固定）；取不到才退回洗盘段最低价
+    stop_anchor = st.get("zt_low") or wash_low
     lag = confirm_i - st["i1"]              # 断板日 → 确认日 间隔（交易日）
     since = n - 1 - confirm_i               # 确认后已过几个交易日（0 = 今天确认）
     lag_txt = "次日缩量确认" if lag == 1 else ("%d日缩量确认" % lag)
@@ -334,6 +393,7 @@ def chen_stage(code, kl, zt_iso):
         st["zt_md"], _lbc_txt(lbc), r1, drop1, lag_txt)
     if shrink_t is not None:
         form += "（T日量%.2f倍均量）" % shrink_t
+    form += "（较MA5+%.1f%%）" % gap_ma5
     if since > 0:
         # 老票必须自曝：否则读者会把它当今天的买入信号（§2 的核心问题）
         form += "（确认后第%d日·非当日新信号）" % (since + 1)
@@ -347,11 +407,11 @@ def chen_stage(code, kl, zt_iso):
         "confirmLag": lag,          # 断板日到确认日隔了几个交易日
         "sinceConfirm": since,      # 确认后又过了几个交易日（0 = 今天确认）
         "washDays": since,          # 兼容旧读者，值同 sinceConfirm（确认后第 N 天）
-        "stopPrice": round(wash_low, 2) if wash_low > 0 else None,
+        "stopPrice": round(stop_anchor, 2) if stop_anchor > 0 else None,
         "tailRisk": r1 > 8.0,
     }
     return {"pool": "confirmed", "tier": tier, "stage": "缩量确认", "form": form,
-            "metrics": metrics, "days_ago": st["days_ago"], "stop_price": wash_low,
+            "metrics": metrics, "days_ago": st["days_ago"], "stop_price": stop_anchor,
             "confirm_day": str(kl[confirm_i].get("day") or ""),
             "confirm_idx": confirm_i, "since_confirm": since}
 
@@ -366,6 +426,7 @@ def chen_watch(code, kl, zt_iso):
         return None
     n, i1, CL = st["n"], st["i1"], st["CL"]
     lbc, r1, wash_low = st["lbc"], st["r1"], st["wash_low"]
+    stop_anchor = st.get("zt_low") or wash_low        # v3：与确认池同锚（T 日最低价）
     if i1 == n - 1:
         stage, form = "待缩量", "%s %s→次%.1f倍量断板·待缩量" % (st["zt_md"], _lbc_txt(lbc), r1)
     else:
@@ -377,8 +438,8 @@ def chen_watch(code, kl, zt_iso):
             return None
     return {"pool": "watch", "tier": None, "stage": stage, "form": form,
             "metrics": {"lbc": lbc, "volRatio": round(r1, 2),
-                        "stopPrice": round(wash_low, 2) if wash_low > 0 else None},
-            "days_ago": st["days_ago"], "stop_price": wash_low,
+                        "stopPrice": round(stop_anchor, 2) if stop_anchor > 0 else None},
+            "days_ago": st["days_ago"], "stop_price": stop_anchor,
             "confirm_day": "", "confirm_idx": None, "since_confirm": None}
 
 
@@ -387,14 +448,16 @@ def trade_params(ref_close, stop_price):
     """买点/卖点/止损/仓位 —— 全部由冻结口径推出，不含任何主观调速。
 
     ref_close：确认日收盘价（买价基准用它的次日开盘，这里先给参考值）。
-    止损：洗盘段最低价；缺失时用 -3% 兜底（不编更宽的数）。
+    止损：T 日最低价（v3，R100z233；原为洗盘段最低价）；缺失时用 -3% 兜底（不编更宽的数）。
     仓位：RISK_BUDGET / 止损距离，上限 30%（三条线不可能全仓一只）。
 
     R100z222（审核意见 §8）：`stopFar` / `riskBreach` 两个标记位。
-    实测池里出现过止损距 26.4% 的票——HOLD_DAYS=2 时，两天跌 26% 需要两个跌停连板，
-    止损在持仓窗口内几乎不可能触发，实际是「裸持两天收盘平」。页面上写「止损」会让人
-    以为有保护。**不剔除**（那会改选股，属于策略决策），只在卡上标出来：
-      · stopFar     = 止损距离 > STOP_FAR_PCT（10%），标记「止损形同虚设」
+    实测池里出现过止损距 26.4% 的票。v3 把持有窗口从 2 日拉到 10 日之后，这条标记的
+    **含义变了**：原来 2 天窗口里跌 26% 几乎不可能，标记等于「裸持到日收盘平」；
+    现在 10 天窗口里 10%+ 的止损距离是**正常可达**的，所以它不再是「止损形同虚设」，
+    而是「止损很远、仓位已被压到下限，单笔风险仍然偏大」——文案按新含义重写，
+    不留一句被参数改动架空的话。**不剔除**（那会改选股，属于策略决策），只在卡上标出来：
+      · stopFar     = 止损距离 > STOP_FAR_PCT（10%），标记「止损偏远、仓位已压到底」
       · riskBreach  = 5% 的仓位下限把 1.5% 的风险预算顶破了（dist > 30% 时才可能）
     """
     buy = float(ref_close or 0)
@@ -420,8 +483,8 @@ def trade_params(ref_close, stop_price):
         note += "｜⚠️ 止损 %.1f%% 过宽，%d%% 的仓位下限已顶破预算（实际单笔亏 %.2f%%）" % (
             dist, pos, risk)
     if dist > STOP_FAR_PCT:
-        note += "｜⚠️ 止损距离 >%.0f%% 且只持 %d 日：窗口内几乎不可能触发，实质是到日收盘平" % (
-            STOP_FAR_PCT, HOLD_DAYS)
+        note += "｜⚠️ 止损距离 >%.0f%%，仓位已压到下限仍需 %.2f%% 单笔风险，别加仓" % (
+            STOP_FAR_PCT, risk)
     return {
         "refClose": round(buy, 2),
         "buyRule": "确认日次日开盘买入（等洗盘缩量走完再进，不追涨）",
@@ -512,6 +575,14 @@ def load_ledger():
                 x["confirmDate"] = x.get("entryDate") or ""
             if not x.get("firstSeenDate"):
                 x["firstSeenDate"] = x.get("entryDate") or x.get("confirmDate") or ""
+            # R100z233b：旧条目（记在 2026-10-26 换口径之前）没有 tgtPct/holdDays/ruleFrom。
+            # 按「开仓时在用的参数」补齐 = 旧值，并把 ruleFrom 标成换版前那天——
+            # 这样它们既不会被新参数重新结算，也不会混进新口径的胜率表。
+            if not x.get("tgtPct") or not x.get("holdDays"):
+                x.setdefault("tgtPct", TARGET_PCT_PREV)
+                x.setdefault("holdDays", HOLD_DAYS_PREV)
+            if not x.get("ruleFrom"):
+                x["ruleFrom"] = "legacy"
         return d
     except Exception as e:
         print("[warn] 留痕台账读取失败（%s），按空台账继续" % e, file=sys.stderr)
@@ -522,8 +593,8 @@ def settle_one(e, kl):
     """统一结算口径（两个池、两套指标共用，不然胜率不可比）。
 
     买价 = 确认日**次一交易日开盘**（唯一可成交的时点；用确认日收盘价属偷看未来）。
-    窗口 = 次日起 HOLD_DAYS 个交易日。
-      · 止盈：**盘中最高** ≥ +3.5% → 赢（可挂单，按 +3.5% 计）
+    窗口 = 次日起 `holdDays` 个交易日（**取条目自带的参数**，缺省才用当前常量）。
+      · 止盈：**盘中最高** ≥ +tgtPct% → 赢（可挂单，按 +tgtPct% 计）
       · 止损：**收盘**跌破止损价 → 亏（按当日收盘价计）
         ⚠️ 为什么止损看收盘、止盈看盘中：这是实盘可执行的不对称——
         止盈能挂单，止损只有收盘才确认破位（两个池的形态判定也都是收盘口径，
@@ -536,7 +607,13 @@ def settle_one(e, kl):
     真实操作里「跌破止损位不接」是纪律，不是可选项；原来这些被记成正常交易，
     等于把「你根本不会下的单」也算进胜率。改成 notExecuted 并单独计数（skip），
     分母里不含它们——它们既不是赢也不是亏，是没做。
+
+    R100z233b：止盈线/持有窗口改为**读条目自带字段** `tgtPct` / `holdDays`。
+    理由：参数一改，所有「已开仓未结算」的样本会被新参数重新解释，历史胜率在换版当天
+    被静默改写。冻结在条目上才是可复现的（止损价 stopPrice 本来就是这么做的）。
     """
+    tgt_pct = float(e.get("tgtPct") or TARGET_PCT)
+    hold_days = int(e.get("holdDays") or HOLD_DAYS)
     days = [str(k.get("day")) for k in kl]
     # R100z222（审核意见 §1）：结算基准改成 confirmDate（数据日）——买入永远是它的
     # 下一根开盘，语义与「看到信号之后才买」一致；entryDate 只作旧台账的兼容回退。
@@ -566,8 +643,8 @@ def settle_one(e, kl):
         return {"status": "settled", "result": "notExecuted", "exitDay": days[idx + 1],
                 "exitPrice": round(buy, 2), "buyPrice": round(buy, 2), "retPct": 0.0,
                 "note": "开盘价 %.2f 已跌破止损位 %.2f，按纪律不进场" % (buy, stop)}
-    tgt = buy * (1 + TARGET_PCT / 100)
-    last = min(idx + HOLD_DAYS, len(kl) - 1)
+    tgt = buy * (1 + tgt_pct / 100)
+    last = min(idx + hold_days, len(kl) - 1)
     for j in range(idx + 1, last + 1):
         hi = float(kl[j].get("high") or 0)
         cl = float(kl[j].get("close") or 0)
@@ -577,17 +654,19 @@ def settle_one(e, kl):
             return {"status": "settled", "result": "loss", "exitDay": days[j],
                     "exitPrice": round(cl, 2), "buyPrice": round(buy, 2),
                     "retPct": round((cl - buy) / buy * 100, 2),
-                    "note": "收盘跌破止损位" + ("（同日也触过 +3.5%，保守算亏）" if hit_tgt else "")}
+                    "note": "收盘跌破止损位"
+                            + ("（同日也触过 +%.1f%%，保守算亏）" % tgt_pct if hit_tgt else "")}
         if hit_tgt:
             return {"status": "settled", "result": "win", "exitDay": days[j],
                     "exitPrice": round(tgt, 2), "buyPrice": round(buy, 2),
-                    "retPct": TARGET_PCT, "note": "盘中触 +3.5% 当天兑现"}
-    if len(kl) - 1 >= idx + HOLD_DAYS:
-        c = float(kl[idx + HOLD_DAYS].get("close") or 0)
-        return {"status": "settled", "result": "expired", "exitDay": days[idx + HOLD_DAYS],
+                    "retPct": round(tgt_pct, 2),
+                    "note": "盘中触 +%.1f%% 当天兑现" % tgt_pct}
+    if len(kl) - 1 >= idx + hold_days:
+        c = float(kl[idx + hold_days].get("close") or 0)
+        return {"status": "settled", "result": "expired", "exitDay": days[idx + hold_days],
                 "exitPrice": round(c, 2), "buyPrice": round(buy, 2),
                 "retPct": round((c - buy) / buy * 100, 2),
-                "note": "持仓 %d 日未触目标也未破止损，收盘平" % HOLD_DAYS}
+                "note": "持仓 %d 日未触目标也未破止损，收盘平" % hold_days}
     return None
 
 
@@ -596,7 +675,14 @@ def pool_stats(entries):
 
     R100z222（审核意见 §11）：notExecuted 单列 `skip`，**不进 n**——它们不是输赢，
     是没做。混进分母会把胜率稀释成「包含你根本不会下的单」的数。
+
+    R100z233b：只统计 `ruleFrom == RULE_FROZEN_AT`（当前口径）的样本，换口径前的样本
+    单独计数进 `legacyN`。否则每改一次参数，历史胜率表就在页面上自己改写一次——
+    这不是「统计」，是给记分牌重新判分。
     """
+    allin = list(entries or [])
+    legacy = [e for e in allin if (e.get("ruleFrom") or "legacy") != RULE_FROZEN_AT]
+    entries = [e for e in allin if (e.get("ruleFrom") or "legacy") == RULE_FROZEN_AT]
     settled = [e for e in entries if (e.get("result") or {}).get("status") == "settled"]
     skip = sum(1 for e in settled if (e["result"] or {}).get("result") == "notExecuted")
     # §7：止损位取不到（stopPrice ≤ 0）的条目**不进同一张表**——没有止损时只有止盈和到期，
@@ -609,7 +695,7 @@ def pool_stats(entries):
             and float(e.get("stopPrice") or 0)]
     if not done:
         return {"n": 0, "win": 0, "loss": 0, "expired": 0, "skip": skip,
-                "noStop": nostop, "winRate": None,
+                "noStop": nostop, "legacyN": len(legacy), "winRate": None,
                 "avgRet": None, "avgWin": None, "avgLoss": None, "odds": None}
     rets = [float((e["result"] or {}).get("retPct") or 0) for e in done]
     win = sum(1 for e in done if (e["result"] or {}).get("result") == "win")
@@ -622,7 +708,7 @@ def pool_stats(entries):
     odds = round(abs(avg_win / avg_loss), 2) if (avg_win and avg_loss) else None
     return {
         "n": len(done), "win": win, "loss": loss, "expired": exp, "skip": skip,
-        "noStop": nostop,
+        "noStop": nostop, "legacyN": len(legacy),
         "winRate": round(win / len(done) * 100, 1),
         "avgRet": round(sum(rets) / len(rets), 2),
         "avgWin": avg_win,
@@ -690,6 +776,13 @@ def record_entries(ledger, pool_key, entries, today, tier=None, cross=None):
             # 否则会出现「页面写 30、回测按 31 结算」的静默口径分叉。
             "stopPrice": (e.get("trade") or {}).get("stopPrice")
                          or (e.get("metrics") or {}).get("stopPrice") or e.get("stopPrice"),
+            # R100z233b：止盈线、持有窗口、口径起始日一起冻结在条目上。
+            # 只冻结 stopPrice 是不够的——2026-10-26 改口径时，9 条 10-25 开仓的样本
+            # 就是被新的 +5%/10 日重新结算成了 win(5.0)，胜率表在换版当天自己变好看。
+            # 冻结之后 pool_stats 只统计 ruleFrom == 当前口径 的样本，旧样本单列 legacyN。
+            "ruleFrom": RULE_FROZEN_AT,
+            "tgtPct": TARGET_PCT,
+            "holdDays": HOLD_DAYS,
             "result": None,
         })
         added += 1
@@ -814,6 +907,11 @@ def build_compare(chen_codes, db_codes, ledger):
         },
         "stats": stats,
         "ledgerN": len(ents),
+        # R100z233b：换口径前的样本条数（页面据此说明「它们单独结算、不进上表」）。
+        # 放在这里而不是让前端累加各行 stats[].legacyN：同一只票既在某池行、又在交集行，
+        # 前端累加会重复计数。
+        "legacyN": sum(1 for e in ents
+                       if (e.get("ruleFrom") or "legacy") != RULE_FROZEN_AT),
         "settledN": sum(1 for e in ents if (e.get("result") or {}).get("status") == "settled"),
     }
 
@@ -930,11 +1028,13 @@ def build_module(args):
         # 只留冻结日期——「参数在回测出结果之前定死」这个承诺用日期表达，不需要版本号。
         "ruleFrozenAt": RULE_FROZEN_AT,
         "note": (
-            "陈学长口径（冻结于 2026-10-25）：主板股价≥4元 → T日涨停（首板或连板都算，连板只作排序加分）→ "
-            "T+1放量≥2倍断板（无上限）→ 未破T日低点 → T+2缩量 → 站稳MA5；"
-            "严格池另加「T日缩量≤1.0 + T+1跌≥3%」两条软条件。"
-            "买点=确认日次日开盘，卖点=+3.5%当天兑现或持仓2日，止损=洗盘段最低价，"
-            "仓位=单笔亏总仓1.5%。分时量能/盘口/板块角色是日线缺口，未假装实现。"
+            "陈学长口径（%s）：主板股价≥4元 → T日涨停（首板或连板都算，连板只作排序加分）→ "
+            "T+1放量≥2倍断板（无上限）→ 未破T日低点 → T+2缩量 → 站稳MA5"
+            "且确认日收盘较MA5≥%.1f%%（阈值口径见 ruleFrozenAt 冻结说明）；"
+            "严格池另加「T日缩量≤1.0 + T+1跌≥3%%」两条软条件。"
+            "买点=确认日次日开盘，卖点=+%.1f%%当天兑现或持仓%d日，止损=T日最低价，"
+            "仓位=单笔亏总仓1.5%%。分时量能/盘口/板块角色是日线缺口，未假装实现。"
+            % (RULE_FROZEN_AT, MA5_GAP_MIN, TARGET_PCT, HOLD_DAYS)
         ),
         "strict": strict,
         "loose": loose,
@@ -1116,17 +1216,26 @@ def main():
     chen_codes = [e["code"] for e in mod["strict"] + mod["loose"]]
     db_codes = [e.get("code") for e in (db_mod.get("confirmed") or [])]
     mod["compare"] = build_compare(chen_codes, db_codes, ledger)
+    # R100z233b：`since` 只从**当前口径**的样本里取。原写法取全台账最小值，
+    # 换口径后页面会写成「起始日 2026-10-22 / 已结算 13 条」而表格里样本是 0——
+    # 两个数字各说一套，读者只会认为这张表算错了。
+    _cur = [e for e in ledger.get("entries") or []
+            if (e.get("ruleFrom") or "legacy") == RULE_FROZEN_AT]
     mod["track"] = {
         "since": min([e.get("confirmDate") or e.get("entryDate")
-                      for e in ledger.get("entries") or []
+                      for e in _cur
                       if (e.get("confirmDate") or e.get("entryDate"))] or [today]),
-        "settledN": mod["compare"].get("settledN", 0),
-        "openN": len(open_codes) - n_settled,
+        # 与 since 同口径：只数当前口径的已结算条数（旧口径由 legacyN 单独交代）
+        "settledN": sum(1 for e in _cur
+                        if (e.get("result") or {}).get("status") == "settled"),
+        "openN": sum(1 for e in _cur
+                     if (e.get("result") or {}).get("status") != "settled"),
         "justSettled": n_settled,
+        "legacyN": mod["compare"].get("legacyN", 0),
         "settleRule": ("买价=确认日（数据日）次一交易日开盘；窗口 %d 个交易日；"
-                       "止盈按盘中触 +3.5%% 算（可挂单），止损按收盘跌破止损位算（盘中不算），"
+                       "止盈按盘中触 +%.1f%% 算（可挂单），止损按收盘跌破止损位算（盘中不算），"
                        "开盘即破止损视为不进场（不进胜负分母），都不触按窗口末收盘计。"
-                       "两个池用同一口径，胜率才可比。" % HOLD_DAYS),
+                       "两个池用同一口径，胜率才可比。" % (HOLD_DAYS, TARGET_PCT)),
     }
 
     old["chenPool"] = mod
