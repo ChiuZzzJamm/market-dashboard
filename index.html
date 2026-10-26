@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610261843"></script>
+<script src="data.js?v=202610261907"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -81,7 +81,7 @@
   .pool-badge, .dir-badge, .conf-badge, .exp-badge, .quad-badge, .src-tag, .td-tag,
   .date-tag, .pool-tag, .stk-tag, .hz-badge, .lv-badge, .lb-tag, .dd-tag,
   .db-src-tag, .db-sec-pill, .db-stage, .fc-chip, .fail-chip, .tag, .subtag, .s-tag,
-  .tchip, .tk-chip, .chip-pop, .chip-sec, .persp-tag {
+  .tchip, .chip-pop, .chip-sec, .persp-tag {
     display: inline-flex; align-items: center; justify-content: center;
     vertical-align: middle; line-height: 1.35;
   }
@@ -468,7 +468,6 @@
   .oo-pos-item.up .v { color: var(--up); }
   .oo-pos-item.down .v { color: var(--down); }
   .oo-pos-item.flat .v { color: var(--ink2); }
-  .wk-summary { font-size: var(--fs-md); margin-bottom: 16px; line-height: 1.7; }
   .wk-section { margin: 22px 0 14px; padding-top: 16px; border-top: 1px solid var(--line); }
   .wk-section h4 { font-size: var(--fs-body); font-weight: 700; margin: 0 0 6px 0; color: var(--accent-deep); letter-spacing: 1px; }
   .wk-section h4.bull { color: var(--up); }
@@ -478,13 +477,8 @@
   .wk-item.wk-dir-up { border-left: 4px solid var(--up); }
   .wk-item.wk-dir-down { border-left: 4px solid var(--down); }
   .wk-item.wk-dir-flat { border-left: 4px solid #9aa4af; }
-  .wk-item .thm { font-size: var(--fs-body); font-weight: 700; margin-bottom: 3px; }
-  .wk-item .dtl { font-size: var(--fs-base); color: var(--ink2); line-height: 1.6; }
-  .wk-stock-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
   .wk-section.intl h4 { color: var(--accent-deep); }
   .wk-section.bank h4 { color: #6b4ea2; }
-  .wk-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
-  .wk-tags .tag { font-size: var(--fs-sm); background: var(--accent-soft); border-radius: 8px; padding: 2px 9px; color: var(--accent-deep); }
   .nc-src { font-size: var(--fs-sm); color: var(--ink2); margin-top: 7px; }
   .wk-item .nc-theme { font-size: var(--fs-body); font-weight: 800; margin-bottom: 3px; }
   .wk-item .nc-dtl { font-size: var(--fs-base); color: var(--ink); line-height: 1.6; margin-bottom: 8px; min-height: 0; }
@@ -876,7 +870,6 @@
   .fail-chip .r1 { display: flex; align-items: center; gap: 6px; }
   .fail-chip .r1 b { font-weight: 800; }
   .fail-chip .cd { font-size: var(--fs-sm); color: var(--ink2); }
-  .fail-chip .fr { font-size: var(--fs-sm); color: #a33; margin-top: 4px; line-height: 1.5; }
   .fail-chip .fd { font-size: var(--fs-xs); color: var(--ink2); margin-top: 2px; }
   /* R100z41：最新归档批次用实线边框 + 「新」徽章，与滚动窗口里剩下的旧归档一眼区分。
      R100z59（用户 2026-10-04「颜色不用是黄的，鼠标放上去才显示黄色」）：
@@ -911,7 +904,6 @@
   /* R100z209：三段（个股公告 / 个股新闻 / 板块新闻）之间留一道呼吸，组内不留大间隙 */
   .sn-grp + .sn-grp { margin-top: 9px; }
   .db-ref-sum { color: var(--ink2); font-size: var(--fs-sm); line-height: 1.65; margin: 2px 0 0 2px; }
-  .db-src-tag { display: inline-block; font-size: var(--fs-xs); font-weight: 700; color: var(--accent-deep); background: var(--accent-soft); border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; margin-left: 2px; line-height: 1.6; }
   .db-kline { position: relative; }
   .db-tip { position: absolute; display: none; transform: translateX(-50%); background: var(--paper); border: 1px solid var(--accent); border-radius: 8px; padding: 6px 10px; font-size: var(--fs-sm); line-height: 1.6; color: var(--ink); box-shadow: 0 6px 18px rgba(17,17,26,.18); pointer-events: none; z-index: 10; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .db-tip b.up { color: var(--up); }
@@ -1084,7 +1076,6 @@
   /* 今日涨幅取不到时（顶层无该票 K 线）显示灰破折号，不编数字 */
   @media (max-width: 700px) { .tc-cell .v { font-size: var(--fs-body); } }
 
-  .ai-harmonic { font-size: var(--fs-base); font-weight:700; color:#7a4d00; background:var(--paper)3d6; border:1px solid #f0c36d; border-radius:8px; padding:6px 10px; margin:8px 0; }
   /* R100z107b 政策信号解码面板 */
   .ps-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
   .ps-item { border: 1px solid var(--line); border-radius: var(--r-block); padding: 9px 11px; background: var(--paper); }
@@ -1169,7 +1160,7 @@
   #gn-ashare, #gn-us { scroll-margin-top: 12px; }
 
   /* R100z234（2026-10-26 用户拍板「直接删掉」）：交易预案整块下线。
-     signal_rank.py 已退役（_retired/），data.js 的 tradeDesk 键已删，前端渲染函数与容器一并移除。
+     signal_rank.py 已删除，data.js 的 tradeDesk 键已删，前端渲染函数与容器一并移除。
      它原来的 18 条 .td-* 样式（.td-scope/.td-mkt/.td-port/.td-warn/.td-item/.td-rank/.td-name/
      .td-sec/.td-q/.td-kv/.td-why/.td-fold/.td-x/.td-note/.td-plan/.td-valid/.td-h）同步删除——
      留着就是死样式，下次谁看到都会以为这个模块还在。
@@ -1306,7 +1297,6 @@
     /* R100z164：.td-port 已并入 .td-mkt 内部，改成竖线分隔的键值流——
        窄屏再套 grid 2 列会把分隔线和文字割开，改用自然换行。 */
     .td-port { display: flex; flex-wrap: wrap; gap: 2px 0; }
-    .td-port-wide { flex: 1 1 100%; }
     .pf-row { grid-template-columns: minmax(0,1.4fr) 60px minmax(0,.9fr); }
     .pf-row .pf-hide { display: none; }
     .pf-cmp-r { grid-template-columns: minmax(0,1.15fr) 60px 54px 64px; font-size: var(--fs-base); }
@@ -6334,7 +6324,7 @@ function renderOpenDesk() {
   // R100z234（2026-10-26 用户拍板「直接删掉」）：交易预案整块下线。
   // 原因不是「准确率低」这句印象，而是它与开盘精选在同一天给出两套几乎不重叠的名单
   // （2026-10-26 实测：精选 10 只 / 预案 8 只 / 交集 1 只），两套止损仓位并存，
-  // 任何一套都无法照做。signal_rank.py 已退役到 _retired/，data.js 的 tradeDesk 键已删。
+  // 任何一套都无法照做。signal_rank.py 已删除，data.js 的 tradeDesk 键已删。
   renderOpenOutlook();
   renderAiPrediction();
 }

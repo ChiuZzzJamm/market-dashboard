@@ -30,15 +30,10 @@ LIST_PATH = os.path.join(BASE, '.kline_hist_list.json')
 BEG = '20230101'          # 前置窗口：算 MA250 / 60 日均额 / 上市满一年
 END = '20261101'
 UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-# 东财单节点会限流（2026-10-26 实测：连续 1300 只后主域返回空串）。
-# 数字子域是同一份数据的不同接入节点，轮询可把限流摊平；失效节点自动跳过。
-NODES = ['7', '23', '45', '13', '29', '36', '54', '61', '75', '88']
-_nrr = [0]
-
-
-def next_host():
-    _nrr[0] += 1
-    return 'https://%s.push2his.eastmoney.com' % NODES[_nrr[0] % len(NODES)]
+# 东财单节点会限流（2026-10-26 实测：连续约 1300 只后返回空串）。
+# 已实测：7./23./45.push2his 与主域 DNS 解析到**同一个 IP**，所谓「数字子域轮换」
+# 摊不平限流，纯粹是幻觉优化，故不做。真实对策是调用点重试（见 kline 抓取的 for 循环）
+# 加上分片跑；抓不到的按缺失处理、不写空文件。
 
 
 def _curl(url, timeout=20):
@@ -53,10 +48,6 @@ def _curl(url, timeout=20):
     if p and p.returncode == 0 and p.stdout.strip():
         return p.stdout.decode('utf-8', errors='replace')
     return None
-
-
-def secid(code):
-    return ('1.' if code.startswith('6') else '0.') + code
 
 
 def fetch_list():
