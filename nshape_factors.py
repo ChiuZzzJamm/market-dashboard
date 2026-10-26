@@ -19,10 +19,6 @@ TP, SL, HOLD = 0.03, 0.05, 5
 ENTRY = 'open'   # 次日开盘买：v2 实测优于当日收盘买
 
 
-def pct_rank(vals, v):
-    pass
-
-
 def features(st, t, d, t0, ctx):
     c, o, a, h, l = st.c, st.o, st.a, st.h, st.l
     f = {}

@@ -54,3 +54,9 @@ _weekend_*.py
 # 是「随时间滚动的本机状态」，不是事实源；提交进仓库会让每次运行都产生 diff
 .cache/
 .bt_cache/
+
+# N 字形态研究的长周期 K 线缓存（nshape_fetch.py 生成，2023 起全市场 ≈1250 只 / 226MB）
+# 2026-10-26 漏登记：deploy.sh 用 `git add -A`，不排除就会把 226MB 缓存推进公开仓库
+.kline_hist/
+.kline_hist_list.json
+.kline_hist_miss.json

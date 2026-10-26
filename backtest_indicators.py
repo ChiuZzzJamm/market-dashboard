@@ -50,7 +50,8 @@
   以 `(形态名, D 点日期)` 去重，只记首次出现。
 - 吸筹：`accumulation_score.score_one()` 的 grade ≠ 不入池，以 `sigIdx` 变化去重
   （同一根信号 K 线只触发一次）。
-- 九门：`power_screener.screen_one().passed`，只在「连续通过段的第一天」触发。
+- 横盘启动：`breakout_pool.evaluate(bars, k)` 返回 `active`，只在「连续 active 段的第一天」触发
+  （即刚洗完、缩量达标的那个收盘）。
 - 断板：`check_duanban.check_form()` 达标（确认池口径），对最近 2~5 个交易日的
   涨停日逐个试，以涨停日去重。
 
@@ -79,15 +80,12 @@ from datetime import datetime
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE)
-# R100z232：power_screener.py 已退役到 _retired/（九门下线），但「四指标年化对照」
-# 还要能复现九门那一行（t=−5.02 / 均超额 −0.390%/笔），所以补一条 path 让它仍可 import。
-sys.path.insert(0, os.path.join(BASE, '_retired'))
 
 import accumulation_score as A      # noqa: E402
 import check_duanban as DUAN        # noqa: E402
 import harmonic_detect as H         # noqa: E402
 import kline_cache as K             # noqa: E402
-import power_screener as P          # noqa: E402
+import breakout_pool as B           # noqa: E402
 
 BT_DIR = os.path.join(BASE, '.bt_cache')
 KLINE_DIR = os.path.join(BASE, '.kline_cache')
@@ -100,8 +98,8 @@ UNFILLABLE_GAP = 0.095
 HORIZONS = (1, 3, 5, 10)
 WARMUP = 120
 IND_ZH = {'duanban': '断板反包', 'harmonic': '谐波形态',
-          'accum': '主力吸筹', 'power': '九门强势'}
-IND_ORDER = ('duanban', 'harmonic', 'accum', 'power')
+          'accum': '主力吸筹', 'bp': '横盘启动'}
+IND_ORDER = ('duanban', 'harmonic', 'accum', 'bp')
 
 
 # ---------------------------------------------------------------- 数据层
@@ -288,15 +286,16 @@ def replay(code, bars, window, start):
                      and PCT_LO <= pct <= PCT_HI)
         win = bars[max(0, k - window + 1):k + 1] if window else bars[:k + 1]
 
+        # 横盘启动 v2：evaluate 需要整条 bars + 当前索引（要回看 150 日找涨停锚），不能用 win 切片。
         try:
-            p = P.screen_one(win)
+            _st, _info, _it = B.evaluate(bars, k)
         except Exception:
-            p = None
-        passed = bool(p and p.get('passed'))
+            _st, _it = None, None
+        passed = (_st == 'active')
         if passed and not prev_pass and tradeable:
-            sc = p.get('score') or 0
-            sub = '9分' if sc >= 9 else ('7-8分' if sc >= 7 else '5-6分')
-            out.append((k, 'power', sub, sc))
+            sc = (_it or {}).get('score') or 0
+            sub = '80+' if sc >= 80 else ('60-79' if sc >= 60 else '<60')
+            out.append((k, 'bp', sub, sc))
         prev_pass = passed
 
         try:
@@ -651,7 +650,7 @@ def build_report(res, meta):
                                             pct(meta['bh_total'], 1), meta['calib'][4][1]),
         '2. **ST 不可知**：K 线里没有历史 ST 标记，回测会包含当期是 ST 的票（实盘会被黑名单拦掉）。',
         '3. **涨跌停排队**：只剔除了「开盘就 ≥9.5% 买不进」，盘中封板 / 炸板的真实滑点没建模。'
-        '断板反包买不进 10 笔、九门 317 笔——后者占 2%，不改变结论但会低估交易摩擦。',
+        '断板反包买不进 10 笔、横盘启动 300+ 笔——后者占比小，不改变结论但会低估交易摩擦。',
         '4. **前复权口径**：收益含分红再投资，与真实成交价有微小差异；除权日的涨停判定会漏。',
         '5. **样本内检验**：用的是今天这套阈值去回测两年前，不能当作「参数没过拟合」的证据。',
         '6. **基准本身是「持有 1260 只等权」**，任何 5~10 只的集中组合都不可能完全复制它，'

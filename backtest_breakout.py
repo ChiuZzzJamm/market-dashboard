@@ -201,15 +201,6 @@ def equity_cal(trades, N, calendar):
     return out
 
 
-def perf_window(eq, d0, d1):
-    """把净值曲线裁到公共窗口再算年化，避免「谁先出信号谁窗口长」的伪比较。"""
-    sub = [(d, lv, nb) for (d, lv, nb) in eq if d0 <= d <= d1]
-    if len(sub) < 30:
-        return None
-    base = sub[0][1]
-    return BI.perf([(d, lv / base, nb) for (d, lv, nb) in sub])
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--limit', type=int, default=0)
