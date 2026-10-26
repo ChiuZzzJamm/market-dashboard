@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610261815"></script>
+<script src="data.js?v=202610261819"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -6505,11 +6505,15 @@ function failGenericTcHtml(e, i, latestD, kind) {
       tcCell('失效原因', esc(e.reason || '形态失效'), '', true)
     ];
     foot = (isFinite(lag) && lag > 0 ? ('信号滞后 ' + lag + ' 日 · ') : '') + '归档 ' + esc(e.entryDate || '—');
-  } else { // R100z232：breakoutPool 横盘启动——无 grade / lagDays，用「本轮分数 + 失效原因」
+  } else { // R100z233：breakoutPool 横盘启动 v2——第二格改成「涨停日 / 洗盘天数」
+    // v1 那格是「距箱顶」，而 v2 已经没有箱顶字段，会恒显示「—」（2026-10-26 截图发现）。
+    // 失效时最该留的信息是「它当初是哪一根涨停起爆的、洗了几天」，复盘才知道错在哪。
     var sc2 = Number(e.score);
+    var ld2 = String(e.limitDay || '');
     cells = [
       tcCell('本轮评分', isFinite(sc2) ? String(sc2) : '—', ''),
-      tcCell('距箱顶', '—', ''),
+      tcCell('涨停 / 洗盘', '<span class="nw">' + esc(ld2.slice(5) || '—') + '</span> <span class="nw">' +
+        (e.washDays != null ? e.washDays + ' 日' : '—') + '</span>', '', false, true),
       tcCell('失效原因', esc(e.reason || '形态失效'), '', true)
     ];
     foot = '归档 ' + esc(e.entryDate || '—');
