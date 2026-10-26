@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610261909"></script>
+<script src="data.js?v=202610261924"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -487,7 +487,7 @@
   .wk-item .nc-stocks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: 6px; }
   .nc-theme { font-size: var(--fs-body); font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; min-width: 0; }
   .nc-theme .nc-tt { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  /* R100z111（用户 2026-10-10）：取消「点击展开全文」，摘要默认完整显示（原 3 行 line-clamp + 点击 .expanded 切换已废） */
+  /* R100z111（用户 2026-10-10）：取消「点击展开全文」，摘要默认完整显示（原 3 行 line-clamp + 点击 .expanded 切换已取消） */
   .nc-dtl { font-size: var(--fs-body); color: var(--ink); line-height: 1.65; margin-bottom: 10px; display: block; }
   .nc-dtl b { font-weight: 700; }
   .nc-imp { display: flex; flex-wrap: wrap; align-items: center; } /* R100x：传导链行 flex 垂直居中（主题+期距徽章+个股网格） */
@@ -4696,14 +4696,14 @@ function renderAccumulation() {
   return accLeg + secS + secW + accFail;
 }
 
-/* R100z232 · 横盘启动页（2026-10-26 v2：涨停锚口径）
+/* 横盘启动页（涨停锚口径）
    --------------------------------------------------------------------------
    数据源：data.js 顶层 `breakoutPool`（breakout_pool.py 写，16:00 数据步）。
 
-   为什么 v2 重写：v1 是「任意 60 日平台 + 均线粘合 + 地量」，**里面没有涨停**，
-   用户给了 4 张正样本图（上海洗霸/百洋/兴业/多伦）实测 0/4 通过。v2 按用户口述
-   改成「T 日涨停为锚 → 洗盘 5~30 日 → 破底允许 1~2 日收回 → 收盘较涨停板 +30%
-   即算启动、移出本池」，同样 4 只 4/4 命中。
+   口径：T 日涨停为锚 → 洗盘 5~30 个交易日 → 缩量达标 → 破底允许 1~2 日收回
+   → 收盘较涨停板 +30% 即算启动、移出本池。用户给的 4 张正样本（上海洗霸/百洋/
+   兴业/多伦）4/4 命中。**红线**：锚点必须是涨停事件，不许退化成「横着走 60 天
+   就算」——纯几何平台的 +15% 命中率只有 20.3%，连随机买入的 23.5% 都不如。
 
    ⚠️ 本池只出「洗盘末期的埋伏名单 + 次日挂单区间」，不给目标价（用户 2026-10-26：
       「止盈你不用管」）。离场、止盈由用户自己决定。
@@ -4742,8 +4742,8 @@ function renderBreakoutPool() {
         (it.note || '') + '\n' + (en.note || '') + '\n点击查看K线与个股消息'
     });
   }).join('');
-  // R100z233：口径块改成与谐波/吸筹/陈学长同款五段（一句话逻辑 / 判定规则 / 分池 /
-  // 失效与离场 / 下一步黄条），并把 v1 那段「箱顶·均线粘合·地量」的说明全部删掉。
+  // 口径块与谐波/吸筹/陈学长同款五段（一句话逻辑 / 判定规则 / 分池 /
+  // 失效与离场 / 下一步黄条）。
   // ⚠️ 这里直接进网页正文，**不许出现 Markdown 星号**（esc 不解析，会原样显示 **）。
   var legend = '<details class="tech-legend"><summary>横盘启动口径 · 涨停后缩量洗盘（点击查看技术指标）</summary><div class="lg-body">' +
     '<div><b>一句话逻辑</b>：先有一根涨停（异动），然后缩量横盘洗盘，股价一般不跌破涨停日最低价；' +
@@ -5194,7 +5194,7 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
         tcStopCell(e.code) // 吸筹无形态止损位 → exitForCode 统一纪律位（最近收盘 −2.5%，basis 自述非形态位）
       ];
     } else if (e.src === 'bp' && te) {
-      // R100z233：v2 涨停锚口径——四格与横盘启动页卡片逐格同源：
+      // 涨停锚口径——四格与横盘启动页卡片逐格同源：
       // 买入区间 / 证伪价（涨停日最低×0.98）/ 涨停·洗盘天数 / 距涨停收盘。
       // **不套 tcStopCell**：本池的证伪价是形态位，不是「最近收盘 −2.5%」的纪律位；
       // 用纪律位顶替会给出一个与形态无关的数，比留「—」更误导。
@@ -5485,7 +5485,7 @@ function renderDuanban() {
         '<span>现价</span><span>证伪价</span><span>目标 · 持有</span></div>';
       bl.forEach(function (r) {
         var cls = ({ buy: 'bl-st-buy', over: 'bl-st-over', under: 'bl-st-under' })[r.state] || 'bl-st-unknown';
-        // R100z233：横盘启动 v2 的买区是「涨停锚挂单带」（今收 −1%~+2%），
+        // 横盘启动的买区是「涨停锚挂单带」（今收 −1%~+2%），
         // 既不是箱体几何，也不是纯滑点带；三档都要能说清，别让读者猜。
         var anchorZh = (r.anchor === 'box') ? '箱体几何'
           : (r.anchor === 'anchor') ? '涨停锚挂单带'
@@ -5680,9 +5680,9 @@ function chenDataDay(c) {
    原文的每个事实（首板与连板的口径、三档梯度、不采纳三条、日线缺口、交易参数与仓位警告）一条不删，
    只按新段落归位，并补上另外四页都有、这页缺的「分期与离场」与「下一步」。 */
 function chenLegendHtml(c) {
-  // R100z221（用户 2026-10-26：「不要有什么 v1v2，就只有一个版本」）：原先这里取 ruleVersion
-  // 并在脚注写「口径版本 v2」、正文写「v2 的修正点，v1 误把连板 ≥2 当成门槛」。
-  // 只有一套口径时，版本号是噪音：读者要花力气才能确认「我看的是哪一版」，而答案永远是同一版。
+  // 用户 2026-10-26：「不要有什么版本号，就只有一个版本」。
+  // 只有一套口径时，版本标记是噪音：读者要花力气确认「我看的是哪一版」，而答案永远同一版。
+  // 全站有效：代码/注释/页面/prompt 里都不许再出现口径版本号。
   // R100z225（用户 2026-10-26 截图 4）：「删掉」——脚注整行（口径冻结于 … 数据日 … 生成于 …）
   // 一并删除。「参数在回测出结果之前定死」这条承诺是写给维护者的，读者要的只是「这页的数怎么来的」，
   // 而这件事正文各条已经逐条写了；剩下的只有一串日期，占一行还看不出所以然。
@@ -5747,8 +5747,7 @@ function chenLegendHtml(c) {
 function chenTradeMeta(e) {
   var t = e.trade || {}, m = e.metrics || {};
   if (!t.targetPrice) return '';
-  // R100z221：原先写「首板（v2 起首板也算，连板只作排序加分）」——版本号已全站删除，
-  // 这里只留读者真正需要的那半句：首板算数，板数只是排序抓手，不是门票。
+  // 只留读者真正需要的那半句：首板算数，板数只是排序抓手，不是门票。
   var lbcTxt = m.lbc ? (m.lbc === 1 ? '首板（连板数只作排序加分，不是门票）' : m.lbc + ' 板') : '—';
   // R100z225（用户 2026-10-26 截图 5：「这个 146 是啥？要不要删掉？」）：146 是他视频的期数，
   // 用来内部追溯出处，读者看到只有一个看不懂的数字。源头（chen_pool.py 的 note）已不再写它，
@@ -6201,8 +6200,8 @@ function failGenericTcHtml(e, i, latestD, kind) {
       tcCell('失效原因', esc(e.reason || '形态失效'), '', true)
     ];
     foot = (isFinite(lag) && lag > 0 ? ('信号滞后 ' + lag + ' 日 · ') : '') + '归档 ' + esc(e.entryDate || '—');
-  } else { // R100z233：breakoutPool 横盘启动 v2——第二格改成「涨停日 / 洗盘天数」
-    // v1 那格是「距箱顶」，而 v2 已经没有箱顶字段，会恒显示「—」（2026-10-26 截图发现）。
+  } else { // breakoutPool 横盘启动——第二格是「涨停日 / 洗盘天数」
+    // 归档时最该留的是「它当初是哪一根涨停起爆、洗了几天」，复盘才知道错在哪。
     // 失效时最该留的信息是「它当初是哪一根涨停起爆的、洗了几天」，复盘才知道错在哪。
     // 两格足够：归档时最该留的是「哪根涨停起爆、洗了几天」+「为什么失效」。
     // 原来那格「本轮评分」在归档条目上恒为「—」（分数只在在池时有意义），2026-10-26 截图后去掉。
@@ -7808,7 +7807,7 @@ function openStkModal(code, name, note) {
 }
 function stkClose() { TB_OPEN = false; document.getElementById('stk-modal').classList.remove('open'); }
 // R98b：板块 TOP10 点击看K线（数据已预加载在后端，无需再fetch）
-// R98e：K线从 _TB_KL 注册表按板块名取（onclick 内联 JSON 双引号会截断 HTML 属性，已废弃）
+// R98e：K线从 _TB_KL 注册表按板块名取（onclick 内联 JSON 双引号会截断 HTML 属性，已移除）
 // R98g：左右箭头在 TOP10 内快速切换（与标的K线弹窗同款 .db-nav），键盘 ←/→ 同样路由
 var TB_OPEN = false, TB_IDX = 0, TB_MODE = ''; // R100z127：TB_MODE='top'(TOP10板块)/'sec'(全景·政策板块)；取代 TB_NAV_OFF
 var _SECNAV_NAME = '', _SECNAV_LIST = [], _SECNAV_MARKET = 'ashare', _SECNAV_MAP = {}; // R100z127：板块(sec)导航状态（与 stkSecOf 的 _SEC_MAP 区分，避免冲突）

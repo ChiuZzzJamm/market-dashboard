@@ -1447,7 +1447,7 @@ def check_selection_modules(D):
                     warns.append(f"breakoutPool.passed[{i}] code {c} 非 60/00 沪深主板")
                 if 'score' not in it:
                     warns.append(f"breakoutPool.passed[{i}] 缺 score")
-                # R100z233：横盘启动 v2 的买区＝次日挂单带、证伪价＝涨停日最低×0.98；
+                # 横盘启动的买区＝次日挂单带、证伪价＝涨停日最低×0.98；
                 # **不再要求 target**（用户 2026-10-26「止盈你不用管」，目标由用户自定）。
                 _e = it.get('entry') if isinstance(it.get('entry'), dict) else None
                 if not _e or not all(_e.get(k) is not None

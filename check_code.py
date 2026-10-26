@@ -87,7 +87,7 @@ DATA_WRITERS = [
     'market_bench.py',          # 行业基准回填
     'market_structure.py',      # 市场结构
     'merge_duanban.py',         # 断板合并
-    'breakout_pool.py',         # R100z232：横盘启动池（取代九门 powerScreen；走 write_data_js）
+    'breakout_pool.py',         # 横盘启动池（涨停锚口径；走 write_data_js）
     'refresh_stamp.py',         # updatedAt 单一主人（正则手术式改写）
     'retag_duanban.py',         # 断板重打标
     'risk_gate.py',             # 个股风险闸
@@ -125,7 +125,7 @@ DEAD_OK = {
     'decode_policy.py': '政策词表纯函数，被 enrich_policy import',
     'kline_cache.py': 'K 线缓存模块，被 accumulation_score import',
     'backtest_indicators.py': '四指标 2 年滚动回测（信号归因+组合年化），纯本地、手工触发',
-    'backtest_v2_entry.py': '断板反包买点口径 v2 回测（涨停→倍量阴→缩量回均线尾盘买），纯本地、手工触发',
+    'backtest_entry.py': '断板反包买点口径回测（涨停→倍量阴→缩量回均线尾盘买），纯本地、手工触发',
     'nshape_fetch.py': 'N 字形态研究：全市场日K抓取（东财/腾讯双源→.kline_hist/），纯本地、手工触发',
     'nshape_factors.py': 'N 字形态研究：因子分层+按年切分，纯本地、手工触发',
     'nshape_rules.py': 'N 字形态研究：过滤规则组合搜索（双段验证），纯本地、手工触发',
@@ -133,13 +133,13 @@ DEAD_OK = {
     'nshape_extra.py': 'N 字形态研究：跨度交叉表/市场开关/平台可买性，纯本地、手工触发',
     'backtest_breakout.py': '横盘启动接入 backtest_indicators 同一跑道的年化对照，纯本地、手工触发',
     'breakout_study.py': '横盘启动参数研究：振幅/粘合/地量/贴沿四维分层搜索，纯本地、手工触发',
-    'chen_study.py': '陈学长口径研究：v3 卖点/持有天数网格 + 训练-样本外切分，纯本地、手工触发',
+    'chen_study.py': '陈学长口径研究：卖点/持有天数网格 + 训练-样本外切分，纯本地、手工触发',
     'duanban_study.py': '断板反包口径研究：买点/卖点/止损锚分层，纯本地、手工触发',
     'duanban_tune.py': '断板反包参数寻优（量比/回撤/确认日），纯本地、手工触发',
     'duanban_extra.py': '断板反包补充维度（距MA5/板块/情绪分层），纯本地、手工触发',
-    'rule_v3_check.py': '陈学长 v3 换版前后样本重算校验，纯本地、手工触发',
+    'rule_final_check.py': '陈学长口径终选：换参前后样本重算校验，纯本地、手工触发',
     'nshape_backtest.py': 'N 字形态研究：组合回测，纯本地、手工触发',
-    'nshape_bt_v2.py': 'N 字形态研究：v2 回测口径对照，纯本地、手工触发',
+    'nshape_bt.py': 'N 字形态研究：回测口径对照，纯本地、手工触发',
     'nshape_final.py': 'N 字形态研究：最终规则定稿统计，纯本地、手工触发',
 }
 

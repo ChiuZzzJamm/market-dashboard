@@ -286,7 +286,7 @@ def replay(code, bars, window, start):
                      and PCT_LO <= pct <= PCT_HI)
         win = bars[max(0, k - window + 1):k + 1] if window else bars[:k + 1]
 
-        # 横盘启动 v2：evaluate 需要整条 bars + 当前索引（要回看 150 日找涨停锚），不能用 win 切片。
+        # 横盘启动：evaluate 需要整条 bars + 当前索引（要回看 150 日找涨停锚），不能用 win 切片。
         try:
             _st, _info, _it = B.evaluate(bars, k)
         except Exception:
