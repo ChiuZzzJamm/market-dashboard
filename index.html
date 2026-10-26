@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610261712"></script>
+<script src="data.js?v=202610261757"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1614,15 +1614,6 @@ var charts = [];
 var currentMarket = 'ashare';
 function cls(v) { return v > 0 ? "up" : (v < 0 ? "down" : "flat"); }
 function fmtPct(v) { if (v === null || v === undefined) return "—"; return (v > 0 ? "+" : "") + v.toFixed(2) + "%"; }
-/* R100z233：`distTop` 不是涨跌幅，是「现价距箱顶还差多少」——breakout_pool.py 里
-   `(箱顶 / 收盘 − 1) × 100`，**正数代表现价还在箱顶下方**。套 fmtPct 会渲染成「+0.89%」，
-   读起来像「已经涨过箱顶 0.89%」，语义正好反了（2026-10-26 上线当天截图核对时发现的）。
-   这里只换显示方向词，不动任何数据。 */
-function fmtDistTop(v) {
-  if (v === null || v === undefined || v === '' || !isFinite(Number(v))) return '—';
-  var n = Number(v);
-  return n >= 0 ? ('下方 ' + n.toFixed(1) + '%') : ('上方 ' + Math.abs(n).toFixed(1) + '%');
-}
 function esc(s) { if (s === null || s === undefined) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 function escAttr(s){ return esc(s).replace(/"/g, '&quot;'); }
 // R100z81：清洗 AI 写回时泄漏的内部变量名（cal_factor / alignRate=0.xxx），避免大盘研判/
@@ -5009,75 +5000,78 @@ function renderAccumulation() {
   return accLeg + secS + secW + accFail;
 }
 
-/* R100z232 · 横盘启动页（取代九门）
+/* R100z232 · 横盘启动页（2026-10-26 v2：涨停锚口径）
    --------------------------------------------------------------------------
    数据源：data.js 顶层 `breakoutPool`（breakout_pool.py 写，16:00 数据步）。
-   为什么撤九门：同跑道回测（1,260 只 / 537 个交易日 / T+1 开盘买）九门 t=−5.02、
-   均超额 −0.390%/笔、胜率 45.6%，四个技术池里唯一突破 5 的负超额；横盘启动
-   t=0.41（不显著）但均超额 +0.148%、胜率 54.0%，是四者里唯一非负的。
-   ⚠️ 本池只出「贴沿名单 + 可否低吸的价格区间」，突破确认留给 09:45 开盘精选
-      （那时才有盘口）。回测是固定持有 10 日、不设百分比止损，所以卡上那格叫
-      「证伪价」不叫「止损」——宽平台的证伪价可能距买价 −20%，是箱体几何，不是预算。
+
+   为什么 v2 重写：v1 是「任意 60 日平台 + 均线粘合 + 地量」，**里面没有涨停**，
+   用户给了 4 张正样本图（上海洗霸/百洋/兴业/多伦）实测 0/4 通过。v2 按用户口述
+   改成「T 日涨停为锚 → 洗盘 5~30 日 → 破底允许 1~2 日收回 → 收盘较涨停板 +30%
+   即算启动、移出本池」，同样 4 只 4/4 命中。
+
+   ⚠️ 本池只出「洗盘末期的埋伏名单 + 次日挂单区间」，不给目标价（用户 2026-10-26：
+      「止盈你不用管」）。离场、止盈由用户自己决定。
    ⚠️ 卡片点击复用 openGrpModal(BP_SORTED, idx)：渲染与弹窗回取必须共用同一份数组，
       否则左右箭头串票（R100z82 在九门页踩过）。 */
 function renderBreakoutPool() {
   var b = (window.DASHBOARD_DATA || {}).breakoutPool;
   if (!b || !b.passed || !b.passed.length) return '';
-  BP_SORTED = b.passed.slice(0, 30); // 生成侧已按 score 降序、distTop 升序排好
+  BP_SORTED = b.passed.slice(0, 30);   // 生成侧已按 score 降序、|位置| 升序排好
   var items = BP_SORTED.map(function (it, idx) {
     var en = it.entry || {};
     var nm = (it.name && it.name !== it.code) ? it.name : '';
-    var dist = Number(it.distTop);
-    // 距箱顶越近越值得看：≤1% 给涨色（已贴上沿），否则中性
-    var distCls = (isFinite(dist) && dist <= 1.0) ? 'up' : '';
+    var pos = Number(it.posPct);
+    // 现价在涨停日收盘附近最理想：−2%~+6% 给涨色，掉到 −5% 以下转中性
+    var posCls = (isFinite(pos) && pos >= -2 && pos <= 6) ? 'up' : '';
     var zone = (en.low && en.high)
       ? '<span class="nw">' + en.low.toFixed(2) + '</span>~<span class="nw">' + en.high.toFixed(2) + '</span>'
       : '—';
-    var foot = '箱顶 <span class="xt">' + (it.top !== undefined ? Number(it.top).toFixed(2) : '—') +
-      '</span> · 下沿 <span class="xt">' + (it.bottom !== undefined ? Number(it.bottom).toFixed(2) : '—') + '</span>' +
-      (it.entryDate ? ' · 入池 ' + esc(it.entryDate) : '');
+    var ld = String(it.limitDay || '');
+    var foot = '涨停日最低 <span class="xt">' + (it.limitLow !== undefined ? Number(it.limitLow).toFixed(2) : '—') +
+      '</span> · 失效线 <span class="xt">' + (it.invalidUp !== undefined ? Number(it.invalidUp).toFixed(2) : '—') +
+      '</span>（较涨停板 +30%）' + (it.entryDate ? ' · 入池 ' + esc(it.entryDate) : '');
     return tcCard({
       code: it.code, name: nm || it.code, chg: tcPctOf(it.code, it.pct), dim: false,
       fresh: poolFresh(it, b.tradeDate),
       pills: [it.sector || stkSectorOf(it.code)], sent: true,
       cells: [
         tcCell('买入区间', zone, ''),
-        tcCell('证伪价', en.stop ? '<span class="xt">' + en.stop.toFixed(2) + '</span>' : '—', 'down'),
-        // R100z233：「距箱顶」是方向，不是涨跌幅。原来套 fmtPct → 显示「+0.89%」，
-        // 读者会当成已经突破箱顶；改走 fmtDistTop（正数=还在箱顶下方，负数=已在上方）。
-        tcCell('距箱顶', fmtDistTop(dist), distCls),
-        tcCell('箱体振幅', isFinite(Number(it.boxPct)) ? Number(it.boxPct).toFixed(0) + '%' : '—', '')
+        tcCell('证伪价', en.stop ? '<span class="xt" title="涨停日最低×0.98：收盘跌破即形态作废">' + en.stop.toFixed(2) + '</span>' : '—', 'down'),
+        tcCell('涨停 / 洗盘', '<span class="nw">' + esc(ld.slice(5) || '—') + '</span> <span class="nw">' + (it.washDays != null ? it.washDays + ' 日' : '—') + '</span>', ''),
+        tcCell('距涨停收盘', isFinite(pos) ? ((pos > 0 ? '+' : '') + pos.toFixed(1) + '%') : '—', posCls)
       ],
       foot: foot,
       onclick: 'openGrpModal(BP_SORTED,' + idx + ')',
       title: (nm || it.code) + ' ' + it.code + ' · 横盘启动 ' + it.score + ' 分\n' +
-        (it.note || '') + '\n' + (en.note || '') +
-        '\n目标 ' + (en.target || '—') + '（' + (en.targetPct > 0 ? '+' : '') + (en.targetPct || 0) + '%）' +
-        '｜持有 ≤' + (en.holdDays || 10) + ' 日\n点击查看K线与个股消息'
+        (it.note || '') + '\n' + (en.note || '') + '\n点击查看K线与个股消息'
     });
   }).join('');
-  var legend = '<details class="tech-legend"><summary>横盘启动口径 · 平台贴沿 + 买入区间（点击查看判定规则）</summary><div class="lg-body">' +
-    '<div><b>一句话逻辑</b>：找「已经横了 60 天、量能枯竭、均线粘合、且今天正好贴在箱顶下面」的票——' +
-    '在箱顶下面低吸，赚的是箱体被突破那一段，不是追当天涨幅。这是**提前埋伏**，与九门那种' +
-    '「今天已经很硬所以明天继续硬」的追涨逻辑正好相反。</div>' +
+  var legend = '<details class="tech-legend"><summary>横盘启动口径 · 涨停后洗盘 + 埋伏买区（点击查看判定规则）</summary><div class="lg-body">' +
+    '<div><b>一句话逻辑</b>：先有一根涨停（异动），然后缩量横盘洗盘，股价一般不跌破涨停日最低价；' +
+    '洗完（量能枯竭）再启动。这页出的是「**洗完还没启动**」那一批——在涨停收盘附近埋伏，' +
+    '不是追当天的涨幅，也不是追第二个板。</div>' +
     '<div><b>判定规则</b>（全部量在收盘价上，收盘后算得出）：' + esc(b.rule || '') + '</div>' +
-    '<div><b>买入区间</b>：下限＝箱顶×0.985（跌回箱内不接）／上限＝箱顶×1.005（越过就是追突破，不跟）；' +
-    '高开越过 <b>箱顶×1.03</b> 直接放弃——那已经不是低吸。</div>' +
-    '<div><b>「证伪价」不是止损</b>：它是平台下沿×0.99，收盘跌破就说明「横盘」这个前提没了。' +
-    '宽平台的证伪价可能距买价 −20%，那是箱体几何，不是让你挂 −20% 止损；' +
-    '风控靠<b>持有 ≤' + 10 + ' 个交易日</b> + 证伪价被打穿就认两条。要按预算定仓位，用「证伪距离」倒算，别当硬止损挂。</div>' +
+    '<div><b>破底不算坏</b>：洗盘期允许收盘跌破涨停日最低价，只要该日或其后 1~2 个交易日内' +
+    '收回上方——那一下常常是故意砸出来捡筹码的。连续 2 个交易日收不回才判形态作废。</div>' +
+    '<div><b>「证伪价」＝涨停日最低×0.98</b>：收盘跌破它就说明「主力还在」这个前提没了，' +
+    '不是让你挂一个固定百分比的止损；要按预算定仓位，用证伪距离倒算。</div>' +
+    '<div><b>失效只有三种</b>：① 收盘跌破涨停日最低且 2 日未收回 ② 收盘较涨停板高出 +30%' +
+    '（已经启动，再买就晚了）③ 洗盘超过 30 个交易日仍未启动。已经回落但事件仍有效的票' +
+    '<b>留在池里</b>，只降分并显示位置，不踢出去。</div>' +
     '<div class="lg-hr"></div>' +
-    '<div><b>诚实的期望值</b>：同跑道回测 T+5 年化 +23.15%、均超额 +0.148%/笔、<b>t=0.41</b>（不显著）、胜率 54.0%。' +
-    '它比九门（t=−5.02）、谐波（−3.08）、吸筹（−3.66）都好，但**没跑赢等权基准 +31.18%**——' +
-    '所以这页是「观察名单 + 挂单价位」，不是「闭眼买」。</div>' +
-    '<div><b>密度</b>：贴沿标的一天平均 0.6 只（≤3% 口径日均 2.1 只），<b>空池是常态</b>，不是数据没跑。</div>' +
+    '<div><b>诚实的期望值</b>：同跑道回测（1313 只 / 717 个交易日）买进去 20 天内' +
+    '触及 <b>+15%</b> 的概率是 <b>33.5%</b>，随机买同一批票是 23.5%；触及 +30% 是 13.2%，' +
+    '随机 8.1%。代价是平均最大浮亏 <b>−10.6%</b>（随机 −8.0%）——它是「更容易走出大涨」的形态，' +
+    '不是「更不容易亏」的形态。固定持有 10 天的超额 ≈ 0，所以别机械放着不管。</div>' +
+    '<div><b>密度</b>：洗盘末期的票一天 5~30 只（2026-10-26 实测 25 只），<b>空池是常态</b>，' +
+    '不是数据没跑。</div>' +
     '</div></details>';
   var fail = dbFailHtml(b.failPool || [], 'breakoutPool');
   return legend +
-    '<div class="db-pool p-conf"><h2>贴沿名单 · ' + BP_SORTED.length + ' 只</h2>' +
-    '<div class="db-sub">贴在箱顶下面、量能枯竭——按卡上的买入区间低吸，越过上限不追；收盘跌破证伪价即形态作废</div>' +
-    // R100z233：把筛选漏斗写出来。只有「贴沿名单 · 1 只」这一行时，读者无法区分
-    // 「今天真的只有 1 只合格」和「K 线没抓到、只扫了 1 只」——本项目踩过多次的
+    '<div class="db-pool p-conf"><h2>涨停后洗盘 · ' + BP_SORTED.length + ' 只</h2>' +
+    '<div class="db-sub">涨停后缩量洗盘、还没启动的票——按卡上的买入区间挂低吸；收盘跌破证伪价即形态作废，站上失效线就算已经启动、本池不再跟踪</div>' +
+    // R100z233：把筛选漏斗写出来。只有「N 只」这一行时，读者无法区分
+    // 「今天真的只有 N 只合格」和「K 线没抓到、只扫到 N 只」——本项目踩过多次的
     // 「抓不到 ≠ 没有」。summary 由 breakout_pool.py 用真实计数拼，前端只读不加工。
     (b.summary ? '<div class="db-sub">筛选漏斗：' + esc(String(b.summary)) + '</div>' : '') +
     '<div class="db-chips">' + items + '</div></div>' + fail +
@@ -5506,20 +5500,23 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
         tcStopCell(e.code) // 吸筹无形态止损位 → exitForCode 统一纪律位（最近收盘 −2.5%，basis 自述非形态位）
       ];
     } else if (e.src === 'bp' && te) {
-      // R100z232（九门撤、横盘启动接位）：四格与横盘启动页卡片逐格同源——
-      // 买入区间 / 证伪价 / 距箱顶 / 箱体振幅。**不套 tcStopCell**：本池没有百分比止损，
-      // 用全站纪律位（最近收盘 −2.5%）会给出一个与箱体几何无关的数，比留「—」更误导。
+      // R100z233：v2 涨停锚口径——四格与横盘启动页卡片逐格同源：
+      // 买入区间 / 证伪价（涨停日最低×0.98）/ 涨停·洗盘天数 / 距涨停收盘。
+      // **不套 tcStopCell**：本池的证伪价是形态位，不是「最近收盘 −2.5%」的纪律位；
+      // 用纪律位顶替会给出一个与形态无关的数，比留「—」更误导。
       var _be = te.entry || {};
-      var _bd = Number(te.distTop);
+      var _bpos = Number(te.posPct);
+      var _bld = String(te.limitDay || '');
       cells = [
         tcCell('买入区间', (_be.low && _be.high)
           ? '<span class="xt">' + _be.low.toFixed(2) + '~' + _be.high.toFixed(2) + '</span>' : '—', ''),
-        tcCell('证伪价', _be.stop ? '<span class="xt" title="平台下沿×0.99：收盘跌破即横盘前提作废，不是百分比止损">' + _be.stop.toFixed(2) + '</span>' : '—', 'down'),
-        tcCell('距箱顶', fmtDistTop(_bd), (isFinite(_bd) && _bd <= 1.0) ? 'up' : ''),
-        tcCell('箱体振幅', isFinite(Number(te.boxPct)) ? Number(te.boxPct).toFixed(0) + '%' : '—', '')
+        tcCell('证伪价', _be.stop ? '<span class="xt" title="涨停日最低×0.98：收盘跌破即形态作废，不是百分比止损">' + _be.stop.toFixed(2) + '</span>' : '—', 'down'),
+        tcCell('涨停 / 洗盘', '<span class="nw">' + esc(_bld.slice(5) || '—') + '</span> <span class="nw">' + (te.washDays != null ? te.washDays + ' 日' : '—') + '</span>', '', false, true),
+        tcCell('距涨停收盘', isFinite(_bpos) ? ((_bpos > 0 ? '+' : '') + _bpos.toFixed(1) + '%') : '—',
+          (isFinite(_bpos) && _bpos >= -2 && _bpos <= 6) ? 'up' : '')
       ];
       foot = '<span class="xt">横盘启动 ' + (te.score == null ? '—' : te.score + ' 分') +
-        ' · 持有 ≤' + (_be.holdDays || 10) + ' 日</span>';
+        ' · 涨停日最低 ' + (te.limitLow != null ? Number(te.limitLow).toFixed(2) : '—') + '</span>';
     } else if (e.src === 'chen' && te) {
       // R100z222（用户 2026-10-26「开盘精选池子里也记得加入陈学长技术指标池，因为对胜率有帮助」）：
       // 四格与陈学长池卡片（chenPoolBlock.oneCard）逐格同源同文案——同一只票在两个页面显示两套数字，
@@ -5794,7 +5791,11 @@ function renderDuanban() {
         '<span>现价</span><span>证伪价</span><span>目标 · 持有</span></div>';
       bl.forEach(function (r) {
         var cls = ({ buy: 'bl-st-buy', over: 'bl-st-over', under: 'bl-st-under' })[r.state] || 'bl-st-unknown';
-        var anchorZh = (r.anchor === 'box') ? '箱体几何' : '现价 ±' + (bs.slipPct == null ? 1 : bs.slipPct) + '%';
+        // R100z233：横盘启动 v2 的买区是「涨停锚挂单带」（今收 −1%~+2%），
+        // 既不是箱体几何，也不是纯滑点带；三档都要能说清，别让读者猜。
+        var anchorZh = (r.anchor === 'box') ? '箱体几何'
+          : (r.anchor === 'anchor') ? '涨停锚挂单带'
+          : '现价 ±' + (bs.slipPct == null ? 1 : bs.slipPct) + '%';
         html += '<div class="bl-row">' +
           // 第一列分两层：上面是「名称 + 代码 + 来源徽标」，下面单独一行放仓位。
           // 早版本把仓位也塞进 .bl-nm 的 flex 里，于是名字长的行仓位换行、名字短的行不换行——

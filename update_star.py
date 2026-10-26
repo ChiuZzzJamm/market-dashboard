@@ -206,7 +206,8 @@ def build_buy_list(D, picks, quotes, blacklist):
               "开盘价上下 %.0f%% 内可下单（回测按次日盘口成交，超这条线就不是同一笔交易）；"
               "收盘跌破证伪价＝反包形态作废，先撤" % BUY_SLIP)
 
-    # ---- ② 横盘启动贴沿池：买区是箱体几何算出来的，不是滑点带 ----
+    # ---- ② 横盘启动池（v2 涨停锚口径）：买区＝次日挂单带，证伪价＝涨停日最低×0.98 ----
+    # 不给目标价（用户 2026-10-26「止盈你不用管」），只给买区 + 证伪价 + 失效线。
     for e in ((D.get("breakoutPool") or {}).get("passed") or []):
         c = str(e.get("code"))
         q = _q(c)
@@ -222,14 +223,16 @@ def build_buy_list(D, picks, quotes, blacklist):
             pos = CP.trade_params(hi, _num(b.get("stop"))).get("posPct")
         except Exception:
             pos = None
-        _push("bp", c, e.get("name"), e.get("sector"), q, lo, hi, "box",
-              b.get("stop"), "证伪价（跌破平台下沿）",
-              b.get("target"), b.get("holdDays"), pos,
-              "箱顶 %.2f 下方 %.2f~%.2f 挂低吸；高开越过 %.2f 属追突破不跟"
-              % (_num(e.get("top")) or 0, lo, hi, _num(b.get("chaseMax")) or hi),
-              extra={"score": e.get("score"), "distTop": e.get("distTop"),
-                     "boxPct": e.get("boxPct"), "squeeze": e.get("squeeze"),
-                     "dry": e.get("dry")})
+        _push("bp", c, e.get("name"), e.get("sector"), q, lo, hi, "anchor",
+              b.get("stop"), "证伪价（跌破涨停日最低）",
+              None, None, pos,
+              "涨停日 %s 起洗盘 %s 个交易日、量比 %s：在 %.2f~%.2f 挂低吸；"
+              "收盘站上 %.2f（较涨停板 +30%%）就算已经启动，不再追"
+              % (str(e.get("limitDay") or "—")[5:], e.get("washDays"),
+                 e.get("volRatio"), lo, hi, _num(b.get("invalidUp")) or 0),
+              extra={"score": e.get("score"), "posPct": e.get("posPct"),
+                     "washDays": e.get("washDays"), "volRatio": e.get("volRatio"),
+                     "limitDay": e.get("limitDay"), "limitLow": e.get("limitLow")})
 
     # ---- ③ 陈学长双池：trade 块参数齐全，直接搬；观察池（watching）不给买点 ----
     for kind, key in (("chen_strict", "strict"), ("chen_loose", "loose")):
