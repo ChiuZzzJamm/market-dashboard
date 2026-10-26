@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610262151"></script>
+<script src="data.js?v=202610262222"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -3323,7 +3323,8 @@ function renderSignalPerf() {
       '｜止损触及 ' + rt(r.touchRate) +
       '｜判定 ' + (r.verdict || '—');
     h += '<div class="rv-bar' + (w === null ? ' rv-na' : '') + '" title="' + escAttr(tip) + '">' +
-      '<div class="rv-nm">' + esc(r.label) + (r.legacy ? '<s>历史台账</s>' : '') +
+      '<div class="rv-nm">' + esc(r.label) +
+        (r.sub ? '<s>自有口径</s>' : (r.legacy ? '<s>历史台账</s>' : '')) +
         '<small>' + (r.n || 0) + ' 条 / ' + (r.days || 0) + ' 日</small></div>' +
       '<div class="rv-track"><i class="rv-fill' + (ok ? ' ok' : '') + '" style="width:' +
         (w === null ? 0 : w).toFixed(1) + '%"></i><u class="rv-mark"></u></div>' +
@@ -3332,6 +3333,14 @@ function renderSignalPerf() {
       '<div class="rv-vd' + (bad ? ' bad' : '') + '">' + esc(vdShort(r.verdict)) + '</div></div>';
   });
   h += '</div>';
+  // 陈学长是按它自己的口径（+5% 止盈 / 10 个交易日）结算的，与这张表的「1 日胜率」不是同一把尺子。
+  // 硬塞进 win1 就是混口径；不写出来又像没在跑——所以单独一行说明，样本数一起给（不让 2 笔当结论）。
+  var subs = P.ranking.filter(function (r) { return r.sub; });
+  if (subs.length) {
+    h += '<div class="rv-legend">' + subs.map(function (r) {
+      return esc(r.label) + '：' + esc(r.sub) + '（' + (r.n || 0) + ' 笔，样本不足，不作结论）';
+    }).join('；') + '</div>';
+  }
   if (withX.length && !passed.length) {
     h += '<div class="rv-legend">没有一条过线——这条结论本身是信息：四个池都在买「已经涨过的票」，' +
       '而回测里追强的次日超额是负的；正期望在对面（同板块落后 2pp 以上的那只，见下方 🎯 卡）。</div>';
@@ -4749,12 +4758,15 @@ function renderBreakoutPool() {
     '<div><b>一句话逻辑</b>：先有一根涨停（异动），然后缩量横盘洗盘，股价一般不跌破涨停日最低价；' +
     '洗完（量能枯竭）再启动。这页只出「洗完、还没启动」的那一批——在涨停收盘附近埋伏，' +
     '不追当天涨幅，也不追第二个板。</div>' +
-    '<div><b>判定规则</b>：' + esc(b.rule || '') + '。涨停按「一波」算——从近期最低收盘往后数的' +
-    '第一根涨停才是这一波的起点，连板只认第一根。</div>' +
+    '<div><b>判定规则</b>：' + esc(b.rule || '') + '。涨停按「一波」算——一波里的连板、隔日板都算同一次异动，' +
+    '锚点取这一波的第一根涨停。</div>' +
+    '<div><b>为什么量能要有下限</b>：缩量是必要条件，但不是越缩越好。全样本分档看，量比 0.70~0.85 那档' +
+    '20 日内触及 +15% 的概率最高（31.6%）；掉到 0.40 以下只有 19.4%，比随机买还差——那是没人管的死票，' +
+    '不是主力在洗盘。</div>' +
     '<div class="lg-hr"></div>' +
     '<div><b>分池</b>：主池＝洗盘 5~30 日、缩量达标、且较涨停板累计涨幅未超 30% 的票' +
     '（按分数降序，分数＝缩量 40 + 贴沿 30 + 洗盘天数 20 + 未破底 10）；失效池＝已经走完的那批。</div>' +
-    '<div><b>失效与离场</b>：只有三种情形会移出主池 —— ① 收盘跌破涨停日最低价且 2 个交易日内未收回 ' +
+    '<div><b>失效与离场</b>：只有三种情形会移出主池 —— ① 收盘跌破这一波最低价且 5 个交易日内未收回 ' +
     '② 收盘较涨停板高出 +30%（已经启动，再买就晚了）③ 洗盘超过 30 个交易日仍未启动。' +
     '已经回落但事件仍有效的票留在池里，只降分并显示位置。</div>' +
     '<div class="lg-tip">下一步：明日在卡上的买入区间挂低吸；收盘跌破证伪价（涨停日最低×0.98）' +
@@ -5833,7 +5845,7 @@ function chenCompareHtml(c) {
       (s.noStop ? '，' + s.noStop + ' 条止损位取不到、已排除（否则只输时间不输钱，胜率会虚高）' : '');
     return '<tr><td>' + esc(name) + '</td><td title="' + escAttr(nTip) + '">' + (s.n || 0) + '</td>' +
       '<td>' + (s.win || 0) + '</td><td>' + (s.loss || 0) + '</td><td>' + (s.expired || 0) + '</td>' +
-      '<td><b>' + wr + '</b></td>' +
+      '<td><b>' + wr + '</b>' + ((s.n || 0) > 0 && (s.n || 0) < 5 ? '<s>样本少</s>' : '') + '</td>' +
       '<td class="' + (s.avgRet > 0 ? 'up' : (s.avgRet < 0 ? 'down' : '')) + '" title="' + escAttr(avgTip) + '">' +
       ar + '</td></tr>';
   };
@@ -5877,6 +5889,13 @@ function chenCompareHtml(c) {
     // 表头顺序与结算三结局对齐：赢 + 亏 + 平 = 样本（平＝持仓满窗口两条线都没触，按窗口末收盘平）。
     // R100z233b：窗口已从 2 日拉到 10 日（见 chen_pool.py RULE_FROZEN_AT），标题不再写死「2 日」——
     // 台账里每条样本各自带 holdDays，旧样本 2 日、新样本 10 日，写死哪个都是错的。
+    // 2026-10-26 用户看不懂这张表：「三个选中不都是亏的吗」——因为上面列的是**今日名单**，
+    // 下面统计的是**已走完 10 个交易日窗口**的样本，两者根本不是同一批票。
+    // 不写明这一点，读者会把「2 笔 100%」当成「今天这 5 只的胜率」。
+    '<div class="cc-note">上表<b>只统计已经走完持有窗口的样本</b>（确认日次日开盘买、10 个交易日、' +
+      '+5% 止盈 / 收盘破止损）。上面列的今日名单还在窗口里，' +
+      '<b>' + (tr.openN || 0) + ' 条待结算</b>，不在这张表里——所以这里出现 100% 与今天几只下跌并不矛盾。' +
+      '样本少于 5 条的行只作记录，不构成结论。</div>' +
     '<div class="cc-tbl-w"><table class="cc-tbl"><thead><tr><th>口径</th><th>样本</th><th>赢</th><th>亏</th>' +
       '<th title="持仓满各自窗口（现口径 10 个交易日、2026-10-26 前的旧样本 2 日）未触目标也未破止损，按窗口末收盘平；收益仍计入均值">平</th>' +
       '<th title="赢 ÷ 样本（平不算赢）">胜率</th><th>均值</th></tr></thead>' +
