@@ -309,8 +309,8 @@ def collect(D):
     for x in (D.get('accumulation') or {}).get('scored') or []:
         add(x.get('code'), x.get('name'), x.get('sector'), 'accumulation')
 
-    for x in (D.get('powerScreen') or {}).get('passed') or []:
-        add(x.get('code'), x.get('name'), x.get('sector'), 'powerScreen')
+    for x in (D.get('breakoutPool') or {}).get('passed') or []:
+        add(x.get('code'), x.get('name'), x.get('sector'), 'breakoutPool')
 
     db = D.get('duanban') or {}
     for pool in ('confirmed', 'watching'):

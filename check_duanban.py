@@ -69,6 +69,28 @@ SINA_KLINE = ("https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/
 MA5_TOL = 0.97      # 收盘 ≥ MA5 × 0.97（容差 3%）才判「站稳 MA5」
 LOW_TOL = 0.98      # 收盘 < T 日低点 × 0.98（容差 2%）才判「破 T 日低点」
 
+# ---------------- R100z233（2026-10-26）断板反包 v3 口径 ----------------
+# 出处：全市场 18,225 笔样本回测（`duanban_study.py` / `duanban_extra.py` /
+# `rule_v3_check.py`），训练 2024-01~2025-12、样本外 2026-01~ 分开验。
+# 加这三个条件前后（zt_low 锚、止盈 5%、持有 10 日）：
+#
+#   口径                          全样本      训练      样本外     日均只数
+#   v2 现状（只看形态）           +0.060%   +0.160%    −0.209%     20.05
+#   v3-b（本常量全开）            +0.763%   +0.712%    +0.874%      2.35
+#
+# 逐条边际贡献（TP5/H10 基线 +0.144%）：市值≥100 亿 +0.178%、启动前20日≤10% +0.310%
+# → 是这两个把期望从 0 拉到正；上影线/首板/断板日跌幅再叠加只有 +0.001~+0.025，
+# 且样本量掉一半，**不加**。
+#
+# 两个反直觉但实测的点，别「好心」改回去：
+#   ① 距 MA5 越远越好：0~2% 只有 45.4%/+0.018%，>5% 是 68.6%/+1.078%。
+#      刚站上 MA5 就买是弱信号——那是「还没证明有承接」。
+#   ② 收紧止损全线更差（wash_low 48.6% vs zt_low 65.7%）：断板后日内波动大，
+#      紧止损只是提前打掉会回来的票。
+PRE20_MAX = 10.0    # 启动前 20 个交易日涨幅上限（%）——涨过了就不是「启动」是「延续」
+MA5_GAP_MIN = 2.0   # 收盘相对 MA5 的最小溢价（%）——刚贴住 MA5 不算有效承接
+CAP_MIN = 100.0     # 流通市值下限（亿元）——小盘断板的资金行为不可复制
+
 
 def curl_text(url, timeout=15):
     r = subprocess.run(["curl", "-s", "--max-time", str(timeout),
@@ -623,6 +645,71 @@ def _stock_clist_agg():
     return None
 
 
+MCAP_CACHE_DIR = "/tmp/duanban_mcap_cache"
+
+
+def fetch_market_caps(codes, today=None):
+    """候选票的**流通市值**（亿元）→ {code: mcap}。当日缓存，取不到返回已取到的部分。
+
+    v3 口径的第三个条件（CAP_MIN）需要市值，而 data.js 里没有（`ashare` 只有
+    指数/板块/资金，`fullScan.candidates` 只有代码）。所以按需拉腾讯行情
+    `qt.gtimg.cn`——**只拉候选票**、60 只/批（与 `common.fetch_names` 同一源同一批长，
+    实测可达），结果当日缓存到 `/tmp/duanban_mcap_cache/<日期>.json`。
+
+    腾讯返回的 `~` 分隔字段：`f[44]` = 流通市值（亿元）、`f[45]` = 总市值（亿元）。
+    已用 600900 长江电力（7306.21 亿）/ 000096 广聚能源（39.80 亿）实测核对过。
+
+    ⚠️ 取不到时返回 {}/部分结果，调用方必须显式降级（跳过市值过滤 + 打标记），
+    不能把「抓不到」当成「全部不达标」——那会把池子清空还看不出原因（24.16）。
+    """
+    import pathlib
+    day = today or _today_str()
+    try:
+        pathlib.Path(MCAP_CACHE_DIR).mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+    cache = os.path.join(MCAP_CACHE_DIR, f"{day}.json")
+    out = {}
+    if os.path.exists(cache):
+        try:
+            with open(cache, encoding="utf-8") as f:
+                out = json.load(f) or {}
+        except Exception:
+            out = {}
+    cs = [str(c).strip() for c in (codes or []) if str(c).strip()]
+    todo = [c for c in dict.fromkeys(cs) if c not in out]
+    if todo:
+        for i in range(0, len(todo), 60):
+            chunk = todo[i:i + 60]
+            q = ",".join(("sh" if c.startswith(("6", "9")) else "sz") + c for c in chunk)
+            url = "https://qt.gtimg.cn/q=" + q
+            txt = None
+            try:
+                txt = curl_text(url, timeout=12)
+            except Exception:
+                txt = None
+            if not txt:
+                continue
+            for line in txt.split(";"):
+                if '="' not in line:
+                    continue
+                try:
+                    f = line.split('="', 1)[1].rstrip('"').split("~")
+                    c, mv = f[2].strip(), float(f[44])
+                except (IndexError, TypeError, ValueError):
+                    continue
+                if len(c) == 6 and c.isdigit() and mv > 0:
+                    out[c] = round(mv, 2)
+            time.sleep(0.15)
+        if out:
+            try:
+                with open(cache, "w", encoding="utf-8") as f:
+                    json.dump(out, f, ensure_ascii=False)
+            except Exception:
+                pass
+    return out
+
+
 def _industry_of(hybk, agg):
     """hybk（涨停池申万行业，可能4字截断）→ agg 里的完整行业名（前缀互配）。"""
     if not hybk or not agg:
@@ -877,6 +964,16 @@ def check_form(code, kline, zt_date_iso):
     ma5 = sum(C(i) for i in range(n - 5, n)) / 5.0
     if C(n - 1) < ma5 * MA5_TOL:
         return None
+    # ---- v3-a：距 MA5 的最小溢价（见 CAP_MIN 上方注释 ①）----
+    if ma5 > 0 and (C(n - 1) / ma5 - 1) * 100 < MA5_GAP_MIN:
+        return None
+    # ---- v3-b：启动前 20 日涨幅上限 ----
+    # 取 T 日**之前**的 20 日（iT-21 → iT-1），不含涨停日本身，
+    # 否则涨停那 10% 会把所有票都顶到阈值以上。
+    if iT - 21 >= 0 and C(iT - 21) > 0:
+        pre20 = (C(iT - 1) / C(iT - 21) - 1) * 100
+        if pre20 > PRE20_MAX:
+            return None
     zt_md = f"{zt_date_iso[5:7]}/{zt_date_iso[8:10]}"
     n_shrink = n - 1 - i1
     return f"{zt_md}涨停→次{r1:.1f}倍量断板→{n_shrink}日缩量·站稳MA5"
@@ -1652,6 +1749,29 @@ def main():
     failed = []  # K线拉取失败的候选（多为新浪限频），预算允许时二轮重试（R70）
     res_lock = threading.Lock()
 
+    # ---- v3 市值条件（CAP_MIN）：放在抓 K 线**之前**，因为 K 线是 420s 预算的瓶颈。
+    # 这一步能把候选数砍掉一大半，等于给后面的并行抓取留出余量。
+    # 取不到市值的票**保留**（不误杀）；整批都取不到就整体跳过并打警告（24.16 显式降级）。
+    _caps = {}
+    try:
+        _caps = fetch_market_caps([c for c, _ in cands])
+    except Exception as _e:
+        print("[duanban] 市值接口异常：%s" % _e, file=sys.stderr)
+    if _caps:
+        _keep, _cut = [], 0
+        for _c, _rec in cands:
+            _mc = _caps.get(_c)
+            if _mc is None or _mc >= CAP_MIN:
+                _keep.append((_c, _rec))
+            else:
+                _cut += 1
+        print("[duanban] 市值过滤：流通市值 <%.0f 亿剔除 %d 只，候选 %d → %d 只"
+              % (CAP_MIN, _cut, len(cands), len(_keep)), file=sys.stderr)
+        cands = _keep
+    else:
+        print("[duanban] ⚠️ 市值全部取不到，本轮跳过 CAP_MIN 过滤（显式降级，"
+              "池子会偏松——v3 口径未完整生效）", file=sys.stderr)
+
     def run_one(code, rec, kl):
         """对单候选评估：--module 双池入 pairs，确认池同步入 results（历史口径）。"""
         hit = eval_candidate(code, rec, kl)
@@ -1767,7 +1887,10 @@ def main():
             if code in failed_codes:
                 reason = 'K线获取失败，形态校验缺失，暂归失效'
             elif code in cand_codes:
-                reason = '形态失效（不再符合涨停→放量断板→缩量→企稳结构）'
+                # R100z233：口径收紧后（v3 加了市值/启动前20日/距MA5 三道），
+                # 出池不等于「形态走坏」——多数是被新条件筛掉。原文案一口咬定
+                # 「形态失效」会让读者误判走势，这里改成对三种原因都成立的表述。
+                reason = '不再符合当前判定口径（形态走完，或市值／启动幅度／距MA5 未达标）'
             else:
                 reason = '超过观察窗口，形态失效'
             new_fails.append({'code': code, 'name': info.get('name', ''),

@@ -449,7 +449,7 @@ def collect_targets(D):
             add(e.get('code'), e.get('name'))
     for e in (db.get('star') or {}).get('picks') or []:
         add(e.get('code'), e.get('name'))
-    for key in ('harmonic', 'accumulation', 'powerScreen'):
+    for key in ('harmonic', 'accumulation', 'breakoutPool'):
         m = D.get(key) or {}
         for f in ('confirmPool', 'watchPool', 'passed', 'scored', 'strong', 'watch', 'failPool'):
             for e in m.get(f) or []:

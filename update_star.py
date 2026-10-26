@@ -67,6 +67,238 @@ def gap_tag(open_pct):
     return "neutral", "平开"
 
 
+# ---------------------------------------------------------------- R100z232 今日买入清单
+# 用户 2026-10-26 第 4 项：「若当天有符合断板反包池、横盘启动池、陈学长池的标的时，
+# 提示当日买入，且包含买入价格区间」。同一句话里还明确了：**不要「昨日持仓·今日离场」**，
+# 离场他自己看。所以本节只回答一个问题——今天买什么、多少钱买、跌到哪算买错了。
+#
+# 三池三套买区，每一套都锚在**池子自己已经算出来、且与回测同源**的价格上，不新造系数：
+#   · 横盘启动 bp   : entry.low ~ entry.high（箱体几何：箱顶×0.985 ~ 箱顶×1.005）
+#   · 陈学长 chen   : 池里 trade.stopPrice / targetPrice / holdDays / posPct 全齐，直接搬
+#   · 断板反包 pool : 池里**没有任何价格纪律字段**（只有 kline/pct/probability/probNote），
+#                     所以买区只给「现价 ± 滑点」这条可执行带（回测按次日盘口成交，滑点容差
+#                     不是预测），证伪价复用 stop_tracker.mech_stop 的 **T 日最低价**（唯一
+#                     权威锚），**目标价与持有天数不给**——不编一个没被回测验证过的数
+#   · 谐波 / 吸筹   : 同样没有价格纪律字段 → **不进清单**。硬凑一个买区就是编数字，
+#                     而编出来的数字会被当成纪律执行，比不显示更危险。
+BUY_SLIP = 1.0          # 滑点容差 %：只是买区半宽，不是收益预测
+BUY_SRC_ZH = {
+    'chen_strict': '陈学长·严格池',
+    'chen_loose': '陈学长·放宽池',
+    'duanban': '断板反包·确认池',
+    'bp': '横盘启动·贴沿',
+}
+BUY_ORDER = ('chen_strict', 'duanban', 'bp', 'chen_loose')
+
+
+def _num(x):
+    """安全转 float：None / '' / NaN / 非数值一律 None（不做 0 兜底，0 是合法价格）。"""
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return None
+    return None if v != v else v
+
+
+def build_buy_list(D, picks, quotes, blacklist):
+    """三个池 → (今日买入清单 rows, 汇总 summary)。
+
+    `rows` 按 BUY_ORDER 排序：陈学长严格池 → 断板反包确认池 → 横盘启动 → 陈学长放宽池。
+    `state` 是这只票**此刻**和买区的关系，不是推荐强度：
+        buy  现价落在买区里（可以下单）
+        over 现价已高于买区上沿（不追，等回落或就不做）
+        under 现价还没到买区下沿（挂单等，别提前进）
+        unknown 行情抓空（**不是「没机会」，是没数据**）
+    """
+    import stop_tracker as ST        # 唯一权威「T 日最低价」止损锚
+    import chen_pool as CP           # 唯一权威「风险预算 / 仓位 / 目标」口径
+
+    pick_codes = {str(p.get("code")) for p in (picks or [])}
+    rows, skipped = [], []
+
+    def _q(c):
+        return quotes.get(str(c)) or {}
+
+    def _guard(code, q, src_zh):
+        """三池共用的硬门槛。返回 True=可用；False=已记入 skipped。"""
+        c = str(code or "")
+        if not c.startswith(("60", "00")):
+            skipped.append({"code": c, "src": src_zh, "why": "非沪深主板（不在交易范围）"})
+            return False
+        if blacklist.get(c) == "red":
+            skipped.append({"code": c, "src": src_zh, "why": "硬风险黑名单（red）"})
+            return False
+        live = _num(q.get("pct"))
+        if live is not None and live < -2.0:
+            skipped.append({"code": c, "src": src_zh, "why": f"开盘现价 {live:+.1f}%，深跌不接"})
+            return False
+        if live is not None and live >= 9.5:
+            skipped.append({"code": c, "src": src_zh, "why": f"开盘现价 {live:+.1f}%，涨停买不进"})
+            return False
+        return True
+
+    def _push(kind, code, name, sector, q, lo, hi, anchor, invalid, invalid_zh,
+              target, hold_days, pos_pct, rule, extra=None):
+        last = _num(q.get("last"))
+        lo, hi, invalid, target = _num(lo), _num(hi), _num(invalid), _num(target)
+        if last is None or lo is None or hi is None:
+            state, state_zh = "unknown", "价格抓空"
+        elif last > hi * 1.0001:
+            state, state_zh = "over", "已高于买区"
+        elif last < lo * 0.9999:
+            state, state_zh = "under", "未到买区"
+        else:
+            state, state_zh = "buy", "在买区内"
+        row = {
+            "code": str(code), "name": name or "", "sector": sector or "",
+            "src": kind, "srcZh": BUY_SRC_ZH.get(kind, kind),
+            "price": last, "low": lo, "high": hi, "anchor": anchor,
+            "invalid": invalid, "invalidZh": invalid_zh or "证伪价",
+            "target": target, "holdDays": hold_days, "posPct": pos_pct,
+            "rule": rule, "state": state, "stateZh": state_zh,
+            "inPicks": str(code) in pick_codes,
+            # 距离用现价算，不是用买区中点——用户要看到的是「现在下单，跌多少算错」
+            "invalidPct": (round((invalid / last - 1) * 100, 1)
+                           if (invalid and last) else None),
+            "targetPct": (round((target / last - 1) * 100, 1)
+                          if (target and last) else None),
+        }
+        if extra:
+            row.update(extra)
+        rows.append(row)
+        return row
+
+    # ---- ① 断板反包确认池：只收 9:45 已过「板块情绪+资金」双闸的 picks（src=pool）----
+    # 观察池（watching，stage=待企稳）一律不给买点：还没企稳就没有可执行的买点，
+    # 给了就是把「再等一根确认 K 线」这个前提悄悄删掉。
+    for p in (picks or []):
+        if p.get("src") != "pool":
+            continue
+        c = str(p.get("code"))
+        q = _q(c)
+        last = _num(q.get("last"))
+        if last is None:
+            skipped.append({"code": c, "src": BUY_SRC_ZH["duanban"],
+                            "why": "行情抓空，给不出买区（不是没机会，是没数据）"})
+            continue
+        ent = None
+        for e in ((D.get("duanban") or {}).get("confirmed") or []):
+            if str(e.get("code")) == c:
+                ent = e
+                break
+        inv, inv_src = (None, "")
+        if ent:
+            try:
+                inv, inv_src = ST.mech_stop(ent, last)
+            except Exception:
+                inv, inv_src = None, ""
+        lo = round(last * (1 - BUY_SLIP / 100.0), 2)
+        hi = round(last * (1 + BUY_SLIP / 100.0), 2)
+        pos = None
+        if inv and inv < last:
+            try:
+                pos = CP.trade_params(last, inv).get("posPct")
+            except Exception:
+                pos = None
+        _push("duanban", c, p.get("name"), p.get("sector"), q, lo, hi, "live",
+              inv, ("T日最低价" if inv_src == "T日低点" else (inv_src or "证伪价")),
+              None, None, pos,
+              "开盘价上下 %.0f%% 内可下单（回测按次日盘口成交，超这条线就不是同一笔交易）；"
+              "收盘跌破证伪价＝反包形态作废，先撤" % BUY_SLIP)
+
+    # ---- ② 横盘启动贴沿池：买区是箱体几何算出来的，不是滑点带 ----
+    for e in ((D.get("breakoutPool") or {}).get("passed") or []):
+        c = str(e.get("code"))
+        q = _q(c)
+        if not _guard(c, q, BUY_SRC_ZH["bp"]):
+            continue
+        b = e.get("entry") or {}
+        lo, hi = _num(b.get("low")), _num(b.get("high"))
+        if lo is None or hi is None:
+            skipped.append({"code": c, "src": BUY_SRC_ZH["bp"], "why": "池条目缺买区字段"})
+            continue
+        pos = None
+        try:
+            pos = CP.trade_params(hi, _num(b.get("stop"))).get("posPct")
+        except Exception:
+            pos = None
+        _push("bp", c, e.get("name"), e.get("sector"), q, lo, hi, "box",
+              b.get("stop"), "证伪价（跌破平台下沿）",
+              b.get("target"), b.get("holdDays"), pos,
+              "箱顶 %.2f 下方 %.2f~%.2f 挂低吸；高开越过 %.2f 属追突破不跟"
+              % (_num(e.get("top")) or 0, lo, hi, _num(b.get("chaseMax")) or hi),
+              extra={"score": e.get("score"), "distTop": e.get("distTop"),
+                     "boxPct": e.get("boxPct"), "squeeze": e.get("squeeze"),
+                     "dry": e.get("dry")})
+
+    # ---- ③ 陈学长双池：trade 块参数齐全，直接搬；观察池（watching）不给买点 ----
+    for kind, key in (("chen_strict", "strict"), ("chen_loose", "loose")):
+        for e in ((D.get("chenPool") or {}).get(key) or []):
+            c = str(e.get("code"))
+            q = _q(c)
+            if not _guard(c, q, BUY_SRC_ZH[kind]):
+                continue
+            tr = e.get("trade") or {}
+            last = _num(q.get("last"))
+            # 陈学长买区＝现价±滑点（回测成交价是确认日次日开盘，9:45 的现价就是
+            # 那笔交易此刻还能拿到的价）；不给箱体，因为他这套口径没有箱体。
+            if last is None:
+                skipped.append({"code": c, "src": BUY_SRC_ZH[kind],
+                                "why": "行情抓空，给不出买区（不是没机会，是没数据）"})
+                continue
+            _push(kind, c, e.get("name"), e.get("sector"), q,
+                  round(last * (1 - BUY_SLIP / 100.0), 2),
+                  round(last * (1 + BUY_SLIP / 100.0), 2), "live",
+                  tr.get("stopPrice"), "证伪价（T日最低价）",
+                  tr.get("targetPrice"), tr.get("holdDays"), tr.get("posPct"),
+                  "确认日次日盘口买入；买入价超过现价 %.0f%% 就放弃这一笔"
+                  % BUY_SLIP,
+                  extra={"stopFar": tr.get("stopFar"),
+                         "riskNote": tr.get("riskNote"),
+                         "stopPct": tr.get("stopPct")})
+
+    rows.sort(key=lambda r: (BUY_ORDER.index(r["src"])
+                             if r["src"] in BUY_ORDER else 9,
+                             -(r.get("score") or 0)))
+
+    n_buy = sum(1 for r in rows if r["state"] == "buy")
+    by_src = {}
+    for r in rows:
+        by_src[r["srcZh"]] = by_src.get(r["srcZh"], 0) + 1
+    if not rows:
+        head = "今日三池无买点，不建仓"
+        if skipped:
+            head += "（%s）" % "；".join(
+                "%s %s" % (s["src"], s["why"]) for s in skipped[:4])
+        text = head + "。空池/无买点是常态，不要为了「今天买点什么」去池外找票。"
+    else:
+        seg = "、".join("%s %d 只" % (k, v) for k, v in by_src.items())
+        names = "、".join("%s(%s %.2f~%.2f)" % (r["name"], r["code"], r["low"], r["high"])
+                          for r in rows[:6])
+        text = "今日买点 %d 只（%s）：其中在买区内 %d 只。%s" % (len(rows), seg, n_buy, names)
+        if len(rows) > 6:
+            text += " 等"
+        if skipped:
+            text += "。未给买点 %d 只（%s）" % (
+                len(skipped), "；".join("%s %s" % (s["src"], s["why"]) for s in skipped[:3]))
+    summary = {
+        "n": len(rows),
+        "nBuy": n_buy,
+        "bySrc": by_src,
+        "text": text,
+        # 这段是**直接渲染成网页正文**的（前端 bl-rule 用 esc 原样输出，不解析 Markdown），
+        # 所以两条硬规矩：① 不许带 `**` 强调符（会原样显示成星号）；
+        # ② 不许出现 holdDays / stopPct 这类内部字段名（用户硬偏好：页面只出中文）。
+        # 2026-10-26 首轮截图实测两种都犯了，被 L16 视觉自检抓到。
+        "rule": ("买区＝此刻可以下单的价格带，不是目标价；证伪价被打穿＝形态作废，先撤不留；"
+                 "持有到每只标注的持有天数上限无条件了结（回测口径）。"
+                 "本节不含「昨日持仓·今日离场」——离场自行决定。"),
+        "skipped": skipped,
+        "slipPct": BUY_SLIP,
+    }
+    return rows, summary
+
+
 def _gap_summary(picks):
     """开盘价位置分布（低开/平开/高开各几只）。
 
@@ -155,7 +387,7 @@ def load_blacklist(base):
 
     R100z9y（2026-10-09 实战）：star 精选把硬风险黑名单标的（金溢科技 002869，
     red·两次减持公告）选进了 picks，直到 validate_stocks --scope star 才报 FAIL。
-    断板池由 16:00 数据步负责、谐波/九门/吸筹池也不查减持，**开盘精选是唯一有机会
+    断板池由 16:00 数据步负责、谐波/横盘启动/吸筹池也不查减持，**开盘精选是唯一有机会
     在选股环节拦住这类标的的闸口**，故在脚本里硬剔（severity=red），而不是让
     每天靠 AI 事后补救（AI 补救还会踩「配额已用尽、下一名也上不了」的坑）。
     文件缺失/损坏一律按空处理（源不可达不等于安全，但也不阻塞本任务）。
@@ -202,7 +434,7 @@ def fetch_open_indices():
 
 
 def fetch_stock_quotes(codes):
-    """批量腾讯 gtimg 个股快照 → {code: {pct, openPct}}；失败 {}。"""
+    """批量腾讯 gtimg 个股快照 → {code: {pct, openPct, open, last, prev}}；失败 {}。"""
     quotes = {}
     for i in range(0, len(codes), 60):
         batch = codes[i:i + 60]
@@ -219,10 +451,23 @@ def fetch_stock_quotes(codes):
             if len(f) > 32:
                 try:
                     d = {"pct": round(float(f[32]), 2)}  # 32=涨跌幅%
+                    # R100z232：买区要有**绝对价格**锚。此前只存涨跌幅，前端算不出
+                    # 「5.59~5.71 之间买」这种区间，只能显示百分比——用户第 4 项要的是价格。
+                    # 3=现价 4=昨收 5=今开（gtimg 口径，GBK 文本按 ~ 分隔）。
+                    try:
+                        d["last"] = float(f[3]) or None
+                    except Exception:
+                        d["last"] = None
+                    try:
+                        d["open"] = float(f[5]) or None
+                    except Exception:
+                        d["open"] = None
                     try:
                         prev, op = float(f[4]), float(f[5])
+                        d["prev"] = prev or None
                         d["openPct"] = round((op - prev) / prev * 100, 2) if prev and op > 0 else None
                     except Exception:
+                        d["prev"] = None
                         d["openPct"] = None
                     quotes[m.group(1)] = d
                 except Exception:
@@ -270,17 +515,17 @@ def build_star(D, base=None):
     for pool in ("confirmed", "watching"):
         pools.extend(db.get(pool) or [])
 
-    # ---- R100m（需求7）：技术池候选——直接从 谐波/九门/吸筹 池取标的（前一日 16:00 数据步结果） ----
+    # ---- R100m（需求7）：技术池候选——直接从 谐波/横盘启动/吸筹 池取标的（前一日 16:00 数据步结果） ----
     # 这些标的无 sentiment/probability（neutral 兜底），按池内得分排序，取头部，宁缺勿滥。
-    # R100z85（量纲修正，2026-10-08 用户质询「标的映射只有断板+九门」暴露）：原实现全池合并
-    # 按 score 降序取前 8，但九门量纲 score×10（8~10分=80~100）结构性碾压 谐波(确认65/观察55)
-    # 与 吸筹(60~76)——实测九门前 10 全为 90/80，top8 被九门垄断，谐波 12 只/吸筹 6 只候选
-    # 一个都进不了终选，AI 映射段随之只写断板+九门。改为**按池配额保底**：九门≤3、谐波≤3、
+    # R100z85（量纲修正，2026-10-08 用户质询「标的映射只有断板+单一技术池」暴露）：原实现全池合并
+    # 按 score 降序取前 8，但原九门量纲 score×10（8~10分=80~100）结构性碾压 谐波(确认65/观察55)
+    # 与 吸筹(60~76)——当时九门前 10 全为 90/80，top8 被它垄断，谐波 12 只/吸筹 6 只候选
+    # 一个都进不了终选，AI 映射段随之只写断板+单池。改为**按池配额保底**：横盘启动≤3、谐波≤3、
     # 吸筹≤2、陈学长≤2（配额决定入选资格，合并后分数只决定展示顺序），总量 10；
-    # 跨池去重按 九门→谐波→吸筹→陈学长 优先级（多池命中取先处理池的 label）；
+    # 跨池去重按 横盘启动→谐波→吸筹→陈学长 优先级（多池命中取先处理池的 label）；
     # -2% 深跌/≥9.5% 涨停剔除守卫不变。R100z221 新增陈学长池，因此总量从 8 提到 10
     # （原因见下面「配额合计必须 ≤ 切片上限」那段）。
-    hz_list, pw_list, acc_list = [], [], []
+    hz_list, bp_list, acc_list = [], [], []
     hz = D.get("harmonic") or {}
     _seen_hz = set()
     for it in (hz.get("confirmPool") or [])[:6] + (hz.get("watchPool") or [])[:6]:
@@ -290,15 +535,18 @@ def build_star(D, base=None):
             hz_list.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
                             "src": "hz", "label": f"谐波{it.get('pattern') or ''}",
                             "score": 65 if it.get("stage") == "确认" else 55})
-    pw = D.get("powerScreen") or {}
-    _seen_pw = set()
-    for it in (pw.get("passed") or [])[:10]:
+    # R100z232：九门（powerScreen）已下线，换成横盘启动（breakoutPool）。
+    # 量纲变化：九门 score 是 0-10 的「过几门」，所以要 ×10 才和吸筹同量纲；
+    # 横盘启动 score_of() 直接出 0-100，**不能再 ×10**，否则单只票 900 分直接垄断配额。
+    bp = D.get("breakoutPool") or {}
+    _seen_bp = set()
+    for it in (bp.get("passed") or [])[:10]:
         c = str(it.get("code") or "")
-        if c.startswith(("60", "00")) and c not in _seen_pw:
-            _seen_pw.add(c)
-            pw_list.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
-                            "src": "pw", "label": f"九门{it.get('score') or ''}分",
-                            "score": int(it.get("score") or 0) * 10})  # 量纲：9分=90（仅池内排序用）
+        if c.startswith(("60", "00")) and c not in _seen_bp:
+            _seen_bp.add(c)
+            bp_list.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
+                            "src": "bp", "label": f"横盘启动{it.get('score') or ''}分",
+                            "score": int(it.get("score") or 0)})  # 量纲：0-100（已同吸筹）
     acc = D.get("accumulation") or {}
     for it in (acc.get("scored") or []):
         try:
@@ -334,7 +582,7 @@ def build_star(D, base=None):
             except Exception:
                 _lbs = 1
             # 排序分只在池内用：口径档位（严格 80 / 放宽 70）+ 每板 +4（最多算 3 板）。
-            # 不与九门 ×10 的量纲混比——配额已经保证各池的上车名额，分数只决定展示顺序。
+            # 不与 ×10 的量纲混比——配额已经保证各池的上车名额，分数只决定展示顺序。
             chen_list.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
                               "src": "chen", "sentiment": it.get("sentiment") or "neutral",
                               "label": ("陈学长·严格池·" if _tier == "strict" else "陈学长·放宽池·")
@@ -343,12 +591,12 @@ def build_star(D, base=None):
     # ⚠️ 配额装配挪到 picks 定稿之后（R100z221）——理由见下面 `pool_codes` 那一段。
     # 这里只先把四个池的候选代码汇总出来，供下面批量抓个股快照用。
     _tech_codes = []
-    for _l in (pw_list, hz_list, acc_list, chen_list):
+    for _l in (bp_list, hz_list, acc_list, chen_list):
         _tech_codes.extend([t["code"] for t in _l])
     _tech_codes = list(dict.fromkeys(_tech_codes))
 
     if not pools and not _tech_codes:
-        return None, "断板反包双池与四个技术池（谐波/九门/吸筹/陈学长）均为空"
+        return None, "断板反包双池与四个技术池（谐波/横盘启动/吸筹/陈学长）均为空"
 
     # ---- 盘面：指数 / 行业涨幅 / 资金 ----
     idx = fetch_open_indices()
@@ -362,7 +610,7 @@ def build_star(D, base=None):
             continue
     sectors = [s for s in sectors if s["name"]]
     sectors.sort(key=lambda s: -s["pct"])
-    # R100z170：技术池标的（谐波/九门/吸筹）身上只有 sector 名、没有板块涨幅字段，
+    # R100z170：技术池标的（谐波/横盘启动/吸筹）身上只有 sector 名、没有板块涨幅字段，
     # 结果「开盘精选」里来自技术池的条目板块涨幅整片「—」。这里按同花顺一级行业名
     # 精确命中一次补上；名字不属同花顺一级（例如主题名「创新药·CXO」）就留空，
     # 由前端 boardPctOf 三级回落兜底，绝不硬套。
@@ -479,15 +727,15 @@ def build_star(D, base=None):
     # 而陈学长严格池 16 只里有 13 只同时命中断板池 → 配额给它的 2 个座位几乎每次都被
     # 合并段那句 `if t["code"] in pool_codes: continue` 挡掉，实际贡献 0 席
     # （用户 2026-10-26「开盘精选池子里也记得加入陈学长技术指标池，因为对胜率有帮助」＝没兑现）。
-    # 现在先剔掉断板池已选走的票，再按 九门→谐波→吸筹→陈学长 的顺序填配额，配额才真能兑现。
+    # 现在先剔掉断板池已选走的票，再按 横盘启动→谐波→吸筹→陈学长 的顺序填配额，配额才真能兑现。
     # 开盘深跌(<-2%)/涨停(≥9.5%)的剔除也一起上移：原来被剔的票仍然占着一个配额位、不顺位递补，
     # 等于同一个池的座位凭空少几个（行情一差就整池消失）。
     pool_codes = {p["code"] for p in picks}
     tech, _used = [], set()
     # ⚠️ 配额合计必须 ≤ 下面切片上限：R100z85 的教训是「合并后按 score 降序取前 N」会让
-    # 量纲最大的九门垄断名额，配额等于白写。所以这里配额和 = 10，切片也必须是 [:10]；
+    # 量纲最大的池垄断名额，配额等于白写。所以这里配额和 = 10，切片也必须是 [:10]；
     # 加池要同时改这两个数，只改一个就会静默把最后一个池全砍掉。
-    for _lst, _quota in ((pw_list, 3), (hz_list, 3), (acc_list, 2), (chen_list, 2)):
+    for _lst, _quota in ((bp_list, 3), (hz_list, 3), (acc_list, 2), (chen_list, 2)):
         _cnt = 0
         for _t in _lst:
             if _cnt >= _quota:
@@ -522,7 +770,7 @@ def build_star(D, base=None):
         if live is not None:
             note += f"·现涨{live:+.1f}%"
         picks.append({"code": t["code"], "name": t["name"], "sector": t["sector"],
-                      # R100z221：技术池条目自带情绪（陈学长池有 sentiment，谐波/九门/吸筹没有 →
+                      # R100z221：技术池条目自带情绪（陈学长池有 sentiment，谐波/横盘启动/吸筹没有 →
                       # 落到 neutral）。以前这里写死 "neutral"，会把陈学长的利空票也标成中性；
                       # 利空票在 chen_list 构造时已经剔除，这里只是不覆盖真值。
                       "sentiment": t.get("sentiment") or "neutral", "probability": None,
@@ -610,10 +858,22 @@ def build_star(D, base=None):
         "⚠️ 本次开盘精选存在数据缺口：同花顺行业涨幅与主力资金接口连续两次抓取失败，"
         "板块情绪与资金流向两项判据缺失。脚本按既定纪律不做板块挂钩判定，"
         "因此断板反包池标的全部不参与本次精选，仅保留前一日 16:00 数据步筛出的"
-        "形态类技术池标的（谐波/九门/吸筹）。指数与个股实时涨跌取自腾讯行情，正常可用。"
+        "形态类技术池标的（横盘启动/谐波/吸筹）。指数与个股实时涨跌取自腾讯行情，正常可用。"
         "此为取数故障，不代表当日「无合格板块」或市场无机会，请勿据此判断强弱；"
         "可结合盘中资金回流情况另行观察，待接口恢复后按常规口径重跑。"
     )
+
+    # ---- R100z232：今日买入清单（用户第 4 项）----
+    # 放在 picks 定稿之后、star 组装之前：它读的是 picks（断板池已过双闸）+ 三个池的
+    # 原始条目（横盘启动/陈学长 的买区字段只在池条目里，picks 是精简副本）。
+    # 失败不阻断：清单拿不到就只少一块，picks/pushText 照常出。
+    buy_rows, buy_summary = [], None
+    try:
+        buy_rows, buy_summary = build_buy_list(D, picks, quotes, blacklist)
+    except Exception as _e:                                   # noqa: BLE001
+        buy_summary = {"n": 0, "nBuy": 0, "bySrc": {},
+                       "text": "买入清单生成失败（%s）——这是脚本故障，不代表今日无买点。" % _e,
+                       "rule": "", "skipped": [], "slipPct": BUY_SLIP}
 
     star = {
         "date": now.strftime("%Y-%m-%d"),
@@ -621,10 +881,12 @@ def build_star(D, base=None):
         "marketLine": market_line,
         "sentiment": sentiment,
         "picks": picks,
+        "buyList": buy_rows,
+        "buySummary": buy_summary,
         "gapSummary": _gap_summary(picks),
         "tapeSummary": tape_summary,
         "pushText": push_text,
-        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波/九门/吸筹池直接取标的；R100z85：技术池按池配额 九门3/谐波3/吸筹2 防单池量纲垄断；R100z156：行业/资金接口抓空重试+显式降级；R100z192：picks 增 gapTag 开盘价位置标注 + star.gapSummary 分布，只标注不排序；R100z193：接入 tape.py 分时量价结构（均价线/跌破次数/下跌分钟量占比/爆量倍数），picks 增 tape 字段 + star.tapeSummary，动作口径由盘口结构决定，gapTag 降级为价格事实） + 自动化 AI 复核",
+        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波/吸筹池直接取标的；R100z85：技术池按池配额 防单池量纲垄断；R100z232：九门下线换横盘启动（配额 横盘启动3/谐波3/吸筹2）+ 新增 star.buyList 今日买入清单（三池买区/证伪价/目标/持有天数/仓位，不含离场提示）；R100z156：行业/资金接口抓空重试+显式降级；R100z192：picks 增 gapTag 开盘价位置标注 + star.gapSummary 分布，只标注不排序；R100z193：接入 tape.py 分时量价结构（均价线/跌破次数/下跌分钟量占比/爆量倍数），picks 增 tape 字段 + star.tapeSummary，动作口径由盘口结构决定，gapTag 降级为价格事实） + 自动化 AI 复核",
     }
     return star, None
 
@@ -646,6 +908,20 @@ def main():
         print(f"  {p['code']} {p['name']} | {p['note']} | "
               + (f"score源概率 {_pv}%" if _pv is not None else "score源概率 未给"))
     print("[star] marketLine:", star["marketLine"])
+    # R100z232：今日买入清单（用户第 4 项）——落库前先在日志里打出来，
+    # 出问题时能一眼分清「没买点」和「清单生成失败」。
+    _bs = star.get("buySummary") or {}
+    print("[star] 买入清单 %d 只（在买区内 %d 只）: %s"
+          % (_bs.get("n") or 0, _bs.get("nBuy") or 0, _bs.get("text") or ""))
+    for r in (star.get("buyList") or []):
+        print("   %-6s %-8s %-14s 买区 %.2f~%.2f | 现价 %s | %s | 证伪 %s | 目标 %s | 持 %s"
+              % (r["code"], r["name"][:8], r["srcZh"],
+                 r["low"] or 0, r["high"] or 0,
+                 ("%.2f" % r["price"]) if r["price"] is not None else "—",
+                 r["stateZh"],
+                 ("%.2f" % r["invalid"]) if r["invalid"] is not None else "—",
+                 ("%.2f" % r["target"]) if r["target"] is not None else "—",
+                 ("%d日" % r["holdDays"]) if r["holdDays"] else "—"))
     if args.dry:
         print("[DRY-RUN] 未写回")
         return

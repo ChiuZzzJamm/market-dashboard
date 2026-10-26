@@ -1,0 +1,340 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ⛔ 已退役（R100z232，2026-10-26）—— 九门模块下线，产品链路里不再有任何消费方。
+#   本文件迁移到 _retired/，只为 `backtest_indicators.py` 的「四指标年化对照」留一份历史口径，
+#   让「横盘启动 vs 九门」的对照能复现（横盘启动 t=0.41 / 九门 t=−5.02 就是用它跑出来的）。
+#   已经在 main() 里禁掉 --write：谁把它移回根目录再跑，也写不出 data.js 的 powerScreen 节点，
+#   杜绝「退役脚本复活一个前端已不渲染的顶层节点」这类半死链路（G12 会 FAIL）。
+"""量化强势筛选（2026-09-26 新增 · 方向②，分时条件已取消 → 纯日线收盘筛选）。
+
+方法论：fin-strategy-engine skill 选股扩展（数据清单方向②）。全部为日级确定性阈值，
+不依赖盘中分时（用户 9/26 拍板：取消盘中自动化）。
+
+- 九道硬阈值（G1-G9）：G1 涨幅≥3% / G2 放量≥1.5×5日均量 / G3 价处20日区间上1/3 /
+  G4 站上MA20 / G5 非ST主板 / G6 近5日无长上影出货 / G7 当日振幅≤15% /
+  G8 波动率适中(ATR14/close∈[2%,8%]) / G9 RSI14∈[40,80]。
+- 硬门禁：G1/G2/G4/G5/G7 必过；质量门：G3/G6/G8/G9 过≥3 道。
+- score = 通过阈值数（0-9）；passed = 硬门禁全过 且 质量门≥3。
+- 扫描域：collect_pool_codes ∪ 断板池 ∪ stkKlines 内 60/00 标的；优先内嵌 stkKlines。
+- 交叉徽标：命中 harmonic.tags / accumulation.scored 则打标（前端用）。
+- 输出：D.powerScreen。失败保留旧值（R91n）。
+- 用法：python3 power_screener.py [--dry-run] [--self-test]
+"""
+import sys, json, os, datetime
+
+# R100z232：本文件已移到 _retired/，同级目录里没有兄弟模块；把上级（项目根）加进
+# sys.path，这样 `python3 _retired/power_screener.py` 也能跑（BASE 同步指回项目根，
+# load_dashboard_data 才不会去 _retired/ 里找 data.js）。
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_ROOT = os.path.dirname(_HERE)
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
+
+import kline_cache as K
+# R100z56：失效归档池滚动窗口走 common.roll_fail_pool（节假日感知 5 交易日），
+# 旧实现只数周一~周五，长假会被数错、导致节后首日误清空归档池。
+# R100z64：原顶层 `import common` 从未被顶层使用（调用点在 main 内 import），属死 import，已删。
+
+BASE = _ROOT
+
+# 硬门禁（必过）
+HARD = ['g1', 'g2', 'g4', 'g5', 'g7']
+# 质量门（过≥3）
+SOFT = ['g3', 'g6', 'g8', 'g9']
+SOFT_NEED = 3
+
+
+def _ma(vals, n):
+    # R100z59：与 accumulation_score.py/_ma 同口径补 `n <= 0` 守卫——九门只调 _ma(v,5)，
+    # 但同一个 _ma 也被 MA20 之类的曲线复用；n=0 时原写法走 `vals[-0:]` = 全量切片，
+    # 返回"整段均值"而非 None，指标会静默变成一条被拉平的错误值（宁缺毋滥 → 该判无效就 None）。
+    if len(vals) < n or n <= 0:
+        return None
+    s = vals[-n:]
+    return sum(s) / len(s)
+
+
+def _rsi14(closes):
+    if len(closes) < 15:
+        return None
+    gains, losses = [], []
+    for i in range(1, len(closes)):
+        d = closes[i] - closes[i - 1]
+        gains.append(max(d, 0))
+        losses.append(max(-d, 0))
+    ag = sum(gains[-14:]) / 14
+    al = sum(losses[-14:]) / 14
+    if al == 0:
+        return 100.0
+    rs = ag / al
+    return 100 - 100 / (1 + rs)
+
+
+def screen_one(bars, name='', idx=None):
+    """返回 dict: {passed, score, gates:{g1..g9:bool}, pct, volRatio, rsi, reason}。
+
+    idx：以 bars[idx] 作为「最新一根」判定（历史逐日重放口径用，
+    默认 None = bars[-1]，与实盘口径一致）。所有相对尾部的窗口（20 日区间、
+    近 5 日、ATR14、RSI14）都随 idx 平移；idx 之外的数据一律不得泄漏。
+    注：原依赖的外部回测脚本 signal_stats.py 已于 R100z31 下线（不计入
+    data.js.signalStats），重放口径现由本函数自身支持。
+    """
+    n = len(bars)
+    gates = {f'g{i}': False for i in range(1, 10)}
+    if n < 25 or (idx is not None and idx < 24):
+        return {'passed': False, 'score': 0, 'gates': gates, 'pct': 0,
+                'volRatio': 0, 'rsi': 0, 'reason': '数据不足25根'}
+
+    end = n - 1 if idx is None else idx
+    last = bars[end]
+    prev = bars[end - 1]
+    closes = [b['close'] for b in bars[:end + 1]]
+    pct = last['close'] / prev['close'] - 1
+    # G1 涨幅≥3%
+    gates['g1'] = pct >= 0.03
+    # G2 放量（R100z51 口径修正）：量比分母必须是**前 5 日均量（不含当日）**。
+    # 原写法 `_ma([...],5)` 取的是 bars 尾部 5 根（**含当日**），分母被当日量自身抬高，
+    # 实测同一段 K 线（002971，84 天）：现口径「量比≥1.5」只检出 6 天，标准口径检出 11 天
+    # ——G2 是硬门禁之一，等于是把约 45% 的放量达标日直接判死。修复后与
+    # accumulation_score._vol_ma5（注释已写明「不含 i 当日」）口径对齐。
+    vma5 = _ma([b['volume'] for b in bars[:end]], 5)
+    vol_ratio = (last['volume'] / vma5) if vma5 else 0
+    gates['g2'] = vol_ratio >= 1.5
+    # G3 价处20日区间上1/3
+    hi20 = max(b['high'] for b in bars[end - 19:end + 1])
+    lo20 = min(b['low'] for b in bars[end - 19:end + 1])
+    gates['g3'] = (hi20 - lo20) > 0 and last['close'] >= lo20 + 0.66 * (hi20 - lo20)
+    # G4 站上MA20
+    ma20 = _ma(closes, 20)
+    gates['g4'] = ma20 is not None and last['close'] > ma20
+    # G5 非ST主板（code 已在扫描域限定 60/00；此处只排 ST）
+    gates['g5'] = 'ST' not in (name or '') and 'st' not in (name or '')
+    # G6 近5日无长上影出货
+    cnt_bad = 0
+    for b in bars[end - 4:end + 1]:
+        us = b['high'] - max(b['open'], b['close'])
+        body = abs(b['close'] - b['open'])
+        if body > 0 and us >= 2.5 * body and b['close'] < b['open']:
+            cnt_bad += 1
+    gates['g6'] = cnt_bad <= 1
+    # G7 当日振幅≤15%
+    amp = (last['high'] - last['low']) / last['close']
+    gates['g7'] = amp <= 0.15
+    # G8 波动率适中
+    trs = []
+    for i in range(1, end + 1):
+        h, l, pc = bars[i]['high'], bars[i]['low'], bars[i - 1]['close']
+        trs.append(max(h - l, abs(h - pc), abs(l - pc)))
+    atr = sum(trs[-14:]) / 14 if len(trs) >= 14 else 0
+    vrate = atr / last['close'] if last['close'] else 0
+    gates['g8'] = 0.02 <= vrate <= 0.08
+    # G9 RSI14
+    rsi = _rsi14(closes)
+    gates['g9'] = (rsi is not None) and (40 <= rsi <= 80)
+
+    hard_ok = all(gates[g] for g in HARD)
+    soft_ok = sum(1 for g in SOFT if gates[g]) >= SOFT_NEED
+    score = sum(1 for g in gates.values() if g)
+    passed = hard_ok and soft_ok
+
+    reason = ';'.join(k.upper() for k, v in gates.items() if v)
+    return {'passed': passed, 'score': score, 'gates': gates, 'pct': round(pct * 100, 2),
+            'volRatio': round(vol_ratio, 2), 'rsi': round(rsi, 1) if rsi else None,
+            'reason': reason or '无'}
+
+
+# ---------------- 自检 ----------------
+def _mk_power_bars():
+    """合成一只强势股：温和上行（含涨跌互现使 RSI 落在 40-80）+ 放量长阳收盘（过全部 9 门）。"""
+    bars = []
+    p = 50.0
+    for i in range(40):
+        chg = 0.012 if i % 2 == 0 else -0.009  # 净上行 + 含回调 → RSI 适中
+        o = p
+        c = p * (1 + chg)
+        hi = max(o, c) * 1.015
+        lo = min(o, c) * 0.985
+        bars.append({'day': '', 'open': o, 'close': c, 'high': hi, 'low': lo, 'volume': 1_000_000})
+        p = c
+    # 末根长阳（涨幅≥3% + 放量）
+    prev_c = bars[-1]['close']
+    nl = {'day': '', 'open': prev_c, 'close': prev_c * 1.035,
+          'high': prev_c * 1.046, 'low': prev_c * 0.999, 'volume': 4_800_000}
+    bars.append(nl)
+    return bars
+
+
+def self_test():
+    bars = _mk_power_bars()
+    r = screen_one(bars, '测试股')
+    print(f"[SELF-TEST] power passed={r['passed']} score={r['score']} "
+          f"pct={r['pct']}% volRatio={r['volRatio']} rsi={r['rsi']}")
+    print(f"[SELF-TEST] gates={r['gates']}")
+    ok = r['passed'] and r['score'] == 9
+    print(f"[SELF-TEST] {'OK' if ok else 'FAIL'} (期望 全过 9 门)")
+    return ok
+
+
+# ---------------- 主流程 ----------------
+def main():
+    args = sys.argv[1:]
+    # R100z232：退役脚本**永不允许写盘**。--write 直接拒绝，默认也改成 dry。
+    if '--write' in args:
+        print('[POWER] ⛔ 本脚本已退役（九门下线），不再写 data.js。'
+              '需要重算九门口径请只做回测（backtest_indicators.py --ind power）。')
+        return 2
+    if '--self-test' in args:
+        sys.exit(0 if self_test() else 1)
+    # R100z27：本脚本没用 argparse，`--help` 会直接跑一遍 651 只全扫描（慢且易被误当成语法检查）。
+    # 显式早退，与其它脚本的 --help 行为对齐（避免「查一下用法」触发一次生产扫描）。
+    if '--help' in args or '-h' in args:
+        print('用法：python3 power_screener.py [--dry-run] [--self-test] [--write]')
+        print('  --dry-run   只打印扫描结果，不写回 data.js（默认即 dry）')
+        print('  --self-test 合成一只强势股自检 9 道门是否都能判过')
+        print('  --write     写回 data.js 的 D.powerScreen')
+        return
+
+    import common
+    # R100z232：退役后恒为 dry（上面的 --write 已被拒绝，这里再兜一层，防止将来有人改回去）。
+    dry = True
+
+    D = common.load_dashboard_data(BASE)
+    names = K.collect_pool_names(D)  # R100g：池内 code→name（stkKlineNames 缺名兜底）
+    sec_map = K.collect_sectors(D)   # R100q：code→行业（弹窗板块徽章全覆盖，新浪兜底）
+    codes = K.collect_pool_codes(D)
+    # 扩展扫描域：断板池 code + stkKlines 内 60/00 标的
+    for pool in ('confirmed', 'watching'):
+        for e in (D.get('duanban') or {}).get(pool) or []:
+            c = str(e.get('code') or '')
+            if c.startswith(('60', '00')):
+                codes.append(c)
+    sk = D.get('stkKlines') or {}
+    for c in sk:
+        if c.startswith(('60', '00')):
+            codes.append(c)
+    codes = sorted(set(codes))
+    print(f"[POWER] 扫描域 {len(codes)} 只（优先内嵌 stkKlines）")
+
+    # 交叉徽标
+    htags = set((D.get('harmonic') or {}).get('tags', {}).keys())
+    ascodes = set(str(it.get('code') or '') for it in (D.get('accumulation') or {}).get('scored', []) or [])
+
+    passed = []
+    for c in codes:
+        bars = K.get_bars(c)
+        if not bars or len(bars) < 25:
+            continue
+        nm = names.get(c) or (D.get('stkKlineNames') or {}).get(c) or ''
+        r = screen_one(bars, nm)
+        if not r['passed']:
+            continue
+        item = {'code': c, 'name': nm, 'sector': sec_map.get(c, ''), 'score': r['score'], 'pct': r['pct'],
+                'volRatio': r['volRatio'], 'rsi': r['rsi'], 'lastClose': round(bars[-1]['close'], 2),
+                'reasons': r['reason'], 'story': '', 'deduce': None}
+        if c in htags:
+            item['harmonic'] = (D['harmonic']['tags'] or {}).get(c)
+        if c in ascodes:
+            item['acc'] = True
+        passed.append(item)
+    passed.sort(key=lambda x: (-x['score'], -x['pct']))
+
+    # R100z167：名缺失兜底（用户截图实报「失效池出现空行」的根因）。
+    # collect_pool_names 只覆盖「池内 + stkKlineNames」，本脚本扩展扫描域（断板池/全量
+    # stkKlines 的 60/00）里有些标的查不到名 → name='' → passed 与 failPool 都带空名。
+    # 只在**确实缺名**的标的上补一次腾讯行情（60 只/批），失败就沿用空名并由
+    # roll_fail_pool 丢弃该归档条目（绝不写空串进 data.js 让前端渲染空行）。
+    _miss = sorted({str(i.get('code') or '') for i in passed if not str(i.get('name') or '').strip()})
+    _old_ps = (D.get('powerScreen') or {})
+    for _k in ('failPool', 'passed'):
+        _miss += sorted({str(x.get('code') or '') for x in (_old_ps.get(_k) or [])
+                         if isinstance(x, dict) and not str(x.get('name') or '').strip()})
+    _miss = [c for c in dict.fromkeys(_miss) if c]
+    if _miss:
+        _got = common.fetch_names(_miss) or {}
+        for i in passed:
+            if not str(i.get('name') or '').strip():
+                i['name'] = _got.get(str(i.get('code') or ''), '')
+        names.update(_got)
+        print(f"[POWER] 补名：需要 {len(_miss)} 只，取到 {len(_got)} 只"
+              f"（仍无名 {len(_miss) - len(_got)} 只，其失效归档条目会被丢弃）")
+    # ⚠️ R100z57：不许拿 date.today() 当交易日——周末/长假跑一次就会把假日期写进
+    # tradeDate 与 entryDate（页面标题印「周六收盘」+ 全池误挂「新」徽章）。
+    today = common.today_trade_date()
+
+    new_field = {
+        'updatedAt': f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}（量化筛选 {today} 收盘 数据已自动更新）",
+        'tradeDate': today,
+        'passed': passed[:30],
+        'summary': '',
+    }
+    old = D.get('powerScreen')
+    # R100z44：入池首日标记——新入池标的 entryDate=本数据交易日，老标的沿用首次入池日
+    # （从旧 data.js 按 code 继承；离池后再进视为新入池）。前端据此首日黄色高亮+「新」徽章。
+    # ⚠️ R100z57 判定口径收紧（见 accumulation_score.py 同段长注）：旧写法 `_old_ed.get(code) or today`
+    # 会在「上一轮没有 entryDate」时一律写今天 → 整屏刷「新」。现改三分支：沿用旧值 / 首次见→写今天 /
+    # 见过但无记忆→不写（前端不挂徽章，宁缺毋滥）。
+    _old_pools = [i for i in (old or {}).get('passed') or [] if isinstance(i, dict)]
+    _old_ed = {str(i.get('code') or ''): i.get('entryDate') for i in _old_pools}
+    _old_codes = set(_old_ed.keys())
+    for i in new_field.get('passed') or []:
+        _c = str(i.get('code') or '')
+        _ed = _old_ed.get(_c)
+        if _c in _old_codes and _ed:
+            i['entryDate'] = _ed
+        elif _c not in _old_codes:
+            i['entryDate'] = today
+    # ---------------- R100z56：失效归档池（用户 2026-10-04 要求，参考断板反包/谐波） ----------------
+    # 定义：上一轮 passed 内、本轮不再过阈值的标的 → 归因失效归档，自失效日起留 5 个交易日。
+    # 九门是「当日强度」筛、天然逐日重算，只对上一轮还在池内的标的归档，绝不对从未入池的标的补写。
+    # ⚠️ 成因不再猜：旧条目只带 score/gates，取不到是哪道门掉下来，如实写「本轮未过九门阈值」。
+    _new_codes = {str(i.get('code')) for i in passed}
+    new_fails = []
+    for _oi in ((old or {}).get('passed') or []):
+        if not isinstance(_oi, dict):
+            continue
+        _c = str(_oi.get('code') or '')
+        if not _c or _c in _new_codes:
+            continue
+        new_fails.append({'code': _c,
+                          'name': (_oi.get('name') or '').strip() or (names.get(_c) or ''),
+                          'sector': _oi.get('sector') or '',
+                          'score': _oi.get('score'),
+                          'reason': f"本轮未过九门阈值（上一轮 {_oi.get('score')}/9 门，阈值不再满足）",
+                          'entryDate': today})
+    if not passed and old:
+        print('[POWER] 本轮无达标标的，保留既有池（R91n 不清场）')
+        old['note'] = (old.get('note') or '') + f"｜{today} 本轮无新命中"
+        old['failPool'] = common.roll_fail_pool(old.get('failPool') or [], [], today,
+                                                exclude_codes=_new_codes, name_map=names)
+        new_field = old
+    elif not passed and not old:
+        print('[POWER] 无达标且无旧值，写空结构')
+    else:
+        _existed = len(new_fails)
+        new_field['failPool'] = common.roll_fail_pool(
+            (old or {}).get('failPool') or [], new_fails, today, exclude_codes=_new_codes,
+            name_map=names)
+        if _existed:
+            print(f"[POWER] 失效池新增 {_existed} 只（5 交易日滚动窗口后共 "
+                  f"{len(new_field['failPool'])} 只）")
+    D['powerScreen'] = new_field
+
+    if dry:
+        print(f"[POWER][DRY] 达标 {len(passed)} 只，未写回")
+        print(json.dumps([(i['code'], i['name'], i['score'], i['pct']) for i in passed[:10]],
+                         ensure_ascii=False))
+        return
+
+    out = 'window.DASHBOARD_DATA = ' + json.dumps(D, ensure_ascii=False,
+                                                  separators=(',', ':')) + ';\n'
+    # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace
+    _p = os.path.join(BASE, 'data.js')
+    _tmp = _p + '.tmp'
+    with open(_tmp, 'w', encoding='utf-8') as f:
+        f.write(out)
+    os.replace(_tmp, _p)
+    print(f"[POWER] 写回 data.js：达标 {len(passed)} 只")
+
+
+if __name__ == '__main__':
+    sys.exit(main())

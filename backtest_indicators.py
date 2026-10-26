@@ -79,6 +79,9 @@ from datetime import datetime
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE)
+# R100z232：power_screener.py 已退役到 _retired/（九门下线），但「四指标年化对照」
+# 还要能复现九门那一行（t=−5.02 / 均超额 −0.390%/笔），所以补一条 path 让它仍可 import。
+sys.path.insert(0, os.path.join(BASE, '_retired'))
 
 import accumulation_score as A      # noqa: E402
 import check_duanban as DUAN        # noqa: E402

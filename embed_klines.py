@@ -139,9 +139,9 @@ def collect_stocks(D):
         add_code(hp.get("code") or hp.get("thsCode"))
     for hp in (D.get("harmonic") or {}).get("watchPool") or []:
         add_code(hp.get("code") or hp.get("thsCode"))
-    # 8) 九门池 / 吸筹池 —— R100z4t：开盘精选会直接从这两池取标的，弹窗 K 线走
+    # 8) 横盘启动池 / 吸筹池 —— R100z4t：开盘精选会直接从这两池取标的，弹窗 K 线走
     #    stkGlobalKline 兜底读顶层 stkKlines，池内标的必须全部内嵌覆盖
-    for pp in (D.get("powerScreen") or {}).get("passed") or []:
+    for pp in (D.get("breakoutPool") or {}).get("passed") or []:
         add_code(pp.get("code"))
     for ap in (D.get("accumulation") or {}).get("scored") or []:
         add_code(ap.get("code"))
@@ -270,10 +270,10 @@ def _fetch_names(codes, timeout=10):
 
 
 def _iter_pools(D):
-    """产出 (容器描述, 条目列表)：九门 / 吸筹 / 谐波三个选股池。"""
-    ps = D.get("powerScreen") or {}
+    """产出 (容器描述, 条目列表)：横盘启动 / 吸筹 / 谐波三个选股池。"""
+    ps = D.get("breakoutPool") or {}
     if isinstance(ps.get("passed"), list):
-        yield "powerScreen.passed", ps["passed"]
+        yield "breakoutPool.passed", ps["passed"]
     acc = D.get("accumulation") or {}
     if isinstance(acc.get("scored"), list):
         yield "accumulation.scored", acc["scored"]

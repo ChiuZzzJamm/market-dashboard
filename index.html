@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610261031"></script>
+<script src="data.js?v=202610261704"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -759,6 +759,47 @@
   .st-gap-t { font-weight: 700; color: var(--ink); }
   .st-gap-r { flex: 1 1 100%; font-size: var(--fs-xs); color: var(--ink3, var(--ink2)); opacity: .8; line-height: 1.6; }
   @media (max-width: 720px) { .st-gap { font-size: var(--fs-xs); } }
+  /* ===== R100z232：今日买入清单（9:45 三池命中 → 当日买点 + 买区）=====
+     这张表解决的是「池里有票，但今天该用什么价下手」——买区/证伪价/目标三列全部由脚本给，
+     页面不做任何计算。颜色语义：state 只描述现价与买区的位置关系，不是推荐强度，
+     所以「在买区内」用涨色（可下单）、「已高于买区」用橙色（等回落）、「未到买区」用深蓝（挂单等）。 */
+  .bl-wrap { margin: -4px 0 12px; border: 1px solid var(--line); border-radius: var(--r-block);
+    background: var(--paper); overflow: hidden; }
+  .bl-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+    padding: 8px 11px; background: var(--accent-soft); border-bottom: 1px solid var(--line);
+    font-size: var(--fs-sm); color: var(--ink2); }
+  .bl-head b { font-size: var(--fs-base); color: var(--accent-deep); }
+  .bl-row { display: grid; gap: 4px 10px; padding: 8px 11px; align-items: baseline;
+    grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) minmax(0,1.15fr) minmax(0,.95fr) minmax(0,1.1fr);
+    border-bottom: 1px dashed var(--line); font-size: var(--fs-base); }
+  .bl-row:last-of-type { border-bottom: 0; }
+  /* R100z232：列头。没有这一行，读者只能靠每行的小字反推「第四列是证伪价」——
+     五个数字并排而语义各不相同，靠猜一定会读错。列头与数据行共用同一套 grid 模板，
+     改列宽时只需改上面 .bl-row 一处。 */
+  .bl-th { display: grid; gap: 0 10px; padding: 5px 11px 4px; align-items: baseline;
+    grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) minmax(0,1.15fr) minmax(0,.95fr) minmax(0,1.1fr);
+    font-size: var(--fs-xs); color: var(--ink2); opacity: .8; border-bottom: 1px solid var(--line); }
+  .bl-th span { font-weight: 600; }
+  @media (max-width: 720px) {
+    .bl-row { grid-template-columns: minmax(0,1fr) minmax(0,1fr); font-size: var(--fs-sm); }
+    /* 窄屏两列布局下列头会错位（每行的第 3~5 个格子会掉到第二行），
+       与其给出对不上的标签，不如不显示——每行自带的灰字小标已经说明了每个数字是什么。 */
+    .bl-th { display: none; }
+  }
+  .bl-nm { font-weight: 700; color: var(--ink); display: flex; align-items: center;
+    gap: 5px; flex-wrap: wrap; min-width: 0; }
+  .bl-tag { font-size: var(--fs-xs); font-weight: 600; padding: 1px 5px; border-radius: 5px;
+    background: var(--bg-2); color: var(--ink2); white-space: nowrap; }
+  .bl-k { display: block; font-size: var(--fs-xs); color: var(--ink2); opacity: .75; }
+  .bl-v { font-variant-numeric: tabular-nums; color: var(--ink); }
+  .bl-buy { font-weight: 800; color: var(--accent-deep); font-variant-numeric: tabular-nums; }
+  .bl-st-buy { color: var(--up); font-weight: 700; }
+  .bl-st-over { color: #c77a12; font-weight: 700; }
+  .bl-st-under { color: var(--accent-deep); font-weight: 700; }
+  .bl-st-unknown { color: var(--ink2); }
+  .bl-rule { padding: 7px 11px; background: var(--bg-2); border-top: 1px solid var(--line);
+    font-size: var(--fs-xs); color: var(--ink2); line-height: 1.7; }
+  .bl-empty { padding: 9px 11px; font-size: var(--fs-sm); color: var(--ink2); line-height: 1.7; }
   /* R91j: 近3日涨幅居前板块 TOP10 */
   .db-tb { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
   @media (max-width: 900px) { .db-tb { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -896,8 +937,6 @@
   .hz-side .hz-approx { font-size: var(--fs-xs); color:var(--ink2); margin-top:3px; opacity:.85; } /* R100z4x：失效前近似形态提示 */
   /* R100s：卡片 hz-stage（确认/观察）徽标已删，CSS 一并清理 */
 
-  .pw-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; margin-top:8px; }
-  @media (max-width: 900px) { .pw-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
   /* R100j：主力吸筹卡片美化——左侧强调条 + 评分进度条 + 特征胶囊（通过亮/未过灰）。
      R100z102c：原 .acc-grid 网格随池结构改版弃用（统一 .db-chips），仅保留卡内件样式。 */
   .acc-head { display:flex; align-items:center; gap:6px; }
@@ -905,13 +944,12 @@
   .acc-head .acc-id b { font-weight:800; }
   .acc-head .cd { font-size: var(--fs-sm); color:var(--ink2); }
   .acc-grd { font-size: var(--fs-xs); font-weight:800; border-radius:999px; padding:1px 8px; margin-left:auto; flex-shrink:0; font-variant-numeric:tabular-nums; }
-  /* R100z28：强池/强评＝红（A股涨红惯例，与九门 pw-grd 同款红），观察池沿用琥珀黄 */
+  /* R100z28：强池/强评＝红（A股涨红惯例），观察池沿用琥珀黄 */
   .acc-grd.strong { color:#fff; background:linear-gradient(135deg,#f0435c,#d02c44); }
   .acc-grd.watch { color:#8a5800; background:#ffe9c2; border:1px solid #f0c36d; }
   /* R100z102c：原 .acc-sub / .acc-sub-desc 池头小节样式已随「db-pool 独立卡」重构整体移除
      （池头由 .db-pool h2 + .db-sub 接管，与断板/谐波/九门三页共用同一套样式）。 */
   /* R100m：九门评分徽章——红色、与代码同行平行（与吸筹评级徽章 acc-grd 区分） */
-  .pw-grd { font-size: var(--fs-xs); font-weight:800; border-radius:999px; padding:1px 8px; flex-shrink:0; font-variant-numeric:tabular-nums; color:#fff; background:linear-gradient(135deg,#e35d5d,#c0392b); }
   /* R100m：全站标的池角标（谐波🌟/吸筹👀/九门💡/断板❗️），可叠加 */
   .stk-tag { font-size: var(--fs-xs); line-height:1; margin-left:2px; flex-shrink:0; }
   /* R100z13：个股硬风险角标（减持/解禁/ST/业绩预减）——hover 看原因 */
@@ -945,7 +983,7 @@
   /* R100n：通用标的板块小胶囊——R100p 起仅用于弹窗标题行（stkSecBadge），主页胶囊不再显示 */
   .chip-sec { font-size: var(--fs-sm); font-weight:700; color:var(--accent-deep); background:var(--accent-soft); border:1px solid currentColor; border-radius:4px; padding:1px 7px; line-height:1.5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:96px; flex-shrink:0; }
   .tchip .chip-sec { max-width:88px; }
-  /* R100n：九门 G1-G9 通过胶囊改红色（用户要求）；未过门保持警示但区分度更高（红底白字） */
+  /* R100n：技术池「通过」胶囊统一红色（用户要求） */
 
   /* R100h：清单 .cl-* 样式已随必带数据清单模块下线删除 */
 
@@ -1442,7 +1480,7 @@
   <div class="float-group" id="float-group" title="整组可拖动到任意位置">
     <button class="mkt-toggle" id="mkt-toggle" title="切换到美股看板" aria-label="切换A股/美股看板" onclick="switchTab(currentMarket==='ashare'?'us':'ashare')">🐼</button>
     <button class="db-entry" id="gn-entry" title="点击进入全球要闻（A股/美股要闻 · 政策信号解码）" aria-label="全球要闻"><span class="db-emoji">📄</span></button>
-    <button class="db-entry" id="db-entry" title="点击进入策略工具箱（断板反包 / 陈学长 / 谐波形态 / 日线九门）" aria-label="策略工具箱"><span class="db-emoji">🧰</span><span class="db-badge" id="db-badge"></span></button>
+    <button class="db-entry" id="db-entry" title="点击进入策略工具箱（断板反包 / 陈学长 / 横盘启动 / 谐波形态 / 主力吸筹）" aria-label="策略工具箱"><span class="db-emoji">🧰</span><span class="db-badge" id="db-badge"></span></button>
     <button class="db-entry" id="sc-entry" title="点击进入复盘台账（选股信号 · 方向判断，谁准谁不准）" aria-label="复盘台账"><span class="db-emoji">📋</span><span class="db-badge" id="sc-badge"></span></button>
   </div>
   <div class="hero">
@@ -1474,13 +1512,13 @@
   <div id="duanban-view">
     <div class="db-topbar">
       <div class="db-title">技术看板</div>
-      <div class="db-sub2">断板反包 · 陈学长 · 谐波形态 · 日线九门 · 开盘预测</div>
+      <div class="db-sub2">断板反包 · 陈学长 · 横盘启动 · 谐波形态 · 主力吸筹 · 开盘预测</div>
       <div class="db-date" id="db-date"></div>
     </div>
     <button class="db-entry-in" id="db-entry-in" title="点击返回每日市场看板">🧰</button>
-    <!-- R100k：子页菜单已移入各子页内容流（断板页位于开盘精选与确认池说明之间；谐波/九门页位于页首） -->
+    <!-- R100k：子页菜单已移入各子页内容流（断板页位于开盘精选与确认池说明之间；谐波/横盘启动页位于页首） -->
 
-    <!-- R100m：TOP10 + 开盘精选固定区——切换谐波/九门/吸筹子页时保持显示（用户要求固定不动） -->
+    <!-- R100m：TOP10 + 开盘精选固定区——切换谐波/横盘启动/吸筹子页时保持显示（用户要求固定不动） -->
     <div id="db-fixed"></div>
     <!-- R100z162：开盘预测子页——盘前前瞻 + AI 预测分析 + 交易预案三块合并成一页。
          用户 2026-10-24 要求「AI 预测分析整个模块挪到技术看板，新增开盘预测；交易预案也放这里，
@@ -1496,7 +1534,8 @@
          不改断板反包任何口径——用户 2026-10-25 要求「建一个陈学长技术指标，而不是更新断板反包」） -->
     <div id="db-chen" class="db-subpage" style="display:none;"></div>
     <div id="db-hz" class="db-subpage" style="display:none;"></div>
-    <div id="db-pw" class="db-subpage" style="display:none;"></div>
+    <!-- R100z232：`db-pw`（日线九门）已撤，替换为 `db-bp`（横盘启动，breakout_pool.py） -->
+    <div id="db-bp" class="db-subpage" style="display:none;"></div>
     <div id="db-acc" class="db-subpage" style="display:none;"></div>
   </div>
 
@@ -1678,7 +1717,7 @@ function renderStructure(s, tradeDate) {
 // 兼容旧数据：仅有 leader 字段时按旧规则归一化。
 /* R100n→R100p：全站 code→板块 映射（stkSecOf）：来源=断板双池 / 谐波池 / 开盘精选 / 连板梯队 /
    领涨领跌板块 TOP 成分股。R100p 起主页胶囊不再显示板块徽标，仅弹窗板块徽章（stkSecBadge）使用。
-   R100q：新增 AI预测成分 / 九门池 sector / 吸筹池 sector（三脚本已写入）+ 站内其余字段，
+   R100q：新增 AI预测成分 / 横盘启动池 sector / 吸筹池 sector（三脚本已写入）+ 站内其余字段，
    弹窗板块徽章全覆盖（宁缺勿滥：查不到就不显示）。 */
 function stkSecOf(code) {
   code = String(code || '');
@@ -1702,7 +1741,7 @@ function stkSecOf(code) {
     ((D.aiPrediction || {}).sectors || []).forEach(function (s) {
       (s.stocks || []).forEach(function (t) { if (t && t.code && s.sector && !M[String(t.code)]) M[String(t.code)] = s.sector; });
     });
-    ((D.powerScreen || {}).passed || []).forEach(function (x) { if (x && x.code && x.sector && !M[String(x.code)]) M[String(x.code)] = x.sector; });
+    ((D.breakoutPool || {}).passed || []).forEach(function (x) { if (x && x.code && x.sector && !M[String(x.code)]) M[String(x.code)] = x.sector; });
     ((D.accumulation || {}).scored || []).forEach(function (x) { if (x && x.code && x.sector && !M[String(x.code)]) M[String(x.code)] = x.sector; });
     /* R100v2：全局行业映射兜底（embed_klines.py 写入的顶层 sectorMap，新浪行业全量）——
        题材掘金/全球要闻等不在任何池内的标的也能出板块徽章 */
@@ -1718,14 +1757,14 @@ function stkSecBadge(code) {
   return sec ? '<span class="chip-sec" style="font-size: var(--fs-sm);max-width:120px;padding:1px 7px;border-radius:4px;margin-left:4px" title="所属板块：' + escAttr(sec) + '">' + esc(sec) + '</span>' : '';
 }
 
-/* R100q：技术池归属（断板/谐波/九门/吸筹）——供弹窗技术徽章 + 主页金框共用。
+/* R100q：技术池归属（断板/谐波/横盘启动/吸筹）——供弹窗技术徽章 + 主页金框共用。
    R100t：池归属并入技术徽章（断板反包·确认池 / 谐波·XX·确认池 单枚徽标），美股代码非 6 位数字天然不命中。 */
 function stkTechMeta(code) {
   code = String(code || '');
   if (!/^\d{6}$/.test(code)) return null;
   var T = window._TECH_MAP;
   if (!T) {
-    T = { db: {}, hz: {}, pw: {}, acc: {} };
+    T = { db: {}, hz: {}, bp: {}, acc: {} };
     var D = window.DASHBOARD_DATA || {};
     var db = D.duanban || {};
     (db.confirmed || []).forEach(function (x) { if (x && x.code) T.db[String(x.code)] = '确认池'; });
@@ -1735,7 +1774,7 @@ function stkTechMeta(code) {
        时可能出现 T1 ≤ 现价的「倒挂/已达成」——以前这个情况在 data.js 里有数字、前端全无提示）。 */
     (hz.confirmPool || []).forEach(function (x) { if (x && x.code) T.hz[String(x.code)] = { p: x.pattern || '谐波', pool: '确认池', g1: x.t1GapPct, g2: x.t2GapPct, r1: x.t1Reached, r2: x.t2Reached }; });
     (hz.watchPool || []).forEach(function (x) { if (x && x.code && !T.hz[String(x.code)]) T.hz[String(x.code)] = { p: x.pattern || '谐波', pool: '观察池', g1: x.t1GapPct, g2: x.t2GapPct, r1: x.t1Reached, r2: x.t2Reached }; });
-    ((D.powerScreen || {}).passed || []).forEach(function (x) { if (x && x.code) T.pw[String(x.code)] = 1; });
+    ((D.breakoutPool || {}).passed || []).forEach(function (x) { if (x && x.code) T.bp[String(x.code)] = 1; });
     ((D.accumulation || {}).scored || []).forEach(function (x) { if (x && x.code) T.acc[String(x.code)] = 1; });
     window._TECH_MAP = T;
   }
@@ -1754,7 +1793,7 @@ function stkTechMeta(code) {
     }
     out.push({ k: 'hz', label: lbl, pool: hz.pool, warn: hz.r1 || hz.r2 });
   }
-  if (T.pw[code]) out.push({ k: 'pw', label: '日线九门' });
+  if (T.bp[code]) out.push({ k: 'bp', label: '横盘启动' });
   if (T.acc[code]) out.push({ k: 'acc', label: '主力吸筹' });
   return out.length ? out : null;
 }
@@ -3437,7 +3476,7 @@ function renderTradeDesk() {
     var rr = (close && stop && tgt && close > stop) ? (tgt - close) / (close - stop) : null;
     var posRaw = num(p.posPctRaw);
     var srcs = (p.srcs || []).map(function (s) {
-      return ({ ai: 'AI 预测', powerScreen: '九门强势', accumulation: '吸筹打分',
+      return ({ ai: 'AI 预测', breakoutPool: '横盘启动', accumulation: '吸筹打分',
                 harmonic: '谐波形态', duanban: '断板反包' })[s] || s;
     });
     h += '<div class="td-item">' +
@@ -4116,20 +4155,20 @@ function _hzFailClip(kl, hz) {
   return (out.length > 1) ? out : kl;
 }
 /* R100z56：失效池按 kind 分源（原写法非 harmonic 一律回落断板池——
-   传入 'powerScreen'/'accumulation' 会静默串到断板 failPool，弹窗错票且无报错）。
+   传入 'breakoutPool'/'accumulation' 会静默串到断板 failPool，弹窗错票且无报错）。
    ⚠️ 新增 kind 必须同步 dbFailHtml 的 onclick 白名单与新生成侧字段名，别只改这里。 */
 function failPoolOf(kind) {
   var D = window.DASHBOARD_DATA || {};
   if (kind === 'harmonic') return (D.harmonic || {}).failPool || [];
   if (kind === 'accumulation') return (D.accumulation || {}).failPool || [];
-  if (kind === 'powerScreen') return (D.powerScreen || {}).failPool || [];
+  if (kind === 'breakoutPool') return (D.breakoutPool || {}).failPool || [];
   if (kind === 'chen') return (D.chenPool || {}).failPool || [];  // R100z218：陈学长池自己的归档
   return (D.duanban || {}).failPool || []; // 兜底：断板反包（默认）
 }
 /* ⚠️ 新增 kind 必须同步 D 里（failPoolOf 白名单 + 本映射 + dbFailHtml 的 onclick）。 */
 function failKindCn(kind) {
   return kind === 'harmonic' ? '谐波·'
-    : kind === 'powerScreen' ? '九门·'
+    : kind === 'breakoutPool' ? '横盘启动·'
     : kind === 'accumulation' ? '吸筹·'
     : kind === 'chen' ? '陈学长·'
     : '断板·';
@@ -4471,9 +4510,9 @@ function stkNewsHtml(code) {
   var e = null;
   (db.confirmed || []).concat(db.watching || []).forEach(function (x) { if (!e && String(x.code) === code) e = x; });
   var hzIt = findHarmonic(code);
-  var accIt = null, pwIt = null;
+  var accIt = null, bpIt = null;
   ((D.accumulation || {}).scored || []).forEach(function (x) { if (!accIt && String(x.code) === code) accIt = x; });
-  ((D.powerScreen || {}).passed || []).forEach(function (x) { if (!pwIt && String(x.code) === code) pwIt = x; });
+  ((D.breakoutPool || {}).passed || []).forEach(function (x) { if (!bpIt && String(x.code) === code) bpIt = x; });
   // R100z209：板块级要闻命中改由 sectorNewsItems() 统一产出（原来这里手写一遍、
   // failNewsScan 又写一遍，且都标成「个股消息」——其实是板块级要闻）。
   var secItems = sectorNewsItems(code);
@@ -4489,7 +4528,7 @@ function stkNewsHtml(code) {
     if (aiHit || !s || !s.stocks) return;
     for (var i = 0; i < s.stocks.length; i++) { if (String((s.stocks[i] || {}).code) === code) { aiHit = s; break; } }
   });
-  if (!e && !secItems.length && !hzIt && !accIt && !pwIt && !secHit && !aiHit) {
+  if (!e && !secItems.length && !hzIt && !accIt && !bpIt && !secHit && !aiHit) {
     // R100z149：只有个股消息库命中时仍要渲染（板块/池都没挂上，但公司自己发了公告）
     if (!stockNewsItems(code).length) return '';
   }
@@ -4707,12 +4746,13 @@ function openHzModal(code, name) {
   STK_IDX = i >= 0 ? i : 0;
   openStkModal(code, name || code, '');
 }
-// R100h：吸筹/量化九门卡片固定本组导航——此前直接 openStkModal，STK_GRP 残留上一组导致箭头跳出本模块
+// R100h：吸筹/横盘启动卡片固定本组导航——此前直接 openStkModal，STK_GRP 残留上一组导致箭头跳出本模块
 /* R100z82：弹窗按下标回取必须用与渲染同一份排序数组——
-   R100z76-③ 给九门/吸筹加 sortByReso 排序后，tcCard 的 idx 是「排序+截断后」的位置，
+   R100z76-③ 给横盘启动/吸筹加 sortByReso 排序后，tcCard 的 idx 是「排序+截断后」的位置，
    而 onclick 仍回取原始未排序池 → 点上海洗霸弹出传艺科技（硬教训#4 原样复发）。
-   两页各存一份全局排序数组，渲染与 openGrpModal（含组内导航）共用；谐波页按 code 回取不受影响。 */
-var PW_SORTED = [], ACC_SORTED = [];
+   两页各存一份全局排序数组，渲染与 openGrpModal（含组内导航）共用；谐波页按 code 回取不受影响。
+   R100z232：PW_SORTED → BP_SORTED（九门撤、横盘启动接位）。 */
+var BP_SORTED = [], ACC_SORTED = [];
 function openGrpModal(list, idx) {
   if (!list || !list[idx]) return;
   STK_GRP = list.map(function (x) { return { c: x.code, n: (x.name && x.name !== x.code) ? x.name : x.code, t: '' }; });
@@ -4763,11 +4803,12 @@ function hzSideHtml(hz) {
 }
 function techMetaLines(code) {
   var D = window.DASHBOARD_DATA || {};
-  var pwTop = null, accTop = null;
-  ((D.powerScreen || {}).passed || []).forEach(function (x) { if (!pwTop && x && String(x.code) === code) pwTop = x; });
+  var bpTop = null, accTop = null;
+  ((D.breakoutPool || {}).passed || []).forEach(function (x) { if (!bpTop && x && String(x.code) === code) bpTop = x; });
   ((D.accumulation || {}).scored || []).forEach(function (x) { if (!accTop && x && String(x.code) === code) accTop = x; });
   var out = '';
-  if (pwTop && pwTop.reasons) out += '<div><span class="lab">日线九门：</span>通过 ' + esc(String(pwTop.reasons).split(';').filter(Boolean).join(' · ')) + '</div>';
+  // R100z232：九门「通过 G1-G9」那一行换成横盘启动的平台口径（同一位置、同样是纯文本行）。
+  if (bpTop && bpTop.note) out += '<div><span class="lab">横盘启动：</span>' + esc(bpTop.note) + '</div>';
   if (accTop && accTop.note) out += '<div><span class="lab">主力吸筹：</span>' + esc(accTop.note) + '</div>';
   // R100z202：龙虎榜固定排在技术指标**之后**（见 stkLhbLine 注释：位置必须与标的技术面构成无关）
   out += stkLhbLine(code);
@@ -4959,57 +5000,75 @@ function renderAccumulation() {
   return accLeg + secS + secW + accFail;
 }
 
-function renderPowerScreen() {
-  var p = window.DASHBOARD_DATA.powerScreen;
-  if (!p || !p.passed || !p.passed.length) return '';
-  // R100z82：先固化排序数组到全局 PW_SORTED，渲染与弹窗回取共用（否则 idx 错位串票，见 openGrpModal 上注释）
-  PW_SORTED = sortByReso(p.passed).slice(0, 30); // R100z76-③：共振命中≥2池排前
-  var items = PW_SORTED.map(function (it, idx) {
-    var gates = (it.reasons || '').split(';').filter(Boolean);
-    // R100g：名称缺失只展示代码一次
+/* R100z232 · 横盘启动页（取代九门）
+   --------------------------------------------------------------------------
+   数据源：data.js 顶层 `breakoutPool`（breakout_pool.py 写，16:00 数据步）。
+   为什么撤九门：同跑道回测（1,260 只 / 537 个交易日 / T+1 开盘买）九门 t=−5.02、
+   均超额 −0.390%/笔、胜率 45.6%，四个技术池里唯一突破 5 的负超额；横盘启动
+   t=0.41（不显著）但均超额 +0.148%、胜率 54.0%，是四者里唯一非负的。
+   ⚠️ 本池只出「贴沿名单 + 可否低吸的价格区间」，突破确认留给 09:45 开盘精选
+      （那时才有盘口）。回测是固定持有 10 日、不设百分比止损，所以卡上那格叫
+      「证伪价」不叫「止损」——宽平台的证伪价可能距买价 −20%，是箱体几何，不是预算。
+   ⚠️ 卡片点击复用 openGrpModal(BP_SORTED, idx)：渲染与弹窗回取必须共用同一份数组，
+      否则左右箭头串票（R100z82 在九门页踩过）。 */
+function renderBreakoutPool() {
+  var b = (window.DASHBOARD_DATA || {}).breakoutPool;
+  if (!b || !b.passed || !b.passed.length) return '';
+  BP_SORTED = b.passed.slice(0, 30); // 生成侧已按 score 降序、distTop 升序排好
+  var items = BP_SORTED.map(function (it, idx) {
+    var en = it.entry || {};
     var nm = (it.name && it.name !== it.code) ? it.name : '';
-    // R100z36：九门卡改用统一 T2 骨架。四格＝门通过 / 量比 / RSI / 止损。
-    // RSI14 落在 40-80 是 G9 的合格区间，出区间给跌色提示（过热/超卖都不是好事）。
-    var rsi = Number(it.rsi);
-    var rsiCls = (isFinite(rsi) && (rsi > 80 || rsi < 40)) ? 'warn' : '';
-    var foot = '收 <span class="xt">' + it.lastClose + '</span> · 过 ' + esc(gates.join(' ')) +
-      (it.acc ? ' · <span class="hz-badge">吸筹</span>' : '');
+    var dist = Number(it.distTop);
+    // 距箱顶越近越值得看：≤1% 给涨色（已贴上沿），否则中性
+    var distCls = (isFinite(dist) && dist <= 1.0) ? 'up' : '';
+    var zone = (en.low && en.high)
+      ? '<span class="nw">' + en.low.toFixed(2) + '</span>~<span class="nw">' + en.high.toFixed(2) + '</span>'
+      : '—';
+    var foot = '箱顶 <span class="xt">' + (it.top !== undefined ? Number(it.top).toFixed(2) : '—') +
+      '</span> · 下沿 <span class="xt">' + (it.bottom !== undefined ? Number(it.bottom).toFixed(2) : '—') + '</span>' +
+      (it.entryDate ? ' · 入池 ' + esc(it.entryDate) : '');
     return tcCard({
       code: it.code, name: nm || it.code, chg: tcPctOf(it.code, it.pct), dim: false,
-      fresh: poolFresh(it, p.tradeDate), // R100z44：新入池首日黄色+「新」徽章
+      fresh: poolFresh(it, b.tradeDate),
       pills: [it.sector || stkSectorOf(it.code)], sent: true,
       cells: [
-        tcCell('门通过', it.score + ' / 9', 'up'),
-        tcCell('量比', (it.volRatio === null || it.volRatio === undefined) ? '—' : Number(it.volRatio).toFixed(2) + '×', ''),
-        tcCell('RSI14', isFinite(rsi) ? rsi.toFixed(1) : '—', rsiCls),
-        tcStopCell(it.code)
+        tcCell('买入区间', zone, ''),
+        tcCell('证伪价', en.stop ? '<span class="xt">' + en.stop.toFixed(2) + '</span>' : '—', 'down'),
+        // 「距箱顶」是距离，不是涨跌幅：写正数（+1.2% = 还差 1.2% 到箱顶），
+        // 别用 -dist 变成负号，读者会误读成「箱顶在下面 1.2%」。
+        tcCell('距箱顶', isFinite(dist) ? fmtPct(dist) : '—', distCls),
+        tcCell('箱体振幅', isFinite(Number(it.boxPct)) ? Number(it.boxPct).toFixed(0) + '%' : '—', '')
       ],
       foot: foot,
-      onclick: 'openGrpModal(PW_SORTED,' + idx + ')', // R100z82：回取同一份排序数组，原写法传 p.passed 会串票
-      title: nm + ' ' + it.code + ' · 九门 ' + it.score + '/9\n通过：' + gates.join('、') +
-        '\n涨幅 ' + it.pct + '% · 量比 ' + it.volRatio + ' · RSI14 ' + it.rsi
+      onclick: 'openGrpModal(BP_SORTED,' + idx + ')',
+      title: (nm || it.code) + ' ' + it.code + ' · 横盘启动 ' + it.score + ' 分\n' +
+        (it.note || '') + '\n' + (en.note || '') +
+        '\n目标 ' + (en.target || '—') + '（' + (en.targetPct > 0 ? '+' : '') + (en.targetPct || 0) + '%）' +
+        '｜持有 ≤' + (en.holdDays || 10) + ' 日\n点击查看K线与个股消息'
     });
   }).join('');
-  // R100z4i：口径说明挪出 card（子页导航下方、谐波说明同款位置），去 📐 emoji、无背景（hz-sub 朴素样式）
-  var gateDef = '<details class="tech-legend"><summary>九门口径 · 9 道量化硬阈值（点击查看技术指标）</summary><div class="lg-body">' +
-    '<div><b>一句话逻辑</b>：九道门量的全是「今天已经很硬」——涨幅、量能、位置、RSI 都取当日收盘。所以这页偏追当天，不是提前埋伏；买的是延续，不是反转。</div>' +
-    '<div><b>判定规则</b>：硬门禁（必过 5 道）G1 当日涨幅≥3% · G2 放量≥1.5×5日均量 · G4 站上 MA20 · G5 非 ST 主板 · G7 当日振幅≤15%；' +
-    '质量门（过≥3 道）G3 价处 20 日区间上 1/3 · G6 近 5 日无长上影出货 · G8 波动率适中（ATR14/收盘∈2%-8%） · G9 RSI14∈40-80；' +
-    '打分＝通过阈值数（0-9 分）。</div>' +
+  var legend = '<details class="tech-legend"><summary>横盘启动口径 · 平台贴沿 + 买入区间（点击查看判定规则）</summary><div class="lg-body">' +
+    '<div><b>一句话逻辑</b>：找「已经横了 60 天、量能枯竭、均线粘合、且今天正好贴在箱顶下面」的票——' +
+    '在箱顶下面低吸，赚的是箱体被突破那一段，不是追当天涨幅。这是**提前埋伏**，与九门那种' +
+    '「今天已经很硬所以明天继续硬」的追涨逻辑正好相反。</div>' +
+    '<div><b>判定规则</b>（全部量在收盘价上，收盘后算得出）：' + esc(b.rule || '') + '</div>' +
+    '<div><b>买入区间</b>：下限＝箱顶×0.985（跌回箱内不接）／上限＝箱顶×1.005（越过就是追突破，不跟）；' +
+    '高开越过 <b>箱顶×1.03</b> 直接放弃——那已经不是低吸。</div>' +
+    '<div><b>「证伪价」不是止损</b>：它是平台下沿×0.99，收盘跌破就说明「横盘」这个前提没了。' +
+    '宽平台的证伪价可能距买价 −20%，那是箱体几何，不是让你挂 −20% 止损；' +
+    '风控靠<b>持有 ≤' + 10 + ' 个交易日</b> + 证伪价被打穿就认两条。要按预算定仓位，用「证伪距离」倒算，别当硬止损挂。</div>' +
     '<div class="lg-hr"></div>' +
-    '<div><b>分池</b>：入选＝硬门禁全过 且 质量门≥3 道。只过硬门禁、质量门不够的不进池——宁可留空，也不放半合格品进清单。</div>' +
-    '<div><b>失效与离场</b>：次日不再过阈值（掉出当日强度）→ 移入失效归档池，保留 5 个交易日后自动剔除</div>' +
-    '<div class="lg-tip">下一步：这是「当日强度」筛（偏追当天）；次日看能否站稳 MA20、量能能否续上，站不稳量缩就先出。</div>' +
+    '<div><b>诚实的期望值</b>：同跑道回测 T+5 年化 +23.15%、均超额 +0.148%/笔、<b>t=0.41</b>（不显著）、胜率 54.0%。' +
+    '它比九门（t=−5.02）、谐波（−3.08）、吸筹（−3.66）都好，但**没跑赢等权基准 +31.18%**——' +
+    '所以这页是「观察名单 + 挂单价位」，不是「闭眼买」。</div>' +
+    '<div><b>密度</b>：贴沿标的一天平均 0.6 只（≤3% 口径日均 2.1 只），<b>空池是常态</b>，不是数据没跑。</div>' +
     '</div></details>';
-  // R100z56（用户 2026-10-04 要求）：九门页同样补失效归档池（原在池内、本轮不再过阈值的标的，
-  // 自失效日起留 5 个交易日，生成侧 power_screener.py 走 roll_fail_pool 剔除）。
-  var pwFail = dbFailHtml(p.failPool || [], 'powerScreen'); // R100z58 无条件调用；R100z60 空池仍渲染 0 只块（留白=块上 16px 间距，不是删块）
-  // R100z101（用户 2026-10-09，对齐吸筹页 R100z43 同款要求）：删「⚡ 日线九门 + 日期」大标题——
-  // tab 名与口径条已够定位，模块直接以「确认池」开头（与谐波/断板页 .db-pool 直排同构，不再套 .card）。
-  return gateDef +
-    '<div class="db-pool p-conf"><h2>确认池 · ' + PW_SORTED.length + ' 只</h2>' +
-    '<div class="db-sub">九门全过阈值、当日最强，可直接跟（次日看能否站稳 MA20、量能能否续上，站不稳量缩先出）</div>' +
-    '<div class="pw-grid">' + items + '</div></div>' + pwFail + (p.summary ? '<div class="note-line">' + esc(p.summary) + '</div>' : '');
+  var fail = dbFailHtml(b.failPool || [], 'breakoutPool');
+  return legend +
+    '<div class="db-pool p-conf"><h2>贴沿名单 · ' + BP_SORTED.length + ' 只</h2>' +
+    '<div class="db-sub">贴在箱顶下面、量能枯竭——按卡上的买入区间低吸，越过上限不追；收盘跌破证伪价即形态作废</div>' +
+    '<div class="db-chips">' + items + '</div></div>' + fail +
+    (b.note ? '<div class="note-line">' + esc(b.note) + '</div>' : '');
 }
 
 // R100h：必带数据清单（renderChecklist）已整体下线（2026-09-28 用户要求），data_checklist.py 同步删除
@@ -5269,7 +5328,7 @@ function stkMa5Of(code0, embKline) {
   return s / 5;
 }
 /* R100z105：开盘精选技术池标的（src=hz/acc/pw/chen）回源查池内条目。
-   四格渲染需要来源池的专属字段（谐波 prz/stop/target1、吸筹 score/f5Tier/hitCount、九门 score/volRatio/rsi、
+   四格渲染需要来源池的专属字段（谐波 prz/stop/target1、吸筹 score/f5Tier/hitCount、横盘启动 entry/distTop/boxPct、
    陈学长 trade.targetPrice/stopPrice/posPct + metrics.lbc/volRatio），
    star 循环合成的 e2 只带了 score/grade/story/deduce，不够用——按 src 回原池查全量条目，查不到返回 null。 */
 function starTechOf(code0, src) {
@@ -5280,7 +5339,7 @@ function starTechOf(code0, src) {
   // R100z221：陈学长池分三档（严格/放宽/观察），按池展示优先级找——严格池的条目信息最全，
   // 同一只票同时满足两档时以严格池那条为准（与 chenNameOf / chenPoolBlock 的口径一致）。
   var arr = src === 'acc' ? ((D.accumulation || {}).scored || [])
-          : src === 'pw' ? ((D.powerScreen || {}).passed || [])
+          : src === 'bp' ? ((D.breakoutPool || {}).passed || [])
           : src === 'chen' ? [].concat(((D.chenPool || {}).strict) || [],
                                        ((D.chenPool || {}).loose) || [],
                                        ((D.chenPool || {}).watching) || [])
@@ -5317,7 +5376,7 @@ function resoMap() {
   var h = d.harmonic || {};
   add(d.accumulation && d.accumulation.scored, '吸筹');
   add(h.confirmPool, '谐波'); add(h.watchPool, '谐波');
-  add(d.powerScreen && d.powerScreen.passed, '九门');
+  add(d.breakoutPool && d.breakoutPool.passed, '横盘启动');   // R100z232：九门撤，横盘启动接位
   var db = d.duanban || {};
   add(db.confirmed, '断板反包'); add(db.watching, '断板反包');
   _RESO_MAP = m; return m;
@@ -5352,7 +5411,7 @@ function poolFresh(it, modDate) {
   return !!(it && it.entryDate && modDate && String(it.entryDate) === String(modDate).slice(0, 10));
 }
 /* R100z120 Q3：弹窗「新」徽章——与卡片 .tc .nb / fail-chip.fail-new 同口径（poolFresh：entryDate === 模块交易日）。
-   池内标的：逐模块比对 entryDate 与各自交易日（duanban.generatedAt / harmonic·powerScreen·accumulation 用 tradeDate）。
+   池内标的：逐模块比对 entryDate 与各自交易日（duanban.generatedAt / harmonic·breakoutPool·accumulation 用 tradeDate）。
    失效归档池（key=f|kind|code）：entryDate === 该池最新归档日（failPoolLatest，与卡片 fail-chip.fail-new 同口径）。 */
 function modalFreshBadgeHtml(key, code) {
   code = String(code || '');
@@ -5371,7 +5430,7 @@ function modalFreshBadgeHtml(key, code) {
     var mods = [
       { node: D.duanban || {}, date: ((D.duanban || {}).generatedAt || '').slice(0, 10), pools: ['confirmed', 'watching'] },
       { node: D.harmonic || {}, date: ((D.harmonic || {}).tradeDate || '').slice(0, 10), pools: ['confirmPool', 'watchPool'] },
-      { node: D.powerScreen || {}, date: ((D.powerScreen || {}).tradeDate || '').slice(0, 10), pools: ['passed'] },
+      { node: D.breakoutPool || {}, date: ((D.breakoutPool || {}).tradeDate || '').slice(0, 10), pools: ['passed'] },
       { node: D.accumulation || {}, date: ((D.accumulation || {}).tradeDate || '').slice(0, 10), pools: ['scored'] },
       // R100z218：陈学长池——不登记就会「卡片上有『新』、点开弹窗没有」，同一标的两种说法。
       { node: D.chenPool || {}, date: ((D.chenPool || {}).generatedAt || '').slice(0, 10), pools: ['strict', 'loose', 'watching'] }
@@ -5411,11 +5470,11 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
   // R100z44：断板模块数据日取 generatedAt（该模块无 tradeDate 字段）
   var modD = String(((window.DASHBOARD_DATA || {}).duanban || {}).generatedAt || '').slice(0, 10);
   // R100z104→R100z105（用户 2026-10-09 两轮反馈）：开盘精选标的来自四池，但「板块涨幅/上涨概率/MA5买入/断板日止损」
-  // 全是断板反包专属口径——九门/吸筹/谐波没有这些指标，硬套只会渲染一排「—」和口径错误的买入价。
+  // 全是断板反包专属口径——横盘启动/吸筹/谐波没有这些指标，硬套只会渲染一排「—」和口径错误的买入价。
   // 改为按来源分派四格：断板=板块涨幅/上涨概率/建议买入价(MA5)/止损；谐波=买入区(PRZ)/距PRZ/止损(D点)/T1；
-  // 吸筹=吸筹评分/信号阶段/特征命中/止损(纪律位)；九门=九门评分/量比/RSI/止损(纪律位)。取不到如实「—」，绝不编数。
+  // 吸筹=吸筹评分/信号阶段/特征命中/止损(纪律位)；横盘启动=买入区间/证伪价/距箱顶/箱体振幅（无止损格）。取不到如实「—」，绝不编数。
   var cells;
-  if (star && (e.src === 'hz' || e.src === 'acc' || e.src === 'pw' || e.src === 'chen')) {
+  if (star && (e.src === 'hz' || e.src === 'acc' || e.src === 'bp' || e.src === 'chen')) {
     var te = starTechOf(e.code, e.src);
     if (e.src === 'hz' && te && te.prz) {
       var hzDist = (typeof te.distToPrzPct === 'number') ? te.distToPrzPct : null;
@@ -5433,13 +5492,21 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
         tcCell('特征命中', te.hitCount == null ? '—' : te.hitCount + ' / 6 项', ''),
         tcStopCell(e.code) // 吸筹无形态止损位 → exitForCode 统一纪律位（最近收盘 −2.5%，basis 自述非形态位）
       ];
-    } else if (e.src === 'pw' && te) {
+    } else if (e.src === 'bp' && te) {
+      // R100z232（九门撤、横盘启动接位）：四格与横盘启动页卡片逐格同源——
+      // 买入区间 / 证伪价 / 距箱顶 / 箱体振幅。**不套 tcStopCell**：本池没有百分比止损，
+      // 用全站纪律位（最近收盘 −2.5%）会给出一个与箱体几何无关的数，比留「—」更误导。
+      var _be = te.entry || {};
+      var _bd = Number(te.distTop);
       cells = [
-        tcCell('九门评分', te.score == null ? '—' : te.score + ' / 9', Number(te.score) >= 8 ? 'up' : ''),
-        tcCell('量比', (te.volRatio == null || !isFinite(Number(te.volRatio))) ? '—' : Number(te.volRatio).toFixed(2), ''),
-        tcCell('RSI', (te.rsi == null || !isFinite(Number(te.rsi))) ? '—' : Number(te.rsi).toFixed(1), ''),
-        tcStopCell(e.code) // 九门无形态止损位 → 统一纪律位兜底
+        tcCell('买入区间', (_be.low && _be.high)
+          ? '<span class="xt">' + _be.low.toFixed(2) + '~' + _be.high.toFixed(2) + '</span>' : '—', ''),
+        tcCell('证伪价', _be.stop ? '<span class="xt" title="平台下沿×0.99：收盘跌破即横盘前提作废，不是百分比止损">' + _be.stop.toFixed(2) + '</span>' : '—', 'down'),
+        tcCell('距箱顶', isFinite(_bd) ? fmtPct(_bd) : '—', (isFinite(_bd) && _bd <= 1.0) ? 'up' : ''),
+        tcCell('箱体振幅', isFinite(Number(te.boxPct)) ? Number(te.boxPct).toFixed(0) + '%' : '—', '')
       ];
+      foot = '<span class="xt">横盘启动 ' + (te.score == null ? '—' : te.score + ' 分') +
+        ' · 持有 ≤' + (_be.holdDays || 10) + ' 日</span>';
     } else if (e.src === 'chen' && te) {
       // R100z222（用户 2026-10-26「开盘精选池子里也记得加入陈学长技术指标池，因为对胜率有帮助」）：
       // 四格与陈学长池卡片（chenPoolBlock.oneCard）逐格同源同文案——同一只票在两个页面显示两套数字，
@@ -5493,7 +5560,7 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
       (star ? '\n' + ({
         hz: '建议买入区＝PRZ 潜在反转区（回踩入区企稳介入）· 止损＝D 点结构失效位 · T1＝一级目标位',
         acc: '吸筹评分＝六项特征加权（命中越多分越高）· 止损＝全站统一纪律位（最近收盘 −2.5%，非形态位）',
-        pw: '九门评分＝量化九门通过数（满分 9）· 止损＝全站统一纪律位（最近收盘 −2.5%，非形态位）',
+        bp: '买入区间＝箱顶×0.985~×1.005（越过上限不追）· 证伪价＝平台下沿×0.99（跌破即横盘作废）· 固定持有 10 日、不设百分比止损',
         chen: '目标 +3.5% 次日冲高兑现 · 止损＝洗盘段最低价（破位按收盘算）· 仓位＝1.5% 风险预算 ÷ 止损宽度 · 持仓 ≤2 日'
       }[e.src] || '建议买入价＝MA5（回踩5日线企稳介入）· 止损＝断板日最低价') : '') +
       '\n点击查看K线与利好依据'
@@ -5583,7 +5650,7 @@ function renderDuanban() {
   var badge = document.getElementById('db-badge');
   badge.textContent = (conf.length + watch.length) ? ('确认 ' + conf.length + ' · 观察 ' + watch.length) : '';
   var dbEntryBtn = document.getElementById('db-entry');
-  if (dbEntryBtn) dbEntryBtn.title = '点击进入技术看板（断板反包/谐波/九门）· 确认 ' + conf.length + ' · 观察 ' + watch.length;
+  if (dbEntryBtn) dbEntryBtn.title = '点击进入技术看板（断板反包/谐波/横盘启动/主力吸筹）· 确认 ' + conf.length + ' · 观察 ' + watch.length;
   var html = '';
   // R100m：TOP10 与 开盘精选 写入 #db-fixed 固定区——切换子页时保持显示
   var fixed = '';
@@ -5626,14 +5693,14 @@ function renderDuanban() {
   if (st && st.date === _tdStr && st.picks && st.picks.length) {
     var poolByCode = {};
     conf.concat(watch).forEach(function (e) { poolByCode[String(e.code)] = e; });
-    // R100m：精选候选扩展至四池——断板池标的带概率，技术池（谐波/九门/吸筹）标的带 src 来源标记、
+    // R100m：精选候选扩展至四池——断板池标的带概率，技术池（谐波/横盘启动/吸筹）标的带 src 来源标记、
     // 无概率排断板池之后；前端对池外标的构造最小弹窗条目（K线由 stkFetchKline 网络兜底）。
     var starPool = st.picks.filter(function (p) { return poolByCode[String(p.code)]; });
     var starTech = st.picks.filter(function (p) { return !poolByCode[String(p.code)] && String(p.code || '').length === 6; });
-    // R100z4u：技术池 code→条目 映射（九门→谐波→吸筹 顺序），精选卡补分数徽章 + 分数降序
+    // R100z4u：技术池 code→条目 映射（横盘启动→谐波→吸筹 顺序），精选卡补分数徽章 + 分数降序
     var D0 = window.DASHBOARD_DATA || {};
     var _techMap = {};
-    ((D0.powerScreen || {}).passed || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
+    ((D0.breakoutPool || {}).passed || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
     [].concat((D0.harmonic || {}).confirmPool || [], (D0.harmonic || {}).watchPool || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
     ((D0.accumulation || {}).scored || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
     // R100z222：陈学长池也进映射表（严格先于放宽，与 starTechOf 同序）。精选条目是 update_star.py
@@ -5673,10 +5740,92 @@ function renderDuanban() {
           return esc(String(p.name || p.code)) + ' ' + (g > 0 ? '+' : '') + g.toFixed(1) + '%';
         }).join('、')
       : (_gapKnown ? '今日精选无开盘涨超 +1% 的标的' : '开盘价缺失，今日无法判定');
+    // ===== R100z232：今日买入清单（用户 2026-10-26 第 4 项）=====
+    // 数据源 star.buyList / star.buySummary（update_star.py 的 build_buy_list 生成）。
+    // 三条铁律，页面不许自己算：
+    //   ① 买区是**此刻能下单的价格带**，不是目标价——所以和「目标」分两列，中间隔着证伪价；
+    //   ② state（buy/over/under/unknown）只描述现价与买区的**位置关系**，不是推荐强度，
+    //      所以「未到买区」不等于「更好」，「已高于买区」也不等于「更强」；
+    //   ③ 行情抓空 → state=unknown，文案必须写「价格抓空」而不是「无机会」（抓不到 ≠ 没有）。
+    // 断板反包确认池不给目标价与持有天数（回测只验证到次日盘口成交 + T日低点止损），
+    // 所以那一行目标列显式写「未给目标」，不拿别的池的数字来凑。
+    var _buyHtml = (function () {
+      var bl = st.buyList, bs = st.buySummary || {};
+      var p2 = function (v) {
+        return (v === null || v === undefined || v === '' || !isFinite(Number(v))) ? '—' : Number(v).toFixed(2);
+      };
+      var sg = function (v) {
+        if (v === null || v === undefined || v === '' || !isFinite(Number(v))) return '';
+        var n = Number(v);
+        return (n > 0 ? '+' : '') + n.toFixed(1) + '%';
+      };
+      if (!bl || !bl.length) {
+        // 空清单是常态（三池日均命中个位数），不是漏跑。summary.text 里会写清是「无买点」还是「抓空」。
+        if (!bs.text) return '';
+        return '<div class="bl-wrap"><div class="bl-head"><b>💵 今日买入清单</b>' +
+          '<span>今日三池无买点</span></div>' +
+          '<div class="bl-empty">' + esc(String(bs.text)) + '</div>' +
+          (bs.rule ? '<div class="bl-rule">' + esc(String(bs.rule)) + '</div>' : '') + '</div>';
+      }
+      var nBuy = (bs.nBuy == null ? 0 : bs.nBuy);
+      var bySrc = [];
+      for (var k in (bs.bySrc || {})) {
+        if (Object.prototype.hasOwnProperty.call(bs.bySrc, k)) bySrc.push(k + ' ' + bs.bySrc[k] + ' 只');
+      }
+      var noTarget = false, html = '';
+      html += '<div class="bl-wrap"><div class="bl-head"><b>💵 今日买入清单</b>' +
+        '<span>' + bl.length + ' 只 · 现价在买区内 ' + nBuy + ' 只</span>' +
+        (bySrc.length ? '<span>' + esc(bySrc.join(' · ')) + '</span>' : '') +
+        '</div>' +
+        '<div class="bl-th"><span>标的 · 来源 / 仓位</span><span>买入区间</span>' +
+        '<span>现价</span><span>证伪价</span><span>目标 · 持有</span></div>';
+      bl.forEach(function (r) {
+        var cls = ({ buy: 'bl-st-buy', over: 'bl-st-over', under: 'bl-st-under' })[r.state] || 'bl-st-unknown';
+        var anchorZh = (r.anchor === 'box') ? '箱体几何' : '现价 ±' + (bs.slipPct == null ? 1 : bs.slipPct) + '%';
+        html += '<div class="bl-row">' +
+          // 第一列分两层：上面是「名称 + 代码 + 来源徽标」，下面单独一行放仓位。
+          // 早版本把仓位也塞进 .bl-nm 的 flex 里，于是名字长的行仓位换行、名字短的行不换行——
+          // 并排两行一上一下，看起来像两种不同的排版（L16 截图实报）。分层后恒定两行。
+          '<div><div class="bl-nm">' + esc(String(r.name || '')) +
+            '<span style="font-weight:400;color:var(--ink2);font-size:var(--fs-xs);">' + esc(String(r.code || '')) + '</span>' +
+            '<span class="bl-tag">' + esc(String(r.srcZh || '')) + '</span>' +
+            (r.inPicks ? '<span class="bl-tag" style="background:var(--accent-soft);color:var(--accent-deep);">精选</span>' : '') +
+            '</div>' +
+            (r.posPct ? '<span class="bl-k">仓位 ' + Number(r.posPct).toFixed(0) + '%</span>' : '') +
+          '</div>' +
+          '<div><span class="bl-buy">' + p2(r.low) + ' ~ ' + p2(r.high) + '</span>' +
+            '<span class="bl-k">' + esc(anchorZh) + '</span></div>' +
+          '<div><span class="bl-v">' + p2(r.price) + '</span>' +
+            '<span class="bl-k ' + cls + '">' + esc(String(r.stateZh || '')) + '</span></div>' +
+          '<div><span class="bl-v">' + p2(r.invalid) + '</span>' +
+            '<span class="bl-k">' + esc(String(r.invalidZh || '证伪价')) +
+            (r.invalidPct == null ? '' : ' ' + sg(r.invalidPct)) + '</span></div>' +
+          '<div>';
+        if (r.target == null) {
+          noTarget = true;
+          html += '<span class="bl-v">—</span><span class="bl-k">未给目标</span>';
+        } else {
+          html += '<span class="bl-v">' + p2(r.target) +
+            (r.targetPct == null ? '' : ' <span style="font-size:var(--fs-xs);">' + sg(r.targetPct) + '</span>') + '</span>' +
+            '<span class="bl-k">' + (r.holdDays ? ('持 ' + r.holdDays + ' 日') : '未给持有期') + '</span>';
+        }
+        html += '</div></div>';
+      });
+      var rule = String(bs.rule || '');
+      if (noTarget) {
+        rule += ' 断板反包确认池的「证伪价」= T 日最低价，目标与持有期本轮不给——回测只验证到次日盘口成交 + 该价位作废，凑一个目标价就是编数字。';
+      }
+      if (rule) html += '<div class="bl-rule">' + esc(rule) + '</div>';
+      html += '</div>';
+      return html;
+    })();
     fixed += '<div class="db-pool p-star"><h2>🌟 开盘精选 · ' + starPicks.length + ' 只</h2>' +
       // R100z228：副标题原文只列了「谐波/九门/吸筹」，而 R100z222 起陈学长也有 2 个名额——
       // 名册里有、说明书里没有，读者就不知道那两枚「陈学长·XX池」徽标是怎么进来的。顺手把各池名额写出来。
-      '<div class="db-sub">' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：断板池按「板块情绪正向+主力净流入正向」挂钩+上涨概率降序，并可从谐波/九门/吸筹/陈学长池直接取标的（名额 九门 3 · 谐波 3 · 吸筹 2 · 陈学长 2）；弹窗与池内一致）</div>' +
+      '<div class="db-sub">' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：断板池按「板块情绪正向+主力净流入正向」挂钩+上涨概率降序，并可从谐波/横盘启动/吸筹/陈学长池直接取标的（名额 横盘启动 3 · 谐波 3 · 吸筹 2 · 陈学长 2）；弹窗与池内一致）</div>' +
+      // R100z232：买入清单紧跟副标题——这是全卡唯一「能直接下单」的结论段，
+      // 放在开盘价/盘口/深度分析之前，读者不用滚过三段分析才看到价。
+      _buyHtml +
       // R100z193（2026-10-24 用户口径）：开盘价位置**不是强弱信号**，只是价格事实；
       // 动作口径下移到「盘口结构」那一行（tape.py 的分时量价诊断）。
       (st.gapSummary && st.gapSummary.text
@@ -5708,7 +5857,7 @@ function renderDuanban() {
         e2 = { code: code, name: p.name || '', sector: p.sector || '', stage: '精选',
                sentiment: p.sentiment || 'neutral', probability: p.probability,
                src: p.src || '',
-               form: ({ hz: '谐波形态', pw: '日线九门', acc: '主力吸筹', chen: '陈学长断板反包' }[p.src] || '技术池候选'), note: p.note || '' };
+               form: ({ hz: '谐波形态', bp: '横盘启动', acc: '主力吸筹', chen: '陈学长断板反包' }[p.src] || '技术池候选'), note: p.note || '' };
         if (p.score != null) e2.score = p.score;
         if (p.grade) e2.grade = p.grade;
         // R100z4t：合并技术池条目字段——story/deduce（AI 写回后弹窗可见）、sector 补全。
@@ -5762,12 +5911,14 @@ function renderDuanban() {
   var odNav = document.getElementById('db-od-nav');
   if (odNav) odNav.innerHTML = subnavHtml();
 
-  // R100i：🧰 工具箱另两个子页——谐波形态 / 日线九门（从主页面挪入，见 index 渲染段注释）
+  // R100i：🧰 工具箱另两个子页——谐波形态 / 横盘启动（从主页面挪入 / 新建，见 index 渲染段注释）
   // R100k：子页菜单嵌入页首（空数据态也保留菜单，避免困在子页无法返回）
   var hzWrap = document.getElementById('db-hz');
   if (hzWrap) hzWrap.innerHTML = subnavHtml() + (renderHarmonic() || '<div class="db-empty">暂无谐波形态数据</div>');
-  var pwWrap = document.getElementById('db-pw');
-  if (pwWrap) pwWrap.innerHTML = subnavHtml() + (renderPowerScreen() || '<div class="db-empty">暂无量化九门数据</div>');
+  // R100z232：九门页 → 横盘启动页。九门已按同跑道回测（t=−5.02）撤掉，不再渲染。
+  var bpWrap = document.getElementById('db-bp');
+  if (bpWrap) bpWrap.innerHTML = subnavHtml() +
+    (renderBreakoutPool() || '<div class="db-empty">暂无横盘启动数据（16:00 数据步跑 breakout_pool.py 后出现；空池是常态——贴沿标的一天平均 0.6 只）</div>');
   // R100m：主力吸筹成为第 4 个子页（主页面模块同步移除）
   var accWrap = document.getElementById('db-acc');
   if (accWrap) accWrap.innerHTML = subnavHtml() + (renderAccumulation() || '<div class="db-empty">暂无主力吸筹数据</div>');
@@ -5778,7 +5929,7 @@ function renderDuanban() {
 
   // R100n：子页记忆——优先恢复上次选择的子页（localStorage），默认断板反包
   var _savedTab = (function () { try { return localStorage.getItem('dbSubTab'); } catch (e) { return null; } })();
-  switchSubTab(['od', 'db', 'chen', 'hz', 'pw', 'acc'].indexOf(_savedTab) >= 0 ? _savedTab : 'od');
+  switchSubTab(['od', 'db', 'chen', 'bp', 'hz', 'acc'].indexOf(_savedTab) >= 0 ? _savedTab : 'od');
 }
 
 /* ==========================================================================
@@ -5929,6 +6080,9 @@ function chenSinceTxt(m) {
    标题按用户要求改为「断板反包和陈学长复盘」。 */
 function chenCompareHtml(c) {
   var cmp = c.compare || {}, tdy = cmp.today || {}, stats = cmp.stats || {}, tr = c.track || {};
+  // R100z233b：旧口径样本条数由生成侧给出（cmp.legacyN）。**不能**在前端把各行 stats[].legacyN
+  // 加起来——同一条样本既出现在「陈学长·严格池」行、又出现在「两个都选中」行，会重复计数。
+  var cmpLegacyN = cmp.legacyN || 0;
   var chenN = (c.strict || []).length + (c.loose || []).length;
   var both = tdy.both || [], co = tdy.chenOnly || [], doOnly = tdy.duanbanOnly || [];
   /* R100z221（用户 2026-10-26 截图 2）：「陈学长模块…标的点击要能打开看k线和丰富的内容以及左右切换按钮」。
@@ -6008,22 +6162,30 @@ function chenCompareHtml(c) {
       '放量不足 2 倍 ／ 洗盘超 3 日 ／ 收盘破了 T 日最低价 2% ／ 站不稳 5 日线（任一不满足即剔）</div>' +
       '<div class="cc-list">' + (doOnly.length ? doShow : '<span class="cc-more">无</span>') + '</div></div>' +
     '<div class="cc-sec"><div class="cc-t">留痕回测进度</div>' +
-      '<div class="cc-note">起始日 <b>' + esc(tr.since || '—') + '</b> ｜ 已结算 <b>' + (tr.settledN || 0) +
+      '<div class="cc-note">当前口径起始日 <b>' + esc(tr.since || '—') + '</b> ｜ 已结算 <b>' + (tr.settledN || 0) +
       '</b> 条 ｜ 待结算 <b>' + (tr.openN || 0) + '</b> 条' +
       (tr.justSettled ? '（本次新增结算 ' + tr.justSettled + ' 条）' : '') +
+      (tr.legacyN ? ' ｜ 另有旧口径 <b>' + tr.legacyN + '</b> 条按开仓时参数单独结算、不计入' : '') +
       '<br>' + esc(tr.settleRule || '') + '</div></div>' +
-    // 表头顺序与结算三结局对齐：赢 + 亏 + 平 = 样本（平＝持仓满 2 日两条线都没触，按窗口末收盘平）。
+    // 表头顺序与结算三结局对齐：赢 + 亏 + 平 = 样本（平＝持仓满窗口两条线都没触，按窗口末收盘平）。
+    // R100z233b：窗口已从 2 日拉到 10 日（见 chen_pool.py RULE_FROZEN_AT），标题不再写死「2 日」——
+    // 台账里每条样本各自带 holdDays，旧样本 2 日、新样本 10 日，写死哪个都是错的。
     '<div class="cc-tbl-w"><table class="cc-tbl"><thead><tr><th>口径</th><th>样本</th><th>赢</th><th>亏</th>' +
-      '<th title="持仓满 2 日未触目标也未破止损，按窗口末收盘平；收益仍计入均值">平</th>' +
+      '<th title="持仓满各自窗口（现口径 10 个交易日、2026-10-26 前的旧样本 2 日）未触目标也未破止损，按窗口末收盘平；收益仍计入均值">平</th>' +
       '<th title="赢 ÷ 样本（平不算赢）">胜率</th><th>均值</th></tr></thead>' +
     '<tbody>' + statRows + '</tbody></table></div>' +
     ((skipTotal || noStopTotal)
       ? '<div class="cc-note">另：<b>' + skipTotal + '</b> 条开盘价已跌破止损、按纪律没进场（不计胜负）；' +
-        '<b>' + noStopTotal + '</b> 条止损位取不到、已排除在胜负之外——两边止损口径已统一为「洗盘段最低价」，' +
+        '<b>' + noStopTotal + '</b> 条止损位取不到、已排除在胜负之外——两边止损口径已统一，' +
         '胜率可直接横比。</div>'
       : '') +
-    '<div class="cc-note">样本为 0 是正常的——留痕从本模块上线那天才开始，之前的历史不补记' +
-    '（补记要用今天的 K 线倒推止损位，那是前视偏差，宁可样本少）。一周后这张表才有意义。</div>' +
+    (cmpLegacyN
+      ? '<div class="cc-note">另有 <b>' + cmpLegacyN + '</b> 条旧口径样本（2026-10-26 换口径前开仓）' +
+        '已按<b>开仓时</b>的参数（+3.5% / 持 2 日）单独结算，<b>不计入上表</b>——' +
+        '否则每改一次参数，历史胜率就在页面上被重新判分一遍。</div>'
+      : '') +
+    '<div class="cc-note">上表只统计当前口径（2026-10-26 起）的样本，样本为 0 是正常的——' +
+    '换口径后从零开始计，量到 20 条以上才有统计意义；改口径不加样本，改完不收窄判定就等于自己骗自己。</div>' +
     '</div>';
   // 组必须在整串拼完之后才挂到 window：_grp 是在拼字符串过程中逐只 push 的，
   // 提前挂会挂上一份长度还在变的数组引用（虽然 JS 里引用同一份也对，但显式放末尾读起来更清楚）。
@@ -6190,7 +6352,7 @@ function failPoolSorted(failPool) {
    绝不因拼错 kind 就在页面上印出错误的形态名）。 */
 function failKindName(kind) {
   var m = {'duanban': '断板反包形态', 'harmonic': '谐波形态',
-           'accumulation': '主力吸筹结构', 'powerScreen': '日线九门阈值',
+           'accumulation': '主力吸筹结构', 'breakoutPool': '横盘启动平台',
            'chen': '陈学长反包形态'};   // R100z218
   return m[String(kind)] || '原形态';
 }
@@ -6331,11 +6493,11 @@ function failGenericTcHtml(e, i, latestD, kind) {
       tcCell('失效原因', esc(e.reason || '形态失效'), '', true)
     ];
     foot = (isFinite(lag) && lag > 0 ? ('信号滞后 ' + lag + ' 日 · ') : '') + '归档 ' + esc(e.entryDate || '—');
-  } else { // powerScreen 九门：无 grade / lagDays
+  } else { // R100z232：breakoutPool 横盘启动——无 grade / lagDays，用「本轮分数 + 失效原因」
     var sc2 = Number(e.score);
     cells = [
       tcCell('本轮评分', isFinite(sc2) ? String(sc2) : '—', ''),
-      tcCell('评级', '—', ''),
+      tcCell('距箱顶', '—', ''),
       tcCell('失效原因', esc(e.reason || '形态失效'), '', true)
     ];
     foot = '归档 ' + esc(e.entryDate || '—');
@@ -6402,18 +6564,27 @@ function subnavHtml() {
     // R100z218（用户 2026-10-25 红框指定位置）：陈学长独立指标——与断板反包并列，
     // 不是它的升级版。两套口径同时跑、同一结算口径回测，一周后比胜率与选股差异。
     { k: 'chen', t: '陈学长' },
+    // R100z232（用户 2026-10-26「删九门模块 + 新增横盘启动模块」）：`pw` 整条链撤掉，
+    // 换成 `bp`（横盘启动，breakout_pool.py）。位置放在「陈学长」后面——断板/陈学长/横盘启动
+    // 三个都是**买点型**池，排在一起读者才能横向比；谐波/吸筹排后面。
+    // 九门撤掉的数据依据（不是偏好）：同跑道回测 t=−5.02、均超额 −0.390%/笔、胜率 45.6%，
+    // 是四个技术池里唯一突破 5 的负超额；且「次日留存 25%」＝每天换一份名单，追不进去。
+    // 横盘启动同跑道 t=0.41（不显著），但均超额 +0.148%/笔、胜率 54.0%，是四者里唯一非负的。
+    { k: 'bp', t: '横盘启动' },
     { k: 'hz', t: '谐波形态' },
-    { k: 'acc', t: '主力吸筹' },
-    { k: 'pw', t: '日线九门' }
+    { k: 'acc', t: '主力吸筹' }
   ];
   return '<div class="db-subnav">' + tabs.map(function (x) {
     return '<div class="db-subtab' + (x.k === currentSubTab ? ' on' : '') + '" data-k="' + x.k + '" onclick="switchSubTab(\'' + x.k + '\')">' + x.t + '</div>';
   }).join('') + '</div>';
 }
 function switchSubTab(k) {
+  // R100z232：`pw`（九门）已删。老浏览器里 localStorage 可能还存着 'pw'，
+  // 不拦的话 switchSubTab('pw') 找不到容器 → 所有子页 display:none → **整页空白且无报错**。
+  var map = { od: 'db-od', db: 'db-pools', chen: 'db-chen', bp: 'db-bp', hz: 'db-hz', acc: 'db-acc' };
+  if (!map[k]) k = 'db';
   currentSubTab = k;
-  try { localStorage.setItem('dbSubTab', k); } catch (e) {} // R100n：记住上次子页（开盘预测/断板/谐波/吸筹/九门）
-  var map = { od: 'db-od', db: 'db-pools', chen: 'db-chen', hz: 'db-hz', pw: 'db-pw', acc: 'db-acc' };
+  try { localStorage.setItem('dbSubTab', k); } catch (e) {} // R100n：记住上次子页（开盘预测/断板/陈学长/横盘启动/谐波/吸筹）
   Object.keys(map).forEach(function (m) {
     var el = document.getElementById(map[m]);
     if (el) el.style.display = (m === k) ? 'block' : 'none';
@@ -7150,7 +7321,7 @@ function openDbModal(key) {
     faceHtml = '<div class="db-ref-p"><b>中性口径：</b><span class="db-ref-sum" style="display:inline;">' +
       '暂无明确利好/利空消息（按当日要闻自动匹配，AI 复核可改判）</span></div>';
   }
-  if (e.deduce) faceHtml += renderDeduce(e.deduce, true); // R100z4t：技术池标的合并自 powerScreen/harmonic/accumulation 的三候选推演
+  if (e.deduce) faceHtml += renderDeduce(e.deduce, true); // R100z4t：技术池标的合并自 breakoutPool/harmonic/accumulation 的三候选推演
   document.getElementById('db-refs').innerHTML =
     faceHtml +
     '<br>' + (isChen

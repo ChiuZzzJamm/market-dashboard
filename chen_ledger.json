@@ -8,7 +8,20 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-21",
    "stopPrice": 9.22,
-   "result": null
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-10-26",
+    "exitPrice": 9.83,
+    "buyPrice": 9.5,
+    "retPct": 3.5,
+    "note": "盘中触 +3.5% 当天兑现"
+   },
+   "confirmDate": "2026-10-25",
+   "firstSeenDate": "2026-10-25",
+   "tgtPct": 3.5,
+   "holdDays": 2,
+   "ruleFrom": "legacy"
   },
   {
    "pool": "chen_loose",
@@ -18,7 +31,20 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-20",
    "stopPrice": 31.0,
-   "result": null
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-10-26",
+    "exitPrice": 41.49,
+    "buyPrice": 40.09,
+    "retPct": 3.5,
+    "note": "盘中触 +3.5% 当天兑现"
+   },
+   "confirmDate": "2026-10-25",
+   "firstSeenDate": "2026-10-25",
+   "tgtPct": 3.5,
+   "holdDays": 2,
+   "ruleFrom": "legacy"
   },
   {
    "pool": "chen_loose",
@@ -28,7 +54,20 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-21",
    "stopPrice": 52.67,
-   "result": null
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-10-26",
+    "exitPrice": 51.78,
+    "buyPrice": 55.51,
+    "retPct": -6.72,
+    "note": "收盘跌破止损位"
+   },
+   "confirmDate": "2026-10-25",
+   "firstSeenDate": "2026-10-25",
+   "tgtPct": 3.5,
+   "holdDays": 2,
+   "ruleFrom": "legacy"
   },
   {
    "pool": "chen_loose",
@@ -38,7 +77,20 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-20",
    "stopPrice": 13.45,
-   "result": null
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-10-26",
+    "exitPrice": 14.45,
+    "buyPrice": 13.96,
+    "retPct": 3.5,
+    "note": "盘中触 +3.5% 当天兑现"
+   },
+   "confirmDate": "2026-10-25",
+   "firstSeenDate": "2026-10-25",
+   "tgtPct": 3.5,
+   "holdDays": 2,
+   "ruleFrom": "legacy"
   },
   {
    "pool": "chen_strict",
@@ -48,7 +100,20 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-21",
    "stopPrice": 8.63,
-   "result": null
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-10-26",
+    "exitPrice": 9.4,
+    "buyPrice": 9.08,
+    "retPct": 3.5,
+    "note": "盘中触 +3.5% 当天兑现"
+   },
+   "confirmDate": "2026-10-25",
+   "firstSeenDate": "2026-10-25",
+   "tgtPct": 3.5,
+   "holdDays": 2,
+   "ruleFrom": "legacy"
   },
   {
    "pool": "chen_strict",
@@ -58,7 +123,12 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-21",
    "stopPrice": 7.26,
-   "result": null
+   "result": null,
+   "confirmDate": "2026-10-25",
+   "firstSeenDate": "2026-10-25",
+   "tgtPct": 3.5,
+   "holdDays": 2,
+   "ruleFrom": "legacy"
   },
   {
    "pool": "chen_loose",
@@ -68,7 +138,20 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-19",
    "stopPrice": 39.02,
-   "result": null
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-10-26",
+    "exitPrice": 46.57,
+    "buyPrice": 45.0,
+    "retPct": 3.5,
+    "note": "盘中触 +3.5% 当天兑现"
+   },
+   "confirmDate": "2026-10-25",
+   "firstSeenDate": "2026-10-25",
+   "tgtPct": 3.5,
+   "holdDays": 2,
+   "ruleFrom": "legacy"
   },
   {
    "pool": "chen_loose",
@@ -78,7 +161,20 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-19",
    "stopPrice": 67.51,
-   "result": null
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-10-26",
+    "exitPrice": 96.25,
+    "buyPrice": 93.0,
+    "retPct": 3.5,
+    "note": "盘中触 +3.5% 当天兑现"
+   },
+   "confirmDate": "2026-10-25",
+   "firstSeenDate": "2026-10-25",
+   "tgtPct": 3.5,
+   "holdDays": 2,
+   "ruleFrom": "legacy"
   },
   {
    "pool": "chen_loose",
@@ -88,7 +184,12 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-19",
    "stopPrice": 9.05,
-   "result": null
+   "result": null,
+   "confirmDate": "2026-10-25",
+   "firstSeenDate": "2026-10-25",
+   "tgtPct": 3.5,
+   "holdDays": 2,
+   "ruleFrom": "legacy"
   },
   {
    "pool": "chen_loose",
@@ -98,7 +199,20 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-21",
    "stopPrice": 7.25,
-   "result": null
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-10-26",
+    "exitPrice": 7.21,
+    "buyPrice": 7.49,
+    "retPct": -3.74,
+    "note": "收盘跌破止损位"
+   },
+   "confirmDate": "2026-10-25",
+   "firstSeenDate": "2026-10-25",
+   "tgtPct": 3.5,
+   "holdDays": 2,
+   "ruleFrom": "legacy"
   },
   {
    "pool": "chen_loose",
@@ -108,7 +222,20 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-21",
    "stopPrice": 13.8,
-   "result": null
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-10-26",
+    "exitPrice": 13.56,
+    "buyPrice": 14.76,
+    "retPct": -8.13,
+    "note": "收盘跌破止损位"
+   },
+   "confirmDate": "2026-10-25",
+   "firstSeenDate": "2026-10-25",
+   "tgtPct": 3.5,
+   "holdDays": 2,
+   "ruleFrom": "legacy"
   },
   {
    "pool": "chen_loose",
@@ -118,7 +245,12 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-20",
    "stopPrice": 22.93,
-   "result": null
+   "result": null,
+   "confirmDate": "2026-10-25",
+   "firstSeenDate": "2026-10-25",
+   "tgtPct": 3.5,
+   "holdDays": 2,
+   "ruleFrom": "legacy"
   },
   {
    "pool": "chen_loose",
@@ -128,8 +260,189 @@
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-20",
    "stopPrice": 52.5,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-10-26",
+    "exitPrice": 58.99,
+    "buyPrice": 57.0,
+    "retPct": 3.5,
+    "note": "盘中触 +3.5% 当天兑现"
+   },
+   "confirmDate": "2026-10-25",
+   "firstSeenDate": "2026-10-25",
+   "tgtPct": 3.5,
+   "holdDays": 2,
+   "ruleFrom": "legacy"
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "603341",
+   "name": "龙旗科技",
+   "confirmDate": "2026-10-26",
+   "firstSeenDate": "2026-10-26",
+   "entryDate": "2026-10-26",
+   "cross": "db",
+   "ztDate": "2026-10-20",
+   "stopPrice": 38.4,
+   "result": null,
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "ruleFrom": "2026-10-26"
+  },
+  {
+   "pool": "chen_strict",
+   "tier": "strict",
+   "code": "002696",
+   "name": "百洋股份",
+   "confirmDate": "2026-10-23",
+   "firstSeenDate": "2026-10-25",
+   "entryDate": "2026-10-23",
+   "cross": "chen",
+   "ztDate": "2026-10-21",
+   "stopPrice": 9.94,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": {
+    "status": "settled",
+    "result": "notExecuted",
+    "exitDay": "2026-10-26",
+    "exitPrice": 9.5,
+    "buyPrice": 9.5,
+    "retPct": 0.0,
+    "note": "开盘价 9.50 已跌破止损位 9.94，按纪律不进场"
+   }
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "605488",
+   "name": "福莱新材",
+   "confirmDate": "2026-10-22",
+   "firstSeenDate": "2026-10-25",
+   "entryDate": "2026-10-22",
+   "cross": "chen",
+   "ztDate": "2026-10-20",
+   "stopPrice": 29.65,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-10-23",
+    "exitPrice": 35.77,
+    "buyPrice": 34.07,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   }
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "600271",
+   "name": "航天信息",
+   "confirmDate": "2026-10-23",
+   "firstSeenDate": "2026-10-25",
+   "entryDate": "2026-10-23",
+   "cross": "chen",
+   "ztDate": "2026-10-21",
+   "stopPrice": 6.72,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "002929",
+   "name": "润建股份",
+   "confirmDate": "2026-10-23",
+   "firstSeenDate": "2026-10-25",
+   "entryDate": "2026-10-23",
+   "cross": "chen",
+   "ztDate": "2026-10-21",
+   "stopPrice": 50.23,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "600267",
+   "name": "海正药业",
+   "confirmDate": "2026-10-22",
+   "firstSeenDate": "2026-10-25",
+   "entryDate": "2026-10-22",
+   "cross": "both",
+   "ztDate": "2026-10-20",
+   "stopPrice": 13.0,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-10-26",
+    "exitPrice": 14.34,
+    "buyPrice": 13.66,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   }
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "603859",
+   "name": "能科科技",
+   "confirmDate": "2026-10-26",
+   "firstSeenDate": "2026-10-26",
+   "entryDate": "2026-10-26",
+   "cross": "db",
+   "ztDate": "2026-10-19",
+   "stopPrice": 39.02,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "003021",
+   "name": "兆威机电",
+   "confirmDate": "2026-10-26",
+   "firstSeenDate": "2026-10-26",
+   "entryDate": "2026-10-26",
+   "cross": "db",
+   "ztDate": "2026-10-19",
+   "stopPrice": 67.51,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "605389",
+   "name": "长龄液压",
+   "confirmDate": "2026-10-26",
+   "firstSeenDate": "2026-10-26",
+   "entryDate": "2026-10-26",
+   "cross": "db",
+   "ztDate": "2026-10-20",
+   "stopPrice": 52.5,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
    "result": null
   }
  ],
- "updatedAt": "2026-10-26 00:14"
+ "updatedAt": "2026-10-26 16:09"
 }

@@ -368,7 +368,7 @@ def check_horizon(D):
 # 分派原则 =「写它的任务跑哪个 scope」，与 check_logic_depth(ai) / check_reason_depth(us) 对齐：
 #   ai 组 = 决策链（aiPrediction + A股利好/利空卡）
 #   us 组 = 叙事段落（A股/美股 板块理由、五节要闻、题材掘金 + ashare.fundNote_deduce）
-# 不入白名单：量化池（harmonic/accumulation/powerScreen）的 deduce 恒为 None（纯指标页
+# 不入白名单：量化池（harmonic/accumulation/breakoutPool）的 deduce 恒为 None（纯指标页
 #   by-design 占位，2026-10-19 实测 99 处全 None）、us.bullish/bearish 当前不带 deduce。
 # 列表节点用「有则校验」语义（deduce 缺失/非对象 = 未启用，跳过）；仅 aiPrediction.sectors
 #   保持「缺失即 FAIL」旧语义（三候挑选股是前端推演段硬依赖）。
@@ -1253,8 +1253,8 @@ def check_star_module(D):
     """R98k 软闸门：① 双池上涨概率全池拉平（如全为 50%）→ 疑似未校准 WARN；
     ② duanban.star（9:45 开盘精选）picks 数量不限（≥1，R98l）；
        picks 允许三类：a) 双池内标的（src='pool'）；b) src='board' 的板块动量标的
-       （早盘真实强势板块领涨股，R98n，允许池外）；c) src='pw'/'hz'/'acc' 的技术池标的
-       （谐波/九门/吸筹，R100m 前一日 16:00 数据步产物，允许池外）。
+       （早盘真实强势板块领涨股，R98n，允许池外）；c) src='bp'/'hz'/'acc' 的技术池标的
+       （横盘启动/谐波/吸筹，R100m 前一日 16:00 数据步产物，允许池外）。
        纯池外且无合法 src/无板块依据的标的 → WARN。"""
     db = D.get('duanban')
     if not isinstance(db, dict):
@@ -1284,8 +1284,9 @@ def check_star_module(D):
                     # R98n：允许 src='board' 的板块动量标的（早盘真实强势板块领涨股，需有板块依据）
                     if src == 'board' and name_ok and str(p.get('sector') or '').strip():
                         continue
-                    # R100m：允许 src='pw'/'hz'/'acc' 的技术池标的（谐波/九门/吸筹，前一日 16:00 数据步产物）
-                    if src in ('pw', 'hz', 'acc') and name_ok:
+                    # R100m：允许 src='bp'/'hz'/'acc' 的技术池标的（横盘启动/谐波/吸筹，前一日 16:00 数据步产物）
+                    # R100z232：九门下线，'pw' 换成 'bp'；两个都留着是因为历史 star.picks 里还有 'pw'
+                    if src in ('bp', 'pw', 'hz', 'acc') and name_ok:
                         continue
                     warns.append(f"duanban.star.picks {c} {p.get('name')} 不在断板反包双池内且非合规来源标的（精选只能从双池/板块动量/技术池筛）")
             if not str(star.get('pushText') or '').strip():
@@ -1433,19 +1434,24 @@ def check_selection_modules(D):
                 if 'score' not in it or 'grade' not in it:
                     warns.append(f"accumulation.scored[{i}] 缺 score/grade")
 
-    p = D.get('powerScreen')
+    p = D.get('breakoutPool')
     if p is not None:
         if not isinstance(p, dict):
-            warns.append("powerScreen 应为对象")
+            warns.append("breakoutPool 应为对象")
         else:
             for i, it in enumerate(p.get('passed') or []):
                 if not isinstance(it, dict):
-                    warns.append(f"powerScreen.passed[{i}] 非对象"); continue
+                    warns.append(f"breakoutPool.passed[{i}] 非对象"); continue
                 c = str(it.get('code') or '')
                 if not MAIN.match(c):
-                    warns.append(f"powerScreen.passed[{i}] code {c} 非 60/00 沪深主板")
+                    warns.append(f"breakoutPool.passed[{i}] code {c} 非 60/00 沪深主板")
                 if 'score' not in it:
-                    warns.append(f"powerScreen.passed[{i}] 缺 score")
+                    warns.append(f"breakoutPool.passed[{i}] 缺 score")
+                # R100z232：横盘启动的买区/证伪价是箱体几何推出来的，缺了就没法下单
+                _e = it.get('entry') if isinstance(it.get('entry'), dict) else None
+                if not _e or not all(_e.get(k) is not None
+                                     for k in ('low', 'high', 'stop', 'target')):
+                    warns.append(f"breakoutPool.passed[{i}] entry 缺 low/high/stop/target")
 
     # R100h：macroChecklist 校验已随必带数据清单模块下线删除
     return warns

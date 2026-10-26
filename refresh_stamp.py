@@ -40,7 +40,7 @@ SLOTS = [
     (("panorama", "updatedAt"), "全球市场全景"),
     (("harmonic", "updatedAt"), "谐波形态"),
     (("accumulation", "updatedAt"), "吸筹打分"),
-    (("powerScreen", "updatedAt"), "量化筛选"),
+    (("breakoutPool", "updatedAt"), "横盘启动"),
     (("fullScan", "updatedAt"), "全量扫描"),
     (("stopTrack", "updatedAt"), "止损跟踪"),
 ]

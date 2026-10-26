@@ -71,6 +71,12 @@
     G45 弹窗导航分组  列表点开的 K 线弹窗必须**先建组再开**（stkOpenIn），openStkModal 入口须
                       兜底关箭头（stkSyncNav）；内联 onclick 直开弹窗一律禁止——那会让 ←/→
                       翻上一个读者点过的清单（R100h 犯过一次、R100z200 又犯一次，FAIL）
+    G46 板块名可解析   预测板块名（AI 手写主题名）必须能落到 allBoards 的行业名；别名表
+                      board_alias.json 与 index.html 的 pctAlias 逐字同源（R100z224，FAIL）
+    G47 买入清单真值   duanban.star.buyList 是**唯一会被当下单指令读**的字段，查的不是
+                      「有没有字段」而是「会不会让人做错事」：state 与现价必须自洽、
+                      票必须能回溯到对应池（防凭空造票）、买区上下沿不得颠倒、只能沪深主板、
+                      断板反包不得编目标价；外加生成端/渲染端接线断言（R100z232，FAIL）
 """
 import ast
 import json
@@ -105,12 +111,12 @@ EMPTY_WHITELIST = [
     # --- 被动技术池：脚本只出形态/量化，AI 叙事由 19:30 叙事步 AI 写回，脚本阶段天然空 ---
     (r"harmonic\.(confirmPool|watchPool|failPool)\[\d+\]\.(story|deduce)",
      "R100z4q：harmonic_detect 从旧池继承叙事，新形态条目脚本阶段无叙事，等 AI 写回"),
-    (r"(accumulation|powerScreen)\.(scored|passed|strong|watch)\[\d+\]\.(story|deduce)",
+    (r"(accumulation|breakoutPool)\.(scored|passed|strong|watch)\[\d+\]\.(story|deduce)",
      "R100z21：scored 全量 + strong/watch 分池副本同构，AI 叙事位脚本阶段为空、由 AI 写回"),
-    (r"(accumulation|powerScreen)\.(scored|strong|watch)\[\d+\]\.sector",
+    (r"(accumulation|breakoutPool)\.(scored|strong|watch)\[\d+\]\.sector",
      "R100z21：strong/watch 分池副本沿用 scored 的板块字段，sec_map 查不到时留空"),
     # --- 结构化可选字段：脚本写 foo or ''，无值时该维度不存在 ---
-    (r"(harmonic|accumulation|powerScreen)\.(confirmPool|watchPool|scored|passed|failPool)\[\d+\]\.sector",
+    (r"(harmonic|accumulation|breakoutPool)\.(confirmPool|watchPool|scored|passed|failPool)\[\d+\]\.sector",
      "sec_map 查不到板块时留空；前端按板块分组，无板块归入默认组不渲染空标签"),
     (r"duanban\.(confirmed|watching)\[\d+\]\.bullType",
      "R91p 打标加权制：个股×2/板块×1，既非利好也非利空即中性→留空"),
@@ -127,7 +133,7 @@ EMPTY_WHITELIST = [
      "R98j：主题速览模块已下线，字段保留防旧键丢失"),
     (r"excluded$",                      # 结构预留
      "无剔除项时为空数组"),
-    (r"(harmonic|accumulation|powerScreen)\.summary$",
+    (r"(harmonic|accumulation|breakoutPool)\.summary$",
      "脚本可能不给名，前端真值兜底"),
     (r"aiPrediction\.verification",     # 非交易日/null 属正常
      "08:30 未写 verification 时前端不渲染验证卡"),
@@ -166,7 +172,7 @@ EMPTY_WHITELIST = [
 
 DATA_KEYS_REQUIRED = [
     "us", "ashare", "duanban", "panorama", "aiPrediction", "openOutlook",
-    "stkKlines", "stkKlineNames", "harmonic", "accumulation", "powerScreen",
+    "stkKlines", "stkKlineNames", "harmonic", "accumulation", "breakoutPool",
 ]
 
 VALIDATE_SCOPES = ("all", "ai", "us", "star")
@@ -227,9 +233,13 @@ PRODUCT_OWNERSHIP = {
         "require": ("accumulation", "吸筹"),
         "note": "吸筹形态池",
     },
-    "powerScreen": {
-        "require": ("powerScreen", "九门", "强势"),
-        "note": "九门强势筛选池（power_screener）",
+    "breakoutPool": {
+        "require": ("breakoutPool", "横盘启动", "breakout_pool"),
+        "note": ("R100z232：横盘启动池（breakout_pool.py，60 日平台贴沿 + 均线粘合 + 地量），"
+                 "**取代九门 powerScreen**。九门同跑道回测 t=−5.02 / 均超额 −0.390%/笔，"
+                 "是四个技术池里唯一突破 5 的负超额；横盘启动 +0.148%/笔、胜率 54.0%、t=0.41"
+                 "（不显著但非负）。池子给的是「箱顶下方 3% 内低吸」的可成交买区，"
+                 "突破确认交给 09:45 开盘精选判。"),
     },
     "openOutlook": {
         "require": ("openOutlook", "开盘前瞻", "前瞻"),
@@ -282,7 +292,7 @@ PRODUCT_OWNERSHIP = {
     "stockNews": {
         "require": ("stock_news.py", "个股消息库", "stockNews"),
         "note": "R100z149：stock_news.py 抓东财个股公告 + 资讯搜索，按 code 汇总成 {code:{name,notices,news}}，"
-                "覆盖断板（含失效池）/谐波/吸筹/九门/连板/板块成分/AI预测/要闻影响标的；"
+                "覆盖断板（含失效池）/谐波/吸筹/横盘启动/连板/板块成分/AI预测/要闻影响标的；"
                 "前端弹窗（网页 db-modal）统一渲染「个股消息」段。"
                 "16:00 数据步第 4.5 步点名（四模块之后、汇报之前；R100z162 更正：旧注记为「断板主生成前」，"
                 "与 16:00 实际步骤顺序（2 断板 → 3 要闻 → 4 四模块 → 4.5 个股消息）不符）。",
@@ -1363,7 +1373,7 @@ def g16_narrative_depth(r):
 
     背景：用户复盘满意 A 股深度（板块 285-390 / 题材 371-411 / 要闻 333-431 字），
     但美股 us.* 长期只有 60-110 字（根因：07:00 / 周日两条自动化 prompt 把字数上限
-    写成 60-110）。量化页（谐波/九门/吸筹）无叙事字段渲染，其空 story 是设计行为，不在这
+    写成 60-110）。量化页（谐波/横盘启动/吸筹）无叙事字段渲染，其空 story 是设计行为，不在这
     里管；chip 标签类字段（lianban.reason / 各池 note / star.picks.note / failPool.reason）
     也非主叙事，不在这管。本闸只管「真正渲染给用户的长文主字段」。
 
@@ -1707,7 +1717,7 @@ def g21_failpool_disjoint(r):
     某票先失效归档、之后又重新走完形态达标进池，旧归档未清，导致同一 code 两池共存。
     失效池语义本应为「已失效且当前不在池」。修复：common.roll_fail_pool 增 exclude_codes 参数，
     各模块生成脚本在滚动旧归档时剔除当前在池 code（check_duanban / harmonic_detect /
-    accumulation_score / power_screener）。本闸做硬校验，防止该 bug 回归：四模块 failPool 的
+    accumulation_score / breakout_pool）。本闸做硬校验，防止该 bug 回归：四模块 failPool 的
     code 集合与各自在池（confirmed+watching / confirmPool+watchPool / scored / passed）的
     code 集合必须互斥，有交集即 FAIL。"""
     try:
@@ -1718,7 +1728,7 @@ def g21_failpool_disjoint(r):
     specs = [
         ("duanban", ("confirmed", "watching"), "confirmed+watching"),
         ("harmonic", ("confirmPool", "watchPool"), "confirmPool+watchPool"),
-        ("powerScreen", ("passed",), "passed"),
+        ("breakoutPool", ("passed",), "passed"),
         ("accumulation", ("scored",), "scored"),
     ]
     problems = []
@@ -2175,7 +2185,7 @@ STAMP_SLOTS = [
     (("panorama", "updatedAt"), "全球市场全景"),
     (("harmonic", "updatedAt"), "谐波形态"),
     (("accumulation", "updatedAt"), "吸筹打分"),
-    (("powerScreen", "updatedAt"), "量化筛选"),
+    (("breakoutPool", "updatedAt"), "横盘启动"),
     (("fullScan", "updatedAt"), "全量扫描"),
     (("stopTrack", "updatedAt"), "止损跟踪"),
 ]
@@ -2315,7 +2325,7 @@ def g28_freshness_consistency(r):
     # 所以升级为 FAIL。四模块保持 WARN：16:00 prompt 显式允许 full_scan 失败时「不写 fullScan、
     # 继续跑后三脚本即可」，判 FAIL 会与既有容错设计正面冲突（那是有意为之的降级，不是漏跑）。
     lag_mod = []
-    for key in ("harmonic", "accumulation", "powerScreen", "fullScan"):
+    for key in ("harmonic", "accumulation", "breakoutPool", "fullScan"):
         v = str((D.get(key) or {}).get("tradeDate") or "")[:10]
         if v and v < td:
             lag_mod.append(f"{key}.tradeDate={v}")
@@ -2364,7 +2374,7 @@ def g29_name_and_risk_hygiene(r):
         **已戴帽 ST 却显示成正常公司，还被摆在「板块受益标的」里**。
         黑名单自己取的是实时行情名，两边不一致 → 同一只票两套名字。
       · 风险层：`stock_risk_blacklist.py` 每天都在算 red，但只有 `update_star.py` 会过滤；
-        `check_duanban` / `power_screener` / `accumulation_score` 压根不读 →
+        `check_duanban` / `breakout_pool` / `accumulation_score` 压根不读 →
         603330 天洋新材 10-09 就公告减持，到 10-21 仍挂在「断板确认池」和「量化筛选」里。
 
     分工：`sync_names.py` 负责校正、`risk_gate.py` 负责清理（均幂等，deploy.sh 已内置）；
@@ -4077,6 +4087,156 @@ def g46_sector_board_names(r):
                 f"{len(warns)} 个主题名走别名映射（买点 basis 已注明按哪条指数算）")
 
 
+def g47_buy_list_truth(r):
+    """G47 今日买入清单：结构 / 价格自洽 / 票必须在池里（R100z232，2026-10-26）。
+
+    背景：用户第 4 项要求——当天若三池（断板反包确认池 / 横盘启动贴沿 / 陈学长双池）
+    命中，就要在开盘精选里直接给「当日买入 + 买入价格区间」。清单由
+    `update_star.py::build_buy_list()` 生成，写进 `duanban.star.buyList`。
+
+    这张清单和别的只读展示字段不同，它是**唯一会被当成下单指令读的东西**，
+    错的方式也特别安静，所以这里查的都是「页面照常漂亮、但读的人会做错事」的几种：
+
+      a) **state 与价格不自洽**：`state='buy'`（页面写「在买区内」）而现价其实在区间外。
+         改算法/改滑点参数时最容易脱节——页面不会报错，只会平静地骗人。
+      b) **凭空造票**：清单里的 code 在三个池里都找不到。这条最严重，等于页面自己编标的。
+      c) **买区上下沿颠倒**（low > high）：箱体几何算错时会出现。
+      d) **非沪深主板**（688/300/8xx）：硬约束 3，进了清单就等于推荐不能买的东西。
+      e) **断板反包被塞了目标价**：那一池回测只验证到「次日盘口成交 + T日低点作废」，
+         给它编一个 targetPrice 就是造假。反向断言。
+      f) **接线断了**：`build_buy_list` 没人调、`st.buyList` 前端没人渲染——
+         清单静默消失，而所有字段级校验都会「因为没有数据而跳过」显示全绿。
+
+    f 是这道闸存在的主要理由：字段校验只保护「有数据时的数据」，接线的完整性只能靠源码断言。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G47", f"data.js 读取失败，跳过买入清单校验：{e}")
+        return
+
+    # ---- f) 接线完整性：生成端 + 渲染端 ----
+    try:
+        up = open(os.path.join(HERE, "update_star.py"), encoding="utf-8").read()
+        htm = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G47", f"无法读取 update_star.py / index.html，接线校验失效：{e}")
+        return
+    wire = []
+    if "def build_buy_list(" not in up:
+        wire.append("update_star.py 缺 build_buy_list()")
+    if '"buyList": buy_rows' not in up and '"buyList":buy_rows' not in up:
+        wire.append("update_star.py 未把 buy_rows 写进 star['buyList']")
+    if "build_buy_list(" not in up.split("def build_buy_list(", 1)[-1].split("\ndef ", 1)[-1]:
+        wire.append("update_star.py 的 build_buy_list 没有被调用（只定义不接线）")
+    if "st.buyList" not in htm:
+        wire.append("index.html 未渲染 st.buyList")
+    if wire:
+        r.fail("G47", "买入清单接线断了：" + "；".join(wire))
+        return
+
+    # ---- 结构 ----
+    star = ((D.get("duanban") or {}).get("star") or {})
+    bl = star.get("buyList")
+    summ = star.get("buySummary") or {}
+    if bl is None:
+        # 兼容窗口：9:45 任务升级前的存量 data.js 没有这个字段。不判 FAIL，
+        # 但必须说清「没跑」而不是「没买点」——两者在页面上长得一样。
+        r.warn("G47", "duanban.star.buyList 缺失（9:45 任务尚未按新口径重跑）；"
+                      "缺失 ≠ 今日无买点")
+        return
+    if not isinstance(bl, list):
+        r.fail("G47", f"duanban.star.buyList 类型应为 list，实际 {type(bl).__name__}")
+        return
+    if not isinstance(summ, dict) or summ.get("n") != len(bl):
+        r.fail("G47", "buySummary.n=%r 与 buyList 实际 %d 只不符（汇总与明细脱节）"
+                      % (summ.get("n") if isinstance(summ, dict) else None, len(bl)))
+        return
+
+    # 各池的真实成员集合（用于 b 造票检查）
+    duanban_pool = set()
+    for p in (D.get("duanban") or {}).get("confirmed") or []:
+        if isinstance(p, dict):
+            duanban_pool.add(str(p.get("code")))
+    bp_pool = {str(x.get("code")) for x in
+               ((D.get("breakoutPool") or {}).get("passed") or []) if isinstance(x, dict)}
+    chen_strict = {str(x.get("code")) for x in
+                   ((D.get("chenPool") or {}).get("strict") or []) if isinstance(x, dict)}
+    chen_loose = {str(x.get("code")) for x in
+                  ((D.get("chenPool") or {}).get("loose") or []) if isinstance(x, dict)}
+    pick_pool = {str(p.get("code")) for p in (star.get("picks") or []) if isinstance(p, dict)}
+
+    def _n(v):
+        try:
+            return None if v is None or v == "" else float(v)
+        except (TypeError, ValueError):
+            return None
+
+    bad = []
+    for i, it in enumerate(bl):
+        tag = "buyList[%d]" % i
+        if not isinstance(it, dict):
+            bad.append("%s 不是对象" % tag)
+            continue
+        code = str(it.get("code") or "")
+        src = it.get("src")
+        tag = "buyList[%d](%s)" % (i, code or "?")
+        # 必需字段
+        miss = [k for k in ("code", "name", "src", "srcZh", "low", "high",
+                            "invalid", "state", "stateZh") if it.get(k) in (None, "")]
+        if miss:
+            bad.append("%s 缺字段 %s" % (tag, "/".join(miss)))
+            continue
+        if not code.startswith(("60", "00")):
+            bad.append("%s 非沪深主板（硬约束 3）" % tag)
+        if src not in ("chen_strict", "chen_loose", "duanban", "bp"):
+            bad.append("%s src=%r 不在白名单" % (tag, src))
+            continue
+        # d) 票必须在池里
+        member = {"chen_strict": chen_strict, "chen_loose": chen_loose,
+                  "bp": bp_pool, "duanban": (duanban_pool | pick_pool)}[src]
+        if code not in member:
+            bad.append("%s 声称来自 %s，但该池里没有这只票（凭空造票）" % (tag, src))
+        # c) 买区上下沿
+        lo, hi, last, inv = _n(it.get("low")), _n(it.get("high")), _n(it.get("price")), _n(it.get("invalid"))
+        if lo is None or hi is None:
+            bad.append("%s 买区缺数值" % tag)
+            continue
+        if lo > hi:
+            bad.append("%s 买区上下沿颠倒（low %.2f > high %.2f）" % (tag, lo, hi))
+        if inv is not None and lo > 0 and inv > lo:
+            bad.append("%s 证伪价 %.2f 高于买区下沿 %.2f（跌穿才算错，不该在买区上方）"
+                       % (tag, inv, lo))
+        # a) state 与价格自洽
+        st = it.get("state")
+        if last is None:
+            exp = "unknown"
+        elif last > hi * 1.0001:
+            exp = "over"
+        elif last < lo * 0.9999:
+            exp = "under"
+        else:
+            exp = "buy"
+        if st != exp:
+            bad.append("%s state=%s 但现价 %s 对买区 %.2f~%.2f 应为 %s（页面会写着「%s」而价格在区外）"
+                       % (tag, st, ("%.2f" % last) if last is not None else "缺失",
+                          lo, hi, exp, it.get("stateZh")))
+        # e) 断板反包不许给目标价
+        if src == "duanban" and it.get("target") not in (None, ""):
+            bad.append("%s 断板反包池给了目标价 %.2f——该池回测未验证目标价，属编数字"
+                       % (tag, _n(it.get("target")) or 0))
+
+    if bad:
+        r.fail("G47", "；".join(bad[:4]) + ("（共 %d 处）" % len(bad) if len(bad) > 4 else ""))
+        return
+    if not bl:
+        r.ok("G47", "买入清单为空（三池当日无买点，属常态）；接线与结构校验通过")
+        return
+    n_buy = sum(1 for x in bl if x.get("state") == "buy")
+    r.ok("G47", "买入清单 %d 只（现价在买区内 %d 只）；买区/证伪价自洽、票全部可回溯到池、"
+                "断板反包未编目标价；生成端与渲染端接线完整" % (len(bl), n_buy))
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -4138,6 +4298,7 @@ def main():
     g44_zombie_mirror_nodes(r)
     g45_modal_nav_group(r)
     g46_sector_board_names(r)
+    g47_buy_list_truth(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
