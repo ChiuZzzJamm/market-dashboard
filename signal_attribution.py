@@ -63,14 +63,19 @@ MIN_DAYS = 5        # 出结论最少覆盖交易日
 REVERSE_T = -2.0    # 1 日期望的 t 值低于此 → 判「负期望」，不是「运气差」
 
 SRC_LABEL = {
-    'harmonic': '谐波形态',
-    'accumulation': '吸筹打分',
-    'breakoutPool': '横盘启动',
-    'duanban': '断板反包',
     'ai': 'AI 预测',
     'mech': '机械池（吸筹+横盘启动）',
-    'leadLag': '强板块落后股',
+    'duanban': '断板反包',
+    'chen': '陈学长',
+    'breakoutPool': '横盘启动',
+    'harmonic': '谐波形态',
+    'accumulation': '主力吸筹',
 }
+
+# 页面展示顺序（用户 2026-10-26 指定）：七个指标逐行分开，不再合并成「机械池」一行。
+# 不在这个元组里的 src 一律不展示——powerScreen（九门）已废弃，台账里还留着 30 条历史记录，
+# 不过滤就会在页面上挂一行永久「累积中」的死指标。
+ROW_ORDER = ('ai', 'mech', 'duanban', 'chen', 'breakoutPool', 'harmonic', 'accumulation')
 
 # stop_ledger 的 stopSrc → 主台账键名。stop_ledger 无法区分吸筹与横盘启动
 # （两者都落进 default-3%），所以合成一个 'mech'，不硬拆成两个假精度。
@@ -124,14 +129,30 @@ def snapshot(D):
     """今日各指标选出的标的（code/name/sector/close）。按指标分组，同指标内去重。"""
     K = D.get('stkKlines') or {}
     out = {}
+
+    def _put(s, code, name, sector):
+        c = str(code or '').strip()
+        if not c:
+            return
+        bars = A.norm_bars(K.get(c))
+        grp = out.setdefault(s, {})
+        if c not in grp:
+            grp[c] = {'code': c, 'name': name or '',
+                      'sector': (sector or '').strip(),
+                      'close': bars[-1][2] if bars else None}
+
     for code, meta in A.collect(D):
-        bars = A.norm_bars(K.get(code))
-        close = bars[-1][2] if bars else None
         for s in meta['_srcs']:
-            grp = out.setdefault(s, {})
-            if code not in grp:
-                grp[code] = {'code': code, 'name': meta['name'],
-                             'sector': meta['sector'], 'close': close}
+            _put(s, code, meta['name'], meta['sector'])
+
+    # 陈学长：只登记「已确认」的两档（strict + loose）。watching 是观察池、还没确认，
+    # 记进来会把「没确认的票」算成指标命中，凭空抬高它的胜率。
+    # 注：不往 atr_stop.collect 里加——那会把这批票塞进全站止损清单，改变 atrStops 的覆盖口径。
+    cp = D.get('chenPool') or {}
+    for pool in ('strict', 'loose'):
+        for x in cp.get(pool) or []:
+            _put('chen', x.get('code'), x.get('name'), x.get('sector'))
+
     return {s: list(v.values()) for s, v in out.items()}
 
 
@@ -450,6 +471,33 @@ def build(D, do_snapshot=True):
                                    'win': r['win5'], 'winExc': None,
                                    't': r['x'].get('2', {}).get('t') if r.get('x') else None}
 
+    # 陈学长接入本表（2026-10-26 用户要求：指标复盘要逐行分开）。
+    # 它有自己的留痕回测（chenPool.compare，规则是「+5% 止盈 / 10 个交易日」），
+    # 与这里的「1 日胜率」不是同一把尺子——所以**不把它的胜率塞进 win1**（那是混口径），
+    # 只在 sub 里如实写出自有口径的数字，行本身按「累积中」展示，等 1 日口径攒够样本。
+    chen_cmp = ((D.get('chenPool') or {}).get('compare') or {}).get('stats') or {}
+    if chen_cmp and not (summ.get('chen') or {}).get('sampleEnough'):
+        lo = chen_cmp.get('chen_loose') or {}
+        st_ = chen_cmp.get('chen_strict') or {}
+        bits = []
+        if st_.get('n'):
+            bits.append('严格池 %d 笔 %s' % (st_['n'],
+                       ('胜率 %.0f%%' % st_['winRate']) if st_.get('winRate') is not None else ''))
+        if lo.get('n'):
+            bits.append('放宽池 %d 笔 %s %s' % (lo['n'],
+                       ('胜率 %.0f%%' % lo['winRate']) if lo.get('winRate') is not None else '',
+                       ('均 %+.1f%%' % lo['avgRet']) if lo.get('avgRet') is not None else ''))
+        summ['chen'] = {
+            'label': SRC_LABEL['chen'],
+            'n': (lo.get('n') or 0) + (st_.get('n') or 0), 'days': 3,
+            'h': {str(h): {'n': 0, 'ret': None, 'exc': None,
+                           'win': None, 'winExc': None, 't': None} for h in HORIZONS},
+            'x': {},
+            'sampleEnough': False,
+            'legacy': True,
+            'sub': ('自有口径 +5%/10日：' + '；'.join(bits)) if bits else '自有口径已结算 0 笔',
+        }
+
     weights, wmsg = suggest_weights(summ)
 
     ranking = []
@@ -469,11 +517,12 @@ def build(D, do_snapshot=True):
                         'touchRate': r.get('touchRate'),
                         'verdict': verdict_of(r), 'sampleEnough': r['sampleEnough'],
                         'legacy': bool(r.get('legacy')),
+                        'sub': r.get('sub'),
                         'weight': weights.get(s)})
-    # 排序：能交易的排前面（t1 降序），没 t1 的按 5 日超额，最后按样本
-    ranking.sort(key=lambda x: (-(x['t1'] if x['t1'] is not None else -99),
-                                -(x['exc5'] if x['exc5'] is not None else -99),
-                                -x['n']))
+    # 只留用户点名的那七个指标，并按固定顺序排（不再按 t 值排序）。
+    # 按 t 排序会让行序每天变，读者没法「昨天那行今天还在原位」地对照。
+    ranking = [r for r in ranking if r['src'] in ROW_ORDER]
+    ranking.sort(key=lambda x: ROW_ORDER.index(x['src']))
 
     if do_snapshot and ent:
         L['updatedAt'] = _now()
@@ -636,7 +685,7 @@ def self_test():
     chk('超额为负的指标权重归零（不在表里）', 'accumulation' not in w2)
     chk('权重合计 = 1.0（实测 %s）' % round(sum(w2.values()), 3),
         abs(sum(w2.values()) - 1.0) < 0.01)
-    chk('零权说明里点名了该指标', '吸筹打分' in msg2)
+    chk('零权说明里点名了该指标', SRC_LABEL['accumulation'] in msg2)
 
     # ⑤ 可执行口径：T+1 开盘买入
     b2 = [('2026-10-01', 100, 100, 101, 99, 1e6),      # 登记日：收 100
