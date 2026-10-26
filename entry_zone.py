@@ -108,6 +108,30 @@ def ma_pct(kline, n):
     return sum(cl[-n:]) / n
 
 
+def _drop_partial_today(kl, now=None):
+    """末根若是「今天且还没收盘」，丢掉它。
+
+    R100z224 的连带风险：本脚本原本只在 08:30（开盘前）被调，kline 末根必然是**完整**交易日。
+    下沉进 `deploy.sh` 之后，09:45 / 19:30 的部署也会重算 —— 09:45 时末根是当天进行中的
+    bar：`close` 是活价、真实波幅只有十几分钟，照用的话 basis 会把**盘中活价写成「昨收」**，
+    支撑位还会随盘中跳动。判据：末根日期 == 今天 且 现在 < 15:00 → 丢（A 股 15:00 收盘）。
+
+    宁可少一根，也不给一个「挂错日期的数」——同日期的错数比没有数更坏（看不出错）。
+
+    `now` 只为自检注入，生产不传（19:30 的部署也会跑自检，不能赌运行时刻）。
+    """
+    if not kl:
+        return kl
+    try:
+        import datetime as _dt
+        now = now or _dt.datetime.now()
+        if str(kl[-1][0])[:10] == now.date().isoformat() and now.hour < 15:
+            return kl[:-1]
+    except Exception:                                       # noqa: BLE001
+        pass
+    return kl
+
+
 def _kline_of(board):
     """板块日线：优先用 data.js 里已附的 kline，没有就抓同花顺行业日线。
 
@@ -115,7 +139,7 @@ def _kline_of(board):
     （kline 只挂在 sectorsUp/sectorsDown 的 top5 上）。所以 ATR 必须现抓，
     数据源与 update_ashare_sectors.py 同源（thsCode 就是 allBoards[].code）。
     """
-    kl = board.get('kline') or []
+    kl = _drop_partial_today(board.get('kline') or [])
     if len(kl) >= 5:
         return kl
     code = board.get('code')
@@ -123,7 +147,7 @@ def _kline_of(board):
         return []
     try:
         import update_ashare_sectors as UAS
-        return UAS.fetch_ths_board_kline(str(code), days=30) or []
+        return _drop_partial_today(UAS.fetch_ths_board_kline(str(code), days=30) or [])
     except Exception:                                       # noqa: BLE001
         return []
 
@@ -290,6 +314,17 @@ def selftest():
     chk('别名 basis 注明近似板块',
         '化学制药' in str(resA.get('创新药', {}).get('entry', {}).get('basis', '')))
     chk('两处都没有 → miss', missA == ['不存在的主题'], str(missA))
+
+    # R100z224：进行中的当日 bar 必须丢掉，否则盘中活价会被写成「昨收」
+    import datetime as _dt
+    klP = [[f'd{i}', 100, 100, 101, 99, 1000.0] for i in range(19)] + [['2026-10-26', 100, 103, 104, 99, 900.0]]
+    chk('盘中(09:45)丢掉当日未走完的 bar',
+        len(_drop_partial_today(klP, now=_dt.datetime(2026, 10, 26, 9, 45))) == 19)
+    chk('收盘后(15:30)保留当日 bar',
+        len(_drop_partial_today(klP, now=_dt.datetime(2026, 10, 26, 15, 30))) == 20)
+    chk('末根是往日 → 不动',
+        len(_drop_partial_today(klP, now=_dt.datetime(2026, 10, 27, 9, 45))) == 20)
+    chk('空 kline → 不炸', _drop_partial_today([]) == [])
 
     # write_back：entry 算不出来时必须删旧值，不许留昨天的数（幽灵数据）
     DB = {'aiPrediction': {'sectors': [{'sector': '创新药', 'entry': {'supportPct': -9.9}}]}}
