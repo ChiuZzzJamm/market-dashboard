@@ -144,8 +144,10 @@ EMPTY_WHITELIST = [
      "R100z107b：政策解码无识别到受益板块/量化目标时为空数组，前端按 '-' 显示"),
     # R100z190：强板块落后股——「今天没有强板块」是这套规则的正常输出，不是脚本漏跑。
     (r"duanban\.leadLag\.(picks|sectors)$",
-     "R100z190：lead_lag 约六成交易日无候选（回测 34/90 日有信号），picks/sectors 为空属正常；"
-     "前端 renderDuanban 里 `if ((LL.picks||[]).length) ... else 空仓文案` 双向兜底，sectors 前端未引用"),
+     "R100z190：lead_lag 约六成交易日无候选（回测 34/90 日有信号），picks/sectors 为空属正常。"
+     "R100z225 起前端**不再引用 picks**（今日清单那半已整块删除，只留复盘台账的回测块），"
+     "属理由①「纯数据层字段、空值无害」；它仍有下行读者——lead_lag 同时把当日候选登记进 "
+     "signal_ledger.entries[date].leadLag，由 signal_attribution 逐日回算真实胜率，不是僵尸字段"),
     # R100z218：陈学长池——他的口径比断板反包严得多（连板≥2 + 断板日放量≥2 倍），空池是常态。
     (r"chenPool\.(watching|failPool|failedDates)$",
      "R100z218：观察池「今天没有走到差一根K线的标的」、失效池「今天没有标的失效」都是正常日度状态；"
@@ -3496,11 +3498,11 @@ def g40_score_page_and_slots(r):
       a) #score-view / #score-body / #sc-date / #sc-entry / #sc-entry-in 五个锚点齐全；
       b) CSS 三件套齐（容器默认隐藏 + body.score-open 隐藏其余 + 显示本页）；
       c) renderScoreView() 同时渲染 renderSignalPerf / renderForecastScore / chenCompareHtml /
-         renderLeadLag('bt')（少一张＝用户要的丢一半）；且 renderLeadLag 只允许两个
-         **带 mode 的**调用点：'picks' 在断板页、'bt' 在复盘台账，**禁止无参调用**——
+         renderLeadLag（少一张＝用户要的丢一半）；且 renderLeadLag **恰好一个调用点、且无参**——
          R100z199 把它从断板页搬到复盘页，两处各挂一份就会出现「同一张卡两个页面数字不同步」；
-         R100z221 又按「今天买什么 / 这套口径能不能信」拆成两半，无参调用会把两半同时塞进两个页面。
-         （闸门查的是「每个 mode 恰好一个调用点」，不是函数名——将来再拆第三半只需同步这张表。）
+         R100z221 又按「今天买什么 / 这套口径能不能信」拆成两半，结果用户 2026-10-26 看到两块
+         直接问「这两个是一个东西吗？我不是问你这个模块要不要删掉吗」；R100z225 把 picks 那半
+         整块删掉、函数回到无参，闸门改为「恰好一处 + 不许传参」。将来若再拆，先改这条判据。
       d) hash '#score' 至少两处（初始直达 + popstate 返回）；
       e) 槽位表 RAIL 把 4 个页内替身按「🐼→📄→🧰→📋」顺序指到组内第 0..3 个按钮；
          layout() 用实测偏移 gm.off[i] 落位，且 CSS 里不再出现 calc(50% ± N) 的槽位副本；
@@ -3548,18 +3550,20 @@ def g40_score_page_and_slots(r):
                        % "、".join(miss))
     # R100z199：搬页只能搬一次。调用点 >1 说明断板页那份没删干净，两处各渲染一份，
     # 将来改一边忘另一边，两个页面的同一个数字会不一致（而且没人会去对照）。
-    # R100z221：改成「按 mode 各一个」——'picks' 归断板页、'bt' 归复盘页；无参调用直接判死。
+    # R100z221：曾改成「按 mode 各一个」（'picks' 断板页 / 'bt' 复盘台账）。
+    # R100z225（用户 2026-10-26：「这两个是一个东西吗？我不是问你这个模块要不要删掉吗？」）：
+    #   picks 那半整块删除，函数回到**无参**、只出回测。规矩更严了——恰好一个调用点，
+    #   且不许再传 mode：传了就说明有人想把清单拆出去，而拆出去那次正是用户看到两块的原因。
     # ⚠️ 与 G30 同一条规矩：**注释命中也算命中**。写代码注释时不要把这几个字面量原样抄进去，
     #    要么说「mode 取 'bt'」，要么走 prose；否则闸门会把注释数成调用点（本轮踩过一次）。
     bare = re.findall(r"(?<!function )renderLeadLag\(\s*\)", s)
-    if bare:
-        bad.append("renderLeadLag() 有 %d 个无参调用——必须显式写 'picks'（断板页）"
-                   "或 'bt'（复盘台账）；无参会把清单+回测整块塞进两个页面，"
-                   "同一个胜率数字两页显示不同步" % len(bare))
-    modes = sorted(re.findall(r"(?<!function )renderLeadLag\(\s*['\"]([a-z]+)['\"]\s*\)", s))
-    if modes != ["bt", "picks"]:
-        bad.append("renderLeadLag 的调用点应为 ['bt', 'picks'] 各一处，实际 %s"
-                   % (modes or "无"))
+    if len(bare) != 1:
+        bad.append("renderLeadLag() 应恰好 1 个调用点（复盘台账），实际 %d 个"
+                   "——多一处就是同一张回测卡在两个页面各渲染一份，数字迟早不同步" % len(bare))
+    witharg = re.findall(r"(?<!function )renderLeadLag\(\s*['\"]", s)
+    if witharg:
+        bad.append("renderLeadLag 被传了 %d 次参数——R100z225 起它无参（picks 那半已删；"
+                   "清单要么并进复盘台账那一块、要么不加，严禁再拆两半各挂一页）" % len(witharg))
 
     # ---- d) hash 直达 ----
     nh = s.count("'#score'") + s.count('"#score"')
