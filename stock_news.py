@@ -842,7 +842,7 @@ def main():
                     help='把指定 data.js 快照里仍在窗口内的 stockNews 条目并回当前 data.js'
                          '（不联网）。用于接口抖动导致深度掉下去后的《只增不减》修补')
     ap.add_argument('--allow-drop', action='store_true',
-                    help='显式放行 K9 环比闸门（单项跌幅 >10% 也写盘）。只在确认下降合法时用，'
+                    help='显式放行 K9 环比闸门（单项跌幅 >10%% 也写盘）。只在确认下降合法时用，'
                          '如收紧过滤规则后的首次全量重抓')
     ap.add_argument('--stats', action='store_true',
                     help='只打印 current data.js 的三项统计与历史基线（不联网、不写盘）')

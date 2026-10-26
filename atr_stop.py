@@ -116,7 +116,8 @@ def norm_bars(bars):
     不是常见的 OHLC 顺序，写错一位整条止损会偏到开盘价上）；
     断板/吸筹条目内嵌 kline 是 dict 容器。两种都收，缺字段的行直接丢（不补 0）。
 
-    ⚠️ 第 6 位 volume 必须保留：signal_rank 的量能因子读它。
+    ⚠️ 第 6 位 volume 必须保留：量能类因子（历史上是 signal_rank 的量能分，现由 breakout_pool/
+    其他消费方读 K 线时也可用）依赖它，删了会让下游静默退回「中性」。
     第一版这里只返回到 low（5 元组），量能因子取 `len(bars[0]) > 5` 恒为假 →
     永远走「中性 40%」分支，等于量能这一项**没参与打分**却不报错。
     """
@@ -685,7 +686,8 @@ def main():
     print('单票上限 %.0f%%、单笔风险预算 %.1f%% —— 止损宽则仓位自动变小，'
           '所以每笔打掉的最大亏损恒为权益的 %.1f%%'
           % (MAX_POS_PCT, RISK_BUDGET_PCT, RISK_BUDGET_PCT))
-    print('（%d 只全买的理论合计仓位 %.0f%% 只是上界，实际取舍由 signal_rank 的 A/B/C 分层决定）'
+    # R100z234：signal_rank（交易预案）已下线，这句不再指向一个不存在的模块。
+    print('（%d 只全买的理论合计仓位 %.0f%% 只是上界，实际取舍看开盘精选与技术池的买区/证伪价）'
           % (s['n'], s['sumPosPct']))
     if s['concentrationWarn']:
         for w in s['concentrationWarn']:
