@@ -1,31 +1,31 @@
 {
- "date": "2026-10-23",
- "benchPct": 2.585,
+ "date": "2026-10-26",
+ "benchPct": -1.365,
  "benchSrc": "gtimg",
  "benchFormula": "上证指数/深证成指/创业板指/中证1000 涨跌幅**中位数**",
- "benchSectorPct": 1.435,
+ "benchSectorPct": -0.39,
  "sectorN": 90,
  "benchSectorFormula": "同花顺一级行业（allBoards）当日涨跌幅**中位数**",
  "names": [
   {
    "code": "sh000001",
    "name": "上证指数",
-   "pct": 0.89
+   "pct": 0.19
   },
   {
    "code": "sz399001",
    "name": "深证成指",
-   "pct": 2.79
+   "pct": -1.19
   },
   {
    "code": "sz399006",
    "name": "创业板指",
-   "pct": 4.16
+   "pct": -1.71
   },
   {
    "code": "sh000852",
    "name": "中证1000",
-   "pct": 2.38
+   "pct": -1.54
   }
  ],
  "errors": [],
