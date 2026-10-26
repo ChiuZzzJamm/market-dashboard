@@ -485,6 +485,10 @@ def main():
             'sector': oi.get('sector') or '',
             'reason': (STATE_CN.get(st, STATE_CN['lost']) if st
                        else diagnose(bars, oi)),
+            # R100z233：带上涨停日/洗盘天数/分数——失效卡要能复盘「它当初凭什么进池」
+            'limitDay': oi.get('limitDay') or '',
+            'washDays': oi.get('washDays'),
+            'score': oi.get('score'),
             'entryDate': today,
         })
     if kept:
@@ -514,6 +518,19 @@ def main():
         print('[BREAKOUT] 本轮无标的，保留既有池（不清场）')
         field['passed'] = old_passed
         field['note'] = '本轮无新命中，沿用上一轮名单'
+    # R100z233：老归档补字段——今天之前归档的条目没有 limitDay/score，
+    # 失效卡第二格会显示「—」。用同一套波起点规则回填一次（幂等，已有值不动）。
+    for f in (field.get('failPool') or []):
+        if not isinstance(f, dict) or f.get('limitDay'):
+            continue
+        _b = K.get_bars(str(f.get('code') or ''))
+        if not _b or len(_b) < MIN_BARS:
+            continue
+        _k = len(_b) - 1
+        _t = _wave_anchor(_b, _k, CHAIN_LOOKBACK)
+        if _t is not None:
+            f['limitDay'] = _b[_t]['day']
+            f['washDays'] = _k - _t
     D['breakoutPool'] = field
 
     if not a.write:
