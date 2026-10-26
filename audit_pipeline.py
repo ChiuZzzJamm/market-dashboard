@@ -4016,6 +4016,63 @@ def g45_modal_nav_group(r):
                     "龙虎榜/交易预案/今日不做·备选三处清单均先建组再开")
 
 
+def g46_sector_board_names(r):
+    """G46 预测板块名可解析 + 别名表同源（R100z224，2026-10-26）。
+
+    事故：`aiPrediction.sectors[].sector` 由 AI 每周手写，它写**主题名**（创新药 / 光模块 /
+    半导体设备 / 石油开采），而 `ashare.allBoards` 里是**同花顺行业名**（化学制药 / 通信设备 /
+    半导体 / 油气开采及服务）。2026-10-22 / 10-23 / 10-26 三天实测，6 个预测板块里分别有
+    3 / 5 / 4 个对不上，**每周重演**。后果不是报错，是：
+
+      - `entry_zone.py` 按名精确匹配 → 算不出 `fundCheck`/`entry` → 该板块买点整块为空；
+      - 前端涨幅走 `pctAlias` 别名 → 照常显示。
+
+    于是「页面一切正常，只是买点区安静地空着」——这类问题只有闸门能发现，靠看页面看不出来。
+
+    判据（两条都要）：
+      a) `board_alias.py --check` 必须通过：`board_alias.json` 与 `index.html` 的 `pctAlias`
+         **逐字同源**。两份手工副本必然漂移（节假日表踩过，G13 同款），而漂移的后果是
+         「买点按 A 板算、涨幅按 B 板算」，谁都发现不了；
+      b) 用 data.js 实跑 `validate_stocks.check_sector_board`，不许有 FAIL。
+
+    为什么 b 不能只依赖 G7：G7 把 validate_stocks 的所有 FAIL **一律降级为 WARN**（设计如此，
+    因为历史遗留 FAIL 归对应任务处理）。新加的这条若只走 G7，就永远只是 WARN，
+    「22:00 就挡住」等于没做。这里单独硬拦。
+    """
+    # a) 别名表同源
+    try:
+        import board_alias as _ba
+        ok, msg = _ba.check()
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G46", f"board_alias.py 无法导入/执行，别名表同源校验失效：{e}")
+        return
+    if not ok:
+        r.fail("G46", f"别名表两边不同源：{msg}")
+        return
+
+    # b) 板块名可解析
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G46", f"data.js 读取失败，跳过板块名校验：{e}")
+        return
+    try:
+        import validate_stocks as _vs
+        fails, warns = _vs.check_sector_board(D, scope="ai")
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G46", f"validate_stocks.check_sector_board 无法执行：{e}")
+        return
+    boards = len(((D.get("ashare") or {}).get("allBoards") or []))
+    if fails:
+        r.fail("G46", "；".join(fails[:3]))
+        return
+    if boards < 20:
+        r.warn("G46", f"allBoards 仅 {boards} 个板块，板块名无法核对（多半 16:00 抓取失败）")
+        return
+    r.ok("G46", f"预测板块名全部可落到 allBoards（{boards} 个行业板块）；{msg}；"
+                f"{len(warns)} 个主题名走别名映射（买点 basis 已注明按哪条指数算）")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -4076,6 +4133,7 @@ def main():
     g43_stock_chip_layout(r)
     g44_zombie_mirror_nodes(r)
     g45_modal_nav_group(r)
+    g46_sector_board_names(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
