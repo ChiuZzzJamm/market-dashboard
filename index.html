@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610261014"></script>
+<script src="data.js?v=202610261023"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1779,6 +1779,30 @@ function stkTechBadgeHtml(code, noPoolMerge) {
     if (t.warn) style += ';background:#eef7f3;color:#0f9d78;border:1px solid #cfe6dc';
     return '<span class="hz-badge" style="' + style + '" title="' + escAttr(tip) + '">' + esc(label) + '</span>';
   }).join('');
+}
+/* R100z228（用户 2026-10-26 截图：「开盘精选怎么没有陈学长的徽标？」）：陈学长徽标从「按入口 key」
+   改成「按 code 查池」。改前只有从陈学长页点开（key 以 x| 开头、isChen=true）才画这枚徽标；
+   开盘精选是 s|<code>、断板确认池是 c|、观察池是 w| ——同一只票换个入口打开，徽标行就少一枚
+   （用户截图 1 vs 2 就是同一只百洋股份：精选里只有「断板反包·确认池」，陈学长页里多一枚「陈学长·严格池」）。
+   池归属本来就是 code 的事实，不该由「你从哪一页点进来」决定。
+   ⚠️ 只补徽标、不补参数：陈学长的 买点/目标/止损/仓位 与断板的「退出纪律」是两套数（同一只票实测
+   目标 10.61 vs 12.82、仓位 15% vs 5%），同屏并列必被读成自相矛盾；参数只在陈学长页与 chen 来源的
+   精选卡上出（那里本来就只有一套数）。徽标 title 里写明这层关系，并指出去哪看参数。
+   ⚠️ 也**不进 stkTechMeta**：那张表同时喂 stkGoldCls（金框分级＝命中池数），陈学长与断板 16 只里 13 只
+   重叠，并进去等于把同一件事数两遍、断板票边框整体提一档（R100z76-③ 已定过这条，别改）。 */
+function chenPoolHit(code0) {
+  var c = String(code0 || '').replace(/\D/g, '');
+  if (!/^\d{6}$/.test(c)) return null;
+  var cp = (window.DASHBOARD_DATA || {}).chenPool || {};
+  var arr = [].concat(cp.strict || [], cp.loose || [], cp.watching || []); // 严格先于放宽，与 starTechOf 同序
+  for (var i = 0; i < arr.length; i++) { if (String((arr[i] || {}).code || '') === c) return arr[i]; }
+  return null;
+}
+function chenBadgeHtml(tier) {
+  var t = tier === 'strict' ? '严格池' : (tier === 'loose' ? '放宽池' : '观察中');
+  return '<span class="hz-badge" title="' + escAttr('陈学长口径（与断板反包并列的第二套指标）：陈学长·' + t +
+    '。他的买点/目标/仓位在「陈学长」页，与断板反包的退出纪律不是同一套数，别混着用') +
+    '">陈学长·' + t + '</span>';
 }
 /* R100z80：技术池命中分级边框（stkTechMeta 命中池数 → reso-1/2/3/4：1黄/2橙/3红/4紫）；全站标的胶囊/卡片共用 */
 function stkGoldCls(code) {
@@ -7004,10 +7028,11 @@ function openDbModal(key) {
       //   原来走 .pool-badge.hold/.done：hold 是浅蓝（与左侧板块徽章 .chip-sec 同色，两枚蓝标贴在一起读不出区别）、
       //   done 是涨色红（与「利好」撞色，还被误读成利好）。三类技术徽章统一用 .hz-badge（金），
       //   池子差别由文案（严格池/放宽池/观察中）承担，不再靠颜色。
-      if (isChen) return '<span class="hz-badge" title="陈学长口径（与断板反包并列的第二套指标）：' +
-        escAttr('陈学长·' + (e.tier === 'strict' ? '严格池' : (e.tier === 'loose' ? '放宽池' : '观察中'))) +
-        '">陈学长·' +
-        (e.tier === 'strict' ? '严格池' : (e.tier === 'loose' ? '放宽池' : '观察中')) + '</span>' + tb;
+      if (isChen) return chenBadgeHtml(e.tier) + tb;
+      // R100z228：**非陈学长入口也要按 code 查一遍**——精选/断板入口打开同一只票时必须同样多出这枚徽标，
+      //   否则「你在哪一页点开」决定了这票是不是陈学长选的（用户 2026-10-26 截图 1 vs 2）。
+      var ch = chenPoolHit(e.code);
+      if (ch) return chenBadgeHtml(ch.tier) + tb;
       return tb || ('<span class="pool-badge ' + (done ? 'done' : 'hold') + '">' + (done ? '确认池' : ('观察池 · ' + esc(e.stage))) + '</span>');
     })() +
     stkLhbBadge(String(e.code)) + // R100z201：当日龙虎榜归属（用户：标的页面里要写）
