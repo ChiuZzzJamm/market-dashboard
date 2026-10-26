@@ -379,7 +379,13 @@ def main():
         'tradeDate': today,
         'date': today,
         'passed': passed[:20],
-        'summary': '',
+        # R100z233：原来是空串 —— 页面上只剩「贴沿名单 · 1 只」，读者无法分辨
+        # 「今天真的只有 1 只合格」还是「数据抓空只扫到 1 只」。这就是本项目反复踩的
+        # 「抓不到 ≠ 没有」。把四段漏斗写出来，让 1 只也能自证。
+        'summary': ('扫描域 %d 只沪深主板 → 有足够 K 线 %d 只 → 平台成立 %d 只 → 贴沿入池 %d 只；'
+                    '主要淘汰在振幅>%.0f%%、均线粘合>%.0f%%、近10日均额/前50日>%.2f 三道门槛'
+                    % (cnt['universe'], cnt['bars'], cnt['platform'], len(passed),
+                       AMP_MAX * 100, SQUEEZE_MAX * 100, DRY_MAX)),
         'rule': ('60 日平台（振幅≤%.0f%%）+ 均线粘合≤%.0f%% + 地量（近10日均额/前50日≤%.2f）'
                  '+ 距箱顶≤%.0f%%；箱顶取 60 日收盘 95 分位' % (AMP_MAX * 100, SQUEEZE_MAX * 100,
                                                              DRY_MAX, NEAR_MAX)),
