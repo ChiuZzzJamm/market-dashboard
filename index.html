@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610261837"></script>
+<script src="data.js?v=202610261843"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1432,9 +1432,10 @@
 
     <!-- R100m：TOP10 + 开盘精选固定区——切换谐波/横盘启动/吸筹子页时保持显示（用户要求固定不动） -->
     <div id="db-fixed"></div>
-    <!-- R100z162：开盘预测子页——盘前前瞻 + AI 预测分析 + 交易预案三块合并成一页。
-         用户 2026-10-24 要求「AI 预测分析整个模块挪到技术看板，新增开盘预测；交易预案也放这里，
-         在 AI 预测分析下面」。三块都有独立渲染函数，容器常驻、只切 display，不重复 innerHTML。 -->
+    <!-- R100z162：开盘预测子页——盘前前瞻 + AI 预测分析合并成一页。
+         用户 2026-10-24 要求「AI 预测分析整个模块挪到技术看板，新增开盘预测」。
+         R100z234（2026-10-26 用户拍板）：原第三块「交易预案」已整块删除（与开盘精选交集仅 1 只），
+         所以这里只剩两个容器。两块各有独立渲染函数，容器常驻、只切 display，不重复 innerHTML。 -->
     <div id="db-od" class="db-subpage" style="display:none;">
       <div id="db-od-nav"></div>
       <div id="weekend-news"></div>
@@ -2144,8 +2145,8 @@ function render(market) {
 
   html += '<div class="card"><h2>大盘指数' + h2Date(d) + '</h2>' + renderIndexCards(d.indices) + '<div style="height:10px"></div>' + renderBreadth(d.breadth) + renderStructure(d.structure, d.tradeDate) + '</div>';
 
-  // R100z162：交易预案迁入「🧰 技术看板 → 开盘预测」子页（用户 2026-10-24 要求：
-  // 预测与预案同页，先看方向再看作法）。主页面只留当日盘面。
+  // R100z162：预测相关两块迁入「🧰 技术看板 → 开盘预测」子页（用户 2026-10-24 要求：
+  // 先看方向再看依据）。主页面只留当日盘面。R100z234 起交易预案已删，这里不再有「看作法」那块。
 
   // R100z82：预测验证块按用户要求移回 AI 预测卡（renderAiPrediction 内渲染）；
   // 大盘趋势研判卡恢复为纯研判内容（2026-10-08 用户反馈：验证块应放在 AI 预测下面）
@@ -3111,8 +3112,8 @@ function renderAiPrediction() {
   var html = '<div class="ai-card"><div class="ai-head"><h2>AI 预测分析' + (p.date ? '<span class="h2-date">' + esc(p.date) + '</span>' : '') + '</h2></div>' +
     '<div class="ai-summary">' + (p.indexLine ? esc(p.indexLine) + '。' : '') + '通过隔夜美股各板块涨跌推导今日 A 股强弱方向：' + esc(p.summary) + '</div>' +
     poolMetaLine(p.poolMeta) +
-    // R100z163（用户 2026-10-24 问「AI 预测和交易预案是否冲突」）：这里点明分工，避免读者把
-    // 「每板块 8 只候选」当成买入清单——候选是给人看板块强弱的，能不能买由下方交易预案决定。
+    // R100z163（用户 2026-10-24 问「AI 预测和清单是否冲突」）：这里点明分工，避免读者把
+    // 「每板块 8 只候选」当成买入清单——候选是给人看板块强弱的，买不买看开盘精选的买入清单。
     '<div class="td-rel">本卡是<b>方向与候选池</b>：每板块 8 只，用来看这个板块值不值得做。' +
       '<b>真正下手买哪几只、买多少、跌到哪走</b>看「🌟 开盘精选」的今日买入清单（买区 + 证伪价 + 仓位），' +
       '以及各技术池卡片上的买区/证伪价——本卡只给方向，不给价位。</div>' +
@@ -6279,7 +6280,7 @@ function subnavHtml() {
   // 九门已回测出负超额，不该占更靠前的位）；四个键的映射关系不变，仅调整视觉顺序。
   var tabs = [
     // R100z162（用户 2026-10-24）：新增「开盘预测」子页并排到最前——盘前前瞻 + AI 预测分析 +
-    // 交易预案。排第一是因为它是每天开盘前唯一要看的一页：先判断方向，再决定做哪只。
+    // （R100z234 起交易预案已删，这里只剩两块）。排第一是因为它是每天开盘前唯一要看的一页：先判断方向。
     { k: 'od', t: '开盘预测' },
     { k: 'db', t: '断板反包' },
     // R100z218（用户 2026-10-25 红框指定位置）：陈学长独立指标——与断板反包并列，
@@ -7659,8 +7660,8 @@ function stkResolveByName(name, cb) {
   });
 }
 // R100z200（用户 2026-10-25 截图 6：「标的页面的左右按钮不是跟着交易预案里面标的切换的」）：
-// 根因与 R100h 同一类——`openStkModal()` 只认全局 STK_GRP，而交易预案/龙虎榜的行是**内联 onclick 直接开弹窗**，
-// 从不设置分组，于是箭头翻的是「上一位读者点过的那个列表」残留顺序（点交易预案能翻到龙虎榜的票）。
+// 根因与 R100h 同一类——`openStkModal()` 只认全局 STK_GRP，而**内联 onclick 直接开弹窗**的列表从不设置分组，
+// 于是箭头翻的是「上一位读者点过的那个列表」残留顺序（当年点交易预案的票能翻到龙虎榜去）。
 // 现在两组约定：
 //   ① 任何列表开弹窗前调 `stkOpenIn(list, idx)`，把分组和下标一起定下来；
 //   ② `openStkModal` 入口处调 `stkSyncNav(code)`：代码不在当前分组里就**关掉箭头**，
@@ -8129,7 +8130,7 @@ loadPoolExit(function () {
   if (aiBox && aiBox.innerHTML) renderAiPrediction();
 });
 loadRiskBlacklist();   // R100z13：先发请求，黑名单异步到后再自动重画一次
-// R100z162：三块（开盘前瞻 / AI 预测分析 / 交易预案）统一入口，全部落在「🧰 技术看板 → 开盘预测」子页
+// R100z162：两块（开盘前瞻 / AI 预测分析）统一入口，全部落在「🧰 技术看板 → 开盘预测」子页（交易预案已删）
 renderOpenDesk();
 
   function closeChips() {
