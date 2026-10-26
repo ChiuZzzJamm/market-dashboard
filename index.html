@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610261708"></script>
+<script src="data.js?v=202610261712"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -5076,6 +5076,10 @@ function renderBreakoutPool() {
   return legend +
     '<div class="db-pool p-conf"><h2>贴沿名单 · ' + BP_SORTED.length + ' 只</h2>' +
     '<div class="db-sub">贴在箱顶下面、量能枯竭——按卡上的买入区间低吸，越过上限不追；收盘跌破证伪价即形态作废</div>' +
+    // R100z233：把筛选漏斗写出来。只有「贴沿名单 · 1 只」这一行时，读者无法区分
+    // 「今天真的只有 1 只合格」和「K 线没抓到、只扫了 1 只」——本项目踩过多次的
+    // 「抓不到 ≠ 没有」。summary 由 breakout_pool.py 用真实计数拼，前端只读不加工。
+    (b.summary ? '<div class="db-sub">筛选漏斗：' + esc(String(b.summary)) + '</div>' : '') +
     '<div class="db-chips">' + items + '</div></div>' + fail +
     (b.note ? '<div class="note-line">' + esc(b.note) + '</div>' : '');
 }
