@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610261822"></script>
+<script src="data.js?v=202610261834"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1168,108 +1168,20 @@
   /* 页内定位锚点：给顶部留出呼吸空间 */
   #gn-ashare, #gn-us { scroll-margin-top: 12px; }
 
-  /* ===== 今日交易执行台（R100z160）——从「今天能不能做、做哪只、买多少、错在哪止损」四问出发排布 ===== */
-  /* ===== 交易预案卡（R100z164 重排层级）=====
-     用户 2026-10-24 截图：「这种视觉不觉得乱吗？」
-     乱在哪：标题下方连续堆了 4 个满宽色块——
-       ① .td-valid 口径说明（淡蓝底 + 蓝字 + 边框，比别的块还浅一档）
-       ② .td-mkt   市场统计（浅蓝底）
-       ③ .td-port  4 个白底胶囊
-       ④ .td-rel   AI 关系说明（浅蓝底 + 5 行字）
-     四个块宽度相同、圆角不同（10/12/999/10）、底色三种，眼睛没有落点，
-     而真正要看的「买哪几只、什么价」被压到最下面。
-     改法（不删任何信息、不加任何模块）：
-       ① → 降为标题下一行**无底色**小字，前缀「口径 · 」
-       ② + ③ → 合并成**整张卡唯一的浅色块**，第一行市场温度、第二行组合仓位
-       ④ → 去掉底色，改成左侧 3px 色条的旁注（有反向标的时色条转橙，不整块变橙）
-     结果：卡内只剩 1 个浅色块（= 今日结论），其余都是无底的文字层。 */
-  .td-scope {
-    font-size: var(--fs-sm); color: var(--ink2); line-height: 1.7;
-    margin: 6px 0 10px;
-  }
-  .td-scope::before { content: "口径 · "; opacity: .75; }
-  .td-scope b { color: var(--ink); font-variant-numeric: tabular-nums; }
-  .td-mkt {
-    font-size: var(--fs-base); color: var(--ink2);
-    background: var(--accent-soft); border-radius: var(--r-note);
-    padding: 10px 14px; margin-bottom: 10px; line-height: 1.9;
-  }
-  .td-mkt b { color: var(--ink); font-variant-numeric: tabular-nums; }
-  .td-port {
-    display: flex; flex-wrap: wrap; gap: 0 0;
-    margin-top: 4px; padding-top: 5px;
-    border-top: 1px dashed rgba(31, 92, 139, .16);
-    font-size: var(--fs-base); color: var(--ink2);
-  }
-  /* 胶囊改为竖线分隔的键值对：4 个胶囊各自一圈边框，看起来像 4 个按钮。 */
-  .td-port span { margin-right: 14px; }
-  .td-port span + span::before {
-    content: ""; display: inline-block; width: 1px; height: 10px;
-    background: rgba(31, 92, 139, .25); margin-right: 14px; vertical-align: -1px;
-  }
-  .td-port span b { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
-  /* 旁注：左侧色条 + 无底色。信息还在，但不再和「今日结论」抢同一档视觉权重。 */
+  /* R100z234（2026-10-26 用户拍板「直接删掉」）：交易预案整块下线。
+     signal_rank.py 已退役（_retired/），data.js 的 tradeDesk 键已删，前端渲染函数与容器一并移除。
+     它原来的 18 条 .td-* 样式（.td-scope/.td-mkt/.td-port/.td-warn/.td-item/.td-rank/.td-name/
+     .td-sec/.td-q/.td-kv/.td-why/.td-fold/.td-x/.td-note/.td-plan/.td-valid/.td-h）同步删除——
+     留着就是死样式，下次谁看到都会以为这个模块还在。
+     只剩三条仍被别的卡复用，见下。 */
+  .td-h2 { font-size: var(--fs-h2); gap: 6px; flex-wrap: nowrap; }
+  .td-tag { display: none; }
   .td-rel {
     font-size: var(--fs-sm); color: var(--ink2);
     background: none; border: 0; border-left: 3px solid var(--accent);
     border-radius: 0; padding: 2px 0 2px 11px;
     margin: 0 0 12px; line-height: 1.85;
   }
-  .td-rel b { color: var(--ink); }
-  .td-warn {
-    font-size: var(--fs-sm); color: #a8541a;
-    background: rgba(255, 244, 232, .75);
-    border: 0; border-left: 3px solid #e08a3c;
-    border-radius: 0 var(--r-note) var(--r-note) 0;
-    padding: 8px 12px; margin-bottom: 10px; line-height: 1.8;
-  }
-  .td-warn b { color: #8a3f0d; }
-  .td-item { border: 1px solid var(--line); border-radius: var(--r-block); padding: 9px 11px; margin-bottom: 7px; background: var(--paper); }
-  .td-h { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-  .td-rank { width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 6px; background: var(--accent); color: #fff; font-size: var(--fs-sm); font-weight: 700; flex-shrink: 0; }
-  .td-name { font-size: var(--fs-body); font-weight: 700; color: var(--ink); cursor: pointer; -webkit-tap-highlight-color: transparent; }
-  .td-name:hover { color: var(--accent-deep); }
-  .td-name em { font-style: normal; font-size: var(--fs-sm); color: var(--ink2); font-weight: 400; margin-left: 4px; }
-  .td-sec { font-size: var(--fs-sm); color: var(--accent-deep); background: var(--accent-soft); border-radius: 7px; padding: 1px 7px; }
-  .td-q { margin-left: auto; font-size: var(--fs-md); font-weight: 800; color: var(--accent-deep); white-space: nowrap; }
-  .td-q i { font-style: normal; font-size: var(--fs-sm); font-weight: 600; color: var(--ink2); margin-left: 3px; }
-  /* R100z164：5 个数值平铺（收盘/止损/目标/仓位/共振）读起来是一串没有断点的数字，
-     加细竖线分隔：前三个是「价位与风险」，后两个是「资金配置」，一行里能看出两组。 */
-  .td-kv { display: flex; flex-wrap: wrap; gap: 3px 0; font-size: var(--fs-base); color: var(--ink2); margin-top: 6px; }
-  .td-kv > span { margin-right: 14px; }
-  .td-kv > span + span::before {
-    content: ""; display: inline-block; width: 1px; height: 10px;
-    background: var(--line); margin-right: 14px; vertical-align: -1px;
-  }
-  .td-kv b { font-weight: 700; color: var(--ink); }
-  .td-kv b.dn { color: var(--down); }
-  .td-kv b.up { color: var(--up); }
-  .td-kv i { font-style: normal; font-size: var(--fs-sm); color: var(--ink2); margin-left: 4px; }
-  .td-why { font-size: var(--fs-sm); color: var(--ink2); margin-top: 4px; }
-  .td-fold { margin-top: 9px; }
-  .td-fold > summary { cursor: pointer; font-size: var(--fs-base); color: var(--accent-deep); padding: 6px 0; -webkit-tap-highlight-color: transparent; }
-  .td-fold > summary::marker { color: var(--accent); }
-  .td-x { font-size: var(--fs-base); color: var(--ink2); padding: 5px 0 5px 6px; border-bottom: 1px dashed var(--line); display: flex; gap: 6px 8px; flex-wrap: wrap; align-items: baseline; }
-  .td-x b { color: var(--ink); font-weight: 600; }
-  /* R100z162：今日不做 / 备选的标的也能点开 K 线——用户要求「也要做点开能看 K 线的」。
-     只给名字加点击（整行加会误触否决理由），用虚线底暗示可点，和主清单的实线区分。 */
-  .td-x b.td-x-nm { cursor: pointer; border-bottom: 1px dashed #c3ccd8; transition: color .15s ease, border-color .15s ease; }
-  .td-x b.td-x-nm:hover { color: var(--accent-deep); border-bottom-color: var(--accent); }
-  .td-x b.td-x-nm::after { content: '　↗'; font-size: var(--fs-xs); color: #98a4b3; }
-  .td-x em { font-style: normal; color: #a8541a; }
-  .td-x s { text-decoration: none; color: var(--ink2); font-size: var(--fs-sm); }
-  .td-note { font-size: var(--fs-sm); color: var(--ink2); margin-top: 10px; line-height: 1.65; }
-  /* R100z166：.td-acct 全套已删除（用户 2026-10-24 要求删掉「账户与目标」块）。
-     删除原因见 renderTradeDesk() 里那段注释——账没算错，是不该把「目标不成立」写成产品自述。
-     不要加回来。 */
-  /* R100z161/R100z164：.td-valid 已并入 .td-scope（口径说明降为无底色一行小字）——
-     当初它是「淡蓝底 + 边框 + 蓝字」的第三条色块，与 .td-mkt/.td-rel 抢同一档权重。 */
-  .td-plan { display: flex; flex-wrap: wrap; gap: 3px 12px; align-items: baseline; font-size: var(--fs-sm); color: var(--ink2); margin-top: 6px; padding: 6px 10px; background: var(--accent-soft); border-radius: var(--r-note); }
-  /* R100z164：「明日」原本是 <em> 走 UA 斜体，和中文字形一斜就发飘，改成正体加粗当小标题用。 */
-  .td-plan em { font-style: normal; font-weight: 700; color: var(--accent-deep); }
-  .td-plan b { color: var(--accent-deep); font-weight: 700; font-variant-numeric: tabular-nums; }
-  .td-plan em { font-style: normal; font-weight: 700; color: var(--ink); margin-right: 3px; }
-  .td-plan s { text-decoration: none; color: #a8541a; }
   /* R100z161：预测复盘卡。基调是「报数」，不是「汇报成绩」——
      所以坏数字用警示橙而不是红绿（红绿在本站是涨跌语义，别混用）。 */
   .fc-hero { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 11px; }
@@ -1527,7 +1439,6 @@
       <div id="db-od-nav"></div>
       <div id="weekend-news"></div>
       <div id="ai-prediction"></div>
-      <div id="trade-desk"></div>
     </div>
     <div id="db-pools" class="db-subpage"></div>
     <!-- R100z218：陈学长「断板反包」独立技术指标（chen_pool.py 产出，与断板反包并行对照，
@@ -3203,7 +3114,8 @@ function renderAiPrediction() {
     // R100z163（用户 2026-10-24 问「AI 预测和交易预案是否冲突」）：这里点明分工，避免读者把
     // 「每板块 8 只候选」当成买入清单——候选是给人看板块强弱的，能不能买由下方交易预案决定。
     '<div class="td-rel">本卡是<b>方向与候选池</b>：每板块 8 只，用来看这个板块值不值得做。' +
-      '<b>真正下手买哪几只、买多少、跌到哪走</b>在下方「交易预案」——那一份经过全市场否决、五因子排序与同板块配额。</div>' +
+      '<b>真正下手买哪几只、买多少、跌到哪走</b>看「🌟 开盘精选」的今日买入清单（买区 + 证伪价 + 仓位），' +
+      '以及各技术池卡片上的买区/证伪价——本卡只给方向，不给价位。</div>' +
     '<div id="cal-hist" class="cal-hist"></div>' +
     '<div id="pf-box" class="pf-box"></div>' +
     '<div id="st-track-box"></div>' +
@@ -3360,213 +3272,6 @@ function renderStopTrack() {
     cell(cls(st.avgRebound5Pct), '触后反弹均值 ' + pct(st.avgRebound5Pct)).replace('<span ', '<span title="仅统计触过止损的标的：触损后 5 日内相对最低点的平均反弹幅度。反弹越大 = 越容易割在半山腰，可结合止损位松紧来判断该收紧还是放宽。" ') +
     cell(cls(st.hitThenUpRate), '触后上涨率 ' + rate(st.hitThenUpRate)).replace('<span ', '<span title="触过止损的标的中、5 日后相对入场价收涨的比例。偏高 = 止损可能设得太近、容易被洗出去；偏低 = 触损的标的大概率继续走弱，止损位合理。" ') +
     '</div>';
-}
-
-/* R100z160（2026-10-24）：今日交易执行台 —— 从「今天做什么」倒推的信息组织。
-   数据来自 16:00 的 signal_rank.py（data.js 顶层 tradeDesk）。它自己不算止损、不算
-   波动率，全部消费 atrStops（atr_stop.py）的结果，保证全站止损口径唯一。
-   为什么补这张卡：旧页面把「池子里有哪些票」摆得很全，但交易员每天真正要的是
-   三件事——今天做哪几只、每只买多少、错在哪走。此前这三件事散在各池卡片里，得自己拼。 */
-function renderTradeDesk() {
-  var D = window.DASHBOARD_DATA || {};
-  var T = D.tradeDesk;
-  if (!T || !T.picks || !T.picks.length) return '';
-
-  var num = function (v) { var n = Number(v); return (v === null || v === undefined || v === '' || !isFinite(n)) ? null : n; };
-  var f2 = function (v) { var n = num(v); return n === null ? '—' : n.toFixed(2); };
-  var pct1 = function (v) { var n = num(v); return n === null ? '—' : (n > 0 ? '+' : '') + n.toFixed(1) + '%'; };
-  var mm = T.market || {}, tt = T.tiers || {}, pf = T.portfolio || {};
-
-  // 市场温度用**全市场 20 日涨幅中位数**，不用指数：指数被银行石油绑架，
-  // 涨指数跌个股是 A 股常态，用指数判断「今天该不该做」会说谎。
-  var med = num(mm.momMedian), mood = '中性，按计划执行';
-  if (med !== null) {
-    if (med <= -3) mood = '普跌，只做最强、不铺仓位';
-    else if (med < -0.5) mood = '偏弱，控制节奏、不追高';
-    else if (med > 3) mood = '普涨，注意追高风险';
-    else if (med > 0.5) mood = '偏强，可按计划做';
-  }
-
-  // 标题不再叫「今日交易执行台」：这张表的核心不是记录今天，而是给明天用。
-  // 用户 2026-10-24 的原话是「他是当日收盘后的产出，对我而言是过时的」——
-  // 所以页头写清锚定日与有效期，每只票给开盘三档走法。
-  // R100z163（同日稍后）：标题去掉了「次日」二字改叫「交易预案」——用户看图直接说「改成交易预案」。
-  // 锚定日与有效期已在同一行里明示，标题里再写「次日」是重复。
-  var h = '<div class="card"><h2 class="td-h2">交易预案' +
-    (T.tradeDate ? ' <span class="h2-date">锚定 ' + esc(T.tradeDate) + ' 收盘</span>' : '') +
-    '<span class="src-tag td-tag">有效期 ' + esc(T.validUntil || '下一交易日') + '</span></h2>';
-
-  // R100z164：口径说明从「第三条淡蓝色块」降为标题下一行无底色小字。
-  // 它是读表前提（价位以哪天收盘为锚），不是结论，不该和「今日结论」抢同一档视觉权重。
-  if (T.planNote) h += '<div class="td-scope">' + esc(T.planNote) + '</div>';
-
-  // 组合层：单票仓位加起来是多少、有没有被压缩、板块分布
-  var posTxt = num(pf.cappedPosPct) !== null
-    ? '<b>' + pf.cappedPosPct.toFixed(1) + '%</b>（已从 ' + (num(pf.sumPosPct) || 0).toFixed(1) + '% 压缩）'
-    : '<b>' + (num(pf.sumPosPct) === null ? '—' : pf.sumPosPct.toFixed(1) + '%') + '</b>';
-  var secTop = [];
-  var bs = pf.bySector || {};
-  Object.keys(bs).sort(function (a, b) { return (bs[b].pos || 0) - (bs[a].pos || 0); })
-    .slice(0, 3).forEach(function (k) { secTop.push(k + ' ' + (bs[k].pos || 0).toFixed(1) + '%'); });
-
-  // R100z164：市场温度与组合仓位原本是两个块（.td-mkt + .td-port 胶囊行），
-  // 加上口径条和 AI 关系条，标题下方一口气排了 4 条满宽色块 —— 用户原话「这种视觉不觉得乱吗」。
-  // 现在合成**整张卡唯一一个浅色块**：第一行「今天能不能做」，第二行「这笔钱怎么分」。
-  h += '<div class="td-mkt"><div>全市场 <b>' + (mm.n || '—') + '</b> 只 20 日涨幅中位数 <b>' +
-    pct1(mm.momMedian) + '</b> → <b>' + mood + '</b>　·　通过硬性否决 <b>' +
-    (tt.qualified || 0) + '</b> 只（强 ' + (tt.strong || 0) + ' / 中 ' + (tt.mid || 0) +
-    '），被否决 <b>' + (tt.vetoed || 0) + '</b> 只，只取前 ' + T.picks.length + ' 名进清单</div>' +
-    '<div class="td-port">' +
-    '<span>执行清单 <b>' + T.picks.length + '</b> 只</span>' +
-    '<span>建议总仓位 ' + posTxt + '</span>' +
-    '<span>组合目标 <b>' + esc(pf.targetBand || '未设') + '</b></span>' +
-    (secTop.length ? '<span class="td-port-wide">板块集中度 ' + esc(secTop.join(' · ')) + '</span>' : '') +
-    '</div></div>';
-  // 板块缺失的票不占同板块配额（占位符不是板块），但必须说出来：
-  // 否则读者会以为这 8 只已经做完整板块分散，实际有 N 只没被这条规则覆盖。
-  if (num(pf.sectorUnknownN) > 0) {
-    h += '<div class="td-warn">⚠️ 其中 ' + pf.sectorUnknownN +
-      ' 只板块映射缺失，未参与「单板块 ≤2」的限制——这几只之间没有同涨同跌关系，' +
-      '所以不占配额；但也意味着它们的行业敞口没法在这里核对。</div>';
-  }
-  (pf.warn || []).forEach(function (w) { h += '<div class="td-warn">⚠️ ' + esc(w) + '</div>'; });
-
-  // R100z163（用户 2026-10-24 问「AI 预测和交易预案是否有冲突？」）：
-  // 两个模块不是同一层东西——AI 预测（上一块）是**输入**：给方向 + 每个板块 8 只候选；
-  // 本清单是**输出**：全市场否决 + 五因子 + 同板块 ≤2 之后真正能下手的几只。
-  // 但页面上此前没有一句话说明这层关系，读者看到两套标的会以为是两个互相打架的建议。
-  // 这里把关系写成一行可核对的数字，并且**两边打架时要显式说出来**（清单落在 AI 看空板块的只数）——
-  // 藏着不说才是真冲突，说出来就是「量化分硬但板块逆风，别加仓」。
-  // R100z164：AI 关系改为「旁注」——左侧 3px 色条、无底色。
-  // 旧版是整块浅蓝/橙底的长段文字，字数比「今日结论」还多，看起来像第二个结论。
-  // 现在把两端的关系压成一句，再把「与 AI 方向相反」单独提到最前（冲突要显眼，不要藏在句尾）。
-  var _ap = D.aiPrediction || {};
-  var _upSec = {}, _dnSec = {};
-  (_ap.sectors || []).forEach(function (x) {
-    var _nm = String(x.sector || '').trim();
-    if (!_nm) return;
-    if (String(x.direction || '').indexOf('承压') === -1) _upSec[_nm] = 1; else _dnSec[_nm] = 1;
-  });
-  if (_ap.sectors && _ap.sectors.length) {
-    var _inUp = 0, _inDn = 0, _inOut = 0, _fromAi = 0;
-    T.picks.forEach(function (p) {
-      var _sn = String(p.sector || '').trim();
-      if (_upSec[_sn]) _inUp++; else if (_dnSec[_sn]) _inDn++; else _inOut++;
-      if ((p.srcs || []).indexOf('ai') >= 0) _fromAi++;
-    });
-    h += '<div class="' + (_inDn ? 'td-warn' : 'td-rel') + '">' +
-      (_inDn ? '<b>' + _inDn + ' 只与 AI 方向相反</b>——量化分够硬但板块逆风，只按「跌破放弃价」做，不加仓。<br>' : '') +
-      '<b>与上方 AI 预测的关系</b>：AI 给方向与候选池，本清单是筛完能下手的 <b>' + T.picks.length + '</b> 只 · ' +
-      '看多板块 ' + _inUp + ' 只 / 看空板块 ' + _inDn + ' 只 / 覆盖外 ' + _inOut + ' 只 · 来自 AI 候选 ' + _fromAi + ' 只' +
-      '</div>';
-  }
-
-  // 逐票：一行标题 + 一行价位 + 一行依据。不用 table——移动端表格必溢出。
-  // R100z200：先把三份清单登记成弹窗导航组——箭头必须跟着「你点的那份清单」翻，
-  // 而不是翻上一组残留（用户 2026-10-25 截图 6 的原话：「不是跟着交易预案里面标的切换的」）。
-  window._TD_GRP = {
-    p: (T.picks || []).map(function (x) {
-      return { c: x.code, n: x.name, t: '交易预案 ' + (x.rank || '') + '/' + (T.picks || []).length };
-    }),
-    w: (T.watch || []).map(function (x) { return { c: x.code, n: x.name, t: '今日不做：' + (x.veto || '—') }; }),
-    c: (T.candidates || []).map(function (x) { return { c: x.code, n: x.name, t: '备选：' + (x.sector || '') }; })
-  };
-  T.picks.forEach(function (p, pi) {
-    var close = num(p.close), stop = num(p.stop), tgt = num(p.target);
-    var rr = (close && stop && tgt && close > stop) ? (tgt - close) / (close - stop) : null;
-    var posRaw = num(p.posPctRaw);
-    var srcs = (p.srcs || []).map(function (s) {
-      return ({ ai: 'AI 预测', breakoutPool: '横盘启动', accumulation: '吸筹打分',
-                harmonic: '谐波形态', duanban: '断板反包' })[s] || s;
-    });
-    h += '<div class="td-item">' +
-      '<div class="td-h">' +
-        '<span class="td-rank">' + (p.rank || '·') + '</span>' +
-        '<span class="td-name" title="点击看 K 线 · 同清单内可用 ←/→ 切换" onclick="stkOpenIn(window._TD_GRP.p,' + pi + ')">' + esc(p.name) + '<em>' + esc(p.code) + '</em></span>' +
-        '<span class="td-sec">' + esc(p.sector || '未分类') + '</span>' +
-        '<span class="td-q" title="五因子量化分（动量25/趋势20/量能20/位置20/波动15）' +
-            (p.bonus ? ' + 共振加分 ' + p.bonus : '') + '">' +
-            (num(p.q) === null ? '—' : p.q) + '<i>' + esc(p.strength || '') + '</i></span>' +
-      '</div>' +
-      '<div class="td-kv">' +
-        '<span>收盘 <b>' + f2(close) + '</b></span>' +
-        '<span title="ATR(14) 自适应止损，含 20 日结构位与 2.5%~10% 宽度钳制">止损 <b class="dn">' +
-          f2(stop) + '</b><i>' + (num(p.stopWidPct) === null ? '' : '−' + p.stopWidPct.toFixed(1) + '%') + '</i></span>' +
-        '<span title="R 倍数目标 = 收盘 + 2.5×(收盘−止损)">目标 <b class="up">' + f2(tgt) + '</b><i>' +
-          (rr === null ? '' : rr.toFixed(1) + 'R') + '</i></span>' +
-        '<span title="风险预算法：单笔风险 0.5% ÷ 止损宽度，上限 20%">仓位 <b>' +
-          (num(p.posPct) === null ? '—' : p.posPct.toFixed(1) + '%') + '</b>' +
-          (posRaw !== null ? '<i>（原 ' + posRaw.toFixed(1) + '%）</i>' : '') + '</span>' +
-        '<span title="' + escAttr(srcs.join(' / ')) + '">共振 <b>' + (p.resonance || 1) + '</b></span>' +
-      '</div>' +
-      // 明日执行区间：收盘价算出来的止损/目标，明天开盘就变了。
-      // 这里把「买哪、追到哪为止、跌破哪就撤」提前写死，开盘不用临场算。
-      (p.plan ?
-        '<div class="td-plan"><em>明日</em>' +
-          '<span>进场 <b>' + f2(p.plan.entryLo) + '~' + f2(p.plan.entryHi) + '</b></span>' +
-          '<span>高于 <b>' + f2(p.plan.chase) + '</b> 不追</span>' +
-          '<span><s>跌破 ' + f2(p.plan.abandon) + ' 放弃</s></span>' +
-        '</div>' : '') +
-      (p.why ? '<div class="td-why">' + esc(p.why) + '</div>' : '') +
-      '</div>';
-  });
-
-  // 另外两个清单同样重要：为什么不做（否决）、差一点做什么（备选）。
-  // 只给「能做的」会让人以为池子里每只都能买。
-  var watch = T.watch || [], cand = T.candidates || [];
-  // R100z162：没做的票也要能查图——「为什么不做」的否决理由只有配上 K 线才可信，
-  // 否则用户只能信我一句话。名字可点（openStkModal 与主清单同一个弹窗）。
-  // R100z200：今日不做 / 备选 也按各自的清单做导航组（用户 2026-10-25 截图 5 要求这两个折叠区同样能翻）
-  var xNm = function (p, kind, idx) {
-    return '<b class="td-x-nm" title="点击查看 K 线 · ' + escAttr(p.name + ' ' + (p.code || '')) +
-      ' · 可用 ←/→ 在本清单内切换" onclick="stkOpenIn(window._TD_GRP.' + kind + ',' + idx + ')">' +
-      esc(p.name) + '</b>';
-  };
-  if (watch.length) {
-    h += '<details class="td-fold"><summary>今日不做 ' + watch.length + ' 只（附否决理由）</summary>';
-    watch.forEach(function (p, wi) {
-      h += '<div class="td-x">' + xNm(p, 'w', wi) + '<s>' + esc(p.code) + '</s>' +
-        '<s>分 ' + (num(p.q) === null ? '—' : p.q) + '</s>' +
-        '<em>' + esc(p.veto || '—') + '</em></div>';
-    });
-    h += '</details>';
-  }
-  if (cand.length) {
-    h += '<details class="td-fold"><summary>备选 ' + cand.length + ' 只（通过否决但排名靠后）</summary>';
-    cand.forEach(function (p, ci) {
-      h += '<div class="td-x">' + xNm(p, 'c', ci) + '<s>' + esc(p.code) + '</s>' +
-        '<s>' + esc(p.sector || '') + '</s>' +
-        '<s>分 ' + (num(p.q) === null ? '—' : p.q) + '</s>' +
-        '<em>' + esc(p.cappedBySector ? '同板块已满额，等换手' : '排名靠后，等回调或缩量') + '</em></div>';
-    });
-    h += '</details>';
-  }
-
-  // R100z166（2026-10-24 13:4x，用户：「这个删掉，你作为专业的交易员，从你做出的看板中都赚不到钱，
-  // 那这个看板有什么用？」）：整块「账户与目标」（本金 3 万 · 11-30 前翻倍 + 期望值外推）已删除。
-  // 那块把「40% 胜率、平均 2.5R、单笔风险 0.5%」摊成 26 个交易日的期望（3.16 万，距目标 2.84 万），
-  // 再反解出「要补上得单笔风险 9.6%（约 2889 元/笔），连亏 5 笔亏掉 40% 本金」，
-  // 结论写的是「这张表保证的是别让 3 万继续缩水」。
-  // 数字没算错，错在**把「目标不成立」写成了产品自述**：读者读到的不是风控，是「这产品自己都说赚不到钱」。
-  // 可执行的信息没有丢：单笔风险金额 = 个股行的「仓位 %」× 本金，总仓位金额 = 组合层的「建议总仓位 %」。
-  // 别再把它加回来；要再谈目标，谈「这个仓位下最坏亏多少」，不谈「多久能翻倍」。
-    '</div>';
-
-  // 止损换口径的效果：这里只给一组前后对比，明细（三口径、收益、样本）交给「指标表现」卡。
-  // 同一句长证据在两张卡上各贴一遍，读者会跳读，反而漏掉重点。
-  var ER = ((D.atrStops || {}).evidenceRows) || [];
-  var rt1 = function (v) { var n = num(v); return n === null ? '—' : (n * 100).toFixed(1) + '%'; };
-  var ev = ER.length >= 2
-    ? '固定 −3% 触及率 ' + rt1(ER[0].touchRate) + ' → ATR 收盘确认 ' + rt1(ER[ER.length - 1].touchRate) +
-      '、胜率 ' + rt1(ER[0].winRate) + ' → ' + rt1(ER[ER.length - 1].winRate) +
-      '（同一批 ' + (ER[0].n || 0).toLocaleString('en-US') + ' 个入场点，明细见「指标复盘」卡）'
-    : '';
-  h += '<div class="td-note">' + esc(T.method || '') +
-    '<br>止损口径：ATR(14) 自适应 + 20 日结构低点，宽度钳制 2.5%~10%、收盘确认；' +
-    '宽度越宽仓位越小，单笔最大亏损恒为权益 0.5%。' +
-    (ev ? '<br>换口径实测：' + esc(ev) + '。' : '') +
-    '<br>清单只代表「按规则今天最优的几只」，不代表一定涨；被否决的票不等于会跌，只说明它不符合这套做多前提。</div>';
-  return h + '</div>';
 }
 
 /* R100z160：指标表现 —— 四个选股指标谁准谁不准。
@@ -6625,14 +6330,12 @@ function resizeOdCharts() {
 }
 /* R100z162：开盘预测页三块的渲染入口。三块各自独立取数、独立失败，一块挂了另两块照常出。 */
 function renderOpenDesk() {
+  // R100z234（2026-10-26 用户拍板「直接删掉」）：交易预案整块下线。
+  // 原因不是「准确率低」这句印象，而是它与开盘精选在同一天给出两套几乎不重叠的名单
+  // （2026-10-26 实测：精选 10 只 / 预案 8 只 / 交集 1 只），两套止损仓位并存，
+  // 任何一套都无法照做。signal_rank.py 已退役到 _retired/，data.js 的 tradeDesk 键已删。
   renderOpenOutlook();
   renderAiPrediction();
-  var td = document.getElementById('trade-desk');
-  if (td) {
-    var h = renderTradeDesk();
-    td.innerHTML = h || '<div class="card"><h2 class="td-h2">交易预案</h2>' +
-      '<div class="db-empty">暂无执行清单（16:00 数据步跑完 signal_rank.py 后出现）</div></div>';
-  }
 }
 
 function openDuanban() {

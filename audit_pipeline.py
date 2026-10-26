@@ -165,9 +165,6 @@ EMPTY_WHITELIST = [
     (r"atrStops\.skipped$",
      "R100z160：atr_stops 没有「K 线不足被跳过」的标的时为空数组（正常日度状态，不是漏跑）；"
      "被跳过的票根本不会进 atrStops.items，前端只读 items、不引用 skipped"),
-    (r"tradeDesk\.portfolio\.warn$",
-     "R100z160：组合仓位既没超单板块上限、也没超组合目标仓位时为空数组（这正是想要的状态）；"
-     "前端 renderTradeDesk 用 (pf.warn||[]).forEach 兜底，空数组不渲染任何预警条"),
 ]
 
 DATA_KEYS_REQUIRED = [
@@ -303,11 +300,6 @@ PRODUCT_OWNERSHIP = {
         "note": "R100z160：atr_stop.py 逐票算 ATR(14) 自适应止损（20 日结构位、k 系数、2.5%~10% 宽度钳制、"
                 "风险预算仓位、R 倍数目标），是**全站止损口径的唯一权威源**；16:00 数据步点名运行，"
                 "前端弹窗退出纪律（exitForCode → atrExitOf）与交易执行台共用同一份数字。",
-    },
-    "tradeDesk": {
-        "require": ("tradeDesk", "signal_rank"),
-        "note": "R100z160：signal_rank.py 五因子打分（动量/趋势/量能/位置/波动）+ 三项硬性否决 + 排名取前 8，"
-                "16:00 数据步点名运行；前端「今日交易执行台」卡渲染（renderTradeDesk）。",
     },
     "signalPerf": {
         "require": ("signalPerf", "signal_attribution"),
@@ -2922,160 +2914,6 @@ def g32_stop_ledger_truth(r):
                 ("%+.2f%%" % (sum(p5) / len(p5))) if p5 else "样本不足"))
 
 
-def g33_atr_stop_consistency(r):
-    """G33 止损口径唯一性：同一只票在 atrStops 与 tradeDesk 里必须是同一个止损价（R100z160）。
-
-    为什么需要（2026-10-24）：页面现在有两处会显示止损价——弹窗「退出纪律」读
-    `atrStops`，交易执行台的清单行读 `tradeDesk`。两个节点由两个脚本分别写，
-    如果各自算一套，页面对同一只票会给出**两个不同的止损价**，而且两边都自洽、
-    都不报错。这类「看起来对、实际互相打脸」的错误，只能靠跨节点对账发现。
-
-    同时校验三条内部自洽（都比"看起来合理"更强）：
-      ① stop < close（止损必须在收盘价下方，否则不是止损）；
-      ② stopWidPct 与 (close-stop)/close 一致（防宽度字段与价位脱节）；
-      ③ posPct ≈ min(20, 0.5% ÷ 宽度)（防仓位不是按风险预算算的，而是拍脑袋）。
-    """
-    try:
-        D = load_data_json()
-    except Exception as e:                                     # noqa: BLE001
-        r.fail("G33", "读 data.js 失败：%s" % e)
-        return
-    A = D.get("atrStops") or {}
-    T = D.get("tradeDesk") or {}
-    items = A.get("items") or {}
-    if not items:
-        r.fail("G33", "atrStops.items 为空 —— 止损权威源缺失，弹窗退出纪律会整体退回固定百分比口径")
-        return
-    params = A.get("params") or {}
-    risk_budget = float(params.get("riskBudgetPct") or 0.5)
-    max_pos = float(params.get("maxPosPct") or 20.0)
-
-    bad_rel, bad_wid, bad_pos = [], [], []
-    for code, it in items.items():
-        c, s = it.get("close"), it.get("stop")
-        w, p = it.get("stopWidPct"), it.get("posPct")
-        if not isinstance(c, (int, float)) or not isinstance(s, (int, float)) or c <= 0:
-            bad_rel.append("%s(价%d/%d)" % (code, c if isinstance(c, (int, float)) else -1,
-                                            s if isinstance(s, (int, float)) else -1))
-            continue
-        if not (0 < s < c):
-            bad_rel.append("%s(%.2f→%.2f)" % (code, c, s))
-            continue
-        real_w = (c - s) / c * 100.0
-        if w is None:
-            bad_wid.append("%s(缺宽度)" % code)
-        elif abs(float(w) - real_w) > 0.3:
-            bad_wid.append("%s 标%.2f/实%.2f" % (code, float(w), real_w))
-        if w and p is not None:
-            want = min(max_pos, risk_budget / (float(w) / 100.0))
-            if abs(float(p) - want) > 0.9:
-                bad_pos.append("%s 标%.1f/应%.1f" % (code, float(p), want))
-
-    # 跨节点对账：执行清单里的每一只，止损必须与 atrStops 同值
-    drift = []
-    not_in = []
-    for pk in (T.get("picks") or []):
-        code = str(pk.get("code") or "")
-        src = items.get(code)
-        if not src:
-            not_in.append(code)
-            continue
-        ps, ss = pk.get("stop"), src.get("stop")
-        if ps is None or ss is None or abs(float(ps) - float(ss)) > 0.005:
-            drift.append("%s 执行台 %s vs atrStops %s"
-                         % (code, ("%.2f" % float(ps)) if ps is not None else "空",
-                            ("%.2f" % float(ss)) if ss is not None else "空"))
-
-    if bad_rel:
-        r.fail("G33", "atrStops 有 %d 只止损不在收盘价下方（不是止损）：%s"
-               % (len(bad_rel), "; ".join(bad_rel[:6])))
-    if bad_wid:
-        r.fail("G33", "atrStops 宽度字段与价位不符 %d 只（标 vs 实）：%s"
-               % (len(bad_wid), "; ".join(bad_wid[:6])))
-    if bad_pos:
-        r.fail("G33", "atrStops 仓位不是按风险预算算的 %d 只（标 vs 应）：%s"
-               % (len(bad_pos), "; ".join(bad_pos[:6])))
-    if drift:
-        r.fail("G33", "同一只票两处止损不一致（弹窗读 atrStops、执行台读 tradeDesk）：%s"
-               % "; ".join(drift[:6]))
-    if not_in:
-        r.warn("G33", "执行清单 %d 只不在 atrStops 里（K 线不足被跳过？）：%s"
-               % (len(not_in), ", ".join(not_in[:6])))
-    if not (bad_rel or bad_wid or bad_pos or drift):
-        r.ok("G33", "止损口径唯一：%d 只价位/宽度/仓位自洽，执行清单与 atrStops 逐只同值"
-                    "（风险预算 %.1f%%、仓位上限 %.0f%%）" % (len(items), risk_budget, max_pos))
-
-
-def g34_desk_structure(r):
-    """G34 执行清单结构：数量、单板块集中度、价位关系、仓位合计必须与声明一致。
-
-    为什么需要：`tradeDesk.picks` 是「今天买什么」的唯一入口，一旦这里悄悄多了
-    单板块第 3 只，散户就会把同一个赌注下三遍，而页面上看不出任何异常——
-    「8 只清单」看着依然分散。所以单板块上限必须由闸门校验，不能只写在脚本里。
-    """
-    try:
-        D = load_data_json()
-    except Exception as e:                                     # noqa: BLE001
-        r.fail("G34", "读 data.js 失败：%s" % e)
-        return
-    T = D.get("tradeDesk") or {}
-    picks = T.get("picks") or []
-    if not picks:
-        r.warn("G34", "tradeDesk.picks 为空（池子当日无通过否决的标的，或脚本未跑）")
-        return
-    tiers = T.get("tiers") or {}
-    pf = T.get("portfolio") or {}
-    bad = []
-
-    if len(picks) > 8:
-        bad.append("清单 %d 只 > 上限 8 只" % len(picks))
-    if tiers.get("desk") not in (None, len(picks)):
-        bad.append("tiers.desk=%s 与 picks 实际 %d 只不符" % (tiers.get("desk"), len(picks)))
-
-    sec_n = {}
-    for p in picks:
-        sec_n[p.get("sector") or "未分类"] = sec_n.get(p.get("sector") or "未分类", 0) + 1
-    # 「未分类」是板块映射缺失的占位符，不是一个板块——把浙商银行、赤峰黄金、汇顶科技
-    # 合并计数会得出「同板块超 2 只」的假 FAIL。上游 signal_rank 也不给它配额，
-    # 这里必须同步，否则闸门与脚本口径打架（一方放行、一方判 FAIL）。
-    over = {k: v for k, v in sec_n.items() if v > 2 and k != "未分类"}
-    if over:
-        bad.append("单板块超 2 只：" + ", ".join("%s×%d" % (k, v) for k, v in over.items()))
-    # 但「未分类」不能无限放行：它占掉的仓位是真实的，只数多到一定程度说明
-    # 板块映射大面积缺失，这套「单板块 ≤2」的分散逻辑已经名存实亡，必须报出来。
-    unc_n = sec_n.get("未分类", 0)
-    if unc_n > 4:
-        bad.append("板块缺失 %d 只 > 4：映射大面积缺失，同板块上限实际未生效" % unc_n)
-
-    for p in picks:
-        code, c, s, t = (str(p.get("code") or ""), p.get("close"),
-                         p.get("stop"), p.get("target"))
-        if not all(isinstance(x, (int, float)) for x in (c, s, t)) or not c:
-            bad.append("%s 价位缺失" % code)
-            continue
-        if not (0 < s < c):
-            bad.append("%s 止损 %s 不在收盘 %s 下方" % (code, s, c))
-        if t <= c:
-            bad.append("%s 目标 %s 不高于收盘 %s" % (code, t, c))
-        q = p.get("q")
-        if not isinstance(q, (int, float)) or not (0 <= q <= 100):
-            bad.append("%s 量化分异常 %s" % (code, q))
-
-    # 仓位合计：没压缩时 = 单票加总；压缩过时 = cappedPosPct
-    ps = [p.get("posPct") for p in picks if isinstance(p.get("posPct"), (int, float))]
-    summed = round(sum(ps), 1) if ps else 0.0
-    stated = pf.get("cappedPosPct")
-    stated = float(stated) if isinstance(stated, (int, float)) else float(pf.get("sumPosPct") or 0)
-    if abs(summed - stated) > 0.4:
-        bad.append("单票仓位加总 %.1f%% ≠ 组合声明 %.1f%%" % (summed, stated))
-
-    if bad:
-        r.fail("G34", "执行清单结构有问题：" + "; ".join(bad[:6]))
-    else:
-        r.ok("G34", "执行清单 %d 只、%d 个板块（单板块 ≤2）、价位关系正确、仓位加总 %.1f%% 与组合声明一致"
-             % (len(picks), len(sec_n), summed))
-
-
 def g35_atr_evidence_truth(r):
     """G35 ATR 证据必须由回测产出，且句子里每个数字都跟 evidenceRows 对得上。
 
@@ -3145,74 +2983,6 @@ def g35_atr_evidence_truth(r):
              % (len(rows), "{:,}".format(rows[0]["n"]),
                 rows[0]["touchRate"] * 100, rows[-1]["touchRate"] * 100,
                 rows[0]["winRate"] * 100, rows[-1]["winRate"] * 100))
-
-
-def g36_desk_exec_plan(r):
-    """G36 次日执行参数自洽 —— 「明天怎么下单」不能自相矛盾。
-
-    为什么需要：R100z161 给每只票加了 plan（进场区间 / 追高上限 / 放弃线），
-    这张表才从「收盘排名」变成「能照着做的预案」。但四个价位一旦算错，
-    用户会照着错误指令下单——比没有指令更糟：
-      · 放弃线比止损还低  → 等于让人多亏一截才认错
-      · 追高上限高于目标  → 追进去就是负期望
-      · 区间倒序          → 页面显示「11.40~10.80」这种没法执行的区间
-    这些都不会报错，只会安静地害人，所以必须逐只对账。
-    """
-    try:
-        D = load_data_json()
-    except Exception as e:                                     # noqa: BLE001
-        r.fail("G36", "读 data.js 失败：%s" % e)
-        return
-    T = D.get("tradeDesk") or {}
-    picks = T.get("picks") or []
-    if not picks:
-        r.warn("G36", "tradeDesk.picks 为空（signal_rank.py 未跑？）")
-        return
-
-    bad, noPlan = [], []
-    for p in picks:
-        code = p.get("code") or "?"
-        pl = p.get("plan")
-        if not pl:
-            noPlan.append(code)
-            continue
-        a, lo, hi, ch = (pl.get("abandon"), pl.get("entryLo"),
-                         pl.get("entryHi"), pl.get("chase"))
-        stop, close, tgt = p.get("stop"), p.get("close"), p.get("target")
-        vals = [a, lo, hi, ch]
-        if any(not isinstance(v, (int, float)) for v in vals):
-            bad.append("%s 执行参数不全是数字 %s" % (code, vals))
-            continue
-        if not (a < lo < hi < ch):
-            bad.append("%s 四档顺序错乱 abandon=%s entryLo=%s entryHi=%s chase=%s"
-                       % (code, a, lo, hi, ch))
-        if isinstance(stop, (int, float)) and a < stop - 0.005:
-            bad.append("%s 放弃线 %.2f 低于止损 %.2f——等于让人多亏一截才认错"
-                       % (code, a, stop))
-        if isinstance(tgt, (int, float)) and ch >= tgt:
-            bad.append("%s 追高上限 %.2f ≥ 目标 %.2f——追进去是负期望" % (code, ch, tgt))
-        if isinstance(close, (int, float)) and not (a <= close <= ch):
-            bad.append("%s 收盘价 %.2f 不在执行区间 [%s, %s] 内" % (code, close, a, ch))
-        if not (pl.get("ifGapUp") and pl.get("ifInBand") and pl.get("ifGapDown")):
-            bad.append("%s 三档情景文案不全（高开/区间内/低开）" % code)
-
-    # 有效期：清单是给**下一个交易日**用的，过期没重算就会误导人
-    td, vu = str(T.get("tradeDate") or "")[:10], str(T.get("validUntil") or "")[:10]
-    if not vu:
-        bad.append("tradeDesk.validUntil 缺失——页面无法说明这张表什么时候作废")
-    elif td and vu <= td:
-        bad.append("validUntil(%s) 不晚于 tradeDate(%s)" % (vu, td))
-
-    # 个别票缺 plan 只 WARN（数据不全时宁可不展示）；超过一半才 FAIL
-    if len(noPlan) * 2 > len(picks):
-        bad.append("%d/%d 只缺执行参数——这张表会退回「只有收盘价的排名」"
-                   % (len(noPlan), len(picks)))
-
-    if bad:
-        r.fail("G36", "；".join(bad[:6]))
-    else:
-        r.ok("G36", "%d 只执行参数自洽（放弃线 ≤ 止损、追高 < 目标、四档有序），有效期至 %s"
-             % (len(picks) - len(noPlan), vu or "—"))
 
 
 def g37_forecast_score_truth(r):
@@ -3384,12 +3154,12 @@ def g38_flags_respected(r):
 
 
 def g39_open_desk_page(r):
-    """G39 开盘预测子页：三块齐全 + 顺序正确 + 进得去也走得掉（R100z162，2026-10-24）。
+    """G39 开盘预测子页：两块齐全 + 顺序正确 + 进得去也走得掉（R100z162；R100z234 删预案块）。
 
-    由来：用户 2026-10-24 要求「AI 预测分析整个模块挪到技术看板，新增开盘预测；
-    次日交易预案也放这里，在 AI 预测分析下面」。三块顺序是**有语义的**——
-    先看方向（盘前前瞻）→ 再看依据（AI 预测）→ 最后看作法（次日预案）。
-    顺序反了就是「先看买什么、再补为什么」，决策链是倒的。
+    由来：用户 2026-10-24 要求「AI 预测分析整个模块挪到技术看板，新增开盘预测」。
+    两块顺序是**有语义的**——先看方向（盘前前瞻）→ 再看依据（AI 预测）。
+    2026-10-26 用户拍板删掉「交易预案」（与开盘精选同日给出两套几乎不重叠的名单，
+    精选 10 只 / 预案 8 只 / 交集 1 只），所以这里从三块收成两块。
 
     这类「搬页」改动最典型的故障不是报错，是**静默降级**：容器在、渲染函数也在，
     但某一块忘了挂上去，页面照样能开、闸门照样绿，只是用户少看一块内容。
@@ -3397,8 +3167,8 @@ def g39_open_desk_page(r):
     用户被锁死在开盘预测页，下次进来还是它。
 
     判据（只看源码，不跑浏览器）：
-      a) #db-od 内四个容器齐全：db-od-nav / weekend-news / ai-prediction / trade-desk；
-      b) 顺序必须 nav → weekend-news → ai-prediction → trade-desk；
+      a) #db-od 内三个容器齐全：db-od-nav / weekend-news / ai-prediction；
+      b) 顺序必须 nav → weekend-news → ai-prediction；
       c) subnavHtml() 的 tabs 里 'od' 存在且排第一（盘前唯一要看的一页）；
       d) switchSubTab 的 map 里有 od → 'db-od'（否则切过去白屏）；
       e) renderOpenDesk() 真的依次调用三个渲染函数；
@@ -3422,7 +3192,7 @@ def g39_open_desk_page(r):
     else:
         i1 = s.find('<div id="db-pools"', i0)
         seg = s[i0:i1 if i1 > 0 else i0 + 4000]
-        want = ["db-od-nav", "weekend-news", "ai-prediction", "trade-desk"]
+        want = ["db-od-nav", "weekend-news", "ai-prediction"]
         pos = {}
         for key in want:
             j = seg.find('id="%s"' % key)
@@ -3430,10 +3200,10 @@ def g39_open_desk_page(r):
                 bad.append("开盘预测子页缺 #%s" % key)
             else:
                 pos[key] = j
-        if len(pos) == 4:
+        if len(pos) == len(want):
             seq = sorted(pos, key=lambda k: pos[k])
             if seq != want:
-                bad.append("子页块顺序 %s，应为 盘前前瞻→AI预测→次日预案（用户要求预案在预测下面）"
+                bad.append("子页块顺序 %s，应为 盘前前瞻→AI预测（先看方向再看依据）"
                            % "→".join(seq))
 
     # ---- c) tabs 里 od 排第一 ----
@@ -3461,25 +3231,19 @@ def g39_open_desk_page(r):
         elif not re.search(r"od:\s*'db-od'", mm.group(1)):
             bad.append("switchSubTab 的 map 缺 od → 'db-od'（点开盘预测会白屏）")
 
-    # ---- e) 三块渲染入口齐全 ----
+    # ---- e) 两块渲染入口齐全 ----
     mf = re.search(r"function renderOpenDesk\(\)\s*\{([\s\S]{0,1200}?)\n\}", s)
     if not mf:
-        bad.append("找不到 renderOpenDesk()——三块没有统一渲染入口（搬页后谁来画？）")
+        bad.append("找不到 renderOpenDesk()——两块没有统一渲染入口（搬页后谁来画？）")
     else:
         fb = mf.group(1)
-        miss = [fn for fn in ("renderOpenOutlook", "renderAiPrediction", "renderTradeDesk")
+        miss = [fn for fn in ("renderOpenOutlook", "renderAiPrediction")
                 if fn not in fb]
         if miss:
             bad.append("renderOpenDesk() 未调用 %s（该块搬进子页后没人画＝空白）"
                        % "、".join(miss))
-        # R100z162：只查「函数名出现过」是不够的——第一版埋雷实测漏过一颗：
-        # 把 `var td = getElementById('trade-desk')` 改成 `= null`，`renderTradeDesk()`
-        # 这行还在源码里（只是拿不到容器、画不出去），闸门照样绿。所以还要查
-        # 「拿到容器 + 写回容器」这两步，缺任一步就等于那块永远白着。
-        if "getElementById('trade-desk')" not in fb:
-            bad.append("renderOpenDesk() 没去取 #trade-desk 容器——预案渲染出来无处可写")
-        elif "td.innerHTML" not in fb:
-            bad.append("renderOpenDesk() 取了 #trade-desk 却没写回（td.innerHTML）——预案那块永远空")
+        # R100z234：原来这里还查「getElementById('trade-desk') + td.innerHTML」两步，
+        # 交易预案删除后一并撤掉——留着会让闸门要求一个已经不存在的容器。
 
     # ---- f) 子页自带菜单 ----
     if 'id="db-od-nav"' in s and not re.search(
@@ -3489,7 +3253,7 @@ def g39_open_desk_page(r):
     if bad:
         r.fail("G39", "；".join(bad[:4]))
     else:
-        r.ok("G39", "开盘预测子页三块齐全且顺序正确（前瞻→AI预测→预案），od 为默认子页且可切走")
+        r.ok("G39", "开盘预测子页两块齐全且顺序正确（前瞻→AI预测），od 为默认子页且可切走")
 
 
 def g40_score_page_and_slots(r):
@@ -3660,8 +3424,8 @@ def g41_visual_norms(r):
     这一条把可感知的一致性也锁住。
 
     判据：
-      a) 交易预案标题必须是「交易预案」，不许回退成「次日交易预案」；
-      b) renderTradeDesk 必须产出「与 AI 预测的关系」行；
+      a) 源码里不许再出现「次日交易预案」这个旧标题（连注释也不许，防止被复制回去）；
+      b) （原「交易预案卡两块」判据已随 R100z234 删除该模块一并撤除）；
          （R100z166：原判据还要求「账户与目标」块 + ACCT.equity + acctProfile 三件，
           2026-10-24 用户明确要求删掉那块：「这个删掉，你作为专业的交易员，从你做出的看板中
           都赚不到钱，那这个看板有什么用？」——它把「本金 3 万 / 11-30 前翻倍」摊成期望值外推，
@@ -3687,20 +3451,8 @@ def g41_visual_norms(r):
         # 注释里也不许出现：这条标题被用户点名简化过一次，留一句就能被下一次复制回去
         bad.append("源码里仍有「次日交易预案」字样——用户 2026-10-24 要求标题就叫「交易预案」")
 
-    # ---- b) 交易预案里的两块 ----
-    mt = re.search(r"function renderTradeDesk\(\)\s*\{([\s\S]*?)\n\}", s)
-    if not mt:
-        bad.append("找不到 renderTradeDesk() —— 交易预案卡整块没了")
-    else:
-        tb = mt.group(1)
-        # R100z166：判据从「必须有」翻成「不许回来」。这块的字面结论就是
-        # 「这张表能保证的是别让 3 万继续缩水」+「距目标还差 2.84 万」——
-        # 谁再补回来，等于产品又一次自证无用（用户 2026-10-24 原话）。
-        if "td-acct" in tb or "acctProfile" in s or "ACCT.equity" in s:
-            bad.append("交易预案卡又出现「账户与目标」块（td-acct / acctProfile / ACCT.equity）"
-                       "——用户 2026-10-24 明确要求删除：把「目标不成立」写成产品自述")
-        if "td-rel" not in tb and "与上方 AI 预测的关系" not in tb:
-            bad.append("交易预案卡缺「与 AI 预测的关系」行——两套标的并排却不解释关系，读者会以为互相打架")
+    # ---- b) 交易预案已下线（R100z234），原「账户与目标 / 与 AI 预测的关系」两条判据一并撤除。
+    # 保留 a) 那条「源码里不许出现『次日交易预案』」，防止有人把旧标题抄回来。
 
     # ---- c) 悬浮按钮三件套 ----
     entry = ["gn-entry", "db-entry", "sc-entry"]
@@ -3996,8 +3748,8 @@ def g45_modal_nav_group(r):
       a) `openStkModal()` 函数体里有 `stkSyncNav(code)` —— 兜住所有仍走内联 onclick 的旧调用点：
          代码不在当前分组里就关箭头，宁可没箭头，也不给一个会翻到别处的箭头；
       b) 全文不得有 `onclick="openStkModal(` —— 列表点击必须走 `stkOpenIn(list, idx)` 先建组；
-      c) 三处「清单型」列表的生成串必须显式带 `stkOpenIn(`：龙虎榜 `.lhb-go`、
-         交易预案 `.td-name`、今日不做/备选 `.td-x-nm`。
+      c) 「清单型」列表的生成串必须显式带 `stkOpenIn(`：目前只剩龙虎榜 `.lhb-go`
+         （交易预案的两处清单已随 R100z234 删除该模块一并撤除）。
     """
     p = os.path.join(HERE, "index.html")
     try:
@@ -4018,9 +3770,8 @@ def g45_modal_nav_group(r):
     n = s.count('onclick="openStkModal(') + s.count("onclick=\\\"openStkModal(")
     if n:
         bad.append("还有 %d 处内联 onclick 直开 openStkModal——必须先 stkOpenIn(list, idx) 建组" % n)
-    for need, why in (("stkOpenIn(window._LHB_GRP,", "龙虎榜行"),
-                      ("stkOpenIn(window._TD_GRP.p,", "交易预案主清单"),
-                      ("stkOpenIn(window._TD_GRP.' + kind + '", "今日不做/备选折叠区")):
+    # R100z234：交易预案（_TD_GRP 两处清单）已下线，这里只留仍在用的龙虎榜行。
+    for need, why in (("stkOpenIn(window._LHB_GRP,", "龙虎榜行"),):
         if need not in s:
             bad.append("%s 未走 stkOpenIn（箭头会跟着上一位读者点过的清单翻）" % why)
 
@@ -4028,7 +3779,7 @@ def g45_modal_nav_group(r):
         r.fail("G45", "；".join(bad[:3]))
     else:
         r.ok("G45", "弹窗导航分组一致：openStkModal 兜底 stkSyncNav、无内联直开、"
-                    "龙虎榜/交易预案/今日不做·备选三处清单均先建组再开")
+                    "龙虎榜清单均先建组再开")
 
 
 def g46_sector_board_names(r):
@@ -4285,10 +4036,7 @@ def main():
     g30_display_prefs(r)
     g31_deduce_prefix(r)
     g32_stop_ledger_truth(r)
-    g33_atr_stop_consistency(r)
-    g34_desk_structure(r)
     g35_atr_evidence_truth(r)
-    g36_desk_exec_plan(r)
     g37_forecast_score_truth(r)
     g38_flags_respected(r)
     g39_open_desk_page(r)
