@@ -1447,11 +1447,15 @@ def check_selection_modules(D):
                     warns.append(f"breakoutPool.passed[{i}] code {c} 非 60/00 沪深主板")
                 if 'score' not in it:
                     warns.append(f"breakoutPool.passed[{i}] 缺 score")
-                # R100z232：横盘启动的买区/证伪价是箱体几何推出来的，缺了就没法下单
+                # R100z233：横盘启动 v2 的买区＝次日挂单带、证伪价＝涨停日最低×0.98；
+                # **不再要求 target**（用户 2026-10-26「止盈你不用管」，目标由用户自定）。
                 _e = it.get('entry') if isinstance(it.get('entry'), dict) else None
                 if not _e or not all(_e.get(k) is not None
-                                     for k in ('low', 'high', 'stop', 'target')):
-                    warns.append(f"breakoutPool.passed[{i}] entry 缺 low/high/stop/target")
+                                     for k in ('low', 'high', 'stop')):
+                    warns.append(f"breakoutPool.passed[{i}] entry 缺 low/high/stop")
+                # 失效线（较涨停板 +30%）是判定「已启动」的依据，缺了前端画不出这一行
+                if it.get('invalidUp') is None or it.get('limitDay') in (None, ''):
+                    warns.append(f"breakoutPool.passed[{i}] 缺 invalidUp/limitDay")
 
     # R100h：macroChecklist 校验已随必带数据清单模块下线删除
     return warns
