@@ -86,6 +86,13 @@ POS_MIN = 0.92         # 入池要求：现价 ≥ 涨停日收盘 ×0.92（别�
 INVALID_UP = 0.30      # 收盘 ≥ 涨停日收盘 ×1.30 → 已启动，失效
 STOP_TOL = 0.98        # 证伪价 = 涨停日最低 ×0.98（留 2% 给插针，与陈学长 S7 同口径）
 MIN_BARS = 40          # 少于这个根数给不出「涨停前 5 日均量 + 洗盘窗口」
+# 2026-10-26 18:0x 用户抓到的真 bug：上海洗霸 8/24 第一根涨停 → 之后 3 个涨停、区间涨幅 41.7%，
+# 慈文传媒 9/8 → 7 个涨停，早就「已启动」，而我的池子把它们判成「没启动」。
+# 根因：只回看 30 日找锚，8/24 那根已在窗口外，于是 10/15 的新涨停被当成一次全新异动。
+# 修法：先把涨停按「一轮」归并 —— 两个涨停之间若已走出 +30%，才算两轮；锚点取**本轮起点**，
+# 再拿它去做 +30% 失效判定。这样「累计涨幅」的口径和用户看图一致。
+CHAIN_LOOKBACK = 150   # 往前找「这一轮涨停链起点」的回看天数（覆盖一整波行情）
+CHAIN_UP = 0.30        # 同一轮内允许的最大涨幅；超过即视为进入了新一轮
 BUY_LOW, BUY_HIGH = 0.990, 1.020   # 次日挂单区间：今收下方 1% ~ 上方 2%
 
 STATE_CN = {
@@ -131,16 +138,25 @@ def track(bars, t, k):
     """从涨停日 t 推演到信号日 k，返回 (status, info)。
 
     status ∈ {active, launched, broken, expired}
+
+    ⚠️ 判定顺序很重要（2026-10-26 踩过）：**先查「这一波有没有涨过 +30%」，再查破底**。
+       慈文传媒 9/8 起爆、走到 10 月已 +75%，但中途有一次收盘跌破涨停日最低且 2 日没收回；
+       如果先判破底，它会被打成「形态作废」，而用户看到的是「7 个涨停，早失效了」。
+       用户的失效口径是「较第一个涨停板超出 30%」——只问**曾经**有没有涨上去。
     """
     T = bars[t]
     lim_close, lim_low, base = T['close'], T['low'], _base_vol(bars, t)
+    seg = bars[t + 1:k + 1]
+    # ① 曾经涨过 +30% → 已启动（这一波做完了，别再当埋伏标的）
+    for b in seg:
+        if b['close'] >= lim_close * (1 + INVALID_UP):
+            return 'launched', dict(day=b['day'], close=b['close'])
+    # ② 破底与容忍期
     vols, hi, lo = [], T['high'], T['low']
     pending = False
     for i in range(t + 1, k + 1):
         b = bars[i]
-        if b['close'] >= lim_close * (1 + INVALID_UP):        # B4 已启动
-            return 'launched', dict(day=b['day'], close=b['close'])
-        if b['close'] < lim_low:                              # B3 破底（收盘口径）
+        if b['close'] < lim_low:
             rec = any(bars[j]['close'] >= lim_low
                       for j in range(i + 1, min(len(bars), i + 1 + RECOVER)))
             if rec:
@@ -153,7 +169,7 @@ def track(bars, t, k):
         hi = max(hi, b['high'])
         lo = min(lo, b['low'])
     nd = k - t
-    if nd > MAX_N:                                            # B5 超期
+    if nd > MAX_N:                                            # ③ 超期
         return 'expired', dict(washDays=nd)
     vr = (sum(vols) / len(vols)) / base if (vols and base > 0) else None
     return 'active', dict(limitDay=T['day'], limitClose=lim_close, limitLow=lim_low,
@@ -161,33 +177,53 @@ def track(bars, t, k):
                           pending=pending, lastClose=bars[k]['close'])
 
 
-def find_events(bars, k):
-    """k 日回看窗口内的涨停事件（新的在前），连板串只认第一根。"""
+def _limit_starts(bars, k, lookback, upto=None):
+    """最近 lookback 日内的涨停链起点（升序）。连板串只认第一根。
+
+    `upto` 用于排除「最近几天刚发生的涨停」——洗盘不足 MIN_N 日的不做锚，
+    否则刚拉起来那根会把 nd 打成 0，反而判成「没洗」。
+    """
+    end = k if upto is None else min(k, upto)
     out = []
-    for t in range(max(1, k - MAX_N), k - MIN_N + 1):
+    for t in range(max(1, k - lookback), end + 1):
         if not _is_limit(bars, t):
             continue
         if _is_limit(bars, t - 1):
             continue                                          # 连板第 2 根起不算新事件
         out.append(t)
-    return list(reversed(out))
+    return out
+
+
+def _wave_anchor(bars, k, lookback):
+    """找「这一波上涨的起点涨停」——从最近 lookback 日内的**最低收盘价**往后，
+    第一根涨停链起点就是这波的起爆点。
+
+    为什么不用「相邻涨停之间是否已 +30%」逐段归并：上海洗霸 8/24 → 9/15 → 9/29 → 10/8 → 10/15，
+    每段之间都没到 30%，但整波到 10/16 已经比 8/24 高出 41.8%，用户看的是「整波涨幅」。
+    以「最低点之后的第一根涨停」为锚，才和用户看图的口径一致（4 只样本全部对上）。
+    """
+    lo = max(1, k - lookback)
+    if k - lo < MIN_N:
+        return None
+    i_low = min(range(lo, k + 1), key=lambda i: bars[i]['close'])
+    starts = _limit_starts(bars, k, lookback, upto=k - MIN_N)
+    after = [t for t in starts if t >= i_low]
+    if after:
+        return after[0]
+    before = [t for t in starts if t < i_low]
+    return before[-1] if before else None
 
 
 def evaluate(bars, k):
     """返回 (status, info, item)。取最近一次仍有效的事件定状态。"""
-    best = None
-    for t in find_events(bars, k):
-        st, info = track(bars, t, k)
-        if st == 'active':
-            best = (st, info, t)
-            break
-        if best is None:
-            best = (st, info, t)                              # 只用于归档原因
-    if best is None:
+    t = _wave_anchor(bars, k, CHAIN_LOOKBACK)
+    if t is None:
         return None, {}, None
-    st, info, t = best
+    st, info = track(bars, t, k)
     if st != 'active':
         return st, info, None
+    if info.get('washDays', 0) < MIN_N:
+        return 'lost', info, None                             # 洗盘不足 5 日，还没洗
     if info.get('vr') is None:
         return 'lost', info, None
     if info['vr'] > VOL_MAX:
@@ -281,7 +317,7 @@ def scan(codes, names, secs, asof=''):
         k = len(bars) - 1
         if bars[k]['close'] < 4:
             continue
-        if find_events(bars, k):
+        if _limit_starts(bars, k, MAX_N):
             cnt['limit'] += 1
         st, _info, item = evaluate(bars, k)
         if st != 'active' or not item:
@@ -431,22 +467,24 @@ def main():
         bars = K.get_bars(c)
         if not bars:
             continue
-        ld = str(oi.get('limitDay') or '')
-        t = next((i for i, b in enumerate(bars) if str(b.get('day') or '') == ld), None)
-        st = track(bars, t, len(bars) - 1)[0] if t is not None else None
-        if st == 'active':
-            # 事件还活着：留在池里，位置按今天收盘刷新（分数随之下降），不踢出去
-            _b = bars[-1]
-            if oi.get('limitClose'):
-                oi['lastClose'] = round(_b['close'], 2)
-                oi['posPct'] = round(_pct(_b['close'], oi['limitClose']), 1)
-                oi['score'] = score_of(oi)
+        # 2026-10-26 修：老成员必须用**同一套口径重算**（波起点 + 先判 +30%），
+        # 不能拿它入库时记下的 limitDay 去 track —— 否则「已经又涨了 30%」的票会被误留。
+        st, _info, item2 = evaluate(bars, len(bars) - 1)
+        if st == 'active' and item2:
+            # 事件还活着：留在池里，位置/分数按今天刷新，不踢出去
+            for k2 in ('lastClose', 'limitDay', 'limitClose', 'limitLow', 'invalidPrice',
+                       'invalidUp', 'washDays', 'volRatio', 'posPct', 'pending', 'rangePct'):
+                oi[k2] = item2[k2]
+            oi['entry'] = entry_of(item2)
+            oi['score'] = score_of(item2)
+            oi['note'] = label_of(item2)
             kept.append(oi)
             continue
         new_fails.append({
             'code': c, 'name': (oi.get('name') or '').strip(),
             'sector': oi.get('sector') or '',
-            'reason': diagnose(bars, oi) if st is None else STATE_CN.get(st, STATE_CN['lost']),
+            'reason': (STATE_CN.get(st, STATE_CN['lost']) if st
+                       else diagnose(bars, oi)),
             'entryDate': today,
         })
     if kept:
