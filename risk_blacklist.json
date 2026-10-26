@@ -2,12 +2,12 @@
  "ok": true,
  "nameSrc": "tx",
  "nameSrcDetail": {
-  "tx": 94,
+  "tx": 331,
   "sina": 0,
   "em": 0
  },
- "date": "2026-10-25",
- "checked": 94,
+ "date": "2026-10-26",
+ "checked": 331,
  "liftWindow": [
   2,
   5
@@ -17,28 +17,53 @@
  "dims": {
   "st": {
    "status": "ok",
-   "cover": "行情名源（腾讯94/新浪0/东财0）94/94 只取到"
+   "cover": "行情名源（腾讯331/新浪0/东财0）331/331 只取到"
   },
   "cut": {
    "status": "ok",
-   "cover": "公告源 94/94 只取到（东财94/巨潮0）"
+   "cover": "公告源 331/331 只取到（东财331/巨潮0）"
   },
   "loss": {
    "status": "ok",
-   "cover": "公告源 94/94 只取到（东财94/巨潮0）"
+   "cover": "公告源 331/331 只取到（东财331/巨潮0）"
   },
   "lift": {
    "status": "ok",
-   "cover": "解禁源 94/94 只取到"
+   "cover": "解禁源 331/331 只取到"
   },
   "pledge": {
    "status": "ok",
-   "cover": "质押源 94/94 只取到（仅供参考）"
+   "cover": "质押源 331/331 只取到（仅供参考）"
   }
  },
  "verdict": "full",
  "uncheckedDims": [],
- "blacklist": {},
+ "blacklist": {
+  "001298": {
+   "name": "好上好",
+   "reasons": [
+    "2026-10-09 减持计划（预披露）"
+   ],
+   "count": 1,
+   "watch": [],
+   "severity": "orange",
+   "progress": [
+    "减持预披露"
+   ]
+  },
+  "603119": {
+   "name": "浙江荣泰",
+   "reasons": [
+    "2026-10-14 减持计划（预披露）"
+   ],
+   "count": 1,
+   "watch": [],
+   "severity": "orange",
+   "progress": [
+    "减持预披露"
+   ]
+  }
+ },
  "unknown": [],
  "failed": [],
  "note": "硬风险黑名单（R100z76-④ severity 分级）：red=硬剔(ST/退市·业绩预减/预亏·减持实施中)、orange=警示可保留(减持预披露/计划·限售解禁窗口)、yellow=参考(质押≥30%)；ST/退市、T+2~T+5 解禁、减持公告 30 日内；源不可达不判安全（verdict=full 才算各维度全核查）"
