@@ -382,6 +382,19 @@ def build_buy_list(D, picks, quotes, blacklist):
                  "本节不含「昨日持仓·今日离场」——离场自行决定。"),
         "skipped": skipped,
         "slipPct": BUY_SLIP,
+        # R100z246：记录**本清单用的池快照时点**（2026-10-27）。
+        # 背景：清单是 9:45 盘中生成的，而横盘启动池 16:00 收盘会整体重算换名单。
+        # 晚上读页面时，清单里的票「在当时的池里、不在现在的池里」，audit G47 原本
+        # 一律判「凭空造票」——实测 2026-10-27 被误报 9 只，全是 10-26 收盘池的合法成员。
+        # 记下快照时点后，闸门能区分两种情形：
+        #   池快照日期 == 清单日期 → 同一时点，票必须对得上（真造票就 FAIL）
+        #   池快照日期  > 清单日期 → 池已换过一轮，只校验「当时合法」，不追「现在还在」
+        # 这不是放宽闸门，是把「跨时点比对」这个假问题从判据里摘出去。
+        "poolSnapshot": {
+            "duanban": str((D.get("duanban") or {}).get("generatedAt") or ""),
+            "breakout": str((D.get("breakoutPool") or {}).get("tradeDate") or ""),
+            "chen": str((D.get("chenPool") or {}).get("generatedAt") or ""),
+        },
     }
     return rows, summary
 

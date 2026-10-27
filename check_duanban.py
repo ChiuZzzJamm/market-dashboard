@@ -793,6 +793,73 @@ NOTICE_NEUTRAL_OVERRIDE = ("终止减持", "终止增持", "终止回购", "减�
                            "解除冻结", "解除质押", "解除限售", "解除冻结及")
 
 
+# ---------- R100z223：业绩方向确定性判定（补词表漏「下降/减少/降低」） ----------
+# 背景（2026-10-27 用户实报）：大洋电机 002249 在 stockNews 里明明有
+# 「第三季度归母净利润7143.93万元，同比下降70.58%」和「前三季度净利润同比下降42.04%」，
+# 却两条都判 neutral。根因是 NEWS_BEAR_PAIRS 只收了「下滑/预亏」，
+# **没收到业绩表述的绝对主力词「下降/减少/降低」**——全量 4667 条里这类表述 83 条，
+# 一条都没判出来。结果同一只票：AI 手写进断板池的 bear 有依据、脚本重跑就变 neutral，
+# 陈学长池与断板池对同一只票给出相反结论。
+#
+# 为什么不继续加词对：实测 NEWS_BEAR_PAIRS 读「标题+摘要头80字」，
+# 而摘要常是**别家公司的新闻拼盘**（恒邦股份「净利同比增长69.86%」因摘要里出现
+# 「减持」被判 bear，方向完全反）。业绩这类**有明确数值方向**的表述，
+# 只读标题就能定，且比模糊词对可靠得多。
+#
+# 阈值 30%：<=30% 的同比降幅属正常经营波动（财报季这类条目标题极多），
+# 30% 以上才构成需要写进 story 的方向性变化。亏损失金额、扭亏为盈不受阈值限制。
+_EPS_OBJ = (r"(?:归属于上市公司股东的净利润|归母净利润|扣非净利润|净利润|归母净利"
+            r"|净利|营业收入|营收|毛利率|利润总额|营业利润)")
+# 中间段允许逗号（「归母净利润7143.93万元，同比下降70.58%」是标准写法，
+# 2026-10-27 实测：排除逗号会导致最典型的一条漏判），但**不允许跨分句**——
+# 句号/分号是不同指标的边界，跨过去就会把「营收降41%；净利增17%」判成单向。
+_EPS_DROP = re.compile(_EPS_OBJ + r"[^。；]{0,30}?同比(?:下降|减少|下滑|降低|降|减)"
+                                 r"\s*(?:幅|约)?\s*([\d.]+)\s*%")
+_EPS_RISE = re.compile(_EPS_OBJ + r"[^。；]{0,30}?同比(?:增长|增加|上升|上涨|增|升)"
+                                 r"\s*(?:幅|约)?\s*([\d.]+)\s*%")
+_EPS_LOSS = re.compile(r"(?:净利润|归母净利润|归母净利|扣非净利润|净利)"
+                       r"[^。；]{0,24}?(?:净亏损|亏损)\s*[\d.]+\s*(?:万元|亿元)")
+# 「降幅收窄/亏损收窄」是边际改善，不判 bear（实测会误杀扭亏叙事）
+_EPS_NARROW = re.compile(r"收窄|缩窄")
+_EPS_TURN = re.compile(r"扭亏为盈|扭亏")
+EPS_PCT_MIN = 30.0
+
+
+def classify_earnings(title):
+    """业绩标题 → 'bear' / 'bull' / None（只读标题，数值方向确定）。
+
+    判据优先级：降幅/增幅 > 亏损额 > 扭亏。两条方向都出现（「营收降 41%、净利增 17%」）
+    时**不判**——同一份财报里增收不增利/减收增利并存，任何单向结论都会误导，
+    留给 AI 与摘要人工复核。这也是恒邦股份那类标题的正确处理。
+    """
+    t = str(title or "")
+    if not t:
+        return None
+    md, mr = _EPS_DROP.search(t), _EPS_RISE.search(t)
+    # 双方向并存 → 不判（宁缺毋滥）
+    if md and mr:
+        return None
+    if md:
+        if _EPS_NARROW.search(t):
+            return None
+        try:
+            return "bear" if float(md.group(1)) >= EPS_PCT_MIN else None
+        except Exception:
+            return None
+    if mr:
+        if _EPS_NARROW.search(t):
+            return None
+        try:
+            return "bull" if float(mr.group(1)) >= EPS_PCT_MIN else None
+        except Exception:
+            return None
+    if _EPS_LOSS.search(t) and not _EPS_NARROW.search(t):
+        return "bear"
+    if _EPS_TURN.search(t):
+        return "bull"
+    return None
+
+
 def classify_notice(title):
     """公告标题 → 'bear' / 'bull' / None（保守：一词多义或歧义时不打标）。"""
     t = str(title or "")
@@ -800,6 +867,12 @@ def classify_notice(title):
         return None
     if any(k in t for k in NOTICE_NEUTRAL_OVERRIDE):
         return None
+    # R100z223：业绩类公告/新闻先走数值方向判定（公告 API 的标题就是完整财报标题）。
+    # 放在 override 之后：业绩标题不会命中「减持计划」等中性词，顺序无影响，
+    # 但保持「解除类优先中性」的既有语义不被业绩规则抢走。
+    _eps = classify_earnings(t)
+    if _eps:
+        return _eps
     bear = any(k in t for k in NOTICE_BEAR_KW)
     bull = any(k in t for k in NOTICE_BULL_KW)
     if bear and not bull:
@@ -1033,13 +1106,34 @@ def eval_stage(code, kline, zt_date_iso):
         return {"pool": "watch", "stage": "待缩量",
                 "form": f"{zt_md}涨停→次{r1:.1f}倍量断板·待缩量",
                 "days_ago": 1}
+    # ⚠️ 2026-10-27 修「死区」（用户问「大洋电机为什么没进断板反包确认池」时查出来）：
+    # 原写法 2<=days_ago<=4 时只判「已缩量 + 收盘 < MA5×0.97 → 待企稳」，把**站上 MA5 但
+    # 溢价不足 2%** 的票漏在两条分支之间：
+    #   · 不满足 confirmed —— check_form 里 MA5_GAP_MIN=2.0 卡住；
+    #   · 不满足待企稳   —— 待企稳要求收盘 < MA5×0.97，而它是站上的；
+    #   → eval_stage 返回 None → 掉出 confirmed/watching → 进 failPool，
+    #     理由还写「形态失效」。形态没失效，是判定留了个洞。
+    # 实测同形状样本（只差 MA5 溢价 0~2pp 的票）：002077/002747/002881/002945/600698，
+    # 其中 002945 华林证券、002747 埃斯顿 已被写进失效池归因「不再符合当前判定口径」。
+    # 修法：加一档「待脱离」——形态全达标、只差最后这口脱离幅度的，留在观察池等。
+    # 不直接放 confirmed（那等于把 2% 门槛废掉，与回测口径脱钩）。
     if 2 <= days_ago <= 4:
         shrunk = any(0 < V(i) < V(i1) for i in range(iT + 2, n))
         if shrunk:
             ma5 = sum(C(i) for i in range(n - 5, n)) / 5.0
-            if C(n - 1) < ma5 * 0.97:  # 仅差收复MA5
+            gap = ((C(n - 1) / ma5 - 1) * 100) if ma5 > 0 else -99.0
+            if C(n - 1) < ma5 * MA5_TOL:
                 return {"pool": "watch", "stage": "待企稳",
                         "form": f"{zt_md}涨停→次{r1:.1f}倍量断板→已缩量·待收复MA5",
+                        "days_ago": days_ago}
+            if gap < MA5_GAP_MIN:
+                # R100z223：负溢价（收盘在 MA5 之下但没破 MA5_TOL）也会落到这档，
+                # 原先固定 "+%.1f%%" 会写出「+-0.1%」这种双符号（实测 5 只里 3 只）。
+                # 统一用带符号格式，正负各自正确。
+                # ⚠️ 这段必须与上面「待企稳」同级（同一层 if/if），
+                # 曾是「待企稳」return 之后的缩进内嵌块 → 永远不可达（2026-10-27 自查发现）。
+                return {"pool": "watch", "stage": "待脱离",
+                        "form": f"{zt_md}涨停→次{r1:.1f}倍量断板→已缩量·站稳MA5（距MA5 {gap:+.1f}%，需 +{MA5_GAP_MIN:.0f}%）",
                         "days_ago": days_ago}
     return None
 
@@ -1151,6 +1245,41 @@ def collect_sentiment(D):
                               {"sector": sec, "title": f"AI预测看多：{sec}",
                                "summary": str(s.get("reason") or d),
                                "source": "aiPrediction", "time": ""})
+
+    # ⚠️ 2026-10-27 补：个股消息（stockNews）—— 原先这里完全不读，是个长期漏项。
+    # 后果：AI 在 16:00/19:30 从 stockNews 里挖出的个股利空（业绩暴雷、立案、减持等）
+    # 只写在当次 data.js 里，**任何一次脚本重跑都会把它冲成 neutral**，且不报错。
+    # 实测 2026-10-27 大洋电机 002249：断板池判 bear（引用「三季度净利同比降 70.58%」），
+    # 同一天重跑 chen_pool 后陈学长池判 neutral（bearRefs 空）——同一只票两个池结论相反。
+    #
+    # 判据：**不信 stockNews 里的历史 dir 字段，用 classify_notice 现场重判**。
+    #   - dir 是写入时的快照，词表/规则一改就过时，且不会自动回溯；
+    #     实测 2026-10-27 有 48 条业绩利空在存量里是 neutral（词表漏「下降/减少」）。
+    #   - 现场重判让「词表修复」立即对全部存量生效，不必等 stock_news 全量重抓。
+    #   - 只判标题：摘要常混入别家公司新闻（恒邦「净利增69.86%」因摘要含「减持」判成 bear）。
+    # 只在 classify_notice 给出确定方向时才算：null 一律不参与（宁缺毋滥，与全站口径一致）。
+    sn = D.get("stockNews") or {}
+    if isinstance(sn, dict):
+        for code, v in sn.items():
+            if not re.fullmatch(r"\d{6}", str(code)) or not isinstance(v, dict):
+                continue
+            nm = str(v.get("name") or "")
+            for key, bucket in (("notices", "notice"), ("news", "news")):
+                for it in v.get(key) or []:
+                    ttl = str((it or {}).get("title") or "")
+                    dr = classify_notice(ttl)
+                    if dr not in ("bull", "bear"):
+                        continue
+                    item = {"src": "stockNews", "sec": "",
+                            "title": str(it.get("title") or ""),
+                            "summary": str(it.get("summary") or ""),
+                            "source": str(it.get("source") or nm),
+                            "time": str(it.get("date") or it.get("time") or ""),
+                            "kind": "stock"}
+                    tgt = B["bull_codes"] if dr == "bull" else B["bear_codes"]
+                    lst = tgt.setdefault(str(code), [])
+                    if not any(r["title"] == item["title"] for r in lst):
+                        lst.append(item)
     return B
 
 
@@ -1166,7 +1295,7 @@ NO_NEWS_PHRASE = ["走势主要由板块联动贡献", "板块逻辑是当前主
                   "断板后资金接力跟随板块节奏",
                   "公司事件层面暂无新增变量", "板块联动是当前主导因素",
                   "催化沿产业链逐级传导", "盘面驱动让位于板块节奏",
-                  "个股独立行情弱于板块联动", "消息面处于真空期"]
+                  "个股独立行情弱于板块联动", "题材热度暂无二次扩散"]
 BEAR_PHRASE = ["短期确定性下降", "短期不确定性上升", "短期抛压增加",
                "短期情绪面承压", "短期风险暴露", "短期预期回落",
                "短期博弈难度上升", "短期预期需下修"]
@@ -1200,6 +1329,9 @@ STAGE_PHRASE = {
                    "确认流程已全部走完"],
     "待缩量": ["待缩量确认", "处于缩量确认阶段", "等待缩量信号确认"],
     "待企稳": ["待收复MA5确认", "等待企稳确认K线", "差最后一根确认K线"],
+    # 2026-10-27 新增档：形态已全达标、只差 MA5 溢价那 2 个百分点（原先是判定死区，会被误归失效）
+    "待脱离": ["已站稳MA5、待脱离幅度确认", "缩量与站稳已过，只差脱离MA5的幅度",
+               "待脱离MA5确认（未达最小溢价）"],
 }
 
 
@@ -1298,12 +1430,28 @@ def build_story(e, refs=None, bear_refs=None):
         seg1 = (f"【个股消息】{name}{date}东方财富公告《{n.get('title')}》："
                 f"{col}，{phrase}，{tail}。")
     else:
-        # 优先用要闻 ref（真实新闻标题）
-        ref = next((r for r in refs if r.get("title")), None) \
-            or next((r for r in bear_refs if r.get("title")), None)
+        # 优先用要闻 ref（真实新闻标题）。
+        # R100z223：**必须按 sentiment 同向取 ref**。原实现先无条件取 refs（利好池），
+        # 读到票判 bear 时就用一条利好公告去论证「短期抛压增加」——实测 002929 润建股份：
+        # bear 来自「AI 算力链估值下移」（加权4），story 却引用「签订销售服务合同」
+        # （利好，加权1）配 BEAR_PHRASE。方向自相矛盾，读者会当成利空公告。
+        if sent == "bear":
+            ref = next((r for r in bear_refs if r.get("title")), None) \
+                or next((r for r in refs if r.get("title")), None)
+        else:
+            ref = next((r for r in refs if r.get("title")), None) \
+                or next((r for r in bear_refs if r.get("title")), None)
         if ref:
+            # R100z223：原实现 "【个股消息】{name}{head}《标题》" 没留分隔符，
+            # 且 aiPrediction 来源的 time 为空 → head 只剩内部标记 "aiPrediction"，
+            # 拼出来是「华林证券aiPrediction《AI预测看多：证券》」，像排版错误。
+            # 改：head 前统一加空格；内部标记译成读者看得懂的来源名（全站禁英文行话）。
+            _SRC_ZH = {"aiPrediction": "AI 预测"}
+            _src_raw = str(ref.get("source") or "").strip()
+            _src_show = _SRC_ZH.get(_src_raw, _src_raw)
             head = " ".join(x for x in (str(ref.get("time") or "")[5:].replace("-", "/"),
-                                        ref.get("source")) if x)
+                                        _src_show) if x)
+            head = (" " + head) if head else ""
             body = _story_first_sentence(ref.get("summary"))
             phrase = _pick(BULL_PHRASE if sent == "bull"
                            else (BEAR_PHRASE if sent == "bear" else NEUTRAL_PHRASE),
@@ -1313,15 +1461,23 @@ def build_story(e, refs=None, bear_refs=None):
             # R100z154：drv(4)×tail(4) 按 code 取模组合有限 → 实测 11 只 refs 标的里
             # 有 3 组整句被 ≥3 只共用（踩 G17）。把个股名称并入 tail 段（整句带唯一
             # 标识即可消除复读；并入 drv 会让名称在相邻两处重复出现，读感冗余）。
-            seg1 = (f"【个股消息】{name}{head}《{ref.get('title')}》：{body}，{phrase}；"
-                    f"{drv}，{name}{tail}。")
+            # R100z223：summary 为空时原样拼出「《标题》：，短期抛压增加」——冒号后直接逗号。
+            # 公告类 ref 的 summary 存的是 column（栏目名），常为空。
+            seg1 = (f"【个股消息】{name}{head}《{ref.get('title')}》"
+                    + (f"：{body}" if body else "")
+                    + f"，{phrase}；{drv}，{name}{tail}。")
         elif notices:
             n0 = notices[0]
             d0 = str(n0.get("date") or "")[5:].replace("-", "/")
             zt = str(e.get("ztDate") or "")[5:].replace("-", "/")
             phrase = _pick(NO_NEWS_PHRASE, code)
+            # R100z223：原写「未见方向性催化」——但"本函数认定的方向性公告"与
+            # "读者点开弹窗看到的公告列表"不是同一个集合：stockNews/news 里的
+            # 业绩类条目（如大洋电机「净利同比降70.58%」）不走 notices 通道，
+            # 于是同屏出现「未见方向性催化」+ 一条业绩暴雷，自相矛盾。
+            # 改为只陈述"本条公告的属性"，不对整体下"无方向"的断言。
             seg1 = (f"【个股消息】{name}近期信披以{n0.get('column') or '常规公告'}类为主（{d0}），"
-                    f"未见方向性催化，{phrase}；该股{zt}涨停入池。")
+                    f"该条公告本身不含涨跌方向指向，{phrase}；该股{zt}涨停入池。")
         else:
             zt = str(e.get("ztDate") or "")[5:].replace("-", "/")
             phrase = _pick(NO_NEWS_PHRASE, code)
@@ -1922,6 +2078,16 @@ def main():
                      for e in (mod.get('confirmed') or []) + (mod.get('watching') or [])}
         _save_duanban_state({'pools': cur_pools, 'failPool': failPool})
         mod['failPool'] = failPool
+
+        # R100z223 自证：失效池与在池必须互斥（audit G 闸门同判据）。
+        # 2026-10-27 踩过：把「待脱离」5 只手工追加进 data.js 的 watching，但没同步
+        # 从 failPool 摘掉 → 同一只票既在观察池又在失效池，闸门 FAIL 才发现。
+        # 这里在写草稿前自检一遍，越早炸越好过跑到 deploy 才炸。
+        _inpool = {str(e.get('code') or '') for e in mod["confirmed"] + mod["watching"]}
+        _dup = sorted(_inpool & {str(f.get('code') or '') for f in failPool})
+        if _dup:
+            print(f"[warn] 失效池与在池重叠 {_dup}（应为互斥，检查 roll/merge 路径）",
+                  file=sys.stderr)
 
         out = json.dumps(mod, ensure_ascii=False, indent=1)
         if args.out:

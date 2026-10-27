@@ -359,22 +359,33 @@ def chen_stage(code, kl, zt_iso):
     if not (0 < VO(i2) < VO(st["i1"])):
         return None                  # S5 缩量未过
 
-    # S8 站稳 MA5 → 从 T+2 起第一根站上的交易日 = 确认日
+    # S8 + S8b：确认日 = 从 T+2 起**第一根同时满足「站稳 MA5」且「溢价达标」**的交易日。
+    # S8b 溢价门槛的用意是「确认日必须明显脱离 MA5，不能只是贴住」——
+    # 这条把期望从 +0.70% 拉到 +3.05%（详见文件头 R100z233 表的 0~2% vs >5% 对比）。
+    #
+    # ⚠️ 2026-10-27 修 bug（用户问「大洋电机为什么没进陈学长池」时查出来）：
+    # 原写法是「先取第一根站稳的日 j 当确认日，再拿 j 的溢价去卡 3%」，两步是**串联**的。
+    # 于是 T+2 只站上 MA5 一点点（如 +1.69%）、T+3 才明显脱离（+7.66%）的票，
+    # 第一步就把 confirm_i 钉在 T+2，第二步用 T+2 那个不够的溢价把**整只票永久判死**——
+    # 它明明在窗口内走到了合格状态，却因为「第一次站上时还不够强」再也不会被看到。
+    # 实测大洋电机 002249 正是这个形状：10-26 站上（+1.69%，差 1.31pp）→ 被拒；
+    # 10-27 涨到 +7.66%（远超 3%）→ 但因为 confirm_i 已经钉死，今天照样进不来。
+    # 全市场同形状的实测：现行口径 n=1338（胜率 71.7% / 均值 +0.769%），
+    # 改成本写法 n=1443（71.6% / +0.767%）——**多 63 笔、胜率均值几乎不动**，
+    # 说明漏掉的不是「差票」，是被第 2 步误杀的好票。所以这是纯漏筛，不是放松标准。
+    # 现在把两步合并成一个条件：不达标就继续往后找，找到即确认日。
     confirm_i = None
+    gap_ma5 = -99.0
     for j in range(i2, n):
         m = _ma5(kl, j)
-        if m > 0 and CL(j) >= m * MA5_TOL:
-            confirm_i = j
-            break
+        if m <= 0 or CL(j) < m * MA5_TOL:
+            continue
+        g = (CL(j) / m - 1) * 100
+        if g < MA5_GAP_MIN:
+            continue                     # 这根只是站上、还没脱离 → 继续等下一根
+        confirm_i, gap_ma5 = j, g
+        break
     if confirm_i is None:
-        return None
-
-    # S8b：确认日必须**明显脱离** MA5，不能只是贴住。
-    # 用 confirm_i 当天的收盘与 MA5 比，只用当天及之前的数据，无前视。
-    # 这条把期望从 +0.70% 拉到 +3.05%（详见文件头 R100z233 表的 0~2% vs >5% 对比）。
-    _m5c = _ma5(kl, confirm_i)
-    gap_ma5 = ((CL(confirm_i) / _m5c - 1) * 100) if _m5c > 0 else -99.0
-    if gap_ma5 < MA5_GAP_MIN:
         return None
 
     # ---- 软条件（只影响 strict / loose 分档）
@@ -435,7 +446,21 @@ def chen_watch(code, kl, zt_iso):
             stage, form = "待企稳", "%s %s→次%.1f倍量断板→已缩量·待收复MA5" % (
                 st["zt_md"], _lbc_txt(lbc), r1)
         else:
-            return None
+            # R100z223 修死区（与断板池 eval_stage 对称的同一处漏筛）：
+            # 原实现在「已缩量 + 站上 MA5」时直接 return None —— 站上 MA5 但
+            # 溢价不足 MA5_GAP_MIN 的票既不进确认池（chen_stage 要求 ≥3%），
+            # 也不进观察池，直接掉出两池。实测 2026-10-27：大洋电机 002249
+            # 10-26 收 7.00 / MA5 6.884 = +1.69%（差 1.31pp），两池全丢；
+            # 10-27 涨停。这类票的正确状态是「已站稳、只差脱离幅度」，必须可见。
+            gap = ((CL(n - 1) / m - 1) * 100) if m > 0 else -99.0
+            if m > 0 and gap < MA5_GAP_MIN:
+                # 负溢价（收盘在 MA5 之下但没破 MA5_TOL）也落这档，用带符号格式
+                # 避免写出「+-0.1%」这种双符号（断板池同一处 2026-10-27 实测踩到）
+                stage, form = "待脱离", (
+                    "%s %s→次%.1f倍量断板→已缩量·站稳MA5（距MA5 %+.1f%%，需 +%.0f%%）"
+                    % (st["zt_md"], _lbc_txt(lbc), r1, gap, MA5_GAP_MIN))
+            else:
+                return None
     return {"pool": "watch", "tier": None, "stage": stage, "form": form,
             "metrics": {"lbc": lbc, "volRatio": round(r1, 2),
                         "stopPrice": round(stop_anchor, 2) if stop_anchor > 0 else None},
