@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610280052"></script>
+<script src="data.js?v=202610280106"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1454,21 +1454,9 @@
   .rv-bar.rv-na .rv-track { background: repeating-linear-gradient(135deg,#f3f6f9,#f3f6f9 4px,#e9eef3 4px,#e9eef3 8px); }
   .rv-bar.rv-na .rv-v { color: var(--ink2); }
   .rv-legend { font-size: var(--fs-xs); color: var(--ink2); line-height: 1.65; padding: 6px 2px 0; }
-  /* 2026-10-27 指数趋势状态卡。6 列：指数 / 距MA20 / MA20斜率 / 60日分位 / ATR / 档位。
-     列宽与 .rv-bar 同一套语言，只是把「条形」换成了「位置百分比」——趋势卡不需要条，
-     需要的是「多少」和「哪一侧」，两列带正负号的百分比比一根条更直接。 */
-  .ts-tbl { margin: 4px 0 2px; }
-  .ts-r { display: grid; grid-template-columns: minmax(0,1.3fr) 62px 66px 62px 54px 44px;
-          gap: 8px; align-items: center; padding: 6px 2px;
-          border-bottom: 1px dashed var(--line); font-size: var(--fs-sm); }
-  .ts-r:last-child { border-bottom: 0; }
-  .ts-hd { font-size: var(--fs-xs); color: var(--ink2); font-weight: 400; border-bottom-style: solid; }
-  .ts-hd > div { text-align: right; }
-  .ts-hd .ts-n { text-align: left; }
-  .ts-n { font-weight: 700; color: var(--ink); font-size: var(--fs-base); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ts-n small { display: block; font-weight: 400; font-size: var(--fs-xs); color: var(--ink2); }
-  .ts-v { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
-  .ts-vd { text-align: right; font-size: var(--fs-xs); font-weight: 700; }
+  /* 2026-10-27 指数趋势状态并入「大盘指数」卡后，原先那张六列表格（.ts-tbl/.ts-r/.ts-hd/.ts-n/
+     .ts-v/.ts-vd）整块下线——数据改由每张指数卡底部「距MA20 · 分位」一行承载，
+     同一个数不必在两处出现。只留下档位配色与 staleNote 提示条。 */
   /* 档位配色：强/偏强 走涨色、偏弱/弱 走跌色、中性灰。A 股惯例，别反。 */
   .ts-lv1 { color: #b0182c; }
   .ts-lv2 { color: #f0435c; }
@@ -3347,20 +3335,21 @@ function renderTrendStrip(T) {
   var cap = (T.marketCapPct == null) ? '—' : Number(T.marketCapPct) + '%';
   var rs = T.reasons || {};
   var weak = (rs.weak || []).length, total = (T.indices || []).length;
+  // 仓位上限的来源只在 title 里说明。原先这里还单独挂一条 ⛔ 实底提示「仓位上限 X% 是趋势档的硬约束，
+  // 不是建议值」——和条内已写的「仓位上限 X%」重复一遍，正是用户点名要删的那种「一堆道理」。
+  var pb = ((window.DASHBOARD_DATA || {}).strategy || {}).positionBand || {};
+  var capTip = '';
+  if (pb.trendCapPct != null && pb.source === 'cal_factor+trend') {
+    capTip = ' title="趋势档「' + escAttr(pb.trendLevel || T.marketLevel) + '」的硬约束，不是建议值：' + escAttr(String(pb.text || '')) + '"';
+  }
   var h = '<div class="ts-strip">' +
     '<span class="k">趋势档</span><b class="lv ' + (lvCls[T.marketLevel] || 'ts-lv3') + '">' + esc(T.marketLevel) + '</b>' +
-    '<span class="k">仓位上限</span><b class="cap">' + esc(cap) + '</b>' +
+    '<span class="k">仓位上限</span><b class="cap"' + capTip + '>' + esc(cap) + '</b>' +
     '<i>' + esc(T.marketBasis || '') + (weak && total ? '（' + weak + '/' + total + ' 个指数走弱）' : '') + '</i>' +
     '</div>';
   // asOf 落后当日时自曝：trend_state 读指数日线，日线要 19:30 的 embed_klines 才刷到当日，
   // 16:00 跑出来的是 T−1 收盘。档位可能没变、数字却是旧价——这类「结论对、数字旧」最难发现。
   if (T.staleNote) h += '<div class="ts-cap">⚠️ ' + esc(T.staleNote) + '</div>';
-  // 仓位真的被趋势压下去了没有：只在压制生效时写，避免读者以为每轮都有这道闸
-  var pb = ((window.DASHBOARD_DATA || {}).strategy || {}).positionBand || {};
-  if (pb.trendCapPct != null && pb.source === 'cal_factor+trend') {
-    h += '<div class="ts-cap">⛔ 仓位上限 ' + pb.trendCapPct + '% 是趋势档「' + esc(pb.trendLevel || '') +
-      '」的硬约束，不是建议值。</div>';
-  }
   return h;
 }
 
@@ -3394,12 +3383,29 @@ function entryLineHtml(s) {
   // 现在 entry_zone 会给跨日保留的那份打 staleAsOf/staleReason，这里如实显示来源日期，
   // 不再让读者以为「1/3 就是昨天那个 1/3」。
   if (f.staleAsOf) {
-    conf += '<span class="ez-warn" title="' + escAttr(f.staleReason || '') + '">· 基准日 ' +
-      esc(f.staleAsOf) + '，与徽章同源</span>';
+    // 「与徽章同源」这句口径解释挪进 title：读者要的是「这组数字是哪天算的」，不是口径说明书。
+    conf += '<span class="ez-warn" title="' + escAttr(f.staleReason || '') +
+      '（与上方徽章的资金确认状态取自同一基准日）">· 基准日 ' + esc(f.staleAsOf) + '</span>';
   }
   return '<div class="ez" title="' + escAttr(e.basis || '') + '">买点：回踩 <b>' + p(e.supportPct) +
     '</b> 有承接 · 涨过 <b>' + p(e.chaseCeilPct) + '</b> 不追 · 跌破 <b>' + p(e.invalidPct) +
     '</b> 逻辑失效' + conf + '</div>';
+}
+
+/* R100z248b：把 logic 里 AI 自己复述的买点三档剥掉。
+   由来（2026-10-27 实跑发现，这是会让人下错单的那种错）：同一张板块卡里存在**两套止损位**——
+   logic 尾巴是 AI 手写的「回踩 0.80% 以内算有承接，涨过 0.80% 不追，跌破 1.60% 说明红利资金也在撤」，
+   下面 entryLineHtml 又是 entry_zone.py 按 ATR 算的「回踩 -0.81% / 涨过 +0.81% / 跌破 -1.62%」。
+   实测六个板块全部不一致：油气 2.67% vs 2.88%、证券 0.91%/1.82% vs 0.98%/1.97%、
+   军工承接 1.85% vs 2.00%。读者无从判断该信哪套。
+   权威值只有一个：entry 字段（由日线 ATR 算出、带 basis）。logic 里的复述只能删，不能留。 */
+function stripEntryDup(s) {
+  s = String(s || '');
+  if (!s) return s;
+  // 逐句（按句号）判：同时出现「回踩」与「不追/跌破」的整句丢掉，其余原样保留（含末尾句号）
+  return s.split('。').filter(function (seg) {
+    return !(/回踩/.test(seg) && /(不追|跌破)/.test(seg));
+  }).join('。');
 }
 
 function renderAiPrediction() {
@@ -3451,7 +3457,7 @@ function renderAiPrediction() {
       quadPill(s) +
       '</div>' +
       '<div class="drv">外盘与要闻：' + esc(s.usDriver) + '</div>' +
-      '<div class="lgc">' + (isFc ? '推演依据：' : '资金映射：') + esc(s.logic) + '</div>' +
+      '<div class="lgc">' + (isFc ? '推演依据：' : '资金映射：') + esc(stripEntryDup(s.logic)) + '</div>' +
       entryLineHtml(s) +
       (s.deduce ? renderDeduce(s.deduce, true) : (s.counter ? '<div class="dd-box"><div class="dd-counter">反证：' + esc(_ddClean(s.counter)) + '</div></div>' : ''));
     if (s.stocks && s.stocks.length) {
