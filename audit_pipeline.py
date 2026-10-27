@@ -77,9 +77,10 @@
                       「有没有字段」而是「会不会让人做错事」：state 与现价必须自洽、
                       票必须能回溯到对应池（防凭空造票）、买区上下沿不得颠倒、只能沪深主板、
                       断板反包不得编目标价；外加生成端/渲染端接线断言（R100z232，FAIL）
-    G48 板块卡自洽     aiPrediction.sectors 的 direction 徽章与 fundCheck.passed 必须同源同向
-                      ——direction 08:30 写定后不再更新，fundCheck 若被跨日重算覆盖，
-                      同一张卡会出现「昨日走强 / 1-3 资金不支持」两个相反结论（R100z247，FAIL）
+    G48 盘前预测契约   本卡必须是**对今日的预测**而不是昨日回顾：dirMode=forecast、
+                      forecastBasis 五路依据齐全且互不复制、direction 取自固定词表。
+                      原「fundCheck.passed 决定方向」的机械映射已被用户当面否掉
+                      （「怎么变成复盘了？」），R100z248 改口径并重写本闸（FAIL）
 """
 import ast
 import json
@@ -4083,70 +4084,83 @@ def g47_buy_list_truth(r):
                     "断板反包未编目标价；生成端与渲染端接线完整" % (len(bl), n_buy))
 
 
-def g48_sector_state_consistency(r):
-    """G48 板块卡内部自洽：徽章方向 vs 资金三重确认必须同源同向（R100z247，2026-10-27 夜）。
+def g48_forecast_contract(r):
+    """G48 盘前预测契约（R100z248 重写，2026-10-27 深夜）。
 
-    由来（用户原话「AI 预测被你改得很乱了……为什么写的是昨日走强」）：
-    `direction` 由 08:30 按**上一交易日**收盘的 `fundCheck.passed` 映射后写定，当天不再更新；
-    而 `fundCheck` 此前被 `entry_zone.py --write` 在**每次部署**时按最新 `allBoards` 重算。
-    收盘后一部署，两者就指向不同的交易日，板块卡同时出现：
+    由来（用户原话「昨日走强只是告诉我昨天这个板块走的好是吗？我要的是通过隔夜美股 +
+    日韩早盘 + 前一日 A 股 + 全球要闻 + 国内要闻推出来的预计涨的板块，你怎么变成复盘了？」）：
+    R100z194 曾把 `direction` 改成「`fundCheck.passed` 的映射」——passed=3→走强、≤1→承压。
+    那等于把一张**预测卡**降级成**状态回顾卡**：读者看到的方向是昨天的资金结论，
+    而卡片标题还叫「AI 预测分析」。这是产品口径错误，不是文案问题。
 
-        徽章：昨日走强     正文：昨日资金三重确认 1/3：净流入 −3.08 亿✘（资金不支持）
+    R100z248 起 `direction` 回到「今日的预计方向」，依据为五路：
+      隔夜美股 / 日韩早盘 / 前一日 A 股 / 全球要闻 / 国内要闻。
+    本闸只查**契约是否成立**，不评判方向对不对（那由台账结算，forecast_scorecard）：
 
-    6 个板块里 3 个中招。这不是文案问题——读者看到的是一张卡里两个相反的结论，
-    而且哪个都不算错，错的是它们被并排放着。
+      ① `dirMode` 必须是 `"forecast"`——前端凭它决定徽章写「预计走强」还是旧的裸方向词。
+         缺了它，页面会把预测读成回顾，正是这次事故的形态。
+      ② `forecastBasis` 五键（us / asia / ashare / globalNews / domesticNews）齐全且非空：
+         少一路就等于少了一路依据，而这五路是用户点名要求的。
+      ③ 五句不得互相复制——复制说明模型没真读数据（与 G17 复读句同一类病）。
+      ④ 每个板块的 `direction` 必须落在词表「走强/偏强/承压」内。
+      ⑤ 句子过长（>30 字）只 WARN 不 FAIL：它影响可读性，不该阻断部署。
 
-    判据（查结构不查措辞，与 G47 同一思路）：
-      ① 映射一致性：走强/偏强 → passed ≥ 2；承压 → passed ≤ 1。违反即 FAIL
-         （`VERDICT` 表在 entry_zone.py，是唯一来源；这里不重复定义阈值）。
-      ② 同源性：`fundCheck.staleAsOf` 存在即说明 `entry_zone` 判定过「徽章与本次数据不同源」
-         并保留了旧值——这是**正确行为**，但页面必须能看出来，所以报 INFO 点名数量。
-      ③ 反向保护：`staleAsOf` 存在而 passed 仍与徽章矛盾 → FAIL（说明保护没生效）。
+    口径生效日：2026-10-28。更早的历史 aiPrediction 没有 dirMode/forecastBasis，
+    不按新契约判（否则等于用今天的规则去判昨天的数据，天天 FAIL）。
     """
+    CUTOFF = "2026-10-28"
     try:
         D = load_data_json()
     except Exception as e:                                   # noqa: BLE001
-        r.warn("G48", f"data.js 读取失败，跳过板块卡自洽校验：{e}")
+        r.warn("G48", f"data.js 读取失败，跳过预测契约校验：{e}")
         return
-    secs = ((D.get("aiPrediction") or {}).get("sectors") or [])
-    if not secs:
-        r.ok("G48", "aiPrediction.sectors 为空，无板块卡可比")
+    P = (D.get("aiPrediction") or {})
+    date = str(P.get("date") or "")
+    if date and date < CUTOFF:
+        r.ok("G48", "aiPrediction.date=%s 早于口径生效日 %s，按历史数据不校验新契约"
+                    % (date, CUTOFF))
         return
 
-    bad, stale = [], 0
+    keys = ["us", "asia", "ashare", "globalNews", "domesticNews"]
+    bad, warn = [], []
+    if str(P.get("dirMode") or "") != "forecast":
+        bad.append("dirMode=%r，必须是 \"forecast\"（否则页面会把预测读成昨日回顾）"
+                   % (P.get("dirMode"),))
+    fb = P.get("forecastBasis") or {}
+    miss = [k for k in keys if not str(fb.get(k) or "").strip()]
+    if miss:
+        bad.append("forecastBasis 缺 %s（五路依据必须齐全）" % "、".join(miss))
+    else:
+        seen = {}
+        for k in keys:
+            v = str(fb.get(k)).strip()
+            if v in seen:
+                bad.append("forecastBasis.%s 与 .%s 文本完全相同（说明没真读数据）" % (k, seen[v]))
+            seen[v] = k
+            if len(v) > 30:
+                warn.append("forecastBasis.%s 有 %d 字（≤30 更易读）" % (k, len(v)))
+
+    words = ("走强", "偏强", "承压")
+    secs = (P.get("sectors") or [])
     for s in secs:
         nm = s.get("sector") or "?"
         d = str(s.get("direction") or "")
-        fc = s.get("fundCheck") or {}
-        passed = fc.get("passed")
-        if fc.get("staleAsOf"):
-            stale += 1
-        if passed is None:
-            # fundCheck 未补（板块名没落到行业名→G46 会报）时无法比对，不算本闸的账
-            continue
-        # ① / ③ 共用同一判据：徽章档位与 passed 必须对得上。
-        # expect 是 entry_zone.VERDICT 的映射（passed 3/2/≤1 → 走强/偏强/承压），
-        # 只用来在报错里写清「按资金应该是哪一档」，不做逐字相等断言——
-        # 因为 direction 是 08:30 由 AI 按上一交易日收盘写的，措辞允许有
-        # 「走强 / 偏强 / 震荡」之外的合法变体，硬比字面会误伤。
-        expect = "承压" if passed <= 1 else ("偏强" if passed == 2 else "走强")
-        up_badge = d in ("走强", "偏强")
-        up_num = passed >= 2
-        if up_badge != up_num:
-            bad.append("%s：徽章「昨日%s」但资金三重确认 %s/3（按资金应为「%s」，%s）"
-                       "——两者指向不同交易日"
-                       % (nm, d or "—", passed, expect, fc.get("verdict") or "—"))
+        if d not in words:
+            bad.append("%s：direction=%r 不在词表「走强/偏强/承压」内" % (nm, d))
 
     if bad:
-        r.fail("G48", "；".join(bad[:4]) + ("（共 %d 个板块）" % len(bad) if len(bad) > 4 else "")
-               + "。修法：fundCheck 不许被跨日覆盖（entry_zone.write_back 已按 "
-                 "directionAsOf 保护），或让 direction 跟着重算——但 direction 被 verification "
-                 "逐字引用做复盘结算，改它会污染台账，所以只能护 fundCheck")
+        r.fail("G48", "；".join(bad[:4]) + ("（共 %d 条）" % len(bad) if len(bad) > 4 else "")
+               + "。修法：08:30 必须写 dirMode=\"forecast\" + 五路 forecastBasis，"
+                 "direction 取自词表；资金三确认只是其中一路证据，不能再直接映射方向")
     else:
-        r.ok("G48", "板块卡自洽：%d 个板块的「昨日」徽章与资金三重确认同源同向"
-                    "%s" % (len(secs),
-                            ("；其中 %d 个已标记 staleAsOf（徽章基准日 ≠ 本次 allBoards，"
-                             "保留与徽章同源的那一份，未覆盖）" % stale) if stale else ""))
+        up = sum(1 for s in secs if str(s.get("direction")) in ("走强", "偏强"))
+        msg = ("盘前预测契约成立：dirMode=forecast、五路依据齐全且互不复制、"
+               "%d 个板块方向均在词表内（预计走强/偏强 %d 个、承压 %d 个）"
+               % (len(secs), up, len(secs) - up))
+        if warn:
+            r.warn("G48", msg + "；" + "；".join(warn[:3]))
+        else:
+            r.ok("G48", msg)
 
 
 def g49_excess_benchmark_consistency(r):
@@ -4256,7 +4270,7 @@ def main():
     g45_modal_nav_group(r)
     g46_sector_board_names(r)
     g47_buy_list_truth(r)
-    g48_sector_state_consistency(r)
+    g48_forecast_contract(r)
     g49_excess_benchmark_consistency(r)
 
     if as_json:
