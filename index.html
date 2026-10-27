@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610271304"></script>
+<script src="data.js?v=202610271340"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -728,56 +728,6 @@
   .cc-tbl th { color: var(--ink2); font-weight: 500; }
   .cc-tbl td.up { color: var(--up); }
   .cc-tbl td.down { color: var(--down); }
-  /* ===== R100z242：宽基 ETF 份额流向（挂在主力资金卡内） =====
-     六列在 375px 屏必然挤，所以名字列不换行、数值列定宽 + tabular-nums 对齐；
-     窄屏隐藏「涨跌幅」列（它与上面指数卡重复），保住份额/Δ/量能三列。 */
-  .etf { margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 9px; }
-  .etf-hd { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; font-size: var(--fs-sm); }
-  .etf-hd > b { font-size: var(--fs-base); color: var(--ink); }
-  .etf-d { font-size: var(--fs-xs); color: var(--ink2); font-variant-numeric: tabular-nums; }
-  .etf-tag { font-size: var(--fs-xs); color: var(--accent-deep); background: var(--accent-soft);
-             border-radius: 999px; padding: 0 7px; }
-  .etf-sum { font-size: var(--fs-base); color: var(--ink2); line-height: 1.7; margin: 5px 0 7px; }
-  .etf-sum b { color: var(--ink); }
-  .etf-rows { display: flex; flex-direction: column; gap: 2px; }
-  /* R100z243：列头。必须与 .etf-r 用同一套 grid 模板，否则窄屏断点下会错位。 */
-  .etf-hd-r { display: grid; grid-template-columns: 1fr 76px 60px 66px 44px 52px;
-              align-items: baseline; gap: 4px; padding: 0 0 3px;
-              font-size: var(--fs-xs); color: var(--ink2);
-              border-bottom: 1px solid var(--line); }
-  .etf-hd-r > div { text-align: right; }
-  .etf-hd-r > div:first-child { text-align: left; }
-  /* 首日提示：Δ份额整列为空时必须说一句「明天才有」，否则读者会以为抓取失败。 */
-  .etf-warm { margin: 6px 0 2px; font-size: var(--fs-xs); color: var(--ink2); line-height: 1.6; }
-  .etf-warm b { color: var(--ink); }
-  .etf-r { display: grid; grid-template-columns: 1fr 76px 60px 66px 44px 52px;
-           align-items: baseline; gap: 4px; padding: 4px 0;
-           border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
-  .etf-r:last-child { border-bottom: 0; }
-  .etf-nm { font-size: var(--fs-sm); color: var(--ink); line-height: 1.35; }
-  .etf-g { display: block; font-size: var(--fs-xs); color: var(--ink2); }
-  .etf-v { font-size: var(--fs-base); color: var(--ink); text-align: right; }
-  .etf-v i, .etf-f i { font-style: normal; font-size: var(--fs-xs); color: var(--ink2); margin-left: 1px; }
-  .etf-d2, .etf-f, .etf-h, .etf-pc { font-size: var(--fs-sm); text-align: right; color: var(--ink2); }
-  .etf-d2.up, .etf-f.up, .etf-pc.up { color: var(--up); }
-  .etf-d2.down, .etf-f.down, .etf-pc.down { color: var(--down); }
-  .etf-na { color: var(--line); }
-  .etf-h.warm { color: #a8541a; font-weight: 600; }
-  .etf-h.hot { color: #c0392b; font-weight: 700; }
-  .etf-warn { margin-top: 8px; font-size: var(--fs-sm); color: #8a5a00; line-height: 1.7;
-              background: #fff8e8; border-radius: var(--r-note); padding: var(--pad-note); }
-  .etf-warn b { color: #6d4700; }
-  .etf-det { margin-top: 8px; }
-  .etf-det > summary { cursor: pointer; font-size: var(--fs-xs); color: var(--ink2);
-                       padding: 2px 0; list-style: none; }
-  .etf-det > summary::-webkit-details-marker { display: none; }
-  .etf-det > summary::before { content: '▸ '; }
-  .etf-det[open] > summary::before { content: '▾ '; }
-  @media (max-width: 420px) {
-    .etf-r { grid-template-columns: 1fr 70px 56px 62px 40px; }
-    .etf-hd-r { grid-template-columns: 1fr 70px 56px 62px 40px; }
-    .etf-pc, .etf-hd-r > div:last-child { display: none; }
-  }
   /* 窄屏：chip 里的代码隐藏——与断板卡片 R99e 同一条理由：挤没的代码没有信息量。 */
   @media (max-width: 700px) {
     .cc-chip .cd { display: none; }
@@ -2288,9 +2238,6 @@ function render(market) {
     html += '<div class="card"><h2>主力资金流向' + (d.tradeDate ? '<span class="h2-date">' + esc(d.tradeDate) + '</span>' : '') + '</h2>';
     if (d.fundNote) html += '<div class="note-line">' + esc(d.fundNote) + '</div>';
     html += '<div id="chart-fund" class="chart-tall"></div>';
-    // R100z242：宽基 ETF 份额流向接在主力资金卡内（用户 2026-10-27：「加在主力资金模块下面」）。
-    // 放在行业资金柱之后、龙虎榜之前——同属「钱往哪走」，粒度从行业细到 ETF。
-    html += renderEtfFlow((window.DASHBOARD_DATA || {}).etfFlow);
     // R100z195：龙虎榜席位结构接在同一张卡里（用户 2026-10-24：原有只有行业级「大数」）
     html += renderLhb(d.lhb);
     html += '</div>';
@@ -4988,94 +4935,6 @@ function renderLhb(l) {
     s += '<div class="lhb-rep"><b>同一营业部席位同时净买多只</b>：' + seg.join('；') + '</div>';
   }
   if (l.note) s += '<div class="src-line">' + esc(l.note) + '</div>';
-  return s + '</div>';
-}
-
-function renderEtfFlow(e) {
-  /* R100z242（用户 2026-10-27：「加在主力资金模块下面」）。
-     起因：用户问「头部沪深300基金市值占沪深300流通市值比例能不能当国家队持仓」——
-     不能（详见 etf_flow.py 顶部），所以这里**不画渗透率**，只画三件可验证的事：
-       ① 份额日变动（剔除净值涨跌的纯申赎信号）
-       ② 由 ① 换算的净流入额
-       ③ 放量倍数（尾盘巨量是平准资金的指纹）
-     反例要写在卡上：规模缩水 20% 可能全是指数跌的，不能读成赎回。
-     这是本模块最容易误用的地方，也是它唯一的价值所在——份额与规模分得清。 */
-  if (!e || !e.rows || !e.rows.length) return '';
-  var n1 = function (v, d) { var n = Number(v); return (v === null || v === undefined || v === '' || !isFinite(n)) ? null : n; };
-  var fx = function (v) { var n = n1(v); return n === null ? '—' : (n > 0 ? '+' : '') + n.toFixed(2); };
-  var fp = function (v) { var n = n1(v); return n === null ? '—' : (n > 0 ? '+' : '') + n.toFixed(2) + '%'; };
-
-  var g = (e.groups || {}).hs300 || {};
-  var hasD = n1(g.dFlow) !== null;
-  /* 头部一句话：Δ份额有值就说「申赎」，没值就明说「还没第二个交易日」——
-     不能显示 +0.00 假装有信号（首日实测全是 +0.00，那是没有数据不是没有变化）。 */
-  var head = '';
-  if (hasD) {
-    var dir = n1(g.dFlow) > 0 ? '净申购' : (n1(g.dFlow) < 0 ? '净赎回' : '零变化');
-    head = '沪深300 四只合计 <b>' + dir + ' ' + fx(g.dFlow) + ' 亿元</b>' +
-      '（' + fx(g.dShare) + ' 亿份，截至 ' + esc(g.prevDay || '') + '）';
-  } else {
-    // 首日：head 只说存量，解释交给下面的 warm（R100z243 去重，原先两句都在讲同一件事）
-    head = '沪深300 四只合计 <b>' + (g.shares || 0).toFixed(0) + ' 亿份 / ' +
-      (g.mv || 0).toFixed(0) + ' 亿元</b>';
-  }
-
-  /* R100z243：首日整列 Δ 为空，必须显式说一句，否则「—」会被读成抓取失败。
-     这是本卡最容易误判的地方：份额日频、交易所不给历史，只能逐日累积。 */
-  var warm = '';
-  if (!hasD) {
-    warm = '<div class="etf-warm"><b>今天这一列是空的，不是抓取失败</b>：' +
-      '份额只能逐日累积（交易所只日频披露、无历史接口），' +
-      '本模块从今天开始记，<b>明天收盘后 Δ份额与净流入才会出数</b>。' +
-      '在此之前只有「份额存量」和「量能倍数」可读。</div>';
-  }
-
-  var s = '<div class="etf"><div class="etf-hd"><b>宽基 ETF 份额流向</b>' +
-    '<span class="etf-d">' + esc(e.updatedAt || '') + '</span>' +
-    (e.intraday ? '<span class="etf-tag" title="量能已按已走交易时长折算，不是全天实际值">盘中折算 ' +
-      ((e.sessionFrac || 0) * 100).toFixed(0) + '%</span>' : '') +
-    '<span class="etf-tag">份额＝纯申赎</span></div>' +
-    '<div class="etf-sum">' + head + '</div>' + warm;
-
-  /* R100z243（用户 2026-10-27：「新增的模块我怎么没看到」）：先补列头。
-     原版 6 列数字**没有任何表头**，读者看到「354.47 亿份 — — 0.47x −0.10%」时
-     根本不知道两列「—」是什么、0.47x 相对什么——首日尤其像坏了。
-     表头必须与 .etf-r 的 grid-template-columns 逐列对齐（1fr 76px 60px 66px 44px 52px）。 */
-  s += '<div class="etf-hd-r">' +
-    '<div>基金</div><div>份额</div><div>Δ份额</div><div>净流入</div><div>量能</div><div>涨跌</div>' +
-    '</div>';
-
-  s += '<div class="etf-rows">';
-  (e.rows || []).forEach(function (r) {
-    var d = n1(r.dShare), f = n1(r.dFlow), h = n1(r.hot);
-    var cls = d === null ? '' : (d > 0 ? 'up' : (d < 0 ? 'down' : ''));
-    // 量能条：1x 是「与前 5 日均量持平」，超过 2x 标红——那是平准资金的典型时间窗
-    var hotTxt = h === null ? '—' : h.toFixed(2) + 'x';
-    var hotCls = h === null ? '' : (h >= 2 ? ' hot' : (h >= 1.2 ? ' warm' : ''));
-    s += '<div class="etf-r">' +
-      '<div class="etf-nm">' + esc(r.name || r.code) +
-        '<span class="etf-g">' + esc((e.groups && e.groups[r.group] && e.groups[r.group].zh) || '') + '</span></div>' +
-      '<div class="etf-v">' + (r.shares || 0).toFixed(2) + '<i>亿份</i></div>' +
-      '<div class="etf-d2 ' + cls + '">' + (d === null ? '<span class="etf-na">—</span>' : fx(d)) + '</div>' +
-      '<div class="etf-f ' + cls + '">' + (f === null ? '<span class="etf-na">—</span>' : fx(f) + '<i>亿</i>') + '</div>' +
-      '<div class="etf-h ' + hotCls + '">' + hotTxt + '</div>' +
-      '<div class="etf-pc ' + (n1(r.pct) > 0 ? 'up' : (n1(r.pct) < 0 ? 'down' : '')) + '">' + fp(r.pct) + '</div>' +
-      '</div>';
-  });
-  s += '</div>';
-
-  // 反例必须留在可见区：这是本卡与「渗透率」那条错路的唯一区别。
-  s += '<div class="etf-warn">规模涨跌 ≠ 资金进出：指数跌 20% 会让规模缩两成，' +
-    '份额才剔除净值波动。<b>只看 Δ份额</b>。</div>';
-  s += '<details class="etf-det"><summary>口径与局限</summary>' +
-    '<div class="pf-sub">' + esc(e.note || '') + '</div>' +
-    '<div class="pf-sub">' + esc(e.caveat || '') + '</div>' +
-    (e.asOfWarn ? '<div class="pf-sub">' + esc(e.asOfWarn) + '</div>' : '') +
-    '<div class="pf-sub">为什么不做「ETF 市值占指数流通市值」：那是全市场所有持有人的钱，' +
-    '不是国家队持仓。真实持仓 = 渗透率 × 国家队在该 ETF 的份额占比 p，' +
-    '而 p 自 2026-05 起已不披露，最后可验证值 82.76%。同一公式 p=83% 时几乎等于持仓、' +
-    'p&lt;20% 时完全不能当持仓——用它判托底会系统性高估剩余子弹。</div>' +
-    '</details>';
   return s + '</div>';
 }
 
