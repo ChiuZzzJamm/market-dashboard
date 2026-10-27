@@ -121,6 +121,8 @@ NON_DATA_WRITERS = {
 # 死脚本白名单：合法的「手工跑、不进自动化」工具，写明用途才准留
 DEAD_OK = {
     'goldpit_study.py': '「黄金坑」形态/外盘映射原型研究，手工触发（--dump 才落盘），不进流水线',
+    'dryveto_study.py': 'R100z241：「昨日大跌+极度缩量」可否作为横盘启动池否决条件的事前验证，'
+                        '手工触发、只打印不落盘，不进流水线',
     'fix_dd_prefix.py': '一次性修数工具（历史 DD 前缀），手工触发',
     'track_calibration.py': '校准曲线统计，手工触发',
     'score_openoutlook.py': '开盘前瞻打分，手工/被 import',

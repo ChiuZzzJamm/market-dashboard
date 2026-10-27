@@ -596,6 +596,24 @@ def build_star(D, base=None):
     _tech_codes = []
     for _l in (bp_list, hz_list, acc_list, chen_list):
         _tech_codes.extend([t["code"] for t in _l])
+    # R100z241（2026-10-27 用户问「开盘精选和今日买入清单两块的区别」时抓到）：
+    # 买入清单要覆盖**整池**，而上面四个 _list 是为「精选配额」截断过的（bp 只取 passed[:10]、
+    # hz 取前 6+6、陈学长取严格/放宽全量但 acc 只取 ≥60 分）。于是 breakoutPool.passed 30 只里
+    # 第 11~30 只**从未进过 quotes** → build_buy_list 里 last=None → 全部渲染成「价格抓空」。
+    # 实测（2026-10-27 09:58 数据）：清单 32 只里 19 只 price 为空，**19 只全部落在池前 10 之外**，
+    # 而同一批代码此刻直接用 curl 抓腾讯接口是 15/15 有返回 —— 说明不是数据源抖动，是我们没去抓。
+    # 「价格抓空」在页面上是「没有数据」的降级文案，读者会以为行情接口坏了；
+    # 真实原因是自己只抓了 10 只却列了 30 行，这是比抓空更坏的错：**数字本身是假的**。
+    # 修法：把买入清单的三类来源（全量横盘启动 / 陈学长双池）也并进抓取列表。
+    for _e in ((D.get("breakoutPool") or {}).get("passed") or []):
+        _c = str(_e.get("code") or "")
+        if _c.startswith(("60", "00")):
+            _tech_codes.append(_c)
+    for _k in ("strict", "loose"):
+        for _e in ((D.get("chenPool") or {}).get(_k) or []):
+            _c = str(_e.get("code") or "")
+            if _c.startswith(("60", "00")):
+                _tech_codes.append(_c)
     _tech_codes = list(dict.fromkeys(_tech_codes))
 
     if not pools and not _tech_codes:
