@@ -98,6 +98,8 @@ DATA_WRITERS = [
     'strategy_engine.py',       # strategy 卡片（走 write_data_js）
     'sweep_news.py',            # 要闻分级（走 write_data_js）
     'sync_names.py',            # 简称同步
+    'timing_plan.py',           # R101：timingPlan（时间口挂单清单；走 write_data_js）
+    'trend_state.py',           # R101：trendState（五指数趋势档；走 write_data_js）
     'update_ashare_sectors.py',  # A 股板块
     'update_kr_jp.py',          # 日韩早盘
     'update_star.py',           # 09:45 精选落库
@@ -131,6 +133,12 @@ DEAD_OK = {
     'kline_cache.py': 'K 线缓存模块，被 accumulation_score import',
     'backtest_indicators.py': '四指标 2 年滚动回测（信号归因+组合年化），纯本地、手工触发',
     'backtest_entry.py': '断板反包买点口径回测（涨停→倍量阴→缩量回均线尾盘买），纯本地、手工触发',
+    'duanban_timing.py': 'R101：断板反包「时间口」对照回测（买点×卖点九宫格 + 限价挂单口径），'
+                         '口径唯一来源（LIMIT_K/FLOOR_K/SLOTS 被 timing_plan import），纯本地、手工触发',
+    'trend_state.py': 'R101：五指数趋势档（从 stkKlines 现算 MA20/斜率/60日分位→仓位上限），'
+                      '被 strategy_engine 读作 positionBand 上限',
+    'timing_plan.py': 'R101：时间口挂单清单（16:00 数据步跑，产出 data.js 顶层 timingPlan），'
+                      '9:45 的 update_star 只做开盘核对、不改单',
     'nshape_fetch.py': 'N 字形态研究：全市场日K抓取（东财/腾讯双源→.kline_hist/），纯本地、手工触发',
     'nshape_factors.py': 'N 字形态研究：因子分层+按年切分，纯本地、手工触发',
     'nshape_rules.py': 'N 字形态研究：过滤规则组合搜索（双段验证），纯本地、手工触发',

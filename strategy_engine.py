@@ -84,6 +84,16 @@ def _curve_excess():
         return None
 
 
+def _band_text(pct):
+    """仓位百分比 → 「6-7 成」这种中文说法（页面只出中文，禁写 0.6-0.7）。"""
+    def _c(x):
+        v = x / 10.0
+        if abs(v - round(v)) < 0.05:
+            return str(int(round(v)))
+        return ('%.1f' % v).rstrip('0').rstrip('.')
+    return '%s 成' % _c(pct)
+
+
 def _clip(t, limit):
     """截到 limit 内并落到句子边界（避免出现「若今日成交额不能回到 1.45 万亿上方，」这种半句）。"""
     t = str(t or "").strip()
@@ -137,6 +147,27 @@ def main():
         if cal and cal.get('posText'):
             pos = {'lo': cal.get('posLo'), 'hi': cal.get('posHi'),
                    'text': cal.get('posText'), 'source': 'cal_factor'}
+
+        # ---- 趋势闸门（2026-10-27）：日历因子只回答「今天什么日子」，回答不了
+        # 「大盘站在 MA20 哪一侧」。实测教训：2026-10-27 五个指数全部空头排列、
+        # 上证在 MA20 下方 2.52%、60 日分位 12%，而纯日历口径仍然给出「6-7 成」。
+        # 所以日历给的是**基础带**，趋势给的是**上限**，取两者更保守的那个。
+        # 趋势数据缺失时（trendState 未生成）不降级、不猜，保持原样并在 pos 里标出来。
+        ts = D.get('trendState') or {}
+        if ts.get('marketCapPct') is not None and pos.get('hi') is not None:
+            cap = float(ts['marketCapPct']) / 100.0
+            if pos['hi'] > cap:
+                pos = dict(pos, lo=min(pos.get('lo') or 0, cap), hi=cap,
+                           text='%s（趋势档「%s」压到 %d%%：%s）'
+                                % (_band_text(cap * 100), ts.get('marketLevel'), cap * 100,
+                                   (ts.get('text') or '')[:60]),
+                           source='cal_factor+trend', trendCapPct=ts['marketCapPct'],
+                           trendLevel=ts.get('marketLevel'))
+            else:
+                pos = dict(pos, trendCapPct=ts['marketCapPct'],
+                           trendLevel=ts.get('marketLevel'),
+                           trendNote='趋势上限 %d%% 高于日历带，不生效'
+                                     % ts['marketCapPct'])
         lock_in = (cal or {}).get('lockIn')
         out_weight = (cal or {}).get('outWeight')
 
