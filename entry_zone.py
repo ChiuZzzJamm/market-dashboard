@@ -40,6 +40,8 @@ import os
 import sys
 
 BASE = os.path.dirname(os.path.abspath(__file__))
+if BASE not in sys.path:          # 脚本可被任意 cwd 调用（deploy.sh / 自动化），别依赖 cwd
+    sys.path.insert(0, BASE)
 
 # 三重确认阈值（集中放这里）
 INFLOW_MIN = 0.0      # 主力净流入 > 0（亿）
@@ -241,17 +243,75 @@ def build(D):
     return out, miss
 
 
+def _direction_asof(D):
+    """`direction` 徽章所依据的收盘日（= aiPrediction.date 的上一交易日）。
+
+    为什么能推出来：direction 由 08:30 那一步按「上一交易日收盘」的 fundCheck.passed 映射，
+    写在 aiPrediction.date 当天。所以它的基准日 = date 的前一个交易日，不需要 AI 多写字段
+    （多一个字段就多一处会写错、会被别的步骤洗掉的地方）。
+    异常兜底返回 ''——调用方见到空串就不做跨日保护，保持原行为，绝不因为算不出来而阻断写入。
+    """
+    d = str((D.get('aiPrediction') or {}).get('date') or '')
+    try:
+        y, m, dd = (int(x) for x in d.split('-'))
+    except (ValueError, TypeError):
+        return ''
+    from datetime import date, timedelta
+    import common                      # 函数内导入：本模块顶层不依赖 common（--selftest 可裸跑）
+    cur = date(y, m, dd) - timedelta(days=1)
+    for _ in range(12):
+        if common.is_trade_day(cur):
+            return cur.strftime('%Y-%m-%d')
+        cur -= timedelta(days=1)
+    return ''
+
+
 def write_back(D, res):
     """只补 fundCheck/entry 两个字段，其余一字不动（含 direction/logic/exp/stocks）。
 
     R100z224：`entry` 算不出来（板块日线拿不到）时**删掉旧值**，不留上一次的数。
     留着的后果是幽灵数据：昨天按旧 ATR 算出的「承接 -1.2%」今天还挂在页面上，
     读者会当成当日买点用。宁可显示「—」，也不给一个过期数字（与「抓不到≠没有」同一条纪律）。
+
+    ★R100z247（2026-10-27 夜，用户「AI 预测被改得很乱」）：**fundCheck 不能无条件覆盖**。
+    事故现场（10-27 线上）：板块卡徽章写「昨日走强」（08:30 按 10-26 收盘由 passed=3 映射、
+    写定后不再更新），正文却写「昨日资金三重确认 1/3：净流入 −3.08 亿✘」（19:56 部署时本函数
+    用 10-27 收盘的 allBoards 重算了 fundCheck）。同一张卡里两个「昨日」= 两个不同的交易日，
+    于是 6 个板块里 3 个出现「走强 / 资金不支持」自相矛盾。
+
+    判据用 `directionAsOf`（08:30 写 direction 时一并写入的基准日，见 prompt 3.45 步）：
+      · 该字段存在且 ≠ 本次 allBoards 的基准日 → **保留旧 fundCheck**，只标记 stale；
+      · 字段缺失（老数据）→ 同样保留，因为无法证明两者同源，覆盖就等于赌；
+      · 相等 → 正常覆盖（这正是 08:30 那一步自己的场景，pass 后立刻写，同源）。
+    为什么不是「干脆连 direction 一起重算」：direction 是当天盘前结论、verification 里
+    `predicted` 逐字复制它做复盘结算（19:30 prompt 硬约束），收盘后改它会让当天复盘
+    对不上账。所以只能护住 fundCheck，让页面宁可少显示也不显示错。
     """
-    n = 0
+    asof = str((D.get('ashare') or {}).get('tradeDate') or '')
+    dir_asof = _direction_asof(D)
+    n = n_keep = 0
     for s in (D.get('aiPrediction', {}).get('sectors') or []):
         r = res.get(str(s.get('sector') or ''))
         if not r:
+            continue
+        # 显式字段优先（08:30 若写了 directionAsOf 就以它为准），否则用推出来的
+        d_asof = str(s.get('directionAsOf') or dir_asof or '')
+        if d_asof and asof and d_asof != asof:
+            # 徽章基准日与本次数据不同源：fundCheck 保持旧值，但必须让页面能看出它过期了。
+            # ★只护 fundCheck —— `entry`（承接/不追/证伪）面向**下一交易日**，
+            # 天然该用最新收盘算，跟徽章的回顾口径不是一回事。一刀 continue 会连买点
+            # 一起冻在昨天，那才是真把「明天跌到哪买」变成过期数字。
+            fc = s.get('fundCheck')
+            if fc:
+                fc['staleAsOf'] = asof
+                fc['staleReason'] = ('徽章基准日 %s ≠ 本次数据 %s，此处保留与徽章同源的那一份'
+                                     % (d_asof, asof))
+            if r.get('entry'):
+                s['entry'] = r['entry']
+            else:
+                s.pop('entry', None)
+            n_keep += 1
+            n += 1
             continue
         s['fundCheck'] = r['fundCheck']
         if r.get('entry'):
@@ -259,6 +319,9 @@ def write_back(D, res):
         else:
             s.pop('entry', None)
         n += 1
+    if n_keep:
+        print(f'[entry_zone] 保留旧 fundCheck {n_keep} 个（徽章基准日与本次 allBoards 不同源，'
+              f'覆盖会造出「走强 / 资金不支持」自相矛盾）')
     return n
 
 
@@ -340,6 +403,32 @@ def selftest():
     chk('write_back 计数', n == 1)
     chk('其余字段不动', s['direction'] == '走强' and s['logic'] == '原文不许动' and s['exp'] == {'layer': 'F'})
     chk('补上 fundCheck', s['fundCheck']['passed'] == 3)
+
+    # R100z247：跨日保护——徽章基准日 ≠ 本次 allBoards 基准日时，fundCheck 必须保持旧值
+    # （否则页面出现「昨日走强 / 昨日资金三重确认 1/3 资金不支持」同卡自相矛盾）
+    f_new = dict(f, inflow=-3.08, passed=1, verdict='资金不支持', dirHint='承压', text='新口径')
+    DX = {'aiPrediction': {'date': '2026-10-27', 'sectors': [
+              {'sector': '银行', 'direction': '走强',
+               'fundCheck': {'passed': 3, 'verdict': '资金已成共识', 'text': '旧口径'}}]},
+          'ashare': {'tradeDate': '2026-10-27'}}
+    chk('推导徽章基准日 = aiPrediction.date 前一交易日',
+        _direction_asof(DX) == '2026-10-26', _direction_asof(DX))
+    write_back(DX, {'银行': dict(fundCheck=f_new, entry=None)})
+    fcX = DX['aiPrediction']['sectors'][0]['fundCheck']
+    chk('跨日不覆盖 fundCheck', fcX['passed'] == 3 and fcX['text'] == '旧口径', str(fcX.get('passed')))
+    chk('跨日标记过期来源', fcX.get('staleAsOf') == '2026-10-27', str(fcX.get('staleAsOf')))
+
+    # 同源时（aiPrediction.date 与 tradeDate 相差一天，direction 正好基于 tradeDate）→ 正常覆盖
+    DY = {'aiPrediction': {'date': '2026-10-27', 'sectors': [{'sector': '银行', 'direction': '走强'}]},
+          'ashare': {'tradeDate': '2026-10-26'}}
+    write_back(DY, {'银行': dict(fundCheck=f_new, entry=None)})
+    chk('同源时正常覆盖', DY['aiPrediction']['sectors'][0]['fundCheck']['passed'] == 1)
+
+    # 日期缺失时不做跨日保护、也不炸（保持原行为，绝不因为推不出而阻断写入）
+    DZ = {'aiPrediction': {'sectors': [{'sector': '银行', 'direction': '走强'}]}, 'ashare': {}}
+    write_back(DZ, {'银行': dict(fundCheck=f_new, entry=None)})
+    chk('日期缺失照常写入', DZ['aiPrediction']['sectors'][0]['fundCheck']['passed'] == 1)
+    chk('日期缺失不崩', _direction_asof({'aiPrediction': {}}) == '')
 
     print(f'[entry_zone] 自检 {ok}/{ok+len(bad)} 通过')
     for x in bad:

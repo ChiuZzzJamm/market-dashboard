@@ -77,6 +77,9 @@
                       「有没有字段」而是「会不会让人做错事」：state 与现价必须自洽、
                       票必须能回溯到对应池（防凭空造票）、买区上下沿不得颠倒、只能沪深主板、
                       断板反包不得编目标价；外加生成端/渲染端接线断言（R100z232，FAIL）
+    G48 板块卡自洽     aiPrediction.sectors 的 direction 徽章与 fundCheck.passed 必须同源同向
+                      ——direction 08:30 写定后不再更新，fundCheck 若被跨日重算覆盖，
+                      同一张卡会出现「昨日走强 / 1-3 资金不支持」两个相反结论（R100z247，FAIL）
 """
 import ast
 import json
@@ -4080,6 +4083,120 @@ def g47_buy_list_truth(r):
                     "断板反包未编目标价；生成端与渲染端接线完整" % (len(bl), n_buy))
 
 
+def g48_sector_state_consistency(r):
+    """G48 板块卡内部自洽：徽章方向 vs 资金三重确认必须同源同向（R100z247，2026-10-27 夜）。
+
+    由来（用户原话「AI 预测被你改得很乱了……为什么写的是昨日走强」）：
+    `direction` 由 08:30 按**上一交易日**收盘的 `fundCheck.passed` 映射后写定，当天不再更新；
+    而 `fundCheck` 此前被 `entry_zone.py --write` 在**每次部署**时按最新 `allBoards` 重算。
+    收盘后一部署，两者就指向不同的交易日，板块卡同时出现：
+
+        徽章：昨日走强     正文：昨日资金三重确认 1/3：净流入 −3.08 亿✘（资金不支持）
+
+    6 个板块里 3 个中招。这不是文案问题——读者看到的是一张卡里两个相反的结论，
+    而且哪个都不算错，错的是它们被并排放着。
+
+    判据（查结构不查措辞，与 G47 同一思路）：
+      ① 映射一致性：走强/偏强 → passed ≥ 2；承压 → passed ≤ 1。违反即 FAIL
+         （`VERDICT` 表在 entry_zone.py，是唯一来源；这里不重复定义阈值）。
+      ② 同源性：`fundCheck.staleAsOf` 存在即说明 `entry_zone` 判定过「徽章与本次数据不同源」
+         并保留了旧值——这是**正确行为**，但页面必须能看出来，所以报 INFO 点名数量。
+      ③ 反向保护：`staleAsOf` 存在而 passed 仍与徽章矛盾 → FAIL（说明保护没生效）。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G48", f"data.js 读取失败，跳过板块卡自洽校验：{e}")
+        return
+    secs = ((D.get("aiPrediction") or {}).get("sectors") or [])
+    if not secs:
+        r.ok("G48", "aiPrediction.sectors 为空，无板块卡可比")
+        return
+
+    bad, stale = [], 0
+    for s in secs:
+        nm = s.get("sector") or "?"
+        d = str(s.get("direction") or "")
+        fc = s.get("fundCheck") or {}
+        passed = fc.get("passed")
+        if fc.get("staleAsOf"):
+            stale += 1
+        if passed is None:
+            # fundCheck 未补（板块名没落到行业名→G46 会报）时无法比对，不算本闸的账
+            continue
+        # ① / ③ 共用同一判据：徽章档位与 passed 必须对得上。
+        # expect 是 entry_zone.VERDICT 的映射（passed 3/2/≤1 → 走强/偏强/承压），
+        # 只用来在报错里写清「按资金应该是哪一档」，不做逐字相等断言——
+        # 因为 direction 是 08:30 由 AI 按上一交易日收盘写的，措辞允许有
+        # 「走强 / 偏强 / 震荡」之外的合法变体，硬比字面会误伤。
+        expect = "承压" if passed <= 1 else ("偏强" if passed == 2 else "走强")
+        up_badge = d in ("走强", "偏强")
+        up_num = passed >= 2
+        if up_badge != up_num:
+            bad.append("%s：徽章「昨日%s」但资金三重确认 %s/3（按资金应为「%s」，%s）"
+                       "——两者指向不同交易日"
+                       % (nm, d or "—", passed, expect, fc.get("verdict") or "—"))
+
+    if bad:
+        r.fail("G48", "；".join(bad[:4]) + ("（共 %d 个板块）" % len(bad) if len(bad) > 4 else "")
+               + "。修法：fundCheck 不许被跨日覆盖（entry_zone.write_back 已按 "
+                 "directionAsOf 保护），或让 direction 跟着重算——但 direction 被 verification "
+                 "逐字引用做复盘结算，改它会污染台账，所以只能护 fundCheck")
+    else:
+        r.ok("G48", "板块卡自洽：%d 个板块的「昨日」徽章与资金三重确认同源同向"
+                    "%s" % (len(secs),
+                            ("；其中 %d 个已标记 staleAsOf（徽章基准日 ≠ 本次 allBoards，"
+                             "保留与徽章同源的那一份，未覆盖）" % stale) if stale else ""))
+
+
+def g49_excess_benchmark_consistency(r):
+    """G49 超额口径同源：页面两处超额必须是同一把尺子（R100z247）。
+
+    2026-10-27 实测：AI 预测卡上同时出现「组合回测超额 +0.19%（跑赢）」和
+    「超额 −0.91%（跑输）」——同一张卡、同一天、符号相反。
+
+    根因是两个文件、两把尺子：
+      · strategy_feedback.json  ← strategy_engine._curve_excess() 原读 excessPct
+      · portfolio_curve.json    ← 前端 loadPortfolioCash() 读 excessSectorPct
+    而 portfolio_curve.json 自己的 note 里早写着「★权威超额=excessSectorPct
+    （同源行业基准）」，因为组合是一篮子**行业板块**的标的，拿综合指数当分母
+    会在普跌日虚高（上证 −4.42% vs 行业基准 −7.71%，凭空多出 3 个点）。
+
+    这条闸只判「两处是否同源同向」，不判数值对错——数值由 portfolio_curve 负责。
+    容差 0.05：两边都四舍五入到两位小数，允许末位差异。
+    """
+    try:
+        base = os.path.dirname(os.path.abspath(__file__))
+        st = (json.load(open(os.path.join(base, "portfolio_curve.json"), encoding="utf-8"))
+              .get("stat") or {})
+        fb = json.load(open(os.path.join(base, "strategy_feedback.json"), encoding="utf-8"))
+    except Exception as e:
+        r.warn("G49", "超额口径无法核对（读文件失败：%s）" % e)
+        return
+
+    auth = st.get("excessSectorPct")
+    used = fb.get("excessPct")
+    if auth is None or used is None:
+        r.warn("G49", "超额口径不完整：权威 excessSectorPct=%s / 策略层用的 excessPct=%s"
+                      "——缺一边就比对不了，请确认 portfolio_curve 的行业基准是否齐全"
+                      % (auth, used))
+        return
+    if abs(float(used) - float(auth)) > 0.05:
+        r.fail("G49", "两处超额不同源：策略层写 %+.2f%%，权威口径（行业基准）是 %+.2f%%"
+                      "——符号相反时同一张卡会自相矛盾。修法：strategy_engine._curve_excess() "
+                      "必须读 excessSectorPct（组合是一篮子行业板块，综合指数当尺子是量纲错配）"
+                      % (float(used), float(auth)))
+        return
+    # 顺带查 underperform 标志与符号一致（跑输却标 false，会让「收紧高确信」失效）
+    up = bool(fb.get("underperform"))
+    if up != (float(auth) < 0):
+        r.fail("G49", "跑输标志与超额符号矛盾：excessSectorPct=%+.2f%% 但 underperform=%s"
+                      "——跑输不标记，高确信层就不会收紧" % (float(auth), up))
+        return
+    r.ok("G49", "超额口径同源：策略层与页面都按行业基准 %+.2f%%（跑%s），"
+                "underperform=%s 与符号一致" % (float(auth), "赢" if auth >= 0 else "输", up))
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -4139,6 +4256,8 @@ def main():
     g45_modal_nav_group(r)
     g46_sector_board_names(r)
     g47_buy_list_truth(r)
+    g48_sector_state_consistency(r)
+    g49_excess_benchmark_consistency(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
