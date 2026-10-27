@@ -3951,6 +3951,46 @@ def g47_buy_list_truth(r):
     chen_loose = {str(x.get("code")) for x in
                   ((D.get("chenPool") or {}).get("loose") or []) if isinstance(x, dict)}
     pick_pool = {str(p.get("code")) for p in (star.get("picks") or []) if isinstance(p, dict)}
+    # R100z246：失效池成员也算**可回溯**（2026-10-27）。
+    # 名额挤占 / 形态到期 / 回到池外，票会从在池挪到失效归档——它没被编出来，
+    # 只是被后来的一轮重算移走了。判「凭空造票」时若不认失效池，
+    # 每一次正常的池换血都会被误报（实测 2026-10-27 误报 9 只）。
+    bp_fail = {str(x.get("code")) for x in
+               ((D.get("breakoutPool") or {}).get("failPool") or []) if isinstance(x, dict)}
+
+    # 跨时点比对豁免：清单是 9:45 盘中产物，横盘启动 / 断板 / 陈学长池都可能在此后的
+    # 收盘重算里换名单（实测 2026-10-27：清单 09:58 生成用 10-26 收盘池，
+    # 而 breakoutPool 16:17 已按 10-27 收盘重算，同一 tradeDate、不同时刻）。
+    # **必须比时刻，不能只比日期**——同一天里 09:58 与 16:17 是两个不同的池快照。
+    # 池的快照时刻晚于清单时刻 → 只校验「当时合法」，不追「现在还在」。
+
+    def _star_dt():
+        d = str(star.get("date") or "")
+        t = str(star.get("time") or "")
+        return (d + " " + (t if t else "00:00")).strip()[:16]
+
+    def _pool_dt(node, fallback_date=""):
+        raw = str((node or {}).get("updatedAt") or (node or {}).get("generatedAt") or "")
+        # updatedAt 形如「2026-10-27 16:17（横盘启动 2026-10-27 收盘 …）」——取前 16 字即时刻
+        m = re.search(r"(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})", raw)
+        if m:
+            return (m.group(1) + " " + m.group(2))[:16]
+        d = str((node or {}).get("tradeDate") or fallback_date or "")[:10]
+        return (d + " 00:00").strip()[:16]
+
+    _sd = _star_dt()
+
+    def _stale(pool_key):
+        """池的快照时刻是否晚于清单时刻（晚于 = 清单已过期，不再按当前池判造票）。"""
+        if not _sd:
+            return False
+        if pool_key == "breakout":
+            pd_ = _pool_dt(D.get("breakoutPool"))
+        elif pool_key == "chen":
+            pd_ = _pool_dt(D.get("chenPool"))
+        else:
+            pd_ = _pool_dt(D.get("duanban"))
+        return bool(pd_ and pd_ > _sd)
 
     def _n(v):
         try:
@@ -3959,6 +3999,7 @@ def g47_buy_list_truth(r):
             return None
 
     bad = []
+    stale_note = []          # 跨时点比对豁免的条目（提示，不 FAIL）
     for i, it in enumerate(bl):
         tag = "buyList[%d]" % i
         if not isinstance(it, dict):
@@ -3978,11 +4019,18 @@ def g47_buy_list_truth(r):
         if src not in ("chen_strict", "chen_loose", "duanban", "bp"):
             bad.append("%s src=%r 不在白名单" % (tag, src))
             continue
-        # d) 票必须在池里
+        # d) 票必须在池里（或该池的失效归档里）
         member = {"chen_strict": chen_strict, "chen_loose": chen_loose,
                   "bp": bp_pool, "duanban": (duanban_pool | pick_pool)}[src]
-        if code not in member:
-            bad.append("%s 声称来自 %s，但该池里没有这只票（凭空造票）" % (tag, src))
+        # 失效归档也算可回溯：票是被后续重算挪走的，不是编出来的。
+        _archived = (code in bp_fail) if src == "bp" else False
+        if code not in member and not _archived:
+            # 池快照已跨日 → 清单反映的是当时那一版池，不按今日池判造票（降为 WARN 提示）。
+            if _stale("breakout" if src == "bp" else
+                      ("chen" if src.startswith("chen") else "duanban")):
+                stale_note.append(tag)
+            else:
+                bad.append("%s 声称来自 %s，但该池里没有这只票（凭空造票）" % (tag, src))
         # c) 买区上下沿
         lo, hi, last, inv = _n(it.get("low")), _n(it.get("high")), _n(it.get("price")), _n(it.get("invalid"))
         if lo is None or hi is None:
@@ -4019,8 +4067,17 @@ def g47_buy_list_truth(r):
         r.ok("G47", "买入清单为空（三池当日无买点，属常态）；接线与结构校验通过")
         return
     n_buy = sum(1 for x in bl if x.get("state") == "buy")
-    r.ok("G47", "买入清单 %d 只（现价在买区内 %d 只）；买区/证伪价自洽、票全部可回溯到池、"
-                "断板反包未编目标价；生成端与渲染端接线完整" % (len(bl), n_buy))
+    if stale_note:
+        # 不判 FAIL：清单是盘中产物、池是收盘重算，跨时点对不上属正常换血。
+        # 但必须点名——否则「9 只对不上」和「0 只对不上」在页面上没有区别，
+        # 真造票（同一时点还查不到）才会走上面的 FAIL 分支。
+        r.warn("G47", "买入清单 %d 只；其中 %d 只不在今日池（%s）——清单生成于 %s，"
+                      "池此后已收盘重算，属跨时点换血、非造票；同一时点仍查不到的会判 FAIL"
+                      % (len(bl), len(stale_note), "、".join(stale_note[:5]),
+                         _sd or "—"))
+    else:
+        r.ok("G47", "买入清单 %d 只（现价在买区内 %d 只）；买区/证伪价自洽、票全部可回溯到池、"
+                    "断板反包未编目标价；生成端与渲染端接线完整" % (len(bl), n_buy))
 
 
 def main():

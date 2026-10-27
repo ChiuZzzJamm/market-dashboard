@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610271446"></script>
+<script src="data.js?v=202610271955"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -394,14 +394,18 @@
   /* R100z60（用户 2026-10-04「增加点空格」）：组合净值块（命中率 + 净值曲线 + 统计标签行）
      与下方板块卡片（「新型电池·固态电池」等）之间原来只留 2px，两坨内容几乎贴在一起；
      底部撑到 18px（顶部保持 10px），扫读时曲线区和下面的板块卡能分开。
-     同时把统计标签行与曲线图之间也补 6px（原来 4px），标签不至于糊在曲线下缘。 */
-  .pf-box { margin: 10px 0 18px; }
+     同时把统计标签行与曲线图之间也补 6px（原来 4px），标签不至于糊在曲线下缘。
+     R100z246：.pf-box 已随净值曲线下线删除；.pf-stat 保留——它还被其它历史面板复用。 */
   .pf-stat { display: flex; gap: 8px; flex-wrap: wrap; font-size: var(--fs-sm); margin-top: 6px; }
   .pf-stat span { padding: 2px 6px; border-radius: 4px; border: 1px solid currentColor; color: var(--ink2); }
   .pf-stat .up { color: var(--up); }
   .pf-stat .down { color: var(--down); }
   .pf-stat .flat { color: var(--ink2); }
   .pf-note { font-size: var(--fs-xs); color: #9aa4af; line-height: 1.6; margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--line); }
+  /* R100z246 注：曾在此加过 .pf-note .up/.down 三条规则，后来发现「组合实盘口径」的
+     指标胶囊实际挂在 .pf-stat（flex + gap + 描边）上、不是 .pf-note，那三条永远不会命中，
+     已删除。留这条注释是提醒：**给某个类加样式前先确认元素真的用了那个类**，
+     否则就是又一个「写了但静默不生效」。 */
 
   /* R100z117 前瞻层：宏观事件日历（R100z117b 起并入埋伏/风险两行，T+N 徽章按用户要求移除） */
   .mc-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
@@ -428,7 +432,8 @@
   /* R100z60c（用户 2026-10-05 截图：止损卡胶囊行紧贴下方标的网格）：
      #st-track-box 之前完全没有自己的 margin，胶囊行到底下的 .ai-grid 只剩 .risk-line 的
      2px 底边距，7 个胶囊和「新型电池·固态电池」那排卡片几乎粘在一起。
-     这里补 18px 下间距（顶部不动，上方是 .pf-box 的 18px 底边距）。
+     这里补 18px 下间距（顶部不动，R100z246 前上方是 .pf-box 的 18px 底边距；
+     净值曲线下线后上方换成 .cal-hist，间距仍由本行保证）。
      ⚠️「留空白」一律是加 margin，不是删块/隐藏——别再理解成 display:none。 */
   #st-track-box { margin-bottom: 18px; }
 
@@ -2896,12 +2901,18 @@ function renderCalHistory() {
     var xhr = new XMLHttpRequest();
     xhr.open('GET', 'calibration_log.json', true);
     xhr.onload = function () {
-      if (xhr.status !== 200) return;
+      if (xhr.status !== 200) { loadPortfolioCash(box); return; }
       try {
         var d = JSON.parse(xhr.responseText);
         var log = (d && d.log) || {};
         var days = Object.keys(log).sort().slice(-5);
-        if (!days.length) return;
+        if (!days.length) {
+          // R100z246：台账为空也要给回撤/分档留出口——那两项来自 portfolio_curve.json，
+          // 与台账是**两个独立数据源**。原来这里直接 return，等于「台账没数据 ⇒ 钱的口径也消失」，
+          // 而钱的口径恰恰在最需要的时候（预测刚起步、台账还没攒够）才有参考价值。
+          loadPortfolioCash(box);
+          return;
+        }
         var h = '<div class="cal-hist-t">📅 最近 ' + days.length + ' 个预测日的命中率</div><div class="cal-bar">';
         var dirS = 0, dirG = 0, stkS = 0, stkG = 0;
         days.forEach(function (dt) {
@@ -2993,6 +3004,14 @@ function renderCalHistory() {
              + ' · 点位 ' + pct(agg.bandHit) + ' · 量能 ' + pct(agg.volHit) + '</div>';
         }
         box.innerHTML = h;
+        // R100z246（用户 2026-10-27 拍板）：把「组合净值曲线」这块**删掉**，只把预测复盘
+        // 拿不到的两项搬到本卡——净值曲线与复盘的"没跑赢"结论重复，且 12 日样本自己都标着不足。
+        // 复盘卡原有的是**命中率**（判方向/选标的/分档校准），缺的是**钱**：
+        //   ① 最大回撤（最不利时要忍多大浮亏）② 分档实际收益（高确信是否真赚得更多）。
+        // 命中率与收益不是一回事——命中 60% 也可能亏钱，这两个数字才是补上那一环。
+        // 用 insertAdjacentHTML 追加而**不是重写 innerHTML**：portfolio_curve.json 是另一路
+        // XHR，先到先写会互相覆盖（两路都写同一个 box），追加是顺序无关的。
+        loadPortfolioCash(box);
       } catch (e) { /* 台账坏了也不影响主看板 */ }
     };
     xhr.send();
@@ -3082,11 +3101,17 @@ function riskTipBadge(code0, poolMode) {
   return '<span class="risk-tip' + cls + '" title="' + escAttr(tip) + '">⚠️ 风险提示 · ' + esc(rs) + '</span>';
 }
 
-/* R100z15 缺口④：组合净值曲线——命中 60% 但亏钱、命中 50% 但赚钱，光看命中率分不出来。
-   组合 = 每个预测日 8 只标的等权平均涨跌幅累乘；基准 = 同日市场基准累乘；下面再挂一条回撤。
-   取不到 portfolio_curve.json（未发布 / 本地预览）时整块静默，不白屏、不报错。 */
-function loadPortfolioCurve() {
-  var box = document.getElementById('pf-box');
+/* R100z246（用户 2026-10-27 拍板）：原「组合净值曲线」整块下线，只留两项钱的口径。
+   为什么删：这条曲线与「预测复盘」重复度极高——同为 12 个交易日、同一批预测样本，
+   而复盘已经用更严口径回答了「准不准」（严格命中 / 跑赢基准 / 权威超额），
+   曲线只是把同一个结论画第二遍；且 sampleEnough=false（12 日 < 15），
+   页面自己都得挂一句「样本不足，仅供观察」，留着反而稀释可信度。
+   为什么不整块删干净：复盘卡只有**命中率**（判方向/选标的/分档校准），没有**钱**。
+   命中 60% 也可能亏钱——这两项是复盘拿不到的增量，必须留：
+     ① 最大回撤：最不利情形下要忍多深的浮亏（复盘完全没有这个字段）；
+     ② 分档实际收益：高确信到底是不是真赚得更多（复盘的分档只比命中率）。
+   落点改为追加到 #cal-hist（预测复盘卡），不再单独占一块。 */
+function loadPortfolioCash(box) {
   if (!box) return;
   try {
     var xhr = new XMLHttpRequest();
@@ -3095,49 +3120,45 @@ function loadPortfolioCurve() {
       if (xhr.status !== 200) return;
       try {
         var d = JSON.parse(xhr.responseText);
-        var se = (d && d.series) || [];
-        if (!se.length) return;
-        var s = d.stat || {};
-        var h = '<div class="cal-hist-t">📈 组合净值（高确信板块标的等权 vs 市场基准，含回撤）</div>' +
-          '<div id="chart-pf" style="width:100%;height:150px;"></div><div class="pf-stat">' +
-          '<span class="' + ((s.totRetPct || 0) >= 0 ? 'up' : 'down') + '" title="组合净值：每个预测日把当日「确信=高」板块的预测标的等权买入（当日无高确信则取确信最高一档），按日累乘的总涨跌幅。各日入选板块数不同（每日 8/16/24…只）。正数 = 预测组合整体赚钱。">组合 ' +
-          (s.totRetPct >= 0 ? '+' : '') + (s.totRetPct || 0).toFixed(2) + '%</span>' +
-          '<span class="' + ((s.benchRetPct || 0) >= 0 ? 'up' : 'down') + '" title="基准净值：同期的市场基准（四指数涨跌幅中位数，全市场代理）累计涨跌幅，代表「不做预测、直接买市场」的结果，用来和组合对照。">基准 ' +
-          (s.benchRetPct >= 0 ? '+' : '') + (s.benchRetPct || 0).toFixed(2) + '%</span>' +
-          (s.benchSectorCmpRetPct != null ? '<span class="' + ((s.benchSectorCmpRetPct || 0) >= 0 ? 'up' : 'down') + '" title="行业基准（同花顺一级行业涨跌幅中位数）累计涨跌幅——组合本身是一篮子行业板块，这才与预测对象同源。拿综合指数当尺子，普涨日会让每个板块都「轻松跑赢」、超额虚高。">行业基准 ' +
-          (s.benchSectorCmpRetPct >= 0 ? '+' : '') + (s.benchSectorCmpRetPct).toFixed(2) + '%</span>' : '') +
-          (s.benchMainRetPct != null ? '<span class="' + ((s.benchMainRetPct || 0) >= 0 ? 'up' : 'down') + '" title="主板代理基准（上证+深成等权，低 beta 口径）累计涨跌幅；与「基准」对照可看创业板/小盘对本书组合的拖累程度。">主板基准 ' +
-          (s.benchMainRetPct >= 0 ? '+' : '') + (s.benchMainRetPct).toFixed(2) + '%</span>' : '') +
-          '<span class="' + ((s.excessSectorPct != null ? s.excessSectorPct : (s.excessPct || 0)) >= 0 ? 'up' : 'down') + '" title="权威超额 = 组合 − 行业基准（同源比较）。组合是一篮子行业板块，只有扣掉行业自身的平均表现才谈得上 alpha；为负说明这套预测选股反而跑输了行业。旧的「超额 − 综合指数」见 tooltip 对照。">超额 ' +
-          ((s.excessSectorPct != null ? s.excessSectorPct : (s.excessPct || 0)) >= 0 ? '+' : '') + ((s.excessSectorPct != null ? s.excessSectorPct : (s.excessPct || 0))).toFixed(2) + '%</span>' +
-          '<span class="flat" title="最大回撤：持有期内净值从最高点回落的最大幅度（括号内为发生日期），衡量最不利情形下要忍受多大的浮亏。">最大回撤 ' + (s.maxDdPct || 0).toFixed(2) + '%（' + esc(s.maxDdDate || '') + '）</span>' +
-          '<span class="flat" title="统计覆盖的交易日数量：样本越多，这组收益与胜率数据越有说服力；样本少时只作参考。">' + (s.days || 0) + ' 个交易快照</span></div>' +
-          (s.assumptions ? '<div class="pf-note">假设：单边佣金 ' + (s.assumptions.feePerSide).toFixed(3) + '% / 卖出印花税 ' + (s.assumptions.stampDutySell).toFixed(3) + '% / 滑点 ' + (s.assumptions.slippagePerSide).toFixed(3) + '%（净值未扣，毛收益）；' +
-          (s.assumptions.sampleEnough ? '样本充足' : '⚠️ 样本仅 ' + s.days + ' 日（&lt;15）显著性不足，仅供观察') + '。权威基准=同花顺一级行业中位；指数基准=四指数中位；主板代理=上证+深成等权。</div>' : '');
-        box.innerHTML = h;
-        var el = document.getElementById('chart-pf');
-        if (el && window.echarts) {
-          var c = echarts.init(el);
-          var dates = se.map(function (x) { return String(x.date).slice(5); });
-          var ln = function (key, name, color) {
-            return { name: name, type: 'line', smooth: true, symbol: 'circle', symbolSize: 4,
-              lineStyle: { width: 2, color: color }, itemStyle: { color: color },
-              data: se.map(function (x) { return x[key]; }) };
-          };
-          c.setOption({
-            grid: { left: 42, right: 10, top: 26, bottom: 22 },
-            tooltip: { trigger: 'axis' },
-            legend: { data: (se[0] && se[0].benchSec != null ? ['组合', '基准', '行业基准'] : ['组合', '基准']).concat(
-              se[0] && se[0].benchMain != null ? ['主板基准'] : []), top: 0, textStyle: { fontSize: 10 } },
-            xAxis: { type: 'category', data: dates, axisLabel: { fontSize: 10 }, axisLine: { lineStyle: { color: '#bbb' } } },
-            yAxis: { type: 'value', scale: true, axisLabel: { fontSize: 10, formatter: function (v) { return v.toFixed(2); } } },
-            series: [ln('pf', '组合', '#f0435c'), ln('bench', '基准', '#8fa3b8')].concat(
-              (se[0] && se[0].benchSec != null) ? [ln('benchSec', '行业基准', '#5aa9d6')] : []).concat(
-              (se[0] && se[0].benchMain != null) ? [ln('benchMain', '主板基准', '#c9a14a')] : [])
-          });
-          charts.push(c);
-        }
-      } catch (e) { /* 曲线坏了也不影响主看板 */ }
+        var s = (d && d.stat) || {};
+        if (s.maxDdPct === null || s.maxDdPct === undefined) return;
+        var pct1 = function (v) {
+          var n = Number(v);
+          return (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
+        };
+        var cls = function (v) { return Number(v) >= 0 ? 'up' : 'down'; };
+        var bc = s.byConf || {};
+        var seg = function (k) {
+          var o = bc[k];
+          if (!o || o.totRetPct === null || o.totRetPct === undefined) return '';
+          return '<span class="' + cls(o.totRetPct) + '" title="「' + k + '确信」板块的预测标的等权收益（'
+            + (o.days || 0) + ' 个交易日累乘）。与上方分档校准对照看：命中率高但收益为负，'
+            + '说明选对了方向却没选对标的。">' + k + '确信 ' + pct1(o.totRetPct) + '</span>';
+        };
+        // 两层结构：.pf-note 只当一行标题（它自带虚线顶边，正好当分隔），
+        // 指标胶囊放进 .pf-stat（flex + gap）。合并成一层会踩两个坑：
+        // ① .pf-note 不是 flex，胶囊全靠文本流拼接，纯文本核对时实测
+        //    「组合 -6.82%行业基准 -5.27%超额…」粘成一句没有分隔；
+        // ② .pf-note 的 color 是灰的，涨跌色虽然能靠 .up/.down 覆盖，但胶囊没有描边，
+        //    三五个数字挤在一行读起来更像流水账而不是仪表。
+        var h = '<div class="pf-note">💰 组合实盘口径（' + (s.days || 0)
+          + ' 个交易日，毛收益未扣费税）——这是「钱」的口径，与上方命中率是两回事：'
+          + '命中率高而这里为负，就说明方向对、标的没选对。</div>'
+          + '<div class="pf-stat">'
+          + '<span class="' + cls(s.totRetPct) + '" title="组合净值累计涨跌幅：把每个预测日最高置信档板块的预测标的等权买入后逐日累乘。">组合 '
+          + pct1(s.totRetPct) + '</span>'
+          + (s.benchSectorCmpRetPct !== null && s.benchSectorCmpRetPct !== undefined
+             ? '<span class="' + cls(s.benchSectorCmpRetPct) + '" title="行业基准（同花顺一级行业中位）累计涨跌幅。组合本身是一篮子行业板块，只有扣掉行业自身表现才谈得上选股能力；拿综合指数当尺子是量纲错配。">行业基准 '
+               + pct1(s.benchSectorCmpRetPct) + '</span>' : '')
+          + (s.excessSectorPct !== null && s.excessSectorPct !== undefined
+             ? '<span class="' + cls(s.excessSectorPct) + '" title="权威超额＝组合 − 行业基准（同源比较）。为负说明这套预测选股跑输了它所在行业的平均表现。">超额 '
+               + pct1(s.excessSectorPct) + '</span>' : '')
+          + '<span class="flat" title="最大回撤：组合净值从最高点回落的最大幅度（括号内为发生日期），衡量最不利情形下要忍受多深的浮亏。">最大回撤 '
+          + Number(s.maxDdPct).toFixed(2) + '%（' + esc(String(s.maxDdDate || '')) + '）</span>'
+          + seg('高') + seg('中')
+          + '</div>';
+        box.insertAdjacentHTML('beforeend', h);
+      } catch (e) { /* 台账坏了也不影响主看板 */ }
     };
     xhr.send();
   } catch (e) { /* file:// 下被拦，静默跳过 */ }
@@ -3317,7 +3338,7 @@ function renderAiPrediction() {
       '<b>真正下手买哪几只、买多少、跌到哪走</b>看「🌟 开盘精选」的今日买入清单（买区 + 证伪价 + 仓位），' +
       '以及各技术池卡片上的买区/证伪价——本卡只给方向，不给价位。</div>' +
     '<div id="cal-hist" class="cal-hist"></div>' +
-    '<div id="pf-box" class="pf-box"></div>' +
+    // R100z246：原 #pf-box（组合净值曲线）已并入 #cal-hist，容器不再单独占位。
     '<div id="st-track-box"></div>' +
     riskLineHtml(p) +
     strategyDisciplineHtml() +
@@ -3384,11 +3405,14 @@ function renderAiPrediction() {
   html += '</div>';
   box.innerHTML = html;
   renderCalHistory();
-  loadPortfolioCurve();
+  // R100z246：不再单独调用净值曲线——它的两项增量（回撤 / 分档收益）已由
+  // renderCalHistory 内部在拿到 calibration_log 之后接着拉 portfolio_curve.json 补上。
   renderStopTrack();
   renderRiskLines();
-  // R100z162：本卡现在常驻在 display:none 的「开盘预测」子页里。ECharts（组合净值）在隐藏容器
+  // R100z162：本卡现在常驻在 display:none 的「开盘预测」子页里。ECharts 在隐藏容器
   // init 会量到 0 宽，画出一根竖线；每次重画后补一次 resize，切页时再补一次（switchSubTab）。
+  // R100z246 起本卡内已无 ECharts 图（净值曲线下线），但 resizeOdCharts 仍保留：
+  // 它同时管其它隐藏容器里的图，删了会让切页后那些图量到 0 宽。
   setTimeout(resizeOdCharts, 30);
 }
 
@@ -5581,7 +5605,7 @@ function renderDuanban() {
     '范围仅沪深主板 60/00，排除科创板 688 与北交所；东财涨停池取 T 日、腾讯日 K 核验（check_duanban.py，纯脚本，不靠人眼）。' +
     '标签按当日要闻/AI 预测自动标利好（红）/利空（绿）/中性（灰），上涨概率＝脚本基线＋AI 复核校准。</div>' +
     '<div class="lg-hr"></div>' +
-    '<div><b>分池</b>：确认池＝四步全流程走完（可随时等反包）；观察池＝形态进行中、只差最后一根确认 K 线（先待企稳、再待缩量）</div>' +
+    '<div><b>分池</b>：确认池＝四步全流程走完（可随时等反包）；观察池＝形态进行中、只差最后一根确认 K 线（待缩量 → 待企稳 → 待脱离）</div>' +
     '<div><b>失效与离场</b>：跌破 T 日最低点或 MA5（破位）、或 5 个交易日内没走完反包（超期）→ 移入失败池，5 个交易日后自动清理</div>' +
     // R100z162（用户 2026-10-24）：三档底色图例整行删除——原话「这个删掉，我知道就行不用提示」。
     // 徽章本身仍显示在卡片上，只是不再解释深浅含义。
@@ -5941,7 +5965,7 @@ function renderDuanban() {
   // 从标题上就说明自己不是当日指令）。「提前一天提醒买哪只」由 22:00 的 aiPrediction / 开盘预测
   // 承担——那两处才是真的提前一天。
   html += dbPoolHtml('确认池', 'p-conf', '已走完「涨停 → 放量断板 → 缩量 → 不破T日低点与MA5」全流程', conf, true, 'c');
-  html += dbPoolHtml('观察池', 'p-watch', '形态进行中、只差最后一根确认K线（待企稳 ＞ 待缩量）', watch, false, 'w');
+  html += dbPoolHtml('观察池', 'p-watch', '形态进行中、只差最后一根确认K线（待缩量 ＞ 待企稳 ＞ 待脱离）', watch, false, 'w');
   // R100i：断板反包失败池（破位 / 超期失效归档，5 交易日后自动清理）
   html += dbFailHtml(db && db.failPool, 'duanban');
   document.getElementById('db-pools').innerHTML = html;
@@ -6378,7 +6402,7 @@ function renderChen() {
   h += chenPoolBlock('陈学长 · 放宽池', 'p-watch',
     '只过硬结构、去掉两条软条件——用来单独检验「T日缩量 + 大阴」到底值不值钱', c.loose, 'loose');
   h += chenPoolBlock('形态进行中', 'p-watch',
-    '硬结构已到「放量断板 + 未破位」，只差缩量 / 收复5日线这一根确认K线', c.watching, 'watch');
+    '硬结构已到「放量断板 + 未破位」，只差缩量 / 收复5日线 / 脱离MA5幅度这一根确认K线', c.watching, 'watch');
   // 失效归档：昨天还在池里、今天不在了——不写出来读者会以为池子被吞了。
   // 走 dbFailHtml（kind='chen'），5 个交易日滚动，卡片可点开看 K 线与个股消息。
   h += dbFailHtml(c.failPool, 'chen');

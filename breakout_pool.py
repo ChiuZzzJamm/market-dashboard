@@ -597,11 +597,42 @@ def main():
         passed.sort(key=lambda x: (-x['score'], abs(x.get('posPct') or 0)))
         print('[BREAKOUT] 池内沿用 %d 只（事件仍有效、但今天不贴沿）' % len(kept))
 
+    # ---- R100z246：名额挤占必须显式归档，不许人间蒸发（2026-10-27）----
+    # 实测：10-26 收盘池里 30 只，到 10-27 收盘重算后其中 9 只被 passed[:30] 截掉，
+    # 而它们**既不在 passed、也不在 failPool** —— 页面上完全消失。
+    # 更坏的地方是它和「凭空造票」长得一模一样：09:58 生成的 buyList 里这 9 只都合法，
+    # 收盘后池子一换，audit G47 就判「声称来自 bp 但池里没有」。
+    # 真相不是编票，是**名额不够**：passed 当时 39 只、只上卡前 30。
+    # 因此不能只把它们丢掉：形态仍有效、只是排到了 30 名之后，读者有权知道它们去哪了。
+    # 归到 failPool 而不是静默丢弃，同时 reason 必须写清「形态仍有效、不是跌破失效」——
+    # 否则读者会把「没名额」读成「跌坏了」，那是比丢失更严重的误读。
+    MAX_SHOWN = 30
+    final_passed = passed[:MAX_SHOWN]
+    overflow = passed[MAX_SHOWN:]
+    for oi in overflow:
+        _c = str(oi.get('code') or '')
+        if not _c:
+            continue
+        new_fails.append({
+            'code': _c,
+            'name': (oi.get('name') or '').strip(),
+            'sector': oi.get('sector') or '',
+            'reason': ('名额已满被挤到卡外（形态仍有效、不是跌破失效）：同时成立 %d 只，'
+                       '按分数只上卡前 %d 只' % (len(passed), MAX_SHOWN)),
+            'limitDay': oi.get('limitDay') or '',
+            'washDays': oi.get('washDays'),
+            'score': oi.get('score'),
+            'entryDate': today,
+        })
+    if overflow:
+        print('[BREAKOUT] 名额挤占归档 %d 只（同时成立 %d 只 > 上卡 %d 只）'
+              % (len(overflow), len(passed), MAX_SHOWN))
+
     field = {
         'updatedAt': '%s（横盘启动 %s 收盘 数据已自动更新）' % (local_stamp(), today),
         'tradeDate': today,
         'date': today,
-        'passed': passed[:30],
+        'passed': final_passed,
         # 筛选漏斗：没有它，「今天只有 N 只」无法区分是筛得严还是 K 线抓空。
         # 漏斗要写「全部成立 N 只、上卡前 30 只」——只写一个数会让人以为这就是全部。
         'summary': ('扫描域 %d 只沪深主板 → 有 K 线 %d 只 → 30 日内有涨停事件 %d 只 → '
@@ -617,10 +648,15 @@ def main():
                     INVALID_UP * 100, STOP_TOL)),
     }
     if new_fails or (old.get('failPool')):
+        # ⚠️ exclude_codes 必须是**最终上卡**的集合，不能用上面的 new_codes。
+        # new_codes 是截断前的全集，里面含着刚被挤到卡外的 overflow——
+        # 若拿它去排除，roll_fail_pool 会把上面辛苦归档的 overflow 条目原样剔掉，
+        # 等于白做（这正是「失效池语义 = 已失效且当前不在池」的边界：在池 = 在卡上）。
+        _on_card = {str(x.get('code') or '') for x in final_passed}
         field['failPool'] = common.roll_fail_pool(
-            old.get('failPool') or [], new_fails, today, exclude_codes=new_codes,
+            old.get('failPool') or [], new_fails, today, exclude_codes=_on_card,
             name_map=names)
-    if not passed and old_passed and not a.asof:
+    if not final_passed and old_passed and not a.asof:
         print('[BREAKOUT] 本轮无标的，保留既有池（不清场）')
         field['passed'] = old_passed
         field['note'] = '本轮无新命中，沿用上一轮名单'
@@ -642,7 +678,7 @@ def main():
     if not a.write:
         print('\n%-8s %-9s %5s %6s %6s %8s %10s  %s'
               % ('代码', '名称', '分数', '洗盘', '量比', '距涨停收', '涨停日', '买区/证伪'))
-        for i in passed[:30]:
+        for i in final_passed:
             e = i['entry']
             print('%-8s %-9s %5d %5d日 %6.2f %+7.1f%% %10s  %.2f~%.2f / %.2f'
                   % (i['code'], (i['name'] or '')[:9], i['score'], i['washDays'],
