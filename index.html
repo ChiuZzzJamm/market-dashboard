@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610280111"></script>
+<script src="data.js?v=202610280140"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -309,16 +309,6 @@
   .ai-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
   .ai-head h2 { margin: 0; }
   .ai-summary { font-size: var(--fs-body); margin-bottom: 16px; }
-  /* R100z248：盘前预测依据条——五路输入并排，每格「名称 + 一句结论」。
-     用 auto-fit 而不是固定 5 列：缺哪一路（全球/国内要闻偶尔抓不到）就少一格，
-     不留空格也不压缩字体。 */
-  .fb-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
-            gap: 8px; margin-bottom: 14px; }
-  .fb-chip { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-note);
-             padding: 7px 11px; min-width: 0; }
-  .fb-chip .k { display: block; font-size: var(--fs-xs); color: var(--ink2); letter-spacing: .02em; }
-  .fb-chip .v { display: block; font-size: var(--fs-base); font-weight: 700; color: var(--ink);
-                overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ai-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 860px) { .ai-grid { grid-template-columns: 1fr; } }
   .ai-item { background: var(--accent-soft); border: 1px solid var(--line); border-radius: var(--r-block); padding: 12px 16px; display: flex; flex-direction: column; }
@@ -453,9 +443,6 @@
   .mc-imp b { color: var(--accent-deep); }
   .mc-rsk { font-size: var(--fs-sm); color: #a23b2e; margin-top: 2px; line-height: 1.6; }
   .mc-foot { font-size: var(--fs-xs); color: #9aa4af; line-height: 1.6; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); }
-  /* R100z117b（用户 2026-10-10：不新增模块）：原独立「盘前策略」卡压缩为 AI 预测卡内一条纪律条 */
-  .str-strip { font-size: var(--fs-base); color: var(--ink); background: var(--accent-soft); border: 1px dashed var(--line); border-radius: var(--r-note); padding: 9px 13px; margin: 10px 0 2px; line-height: 1.8; }
-  .str-strip b { color: var(--accent-deep); }
 
   /* R100z60c（用户 2026-10-05 截图：止损卡胶囊行紧贴下方标的网格）：
      #st-track-box 之前完全没有自己的 margin，胶囊行到底下的 .ai-grid 只剩 .risk-line 的
@@ -3225,101 +3212,12 @@ function riskLineHtml(p) {
     + esc(hits.join('；')) + '</div>';
 }
 
-/* R100z248（用户 2026-10-27「把这里一堆废话全部删了，我只要结果」）：
-   原 strategyDisciplineHtml() 一条里塞了仓位纪律 + 锁仓/减仓 + 组合超额 + 风险预警，
-   其中仓位纪律已并进「大盘指数」卡的趋势结论带、组合超额已搬去复盘台账——
-   留在本卡只会和那两处重复。此处只留**风险预警名单**：它是唯一「今天不能用哪只」的结果。 */
-function riskAlertHtml() {
-  var st = (window.DASHBOARD_DATA || {}).strategy || {};
-  var rk = (st.risks || []).map(function (r) { return r.name || ''; }).filter(Boolean).slice(0, 6);
-  if (!rk.length) return '';
-  return '<div class="str-strip">⚠️ 风险预警：' + esc(rk.join('、')) + '</div>';
-}
-
-/* R100z248：盘前预测依据条——五路输入各自给一句结论，读者不用展开就知道这个方向是怎么来的。
-   顺序固定为「隔夜美股 → 日韩早盘 → 前日 A 股 → 全球要闻 → 国内要闻」，这就是判断链的顺序。
-   数据来源优先级：aiPrediction.forecastBasis（08:30 AI 写回）＞ 现成行情节点兜底。
-   兜底是必须的：forecastBasis 是这一版才加的字段，历史日期的 aiPrediction 里没有，
-   没有兜底这些天的页面会整块空白——那等于把「依据」这件事又一次藏起来。 */
-function forecastBasisHtml(p) {
-  var fb = (p && p.forecastBasis) || {};
-  var D = (window.DASHBOARD_DATA || {}) || {};
-  var items = [];
-  var num = function (v) { var n = Number(v); return (v === null || v === undefined || v === '' || !isFinite(n)) ? null : n; };
-  var pc = function (v) { var n = num(v); return n === null ? '—' : (n > 0 ? '+' : '') + n.toFixed(2) + '%'; };
-  var cut = function (s, n) { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n) + '…' : s; };
-
-  // ① 隔夜美股
-  var us = fb.us;
-  if (!us && p && p.indexLine) {
-    us = String(p.indexLine).replace(/报\s*[\d.,]+/g, '').replace(/\s*｜\s*/g, ' · ').replace(/。$/, '');
-  }
-  if (us) items.push({ k: '隔夜美股', v: us });
-
-  // ② 日韩早盘
-  var asia = fb.asia;
-  if (!asia) {
-    var mk = (D.panorama || {}).markets || [];
-    var seg = [];
-    ['kr', 'jp'].forEach(function (key) {
-      var m = null;
-      mk.forEach(function (x) { if (x && x.key === key) m = x; });
-      var ix = (m && m.indices) || [];
-      // R100z248b：原先是 replace(/韩国综合指数 |日经\d*/,'') 剥名字，中国指数名不含这些前缀时会剥成空串
-      // （实测「日经225」→ '' → 只剩一个孤零零的 +1.74%）。改成按指数特征映射短名，取不到再退回市场名。
-      var _short = function (raw, fbName) {
-        var s = String(raw || '');
-        if (/KOSPI|韩国/.test(s)) return 'KOSPI';
-        if (/日经|日本|TOPIX|东证/.test(s)) return '日经';
-        s = s.replace(/\s+/g, ' ').trim();
-        return s || String(fbName || '').trim();
-      };
-      var _nm = ix.length ? _short(ix[0].name, m && m.name) : '';
-      if (ix.length && num(ix[0].changePct) !== null && _nm) seg.push(_nm + ' ' + pc(ix[0].changePct));
-    });
-    if (seg.length) asia = seg.join(' · ');
-  }
-  if (asia) items.push({ k: '日韩早盘', v: asia });
-
-  // ③ 前日 A 股
-  var ash = fb.ashare;
-  if (!ash) {
-    var A = D.ashare || {};
-    var ai = (A.indices || [])[0] || {};
-    var br = A.breadth || {};
-    var segA = [];
-    if (ai.name) segA.push(String(ai.name).replace('指数', '') + ' ' + pc(ai.changePct));
-    if (num(br.up) !== null && num(br.down) !== null) segA.push('涨 ' + br.up + ' / 跌 ' + br.down);
-    if (segA.length) ash = segA.join(' · ');
-  }
-  if (ash) items.push({ k: '前日A股', v: ash });
-
-  // ④ 全球要闻
-  var gn = fb.globalNews;
-  if (!gn) {
-    var itl = ((D.us || {}).intlNews || [])[0];
-    if (itl && itl.title) gn = cut(itl.title, 30);
-  }
-  if (gn) items.push({ k: '全球要闻', v: gn });
-
-  // ⑤ 国内要闻
-  var dn = fb.domesticNews;
-  if (!dn) {
-    var mac = ((D.us || {}).macroNews || [])[0];
-    var bu = (((D.ashare || {}).bullNews) || [])[0];
-    if (mac && mac.title) dn = cut(mac.title, 30);
-    else if (bu && bu.title) dn = cut(bu.title, 30);
-  }
-  if (dn) items.push({ k: '国内要闻', v: dn });
-
-  if (!items.length) return '';
-  var h = '<div class="fb-row">';
-  items.forEach(function (x) {
-    h += '<div class="fb-chip" title="' + escAttr(x.k + '：' + x.v) + '">' +
-      '<span class="k">' + esc(x.k) + '</span><span class="v">' + esc(x.v) + '</span></div>';
-  });
-  return h + '</div>';
-}
+/* 2026-10-27 用户截图要求删除的两块，删因（不是精简口味，是内容重复）：
+   · 五路依据条（隔夜美股/日韩早盘/前日A股/全球要闻/国内要闻）：summary 首两句已经把
+     这五路串成一句话说完了，并排五格是同一句话说两遍。forecastBasis 字段仍然照写——
+     G48 拿它做契约校验、复盘时靠它回溯「当时看到什么」，只是不再上版面。
+   · 风险预警名单（strategy.risks）：点名的两只在断板池里已各自挂「利空」徽章 + 原因
+     （bearRefs 带原文标题），聚合条只是把它们再列一次。风险信息没丢，只是回到标的身上。 */
 
 /* R100z248（用户 2026-10-27「大盘趋势状态放到主页面，不是直接塞进去，是加到原有模块」）：
    趋势档不再单独成卡、也不再塞进 AI 预测卡——它收进「大盘指数」卡底部一条结论带。
@@ -3432,10 +3330,8 @@ function renderAiPrediction() {
   var html = '<div class="ai-card"><div class="ai-head"><h2>AI 预测分析' +
     (p.date ? '<span class="h2-date">' + esc(p.date) + '</span>' : '') +
     '<span class="src-tag" title="' + escAttr(_tagTip) + '">' + (isFc ? '盘前预测' : '方向参照') + '</span></h2></div>' +
-    forecastBasisHtml(p) +
     (p.summary ? '<div class="ai-summary">' + esc(p.summary) + '</div>' : '') +
     riskLineHtml(p) +
-    riskAlertHtml() +
     '<div class="ai-grid">';
   // R100z82：标的层验证按板块名建索引（verification.stockCheck.sector 与 aiPrediction.sectors 同名），
   // 供下方各板块卡底部渲染「8 只标的平均/方向一致率/主力净额」行。
