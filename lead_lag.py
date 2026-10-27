@@ -471,9 +471,21 @@ def backtest(D, cost=0.20):
     把 `replay_quotes()` 重建的 9:45 快照喂进去——**回测与线上同一条代码路径**，
     页面上的胜率和实际在跑的东西不可能脱节。
 
-    口径：入场 = 当日开盘价（9:45 近似），出场 = 当日收盘 / 次日收盘，
-    每次都扣 `cost` 双边成本（%）。t 值给两个：逐票（仅供参考）和**按日聚类**
-    （判定用这个，同一天 6 只票共享同一个大盘，不能当 6 个独立样本）。
+    ## 口径（2026-10-27 修正：原主口径是 T+0，A 股做不到）
+
+    **入场**：当日开盘价（9:45 近似）。
+    **出场**：**一律 T+1 及以后**——A 股 T+1，当日买入当日不可卖，所以
+    「当日收盘卖」这个口径在实盘不存在。原主口径 `(当日收盘 − 当日开盘)` 是
+    **T+0 非法口径**，它把「当天下午的情绪」记成了利润，必须废弃。
+
+    三种合法口径并列（都扣 `cost` 双边成本）：
+      · `main` = **次日收盘卖**（T+1）——主口径
+      · `alt`  = **次日开盘卖**（T+1，最保守：隔夜就跑）
+      · `t2`   = **T+2 收盘卖**（多持一天）
+    另保留 `t0Invalid` 只为对照，**页面不许把它当主口径展示**。
+
+    t 值给两个：逐票（仅供参考）和**按日聚类**（判定用这个，同一天 6 只票共享
+    同一个大盘，不能当 6 个独立样本）。
 
     返回 dict，直接进 `node['bt']` 给页面用；不写死任何数字。
     """
@@ -488,10 +500,12 @@ def backtest(D, cost=0.20):
     except Exception:
         names = {}
 
-    r1, r2, d1, d2, sig = [], [], [], [], []
+    # r1 主口径（次日收盘卖）/ r2 备选（次日开盘卖）/ r3 T+2 收盘 / r0 T+0 非法（仅对照）
+    r1, r2, r3, r0 = [], [], [], []
+    d1, d2, sig = [], [], []
     by_month = {}
     recent = []
-    for d in days[:-1]:                    # 最后一天没有次日数据，只用于 T+1 口径，仍需包含
+    for d in days[:-2]:                    # 需要 i+1（T+1）与 i+2（T+2），末两天不参与
         q, _ = replay_quotes(D, d, bars_map=bars_map, names=names)
         if not q:
             continue
@@ -499,7 +513,7 @@ def backtest(D, cost=0.20):
         if err or not node['picks']:
             continue
         sig.append(d)
-        cur1, cur2 = [], []
+        cur0, cur1, cur2, cur3 = [], [], [], []
         for p in node['picks']:
             c, i = p['code'], idx_map.get(p['code'], {}).get(d)
             if i is None:
@@ -508,15 +522,21 @@ def backtest(D, cost=0.20):
             entry = b[i][1]
             if not entry:
                 continue
-            x1 = (b[i][2] - entry) / entry * 100 - cost
-            cur1.append(round(x1, 2))
+            # T+0（非法）：当日收盘卖。只留作对照，不进任何主指标。
+            cur0.append(round((b[i][2] - entry) / entry * 100 - cost, 2))
             if i + 1 < len(b):
-                x2 = (b[i + 1][2] - entry) / entry * 100 - cost
-                cur2.append(round(x2, 2))
+                # T+1 次日收盘卖（主口径）
+                cur1.append(round((b[i + 1][2] - entry) / entry * 100 - cost, 2))
+                # T+1 次日开盘卖（最保守）
+                cur2.append(round((b[i + 1][1] - entry) / entry * 100 - cost, 2))
+            if i + 2 < len(b):
+                cur3.append(round((b[i + 2][2] - entry) / entry * 100 - cost, 2))
         if not cur1:
             continue
+        r0 += cur0
         r1 += cur1
         r2 += cur2
+        r3 += cur3
         d1.append(sum(cur1) / len(cur1))
         if cur2:
             d2.append(sum(cur2) / len(cur2))
@@ -527,8 +547,11 @@ def backtest(D, cost=0.20):
         # 最近几次出手的实际结果。聚合胜率说服力有限，用户要看的是「上周真挑到的那几只
         # 到底涨没涨」——所以把逐日明细一起带出来，只留最近 6 个信号日。
         recent.append({'date': d, 'n': len(cur1),
-                       'ret': round(sum(cur1) / len(cur1), 2),
+                       'ret': round(sum(cur1) / len(cur1), 2),          # 主口径：T+1 收盘卖
                        'up': len([x for x in cur1 if x > 0]),
+                       'retOpen': round(sum(cur2) / len(cur2), 2) if cur2 else None,
+                       'retT2': round(sum(cur3) / len(cur3), 2) if cur3 else None,
+                       'retT0': round(sum(cur0) / len(cur0), 2) if cur0 else None,
                        'names': [str(p.get('name') or p['code']) for p in node['picks']][:6]})
 
     if not r1:
@@ -541,12 +564,21 @@ def backtest(D, cost=0.20):
         'samples': len(r1),
         'cost': cost,
         'recent': recent[-6:],
-        'main': {'name': '当日收盘卖', 'ret': round(sum(r1) / len(r1), 2),
+        # main = 次日收盘卖（T+1，主口径）；alt = 次日开盘卖（T+1，最保守）
+        'main': {'name': '次日收盘卖', 'ret': round(sum(r1) / len(r1), 2),
                  'win': _wr(r1), 't': _tstat(r1), 'tDaily': _tstat(d1),
                  'dayWin': _wr(d1), 'n': len(r1), 'days': len(d1)},
-        'alt': {'name': '次日收盘卖', 'ret': round(sum(r2) / len(r2), 2) if r2 else None,
+        'alt': {'name': '次日开盘卖', 'ret': round(sum(r2) / len(r2), 2) if r2 else None,
                 'win': _wr(r2), 't': _tstat(r2), 'tDaily': _tstat(d2),
                 'dayWin': _wr(d2), 'n': len(r2), 'days': len(d2)},
+        't2': {'name': 'T+2 收盘卖', 'ret': round(sum(r3) / len(r3), 2) if r3 else None,
+               'win': _wr(r3), 't': _tstat(r3), 'tDaily': _tstat(r3),
+               'n': len(r3)},
+        # T+0 只能作对照：A 股当日买当日不可卖，这个数字实盘不存在。
+        't0Invalid': {'name': '当日收盘卖（T+0·A股不可行）',
+                      'ret': round(sum(r0) / len(r0), 2) if r0 else None,
+                      'win': _wr(r0), 't': _tstat(r0), 'n': len(r0),
+                      'note': 'A 股 T+1，当日买入不可当日卖出；此口径仅用于说明「原口径虚高了多少」'}, 
         'byMonth': [{'month': k, 'n': v['n'], 'ret': round(sum(v['r']) / len(v['r']), 2),
                      'win': _wr(v['r'])} for k, v in sorted(by_month.items())],
         'lastSignalDay': sig[-1] if sig else None,
