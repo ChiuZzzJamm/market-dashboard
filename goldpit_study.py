@@ -221,7 +221,7 @@ def _t_ci(vals):
 
 # ---------------------------------------------------------------- 扫信号
 def scan(s, gi, pool, ctrl, drop=DROP, dry=None, hold_def=None, rel=False,
-         gap_lo=None, gap_hi=None, gap_only=False):
+         gap_lo=None, gap_hi=None, gap_only=False, vol_lo=None, vol_hi=None):
     """扫信号。
 
     `gap_only=True` 时走「T 日开盘买」路线，**严格只用 T-1 及之前 + T 日开盘价**：
@@ -242,11 +242,18 @@ def scan(s, gi, pool, ctrl, drop=DROP, dry=None, hold_def=None, rel=False,
             d1 -= m
         if d1 > drop:
             continue
-        if dry is not None:
+        need_vr = dry is not None or vol_lo is not None or vol_hi is not None
+        vr = None
+        if need_vr:
             base = s.a[k - 1 - VOL_LOOK:k - 1]
             if not base or statistics.mean(base) <= 0:
                 continue
-            if s.a[k - 1] / statistics.mean(base) >= dry:
+            vr = s.a[k - 1] / statistics.mean(base)
+            if dry is not None and vr >= dry:
+                continue
+            if vol_lo is not None and vr < vol_lo:
+                continue
+            if vol_hi is not None and vr >= vol_hi:
                 continue
         g = s.o[k] / s.c[k - 1] - 1 if (s.o[k] > 0 and s.c[k - 1] > 0) else None
         if gap_only:
@@ -290,7 +297,7 @@ def scan(s, gi, pool, ctrl, drop=DROP, dry=None, hold_def=None, rel=False,
                 ent.setdefault(mode, {})[N] = (r - COST, r - COST - c)
         if ent:
             out.append({'code': s.code, 'day': day, 'k': k, 'ent': ent,
-                        'drop': d1, 'gap': g})
+                        'drop': d1, 'gap': g, 'vr': vr})
     return out
 
 
@@ -539,6 +546,28 @@ def main():
         print('  跌<%4.1f%%      %s' % (dd * 100, '  '.join('%-15s' % c for c in cells)),
               flush=True)
 
+    # ---------------- 4b) 量比五档 × 跌幅（反向验证「缩量更好」）
+    print('\n===== 4b) 量比五档 × 跌幅门槛：缩量真的更好吗？=====')
+    print('  预期（用户直觉）：缩量=惜售，应该更好。实测：极度缩量最差。')
+    print('  %-16s %-7s %-9s %-9s %-8s %-8s' % ('量比档', 'n', '均值', '中位', '超额', 't'))
+    bands = ((0.0, 0.5, '<0.5 极度缩量'), (0.5, 0.7, '0.5~0.7'),
+             (0.7, 1.0, '0.7~1.0'), (1.0, 1.5, '1.0~1.5'),
+             (1.5, 99.0, '>=1.5 显著放量'))
+    for dd in (-0.025, -0.04, -0.06):
+        print('\n  昨日跌幅 < %.1f%%：' % (dd * 100))
+        for lo, hi, lbl in bands:
+            rows = collect(stocks, pool, ctrl, hold_def='hl', drop=dd,
+                           vol_lo=lo, vol_hi=hi)
+            st = stat(rows, 'next', 5)
+            if not st:
+                print('    %-16s 样本不足' % lbl)
+                continue
+            print('    %-16s %-7d %+8.2f%% %+8.2f%% %+7.3f%% %s'
+                  % (lbl, st['n'], st['avg'] * 100, st['med'] * 100,
+                     st['ex_day'] * 100,
+                     ('%+.2f' % st['t']) if st['t'] is not None else ' n/a'),
+                  flush=True)
+
     # ---------------- 5) 分年
     print('\n===== 5) 分年（跌<-2.5%% + 不破 + 收昨收上 + 缩量<%.2f）=====' % DRY)
     best = out['dry_hl']
@@ -652,16 +681,27 @@ def main():
     print('    多数样本仍在亏，靠它做池子必须解决「怎么挑出那少数」和「怎么砍掉多数」。')
 
     if a.dump:
-        slim = {}
+        # 只落汇总统计，不落逐笔明细：明细 20 组 × 上万笔 ≈ 259MB，
+        # 既进不了公开仓库（已在 .gitignore），留着也只会让下次读盘变慢。
+        summ = {'meta': {'stocks': len(stocks), 'days': len(pool.days),
+                         'start': d0[0], 'end': d0[-1], 'cost': COST,
+                         'sample_drop': DROP, 'sample_dry': DRY},
+                'groups': {}}
         for k, rows in out.items():
-            slim[k] = [{'code': x['code'], 'day': x['day'], 'gap': x['gap'],
-                        'ent': {m: {str(N): v for N, v in d.items()}
-                                for m, d in x['ent'].items()}} for x in rows]
+            g = {}
+            for mode, _ in MODES:
+                for N in HORIZONS:
+                    st = stat(rows, mode, N)
+                    if st:
+                        g['%s_%d' % (mode, N)] = {kk: st[kk] for kk in
+                                                  ('n', 'days', 'avg', 'med', 'win',
+                                                   'ex', 'ex_day', 't')}
+            summ['groups'][k] = g
         p = os.path.join(BASE, 'goldpit_study.json')
         with open(p + '.tmp', 'w', encoding='utf-8') as f:
-            json.dump(slim, f, separators=(',', ':'))
+            json.dump(summ, f, ensure_ascii=False, separators=(',', ':'))
         os.replace(p + '.tmp', p)
-        print('\n[dump] %s（%d 组）' % (p, len(slim)))
+        print('\n[dump] %s（%d 组汇总）' % (p, len(summ['groups'])))
 
 
 if __name__ == '__main__':
