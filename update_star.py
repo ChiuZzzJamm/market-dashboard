@@ -91,6 +91,90 @@ BUY_SRC_ZH = {
 BUY_ORDER = ('chen_strict', 'duanban', 'bp', 'chen_loose')
 
 
+# ---------------------------------------------------------------- R101 开盘执行核对
+# 用户 2026-10-27 第 1 问：「不止是能看能复盘，还要能在通过开盘后的 15 分通过开盘精选
+# 给到能下单」。这一段的定位必须说清，否则会被误读成又一版选股清单：
+#
+#   timing_plan.py（16:00 数据步跑）→ 昨晚就把「挂什么价、挂哪只」定完了
+#   本段（9:45）→ **只核对**开盘价有没有跌破形态下沿、现价相对挂单价在哪，不改清单
+#
+# 为什么 9:45 不能再筛：回测（duanban_timing.py）里这套单笔毛利 +0.58%，
+# 买入价贵 0.5% 年化就从 +58.6% 掉到 −6.8%。9:45 相对 9:25 通常已偏 0.3~1%，
+# 「等 15 分钟看情况再决定」这个动作本身就把 alpha 吃光了。
+def build_timing_exec(D, quotes):
+    """读 data.js 的 timingPlan（昨晚生成），用 9:45 实时行情核对 → 执行表。
+
+    状态口径（只描述事实，不做推荐）：
+        go      开盘价仍在形态下沿之上 → 按限价挂单可成交
+        broken  开盘价已跌破形态下沿 → 形态作废，撤单
+        missed  开盘价已高于限价 → 挂单不会成交（不追）
+        市价参考 现价 vs 限价的位置，供用户判断是否还要补单
+    """
+    plan = (D.get('timingPlan') or {})
+    orders = plan.get('orders') or []
+    if not orders:
+        return None
+    today = datetime.now().strftime('%Y-%m-%d')
+    rows = []
+    for o in orders:
+        c = str(o.get('code') or '')
+        q = quotes.get(c) or {}
+        op = _num(q.get('open'))
+        last = _num(q.get('last'))
+        lim = _num(o.get('limit'))
+        floor = _num(o.get('floor'))
+        state, zh = 'unknown', '行情抓空'
+        if op is not None and floor is not None and lim is not None:
+            if op < floor:
+                state, zh = 'broken', '开盘已破形态下沿'
+            elif op > lim:
+                state, zh = 'missed', '开盘高于限价'
+            else:
+                state, zh = 'go', '开盘在限价内，可挂'
+        rows.append({
+            'code': c, 'name': o.get('name') or '', 'sector': o.get('sector') or '',
+            'limit': lim, 'floor': floor, 'stop': _num(o.get('stop')),
+            'tp': _num(o.get('tp')),
+            't1Close': _num(o.get('t1Close')), 'volRatio': o.get('volRatio'),
+            'ztDate': o.get('ztDate'),
+            'open': op, 'last': last,
+            'openPct': _num(q.get('openPct')),
+            'vsLimit': (round((op / lim - 1) * 100, 2) if (op and lim) else None),
+            'state': state, 'stateZh': zh,
+        })
+    n_go = sum(1 for r in rows if r['state'] == 'go')
+    n_broken = sum(1 for r in rows if r['state'] == 'broken')
+    n_missed = sum(1 for r in rows if r['state'] == 'missed')
+    bt = plan.get('bt') or {}
+    return {
+        'asOf': today,
+        'time': datetime.now().strftime('%H:%M'),
+        'tradeDate': plan.get('tradeDate'),
+        'buyDate': plan.get('buyDate'),
+        'n': len(rows),
+        'nGo': n_go, 'nBroken': n_broken, 'nMissed': n_missed,
+        'rows': rows,
+        'bt': bt,
+        'rule': (
+            '这是昨晚（%s 收盘后）就定好的挂单清单，本表只核对开盘有没有破位，**不改清单、不新增标的**。'
+            '「可挂」＝开盘价仍在形态下沿之上，按限价挂单能成交；'
+            '「已破下沿」＝形态作废，撤单不做；「高于限价」＝挂单不会成交，也不许追价。'
+            '回测口径是限价成交，追价的滑价会吃掉全部毛利：买入贵 0.5%%，年化从 +58.6%% 掉到 −6.8%%。'
+            % (plan.get('tradeDate') or '')
+        ),
+        'riskNote': (
+            # R101：唯一来源是 timing_plan.py 的 riskNote（随数据一起产出）。
+            # 这里不再硬编码一份——两处各写一份等于埋一个「改了一处、另一处还是旧数字」的雷。
+            plan.get('riskNote') or (
+                '止损距离偏宽是这套形态的固有代价：买价相对 T 日最低价中位 +9.2%、43%% 的单子超过 +10%%。'
+                '回测里 17.9%% 的笔触发止损、均亏 5.5%%，靠 46.5%% 的 +5%% 止盈覆盖。'
+                '所以**单笔仓位必须小**（每只 1/32 资金），不要因为「看着确定」就加重。'
+            )
+        ),
+        'source': 'timing_plan.py（16:00 生成）→ update_star.py（9:45 只做开盘核对）',
+    }
+
+
 def _num(x):
     """安全转 float：None / '' / NaN / 非数值一律 None（不做 0 兜底，0 是合法价格）。"""
     try:
@@ -896,6 +980,18 @@ def build_star(D, base=None):
                        "text": "买入清单生成失败（%s）——这是脚本故障，不代表今日无买点。" % _e,
                        "rule": "", "skipped": [], "slipPct": BUY_SLIP}
 
+    # ---- R101：时间口挂单清单的开盘核对（用户 2026-10-27 第 1 问「能下单」）----
+    # 清单由 16:00 的 timing_plan.py 生成，这里**只核对开盘价有没有破位**。
+    # 与上面 buyList 的分工：buyList 回答「此刻现价在不在买区」（9:45 看盘口径），
+    # timingExec 回答「昨晚挂的单今天能不能成、要不要撤」（挂单口径）。两者并存、互不替代。
+    timing_exec = None
+    try:
+        timing_exec = build_timing_exec(D, quotes)
+    except Exception as _e:                                   # noqa: BLE001
+        timing_exec = {"rows": [], "n": 0, "nGo": 0, "nBroken": 0, "nMissed": 0,
+                       "rule": "挂单清单核对失败（%s）——这是脚本故障，不是今日无单。" % _e,
+                       "riskNote": "", "bt": {}, "asOf": "", "time": ""}
+
     star = {
         "date": now.strftime("%Y-%m-%d"),
         "time": now.strftime("%H:%M"),
@@ -904,10 +1000,11 @@ def build_star(D, base=None):
         "picks": picks,
         "buyList": buy_rows,
         "buySummary": buy_summary,
+        "timingExec": timing_exec,
         "gapSummary": _gap_summary(picks),
         "tapeSummary": tape_summary,
         "pushText": push_text,
-        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波/吸筹池直接取标的；R100z85：技术池按池配额 防单池量纲垄断；R100z232：九门下线换横盘启动（配额 横盘启动3/谐波3/吸筹2）+ 新增 star.buyList 今日买入清单（三池买区/证伪价/目标/持有天数/仓位，不含离场提示）；R100z156：行业/资金接口抓空重试+显式降级；R100z192：picks 增 gapTag 开盘价位置标注 + star.gapSummary 分布，只标注不排序；R100z193：接入 tape.py 分时量价结构（均价线/跌破次数/下跌分钟量占比/爆量倍数），picks 增 tape 字段 + star.tapeSummary，动作口径由盘口结构决定，gapTag 降级为价格事实） + 自动化 AI 复核",
+        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波/吸筹池直接取标的；R100z85：技术池按池配额 防单池量纲垄断；R100z232：九门下线换横盘启动（配额 横盘启动3/谐波3/吸筹2）+ 新增 star.buyList 今日买入清单（三池买区/证伪价/目标/持有天数/仓位，不含离场提示）；R100z156：行业/资金接口抓空重试+显式降级；R100z192：picks 增 gapTag 开盘价位置标注 + star.gapSummary 分布，只标注不排序；R100z193：接入 tape.py 分时量价结构（均价线/跌破次数/下跌分钟量占比/爆量倍数），picks 增 tape 字段 + star.tapeSummary，动作口径由盘口结构决定，gapTag 降级为价格事实；R101：新增 star.timingExec——读 16:00 timing_plan.py 生成的挂单清单，用 9:45 实时行情核对开盘是否破位，只核对不改单） + 自动化 AI 复核",
     }
     return star, None
 

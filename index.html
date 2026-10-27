@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610271340"></script>
+<script src="data.js?v=202610271446"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -806,6 +806,46 @@
   .bl-rule { padding: 7px 11px; background: var(--bg-2); border-top: 1px solid var(--line);
     font-size: var(--fs-xs); color: var(--ink2); line-height: 1.7; }
   .bl-empty { padding: 9px 11px; font-size: var(--fs-sm); color: var(--ink2); line-height: 1.7; }
+  /* ===== R101：时限挂单（昨晚定单 → 今天开盘核对）=====
+     与 .bl-* 视觉上刻意区分（深色描边 + 主色头部）：这两张表语义不同，长得一样会被当成
+     「两份互相打架的清单」。这里回答的是「昨晚挂的单今天能不能成」，不是「现在买什么」。 */
+  .tb-wrap { margin: -4px 0 12px; border: 1.5px solid var(--accent-deep); border-radius: var(--r-block);
+    background: var(--paper); overflow: hidden; }
+  .tb-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+    padding: 8px 11px; background: var(--accent-deep); border-bottom: 1px solid var(--accent-deep);
+    font-size: var(--fs-sm); color: #fff; }
+  .tb-head b { font-size: var(--fs-base); color: #fff; }
+  .tb-note { padding: 5px 11px; font-size: var(--fs-xs); color: var(--ink2);
+    background: var(--bg-2); border-bottom: 1px solid var(--line); }
+  .tb-row { display: grid; gap: 4px 10px; padding: 8px 11px; align-items: baseline;
+    grid-template-columns: minmax(0,1.5fr) minmax(0,1fr) minmax(0,.85fr) minmax(0,.85fr) minmax(0,1.2fr);
+    border-bottom: 1px dashed var(--line); font-size: var(--fs-base); }
+  .tb-row:last-of-type { border-bottom: 0; }
+  .tb-th { display: grid; gap: 0 10px; padding: 5px 11px 4px; align-items: baseline;
+    grid-template-columns: minmax(0,1.5fr) minmax(0,1fr) minmax(0,.85fr) minmax(0,.85fr) minmax(0,1.2fr);
+    font-size: var(--fs-xs); color: var(--ink2); opacity: .8; border-bottom: 1px solid var(--line); }
+  .tb-th span { font-weight: 600; }
+  @media (max-width: 720px) {
+    .tb-row { grid-template-columns: minmax(0,1fr) minmax(0,1fr); font-size: var(--fs-sm); }
+    .tb-th { display: none; }
+  }
+  .tb-nm { font-weight: 700; color: var(--ink); display: flex; align-items: center;
+    gap: 5px; flex-wrap: wrap; min-width: 0; }
+  .tb-k { display: block; font-size: var(--fs-xs); color: var(--ink2); opacity: .75; }
+  .tb-v { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 700; }
+  .tb-st-go { color: var(--up); font-weight: 700; }
+  .tb-st-broken { color: var(--down); font-weight: 700; }
+  .tb-st-missed { color: #c77a12; font-weight: 700; }
+  /* pending：16:00 定单后到次日 9:45 核对前的那一晚。不是四档状态之一，
+     它只是「还没开盘」——所以用中性灰，不许染成绿或红，否则会被读成结论。 */
+  .tb-st-pending { color: var(--ink2); font-weight: 600; }
+  .tb-st-unknown { color: var(--ink2); }
+  .tb-rule { padding: 7px 11px; background: var(--bg-2); border-top: 1px solid var(--line);
+    font-size: var(--fs-xs); color: var(--ink2); line-height: 1.7; }
+  .tb-risk { padding: 7px 11px; background: rgba(199,122,18,.08); border-top: 1px solid var(--line);
+    font-size: var(--fs-xs); color: #8a5410; line-height: 1.7; }
+  .tb-bt { padding: 7px 11px; background: var(--accent-soft); border-top: 1px solid var(--line);
+    font-size: var(--fs-xs); color: var(--accent-deep); line-height: 1.7; font-variant-numeric: tabular-nums; }
   /* R91j: 近3日涨幅居前板块 TOP10 */
   .db-tb { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
   @media (max-width: 900px) { .db-tb { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -1381,6 +1421,34 @@
   .rv-bar.rv-na .rv-track { background: repeating-linear-gradient(135deg,#f3f6f9,#f3f6f9 4px,#e9eef3 4px,#e9eef3 8px); }
   .rv-bar.rv-na .rv-v { color: var(--ink2); }
   .rv-legend { font-size: var(--fs-xs); color: var(--ink2); line-height: 1.65; padding: 6px 2px 0; }
+  /* 2026-10-27 指数趋势状态卡。6 列：指数 / 距MA20 / MA20斜率 / 60日分位 / ATR / 档位。
+     列宽与 .rv-bar 同一套语言，只是把「条形」换成了「位置百分比」——趋势卡不需要条，
+     需要的是「多少」和「哪一侧」，两列带正负号的百分比比一根条更直接。 */
+  .ts-tbl { margin: 4px 0 2px; }
+  .ts-r { display: grid; grid-template-columns: minmax(0,1.3fr) 62px 66px 62px 54px 44px;
+          gap: 8px; align-items: center; padding: 6px 2px;
+          border-bottom: 1px dashed var(--line); font-size: var(--fs-sm); }
+  .ts-r:last-child { border-bottom: 0; }
+  .ts-hd { font-size: var(--fs-xs); color: var(--ink2); font-weight: 400; border-bottom-style: solid; }
+  .ts-hd > div { text-align: right; }
+  .ts-hd .ts-n { text-align: left; }
+  .ts-n { font-weight: 700; color: var(--ink); font-size: var(--fs-base); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ts-n small { display: block; font-weight: 400; font-size: var(--fs-xs); color: var(--ink2); }
+  .ts-v { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .ts-vd { text-align: right; font-size: var(--fs-xs); font-weight: 700; }
+  /* 档位配色：强/偏强 走涨色、偏弱/弱 走跌色、中性灰。A 股惯例，别反。 */
+  .ts-lv1 { color: #b0182c; }
+  .ts-lv2 { color: #f0435c; }
+  .ts-lv3 { color: var(--ink2); }
+  .ts-lv4 { color: #12a37e; }
+  .ts-lv5 { color: #0f7f61; }
+  /* 趋势档大字不再单独设字号：26px 既不在 --fs-* 阶梯上（G41 拦），又是裸 px（G42 拦），
+     而且它的优先级高于下面 @media 的 `.rv-hero b` 降级——窄屏根本没降下来。
+     现在统一继承 `.rv-hero b` 的 --fs-h1（窄屏 --fs-h2），与「指标复盘」那张 hero 同字号，
+     并排两张卡才像同一个产品。档位靠 .ts-lv* 的颜色区分，不靠字号。 */
+  /* 趋势压制仓位那句话：用实底提示条，不是又一串灰字——它是一条「今天别加仓」的结论。 */
+  .ts-cap { margin-top: 8px; padding: 7px 10px; border-radius: 8px; font-size: var(--fs-sm);
+            line-height: 1.6; color: #7a2e12; background: #fdf1ea; border: 1px solid #f3cdb9; }
   /* 长注收纳：默认收起，summary 就是那句「点开看口径」。details 自带的三角在各端渲染不一，统一换成 ▸/▾。 */
   .rv-det { margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 8px; }
   .rv-det > summary { cursor: pointer; font-size: var(--fs-sm); font-weight: 700; color: var(--accent-deep); list-style: none; }
@@ -1435,6 +1503,9 @@
     .rv-bar .rv-nm s { display: none; }
     .ll-rc-r { grid-template-columns: 40px minmax(0,1fr) 52px; gap: 5px 8px; }
     .ll-rc-r .ll-rc-n { grid-column: 1 / -1; }
+    /* 趋势表在窄屏砍到 4 列：档位的正负号已经说明了方向，ATR 与「MA20 斜率」让位。 */
+    .ts-r { grid-template-columns: minmax(0,1.2fr) 58px 58px 42px; gap: 6px; }
+    .ts-r .ts-v:nth-child(4), .ts-r .ts-v:nth-child(5) { display: none; }
   }
 </style>
 </head>
@@ -3116,6 +3187,73 @@ function strategyDisciplineHtml() {
   return html;
 }
 
+/* 2026-10-27：指数趋势状态卡（接线 trend_state.py 写的 data.js 顶层 trendState）。
+   为什么单独一张卡：体检指出「只有当日切片，大盘在 MA20 上方还是下方答不出来」——
+   而 **stkKlines 里 sh000001 一直有 90 根日线**，atr_stop 里也有 ma20/ma60，
+   单纯是没人把它们接成一句可读的结论。所以这不是新数据，是接线。
+
+   这张卡要回答三件事，缺一件就还是「看不出来」：
+     ① 现在什么位置（距 MA20 多少、60 日分位多少、MA20 朝上还是朝下）
+     ② 该开多大仓（趋势档 → 仓位上限，且真的压到了 strategy.positionBand 上）
+     ③ 五个指数分歧在哪（创业板/科创与上证的差，决定是小盘还是大盘的行情）
+   数字全部来自脚本，页面只做单位换算；trendState 缺失时整块不渲染（不白屏）。 */
+function renderTrendState() {
+  var T = (window.DASHBOARD_DATA || {}).trendState;
+  if (!T || !T.indices || !T.indices.length) return '';
+  var num = function (v) { var n = Number(v); return (v === null || v === undefined || v === '' || !isFinite(n)) ? null : n; };
+  var pc = function (v, d) { var n = num(v); return n === null ? '—' : (n > 0 ? '+' : '') + n.toFixed(d == null ? 2 : d) + '%'; };
+  var sgn = function (v) { var n = num(v); return n === null ? 'flat' : (n > 0 ? 'up' : (n < 0 ? 'down' : 'flat')); };
+  // 档位配色：强/偏强 红、中性 灰、偏弱/弱 绿（A 股惯例，涨红跌绿）
+  var lvCls = { '强': 'ts-lv1', '偏强': 'ts-lv2', '中性': 'ts-lv3', '偏弱': 'ts-lv4', '弱': 'ts-lv5' };
+
+  var h = '<div class="card"><h2 class="td-h2">大盘趋势状态' +
+    (T.asOf ? ' <span class="h2-date">' + esc(T.asOf) + '</span>' : '') +
+    '<span class="src-tag td-tag">指数层</span></h2>';
+
+  h += '<div class="rv-hero"><b class="' + (lvCls[T.marketLevel] || 'ts-lv3') + '">' + esc(T.marketLevel || '—') + '</b>' +
+    '<span>全市场趋势档，仓位上限 <em>' + (num(T.marketCapPct) === null ? '—' : T.marketCapPct + '%') + '</em></span>' +
+    '<i>档位＝收盘 vs MA20 × MA20 近 5 日斜率 × 近 60 日分位，五个指数取中位数</i></div>';
+
+  h += '<div class="ts-tbl"><div class="ts-r ts-hd">' +
+    '<div class="ts-n">指数</div><div class="ts-v">距 MA20</div><div class="ts-v">MA20 斜率</div>' +
+    '<div class="ts-v">60 日分位</div><div class="ts-v">波动 ATR</div><div class="ts-vd">档位</div></div>';
+  T.indices.forEach(function (x) {
+    var tip = x.name + '｜收盘 ' + (num(x.close) === null ? '—' : x.close) +
+      '｜MA20 ' + (num(x.ma20) === null ? '—' : x.ma20) +
+      '｜MA60 ' + (num(x.ma60) === null ? '—' : x.ma60) +
+      '｜60 日区间 ' + (num(x.pos60Low) === null ? '—' : x.pos60Low) + ' ~ ' +
+      (num(x.pos60High) === null ? '—' : x.pos60High) +
+      '｜结构 ' + (x.struct || '—') +
+      '｜连' + ((num(x.streak) || 0) >= 0 ? '涨' : '跌') + ' ' + Math.abs(num(x.streak) || 0) + ' 日';
+    h += '<div class="ts-r" title="' + escAttr(tip) + '">' +
+      '<div class="ts-n">' + esc(x.name) +
+        '<small>' + esc(x.struct || '') + '</small></div>' +
+      '<div class="ts-v ' + sgn(x.vsMa20Pct) + '">' + pc(x.vsMa20Pct) + '</div>' +
+      '<div class="ts-v ' + sgn(x.ma20Slope5) + '">' + pc(x.ma20Slope5) + '</div>' +
+      '<div class="ts-v">' + (num(x.pos60) === null ? '—' : x.pos60.toFixed(0) + '%') + '</div>' +
+      '<div class="ts-v flat">' + (num(x.atr20) === null ? '—' : x.atr20.toFixed(2) + '%') + '</div>' +
+      '<div class="ts-vd ' + (lvCls[x.level] || 'ts-lv3') + '">' + esc(x.level || '—') + '</div></div>';
+  });
+  h += '</div>';
+
+  if (T.text) h += '<div class="rv-legend">' + esc(T.text) + '</div>';
+
+  // 仓位纪律真的被压下去了没有——只在趋势上限生效时写，避免读者以为每轮都这样
+  var st = (window.DASHBOARD_DATA || {}).strategy || {};
+  var pb = st.positionBand || {};
+  if (pb.trendCapPct != null && pb.source === 'cal_factor+trend') {
+    h += '<div class="ts-cap">⛔ 仓位已被趋势压制：日历因子原本给出 ' +
+      esc(pb.text || '') + '，趋势档「' + esc(pb.trendLevel || '') + '」只允许开到 ' +
+      pb.trendCapPct + '%。位置决定仓位，不是情绪决定仓位。</div>';
+  } else if (pb.trendCapPct != null) {
+    h += '<div class="rv-legend">趋势上限 ' + pb.trendCapPct + '% 未严格于日历窗口，本次不生效。</div>';
+  }
+
+  h += '<details class="rv-det"><summary>口径 <span>· 三条阈值 / 为什么不给涨跌预测</span></summary>' +
+    '<div class="pf-sub">' + esc(T.rule || '') + '</div></details></div>';
+  return h;
+}
+
 // R100z157：机械候选快照说明行（数据由 annotate_pool_meta.py 确定性写入 aiPrediction.poolMeta）。
 // 目的：让「这批 8 只是机械池选出来的、还是 AI 自选补位」在页面直接可查，并写明候选集有效期。
 function poolMetaLine(pm) {
@@ -3183,6 +3321,7 @@ function renderAiPrediction() {
     '<div id="st-track-box"></div>' +
     riskLineHtml(p) +
     strategyDisciplineHtml() +
+    renderTrendState() +
     '<div class="ai-grid">';
   // R100z82：标的层验证按板块名建索引（verification.stockCheck.sector 与 aiPrediction.sectors 同名），
   // 供下方各板块卡底部渲染「8 只标的平均/方向一致率/主力净额」行。
@@ -5544,6 +5683,95 @@ function renderDuanban() {
           return esc(String(p.name || p.code)) + ' ' + (g > 0 ? '+' : '') + g.toFixed(1) + '%';
         }).join('、')
       : (_gapKnown ? '今日精选无开盘涨超 +1% 的标的' : '开盘价缺失，今日无法判定');
+    // ===== R101：时间口挂单清单（用户 2026-10-27 第 1 问「能下单」）=====
+    // 数据源 star.timingExec（update_star.py 读 timingPlan 后用 9:45 实时行情核对）。
+    // 与下面 buyList 的分工必须讲清，否则会被读成两份互相打架的清单：
+    //   timingExec = 昨晚定的挂单，今天开盘能不能成 / 要不要撤（**执行核对**）
+    //   buyList    = 此刻现价在不在买区（**盘中看盘口径**）
+    // 三条铁律：
+    //   ① 这里只核对、不新增标的——回测口径是限价成交，9:45 现挑的票不在回测里；
+    //   ② 「已破下沿」= 形态作废撤单，不是「跌得更多更便宜」；
+    //   ③ 止损距离偏宽是这套形态的固有代价，必须显式写出来，不能只报收益。
+    var _timingHtml = (function () {
+      // R101 回退：timingExec 由 9:45 的 update_star.py 写（要等开盘价才能核对），
+      // 而 timingPlan 由前一晚 16:00 写（**不含开盘价**）。所以 16:00 之后到次日 9:45 之间
+      // 这一段，页面只有 timingPlan 可用——必须先渲染它，否则用户 22:00 打开看到空白，
+      // 会以为「今晚什么都没生成」，而实际是 8 只单已经定好了。
+      // 回退态与核对态的唯一差别：状态列写「未开盘」，不给 go/broken/missed 的假结论
+      // （昨晚不可能知道今开，写「可挂」就是编）。
+      var te = st.timingExec;
+      var fallback = false;
+      if (!te || !te.rows || !te.rows.length) {
+        var tp = (window.DASHBOARD_DATA || {}).timingPlan;
+        if (!tp || !(tp.orders || []).length) return '';
+        // 把 orders 映射成与 rows 同构的形状，避免下面两套渲染分支
+        te = {
+          rows: (tp.orders || []).map(function (o) {
+            return {
+              code: o.code, name: o.name, limit: o.limit, floor: o.floor,
+              stop: o.stop, tp: o.tp, t1Close: o.t1Close, volRatio: o.volRatio,
+              ztDate: o.ztDate, open: null, vsLimit: null,
+              state: 'pending', stateZh: '未开盘·照限价挂'
+            };
+          }),
+          n: (tp.orders || []).length, nGo: 0, nBroken: 0, nMissed: 0,
+          tradeDate: tp.tradeDate, buyDate: tp.buyDate, time: null,
+          rule: tp.rule, riskNote: tp.riskNote, bt: tp.bt
+        };
+        fallback = true;
+      }
+      var p2 = function (v) {
+        return (v === null || v === undefined || v === '' || !isFinite(Number(v))) ? '—' : Number(v).toFixed(2);
+      };
+      var sg = function (v) {
+        if (v === null || v === undefined || v === '' || !isFinite(Number(v))) return '';
+        var n = Number(v);
+        return (n > 0 ? '+' : '') + n.toFixed(2) + '%';
+      };
+      var clsMap = { go: 'tb-st-go', broken: 'tb-st-broken', missed: 'tb-st-missed', pending: 'tb-st-pending' };
+      var h = '<div class="tb-wrap"><div class="tb-head"><b>🎯 时限挂单 · 昨晚定单，今天挂</b>' +
+        (fallback
+          ? '<span>已定单 ' + te.n + ' 只 · 明早开盘按限价挂 · 未开盘，暂无核对结果</span>'
+          : '<span>挂单 ' + te.n + ' 只 · 可挂 ' + (te.nGo || 0) +
+            ' · 已破下沿 ' + (te.nBroken || 0) + ' · 高于限价 ' + (te.nMissed || 0) + '</span>') +
+        '</div>' +
+        '<div class="tb-note">基准日 ' + esc(String(te.tradeDate || '')) + ' 收盘定价 → 下单日 ' +
+        esc(String(te.buyDate || '')) + ' 开盘前挂单' +
+        (fallback ? '（9:45 自动核对开盘价后更新状态）' : '（' + esc(String(te.time || '')) + ' 核对）') +
+        '</div>' +
+        '<div class="tb-th"><span>标的 · 涨停日</span><span>限价（挂这个价）</span>' +
+        '<span>形态下沿</span><span>止盈</span><span>' + (fallback ? '昨收 · 状态' : '今开 · 状态') + '</span></div>';
+      te.rows.forEach(function (r) {
+        var cls = clsMap[r.state] || 'tb-st-unknown';
+        h += '<div class="tb-row">' +
+          '<div><div class="tb-nm">' + esc(String(r.name || '')) +
+            '<span style="font-weight:400;color:var(--ink2);font-size:var(--fs-xs);">' +
+            esc(String(r.code || '')) + '</span></div>' +
+            '<span class="tb-k">涨停 ' + esc(String(r.ztDate || '').slice(5)) +
+            ' · 放量 ' + (r.volRatio == null ? '—' : Number(r.volRatio).toFixed(2)) + ' 倍</span></div>' +
+          '<div><span class="tb-v">' + p2(r.limit) + '</span>' +
+            '<span class="tb-k">昨收 ' + p2(r.t1Close) + '</span></div>' +
+          '<div><span class="tb-v">' + p2(r.floor) + '</span>' +
+            '<span class="tb-k">破了就撤</span></div>' +
+          '<div><span class="tb-v">' + p2(r.tp) + '</span>' +
+            '<span class="tb-k">+5% 触及即平</span></div>' +
+          '<div><span class="tb-v">' + (fallback ? p2(r.t1Close) : p2(r.open)) + sg(r.vsLimit) + '</span>' +
+            '<span class="tb-k ' + cls + '">' + esc(String(r.stateZh || '')) + '</span></div>' +
+          '</div>';
+      });
+      if (te.rule) h += '<div class="tb-rule">' + esc(String(te.rule)) + '</div>';
+      if (te.riskNote) h += '<div class="tb-risk">' + esc(String(te.riskNote)) + '</div>';
+      var b = te.bt;
+      if (b && b.n) {
+        h += '<div class="tb-bt">回测出处：' +
+          esc(String((b.span || []).join(' ~ '))) + ' · ' + b.n + ' 笔 · 胜率 ' +
+          Number(b.win).toFixed(1) + '% · 均 ' + Number(b.avg).toFixed(2) +
+          '% · 年化 ' + (Number(b.ann) * 100).toFixed(1) + '% · 最大回撤 ' +
+          (Number(b.mdd) * 100).toFixed(1) + '%（限价成交、每只 1/32 资金、含双边 0.16% 成本）</div>';
+      }
+      h += '</div>';
+      return h;
+    })();
     // ===== R100z232：今日买入清单（用户 2026-10-26 第 4 项）=====
     // 数据源 star.buyList / star.buySummary（update_star.py 的 build_buy_list 生成）。
     // 三条铁律，页面不许自己算：
@@ -5633,6 +5861,9 @@ function renderDuanban() {
       '<div class="db-sub">' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：断板池按「板块情绪正向+主力净流入正向」挂钩+上涨概率降序，并可从谐波/横盘启动/吸筹/陈学长池直接取标的（名额 横盘启动 3 · 谐波 3 · 吸筹 2 · 陈学长 2）；弹窗与池内一致）</div>' +
       // R100z232：买入清单紧跟副标题——这是全卡唯一「能直接下单」的结论段，
       // 放在开盘价/盘口/深度分析之前，读者不用滚过三段分析才看到价。
+      // R101：时限挂单排在买入清单**之前**——它是昨晚就定好的、可以直接照抄下单的那份；
+      // buyList 是 9:45 盘中口径，属于「还能不能补」的第二层，不能反过来压在前面。
+      _timingHtml +
       _buyHtml +
       // R100z193（2026-10-24 用户口径）：开盘价位置**不是强弱信号**，只是价格事实；
       // 动作口径下移到「盘口结构」那一行（tape.py 的分时量价诊断）。

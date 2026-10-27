@@ -179,6 +179,12 @@ EMPTY_WHITELIST = [
      "R100z242：开盘精选个股的行业映射随行情源覆盖度浮动，个别票当天查不到行业即留空串。"
      "前端 line 1733 用 `if (x && x.code && x.sector && !M[...])` 过滤——空 sector 直接不参与"
      "映射，不渲染空标签；不豁免会让 WARN 随覆盖率每天抖动"),
+    # R101：趋势档的走强/走弱清单——空数组是「五个指数全在同一侧」的正常结果，不是漏跑。
+    (r"trendState\.reasons\.(weak|strong)$",
+     "R101：reasons.weak / reasons.strong 列出站在 MA20 弱侧 / 强侧的指数名。"
+     "五个指数全在弱侧时 strong 为空、全在强侧时 weak 为空——**这正是全市场单边状态的证据**，"
+     "不是取数失败。2026-10-27 实测 five 指数全部空头排列，strong 就该是空数组。"
+     "前端 renderTrendState 只读 indices/marketLevel/marketCapPct，不引用 reasons（不渲染空段）"),
 ]
 
 DATA_KEYS_REQUIRED = [
@@ -268,6 +274,20 @@ PRODUCT_OWNERSHIP = {
     "stopTrack": {
         "require": ("stopTrack", "止损跟踪"),
         "note": "R100z61b 新增的止损台账统计卡，只能由 stop_tracker.py 刷写，AI 禁手写",
+    },
+    "trendState": {
+        "require": ("trendState", "趋势档", "仓位上限", "空头排列"),
+        "note": ("R101：五指数趋势档（trend_state.py 从 stkKlines 现算，零网络），"
+                 "作为 strategy.positionBand 的**上限约束**。为什么必须有：日历因子只回答"
+                 "「今天什么日子」，回答不了「大盘在 MA20 哪一侧」；2026-10-27 实测五个指数"
+                 "全部空头排列时，日历仍给「6-7 成」仓位——这是会把账户打爆的缺陷。"
+                 "只由 trend_state.py --write 写，AI 禁手写。"),
+    },
+    "timingPlan": {
+        "require": ("timingPlan", "时限挂单", "挂单清单", "timing_plan"),
+        "note": ("R101：断板反包「时间口」挂单清单（timing_plan.py 16:00 数据步产出，"
+                 "口径唯一来源 duanban_timing.py）。只在**前一日收盘后**定单，9:45 的 "
+                 "update_star 只做开盘核对（star.timingExec），不改单、不加票。"),
     },
     "fullScan": {
         "require": (), "proof": "intermediate",
