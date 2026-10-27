@@ -60,3 +60,6 @@ _weekend_*.py
 .kline_hist/
 .kline_hist_list.json
 .kline_hist_miss.json
+
+# 研究脚本的原始统计产物（goldpit_study.py --dump，单个可达数百 MB，公开仓库绝不提交）
+goldpit_study.json

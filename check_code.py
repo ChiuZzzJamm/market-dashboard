@@ -114,10 +114,13 @@ NON_DATA_WRITERS = {
     'backtest_indicators.py': '原子写的是 .bt_cache K线缓存 + backtest_report.md/result.json，从不碰 data.js',
     'board_alias.py': 'R100z224：原子写的是 index.html 里的 pctAlias 段（从 board_alias.json 生成），'
                       '读 data.js 只为 --add 校验目标板块是否存在',
+    'goldpit_study.py': 'R100z234：黄金坑原型研究脚本，原子写的是 goldpit_study.json（--dump 时才写，'
+                        '可达数百 MB、已在 .gitignore 排除），纯离线统计、从不碰 data.js、不进任何自动化',
 }
 
 # 死脚本白名单：合法的「手工跑、不进自动化」工具，写明用途才准留
 DEAD_OK = {
+    'goldpit_study.py': '「黄金坑」形态/外盘映射原型研究，手工触发（--dump 才落盘），不进流水线',
     'fix_dd_prefix.py': '一次性修数工具（历史 DD 前缀），手工触发',
     'track_calibration.py': '校准曲线统计，手工触发',
     'score_openoutlook.py': '开盘前瞻打分，手工/被 import',

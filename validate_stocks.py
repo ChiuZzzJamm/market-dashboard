@@ -1288,6 +1288,15 @@ def check_star_module(D):
                     # R100z232：九门下线，'pw' 换成 'bp'；两个都留着是因为历史 star.picks 里还有 'pw'
                     if src in ('bp', 'pw', 'hz', 'acc') and name_ok:
                         continue
+                    # R100z233：src='chen'（陈学长严格/放宽池，update_star.py 自 10-26 起会选）
+                    # 之前不在白名单 → 每天误报「非合规来源」。这里改为**核成员**而非只信 src：
+                    # 必须真在 chenPool.strict/loose 里才放行，堵住「随便标个 chen 就绕过」的口子。
+                    if src == 'chen' and name_ok:
+                        _ch = D.get('chenPool') or {}
+                        _ch_codes = {str(e.get('code')) for _k in ('strict', 'loose')
+                                     for e in (_ch.get(_k) or []) if isinstance(e, dict)}
+                        if c in _ch_codes:
+                            continue
                     warns.append(f"duanban.star.picks {c} {p.get('name')} 不在断板反包双池内且非合规来源标的（精选只能从双池/板块动量/技术池筛）")
             if not str(star.get('pushText') or '').strip():
                 warns.append("duanban.star.pushText 为空（微信推送深度分析缺失，10:00 自动化 AI 须补写）")
