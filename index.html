@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610270923"></script>
+<script src="data.js?v=202610270936"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1282,6 +1282,11 @@
   .ll-rc-sum b.down { color: var(--down); }
   /* t<2 时给「不显著」一个可见样式：用中性灰底而不是警告红——它说明的是
      「证据还不够」，不是「这套规则错了」，红色会让人误读成负期望。 */
+  /* T+0/T+1 口径对照行：这条必须显眼——它解释「为什么主页数字比历史回测小」。 */
+  .ll-t0 { padding: 8px 12px; font-size: var(--fs-sm); color: var(--ink2); line-height: 1.8;
+           background: #fffaf2; border-top: 1px solid var(--line); }
+  .ll-t0 b { color: var(--ink); }
+  .ll-t0 .ll-warn { color: #b4541e; }
   .ll-bt .ll-sig { display: inline-block; margin-left: 6px; padding: 0 5px;
                    border-radius: 4px; background: var(--line); color: var(--ink2);
                    font-size: var(--fs-xs); font-weight: 400; vertical-align: 2px; }
@@ -3111,7 +3116,17 @@ function renderAiPrediction() {
   });
   // R100f：「谐波共振」横幅已按用户要求移除（2026-09-28），谐波交叉徽标保留在谐波模块内
   var html = '<div class="ai-card"><div class="ai-head"><h2>AI 预测分析' + (p.date ? '<span class="h2-date">' + esc(p.date) + '</span>' : '') + '</h2></div>' +
-    '<div class="ai-summary">' + (p.indexLine ? esc(p.indexLine) + '。' : '') + '通过隔夜美股各板块涨跌推导今日 A 股强弱方向：' + esc(p.summary) + '</div>' +
+    '<div class="ai-summary">' + (p.indexLine ? esc(p.indexLine) + '。' : '') +
+      // 2026-10-27 用户追问「隔夜外部利好 + 昨日资金流出，为什么还判承压」——
+      // 原句「推导今日 A 股强弱方向」是错的说法：direction 由昨日资金映射、不预测今日。
+      // 这里如实改成「描述昨日」，并在下面单独给一段实证，讲清「昨日大跌 → 次日倾向反弹」。
+      '板块方向取自<b>昨日</b>资金三重确认（不预测今日）：' + esc(p.summary) + '</div>' +
+    '<div class="db-ref-sum">为什么不是「预测」：全样本（48 个板块 × 90 个交易日）里，板块当日涨幅的' +
+      '次日自相关只有 <b>−0.026</b>、今日前十明日仍在前十仅 <b>24.3%</b>——猜方向没有 edge。' +
+      '但「昨日大跌之后」是个例外：昨日板块跌超 2.5% 的 ' +
+      '<b>472</b> 个样本，次日均值 <b>+0.20%</b>、胜率 <b>56.1%</b>，而其余交易日是 −0.12%、49.9%。' +
+      '所以昨日大跌＋隔夜外部同向利好，方向上偏<b>修复</b>而不是继续承压；' +
+      '能不能兑现要看开盘能否放量收复昨日跌幅（缩量下的反抽不算修复）。</div>' +
     poolMetaLine(p.poolMeta) +
     // R100z163（用户 2026-10-24 问「AI 预测和清单是否冲突」）：这里点明分工，避免读者把
     // 「每板块 8 只候选」当成买入清单——候选是给人看板块强弱的，买不买看开盘精选的买入清单。
@@ -3140,7 +3155,11 @@ function renderAiPrediction() {
     var _pm = _pmMap[s.sector] || null;
     html += '<div class="ai-item"><div class="row1">' +
       '<span class="sec-nm">' + esc(s.sector) + '</span>' +
-      '<span class="dir-badge ' + (isUp ? 'dir-up' : 'dir-down') + '">预计' + esc(s.direction) + '</span>' +
+      // 2026-10-27 用户指出语义矛盾：徽章写「预计走强/预计承压」，但 direction 是
+      // 由昨日 fundCheck.passed 映射出来的「昨天钱进没进来」，`logic` 里也明写「这是描述昨天、
+      // 不是预言今天」。既然不预测，就不能叫「预计」——改成「昨日」，并且下游两处
+      // 引用（db-ref-sum）同步。改词不改数据：direction 的取值与映射规则一个字没动。
+      '<span class="dir-badge ' + (isUp ? 'dir-up' : 'dir-down') + '">昨日' + esc(s.direction) + '</span>' +
       '<span class="conf-badge ' + confCls + '">' + esc(confZh(s.confidence)) + '</span>' +
       (_pm ? '<span class="pool-tag" title="机械池该板块候选 ' + _pm.poolN + ' 只，本板块 8 只中 ' + _pm.hit + ' 只来自机械候选">机械 ' + _pm.hit + '/' + _pm.picked + '</span>' : '') +
       expBadge(s.exp) +
@@ -4306,7 +4325,7 @@ function stkNewsHtml(code) {
   }
   if (aiHit) {
     h += '<div class="db-ref-p" style="margin-top:6px;"><b>AI 预测 · ' + esc(aiHit.sector || '') + '：</b>' +
-      '<div class="db-ref-sum">预计' + esc(aiHit.direction || '') + ' · ' + esc(confZh(aiHit.confidence)) + '</div>' +
+      '<div class="db-ref-sum">昨日' + esc(aiHit.direction || '') + ' · ' + esc(confZh(aiHit.confidence)) + '</div>' +
       (aiHit.usDriver ? '<div class="db-ref-sum">隔夜驱动：' + esc(aiHit.usDriver) + '</div>' : '') +
       (aiHit.logic ? '<div class="db-ref-sum">映射逻辑：' + esc(aiHit.logic) + '</div>' : '') + '</div>';
     if (aiHit.deduce) h += renderDeduce(aiHit.deduce, true);
@@ -4380,7 +4399,7 @@ function sectorNewsHtml(name, market) {
   // AI 预测
   if (aiHit) {
     h += '<div class="db-ref-p" style="margin-top:6px;"><b>AI 预测 · ' + esc(aiHit.sector || '') + '：</b>' +
-      '<div class="db-ref-sum">预计' + esc(aiHit.direction || '') + ' · ' + esc(confZh(aiHit.confidence)) + '</div>' +
+      '<div class="db-ref-sum">昨日' + esc(aiHit.direction || '') + ' · ' + esc(confZh(aiHit.confidence)) + '</div>' +
       (aiHit.usDriver ? '<div class="db-ref-sum">隔夜驱动：' + esc(aiHit.usDriver) + '</div>' : '') +
       (aiHit.logic ? '<div class="db-ref-sum">映射逻辑：' + esc(aiHit.logic) + '</div>' : '') + '</div>';
     if (aiHit.deduce) h += renderDeduce(aiHit.deduce, true);
@@ -6448,9 +6467,12 @@ function renderLeadLag() {
 
     if (bt.main) {
       out += '<div class="ll-bt">' +
-        '<div><div class="ll-bt-k">' + esc(String(mainEx.name || '')) + '（首选）</div>' +
+        // 2026-10-27 用户抓到的硬伤：原来的「当日收盘卖」是 **T+0**，A 股当日买当日不可卖，
+        // 那个 +0.95% 在实盘根本拿不到（换成合法 T+1 只剩 +0.19%~+0.70%）。
+        // 现在主口径一律 T+1，标题里把「T+1」写出来，不让读者再自己去推。
+        '<div><div class="ll-bt-k">' + esc(String(mainEx.name || '')) + '（T+1 · 主口径）</div>' +
         '<div class="ll-bt-v ' + _ls(mainEx.ret) + '">' + _lp(mainEx.ret) + '<small>胜率 ' + _lr(mainEx.win) + '</small></div></div>' +
-        '<div><div class="ll-bt-k">' + esc(String(altEx.name || '')) + '（备选）</div>' +
+        '<div><div class="ll-bt-k">' + esc(String(altEx.name || '')) + '（T+1 · 最保守）</div>' +
         '<div class="ll-bt-v ' + _ls(altEx.ret) + '">' + _lp(altEx.ret) + '<small>胜率 ' + _lr(altEx.win) + '</small></div></div>' +
         // 2026-10-27 用户问「这个是什么，需要删吗」——查下来最该改的就是这一格：
         // 原来只显示 1.10，没有任何「这不显著」的标记，而「胜率 61.8%」摆在最显眼处，
@@ -6464,6 +6486,18 @@ function renderLeadLag() {
         '<div><div class="ll-bt-k">有信号的天数</div>' +
         '<div class="ll-bt-v">' + (bt.signalDays || 0) + '<small>/ ' + (bt.days || 0) + ' 日</small></div></div>' +
         '</div>';
+      // T+0 对照：把「原口径虚高了多少」直接摆出来。不这么写，读者会以为这套规则
+      // 真有 +1% 的日收益，而那是当天买当天卖才有的数字。
+      var t0i = bt.t0Invalid || {};
+      var t2g = bt.t2 || {};
+      if (t0i.ret != null) {
+        out += '<div class="ll-t0">口径对照：' +
+          'T+0 当日收盘卖 <b>' + _lp(t0i.ret) + '</b>（胜率 ' + _lr(t0i.win) +
+          '，<b class="ll-warn">A 股 T+1，这个价格实盘拿不到</b>）' +
+          '｜T+1 当日买次日卖 <b>' + _lp(mainEx.ret) + '</b>' +
+          (t2g.ret != null ? '｜T+2 收盘卖 <b>' + _lp(t2g.ret) + '</b>' : '') +
+          '。两者之差就是「隔夜风险」的实际代价，不能拿前者当业绩。</div>';
+      }
 
       var rc = bt.recent || [];
       if (rc.length) {
