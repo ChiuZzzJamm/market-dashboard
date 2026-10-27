@@ -567,7 +567,11 @@ def build(targets, days=NEWS_DAYS):
             nl.append({
                 'date': x.get('date') or '',
                 'title': title[:70],
-                'column': x.get('column') or '',
+                # R100z242：column（公告栏位，如「上交所」「公司公告」）取不到时**不写这个键**，
+                # 而不是写空串。前端读法是 `n.column ? ' · '+n.column : ' '`，缺键与空串
+                # 渲染完全一致；但空串会被 audit G9 判成「白名单外空内容」，每天固定刷
+                # 3~6 条假 WARN，久了闸门就被无视。同一原则已用于 notices/news 两个键（R100z150）。
+                **({'column': x['column']} if x.get('column') else {}),
                 'dir': cd.classify_notice(x.get('title')) or 'neutral',
             })
         nw = news.get(code) or []

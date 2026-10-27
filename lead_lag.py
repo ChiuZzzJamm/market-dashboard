@@ -505,7 +505,8 @@ def backtest(D, cost=0.20):
     d1, d2, sig = [], [], []
     by_month = {}
     recent = []
-    for d in days[:-2]:                    # 需要 i+1（T+1）与 i+2（T+2），末两天不参与
+    pending = []                            # 已出信号但还没到结算日（T+1/T+2 未发生）
+    for d in days:                          # 全窗口；结算不足的日子进 pending，不进统计
         q, _ = replay_quotes(D, d, bars_map=bars_map, names=names)
         if not q:
             continue
@@ -532,6 +533,12 @@ def backtest(D, cost=0.20):
             if i + 2 < len(b):
                 cur3.append(round((b[i + 2][2] - entry) / entry * 100 - cost, 2))
         if not cur1:
+            # 2026-10-27 修：原来 `for d in days[:-2]` 直接把末两天排除，导致「昨天出的信号」
+            # 在页面上永远不存在——用户 10-27 看到末笔是 10-21，实际 10-26 有 4 只命中。
+            # 这不是「没出手」，是回测为了等 T+1/T+2 结算把它们截掉了。
+            # 现在把这类日子单独记成 pending，页面明确标「待结算」，而不是假装没发生。
+            pending.append({'date': d, 'n': len(node['picks']),
+                            'names': [str(p.get('name') or p['code']) for p in node['picks']][:6]})
             continue
         r0 += cur0
         r1 += cur1
@@ -564,6 +571,7 @@ def backtest(D, cost=0.20):
         'samples': len(r1),
         'cost': cost,
         'recent': recent[-6:],
+        'pending': pending[-3:],        # 最近 3 个「已出信号、未结算」的日子
         # main = 次日收盘卖（T+1，主口径）；alt = 次日开盘卖（T+1，最保守）
         'main': {'name': '次日收盘卖', 'ret': round(sum(r1) / len(r1), 2),
                  'win': _wr(r1), 't': _tstat(r1), 'tDaily': _tstat(d1),
@@ -586,11 +594,18 @@ def backtest(D, cost=0.20):
 
 
 def _bt_sig(D, cost=0.20):
-    """回测缓存签名：数据窗口一变就重算。只认「数据 + 规则」，不认时间。"""
+    """回测缓存签名：数据窗口一变就重算。只认「数据 + 规则」，不认时间。
+
+    前缀是**回测算法本身的版本**，不是页面口径版本：只要 backtest() 的算法变了
+    （哪怕数据一字未改、参数一字未改），就必须手动抬这一位，否则缓存永远算的是旧逻辑。
+    2026-10-27：v2 → v3，因为循环从 `days[:-2]` 改成 `days`（末两天不再被截断，
+    新增 pending 待结算），旧缓存里根本没有 pending 字段，页面上「末笔 10-21」
+    会一直停在那儿——这正是用户问「这几天是没出手吗」的根因。
+    """
     K = D.get('stkKlines') or {}
     bars = K.get('600000') or []
     last = str(bars[-1][0]) if bars else ''
-    return 'v2|%s|%d|%s|%s|%s|%.2f' % (
+    return 'v3|%s|%d|%s|%s|%s|%.2f' % (
         last, len(K), SEC_GAP_MIN, LAG_MIN, GAP_TRIM, cost)
 
 

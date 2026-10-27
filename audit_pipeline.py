@@ -165,6 +165,24 @@ EMPTY_WHITELIST = [
     (r"atrStops\.skipped$",
      "R100z160：atr_stops 没有「K 线不足被跳过」的标的时为空数组（正常日度状态，不是漏跑）；"
      "被跳过的票根本不会进 atrStops.items，前端只读 items、不引用 skipped"),
+    (r"etfFlow\.failed$",
+     "R100z242：etf_flow 的 failed 只在「价×份额 ≠ 总市值（>2%）」时才有值；"
+     "空数组＝8 只全部通过交叉校验，是最好状态而非漏跑。"
+     "前端只在 header 显示抓取失败只数，0 只不渲染任何提示"),
+    # --- 2026-10-27 清理：这 4 处长期报假 WARN，逐条核实前端都有空值兜底后登记 ---
+    (r"ashare\.lhb\.seatRepeat$",
+     "R100z195：seatRepeat 只在「同一营业部席位同时净买 ≥2 只」时才有值，空数组＝当日没有"
+     "这种席位结构，是常态。前端 `if (l.seatRepeat && l.seatRepeat.length)` 才渲染，空值不渲染"),
+    (r"strategy\.risks$",
+     "R100z242：strategy.risks 无风险条目时为空数组；前端 `(st.risks || []).map(...).filter(Boolean)` "
+     "再 slice(0,6)，空数组渲染出空串、不占版面"),
+    (r"chenPool\.failedCodes$",
+     "R100z218：failedCodes 只在「K 线缺口导致取不到价」时才有值，空数组＝全部标的取数正常。"
+     "前端 `var fc = c.failedCodes || []` 后 `if (fc.length)` 才渲染⚠️行"),
+    (r"duanban\.star\.picks\[\d+\]\.sector$",
+     "R100z242：开盘精选个股的行业映射随行情源覆盖度浮动，个别票当天查不到行业即留空串。"
+     "前端 line 1733 用 `if (x && x.code && x.sector && !M[...])` 过滤——空 sector 直接不参与"
+     "映射，不渲染空标签；不豁免会让 WARN 随覆盖率每天抖动"),
 ]
 
 DATA_KEYS_REQUIRED = [
@@ -312,6 +330,15 @@ PRODUCT_OWNERSHIP = {
                 "结算成跨日命中率：按置信度、按方向、近 5 日分层，并**按阈值自动生成使用建议**（不许人手写结论）。"
                 "16:00 数据步点名运行；前端「预测复盘 · 谁准谁不准」卡渲染（renderForecastScore）。"
                 "存在理由：此前页面只有 AI 自己写的当日总结，没有累计命中率，用户无从判断该信几分。",
+    },
+    "etfFlow": {
+        "require": ("etfFlow", "etf_flow"),
+        "note": "R100z242（用户 2026-10-27「加在主力资金模块下面」）：etf_flow.py 抓 8 只头部宽基 ETF 的"
+                "**份额日变动**（腾讯 qt.gtimg.cn，价×份额与总市值交叉校验 <0.02%，校验不过判失败不编数），"
+                "换算净流入额与放量倍数；16:00 数据步点名运行，前端挂在「主力资金流向」卡内（renderEtfFlow）。"
+                "存在理由：用户原问是「沪深300ETF 市值占流通市值比例能否当国家队持仓」——不能（那只是上界，"
+                "且分母口径差 2.1 倍、p 自 2026-05 起不再披露），所以本节点只出可验证的申赎信号，不出渗透率。"
+                "口径铁律：份额剔除净值波动、规模会——规模缩水两成不能读成赎回。",
     },
 }
 

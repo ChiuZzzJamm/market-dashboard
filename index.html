@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610271041"></script>
+<script src="data.js?v=202610271304"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -689,6 +689,18 @@
   .cc-sum { font-size: var(--fs-base); color: var(--ink); line-height: 1.8; }
   .cc-sec { padding: 9px 0; border-top: 1px solid var(--line); }
   .cc-t { font-size: var(--fs-sm); color: var(--ink2); margin-bottom: 7px; line-height: 1.6; }
+  /* R100z230：名单上方的规则差异收成 <summary>，与 .cc-t 同字号同一行，
+     不再占两行 61 字——名单是内容，规则差异是核对用的。 */
+  .cc-why { display: inline-block; margin-left: 6px; vertical-align: baseline; }
+  .cc-why > summary { display: inline-block; cursor: pointer; font-size: var(--fs-xs);
+                      color: var(--ink2); padding: 1px 7px; border-radius: 999px;
+                      background: var(--bg-2); list-style: none; }
+  .cc-why > summary::-webkit-details-marker { display: none; }
+  .cc-why > summary::before { content: '+ '; }
+  .cc-why[open] > summary::before { content: '− '; }
+  .cc-why > summary:hover { color: var(--accent-deep); background: var(--accent-soft); }
+  .cc-why-x { margin: 6px 0 2px; font-size: var(--fs-sm); color: var(--ink2); line-height: 1.75;
+              padding-left: 9px; border-left: 2px solid var(--line); }
   .cc-list { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .cc-chip { display: inline-flex; align-items: baseline; gap: 5px; padding: 3px 9px;
              border-radius: 999px; background: var(--accent-soft);
@@ -716,6 +728,56 @@
   .cc-tbl th { color: var(--ink2); font-weight: 500; }
   .cc-tbl td.up { color: var(--up); }
   .cc-tbl td.down { color: var(--down); }
+  /* ===== R100z242：宽基 ETF 份额流向（挂在主力资金卡内） =====
+     六列在 375px 屏必然挤，所以名字列不换行、数值列定宽 + tabular-nums 对齐；
+     窄屏隐藏「涨跌幅」列（它与上面指数卡重复），保住份额/Δ/量能三列。 */
+  .etf { margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 9px; }
+  .etf-hd { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; font-size: var(--fs-sm); }
+  .etf-hd > b { font-size: var(--fs-base); color: var(--ink); }
+  .etf-d { font-size: var(--fs-xs); color: var(--ink2); font-variant-numeric: tabular-nums; }
+  .etf-tag { font-size: var(--fs-xs); color: var(--accent-deep); background: var(--accent-soft);
+             border-radius: 999px; padding: 0 7px; }
+  .etf-sum { font-size: var(--fs-base); color: var(--ink2); line-height: 1.7; margin: 5px 0 7px; }
+  .etf-sum b { color: var(--ink); }
+  .etf-rows { display: flex; flex-direction: column; gap: 2px; }
+  /* R100z243：列头。必须与 .etf-r 用同一套 grid 模板，否则窄屏断点下会错位。 */
+  .etf-hd-r { display: grid; grid-template-columns: 1fr 76px 60px 66px 44px 52px;
+              align-items: baseline; gap: 4px; padding: 0 0 3px;
+              font-size: var(--fs-xs); color: var(--ink2);
+              border-bottom: 1px solid var(--line); }
+  .etf-hd-r > div { text-align: right; }
+  .etf-hd-r > div:first-child { text-align: left; }
+  /* 首日提示：Δ份额整列为空时必须说一句「明天才有」，否则读者会以为抓取失败。 */
+  .etf-warm { margin: 6px 0 2px; font-size: var(--fs-xs); color: var(--ink2); line-height: 1.6; }
+  .etf-warm b { color: var(--ink); }
+  .etf-r { display: grid; grid-template-columns: 1fr 76px 60px 66px 44px 52px;
+           align-items: baseline; gap: 4px; padding: 4px 0;
+           border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .etf-r:last-child { border-bottom: 0; }
+  .etf-nm { font-size: var(--fs-sm); color: var(--ink); line-height: 1.35; }
+  .etf-g { display: block; font-size: var(--fs-xs); color: var(--ink2); }
+  .etf-v { font-size: var(--fs-base); color: var(--ink); text-align: right; }
+  .etf-v i, .etf-f i { font-style: normal; font-size: var(--fs-xs); color: var(--ink2); margin-left: 1px; }
+  .etf-d2, .etf-f, .etf-h, .etf-pc { font-size: var(--fs-sm); text-align: right; color: var(--ink2); }
+  .etf-d2.up, .etf-f.up, .etf-pc.up { color: var(--up); }
+  .etf-d2.down, .etf-f.down, .etf-pc.down { color: var(--down); }
+  .etf-na { color: var(--line); }
+  .etf-h.warm { color: #a8541a; font-weight: 600; }
+  .etf-h.hot { color: #c0392b; font-weight: 700; }
+  .etf-warn { margin-top: 8px; font-size: var(--fs-sm); color: #8a5a00; line-height: 1.7;
+              background: #fff8e8; border-radius: var(--r-note); padding: var(--pad-note); }
+  .etf-warn b { color: #6d4700; }
+  .etf-det { margin-top: 8px; }
+  .etf-det > summary { cursor: pointer; font-size: var(--fs-xs); color: var(--ink2);
+                       padding: 2px 0; list-style: none; }
+  .etf-det > summary::-webkit-details-marker { display: none; }
+  .etf-det > summary::before { content: '▸ '; }
+  .etf-det[open] > summary::before { content: '▾ '; }
+  @media (max-width: 420px) {
+    .etf-r { grid-template-columns: 1fr 70px 56px 62px 40px; }
+    .etf-hd-r { grid-template-columns: 1fr 70px 56px 62px 40px; }
+    .etf-pc, .etf-hd-r > div:last-child { display: none; }
+  }
   /* 窄屏：chip 里的代码隐藏——与断板卡片 R99e 同一条理由：挤没的代码没有信息量。 */
   @media (max-width: 700px) {
     .cc-chip .cd { display: none; }
@@ -1194,6 +1256,20 @@
   .fc-use > div { font-size: var(--fs-base); color: var(--ink); line-height: 1.75; padding: 6px 0 6px 20px; position: relative; }
   .fc-use > div::before { content: '→'; position: absolute; left: 2px; color: var(--accent-deep); font-weight: 700; }
   .fc-use b { color: var(--accent-deep); }
+  /* 结论行：一行一句「能不能用」，依据折叠在下面（R100z230）。
+     原来 5 条各带完整推理，默认展开占 289 字，把上面的 hero 数字和条形图全推下去了。 */
+  .fc-u-r { padding-top: 5px !important; padding-bottom: 5px !important; }
+  .fc-u-r .fc-u-h { font-size: var(--fs-base); font-weight: 700; }
+  .fc-u-d { margin: 3px 0 1px; }
+  .fc-u-d > summary { display: inline-block; cursor: pointer; font-size: var(--fs-xs);
+                      color: var(--ink2); padding: 1px 6px; border-radius: 4px;
+                      background: var(--bg-2); list-style: none; }
+  .fc-u-d > summary::-webkit-details-marker { display: none; }
+  .fc-u-d > summary::before { content: '▸ '; }
+  .fc-u-d[open] > summary::before { content: '▾ '; }
+  .fc-u-d > summary:hover { color: var(--accent-deep); }
+  .fc-u-x { font-size: var(--fs-sm); color: var(--ink2); line-height: 1.7;
+            padding: 4px 0 2px 10px; border-left: 2px solid var(--line); margin: 3px 0 2px 3px; }
   .fc-small { color: #a8541a; font-weight: 700; margin-left: 2px; }
   .fc-note { font-size: var(--fs-sm); color: var(--ink2); line-height: 1.65; padding: 5px 0 0 2px; }
   /* 开关区：重点是「它咬住了下一次预测」，所以用实心浅底 + 左侧竖线，和上面那排结论区分开 */
@@ -1368,6 +1444,25 @@
   .rv-chip.dim { color: var(--ink2); background: transparent; }
   .ll-rule { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
   .ll-rule-note { flex: 1 1 100%; font-size: var(--fs-xs); color: var(--ink2); line-height: 1.6; padding-top: 2px; }
+  /* R100z243：规则「定义」与口径「为何不可用」的折叠。原来这两段默认展开共 116 字，
+     而它们回答的都是「规则怎么写的」，不是「准不准」——不看也能读懂全卡。
+     用 inline details，折叠时只占两个字宽，跟胶囊排在同一行。 */
+  .ll-rule-d { font-size: var(--fs-xs); color: var(--ink2); display: inline; }
+  .ll-rule-d > summary { display: inline-block; cursor: pointer; padding: 0 2px;
+                          color: var(--ink2); text-decoration: underline dotted; text-underline-offset: 2px; }
+  .ll-rule-d[open] { display: block; flex: 1 1 100%; line-height: 1.6; padding-top: 2px; }
+  /* 待结算：已出信号、T+1 未到。原来这些日子被回测直接丢弃，读者以为没出手。 */
+  .ll-pend { margin: 8px 0 2px; padding: 8px 10px; border-left: 2px solid var(--line);
+             background: var(--paper); border-radius: 0 6px 6px 0; }
+  .ll-pend-r { display: flex; align-items: baseline; gap: 8px; font-size: var(--fs-sm); line-height: 1.9; }
+  .ll-pend-r > b { font-variant-numeric: tabular-nums; color: var(--ink2); min-width: 40px; }
+  .ll-pend-tag { font-size: var(--fs-xs); color: var(--ink2); border: 1px solid var(--line);
+                 border-radius: 999px; padding: 0 6px; white-space: nowrap; }
+  .ll-pend-n { color: var(--ink); }
+  .ll-pend-x { font-size: var(--fs-xs); color: var(--ink2); margin-top: 4px; line-height: 1.6; }
+  .ll-t0-x { color: var(--ink2); }
+  .ll-rc-warn { font-style: normal; font-size: var(--fs-xs); color: var(--ink2);
+                border-bottom: 1px dotted var(--line); margin-left: 6px; cursor: help; }
   /* 回测逐日的零轴迷你条：从中线往两边长，正红负绿（A 股惯例，别反）。 */
   .ll-rc-track { height: 12px; }
   .ll-rc-track > .rv-fill { left: 50%; top: 0; bottom: 0; border-radius: 0 6px 6px 0; background: var(--up); }
@@ -2193,6 +2288,9 @@ function render(market) {
     html += '<div class="card"><h2>主力资金流向' + (d.tradeDate ? '<span class="h2-date">' + esc(d.tradeDate) + '</span>' : '') + '</h2>';
     if (d.fundNote) html += '<div class="note-line">' + esc(d.fundNote) + '</div>';
     html += '<div id="chart-fund" class="chart-tall"></div>';
+    // R100z242：宽基 ETF 份额流向接在主力资金卡内（用户 2026-10-27：「加在主力资金模块下面」）。
+    // 放在行业资金柱之后、龙虎榜之前——同属「钱往哪走」，粒度从行业细到 ETF。
+    html += renderEtfFlow((window.DASHBOARD_DATA || {}).etfFlow);
     // R100z195：龙虎榜席位结构接在同一张卡里（用户 2026-10-24：原有只有行业级「大数」）
     html += renderLhb(d.lhb);
     html += '</div>';
@@ -3336,7 +3434,7 @@ function renderSignalPerf() {
   h += '<div class="rv-hero"><b>' + passed.length + ' / ' + withX.length + '</b>' +
     '<span>个指标 1 日胜率过 <em>60%</em>' +
     (withX.length && !passed.length ? '，最高 ' + esc(best.label) + ' ' + rt(best.win1) : '') + '</span>' +
-    '<i>条＝1 日胜率　竖线＝60% 及格线　右侧＝5 日超额（相对全市场等权）</i></div>';
+    '<i>条＝1日胜率　竖线＝60%及格线　右＝5日超额（对全市场等权）</i></div>';
 
   h += '<div class="rv-bars">';
   // 表头：右侧三列没有表头就得靠 hero 那行图例去猜，加一行 11px 的标题最省事。
@@ -3368,12 +3466,11 @@ function renderSignalPerf() {
   var subs = P.ranking.filter(function (r) { return r.sub; });
   if (subs.length) {
     h += '<div class="rv-legend">' + subs.map(function (r) {
-      return esc(r.label) + '：' + esc(r.sub) + '（' + (r.n || 0) + ' 笔，样本不足，不作结论）';
+      return esc(r.label) + '：' + esc(r.sub) + '（' + (r.n || 0) + ' 笔，样本不足）';
     }).join('；') + '</div>';
   }
   if (withX.length && !passed.length) {
-    h += '<div class="rv-legend">没有一条过线——这条结论本身是信息：四个池都在买「已经涨过的票」，' +
-      '而回测里追强的次日超额是负的；正期望在对面（同板块落后 2pp 以上的那只，见下方 🎯 卡）。</div>';
+    h += '<div class="rv-legend">没一条过线——四个池都在买「已经涨过的票」，正期望在对面（见下方 🎯 卡）。</div>';
   }
 
   // 建议权重：超额为正才给权重，跑输基准的归零——不做「平均主义」配置
@@ -3387,7 +3484,8 @@ function renderSignalPerf() {
       lbl += '<span>' + esc(lab) + ' <b>' + (ws[k] * 100).toFixed(0) + '%</b></span>';
     });
     h += '<div class="pf-wbar"><div class="pf-w">' + bar + '</div><div class="pf-wl">' + lbl + '</div></div>';
-    if (P.weightNote) h += '<div class="rv-legend">权重依据：' + esc(P.weightNote) + '</div>';
+    // 权重说明来自 P.weightNote（脚本生成，禁写死）：只在前面加两个字缩写标签
+    if (P.weightNote) h += '<div class="rv-legend">权重：' + esc(P.weightNote) + '</div>';
   }
 
   // ---- 以下全部下沉到折叠区：需要核对口径时才展开，不再抢占首屏 ----
@@ -3540,7 +3638,7 @@ function renderForecastScore() {
       bar('近 ' + (F.criteria || {}).recentDays + ' 日', r5, '');
   }
   if (byConf.length || byDir.length) {
-    h += '<div class="rv-legend">竖线＝50%（抛硬币）；条子短于它＝这组判断不如随机。带 * 的样本 &lt; 5 条，百分比只是巧合。</div>';
+    h += '<div class="rv-legend">竖线＝50%（抛硬币）；条短于线＝不如随机。带 * 的样本 &lt; 5 条，百分比是巧合。</div>';
   }
 
   // 开盘前瞻：三个分项的可信度差得很远——区间比方向判词可靠得多。
@@ -3549,15 +3647,26 @@ function renderForecastScore() {
     h += bar('方向判词（0.5）', { n: fw.tendencyN, strictHit: fw.tendencyRate, wideHit: null }, '');
     h += bar('点位区间（0.3）', { n: fw.bandN, strictHit: fw.bandAnyRate, wideHit: null }, '');
     h += bar('量能（0.2）', { n: fw.volN, strictHit: fw.volRate, wideHit: null }, '');
-    h += '<div class="fc-note">点位按「至少半对」计：落在区间内但偏离 &gt;1% 记半对，' +
-      '「全' + (fw.bandFull || 0) + '半' + (fw.bandHalf || 0) + '」＝全对 ' + (fw.bandFull || 0) +
-      ' 天 + 半对 ' + (fw.bandHalf || 0) + ' 天。</div>';
+    h += '<div class="fc-note">点位按「至少半对」计：落区间内但偏离 &gt;1% 记半对（全' +
+      (fw.bandFull || 0) + '·半' + (fw.bandHalf || 0) + '）。</div>';
   }
 
+  // R100z230：结论区从「5 段 50–103 字长句全展开」（实测 289 字）改成
+  // 「一行结论 + 折叠依据」。上面已有三条 hero 数字和三组条形图，正文再铺半屏
+  // 推理，读者根本滚不到。现在可见只有每行一句「能不能用」，想看推导再点开。
   if (F.enough && F.usage && F.usage.length) {
-    h += '<div class="fc-use">' + F.usage.map(function (u) { return '<div>' + u + '</div>'; }).join('') + '</div>';
+    var uArr = F.usage.filter(function (u) { return u && (u.h || typeof u === 'string'); });
+    h += '<div class="fc-use">' + uArr.map(function (u) {
+      // 兼容旧数据：data.js 里可能还是纯字符串（脚本没重跑），别整块消失
+      if (typeof u === 'string') return '<div class="fc-u-r">' + u + '</div>';
+      var x = u.x ? '<details class="fc-u-d"><summary>依据</summary>' +
+        '<div class="fc-u-x">' + u.x + '</div></details>' : '';
+      return '<div class="fc-u-r"><b class="fc-u-h">' + u.h + '</b>' + x + '</div>';
+    }).join('') + '</div>';
   } else {
-    h += '<div class="fc-use"><div>' + esc((F.usage || ['样本不足'])[0]) + '</div></div>';
+    var u0 = (F.usage || ['样本不足'])[0];
+    h += '<div class="fc-use"><div class="fc-u-r"><b class="fc-u-h">' +
+      (typeof u0 === 'string' ? esc(u0) : u0.h) + '</b></div></div>';
   }
 
   // R100z161：光有结论没用，得看见它咬住了下一次预测。
@@ -3572,9 +3681,11 @@ function renderForecastScore() {
   if (FL.dirAsym === 'upWeak') chips.push(['看涨降为观察级', '看涨结论不得当买入理由']);
   if (FL.dirAsym === 'downWeak') chips.push(['看跌降为参考', '看跌结论不得单独当离场依据']);
   if (chips.length) {
+    // R100z230：每条 chip 原来把「标签 + 一句解释」都摊在页面上（合计 60 字），
+    // 而这三条本质是**生成端开关**，读者只需要知道「收紧成什么样」，细节挂 title。
     h += '<div class="fc-flags"><span class="fc-flags-t">下版预测已按此收紧</span>' +
       chips.map(function (c) {
-        return '<span class="fc-chip"><em>' + esc(c[0]) + '</em>' + esc(c[1]) + '</span>';
+        return '<span class="fc-chip" title="' + escAttr(c[1]) + '"><em>' + esc(c[0]) + '</em></span>';
       }).join('') + '</div>';
   }
 
@@ -4880,6 +4991,94 @@ function renderLhb(l) {
   return s + '</div>';
 }
 
+function renderEtfFlow(e) {
+  /* R100z242（用户 2026-10-27：「加在主力资金模块下面」）。
+     起因：用户问「头部沪深300基金市值占沪深300流通市值比例能不能当国家队持仓」——
+     不能（详见 etf_flow.py 顶部），所以这里**不画渗透率**，只画三件可验证的事：
+       ① 份额日变动（剔除净值涨跌的纯申赎信号）
+       ② 由 ① 换算的净流入额
+       ③ 放量倍数（尾盘巨量是平准资金的指纹）
+     反例要写在卡上：规模缩水 20% 可能全是指数跌的，不能读成赎回。
+     这是本模块最容易误用的地方，也是它唯一的价值所在——份额与规模分得清。 */
+  if (!e || !e.rows || !e.rows.length) return '';
+  var n1 = function (v, d) { var n = Number(v); return (v === null || v === undefined || v === '' || !isFinite(n)) ? null : n; };
+  var fx = function (v) { var n = n1(v); return n === null ? '—' : (n > 0 ? '+' : '') + n.toFixed(2); };
+  var fp = function (v) { var n = n1(v); return n === null ? '—' : (n > 0 ? '+' : '') + n.toFixed(2) + '%'; };
+
+  var g = (e.groups || {}).hs300 || {};
+  var hasD = n1(g.dFlow) !== null;
+  /* 头部一句话：Δ份额有值就说「申赎」，没值就明说「还没第二个交易日」——
+     不能显示 +0.00 假装有信号（首日实测全是 +0.00，那是没有数据不是没有变化）。 */
+  var head = '';
+  if (hasD) {
+    var dir = n1(g.dFlow) > 0 ? '净申购' : (n1(g.dFlow) < 0 ? '净赎回' : '零变化');
+    head = '沪深300 四只合计 <b>' + dir + ' ' + fx(g.dFlow) + ' 亿元</b>' +
+      '（' + fx(g.dShare) + ' 亿份，截至 ' + esc(g.prevDay || '') + '）';
+  } else {
+    // 首日：head 只说存量，解释交给下面的 warm（R100z243 去重，原先两句都在讲同一件事）
+    head = '沪深300 四只合计 <b>' + (g.shares || 0).toFixed(0) + ' 亿份 / ' +
+      (g.mv || 0).toFixed(0) + ' 亿元</b>';
+  }
+
+  /* R100z243：首日整列 Δ 为空，必须显式说一句，否则「—」会被读成抓取失败。
+     这是本卡最容易误判的地方：份额日频、交易所不给历史，只能逐日累积。 */
+  var warm = '';
+  if (!hasD) {
+    warm = '<div class="etf-warm"><b>今天这一列是空的，不是抓取失败</b>：' +
+      '份额只能逐日累积（交易所只日频披露、无历史接口），' +
+      '本模块从今天开始记，<b>明天收盘后 Δ份额与净流入才会出数</b>。' +
+      '在此之前只有「份额存量」和「量能倍数」可读。</div>';
+  }
+
+  var s = '<div class="etf"><div class="etf-hd"><b>宽基 ETF 份额流向</b>' +
+    '<span class="etf-d">' + esc(e.updatedAt || '') + '</span>' +
+    (e.intraday ? '<span class="etf-tag" title="量能已按已走交易时长折算，不是全天实际值">盘中折算 ' +
+      ((e.sessionFrac || 0) * 100).toFixed(0) + '%</span>' : '') +
+    '<span class="etf-tag">份额＝纯申赎</span></div>' +
+    '<div class="etf-sum">' + head + '</div>' + warm;
+
+  /* R100z243（用户 2026-10-27：「新增的模块我怎么没看到」）：先补列头。
+     原版 6 列数字**没有任何表头**，读者看到「354.47 亿份 — — 0.47x −0.10%」时
+     根本不知道两列「—」是什么、0.47x 相对什么——首日尤其像坏了。
+     表头必须与 .etf-r 的 grid-template-columns 逐列对齐（1fr 76px 60px 66px 44px 52px）。 */
+  s += '<div class="etf-hd-r">' +
+    '<div>基金</div><div>份额</div><div>Δ份额</div><div>净流入</div><div>量能</div><div>涨跌</div>' +
+    '</div>';
+
+  s += '<div class="etf-rows">';
+  (e.rows || []).forEach(function (r) {
+    var d = n1(r.dShare), f = n1(r.dFlow), h = n1(r.hot);
+    var cls = d === null ? '' : (d > 0 ? 'up' : (d < 0 ? 'down' : ''));
+    // 量能条：1x 是「与前 5 日均量持平」，超过 2x 标红——那是平准资金的典型时间窗
+    var hotTxt = h === null ? '—' : h.toFixed(2) + 'x';
+    var hotCls = h === null ? '' : (h >= 2 ? ' hot' : (h >= 1.2 ? ' warm' : ''));
+    s += '<div class="etf-r">' +
+      '<div class="etf-nm">' + esc(r.name || r.code) +
+        '<span class="etf-g">' + esc((e.groups && e.groups[r.group] && e.groups[r.group].zh) || '') + '</span></div>' +
+      '<div class="etf-v">' + (r.shares || 0).toFixed(2) + '<i>亿份</i></div>' +
+      '<div class="etf-d2 ' + cls + '">' + (d === null ? '<span class="etf-na">—</span>' : fx(d)) + '</div>' +
+      '<div class="etf-f ' + cls + '">' + (f === null ? '<span class="etf-na">—</span>' : fx(f) + '<i>亿</i>') + '</div>' +
+      '<div class="etf-h ' + hotCls + '">' + hotTxt + '</div>' +
+      '<div class="etf-pc ' + (n1(r.pct) > 0 ? 'up' : (n1(r.pct) < 0 ? 'down' : '')) + '">' + fp(r.pct) + '</div>' +
+      '</div>';
+  });
+  s += '</div>';
+
+  // 反例必须留在可见区：这是本卡与「渗透率」那条错路的唯一区别。
+  s += '<div class="etf-warn">规模涨跌 ≠ 资金进出：指数跌 20% 会让规模缩两成，' +
+    '份额才剔除净值波动。<b>只看 Δ份额</b>。</div>';
+  s += '<details class="etf-det"><summary>口径与局限</summary>' +
+    '<div class="pf-sub">' + esc(e.note || '') + '</div>' +
+    '<div class="pf-sub">' + esc(e.caveat || '') + '</div>' +
+    (e.asOfWarn ? '<div class="pf-sub">' + esc(e.asOfWarn) + '</div>' : '') +
+    '<div class="pf-sub">为什么不做「ETF 市值占指数流通市值」：那是全市场所有持有人的钱，' +
+    '不是国家队持仓。真实持仓 = 渗透率 × 国家队在该 ETF 的份额占比 p，' +
+    '而 p 自 2026-05 起已不披露，最后可验证值 82.76%。同一公式 p=83% 时几乎等于持仓、' +
+    'p&lt;20% 时完全不能当持仓——用它判托底会系统性高估剩余子弹。</div>' +
+    '</details>';
+  return s + '</div>';
+}
+
 function renderLianban(list) {
   if (!list || !list.length) return '';
   // 连板（lbc>=2）作为梯队展示；首板仅统计数量（避免卡片过长）
@@ -5900,48 +6099,55 @@ function chenCompareHtml(c) {
     '</b> 只 ｜ 两个都选中 <b class="up">' + both.length + '</b> 只 ｜ 只有陈学长选中 <b>' + co.length + '</b> 只</div>' +
     '<div class="cc-sec"><div class="cc-t">两个都选中（' + both.length + '）</div><div class="cc-list">' +
       (both.length ? both.map(lab).join('') : '<span class="cc-more">无</span>') + '</div></div>' +
-    // R100z221（审核意见 §15）：这两句归因原来把 6 处差异简写成「爆量」一条，
-    // 读者会以为陈学长 = 断板反包 + 一个成交量阈值。实际是两套独立规则，差异至少五条，
-    // 而且方向不全是「他更严」——他放开放量上限、只比一根缩量，这两条比断板反包**更松**。
-    '<div class="cc-sec"><div class="cc-t">只有陈学长选中（' + co.length + '）— 他多做的几层，' +
-      '不止「爆量」一条：首板也算 ／ 断板日放量 ≥2 倍且<b>不设上限</b>（断板卡砍在 3.5 倍）／ ' +
-      '只比 T+2 一根缩量、不看趋势 ／ 洗盘 ≤3 日 ／ 破位与 MA5 各给容忍度（2% / 3%）</div>' +
+    /* R100z230（用户 2026-10-27「文字太多」）：这两段差异说明原来各 61 / 42 字直接摊在名单上方，
+       每段都要读完才知道下面在列什么。现在标题只留「他多做几层 / 被他剔掉的」，
+       五条具体规则挂 title + 折叠——名单本身才是内容，规则差异是核对用的。 */
+    '<div class="cc-sec"><div class="cc-t">只有陈学长选中（' + co.length + '）' +
+      '<details class="cc-why"><summary>他多做的几层</summary>' +
+      '<div class="cc-why-x">首板也算 ／ 断板日放量 ≥2 倍且<b>不设上限</b>（断板卡砍在 3.5 倍）／ ' +
+      '只比 T+2 一根缩量、不看趋势 ／ 洗盘 ≤3 日 ／ 破位与 MA5 各给容忍度（2% / 3%）。' +
+      '注意方向不全是「他更严」——放量上限与缩量根数这两条比断板反包更松。</div></details></div>' +
       '<div class="cc-list">' + (co.length ? co.map(lab).join('') : '<span class="cc-more">无</span>') + '</div></div>' +
-    '<div class="cc-sec"><div class="cc-t">只有断板反包选中（' + doOnly.length + '）— 被他剔掉的：' +
-      '放量不足 2 倍 ／ 洗盘超 3 日 ／ 收盘破了 T 日最低价 2% ／ 站不稳 5 日线（任一不满足即剔）</div>' +
+    '<div class="cc-sec"><div class="cc-t">只有断板反包选中（' + doOnly.length + '）' +
+      '<details class="cc-why"><summary>被他剔掉的</summary>' +
+      '<div class="cc-why-x">放量不足 2 倍 ／ 洗盘超 3 日 ／ 收盘破了 T 日最低价 2% ／ ' +
+      '站不稳 5 日线。任一不满足即剔。</div></details></div>' +
       '<div class="cc-list">' + (doOnly.length ? doShow : '<span class="cc-more">无</span>') + '</div></div>' +
     '<div class="cc-sec"><div class="cc-t">留痕回测进度</div>' +
-      '<div class="cc-note">当前口径起始日 <b>' + esc(tr.since || '—') + '</b> ｜ 已结算 <b>' + (tr.settledN || 0) +
+      '<div class="cc-note">起始 <b>' + esc(tr.since || '—') + '</b> ｜ 已结算 <b>' + (tr.settledN || 0) +
       '</b> 条 ｜ 待结算 <b>' + (tr.openN || 0) + '</b> 条' +
-      (tr.justSettled ? '（本次新增结算 ' + tr.justSettled + ' 条）' : '') +
-      (tr.legacyN ? ' ｜ 另有旧口径 <b>' + tr.legacyN + '</b> 条按开仓时参数单独结算、不计入' : '') +
-      '<br>' + esc(tr.settleRule || '') + '</div></div>' +
+      (tr.justSettled ? '（本次 +' + tr.justSettled + '）' : '') +
+      (tr.legacyN ? ' ｜ 旧口径 ' + tr.legacyN + ' 条另结' : '') + '</div></div>' +
     // 表头顺序与结算三结局对齐：赢 + 亏 + 平 = 样本（平＝持仓满窗口两条线都没触，按窗口末收盘平）。
     // R100z233b：窗口已从 2 日拉到 10 日（见 chen_pool.py RULE_FROZEN_AT），标题不再写死「2 日」——
     // 台账里每条样本各自带 holdDays，旧样本 2 日、新样本 10 日，写死哪个都是错的。
-    // 2026-10-26 用户看不懂这张表：「三个选中不都是亏的吗」——因为上面列的是**今日名单**，
-    // 下面统计的是**已走完 10 个交易日窗口**的样本，两者根本不是同一批票。
-    // 不写明这一点，读者会把「2 笔 100%」当成「今天这 5 只的胜率」。
-    '<div class="cc-note">上表<b>只统计已经走完持有窗口的样本</b>（确认日次日开盘买、10 个交易日、' +
-      '+5% 止盈 / 收盘破止损）。上面列的今日名单还在窗口里，' +
-      '<b>' + (tr.openN || 0) + ' 条待结算</b>，不在这张表里——所以这里出现 100% 与今天几只下跌并不矛盾。' +
-      '样本少于 5 条的行只作记录，不构成结论。</div>' +
     '<div class="cc-tbl-w"><table class="cc-tbl"><thead><tr><th>口径</th><th>样本</th><th>赢</th><th>亏</th>' +
       '<th title="持仓满各自窗口（现口径 10 个交易日、2026-10-26 前的旧样本 2 日）未触目标也未破止损，按窗口末收盘平；收益仍计入均值">平</th>' +
       '<th title="赢 ÷ 样本（平不算赢）">胜率</th><th>均值</th></tr></thead>' +
     '<tbody>' + statRows + '</tbody></table></div>' +
-    ((skipTotal || noStopTotal)
-      ? '<div class="cc-note">另：<b>' + skipTotal + '</b> 条开盘价已跌破止损、按纪律没进场（不计胜负）；' +
-        '<b>' + noStopTotal + '</b> 条止损位取不到、已排除在胜负之外——两边止损口径已统一，' +
-        '胜率可直接横比。</div>'
-      : '') +
-    (cmpLegacyN
-      ? '<div class="cc-note">另有 <b>' + cmpLegacyN + '</b> 条旧口径样本（2026-10-26 换口径前开仓）' +
-        '已按<b>开仓时</b>的参数（+3.5% / 持 2 日）单独结算，<b>不计入上表</b>——' +
-        '否则每改一次参数，历史胜率就在页面上被重新判分一遍。</div>'
-      : '') +
-    '<div class="cc-note">上表只统计当前口径（2026-10-26 起）的样本，样本为 0 是正常的——' +
-    '换口径后从零开始计，量到 20 条以上才有统计意义；改口径不加样本，改完不收窄判定就等于自己骗自己。</div>' +
+    /* 2026-10-26 用户看不懂这张表：「三个选中不都是亏的吗」——因为上面列的是**今日名单**，
+       下面统计的是**已走完窗口**的样本，两者不是同一批票。不写明，读者会把「2 笔 100%」当成
+       「今天这 5 只的胜率」。所以这句必须留在可见区，但只需要一句。
+       R100z230：原来这里 + 末尾各一段（91 字 / 62 字）说的是同一件事，合并成「一句可见 + 一段折叠」。 */
+    '<div class="cc-note">上表只统计<b>已走完持有窗口</b>的样本，上面今日名单里 <b>' + (tr.openN || 0) +
+      '</b> 条还在窗口内——所以「100%」与今天几只下跌并不矛盾。</div>' +
+    '<details class="rv-det"><summary>结算规则与口径变更 <span>· 买价、止盈止损、旧样本怎么算</span></summary>' +
+      '<div class="pf-sub">确认日次日开盘买，持有 10 个交易日；止盈按盘中触及 +5.0% 算（可挂单），' +
+        '止损按<b>收盘</b>跌破止损位算（盘中不算），开盘即破止损视为不进场（不进胜负分母），' +
+        '两条线都不触按窗口末收盘计。两个池用同一口径，胜率才可比。</div>' +
+      ((skipTotal || noStopTotal)
+        ? '<div class="pf-sub">另有 <b>' + skipTotal + '</b> 条开盘价已跌破止损、按纪律没进场（不计胜负）；' +
+          '<b>' + noStopTotal + '</b> 条止损位取不到、已排除在胜负之外——否则只输时间不输钱，胜率会虚高。</div>'
+        : '') +
+      (cmpLegacyN
+        ? '<div class="pf-sub">另有 <b>' + cmpLegacyN + '</b> 条旧口径样本（2026-10-26 换口径前开仓）' +
+          '已按<b>开仓时</b>的参数（+3.5% / 持 2 日）单独结算，<b>不计入上表</b>——' +
+          '否则每改一次参数，历史胜率就在页面上被重新判分一遍。</div>'
+        : '') +
+      '<div class="pf-sub">换口径不从零开始算旧样本，是因为改口径不加样本：' +
+        '改完不收窄判定，等于自己骗自己。当前口径量到 20 条以上才有统计意义，' +
+        '少于 5 条的行只作记录，不构成结论。</div>' +
+    '</details>' +
     '</div>';
   // 组必须在整串拼完之后才挂到 window：_grp 是在拼字符串过程中逐只 push 的，
   // 提前挂会挂上一份长度还在变的数组引用（虽然 JS 里引用同一份也对，但显式放末尾读起来更清楚）。
@@ -6454,7 +6660,9 @@ function renderLeadLag() {
       (bt.lastSignalDay ? (bt.days ? ' · ' : '') + '末笔 ' + esc(String(bt.lastSignalDay)) : '') +
       '</span></div>';
 
-    // 规则四条件：每条一个胶囊，值全是数据里的阈值（不许写死）；完整句子在 title 里留着。
+    // 规则四条件：每条一个胶囊，值全是数据里的阈值（不许写死）；完整句子收进「定义」折叠。
+    // R100z243（2026-10-27 用户「文字太多」）：那行 63 字的规则注默认展开，占了整卡最贵的位置，
+    // 而它解释的三个词在胶囊里已经自明。改为默认折叠——想核口径的人点一下就有。
     var c1 = '板块开盘跳空 &gt; +' + (rule.secGapMin != null ? rule.secGapMin.toFixed(1) : '1.0') + '%';
     var c2 = '落后板块 &gt; ' + (rule.lagMin != null ? rule.lagMin.toFixed(1) : '2.0') + 'pp';
     var c3 = '昨日还在涨';
@@ -6462,8 +6670,9 @@ function renderLeadLag() {
     out += '<div class="ll-rule"><span class="rv-chip">' + c1 + '</span>' +
       '<span class="rv-chip">' + c2 + '</span><span class="rv-chip">' + c3 + '</span>' +
       '<span class="rv-chip">' + c4 + '</span>' +
-      '<div class="ll-rule-note">跳空＝成分股开盘价均值，剔掉单只 |跳空|&gt;12% 的退市整理股；' +
-      '「昨日还在涨」＝不买破位股；「现价不高于开盘」＝追高即失效。</div></div>';
+      '<details class="ll-rule-d"><summary>定义</summary>' +
+      '跳空＝成分股开盘价均值，剔除单只 |跳空|&gt;12% 的退市整理股；' +
+      '「昨日还在涨」＝不买破位股；「现价不高于开盘」＝追高即失效。</details></div>';
 
     if (bt.main) {
       out += '<div class="ll-bt">' +
@@ -6491,12 +6700,32 @@ function renderLeadLag() {
       var t0i = bt.t0Invalid || {};
       var t2g = bt.t2 || {};
       if (t0i.ret != null) {
-        out += '<div class="ll-t0">口径对照：' +
-          'T+0 当日收盘卖 <b>' + _lp(t0i.ret) + '</b>（胜率 ' + _lr(t0i.win) +
-          '，<b class="ll-warn">A 股 T+1，这个价格实盘拿不到</b>）' +
-          '｜T+1 当日买次日卖 <b>' + _lp(mainEx.ret) + '</b>' +
-          (t2g.ret != null ? '｜T+2 收盘卖 <b>' + _lp(t2g.ret) + '</b>' : '') +
-          '。两者之差就是「隔夜风险」的实际代价，不能拿前者当业绩。</div>';
+        // R100z243：原文案 53 字且带一段说教。压成一句「虚高多少」，把「为什么」收进折叠。
+        var gapT0 = null;
+        if (_ln(t0i.ret) !== null && _ln(mainEx.ret) !== null) {
+          gapT0 = _ln(t0i.ret) - _ln(mainEx.ret);
+        }
+        out += '<div class="ll-t0">T+0 口径（当日买当日卖）<b>' + _lp(t0i.ret) + '</b>' +
+          (gapT0 !== null ? '，比合法 T+1 虚高 <b class="ll-warn">' + _lp(gapT0) + '</b>' : '') +
+          '。<span class="ll-t0-x">A 股 T+1，该价格实盘拿不到</span>' +
+          (t2g.ret != null ? '｜T+2 ' + _lp(t2g.ret) : '') +
+          '<details class="ll-rule-d"><summary>为何不可用</summary>' +
+          'T+0 把「当天下午的情绪」记成利润，等于默认买了当日还能卖。' +
+          'T+0 与 T+1 之差就是「隔夜风险」的实际代价，不能拿前者当业绩。</details></div>';
+      }
+
+      // R100z243：末两天结算不足的日子，原逻辑直接丢弃（用户以为「没出手」）。
+      // 现在明确标出「待结算」——它们是真信号，只是 T+1 还没到。
+      var pd = bt.pending || [];
+      if (pd.length) {
+        out += '<div class="ll-pend">' +
+          pd.map(function (x) {
+            return '<div class="ll-pend-r"><b>' + esc(String(x.date || '').slice(5)) + '</b>' +
+              '<span class="ll-pend-tag">待结算</span>' +
+              '<span class="ll-pend-n">' + (x.n || 0) + '只 ' +
+              (x.names || []).map(function (n) { return esc(String(n)); }).join('、') + '</span></div>';
+          }).join('') +
+          '<div class="ll-pend-x">T+1 收盘价还没出，暂不计胜率——<b>不是没出手</b>。</div></div>';
       }
 
       var rc = bt.recent || [];
@@ -6507,11 +6736,14 @@ function renderLeadLag() {
         if (maxAbs <= 0) maxAbs = 1;
         window._LL_GRP = rc.map(function (x) {
           return (x.names || []).map(function (nm) {
-            return { c: '', n: String(nm), t: '回测出手 ' + String(x.date || '') + ' · 当日开盘买、当日收盘卖' };
+            return { c: '', n: String(nm), t: '回测出手 ' + String(x.date || '') + ' · 当日开盘买、次日收盘卖（T+1）' };
           });
         });
+        // 2026-10-27 修：标题原写「当日开盘买、当日收盘卖」，但每一行的 x.ret 是 **T+1 次日收盘卖**
+        // （lead_lag.backtest 的 r1），T+0 那个数是 x.retT0（非法口径，只在上面「口径对照」里出现）。
+        // 也就是说这里一直在用一句做不到的口径标注一组合法的数字——读者会以为看得见的是 T+0。
         out += '<div class="ll-rc"><div class="ll-rc-h">最近 ' + rc.length +
-          ' 次出手 · 当日开盘买、当日收盘卖（含亏的那几天）</div>';
+          ' 次 · 开盘买、次日收盘卖（T+1，含亏）</div>';
         rc.slice().reverse().forEach(function (x) {
           var idx = rc.indexOf(x);
           var v = _ln(x.ret), half = Math.min(50, Math.abs(v || 0) / maxAbs * 50);
@@ -6539,12 +6771,14 @@ function renderLeadLag() {
         if (_nDay) {
           var avgDay = _sumDay / _nDay;
           var avgStk = _nStock ? _sumStock / _nStock : null;
-          out += '<div class="ll-rc-sum">合计 <b>' + _nDay + '</b> 次出手 / <b>' + _nStock + '</b> 笔：' +
-            '按天等权 <b class="' + _ls(avgDay) + '">' + _lp(avgDay) + '</b>' +
-            (avgStk === null ? '' : '　按笔加权 <b class="' + _ls(avgStk) + '">' + _lp(avgStk) + '</b>') +
+          // R100z243：原文案 51 字，其中「六个交易日不足以判断…」是说教，且「六个」是写死的
+          // （持仓天数一变就错）。改成按实际次数说，并把风险句压进 title。
+          out += '<div class="ll-rc-sum">合计 <b>' + _nDay + '</b> 次 / <b>' + _nStock + '</b> 笔：' +
+            '按天 <b class="' + _ls(avgDay) + '">' + _lp(avgDay) + '</b>' +
+            (avgStk === null ? '' : '　按笔 <b class="' + _ls(avgStk) + '">' + _lp(avgStk) + '</b>') +
             '　上涨 <b>' + _upN + '/' + _nStock + '</b>' +
             (_nStock ? '（' + (_upN / _nStock * 100).toFixed(1) + '%）' : '') +
-            '　——六个交易日不足以判断这套规则最近是变差还是正常波动，<b>连续亏损时应停用观察</b>。</div>';
+            '<i class="ll-rc-warn" title="样本不足 ' + _nDay + ' 次出手即下结论；连续亏损应停用观察">样本不足</i></div>';
         }
         out += '</div>';
       }
