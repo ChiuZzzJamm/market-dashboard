@@ -186,9 +186,27 @@ def build(D):
     if strong:
         txt += ' 走强的指数：%s。' % '、'.join(strong)
 
+    # 基准日自曝（R100z247）。为什么必须写：本脚本读 stkKlines 的**指数日线**，
+    # 而指数日线要 19:30 的 embed_klines 才刷到当日。16:00 数据步跑出来的 asOf 恒为 T−1，
+    # 页面若当成「今日」展示，读者会拿昨天点位判断今天仓位（2026-10-27 实测：
+    # 显示上证 3697.52、下方 2.52%，而当日真实收盘 3648.30、下方 3.44%、60 日分位 0%）。
+    # 档位方向两天都是「弱」，所以不修也不会立刻出错——正是这种「结论对、数字旧」最难被发现。
+    # 只在落后于真实交易日时才出文案，正常当天算出的结果不加噪音。
+    stale_note = ''
+    try:
+        real = str((D.get('ashare') or {}).get('tradeDate') or '')
+        if real and main['date'] and main['date'] < real:
+            stale_note = ('点位基准日是 %s，不是今日 %s——指数日线要 19:30 的 K 线合并才刷到当日，'
+                          '此刻这一块显示的是上一交易日的收盘位置。'
+                          '档位方向可参考，具体点位与分位以今日收盘为准。'
+                          % (main['date'], real))
+    except Exception:
+        stale_note = ''
+
     return dict(
         updatedAt=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         asOf=main['date'],
+        staleNote=stale_note,
         indices=out,
         marketLevel=mid,
         marketCapPct=band[1],

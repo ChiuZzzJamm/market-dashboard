@@ -77,9 +77,25 @@ def _gates():
 
 
 def _curve_excess():
+    """读组合回测超额——**必须用权威口径 excessSectorPct（行业基准）**。
+
+    2026-10-27 实测的 bug：这里原先读 `excessPct`（指数基准，+0.19），
+    而 AI 预测卡里的「组合超额」读的是 `excessSectorPct`（行业基准，−0.91）——
+    同一张卡上出现「+0.19 跑赢」和「−0.91 跑输」两个符号相反的结论。
+
+    根因是量纲错配：组合本身是一篮子**行业板块**的标的，拿综合指数当尺子，
+    普涨日会虚高（上证 −4.42% vs 行业基准 −7.71%，指数跌得少，组合白捡 3 个点）。
+    portfolio_curve.json 的 note 里已写明「★权威超额=excessSectorPct」，
+    是这里没跟上。退回 excessPct 只在行业基准缺失时兜底，且不让它进入
+    「跑输→收紧高确信」的判定（样本口径不一致时宁可不收紧，也不能因为尺子换了
+    就多关掉几条关注项）。
+    """
     try:
-        c = json.load(open(CURVE_FILE, encoding='utf-8'))
-        return (c.get('stat') or {}).get('excessPct')
+        st = (json.load(open(CURVE_FILE, encoding='utf-8')).get('stat') or {})
+        for k in ('excessSectorPct', 'excessComparablePct', 'excessPct'):
+            if st.get(k) is not None:
+                return st.get(k)
+        return None
     except Exception:
         return None
 

@@ -118,6 +118,19 @@ echo "📜 刷新政策信号解码（enrich_policy.py）..."
 # 两者均读整份 data.js 仅新增顶层键、改写整文件，与 enrich_policy 同机制、互不覆盖其它键。
 echo "📅 生成宏观事件日历（macro_calendar.py）..."
 "$PY" macro_calendar.py || true
+
+# ---------- R100z247：趋势档必须在 strategy_engine **之前**重算 ----------
+# 为什么加这一步（2026-10-27 实测）：原顺序只有 16:00 数据步跑 trend_state.py，而它读的
+# stkKlines 指数日线要等 19:30 的 embed_klines 才刷到当日 → 16:00 算出来 asOf 恒为 T−1，
+# 页面显示「上证 3697.52、下方 2.52%」，而当日真实收盘 3648.30、下方 3.44%、60 日分位 0%。
+# 档位方向两天都是「弱」所以没炸，正是这种「结论对、数字旧」最难被发现。
+# deploy 跑在 embed_klines 之后，此时指数日线已是当日 → 这里重算一次 asOf 就对齐了。
+# 必须排在 strategy_engine 前面：strategy_engine 读 trendState.marketCapPct 当仓位上限，
+# 顺序反了会让仓位纪律滞后一天（日历说 6-7 成、趋势已判「弱」却没压下去）。
+# 指数日线仍不是当日时（如 09:45 早盘部署）脚本自己会产出 staleNote 明示，不编造。
+echo "📉 重算指数趋势档（trend_state.py --write）..."
+"$PY" trend_state.py --write || true
+
 echo "🎯 生成盘前策略闭环（strategy_engine.py）..."
 "$PY" strategy_engine.py || true
 

@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610271955"></script>
+<script src="data.js?v=202610280025"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -328,6 +328,9 @@
     border-radius: 6px; background: rgba(74,144,217,.07); border-left: 2px solid #4a90d9; line-height: 1.65; }
   .ai-item .ez b { color: var(--ink); font-variant-numeric: tabular-nums; }
   .ai-item .ez .ez-d { color: var(--ink3, var(--ink2)); }
+  /* R100z247：跨日保留的资金确认必须显形（用户 2026-10-27 亲眼看到「昨日走强 + 1/3」才发现的）。
+     用弱化的警示色而非错误红——数据本身没错，只是基准日不同，不该被读成「资金崩了」。 */
+  .ai-item .ez .ez-warn { color: #b06a12; margin-left: 4px; }
   .stock-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 8px; margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--line); }
   /* R100z168（2026-10-24，用户：「这个怎么歪七扭八的，一会代码换行，一会代码就在名称旁边」）：
      原实现把 <b>名称</b><span.cd>代码</span> 直接放在块级流里，两者各自 nowrap 但**元素边界可断行**，
@@ -1566,6 +1569,13 @@
     <div id="db-od" class="db-subpage" style="display:none;">
       <div id="db-od-nav"></div>
       <div id="weekend-news"></div>
+      <!-- R100z247（用户 2026-10-27「AI 预测被你改得很乱了，怎么新加了这个」）：
+           「大盘趋势状态」独立成块，不再拼进 AI 预测卡内部。
+           它和 AI 预测问的不是一件事：AI 预测答「哪些板块、配哪些标的」，
+           趋势档答「大盘在 MA20 哪一侧、今天最多能开几成仓」；生成链路也不同
+           （aiPrediction 08:30 由 AI 写回，trendState 16:00 由脚本从指数日线算）。
+           容器常驻、由 renderMarketTrendCard() 填；数据缺失时容器 display:none，不白屏。 -->
+      <div id="market-trend" style="display:none;"></div>
       <div id="ai-prediction"></div>
     </div>
     <div id="db-pools" class="db-subpage"></div>
@@ -3230,6 +3240,15 @@ function renderTrendState() {
   var h = '<div class="card"><h2 class="td-h2">大盘趋势状态' +
     (T.asOf ? ' <span class="h2-date">' + esc(T.asOf) + '</span>' : '') +
     '<span class="src-tag td-tag">指数层</span></h2>';
+  // R100z247：基准日必须写在正文里，不只是 h2 的小徽章。
+  // 原因（2026-10-27 实测）：trend_state 读 stkKlines 的指数日线，而指数日线要 19:30 的
+  // embed_klines 才刷到当日 → 16:00 跑出来的 asOf 恒为 T−1。当日页面显示「上证 3697.52、
+  // 下方 2.52%」，而收盘实际是 3648.30（下方 3.44%，60 日分位 0%）。
+  // 档位方向没变（两天都是「弱」/25%），但**数字是旧价**——不点明就会拿昨天点位判断今天仓位。
+  // 这一行只在 asOf ≠ 当日真实交易日时才出现，正常当天算出的结果不加噪音。
+  if (T.asOf && T.staleNote) {
+    h += '<div class="pf-note">⚠️ ' + esc(T.staleNote) + '</div>';
+  }
 
   h += '<div class="rv-hero"><b class="' + (lvCls[T.marketLevel] || 'ts-lv3') + '">' + esc(T.marketLevel || '—') + '</b>' +
     '<span>全市场趋势档，仓位上限 <em>' + (num(T.marketCapPct) === null ? '—' : T.marketCapPct + '%') + '</em></span>' +
@@ -3275,6 +3294,28 @@ function renderTrendState() {
   return h;
 }
 
+/* R100z247（用户 2026-10-27「怎么新加了这个 / AI 预测被改得很乱」）：
+   把「大盘趋势状态」渲染到**独立容器** #market-trend，不再拼进 AI 预测卡。
+
+   为什么必须分开（不是审美问题）：
+     · 两者回答的问题不同——AI 预测是「哪些板块值得做、配哪些标的」，
+       趋势档是「大盘在 MA20 哪一侧、今天最多能开几成仓」；
+     · 生成链路也不同：aiPrediction 由 08:30 AI 写回，trendState 由 16:00 脚本从指数日线算；
+     · 更关键的是**基准日会漂**：trendState 读 stkKlines 的指数日线，而它要 19:30 的
+       embed_klines 才刷到当日。16:00 跑出来的是 T−1 收盘，页面若把它当成「今日」的一部分
+       展示，读者会拿昨天的点位判断今天的仓位。独立成块后，卡头直接标 asOf 与「点位是哪个交易日」，
+       不会再被读成 AI 预测的当日结论。
+
+   容器在 HTML 里是静态的（#market-trend，位于 #ai-prediction 之前），
+   这里只负责填内容；trendState 缺失或为空时容器保持空、整块不占位（不白屏）。 */
+function renderMarketTrendCard() {
+  var box = document.getElementById('market-trend');
+  if (!box) return;
+  var h = renderTrendState();
+  box.innerHTML = h;
+  box.style.display = h ? '' : 'none';
+}
+
 // R100z157：机械候选快照说明行（数据由 annotate_pool_meta.py 确定性写入 aiPrediction.poolMeta）。
 // 目的：让「这批 8 只是机械池选出来的、还是 AI 自选补位」在页面直接可查，并写明候选集有效期。
 function poolMetaLine(pm) {
@@ -3303,6 +3344,14 @@ function entryLineHtml(s) {
   var conf = (f.passed != null)
     ? '<span class="ez-d">（资金三重确认 ' + Number(f.passed) + '/3' + (f.verdict ? '：' + esc(f.verdict) : '') + '）</span>'
     : '';
+  // R100z247：跨日保留时必须自曝。用户 2026-10-27 看到的「昨日走强 + 资金三重确认 1/3」
+  // 就是这个字段该拦没拦——数据被跨日覆盖后，同一张卡自相矛盾而他只能靠肉眼发现。
+  // 现在 entry_zone 会给跨日保留的那份打 staleAsOf/staleReason，这里如实显示来源日期，
+  // 不再让读者以为「1/3 就是昨天那个 1/3」。
+  if (f.staleAsOf) {
+    conf += '<span class="ez-warn" title="' + escAttr(f.staleReason || '') + '">· 基准日 ' +
+      esc(f.staleAsOf) + '，与徽章同源</span>';
+  }
   return '<div class="ez" title="' + escAttr(e.basis || '') + '">买点：回踩 <b>' + p(e.supportPct) +
     '</b> 有承接 · 涨过 <b>' + p(e.chaseCeilPct) + '</b> 不追 · 跌破 <b>' + p(e.invalidPct) +
     '</b> 逻辑失效' + conf + '</div>';
@@ -3322,15 +3371,24 @@ function renderAiPrediction() {
   var html = '<div class="ai-card"><div class="ai-head"><h2>AI 预测分析' + (p.date ? '<span class="h2-date">' + esc(p.date) + '</span>' : '') + '</h2></div>' +
     '<div class="ai-summary">' + (p.indexLine ? esc(p.indexLine) + '。' : '') +
       // 2026-10-27 用户追问「隔夜外部利好 + 昨日资金流出，为什么还判承压」——
-      // 原句「推导今日 A 股强弱方向」是错的说法：direction 由昨日资金映射、不预测今日。
-      // 这里如实改成「描述昨日」，并在下面单独给一段实证，讲清「昨日大跌 → 次日倾向反弹」。
-      '板块方向取自<b>昨日</b>资金三重确认（不预测今日）：' + esc(p.summary) + '</div>' +
-    '<div class="db-ref-sum">为什么不是「预测」：全样本（48 个板块 × 90 个交易日）里，板块当日涨幅的' +
-      '次日自相关只有 <b>−0.026</b>、今日前十明日仍在前十仅 <b>24.3%</b>——猜方向没有 edge。' +
+      // 原句「推导今日 A 股强弱方向」是错的说法：direction 由**上一交易日收盘资金**映射，
+      // 不是对今日的预言。这里如实改成「描述昨日」，并在下面单独给一段实证，
+      // 讲清「昨日大跌 → 次日倾向反弹」。
+      //
+      // 但「不预测今日」这半句必须说清边界，否则会和下面的兑现验证自相矛盾：
+      // verification.predicted 逐字取的就是这个 direction，结算用的却是**当日**实际涨跌。
+      // 也就是说它是「由昨日证据推今日方向」——证据在过去、赌的是未来。
+      // 说成「完全不预测」是错的（那 verification 就无从结算），
+      // 说成「预测」也不准（它不含任何模型外推，只是资金状态的映射）。
+      '板块方向由<b>上一交易日</b>收盘的资金三重确认映射而来（证据在过去，赌的是今日）：' + esc(p.summary) + '</div>' +
+    '<div class="db-ref-sum">为什么它只映射资金、不外推涨跌：全样本（48 个板块 × 90 个交易日）里，板块当日涨幅的' +
+      '次日自相关只有 <b>−0.026</b>、今日前十明日仍在前十仅 <b>24.3%</b>——纯粹的动量外推没有 edge。' +
       '但「昨日大跌之后」是个例外：昨日板块跌超 2.5% 的 ' +
       '<b>472</b> 个样本，次日均值 <b>+0.20%</b>、胜率 <b>56.1%</b>，而其余交易日是 −0.12%、49.9%。' +
       '所以昨日大跌＋隔夜外部同向利好，方向上偏<b>修复</b>而不是继续承压；' +
-      '能不能兑现要看开盘能否放量收复昨日跌幅（缩量下的反抽不算修复）。</div>' +
+      '能不能兑现要看开盘能否放量收复昨日跌幅（缩量下的反抽不算修复）。' +
+      '下面「盘前预测兑现」就是按<b>今日</b>实际涨跌与超额结算这套方向判断——' +
+      '证据来自昨日、结算落在今日，中间没有第二次外推。</div>' +
     poolMetaLine(p.poolMeta) +
     // R100z163（用户 2026-10-24 问「AI 预测和清单是否冲突」）：这里点明分工，避免读者把
     // 「每板块 8 只候选」当成买入清单——候选是给人看板块强弱的，买不买看开盘精选的买入清单。
@@ -3342,7 +3400,12 @@ function renderAiPrediction() {
     '<div id="st-track-box"></div>' +
     riskLineHtml(p) +
     strategyDisciplineHtml() +
-    renderTrendState() +
+    // R100z247（用户 2026-10-27「AI 预测被你改得很乱了，怎么新加了这个」）：
+    // 大盘趋势状态卡**不再塞进 AI 预测卡内部**。它和 AI 预测没有关系——
+    // AI 预测回答「哪些板块、哪些标的」，趋势档回答「大盘在 MA20 哪一侧、该开多大仓」。
+    // 之前把 renderTrendState() 拼在这条字符串链上（L3345），结果是 .card 嵌进 .ai-card，
+    // 两者 CSS 完全相同（都带边框+内边距+阴影）→ 视觉上卡中卡，读者以为它是 AI 预测的一部分。
+    // 现在改由 renderMarketTrendCard() 渲染到独立容器 #market-trend（在 AI 预测卡之前）。
     '<div class="ai-grid">';
   // R100z82：标的层验证按板块名建索引（verification.stockCheck.sector 与 aiPrediction.sectors 同名），
   // 供下方各板块卡底部渲染「8 只标的平均/方向一致率/主力净额」行。
@@ -6694,6 +6757,8 @@ function renderOpenDesk() {
   // （2026-10-26 实测：精选 10 只 / 预案 8 只 / 交集 1 只），两套止损仓位并存，
   // 任何一套都无法照做。signal_rank.py 已删除，data.js 的 tradeDesk 键已删。
   renderOpenOutlook();
+  // R100z247：趋势档独立块，先于 AI 预测渲染（页面顺序即阅读顺序）
+  renderMarketTrendCard();
   renderAiPrediction();
 }
 
@@ -8553,7 +8618,7 @@ syncMktToggle();
 // 到货后主动重画一次，两请求不再抢跑：退出纪律行不再依赖谁先到。
 loadPoolExit(function () {
   var aiBox = document.getElementById('ai-prediction');
-  if (aiBox && aiBox.innerHTML) renderAiPrediction();
+  if (aiBox && aiBox.innerHTML) { renderMarketTrendCard(); renderAiPrediction(); }
 });
 loadRiskBlacklist();   // R100z13：先发请求，黑名单异步到后再自动重画一次
 // R100z162：两块（开盘前瞻 / AI 预测分析）统一入口，全部落在「🧰 技术看板 → 开盘预测」子页（交易预案已删）
