@@ -187,25 +187,36 @@ def build_usage(sector, conf, dirs, fwd, enough):
     """把统计数字翻成「该怎么用」。每条都挂在阈值上，数据变了自动变。
 
     原则：只说「这个信号在什么条件下可以怎么用」，不说「预测准/不准」这种笼统评价。
+
+    每条返回 `{'h': 结论, 'x': 依据}`：
+      h 是页面上**默认可见**的一行（硬限 ≤ 26 字，含数字），只放「能不能用」；
+      x 是推导过程，渲染进折叠区。
+    2026-10-27 改：原先 5 条各 50–103 字、全部默认展开，一张卡光结论就 289 字，
+    把上面三条 hero 数字和条形图全压住了——读者要的是「这条信号我能不能用」，
+    不是半屏推理。拆成「结论行 + 折叠依据」后可见字数 289 → 96。
     """
     U = []
     if not enough:
-        return ['样本不足（需 ≥%d 条且 ≥%d 个交易日，当前 %d 条 / %d 日），'
-                '暂不给出使用建议——样本不够时任何结论都是噪声。'
-                % (MIN_N, MIN_DAYS, sector['n'], sector['days'])]
+        return [{'h': '样本不足，不给建议',
+                 'x': '需 ≥%d 条且 ≥%d 个交易日，当前 %d 条 / %d 日。'
+                      '样本不够时任何结论都是噪声，宁可不说。'
+                      % (MIN_N, MIN_DAYS, sector['n'], sector['days'])}]
 
     br = sector['beatRate']
     ea = sector['excessAvg']
 
     # ① 能不能直接拿来选股
     if br is not None and br < TH_EXCESS_BEAT:
-        U.append('板块推荐<b>不能直接当选股依据</b>：%d 条里只有 %.0f%% 跑赢基准、'
-                 '超额均值 %+.2f%%（中位 %+.2f%%）。方向对也可能是「涨了但没跑赢」，'
-                 '真正决定收益的是超额，不是涨跌符号。'
-                 % (sector['n'], br, ea or 0, sector['excessMed'] or 0))
+        U.append({
+            'h': '<b>板块推荐不能直接当选股依据</b>',
+            'x': '%d 条里只有 %.0f%% 跑赢基准、超额均值 %+.2f%%（中位 %+.2f%%）。'
+                 '方向对也可能是「涨了但没跑赢」——真正决定收益的是超额，不是涨跌符号。'
+                 % (sector['n'], br, ea or 0, sector['excessMed'] or 0)})
     else:
-        U.append('板块推荐的超额为正（跑赢率 %.0f%%、均值 %+.2f%%），可作为选股的方向参考，'
-                 '但仍需个股层面二次筛选。' % (br or 0, ea or 0))
+        U.append({
+            'h': '板块推荐可作选股方向参考',
+            'x': '超额为正（跑赢率 %.0f%%、均值 %+.2f%%），可作方向参考，但仍需个股层面二次筛选。'
+                 % (br or 0, ea or 0)})
 
     # ② 置信度标签是否可信
     hi = next((c for c in conf if c.get('conf') == '高'), None)
@@ -213,18 +224,25 @@ def build_usage(sector, conf, dirs, fwd, enough):
     if hi and mid and hi['n'] >= 5 and mid['n'] >= 10:
         gap = (mid['strictHit'] or 0) - (hi['strictHit'] or 0)
         if gap >= TH_CONF_GAP:
-            U.append('「高置信度」是<b>反向指标</b>：标高的 %d 条命中 %.0f%%、标中的 %d 条命中 %.0f%%，'
-                     '高置信反而低 %.0f 个百分点。这是典型的过度自信——最像样的理由往往已经把利好'
-                     '提前打进价格。结论：<b>不要把「高置信」当加仓理由</b>，宁可等它被市场证实。'
-                     % (hi['n'], hi['strictHit'], mid['n'], mid['strictHit'], gap))
+            U.append({
+                'h': '「高置信」是反向指标：%.0f%% 对 %.0f%%'
+                     % (hi['strictHit'] or 0, mid['strictHit'] or 0),
+                'x': '标高的 %d 条命中 %.0f%%、标中的 %d 条命中 %.0f%%，高置信反而低 %.0f 个百分点。'
+                     '这是典型的过度自信——最像样的理由往往已经把利好提前打进价格。'
+                     '结论：<b>不要把「高置信」当加仓理由</b>，宁可等它被市场证实。'
+                     % (hi['n'], hi['strictHit'], mid['n'], mid['strictHit'], gap)})
         elif gap <= -TH_CONF_GAP:
-            U.append('置信度分层有效：高 %d 条命中 %.0f%%、中 %d 条命中 %.0f%%，'
-                     '高置信确实更准 %.0f 个百分点，可以按置信度分配关注度。'
-                     % (hi['n'], hi['strictHit'], mid['n'], mid['strictHit'], -gap))
+            U.append({
+                'h': '置信度分层有效：高确实更准',
+                'x': '高 %d 条命中 %.0f%%、中 %d 条命中 %.0f%%，高置信更准 %.0f 个百分点，'
+                     '可以按置信度分配关注度。'
+                     % (hi['n'], hi['strictHit'], mid['n'], mid['strictHit'], -gap)})
         else:
-            U.append('置信度分层没有区分度：高 %d 条 %.0f%%、中 %d 条 %.0f%%，差 %.0f 个百分点，'
-                     '在阈值内。也就是说「我觉得很有把握」这个感觉目前不携带额外信息。'
-                     % (hi['n'], hi['strictHit'], mid['n'], mid['strictHit'], abs(gap)))
+            U.append({
+                'h': '置信度分层没有区分度',
+                'x': '高 %d 条 %.0f%%、中 %d 条 %.0f%%，差 %.0f 个百分点，在阈值内。'
+                     '也就是说「我觉得很有把握」这个感觉目前不携带额外信息。'
+                     % (hi['n'], hi['strictHit'], mid['n'], mid['strictHit'], abs(gap))})
 
     # ③ 看涨 vs 看跌的能力差
     up = next((x for x in dirs if x.get('dir') == 'up'), None)
@@ -232,49 +250,61 @@ def build_usage(sector, conf, dirs, fwd, enough):
     if up and dn and up['n'] >= 15 and dn['n'] >= 8:
         upr, dnr = up['strictHit'] or 0, dn['strictHit'] or 0
         if dnr - upr >= TH_DIR_GAP:
-            U.append('判断能力是<b>不对称</b>的：看涨 %d 条命中 %.0f%%、看跌 %d 条命中 %.0f%%，'
-                     '差 %.0f 个百分点。风险识别明显强于机会识别——利空传导直接（价格立刻动），'
+            U.append({
+                'h': '看跌准得多：%.0f%% 对 %.0f%%，只当排除项' % (dnr, upr),
+                'x': '能力是不对称的：看涨 %d 条命中 %.0f%%、看跌 %d 条命中 %.0f%%，差 %.0f 个百分点。'
+                     '风险识别明显强于机会识别——利空传导直接（价格立刻动），'
                      '利好容易被提前抢跑（等你看到的时候已经被买过了）。'
                      '用法：<b>看跌结论可当排除项用</b>（回避它点名的板块），'
                      '<b>看涨结论只作观察</b>，不当买入理由。'
-                     % (up['n'], upr, dn['n'], dnr, dnr - upr))
+                     % (up['n'], upr, dn['n'], dnr, dnr - upr)})
         elif upr - dnr >= TH_DIR_GAP:
-            U.append('看涨（%d 条 %.0f%%）明显强于看跌（%d 条 %.0f%%），'
+            U.append({
+                'h': '看涨明显强于看跌，做空判断要打折',
+                'x': '看涨（%d 条 %.0f%%）明显强于看跌（%d 条 %.0f%%），'
                      '这套判断偏多头视角，做空/避险判断要打折。'
-                     % (up['n'], upr, dn['n'], dnr))
+                     % (up['n'], upr, dn['n'], dnr)})
         else:
-            U.append('看涨 %.0f%%、看跌 %.0f%%，方向能力基本对称，没有系统性偏向。'
-                     % (upr, dnr))
+            U.append({
+                'h': '方向能力基本对称，没有系统性偏向',
+                'x': '看涨 %.0f%%、看跌 %.0f%%。' % (upr, dnr)})
 
     # ④ 开盘前瞻：点位 vs 方向
     if fwd.get('days', 0) >= 5:
         bAny = fwd.get('bandAnyRate') or 0
         tr = fwd.get('tendencyRate') or 0
         if bAny >= TH_BAND_GOOD and tr < TH_TEND_LOW:
-            U.append('开盘前瞻里<b>区间比方向判词可靠</b>：点位 %d/%d 至少半对（%.0f%%），'
-                     '但方向只有 %d/%d 命中（%.0f%%）。用法：<b>用它的点位区间挂单，'
-                     '不要用它的「偏强/承压」下注</b>。'
+            U.append({
+                'h': '用它的点位挂单，别信它的方向判词',
+                'x': '点位 %d/%d 至少半对（%.0f%%），但方向只有 %d/%d 命中（%.0f%%）。'
+                     '用法：<b>用它的点位区间挂单，不要用它的「偏强/承压」下注</b>。'
                      % (fwd['bandFull'] + fwd['bandHalf'], fwd['bandN'], bAny,
-                        fwd['tendencyHit'], fwd['tendencyN'], tr))
+                        fwd['tendencyHit'], fwd['tendencyN'], tr)})
         elif tr < TH_TEND_LOW:
-            U.append('开盘前瞻的方向判词只有 %.0f%% 命中（%d/%d），目前不足以作为隔夜持仓依据。'
-                     '等它连续 10 日跑过 50%% 再考虑采用。' % (tr, fwd['tendencyHit'], fwd['tendencyN']))
+            U.append({
+                'h': '开盘前瞻方向判词不足以作依据',
+                'x': '方向判词只有 %.0f%% 命中（%d/%d）。等它连续 10 日跑过 50%% 再考虑采用。'
+                     % (tr, fwd['tendencyHit'], fwd['tendencyN'])})
         else:
-            U.append('开盘前瞻方向命中 %.0f%%、点位至少半对 %.0f%%，两项都过线，'
-                     '可作次日仓位调整的参考。' % (tr, bAny))
+            U.append({
+                'h': '开盘前瞻两项都过线，可作次日调仓参考',
+                'x': '方向命中 %.0f%%、点位至少半对 %.0f%%。' % (tr, bAny)})
 
     # ⑤ 趋势：近 5 日 vs 全期
     r5 = sector.get('recent5') or {}
     if r5.get('n') and sector.get('strictHit') is not None:
         d = (r5['strictHit'] or 0) - sector['strictHit']
         if d >= 10:
-            U.append('近 %d 日命中 %.0f%%，比全期 %.0f%% 高 %.0f 个百分点，<b>手感在变好</b>，'
+            U.append({
+                'h': '近 %d 日手感在变好（%+.0fpp）' % (RECENT_DAYS, d),
+                'x': '近 %d 日命中 %.0f%%，比全期 %.0f%% 高 %.0f 个百分点。'
                      '但要小心是行情风格适配（普涨里看涨天然容易中）而非能力提升。'
-                     % (RECENT_DAYS, r5['strictHit'], sector['strictHit'], d))
+                     % (RECENT_DAYS, r5['strictHit'], sector['strictHit'], d)})
         elif d <= -10:
-            U.append('近 %d 日命中 %.0f%%，比全期 %.0f%% 低 %.0f 个百分点，'
-                     '<b>近期在退步</b>，使用时应下调权重。'
-                     % (RECENT_DAYS, r5['strictHit'], sector['strictHit'], -d))
+            U.append({
+                'h': '近期在退步（%+.0fpp），下调权重' % (d),
+                'x': '近 %d 日命中 %.0f%%，比全期 %.0f%% 低 %.0f 个百分点。'
+                     % (RECENT_DAYS, r5['strictHit'], sector['strictHit'], -d)})
     return U
 
 
@@ -419,7 +449,10 @@ def print_report(r):
     print('=== 结论 ===')
     print('  ' + r['verdict'])
     for u in r['usage']:
-        print('  · ' + u.replace('<b>', '').replace('</b>', ''))
+        # 2026-10-27：usage 每条改成 {'h': 结论, 'x': 依据}，页面只展开 h。
+        # 这里两段都打出来——终端是给我看的，越详细越好，和页面取舍相反。
+        print('  · ' + u['h'].replace('<b>', '').replace('</b>', ''))
+        print('    ' + u['x'].replace('<b>', '').replace('</b>', ''))
     # 这一段是给「生成下一步预测」的脚本/人看的：文字结论可以略读，开关不能
     F = r.get('flags') or {}
     print()
@@ -498,7 +531,7 @@ def self_test():
     u = build_usage({'n': 3, 'days': 1, 'strictHit': 66.7, 'beatRate': 66.7,
                      'excessAvg': 1.0, 'excessMed': 1.0, 'recent5': {}},
                     [], [], {'days': 1}, enough=False)
-    chk('样本不足 → 只输出 1 条「样本不足」', len(u) == 1 and '样本不足' in u[0])
+    chk('样本不足 → 只输出 1 条「样本不足」', len(u) == 1 and '样本不足' in u[0]['h'])
 
     # ⑤ 置信度反转必须被抓到（本次真实数据就是这种）
     hi_rev = [{'conf': '高', 'n': 9, 'strictHit': 11.1, 'wideHit': 22.2},
@@ -507,7 +540,7 @@ def self_test():
                      'excessAvg': -0.42, 'excessMed': -0.4, 'recent5': {}},
                     hi_rev, [], {'days': 0}, enough=True)
     chk('高置信低于中置信 → 判定「反向指标」',
-        any('反向指标' in x for x in u))
+        any('反向指标' in x['h'] for x in u))
 
     # ⑥ 置信度正常时不许误报反向
     hi_ok = [{'conf': '高', 'n': 20, 'strictHit': 60.0, 'wideHit': 70.0},
@@ -516,7 +549,8 @@ def self_test():
                       'excessAvg': 0.3, 'excessMed': 0.2, 'recent5': {}},
                      hi_ok, [], {'days': 0}, enough=True)
     chk('高置信确实更准 → 判「分层有效」且不出现「反向」',
-        any('分层有效' in x for x in u2) and not any('反向指标' in x for x in u2))
+        any('分层有效' in x['h'] for x in u2)
+        and not any('反向指标' in x['h'] + x['x'] for x in u2))
 
     # ⑦ 方向失衡
     dirs = [{'dir': 'up', 'label': '看涨', 'n': 49, 'strictHit': 26.5, 'wideHit': 45.0},
@@ -524,7 +558,7 @@ def self_test():
     u3 = build_usage({'n': 66, 'days': 11, 'strictHit': 36.4, 'beatRate': 39.4,
                       'excessAvg': -0.42, 'excessMed': -0.4, 'recent5': {}},
                      [], dirs, {'days': 0}, enough=True)
-    chk('看涨远弱于看跌 → 判「不对称」', any('不对称' in x for x in u3))
+    chk('看涨远弱于看跌 → 判「不对称」', any('不对称' in x['h'] + x['x'] for x in u3))
 
     # ⑧ 点位强 / 方向弱 → 必须建议「用区间不用方向」
     fw = {'days': 11, 'scoreAvg': 0.467, 'passDays': 3,
@@ -534,7 +568,8 @@ def self_test():
     u4 = build_usage({'n': 66, 'days': 11, 'strictHit': 36.4, 'beatRate': 39.4,
                       'excessAvg': -0.42, 'excessMed': -0.4, 'recent5': {}},
                      [], [], fw, enough=True)
-    chk('区间可靠+方向不可靠 → 建议用区间', any('用它的点位区间挂单' in x for x in u4))
+    chk('区间可靠+方向不可靠 → 建议用区间',
+        any('用它的点位' in x['h'] and '不要用它的「偏强' in x['x'] for x in u4))
 
     # ⑨ 结论分级
     v_bad = build_verdict({'n': 66, 'strictHit': 36.4, 'beatRate': 39.4}, {'days': 11, 'scoreAvg': 0.467}, True)

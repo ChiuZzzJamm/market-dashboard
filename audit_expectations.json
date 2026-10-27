@@ -1,1702 +1,1694 @@
 {
-  "generatedAt": "2026-10-25 21:30",
-  "projectDir": "/Users/loccco/WorkBuddy/market dashboard",
-  "automations": [
+ "generatedAt": "2026-10-25 21:30",
+ "projectDir": "/Users/loccco/WorkBuddy/market dashboard",
+ "automations": [
+  {
+   "id": "automation-1788494481298",
+   "schedule": "TU,WE,TH,FR 07:00",
+   "stepOrder": [
+    "0",
+    "1",
+    "2",
+    "2.5",
+    "2.6",
+    "3",
+    "3.5",
+    "3.6",
+    "3.7",
+    "3.8",
+    "3.85",
+    "3.87",
+    "3.9",
+    "3.95",
+    "4",
+    "5",
+    "5.2",
+    "5.5",
+    "5.6",
+    "5.7",
+    "6",
+    "7"
+   ],
+   "scripts": [
     {
-      "id": "automation-1788494481298",
-      "schedule": "TU,WE,TH,FR 07:00",
-      "stepOrder": [
-        "0",
-        "1",
-        "2",
-        "2.5",
-        "2.6",
-        "3",
-        "3.5",
-        "3.6",
-        "3.7",
-        "3.8",
-        "3.85",
-        "3.87",
-        "3.9",
-        "3.95",
-        "4",
-        "5",
-        "5.2",
-        "5.5",
-        "5.6",
-        "5.7",
-        "6",
-        "7"
-      ],
-      "scripts": [
-        {
-          "cmd": "python3 cal_factor.py",
-          "flags": [
-            "--json"
-          ],
-          "file": "cal_factor.py",
-          "step": "0"
-        },
-        {
-          "cmd": "python3 update_us_from_quotes.py",
-          "flags": [],
-          "file": "update_us_from_quotes.py",
-          "step": "2"
-        },
-        {
-          "cmd": "python3 check_duanban.py",
-          "flags": [
-            "--days",
-            "7",
-            "--limit",
-            "300",
-            "--json"
-          ],
-          "file": "check_duanban.py",
-          "step": "2.5"
-        },
-        {
-          "cmd": "python3 stock_risk_blacklist.py",
-          "flags": [
-            "--write"
-          ],
-          "file": "stock_risk_blacklist.py",
-          "step": "2.6"
-        },
-        {
-          "cmd": "python3 check_duanban.py",
-          "flags": [
-            "--days",
-            "7",
-            "--limit",
-            "300",
-            "--module",
-            "--out",
-            "/tmp/duanban_am.json"
-          ],
-          "file": "check_duanban.py",
-          "step": "5.6"
-        },
-        {
-          "cmd": "python3 merge_duanban.py",
-          "args": [
-            "/tmp/duanban_am.json"
-          ],
-          "flags": [],
-          "file": "merge_duanban.py",
-          "step": "5.6"
-        },
-        {
-          "cmd": "python3 embed_klines.py",
-          "flags": [],
-          "file": "embed_klines.py",
-          "step": "5.7"
-        },
-        {
-          "cmd": "python3 validate_stocks.py",
-          "flags": [
-            "--no-fix",
-            "--scope",
-            "us"
-          ],
-          "file": "validate_stocks.py",
-          "step": "5.5"
-        }
-      ],
-      "scriptsMissing": [],
-      "mustContain": [
-        "aShareClosed",
-        "cal_factor.py --json",
-        "update_us_from_quotes.py",
-        "check_duanban.py --days 7 --limit 300 --json",
-        "stock_risk_blacklist.py --write",
-        "validate_stocks.py --no-fix --scope us",
-        "--no-fix --scope us",
-        "check_duanban.py --days 7 --limit 300 --module --out /tmp/duanban_am.json",
-        "merge_duanban.py /tmp/duanban_am.json",
-        "embed_klines.py",
-        "us.macroNews",
-        "保持该字段原值不动",
-        "price-in→已计价",
-        "R100z160",
-        "第 1 组＝主组恰好 8 只四类 A 股",
-        "第 2~4 组＝次生组各 2~4 只"
-      ],
-      "forbidden": [
-        "①",
-        "②",
-        "③",
-        "④",
-        "⑤",
-        "⑥",
-        "⑦",
-        "⑧",
-        "⑨",
-        "⑩",
-        "⑪",
-        "⑫",
-        "⑬",
-        "⑭",
-        "⑮"
-      ],
-      "forbiddenGap": [],
-      "dataFields": [
-        "us.bullNews",
-        "us.bearNews",
-        "us.macroNews",
-        "us.intlNews",
-        "us.bankViews",
-        "us.bullNews[].deduce",
-        "us.bearNews[].deduce",
-        "us.macroNews[].deduce",
-        "us.intlNews[].deduce",
-        "us.bankViews[].deduce",
-        "us.bullNews[].impacts[].stocks",
-        "us.bearNews[].impacts[].stocks",
-        "us.bullNews[].impacts[].theme",
-        "us.macroNews[].impacts[].horizon",
-        "us.intlNews[].impacts[].horizon",
-        "us.bankViews[].impacts[].horizon",
-        "us.macroNews[].direction",
-        "us.intlNews[].direction",
-        "us.bankViews[].direction",
-        "us.outlook",
-        "us.sectorsUp[].reason",
-        "us.sectorsDown[].reason",
-        "us.sectorsUp[].deduce",
-        "us.sectorsDown[].deduce",
-        "us.indices[].openPct",
-        "us.indices[].changePct",
-        "us.themePicks",
-        "us.updatedAt",
-        "panorama.markets[us].date",
-        "panorama.markets[us].items",
-        "duanban.confirmed[]/watching[]",
-        "duanban.topBoards",
-        "duanban.star",
-        "stkKlines",
-        "stkKlineNames"
-      ],
-      "writesFields": [
-        "us.bullNews",
-        "us.bearNews",
-        "us.macroNews",
-        "us.intlNews",
-        "us.bankViews",
-        "us.outlook",
-        "us.sectorsUp[].reason",
-        "us.sectorsDown[].reason",
-        "us.sectorsUp[].deduce",
-        "us.sectorsDown[].deduce",
-        "us.bullNews[].deduce",
-        "us.bearNews[].deduce",
-        "us.macroNews[].deduce",
-        "us.intlNews[].deduce",
-        "us.bankViews[].deduce",
-        "us.macroNews[].direction",
-        "us.intlNews[].direction",
-        "us.bankViews[].direction",
-        "us.macroNews[].impacts[].horizon",
-        "us.intlNews[].impacts[].horizon",
-        "us.bankViews[].impacts[].horizon",
-        "us.updatedAt",
-        "duanban (confirmed/watching 双池, sentiment/probability/story/bullRefs/bearRefs/topBoards)",
-        "panorama.markets[us].date",
-        "panorama.markets[us].items",
-        "stkKlines",
-        "stkKlineNames"
-      ],
-      "neverWrites": [
-        "aiPrediction",
-        "ashare",
-        "openOutlook",
-        "weekendNews",
-        "panorama.markets[kr]",
-        "panorama.markets[jp]",
-        "us.themePicks",
-        "duanban.star",
-        "harmonic",
-        "breakoutPool",
-        "accumulation",
-        "fullScan"
-      ],
-      "notes": [
-        "脚本 3 处 check_duanban.py（2.5 与 5.6 用不同 flags），5.6 与 5.5 各跑一次 validate_stocks.py --no-fix --scope us。"
-      ]
+     "cmd": "python3 cal_factor.py",
+     "flags": [
+      "--json"
+     ],
+     "file": "cal_factor.py",
+     "step": "0"
     },
     {
-      "id": "db3b5a70-b990-43f5-9ca8-e261b2005841",
-      "schedule": "MO,TU,WE,TH,FR 08:30",
-      "stepOrder": [
-        "0",
-        "1",
-        "2",
-        "3",
-        "3.4",
-        "3.45",
-        "3.5",
-        "4",
-        "4a",
-        "4a-2",
-        "4b",
-        "4c",
-        "5",
-        "5.2",
-        "5.5",
-        "5.6",
-        "5.10",
-        "5.11",
-        "6",
-        "7",
-        "8"
-      ],
-      "scripts": [
-        {
-          "cmd": "python3 cal_factor.py",
-          "flags": [
-            "--json"
-          ],
-          "file": "cal_factor.py",
-          "step": "0"
-        },
-        {
-          "cmd": "python3 update_kr_jp.py",
-          "flags": [
-            "--label",
-            "早盘"
-          ],
-          "file": "update_kr_jp.py",
-          "step": "1"
-        },
-        {
-          "cmd": "python3 build_stock_pool.py",
-          "flags": [
-            "--json"
-          ],
-          "file": "build_stock_pool.py",
-          "step": "3.4"
-        },
-        {
-          "cmd": "python3 stock_risk_blacklist.py",
-          "flags": [
-            "--write"
-          ],
-          "file": "stock_risk_blacklist.py",
-          "step": "3.5"
-        },
-        {
-          "cmd": "python3 track_calibration.py",
-          "flags": [
-            "--json"
-          ],
-          "file": "track_calibration.py",
-          "step": "3"
-        },
-        {
-          "cmd": "python3 validate_stocks.py",
-          "flags": [
-            "--no-fix",
-            "--scope",
-            "ai"
-          ],
-          "file": "validate_stocks.py",
-          "step": "5.5"
-        },
-        {
-          "cmd": "python3 retag_duanban.py",
-          "flags": [],
-          "file": "retag_duanban.py",
-          "step": "5.6"
-        },
-        {
-          "cmd": "python3 forecast_scorecard.py",
-          "flags": [
-            "--view"
-          ],
-          "file": "forecast_scorecard.py",
-          "step": "3.2"
-        }
-      ],
-      "scriptsMissing": [],
-      "mustContain": [
-        "aShareClosed",
-        "cal_factor.py --json",
-        "update_kr_jp.py --label 早盘",
-        "build_stock_pool.py --json",
-        "stock_risk_blacklist.py --write",
-        "track_calibration.py --json",
-        "validate_stocks.py --no-fix --scope ai",
-        "--no-fix --scope ai",
-        "retag_duanban.py",
-        "openOutlook.pos",
-        "sectors[].exp",
-        "check_stock_pool",
-        "price-in 写作「已计价」",
-        "R100z160",
-        "forecast_scorecard.py --view",
-        "生成约束 flags",
-        "maxHighConf",
-        "requireBand",
-        "`panorama.markets` 中 `key=kr` / `key=jp` 的条目"
-      ],
-      "forbidden": [
-        "①",
-        "②",
-        "③",
-        "④",
-        "⑤",
-        "⑥",
-        "⑦",
-        "⑧",
-        "⑨",
-        "⑩",
-        "⑪",
-        "⑫",
-        "⑬",
-        "⑭",
-        "⑮",
-        "⑯",
-        "⑰",
-        "⑱",
-        "⑲",
-        "⑳",
-        "㉑",
-        "㉒",
-        "㉓",
-        "㉔",
-        "㉕",
-        "㉖",
-        "㉗",
-        "㉘"
-      ],
-      "forbiddenGap": [],
-      "dataFields": [
-        "us.bullish",
-        "us.bearish",
-        "us.bullish[].theme",
-        "us.bullish[].detail",
-        "us.bullish[].stocks",
-        "us.bearish[].theme",
-        "us.bearish[].stocks",
-        "aiPrediction.date",
-        "aiPrediction.indexLine",
-        "aiPrediction.basis",
-        "aiPrediction.summary",
-        "aiPrediction.sectors",
-        "aiPrediction.sectors[].sector",
-        "aiPrediction.sectors[].direction",
-        "aiPrediction.sectors[].confidence",
-        "aiPrediction.sectors[].usDriver",
-        "aiPrediction.sectors[].logic",
-        "aiPrediction.sectors[].exp",
-        "aiPrediction.sectors[].exp.layer",
-        "aiPrediction.sectors[].exp.priceIn",
-        "aiPrediction.sectors[].exp.priceInBasis",
-        "aiPrediction.sectors[].exp.quad",
-        "aiPrediction.sectors[].exp.verdict",
-        "aiPrediction.sectors[].deduce",
-        "aiPrediction.sectors[].deduce.cands",
-        "aiPrediction.sectors[].deduce.main",
-        "aiPrediction.sectors[].deduce.conf",
-        "aiPrediction.sectors[].deduce.counter",
-        "aiPrediction.sectors[].stocks",
-        "aiPrediction.sectors[].stocks[].code",
-        "aiPrediction.sectors[].stocks[].name",
-        "aiPrediction.sectors[].stocks[].note",
-        "aiPrediction.sectors[].stocks[].exit",
-        "aiPrediction.riskNote",
-        "aiPrediction.verification",
-        "openOutlook.date",
-        "openOutlook.content",
-        "openOutlook.source",
-        "openOutlook.pos",
-        "openOutlook.pos.tendency",
-        "openOutlook.pos.bandLo",
-        "openOutlook.pos.bandHi",
-        "openOutlook.pos.volExpect",
-        "panorama.markets[kr].date",
-        "panorama.markets[jp].date",
-        "ashare.tradeDate",
-        "ashare.indices",
-        "ashare.sectorsUp",
-        "ashare.sectorsDown",
-        "ashare.breadth",
-        "ashare.lianban",
-        "ashare.fundIn",
-        "ashare.fundOut",
-        "us.bullNews",
-        "us.bearNews",
-        "us.indices",
-        "stock_pool.json",
-        "market_bench.json",
-        "calibration_log.json",
-        "updatedAt"
-      ],
-      "writesFields": [
-        "us.bullish",
-        "us.bearish",
-        "aiPrediction",
-        "openOutlook",
-        "updatedAt",
-        "duanban (仅经 retag_duanban.py 重算 sentiment/bullRefs/bearRefs/story，池成员、K线、板块涨幅不变)"
-      ],
-      "neverWrites": [
-        "us.bullNews",
-        "us.bearNews",
-        "us.macroNews",
-        "us.intlNews",
-        "us.bankViews",
-        "us.outlook",
-        "us.themePicks",
-        "us.indices",
-        "ashare",
-        "weekendNews",
-        "panorama (all)",
-        "aiPrediction.verification",
-        "stock_pool.json",
-        "market_bench.json"
-      ],
-      "notes": [
-        "步骤编号乱序：5.11 出现在 5.10 之前（正文顺序 5.5→5.6→5.11→5.10→6），且 4a-2 排在 4b/4c 之前；stepOrder 已按正文出现顺序如实记录。",
-        "market_bench.py --write 被明确禁止（本任务只读 market_bench.json），故未计入 scripts。",
-        "retag_duanban.py 会改写 duanban 的 sentiment/bullRefs/bearRefs/story，但池成员与 K 线不变。"
-      ]
+     "cmd": "python3 update_us_from_quotes.py",
+     "flags": [],
+     "file": "update_us_from_quotes.py",
+     "step": "2"
     },
     {
-      "id": "44d9708b-ce74-440d-91e6-1b8d51df6576",
-      "schedule": "MO,TU,WE,TH,FR 09:45",
-      "stepOrder": [
-        "0",
-        "1",
-        "2",
-        "3",
-        "4"
-      ],
-      "scripts": [
-        {
-          "cmd": "python3 cal_factor.py",
-          "flags": [
-            "--json"
-          ],
-          "file": "cal_factor.py",
-          "step": "0"
-        },
-        {
-          "cmd": "python3 update_star.py",
-          "flags": [],
-          "file": "update_star.py",
-          "step": "1"
-        },
-        {
-          "cmd": "python3 validate_stocks.py",
-          "flags": [
-            "--no-fix",
-            "--scope",
-            "star"
-          ],
-          "file": "validate_stocks.py",
-          "step": "3"
-        }
-      ],
-      "scriptsMissing": [],
-      "mustContain": [
-        "aShareClosed",
-        "cal_factor.py --json",
-        "update_star.py",
-        "validate_stocks.py --no-fix --scope star",
-        "--no-fix --scope star",
-        "--scope star",
-        "duanban.star",
-        "run_push.sh star",
-        "harmonic_detect.py",
-        "breakout_pool.py",
-        "accumulation_score.py",
-        "full_scan.py",
-        "price-in→已计价",
-        "盘口结构动作（R100z193，勿删勿改",
-        "这类无动作的空话",
-        "tapeSummary 的动作交代"
-      ],
-      "forbidden": [
-        "①",
-        "②",
-        "③",
-        "④",
-        "⑤",
-        "⑥",
-        "⑦",
-        "⑧",
-        "⑨",
-        "⑩",
-        "⑪"
-      ],
-      "forbiddenGap": [],
-      "dataFields": [
-        "duanban.star.date",
-        "duanban.star.time",
-        "duanban.star.marketLine",
-        "duanban.star.sentiment",
-        "duanban.star.picks",
-        "duanban.star.picks[].code",
-        "duanban.star.picks[].name",
-        "duanban.star.picks[].sector",
-        "duanban.star.picks[].sentiment",
-        "duanban.star.picks[].probability",
-        "duanban.star.picks[].note",
-        "duanban.star.picks[].src",
-        "duanban.star.pushText",
-        "duanban.star.generatedBy",
-        "harmonic.confirmPool",
-        "harmonic.watchPool",
-        "breakoutPool.passed",
-        "accumulation.scored",
-        "fullScan",
-        "duanban.star.gapSummary",
-        "duanban.star.tapeSummary",
-        "duanban.star.picks[].tape",
-        "duanban.star.picks[].gapTag",
-        "duanban.star.buyList",
-        "duanban.star.buySummary"
-      ],
-      "writesFields": [
-        "duanban.star",
-        "duanban.star.sentiment",
-        "duanban.star.pushText",
-        "duanban.star.picks"
-      ],
-      "neverWrites": [
-        "ashare",
-        "us",
-        "weekendNews",
-        "openOutlook",
-        "aiPrediction",
-        "panorama",
-        "harmonic",
-        "breakoutPool",
-        "accumulation",
-        "fullScan",
-        "duanban 池内标的 kline/story/refs/news/probability",
-        "duanban 池成员增删",
-        "us.themePicks"
-      ],
-      "notes": [
-        "唯一写入口是 duanban.star；脚本产物（update_star.py）负责 picks，AI 只复核 sentiment/pushText 并可微调 picks（仅可删减或池内补入）。"
-      ]
+     "cmd": "python3 check_duanban.py",
+     "flags": [
+      "--days",
+      "7",
+      "--limit",
+      "300",
+      "--json"
+     ],
+     "file": "check_duanban.py",
+     "step": "2.5"
     },
     {
-      "id": "a140dfda-b878-4c9d-9a03-448d0d55a58b",
-      "schedule": "MO,TU,WE,TH,FR 16:00",
-      "stepOrder": [
-        "0",
-        "1",
-        "1.5",
-        "2",
-        "2.5",
-        "3",
-        "4",
-        "4.5",
-        "4.6",
-        "4.7",
-        "5",
-        "6"
-      ],
-      "scripts": [
-        {
-          "cmd": "python3 cal_factor.py",
-          "flags": [
-            "--json"
-          ],
-          "file": "cal_factor.py",
-          "step": "0"
-        },
-        {
-          "cmd": "python3 update_ashare_sectors.py",
-          "flags": [],
-          "file": "update_ashare_sectors.py",
-          "step": "1"
-        },
-        {
-          "cmd": "python3 update_kr_jp.py",
-          "flags": [],
-          "file": "update_kr_jp.py",
-          "step": "1.5"
-        },
-        {
-          "cmd": "python3 check_duanban.py",
-          "flags": [
-            "--days",
-            "7",
-            "--limit",
-            "300",
-            "--module",
-            "--out",
-            "/tmp/duanban_pm.json"
-          ],
-          "file": "check_duanban.py",
-          "step": "2"
-        },
-        {
-          "cmd": "python3 merge_duanban.py",
-          "args": [
-            "/tmp/duanban_pm.json"
-          ],
-          "flags": [],
-          "file": "merge_duanban.py",
-          "step": "2"
-        },
-        {
-          "cmd": "python3 chen_pool.py",
-          "flags": [
-            "--merge"
-          ],
-          "file": "chen_pool.py",
-          "step": "2.5"
-        },
-        {
-          "cmd": "python3 full_scan.py",
-          "flags": [],
-          "file": "full_scan.py",
-          "step": "4"
-        },
-        {
-          "cmd": "python3 accumulation_score.py",
-          "flags": [],
-          "file": "accumulation_score.py",
-          "step": "4"
-        },
-        {
-          "cmd": "python3 harmonic_detect.py",
-          "flags": [],
-          "file": "harmonic_detect.py",
-          "step": "4"
-        },
-        {
-          "cmd": "python3 breakout_pool.py --write",
-          "flags": [
-            "--write"
-          ],
-          "file": "breakout_pool.py",
-          "step": "4"
-        },
-        {
-          "cmd": "python3 atr_stop.py",
-          "flags": [],
-          "file": "atr_stop.py",
-          "step": "4.6"
-        },
-        {
-          "cmd": "python3 signal_attribution.py",
-          "flags": [],
-          "file": "signal_attribution.py",
-          "step": "4.6"
-        },
-        {
-          "cmd": "python3 forecast_scorecard.py",
-          "flags": [],
-          "file": "forecast_scorecard.py",
-          "step": "4.7"
-        }
-      ],
-      "scriptsMissing": [],
-      "mustContain": [
-        "aShareClosed",
-        "cal_factor.py --json",
-        "update_ashare_sectors.py",
-        "update_kr_jp.py",
-        "check_duanban.py --days 7 --limit 300 --module --out /tmp/duanban_pm.json",
-        "merge_duanban.py /tmp/duanban_pm.json",
-        "FULLSCAN_MAX=500 KLINE_DEADLINE=900",
-        "KLINE_DEADLINE=900",
-        "SKIP_AUDIT",
-        "tdx",
-        "price-in→已计价",
-        "R100z160",
-        "4.6) 止损与归因两件套",
-        "/Users/loccco/.workbuddy/binaries/run-python atr_stop.py",
-        "/Users/loccco/.workbuddy/binaries/run-python signal_attribution.py",
-        "atrStops",
-        "signalPerf",
-        "止损口径只由 atr_stop.py 产出",
-        "4.7) 预测成绩单",
-        "/Users/loccco/.workbuddy/binaries/run-python forecast_scorecard.py",
-        "forecastScore",
-        "按阈值自动生成",
-        "样本门槛 30 条且 5 个交易日",
-        "2.5) 陈学长断板反包（第二套并列口径",
-        "/Users/loccco/.workbuddy/binaries/run-python chen_pool.py --merge",
-        "chenPool",
-        "并列的第二套技术指标，不是它的升级版",
-        "回测出结果之前严禁改参数"
-      ],
-      "forbidden": [
-        "①",
-        "②",
-        "③",
-        "④",
-        "⑤",
-        "⑥",
-        "⑦",
-        "⑧",
-        "⑨",
-        "⑩",
-        "⑪"
-      ],
-      "forbiddenGap": [],
-      "dataFields": [
-        "ashare.tradeDate",
-        "ashare.status",
-        "ashare.summary",
-        "ashare.sectorSource",
-        "ashare.indices",
-        "ashare.indices[].code",
-        "ashare.breadth",
-        "ashare.sectorsUp[]/sectorsDown[]/allBoards[]（脚本字段）",
-        "ashare.lianban",
-        "duanban.confirmed/watching/topBoards",
-        "fullScan",
-        "harmonic",
-        "accumulation",
-        "breakoutPool",
-        "panorama.markets[kr]/markets[jp]",
-        "atrStops",
-        "signalPerf",
-        "forecastScore",
-        "chenPool（tradeDate/strict/loose/watching/failPool/compare/track）"
-      ],
-      "writesFields": [
-        "ashare 行情字段（脚本生成：tradeDate/status/summary/indices/breadth/sectorsUp/sectorsDown/allBoards/lianban/fundIn/fundOut/fundNote/updatedAt）",
-        "duanban（merge_duanban 合并，story 由 AI 按数据驱动填充复核）",
-        "panorama.markets[kr]/markets[jp]（update_kr_jp）",
-        "fullScan/harmonic/accumulation/breakoutPool（四模块脚本产物）",
-        "atrStops（atr_stop.py：全站唯一权威止损源，151 只 ATR 止损位 + 宽度 + 风险预算仓位）",
-        "signalPerf（signal_attribution.py：按指标来源的 T+1/3/5/10 收益归因与建议权重）",
-        "forecastScore（forecast_scorecard.py：把 calibration_log.json 的板块预判与开盘前瞻台账结算成跨日命中率，按置信度/方向/近5日分层，usage 与 verdict 由阈值自动生成）",
-        "chenPool（chen_pool.py：陈学长第二套断板反包口径，与 duanban 并列不互相覆盖；含 compare 两池差异；留痕写 chen_ledger.json）"
-      ],
-      "neverWrites": [
-        "us（全部字段）",
-        "weekendNews",
-        "aiPrediction",
-        "openOutlook",
-        "ashare.reason / 五节要闻 / themePicks / outlook 等叙述字段（19:30 叙事步职责）",
-        "duanban.star",
-        "stkKlines（19:30 叙事步 embed_klines 职责）",
-        "strategy/macroCalendar 顶层键（deploy.sh 自动生成）"
-      ],
-      "notes": [
-        "R100z138（2026-10-16）：由原 16:00 任务（automation-1788494481279）拆分出的数据步，rrule 16:00（R100z139 由 15:30 提前至 15:15、R100z140 再提前至 16:00——涨停池 15:30 后才发布，16:00 跑确保当日池就绪）。",
-        "本步不部署不推送（休市分支除外：SKIP_AUDIT=1 bash deploy.sh 上线休市状态）。",
-        "第 2 步断板 story 由脚本基于 check_duanban 真实字段数据驱动填充，AI 逐只复核 sentiment/格式/probability。",
-        "R100z161（2026-10-24）：新增第 4.7 步「预测成绩单」（forecast_scorecard.py），把既有台账 calibration_log.json 结算成 forecastScore 顶层节点。此前页面只有当日 verification、第二天被覆盖，用户无从判断累积准确率。已同步 stepOrder/scripts/dataFields/writesFields/mustContain。",
-        "R100z218（2026-10-25）：新增第 2.5 步「陈学长断板反包」——用户在技术看板「断板反包」之后要求**新建**一个并列指标（不是改断板反包），目的是两套口径并行留痕、一周后比胜率。产出 data.js 顶层 chenPool，口径冻结于 2026-10-25，回测出结果前不许调参。已同步 stepOrder/scripts/mustContain/dataFields/writesFields。",
-        "chen_pool.py 对 duanban 节点**只读不写**（只取 confirmed/watching 做当日差异对比）；这条是脚本行为，不登记进 neverWrites——B6 的路径解析会把「duanban（…）」的首词当成字段路径，与 writesFields 的 duanban 撞成「台账自相矛盾」。",
-        "R100z219（2026-10-25）：口径修订——用户指出「陈学长没有要求连板≥2，首板也可以」，删掉连板门槛（连板数仍算、仍展示、仍排序）；同时按要求删掉 funnel 漏斗字段（dataFields/writesFields 已同步）。本步命令与步骤号不变，无需 reorder。",
-        "R100z219b（2026-10-26 00:09）：chenPool 新增 tradeDate（= 命中票最新一根 K 线的日期）。跨午夜跑批时 generatedAt 会写成第二天、行情仍是上一交易日收盘，页面「数据日」照抄 generatedAt 会误导。同时修两处口径 bug：① settle_one 由 days.index(entryDate) 改「≤ entryDate 的最后一根 K 线」，否则 entryDate 落在周末/节假日时永远结算不了且不报错（实测 13 条样本全是周日入口）；② 断板反包对照的「今日新入池」基准由本脚本运行日改为 duanban 模块自己的 generatedAt 日期，否则跨午夜时一条也记不进来、胜率表第三行永远 0 样本。",
-        "R100z234（2026-10-26）：用户拍板删掉「交易预案」整块（与开盘精选同日给出两套几乎不重叠的执行清单：精选 10 只 / 预案 8 只 / 交集 1 只，两套止损与仓位并存等于任何一套都无法照做）。第 4.6 步为「止损与归因两件套」（atr_stop → signal_attribution）。"
-      ]
+     "cmd": "python3 stock_risk_blacklist.py",
+     "flags": [
+      "--write"
+     ],
+     "file": "stock_risk_blacklist.py",
+     "step": "2.6"
     },
     {
-      "id": "automation-1788494481279",
-      "schedule": "MO,TU,WE,TH,FR 19:30",
-      "stepOrder": [
-        "0",
-        "1",
-        "2",
-        "3",
-        "3.5",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-        "9",
-        "10",
-        "11",
-        "12"
-      ],
-      "scripts": [
-        {
-          "cmd": "python3 cal_factor.py",
-          "flags": [
-            "--json"
-          ],
-          "file": "cal_factor.py",
-          "step": "0"
-        },
-        {
-          "cmd": "python3 market_bench.py",
-          "flags": [
-            "--write"
-          ],
-          "file": "market_bench.py",
-          "step": "2"
-        },
-        {
-          "cmd": "python3 build_stock_pool.py",
-          "flags": [
-            "--write"
-          ],
-          "file": "build_stock_pool.py",
-          "step": "3"
-        },
-        {
-          "cmd": "python3 lhb.py",
-          "flags": [
-            "--write"
-          ],
-          "file": "lhb.py",
-          "step": "3.5"
-        },
-        {
-          "cmd": "python3 stock_quotes.py",
-          "flags": [
-            "--codes-file"
-          ],
-          "file": "stock_quotes.py",
-          "step": "4"
-        },
-        {
-          "cmd": "python3 stock_fundflow.py",
-          "flags": [
-            "--json"
-          ],
-          "file": "stock_fundflow.py",
-          "step": "4"
-        },
-        {
-          "cmd": "python3 embed_klines.py",
-          "flags": [],
-          "file": "embed_klines.py",
-          "step": "5"
-        },
-        {
-          "cmd": "python3 stock_risk_blacklist.py",
-          "flags": [
-            "--write"
-          ],
-          "file": "stock_risk_blacklist.py",
-          "step": "6"
-        },
-        {
-          "cmd": "python3 score_openoutlook.py",
-          "flags": [],
-          "file": "score_openoutlook.py",
-          "step": "7"
-        },
-        {
-          "cmd": "python3 track_calibration.py",
-          "flags": [],
-          "file": "track_calibration.py",
-          "step": "8"
-        },
-        {
-          "cmd": "python3 enrich_policy.py",
-          "flags": [],
-          "file": "enrich_policy.py",
-          "step": "9"
-        },
-        {
-          "cmd": "python3 validate_stocks.py",
-          "flags": [
-            "--no-fix",
-            "--scope",
-            "ai"
-          ],
-          "file": "validate_stocks.py",
-          "step": "10"
-        },
-        {
-          "cmd": "python3 validate_stocks.py",
-          "flags": [
-            "--no-fix",
-            "--scope",
-            "us"
-          ],
-          "file": "validate_stocks.py",
-          "step": "10"
-        },
-        {
-          "cmd": "python3 audit_pipeline.py",
-          "flags": [],
-          "file": "audit_pipeline.py",
-          "step": "10"
-        },
-        {
-          "cmd": "bash deploy.sh",
-          "flags": [],
-          "file": "deploy.sh",
-          "step": "10"
-        },
-        {
-          "cmd": "bash run_push.sh ashare",
-          "flags": [],
-          "file": "run_push.sh",
-          "step": "10"
-        },
-        {
-          "cmd": "python3 check_narrative.py",
-          "flags": [],
-          "file": "check_narrative.py",
-          "step": "10"
-        },
-        {
-          "cmd": "python3 apply_narrative.py",
-          "flags": [],
-          "file": "apply_narrative.py",
-          "step": "4"
-        },
-        {
-          "cmd": "python3 update_ashare_sectors.py",
-          "flags": [],
-          "file": "update_ashare_sectors.py",
-          "step": "0（补跑分支）"
-        },
-        {
-          "cmd": "python3 update_kr_jp.py",
-          "flags": [],
-          "file": "update_kr_jp.py",
-          "step": "0（补跑分支）"
-        },
-        {
-          "cmd": "python3 check_duanban.py",
-          "flags": [
-            "--days",
-            "7",
-            "--limit",
-            "300",
-            "--module",
-            "--out",
-            "/tmp/duanban_pm.json"
-          ],
-          "file": "check_duanban.py",
-          "step": "0（补跑分支）"
-        },
-        {
-          "cmd": "python3 merge_duanban.py",
-          "args": [
-            "/tmp/duanban_pm.json"
-          ],
-          "flags": [],
-          "file": "merge_duanban.py",
-          "step": "0（补跑分支）"
-        },
-        {
-          "cmd": "python3 full_scan.py",
-          "flags": [],
-          "file": "full_scan.py",
-          "step": "0（补跑分支）"
-        },
-        {
-          "cmd": "python3 accumulation_score.py",
-          "flags": [],
-          "file": "accumulation_score.py",
-          "step": "0（补跑分支）"
-        },
-        {
-          "cmd": "python3 harmonic_detect.py",
-          "flags": [],
-          "file": "harmonic_detect.py",
-          "step": "0（补跑分支）"
-        },
-        {
-          "cmd": "python3 breakout_pool.py --write",
-          "flags": [
-            "--write"
-          ],
-          "file": "breakout_pool.py",
-          "step": "0（补跑分支）"
-        }
-      ],
-      "scriptsMissing": [],
-      "mustContain": [
-        "aShareClosed",
-        "--no-fix --scope ai",
-        "cal_factor.py --json",
-        "market_bench.py --write",
-        "build_stock_pool.py --write",
-        "stock_risk_blacklist.py --write",
-        "stock_fundflow.py --json",
-        "stock_quotes.py --codes-file",
-        "embed_klines.py",
-        "track_calibration.py",
-        "score_openoutlook.py",
-        "enrich_policy.py",
-        "validate_stocks.py",
-        "audit_pipeline.py",
-        "deploy.sh",
-        "run_push.sh ashare",
-        "verification.stockCheck[].fund",
-        "narrative_patch.json",
-        "check_narrative.py",
-        "price-in→已计价",
-        "R100z160",
-        "G38（成绩单约束）",
-        "forecastScore.flags.maxHighConf",
-        "lhb.py --write",
-        "ashare.lhb",
-        "第 1 组＝主组恰好 8 只四类 A 股",
-        "第 2~4 组＝次生组各 2~4 只"
-      ],
-      "forbidden": [
-        "①",
-        "②",
-        "③",
-        "④",
-        "⑤",
-        "⑥",
-        "⑦",
-        "⑧",
-        "⑨",
-        "⑩",
-        "⑪",
-        "⑫",
-        "⑬",
-        "⑭",
-        "⑮",
-        "⑯",
-        "⑰",
-        "⑱",
-        "⑲",
-        "⑳",
-        "㉑",
-        "㉒",
-        "㉓",
-        "㉔",
-        "㉕",
-        "㉖",
-        "㉗",
-        "㉘",
-        "㉙",
-        "㉚",
-        "㉛",
-        "㉜",
-        "㉝"
-      ],
-      "forbiddenGap": [],
-      "dataFields": [
-        "ashare.tradeDate",
-        "ashare.status",
-        "ashare.summary",
-        "ashare.sectorSource",
-        "ashare.indices",
-        "ashare.indices[].code",
-        "ashare.breadth",
-        "ashare.sectorsUp[].reason",
-        "ashare.sectorsUp[].thsCode",
-        "ashare.sectorsUp[].tops",
-        "ashare.sectorsUp[].netInflow",
-        "ashare.sectorsUp[].upCount",
-        "ashare.sectorsUp[].downCount",
-        "ashare.sectorsDown[].reason",
-        "ashare.sectorsDown[].thsCode",
-        "ashare.sectorsDown[].tops",
-        "ashare.allBoards[].code",
-        "ashare.allBoards[].lead",
-        "ashare.allBoards[].leadPct",
-        "ashare.allBoards[].ztCount",
-        "ashare.allBoards[].pct5",
-        "ashare.allBoards[].netInflow",
-        "ashare.fundIn",
-        "ashare.fundOut",
-        "ashare.fundNote",
-        "ashare.bullNews",
-        "ashare.bearNews",
-        "ashare.macroNews",
-        "ashare.intlNews",
-        "ashare.bankViews",
-        "ashare.outlook",
-        "ashare.source",
-        "ashare.themePicks[].event",
-        "ashare.themePicks[].logic",
-        "ashare.themePicks[].stocks[].chg",
-        "ashare.themePicks[].stocks[].note",
-        "ashare.lianban[].reason",
-        "ashare.lianban[].story",
-        "ashare.updatedAt",
-        "aiPrediction.verification",
-        "aiPrediction.verification.details[]",
-        "aiPrediction.verification.details[].sector",
-        "aiPrediction.verification.details[].predicted",
-        "aiPrediction.verification.details[].actualPct",
-        "aiPrediction.verification.details[].excessPct",
-        "aiPrediction.verification.details[].result",
-        "aiPrediction.verification.stockCheck[]",
-        "aiPrediction.verification.stockCheck[].avgPct",
-        "aiPrediction.verification.stockCheck[].hitN",
-        "aiPrediction.verification.stockCheck[].alignRate",
-        "aiPrediction.verification.stockCheck[].excessAvg",
-        "aiPrediction.verification.stockCheck[].fund.avgMainYi",
-        "aiPrediction.verification.stockCheck[].fund.netInN",
-        "aiPrediction.verification.stockCheck[].fund.src",
-        "openOutlook.verification",
-        "openOutlook.verification.score",
-        "openOutlook.verification.verdict",
-        "duanban.confirmed[]/watching[]",
-        "duanban.topBoards",
-        "duanban.star",
-        "panorama.markets[ashare]",
-        "fullScan",
-        "harmonic",
-        "accumulation",
-        "breakoutPool",
-        "stkKlines",
-        "stkKlineNames",
-        "calibration_state.json",
-        "market_bench.json",
-        "stock_pool.json",
-        "risk_blacklist.json",
-        "ashare.lhb",
-        "ashare.lhb.date",
-        "ashare.lhb.status",
-        "ashare.lhb.top[]",
-        "ashare.lhb.sell[]",
-        "ashare.lhb.seatRepeat[]",
-        "ashare.lhb.text",
-        "ashare.lhb.note"
-      ],
-      "writesFields": [
-        "ashare.* 叙事字段（sectorsUp/Down.reason / 五节要闻 / themePicks / outlook / lianban story / updatedAt）",
-        "aiPrediction.verification",
-        "openOutlook.verification",
-        "stkKlines/stkKlineNames（embed_klines）",
-        "risk_blacklist.json / stock_pool.json / market_bench.json / policySignals（脚本产物）",
-        "panorama.markets[ashare]（date 标签/items/indices）",
-        "ashare.lhb"
-      ],
-      "neverWrites": [
-        "us（全部字段，仅复核）",
-        "weekendNews",
-        "ashare 脚本生成字段（thsCode/tops/netInflow/upCount/downCount/lead/leadPct/ztCount/pct5/indices.code）",
-        "duanban.star",
-        "harmonic/accumulation/breakoutPool/fullScan 的 AI 手改",
-        "strategy/macroCalendar 顶层键（deploy.sh 自动生成）",
-        "stopTrack 的 AI 手写"
-      ],
-      "notes": [
-        "R100z138（2026-10-16）：原 16:00 任务拆分为 16:00 数据步 + 17:00 叙事步两条自动化，本条目为叙事步（原 automation-1788494481279 改 rrule 到 17:00；R100z139 由 16:30 提前至 16:15、R100z140 再提前至 17:00）。",
-        "第 0 步核验 16:00 数据步产物当日性，缺失则补跑对应脚本（scripts 里标注「补跑分支」）。",
-        "第 10 步先 node --check data.js，再 validate_stocks.py --no-fix --scope ai 与 --scope us 二跑，check_narrative 预检后 audit_pipeline FAIL=0 才 deploy.sh + run_push.sh ashare。",
-        "R100z196（2026-10-24 用户拍板）：rrule 由 17:00 推迟到 19:30。原因：第 3.5 步龙虎榜席位数据 18:00 后才披露完，17:00 抓到的大多是 partial；推迟后当日页面即完整席位。代价是叙事与推送晚 2.5 小时（已知取舍，非缺陷）。同步改动：prompt 内 3 处 17:00 口径 + 锁等待逻辑（19:30 时 16:00 早已收工，等待上限由 5 次 45 分钟降为 2 次 18 分钟，并新增「先看 status 再决定等不等」）。check_automations.py 的 A1700 rrule_want 与 check_code/各脚本注释里的时间引用一并对齐。"
-      ]
+     "cmd": "python3 check_duanban.py",
+     "flags": [
+      "--days",
+      "7",
+      "--limit",
+      "300",
+      "--module",
+      "--out",
+      "/tmp/duanban_am.json"
+     ],
+     "file": "check_duanban.py",
+     "step": "5.6"
     },
     {
-      "id": "ae2fc623-5d44-458c-82cf-a9ba28e54cee",
-      "schedule": "SU 21:00",
-      "stepOrder": [
-        "0",
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-        "9",
-        "10"
-      ],
-      "scripts": [
-        {
-          "cmd": "python3 cal_factor.py",
-          "flags": [
-            "--json"
-          ],
-          "file": "cal_factor.py",
-          "step": "0"
-        },
-        {
-          "cmd": "python3 update_us_from_quotes.py",
-          "flags": [],
-          "file": "update_us_from_quotes.py",
-          "step": "1"
-        },
-        {
-          "cmd": "python3 check_duanban.py",
-          "flags": [
-            "--days",
-            "7",
-            "--limit",
-            "300",
-            "--json"
-          ],
-          "file": "check_duanban.py",
-          "step": "3"
-        },
-        {
-          "cmd": "python3 stock_risk_blacklist.py",
-          "flags": [
-            "--write"
-          ],
-          "file": "stock_risk_blacklist.py",
-          "step": "4"
-        },
-        {
-          "cmd": "python3 stock_risk_blacklist.py",
-          "flags": [
-            "--write"
-          ],
-          "file": "stock_risk_blacklist.py",
-          "step": "8"
-        },
-        {
-          "cmd": "python3 validate_stocks.py",
-          "flags": [
-            "--no-fix",
-            "--scope",
-            "us"
-          ],
-          "file": "validate_stocks.py",
-          "step": "9"
-        },
-        {
-          "cmd": "python3 check_narrative.py",
-          "flags": [],
-          "file": "check_narrative.py",
-          "step": "9"
-        },
-        {
-          "cmd": "python3 apply_narrative.py",
-          "flags": [],
-          "file": "apply_narrative.py",
-          "step": "7"
-        },
-        {
-          "cmd": "python3 pipeline_lock.py",
-          "flags": [
-            "acquire",
-            "--task",
-            "a2100-weekend",
-            "--wait",
-            "300"
-          ],
-          "file": "pipeline_lock.py",
-          "step": "0"
-        },
-        {
-          "cmd": "python3 pipeline_lock.py",
-          "flags": [
-            "beat",
-            "--task",
-            "a2100-weekend"
-          ],
-          "file": "pipeline_lock.py",
-          "step": "2"
-        },
-        {
-          "cmd": "python3 pipeline_lock.py",
-          "flags": [
-            "release",
-            "--task",
-            "a2100-weekend"
-          ],
-          "file": "pipeline_lock.py",
-          "step": "汇报前"
-        }
-      ],
-      "scriptsMissing": [],
-      "mustContain": [
-        "cal_factor.py --json",
-        "update_us_from_quotes.py",
-        "check_duanban.py --days 7 --limit 300 --json",
-        "stock_risk_blacklist.py --write",
-        "validate_stocks.py --no-fix --scope us",
-        "check_narrative.py",
-        "apply_narrative.py",
-        "news_sources.py --list",
-        "pipeline_lock.py acquire --task a2100-weekend --wait 300",
-        "pipeline_lock.py release --task a2100-weekend",
-        "pipeline_lock.py beat --task a2100-weekend",
-        "本任务无需生成 us.themePicks",
-        "严禁写 aiPrediction / openOutlook / duanban / stkKlines",
-        "下没有 `us` 键，只有 `markets` 数组",
-        "us.outlook",
-        "保持 `ashare` 全部字段不变",
-        "本步不部署不推送",
-        "`panorama.markets` 中 `key=us` 的条目",
-        "第 1 组＝主组恰好 8 只四类 A 股",
-        "第 2~4 组＝次生组各 2~4 只"
-      ],
-      "forbidden": [
-        "①",
-        "②",
-        "③",
-        "④",
-        "⑤",
-        "⑥",
-        "⑦",
-        "⑧",
-        "⑨",
-        "⑩"
-      ],
-      "forbiddenGap": [],
-      "dataFields": [
-        "us.bullNews",
-        "us.bearNews",
-        "us.macroNews",
-        "us.intlNews",
-        "us.bankViews",
-        "us.outlook",
-        "us.sectorsUp",
-        "us.sectorsDown",
-        "weekendNews",
-        "updatedAt"
-      ],
-      "writesFields": [
-        "us 五节要闻（含 deduce）",
-        "us.outlook",
-        "us.sectorsUp/sectorsDown 各板块 reason（含 deduce）",
-        "weekendNews"
-      ],
-      "neverWrites": [
-        "aiPrediction",
-        "openOutlook",
-        "duanban",
-        "stkKlines",
-        "ashare",
-        "harmonic",
-        "accumulation",
-        "breakoutPool",
-        "strategy",
-        "macroCalendar"
-      ],
-      "notes": [
-        "R",
-        "1",
-        "0",
-        "0",
-        "z",
-        "1",
-        "8",
-        "0",
-        " ",
-        "补",
-        "登",
-        "记",
-        "：",
-        "此",
-        "前",
-        "该",
-        "任",
-        "务",
-        "没",
-        "有",
-        "基",
-        "线",
-        "条",
-        "目",
-        "，",
-        "G",
-        "2",
-        "/",
-        "G",
-        "3",
-        "/",
-        "G",
-        "4",
-        "/",
-        "B",
-        "5",
-        " ",
-        "四",
-        "道",
-        "闸",
-        "门",
-        "对",
-        "它",
-        "零",
-        "覆",
-        "盖",
-        "。"
-      ]
+     "cmd": "python3 merge_duanban.py",
+     "args": [
+      "/tmp/duanban_am.json"
+     ],
+     "flags": [],
+     "file": "merge_duanban.py",
+     "step": "5.6"
     },
     {
-      "id": "dcdf30c0-7d3b-4354-944d-085df91553ea",
-      "schedule": "SU 22:00",
-      "stepOrder": [
-        "0",
-        "1",
-        "2",
-        "2.4",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-        "9",
-        "10",
-        "11",
-        "12"
-      ],
-      "scripts": [
-        {
-          "cmd": "python3 cal_factor.py",
-          "flags": [
-            "--json"
-          ],
-          "file": "cal_factor.py",
-          "step": "0"
-        },
-        {
-          "cmd": "python3 update_us_from_quotes.py",
-          "flags": [],
-          "file": "update_us_from_quotes.py",
-          "step": "1"
-        },
-        {
-          "cmd": "python3 check_duanban.py",
-          "flags": [
-            "--days",
-            "7",
-            "--limit",
-            "300",
-            "--json"
-          ],
-          "file": "check_duanban.py",
-          "step": "2.5"
-        },
-        {
-          "cmd": "python3 stock_risk_blacklist.py",
-          "flags": [
-            "--write"
-          ],
-          "file": "stock_risk_blacklist.py",
-          "step": "2.6"
-        },
-        {
-          "cmd": "python3 track_calibration.py",
-          "flags": [
-            "--json"
-          ],
-          "file": "track_calibration.py",
-          "step": "3"
-        },
-        {
-          "cmd": "python3 build_stock_pool.py",
-          "flags": [
-            "--json"
-          ],
-          "file": "build_stock_pool.py",
-          "step": "3.4"
-        },
-        {
-          "cmd": "python3 check_duanban.py",
-          "flags": [
-            "--days",
-            "7",
-            "--limit",
-            "300",
-            "--module",
-            "--out",
-            "/tmp/duanban_we.json"
-          ],
-          "file": "check_duanban.py",
-          "step": "4.7"
-        },
-        {
-          "cmd": "python3 merge_duanban.py",
-          "args": [
-            "/tmp/duanban_we.json"
-          ],
-          "flags": [],
-          "file": "merge_duanban.py",
-          "step": "4.7"
-        },
-        {
-          "cmd": "python3 embed_klines.py",
-          "flags": [],
-          "file": "embed_klines.py",
-          "step": "4.8"
-        },
-        {
-          "cmd": "python3 validate_stocks.py",
-          "flags": [
-            "--no-fix",
-            "--scope",
-            "ai"
-          ],
-          "file": "validate_stocks.py",
-          "step": "5.5"
-        },
-        {
-          "cmd": "python3 validate_stocks.py",
-          "flags": [
-            "--no-fix",
-            "--scope",
-            "us"
-          ],
-          "file": "validate_stocks.py",
-          "step": "5.5"
-        },
-        {
-          "cmd": "python3 forecast_scorecard.py",
-          "flags": [
-            "--view"
-          ],
-          "file": "forecast_scorecard.py",
-          "step": "3.2"
-        }
-      ],
-      "scriptsMissing": [],
-      "mustContain": [
-        "NEXT_DAY",
-        "cal_factor.py",
-        "cal_factor.py --json",
-        "check_duanban.py --days 7 --limit 300 --json",
-        "check_duanban.py --days 7 --limit 300 --module --out /tmp/duanban_we.json",
-        "merge_duanban.py /tmp/duanban_we.json",
-        "stock_risk_blacklist.py --write",
-        "build_stock_pool.py --json",
-        "track_calibration.py --json",
-        "embed_klines.py",
-        "全部字段未被改动",
-        "run_push.sh weekend",
-        "price-in→已计价",
-        "R100z160",
-        "forecast_scorecard.py --view",
-        "生成约束 flags",
-        "maxHighConf",
-        "requireBand",
-        "`panorama.markets` 中 `key=kr` / `key=jp` 的条目",
-        "第 1 组＝主组恰好 8 只四类 A 股",
-        "第 2~4 组＝次生组各 2~4 只"
-      ],
-      "forbidden": [
-        "①",
-        "②",
-        "③",
-        "④",
-        "⑤",
-        "⑥",
-        "⑦",
-        "⑧",
-        "⑨",
-        "⑩",
-        "⑪",
-        "⑫",
-        "⑬",
-        "⑭",
-        "⑮",
-        "⑯",
-        "⑰",
-        "⑱",
-        "⑲",
-        "⑳",
-        "㉑"
-      ],
-      "forbiddenGap": [],
-      "dataFields": [
-        "us.bullNews",
-        "us.bearNews",
-        "us.macroNews",
-        "us.intlNews",
-        "us.bankViews",
-        "us.bullNews[].impacts[]",
-        "us.bearNews[].impacts[]",
-        "us.macroNews[].direction",
-        "us.intlNews[].direction",
-        "us.bankViews[].direction",
-        "us.macroNews[].impacts[].horizon",
-        "us.intlNews[].impacts[].horizon",
-        "us.bankViews[].impacts[].horizon",
-        "us.bullNews[].deduce",
-        "us.bearNews[].deduce",
-        "us.macroNews[].deduce",
-        "us.intlNews[].deduce",
-        "us.bankViews[].deduce",
-        "us.sectorsUp[].reason",
-        "us.sectorsDown[].reason",
-        "us.sectorsUp[].deduce",
-        "us.sectorsDown[].deduce",
-        "us.outlook",
-        "us.indices[].openPct",
-        "us.indices[].changePct",
-        "us.themePicks",
-        "us.updatedAt",
-        "weekendNews.date",
-        "weekendNews.source",
-        "aiPrediction.date",
-        "aiPrediction.indexLine",
-        "aiPrediction.basis",
-        "aiPrediction.summary",
-        "aiPrediction.sectors[].sector",
-        "aiPrediction.sectors[].direction",
-        "aiPrediction.sectors[].logic",
-        "aiPrediction.sectors[].exp",
-        "aiPrediction.sectors[].deduce",
-        "aiPrediction.sectors[].stocks[]",
-        "openOutlook.date",
-        "openOutlook.content",
-        "openOutlook.source",
-        "duanban.confirmed[]/watching[]",
-        "duanban.topBoards",
-        "duanban.star",
-        "harmonic",
-        "accumulation",
-        "breakoutPool",
-        "fullScan",
-        "stkKlines",
-        "stkKlineNames",
-        "panorama.markets[us]",
-        "stock_pool.json",
-        "risk_blacklist.json"
-      ],
-      "writesFields": [
-        "us.bullNews",
-        "us.bearNews",
-        "us.macroNews",
-        "us.intlNews",
-        "us.bankViews",
-        "us.outlook",
-        "us.sectorsUp[].reason",
-        "us.sectorsDown[].reason",
-        "us.sectorsUp[].deduce",
-        "us.sectorsDown[].deduce",
-        "us.bullNews[].deduce",
-        "us.bearNews[].deduce",
-        "us.macroNews[].deduce",
-        "us.intlNews[].deduce",
-        "us.bankViews[].deduce",
-        "us.updatedAt",
-        "weekendNews",
-        "aiPrediction",
-        "openOutlook",
-        "updatedAt",
-        "duanban.confirmed[]/watching[] (周末复核 confirmed/watching + sentiment/story/probability/bullRefs/bearRefs/topBoards)",
-        "stkKlines",
-        "stkKlineNames",
-        "panorama.markets[us]",
-        "risk_blacklist.json"
-      ],
-      "neverWrites": [
-        "ashare",
-        "harmonic",
-        "accumulation",
-        "breakoutPool",
-        "fullScan",
-        "us.themePicks",
-        "duanban.star",
-        "panorama.markets[kr]",
-        "panorama.markets[jp]",
-        "stock_pool.json",
-        "calibration_state.json"
-      ],
-      "notes": [
-        "第 5.5 步的 validate_stocks.py 已改为双跑：--no-fix --scope ai 与 --no-fix --scope us 各跑一次，两次 ALL OK 才可进入第 6 步部署（R95：禁止裸跑，裸跑会真实写回 data.js 并从后门改掉本任务写入边界外的字段）。",
-        "本任务明确不运行 accumulation_score / harmonic_detect / breakout_pool（沿用周五 16:00 数据步产物），三者仅出现在禁止/保持条款中，故未计入 scripts。",
-        "cal_factor.py 还支持 --date 逐日试算以判定 NEXT_DAY，未在 scripts 中单独列调用。"
-      ]
+     "cmd": "python3 embed_klines.py",
+     "flags": [],
+     "file": "embed_klines.py",
+     "step": "5.7"
+    },
+    {
+     "cmd": "python3 validate_stocks.py",
+     "flags": [
+      "--no-fix",
+      "--scope",
+      "us"
+     ],
+     "file": "validate_stocks.py",
+     "step": "5.5"
     }
-  ],
-  "pendingFields": {
-    "44d9708b-ce74-440d-91e6-1b8d51df6576": {
-      "until": "2026-10-27",
-      "why": "R100z232 新增 duanban.star.buyList / buySummary（今日买入清单），update_star.py 于 2026-10-26 16:xx 改完，当日 9:45 已跑过（改前口径），首个可落盘时点是 2026-10-27 09:45；过期仍缺 = 脚本根本没写，B6 转 FAIL",
-      "fields": [
-        "duanban.star.buyList",
-        "duanban.star.buySummary"
-      ]
+   ],
+   "scriptsMissing": [],
+   "mustContain": [
+    "aShareClosed",
+    "cal_factor.py --json",
+    "update_us_from_quotes.py",
+    "check_duanban.py --days 7 --limit 300 --json",
+    "stock_risk_blacklist.py --write",
+    "validate_stocks.py --no-fix --scope us",
+    "--no-fix --scope us",
+    "check_duanban.py --days 7 --limit 300 --module --out /tmp/duanban_am.json",
+    "merge_duanban.py /tmp/duanban_am.json",
+    "embed_klines.py",
+    "us.macroNews",
+    "保持该字段原值不动",
+    "price-in→已计价",
+    "R100z160",
+    "第 1 组＝主组恰好 8 只四类 A 股",
+    "第 2~4 组＝次生组各 2~4 只"
+   ],
+   "forbidden": [
+    "①",
+    "②",
+    "③",
+    "④",
+    "⑤",
+    "⑥",
+    "⑦",
+    "⑧",
+    "⑨",
+    "⑩",
+    "⑪",
+    "⑫",
+    "⑬",
+    "⑭",
+    "⑮"
+   ],
+   "forbiddenGap": [],
+   "dataFields": [
+    "us.bullNews",
+    "us.bearNews",
+    "us.macroNews",
+    "us.intlNews",
+    "us.bankViews",
+    "us.bullNews[].deduce",
+    "us.bearNews[].deduce",
+    "us.macroNews[].deduce",
+    "us.intlNews[].deduce",
+    "us.bankViews[].deduce",
+    "us.bullNews[].impacts[].stocks",
+    "us.bearNews[].impacts[].stocks",
+    "us.bullNews[].impacts[].theme",
+    "us.macroNews[].impacts[].horizon",
+    "us.intlNews[].impacts[].horizon",
+    "us.bankViews[].impacts[].horizon",
+    "us.macroNews[].direction",
+    "us.intlNews[].direction",
+    "us.bankViews[].direction",
+    "us.outlook",
+    "us.sectorsUp[].reason",
+    "us.sectorsDown[].reason",
+    "us.sectorsUp[].deduce",
+    "us.sectorsDown[].deduce",
+    "us.indices[].openPct",
+    "us.indices[].changePct",
+    "us.themePicks",
+    "us.updatedAt",
+    "panorama.markets[us].date",
+    "panorama.markets[us].items",
+    "duanban.confirmed[]/watching[]",
+    "duanban.topBoards",
+    "duanban.star",
+    "stkKlines",
+    "stkKlineNames"
+   ],
+   "writesFields": [
+    "us.bullNews",
+    "us.bearNews",
+    "us.macroNews",
+    "us.intlNews",
+    "us.bankViews",
+    "us.outlook",
+    "us.sectorsUp[].reason",
+    "us.sectorsDown[].reason",
+    "us.sectorsUp[].deduce",
+    "us.sectorsDown[].deduce",
+    "us.bullNews[].deduce",
+    "us.bearNews[].deduce",
+    "us.macroNews[].deduce",
+    "us.intlNews[].deduce",
+    "us.bankViews[].deduce",
+    "us.macroNews[].direction",
+    "us.intlNews[].direction",
+    "us.bankViews[].direction",
+    "us.macroNews[].impacts[].horizon",
+    "us.intlNews[].impacts[].horizon",
+    "us.bankViews[].impacts[].horizon",
+    "us.updatedAt",
+    "duanban (confirmed/watching 双池, sentiment/probability/story/bullRefs/bearRefs/topBoards)",
+    "panorama.markets[us].date",
+    "panorama.markets[us].items",
+    "stkKlines",
+    "stkKlineNames"
+   ],
+   "neverWrites": [
+    "aiPrediction",
+    "ashare",
+    "openOutlook",
+    "weekendNews",
+    "panorama.markets[kr]",
+    "panorama.markets[jp]",
+    "us.themePicks",
+    "duanban.star",
+    "harmonic",
+    "breakoutPool",
+    "accumulation",
+    "fullScan"
+   ],
+   "notes": [
+    "脚本 3 处 check_duanban.py（2.5 与 5.6 用不同 flags），5.6 与 5.5 各跑一次 validate_stocks.py --no-fix --scope us。"
+   ]
+  },
+  {
+   "id": "db3b5a70-b990-43f5-9ca8-e261b2005841",
+   "schedule": "MO,TU,WE,TH,FR 08:30",
+   "stepOrder": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "3.4",
+    "3.45",
+    "3.5",
+    "4",
+    "4a",
+    "4a-2",
+    "4b",
+    "4c",
+    "5",
+    "5.2",
+    "5.5",
+    "5.6",
+    "5.10",
+    "5.11",
+    "6",
+    "7",
+    "8"
+   ],
+   "scripts": [
+    {
+     "cmd": "python3 cal_factor.py",
+     "flags": [
+      "--json"
+     ],
+     "file": "cal_factor.py",
+     "step": "0"
+    },
+    {
+     "cmd": "python3 update_kr_jp.py",
+     "flags": [
+      "--label",
+      "早盘"
+     ],
+     "file": "update_kr_jp.py",
+     "step": "1"
+    },
+    {
+     "cmd": "python3 build_stock_pool.py",
+     "flags": [
+      "--json"
+     ],
+     "file": "build_stock_pool.py",
+     "step": "3.4"
+    },
+    {
+     "cmd": "python3 stock_risk_blacklist.py",
+     "flags": [
+      "--write"
+     ],
+     "file": "stock_risk_blacklist.py",
+     "step": "3.5"
+    },
+    {
+     "cmd": "python3 track_calibration.py",
+     "flags": [
+      "--json"
+     ],
+     "file": "track_calibration.py",
+     "step": "3"
+    },
+    {
+     "cmd": "python3 validate_stocks.py",
+     "flags": [
+      "--no-fix",
+      "--scope",
+      "ai"
+     ],
+     "file": "validate_stocks.py",
+     "step": "5.5"
+    },
+    {
+     "cmd": "python3 retag_duanban.py",
+     "flags": [],
+     "file": "retag_duanban.py",
+     "step": "5.6"
+    },
+    {
+     "cmd": "python3 forecast_scorecard.py",
+     "flags": [
+      "--view"
+     ],
+     "file": "forecast_scorecard.py",
+     "step": "3.2"
     }
+   ],
+   "scriptsMissing": [],
+   "mustContain": [
+    "aShareClosed",
+    "cal_factor.py --json",
+    "update_kr_jp.py --label 早盘",
+    "build_stock_pool.py --json",
+    "stock_risk_blacklist.py --write",
+    "track_calibration.py --json",
+    "validate_stocks.py --no-fix --scope ai",
+    "--no-fix --scope ai",
+    "retag_duanban.py",
+    "openOutlook.pos",
+    "sectors[].exp",
+    "check_stock_pool",
+    "price-in 写作「已计价」",
+    "R100z160",
+    "forecast_scorecard.py --view",
+    "生成约束 flags",
+    "maxHighConf",
+    "requireBand",
+    "`panorama.markets` 中 `key=kr` / `key=jp` 的条目"
+   ],
+   "forbidden": [
+    "①",
+    "②",
+    "③",
+    "④",
+    "⑤",
+    "⑥",
+    "⑦",
+    "⑧",
+    "⑨",
+    "⑩",
+    "⑪",
+    "⑫",
+    "⑬",
+    "⑭",
+    "⑮",
+    "⑯",
+    "⑰",
+    "⑱",
+    "⑲",
+    "⑳",
+    "㉑",
+    "㉒",
+    "㉓",
+    "㉔",
+    "㉕",
+    "㉖",
+    "㉗",
+    "㉘"
+   ],
+   "forbiddenGap": [],
+   "dataFields": [
+    "us.bullish",
+    "us.bearish",
+    "us.bullish[].theme",
+    "us.bullish[].detail",
+    "us.bullish[].stocks",
+    "us.bearish[].theme",
+    "us.bearish[].stocks",
+    "aiPrediction.date",
+    "aiPrediction.indexLine",
+    "aiPrediction.basis",
+    "aiPrediction.summary",
+    "aiPrediction.sectors",
+    "aiPrediction.sectors[].sector",
+    "aiPrediction.sectors[].direction",
+    "aiPrediction.sectors[].confidence",
+    "aiPrediction.sectors[].usDriver",
+    "aiPrediction.sectors[].logic",
+    "aiPrediction.sectors[].exp",
+    "aiPrediction.sectors[].exp.layer",
+    "aiPrediction.sectors[].exp.priceIn",
+    "aiPrediction.sectors[].exp.priceInBasis",
+    "aiPrediction.sectors[].exp.quad",
+    "aiPrediction.sectors[].exp.verdict",
+    "aiPrediction.sectors[].deduce",
+    "aiPrediction.sectors[].deduce.cands",
+    "aiPrediction.sectors[].deduce.main",
+    "aiPrediction.sectors[].deduce.conf",
+    "aiPrediction.sectors[].deduce.counter",
+    "aiPrediction.sectors[].stocks",
+    "aiPrediction.sectors[].stocks[].code",
+    "aiPrediction.sectors[].stocks[].name",
+    "aiPrediction.sectors[].stocks[].note",
+    "aiPrediction.sectors[].stocks[].exit",
+    "aiPrediction.riskNote",
+    "aiPrediction.verification",
+    "openOutlook.date",
+    "openOutlook.content",
+    "openOutlook.source",
+    "openOutlook.pos",
+    "openOutlook.pos.tendency",
+    "openOutlook.pos.bandLo",
+    "openOutlook.pos.bandHi",
+    "openOutlook.pos.volExpect",
+    "panorama.markets[kr].date",
+    "panorama.markets[jp].date",
+    "ashare.tradeDate",
+    "ashare.indices",
+    "ashare.sectorsUp",
+    "ashare.sectorsDown",
+    "ashare.breadth",
+    "ashare.lianban",
+    "ashare.fundIn",
+    "ashare.fundOut",
+    "us.bullNews",
+    "us.bearNews",
+    "us.indices",
+    "stock_pool.json",
+    "market_bench.json",
+    "calibration_log.json",
+    "updatedAt"
+   ],
+   "writesFields": [
+    "us.bullish",
+    "us.bearish",
+    "aiPrediction",
+    "openOutlook",
+    "updatedAt",
+    "duanban (仅经 retag_duanban.py 重算 sentiment/bullRefs/bearRefs/story，池成员、K线、板块涨幅不变)"
+   ],
+   "neverWrites": [
+    "us.bullNews",
+    "us.bearNews",
+    "us.macroNews",
+    "us.intlNews",
+    "us.bankViews",
+    "us.outlook",
+    "us.themePicks",
+    "us.indices",
+    "ashare",
+    "weekendNews",
+    "panorama (all)",
+    "aiPrediction.verification",
+    "stock_pool.json",
+    "market_bench.json"
+   ],
+   "notes": [
+    "步骤编号乱序：5.11 出现在 5.10 之前（正文顺序 5.5→5.6→5.11→5.10→6），且 4a-2 排在 4b/4c 之前；stepOrder 已按正文出现顺序如实记录。",
+    "market_bench.py --write 被明确禁止（本任务只读 market_bench.json），故未计入 scripts。",
+    "retag_duanban.py 会改写 duanban 的 sentiment/bullRefs/bearRefs/story，但池成员与 K 线不变。"
+   ]
+  },
+  {
+   "id": "44d9708b-ce74-440d-91e6-1b8d51df6576",
+   "schedule": "MO,TU,WE,TH,FR 09:45",
+   "stepOrder": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4"
+   ],
+   "scripts": [
+    {
+     "cmd": "python3 cal_factor.py",
+     "flags": [
+      "--json"
+     ],
+     "file": "cal_factor.py",
+     "step": "0"
+    },
+    {
+     "cmd": "python3 update_star.py",
+     "flags": [],
+     "file": "update_star.py",
+     "step": "1"
+    },
+    {
+     "cmd": "python3 validate_stocks.py",
+     "flags": [
+      "--no-fix",
+      "--scope",
+      "star"
+     ],
+     "file": "validate_stocks.py",
+     "step": "3"
+    }
+   ],
+   "scriptsMissing": [],
+   "mustContain": [
+    "aShareClosed",
+    "cal_factor.py --json",
+    "update_star.py",
+    "validate_stocks.py --no-fix --scope star",
+    "--no-fix --scope star",
+    "--scope star",
+    "duanban.star",
+    "run_push.sh star",
+    "harmonic_detect.py",
+    "breakout_pool.py",
+    "accumulation_score.py",
+    "full_scan.py",
+    "price-in→已计价",
+    "盘口结构动作（R100z193，勿删勿改",
+    "这类无动作的空话",
+    "tapeSummary 的动作交代"
+   ],
+   "forbidden": [
+    "①",
+    "②",
+    "③",
+    "④",
+    "⑤",
+    "⑥",
+    "⑦",
+    "⑧",
+    "⑨",
+    "⑩",
+    "⑪"
+   ],
+   "forbiddenGap": [],
+   "dataFields": [
+    "duanban.star.date",
+    "duanban.star.time",
+    "duanban.star.marketLine",
+    "duanban.star.sentiment",
+    "duanban.star.picks",
+    "duanban.star.picks[].code",
+    "duanban.star.picks[].name",
+    "duanban.star.picks[].sector",
+    "duanban.star.picks[].sentiment",
+    "duanban.star.picks[].probability",
+    "duanban.star.picks[].note",
+    "duanban.star.picks[].src",
+    "duanban.star.pushText",
+    "duanban.star.generatedBy",
+    "harmonic.confirmPool",
+    "harmonic.watchPool",
+    "breakoutPool.passed",
+    "accumulation.scored",
+    "fullScan",
+    "duanban.star.gapSummary",
+    "duanban.star.tapeSummary",
+    "duanban.star.picks[].tape",
+    "duanban.star.picks[].gapTag",
+    "duanban.star.buyList",
+    "duanban.star.buySummary"
+   ],
+   "writesFields": [
+    "duanban.star",
+    "duanban.star.sentiment",
+    "duanban.star.pushText",
+    "duanban.star.picks"
+   ],
+   "neverWrites": [
+    "ashare",
+    "us",
+    "weekendNews",
+    "openOutlook",
+    "aiPrediction",
+    "panorama",
+    "harmonic",
+    "breakoutPool",
+    "accumulation",
+    "fullScan",
+    "duanban 池内标的 kline/story/refs/news/probability",
+    "duanban 池成员增删",
+    "us.themePicks"
+   ],
+   "notes": [
+    "唯一写入口是 duanban.star；脚本产物（update_star.py）负责 picks，AI 只复核 sentiment/pushText 并可微调 picks（仅可删减或池内补入）。"
+   ]
+  },
+  {
+   "id": "a140dfda-b878-4c9d-9a03-448d0d55a58b",
+   "schedule": "MO,TU,WE,TH,FR 16:00",
+   "stepOrder": [
+    "0",
+    "1",
+    "1.5",
+    "2",
+    "2.5",
+    "3",
+    "4",
+    "4.5",
+    "4.6",
+    "4.7",
+    "4.8",
+    "5",
+    "6"
+   ],
+   "scripts": [
+    {
+     "cmd": "python3 cal_factor.py",
+     "flags": [
+      "--json"
+     ],
+     "file": "cal_factor.py",
+     "step": "0"
+    },
+    {
+     "cmd": "python3 update_ashare_sectors.py",
+     "flags": [],
+     "file": "update_ashare_sectors.py",
+     "step": "1"
+    },
+    {
+     "cmd": "python3 update_kr_jp.py",
+     "flags": [],
+     "file": "update_kr_jp.py",
+     "step": "1.5"
+    },
+    {
+     "cmd": "python3 check_duanban.py",
+     "flags": [
+      "--days",
+      "7",
+      "--limit",
+      "300",
+      "--module",
+      "--out",
+      "/tmp/duanban_pm.json"
+     ],
+     "file": "check_duanban.py",
+     "step": "2"
+    },
+    {
+     "cmd": "python3 merge_duanban.py",
+     "args": [
+      "/tmp/duanban_pm.json"
+     ],
+     "flags": [],
+     "file": "merge_duanban.py",
+     "step": "2"
+    },
+    {
+     "cmd": "python3 chen_pool.py",
+     "flags": [
+      "--merge"
+     ],
+     "file": "chen_pool.py",
+     "step": "2.5"
+    },
+    {
+     "cmd": "python3 full_scan.py",
+     "flags": [],
+     "file": "full_scan.py",
+     "step": "4"
+    },
+    {
+     "cmd": "python3 accumulation_score.py",
+     "flags": [],
+     "file": "accumulation_score.py",
+     "step": "4"
+    },
+    {
+     "cmd": "python3 harmonic_detect.py",
+     "flags": [],
+     "file": "harmonic_detect.py",
+     "step": "4"
+    },
+    {
+     "cmd": "python3 breakout_pool.py --write",
+     "flags": [
+      "--write"
+     ],
+     "file": "breakout_pool.py",
+     "step": "4"
+    },
+    {
+     "cmd": "python3 atr_stop.py",
+     "flags": [],
+     "file": "atr_stop.py",
+     "step": "4.6"
+    },
+    {
+     "cmd": "python3 signal_attribution.py",
+     "flags": [],
+     "file": "signal_attribution.py",
+     "step": "4.6"
+    },
+    {
+     "cmd": "python3 forecast_scorecard.py",
+     "flags": [],
+     "file": "forecast_scorecard.py",
+     "step": "4.7"
+    }
+   ],
+   "scriptsMissing": [],
+   "mustContain": [
+    "aShareClosed",
+    "cal_factor.py --json",
+    "update_ashare_sectors.py",
+    "update_kr_jp.py",
+    "check_duanban.py --days 7 --limit 300 --module --out /tmp/duanban_pm.json",
+    "merge_duanban.py /tmp/duanban_pm.json",
+    "FULLSCAN_MAX=500 KLINE_DEADLINE=900",
+    "KLINE_DEADLINE=900",
+    "SKIP_AUDIT",
+    "tdx",
+    "price-in→已计价",
+    "R100z160",
+    "4.6) 止损与归因两件套",
+    "/Users/loccco/.workbuddy/binaries/run-python atr_stop.py",
+    "/Users/loccco/.workbuddy/binaries/run-python signal_attribution.py",
+    "atrStops",
+    "signalPerf",
+    "止损口径只由 atr_stop.py 产出",
+    "4.7) 预测成绩单",
+    "/Users/loccco/.workbuddy/binaries/run-python forecast_scorecard.py",
+    "forecastScore",
+    "按阈值自动生成",
+    "样本门槛 30 条且 5 个交易日",
+    "2.5) 陈学长断板反包（第二套并列口径",
+    "/Users/loccco/.workbuddy/binaries/run-python chen_pool.py --merge",
+    "chenPool",
+    "并列的第二套技术指标，不是它的升级版",
+    "回测出结果之前严禁改参数"
+   ],
+   "forbidden": [
+    "①",
+    "②",
+    "③",
+    "④",
+    "⑤",
+    "⑥",
+    "⑦",
+    "⑧",
+    "⑨",
+    "⑩",
+    "⑪"
+   ],
+   "forbiddenGap": [],
+   "dataFields": [
+    "ashare.tradeDate",
+    "ashare.status",
+    "ashare.summary",
+    "ashare.sectorSource",
+    "ashare.indices",
+    "ashare.indices[].code",
+    "ashare.breadth",
+    "ashare.sectorsUp[]/sectorsDown[]/allBoards[]（脚本字段）",
+    "ashare.lianban",
+    "duanban.confirmed/watching/topBoards",
+    "fullScan",
+    "harmonic",
+    "accumulation",
+    "breakoutPool",
+    "panorama.markets[kr]/markets[jp]",
+    "atrStops",
+    "signalPerf",
+    "forecastScore",
+    "chenPool（tradeDate/strict/loose/watching/failPool/compare/track）"
+   ],
+   "writesFields": [
+    "ashare 行情字段（脚本生成：tradeDate/status/summary/indices/breadth/sectorsUp/sectorsDown/allBoards/lianban/fundIn/fundOut/fundNote/updatedAt）",
+    "duanban（merge_duanban 合并，story 由 AI 按数据驱动填充复核）",
+    "panorama.markets[kr]/markets[jp]（update_kr_jp）",
+    "fullScan/harmonic/accumulation/breakoutPool（四模块脚本产物）",
+    "atrStops（atr_stop.py：全站唯一权威止损源，151 只 ATR 止损位 + 宽度 + 风险预算仓位）",
+    "signalPerf（signal_attribution.py：按指标来源的 T+1/3/5/10 收益归因与建议权重）",
+    "forecastScore（forecast_scorecard.py：把 calibration_log.json 的板块预判与开盘前瞻台账结算成跨日命中率，按置信度/方向/近5日分层，usage 与 verdict 由阈值自动生成）",
+    "chenPool（chen_pool.py：陈学长第二套断板反包口径，与 duanban 并列不互相覆盖；含 compare 两池差异；留痕写 chen_ledger.json）"
+   ],
+   "neverWrites": [
+    "us（全部字段）",
+    "weekendNews",
+    "aiPrediction",
+    "openOutlook",
+    "ashare.reason / 五节要闻 / themePicks / outlook 等叙述字段（19:30 叙事步职责）",
+    "duanban.star",
+    "stkKlines（19:30 叙事步 embed_klines 职责）",
+    "strategy/macroCalendar 顶层键（deploy.sh 自动生成）"
+   ],
+   "notes": [
+    "R100z138（2026-10-16）：由原 16:00 任务（automation-1788494481279）拆分出的数据步，rrule 16:00（R100z139 由 15:30 提前至 15:15、R100z140 再提前至 16:00——涨停池 15:30 后才发布，16:00 跑确保当日池就绪）。",
+    "本步不部署不推送（休市分支除外：SKIP_AUDIT=1 bash deploy.sh 上线休市状态）。",
+    "第 2 步断板 story 由脚本基于 check_duanban 真实字段数据驱动填充，AI 逐只复核 sentiment/格式/probability。",
+    "R100z161（2026-10-24）：新增第 4.7 步「预测成绩单」（forecast_scorecard.py），把既有台账 calibration_log.json 结算成 forecastScore 顶层节点。此前页面只有当日 verification、第二天被覆盖，用户无从判断累积准确率。已同步 stepOrder/scripts/dataFields/writesFields/mustContain。",
+    "R100z218（2026-10-25）：新增第 2.5 步「陈学长断板反包」——用户在技术看板「断板反包」之后要求**新建**一个并列指标（不是改断板反包），目的是两套口径并行留痕、一周后比胜率。产出 data.js 顶层 chenPool，口径冻结于 2026-10-25，回测出结果前不许调参。已同步 stepOrder/scripts/mustContain/dataFields/writesFields。",
+    "chen_pool.py 对 duanban 节点**只读不写**（只取 confirmed/watching 做当日差异对比）；这条是脚本行为，不登记进 neverWrites——B6 的路径解析会把「duanban（…）」的首词当成字段路径，与 writesFields 的 duanban 撞成「台账自相矛盾」。",
+    "R100z219（2026-10-25）：口径修订——用户指出「陈学长没有要求连板≥2，首板也可以」，删掉连板门槛（连板数仍算、仍展示、仍排序）；同时按要求删掉 funnel 漏斗字段（dataFields/writesFields 已同步）。本步命令与步骤号不变，无需 reorder。",
+    "R100z219b（2026-10-26 00:09）：chenPool 新增 tradeDate（= 命中票最新一根 K 线的日期）。跨午夜跑批时 generatedAt 会写成第二天、行情仍是上一交易日收盘，页面「数据日」照抄 generatedAt 会误导。同时修两处口径 bug：① settle_one 由 days.index(entryDate) 改「≤ entryDate 的最后一根 K 线」，否则 entryDate 落在周末/节假日时永远结算不了且不报错（实测 13 条样本全是周日入口）；② 断板反包对照的「今日新入池」基准由本脚本运行日改为 duanban 模块自己的 generatedAt 日期，否则跨午夜时一条也记不进来、胜率表第三行永远 0 样本。",
+    "R100z234（2026-10-26）：用户拍板删掉「交易预案」整块（与开盘精选同日给出两套几乎不重叠的执行清单：精选 10 只 / 预案 8 只 / 交集 1 只，两套止损与仓位并存等于任何一套都无法照做）。第 4.6 步为「止损与归因两件套」（atr_stop → signal_attribution）。"
+   ]
+  },
+  {
+   "id": "automation-1788494481279",
+   "schedule": "MO,TU,WE,TH,FR 19:30",
+   "stepOrder": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "3.5",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12"
+   ],
+   "scripts": [
+    {
+     "cmd": "python3 cal_factor.py",
+     "flags": [
+      "--json"
+     ],
+     "file": "cal_factor.py",
+     "step": "0"
+    },
+    {
+     "cmd": "python3 market_bench.py",
+     "flags": [
+      "--write"
+     ],
+     "file": "market_bench.py",
+     "step": "2"
+    },
+    {
+     "cmd": "python3 build_stock_pool.py",
+     "flags": [
+      "--write"
+     ],
+     "file": "build_stock_pool.py",
+     "step": "3"
+    },
+    {
+     "cmd": "python3 lhb.py",
+     "flags": [
+      "--write"
+     ],
+     "file": "lhb.py",
+     "step": "3.5"
+    },
+    {
+     "cmd": "python3 stock_quotes.py",
+     "flags": [
+      "--codes-file"
+     ],
+     "file": "stock_quotes.py",
+     "step": "4"
+    },
+    {
+     "cmd": "python3 stock_fundflow.py",
+     "flags": [
+      "--json"
+     ],
+     "file": "stock_fundflow.py",
+     "step": "4"
+    },
+    {
+     "cmd": "python3 embed_klines.py",
+     "flags": [],
+     "file": "embed_klines.py",
+     "step": "5"
+    },
+    {
+     "cmd": "python3 stock_risk_blacklist.py",
+     "flags": [
+      "--write"
+     ],
+     "file": "stock_risk_blacklist.py",
+     "step": "6"
+    },
+    {
+     "cmd": "python3 score_openoutlook.py",
+     "flags": [],
+     "file": "score_openoutlook.py",
+     "step": "7"
+    },
+    {
+     "cmd": "python3 track_calibration.py",
+     "flags": [],
+     "file": "track_calibration.py",
+     "step": "8"
+    },
+    {
+     "cmd": "python3 enrich_policy.py",
+     "flags": [],
+     "file": "enrich_policy.py",
+     "step": "9"
+    },
+    {
+     "cmd": "python3 validate_stocks.py",
+     "flags": [
+      "--no-fix",
+      "--scope",
+      "ai"
+     ],
+     "file": "validate_stocks.py",
+     "step": "10"
+    },
+    {
+     "cmd": "python3 validate_stocks.py",
+     "flags": [
+      "--no-fix",
+      "--scope",
+      "us"
+     ],
+     "file": "validate_stocks.py",
+     "step": "10"
+    },
+    {
+     "cmd": "python3 audit_pipeline.py",
+     "flags": [],
+     "file": "audit_pipeline.py",
+     "step": "10"
+    },
+    {
+     "cmd": "bash deploy.sh",
+     "flags": [],
+     "file": "deploy.sh",
+     "step": "10"
+    },
+    {
+     "cmd": "bash run_push.sh ashare",
+     "flags": [],
+     "file": "run_push.sh",
+     "step": "10"
+    },
+    {
+     "cmd": "python3 check_narrative.py",
+     "flags": [],
+     "file": "check_narrative.py",
+     "step": "10"
+    },
+    {
+     "cmd": "python3 apply_narrative.py",
+     "flags": [],
+     "file": "apply_narrative.py",
+     "step": "4"
+    },
+    {
+     "cmd": "python3 update_ashare_sectors.py",
+     "flags": [],
+     "file": "update_ashare_sectors.py",
+     "step": "0（补跑分支）"
+    },
+    {
+     "cmd": "python3 update_kr_jp.py",
+     "flags": [],
+     "file": "update_kr_jp.py",
+     "step": "0（补跑分支）"
+    },
+    {
+     "cmd": "python3 check_duanban.py",
+     "flags": [
+      "--days",
+      "7",
+      "--limit",
+      "300",
+      "--module",
+      "--out",
+      "/tmp/duanban_pm.json"
+     ],
+     "file": "check_duanban.py",
+     "step": "0（补跑分支）"
+    },
+    {
+     "cmd": "python3 merge_duanban.py",
+     "args": [
+      "/tmp/duanban_pm.json"
+     ],
+     "flags": [],
+     "file": "merge_duanban.py",
+     "step": "0（补跑分支）"
+    },
+    {
+     "cmd": "python3 full_scan.py",
+     "flags": [],
+     "file": "full_scan.py",
+     "step": "0（补跑分支）"
+    },
+    {
+     "cmd": "python3 accumulation_score.py",
+     "flags": [],
+     "file": "accumulation_score.py",
+     "step": "0（补跑分支）"
+    },
+    {
+     "cmd": "python3 harmonic_detect.py",
+     "flags": [],
+     "file": "harmonic_detect.py",
+     "step": "0（补跑分支）"
+    },
+    {
+     "cmd": "python3 breakout_pool.py --write",
+     "flags": [
+      "--write"
+     ],
+     "file": "breakout_pool.py",
+     "step": "0（补跑分支）"
+    }
+   ],
+   "scriptsMissing": [],
+   "mustContain": [
+    "aShareClosed",
+    "--no-fix --scope ai",
+    "cal_factor.py --json",
+    "market_bench.py --write",
+    "build_stock_pool.py --write",
+    "stock_risk_blacklist.py --write",
+    "stock_fundflow.py --json",
+    "stock_quotes.py --codes-file",
+    "embed_klines.py",
+    "track_calibration.py",
+    "score_openoutlook.py",
+    "enrich_policy.py",
+    "validate_stocks.py",
+    "audit_pipeline.py",
+    "deploy.sh",
+    "run_push.sh ashare",
+    "verification.stockCheck[].fund",
+    "narrative_patch.json",
+    "check_narrative.py",
+    "price-in→已计价",
+    "R100z160",
+    "G38（成绩单约束）",
+    "forecastScore.flags.maxHighConf",
+    "lhb.py --write",
+    "ashare.lhb",
+    "第 1 组＝主组恰好 8 只四类 A 股",
+    "第 2~4 组＝次生组各 2~4 只"
+   ],
+   "forbidden": [
+    "①",
+    "②",
+    "③",
+    "④",
+    "⑤",
+    "⑥",
+    "⑦",
+    "⑧",
+    "⑨",
+    "⑩",
+    "⑪",
+    "⑫",
+    "⑬",
+    "⑭",
+    "⑮",
+    "⑯",
+    "⑰",
+    "⑱",
+    "⑲",
+    "⑳",
+    "㉑",
+    "㉒",
+    "㉓",
+    "㉔",
+    "㉕",
+    "㉖",
+    "㉗",
+    "㉘",
+    "㉙",
+    "㉚",
+    "㉛",
+    "㉜",
+    "㉝"
+   ],
+   "forbiddenGap": [],
+   "dataFields": [
+    "ashare.tradeDate",
+    "ashare.status",
+    "ashare.summary",
+    "ashare.sectorSource",
+    "ashare.indices",
+    "ashare.indices[].code",
+    "ashare.breadth",
+    "ashare.sectorsUp[].reason",
+    "ashare.sectorsUp[].thsCode",
+    "ashare.sectorsUp[].tops",
+    "ashare.sectorsUp[].netInflow",
+    "ashare.sectorsUp[].upCount",
+    "ashare.sectorsUp[].downCount",
+    "ashare.sectorsDown[].reason",
+    "ashare.sectorsDown[].thsCode",
+    "ashare.sectorsDown[].tops",
+    "ashare.allBoards[].code",
+    "ashare.allBoards[].lead",
+    "ashare.allBoards[].leadPct",
+    "ashare.allBoards[].ztCount",
+    "ashare.allBoards[].pct5",
+    "ashare.allBoards[].netInflow",
+    "ashare.fundIn",
+    "ashare.fundOut",
+    "ashare.fundNote",
+    "ashare.bullNews",
+    "ashare.bearNews",
+    "ashare.macroNews",
+    "ashare.intlNews",
+    "ashare.bankViews",
+    "ashare.outlook",
+    "ashare.source",
+    "ashare.themePicks[].event",
+    "ashare.themePicks[].logic",
+    "ashare.themePicks[].stocks[].chg",
+    "ashare.themePicks[].stocks[].note",
+    "ashare.lianban[].reason",
+    "ashare.lianban[].story",
+    "ashare.updatedAt",
+    "aiPrediction.verification",
+    "aiPrediction.verification.details[]",
+    "aiPrediction.verification.details[].sector",
+    "aiPrediction.verification.details[].predicted",
+    "aiPrediction.verification.details[].actualPct",
+    "aiPrediction.verification.details[].excessPct",
+    "aiPrediction.verification.details[].result",
+    "aiPrediction.verification.stockCheck[]",
+    "aiPrediction.verification.stockCheck[].avgPct",
+    "aiPrediction.verification.stockCheck[].hitN",
+    "aiPrediction.verification.stockCheck[].alignRate",
+    "aiPrediction.verification.stockCheck[].excessAvg",
+    "aiPrediction.verification.stockCheck[].fund.avgMainYi",
+    "aiPrediction.verification.stockCheck[].fund.netInN",
+    "aiPrediction.verification.stockCheck[].fund.src",
+    "openOutlook.verification",
+    "openOutlook.verification.score",
+    "openOutlook.verification.verdict",
+    "duanban.confirmed[]/watching[]",
+    "duanban.topBoards",
+    "duanban.star",
+    "panorama.markets[ashare]",
+    "fullScan",
+    "harmonic",
+    "accumulation",
+    "breakoutPool",
+    "stkKlines",
+    "stkKlineNames",
+    "calibration_state.json",
+    "market_bench.json",
+    "stock_pool.json",
+    "risk_blacklist.json",
+    "ashare.lhb",
+    "ashare.lhb.date",
+    "ashare.lhb.status",
+    "ashare.lhb.top[]",
+    "ashare.lhb.sell[]",
+    "ashare.lhb.seatRepeat[]",
+    "ashare.lhb.text",
+    "ashare.lhb.note"
+   ],
+   "writesFields": [
+    "ashare.* 叙事字段（sectorsUp/Down.reason / 五节要闻 / themePicks / outlook / lianban story / updatedAt）",
+    "aiPrediction.verification",
+    "openOutlook.verification",
+    "stkKlines/stkKlineNames（embed_klines）",
+    "risk_blacklist.json / stock_pool.json / market_bench.json / policySignals（脚本产物）",
+    "panorama.markets[ashare]（date 标签/items/indices）",
+    "ashare.lhb"
+   ],
+   "neverWrites": [
+    "us（全部字段，仅复核）",
+    "weekendNews",
+    "ashare 脚本生成字段（thsCode/tops/netInflow/upCount/downCount/lead/leadPct/ztCount/pct5/indices.code）",
+    "duanban.star",
+    "harmonic/accumulation/breakoutPool/fullScan 的 AI 手改",
+    "strategy/macroCalendar 顶层键（deploy.sh 自动生成）",
+    "stopTrack 的 AI 手写"
+   ],
+   "notes": [
+    "R100z138（2026-10-16）：原 16:00 任务拆分为 16:00 数据步 + 17:00 叙事步两条自动化，本条目为叙事步（原 automation-1788494481279 改 rrule 到 17:00；R100z139 由 16:30 提前至 16:15、R100z140 再提前至 17:00）。",
+    "第 0 步核验 16:00 数据步产物当日性，缺失则补跑对应脚本（scripts 里标注「补跑分支」）。",
+    "第 10 步先 node --check data.js，再 validate_stocks.py --no-fix --scope ai 与 --scope us 二跑，check_narrative 预检后 audit_pipeline FAIL=0 才 deploy.sh + run_push.sh ashare。",
+    "R100z196（2026-10-24 用户拍板）：rrule 由 17:00 推迟到 19:30。原因：第 3.5 步龙虎榜席位数据 18:00 后才披露完，17:00 抓到的大多是 partial；推迟后当日页面即完整席位。代价是叙事与推送晚 2.5 小时（已知取舍，非缺陷）。同步改动：prompt 内 3 处 17:00 口径 + 锁等待逻辑（19:30 时 16:00 早已收工，等待上限由 5 次 45 分钟降为 2 次 18 分钟，并新增「先看 status 再决定等不等」）。check_automations.py 的 A1700 rrule_want 与 check_code/各脚本注释里的时间引用一并对齐。"
+   ]
+  },
+  {
+   "id": "ae2fc623-5d44-458c-82cf-a9ba28e54cee",
+   "schedule": "SU 21:00",
+   "stepOrder": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10"
+   ],
+   "scripts": [
+    {
+     "cmd": "python3 cal_factor.py",
+     "flags": [
+      "--json"
+     ],
+     "file": "cal_factor.py",
+     "step": "0"
+    },
+    {
+     "cmd": "python3 update_us_from_quotes.py",
+     "flags": [],
+     "file": "update_us_from_quotes.py",
+     "step": "1"
+    },
+    {
+     "cmd": "python3 check_duanban.py",
+     "flags": [
+      "--days",
+      "7",
+      "--limit",
+      "300",
+      "--json"
+     ],
+     "file": "check_duanban.py",
+     "step": "3"
+    },
+    {
+     "cmd": "python3 stock_risk_blacklist.py",
+     "flags": [
+      "--write"
+     ],
+     "file": "stock_risk_blacklist.py",
+     "step": "4"
+    },
+    {
+     "cmd": "python3 stock_risk_blacklist.py",
+     "flags": [
+      "--write"
+     ],
+     "file": "stock_risk_blacklist.py",
+     "step": "8"
+    },
+    {
+     "cmd": "python3 validate_stocks.py",
+     "flags": [
+      "--no-fix",
+      "--scope",
+      "us"
+     ],
+     "file": "validate_stocks.py",
+     "step": "9"
+    },
+    {
+     "cmd": "python3 check_narrative.py",
+     "flags": [],
+     "file": "check_narrative.py",
+     "step": "9"
+    },
+    {
+     "cmd": "python3 apply_narrative.py",
+     "flags": [],
+     "file": "apply_narrative.py",
+     "step": "7"
+    },
+    {
+     "cmd": "python3 pipeline_lock.py",
+     "flags": [
+      "acquire",
+      "--task",
+      "a2100-weekend",
+      "--wait",
+      "300"
+     ],
+     "file": "pipeline_lock.py",
+     "step": "0"
+    },
+    {
+     "cmd": "python3 pipeline_lock.py",
+     "flags": [
+      "beat",
+      "--task",
+      "a2100-weekend"
+     ],
+     "file": "pipeline_lock.py",
+     "step": "2"
+    },
+    {
+     "cmd": "python3 pipeline_lock.py",
+     "flags": [
+      "release",
+      "--task",
+      "a2100-weekend"
+     ],
+     "file": "pipeline_lock.py",
+     "step": "汇报前"
+    }
+   ],
+   "scriptsMissing": [],
+   "mustContain": [
+    "cal_factor.py --json",
+    "update_us_from_quotes.py",
+    "check_duanban.py --days 7 --limit 300 --json",
+    "stock_risk_blacklist.py --write",
+    "validate_stocks.py --no-fix --scope us",
+    "check_narrative.py",
+    "apply_narrative.py",
+    "news_sources.py --list",
+    "pipeline_lock.py acquire --task a2100-weekend --wait 300",
+    "pipeline_lock.py release --task a2100-weekend",
+    "pipeline_lock.py beat --task a2100-weekend",
+    "本任务无需生成 us.themePicks",
+    "严禁写 aiPrediction / openOutlook / duanban / stkKlines",
+    "下没有 `us` 键，只有 `markets` 数组",
+    "us.outlook",
+    "保持 `ashare` 全部字段不变",
+    "本步不部署不推送",
+    "`panorama.markets` 中 `key=us` 的条目",
+    "第 1 组＝主组恰好 8 只四类 A 股",
+    "第 2~4 组＝次生组各 2~4 只"
+   ],
+   "forbidden": [
+    "①",
+    "②",
+    "③",
+    "④",
+    "⑤",
+    "⑥",
+    "⑦",
+    "⑧",
+    "⑨",
+    "⑩"
+   ],
+   "forbiddenGap": [],
+   "dataFields": [
+    "us.bullNews",
+    "us.bearNews",
+    "us.macroNews",
+    "us.intlNews",
+    "us.bankViews",
+    "us.outlook",
+    "us.sectorsUp",
+    "us.sectorsDown",
+    "weekendNews",
+    "updatedAt"
+   ],
+   "writesFields": [
+    "us 五节要闻（含 deduce）",
+    "us.outlook",
+    "us.sectorsUp/sectorsDown 各板块 reason（含 deduce）",
+    "weekendNews"
+   ],
+   "neverWrites": [
+    "aiPrediction",
+    "openOutlook",
+    "duanban",
+    "stkKlines",
+    "ashare",
+    "harmonic",
+    "accumulation",
+    "breakoutPool",
+    "strategy",
+    "macroCalendar"
+   ],
+   "notes": [
+    "R",
+    "1",
+    "0",
+    "0",
+    "z",
+    "1",
+    "8",
+    "0",
+    " ",
+    "补",
+    "登",
+    "记",
+    "：",
+    "此",
+    "前",
+    "该",
+    "任",
+    "务",
+    "没",
+    "有",
+    "基",
+    "线",
+    "条",
+    "目",
+    "，",
+    "G",
+    "2",
+    "/",
+    "G",
+    "3",
+    "/",
+    "G",
+    "4",
+    "/",
+    "B",
+    "5",
+    " ",
+    "四",
+    "道",
+    "闸",
+    "门",
+    "对",
+    "它",
+    "零",
+    "覆",
+    "盖",
+    "。"
+   ]
+  },
+  {
+   "id": "dcdf30c0-7d3b-4354-944d-085df91553ea",
+   "schedule": "SU 22:00",
+   "stepOrder": [
+    "0",
+    "1",
+    "2",
+    "2.4",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12"
+   ],
+   "scripts": [
+    {
+     "cmd": "python3 cal_factor.py",
+     "flags": [
+      "--json"
+     ],
+     "file": "cal_factor.py",
+     "step": "0"
+    },
+    {
+     "cmd": "python3 update_us_from_quotes.py",
+     "flags": [],
+     "file": "update_us_from_quotes.py",
+     "step": "1"
+    },
+    {
+     "cmd": "python3 check_duanban.py",
+     "flags": [
+      "--days",
+      "7",
+      "--limit",
+      "300",
+      "--json"
+     ],
+     "file": "check_duanban.py",
+     "step": "2.5"
+    },
+    {
+     "cmd": "python3 stock_risk_blacklist.py",
+     "flags": [
+      "--write"
+     ],
+     "file": "stock_risk_blacklist.py",
+     "step": "2.6"
+    },
+    {
+     "cmd": "python3 track_calibration.py",
+     "flags": [
+      "--json"
+     ],
+     "file": "track_calibration.py",
+     "step": "3"
+    },
+    {
+     "cmd": "python3 build_stock_pool.py",
+     "flags": [
+      "--json"
+     ],
+     "file": "build_stock_pool.py",
+     "step": "3.4"
+    },
+    {
+     "cmd": "python3 check_duanban.py",
+     "flags": [
+      "--days",
+      "7",
+      "--limit",
+      "300",
+      "--module",
+      "--out",
+      "/tmp/duanban_we.json"
+     ],
+     "file": "check_duanban.py",
+     "step": "4.7"
+    },
+    {
+     "cmd": "python3 merge_duanban.py",
+     "args": [
+      "/tmp/duanban_we.json"
+     ],
+     "flags": [],
+     "file": "merge_duanban.py",
+     "step": "4.7"
+    },
+    {
+     "cmd": "python3 embed_klines.py",
+     "flags": [],
+     "file": "embed_klines.py",
+     "step": "4.8"
+    },
+    {
+     "cmd": "python3 validate_stocks.py",
+     "flags": [
+      "--no-fix",
+      "--scope",
+      "ai"
+     ],
+     "file": "validate_stocks.py",
+     "step": "5.5"
+    },
+    {
+     "cmd": "python3 validate_stocks.py",
+     "flags": [
+      "--no-fix",
+      "--scope",
+      "us"
+     ],
+     "file": "validate_stocks.py",
+     "step": "5.5"
+    },
+    {
+     "cmd": "python3 forecast_scorecard.py",
+     "flags": [
+      "--view"
+     ],
+     "file": "forecast_scorecard.py",
+     "step": "3.2"
+    }
+   ],
+   "scriptsMissing": [],
+   "mustContain": [
+    "NEXT_DAY",
+    "cal_factor.py",
+    "cal_factor.py --json",
+    "check_duanban.py --days 7 --limit 300 --json",
+    "check_duanban.py --days 7 --limit 300 --module --out /tmp/duanban_we.json",
+    "merge_duanban.py /tmp/duanban_we.json",
+    "stock_risk_blacklist.py --write",
+    "build_stock_pool.py --json",
+    "track_calibration.py --json",
+    "embed_klines.py",
+    "全部字段未被改动",
+    "run_push.sh weekend",
+    "price-in→已计价",
+    "R100z160",
+    "forecast_scorecard.py --view",
+    "生成约束 flags",
+    "maxHighConf",
+    "requireBand",
+    "`panorama.markets` 中 `key=kr` / `key=jp` 的条目",
+    "第 1 组＝主组恰好 8 只四类 A 股",
+    "第 2~4 组＝次生组各 2~4 只"
+   ],
+   "forbidden": [
+    "①",
+    "②",
+    "③",
+    "④",
+    "⑤",
+    "⑥",
+    "⑦",
+    "⑧",
+    "⑨",
+    "⑩",
+    "⑪",
+    "⑫",
+    "⑬",
+    "⑭",
+    "⑮",
+    "⑯",
+    "⑰",
+    "⑱",
+    "⑲",
+    "⑳",
+    "㉑"
+   ],
+   "forbiddenGap": [],
+   "dataFields": [
+    "us.bullNews",
+    "us.bearNews",
+    "us.macroNews",
+    "us.intlNews",
+    "us.bankViews",
+    "us.bullNews[].impacts[]",
+    "us.bearNews[].impacts[]",
+    "us.macroNews[].direction",
+    "us.intlNews[].direction",
+    "us.bankViews[].direction",
+    "us.macroNews[].impacts[].horizon",
+    "us.intlNews[].impacts[].horizon",
+    "us.bankViews[].impacts[].horizon",
+    "us.bullNews[].deduce",
+    "us.bearNews[].deduce",
+    "us.macroNews[].deduce",
+    "us.intlNews[].deduce",
+    "us.bankViews[].deduce",
+    "us.sectorsUp[].reason",
+    "us.sectorsDown[].reason",
+    "us.sectorsUp[].deduce",
+    "us.sectorsDown[].deduce",
+    "us.outlook",
+    "us.indices[].openPct",
+    "us.indices[].changePct",
+    "us.themePicks",
+    "us.updatedAt",
+    "weekendNews.date",
+    "weekendNews.source",
+    "aiPrediction.date",
+    "aiPrediction.indexLine",
+    "aiPrediction.basis",
+    "aiPrediction.summary",
+    "aiPrediction.sectors[].sector",
+    "aiPrediction.sectors[].direction",
+    "aiPrediction.sectors[].logic",
+    "aiPrediction.sectors[].exp",
+    "aiPrediction.sectors[].deduce",
+    "aiPrediction.sectors[].stocks[]",
+    "openOutlook.date",
+    "openOutlook.content",
+    "openOutlook.source",
+    "duanban.confirmed[]/watching[]",
+    "duanban.topBoards",
+    "duanban.star",
+    "harmonic",
+    "accumulation",
+    "breakoutPool",
+    "fullScan",
+    "stkKlines",
+    "stkKlineNames",
+    "panorama.markets[us]",
+    "stock_pool.json",
+    "risk_blacklist.json"
+   ],
+   "writesFields": [
+    "us.bullNews",
+    "us.bearNews",
+    "us.macroNews",
+    "us.intlNews",
+    "us.bankViews",
+    "us.outlook",
+    "us.sectorsUp[].reason",
+    "us.sectorsDown[].reason",
+    "us.sectorsUp[].deduce",
+    "us.sectorsDown[].deduce",
+    "us.bullNews[].deduce",
+    "us.bearNews[].deduce",
+    "us.macroNews[].deduce",
+    "us.intlNews[].deduce",
+    "us.bankViews[].deduce",
+    "us.updatedAt",
+    "weekendNews",
+    "aiPrediction",
+    "openOutlook",
+    "updatedAt",
+    "duanban.confirmed[]/watching[] (周末复核 confirmed/watching + sentiment/story/probability/bullRefs/bearRefs/topBoards)",
+    "stkKlines",
+    "stkKlineNames",
+    "panorama.markets[us]",
+    "risk_blacklist.json"
+   ],
+   "neverWrites": [
+    "ashare",
+    "harmonic",
+    "accumulation",
+    "breakoutPool",
+    "fullScan",
+    "us.themePicks",
+    "duanban.star",
+    "panorama.markets[kr]",
+    "panorama.markets[jp]",
+    "stock_pool.json",
+    "calibration_state.json"
+   ],
+   "notes": [
+    "第 5.5 步的 validate_stocks.py 已改为双跑：--no-fix --scope ai 与 --no-fix --scope us 各跑一次，两次 ALL OK 才可进入第 6 步部署（R95：禁止裸跑，裸跑会真实写回 data.js 并从后门改掉本任务写入边界外的字段）。",
+    "本任务明确不运行 accumulation_score / harmonic_detect / breakout_pool（沿用周五 16:00 数据步产物），三者仅出现在禁止/保持条款中，故未计入 scripts。",
+    "cal_factor.py 还支持 --date 逐日试算以判定 NEXT_DAY，未在 scripts 中单独列调用。"
+   ]
   }
+ ],
+ "pendingFields": {}
 }
