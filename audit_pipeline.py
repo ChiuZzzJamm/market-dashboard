@@ -1325,6 +1325,13 @@ def collect_g16_checks(D):
 
     # AI 预测逻辑链 + 开盘前瞻（顶层）
     ap = D.get("aiPrediction") or {}
+    # 顶层 summary（R100z249）：这张卡在 2026-10-27 删掉了五路依据条与风险预警条之后，
+    # **summary 成了唯一承载「五路输入 + 方向结论 + 成绩单」的正文**——它一旦写薄，
+    # 整张卡就只剩六个方向词，深度无从谈起。而此前 G16 只扫 sectors[].logic / openOutlook，
+    # 顶层 summary 一个字都没管（2026-10-28 实测 415 字，纯靠 AI 自觉）。
+    # 地板取 240 与 A 股板块叙事同口径：低于这个数说不完「美股→日韩→前日A股→结论」四件事。
+    if isinstance(ap, dict) and str(ap.get("summary") or "").strip():
+        add("aiPrediction.summary", ap.get("summary"), 240)
     for i, s in enumerate(ap.get("sectors") or []):
         if isinstance(s, dict):
             add(f"aiPrediction.sectors[{i}].logic", s.get("logic"), 200)
@@ -1412,6 +1419,7 @@ def g16_narrative_depth(r):
         A 股 板块 reason.detail / 题材 logic / 五节要闻 summary → 240
         A 股 outlook / us.outlook → 300
         A 股 aiPrediction.sectors[].logic → 200
+        A 股 aiPrediction.summary → 240（R100z249：五路依据条下线后它是那张卡唯一的正文）
         A 股 开盘前瞻 openOutlook → 300
         A 股 lianban[].story → 120；duanban confirmed/watching[].story → 100
         A 股 accumulation.{scored,strong,watch}[].note → 90
