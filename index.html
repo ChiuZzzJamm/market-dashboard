@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610270844"></script>
+<script src="data.js?v=202610270923"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1274,6 +1274,17 @@
   .ll-bt .ll-bt-v small { font-size: var(--fs-sm); font-weight: 400; color: var(--ink2); margin-left: 5px; }
   .ll-foot { padding: 8px 12px 11px; font-size: var(--fs-sm); color: var(--ink2); line-height: 1.8; border-top: 1px dashed var(--line); }
   .ll-foot b { color: var(--ink); }
+  /* 最近出手的合计行：单独一条底色，和逐日明细分开——明细是「哪几天」，这是「总共」。 */
+  .ll-rc-sum { margin-top: 4px; padding: 6px 0 2px; border-top: 1px dashed var(--line);
+               font-size: var(--fs-sm); color: var(--ink2); line-height: 1.8; }
+  .ll-rc-sum b { color: var(--ink); }
+  .ll-rc-sum b.up { color: var(--up); }
+  .ll-rc-sum b.down { color: var(--down); }
+  /* t<2 时给「不显著」一个可见样式：用中性灰底而不是警告红——它说明的是
+     「证据还不够」，不是「这套规则错了」，红色会让人误读成负期望。 */
+  .ll-bt .ll-sig { display: inline-block; margin-left: 6px; padding: 0 5px;
+                   border-radius: 4px; background: var(--line); color: var(--ink2);
+                   font-size: var(--fs-xs); font-weight: 400; vertical-align: 2px; }
   /* 最近几次出手的逐日明细：聚合胜率说服力有限，得让人看见具体哪天挑了哪几只、涨了还是跌了。
      亏的那几天照样列出来——只报好数字的表，就是用户说的「只汇报今天的情况」。 */
   .ll-rc { border-top: 1px dashed var(--line); padding: 2px 12px 6px; }
@@ -6441,8 +6452,14 @@ function renderLeadLag() {
         '<div class="ll-bt-v ' + _ls(mainEx.ret) + '">' + _lp(mainEx.ret) + '<small>胜率 ' + _lr(mainEx.win) + '</small></div></div>' +
         '<div><div class="ll-bt-k">' + esc(String(altEx.name || '')) + '（备选）</div>' +
         '<div class="ll-bt-v ' + _ls(altEx.ret) + '">' + _lp(altEx.ret) + '<small>胜率 ' + _lr(altEx.win) + '</small></div></div>' +
+        // 2026-10-27 用户问「这个是什么，需要删吗」——查下来最该改的就是这一格：
+        // 原来只显示 1.10，没有任何「这不显著」的标记，而「胜率 61.8%」摆在最显眼处，
+        // 读者会把它当已验证的策略。t<2 时直接标出来，不靠读者自己去折叠区里找。
         '<div><div class="ll-bt-k">日聚类 t 值</div>' +
         '<div class="ll-bt-v">' + (mainEx.tDaily != null ? mainEx.tDaily.toFixed(2) : '—') +
+        (mainEx.tDaily != null && Math.abs(mainEx.tDaily) < 2
+          ? '<small class="ll-sig">不显著</small>'
+          : '') +
         '<small>' + (mainEx.days || 0) + ' 个信号日</small></div></div>' +
         '<div><div class="ll-bt-k">有信号的天数</div>' +
         '<div class="ll-bt-v">' + (bt.signalDays || 0) + '<small>/ ' + (bt.days || 0) + ' 日</small></div></div>' +
@@ -6476,6 +6493,25 @@ function renderLeadLag() {
             '<div class="ll-rc-n">' + (x.n || 0) + '只' + (x.up != null ? x.up + '涨' : '') +
             (nmHtml ? '　' + nmHtml : '') + '</div></div>';
         });
+        // 汇总行：原来只有 6 行明细，读者得自己心算才知道「最近到底赚不赚」。
+        // 两种平均都要给：按天等权（每次出手算一票，与上面每行的百分比口径一致）
+        // 和按笔加权（票多的那天权重大，更接近满仓照做的实际结果）——
+        // 2026-10-26 实测两者差 0.75 个点（−0.88% vs −0.13%），只给一个都会误导。
+        var _nDay = rc.length, _nStock = 0, _sumDay = 0, _sumStock = 0, _upN = 0;
+        rc.forEach(function (x) {
+          var v = _ln(x.ret) || 0, k = _ln(x.n) || 0;
+          _nStock += k; _sumDay += v; _sumStock += v * k; _upN += (_ln(x.up) || 0);
+        });
+        if (_nDay) {
+          var avgDay = _sumDay / _nDay;
+          var avgStk = _nStock ? _sumStock / _nStock : null;
+          out += '<div class="ll-rc-sum">合计 <b>' + _nDay + '</b> 次出手 / <b>' + _nStock + '</b> 笔：' +
+            '按天等权 <b class="' + _ls(avgDay) + '">' + _lp(avgDay) + '</b>' +
+            (avgStk === null ? '' : '　按笔加权 <b class="' + _ls(avgStk) + '">' + _lp(avgStk) + '</b>') +
+            '　上涨 <b>' + _upN + '/' + _nStock + '</b>' +
+            (_nStock ? '（' + (_upN / _nStock * 100).toFixed(1) + '%）' : '') +
+            '　——六个交易日不足以判断这套规则最近是变差还是正常波动，<b>连续亏损时应停用观察</b>。</div>';
+        }
         out += '</div>';
       }
 
