@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610280106"></script>
+<script src="data.js?v=202610280111"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -3423,9 +3423,15 @@ function renderAiPrediction() {
   // 同时按用户要求把说明性长文全删（为何只映射资金、机械候选快照、本卡分工、命中率/分档校准/
   // 组合实盘/止损跟踪），本卡只给结果。统计与口径搬到「📋 复盘台账」页。
   var isFc = p.dirMode === 'forecast';
+  // 标签含义挂 title，不占版面：旧口径这份数据的方向词来自昨日资金确认，不是预测，
+  // 读者看到「走强」时最容易误读成「今天会涨」——那正是本轮要修的那个错。
+  var _tagTip = isFc
+    ? '由隔夜美股、早上日韩开盘、前一日 A 股、全球要闻、国内要闻五路依据，推演今天哪些板块会走强'
+    : '本卡数据由 2026-10-28 08:30 之前的旧口径生成：方向词按昨日资金确认状态映射，是参照不是预测。'
+      + '下一次盘前跑完会自动切换成五路依据的今日推演（届时徽章会带上「预计」前缀）';
   var html = '<div class="ai-card"><div class="ai-head"><h2>AI 预测分析' +
     (p.date ? '<span class="h2-date">' + esc(p.date) + '</span>' : '') +
-    '<span class="src-tag">' + (isFc ? '盘前预测' : '方向参照') + '</span></h2></div>' +
+    '<span class="src-tag" title="' + escAttr(_tagTip) + '">' + (isFc ? '盘前预测' : '方向参照') + '</span></h2></div>' +
     forecastBasisHtml(p) +
     (p.summary ? '<div class="ai-summary">' + esc(p.summary) + '</div>' : '') +
     riskLineHtml(p) +
