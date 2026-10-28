@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610281011"></script>
+<script src="data.js?v=202610281022"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -882,6 +882,24 @@
      它只是「还没开盘」——所以用中性灰，不许染成绿或红，否则会被读成结论。 */
   .tb-st-pending { color: var(--ink2); font-weight: 600; }
   .tb-st-unknown { color: var(--ink2); }
+  /* R100z254：两张表合并成「今日可下单」后新增的三块。
+     · .tb-grp  组头（① 昨晚定单 / ② 今日买点）——两组列语义相同、时点不同，
+                没有组头就会被读成「一份清单漏了状态的重复行」；
+     · .tb-grp-r 组头右侧的小字说明（由谁生成、什么时候定）；
+     · .tb-st-under 「未到买区」——买入清单原有的深蓝档，与「已高于买区」的橙色必须区分开，
+               混成一个颜色等于把「等回落」和「等下跌」说成同一件事；
+     · .tb-tag 来源徽标（断板反包·确认池 / 陈学长·严格池…）。 */
+  .tb-grp { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+    padding: 6px 11px; background: var(--bg-2);
+    border-bottom: 1px solid var(--line);
+    font-size: var(--fs-sm); font-weight: 700; color: var(--accent-deep); }
+  /* 只有「接在数据行后面」的组头才需要上边框——第一组紧跟 .tb-th（它自己已有下边框），
+     再加一条就是双线粗边。 */
+  .tb-row + .tb-grp { border-top: 1px solid var(--line); }
+  .tb-grp-r { font-weight: 400; font-size: var(--fs-xs); color: var(--ink2); line-height: 1.5; }
+  .tb-st-under { color: var(--accent-deep); font-weight: 700; }
+  .tb-tag { font-size: var(--fs-xs); font-weight: 600; padding: 1px 5px; border-radius: 5px;
+    background: var(--accent-soft); color: var(--accent-deep); white-space: nowrap; }
   .tb-rule { padding: 7px 11px; background: var(--bg-2); border-top: 1px solid var(--line);
     font-size: var(--fs-xs); color: var(--ink2); line-height: 1.7; }
   .tb-risk { padding: 7px 11px; background: rgba(199,122,18,.08); border-top: 1px solid var(--line);
@@ -1162,6 +1180,16 @@
   .tc-cell .v.warn { color: #b3541e; }
   /* 虚线状态行 */
   .tc-foot { border-top: 1px dashed var(--line); padding-top: 3px; font-size: var(--fs-xs); color: var(--ink2); line-height: 1.4; font-weight: 400; }
+  /* R100z254：卡片上的「今日可下单」一行——把两张表的价格压回标的身上。
+     与 .tc-foot 同为虚线行，但用主色底强调：上面那行说形态，这行说钱。
+     没有进任何下单清单的票不渲染这一行（不是「今天不能买」，是这张卡今天没有报价结论，
+     所以连空行都不留——空行会被读成「有结论但没写」）。 */
+  .tc-ord { border-top: 1px dashed var(--line); margin-top: 1px; padding-top: 3px;
+    font-size: var(--fs-xs); line-height: 1.5; color: var(--accent-deep); font-weight: 700;
+    font-variant-numeric: tabular-nums; }
+  .tc-ord i { font-style: normal; font-weight: 400; color: var(--ink2); }
+  /* 价格数字压到最黑：这一行的重点就是「挂多少 / 破多少撤」，其余都是陪衬。 */
+  .tc-ord b { color: var(--ink); font-variant-numeric: tabular-nums; }
   /* 观察池 / 降级卡：虚线边 + 灰字，四页统一 */
   .tc.dim { border-style: dashed; background: var(--paper); }
   .tc.dim .tc-cell { background: #f2f4f7; }
@@ -5514,6 +5542,63 @@ function starTechOf(code0, src) {
    口径以 harmonic_detect.py 的 PATTERNS 为准，取不到就原样显示英文，绝不猜译。 */
 var HZ_PAT_CN = { 'Bat': '蝙蝠', 'Gartley': '加特利', 'Butterfly': '蝶形', 'Crab': '蟹形', 'Shark': '鲨鱼', 'Cypher': '塞弗', 'AB=CD': 'AB等CD' };
 function hzPatCn(p) { return HZ_PAT_CN[p] || p; }
+/* R100z254（用户 2026-10-28「要么删掉，要么就辅佐卡片」）：把「今天挂什么价」压回标的自己身上。
+   并表之后读者仍要在表里按代码找人；而卡片的四格讲形态、.tc-foot 讲洗盘，**没有一行讲钱**——
+   恰恰「这只票今天能不能下单、挂多少、破多少撤」才是他真正要的东西。所以每张 .tc 卡片
+   只要这只票进了今日下单清单，底部就多一行 .tc-ord。
+   数据源只有两个，与并表同源，**页面不自己算价**：
+     duanban.star.buyList          9:45 三池命中（横盘启动·贴沿已在生成端剔除，此处同口径再兜一层）
+     duanban.star.timingExec.rows  昨晚定单 + 今开核对；缺则顶层 timingPlan.orders（未开盘回退态）
+   没进任何清单的票**不渲染空行**：空行会被读成「有结论但没写」。 */
+var _ORD_MAP = null;
+function orderMap() {
+  if (_ORD_MAP) return _ORD_MAP;
+  var D = window.DASHBOARD_DATA || {};
+  var st = ((D.duanban || {}).star) || {};
+  var m = {};
+  function slot(c) {
+    c = String(c || '').replace(/\D/g, '');
+    if (!c) return null;
+    if (!m[c]) m[c] = { buy: null, ord: null };
+    return m[c];
+  }
+  (st.buyList || []).forEach(function (r) {
+    if (String(r.src || '') === 'bp') return;        // 与生成端 BUY_INCLUDE_BP=False 同口径
+    var s = slot(r.code); if (s) s.buy = r;
+  });
+  var te = st.timingExec;
+  var rows = (te && te.rows && te.rows.length)
+    ? te.rows
+    : (((D.timingPlan || {}).orders) || []).map(function (o) {
+        return { code: o.code, limit: o.limit, floor: o.floor,
+                 state: 'pending', stateZh: '未开盘·照限价挂' };
+      });
+  rows.forEach(function (r) {
+    var s = slot(r.code); if (s) s.ord = r;
+  });
+  _ORD_MAP = m;
+  return m;
+}
+function orderLineOf(code) {
+  var s = orderMap()[String(code || '').replace(/\D/g, '')];
+  if (!s || (!s.buy && !s.ord)) return '';
+  var p2 = function (v) {
+    return (v === null || v === undefined || v === '' || !isFinite(Number(v))) ? '—' : Number(v).toFixed(2);
+  };
+  var out = [];
+  if (s.buy) {
+    var b = s.buy;
+    out.push('今可买 <b>' + p2(b.low) + '~' + p2(b.high) + '</b>' +
+      (b.stateZh ? '（' + esc(String(b.stateZh)) + '）' : '') +
+      ' · 破 ' + p2(b.invalid) + ' 撤');
+  }
+  if (s.ord) {
+    var t = s.ord;
+    out.push('昨挂 <b>' + p2(t.limit) + '</b> · 下沿 ' + p2(t.floor) + ' 破了撤' +
+      (t.stateZh ? ' · ' + esc(String(t.stateZh)) : ''));
+  }
+  return '<i>下单</i> ' + out.join('<span style="opacity:.3;"> ｜ </span>');
+}
 /* R100z36：统一卡片骨架。o = {code,name,sector,pills[],sent,chg,cells[],foot,dim,attrs,onclick,title,fresh}
    R100z44：fresh=true → 整卡淡黄+「新」徽章（新入池首日高亮，次日恢复）。 */
 /* R100z76-③→R100z80：四技术池跨池共振——同票命中≥2个技术池（吸筹/谐波/横盘启动/断板反包）即高确信共振。
@@ -5551,6 +5636,7 @@ function sortByReso(arr) {
   });
 }
 function tcCard(o) {
+  var ord = orderLineOf(o.code);   // R100z254：进今日下单清单的票，卡片底部多一行价
   var pills = '';
   (o.pills || []).forEach(function (p) { if (p) pills += '<span class="db-sec-pill">' + esc(p) + '</span>'; });
   // R100z220：sentKind 给「条目自带结论」的池用（陈学长条目直接带 sentiment 字段）——
@@ -5563,6 +5649,7 @@ function tcCard(o) {
     '<div class="tc-id"><b>' + esc(o.name || o.code) + '</b>' + riskBadge(o.code, 1) +
     ((o.name && o.name !== o.code) ? '<span class="cd">' + esc(o.code) + '</span>' : '') + tcChgHtml(o.chg) + '</div>' +
     '<div class="tc-g">' + (o.cells || []).join('') + '</div>' +
+    (ord ? '<div class="tc-ord">' + ord + '</div>' : '') +
     (o.foot ? '<div class="tc-foot">' + o.foot + '</div>' : '') + '</div>';
 }
 /* R100z44：入池首日判定——生成侧给每个池内标的写 entryDate（首次入池日，老标的逐日沿用），
@@ -5903,96 +5990,195 @@ function renderDuanban() {
           return esc(String(p.name || p.code)) + ' ' + (g > 0 ? '+' : '') + g.toFixed(1) + '%';
         }).join('、')
       : (_gapKnown ? '今日精选无开盘涨超 +1% 的标的' : '开盘价缺失，今日无法判定');
-    // ===== R101：时间口挂单清单（用户 2026-10-27 第 1 问「能下单」）=====
-    // 数据源 star.timingExec（update_star.py 读 timingPlan 后用 9:45 实时行情核对）。
-    // 与下面 buyList 的分工必须讲清，否则会被读成两份互相打架的清单：
-    //   timingExec = 昨晚定的挂单，今天开盘能不能成 / 要不要撤（**执行核对**）
-    //   buyList    = 此刻现价在不在买区（**盘中看盘口径**）
-    // 三条铁律：
-    //   ① 这里只核对、不新增标的——回测口径是限价成交，9:45 现挑的票不在回测里；
-    //   ② 「已破下沿」= 形态作废撤单，不是「跌得更多更便宜」；
-    //   ③ 止损距离偏宽是这套形态的固有代价，必须显式写出来，不能只报收益。
-    var _timingHtml = (function () {
-      // R101 回退：timingExec 由 9:45 的 update_star.py 写（要等开盘价才能核对），
-      // 而 timingPlan 由前一晚 16:00 写（**不含开盘价**）。所以 16:00 之后到次日 9:45 之间
-      // 这一段，页面只有 timingPlan 可用——必须先渲染它，否则用户 22:00 打开看到空白，
-      // 会以为「今晚什么都没生成」，而实际是 8 只单已经定好了。
-      // 回退态与核对态的唯一差别：状态列写「未开盘」，不给 go/broken/missed 的假结论
-      // （昨晚不可能知道今开，写「可挂」就是编）。
-      var te = st.timingExec;
-      var fallback = false;
-      if (!te || !te.rows || !te.rows.length) {
-        var tp = (window.DASHBOARD_DATA || {}).timingPlan;
-        if (!tp || !(tp.orders || []).length) return '';
-        // 把 orders 映射成与 rows 同构的形状，避免下面两套渲染分支
-        te = {
-          rows: (tp.orders || []).map(function (o) {
-            return {
-              code: o.code, name: o.name, limit: o.limit, floor: o.floor,
-              stop: o.stop, tp: o.tp, t1Close: o.t1Close, volRatio: o.volRatio,
-              ztDate: o.ztDate, open: null, vsLimit: null,
-              state: 'pending', stateZh: '未开盘·照限价挂'
-            };
-          }),
-          n: (tp.orders || []).length, nGo: 0, nBroken: 0, nMissed: 0,
-          tradeDate: tp.tradeDate, buyDate: tp.buyDate, time: null,
-          rule: tp.rule, riskNote: tp.riskNote, bt: tp.bt
-        };
-        fallback = true;
-      }
+    // ===== R100z254：今日可下单（两张表并一张，用户 2026-10-28 拍板）=====
+    // 原来这里是两张表：「🎯 时限挂单」（8 只，昨晚 16:00 定、今开核对）与
+    // 「💵 今日买入清单」（29 只，9:45 三池命中）。时点不同、列语义却很像，并排放着
+    // 会被读成「两份互相打架的清单」——读者得先弄清哪份才是今天的，才能下单。
+    // 现在合成一张，用组头把时点分开，**五列语义对两组完全一致**：
+    //     标的·来源 | 现价·状态 | 买价带 | 撤单位 | 目标·持有
+    // 时点信息收进组头，不再各开一张表头。
+    //
+    // 同一句话里的「回测数据很低要么删掉，要么就辅佐卡片」落成两件事：
+    //   ① 横盘启动·贴沿不再进这张表（生成端 BUY_INCLUDE_BP=False，此处同口径再兜一层，
+    //      因为当天的 data.js 还是旧口径生成的）。它的回测：7,783 个状态日单笔 +0.22%、
+    //      盈亏比 1.16、T+5 超额 t=0.41（不显著），却占了旧清单 21/29（72%）——
+    //      唯一没有 edge 的一源，贡献了绝大部分噪声，还把有 edge 的 2 只淹在里面。
+    //      **删的不是池子**：横盘启动子页原样保留，删的是「冒充今天该买什么」。
+    //   ② 价格压回卡片：tcCard 多一行 .tc-ord（orderLineOf），每只票自己身上就写着
+    //      挂多少、破多少撤，不必在表里按代码找人。
+    var _shelfHtml = (function () {
+      var D = window.DASHBOARD_DATA || {};
       var p2 = function (v) {
         return (v === null || v === undefined || v === '' || !isFinite(Number(v))) ? '—' : Number(v).toFixed(2);
       };
-      var sg = function (v) {
+      var sg = function (v, d) {
         if (v === null || v === undefined || v === '' || !isFinite(Number(v))) return '';
         var n = Number(v);
-        return (n > 0 ? '+' : '') + n.toFixed(2) + '%';
+        return ' ' + (n > 0 ? '+' : '') + n.toFixed(d == null ? 2 : d) + '%';
       };
-      var clsMap = { go: 'tb-st-go', broken: 'tb-st-broken', missed: 'tb-st-missed', pending: 'tb-st-pending' };
-      var h = '<div class="tb-wrap"><div class="tb-head"><b>🎯 时限挂单 · 昨晚定单，今天挂</b>' +
-        (fallback
-          ? '<span>已定单 ' + te.n + ' 只 · 明早开盘按限价挂 · 未开盘，暂无核对结果</span>'
-          : '<span>挂单 ' + te.n + ' 只 · 可挂 ' + (te.nGo || 0) +
-            ' · 已破下沿 ' + (te.nBroken || 0) + ' · 高于限价 ' + (te.nMissed || 0) + '</span>') +
-        '</div>' +
-        '<div class="tb-note">基准日 ' + esc(String(te.tradeDate || '')) + ' 收盘定价 → 下单日 ' +
-        esc(String(te.buyDate || '')) + ' 开盘前挂单' +
-        (fallback ? '（9:45 自动核对开盘价后更新状态）' : '（' + esc(String(te.time || '')) + ' 核对）') +
-        '</div>' +
-        '<div class="tb-th"><span>标的 · 涨停日</span><span>限价（挂这个价）</span>' +
-        '<span>形态下沿</span><span>止盈</span><span>' + (fallback ? '昨收 · 状态' : '今开 · 状态') + '</span></div>';
-      te.rows.forEach(function (r) {
-        var cls = clsMap[r.state] || 'tb-st-unknown';
-        h += '<div class="tb-row">' +
-          '<div><div class="tb-nm">' + esc(String(r.name || '')) +
-            '<span style="font-weight:400;color:var(--ink2);font-size:var(--fs-xs);">' +
-            esc(String(r.code || '')) + '</span></div>' +
-            '<span class="tb-k">涨停 ' + esc(String(r.ztDate || '').slice(5)) +
-            ' · 放量 ' + (r.volRatio == null ? '—' : Number(r.volRatio).toFixed(2)) + ' 倍</span></div>' +
-          '<div><span class="tb-v">' + p2(r.limit) + '</span>' +
-            '<span class="tb-k">昨收 ' + p2(r.t1Close) + '</span></div>' +
-          '<div><span class="tb-v">' + p2(r.floor) + '</span>' +
-            '<span class="tb-k">破了就撤</span></div>' +
-          '<div><span class="tb-v">' + p2(r.tp) + '</span>' +
-            '<span class="tb-k">+5% 触及即平</span></div>' +
-          '<div><span class="tb-v">' + (fallback ? p2(r.t1Close) : p2(r.open)) + sg(r.vsLimit) + '</span>' +
-            '<span class="tb-k ' + cls + '">' + esc(String(r.stateZh || '')) + '</span></div>' +
-          '</div>';
+
+      // ---- 组①：昨晚定单。timingExec 由 9:45 写（要有开盘价才能核对）；
+      // 16:00 之后到次日 9:45 之间只有 timingPlan（**不含开盘价**）→ 走回退，
+      // 状态列写「未开盘」。回退态不许编 go/broken/missed：昨晚不可能知道今开，
+      // 写「可挂」就是编；而 22:00 打开看到完全空白，会被读成「今晚什么都没生成」。
+      var te = st.timingExec, fallback = false;
+      if (!te || !te.rows || !te.rows.length) {
+        var tp = D.timingPlan || {};
+        if (!(tp.orders || []).length) {
+          te = null;
+        } else {
+          te = {
+            rows: (tp.orders || []).map(function (o) {
+              return {
+                code: o.code, name: o.name, limit: o.limit, floor: o.floor,
+                stop: o.stop, tp: o.tp, t1Close: o.t1Close, volRatio: o.volRatio,
+                ztDate: o.ztDate, open: null, vsLimit: null,
+                state: 'pending', stateZh: '未开盘·照限价挂'
+              };
+            }),
+            n: (tp.orders || []).length, nGo: 0, nBroken: 0, nMissed: 0,
+            tradeDate: tp.tradeDate, buyDate: tp.buyDate, time: null,
+            rule: tp.rule, riskNote: tp.riskNote, bt: tp.bt
+          };
+          fallback = true;
+        }
+      }
+
+      // ---- 组②：今日买点。st.buyList 只该收有回测 edge 的源。
+      // 生成端已剔除横盘启动，这里再兜一层（当天 data.js 可能是旧口径生成的），
+      // 并把被剔的只数**显式说出来**——静默少 21 行会被读成「今天没这东西」。
+      var blAll = st.buyList || [], bs = st.buySummary || {};
+      var bl = [], nBpCut = 0;
+      blAll.forEach(function (r) {
+        if (String(r.src || '') === 'bp') { nBpCut++; return; }
+        bl.push(r);
       });
-      if (te.rule) h += '<div class="tb-rule">' + esc(String(te.rule)) + '</div>';
-      if (te.riskNote) h += '<div class="tb-risk">' + esc(String(te.riskNote)) + '</div>';
-      var b = te.bt;
+      if (!te && !bl.length) return '';          // 两组都空 → 整块不出，不留空框
+      // nBuy 按**列出来的行**重数：summary 里那个把被剔的 21 只也算进去了，
+      // 直接照抄会得到「8 只里 5 只在买区内」而实际只有 1 只。这里只做计数，不动任何价格。
+      var nBuy = 0;
+      bl.forEach(function (r) { if (r.state === 'buy') nBuy++; });
+
+      var clsMap = { go: 'tb-st-go', broken: 'tb-st-broken', missed: 'tb-st-missed', pending: 'tb-st-pending' };
+      // 买入清单三档与挂单三档**不同名同义**：buy=现在就能下单 / over=等回落 / under=等下跌。
+      // 「未到买区」用主色深蓝、「已高于买区」用橙——两者混成一个颜色，等于把
+      // 「等它跌回来」和「等它跌下去」说成同一件事。
+      var bClsMap = { buy: 'tb-st-go', over: 'tb-st-missed', under: 'tb-st-under' };
+
+      var h = '<div class="tb-wrap"><div class="tb-head"><b>💵 今日可下单</b>';
+      if (te) {
+        h += '<span>昨晚定单 ' + te.n + ' 只' +
+          (fallback ? ' · 未开盘，暂无核对结果'
+                    : ' · 可挂 ' + (te.nGo || 0) + ' · 已破下沿 ' + (te.nBroken || 0) +
+                      ' · 高于限价 ' + (te.nMissed || 0)) + '</span>';
+      }
+      if (bl.length) {
+        h += '<span>今日买点 ' + bl.length + ' 只 · 现价在买区内 ' + nBuy + ' 只</span>';
+      }
+      h += '</div>' +
+        '<div class="tb-th"><span>标的 · 来源</span><span>现价 · 状态</span><span>买价带</span>' +
+        '<span>撤单位</span><span>目标 · 持有</span></div>';
+
+      // ---------- 组① 行：昨晚定单 ----------
+      if (te) {
+        h += '<div class="tb-grp">① 昨晚定单 · 今开核对' +
+          '<span class="tb-grp-r">基准日 ' + esc(String(te.tradeDate || '')) + ' 收盘定价 → 下单日 ' +
+          esc(String(te.buyDate || '')) +
+          (fallback ? '（9:45 自动核对开盘价后更新）' : '（' + esc(String(te.time || '')) + ' 核对）') +
+          '　· 限价成交，开盘后不追价</span></div>';
+        te.rows.forEach(function (r) {
+          var cls = clsMap[r.state] || 'tb-st-unknown';
+          h += '<div class="tb-row">' +
+            '<div><div class="tb-nm">' + esc(String(r.name || '')) +
+              '<span style="font-weight:400;color:var(--ink2);font-size:var(--fs-xs);">' +
+              esc(String(r.code || '')) + '</span></div>' +
+              '<span class="tb-k">涨停 ' + esc(String(r.ztDate || '').slice(5)) +
+              ' · 放量 ' + (r.volRatio == null ? '—' : Number(r.volRatio).toFixed(2)) + ' 倍</span></div>' +
+            '<div><span class="tb-v">' + (fallback ? p2(r.t1Close) : p2(r.open)) + sg(r.vsLimit, 2) + '</span>' +
+              '<span class="tb-k ' + cls + '">' + esc(String(r.stateZh || '')) + '</span></div>' +
+            '<div><span class="tb-v">' + p2(r.limit) + '</span>' +
+              '<span class="tb-k">限价挂单 · 昨收 ' + p2(r.t1Close) + '</span></div>' +
+            '<div><span class="tb-v">' + p2(r.floor) + '</span>' +
+              '<span class="tb-k">形态下沿 · 破了就撤</span></div>' +
+            '<div><span class="tb-v">' + p2(r.tp) + '</span>' +
+              '<span class="tb-k">+5% 触及即平</span></div>' +
+            '</div>';
+        });
+      }
+
+      // ---------- 组② 行：今日买点 ----------
+      if (bl.length) {
+        h += '<div class="tb-grp">② 今日买点 · 三池命中' +
+          '<span class="tb-grp-r">9:45 盘中口径，回答「现在还能不能补」；三池＝断板反包确认池 / ' +
+          '陈学长严格池 / 陈学长放宽池。买区是**能下单的价格带**，不是目标价；' +
+          '已高于买区＝等回落，未到买区＝等它跌下来，两者别读成同一个意思</span></div>';
+        bl.forEach(function (r) {
+          var cls = bClsMap[r.state] || 'tb-st-unknown';
+          // anchor 三档：箱体几何 / 涨停锚挂单带 / 纯滑点带。说不清就会让读者猜买区是怎么来的。
+          var anchorZh = (r.anchor === 'box') ? '箱体几何'
+            : (r.anchor === 'anchor') ? '涨停锚挂单带'
+            : '现价 ±' + (bs.slipPct == null ? 1 : bs.slipPct) + '%';
+          h += '<div class="tb-row">' +
+            '<div><div class="tb-nm">' + esc(String(r.name || '')) +
+              '<span style="font-weight:400;color:var(--ink2);font-size:var(--fs-xs);">' +
+              esc(String(r.code || '')) + '</span>' +
+              '<span class="tb-tag">' + esc(String(r.srcZh || '')) + '</span>' +
+              (r.inPicks ? '<span class="tb-tag">精选</span>' : '') + '</div>' +
+              (r.posPct ? '<span class="tb-k">仓位 ' + Number(r.posPct).toFixed(0) + '%</span>' : '') +
+            '</div>' +
+            '<div><span class="tb-v">' + p2(r.price) + '</span>' +
+              '<span class="tb-k ' + cls + '">' + esc(String(r.stateZh || '')) + '</span></div>' +
+            '<div><span class="tb-v">' + p2(r.low) + ' ~ ' + p2(r.high) + '</span>' +
+              '<span class="tb-k">' + esc(anchorZh) + '</span></div>' +
+            '<div><span class="tb-v">' + p2(r.invalid) + '</span>' +
+              '<span class="tb-k">' + esc(String(r.invalidZh || '证伪价')) + sg(r.invalidPct, 1) + '</span></div>' +
+            '<div>' + (r.target == null
+              ? '<span class="tb-v">—</span><span class="tb-k">未给目标</span>'
+              : '<span class="tb-v">' + p2(r.target) + sg(r.targetPct, 1) + '</span>' +
+                '<span class="tb-k' + (r.targetPct < 0 ? ' tb-st-missed' : '') + '">' +
+                // R100z254 实测抓到：现价已跑到目标之上（002929 现价 58.54 / 目标 56.74 = −3.1%），
+                // 页面却仍把 −3.1% 摆在「目标」列，会被读成「目标就是亏 3 个点」。
+                // 不改数字（那是池子给的），只把「它已经在现价下方」这件事说出来。
+                (r.targetPct < 0 ? '已低于现价，不是上涨空间 · ' : '') +
+                (r.holdDays ? ('持 ' + r.holdDays + ' 日') : '未给持有期') + '</span>') +
+            '</div></div>';
+        });
+      }
+
+      // ---------- 规则 / 风险 / 回测：全表一处，不按组重复 ----------
+      // 断板反包确认池不给目标价与持有天数（回测只验证到次日盘口成交 + T 日低点止损），
+      // 所以只要表里出现「未给目标」，就必须说明理由——否则那个破折号会被读成「忘了填」。
+      var noTarget = false;
+      bl.forEach(function (r) { if (r.target == null) noTarget = true; });
+      var rules = [];
+      if (te && te.rule) rules.push(String(te.rule));
+      if (bl.length) {
+        if (bs.rule) rules.push(String(bs.rule));
+        if (noTarget) {
+          rules.push('断板反包确认池的「证伪价」＝ T 日最低价，目标与持有期本轮不给——'
+            + '回测只验证到次日盘口成交 + 该价位作废，凑一个目标价就是编数字。');
+        }
+      }
+      if (nBpCut) {
+        // 显式披露，不静默丢：被剔的票形态仍然有效，只是它的回测不支持「今天该买」这个结论。
+        rules.push('另有 ' + nBpCut + ' 只「横盘启动·贴沿」命中未列入本表：该源 7,783 个状态日'
+          + '单笔仅 +0.22%、盈亏比 1.16、T+5 超额 t=0.41（不显著），且它占了旧清单的 72%——'
+          + '不是形态失效，是它不该冒充今天该买什么。形态与买区仍在「横盘启动」子页。');
+      }
+      if (rules.length) h += '<div class="tb-rule">' + esc(rules.join(' ')) + '</div>';
+      if (te && te.riskNote) h += '<div class="tb-risk">' + esc(String(te.riskNote)) + '</div>';
+
+      var b = te && te.bt;
       if (b && b.n) {
-        h += '<div class="tb-bt">回测出处：' +
+        h += '<div class="tb-bt">组①回测出处：' +
           esc(String((b.span || []).join(' ~ '))) + ' · ' + b.n + ' 笔 · 胜率 ' +
           Number(b.win).toFixed(1) + '% · 均 ' + Number(b.avg).toFixed(2) +
           '% · 年化 ' + (Number(b.ann) * 100).toFixed(1) + '% · 最大回撤 ' +
           (Number(b.mdd) * 100).toFixed(1) + '%（限价成交、每只 1/32 资金、含双边 0.16% 成本）';
-        // R100z253（用户 2026-10-28「回测过数据吗？如果回测数据很低要么删掉」）：
-        // 上面那行只是**全期**数字——3.7 年 33.6% 年化会把「今年已经衰减」这件事盖住。
-        // 分年摆出来，读者才知道现在的水位在哪：2026 单笔只剩 +0.14%、年化 +6.0%。
-        // 这是「报喜也要报忧」的机器保证：只要 bt.byYear 在，最新一年就必须露面，
-        // 且当年低于全期均值时自动加一句「今年明显衰减」，不许靠作者自觉。
+        // R100z253：上面那行只是**全期**数字——3.7 年 33.6% 会把「今年已经衰减」盖住。
+        // 分年摆出来，读者才知道现在的水位在哪（2026 单笔只剩 +0.14%、年化 +6.0%）。
+        // 这是「报喜也要报忧」的机器保证：只要 byYear 在，最新一年就必须露面，
+        // 且当年低于全期均值一半时自动加告警，不许靠作者自觉。
         var _by = b.byYear || {};
         var _ys = Object.keys(_by).sort();
         if (_ys.length) {
@@ -6010,107 +6196,22 @@ function renderDuanban() {
           h += '<br>分年单笔：' + _cells.join(' <span style="opacity:.35;">|</span> ') +
             (isFinite(Number(_last.ann)) ? '　（' + esc(_ys[_ys.length - 1]) + ' 年化 ' +
               (Number(_last.ann) > 0 ? '+' : '') + (Number(_last.ann) * 100).toFixed(1) + '%）' : '') +
-            (_decay ? '　⚠️ 最新一年不到全期均值的一半——别拿全期数字当现在的水位'
-                    : '');
+            (_decay ? '　⚠️ 最新一年不到全期均值的一半——别拿全期数字当现在的水位' : '');
         }
         h += '</div>';
       }
       h += '</div>';
       return h;
     })();
-    // ===== R100z232：今日买入清单（用户 2026-10-26 第 4 项）=====
-    // 数据源 star.buyList / star.buySummary（update_star.py 的 build_buy_list 生成）。
-    // 三条铁律，页面不许自己算：
-    //   ① 买区是**此刻能下单的价格带**，不是目标价——所以和「目标」分两列，中间隔着证伪价；
-    //   ② state（buy/over/under/unknown）只描述现价与买区的**位置关系**，不是推荐强度，
-    //      所以「未到买区」不等于「更好」，「已高于买区」也不等于「更强」；
-    //   ③ 行情抓空 → state=unknown，文案必须写「价格抓空」而不是「无机会」（抓不到 ≠ 没有）。
-    // 断板反包确认池不给目标价与持有天数（回测只验证到次日盘口成交 + T日低点止损），
-    // 所以那一行目标列显式写「未给目标」，不拿别的池的数字来凑。
-    var _buyHtml = (function () {
-      var bl = st.buyList, bs = st.buySummary || {};
-      var p2 = function (v) {
-        return (v === null || v === undefined || v === '' || !isFinite(Number(v))) ? '—' : Number(v).toFixed(2);
-      };
-      var sg = function (v) {
-        if (v === null || v === undefined || v === '' || !isFinite(Number(v))) return '';
-        var n = Number(v);
-        return (n > 0 ? '+' : '') + n.toFixed(1) + '%';
-      };
-      if (!bl || !bl.length) {
-        // 空清单是常态（三池日均命中个位数），不是漏跑。summary.text 里会写清是「无买点」还是「抓空」。
-        if (!bs.text) return '';
-        return '<div class="bl-wrap"><div class="bl-head"><b>💵 今日买入清单</b>' +
-          '<span>今日三池无买点</span></div>' +
-          '<div class="bl-empty">' + esc(String(bs.text)) + '</div>' +
-          (bs.rule ? '<div class="bl-rule">' + esc(String(bs.rule)) + '</div>' : '') + '</div>';
-      }
-      var nBuy = (bs.nBuy == null ? 0 : bs.nBuy);
-      var bySrc = [];
-      for (var k in (bs.bySrc || {})) {
-        if (Object.prototype.hasOwnProperty.call(bs.bySrc, k)) bySrc.push(k + ' ' + bs.bySrc[k] + ' 只');
-      }
-      var noTarget = false, html = '';
-      html += '<div class="bl-wrap"><div class="bl-head"><b>💵 今日买入清单</b>' +
-        '<span>' + bl.length + ' 只 · 现价在买区内 ' + nBuy + ' 只</span>' +
-        (bySrc.length ? '<span>' + esc(bySrc.join(' · ')) + '</span>' : '') +
-        '</div>' +
-        '<div class="bl-th"><span>标的 · 来源 / 仓位</span><span>买入区间</span>' +
-        '<span>现价</span><span>证伪价</span><span>目标 · 持有</span></div>';
-      bl.forEach(function (r) {
-        var cls = ({ buy: 'bl-st-buy', over: 'bl-st-over', under: 'bl-st-under' })[r.state] || 'bl-st-unknown';
-        // 横盘启动的买区是「涨停锚挂单带」（今收 −1%~+2%），
-        // 既不是箱体几何，也不是纯滑点带；三档都要能说清，别让读者猜。
-        var anchorZh = (r.anchor === 'box') ? '箱体几何'
-          : (r.anchor === 'anchor') ? '涨停锚挂单带'
-          : '现价 ±' + (bs.slipPct == null ? 1 : bs.slipPct) + '%';
-        html += '<div class="bl-row">' +
-          // 第一列分两层：上面是「名称 + 代码 + 来源徽标」，下面单独一行放仓位。
-          // 早版本把仓位也塞进 .bl-nm 的 flex 里，于是名字长的行仓位换行、名字短的行不换行——
-          // 并排两行一上一下，看起来像两种不同的排版（L16 截图实报）。分层后恒定两行。
-          '<div><div class="bl-nm">' + esc(String(r.name || '')) +
-            '<span style="font-weight:400;color:var(--ink2);font-size:var(--fs-xs);">' + esc(String(r.code || '')) + '</span>' +
-            '<span class="bl-tag">' + esc(String(r.srcZh || '')) + '</span>' +
-            (r.inPicks ? '<span class="bl-tag" style="background:var(--accent-soft);color:var(--accent-deep);">精选</span>' : '') +
-            '</div>' +
-            (r.posPct ? '<span class="bl-k">仓位 ' + Number(r.posPct).toFixed(0) + '%</span>' : '') +
-          '</div>' +
-          '<div><span class="bl-buy">' + p2(r.low) + ' ~ ' + p2(r.high) + '</span>' +
-            '<span class="bl-k">' + esc(anchorZh) + '</span></div>' +
-          '<div><span class="bl-v">' + p2(r.price) + '</span>' +
-            '<span class="bl-k ' + cls + '">' + esc(String(r.stateZh || '')) + '</span></div>' +
-          '<div><span class="bl-v">' + p2(r.invalid) + '</span>' +
-            '<span class="bl-k">' + esc(String(r.invalidZh || '证伪价')) +
-            (r.invalidPct == null ? '' : ' ' + sg(r.invalidPct)) + '</span></div>' +
-          '<div>';
-        if (r.target == null) {
-          noTarget = true;
-          html += '<span class="bl-v">—</span><span class="bl-k">未给目标</span>';
-        } else {
-          html += '<span class="bl-v">' + p2(r.target) +
-            (r.targetPct == null ? '' : ' <span style="font-size:var(--fs-xs);">' + sg(r.targetPct) + '</span>') + '</span>' +
-            '<span class="bl-k">' + (r.holdDays ? ('持 ' + r.holdDays + ' 日') : '未给持有期') + '</span>';
-        }
-        html += '</div></div>';
-      });
-      var rule = String(bs.rule || '');
-      if (noTarget) {
-        rule += ' 断板反包确认池的「证伪价」= T 日最低价，目标与持有期本轮不给——回测只验证到次日盘口成交 + 该价位作废，凑一个目标价就是编数字。';
-      }
-      if (rule) html += '<div class="bl-rule">' + esc(rule) + '</div>';
-      html += '</div>';
-      return html;
-    })();
     fixed += '<div class="db-pool p-star"><h2>🌟 开盘精选 · ' + starPicks.length + ' 只</h2>' +
       // R100z228：副标题原文只列了「谐波/横盘启动/吸筹」，而 R100z222 起陈学长也有 2 个名额——
       // 名册里有、说明书里没有，读者就不知道那两枚「陈学长·XX池」徽标是怎么进来的。顺手把各池名额写出来。
       '<div class="db-sub">' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：断板池按「板块情绪正向+主力净流入正向」挂钩+上涨概率降序，并可从谐波/横盘启动/吸筹/陈学长池直接取标的（名额 横盘启动 3 · 谐波 3 · 吸筹 2 · 陈学长 2）；弹窗与池内一致）</div>' +
-      // R100z232：买入清单紧跟副标题——这是全卡唯一「能直接下单」的结论段，
+      // R100z232：下单清单紧跟副标题——这是全卡唯一「能直接下单」的结论段，
       // 放在开盘价/盘口/深度分析之前，读者不用滚过三段分析才看到价。
-      // R101：时限挂单排在买入清单**之前**——它是昨晚就定好的、可以直接照抄下单的那份；
-      // buyList 是 9:45 盘中口径，属于「还能不能补」的第二层，不能反过来压在前面。
-      _timingHtml +
-      _buyHtml +
+      // R100z254：原来这里是两张表（时限挂单 + 买入清单），已并成一张「今日可下单」，
+      // 组①=昨晚定好的（可照抄下单），组②=9:45 盘中口径（还能不能补）。
+      _shelfHtml +
       // R100z193（2026-10-24 用户口径）：开盘价位置**不是强弱信号**，只是价格事实；
       // 动作口径下移到「盘口结构」那一行（tape.py 的分时量价诊断）。
       (st.gapSummary && st.gapSummary.text
