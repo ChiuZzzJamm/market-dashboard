@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610290014"></script>
+<script src="data.js?v=202610290019"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -7856,7 +7856,10 @@ function ordCardExitMeta(code0) {
     h += '<div class="exit-row exit-line pb-box"><div class="pb-h"><b>明日概率 ' + ent.prob.p + '%</b>' +
       '<span class="xb">（' + esc(ent.prob.baseSrc) + ' ' + ent.prob.base + '%，逐项加减如下）</span></div>';
     (ent.prob.notes || []).forEach(function (nt) {
-      h += '<div class="pb-i pb-note"><span class="pb-k">说明</span><span class="pb-d">' + esc(nt) + '</span></div>';
+      /* 说明行没有加减值列（.pb-v 缺位时依据列靠左接在名称列后面），
+         原先还挂了一个 .pb-note 类，但没有任何样式读它 —— 空挂的类名等于给下一个人
+         留一条「这里大概有什么特殊样式」的假线索，直接不出。 */
+      h += '<div class="pb-i"><span class="pb-k">说明</span><span class="pb-d">' + esc(nt) + '</span></div>';
     });
     (ent.prob.parts || []).forEach(function (x) {
       var v = Number(x.v) || 0;
