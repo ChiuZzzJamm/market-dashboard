@@ -789,6 +789,103 @@ def filter_by_mcap(cands, caps, lo=None, hi=None):
                   "nonMain": non_main, "cutList": cut}
 
 
+def prioritize_cut(cut, D, limit=60):
+    """把「被市值剔除」的名单按**页面正在展示的票优先**排序，再截断。
+
+    R100z263（2026-10-28 22:0x，修的是「明天就复发」的坑）：
+    `filter_by_mcap` 的排序（离门槛由近到远）本身是对的——读者最想知道差一点点的
+    那几只。但**单靠它，这次修复在第二天就失效**：用户在「今日可下单」卡片上看到的票，
+    流通市值多在 30~60 亿，离 100 亿下限还有 40~70 亿，按距离排到 100 名开外，
+    截断到前 40 条里一只都不剩 —— 名单照旧摆着，他要问的那几只照旧不在里面。
+    2026-10-28 首版实测就是这个结果（45 条里对展示票命中 0 只，靠手工重排才救回来）。
+
+    所以顺序改成**三级**：
+      第 1 级「今日可下单」三源（用户正看着的那几张卡）
+      → 第 2 级 其它正在展示的清单（精选／上一版池子）
+      → 第 3 级 其余，同层内保持离门槛由近到远。
+    展示源取 16:00 那一刻 data.js 里活着的清单——用户就是从这些地方点进来的。
+
+    R100z263b（同日 22:2x 实测纠错）：**第一版取源取错了**。我按顶层 `timingExec`
+    取，而它当天是空对象 `{}`；「今日可下单」那 8 张卡的数据其实在
+    `duanban.star.timingExec.rows`（9:45 写）。结果是名单照旧按距离排、用户点名的
+    8 只排到第 10~19 位 —— 修了跟没修一样，而且日志里看不出错（取的源不报错、只是空）。
+    `ordPrep()` 的真实取数是三处：`duanban.star.timingExec.rows`（今早执行）／
+    顶层 `timingPlan.orders`（16:00 生成的明日挂单）／`duanban.star.buyList`（盘中买点）。
+    三处都得算，且**空源不许当"没有"**——必须三处都试（见 24.16 显式降级同理）。
+    """
+    if not cut:
+        return []
+    hot = set()    # 第 1 级：「今日可下单」三源——用户就是从这几张卡上点进来的
+    warm = set()   # 第 2 级：其它正在展示的清单
+
+    def _add(v, box):
+        c = re.sub(r"\D", "", str(v or ""))
+        if re.match(r"^\d{6}$", c):
+            box.add(c)
+
+    def _scan(seq, box):
+        for r in (seq or []):
+            if isinstance(r, dict):
+                _add(r.get('code'), box)
+
+    D = D if isinstance(D, dict) else {}
+    _db = D.get('duanban') or {}
+    _st = _db.get('star') or {}
+    # ① 断板页「今日可下单」的真实来源（9:45 执行结果 + 盘中买点）→ 最高优先
+    _scan((_st.get('timingExec') or {}).get('rows'), hot)
+    _scan(_st.get('buyList'), hot)
+    # ② 顶层明日挂单（16:00 生成）与顶层执行结果（历史结构，留着不吃亏）
+    _scan((D.get('timingPlan') or {}).get('orders'), hot)
+    _scan((D.get('timingExec') or {}).get('rows'), hot)
+    # ③ 开盘精选项、断板页上一版池子 → 次优先
+    _scan(_st.get('picks'), warm)
+    _scan(_db.get('confirmed'), warm)
+    _scan(_db.get('watching'), warm)
+    _scan((D.get('star') or {}).get('buyList'), warm)
+    _scan((D.get('star') or {}).get('picks'), warm)
+
+    def _tier(x):
+        c = str(x.get('code') or '')
+        if c in hot:
+            return 0
+        if c in warm:
+            return 1
+        return 2
+
+    # 同层内保持 filter_by_mcap 的「离门槛由近到远」，只按层做稳定排序
+    return sorted(cut, key=_tier)[:limit]
+
+
+def mcap_cut_note(stat, kept_n):
+    """生成 duanban.mcapCutNote。**必须由脚本生成，不许手填**。
+
+    R100z263：首版的 total / nonMain / note 三个字段是我手工写进 data.js 的，
+    而自动化只重写 `mcapCut` 数组 —— 第二天名单换了，数字和说明还是昨天的，
+    这正好是 24.110 的「同一量两套数」：标题写 161、名单里 45 条、note 里 198 只候选，
+    三个数一个都对不上当天。所以四个字段必须同一批数据、同一时刻生成。
+    """
+    if not stat:
+        # 注意：这句会经前端 esc() 直接印到页面，**不许带 markdown 记法**（G50）。
+        return ('本轮市值接口没取到数，这道门槛没有生效（显式降级）：'
+                '下面的池子是按未过滤市值选出来的，偏松。不是没有票被卡，是没判。')
+    lo_n = int(stat.get('cut_lo') or 0)
+    hi_n = int(stat.get('cut_hi') or 0)
+    nm = int(stat.get('nonMain') or 0)
+    nb = int(stat.get('nBefore') or 0)
+    tot = lo_n + hi_n
+    s = ('今天 %d 只涨停候选里有 %d 只被「流通市值 %.0f~%.0f 亿」这道门槛剔掉'
+         '（过小 %d / 过大 %d'
+         % (nb, tot, stat.get('lo') or CAP_MIN, stat.get('hi') or CAP_MAX, lo_n, hi_n))
+    # 非主板单独说清：它们是被「只做 60/00 主板」挡的，跟市值没关系。
+    # 混进这份名单等于给了一个错的原因，读者会以为放开市值就能买。
+    s += ('；另有 %d 只是创业板/科创板，本来就不做，不算在内' % nm) if nm else ''
+    s += ('）。市值过滤发生在抓 K 线之前，所以这些票的形态压根没被判定过——'
+          '不在确认池不等于形态不成立。此处按「页面正在展示的票优先、其余离门槛由近到远」'
+          '列出 %d 只，为的是让「形态看着挺好、为什么不在池里」有一个能查到的答案。'
+          % max(0, int(kept_n or 0)))
+    return s
+
+
 def _industry_of(hybk, agg):
     """hybk（涨停池申万行业，可能4字截断）→ agg 里的完整行业名（前缀互配）。"""
     if not hybk or not agg:
@@ -2005,6 +2102,8 @@ def main():
     # 根本判断不出是被「太小」还是「太大」卡的，这正是上一轮归因文案骗人的同一个毛病。
     _caps = {}
     _mcap_cut = []          # R100z262：被市值剔除的明细，落进 duanban.mcapCut
+    _mcap_stat = {}         # R100z263：同批数字，total/nonMain/note 必须一起写，不许手填
+    _n_before = len(cands)  # 过滤前候选数（note 里的「今天 N 只涨停候选」）
     try:
         _caps = fetch_market_caps([c for c, _ in cands])
     except Exception as _e:
@@ -2012,6 +2111,8 @@ def main():
     if _caps:
         cands, _stat = filter_by_mcap(cands, _caps)
         _mcap_cut = _stat.get("cutList") or []
+        _mcap_stat = dict(_stat)
+        _mcap_stat['nBefore'] = _n_before
         print("[duanban] 市值过滤（流通市值 %.0f~%.0f 亿）：过小剔除 %d 只、过大剔除 %d 只，"
               "无市值保留 %d 只，候选 → %d 只"
               % (CAP_MIN, CAP_MAX, _stat["cut_lo"], _stat["cut_hi"],
@@ -2121,9 +2222,16 @@ def main():
             mod = build_module(pairs, D)
         # R100z262：把「被市值剔除」的票写进模块。前端拿它在卡片上直接回答
         # 「形态看着只差最后一步，为什么不在池里」——此前这道门槛只存在于
-        # stderr 的一行日志里，用户端完全看不到。上限 40 条（已按离门槛的距离排序），
-        # 每次 16:00 全量重写，不留历史。
-        mod['mcapCut'] = _mcap_cut[:40]
+        # stderr 的一行日志里，用户端完全看不到。
+        # R100z263：四个字段一次写全（列表/总数/非主板数/口径说明）。历史教训：
+        # 只写列表、其余三个手填进 data.js，第二天就变成「名单是今天的、数字是昨天的」。
+        # 排序走 prioritize_cut（展示票优先），否则用户正在看的那几只排到 100 名开外。
+        _cut = prioritize_cut(_mcap_cut, D, 60)
+        mod['mcapCut'] = _cut
+        mod['mcapCutTotal'] = (_mcap_stat.get('cut_lo', 0) + _mcap_stat.get('cut_hi', 0)) \
+            if _mcap_stat else 0
+        mod['mcapCutNonMain'] = int(_mcap_stat.get('nonMain') or 0)
+        mod['mcapCutNote'] = mcap_cut_note(_mcap_stat, len(_cut))
         # R100i：断板反包失败池——原在池内、今日滑出的标的归因失败归档，5 交易日后清理
         today_str = datetime.now().strftime('%Y-%m-%d')
         try:
