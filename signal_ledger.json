@@ -2732,6 +2732,29 @@
      "sector": "通信服务",
      "close": 51.78
     }
+   ],
+   "buy": [
+    {
+     "code": "002696",
+     "name": "百洋股份",
+     "sector": "养殖业",
+     "close": 10.7,
+     "backfilled": true
+    },
+    {
+     "code": "600271",
+     "name": "航天信息",
+     "sector": "IT服务",
+     "close": 7.03,
+     "backfilled": true
+    },
+    {
+     "code": "002929",
+     "name": "润建股份",
+     "sector": "通信服务",
+     "close": 54.04,
+     "backfilled": true
+    }
    ]
   },
   "2026-10-28": {
@@ -2757,8 +2780,66 @@
      "screen": "leadLag",
      "rule": "secGap>1.0&lag>2.0&yret>0"
     }
+   ],
+   "buy": [
+    {
+     "code": "002696",
+     "name": "百洋股份",
+     "sector": "养殖业",
+     "close": 10.7,
+     "backfilled": true
+    },
+    {
+     "code": "603160",
+     "name": "汇顶科技",
+     "sector": "半导体",
+     "close": 58.25,
+     "backfilled": true
+    },
+    {
+     "code": "002354",
+     "name": "天娱数科",
+     "sector": "文化传媒",
+     "close": 8.24,
+     "backfilled": true
+    },
+    {
+     "code": "002982",
+     "name": "湘佳股份",
+     "sector": "养殖业",
+     "close": 13.59,
+     "backfilled": true
+    },
+    {
+     "code": "002249",
+     "name": "大洋电机",
+     "sector": "电机",
+     "close": 7.7,
+     "backfilled": true
+    },
+    {
+     "code": "603350",
+     "name": "安乃达",
+     "sector": "电机",
+     "close": 30.17,
+     "backfilled": true
+    },
+    {
+     "code": "600271",
+     "name": "航天信息",
+     "sector": "IT服务",
+     "close": 7.03,
+     "backfilled": true
+    },
+    {
+     "code": "002929",
+     "name": "润建股份",
+     "sector": "通信服务",
+     "close": 54.04,
+     "backfilled": true
+    }
    ]
   }
  },
- "updatedAt": "2026-10-27 16:19:19"
+ "updatedAt": "2026-10-28 11:00:57"
 }

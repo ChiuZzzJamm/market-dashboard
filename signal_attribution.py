@@ -42,11 +42,13 @@ AI 预测。它们**各自独立推荐**，但从来没有人回答一个最基�
     python3 signal_attribution.py            # 登记今日 + 回算 + 写 data.js
     python3 signal_attribution.py --view     # 只打印统计，不登记
     python3 signal_attribution.py --dry      # 不写盘
+    python3 signal_attribution.py --backfill 80   # 从 git 历史补「今日可下单」清单（幂等）
     python3 signal_attribution.py --self-test
 """
 import argparse
 import json
 import os
+import re          # R100z255：--backfill 要解析 git 历史里的 data.js 文本
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -458,11 +460,92 @@ def verdict_of(r):
     return '无效（跑输基准）' + tag
 
 
-def build(D, do_snapshot=True):
+def backfill_buy(L, D, commits=80, quiet=False):
+    """从 git 历史 data.js 补登记过去的「今日可下单」清单（幂等）。
+
+    ## 为什么需要这个口
+
+    这份清单每天 9:45 覆盖生成、**不落盘留档**：一旦某天 16:00 没跑成，那天买过什么
+    就永久消失——G51 只能发现「当天没登记」，补不回来。这不是假想：
+    2026-10-27 的清单就是靠 git 里 `data.js` 的历史版本才捞回来的。
+
+    ## 只补 'buy'，不回填其它源
+
+    其它七个源的登记是脚本从当日池子现算的；用历史 data.js 回填它们，等于把
+    「当时页面显示什么」当成「当时系统选了什么」，两者在重算过的日子里并不相同
+    （24.108 就重跑过一次，名单整个换了）。所以这里只补清单这一个源。
+
+    同一天可能有多个版本（盘中重跑/晚间改文案），取**非 bp 条数最多**的那一版：
+    清单只会因为「被筛掉」而变短，取最长的那份最接近用户当天真正看到的全量。
+    """
+    import subprocess
+    try:
+        hashes = subprocess.run(['git', '-C', ROOT, 'log', '--format=%H',
+                                 '-n', str(commits), '--', 'data.js'],
+                                capture_output=True, text=True, timeout=120).stdout.split()
+    except Exception as e:                                    # noqa: BLE001
+        print('[WARN] git 历史读取失败，回填跳过：' + str(e))
+        return 0, 0
+    best = {}
+    for h in hashes:
+        try:
+            blob = subprocess.run(['git', '-C', ROOT, 'show', f'{h}:data.js'],
+                                  capture_output=True, text=True, timeout=90).stdout
+        except Exception:                                     # noqa: BLE001
+            continue
+        m = re.search(r'window\.DASHBOARD_DATA\s*=\s*', blob or '')
+        if not m:
+            continue
+        try:
+            DD = json.loads(blob[m.end():].rstrip().rstrip(';'))
+        except Exception:                                     # noqa: BLE001
+            continue
+        stx = ((DD.get('duanban') or {}).get('star') or {})
+        d = str(stx.get('date') or '')[:10]
+        rows = [x for x in (stx.get('buyList') or [])
+                if isinstance(x, dict) and str(x.get('src') or '') != 'bp']
+        if not d or not rows:
+            continue
+        if d not in best or len(rows) > len(best[d]):
+            best[d] = rows
+    K = D.get('stkKlines') or {}
+    ent = L.setdefault('entries', {})
+    added = days = 0
+    for d in sorted(best):
+        cur = ent.setdefault(d, {})
+        known = {x['code'] for x in (cur.get('buy') or [])}
+        new = []
+        for x in best[d]:
+            c = str(x.get('code') or '').strip()
+            if not c or c in known:
+                continue
+            bars = A.norm_bars(K.get(c))
+            new.append({'code': c, 'name': x.get('name') or '',
+                        'sector': (x.get('sector') or '').strip(),
+                        'close': bars[-1][2] if bars else None,
+                        'backfilled': True})
+            known.add(c)
+        if new:
+            cur['buy'] = (cur.get('buy') or []) + new
+            added += len(new)
+            days += 1
+    if added and not quiet:
+        print('[OK] 清单回填：%d 个交易日 / %d 条（来源 git 历史 data.js，已标注 backfilled）'
+              % (days, added))
+    return added, days
+
+
+def build(D, do_snapshot=True, backfill=0):
     L = load_ledger()
     ent = L.setdefault('entries', {})
     trade_date = str((D.get('ashare') or {}).get('tradeDate')
                      or (D.get('aiPrediction') or {}).get('date') or '')[:10]
+
+    # R100z255：`--backfill N` 从 git 历史补清单（急救口，见 backfill_buy）。
+    # 必须放在登记**之前**：登记只跳过「已知 code」，先回填不会挡住今天的登记，
+    # 反过来若先登记再回填，同一天的重复 code 反而要靠两次去重。
+    if backfill and do_snapshot:
+        backfill_buy(L, D, commits=backfill)
 
     if do_snapshot and trade_date:
         snap = snapshot(D)
@@ -836,6 +919,8 @@ def main():
     ap.add_argument('--dry', action='store_true', help='不写 data.js')
     ap.add_argument('--self-test', action='store_true')
     ap.add_argument('--json', action='store_true')
+    ap.add_argument('--backfill', type=int, default=0, metavar='N',
+                    help='从 git 历史 data.js 回填过去 N 个提交里的「今日可下单」清单（幂等，只补这一源）')
     a = ap.parse_args()
     if a.self_test:
         return self_test()
@@ -844,7 +929,7 @@ def main():
     if D is None:
         print('[ERR] data.js 解析失败', file=sys.stderr)
         return 1
-    out = build(D, do_snapshot=not a.view)
+    out = build(D, do_snapshot=not a.view, backfill=a.backfill)
     if a.json:
         print(json.dumps(out, ensure_ascii=False))
         return 0
