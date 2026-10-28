@@ -7418,11 +7418,21 @@ function ordShrinkScan() {
 }
 
 /* 数据准备：页面里所有数字都从这里出，卡片/摘要/规则三处共用同一份，不各算一遍。 */
-/* 「有没有可执行价」的唯一判据：明早挂单 / 盘中买点 / 缩量回踩档（涨停日高低点
-   就是它的目标与撤单价）。三处口径必须同源，否则摘要说「N 只有价」、
-   卡片上却印着明早挂单价——读者会以为摘要漏算了。 */
+/* 「有没有**明日可用**的可执行价」的唯一判据（排序第一档、摘要「N 只有可执行价」、
+   去重账三处同源，不许各算一遍）：
+     明早挂单（o.plan.limit）· 缩量回踩档（o.shrink：涨停日最高/最低＝明早开盘买的目标与撤单价）。
+   **今日盘中买区（o.buy）不算**，R100z271 实测踩到：o.buy 是 9:45 按当时现价算的区间，
+   收盘后已经过期——拿它当第一档，poolA 里润建股份 002929、汇顶科技 603160 这两只
+   「明日没有任何可用价」的票，会排到「有陈学长参数、明早开盘就能动手」的票前面，
+   正好与用户点的「有可执行价 → 陈学长参数 → 上涨概率」相反。
+   它们不删：卡上照旧印一行「今日盘中买区 …——已收盘，明日不照这个价」，
+   但计入 ordStalePrice，摘要里单列，不进排序第一档。 */
 function ordHasPrice(o) {
-  return !!(o && (o.plan || o.buy || o.shrink));
+  return !!(o && (o.plan || o.shrink));
+}
+/* 只有一张过期的今日买区、没有明日可用价——排序不回第一档，摘要里要单说一句。 */
+function ordStalePrice(o) {
+  return !ordHasPrice(o) && !!(o && o.buy);
 }
 function ordPrep() {
   var D = window.DASHBOARD_DATA || {};
@@ -7540,9 +7550,11 @@ function ordPrep() {
     (o.phase === 'A' ? poolA : poolB).push(o);
   });
   /* 排序（用户 2026-10-28 22:0x 指定，三级，不再加第四级）：
-       ① 有可执行价（明早挂单 / 盘中买点 / 缩量回踩档的涨停日高低点）的在前 —— 能今天就决定；
-       ② 有陈学长参数的在前 —— 目标/仓位/止损齐全，照做就行；
+       ① 有**明日可用**的价的在前（明早挂单价 / 缩量回踩档的涨停日高低点）—— 明天开盘就能挂；
+       ② 有陈学长参数的在前 —— 目标/仓位/止损齐全，照做就行（「明早开盘买」是规则，不是价位，
+          所以落这一档，不冒充第一档）；
        ③ 明日概率降序。
+     今日盘中买区（o.buy）是收盘后就过期的价，不参与第一档——见 ordHasPrice 的注释。
      原来陈学长组内还按「连板数 → 放量倍数 → 情绪」排，这一轮删掉：
      那三项已经全部进了概率模型，再排一次等于同一个因子被数两遍，
      还会出现「连板 1 板但板块在涨停潮里」压倒「连板 3 板但板块在退潮」的错序。
@@ -7696,18 +7708,20 @@ function ordHitCard(r) {
    「形态确认」卡上印出「昨挂 16.45 · 开盘在限价内，可挂」——一个已经过去的动作，被写成今天可挂。
    本档只出**往前看**的价：明早挂单 / 盘中买区 / 陈学长「确认日次日开盘买」这三条，其余如实说没有。 */
 function ordShapeOrderLine(o) {
+  /* R100z270 重排（区块已改名「明日可下单」）：
+     ① 撤单价一律取 ordShapeStopOf(o) —— 不再各分支自己写一遍。原来四条分支恰好都取到了
+        它前面的那一级（plan.stop / buy.invalid / chen.stopPrice / 涨停日低点），靠的是
+        「分支顺序与 stopOf 的回落顺序一致」这个巧合；一旦调换顺序就会印出两个撤单价，
+        而这正是 24.120 刚修完的病。现在改成同源，顺序随便调都不会分叉。
+     ② 「今日盘中买区」降到最后一个分支，并且**必须标「已收盘」**：这片区块是收盘后生成的，
+        那个买区是今天盘中按现价算的，明天开盘价与它无关。原来它排在陈学长形态价前面，
+        实测安乃达就印成「今可买 29.45~30.05（在买区内）」——一条已经过期的指令，
+        却和「明日可下单」的标题并排放着。 */
   var out = [];
+  var st = ordShapeStopOf(o);
+  var stx = (st && isFinite(Number(st.stop))) ? (' · 破 <b>' + ordP2(st.stop) + '</b> 撤') : '';
   if (o.plan) {
-    // 用 plan.stop（真正持仓止损位）而不是 plan.floor（限价单作废价）。
-    // 实测 603028 赛福天 limit=floor=10.35 → 「挂 10.35 · 破 10.35 撤」自相矛盾；
-    // 而 stop=10.33 与卡片止损格是同一个数——**一张卡只能有一个撤单价**。
-    out.push('明早挂 <b>' + ordP2(o.plan.limit) + '</b> · 破 ' +
-      ordP2(o.plan.stop == null ? o.plan.floor : o.plan.stop) + ' 撤');
-  }
-  if (o.buy) {
-    out.push('今可买 <b>' + ordP2(o.buy.low) + '~' + ordP2(o.buy.high) + '</b>' +
-      (o.buy.stateZh ? '（' + esc(String(o.buy.stateZh)) + '）' : '') +
-      ' · 破 ' + ordP2(o.buy.invalid) + ' 撤');
+    out.push('明早挂 <b>' + ordP2(o.plan.limit) + '</b>' + stx);
   }
   if (!out.length && o.shrink) {
     /* 缩量回踩档：价位是**形态自带的**，不是另编的——
@@ -7727,8 +7741,15 @@ function ordShapeOrderLine(o) {
       // 「确认日次日开盘买入」，而 ② 档的票今天**还没确认**（待缩量 / 待脱离）——
       // 照抄那句等于把「形态观察」写成了「明早动手」，这是会让人提前进场的那种错。
       var when = (o.phase === 'A') ? '明早开盘买' : '确认后次日开盘买（今天不是买点）';
-      out.push(when + ' · 仓位 ' + (ct.posPct || '—') + '% · 破 ' + ordP2(ct.stopPrice) + ' 撤');
+      out.push(when + (ct.posPct ? ' · 仓位 ' + ct.posPct + '%' : '') + stx);
     }
+  }
+  /* 今日盘中买区：只在上面都没给出「明日能用的价」时补一句，且写明已收盘。
+     它不删掉——读者会拿它跟 ⑤ 栏对账；但措辞必须让人一眼看出这不是明天的指令。 */
+  if (!out.length && o.buy) {
+    out.push('今日盘中买区 <b>' + ordP2(o.buy.low) + '~' + ordP2(o.buy.high) + '</b>' +
+      (o.buy.stateZh ? '（' + esc(String(o.buy.stateZh)) + '）' : '') +
+      '——已收盘，明日不照这个价' + stx);
   }
   if (!out.length) {
     return '<i>下单</i> <span class="xt" title="断板反包确认池只判形态、不产价位：这里的价由 16:00 挂单步'
@@ -8202,8 +8223,10 @@ function ordBlockHtml() {
      R100z269：加「缩量回踩」一档；且区块改名「明日可下单」——它是收盘后跑的，
      面向的是**下一个交易日**，叫「今日可下单」会让人以为现在还能按这些价下单。 */
   var nPriced = P.poolA.concat(P.poolB, P.poolC).filter(ordHasPrice).length;
+  /* 摘要整行会过 esc()，这里不许写标签——写 <b> 会原样印成 &lt;b&gt;（R100z271 探针抓到）。 */
   sum.push('形态确认 ' + P.poolA.length + ' 只 · 缩量回踩 ' + P.poolC.length +
-    ' 只 · 即将确认 ' + P.poolB.length + ' 只（其中 ' + nPriced + ' 只有可执行价）');
+    ' 只 · 即将确认 ' + P.poolB.length + ' 只（其中 ' + nPriced + ' 只有「明日可用」的价：' +
+    '明早挂单价或缩量回踩档的涨停日高低点）');
   if (P.teRowsOut.length) {
     sum.push((P.isNextPlan ? '明日 ' + buyD + ' 开盘挂单 ' : '昨晚挂单 ') + P.teRowsOut.length + ' 只' +
       (P.fallback ? '（未开盘，照限价挂；可挂/破位要等明早 9:25 集合竞价后才知道，现在不编）'
@@ -8220,10 +8243,15 @@ function ordBlockHtml() {
       P.blOut.filter(function (r) { return r.state === 'buy'; }).length + ' 只）');
   }
   /* 去重的账要说清：读者会拿「池 18 只 + 挂单 8 只 + 买点 29 只」去减卡片数，
-     减法不该由他做（24.110）。这三个数各自是并入别卡 / 剔出的，不是丢了。 */
-  var nMerge = (P.poolA.concat(P.poolB, P.poolC).filter(ordHasPrice)).length;
+     减法不该由他做（24.110）。这三个数各自是并入别卡 / 剔出的，不是丢了。
+     R100z271：并入的「价」只算明日可用的（明早挂单）；只有今日买区的票单列一句——
+     否则读者按「有可执行价」去数，会比摘要少两只，然后又得回头猜哪两只没价。 */
+  var nMerge = (P.poolA.concat(P.poolB, P.poolC).filter(function (o) { return !!o.plan; })).length;
+  var nStale = (P.poolA.concat(P.poolB, P.poolC).filter(ordStalePrice)).length;
   var dedupTxt = [];
-  if (nMerge) dedupTxt.push(nMerge + ' 只同时在池与挂单/买点里，价已并进形态卡，不重复出卡');
+  if (nMerge) dedupTxt.push(nMerge + ' 只同时在池与明早挂单里，挂单价已并进形态卡，不重复出卡');
+  if (nStale) dedupTxt.push(nStale + ' 只没有明日可用的价（只有一张已过期的今日盘中买区），' +
+    '按「陈学长参数 → 概率」往下排，卡上照旧印出来对账');
   /* 「已在精选」这句只对没有形态卡的票说。汇顶科技 603160 既在买点清单、又在精选固定区、
      还在断板确认池 —— 它已经在本页 ① 档出了卡，再说它「已在开盘精选卡里，不重复建卡」
      会让读者以为这张卡不存在（实测 2026-10-28 就是这三个名字一起冒出来）。 */
