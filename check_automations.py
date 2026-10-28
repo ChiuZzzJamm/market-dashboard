@@ -421,6 +421,17 @@ def chk_baseline(T, r):
 #        已到期仍缺 → FAIL（说明脚本压根没写，不是时序问题）
 #        已落盘   → WARN 提醒把豁免删掉（自清理，不留永久后门）
 #      到期日写**预期的下一次落盘日**，不写「+7 天」这种模糊值。
+#   ⑤ **自写字段只验容器**（R100z259）：同一任务 writesFields 登记过的路径，是**本任务自己产出**的，
+#      它在下一次排程前必然不存在。实证 2026-10-28 18:00：A1700（19:30）的 dataFields 里有
+#      `ashare.sectorsUp[].reason` / `ashare.sectorsDown[].reason` / `ashare.lianban[].story` /
+#      `ashare.fundNote` 四条全报 FAIL，而它们正是这一步要写的叙事字段——16:00 重抓把
+#      sectorsUp/sectorsDown/lianban 整段重建（只有取数字段），叙事要等 19:30 才写回，
+#      所以**每天 16:00~19:30 之间这四条一定不存在**。按存在性判 = 固定假 FAIL，
+#      一天里有四小时闸门在报错，久之就和 G10 那条假 WARN 一样被无视。
+#      但也不能无条件放行：路径若写到父节点都不存在的名字上（如 `ashare.sectorUp[].reason`），
+#      那是真 bug，AI 会往空处落盘。所以自写路径**只验容器**（父级能下钻即算过），
+#      内容有没有真写进去由 audit_pipeline 的 G16 字数地板兜底——写错键名时字数仍为 0，
+#      照样拦在部署前，覆盖没有变薄。
 # 散文条目（含中文/空格/通配 `*`）跳过并计数——不是漏洞，是台账允许写人话。
 CLEAN_PATH = re.compile(r'^[A-Za-z_]\w*(?:(?:\.\w+)|(?:\[\w*\]))*$')
 CJK_RE = re.compile(r'[\u4e00-\u9fff]')
@@ -493,6 +504,17 @@ def _resolve_field(D, path):
     return 'ok', ''
 
 
+def _parent_path(p):
+    """自写字段的容器路径：`ashare.sectorsUp[].reason` → `ashare.sectorsUp[]`；
+    `ashare.fundNote` → `ashare`。
+
+    只用来判「这段落盘地址挂在一棵真树上」，不判字段在不在（见 B6 规则 ⑤）。
+    父级保留末尾的 `[]`——`_resolve_field` 会按首元素下钻，顺带验出「数组元素的形状变了」。
+    """
+    head, dot, _ = p.rpartition('.')
+    return head if dot else ''
+
+
 def chk_fields(T, r, verbose=False):
     exp_path = os.path.join(HERE, 'audit_expectations.json')
     if not os.path.exists(exp_path):
@@ -508,7 +530,7 @@ def chk_fields(T, r, verbose=False):
         return
 
     by_id = {t['id']: t for t in T}
-    n_ok = n_skip = n_empty = n_pend = 0
+    n_ok = n_skip = n_empty = n_pend = n_own = 0
     bad = []
     # 首跑豁免：{(任务id, 路径): (到期日, 原因)}
     pend = {}
@@ -546,6 +568,19 @@ def chk_fields(T, r, verbose=False):
                         n_ok += 1
                     elif st == 'empty':
                         n_empty += 1
+                    elif p in w and not p.endswith('.json'):
+                        # 规则 ⑤：**先按原样校验**，只有「真的不存在」才轮到自写豁免。
+                        # 顺序很重要——先豁免会把 161 条本来存在的自写路径整体降成「只验容器」，
+                        # 等于悄悄削掉一层校验（2026-10-28 实测：那样 n_ok 从 269 掉到 108）。
+                        # `.json` 是**文件**不是 data.js 节点，走上面的文件分支，不套 ⑤。
+                        par = _parent_path(p)
+                        st2, why2 = _resolve_field(D, par) if par else ('ok', '')
+                        if st2 in ('ok', 'empty'):
+                            n_own += 1
+                        else:
+                            bad.append('%s 的 %s 是自写字段，但它要挂的容器 %s 在 data.js 里不存在：%s'
+                                       ' —— 写回会落到空处' % (key, p, par, why2))
+                        continue
                     elif ex and ex[0] and today <= ex[0]:
                         n_pend += 1
                         r.warn('B6', '%s 的 %s 尚未落盘（首跑豁免至 %s）：%s'
@@ -567,9 +602,10 @@ def chk_fields(T, r, verbose=False):
         r.fail('B6', m)
     if not bad:
         r.ok('B6', '字段台账 %d 条路径在 data.js/%s 里走得通（空数组 %d 条暂不可验、'
-                   '首跑豁免 %d 条、散文 %d 条跳过；`[]` 按首元素下钻，不保证每个元素都带该键）'
+                   '首跑豁免 %d 条、自写字段只验容器 %d 条、散文 %d 条跳过；'
+                   '`[]` 按首元素下钻，不保证每个元素都带该键）'
                    '—— 7 条任务的读写边界与线上数据一致'
-             % (n_ok, '盘上文件', n_empty, n_pend, n_skip))
+             % (n_ok, '盘上文件', n_empty, n_pend, n_own, n_skip))
 
 
 # ---------------------------------------------------------------- D 死步骤
