@@ -275,8 +275,11 @@ def main():
         # 把反馈落盘（供后续审计/人工复盘，亦是「跑输→写回」的确定性产物）
         try:
             write_json_atomic(FEEDBACK_FILE, feedback, label='[strategy_engine.feedback]')
-        except Exception:
-            pass
+        except Exception as e:
+            # R100z273：反馈落盘失败原来静默 pass。「跑输 → 写回」这条链是复盘卡的数据来源，
+            # 写不进去就等于当天没有反馈，而页面上看不出缺的是哪一天（24.110：空着＝有结论没写）。
+            print(f'[strategy_engine] 反馈落盘失败（复盘数据将缺本日一条）：{str(e)[:120]}',
+                  flush=True)
 
         D['strategy'] = {
             'generatedAt': today.isoformat(),

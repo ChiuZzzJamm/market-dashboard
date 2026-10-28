@@ -23,6 +23,8 @@ import sys
 from datetime import datetime
 
 BASE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, BASE)
+import common  # noqa: E402  (load_json_quarantine：台账读坏不许静默变空账本)
 LEDGER = os.path.join(BASE, "market_structure.json")
 MAX_LOG = 120
 
@@ -42,13 +44,14 @@ def load_data():
 
 
 def load_ledger():
-    try:
-        with open(LEDGER, encoding="utf-8") as f:
-            d = json.load(f)
-        if isinstance(d, dict) and isinstance(d.get("log"), dict):
-            return d
-    except Exception:
-        pass
+    # R100z273：原来 `except: pass` → 返回空账本，而 save_ledger 整份覆盖写：
+    # 读坏一次就把结构台账历史冲干净，且全程不报错。坏文件改名留档 + warn。
+    d = common.load_json_quarantine(LEDGER, None, tag='[market_structure] 结构台账')
+    if isinstance(d, dict) and isinstance(d.get("log"), dict):
+        return d
+    if d is not None:
+        print('[warn] market_structure 台账形状异常（缺 log 字典），本次按空账本继续；'
+              '原文件未改名，保存时会被覆盖，请先备份 market_structure.json', file=sys.stderr)
     return {"log": {}}
 
 

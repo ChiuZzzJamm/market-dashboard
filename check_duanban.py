@@ -1163,6 +1163,7 @@ def fetch_notices_batch(codes, budget=90):
     def work(c):
         return c, fetch_stock_notices(c)
 
+    n_fail = 0
     try:
         with ThreadPoolExecutor(max_workers=6) as ex:
             futs = [ex.submit(work, c) for c in todo]
@@ -1170,14 +1171,23 @@ def fetch_notices_batch(codes, budget=90):
                 try:
                     c, lst = fut.result()
                     out[c] = lst
-                except Exception:
-                    pass
+                except Exception as e:
+                    # R100z273：单只公告抓取抛错原来静默 pass，out 里便没有这只票；
+                    # 下游把它读成「该股无公告」——正是 24.65「AI 禁断言暂无公告」的成因之一。
+                    # 只计数 + 首条打样，末尾汇总总数，避免 300 只刷屏。
+                    n_fail += 1
+                    if n_fail == 1:
+                        print("[warn] 公告单只抓取异常（同类只计数，不逐条打）: %s"
+                              % str(e)[:120], file=sys.stderr)
                 if time.time() - t0 > budget:
                     print("[warn] 公告抓取超预算 %ds，剩余 %d 只放弃（不影响主流程）"
                           % (budget, len(todo) - len(out)), file=sys.stderr)
                     break
     except Exception as ex:
         print("[warn] 公告批量抓取异常（不影响主流程）: %s" % ex, file=sys.stderr)
+    if n_fail:
+        print("[warn] 公告批量：%d/%d 只抓取异常，这些标的本次消息面为空"
+              "（是『没抓到』，不是『没有公告』）" % (n_fail, len(todo)), file=sys.stderr)
     return out
 
 
@@ -2012,8 +2022,12 @@ def _save_duanban_state(st):
     try:
         with open(_DUANBAN_STATE_FILE, 'w', encoding='utf-8') as f:
             json.dump(st, f, ensure_ascii=False)
-    except Exception:
-        pass
+    except Exception as e:
+        # R100z273：写状态失败原来静默 pass。状态文件是「首次入池日 / 连续在池天数」的
+        # 记忆锚，写失败不会让本次结果错，但下一次跑会把所有标的当新入池（entryDate 重置、
+        # 天数从 0 数），属于跨日才显形的错——必须留一句痕迹，否则查不到原因。
+        print("[warn] 断板状态文件写入失败（下次运行入池日期/天数会被重置）: %s"
+              % str(e)[:120], file=sys.stderr)
 
 
 def _clean_duanban_fail(fp, today):
@@ -2102,8 +2116,11 @@ def main():
                 mod["topBoards"] = fetch_top_boards(load_dashboard(
                     args.dashboard or os.path.join(
                         os.path.dirname(os.path.abspath(__file__)), "data.js")))
-            except Exception:
-                pass
+            except Exception as e:
+                # R100z273：涨停池全不可达时，仍想补出「近3日板块 TOP10」，补不出来原来静默 pass，
+                # 前端就只剩空列表（显示「—」），和「今天真的没有板块」长得一模一样（24.16）。
+                print("[warn] 涨停池不可达时补 topBoards 失败，模块 topBoards 留空"
+                      "（是『没抓到』不是『没有板块』）: %s" % str(e)[:120], file=sys.stderr)
             print(json.dumps(mod, ensure_ascii=False, indent=1))
             # R100z72：空模块也落 --out，保证下游 merge_duanban 永远有草稿可读。
             if args.out:

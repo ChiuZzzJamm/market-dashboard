@@ -122,8 +122,12 @@ def cmd_acquire(name, task, wait, ttl):
                 return 3
             try:
                 os.remove(_path(name))
-            except OSError:
-                pass
+            except OSError as e:
+                # R100z273：删除失败原来静默 pass，下一行照打「已删除后重试」——文案与事实相反，
+                # 且下一轮读到的还是同一个坏文件，靠 bad_reads>3 才退出，日志里却看不出删不掉。
+                print("[LOCK][BAD-FILE] %s 锁文件无法解析、删也删不掉（%s），需人工删除 %s"
+                      % (name, str(e)[:80], _path(name)))
+                return 3
             print("[LOCK][STALE-REMOVED] 锁文件无法解析，已删除后重试（第 %d 次）" % bad_reads)
             continue
         if _age(meta) > ttl:
@@ -134,11 +138,16 @@ def cmd_acquire(name, task, wait, ttl):
                 for f in glob.glob(_path(name) + ".stale-*"):
                     os.remove(f)
             except OSError:
-                pass
+                pass  # 残留 .stale-* 清不掉不影响接管，只是多留几份旧锁留档
             try:
                 os.replace(_path(name), old)
-            except OSError:
-                pass
+            except OSError as e:
+                # R100z273：接管失败原来静默 pass 后照打「已抢占」并 continue ——
+                # 下一轮读到的仍是同一个过期锁文件，又走回本分支，**死循环且永远走不到
+                # wait 超时那个分支**（超时判断写在本分支之下）。锁没接管就必须如实退出。
+                print("[LOCK][STOLEN-FAIL] %s 锁判定僵死但无法接管（%s）：%s 仍在盘上，"
+                      "需人工删除后重跑。本实例不做无锁写回。" % (name, str(e)[:80], _path(name)))
+                return 3
             print("[LOCK][STALE-STOLEN] 原持有者已 %.0f 秒无心跳（>%ds），判定已死并抢占："
                   "%s；旧锁留档 %s" % (_age(meta), ttl, _describe(meta), os.path.basename(old)))
             continue

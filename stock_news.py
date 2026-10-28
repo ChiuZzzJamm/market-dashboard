@@ -537,6 +537,7 @@ def build(targets, days=NEWS_DAYS):
         return code, fetch_stock_news(targets.get(code), code, days)
 
     done = 0
+    n_fail = 0
     with ThreadPoolExecutor(max_workers=8) as ex:
         futs = [ex.submit(work, c) for c in codes]
         for fut in as_completed(futs):
@@ -544,14 +545,22 @@ def build(targets, days=NEWS_DAYS):
                 c, lst = fut.result()
                 if lst:
                     news[c] = lst
-            except Exception:
-                pass
+            except Exception as e:
+                # R100z273：单只抓取抛错原来静默 pass，该票进 news 时没有键，弹窗就是「无消息」。
+                # 与 check_duanban 公告侧同一条规矩：只计数、首条打样、末尾汇总。
+                n_fail += 1
+                if n_fail == 1:
+                    print(f'[stock_news] 单只抓取异常（同类只计数，不逐条打）：{str(e)[:120]}',
+                          flush=True)
             done += 1
             if done % 50 == 0:
                 print(f'[stock_news] 新闻 {done}/{len(codes)}  {time.time() - t0:.0f}s', flush=True)
             if time.time() - t0 > BUDGET:
                 print('[stock_news] 预算用尽，提前收尾（剩余标的保持原值）', flush=True)
                 break
+    if n_fail:
+        print(f'[stock_news] 共 {n_fail}/{len(codes)} 只抓取异常，这些标的本次无新闻条目'
+              '（是「没抓到」，不是「没有消息」）', flush=True)
 
     out = {}
     for code, name in targets.items():

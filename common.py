@@ -2,7 +2,7 @@
 """看板脚本共用工具：定位 node、把 data.js 解析为 JSON。
 供 push_notify.py 与 update_us_from_quotes.py 复用，避免重复实现。
 """
-import os, shutil, glob, json, re, random, subprocess, time
+import os, shutil, glob, json, re, random, subprocess, sys, time
 import datetime as _dt
 
 
@@ -290,6 +290,35 @@ def write_json_atomic(path, obj, label='', indent=1):
                 pass
         raise
     return path
+
+
+def load_json_quarantine(path, default=None, tag=''):
+    """读 JSON；文件存在但解析失败时把坏文件改名留档 + 打 warn，返回 default。
+
+    R100z273：四个模块的 `load_ledger()` 原来一律 `except: return 默认空`，而它们随后都用
+    `save_ledger()` **整份覆盖写**。于是「文件写坏一次」＝「台账历史全丢，第二天起像个新账本」，
+    而且整个过程不报错——台账是这些模块的记忆锚（入池日 / 放行记录 / 校准样本 / 止损轨迹），
+    丢一次不会白屏，只会让之后所有结论悄悄偏掉（24.110 的同一类病：空着＝有结论没写）。
+
+    这里不做「猜数据修回来」：改名留档，让人能从 .bad-<ts> 里恢复；本次按空账本继续，
+    保证当次不被阻塞。纯缓存文件（K线/新闻/回测）不要用这个——它们坏了本来就该重抓，
+    改名只会攒垃圾，直接用 try/except 返回 None 即可。
+    """
+    if not path or not os.path.exists(path):
+        return default
+    try:
+        with open(path, encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        bad = '%s.bad-%d' % (path, int(time.time()))
+        try:
+            os.replace(path, bad)
+            note = '坏文件已改名留档 %s' % os.path.basename(bad)
+        except OSError as e2:
+            note = '坏文件改名也失败（%s），下次仍会读到它' % str(e2)[:60]
+        print('[warn] %s 读取失败（%s）：%s；本次按空账本继续，历史请从留档恢复'
+              % (tag or os.path.basename(path), str(e)[:80], note), file=sys.stderr)
+        return default
 
 
 def load_dashboard_data(base):

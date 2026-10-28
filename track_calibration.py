@@ -52,6 +52,7 @@ from datetime import date
 import stop_tracker  # R100z59：止损台账接线（见 main() 内「R100z59 止损台账」段）
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import common  # noqa: E402
 from common import write_json_atomic  # noqa: E402
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -390,12 +391,10 @@ def avg_of(sc_list, sector, bench):
 
 
 def load_log():
-    if os.path.exists(LOG_FILE):
-        try:
-            return json.load(open(LOG_FILE, encoding='utf-8'))
-        except Exception:
-            pass
-    return {'log': {}, 'open': {}}
+    # R100z273：读坏不许静默变空账本——下游 write_json_atomic(LOG_FILE, log) 是整份覆盖写，
+    # 读成空就等于把校准样本历史冲掉（校准曲线会突然「样本变少」而不报错）。
+    lg = common.load_json_quarantine(LOG_FILE, None, tag='[track_calibration] 校准台账')
+    return lg if isinstance(lg, dict) else {'log': {}, 'open': {}}
 
 
 def save_log(log):
