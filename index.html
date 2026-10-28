@@ -958,6 +958,10 @@
 
   /* ===== 选股扩展模块（谐波/吸筹/量化/必带数据，2026-09-26） ===== */
   .hz-badge { display:inline-block; font-size: var(--fs-sm); font-weight:700; color:#7a4d00; background:var(--paper)3d6; border:1px solid #f0c36d; border-radius:4px; padding:1px 7px; line-height:1.5; white-space:nowrap; flex-shrink:0; vertical-align:middle; margin-left:4px; }
+  /* R100z262：今日可下单卡片的紧凑技术池徽章。比 .hz-badge 再小一档、留白更省，
+     因为这个位置是四列网格里的一行，四个「断板·确认」并排会把板块胶囊挤到第二行、
+     整块卡片高度跟着跳。字号不写 px，跟 --fs-xs 走（G42 拦写死字号）。 */
+  .tc-pill-tech { font-size: var(--fs-xs); padding:0 5px; margin-left:0 !important; margin-right:4px; line-height:1.45; }
   /* R100z80：跨池共振分级边框——命中池数→颜色：1黄 / 2橙 / 3红 / 4紫；stkGoldCls 全站标的共用，原 gold-ring 单一紫框已按此分级取代 */
   .reso-1 { border-color: #f59e0b !important; box-shadow: 0 0 0 1px rgba(245,158,11,.35) !important; }
   .reso-1:hover { border-color: #d97706 !important; }
@@ -1968,6 +1972,80 @@ function chenBadgeHtml(tier) {
 function stkGoldCls(code) {
   var n = (stkTechMeta(code) || []).filter(function (t) { return !t.fail; }).length;
   return n >= 1 ? ' reso-' + Math.min(n, 3) : '';
+}
+/* R100z262（用户 2026-10-28 20:32 第 2 次问同一件事：「这些标的为什么不在断板反包确认池
+   或陈学长池？」）：今日可下单卡片此前只印「昨晚挂单 / 来源标签」，**池归属一枚都不出**——
+   于是一只明明在陈学长放宽池的票，在页面上跟「哪个池都不在」长得完全一样，用户只能逐只
+   点开弹窗才查得到，查不到就直接当成系统漏了它。
+   ⇒ 池归属是 code 的事实，不该由「你在哪张卡上看它」决定（R100z228 已为弹窗立过同一条）。
+   取名用短词＋截短池名：tc-top 是四列网格里的一行，印「断板反包 · 确认池」全称会把板块
+   胶囊挤到换行，整块高度跳一档。失效徽章这里**不出**（位置窄、且失效已在弹窗徽标行出全），
+   折成「+N」让人知道点开还有。 */
+/* R100z262：duanban.mcapCut = 今天被「流通市值 100~400 亿」这道门槛剔掉的票。
+   它回答的是「形态看着挺好、为什么不在池里」——此前这个答案只存在于 16:00 的
+   stderr 一行日志里，页面上一点痕迹都没有，于是用户只能反复问同一句话
+   （2026-10-28 已经是第二次问）。门槛不改（有回测支撑），但必须可见。 */
+function mcapCutOf(code) {
+  code = String(code || '').replace(/\D/g, '');
+  if (!/^\d{6}$/.test(code)) return null;
+  var D = window.DASHBOARD_DATA || {};
+  var arr = (D.duanban || {}).mcapCut || [];
+  for (var i = 0; i < arr.length; i++) {
+    if (String((arr[i] || {}).code || '') === code) return arr[i];
+  }
+  return null;
+}
+function mcapCutBadgeHtml(code, cls) {
+  var mc = mcapCutOf(code);
+  if (!mc) return '';
+  var lo = mc.side === 'lo';
+  var txt = '断板·市值剔除';
+  var tip = '断板反包·确认池没收它，不是形态不成立，是「流通市值 ' + mc.mcap + ' 亿」' +
+    (lo ? '低于下限 100 亿' : '高于上限 400 亿') + '。\n' +
+    '这条门槛是回测出来的（100~400 亿：全样本 +0.73%、样本外 +0.91%；去掉下限只剩 +0.06%），' +
+    '所以没有为单只票放开。\n形态判定本身仍然有效，可以看别的池或自己判断。';
+  return '<span class="hz-badge ' + (cls || '') + '" style="margin-left:0;background:#f3f4f6;' +
+    'color:#4b5563;border-color:#d1d5db" title="' + escAttr(tip) + '">' + esc(txt) + '</span>';
+}
+function stkTechShortBadges(code, max) {
+  var meta = stkTechMeta(code) || [];
+  var tags = meta.filter(function (t) { return !t.fail; });
+  var mc = mcapCutBadgeHtml(code, 'tc-pill-tech');
+  /* R100z262b：一只「在池」都没有、却存在失效归档时，**不能什么都不出**——
+     那样这张卡在「有池归属但徽章没渲染」和「查无此票」两种含义下长得完全一样，
+     正是 24.110「空着＝有结论没写」的翻版。实测 600271 航天信息就撞在这里：
+     断板与陈学长两边都在失效池，卡片上一片空白，看着像系统不认识它。 */
+  if (!tags.length) {
+    if (!meta.length) return mc;
+    var f0 = meta[0];
+    // 已经「断板·已失效」的票，市值剔除是更弱的原因（它压根没走到那一步）——
+    // 两枚并排会被读成「两件事都要处理」。失效在，就只出失效。
+    var hasDbFail = meta.some(function (t) { return t.fail && t.k === 'db'; });
+    if (hasDbFail) mc = '';
+    var tip = '技术面已全部失效：' + meta.map(function (x) {
+      return x.label + '（' + (x.failDate || '—') + ' 归档：' + (x.failReason || '未记录原因') + '）';
+    }).join('；') + '。失效归档保留 5 个交易日后自动清理，点开卡片可看详情。';
+    return '<span class="hz-badge tc-pill-tech" style="margin-left:0;background:#f3f4f6;' +
+      'color:#6b7280;border-color:#d1d5db" title="' + escAttr(tip) + '">' +
+      esc(({ db: '断板', chen: '陈学长', bp: '横盘', hz: '谐波', acc: '吸筹' }[f0.k] || f0.label) +
+          '·已失效') + '</span>' + mc;
+  }
+  max = max || 3;
+  var shortK = { db: '断板', chen: '陈学长', bp: '横盘', hz: '谐波', acc: '吸筹' };
+  var all = tags.map(function (x) { return x.label + (x.pool ? '（' + x.pool + '）' : ''); }).join(' · ');
+  var html = tags.slice(0, max).map(function (t) {
+    var nm = shortK[t.k] || t.label;
+    var pl = String(t.pool || '').replace(/池$/, '').replace('观察中', '观察');
+    var txt = pl ? (nm + '·' + pl) : nm;
+    return '<span class="hz-badge tc-pill-tech" style="margin-left:0" title="' +
+      escAttr('技术面归属：' + all) + '">' + esc(txt) + '</span>';
+  }).join('');
+  var more = tags.length - Math.min(tags.length, max);
+  if (more > 0) {
+    html += '<span class="hz-badge tc-pill-tech" style="margin-left:0" title="' +
+      escAttr('另有 ' + more + ' 个池命中，点开卡片看全部徽章') + '">+' + more + '</span>';
+  }
+  return html + mc;
 }
 /* R100s→R100t：独立池徽章仅保留开盘精选（断板/谐波池已并入技术徽章文案） */
 function stkPoolBadge(code) {
@@ -5669,13 +5747,16 @@ function tcCard(o) {
   var ord = orderLineOf(o.code);   // R100z254：进今日下单清单的票，卡片底部多一行价
   var pills = '';
   (o.pills || []).forEach(function (p) { if (p) pills += '<span class="db-sec-pill">' + esc(p) + '</span>'; });
+  // R100z262：技术池徽章（HTML 片段，由 stkTechShortBadges 生产）。**不再 esc**——
+  // 那是本页自己的构造器，进来的是已转义文本的 HTML；再 esc 一遍会把 <span> 印成字面量。
+  var badges = o.badges || '';
   // R100z220：sentKind 给「条目自带结论」的池用（陈学长条目直接带 sentiment 字段）——
   // 不传时仍按全站口径 stkSentiment(code) 从要闻 impacts 推，两者渲染同一套 DB_SENT 文案/配色。
   var sent = o.sent === false ? '' : (o.sentKind ? dbSentBadge({ sentiment: o.sentKind }, 'margin-left:4px') : sentBadgeHtml(o.code));
   var nb = o.fresh ? '<span class="nb">新</span>' : '';
   return '<div class="tc' + stkGoldCls(o.code) + (o.dim ? ' dim' : '') + (o.fresh ? ' fresh' : '') + '"' + (o.attrs || '') + (o.onclick ? ' onclick="' + escAttr(o.onclick) + '"' : '') +
     (o.title ? ' title="' + escAttr(o.title) + '"' : '') + '>' +
-    '<div class="tc-top">' + pills + nb + '<span class="tc-sp"></span>' + sent + '</div>' +
+    '<div class="tc-top">' + pills + badges + nb + '<span class="tc-sp"></span>' + sent + '</div>' +
     '<div class="tc-id"><b>' + esc(o.name || o.code) + '</b>' + riskBadge(o.code, 1) +
     ((o.name && o.name !== o.code) ? '<span class="cd">' + esc(o.code) + '</span>' : '') + tcChgHtml(o.chg) + '</div>' +
     '<div class="tc-g">' + (o.cells || []).join('') + '</div>' +
@@ -6884,7 +6965,7 @@ function ordPlanCard(r) {
   ordReg(k, r, 'plan');
   return tcCard({
     code: r.code, name: r.name, chg: tcPctOf(r.code, r.pct),
-    pills: ['昨晚挂单', r.sector || null], sent: true,
+    pills: ['昨晚挂单', r.sector || null], badges: stkTechShortBadges(r.code), sent: true,
     cells: [
       tcCell('今开', r.open == null ? '—' : ordP2(r.open) + ordSg(r.vsLimit), '', false, true),
       tcCell('目标', r.tp == null ? '—' : ordP2(r.tp), 'up'),
@@ -6906,9 +6987,13 @@ function ordPlanCard(r) {
 function ordHitCard(r) {
   var k = 'o|' + String(r.code || '').replace(/\D/g, '');
   ordReg(k, r, 'hit');
+  /* R100z262：srcZh（如「陈学长·放宽池」）与技术池徽章说的是同一件事，同出会印两枚一样的
+     胶囊。有真实池归属时以徽章为准（它可能命中多个池、信息更全）；一只技术池都没命中时，
+     srcZh 是 timing_plan 唯一给的来源线索，不能丢。 */
+  var tb = stkTechShortBadges(r.code);
   return tcCard({
     code: r.code, name: r.name, chg: tcPctOf(r.code, r.pct),
-    pills: [r.srcZh || '三池命中', r.sector || null], sent: true,
+    pills: [tb ? null : (r.srcZh || '三池命中'), r.sector || null], badges: tb, sent: true,
     cells: [
       tcCell('目标', r.target == null ? '—' : ordP2(r.target) + ordSg(r.targetPct, 1), 'up', false, true),
       tcCell('持有', r.holdDays == null ? '—' : r.holdDays + ' 日', ''),
@@ -6974,6 +7059,36 @@ function ordRuleBlocks(P) {
     h += ordFold('风险口径', '',
       '<div class="ord-li"><i>·</i><span>' + esc(ordMd(te.riskNote)) + '</span></div>');
   }
+  /* R100z262（用户 2026-10-28 20:32 第二次问「这些标的为什么不在断板反包确认池」）：
+     断板确认池有一道「流通市值 100~400 亿」的门槛，市值过滤发生在抓 K 线**之前**，
+     被剔的票既不进确认池、观察池，也不进失效池——它们在系统里等于不存在。
+     过去这道门槛只出现在 16:00 的 stderr 一行日志里，页面一点痕迹都没有，所以
+     「挂单收了它、池子没有它」看起来就是 bug。这里把名单摆出来，让读者自己能判断
+     「是形态没成立，还是被门槛挡住了」。 */
+  (function () {
+    var db = (P.D || {}).duanban || {};
+    var arr = db.mcapCut || [];
+    var tot = db.mcapCutTotal || arr.length;
+    if (!tot) return;
+    var nShow = Math.min(arr.length, 24);
+    var rows = arr.slice(0, nShow).map(function (x) {
+      var tag = x.side === 'lo' ? '低于下限 100 亿' : '高于上限 400 亿';
+      return '<div class="ord-li"><i>·</i><span>' + esc(x.code + ' ' + (x.name || '') +
+        '　' + x.mcap + ' 亿' + '（' + tag + '）') + '</span></div>';
+    }).join('');
+    // 三个数字必须各自说清，否则读者会拿 161 和 24 相减得出「漏了 137 只」：
+    //   tot = 今天被门槛剔掉的全部；arr.length = 本清单收录的（展示票优先）；
+    //   nShow = 这次展开列出的。少一个，减法就要读者自己做（24.110）。
+    var more = arr.length > nShow
+      ? '<div class="ord-li"><i>·</i><span>本清单收录 ' + arr.length +
+        ' 只，此处显示前 ' + nShow + ' 只；另有 ' + (arr.length - nShow) +
+        ' 只未展开，其余 ' + Math.max(0, tot - arr.length) + ' 只未收录（离门槛更远）。</span></div>'
+      : '';
+    h += ordFold('被市值门槛剔掉的 ' + tot + ' 只', '点开看名单',
+      '<div class="ord-li"><i>·</i><span>' + esc(db.mcapCutNote ||
+        ('流通市值必须在 100~400 亿之间。市值过滤发生在抓 K 线之前，所以这些票的形态'
+         + '根本没被判定过——不在确认池不代表形态不成立。')) + '</span></div>' + rows + more);
+  })();
   var b = te && te.bt;
   if (b && b.n) {
     var by = b.byYear || {}, ys = Object.keys(by).sort();
@@ -7797,10 +7912,11 @@ function openDbModal(key) {
       //   用户 2026-10-28 截图 5 的原话就是「这两个徽章都要放」。
       if (isOrd) {
         return '<span class="pool-badge hold">今日可下单 · ' +
-          (e.ordKind === 'plan' ? '昨晚挂单' : '盘中买点') + '</span>' + tb;
+          (e.ordKind === 'plan' ? '昨晚挂单' : '盘中买点') + '</span>' + tb + mcapCutBadgeHtml(e.code);
       }
-      return tb || ('<span class="pool-badge ' + (done ? 'done' : 'hold') + '">' +
-        (done ? '确认池' : ('观察池 · ' + esc(e.stage || '待定'))) + '</span>');
+      return (tb || ('<span class="pool-badge ' + (done ? 'done' : 'hold') + '">' +
+        (done ? '确认池' : ('观察池 · ' + esc(e.stage || '待定'))) + '</span>')) +
+        mcapCutBadgeHtml(e.code);
     })() +
     stkLhbBadge(String(e.code)) + // R100z201：当日龙虎榜归属（用户：标的页面里要写）
     riskTipBadge(String(e.code)) + // R100z87：可见风险提示徽章（手机端也能看到，原 ⚠️ 悬停信息不可达）

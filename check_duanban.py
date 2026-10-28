@@ -743,23 +743,50 @@ def filter_by_mcap(cands, caps, lo=None, hi=None):
 
     · 取不到市值的票**保留**（宁松不误杀，24.16 显式降级）
     · `caps` 为空时由调用方决定整体跳过，这里不兜底
+
+    R100z262（用户 2026-10-28 20:32「这些标的为什么不在断板反包确认池或陈学长池」）：
+    原来这里只回计数、**不保留被剔的是谁**。市值过滤发生在抓 K 线之前，票一被剔就从
+    系统里彻底消失——不进确认池、不进观察池、也**不进失效池**（失效池只收「曾经在池、
+    今天滑出」的票）。结果是 24.105 自己写下的那句「被任何一条卡住的票在失效池可见并
+    注明是哪一条」根本没有兑现：被市值卡掉的票在页面上不存在，用户只能看到「今日可下单
+    收了它、确认池没有它」这个矛盾，而且**没有任何地方能查到原因**。
+    所以现在把明细带出去（cutList），由主流程落进 duanban.mcapCut。
     """
     lo = CAP_MIN if lo is None else lo
     hi = CAP_MAX if hi is None else hi
-    keep, cut_lo, cut_hi, no_cap = [], 0, 0, 0
+    keep, cut_lo, cut_hi, no_cap, cut, non_main = [], 0, 0, 0, [], 0
     for code, rec in cands:
         mc = caps.get(code)
         if mc is None:
             no_cap += 1
             keep.append((code, rec))
-        elif mc < lo:
-            cut_lo += 1
-        elif mc > hi:
-            cut_hi += 1
+        elif mc < lo or mc > hi:
+            side = 'lo' if mc < lo else 'hi'
+            if side == 'lo':
+                cut_lo += 1
+            else:
+                cut_hi += 1
+            # R100z262b：**名单只收沪深主板**。涨停池里混着 300/301/688 —— 它们本来就被
+            # 「只做 60/00 主板」这条线挡在外面，跟市值门槛毫无关系。把它们列进
+            # 「被市值门槛剔掉」的名单，等于编一个不存在的原因（用户会以为放开市值就能买）。
+            # 计数仍含它们（cut_lo/cut_hi 与日志口径不变，不破坏计数守恒）。
+            if not re.match(r"^(60|00)\d{4}$", str(code)):
+                non_main += 1
+                continue
+            r = rec if isinstance(rec, dict) else {}
+            # 保留 2 位：边界票（400.01 / 99.99）只留 1 位会四舍五入成 400.0/100.0，
+            # 页面上就变成「400.0 亿却超过上限 400 亿」——看着像门槛算错了。
+            cut.append({'code': str(code), 'name': r.get('name') or str(code),
+                        'sector': r.get('hybk') or '', 'mcap': round(float(mc), 2),
+                        'side': side})
         else:
             keep.append((code, rec))
+    # 离门槛越近的越值得看（用户想知道「差多少」）：小盘按市值降序、大盘按市值升序，
+    # 两组各在前，等价于「按与门槛的距离升序」。
+    cut.sort(key=lambda x: abs(float(x['mcap']) - (lo if x['side'] == 'lo' else hi)))
     return keep, {"cut_lo": cut_lo, "cut_hi": cut_hi, "no_cap": no_cap,
-                  "total": len(cands), "kept": len(keep), "lo": lo, "hi": hi}
+                  "total": len(cands), "kept": len(keep), "lo": lo, "hi": hi,
+                  "nonMain": non_main, "cutList": cut}
 
 
 def _industry_of(hybk, agg):
@@ -1977,12 +2004,14 @@ def main():
     # R100z250：上下限分开计数——只报一个「剔除 N 只」的话，用户看到池子变小
     # 根本判断不出是被「太小」还是「太大」卡的，这正是上一轮归因文案骗人的同一个毛病。
     _caps = {}
+    _mcap_cut = []          # R100z262：被市值剔除的明细，落进 duanban.mcapCut
     try:
         _caps = fetch_market_caps([c for c, _ in cands])
     except Exception as _e:
         print("[duanban] 市值接口异常：%s" % _e, file=sys.stderr)
     if _caps:
         cands, _stat = filter_by_mcap(cands, _caps)
+        _mcap_cut = _stat.get("cutList") or []
         print("[duanban] 市值过滤（流通市值 %.0f~%.0f 亿）：过小剔除 %d 只、过大剔除 %d 只，"
               "无市值保留 %d 只，候选 → %d 只"
               % (CAP_MIN, CAP_MAX, _stat["cut_lo"], _stat["cut_hi"],
@@ -2090,6 +2119,11 @@ def main():
                                 for p in pairs if p["stage_info"]["pool"] != "confirmed"]}
         else:
             mod = build_module(pairs, D)
+        # R100z262：把「被市值剔除」的票写进模块。前端拿它在卡片上直接回答
+        # 「形态看着只差最后一步，为什么不在池里」——此前这道门槛只存在于
+        # stderr 的一行日志里，用户端完全看不到。上限 40 条（已按离门槛的距离排序），
+        # 每次 16:00 全量重写，不留历史。
+        mod['mcapCut'] = _mcap_cut[:40]
         # R100i：断板反包失败池——原在池内、今日滑出的标的归因失败归档，5 交易日后清理
         today_str = datetime.now().strftime('%Y-%m-%d')
         try:
@@ -2101,16 +2135,28 @@ def main():
         cur_codes = set(str(e.get('code') or '') for e in (mod.get('confirmed') or []) + (mod.get('watching') or []))
         cand_codes = set(str(c) for c in cand.keys())
         failed_codes = set(str(c) for c, _ in failed)
+        _mc_map = {str(x.get('code')): x for x in _mcap_cut}
         new_fails = []
         for code in prev_codes - cur_codes:
             info = prev_pools.get(code, {})
             if code in failed_codes:
                 reason = 'K线获取失败，形态校验缺失，暂归失效'
+            elif code in _mc_map:
+                # R100z262：出池原因要**指名是哪一条**。原来这句是「形态走完，或市值／
+                # 启动幅度／距MA5 未达标」——三个候选并列，等于什么都没说：读者没法据此
+                # 判断该不该继续看这只票。市值这条能精确算出来，就先把它精确掉。
+                _mc = _mc_map[code]
+                reason = ('流通市值 %.1f 亿，%s断板反包市值门槛（%s），形态本身没坏'
+                          % (_mc['mcap'],
+                             '低于' if _mc['side'] == 'lo' else '高于',
+                             ('下限 %.0f 亿' % CAP_MIN) if _mc['side'] == 'lo'
+                             else ('上限 %.0f 亿' % CAP_MAX)))
             elif code in cand_codes:
-                # 口径收紧后（加了市值/启动前20日/距MA5 三道），
-                # 出池不等于「形态走坏」——多数是被新条件筛掉。原文案一口咬定
-                # 「形态失效」会让读者误判走势，这里改成对三种原因都成立的表述。
-                reason = '不再符合当前判定口径（形态走完，或市值／启动幅度／距MA5 未达标）'
+                # 口径收紧后（加了市值/启动前20日/距MA5 三道），出池不等于「形态走坏」。
+                # R100z262：市值这条已经由上一条精确回答，这里不再把它并列进来——
+                # 原来那句「形态走完，或市值／启动幅度／距MA5 未达标」三选一，读者没法
+                # 据此判断该不该继续跟这只票。
+                reason = '形态不达标（启动前 20 日涨幅 >10%，或距 MA5 溢价 <2%），形态本身没坏'
             else:
                 reason = '超过观察窗口，形态失效'
             new_fails.append({'code': code, 'name': info.get('name', ''),
