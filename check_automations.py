@@ -48,7 +48,7 @@ import os
 import re
 import sqlite3
 import sys
-from datetime import date
+from datetime import date, datetime
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DB = os.path.expanduser('~/.workbuddy/workbuddy.db')
@@ -432,6 +432,20 @@ def chk_baseline(T, r):
 #      那是真 bug，AI 会往空处落盘。所以自写路径**只验容器**（父级能下钻即算过），
 #      内容有没有真写进去由 audit_pipeline 的 G16 字数地板兜底——写错键名时字数仍为 0，
 #      照样拦在部署前，覆盖没有变薄。
+#   ⑥ **自写字段的反方向检查**（R100z261，2026-10-28 用户「做吧」）：⑤ 只验容器，于是留下一个
+#      它自己造的口子——容器永远在（16:00 重建的壳不会消失），所以**哪天脚本或 prompt 把字段名
+#      改了**（`reason` → `why`），⑤ 照样放过，闸门一声不响。⑤ 的豁免必须配一个「它太久没写过
+#      东西」的哨兵，否则就是新的静默失效点（和 G10 那条假 WARN 同一类：出了问题没人报）。
+#      判据：自写路径**父级能下钻（ok）但该字段一天下来都不在**，连续 SW_WARN_DAYS 天 → WARN。
+#        · 只认 st2=='ok'：父级是空数组（16:00 刚重建、元素还没填）属于「今天判不了」，记 'skip'，
+#          既不计数也不断线——否则每个 16:00~19:30 的窗口都会被误算成一天。
+#        · 同一天内多次运行只保留**最后一次**观测：16:00 记 miss、20:00 写完变 hit，当天就以 hit 为准。
+#          换句话说，「一整天过去还是没写进去」才算一天，半天不算。
+#        · 闸门不是每天都跑，所以日期有空档（周末/未部署）**不算断线**，只有记录在案的 'hit' 才断。
+#        · **只在该任务「今天该跑、且已过点 60 分钟」时才记 miss**（`_sw_due`）：16:00 跑闸门时
+#          19:30 才写的叙事字段必然不在、节假日该任务根本不跑——这两种都不是缺陷。不挡掉，
+#          ⑥ 立刻退化成「每天固定报同一句」的噪声，跟它要防的病一样。
+#      状态落在 `.cache/b6_selfwrite_state.json`（.cache/ 已在 .gitignore，属本机滚动状态不是事实源）。
 # 散文条目（含中文/空格/通配 `*`）跳过并计数——不是漏洞，是台账允许写人话。
 CLEAN_PATH = re.compile(r'^[A-Za-z_]\w*(?:(?:\.\w+)|(?:\[\w*\]))*$')
 CJK_RE = re.compile(r'[\u4e00-\u9fff]')
@@ -515,6 +529,90 @@ def _parent_path(p):
     return head if dot else ''
 
 
+# ------------------------------------------------------- B6 ⑥ 自写字段哨兵状态
+SW_STATE = os.path.join(HERE, '.cache', 'b6_selfwrite_state.json')
+SW_WARN_DAYS = 3     # 连续 3 天「容器活着、字段却不在」→ WARN（用户口径）
+SW_KEEP_DAYS = 14    # 每条路径只留最近 14 个观测日，够判 3 天又不让状态文件长大
+SW_GRACE_MIN = 60    # 宽限 60 分钟：任务刚启动时字段自然还没落盘，不算「今天缺」
+WD = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']
+
+
+def _sw_due(t, now=None):
+    """这条字段的产出任务「今天该跑、而且已经跑完了」吗？只有 True 才允许记 miss。
+
+    少了这一道，⑥ 会变成新的常态噪声源（本项目的旧病：闸门永远在报同一句，久之被无视）：
+      · **时点**：19:30 才写的叙事字段，16:00 跑闸门时必然不存在；A1600 自己的字段在 16:00
+        刚启动时也还没写。所以 `now` 必须 ≥ 该任务 rrule 的 BYHOUR/BYMINUTE + 宽限。
+      · **非交易日**：周末/节假日该任务本来不跑，字段缺不是缺陷 → 判不了，记 skip 不计数。
+        否则国庆七天连休会攒出 7 天「连续缺失」，节后开工先吃一条假 WARN。
+    任务记录里没有 rrule（自动化已从库里消失，A0 会单独报）→ 无从判断，按「该跑」处理。
+    """
+    if not isinstance(t, dict):
+        return True
+    now = now or datetime.now()   # 只用这一个时间源：星期与时刻必须同一天，否则跨午夜/测试会错位
+    rr = str(t.get('rrule') or '')
+    m = re.search(r'BYDAY=([A-Z,]+)', rr)
+    if m and WD[now.weekday()] not in m.group(1).split(','):
+        return False
+    m = re.search(r'BYHOUR=(\d+)', rr)
+    if not m:
+        return True
+    mi = re.search(r'BYMINUTE=(\d+)', rr)
+    return (now.hour * 60 + now.minute) >= (int(m.group(1)) * 60 + int(mi.group(1) if mi else 0)
+                                            + SW_GRACE_MIN)
+
+
+def _sw_load():
+    """{路径: {日期: 'miss'|'hit'|'skip'}}；读不到就当空开局（首次运行）。"""
+    try:
+        with open(SW_STATE, encoding='utf-8') as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+
+def _sw_save(st):
+    """原子写。状态坏了不拦部署——它是提示用的哨兵，不是事实源。"""
+    try:
+        os.makedirs(os.path.dirname(SW_STATE), exist_ok=True)
+        tmp = SW_STATE + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(st, f, ensure_ascii=False, indent=0, sort_keys=True)
+        os.replace(tmp, SW_STATE)
+    except Exception:
+        pass
+
+
+def _sw_mark(st, path, today, verdict):
+    """登记一天一次的观测结论（同一天重跑以最后一次为准，见 ⑥ 第 2 条）。"""
+    rec = st.setdefault(path, {})
+    rec[today] = verdict
+    if len(rec) > SW_KEEP_DAYS:
+        for d in sorted(rec)[:-SW_KEEP_DAYS]:
+            rec.pop(d, None)
+
+
+def _sw_streak(rec, today):
+    """从今天往回数「整天都没写进去」的连续天数，返回 (天数, 最早那天)。
+
+    只在 rec[today] == 'miss' 时才算数（今天还没判完就报警是误报）。
+    'skip' 透明（无法判定，不断线也不计数）；遇到 'hit' 断线。
+    日期空档（闸门没跑的那几天）不算断线——没有记录不等于写进去了。
+    """
+    if rec.get(today) != 'miss':
+        return 0, ''
+    days, first = 0, today
+    for d in sorted(rec, reverse=True):
+        v = rec[d]
+        if v == 'miss':
+            days += 1
+            first = d
+        elif v == 'hit':
+            break
+    return days, first
+
+
 def chk_fields(T, r, verbose=False):
     exp_path = os.path.join(HERE, 'audit_expectations.json')
     if not os.path.exists(exp_path):
@@ -530,8 +628,12 @@ def chk_fields(T, r, verbose=False):
         return
 
     by_id = {t['id']: t for t in T}
-    n_ok = n_skip = n_empty = n_pend = n_own = 0
+    n_ok = n_skip = n_empty = n_pend = n_own = n_stale = 0
     bad = []
+    # ⑥ 的哨兵状态：{路径: {日期: miss/hit/skip}}，本轮观测完再裁剪写回
+    sw = _sw_load()
+    own_paths = set()
+    stale_warned = set()   # 同一路径可能同时登记在两条任务下，只报一次（否则同一条 WARN 印两遍）
     # 首跑豁免：{(任务id, 路径): (到期日, 原因)}
     pend = {}
     for aid, v in (exp.get('pendingFields') or {}).items():
@@ -561,22 +663,44 @@ def chk_fields(T, r, verbose=False):
                 if not ps:
                     n_skip += 1
                     continue
+                due = _sw_due(t)   # ⑥：该任务今天该跑、且已过点（否 → 只能记 skip）
                 for p in ps:
                     st, why = _resolve_field(D, p)
                     ex = pend.get((e.get('id'), p))
+                    # 自写路径 = 本任务自己产出的字段（规则 ⑤/⑥ 的对象）。
+                    # `.json` 是**文件**不是 data.js 节点，走上面的文件分支，不套 ⑤/⑥。
+                    is_own = (p in w and not p.endswith('.json'))
+                    if is_own:
+                        own_paths.add(p)
                     if st == 'ok':
                         n_ok += 1
+                        if is_own:
+                            _sw_mark(sw, p, today, 'hit')
                     elif st == 'empty':
                         n_empty += 1
-                    elif p in w and not p.endswith('.json'):
+                    elif is_own:
                         # 规则 ⑤：**先按原样校验**，只有「真的不存在」才轮到自写豁免。
                         # 顺序很重要——先豁免会把 161 条本来存在的自写路径整体降成「只验容器」，
                         # 等于悄悄削掉一层校验（2026-10-28 实测：那样 n_ok 从 269 掉到 108）。
-                        # `.json` 是**文件**不是 data.js 节点，走上面的文件分支，不套 ⑤。
                         par = _parent_path(p)
                         st2, why2 = _resolve_field(D, par) if par else ('ok', '')
                         if st2 in ('ok', 'empty'):
                             n_own += 1
+                            # 规则 ⑥：容器活着 → 不是「今天还没到写的时候」，就是「字段名早变了」。
+                            # 父级是空数组时判不了（刚重建、元素还没填），记 skip 不计也不断；
+                            # 父级有内容、任务今天该跑且已过点，才算真缺一天，连续 SW_WARN_DAYS 天才报警。
+                            _sw_mark(sw, p, today, 'miss' if (st2 == 'ok' and due) else 'skip')
+                            days, first = _sw_streak(sw[p], today)
+                            if days >= SW_WARN_DAYS and p not in stale_warned:
+                                stale_warned.add(p)
+                                n_stale += 1
+                                r.warn('B6', '%s 的 %s 已连续 %d 天「容器活着、字段却不在」'
+                                              '（最早缺失日 %s，父级 %s 每天都能下钻）—— '
+                                              '这不是时序问题：容器名没变，那多半是脚本或 prompt '
+                                              '把字段名改了、台账没跟着改。去 audit_expectations.json '
+                                              '的 writesFields 与 %s 的 prompt 里各搜一遍这个字段名，'
+                                              '台账/脚本/prompt 三处必须逐字一致'
+                                       % (key, p, days, first, par, key))
                         else:
                             bad.append('%s 的 %s 是自写字段，但它要挂的容器 %s 在 data.js 里不存在：%s'
                                        ' —— 写回会落到空处' % (key, p, par, why2))
@@ -598,6 +722,12 @@ def chk_fields(T, r, verbose=False):
                     if ex:
                         r.warn('B6', '%s 的 %s 已能走通 —— 首跑豁免应从 pendingFields 删掉（否则豁免长期化）'
                                % (key, p))
+    # ⑥ 状态收尾：只留台账里还登记着的自写路径。字段从台账删掉后状态一起清，
+    # 免得文件无限长，也免得同一路径下次重新登记时带着上次的连续天数「复活」直接报 WARN。
+    for p in list(sw):
+        if p not in own_paths:
+            sw.pop(p, None)
+    _sw_save(sw)
     for m in bad:
         r.fail('B6', m)
     if not bad:
@@ -606,6 +736,11 @@ def chk_fields(T, r, verbose=False):
                    '`[]` 按首元素下钻，不保证每个元素都带该键）'
                    '—— 7 条任务的读写边界与线上数据一致'
              % (n_ok, '盘上文件', n_empty, n_pend, n_own, n_skip))
+        if n_stale:
+            r.warn('B6', '另有 %d 条自写字段已连续 %d 天「容器在、字段不在」—— '
+                         '已按规则 ⑥ 逐条 WARN 在上方，机器判不出是「还没写」还是「改名了」，'
+                         '所以不 FAIL；但连续天数继续涨就说明字段名真的变了，别当噪声'
+                   % (n_stale, SW_WARN_DAYS))
 
 
 # ---------------------------------------------------------------- D 死步骤
