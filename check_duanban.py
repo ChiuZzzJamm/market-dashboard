@@ -90,6 +90,27 @@ LOW_TOL = 0.98      # 收盘 < T 日低点 × 0.98（容差 2%）才判「破 T 
 PRE20_MAX = 10.0    # 启动前 20 个交易日涨幅上限（%）——涨过了就不是「启动」是「延续」
 MA5_GAP_MIN = 2.0   # 收盘相对 MA5 的最小溢价（%）——刚贴住 MA5 不算有效承接
 CAP_MIN = 100.0     # 流通市值下限（亿元）——小盘断板的资金行为不可复制
+CAP_MAX = 400.0     # 流通市值上限（亿元）——R100z250（用户 2026-10-28 定「400 亿以内」）
+#
+# 上限这一条的实测依据（现行三条全开 + 只动上限，zt_low / TP5 / H10，18,225 笔）：
+#
+#   市值区间        笔数    全样本     训练      样本外    盈亏比
+#   100 ~ ∞        2,226   +0.763%  +0.712%   +0.874%   1.35   ← 加上限前
+#   100 ~ 600 亿   2,049   +0.740%  +0.667%   +0.906%   1.37
+#   100 ~ 400 亿   1,890   +0.732%  +0.654%   +0.912%   1.37   ← 现行
+#   100 ~ 300 亿   1,721   +0.752%  +0.680%   +0.919%   1.37
+#
+# 样本外小幅变好（+0.038pp）、样本掉 15%，属于「削不掉收益的减法」，不是靠它提收益。
+# 反面证据在分档里：600 亿+ 全样本 +1.029% 但样本外只有 +0.580%（不稳），
+# 300~400 亿全样本最差（+0.533%）——大盘断板的弹性撑不起 10 日持有。
+#
+# ⚠️ **不是把下限换掉**。同一网格里「只留上限 ≤400 亿、去掉 100 亿下限」是灾难：
+# 7,859 笔 / 样本外 **+0.058%** / 盈亏比 1.02——等于把 v3 之前那个亏钱的口径请回来。
+# 上下限是两件事：下限排除「资金行为不可复制」，上限排除「弹性不够」。
+#
+# ⚠️ 口径差异（别拿两个数直接比）：回测的 mcap 取 `.kline_hist` 的**总市值**，
+# 这里 f[44] 是**流通市值**，后者恒 ≤ 前者，所以线上这道上限实际比回测略松。
+# 实测 100~∞ 与 100~400 的差只有 0.038pp，这点口径漂移不影响结论。
 
 
 def curl_text(url, timeout=15):
@@ -651,7 +672,7 @@ MCAP_CACHE_DIR = "/tmp/duanban_mcap_cache"
 def fetch_market_caps(codes, today=None):
     """候选票的**流通市值**（亿元）→ {code: mcap}。当日缓存，取不到返回已取到的部分。
 
-    本口径的第三个条件（CAP_MIN）需要市值，而 data.js 里没有（`ashare` 只有
+    本口径的第三条（市值带 CAP_MIN~CAP_MAX）需要市值，而 data.js 里没有（`ashare` 只有
     指数/板块/资金，`fullScan.candidates` 只有代码）。所以按需拉腾讯行情
     `qt.gtimg.cn`——**只拉候选票**、60 只/批（与 `common.fetch_names` 同一源同一批长，
     实测可达），结果当日缓存到 `/tmp/duanban_mcap_cache/<日期>.json`。
@@ -708,6 +729,34 @@ def fetch_market_caps(codes, today=None):
             except Exception:
                 pass
     return out
+
+
+def filter_by_mcap(cands, caps, lo=None, hi=None):
+    """按流通市值带筛候选（亿元）。→ (保留的 cands, 统计 dict)
+
+    R100z250 从主流程抽出来，为的是能离线单测：`caps` 传当天的缓存文件就行，
+    不必真去抓 420s 的 K 线。上下限分开计数是刻意的——只报一个「剔除 N 只」，
+    用户看到池子变小根本判断不出是被「太小」还是「太大」卡的。
+
+    · 取不到市值的票**保留**（宁松不误杀，24.16 显式降级）
+    · `caps` 为空时由调用方决定整体跳过，这里不兜底
+    """
+    lo = CAP_MIN if lo is None else lo
+    hi = CAP_MAX if hi is None else hi
+    keep, cut_lo, cut_hi, no_cap = [], 0, 0, 0
+    for code, rec in cands:
+        mc = caps.get(code)
+        if mc is None:
+            no_cap += 1
+            keep.append((code, rec))
+        elif mc < lo:
+            cut_lo += 1
+        elif mc > hi:
+            cut_hi += 1
+        else:
+            keep.append((code, rec))
+    return keep, {"cut_lo": cut_lo, "cut_hi": cut_hi, "no_cap": no_cap,
+                  "total": len(cands), "kept": len(keep), "lo": lo, "hi": hi}
 
 
 def _industry_of(hybk, agg):
@@ -1733,7 +1782,7 @@ def build_module(pairs, D):
                                  {"bull": 0, "neutral": 1, "bear": 2}[e["sentiment"]]))
     return {
         "generatedAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "note": "确认池=走完「涨停→放量断板→缩量→不破T日低点与MA5」全流程；观察池=形态进行中、只差最后一根确认K线（待企稳＞待缩量）。每只标的按当日要闻/AI预测自动标注口径：利好（有利好新闻依据且未被看空）/利空（被利空新闻或AI预测看空点名）/中性（暂无明确新闻依据）；利好/利空只看新闻内容，当日涨跌与走势形态不作为依据（R91j）。口径与 probability 由自动化 AI 复核校准。",
+        "note": "确认池=走完「涨停→放量断板→缩量→不破T日低点与MA5」全流程；观察池=形态进行中、只差最后一根确认K线（待企稳＞待缩量）。形态之外另有三条量化门槛，同时满足才进池：流通市值 100~400 亿、启动前 20 个交易日涨幅 ≤10%、收盘距 MA5 ≥+2%；被任何一条卡住的票在失效池可见并注明是哪一条。每只标的按当日要闻/AI预测自动标注口径：利好（有利好新闻依据且未被看空）/利空（被利空新闻或AI预测看空点名）/中性（暂无明确新闻依据）；利好/利空只看新闻内容，当日涨跌与走势形态不作为依据（R91j）。口径与 probability 由自动化 AI 复核校准。",
         "topBoards": fetch_top_boards(D),
         "confirmed": confirmed,
         "watching": watching,
@@ -1905,27 +1954,25 @@ def main():
     failed = []  # K线拉取失败的候选（多为新浪限频），预算允许时二轮重试（R70）
     res_lock = threading.Lock()
 
-    # ---- 市值条件（CAP_MIN）：放在抓 K 线**之前**，因为 K 线是 420s 预算的瓶颈。
+    # ---- 市值条件（CAP_MIN / CAP_MAX）：放在抓 K 线**之前**，因为 K 线是 420s 预算的瓶颈。
     # 这一步能把候选数砍掉一大半，等于给后面的并行抓取留出余量。
     # 取不到市值的票**保留**（不误杀）；整批都取不到就整体跳过并打警告（24.16 显式降级）。
+    # R100z250：上下限分开计数——只报一个「剔除 N 只」的话，用户看到池子变小
+    # 根本判断不出是被「太小」还是「太大」卡的，这正是上一轮归因文案骗人的同一个毛病。
     _caps = {}
     try:
         _caps = fetch_market_caps([c for c, _ in cands])
     except Exception as _e:
         print("[duanban] 市值接口异常：%s" % _e, file=sys.stderr)
     if _caps:
-        _keep, _cut = [], 0
-        for _c, _rec in cands:
-            _mc = _caps.get(_c)
-            if _mc is None or _mc >= CAP_MIN:
-                _keep.append((_c, _rec))
-            else:
-                _cut += 1
-        print("[duanban] 市值过滤：流通市值 <%.0f 亿剔除 %d 只，候选 %d → %d 只"
-              % (CAP_MIN, _cut, len(cands), len(_keep)), file=sys.stderr)
-        cands = _keep
+        cands, _stat = filter_by_mcap(cands, _caps)
+        print("[duanban] 市值过滤（流通市值 %.0f~%.0f 亿）：过小剔除 %d 只、过大剔除 %d 只，"
+              "无市值保留 %d 只，候选 → %d 只"
+              % (CAP_MIN, CAP_MAX, _stat["cut_lo"], _stat["cut_hi"],
+                 _stat["no_cap"], len(cands)),
+              file=sys.stderr)
     else:
-        print("[duanban] ⚠️ 市值全部取不到，本轮跳过 CAP_MIN 过滤（显式降级，"
+        print("[duanban] ⚠️ 市值全部取不到，本轮跳过市值过滤（显式降级，"
               "池子会偏松——市值条件未生效）", file=sys.stderr)
 
     def run_one(code, rec, kl):
