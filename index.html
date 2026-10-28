@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610281022"></script>
+<script src="data.js?v=202610281031"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -807,50 +807,17 @@
   .st-gap-t { font-weight: 700; color: var(--ink); }
   .st-gap-r { flex: 1 1 100%; font-size: var(--fs-xs); color: var(--ink3, var(--ink2)); opacity: .8; line-height: 1.6; }
   @media (max-width: 720px) { .st-gap { font-size: var(--fs-xs); } }
-  /* ===== R100z232：今日买入清单（9:45 三池命中 → 当日买点 + 买区）=====
-     这张表解决的是「池里有票，但今天该用什么价下手」——买区/证伪价/目标三列全部由脚本给，
-     页面不做任何计算。颜色语义：state 只描述现价与买区的位置关系，不是推荐强度，
-     所以「在买区内」用涨色（可下单）、「已高于买区」用橙色（等回落）、「未到买区」用深蓝（挂单等）。 */
-  .bl-wrap { margin: -4px 0 12px; border: 1px solid var(--line); border-radius: var(--r-block);
-    background: var(--paper); overflow: hidden; }
-  .bl-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
-    padding: 8px 11px; background: var(--accent-soft); border-bottom: 1px solid var(--line);
-    font-size: var(--fs-sm); color: var(--ink2); }
-  .bl-head b { font-size: var(--fs-base); color: var(--accent-deep); }
-  .bl-row { display: grid; gap: 4px 10px; padding: 8px 11px; align-items: baseline;
-    grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) minmax(0,1.15fr) minmax(0,.95fr) minmax(0,1.1fr);
-    border-bottom: 1px dashed var(--line); font-size: var(--fs-base); }
-  .bl-row:last-of-type { border-bottom: 0; }
-  /* R100z232：列头。没有这一行，读者只能靠每行的小字反推「第四列是证伪价」——
-     五个数字并排而语义各不相同，靠猜一定会读错。列头与数据行共用同一套 grid 模板，
-     改列宽时只需改上面 .bl-row 一处。 */
-  .bl-th { display: grid; gap: 0 10px; padding: 5px 11px 4px; align-items: baseline;
-    grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) minmax(0,1.15fr) minmax(0,.95fr) minmax(0,1.1fr);
-    font-size: var(--fs-xs); color: var(--ink2); opacity: .8; border-bottom: 1px solid var(--line); }
-  .bl-th span { font-weight: 600; }
-  @media (max-width: 720px) {
-    .bl-row { grid-template-columns: minmax(0,1fr) minmax(0,1fr); font-size: var(--fs-sm); }
-    /* 窄屏两列布局下列头会错位（每行的第 3~5 个格子会掉到第二行），
-       与其给出对不上的标签，不如不显示——每行自带的灰字小标已经说明了每个数字是什么。 */
-    .bl-th { display: none; }
-  }
-  .bl-nm { font-weight: 700; color: var(--ink); display: flex; align-items: center;
-    gap: 5px; flex-wrap: wrap; min-width: 0; }
-  .bl-tag { font-size: var(--fs-xs); font-weight: 600; padding: 1px 5px; border-radius: 5px;
-    background: var(--bg-2); color: var(--ink2); white-space: nowrap; }
-  .bl-k { display: block; font-size: var(--fs-xs); color: var(--ink2); opacity: .75; }
-  .bl-v { font-variant-numeric: tabular-nums; color: var(--ink); }
-  .bl-buy { font-weight: 800; color: var(--accent-deep); font-variant-numeric: tabular-nums; }
-  .bl-st-buy { color: var(--up); font-weight: 700; }
-  .bl-st-over { color: #c77a12; font-weight: 700; }
-  .bl-st-under { color: var(--accent-deep); font-weight: 700; }
-  .bl-st-unknown { color: var(--ink2); }
-  .bl-rule { padding: 7px 11px; background: var(--bg-2); border-top: 1px solid var(--line);
-    font-size: var(--fs-xs); color: var(--ink2); line-height: 1.7; }
-  .bl-empty { padding: 9px 11px; font-size: var(--fs-sm); color: var(--ink2); line-height: 1.7; }
-  /* ===== R101：时限挂单（昨晚定单 → 今天开盘核对）=====
-     与 .bl-* 视觉上刻意区分（深色描边 + 主色头部）：这两张表语义不同，长得一样会被当成
-     「两份互相打架的清单」。这里回答的是「昨晚挂的单今天能不能成」，不是「现在买什么」。 */
+  /* ===== R100z254：今日可下单（两张表并一张）=====
+     历史：R100z232 先做了「今日买入清单」（三池命中→买区/证伪价/目标），
+     R101 又加了「时限挂单」（昨晚定单→今开核对）。两张表时点不同、五列语义却很像，
+     并排放着被读成「两份互相打架的清单」——用户 2026-10-28 直接问「能不能优化一下」。
+     现在合成一张，用 .tb-grp 组头分时点，列语义统一成：
+         标的·来源 | 现价·状态 | 买价带 | 撤单位 | 目标·持有
+     原来的 .bl-* 那一整套（wrap/head/th/row/nm/v/k/buy/tag/rule/empty/st-*）随旧表一起删掉：
+     留着的死样式会让下一个改这张表的人以为还有第二个渲染分支。
+     颜色语义（两张表共用）：state 只描述「现价与买价带的位置关系」，不是推荐强度——
+     在买区内用涨色（可下单）、已高于买区用橙色（等回落）、未到买区用深蓝（挂单等），
+     未开盘用灰（不编结论）。深色描边 + 主色头部是为了让这块在整页里第一眼被认出来。 */
   .tb-wrap { margin: -4px 0 12px; border: 1.5px solid var(--accent-deep); border-radius: var(--r-block);
     background: var(--paper); overflow: hidden; }
   .tb-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
@@ -860,11 +827,11 @@
   .tb-note { padding: 5px 11px; font-size: var(--fs-xs); color: var(--ink2);
     background: var(--bg-2); border-bottom: 1px solid var(--line); }
   .tb-row { display: grid; gap: 4px 10px; padding: 8px 11px; align-items: baseline;
-    grid-template-columns: minmax(0,1.5fr) minmax(0,1fr) minmax(0,.85fr) minmax(0,.85fr) minmax(0,1.2fr);
+    grid-template-columns: minmax(0,1.65fr) minmax(0,.95fr) minmax(0,1.05fr) minmax(0,1.05fr) minmax(0,1.15fr);
     border-bottom: 1px dashed var(--line); font-size: var(--fs-base); }
   .tb-row:last-of-type { border-bottom: 0; }
   .tb-th { display: grid; gap: 0 10px; padding: 5px 11px 4px; align-items: baseline;
-    grid-template-columns: minmax(0,1.5fr) minmax(0,1fr) minmax(0,.85fr) minmax(0,.85fr) minmax(0,1.2fr);
+    grid-template-columns: minmax(0,1.65fr) minmax(0,.95fr) minmax(0,1.05fr) minmax(0,1.05fr) minmax(0,1.15fr);
     font-size: var(--fs-xs); color: var(--ink2); opacity: .8; border-bottom: 1px solid var(--line); }
   .tb-th span { font-weight: 600; }
   @media (max-width: 720px) {
@@ -902,6 +869,10 @@
     background: var(--accent-soft); color: var(--accent-deep); white-space: nowrap; }
   .tb-rule { padding: 7px 11px; background: var(--bg-2); border-top: 1px solid var(--line);
     font-size: var(--fs-xs); color: var(--ink2); line-height: 1.7; }
+  /* R100z254：规则按组分行，①②号打头。原来两段拼成一行，读者分不清哪条约束管哪张清单。 */
+  .tb-rule-l { display: flex; gap: 6px; align-items: baseline; }
+  .tb-rule-l + .tb-rule-l { margin-top: 4px; }
+  .tb-rule-l b { flex: 0 0 auto; color: var(--accent-deep); font-weight: 700; }
   .tb-risk { padding: 7px 11px; background: rgba(199,122,18,.08); border-top: 1px solid var(--line);
     font-size: var(--fs-xs); color: #8a5410; line-height: 1.7; }
   .tb-bt { padding: 7px 11px; background: var(--accent-soft); border-top: 1px solid var(--line);
@@ -6110,8 +6081,8 @@ function renderDuanban() {
       if (bl.length) {
         h += '<div class="tb-grp">② 今日买点 · 三池命中' +
           '<span class="tb-grp-r">9:45 盘中口径，回答「现在还能不能补」；三池＝断板反包确认池 / ' +
-          '陈学长严格池 / 陈学长放宽池。买区是**能下单的价格带**，不是目标价；' +
-          '已高于买区＝等回落，未到买区＝等它跌下来，两者别读成同一个意思</span></div>';
+          '陈学长严格池 / 陈学长放宽池。买区是能下单的价格带、不是目标价；' +
+          '已高于买区＝等回落，未到买区＝等它跌下来，别读成同一件事</span></div>';
         bl.forEach(function (r) {
           var cls = bClsMap[r.state] || 'tb-st-unknown';
           // anchor 三档：箱体几何 / 涨停锚挂单带 / 纯滑点带。说不清就会让读者猜买区是怎么来的。
@@ -6122,16 +6093,26 @@ function renderDuanban() {
             '<div><div class="tb-nm">' + esc(String(r.name || '')) +
               '<span style="font-weight:400;color:var(--ink2);font-size:var(--fs-xs);">' +
               esc(String(r.code || '')) + '</span>' +
-              '<span class="tb-tag">' + esc(String(r.srcZh || '')) + '</span>' +
-              (r.inPicks ? '<span class="tb-tag">精选</span>' : '') + '</div>' +
-              (r.posPct ? '<span class="tb-k">仓位 ' + Number(r.posPct).toFixed(0) + '%</span>' : '') +
+              '<span class="tb-tag">' + esc(String(r.srcZh || '')) + '</span></div>' +
+              // R100z254：原来「精选」也是名字行里的一个徽标，但名字+代码+来源已经占满，
+              // 它必被 flex 换到第二行、仓位再落到第三行——量过截图，一行变三行。
+              // 精选不是来源（来源已经写在徽标里），它是「这只同时在开盘精选里」的附加事实，
+              // 所以下移到副行，跟仓位同行：「仓位 21% · 精选」。
+              ((r.posPct || r.inPicks)
+                ? '<span class="tb-k">' +
+                  (r.posPct ? '仓位 ' + Number(r.posPct).toFixed(0) + '%' : '') +
+                  (r.inPicks ? (r.posPct ? ' · ' : '') +
+                    '<b style="color:var(--accent-deep);">精选</b>' : '') + '</span>'
+                : '') +
             '</div>' +
             '<div><span class="tb-v">' + p2(r.price) + '</span>' +
               '<span class="tb-k ' + cls + '">' + esc(String(r.stateZh || '')) + '</span></div>' +
             '<div><span class="tb-v">' + p2(r.low) + ' ~ ' + p2(r.high) + '</span>' +
               '<span class="tb-k">' + esc(anchorZh) + '</span></div>' +
-            '<div><span class="tb-v">' + p2(r.invalid) + '</span>' +
-              '<span class="tb-k">' + esc(String(r.invalidZh || '证伪价')) + sg(r.invalidPct, 1) + '</span></div>' +
+            // R100z254：跌幅从标签行挪到数值行（「9.94 −5.7%」/「证伪价（T日最低价）」），
+            // 否则「证伪价（T日最低价） −5.7%」在窄列里必折行，标签和数字被拆到两行。
+            '<div><span class="tb-v">' + p2(r.invalid) + sg(r.invalidPct, 1) + '</span>' +
+              '<span class="tb-k">' + esc(String(r.invalidZh || '证伪价')) + '</span></div>' +
             '<div>' + (r.target == null
               ? '<span class="tb-v">—</span><span class="tb-k">未给目标</span>'
               : '<span class="tb-v">' + p2(r.target) + sg(r.targetPct, 1) + '</span>' +
@@ -6139,7 +6120,7 @@ function renderDuanban() {
                 // R100z254 实测抓到：现价已跑到目标之上（002929 现价 58.54 / 目标 56.74 = −3.1%），
                 // 页面却仍把 −3.1% 摆在「目标」列，会被读成「目标就是亏 3 个点」。
                 // 不改数字（那是池子给的），只把「它已经在现价下方」这件事说出来。
-                (r.targetPct < 0 ? '已低于现价，不是上涨空间 · ' : '') +
+                (r.targetPct < 0 ? '低于现价 · ' : '') +
                 (r.holdDays ? ('持 ' + r.holdDays + ' 日') : '未给持有期') + '</span>') +
             '</div></div>';
         });
@@ -6150,23 +6131,30 @@ function renderDuanban() {
       // 所以只要表里出现「未给目标」，就必须说明理由——否则那个破折号会被读成「忘了填」。
       var noTarget = false;
       bl.forEach(function (r) { if (r.target == null) noTarget = true; });
+      // R100z254 截图实测两处：① 组①和组②的规则原来 `join(' ')` 拼成一段，
+      // 「限价挂单不追价」和「买区不是目标价」连成一句话，读者分不清哪条管哪张清单；
+      // ② data.js 里这些文案沿用了 markdown 的 ** 强调，页面不解析会原样印出星号
+      // （「**不改清单、不新增标的**」）。所以：按组分行 + 显示层剥掉记法（不改原文）。
+      var mdPlain = function (s) { return String(s || '').replace(/\*\*/g, '').trim(); };
       var rules = [];
-      if (te && te.rule) rules.push(String(te.rule));
-      if (bl.length) {
-        if (bs.rule) rules.push(String(bs.rule));
-        if (noTarget) {
-          rules.push('断板反包确认池的「证伪价」＝ T 日最低价，目标与持有期本轮不给——'
-            + '回测只验证到次日盘口成交 + 该价位作废，凑一个目标价就是编数字。');
-        }
+      if (te && te.rule) rules.push({ l: '①', t: mdPlain(te.rule) });
+      if (bl.length && bs.rule) rules.push({ l: '②', t: mdPlain(bs.rule) });
+      if (noTarget) {
+        rules.push({ l: '②', t: '断板反包确认池的「证伪价」＝ T 日最低价，目标与持有期本轮不给——'
+          + '回测只验证到次日盘口成交 + 该价位作废，凑一个目标价就是编数字。' });
       }
       if (nBpCut) {
         // 显式披露，不静默丢：被剔的票形态仍然有效，只是它的回测不支持「今天该买」这个结论。
-        rules.push('另有 ' + nBpCut + ' 只「横盘启动·贴沿」命中未列入本表：该源 7,783 个状态日'
+        rules.push({ l: '·', t: '另有 ' + nBpCut + ' 只「横盘启动·贴沿」命中未列入本表：该源 7,783 个状态日'
           + '单笔仅 +0.22%、盈亏比 1.16、T+5 超额 t=0.41（不显著），且它占了旧清单的 72%——'
-          + '不是形态失效，是它不该冒充今天该买什么。形态与买区仍在「横盘启动」子页。');
+          + '不是形态失效，是它不该冒充今天该买什么。形态与买区仍在「横盘启动」子页。' });
       }
-      if (rules.length) h += '<div class="tb-rule">' + esc(rules.join(' ')) + '</div>';
-      if (te && te.riskNote) h += '<div class="tb-risk">' + esc(String(te.riskNote)) + '</div>';
+      if (rules.length) {
+        h += '<div class="tb-rule">' + rules.map(function (x) {
+          return '<div class="tb-rule-l"><b>' + x.l + '</b><span>' + esc(x.t) + '</span></div>';
+        }).join('') + '</div>';
+      }
+      if (te && te.riskNote) h += '<div class="tb-risk">' + esc(mdPlain(te.riskNote)) + '</div>';
 
       var b = te && te.bt;
       if (b && b.n) {
