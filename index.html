@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610280930"></script>
+<script src="data.js?v=202610280942"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -384,18 +384,16 @@
   .cal-seg.cal-hit { color: var(--up); }
   .cal-seg.cal-mid { color: #d8a33a; }
   .cal-seg.cal-miss { color: var(--down); }
-  /* ===== R100z251：组合净值曲线回到「复盘台账」页 =====
+  /* ===== R100z251 / R100z252：组合净值曲线回到「复盘台账」页 =====
      用户 2026-10-28：「AI 预测的台账，我记得之前是有曲线的，最后被你改没了，你把它修复后
      放在台账页面」。原曲线（R100z15 起）在 R100z246 整块下线，当时只把「最大回撤 / 分档收益」
      两个数字搬到了台账里——数字留下了，图形没了，于是「一路往下」这件事只剩一行 -8.62%。
-
-     这次不用 ECharts，改手写 SVG，三条理由：
-       ① 本卡在 #score-view 里，容器默认 display:none；ECharts 在隐藏容器 init 拿到 0 宽，
-          得靠 30ms 后补一次 resize 兜底，进页时机一变就画不出来；
-       ② CDN 一挂整块消失，而这是唯一的「钱」的曲线，不能靠外网；
-       ③ viewBox 固定 + preserveAspectRatio="none" 就能满宽自适应，线宽用
-          vector-effect="non-scaling-stroke" 锁死，横向拉伸不会把线拉粗。
-     坐标轴文字一律放 SVG 外面（HTML 文本），缩放不变形、字号仍走 --fs-* 令牌（G42）。 */
+     当晚用户又说「这个曲线和之前的不一样」：初版改成了手写 SVG（折线、只标首尾两天、
+     没有 Y 轴刻度、不能悬停读数），数据相同但形状不同，看着就不是原来那张图。恢复 ECharts。
+       · .pf-curve 同时是 ECharts 容器（#chart-pf）与 SVG 兜底图的盒子，高度统一在这里；
+       · .pf-curve-x / .pf-curve-lg 只有兜底路径用（ECharts 自带坐标轴与图例）；
+       · 坐标轴文字走 --fs-* 令牌这一步在 ECharts 里是 JS 配置（fontSize: 10），不受 G42 约束，
+         留在 SVG 兜底的 HTML 文本仍守令牌。 */
   .pf-curve { margin: 8px 0 2px; height: 150px; }
   .pf-curve svg { display: block; width: 100%; height: 100%; }
   .pf-curve-x { display: flex; justify-content: space-between; margin-top: 2px;
@@ -3173,16 +3171,112 @@ function riskTipBadge(code0, poolMode) {
 
    ⚠️ R100z251（用户 2026-10-28 反悔）：「我记得之前是有曲线的，最后被你改没了，修复后放在台账页」。
    数字留下了、图形没了，于是「一路往下」这件事只剩一行 -8.62%——**结论留下、过程删掉，
-   读者就只能相信数字，没有别的东西可看**。曲线这次以手写 SVG 回来（见 pfCurveHtml），
-   仍挂在 #cal-hist 里、仍在台账页，只是不再依赖 ECharts。 */
-/* R100z251（用户 2026-10-28）：净值曲线回到台账页，改手写 SVG（原因见 CSS 上方注释）。
-   三条线：组合（红）/ 行业基准（蓝，同源尺子）/ 市场基准（灰，四指数中位）。
-   benchMissing、benchSecMissing 为真的那天没有可比基准——**断线，不补 0**：
-   把缺失日画成「原地不动」等于编了一个「那天不涨不跌」的假事实。
+   读者就只能相信数字，没有别的东西可看**。
+   ⚠️ R100z252（同日晚，用户「这个曲线和之前的不一样」）：修回来的只有**数据**，不是**那张图**。
+   初版手写 SVG 是折线、只在左右两端标两个日期、没有 Y 轴刻度、不能悬停读数；用户记得的是
+   ECharts 那版（平滑曲线 + 每个快照一个圆点 + Y 轴数值 + 悬停看当日每条线的净值）。
+   **同一组数字画成不同形状，读者会以为数字也换了**——恢复 ECharts 形态，见 pfCurveHtml。 */
+/* R100z251 / R100z252（用户 2026-10-28）：净值曲线挂在台账页，形态恢复成原来那张 ECharts 图。
+   四条线：组合（红）/ 市场基准（灰，四指数中位）/ 行业基准（蓝，同花顺一级行业中位，同源尺子）
+   / 主板基准（金，上证+深成等权）。旧版只画前三条，第四条有数据却不上图，一并补上。
+   benchMissing、benchSecMissing 为真的那天没有可比基准，data 传 null —— 线在这里断掉，
+   **不补 0**。旧版直接画 x.bench（缺失日被写成 1.00），看上去像一条「那天不涨不跌」的平滑横线，
+   是它唯一的数据缺陷，这次一并修掉。
+   容器在 #score-view 里默认 display:none，ECharts 在隐藏容器 init 会量到 0 宽、只画出一条窄缝，
+   所以不在 XHR 回来时硬 init，而是「显形了才 init」：initPfChart() 先量 clientWidth，
+   进页时（openScore）再兜一次；窗口 resize 另挂一个监听。
+   取不到 echarts 时退回手写 SVG（pfCurveSvg），曲线不至于整块消失。
    取不到数据返回空串，调用方照常只出数字（不白屏、不留空框）。 */
-function pfCurveHtml(se) {
+var PF_SE = null, PF_CHART = null, PF_RSZ = false;
+
+function pfCurveOption(se) {
+  var dates = se.map(function (x) { return String(x.date || '').slice(5); });
+  var has = function (k) {
+    for (var i = 0; i < se.length; i++) { if (se[i][k] !== null && se[i][k] !== undefined) return true; }
+    return false;
+  };
+  // 缺失日 → null（断线），非法值 → null；其余取原值。
+  var pick = function (key, missKey) {
+    return se.map(function (x) {
+      if (missKey && x[missKey]) return null;
+      var v = Number(x[key]);
+      return (isFinite(v) && v > 0) ? v : null;
+    });
+  };
+  var ln = function (key, missKey, name, color) {
+    return {
+      name: name, type: 'line', smooth: true, connectNulls: false,
+      symbol: 'circle', symbolSize: 5, showSymbol: true,
+      lineStyle: { width: 2, color: color }, itemStyle: { color: color },
+      emphasis: { focus: 'series' }, data: pick(key, missKey)
+    };
+  };
+  var series = [ln('pf', null, '组合', '#f0435c'),
+                ln('bench', 'benchMissing', '市场基准', '#8fa3b8')];
+  if (has('benchSec')) series.push(ln('benchSec', 'benchSecMissing', '行业基准', '#5aa9d6'));
+  if (has('benchMain')) series.push(ln('benchMain', null, '主板基准', '#c9a14a'));
+  return {
+    animationDuration: 420,
+    grid: { left: 48, right: 14, top: 26, bottom: 22 },
+    tooltip: {
+      trigger: 'axis',
+      // 悬停直接读「净值 + 相对起点的累计涨跌」，省得读者自己心算 0.9138 是跌了多少。
+      formatter: function (ps) {
+        var out = ps.length ? String(ps[0].axisValue) : '';
+        ps.forEach(function (o) {
+          if (o.value === null || o.value === undefined) return;  // 缺失日不编数
+          var v = Number(o.value), pct = (v - 1) * 100;
+          out += '<br>' + o.marker + o.seriesName + ' <b>' + v.toFixed(4) + '</b>　'
+            + (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+        });
+        return out;
+      }
+    },
+    legend: { top: 0, icon: 'roundRect', itemWidth: 14, itemHeight: 3,
+              textStyle: { fontSize: 10, color: '#5b6b7f' } },
+    xAxis: { type: 'category', boundaryGap: false, data: dates,
+             axisLabel: { fontSize: 10, color: '#7b8a9b' }, axisTick: { show: false },
+             axisLine: { lineStyle: { color: '#cfd8e0' } } },
+    yAxis: { type: 'value', scale: true,
+             axisLabel: { fontSize: 10, color: '#7b8a9b',
+                          formatter: function (v) { return Number(v).toFixed(2); } },
+             splitLine: { lineStyle: { color: '#eef2f6' } } },
+    series: series
+  };
+}
+
+/* 什么时候显形什么时候建图。返回 true 表示这次真的画上了。
+   容器被 renderScoreView 重绘过时（DOM 节点换了新对象），旧实例要 dispose 掉重来，
+   否则 getInstanceByDom 找不到、而 PF_CHART 还指着已经离开文档的那个 canvas。 */
+function initPfChart() {
   try {
-    if (!se || se.length < 2) return '';
+    var el = document.getElementById('chart-pf');
+    if (!el || !PF_SE || PF_SE.length < 2) return false;
+    if (typeof echarts === 'undefined') return false;
+    if (PF_CHART && PF_CHART.getDom() !== el) {
+      try { PF_CHART.dispose(); } catch (e) {}
+      PF_CHART = null;
+    }
+    if (!PF_CHART) {
+      if (!el.clientWidth) return false;   // 还没显形，等进页或下次 tick 再试
+      PF_CHART = echarts.init(el);
+    }
+    PF_CHART.setOption(pfCurveOption(PF_SE), true);
+    PF_CHART.resize();
+    if (!PF_RSZ) {
+      PF_RSZ = true;
+      window.addEventListener('resize', function () {
+        if (PF_CHART) { try { PF_CHART.resize(); } catch (e) {} }
+      });
+    }
+    return true;
+  } catch (e) { return false; }
+}
+
+/* 降级路径：拿不到 echarts 时用固定 viewBox 的手写 SVG，至少还有形状。
+   折线、无刻度、无悬停——所以它是兜底，不是常态。 */
+function pfCurveSvg(se) {
+  try {
     var defs = [
       { k: 'pf', nm: '组合', c: '#f0435c', w: 2.4, miss: null, cls: 'k-pf' },
       { k: 'benchSec', nm: '行业基准', c: '#4a90c4', w: 1.8, miss: 'benchSecMissing', cls: 'k-sec' },
@@ -3211,14 +3305,13 @@ function pfCurveHtml(se) {
     var f = function (v) { return Math.round(v * 10) / 10; };
     var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img"'
       + ' aria-label="组合净值曲线：组合与两种基准的累计净值">';
-    // 起点 1.00 参考线：所有线都在它下面，才算「这套预测在亏钱」看得见。
     svg += '<line x1="0" y1="' + f(py(1)) + '" x2="' + W + '" y2="' + f(py(1)) + '"'
       + ' stroke="#c9d4df" stroke-width="1" stroke-dasharray="6 5" vector-effect="non-scaling-stroke"/>';
     used.forEach(function (d) {
       var pts = [];
       var flush = function () {
         if (pts.length >= 2) {
-          svg += '<polyline points="' + pts.map(function (p) { return f(p[0]) + ',' + f(p[1]); }).join(' ')
+          svg += '<polyline points="' + pts.map(function (q) { return f(q[0]) + ',' + f(q[1]); }).join(' ')
             + '" fill="none" stroke="' + d.c + '" stroke-width="' + d.w
             + '" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
         }
@@ -3236,13 +3329,20 @@ function pfCurveHtml(se) {
       return '<span><i class="' + d.cls + '"></i>' + d.nm + '</span>';
     }).join('');
     lg += '<span><i class="k-base"></i>起点 1.00</span>';
-    var d0 = String(se[0].date || '').slice(5), d1 = String(se[n - 1].date || '').slice(5);
-    return '<div class="cal-hist-t">📈 组合净值曲线（每个预测日最高确信档标的等权，按日累乘；'
-      + n + ' 个快照）</div>'
-      + '<div class="pf-curve">' + svg + '</div>'
+    var d0 = String(se[0].date || '').slice(5), d1 = String(se[se.length - 1].date || '').slice(5);
+    return '<div class="pf-curve">' + svg + '</div>'
       + '<div class="pf-curve-x"><span>' + esc(d0) + '</span><span>' + esc(d1) + '</span></div>'
       + '<div class="pf-curve-lg">' + lg + '</div>';
   } catch (e) { return ''; }
+}
+
+function pfCurveHtml(se) {
+  if (!se || se.length < 2) return '';
+  var head = '<div class="cal-hist-t">📈 组合净值曲线（每个预测日最高确信档标的等权，按日累乘；'
+    + se.length + ' 个快照）</div>';
+  PF_SE = se;
+  if (typeof echarts === 'undefined') return head + pfCurveSvg(se);
+  return head + '<div class="pf-curve" id="chart-pf"></div>';
 }
 
 function loadPortfolioCash(box) {
@@ -3296,6 +3396,10 @@ function loadPortfolioCash(box) {
           + seg('高') + seg('中')
           + '</div>';
         box.insertAdjacentHTML('beforeend', h);
+        // R100z252：容器刚插进 DOM，若台账页此刻正开着就直接画；还藏着（clientWidth=0）
+        // 就交给 openScore 里那次兜底 initPfChart —— 两条路各管一种进页顺序。
+        initPfChart();
+        setTimeout(initPfChart, 60);
       } catch (e) { /* 台账坏了也不影响主看板 */ }
     };
     xhr.send();
@@ -7095,6 +7199,11 @@ function openScore() {
   document.body.classList.add('score-open');
   window.scrollTo(0, window._scViewScrollY || 0);
   renderScoreView();
+  // R100z252：净值曲线是 ECharts，藏在 display:none 的 #score-view 里 init 会量到 0 宽。
+  // 进页后这里兜一次（数据可能比进页早到、也可能晚到，两条路都走 initPfChart）——
+  // 60ms 是等 body.score-open 的 display 切换生效并完成一次布局，不是猜的：实测 0ms 时
+  // 容器 clientWidth 仍是 0。
+  setTimeout(initPfChart, 60);
   // R100z163：📋 返回键在独占页里从 display:none 变 flex，必须重新按记忆位置落槽——
   // 否则用户把悬浮组拖到左边、进复盘页后 📋 还停在 CSS 默认的右侧（看起来像"不跟随"）。
   if (window.__applyFloatSaved) window.__applyFloatSaved();
