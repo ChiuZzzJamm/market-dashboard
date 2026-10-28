@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610280841"></script>
+<script src="data.js?v=202610280930"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -384,6 +384,30 @@
   .cal-seg.cal-hit { color: var(--up); }
   .cal-seg.cal-mid { color: #d8a33a; }
   .cal-seg.cal-miss { color: var(--down); }
+  /* ===== R100z251：组合净值曲线回到「复盘台账」页 =====
+     用户 2026-10-28：「AI 预测的台账，我记得之前是有曲线的，最后被你改没了，你把它修复后
+     放在台账页面」。原曲线（R100z15 起）在 R100z246 整块下线，当时只把「最大回撤 / 分档收益」
+     两个数字搬到了台账里——数字留下了，图形没了，于是「一路往下」这件事只剩一行 -8.62%。
+
+     这次不用 ECharts，改手写 SVG，三条理由：
+       ① 本卡在 #score-view 里，容器默认 display:none；ECharts 在隐藏容器 init 拿到 0 宽，
+          得靠 30ms 后补一次 resize 兜底，进页时机一变就画不出来；
+       ② CDN 一挂整块消失，而这是唯一的「钱」的曲线，不能靠外网；
+       ③ viewBox 固定 + preserveAspectRatio="none" 就能满宽自适应，线宽用
+          vector-effect="non-scaling-stroke" 锁死，横向拉伸不会把线拉粗。
+     坐标轴文字一律放 SVG 外面（HTML 文本），缩放不变形、字号仍走 --fs-* 令牌（G42）。 */
+  .pf-curve { margin: 8px 0 2px; height: 150px; }
+  .pf-curve svg { display: block; width: 100%; height: 100%; }
+  .pf-curve-x { display: flex; justify-content: space-between; margin-top: 2px;
+                font-size: var(--fs-xs); color: var(--ink2); font-variant-numeric: tabular-nums; }
+  .pf-curve-lg { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 5px;
+                 font-size: var(--fs-xs); color: var(--ink2); }
+  .pf-curve-lg i { display: inline-block; width: 14px; height: 3px; margin-right: 4px;
+                   vertical-align: middle; border-radius: 2px; }
+  .pf-curve-lg i.k-pf { background: #f0435c; }
+  .pf-curve-lg i.k-sec { background: #4a90c4; }
+  .pf-curve-lg i.k-mkt { background: #8fa3b8; }
+  .pf-curve-lg i.k-base { background: #c9d4df; }
   .ai-verify .v-note { display: block; font-weight: 400; font-size: var(--fs-sm); color: var(--ink-soft, #6b7a8d); margin-top: 1px; }
   /* R100z81：预测验证并入「大盘趋势研判」卡——块内分隔线 + 与研判文同卡的间距 */
   .v-divider { height: 1px; background: var(--line); margin: 14px 0 6px; }
@@ -1505,6 +1529,9 @@
   .stk-go:hover { color: var(--accent-deep); border-bottom-color: var(--accent-deep); }
   @media (max-width: 720px) {
     .rv-hero b { font-size: var(--fs-h2); }
+    /* R100z251：净值曲线窄屏压到 126px——一行三条线在手机首屏还看得清拐点，
+       再高就把下面的「钱」胶囊挤出首屏。 */
+    .pf-curve { height: 126px; }
     .rv-bar, .rv-bar.g4 { grid-template-columns: minmax(0,1.25fr) minmax(0,1fr) 44px 44px; gap: 6px; }
     .rv-bar .rv-x { display: none; }
     /* 窄屏先把「历史台账」这个后缀让出来：它只说明数据从哪来，不值得挤掉指标名。 */
@@ -3142,7 +3169,82 @@ function riskTipBadge(code0, poolMode) {
    命中 60% 也可能亏钱——这两项是复盘拿不到的增量，必须留：
      ① 最大回撤：最不利情形下要忍多深的浮亏（复盘完全没有这个字段）；
      ② 分档实际收益：高确信到底是不是真赚得更多（复盘的分档只比命中率）。
-   落点改为追加到 #cal-hist（预测复盘卡），不再单独占一块。 */
+   落点改为追加到 #cal-hist（预测复盘卡），不再单独占一块。
+
+   ⚠️ R100z251（用户 2026-10-28 反悔）：「我记得之前是有曲线的，最后被你改没了，修复后放在台账页」。
+   数字留下了、图形没了，于是「一路往下」这件事只剩一行 -8.62%——**结论留下、过程删掉，
+   读者就只能相信数字，没有别的东西可看**。曲线这次以手写 SVG 回来（见 pfCurveHtml），
+   仍挂在 #cal-hist 里、仍在台账页，只是不再依赖 ECharts。 */
+/* R100z251（用户 2026-10-28）：净值曲线回到台账页，改手写 SVG（原因见 CSS 上方注释）。
+   三条线：组合（红）/ 行业基准（蓝，同源尺子）/ 市场基准（灰，四指数中位）。
+   benchMissing、benchSecMissing 为真的那天没有可比基准——**断线，不补 0**：
+   把缺失日画成「原地不动」等于编了一个「那天不涨不跌」的假事实。
+   取不到数据返回空串，调用方照常只出数字（不白屏、不留空框）。 */
+function pfCurveHtml(se) {
+  try {
+    if (!se || se.length < 2) return '';
+    var defs = [
+      { k: 'pf', nm: '组合', c: '#f0435c', w: 2.4, miss: null, cls: 'k-pf' },
+      { k: 'benchSec', nm: '行业基准', c: '#4a90c4', w: 1.8, miss: 'benchSecMissing', cls: 'k-sec' },
+      { k: 'bench', nm: '市场基准', c: '#8fa3b8', w: 1.6, miss: 'benchMissing', cls: 'k-mkt' }
+    ];
+    var val = function (x, d) {
+      if (d.miss && x[d.miss]) return null;
+      var v = Number(x[d.k]);
+      return (isFinite(v) && v > 0) ? v : null;
+    };
+    var used = [];
+    defs.forEach(function (d) {
+      for (var i = 0; i < se.length; i++) { if (val(se[i], d) !== null) { used.push(d); return; } }
+    });
+    if (!used.length) return '';
+    var all = [1];
+    used.forEach(function (d) {
+      se.forEach(function (x) { var v = val(x, d); if (v !== null) all.push(v); });
+    });
+    var lo = Math.min.apply(null, all), hi = Math.max.apply(null, all);
+    var rg = (hi - lo) || 0.01;
+    lo -= rg * 0.12; hi += rg * 0.12;
+    var W = 1000, H = 260, n = se.length;
+    var px = function (i) { return n > 1 ? i / (n - 1) * W : W / 2; };
+    var py = function (v) { return (hi - v) / (hi - lo) * H; };
+    var f = function (v) { return Math.round(v * 10) / 10; };
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img"'
+      + ' aria-label="组合净值曲线：组合与两种基准的累计净值">';
+    // 起点 1.00 参考线：所有线都在它下面，才算「这套预测在亏钱」看得见。
+    svg += '<line x1="0" y1="' + f(py(1)) + '" x2="' + W + '" y2="' + f(py(1)) + '"'
+      + ' stroke="#c9d4df" stroke-width="1" stroke-dasharray="6 5" vector-effect="non-scaling-stroke"/>';
+    used.forEach(function (d) {
+      var pts = [];
+      var flush = function () {
+        if (pts.length >= 2) {
+          svg += '<polyline points="' + pts.map(function (p) { return f(p[0]) + ',' + f(p[1]); }).join(' ')
+            + '" fill="none" stroke="' + d.c + '" stroke-width="' + d.w
+            + '" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
+        }
+        pts = [];
+      };
+      se.forEach(function (x, i) {
+        var v = val(x, d);
+        if (v === null) { flush(); return; }
+        pts.push([px(i), py(v)]);
+      });
+      flush();
+    });
+    svg += '</svg>';
+    var lg = used.map(function (d) {
+      return '<span><i class="' + d.cls + '"></i>' + d.nm + '</span>';
+    }).join('');
+    lg += '<span><i class="k-base"></i>起点 1.00</span>';
+    var d0 = String(se[0].date || '').slice(5), d1 = String(se[n - 1].date || '').slice(5);
+    return '<div class="cal-hist-t">📈 组合净值曲线（每个预测日最高确信档标的等权，按日累乘；'
+      + n + ' 个快照）</div>'
+      + '<div class="pf-curve">' + svg + '</div>'
+      + '<div class="pf-curve-x"><span>' + esc(d0) + '</span><span>' + esc(d1) + '</span></div>'
+      + '<div class="pf-curve-lg">' + lg + '</div>';
+  } catch (e) { return ''; }
+}
+
 function loadPortfolioCash(box) {
   if (!box) return;
   try {
@@ -3154,6 +3256,7 @@ function loadPortfolioCash(box) {
         var d = JSON.parse(xhr.responseText);
         var s = (d && d.stat) || {};
         if (s.maxDdPct === null || s.maxDdPct === undefined) return;
+        var se = (d && d.series) || [];
         var pct1 = function (v) {
           var n = Number(v);
           return (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
@@ -3173,7 +3276,10 @@ function loadPortfolioCash(box) {
         //    「组合 -6.82%行业基准 -5.27%超额…」粘成一句没有分隔；
         // ② .pf-note 的 color 是灰的，涨跌色虽然能靠 .up/.down 覆盖，但胶囊没有描边，
         //    三五个数字挤在一行读起来更像流水账而不是仪表。
-        var h = '<div class="pf-note">💰 组合实盘口径（' + (s.days || 0)
+        // R100z251：曲线在前、数字在后——先看形状（一路往下还是一路往上），
+        // 再看具体几个点。曲线取不到时 pfCurveHtml 返回空串，只出数字，不留空框。
+        var h = pfCurveHtml(se)
+          + '<div class="pf-note">💰 组合实盘口径（' + (s.days || 0)
           + ' 个交易日，毛收益未扣费税）——这是「钱」的口径，与上方命中率是两回事：'
           + '命中率高而这里为负，就说明方向对、标的没选对。</div>'
           + '<div class="pf-stat">'
