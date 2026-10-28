@@ -300,8 +300,14 @@ PRODUCT_OWNERSHIP = {
                  "update_star 只做开盘核对（star.timingExec），不改单、不加票。"),
     },
     "fullScan": {
-        "require": (), "proof": "intermediate",
-        "note": "脚本间中间产物：读方是 harmonic_detect/accumulation_score，不进前端渲染",
+        "require": ("fullScan", "full_scan"),
+        "note": ("R101 全市场扫描（full_scan.py，16:00 数据步产出）。读方三类："
+                 "① 脚本 harmonic_detect / accumulation_score；"
+                 "② **前端**：「明日可下单·缩量回踩」档要按代码给全市场票取名，"
+                 "名字只认 stkKlineNames + fullScan.names 两处，拿不到就只剩代码、"
+                 "卡片上认不出是哪只票（R100z270）。所以它不再是「不进前端」的中间产物，"
+                 "豁免由 proof=intermediate 改成自动化点名校验（19:30 / 9:45 / 16:00 三条都点名 full_scan）；"
+                 "③ 点名的三条自动化里任一条改名/换措辞，本闸立刻 FAIL——那是提醒你补回去。"),
     },
     "weekendNews": {
         "require": (), "proof": "intermediate",
