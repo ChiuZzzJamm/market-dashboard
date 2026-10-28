@@ -6955,7 +6955,475 @@ function ordPoolCore() {
    下次有人想「按 code 查形态档」会先看见它、然后拿到一份和卡片不同的数（缓存不清、口径独立）。
    要按 code 查，正路是 DB_INDEX['o|'+code]（卡片出卡时注册的那份），别再建第二份索引。 */
 
+/* ==========================================================================
+   R100z269 · 上下文：板块行情表 / 连板天梯按行业归堆 / 全市场代码→简称
+   --------------------------------------------------------------------------
+   为什么「同板块」必须走 sectorMap 而不是条目自带的 sector：
+     条目的 sector 是 90 个一级名（汽车零部件 / 零售 / 游戏），连板天梯的 hybk
+     是细分名（汽车零部 / 一般零售 / 游戏Ⅱ），两套名字直接比永远不相等——
+     实测 8 条连板里只有「专用设备」一条能精确命中，其余 7 条会被判成「没有同板块连板」。
+     而 sectorMap 对全市场（含连板股）都有值，该票与连板股按 code 各查一次，
+     两边同源同细分口径，才比得出「同板块」。
+   板块行情（涨幅/资金/涨停数）反过来必须走 bkCode 去 join allBoards：
+     bkCode 是生成侧写进条目的一级行业代码，实测 chenPool 21 条里 19 条命中，
+     比按名字模糊匹配可靠；命中不了就返回 null，不拿邻近板块顶替。
+   ========================================================================== */
+var _ORD_CTX = null, _ORD_CTX_KEY = '';
+function ordCtx() {
+  var D = window.DASHBOARD_DATA || {};
+  var key = String(D.updatedAt || '') + '|' + (((D.ashare || {}).allBoards || []).length);
+  if (_ORD_CTX && _ORD_CTX_KEY === key) return _ORD_CTX;
+  var ab = (D.ashare || {}).allBoards || [];
+  var byBk = {}, byName = {};
+  for (var i = 0; i < ab.length; i++) {
+    var b = ab[i];
+    if (!b) continue;
+    if (b.code) byBk[String(b.code)] = b;
+    if (b.name) byName[String(b.name)] = b;
+  }
+  var sm = D.sectorMap || {};
+  var lb = ((D.ashare || {}).lianban || []).slice();
+  var lbBySec = {}, lbByName = {};
+  for (var j = 0; j < lb.length; j++) {
+    var x = lb[j], c = String(x.code || '').replace(/\D/g, '');
+    var sec = sm[c] || '';
+    if (sec) (lbBySec[sec] = lbBySec[sec] || []).push(x);
+    if (x.name) (lbByName[String(x.name)] = lbByName[String(x.name)] || []).push(x);
+  }
+  _ORD_CTX = { D: D, byBk: byBk, byName: byName, sm: sm, lianban: lb,
+               lbBySec: lbBySec, lbByName: lbByName, names: null };
+  _ORD_CTX_KEY = key;
+  return _ORD_CTX;
+}
+/* 行业名归一化表（R100z270）。两套名字为什么对不上：
+     sectorMap（个股行业）写的是「行业缩写 / 词典口径」——汽车零部、塑料、物资外贸；
+     allBoards（行情源）写的是「同花顺一级行业名」——汽车零部件、塑料制品、贸易。
+   实测 213 个 sectorMap 取值里只有 75 个与 allBoards 同名。不归一化，就有 2/3 的票
+   「当天板块情况」整块空着；而用户要的恰恰是「拿板块情况判它明天能不能补涨」。
+   与 pctAlias（主题名→行业名，给 AI 预测板块聚合涨幅用）不是一回事，故单列一张：
+   那个由 board_alias.json 锁源给 entry_zone 用，别往一起混。
+   目标名必须真实存在于 allBoards——写错不报错，只会安静地回落到「对不上」。 */
+var ORD_SEC_ALIAS = {
+  '汽车零部': '汽车零部件', '塑料': '塑料制品', '物资外贸': '贸易',
+  '电机Ⅱ': '电机', '游戏Ⅱ': '游戏', 'IT服务Ⅱ': 'IT服务',
+  '半导体·设备材料': '半导体', '半导体材料': '半导体', '半导体设备': '半导体',
+  '集成电路': '半导体', '电子器件': '元件', '印制电路板': '元件',
+  '光学光电': '光学光电子', '光模块': '通信设备', '光通信·光模块': '通信设备',
+  '通信传输设备': '通信设备', '通信配套服务': '通信服务',
+  '一般零售': '零售', '商业百货': '零售', '百货': '零售', '超市': '零售',
+  '食品加工': '食品加工制造', '食品行业': '食品加工制造', '食品综合': '食品加工制造',
+  '休闲食品': '食品加工制造', '食品饮料': '食品加工制造', '肉制品': '食品加工制造',
+  '调味发酵': '食品加工制造', '消费·食品加工': '食品加工制造',
+  '乳品': '饮料制造', '软饮料': '饮料制造', '饮料乳品': '饮料制造',
+  '房地产开发': '房地产', '生物制药': '生物制品', '电力行业': '电力', '新能源发电': '电力',
+  '钢铁行业': '钢铁', '煤炭行业': '煤炭开采加工', '环保行业': '环境治理', '造纸行业': '造纸',
+  '化纤行业': '化学纤维', '其他化学制品': '化学制品', '其他化学原料': '化学原料',
+  '涂料油漆油墨制造': '化学制品', '纺织化学用品': '化学制品', '民爆用品': '化学制品',
+  '家纺': '服装家纺', '服装鞋类': '服装家纺', '棉纺': '纺织制造', '纺织行业': '纺织制造',
+  '其他纺织': '纺织制造',
+  '建筑建材': '建筑材料', '水泥行业': '建筑材料', '玻璃行业': '建筑材料',
+  '装修装饰': '建筑装饰', '园林工程': '建筑装饰',
+  '家具': '家居用品', '家具行业': '家居用品', '家电家居': '家居用品', '其他家用轻工': '家居用品',
+  '新型电池·固态电池': '电池', '光伏逆变器': '光伏设备', '发电设备': '其他电源设备',
+  '机器人·自动化': '自动化设备', '自动化设': '自动化设备', '其它专用机械': '专用设备',
+  '铁路设备': '轨交设备', '地面兵装': '军工装备', '军工': '军工装备',
+  '数字媒体': '文化传媒', '平面媒体': '文化传媒', '传媒娱乐': '文化传媒',
+  '印刷包装': '包装印刷', '石油行业': '石油加工贸易', '炼化及贸': '石油加工贸易',
+  '公路桥梁': '公路铁路运输', '酒店旅游': '旅游及酒店', '种植业': '种植业与林业',
+  '农药化肥': '农化制品', '供水供气': '燃气', '综合行业': '综合', '其它行业': '综合',
+  '大金融·券商': '证券', '有色·工业金属': '工业金属', '黄金避险': '贵金属'
+};
+/* 返回 {b, how}：how = bkCode（行业代码直接命中）/ name（同名）/ alias（归一化）。
+   alias 命中的必须在文案里标出来——「按行业名近似匹配」，读者才知道这一项是推的。 */
+function ordSecBoard(sec) {
+  sec = String(sec || '');
+  if (!sec) return null;
+  var ctx = ordCtx();
+  if (ctx.byName[sec]) return { b: ctx.byName[sec], how: 'name' };
+  var hit = ORD_SEC_ALIAS[sec];
+  if (!hit) {
+    var t = sec.replace(/[ⅠⅡⅢ]+$/, '').replace(/(行业|板块)$/, '');
+    if (t && ctx.byName[t]) hit = t;
+    else if (t && ORD_SEC_ALIAS[t]) hit = ORD_SEC_ALIAS[t];
+  }
+  if (hit && ctx.byName[hit]) return { b: ctx.byName[hit], how: 'alias' };
+  return null;   // 对不上就不猜：宁可这一项空着，也不拿别的板块的分给它
+}
+function ordBoardInfo(e) {
+  if (!e) return null;
+  var ctx = ordCtx();
+  var bk = e.bkCode ? String(e.bkCode) : '';
+  if (bk && ctx.byBk[bk]) return { b: ctx.byBk[bk], how: 'bkCode' };
+  return ordSecBoard(e.sector);
+}
+function ordBoardOf(e) { var r = ordBoardInfo(e); return r ? r.b : null; }
+/* 全市场代码→简称。stkKlines 有 1499 只，但没名字的一律不出卡——
+   印一排「600xxx」的卡片读者认不出是哪只票，宁可少列，并在摘要里说少了几只。 */
+function ordNameMap() {
+  var ctx = ordCtx();
+  if (ctx.names) return ctx.names;
+  var D = ctx.D, m = {};
+  var put = function (c, n) {
+    c = String(c || '').replace(/\D/g, '');
+    if (/^\d{6}$/.test(c) && n && !m[c]) m[c] = String(n);
+  };
+  var kn = D.stkKlineNames || {};
+  Object.keys(kn).forEach(function (c) { put(c, kn[c]); });
+  var fn = (D.fullScan || {}).names || {};
+  Object.keys(fn).forEach(function (c) { put(c, fn[c]); });
+  var db = D.duanban || {}, cp = D.chenPool || {};
+  [].concat(db.confirmed || [], db.watching || [], db.failPool || [], db.mcapCut || [],
+            cp.strict || [], cp.loose || [], cp.watching || [], cp.failPool || [])
+    .forEach(function (e) { if (e) put(e.code, e.name); });
+  ctx.names = m;
+  return m;
+}
+/* 名字字辈（用户举的「羊字辈」）：与连板股共用某个非通用字，就算同字辈。
+   这是题材横向扩散的近似——不是行业归属，也不进「同板块连板」那份计数，
+   单独成一项并在拆解表里写明是「按名称共字」。停用字是必须的：
+   不停用的话「XX 科技 / XX 股份」会让半数票互相认亲，这一项就变成人人 +5。 */
+var ORD_NAME_STOP = {};
+('股份有限科技电子新能源华中国东南西北大小新光线智能精密装备制造材料生物医药食品环保建设发展产业集团控股国际实业投资本环宇恒通达成方正盛泰宏远昌隆鑫源丰润泽坤和顺安信德利隆环球东方南钢').split('')
+  .forEach(function (ch) { if (ch) ORD_NAME_STOP[ch] = 1; });
+function ordNamePeers(name) {
+  var ctx = ordCtx(), out = [];
+  name = String(name || '');
+  if (name.length < 2) return out;
+  Object.keys(ctx.lbByName).forEach(function (nm) {
+    if (nm === name) return;
+    for (var i = 0; i < name.length; i++) {
+      var ch = name.charAt(i);
+      if (ORD_NAME_STOP[ch]) continue;
+      if (nm.indexOf(ch) >= 0) { out.push(nm); return; }
+    }
+  });
+  return out;
+}
+
+/* ==========================================================================
+   R100z269 · 「明日概率」：新闻面基线 + 板块 + 资金 + 连板补涨位
+   —— 用户 2026-10-28 22:0x：「上涨概率里面要包括当天板块情况+资金情况+
+      连板标的里面是否有对应的板块（这样可以判断是否可以补涨）…
+      你这个上涨概率里面要分析很多内容」
+   --------------------------------------------------------------------------
+   为什么必须重做，而不是给旧 probability 加两分：
+     旧 probability 是脚本按新闻面打的基线（probNote 原文：「脚本基线：利空加权4/
+     利好加权2」），它只回答「有没有消息」，不回答「明天有没有人接」。
+     板块在涨、主力在净流入、同板块有 2~3 家连板——这三件事对次日承接的影响
+     远大于一条中性公告，但它们一个都没进模型。
+   以基线为锚、只做加减的理由（24.110 同一量只许一套数）：
+     断板页印的「上涨概率 74%」就是这个 base。若这里另算一个绝对数，
+     同一只票会在两个页面出现 74% 与 61%，读者无法判断谁对。所以这里
+     输出 = base + 各因子，并在拆解表里把 base 与每一项都列出来——
+     差异有出处，减法读者不用自己做。
+   口径声明（必须写在页面上，不能只写在代码里）：这是**因子打分**，
+   不是回测胜率。没有任何一组回测支持「+6 分等于多 6% 胜率」这种换算，
+   它的用途是排序与解释，不是预测精度。
+   ========================================================================== */
+var ORD_PROB_WEIGHT = {
+  /* 权重整体比第一版小一档（第一版跑出来 74 分的票一加就顶到 95，
+     高基线票全挤在天花板上，排序反而没有区分度）。现在单项合计上限约 +50，
+     base 74 的最强票落在 88~92，base 50 的落在 60~70，档与档拉得开。 */
+  // 板块今日涨幅：+4.85% 的板块 ≈ +4.9（封顶 ±8）
+  boardPct: 1.0,
+  boardPctCap: 8,
+  // 主力净流入（亿元）：+100 亿 ≈ +5（封顶 ±5）
+  netInflow: 0.15,
+  netInflowCap: 5,
+  // 板块涨停家数：每家 +0.7，封顶 +4——涨停 6 家以上就饱和了
+  ztCount: 0.7,
+  ztCap: 4,
+  // 板块内上涨占比：(占比−50%)×16，封顶 ±4
+  breadth: 16,
+  breadthCap: 4,
+  // 同板块最高连板数 → 加分。2 板给得最多，不是笔误：
+  // 4~5 板是龙头自己走到高位，板块已被充分定价、补涨尾声；
+  // 2 板梯队刚成型，扩散才开始，跟风票的次日承接最好。
+  lbcMap: { 1: 3, 2: 5, 3: 4, 4: 2, 5: 1 },
+  // 补涨前夜：板块在涨、它自己还没动 → 次日最容易补涨（用户 2026-10-28 的例子就是这一条）
+  catchUp: 7,
+  /* 追高折扣（R100z270）：板块这四项（涨幅/资金/涨停/涨跌家数）原本无差别加给所有票，
+     结果是「板块涨了一周、它今天也跟涨 5%」和「板块刚启动、它自己还在收阴」拿一样的分——
+     前者是追高，后者才是补涨。板块的正分按它自己今天走没走来打折：
+       今日涨幅 ≤ t0(1%)  → 全额（这就是补涨场景：板块的钱还没进它这里）
+       < t1(5%)          → 打 k1(45%) 折，已经跟涨了一半，强度被它吃掉一部分
+       ≥ t1(5%)          → 只留 k2(15%)，明天是承接不是补涨
+     负分不打折：板块在跌是客观坏消息，跟它自己涨没涨没关系。 */
+  chaseDamp: { t0: 1, t1: 5, k1: 0.45, k2: 0.15 },
+  // 板块在涨、它今天也已追到 5% 以上 → 另扣一笔：明天买它等于接力昨天的涨幅
+  chasePenalty: -3,
+  // 名字辈分（羊字辈这种玄学抱团）：≥2 只连板股共字 +4，1 只 +1
+  namePeers: [4, 1],
+  // 缩量质量：shrinkT＝当日量/均量，越缩越干净
+  shrinkT: [[0.6, 5], [0.9, 2]],
+  shrinkFat: -5,           // >1.5 倍说明没缩量，洗盘没走完
+  // 反包空间：距涨停日最高价的百分比
+  gapT: [[8, 3], [4, 2]],
+  gapTight: -3,            // 不到 1.5% 空间，反包也赚不到
+  // 情绪 / 风险 / 市值
+  sentBull: 4, sentBear: -8, tailRisk: -6,
+  mcapSmall: 2, mcapLarge: -3,
+  // 封顶：95 会让强票全撞顶，92 留出区分度；下限 5 保留（极端利空票不该显示 0%）
+  cap: 92, floor: 5
+};
+function ordProbOf(it) {
+  var ctx = ordCtx(), W = ORD_PROB_WEIGHT;
+  it = it || {};
+  var db = it.db || {}, ch = it.chen || {};
+  var code = String(it.code || db.code || ch.code || '').replace(/\D/g, '');
+  var name = it.name || db.name || ch.name || code;
+  var e = (db.code ? db : ch);
+  var parts = [];
+  var push = function (k, v, d) { if (v && isFinite(v)) parts.push({ k: k, v: Math.round(v * 10) / 10, d: d || '' }); };
+
+  // —— 基线：断板池（AI 已校准）优先，其次陈学长池脚本基线 ——
+  var base = Number(db.probability), baseSrc = '断板池新闻面基线';
+  if (!isFinite(base)) { base = Number(ch.probability); baseSrc = '陈学长池脚本基线'; }
+  if (!isFinite(base)) { base = 50; baseSrc = '无新闻基线，按中性 50 起算'; }
+
+  /* —— 它自己今天涨了多少：板块因子要不要打折、算不算补涨位，全看这个数 ——
+     （R100z270 前这段在 C 里，A 用不到 → 板块强度四项无差别加分 = 变相追高） */
+  var myPct = (it.pct != null && isFinite(Number(it.pct))) ? Number(it.pct) : tcPctOf(code);
+  if (myPct != null && !isFinite(myPct)) myPct = null;
+  var sec = ctx.sm[code] || String(db.sector || ch.sector || it.sector || '');
+
+  // —— A 板块行情（涨幅 / 资金 / 涨停 / 涨跌家数）——
+  var bi = ordBoardInfo({ bkCode: db.bkCode || ch.bkCode || '',
+                          sector: db.sector || ch.sector || it.sector || '' });
+  var b = bi ? bi.b : null, notes = [];
+  var _cd = W.chaseDamp, damp = 1;
+  if (myPct != null) {
+    damp = myPct <= _cd.t0 ? 1 : (myPct < _cd.t1 ? _cd.k1 : _cd.k2);
+    if (damp < 1) {
+      notes.push('板块四项强度已按它自己今日 ' + fmtPct(myPct) + ' 打折到 ' +
+        Math.round(damp * 100) + '%：这波涨幅已经进过它这里一截，明天是承接不是补涨');
+    }
+  }
+  /* 板块正分打折、负分原样：板块在跌是客观坏消息，跟它自己涨没涨无关。 */
+  var bPush = function (k, v, d) {
+    if (!(v && isFinite(v))) return;
+    if (v > 0 && damp < 1) push(k, v * damp, d + '（×' + damp + '，原因见上）');
+    else push(k, v, d);
+  };
+  if (b) {
+    var bn = String(b.name || '') + (bi.how === 'alias' ? '（按行业名近似匹配）' : '');
+    var bp = Number(b.pct) || 0;
+    bPush('板块涨幅', Math.max(-W.boardPctCap, Math.min(W.boardPctCap, bp * W.boardPct)),
+      bn + ' ' + fmtPct(bp));
+    var ni = Number(b.netInflow);
+    if (isFinite(ni)) {
+      bPush('主力资金', Math.max(-W.netInflowCap, Math.min(W.netInflowCap, ni * W.netInflow)),
+        bn + ' 主力净流入 ' + ni.toFixed(1) + ' 亿' +
+        (b.lead ? '，领涨 ' + b.lead + ' ' + fmtPct(b.leadPct) : ''));
+    }
+    var zt = Number(b.ztCount) || 0;
+    bPush('板块涨停', Math.min(W.ztCap, zt * W.ztCount), bn + ' 今日 ' + zt + ' 家涨停');
+    var up = Number(b.upCount) || 0, dn = Number(b.downCount) || 0;
+    if (up + dn > 0) {
+      var tone = up / (up + dn);
+      bPush('涨跌家数', Math.max(-W.breadthCap, Math.min(W.breadthCap, (tone - 0.5) * W.breadth)),
+        '板块内 ' + up + ' 涨 / ' + dn + ' 跌（上涨占比 ' + Math.round(tone * 100) + '%）');
+    }
+  } else {
+    notes.push('板块行情没算：' + (sec || '这只票无行业标注') +
+      ' 对不上今日 90 个一级行业名，宁可空着也不拿别的板块的分给它');
+  }
+
+  // —— B 同板块连板（有没有龙头在上面撑着）——
+  var peers = (ctx.lbBySec[sec] || []).filter(function (x) {
+    return String(x.code || '').replace(/\D/g, '') !== code;
+  });
+  var maxLbc = 0, lbWho = [];
+  peers.forEach(function (x) {
+    var v = Number(x.lbc) || 0;
+    if (v > maxLbc) maxLbc = v;
+    lbWho.push(x.name + ' ' + (x.high_days || v + '板'));
+  });
+  if (peers.length) {
+    push('同板块连板', W.lbcMap[maxLbc] || 0, sec + ' 有 ' + peers.length + ' 家连板：' +
+      lbWho.join('、') + '（最高 ' + maxLbc + ' 板）');
+  } else {
+    // 0 分也要留一行：用户要判的就是「同板块有没有连板股」，没有本身就是结论
+    parts.push({ k: '同板块连板', v: 0,
+      d: '今日连板天梯里没有 ' + (sec || '同行业') + ' 的票——上面没有龙头撑着，补涨缺参照' });
+  }
+
+  // —— C 补涨位 / 追高扣分：板块在涨，看它自己是没动还是已经追上去 ——
+  if (b && Number(b.pct) > 1 && myPct != null) {
+    if (myPct <= 1 && myPct >= -5) {
+      push('补涨位', W.catchUp, '板块 ' + fmtPct(Number(b.pct)) + '，它自己 ' + fmtPct(myPct) +
+        '——同板块的钱还没进它这里，次日最容易补涨');
+    } else if (myPct >= 5) {
+      push('已先行', W.chasePenalty, '板块 ' + fmtPct(Number(b.pct)) + '，它自己今天已经涨 ' +
+        fmtPct(myPct) + '——明天买它等于接力今天的涨幅，不是补涨');
+    }
+  }
+
+  // —— D 名字辈分（按名称共字，不是行业）——
+  var np = ordNamePeers(name), npAdd = np.length >= 2 ? W.namePeers[0] : (np.length === 1 ? W.namePeers[1] : 0);
+  push('名字辈分', npAdd, np.length
+    ? ('与连板股 ' + np.slice(0, 3).join('、') + ' 共字（按名称近似，不是行业归属）')
+    : '');
+
+  // —— E 缩量质量 ——
+  var m = it.metrics || ch.metrics || {};
+  var sT = Number(m.shrinkT);
+  if (isFinite(sT) && sT > 0) {
+    var sAdd = 0;
+    for (var si = 0; si < W.shrinkT.length; si++) {
+      if (sT <= W.shrinkT[si][0]) { sAdd = W.shrinkT[si][1]; break; }
+    }
+    if (sT > 1.5) sAdd = W.shrinkFat;
+    push('缩量质量', sAdd, '今日量是均量的 ' + sT.toFixed(2) + ' 倍' +
+      (sT <= 0.9 ? '（洗盘干净）' : (sT > 1.5 ? '（没缩下来，卖压还在）' : '')));
+  }
+
+  // —— F 反包空间：距涨停日最高价多远 ——
+  var rows = stkParseKline(it.kline || ch.kline || (ctx.D.stkKlines || {})[code]);
+  var gapT = null, iT = -1;
+  if (rows && rows.length > 5) {
+    var zt = String(it.ztDate || ch.ztDate || db.ztDate || '').slice(0, 10);
+    if (zt) {
+      for (var i = rows.length - 1; i > 0; i--) {
+        if (String(rows[i][0]).indexOf(zt) === 0) { iT = i; break; }
+      }
+    }
+    if (iT < 0) {
+      for (var i2 = rows.length - 2; i2 > 0; i2--) {
+        if (rows[i2 - 1][2] > 0 && (rows[i2][2] / rows[i2 - 1][2] - 1) * 100 >= 9.7) { iT = i2; break; }
+      }
+    }
+    if (iT > 0 && rows[rows.length - 1][2] > 0) {
+      gapT = (rows[iT][3] / rows[rows.length - 1][2] - 1) * 100;
+    }
+  }
+  if (gapT != null) {
+    var gAdd = gapT < 1.5 ? W.gapTight : (gapT >= W.gapT[0][0] ? W.gapT[0][1]
+      : (gapT >= W.gapT[1][0] ? W.gapT[1][1] : 0));
+    push('反包空间', gAdd, (gapT >= 0
+      ? '还差 ' + gapT.toFixed(1) + '% 才回到涨停日最高价'
+      : '现价已经高出涨停日最高价 ' + Math.abs(gapT).toFixed(1) + '%') +
+      (gapT < 1.5 ? '（脚下没有空间，反包也赚不到）' : ''));
+  }
+
+  // —— G 情绪 / 爆量风险 / 市值 ——
+  var sent = it.sentiment || stkSentiment(code) || e.sentiment;
+  if (sent === 'bull') push('消息面', W.sentBull, '有利好依据');
+  else if (sent === 'bear') push('消息面', W.sentBear, '被利空点名');
+  if (m.tailRisk) push('爆量风险', W.tailRisk, '断板日量能超过 8 倍，筹码已换手一轮');
+  var mc = Number(it.mcap != null ? it.mcap : (e.mcap != null ? e.mcap : ch.mcap));
+  if (isFinite(mc) && mc > 0) {
+    push('市值', mc < 60 ? W.mcapSmall : (mc > 300 ? W.mcapLarge : 0),
+      '流通市值 ' + mc.toFixed(0) + ' 亿' + (mc < 60 ? '（小盘弹性大）' : (mc > 300 ? '（大票拉不动）' : '')));
+  }
+
+  var sum = 0;
+  for (var k = 0; k < parts.length; k++) sum += parts[k].v;
+  var p = Math.max(W.floor, Math.min(W.cap, Math.round(base + sum)));
+  var top = parts.slice().filter(function (x) { return x.v !== 0; })
+    .sort(function (x, y) { return Math.abs(y.v) - Math.abs(x.v); }).slice(0, 3)
+    .map(function (x) { return x.k + (x.v > 0 ? '+' : '') + x.v; });
+  return { p: p, base: base, baseSrc: baseSrc, sum: Math.round(sum * 10) / 10,
+           parts: parts, notes: notes, myPct: myPct, damp: damp,
+           why: baseSrc + ' ' + base + '%' +
+             (top.length ? '，' + top.join('、') : '') + ' → ' + p + '%' };
+}
+/* 概率拆解表（弹窗与折叠块共用）：一行一个因子，正负用涨跌色。
+   0 分的因子不删——「同板块没有连板股」这种 0 本身就是结论，删了就变成没算过。
+   boardNote 是板块对不上的显式降级说明，写在基线下面，别让它安静消失。 */
+function ordProbRows(x) {
+  if (!x) return '';
+  var h = '<div class="ord-li"><i>·</i><span>' + esc(x.baseSrc) + ' ' + x.base + '%</span></div>';
+  (x.notes || []).forEach(function (nt) {
+    h += '<div class="ord-li"><i>·</i><span class="flat">' + esc(nt) + '</span></div>';
+  });
+  (x.parts || []).forEach(function (it) {
+    h += '<div class="ord-li"><i>' + (it.v > 0 ? '＋' : (it.v < 0 ? '－' : '·')) + '</i><span>' +
+      esc(it.k) + (it.v ? ' <b class="' + (it.v > 0 ? 'up' : 'down') + '">' +
+        (it.v > 0 ? '+' : '') + it.v + '</b>' : ' <b class="flat">0</b>') +
+      (it.d ? '　' + esc(it.d) : '') + '</span></div>';
+  });
+  h += '<div class="ord-li"><i>＝</i><span>明日概率 <b>' + x.p + '%</b>（基线 ' + x.base +
+    (x.sum >= 0 ? ' + ' : ' − ') + Math.abs(x.sum) + '）</span></div>';
+  return h;
+}
+
+/* 「缩量回踩」扫描（用户 2026-10-28 22:0x 第 2 条）：
+   「断板反包这个图形也安排进去（不是要反包完成的，是放量阴后面缩量的第一天，
+    这一天可以是阴，可以是十字星，可以是微红，也可以是缩量的第二天……」）
+   —— 这就是他截图里那类「赌次日反包」的图形，而现有池子恰好把它切碎在两个缝里：
+     · 待缩量 = 断板当天（days_ago==1），是放量阴本身，还没有缩量；
+     · 待企稳/待脱离 = 已缩量 + 已经站到 MA5 附近，形态已经在往「确认」走。
+     中间那段「放量阴之后缩了 1~2 天、K 线是小实体、还在涨停日高点下方」
+     谁的池子都不收——它既不够格进确认池，也不在观察池的定义里。
+   四条硬条件（缺一条就不是这个图形，宁可不出卡）：
+     ① T 日涨停（主板 9.7% 以上）；② T+1 放量收阴：量 1.1~3.5 倍且收盘低于开盘
+        （十字星/微红不算放量阴，那是冲高回落，不是砸盘换手）；
+     ③ T+2 起 1~2 天：每天量都比断板日小，且涨跌幅在 −6%~+4% 之间
+        （阴 / 十字 / 微红都收，大阳说明已经反包，直接排除）；
+     ④ 收盘没跌破 T 日最低价 2% 以上，且没超过 T 日收盘 3%（没反包）。
+   只收「不在断板/陈学长任何池里」的票——池里的在①②③档已经有卡，同票两档就是重复。
+   只收主板（60/00），与全站口径一致；只收有中文名的（印一串代码读者认不出）。 */
+function ordShrinkScan() {
+  var ctx = ordCtx(), D = ctx.D;
+  var KL = D.stkKlines || {}, nm = ordNameMap();
+  var out = [], seen = {}, nCand = 0;
+  Object.keys(KL).forEach(function (code) {
+    if (!/^(60|00)\d{4}$/.test(code)) return;
+    var name = nm[code];
+    if (!name) return;
+    var rows = stkParseKline(KL[code]);
+    if (!rows || rows.length < 25) return;
+    nCand++;
+    var n = rows.length, hit = null;
+    for (var d = 2; d <= 3 && !hit; d++) {
+      var iT = n - 1 - d;
+      if (iT < 21) continue;
+      // ① T 日涨停
+      if (!(rows[iT - 1][2] > 0)) continue;
+      if ((rows[iT][2] / rows[iT - 1][2] - 1) * 100 < 9.7) continue;
+      // ② T+1 放量收阴
+      var i1 = iT + 1;
+      if (i1 > n - 1) continue;
+      if (!(rows[i1][2] < rows[i1][1])) continue;
+      var vr = rows[iT][5] > 0 ? rows[i1][5] / rows[iT][5] : 0;
+      if (!(vr >= 1.1 && vr <= 3.5)) continue;
+      // ③④ 之后 1~2 天缩量 + 小实体 + 未反包 + 未破 T 日低点
+      var ok = true, minC = 1e9;
+      for (var k = i1 + 1; k < n; k++) {
+        if (!(rows[k][5] < rows[i1][5])) { ok = false; break; }
+        var pc = rows[k - 1][2] > 0 ? (rows[k][2] / rows[k - 1][2] - 1) * 100 : 0;
+        if (pc > 4 || pc < -6) { ok = false; break; }
+        if (rows[k][2] > rows[iT][2] * 1.03) { ok = false; break; }
+        if (rows[k][2] < minC) minC = rows[k][2];
+      }
+      if (!ok) continue;
+      if (rows[iT][4] > 0 && minC < rows[iT][4] * 0.98) continue;
+      hit = { iT: iT, i1: i1, days: n - 1 - i1, vr: vr };
+    }
+    if (!hit || seen[code]) return;
+    seen[code] = 1;
+    var last = rows[n - 1], prev = rows[n - 2];
+    out.push({
+      code: code, name: name, sector: ctx.sm[code] || '',
+      ztDate: rows[hit.iT][0],
+      shrinkDays: hit.days,            // 缩量第 1 天 / 第 2 天
+      volRatio: Math.round(hit.vr * 100) / 100,
+      pct: prev[2] > 0 ? Math.round((last[2] / prev[2] - 1) * 10000) / 100 : null,
+      kline: rows, ztHigh: rows[hit.iT][3]
+    });
+  });
+  out.sort(function (a, b) { return (b.shrinkDays - a.shrinkDays); });
+  return { rows: out, nCand: nCand, nNoName: 0 };
+}
+
 /* 数据准备：页面里所有数字都从这里出，卡片/摘要/规则三处共用同一份，不各算一遍。 */
+/* 「有没有可执行价」的唯一判据：明早挂单 / 盘中买点 / 缩量回踩档（涨停日高低点
+   就是它的目标与撤单价）。三处口径必须同源，否则摘要说「N 只有价」、
+   卡片上却印着明早挂单价——读者会以为摘要漏算了。 */
+function ordHasPrice(o) {
+  return !!(o && (o.plan || o.buy || o.shrink));
+}
 function ordPrep() {
   var D = window.DASHBOARD_DATA || {};
   var st = ((D.duanban || {}).star) || {};
@@ -7062,37 +7530,63 @@ function ordPrep() {
     var o = poolIdx[c];
     o.plan = _planMap[c] || null;
     o.buy = _buyMap[c] || null;
+    // 每张卡只算一次概率，排序与卡片共用同一个数（卡片再算一遍就会跟排序不一致）
+    o.prob = ordProbOf({ code: c, name: o.name, sector: o.sector,
+                         db: o.db, chen: o.chen,
+                         metrics: (o.chen || {}).metrics, kline: (o.chen || o.db || {}).kline,
+                         ztDate: (o.chen || o.db || {}).ztDate,
+                         sentiment: (o.chen || o.db || {}).sentiment,
+                         pct: (o.chen || o.db || {}).pct, mcap: (o.chen || o.db || {}).mcap });
     (o.phase === 'A' ? poolA : poolB).push(o);
   });
-  // 排序：有可执行价的先（能今天决定），再按陈学长口径（连板多 → 放量大 → 利好），
-  // 纯断板票按上涨概率降序。同分组内的先后只影响第一眼看到谁，不改变任何口径。
-  var _sentRank = function (e) { return e.sentiment === 'bull' ? 0 : (e.sentiment === 'bear' ? 2 : 1); };
+  /* 排序（用户 2026-10-28 22:0x 指定，三级，不再加第四级）：
+       ① 有可执行价（明早挂单 / 盘中买点 / 缩量回踩档的涨停日高低点）的在前 —— 能今天就决定；
+       ② 有陈学长参数的在前 —— 目标/仓位/止损齐全，照做就行；
+       ③ 明日概率降序。
+     原来陈学长组内还按「连板数 → 放量倍数 → 情绪」排，这一轮删掉：
+     那三项已经全部进了概率模型，再排一次等于同一个因子被数两遍，
+     还会出现「连板 1 板但板块在涨停潮里」压倒「连板 3 板但板块在退潮」的错序。
+     爆量票（tailRisk）也不再单独沉底——它在概率里扣 6 分，够了。 */
   var _ordCmp = function (x, y) {
-    var px = (x.plan || x.buy) ? 0 : 1, py = (y.plan || y.buy) ? 0 : 1;
+    var px = ordHasPrice(x) ? 0 : 1, py = ordHasPrice(y) ? 0 : 1;
     if (px !== py) return px - py;
-    var tx = x.chen ? 0 : 1, ty = y.chen ? 0 : 1;      // 有陈学长参数的在前（口径更全）
+    var tx = x.chen ? 0 : 1, ty = y.chen ? 0 : 1;
     if (tx !== ty) return tx - ty;
-    if (x.chen && y.chen) {
-      var tm = function (o) { return ((o.chen.metrics || {}).tailRisk) ? 1 : 0; };
-      var t = tm(x) - tm(y); if (t !== 0) return t;    // 爆量票（>8 倍）沉底，与陈学长页同规则
-      var a = ((x.chen.metrics || {}).lbc || 0) - ((y.chen.metrics || {}).lbc || 0); if (a !== 0) return -a;
-      var b = ((x.chen.metrics || {}).volRatio || 0) - ((y.chen.metrics || {}).volRatio || 0); if (b !== 0) return -b;
-      return _sentRank(x.chen) - _sentRank(y.chen);
-    }
-    var qx = Number(((x.db || {}).probability)) || -1, qy = Number(((y.db || {}).probability)) || -1;
-    return qy - qx;
+    return (Number(y.prob && y.prob.p) || -1) - (Number(x.prob && x.prob.p) || -1);
   };
   poolA.sort(_ordCmp); poolB.sort(_ordCmp);
   var inPool = function (c) { return !!poolIdx[String(c || '').replace(/\D/g, '')]; };
-  // ③④ 只收「不在池里」的票——在池的已经把价并进①②那卡，不能同页两卡。
-  var teRowsOut = teRows.filter(function (r) { return !inPool(r.code); });
-  var blOut = blRest.filter(function (r) { return !inPool(r.code); });
+  /* —— ③ 缩量回踩（放量阴后缩量 1~2 天）——
+     只收「不在断板/陈学长任何池里」的票：池里的在①②档已经有卡，同票两档就是重复。
+     挂单/买点里的票归这里（形态档优先），所以要从 ④⑤ 的候选里剔掉。
+     `phase:'S'` 是这一档的标记，ordShapeCard / 注册 / 止损出口都按它分支。 */
+  var _shr = ordShrinkScan();
+  var poolC = [];
+  _shr.rows.forEach(function (r) {
+    var c = String(r.code || '').replace(/\D/g, '');
+    if (!/^\d{6}$/.test(c) || inPool(c)) return;
+    if (poolC.some(function (x) { return x.code === c; })) return;
+    var o = { code: c, name: r.name, sector: r.sector, phase: 'S',
+              db: null, chen: null, chenTier: null, srcs: ['shrink'],
+              plan: _planMap[c] || null, buy: _buyMap[c] || null, shrink: r };
+    o.prob = ordProbOf({ code: c, name: r.name, sector: r.sector,
+                         kline: r.kline, ztDate: r.ztDate,
+                         metrics: { shrinkT: null }, pct: r.pct });
+    poolC.push(o);
+  });
+  poolC.sort(_ordCmp);
+  var inC = function (c) { return poolC.some(function (x) { return x.code === String(c || '').replace(/\D/g, ''); }); };
+  // ④⑤ 只收「不在池里、也不在缩量回踩档里」的票——在的已经把价并进那张卡，不能同页两卡。
+  var teRowsOut = teRows.filter(function (r) { return !inPool(r.code) && !inC(r.code); });
+  var blOut = blRest.filter(function (r) { return !inPool(r.code) && !inC(r.code); });
   return { D: D, st: st, te: te, fallback: fallback, bs: bs,
            execHist: execHist, isNextPlan: isNextPlan,
            bl: bl, blRest: blRest, blDupPlan: blDupPlan, blDupPick: blDupPick,
            nBpCut: nBpCut, nBuy: nBuy, teRows: teRows,
-           poolA: poolA, poolB: poolB, teRowsOut: teRowsOut, blOut: blOut,
-           n: poolA.length + poolB.length + teRowsOut.length + blOut.length };
+           poolA: poolA, poolB: poolB, poolC: poolC,
+           nShrinkCand: _shr.nCand,
+           teRowsOut: teRowsOut, blOut: blOut,
+           n: poolA.length + poolB.length + poolC.length + teRowsOut.length + blOut.length };
 }
 
 /* 注册弹窗条目（key = o|<code>）。R100z84 的坑：不注册 = 点开空白；
@@ -7213,6 +7707,17 @@ function ordShapeOrderLine(o) {
       (o.buy.stateZh ? '（' + esc(String(o.buy.stateZh)) + '）' : '') +
       ' · 破 ' + ordP2(o.buy.invalid) + ' 撤');
   }
+  if (!out.length && o.shrink) {
+    /* 缩量回踩档：价位是**形态自带的**，不是另编的——
+       止损＝涨停日最低价（跌破即「不破T日低点」这条前提没了，图形作废），
+       目标＝涨停日最高价（反包到位）。用户要的就是「明早开盘买，赌它反包上去、
+       后天卖出」，所以这里必须写「明早开盘买」；它与②档的「确认后次日开盘买」
+       是两种不同的入场时点，混在一句里会让人在形态没确认时进场。 */
+    var _sk = ordShrinkLevels(o);
+    if (_sk && _sk.lowT > 0) {
+      out.push('明早开盘买 · 目标 <b>' + ordP2(_sk.highT) + '</b> · 破 ' + ordP2(_sk.lowT) + ' 撤');
+    }
+  }
   if (!out.length) {
     var ct = (o.chen || {}).trade || {};
     if (ct.buyRule) {
@@ -7236,6 +7741,29 @@ function ordShapeOrderLine(o) {
    603160 汇顶科技（纪律位 vs 买点证伪价 50.00）。同一只票两个止损，用户不知道该照哪个
    ——24.115「仓位三套数互相不认」的同一个病，只是换成了止损。
    `src==='tech'` 表示这套就是 exitForCode，调用方别再包一层（弹窗要靠它决定是否覆盖）。 */
+/* 缩量回踩档的三个价：涨停日最高 / 最低 / 收盘。
+   抽成函数是为了让「下单行」「止损格」「弹窗退出纪律」取到同一份——
+   上一轮刚因为「三处各算一套」修了一遍，这一档不能再走回去。 */
+function ordShrinkLevels(o) {
+  var sk = (o || {}).shrink;
+  if (!sk) return null;
+  if (sk._lv) return sk._lv;
+  var rows = sk.kline || [], zt = String(sk.ztDate || '').slice(0, 10), iT = -1;
+  for (var i = rows.length - 1; i >= 0; i--) {
+    if (String(rows[i][0]).indexOf(zt) === 0) { iT = i; break; }
+  }
+  if (iT < 0) return null;
+  sk._lv = { iT: iT, highT: Number(rows[iT][3]) || 0, lowT: Number(rows[iT][4]) || 0,
+             closeT: Number(rows[iT][2]) || 0 };
+  return sk._lv;
+}
+/* 形态档**唯一**的撤单价出口——卡片止损格、弹窗「退出纪律」都从这里取，不各算一套。
+   五级回落＝「可执行优先」：
+     明早挂单 stop → 盘中买点证伪价 → 陈学长洗盘段低点 → 缩量回踩的涨停日低点 → 全站技术位
+   实测踩到两处并存：603565 中谷物流（纪律位 11.60 vs 挂单 12.16，差 5%）、
+   603160 汇顶科技（纪律位 vs 买点证伪价 50.00）。同一只票两个止损，用户不知道该照哪个
+   ——24.115「仓位三套数互相不认」的同一个病，只是换成了止损。
+   `src==='tech'` 表示这套就是 exitForCode，调用方别再包一层（弹窗要靠它决定是否覆盖）。 */
 function ordShapeStopOf(o) {
   if (!o) return null;
   var pl = o.plan || null, by = o.buy || null, ct = (o.chen || {}).trade || {};
@@ -7250,6 +7778,11 @@ function ordShapeStopOf(o) {
   if (ct.stopPrice != null && isFinite(Number(ct.stopPrice))) {
     return { stop: Number(ct.stopPrice), src: 'chen', basis: '陈学长口径',
              tip: '洗盘段最低价：破位按收盘算' };
+  }
+  var lv = ordShrinkLevels(o);
+  if (lv && lv.lowT > 0) {
+    return { stop: lv.lowT, src: 'shrink', basis: '缩量回踩口径',
+             tip: '涨停日最低价：收盘跌破即「不破T日低点」这条前提没了，图形作废' };
   }
   var t = tcStopOf((o.db || o.chen || {}).code || o.code);
   return (t === null) ? null : { stop: t, src: 'tech', basis: '' };
@@ -7275,44 +7808,74 @@ function ordCardExitMeta(code0) {
   if (!isFinite(st)) return '';
   var _t = Number(ent.exTgt), _okT = (ent.exTgt !== null && ent.exTgt !== undefined && isFinite(_t));
   var _p = Number(ent.exPos), _okP = (ent.exPos !== null && ent.exPos !== undefined && isFinite(_p));
-  return '<div class="exit-row exit-line"><b>退出纪律</b> 止损 ' + st.toFixed(2) +
+  var h = '<div class="exit-row exit-line"><b>退出纪律</b> 止损 ' + st.toFixed(2) +
     (_okT ? ' · 目标 <span class="xt">' + _t.toFixed(2) + '</span>' : '') +
     (_okP ? ' · 仓位 ' + _p.toFixed(1) + '%' : '') +
     ' <span class="xs">✖</span> ' + esc(ent.exFalsify || '跌破止损位即离场，不摊不扛') +
     '<span class="xb">（' + esc(ent.exBasis || '') + '；与卡片同源）</span></div>';
+  /* 概率拆解也在这里给（用户 2026-10-28「要分析很多内容」）：
+     卡片上只有一个百分数，读者看不到「为什么它排在别人前面」。
+     拆解只读卡片注册的那一份（ent.prob），不在这里重算——
+     重算就会出现「卡片 68%、点开 62%」，正是刚修完的那类病。 */
+  if (ent.prob && ent.prob.p != null) {
+    h += '<div class="exit-row exit-line"><b>明日概率 ' + ent.prob.p + '%</b>' +
+      '<span class="xb">（' + esc(ent.prob.baseSrc) + ' ' + ent.prob.base + '%，逐项加减如下）</span></div>';
+    (ent.prob.notes || []).forEach(function (nt) {
+      h += '<div class="exit-row exit-line">&nbsp;&nbsp;· <span class="xb">' + esc(nt) + '</span></div>';
+    });
+    (ent.prob.parts || []).forEach(function (x) {
+      h += '<div class="exit-row exit-line">&nbsp;&nbsp;· ' + esc(x.k) +
+        (x.v ? ' <b class="' + (x.v > 0 ? 'up' : 'down') + '">' + (x.v > 0 ? '+' : '') + x.v + '</b>'
+             : ' <b>0</b>') +
+        (x.d ? '<span class="xb">　' + esc(x.d) + '</span>' : '') + '</div>';
+    });
+    h += '<div class="exit-row exit-line">&nbsp;&nbsp;＝ 基线 ' + ent.prob.base +
+      (ent.prob.sum >= 0 ? ' + ' : ' − ') + Math.abs(ent.prob.sum) + ' → <b>' + ent.prob.p + '%</b>' +
+      '<span class="xb">（因子打分，不是回测胜率；排序与解释用）</span></div>';
+  }
+  return h;
 }
 /* 形态档的退出纪律字段（供 ordShapeReg 注册；`tech` 源不注册——那套就是 exitForCode 本身）。 */
 function ordShapeExitMeta(o) {
   var st = ordShapeStopOf(o);
   if (!st || st.src === 'tech') return null;
   var pl = o.plan || {}, by = o.buy || {}, ct = (o.chen || {}).trade || {};
-  return {
-    stop: st.stop, basis: st.basis, src: st.src,
-    tgt: st.src === 'plan' ? pl.tp : (st.src === 'buy' ? by.target : ct.targetPrice),
-    pos: st.src === 'plan' ? null : (st.src === 'buy' ? by.posPct : ct.posPct),
-    falsify: st.src === 'plan'
-      ? '开盘低于下沿即不成交（不追）；成交后跌破这个止损位无条件离场'
-      : (st.src === 'buy' ? '收盘跌破买点证伪价即形态作废，先撤不留'
-                          : '跌破洗盘段最低价即断板反包形态失败，无条件离场')
+  var lv = ordShrinkLevels(o) || {};
+  // 目标与仓位按「止损同源」取：缩量回踩档没有仓位口径，就不拿别的档的仓位顶上（24.115）。
+  var TGT = { plan: pl.tp, buy: by.target, chen: ct.targetPrice, shrink: lv.highT };
+  var POS = { plan: null, buy: by.posPct, chen: ct.posPct, shrink: null };
+  var FAL = {
+    plan: '开盘低于下沿即不成交（不追）；成交后跌破这个止损位无条件离场',
+    buy: '收盘跌破买点证伪价即形态作废，先撤不留',
+    chen: '跌破洗盘段最低价即断板反包形态失败，无条件离场',
+    shrink: '收盘跌破涨停日最低价即「不破T日低点」这条前提没了，图形作废，先撤不留'
   };
+  return { stop: st.stop, basis: st.basis, src: st.src,
+           tgt: TGT[st.src], pos: POS[st.src], falsify: FAL[st.src] };
 }
 function ordShapeReg(k, o) {
   var e = o.chen || o.db || {};
-  var phase = o.phase === 'A' ? '形态确认' : '形态即将确认';
-  var srcZh = (o.srcs.indexOf('duanban') >= 0 ? '断板反包' : '') +
-    (o.srcs.length > 1 ? ' + ' : '') + (o.chen ? ('陈学长·' + (o.chenTier === 'strict' ? '严格池'
-      : (o.chenTier === 'loose' ? '放宽池' : '进行中'))) : '');
+  var phase = o.phase === 'A' ? '形态确认' : (o.phase === 'S' ? '缩量回踩' : '形态即将确认');
+  var srcZh = (o.phase === 'S')
+    ? ('断板反包：放量阴后缩量第 ' + ((o.shrink && o.shrink.shrinkDays) || 1) + ' 天')
+    : ((o.srcs.indexOf('duanban') >= 0 ? '断板反包' : '') +
+       (o.srcs.length > 1 ? ' + ' : '') + (o.chen ? ('陈学长·' + (o.chenTier === 'strict' ? '严格池'
+         : (o.chenTier === 'loose' ? '放宽池' : '进行中'))) : ''));
   var ol = ordShapeOrderLine(o);
   DB_INDEX[k] = {
-    code: o.code, name: o.name, sector: o.sector, ztDate: e.ztDate,
+    code: o.code, name: o.name, sector: o.sector, ztDate: o.ztDate || e.ztDate,
     pct: tcPctOf(o.code, e.pct),
     sentiment: stkSentiment(o.code) || e.sentiment,
     // form 不能带「·」：弹窗那行会 .replace(/·/, '：')，会把阶段名切成两段（R100z4e）
-    form: phase + '（' + srcZh + '），' + String(e.stage || '').replace(/·/g, '：'),
+    form: phase + '（' + srcZh + '），' +
+      (o.phase === 'S' ? ('缩量回踩中' + (o.shrink && o.shrink.volRatio ? '：断板放量 ' + o.shrink.volRatio + ' 倍' : ''))
+                       : String(e.stage || '').replace(/·/g, '：')),
     ordKind: 'shape',
-    ordZh: phase,          // 弹窗徽标用：形态确认 / 形态即将确认（弹窗不猜档名）
+    ordZh: phase,          // 弹窗徽标用：形态确认 / 缩量回踩 / 形态即将确认（弹窗不猜档名）
     ordLine: ol.replace(/<[^>]+>/g, '').replace(/^\s*下单\s*/, '').replace(/\s+/g, ' ').trim()
   };
+  // 概率一起注册：弹窗要能拆解「这个百分比是怎么来的」，卡片与弹窗只认这一份
+  if (o.prob) DB_INDEX[k].prob = o.prob;
   // R100z268：卡片自己的撤单价一起注册 → 弹窗「退出纪律」只读这一份（不另调 exitForCode）
   var _xm = ordShapeExitMeta(o);
   if (_xm) {
@@ -7334,6 +7897,14 @@ function ordShapeCard(o) {
     ? tcCell('止损', '<span class="xt"' + ((_stp.tip || _stp.basis) ? ' title="' + escAttr(_stp.tip || _stp.basis) + '"' : '')
         + '>' + _stp.stop.toFixed(2) + '</span>', 'down')
     : tcCell('止损', '—', 'flat');
+  /* 概率格：三档共用同一格（同一个 ordProbOf 结果），悬停给「怎么算出来的」那一句。
+     用户 2026-10-28 要的核心就是这个数——它决定了同组内的先后，卡片上反而只能看到排序结果
+     看不到原因，所以 tooltip 必须把基线、加减项和结论一起给。完整拆解在弹窗。 */
+  var _pr = o.prob || {};
+  var probCell = tcCell('明日概率',
+    (_pr.p == null) ? '—'
+      : '<span class="xt" title="' + escAttr((_pr.why || '') + '\n点开卡片看逐项拆解') + '">' + _pr.p + '%</span>',
+    (_pr.p == null) ? 'flat' : (_pr.p >= 60 ? 'up' : (_pr.p <= 40 ? 'down' : '')));
   if (o.chen) {
     var lbcTxt = cm.lbc ? (cm.lbc === 1 ? '首板' : cm.lbc + ' 板') : '—';
     var volTxt = cm.volRatio ? cm.volRatio + ' 倍' : '—';
@@ -7345,18 +7916,38 @@ function ordShapeCard(o) {
         tgt == null ? '—' : Number(tgt).toFixed(2), 'up'),
       stpCell,
       tcCell('仓位', ct.posPct ? ct.posPct + '%' : '—', ''),
-      tcCell('连板 / 放量', '<span class="nw">' + lbcTxt + '</span> <span class="nw">' + volTxt +
-        '</span>', '', false, true)
+      probCell
     ];
-    foot = '<span class="xt">' + esc(String(o.chen.form || '').replace(/·/, '：')) + '</span>';
+    // 连板/放量从格子里挪到卡脚：概率是这一轮的主角，四格里必须给它一个位置；
+    // 这两个数不参与决策（已进概率模型），放卡脚仍然看得见。
+    foot = '<span class="xt">' + lbcTxt + ' · 断板放量 ' + volTxt + '</span>　' +
+      '<span class="xt">' + esc(String(o.chen.form || '').replace(/·/, '：')) + '</span>';
+  } else if (o.shrink) {
+    /* 缩量回踩档（用户 2026-10-28 要的那个图形：放量阴之后缩量的第 1~2 天）：
+       四格＝反包目标 / 止损 / 缩量进度 / 明日概率。
+       目标与止损都取涨停日那根 K 线（ordShrinkLevels），不另编价位。 */
+    var lv = ordShrinkLevels(o) || {};
+    var sk = o.shrink;
+    var gapT = (lv.highT > 0 && sk.pct != null) ? null : null;
+    cells = [
+      tcCell('反包目标', lv.highT > 0
+        ? '<span class="xt" title="涨停日最高价：反包到位就是这附近，不是预测、是那根K线的价">'
+          + lv.highT.toFixed(2) + '</span>' : '—', 'up'),
+      stpCell,
+      tcCell('缩量', '第 ' + (sk.shrinkDays || 1) + ' 天' +
+        (sk.volRatio ? '<span class="xt"> · 断板 ' + sk.volRatio + ' 倍</span>' : ''), '', false, true),
+      probCell
+    ];
+    foot = '<span class="xt">' + esc(String(sk.ztDate || '').slice(5)) + ' 涨停 → 次日放量收阴 → ' +
+      '缩量第 ' + (sk.shrinkDays || 1) + ' 天（收' +
+      (sk.pct > 0.3 ? '微红' : (sk.pct < -0.3 ? '阴' : '十字')) + '）</span>';
   } else {
-    // 纯断板票：与断板页 dbCardHtml 逐格同源（板块涨幅 / 上涨概率 / MA5观察位 / 止损），
+    // 纯断板票：与断板页 dbCardHtml 逐格同源（板块涨幅 / 明日概率 / MA5观察位 / 止损），
     // 不套陈学长那四格——断板确认池没有目标价、没有仓位，硬套只会渲染一排「—」。
-    var bpNow = boardPctOf(e), prob = e.probability;
+    var bpNow = boardPctOf(e);
     cells = [
       tcCell('板块涨幅', bpNow == null ? '—' : fmtPct(bpNow), bpNow > 0 ? 'up' : (bpNow < 0 ? 'down' : '')),
-      tcCell('上涨概率', prob == null ? '—' : prob + '%',
-        e.sentiment === 'bull' ? 'up' : (e.sentiment === 'bear' ? 'down' : '')),
+      probCell,
       tcCell('MA5观察位', (function () {
         var ma5 = stkMa5Of(e.code, e.kline);
         return ma5 === null ? '—'
@@ -7368,7 +7959,9 @@ function ordShapeCard(o) {
   }
   // 阶段徽章 + 板块。池名（断板/陈学长）由 stkTechShortBadges 给，这里只补阶段，
   // 不重复印两个同色蓝标（R100z220 同一坑）。
-  var pill = o.phase === 'A' ? '形态确认' : ('即将确认·' + String(e.stage || '待信号').replace(/·.*$/, ''));
+  var pill = o.phase === 'A' ? '形态确认'
+    : (o.phase === 'S' ? ('缩量回踩·第' + ((o.shrink && o.shrink.shrinkDays) || 1) + '天')
+                       : ('即将确认·' + String(e.stage || '待信号').replace(/·.*$/, '')));
   // 明早挂单的时点必须自己说出来：读者要知道这价是「今晚定的、明早核对开盘」，
   // 不是「现在就能按这个价买」。价写在「下单」行，这里只说时点（同卡两处印同一个数＝两种说法）。
   if (pl) foot = '<span class="xt warn">明早 ' + esc(String(((window.DASHBOARD_DATA || {}).timingPlan || {}).buyDate || '').slice(5)) +
@@ -7381,9 +7974,15 @@ function ordShapeCard(o) {
     cells: cells, foot: foot,
     attrs: ' data-k="' + escAttr(k) + '"',
     title: o.name + ' ' + o.code + '（' + (o.sector || '') + ' · ' + pill + '）\n' +
-      '命中：' + ((o.srcs.indexOf('duanban') >= 0 ? '断板反包池　' : '') +
-        (o.chen ? ('陈学长·' + (o.chenTier === 'strict' ? '严格池' : (o.chenTier === 'loose' ? '放宽池' : '形态进行中'))) : '')) +
-      '\n' + (o.chen ? String(o.chen.form || '') : String(e.form || '')) +
+      '命中：' + (o.phase === 'S' ? '缩量回踩（放量阴后缩量 1~2 天）　'
+        : ((o.srcs.indexOf('duanban') >= 0 ? '断板反包池　' : '') +
+           (o.chen ? ('陈学长·' + (o.chenTier === 'strict' ? '严格池' : (o.chenTier === 'loose' ? '放宽池' : '形态进行中'))) : ''))) +
+      '\n' + (o.chen ? String(o.chen.form || '')
+        : (o.shrink
+            ? (String(o.shrink.ztDate || '').slice(5) + ' 涨停 → 次日放量 ' + o.shrink.volRatio +
+               ' 倍收阴 → 缩量第 ' + o.shrink.shrinkDays + ' 天，未破 T 日低点、未反包')
+            : String(e.form || ''))) +
+      '\n明日概率：' + ((o.prob && o.prob.why) || '—') +
       (pl ? ('\n明早挂单：限价 ' + ordP2(pl.limit) + '｜下沿 ' + ordP2(pl.floor) + ' 破了撤｜目标 '
         + ordP2(pl.tp) + '｜' + (pl.exitNote || '') ) : '') +
       '\n点开看K线、个股消息与池归属'
@@ -7431,25 +8030,82 @@ function ordRuleBlocks(P) {
   rules.push({ s: true, t: '谐波形态与主力吸筹没有下单价：清单只收有回测支撑的三个来源'
     + '（陈学长严格池 / 断板反包确认池 / 横盘启动），这两个池从来没有下单价口径——'
     + '不是今天没命中，也不是抓空。它们在「开盘精选」里，看形态不看价。' });
-  /* R100z267：四栏的分工必须写在页面上。用户 2026-10-28 的原话是
+  /* R100z267：分栏的分工必须写在页面上。用户 2026-10-28 的原话是
      「你今天提供的今日可下单标的很多都没有陈学长啊」——问题不在数据，在这块原来
      只按「执行时点」组织，形态最成熟的那批反而排在后面甚至不在里面。
-     现在四栏各有准入来源，一栏一句说清；同一只票只出一次卡（价并进那张卡）。 */
-  var _nA = (P.poolA || []).length, _nB = (P.poolB || []).length;
-  if (_nA || _nB) {
-    h += ordFold('四栏的分工（同一只票只出一张卡）', _nA + ' + ' + _nB + ' 只形态档',
+     R100z269：加「缩量回踩」档（用户 22:0x 点名要的图形），共五栏；
+     每栏的准入来源一句说清，同一只票只出一次卡（价并进那张卡）。 */
+  var _nA = (P.poolA || []).length, _nB = (P.poolB || []).length, _nC = (P.poolC || []).length;
+  if (_nA || _nB || _nC) {
+    h += ordFold('五栏的分工（同一只票只出一张卡）', _nA + ' + ' + _nC + ' + ' + _nB + ' 只形态档',
       '<div class="ord-li"><i>①</i><span>形态确认 = 断板反包确认池（四步全走完：涨停→放量断板→缩量→站稳MA5）'
-        + ' ∪ 陈学长严格池/放宽池（缩量确认）。这一档是「按图形能下单」的那批。</span></div>' +
-      '<div class="ord-li"><i>②</i><span>形态即将确认 = 断板观察池（待缩量/待脱离）∪ 陈学长形态进行中。'
-        + '共同点是还差一根确认K线——卡片上的目标/止损是确认之后才生效的参数，今天不是买点。</span></div>' +
-      '<div class="ord-li"><i>③</i><span>明早挂单 = 只走完「T日首板涨停 → T+1 放量断板」两步就下单，'
-        + '不等缩量、不等站稳MA5。它与①②是同一批票的不同时点：等形态确认完，那个开盘价就没了。'
-        + '所以①②里的票如果同时有挂单，价写在卡脚，不另出一张卡。</span></div>' +
-      '<div class="ord-li"><i>④</i><span>盘中买点 = 现价落进买区（现价上下1%）才成立，随价重算。</span></div>' +
+        + ' ∪ 陈学长严格池/放宽池（缩量确认）。这一档是「按图形能下单」的那批，'
+        + '目标与仓位都有回测口径。</span></div>' +
+      '<div class="ord-li"><i>②</i><span>缩量回踩 = 涨停 → 次日<b>放量收阴</b> → 之后 1~2 天<b>缩量</b>且'
+        + '收小实体（阴 / 十字 / 微红都算），同时没跌破涨停日最低价、也没涨过涨停日收盘 3%（没反包）。'
+        + '这一档赌的是「明早开盘买、它当天把阴线收回去」，所以止损就是涨停日最低价、'
+        + '目标就是涨停日最高价，两个价都不是预测。它不在断板/陈学长任何一个池里——'
+        + '池子要么只看断板当天（待缩量），要么已经走到 MA5 附近（待企稳/待脱离），中间这段谁都不收。</span></div>' +
+      '<div class="ord-li"><i>③</i><span>形态即将确认 = 断板观察池（待缩量/待脱离）∪ 陈学长形态进行中。'
+        + '共同点是还差一根确认K线——卡片上的目标/止损是确认之后才生效的参数，明天不是买点。</span></div>' +
+      '<div class="ord-li"><i>④</i><span>明早挂单 = 只走完「T日首板涨停 → T+1 放量断板」两步就下单，'
+        + '不等缩量、不等站稳MA5。它与①②③是同一批票的不同时点：等形态确认完，那个开盘价就没了。</span></div>' +
+      '<div class="ord-li"><i>⑤</i><span>今日盘中买点 = 今天盘中按现价算出来的买区，'
+        + '已经收盘、明天不照这个价执行，只作记录。</span></div>' +
       '<div class="ord-li"><i>·</i><span>一张卡只有一个目标、一个止损：有明早挂单就取挂单那套（唯一可执行价），'
-        + '没有再取陈学长形态参数；两套都印出来就是两个止损，没人知道该照哪个。</span></div>' +
-      '<div class="ord-li"><i>·</i><span>记账分开记：①②的票记在断板反包 / 陈学长两个池的复盘台账里，'
-        + '③④才是「明日挂单」那本账。三本账各算各的胜率，别拿一个的准确率去核另一个的票。</span></div>');
+        + '没有再取陈学长形态参数或涨停日高低点；两套都印出来就是两个止损，没人知道该照哪个。</span></div>' +
+      '<div class="ord-li"><i>·</i><span>记账分开记：①②③的票记在断板反包 / 陈学长 / 缩量回踩三本台账里，'
+        + '④⑤才是「明日挂单」和「盘中买点」那两本。各算各的胜率，别拿一个的准确率去核另一个的票。</span></div>');
+  }
+  /* 明日概率的算法必须公开——它是这一页的排序依据，也是用户 2026-10-28 特别要求的
+     「要包括当天板块情况 + 资金情况 + 连板标的里是否有对应板块」。
+     把权重和口径摊开，是为了让读者能判断「这个百分比我信几分」；
+     并明确它不是回测胜率——没有任何回测支持「+6 分等于多 6% 胜率」这种换算。 */
+  if (_nA || _nB || _nC) {
+    /* 这里的数字全部从 ORD_PROB_WEIGHT 读，不手写——上一版就是因为手写，
+       权重下调之后页面还印着「×1.5 / 封顶 ±12」，读者按页面的算法自己复算会对不上。
+       算法公开是给读者验算用的，印错等于骗人。 */
+    var _W = ORD_PROB_WEIGHT;
+    var _lbc = Object.keys(_W.lbcMap).map(function (k) { return k + ' 板 +' + _W.lbcMap[k]; }).join('、');
+    var _shr = _W.shrinkT.map(function (t) { return '≤' + t[0] + ' 倍 +' + t[1]; }).join('、');
+    var _gap = _W.gapT.map(function (t) { return '≥' + t[0] + '% +' + t[1]; }).join('、');
+    h += ordFold('明日概率怎么算（排序依据）', '新闻面基线 + 6 类因子',
+      '<div class="ord-li"><i>·</i><span>起点是脚本按新闻面打的<b>基线</b>（断板池那条「上涨概率」，'
+        + '断板页印的也是它），然后按下面六类加减，封顶 ' + _W.floor + '%~' + _W.cap + '%。'
+        + '所以卡片上这个数会比断板页的「上涨概率」高或低几分——差异全部来自下面这几项，不是两套数。</span></div>' +
+      '<div class="ord-li"><i>①</i><span><b>板块今日涨幅</b>（×' + _W.boardPct + '，封顶 ±' + _W.boardPctCap + '）：'
+        + '板块在涨说明钱在这个方向，明天承接有人接。</span></div>' +
+      '<div class="ord-li"><i>②</i><span><b>板块主力净流入</b>（每亿 ×' + _W.netInflow + '，封顶 ±' + _W.netInflowCap + '）、'
+        + '<b>板块涨停家数</b>（每家 +' + _W.ztCount + '，封顶 +' + _W.ztCap + '）、'
+        + '<b>板块内上涨占比</b>（占比超出 50% 的部分 ×' + _W.breadth + '，封顶 ±' + _W.breadthCap + '）：'
+        + '这三项一起回答「这个板块今天是真强，还是只有一两只在撑」。</span></div>' +
+      '<div class="ord-li"><i>③</i><span><b>同板块连板梯队</b>（按 sectorMap 归到同一细分行业，'
+        + '没有连板股也留一行 0 分并写明）：' + _lbc + '。'
+        + '2 板给得最多不是笔误——4~5 板是龙头自己到了高位、补涨已近尾声，'
+        + '2 板梯队刚成型、扩散才开始。</span></div>' +
+      '<div class="ord-li"><i>④</i><span><b>补涨位</b>（+' + _W.catchUp + '）：板块在涨而它自己今天没动'
+        + '（收在 −5%~+' + _W.chaseDamp.t0 + '% 之间），说明同板块的钱还没进它这里——'
+        + '这正是大洋电机 10/26 的处境：那天别的羊字辈涨停或收红，它自己收阴，次日直接补涨涨停。'
+        + '<br>反过来，<b>板块这四项的正分要按它自己今天涨没涨打折</b>：'
+        + '今日涨幅 ≤' + _W.chaseDamp.t0 + '% 全额、<' + _W.chaseDamp.t1 + '% 打 '
+        + Math.round(_W.chaseDamp.k1 * 100) + ' 折、≥' + _W.chaseDamp.t1 + '% 只留 '
+        + Math.round(_W.chaseDamp.k2 * 100) + '%，另外再扣 ' + _W.chasePenalty
+        + ' 分记「已先行」。原因：不打折就等于「板块涨了一周、它今天也跟涨 5%」和'
+        + '「板块刚启动、它自己还在收阴」拿一样的分，前者是追高不是补涨。负分不打折（板块在跌与它自己涨没涨无关）。</span></div>' +
+      '<div class="ord-li"><i>⑤</i><span><b>名字辈分</b>（≥2 只连板股共字 +' + _W.namePeers[0] + '、1 只 +'
+        + _W.namePeers[1] + '）：生肖 / 字辈这种玄学抱团按「名称共字」近似，不是行业归属，'
+        + '所以它单列一项、不混进「同板块连板」那份计数。</span></div>' +
+      '<div class="ord-li"><i>⑥</i><span><b>个股自身</b>：缩量质量（当日量/均量 ' + _shr + '、>1.5 倍 '
+        + _W.shrinkFat + '）、反包空间（距涨停日最高价 ' + _gap + '、<1.5% ' + _W.gapTight + '）、'
+        + '消息面（利好 +' + _W.sentBull + ' / 利空 ' + _W.sentBear + '）、爆量风险（'
+        + _W.tailRisk + '）、市值（<60 亿 +' + _W.mcapSmall + ' / >300 亿 ' + _W.mcapLarge + '）。</span></div>' +
+      '<div class="ord-li"><i>·</i><span>板块行情用行业代码（bkCode）对 <b>今日 90 个一级行业</b>；'
+        + '个股行业名是另一套口径（汽车零部 / 塑料 / 物资外贸），对不上的走一张归一化表，'
+        + '并且文案里标「按行业名近似匹配」；<b>连对照表都对不上的，这一项就不算</b>，'
+        + '并在拆解里写明「板块行情没算」——宁可空着，也不拿别的板块的分给它。</span></div>' +
+      '<div class="ord-li"><i>·</i><span>这是<b>因子打分</b>，不是回测胜率：没有任何一组回测支持'
+        + '「+6 分等于多 6% 胜率」这种换算。它的用途是<b>排序与解释</b>，'
+        + '不是预测精度——点开任意一张卡可以看到它自己的逐项拆解。</span></div>');
   }
   if (rules.length) {
     var NUM = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'], no = 0;
@@ -7540,9 +8196,12 @@ function ordBlockHtml() {
   var sum = [];
   var buyD = (te && te.buyDate) ? String(te.buyDate).slice(5) : '';
   /* R100z267：摘要顺序跟着分档走——先说形态（本区块现在的主档），再说执行时点。
-     两个日期必须同时出现，读者要能看出「现在看的是明天的单，不是今早那批」（R100z260）。 */
-  var nPriced = P.poolA.concat(P.poolB).filter(function (o) { return !!(o.plan || o.buy); }).length;
-  sum.push('形态确认 ' + P.poolA.length + ' 只 · 即将确认 ' + P.poolB.length + ' 只（其中 ' + nPriced + ' 只有可执行价）');
+     两个日期必须同时出现，读者要能看出「现在看的是明天的单，不是今早那批」（R100z260）。
+     R100z269：加「缩量回踩」一档；且区块改名「明日可下单」——它是收盘后跑的，
+     面向的是**下一个交易日**，叫「今日可下单」会让人以为现在还能按这些价下单。 */
+  var nPriced = P.poolA.concat(P.poolB, P.poolC).filter(ordHasPrice).length;
+  sum.push('形态确认 ' + P.poolA.length + ' 只 · 缩量回踩 ' + P.poolC.length +
+    ' 只 · 即将确认 ' + P.poolB.length + ' 只（其中 ' + nPriced + ' 只有可执行价）');
   if (P.teRowsOut.length) {
     sum.push((P.isNextPlan ? '明日 ' + buyD + ' 开盘挂单 ' : '昨晚挂单 ') + P.teRowsOut.length + ' 只' +
       (P.fallback ? '（未开盘，照限价挂；可挂/破位要等明早 9:25 集合竞价后才知道，现在不编）'
@@ -7555,18 +8214,18 @@ function ordBlockHtml() {
       ' · 已破下沿 ' + (P.execHist.nBroken || 0) + '）');
   }
   if (P.blOut.length) {
-    sum.push('盘中买点 ' + P.blOut.length + ' 只（现价在买区内 ' +
+    sum.push('今日盘中买点 ' + P.blOut.length + ' 只（现价在买区内 ' +
       P.blOut.filter(function (r) { return r.state === 'buy'; }).length + ' 只）');
   }
   /* 去重的账要说清：读者会拿「池 18 只 + 挂单 8 只 + 买点 29 只」去减卡片数，
-     减法不该由他做（24.110）。这三个数各自是**并入别卡 / 剔出**的，不是丢了。 */
-  var nMerge = (P.poolA.concat(P.poolB).filter(function (o) { return !!(o.plan || o.buy); })).length;
+     减法不该由他做（24.110）。这三个数各自是并入别卡 / 剔出的，不是丢了。 */
+  var nMerge = (P.poolA.concat(P.poolB, P.poolC).filter(ordHasPrice)).length;
   var dedupTxt = [];
   if (nMerge) dedupTxt.push(nMerge + ' 只同时在池与挂单/买点里，价已并进形态卡，不重复出卡');
-  /* 「已在精选」这句只对**没有形态卡**的票说。汇顶科技 603160 既在买点清单、又在精选固定区、
+  /* 「已在精选」这句只对没有形态卡的票说。汇顶科技 603160 既在买点清单、又在精选固定区、
      还在断板确认池 —— 它已经在本页 ① 档出了卡，再说它「已在开盘精选卡里，不重复建卡」
      会让读者以为这张卡不存在（实测 2026-10-28 就是这三个名字一起冒出来）。 */
-  var blPickNoPool = P.blDupPick.filter(function (r) { return !P.poolA.concat(P.poolB).some(function (o) {
+  var blPickNoPool = P.blDupPick.filter(function (r) { return !P.poolA.concat(P.poolB, P.poolC).some(function (o) {
     return o.code === String(r.code || '').replace(/\D/g, '');
   }); });
   if (blPickNoPool.length) {
@@ -7575,9 +8234,16 @@ function ordBlockHtml() {
     }).join('、') + ' 的买点已在开盘精选固定区展示，不重复建卡');
   }
   if (P.nBpCut) dedupTxt.push(P.nBpCut + ' 只「横盘启动·贴沿」未列入（理由见下方下单规则）');
+  /* 缩量回踩这一档是**现算的**（scan stkKlines），扫了多少只必须说出来：
+     否则「今天缩量回踩 0 只」会被读成「没这功能」或「抓空了」，
+     而实际它可能只是扫了 900 只、一个都没满足那四条硬条件。 */
+  if (P.nShrinkCand) {
+    dedupTxt.push('缩量回踩档是从 ' + P.nShrinkCand + ' 只带 K 线的主板票里现扫的（涨停→放量阴→缩量 1~2 天，四条硬条件全中才算）');
+  }
 
-  var h = '<div class="db-pool p-ord"><h2>💵 今日可下单 · ' + P.n + ' 只</h2>' +
-    '<div class="db-sub">' + esc(sum.join('　·　')) +
+  var h = '<div class="db-pool p-ord"><h2>💵 明日可下单 · ' + P.n + ' 只</h2>' +
+    '<div class="db-sub">收盘后生成，面向<b>下一个交易日</b>——下面每个价都是明天开盘要用的，' +
+      '不是现在还能成交的价。' + esc(sum.join('　·　')) +
       (dedupTxt.length ? '。' + dedupTxt.join('；') : '') +
       '。挂多少钱、破多少撤写在每只票自己卡片底部那行「下单」里，不再另开表格</div>';
 
@@ -7589,33 +8255,52 @@ function ordBlockHtml() {
       ' 只 · 断板确认池 + 陈学长缩量确认</span></div>' +
       '<div class="db-chips">' + P.poolA.map(ordShapeCard).join('') + '</div>';
   }
-  /* —— ② 形态即将确认 ——
+  /* —— ② 缩量回踩（用户 2026-10-28 22:0x 点名要的那个图形）——
+     它不是「等确认」，而是「赌明天反包」：放量阴之后缩量 1~2 天、K 线还是小实体，
+     明天开盘买入、看它能不能收回去。所以它与③档的「现在不能下单」完全不同——
+     这一档是**明天就能下单**的，只是赌的成分更大，止损也更硬（破 T 日低点就走）。 */
+  if (P.poolC.length) {
+    h += '<div class="db-sec">② 缩量回踩<span class="db-sec-n">' + P.poolC.length +
+      ' 只 · 放量阴后缩量第 1~2 天，明早开盘赌反包</span></div>' +
+      '<div class="db-sub" style="margin:-2px 0 6px">' +
+      '这一档不是「快要确认」，是「明天开盘就买、赌它反包回涨停日高点」：' +
+      '止损一律是涨停日最低价（收盘跌破＝四条前提里的「不破T日低点」没了，图形作废），' +
+      '目标一律是涨停日最高价（反包到位），两个价都不是预测，是那根 K 线自己的高低点。' +
+      '它比①档早、比③档晚——同一只票只会在其中一档出现一次。</div>' +
+      '<div class="db-chips">' + P.poolC.map(ordShapeCard).join('') + '</div>';
+  }
+  /* —— ③ 形态即将确认 ——
      必须写「现在不能下单」。这一档的形态就是用户截图里那 8 只「只差最后一个反包」，
-     它们的共同点是**还差一根确认K线**；把它当买点直接上手，等于在形态没成立时进场。 */
+     它们的共同点是还差一根确认K线；把它当买点直接上手，等于在形态没成立时进场。 */
   if (P.poolB.length) {
-    h += '<div class="db-sec">② 形态即将确认<span class="db-sec-n">' + P.poolB.length +
+    h += '<div class="db-sec">③ 形态即将确认<span class="db-sec-n">' + P.poolB.length +
       ' 只 · 还差一根确认K线，现在不能下单</span></div>' +
       '<div class="db-sub" style="margin:-2px 0 6px">这一档列出来是为了让你明天第一时间看到它走没走出来；' +
-      '卡片上的目标与止损是确认之后才生效的参数，不是今天的买点。' +
+      '卡片上的目标与止损是确认之后才生效的参数，不是明天的买点。' +
       (P.poolB.filter(function (o) { return o.plan; }).length
         ? '其中 ' + P.poolB.filter(function (o) { return o.plan; }).length +
-          ' 只另有明早挂单——那套口径不等确认（见③栏说明），价格已写在卡脚。' : '') +
+          ' 只另有明早挂单——那套口径不等确认（见④栏说明），价格已写在卡脚。' : '') +
       '</div><div class="db-chips">' + P.poolB.map(ordShapeCard).join('') + '</div>';
   }
-  /* —— ③ 明早挂单（不等形态确认的那套）——
-     这一档的准入是「T日首板涨停 + T+1 断板放量 1.1~3.5 + 成交额≥2亿」，**不等缩量、不等站稳 MA5**。
-     它与①②是同一批票的不同时点（24.120）：等形态确认完，那个开盘价就没了。
-     只有「不在池里」的才出现在这里——在池的已经把挂单价并进①②那张卡。 */
+  /* —— ④ 明早挂单（不等形态确认的那套）——
+     这一档的准入是「T日首板涨停 + T+1 断板放量 1.1~3.5 + 成交额≥2亿」，不等缩量、不等站稳 MA5。
+     它与①②③是同一批票的不同时点（24.120）：等形态确认完，那个开盘价就没了。
+     只有「不在池里」的才出现在这里——在池的已经把挂单价并进那张卡。 */
   if (P.teRowsOut.length) {
-    h += '<div class="db-sec">③ ' + (P.isNextPlan ? '明早 ' + buyD + ' 开盘挂单' : '昨晚挂单') +
+    h += '<div class="db-sec">④ ' + (P.isNextPlan ? '明早 ' + buyD + ' 开盘挂单' : '昨晚挂单') +
       '<span class="db-sec-n">' + P.teRowsOut.length +
       ' 只 · 不等形态确认（只走完「涨停→断板」两步）</span></div>' +
       '<div class="db-chips">' + P.teRowsOut.map(ordPlanCard).join('') + '</div>';
   }
-  /* —— ④ 盘中买点 —— */
+  /* —— ⑤ 今日盘中买点（已收盘，不照价执行）——
+     它在「明日可下单」里是**记录**不是指令：那些价是今天盘中用现价算出来的，
+     明天开盘价与它无关。给它改名并加一句，是因为区块改名后「盘中买点」会被读成
+     「明天盘中也能这么买」——这是会让人照着一个过期的价去下单的那种错。 */
   if (P.blOut.length) {
-    h += '<div class="db-sec">④ 盘中买点<span class="db-sec-n">' + P.blOut.length +
-      ' 只 · 现价落在买区内才成立</span></div>' +
+    h += '<div class="db-sec">⑤ 今日盘中买点（已收盘）<span class="db-sec-n">' + P.blOut.length +
+      ' 只 · 仅作记录，明天不照这个价执行</span></div>' +
+      '<div class="db-sub" style="margin:-2px 0 6px">这些买区是今天盘中按现价重算出来的，' +
+      '明天开盘价与它无关——列出来只是让你核对「今天这几个买点后来走成什么样」，别当明日指令用。</div>' +
       '<div class="db-chips">' + P.blOut.map(ordHitCard).join('') + '</div>';
   }
   return h + ordRuleBlocks(P) + '</div>';
