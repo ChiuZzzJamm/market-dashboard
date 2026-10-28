@@ -5726,10 +5726,15 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
     cells = [
       tcCell('板块涨幅', bpNow == null ? '—' : fmtPct(bpNow), bCls),
       tcCell('上涨概率', prob === null ? '—' : prob + '%', sCls),
-      tcCell('建议买入价', (function () {
+      // R100z257（用户 2026-10-28「可以的，改吧」→ 采用「加限定词」这版）：
+      // 这一格原来叫「建议买入价」，而同一张卡底部的「下单」行也印着一个买入价
+      // （清单口径：现价上下 1%，6,115 笔回测）。两个数都叫「买入价」、锚点不同
+      // （这里是 MA5，那里是现价），读者无从仲裁——而这是会**直接下错单**的那类歧义。
+      // 不改成以 MA5 为锚（那等于改交易口径），只把标签说清：这是形态观察位，不是成交价。
+      tcCell('MA5观察位', (function () {
         var ma5 = stkMa5Of(e.code, e.kline);
         if (ma5 === null) return '—';
-        return '<span class="xt" title="MA5＝最近5根日K收盘均值：回踩5日线附近企稳介入（与形态确认条件「站稳MA5」同源）；非限价单，跌破止损位无条件离场">' + ma5.toFixed(2) + '</span>';
+        return '<span class="xt" title="MA5＝最近 5 根日 K 收盘均值，是形态观察位（回踩 5 日线企稳才考虑介入），不是成交价；今天照什么价买，看卡片底部「下单」那行——那是清单口径（现价上下 1%，有回测支撑）">' + ma5.toFixed(2) + '</span>';
       })(), ''),
       tcStopCell(e.code)
     ];
@@ -5760,7 +5765,7 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
         acc: '吸筹评分＝六项特征加权（命中越多分越高）· 止损＝全站统一纪律位（最近收盘 −2.5%，非形态位）',
         bp: '买入区间＝箱顶×0.985~×1.005（越过上限不追）· 证伪价＝平台下沿×0.99（跌破即横盘作废）· 固定持有 10 日、不设百分比止损',
         chen: '目标 +3.5% 次日冲高兑现 · 止损＝洗盘段最低价（破位按收盘算）· 仓位＝1.5% 风险预算 ÷ 止损宽度 · 持仓 ≤2 日'
-      }[e.src] || '建议买入价＝MA5（回踩5日线企稳介入）· 止损＝断板日最低价') : '') +
+      }[e.src] || '观察位＝MA5（回踩5日线企稳介入，非成交价）· 止损＝断板日最低价 · 照什么价买看卡片底部「下单」行') : '') +
       '\n点击查看K线与利好依据'
   });
 }
@@ -5938,214 +5943,10 @@ function renderDuanban() {
           return esc(String(p.name || p.code)) + ' ' + (g > 0 ? '+' : '') + g.toFixed(1) + '%';
         }).join('、')
       : (_gapKnown ? '今日精选无开盘涨超 +1% 的标的' : '开盘价缺失，今日无法判定');
-    // ===== R100z255：表整块删掉，下单信息全部长在卡片上（用户 2026-10-28 二次拍板）=====
-    // 前情：R100z254 把两张表（昨晚定单 / 今日买点）并成一张「今日可下单」，用户看过之后
-    // 仍然要求「这两个模块删掉，改成给卡片赋能」。这次彻底去掉表格——五列表头、组头、
-    // .tb-* 整套行样式全部删除。保留下来的三样，每一样都有理由：
-    //   ① 一行摘要：几只有下单资格、几只现在就能买。这是**列表级**信息，卡片上读不出来；
-    //   ② 规则 / 风险 / 回测三段文字：不是表格数据，是「凭什么按这个价下单」的依据；
-    //   ③ 每只票自己的卡片，底部「下单」一行写着挂多少、破多少撤（orderLineOf）。
-    // 为什么补卡片而不是直接删：实测今日 8 只昨晚挂单与 11 只开盘精选**零交集**，
-    // 8 只三池命中有 5 只不在精选名额里——直接删表会让这 13 只在页面上彻底消失
-    // （pushText 里也没有它们的名字）。删的是「表」这种形态，不是这些票。
-    var _ordCardsHtml = (function () {
-      var D = window.DASHBOARD_DATA || {};
-      var st = ((D.duanban || {}).star) || {};
-      var p2 = function (v) {
-        return (v === null || v === undefined || v === '' || !isFinite(Number(v))) ? '—' : Number(v).toFixed(2);
-      };
-      var sg = function (v, d) {
-        if (v === null || v === undefined || v === '' || !isFinite(Number(v))) return '';
-        var n = Number(v);
-        return ' ' + (n > 0 ? '+' : '') + n.toFixed(d == null ? 2 : d) + '%';
-      };
-      var mdPlain = function (s) { return String(s || '').replace(/\*\*/g, '').trim(); };
-
-      // 昨晚定单：timingExec 由 9:45 写（要有开盘价才能核对）；16:00 之后到次日 9:45 之间
-      // 只有 timingPlan（不含开盘价）→ 回退，状态写「未开盘」。回退态不许编 go/broken/missed：
-      // 昨晚不可能知道今开，写「可挂」就是编；而 22:00 打开看到完全空白，会被读成「今晚没生成」。
-      var te = st.timingExec, fallback = false;
-      if (!te || !te.rows || !te.rows.length) {
-        var tp = D.timingPlan || {};
-        if ((tp.orders || []).length) {
-          te = { rows: (tp.orders || []).map(function (o) {
-                  return { code: o.code, name: o.name, sector: o.sector, limit: o.limit,
-                           floor: o.floor, stop: o.stop, tp: o.tp, t1Close: o.t1Close,
-                           volRatio: o.volRatio, ztDate: o.ztDate, open: null, last: null,
-                           vsLimit: null, state: 'pending', stateZh: '未开盘·照限价挂' };
-                }),
-                n: (tp.orders || []).length, nGo: 0, nBroken: 0, nMissed: 0,
-                tradeDate: tp.tradeDate, buyDate: tp.buyDate, time: null,
-                rule: tp.rule, riskNote: tp.riskNote, bt: tp.bt };
-          fallback = true;
-        } else { te = null; }
-      }
-
-      // 今日买点：st.buyList 只该收有回测 edge 的源。生成端已剔横盘启动，这里同口径再兜一层
-      // （当天 data.js 可能是旧口径生成的），并把被剔只数**显式说出来**——静默少 21 行会被读成
-      // 「今天没这东西」。
-      var blAll = st.buyList || [], bs = st.buySummary || {};
-      var bl = [], nBpCut = 0;
-      blAll.forEach(function (r) {
-        if (String(r.src || '') === 'bp') { nBpCut++; return; }
-        bl.push(r);
-      });
-      var nBuy = 0;
-      bl.forEach(function (r) { if (r.state === 'buy') nBuy++; });
-
-      // 已在「开盘精选」卡里的票不重复建卡——同一只票两处卡片，就是并表之前那份「两份清单」。
-      var pickCodes = {};
-      (st.picks || []).forEach(function (p) { pickCodes[String(p.code)] = 1; });
-      var teRows = te ? te.rows : [];
-      var blDup = bl.filter(function (r) { return pickCodes[String(r.code)]; });
-      var blRest = bl.filter(function (r) { return !pickCodes[String(r.code)]; });
-      var dupNames = blDup.map(function (r) { return r.name || String(r.code); });
-      if (!teRows.length && !blRest.length) return '';
-
-      var n = teRows.length + blRest.length;
-      var sum = [];
-      if (teRows.length) {
-        sum.push('昨晚挂单 ' + (te.n || teRows.length) + ' 只' +
-          (fallback ? '（未开盘，照限价挂）'
-                    : '（可挂 ' + (te.nGo || 0) + ' · 高于限价 ' + (te.nMissed || 0) +
-                      ' · 已破下沿 ' + (te.nBroken || 0) + '）'));
-      }
-      // 三池命中 8 只、卡片只建 5 张——差的那 3 只必须在同一句里交代，
-      // 否则读者要么以为漏渲染，要么得自己拿下面那句去减（减法不该由读者做）。
-      if (bl.length) sum.push('三池命中 ' + bl.length + ' 只（现价在买区内 ' + nBuy + ' 只' +
-        (blDup.length ? '，其中 ' + blDup.length + ' 只已在精选' : '') + '）');
-
-      var h = '<div class="db-pool p-ord"><h2>💵 今日可下单 · ' + n + ' 只</h2>' +
-        '<div class="db-sub">' + esc(sum.join('　·　')) +
-          '。挂多少钱、破多少撤写在每只票自己卡片底部那行「下单」里，不再另开表格' +
-          (dupNames.length ? '；' + dupNames.map(function (nm) {
-            return '<span class="ord-nw">' + esc(nm) + '</span>';
-          }).join('、') + ' 已在上面开盘精选卡里，不重复建卡' : '') +
-          (nBpCut ? '；另有 ' + nBpCut + ' 只「横盘启动·贴沿」命中未列入，理由见下方下单规则' : '') +
-        '</div><div class="db-chips">';
-
-      // ---------- 卡片：先昨晚挂单（时点最紧），再三池命中里精选没覆盖的 ----------
-      teRows.forEach(function (r) {
-        h += tcCard({
-          code: r.code, name: r.name, chg: tcPctOf(r.code, r.pct),
-          pills: ['昨晚挂单', r.sector || null], sent: true,
-          // 四格**不重复价格**：限价与下沿已经写在底部那行「下单」里了（那才是要照抄的），
-          // 卡片四格放「今开是否溢价 / 目标 / 涨停日 / 放量」——表里那五列本来就只用它做核对。
-          cells: [
-            // wrap=true（vwrap）：这一格是「开盘价 + 相对限价的溢价」合成值，手机 199px 卡宽下
-            // 格子只有 ~73px，nowrap 会把「–2.77%」整段吞成「7.03 –2.7…」——而溢价恰恰是
-            // 「为什么没成交」的那半句话（24.75：解释性内容不许用 ellipsis 兜底）。
-            tcCell('今开', r.open == null ? '—' : p2(r.open) + sg(r.vsLimit), '', false, true),
-            tcCell('目标', r.tp == null ? '—' : p2(r.tp), 'up'),
-            tcCell('涨停日', r.ztDate ? esc(String(r.ztDate).slice(5)) : '—', ''),
-            tcCell('放量', r.volRatio == null ? '—' : Number(r.volRatio).toFixed(2) + ' 倍', '')
-          ],
-          foot: (r.t1Close == null ? '昨收 —' : '昨收 ' + p2(r.t1Close))
-          // 这里原本再接一句 stateZh。但上面「下单」那一行（orderLineOf 的 ord 分支）
-          // 已经把它说完了，同一张卡上同一句话印两遍，会被读成「下单」和「昨收」
-          // 是两个互相独立的结论——而它们明明是同一次开盘核对的结果。
-        });
-      });
-      blRest.forEach(function (r) {
-        h += tcCard({
-          code: r.code, name: r.name, chg: tcPctOf(r.code, r.pct),
-          pills: [r.srcZh || '三池命中', r.sector || null], sent: true,
-          // 同上：买区与撤单在「下单」那一行，四格放目标/持有/仓位/现价。
-          // 原来这里每张卡都抄一遍 r.rule（「买入价超过现价 1% 就放弃这一笔」）——
-          // 五张卡同一句话重复五遍，读者会当成五条不同的约束。规则统一放在下方「下单规则」里。
-          cells: [
-            // 同上：目标价 + 空间也是合成值，手机窄格里同样会被截掉后半段。
-            tcCell('目标', r.target == null ? '—' : p2(r.target) + sg(r.targetPct, 1), 'up', false, true),
-            tcCell('持有', r.holdDays == null ? '—' : r.holdDays + ' 日', ''),
-            tcCell('仓位', r.posPct == null ? '—' : r.posPct + '%', ''),
-            tcCell('现价', p2(r.price), '')
-          ],
-          // 卡片脚**不写东西**：srcZh 顶上徽标已经印了一次；「买区按现价上下 1% 实时算」
-          // 是五张卡共用的一条口径，重复五遍等于把它降级成噪音。口径只说一次，写在下方规则里。
-          foot: ''
-        });
-      });
-      h += '</div>';
-
-      // ---------- 规则 / 风险 / 回测：三段文字原样保留 ----------
-      // 24.110 的教训：文案里 markdown 的 ** 会原样印到页面上，统一用 mdPlain 剥掉。
-      // 序号不再手写：手写过一次 ①②②（bs.rule 与断板证伪价都用了 ②），看着像有两条「第二条」。
-      // 现在按 push 顺序自动编号，补充说明用 s:true 走「·」——序号不可能再撞。
-      var rules = [];
-      if (te && te.rule) rules.push({ t: mdPlain(te.rule) });
-      if (bl.length && bs.rule) rules.push({ t: mdPlain(bs.rule) });
-      // 买区口径原来印在每张三池卡的卡片脚上（5 张卡同一句「买区按现价上下 1% 实时算」）——
-      // 五遍同一句会被当成五条不同约束，而且缩成一句短语反而没说清「为什么早上看到的
-      // 区间跟现在不一样」。口径只说一次，放在这里。全部命中行都是 anchor=live 才写。
-      if (bl.length && bl.every(function (r) { return r.anchor === 'live'; })) {
-        rules.push({ t: '三池卡的「今可买」区间＝该票「现价」上下 1%，随盘中价格实时重算，'
-          + '不是昨晚定死的价——9:45 看到的区间与 14:00 打开时不一样，以点开那一刻为准；'
-          + '超出区间就不买这一笔，不追。' });
-      }
-      var noTarget = false;
-      bl.forEach(function (r) { if (r.target == null) noTarget = true; });
-      if (noTarget) {
-        rules.push({ t: '断板反包确认池的「证伪价」＝ T 日最低价，目标与持有期本轮不给——'
-          + '回测只验证到次日盘口成交 + 该价位作废，凑一个目标价就是编数字。' });
-      }
-      // 吸筹/谐波在精选卡上有、在清单里没有——不在清单里的理由必须说一次，
-      // 否则那两张卡底部那句短标签就成了「反正没价」的搪塞。
-      if ((st.picks || []).some(function (p) {
-            var s = String(p.src || '');
-            return s === 'hz' || s === 'acc';
-          })) {
-        rules.push({ s: true, t: '精选卡里的吸筹/谐波标的没有下单价：清单的来源只有 陈学长严格池 · '
-          + '断板反包确认池 · 横盘启动三个（有回测支撑），这两个池从来没有下单价口径——'
-          + '不是今天没命中，也不是抓空。' });
-      }
-      if (nBpCut) {
-        rules.push({ s: true, t: '另有 ' + nBpCut + ' 只「横盘启动·贴沿」命中未列入：该源 7,783 个状态日'
-          + '单笔仅 +0.22%、盈亏比 1.16、T+5 超额 t=0.41（不显著），且它占了旧清单的 72%——'
-          + '不是形态失效，是它不该冒充今天该买什么。形态与买区仍在「横盘启动」子页。' });
-      }
-      if (rules.length) {
-        var _NUM = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'], _no = 0;
-        h += '<div class="st-gap"><span class="st-gap-t">下单规则</span>' +
-          rules.map(function (x) {
-            var l = x.s ? '·' : (_NUM[_no++] || '·');
-            return '<span class="st-gap-r">' + l + '　' + esc(x.t) + '</span>';
-          }).join('') + '</div>';
-      }
-      if (te && te.riskNote) {
-        h += '<div class="st-gap"><span class="st-gap-t">风险口径</span>' +
-          '<span class="st-gap-r">' + esc(mdPlain(te.riskNote)) + '</span></div>';
-      }
-
-      var b = te && te.bt;
-      if (b && b.n) {
-        var _by = b.byYear || {}, _ys = Object.keys(_by).sort();
-        var _avgN = Number(b.avg);
-        var _last = _ys.length ? (_by[_ys[_ys.length - 1]] || {}) : {};
-        var _la = Number(_last.avg);
-        var _decay = _ys.length && isFinite(_la) && isFinite(_avgN) && _la < _avgN * 0.5;
-        h += '<div class="st-gap"><span class="st-gap-t">组合回测</span>' +
-          esc(String((b.span || []).join(' ~ '))) + ' · ' + b.n + ' 笔 · 胜率 ' +
-          Number(b.win).toFixed(1) + '% · 均 ' + Number(b.avg).toFixed(2) + '% · 年化 ' +
-          (Number(b.ann) * 100).toFixed(1) + '% · 最大回撤 ' + (Number(b.mdd) * 100).toFixed(1) +
-          '%（限价成交、每只 1/32 资金、含双边 0.16% 成本）' +
-          // R100z253：全期数字会把「今年已经衰减」盖住，所以分年必须同时露面，
-          // 当年低于全期均值一半时自动告警——不许靠作者自觉。
-          (_ys.length
-            ? '<span class="st-gap-r">分年单笔：' + _ys.map(function (y) {
-                var v = _by[y] || {}, a = Number(v.avg);
-                return esc(y) + ' ' + (isFinite(a) ? ((a > 0 ? '+' : '') + a.toFixed(2) + '%') : '—');
-              }).join('　|　') +
-              (isFinite(Number(_last.ann)) ? '　（' + esc(_ys[_ys.length - 1]) + ' 年化 ' +
-                (Number(_last.ann) > 0 ? '+' : '') + (Number(_last.ann) * 100).toFixed(1) + '%）' : '') +
-              (_decay ? '　⚠️ 最新一年不到全期均值的一半——别拿全期数字当现在的水位' : '') +
-              '</span>'
-            : '') +
-          '</div>';
-      }
-      h += '</div>';
-      return h;
-    })();
-    fixed += _ordCardsHtml;
+    // R100z257（2026-10-28 用户「今日可下单标的也要增加标的页面」）：这一块的位置与形态都不动，
+    // 补的是**接线**——每张卡带 data-k（o|<code>）并注册进 DB_INDEX，点开就是完整标的页。
+    // 24.112 补卡时漏了这一步，页面上有卡片、点了没反应（R100z219 陈学长子页踩过同一个坑）。
+    fixed += ordBlockHtml();
     fixed += '<div class="db-pool p-star"><h2>🌟 开盘精选 · ' + starPicks.length + ' 只</h2>' +
       // R100z228：副标题原文只列了「谐波/横盘启动/吸筹」，而 R100z222 起陈学长也有 2 个名额——
       // 名册里有、说明书里没有，读者就不知道那两枚「陈学长·XX池」徽标是怎么进来的。顺手把各池名额写出来。
@@ -6893,6 +6694,261 @@ function dbFailHtml(failPool, kind) {
     '<div class="db-chips">' + items + '</div></div>';
 }
 
+/* ==========================================================================
+   R100z257 · 今日可下单（清单页）
+   —— 2026-10-28 用户：「今日可下单标的也要增加标的页面」
+   --------------------------------------------------------------------------
+   为什么另开一页，而不是继续挂在断板反包页的固定区：
+     ① 这份清单是「执行参数」，不是断板反包的形态结论——成分来自四个池
+        （陈学长严格池 / 陈学长放宽池 / 断板反包确认池；横盘启动·贴沿已在生成端剔除）；
+     ② 它要在 9:25 之前看完（昨晚挂单得赶集合竞价），埋在断板页中段意味着
+        每天先滚过 TOP10 与开盘精选才轮得到它；
+     ③ #db-fixed（TOP10 + 开盘精选）在所有子页常显——卡片留在固定区，
+        进这一页就是「同一批卡片上下各印一遍」，用户一定会问「这两个是一个东西吗」
+        （R100z225 原话）。
+   两块并列的理由是「时点不同」，不是「两个池」（并表 → 删表 → 补卡的教训见 24.110–112）：
+     · 昨晚挂单：T−1 收盘后按涨停日结构定限价，9:25 集合竞价后只核对今开 → 能不能挂；
+     · 盘中买点：9:45 起现价落在买区内才成立，随现价重算——不是提前定死的价。
+   已在「开盘精选」卡里的票在这里照样出现：精选是候选、这里是执行参数，
+   同一只票出现在不同页不算重复，出现在同一页才算。
+   页面不自己算价：价格全部来自 data.js（duanban.star.buyList / timingExec / timingPlan）。
+   ========================================================================== */
+function ordP2(v) {
+  return (v === null || v === undefined || v === '' || !isFinite(Number(v))) ? '—' : Number(v).toFixed(2);
+}
+function ordSg(v, d) {
+  if (v === null || v === undefined || v === '' || !isFinite(Number(v))) return '';
+  var n = Number(v);
+  return ' ' + (n > 0 ? '+' : '') + n.toFixed(d == null ? 2 : d) + '%';
+}
+function ordMd(s) { return String(s || '').replace(/\*\*/g, '').trim(); }
+
+/* 数据准备：页面里所有数字都从这里出，卡片/摘要/规则三处共用同一份，不各算一遍。 */
+function ordPrep() {
+  var D = window.DASHBOARD_DATA || {};
+  var st = ((D.duanban || {}).star) || {};
+  // 昨晚定单：timingExec 由 9:45 写（要有开盘价才能核对）；16:00 之后到次日 9:45 之间
+  // 只有 timingPlan（不含开盘价）→ 回退，状态写「未开盘」。回退态不许编 go/broken/missed：
+  // 昨晚不可能知道今开，写「可挂」就是编；而 22:00 打开看到完全空白，会被读成「今晚没生成」。
+  var te = st.timingExec, fallback = false;
+  if (!te || !te.rows || !te.rows.length) {
+    var tp = D.timingPlan || {};
+    if ((tp.orders || []).length) {
+      te = { rows: (tp.orders || []).map(function (o) {
+              return { code: o.code, name: o.name, sector: o.sector, limit: o.limit,
+                       floor: o.floor, stop: o.stop, tp: o.tp, t1Close: o.t1Close,
+                       volRatio: o.volRatio, ztDate: o.ztDate, open: null, last: null,
+                       vsLimit: null, state: 'pending', stateZh: '未开盘·照限价挂' };
+            }),
+            n: (tp.orders || []).length, nGo: 0, nBroken: 0, nMissed: 0,
+            tradeDate: tp.tradeDate, buyDate: tp.buyDate, time: null,
+            rule: tp.rule, riskNote: tp.riskNote, bt: tp.bt };
+      fallback = true;
+    } else { te = null; }
+  }
+  // 盘中买点：st.buyList 只该收有回测 edge 的源。生成端已剔横盘启动，这里同口径再兜一层
+  // （当天 data.js 可能是旧口径生成的），并把被剔只数显式说出来——静默少 21 行会被读成「今天没这东西」。
+  var blAll = st.buyList || [], bs = st.buySummary || {}, bl = [], nBpCut = 0;
+  blAll.forEach(function (r) {
+    if (String(r.src || '') === 'bp') { nBpCut++; return; }
+    bl.push(r);
+  });
+  var nBuy = 0;
+  bl.forEach(function (r) { if (r.state === 'buy') nBuy++; });
+  var teRows = te ? (te.rows || []) : [];
+  // 同一只票可能既在昨晚挂单、又在今天的买区里——同页两卡会被读成两个标的，去重。
+  var teCodes = {};
+  teRows.forEach(function (r) { teCodes[String(r.code || '').replace(/\D/g, '')] = 1; });
+  var pickCodes = {};
+  (st.picks || []).forEach(function (p) { pickCodes[String(p.code)] = 1; });
+  var key = function (r) { return String(r.code || '').replace(/\D/g, ''); };
+  // 三种「不建卡」的理由要分开数、分开说，否则摘要里的减法只能由读者自己做：
+  //   blDupPlan 已在昨晚挂单卡里（同一只票两个时点合并成一张，价格更全）
+  //   blDupPick 已在开盘精选卡里（同一页两处同名卡片＝并表之前那份「两份清单」）
+  //   blRest    本页要建的卡
+  var blDupPlan = bl.filter(function (r) { return teCodes[key(r)] && !pickCodes[String(r.code)]; });
+  var blDupPick = bl.filter(function (r) { return pickCodes[String(r.code)]; });
+  var blRest = bl.filter(function (r) { return !teCodes[key(r)] && !pickCodes[String(r.code)]; });
+  return { D: D, st: st, te: te, fallback: fallback, bs: bs,
+           bl: bl, blRest: blRest, blDupPlan: blDupPlan, blDupPick: blDupPick,
+           nBpCut: nBpCut, nBuy: nBuy, teRows: teRows,
+           n: teRows.length + blRest.length };
+}
+
+/* 注册弹窗条目（key = o|<code>）。R100z84 的坑：不注册 = 点开空白；
+   不单独分组 = 左右箭头串到别的池（R100z170/R100z219 都修过同一个病）。 */
+function ordReg(k, r, kind) {
+  var code = String(r.code || '');
+  DB_INDEX[k] = {
+    code: code, name: r.name, sector: r.sector, ztDate: r.ztDate,
+    // pct 走 tcPctOf：timingExec/timingPlan 的行本身不带涨跌幅，直接取 r.pct 会让弹窗
+    // 印出「今日：—」，而卡片右上角明明有涨跌幅（同一只票两种说法）。
+    pct: tcPctOf(code, r.pct),
+    sentiment: stkSentiment(code),
+    // form 里不能出现「·」：弹窗那行会做 `.replace(/·/, '：')`（R100z4e），
+    // 会把「涨停日 2026-10-26 · 按结构定单」印成「涨停日 2026-10-26 ： 按结构定单」。
+    form: (kind === 'plan'
+      ? ('涨停日 ' + (r.ztDate || '—') + '，按涨停日结构定单')
+      : ((r.srcZh || '清单命中') + '，买区单')),
+    ordKind: kind,
+    // 弹窗里那一行下单口径直接复用卡片行（剥标签），不另写一份——两份文案迟早对不上。
+    ordLine: orderLineOf(code).replace(/<[^>]+>/g, '').replace(/^\s*下单\s*/, '').replace(/\s+/g, ' ').trim()
+  };
+  if (DB_ORDER.indexOf(k) < 0) DB_ORDER.push(k);
+}
+
+/* —— 昨晚挂单卡：四格不重复价格 ——
+   限价与下沿已经写在底部那行「下单」里（那才是要照抄的），四格放「今开是否溢价 / 目标 / 涨停日 / 放量」。
+   今开那格 wrap=true（vwrap）：它是「开盘价 + 相对限价的溢价」合成值，手机 199px 卡宽下
+   nowrap 会把「–2.77%」吞成「-2.7…」，而溢价恰恰是「为什么没成交」的那半句（24.75）。 */
+function ordPlanCard(r) {
+  var k = 'o|' + String(r.code || '').replace(/\D/g, '');
+  ordReg(k, r, 'plan');
+  return tcCard({
+    code: r.code, name: r.name, chg: tcPctOf(r.code, r.pct),
+    pills: ['昨晚挂单', r.sector || null], sent: true,
+    cells: [
+      tcCell('今开', r.open == null ? '—' : ordP2(r.open) + ordSg(r.vsLimit), '', false, true),
+      tcCell('目标', r.tp == null ? '—' : ordP2(r.tp), 'up'),
+      tcCell('涨停日', r.ztDate ? esc(String(r.ztDate).slice(5)) : '—', ''),
+      tcCell('放量', r.volRatio == null ? '—' : Number(r.volRatio).toFixed(2) + ' 倍', '')
+    ],
+    // 卡片脚只留昨收：stateZh（「开盘在限价内，可挂」）已经写在「下单」行尾，
+    // 同卡两行各说一遍，会被读成「下单」和「昨收」是两个互相独立的结论。
+    foot: (r.t1Close == null ? '昨收 —' : '昨收 ' + ordP2(r.t1Close)),
+    attrs: ' data-k="' + escAttr(k) + '"',
+    title: r.name + ' ' + r.code + '（' + (r.sector || '') + '）\n昨晚按涨停日结构定的限价单：' +
+      '挂多少、破多少撤写在卡片底部「下单」行\n今开高于限价＝不成交（不追）；跌破下沿＝作废\n点击查看K线与消息'
+  });
+}
+
+/* —— 盘中买点卡：四格 目标 / 持有 / 仓位 / 现价 ——
+   买区与撤单价写在「下单」行；srcZh 只在顶部徽标印一次，卡脚留空
+   （「买区按现价上下 1%」是五张卡共用的一条口径，重复五遍等于降级成噪音，口径写在下方规则里）。 */
+function ordHitCard(r) {
+  var k = 'o|' + String(r.code || '').replace(/\D/g, '');
+  ordReg(k, r, 'hit');
+  return tcCard({
+    code: r.code, name: r.name, chg: tcPctOf(r.code, r.pct),
+    pills: [r.srcZh || '三池命中', r.sector || null], sent: true,
+    cells: [
+      tcCell('目标', r.target == null ? '—' : ordP2(r.target) + ordSg(r.targetPct, 1), 'up', false, true),
+      tcCell('持有', r.holdDays == null ? '—' : r.holdDays + ' 日', ''),
+      tcCell('仓位', r.posPct == null ? '—' : r.posPct + '%', ''),
+      tcCell('现价', ordP2(r.price), '')
+    ],
+    foot: '',
+    attrs: ' data-k="' + escAttr(k) + '"',
+    title: r.name + ' ' + r.code + '（' + (r.sector || '') + '）\n来源：' + (r.srcZh || '清单命中') +
+      '\n买区＝现价上下 1%（随价重算），超出区间不追\n点击查看K线与消息'
+  });
+}
+
+/* 规则 / 风险 / 回测三块：两块清单共用，只出一份（同一句在两组卡下各印一遍＝两条约束）。 */
+function ordRuleBlocks(P) {
+  var te = P.te, bl = P.bl, bs = P.bs, h = '';
+  // 24.110 的教训：文案里 markdown 的 ** 会原样印到页面上，统一用 ordMd 剥掉。
+  // 序号不手写：手写过一次 ①②②（bs.rule 与断板证伪价都用了 ②），看着像有两条「第二条」。
+  // 现在按 push 顺序自动编号，补充说明用 s:true 走「·」——序号不可能再撞。
+  var rules = [];
+  if (te && te.rule) rules.push({ t: ordMd(te.rule) });
+  if (bl.length && bs.rule) rules.push({ t: ordMd(bs.rule) });
+  if (bl.length && bl.every(function (r) { return r.anchor === 'live'; })) {
+    rules.push({ t: '盘中买点的「今可买」区间＝该票「现价」上下 1%，随盘中价格实时重算，'
+      + '不是昨晚定死的价——9:45 看到的区间与 14:00 打开时不一样，以点开那一刻为准；'
+      + '超出区间就不买这一笔，不追。' });
+  }
+  var noTarget = false;
+  bl.forEach(function (r) { if (r.target == null) noTarget = true; });
+  if (noTarget) {
+    rules.push({ t: '断板反包确认池的「证伪价」＝ T 日最低价，目标与持有期本轮不给——'
+      + '回测只验证到次日盘口成交 + 该价位作废，凑一个目标价就是编数字。' });
+  }
+  if (P.nBpCut) {
+    rules.push({ s: true, t: '另有 ' + P.nBpCut + ' 只「横盘启动·贴沿」命中未列入：该源 7,783 个状态日'
+      + '单笔仅 +0.22%、盈亏比 1.16、T+5 超额 t=0.41（不显著），且它占了旧清单的 72%——'
+      + '不是形态失效，是它不该冒充今天该买什么。形态与买区仍在「横盘启动」子页。' });
+  }
+  rules.push({ s: true, t: '谐波形态与主力吸筹没有下单价：清单只收有回测支撑的三个来源'
+    + '（陈学长严格池 / 断板反包确认池 / 横盘启动），这两个池从来没有下单价口径——'
+    + '不是今天没命中，也不是抓空。它们在「开盘精选」里，看形态不看价。' });
+  if (rules.length) {
+    var NUM = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'], no = 0;
+    h += '<div class="st-gap"><span class="st-gap-t">下单规则</span>' +
+      rules.map(function (x) {
+        var l = x.s ? '·' : (NUM[no++] || '·');
+        return '<span class="st-gap-r">' + l + '　' + esc(x.t) + '</span>';
+      }).join('') + '</div>';
+  }
+  if (te && te.riskNote) {
+    h += '<div class="st-gap"><span class="st-gap-t">风险口径</span>' +
+      '<span class="st-gap-r">' + esc(ordMd(te.riskNote)) + '</span></div>';
+  }
+  var b = te && te.bt;
+  if (b && b.n) {
+    var by = b.byYear || {}, ys = Object.keys(by).sort();
+    var avgN = Number(b.avg);
+    var last = ys.length ? (by[ys[ys.length - 1]] || {}) : {};
+    var la = Number(last.avg);
+    var decay = ys.length && isFinite(la) && isFinite(avgN) && la < avgN * 0.5;
+    h += '<div class="st-gap"><span class="st-gap-t">组合回测</span>' +
+      esc(String((b.span || []).join(' ~ '))) + ' · ' + b.n + ' 笔 · 胜率 ' +
+      Number(b.win).toFixed(1) + '% · 均 ' + Number(b.avg).toFixed(2) + '% · 年化 ' +
+      (Number(b.ann) * 100).toFixed(1) + '% · 最大回撤 ' + (Number(b.mdd) * 100).toFixed(1) +
+      '%（限价成交、每只 1/32 资金、含双边 0.16% 成本）' +
+      // R100z253：全期数字会把「今年已经衰减」盖住，所以分年必须同时露面，
+      // 当年低于全期均值一半时自动告警——不许靠作者自觉。
+      (ys.length
+        ? '<span class="st-gap-r">分年单笔：' + ys.map(function (y) {
+            var v = by[y] || {}, a = Number(v.avg);
+            return esc(y) + ' ' + (isFinite(a) ? ((a > 0 ? '+' : '') + a.toFixed(2) + '%') : '—');
+          }).join('　|　') +
+          (isFinite(Number(last.ann)) ? '　（' + esc(ys[ys.length - 1]) + ' 年化 ' +
+            (Number(last.ann) > 0 ? '+' : '') + (Number(last.ann) * 100).toFixed(1) + '%）' : '') +
+          (decay ? '　⚠️ 最新一年不到全期均值的一半——别拿全期数字当现在的水位' : '') +
+          '</span>'
+        : '') +
+      '</div>';
+  }
+  return h;
+}
+
+/* 断板反包页固定区这一块（R100z255 的形态 + R100z257 的接线）：
+   摘要一行 + 卡片 + 规则/风险/回测三段。
+   R100z257 只做了一件事：每张卡带 data-k（o|<code>），走 #db-fixed 已有的点击代理，
+   点开就是完整的标的页（K线 / 消息面 / 退出纪律 / 下单口径）。24.112 那次只补了卡片没接线——
+   渲染得出来但点了没反应，用户 2026-10-28 说的「今日可下单标的也要增加标的页面」就是这个
+   （同一个说法在 R100z219 出现过一次，当时是陈学长子页的卡片没接线）。 */
+function ordBlockHtml() {
+  var P = ordPrep(), te = P.te;
+  if (!P.n) return '';
+  var sum = [];
+  if (P.teRows.length) {
+    sum.push('昨晚挂单 ' + P.teRows.length + ' 只' +
+      (P.fallback ? '（未开盘，照限价挂）'
+        : '（可挂 ' + (te.nGo || 0) + ' · 高于限价 ' + (te.nMissed || 0) + ' · 已破下沿 ' + (te.nBroken || 0) + '）'));
+  }
+  if (P.bl.length) {
+    sum.push('盘中买点 ' + P.bl.length + ' 只（现价在买区内 ' + P.nBuy + ' 只' +
+      (P.blDupPick.length ? '，其中 ' + P.blDupPick.length + ' 只已在精选' : '') +
+      // 与「昨晚挂单」同码的那几只已经在那 8 张卡里（同一只票两个时点合并成一张），
+      // 不说这一句，读者就得拿「8 只」去减卡片数（减法不该由读者做）。
+      (P.blDupPlan.length ? '，另 ' + P.blDupPlan.length + ' 只昨晚已挂单' : '') + '）');
+  }
+  return '<div class="db-pool p-ord"><h2>💵 今日可下单 · ' + P.n + ' 只</h2>' +
+    '<div class="db-sub">' + esc(sum.join('　·　')) +
+      '。挂多少钱、破多少撤写在每只票自己卡片底部那行「下单」里，不再另开表格' +
+      (P.blDupPick.length
+        ? '；' + P.blDupPick.map(function (r) {
+            return '<span class="ord-nw">' + esc(r.name || String(r.code)) + '</span>';
+          }).join('、') + ' 已在上面开盘精选卡里，不重复建卡'
+        : '') +
+      (P.nBpCut ? '；另有 ' + P.nBpCut + ' 只「横盘启动·贴沿」命中未列入，理由见下方下单规则' : '') +
+    '</div><div class="db-chips">' +
+      P.teRows.map(ordPlanCard).join('') + P.blRest.map(ordHitCard).join('') +
+    '</div>' + ordRuleBlocks(P) + '</div>';
+}
+
 /* R100k：子页菜单改为字符串渲染（可嵌入各子页内容流任意位置）；switchSubTab 经 querySelectorAll
    同步所有实例的 .on 高亮。断板页位置=开盘精选与确认池说明之间；谐波/横盘启动页位置=页首。 */
 var currentSubTab = 'db';
@@ -7610,6 +7666,11 @@ function openDbModal(key) {
   //   「观察池 · <stage>」兜底，把「陈学长·严格池」显示成「观察池 · 缩量确认」，
   //   读者会以为它是断板反包的观察池（两套口径并列，标签必须能区分）。
   var isChen = key.indexOf('x|') === 0;
+  // R100z257：今日可下单清单条目（key = o|<code>）。这些票**不一定在任何技术池里**
+  //   （昨晚挂单的 8 只是按涨停日结构单独生成的定单），所以不能落到下面那句
+  //   「观察池 · <stage>」兜底——stage 是 undefined，会印出「观察池 · undefined」。
+  //   要求：列表里每一个能点开的条目都必须注册（R100z84），且身份标签必须能自证来源。
+  var isOrd = key.indexOf('o|') === 0;
   // R100z124：失效条目来源模块（key = f|<kind>|<code>）——徽章标模块名 + K线/退出纪律只取本模块几何，
   //   不再跨模块借「失效前谐波快照」（同一标的可同时躺在两个模块的失效池，见 PROJECT-MEMORY）。
   var kindFail = isFail ? String(key).split('|')[1] : '';
@@ -7621,6 +7682,15 @@ function openDbModal(key) {
     stkSecBadge(e.code) +
     (function () { // R100z4：池归属并入断板反包徽章（断板反包·确认池 / 断板反包·观察池，金色样式与全站一致）；异常兜底回退独立池徽章
       var tb = stkTechBadgeHtml(e.code);
+      // R100z257：从清单卡点进来，第一枚徽标必须是「今日可下单 · 昨晚挂单/盘中买点」——
+      //   否则打开的是同一只票，徽标却只写「陈学长·观察中」，读者会怀疑点错了入口。
+      //   池归属仍然跟在后面（它本来就同时在那个池里，两边都在是事实）。
+      if (isOrd) {
+        var c0 = chenPoolHit(String(e.code));
+        return '<span class="pool-badge hold">今日可下单 · ' +
+          (e.ordKind === 'plan' ? '昨晚挂单' : '盘中买点') + '</span>' +
+          (c0 ? chenBadgeHtml(c0.tier) : '') + tb;
+      }
       if (isFail) return tb + '<span class="pool-badge fail">' + failKindCn(kindFail) + '失效归档池</span>';
       // R100z218：先判身份再谈技术徽章——陈学长条目即使同时躺在断板池里，
       //   也要先把自己是哪个池说清楚（tb 若命中断板池仍追加在后面，读者能看到「两边都在」）。
@@ -7633,7 +7703,9 @@ function openDbModal(key) {
       //   否则「你在哪一页点开」决定了这票是不是陈学长选的（用户 2026-10-26 截图 1 vs 2）。
       var ch = chenPoolHit(e.code);
       if (ch) return chenBadgeHtml(ch.tier) + tb;
-      return tb || ('<span class="pool-badge ' + (done ? 'done' : 'hold') + '">' + (done ? '确认池' : ('观察池 · ' + esc(e.stage))) + '</span>');
+      return tb || (isOrd
+        ? '<span class="pool-badge hold">今日可下单 · ' + (e.ordKind === 'plan' ? '昨晚挂单' : '盘中买点') + '</span>'
+        : ('<span class="pool-badge ' + (done ? 'done' : 'hold') + '">' + (done ? '确认池' : ('观察池 · ' + esc(e.stage))) + '</span>'));
     })() +
     stkLhbBadge(String(e.code)) + // R100z201：当日龙虎榜归属（用户：标的页面里要写）
     riskTipBadge(String(e.code)) + // R100z87：可见风险提示徽章（手机端也能看到，原 ⚠️ 悬停信息不可达）
@@ -7647,16 +7719,24 @@ function openDbModal(key) {
   // 由「断板池同码条目」补上，不再因 picks 没搬字段而整片「—」。
   var mBpNow = boardPctOf(e), mBpZt = boardPctZtOf(e);
   document.getElementById('db-modal-meta').innerHTML =
-    (e.ztDate || e.pct != null
-      ? '<div><span class="lab">涨停日：</span>' + esc(e.ztDate || '') + '　<span class="lab">今日：</span><b class="' + (e.pct >= 0 ? 'up' : 'down') + '">' + fmtPct(e.pct) + '</b></div>' +
+    // R100z257：两个字段各自判空，不再「有其一就整行渲染」——昨晚挂单的票没有今日涨跌幅，
+    // 原来会印出「今日：—」，看着像抓空；有值的一侧照常显示，缺的一侧整段不写。
+    ((e.ztDate || e.pct != null)
+      ? '<div>' +
+          (e.ztDate ? '<span class="lab">涨停日：</span>' + esc(e.ztDate) + '　' : '') +
+          (e.pct != null ? '<span class="lab">今日：</span><b class="' + (e.pct >= 0 ? 'up' : 'down') + '">' + fmtPct(e.pct) + '</b>' : '') +
+        '</div>' +
         '<div><span class="lab">涨停日板块涨幅：</span><b class="' + (mBpZt >= 0 ? 'up' : 'down') + '">' + (mBpZt == null ? '—' : fmtPct(mBpZt)) + '</b>　<span class="lab">今日板块涨幅：</span><b class="' + (mBpNow >= 0 ? 'up' : 'down') + '">' + (mBpNow == null ? '—' : fmtPct(mBpNow)) + '</b></div>'
       : '') +
     '<div><span class="lab">形态：</span>' + esc((e.form || '').replace(/·/, '：')) + '</div>' + // R100z4e：仅首个 ·→：
+    // R100z257：清单条目进来必须把「照什么价买」再说一遍——卡片底部那行是执行的唯一出口，
+    //   点进来反而没有，就成了「点开以后更不清楚」。
+    (isOrd && e.ordLine ? '<div><span class="lab">下单口径：</span><b>' + esc(e.ordLine) + '</b></div>' : '') +
     (e.note ? '<div><span class="lab">盘面观察：</span>' + esc(e.note) + '</div>' : '') +
     // R100z84：失效条目专有两行（失效原因/归档日）；上涨概率对失效标的无意义，隐藏
     (isFail ? '<div><span class="lab">失效原因：</span>' + esc(e.reason || '—') + '</div>' +
       '<div><span class="lab">归档日：</span>' + esc(e.entryDate || '—') + '（自失效日起保留 5 个交易日后自动清理）</div>' : '') +
-    (!isFail && !isChen ? '<div><span class="lab">上涨概率：</span><b class="' + probCls + '">' + (e.probability !== null && e.probability !== undefined ? e.probability + '%' : '—') + '</b></div>' : '') +
+    (!isFail && !isChen && !isOrd ? '<div><span class="lab">上涨概率：</span><b class="' + probCls + '">' + (e.probability !== null && e.probability !== undefined ? e.probability + '%' : '—') + '</b></div>' : '') +
     // R100z219：陈学长标的页的交易参数与结构（断板反包没有 trade 字段，这块是它独有的）。
     // 原来这里渲染的是「上涨概率：—」——陈学长不产生 probability，那行是纯占位。
     (isChen && !isFail ? chenTradeMeta(e) : '') +
@@ -7773,6 +7853,10 @@ function dbStep(delta) {
     // 用 charAt(0) === 'x' 而不是 indexOf('x|')，与上面两行同一写法。
     } else if (pre === 'x') {
       ord = DB_ORDER.filter(function (k) { return k.charAt(0) === 'x'; });
+    // R100z257：今日可下单条目（o|）单独一组。不分组就落进下面的 else（DB_ORDER 全序列），
+    // 从清单卡点开却能用箭头翻到断板双池/精选——R100z170/R100z219 修的是同一个病。
+    } else if (pre === 'o') {
+      ord = DB_ORDER.filter(function (k) { return k.charAt(0) === 'o'; });
     } else {
       ord = DB_ORDER;
     }
