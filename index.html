@@ -806,18 +806,39 @@
   .db-pool.p-star .tc:hover { border-color: #e8a013; background: rgba(255,248,228,.9); }
   /* R100s：卡片 db-stage 阶段徽标（已确认/待企稳/待缩量）已删，对应 CSS 一并清理 */
   .db-pool .db-sub { font-size: var(--fs-base); color: var(--ink2); margin-bottom: 14px; }
-  /* R100z192：开盘精选·竞价跳空分布（只标注动作，不参与排序） */
-  .st-gap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px;
-    margin: -4px 0 12px; padding: 8px 11px; border: 1px dashed var(--line);
-    border-radius: var(--r-block); background: var(--bg-2); font-size: var(--fs-sm); color: var(--ink2); }
-  .st-gap-t { font-weight: 700; color: var(--ink); }
-  .st-gap-r { flex: 1 1 100%; font-size: var(--fs-xs); color: var(--ink3, var(--ink2)); opacity: .8; line-height: 1.6; }
-  @media (max-width: 720px) { .st-gap { font-size: var(--fs-xs); } }
+  /* R100z258（用户 2026-10-28 截图 1/2/3）：
+     ① 卡片区与「下单规则」之间要留白——红框圈出的就是那段空档，两块贴着会被读成同一段；
+     ② 下单规则 / 风险口径 / 组合回测 三块改成可折叠、默认收起（原生 <details>，不写 JS 状态、
+        也不存 localStorage：折叠是「现在想不想看」，不是「这个人是谁」）；
+     ③ 原 .st-gap（虚线小提示块）随「开盘精选」的开盘价位置/盘口结构/追高区一起删掉（截图 3）。
+        同类提示块从此只有 .ord-fold 一套，不再有第二套语气相同的样式。 */
+  .ord-fold { margin: 0 0 10px; border: 1px solid var(--line); border-radius: var(--r-block);
+    background: var(--bg-2); }
+  .ord-fold:first-of-type { margin-top: 20px; }
+  .ord-fold > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px;
+    cursor: pointer; padding: 9px 12px; font-size: var(--fs-sm); font-weight: 700;
+    color: var(--ink); list-style: none; }
+  .ord-fold > summary::-webkit-details-marker { display: none; }
+  .ord-fold-ic { display: inline-block; font-size: var(--fs-xs); color: var(--ink2);
+    transition: transform .15s ease; }
+  .ord-fold[open] .ord-fold-ic { transform: rotate(90deg); }
+  /* R100z258 手机实测（500px）：组合回测摘要「6115 笔 · 胜率 56% · 年化 33.6% · 最大回撤 -8.2%
+     ⚠️ 最新一年…」一行放不下，被容器硬切（没有省略号，是半个字）。摘要行允许换行，
+     而不是截断——这条行上的衰减告警是全块最该被看见的一句。 */
+  .ord-fold-h { flex: 1 1 auto; min-width: 0; font-weight: 400; font-size: var(--fs-xs);
+    color: var(--ink2); overflow-wrap: anywhere; }
+  .ord-fold-b { padding: 0 12px 11px; font-size: var(--fs-xs); color: var(--ink2); line-height: 1.75; }
+  .ord-fold-b .ord-li { display: flex; gap: 7px; margin-top: 6px; }
+  .ord-fold-b .ord-li > i { flex: 0 0 auto; font-style: normal; font-weight: 700; color: var(--ink2); }
+  .ord-fold-b .ord-li > span { flex: 1 1 auto; min-width: 0; }
+  /* 卡片区下沿再让 6px，与第一个折叠块的 20px 叠成清晰的一段留白 */
+  .p-ord .db-chips { margin-bottom: 6px; }
+  @media (max-width: 720px) { .ord-fold > summary { font-size: var(--fs-xs); } }
   /* R100z255（2026-10-28 用户二次拍板「这两个模块删掉，改成给卡片赋能」）：
      原来这里有一整套 .tb-wrap / .tb-head / .tb-th / .tb-row / .tb-grp / .tb-rule /
      .tb-risk / .tb-bt ——「今日可下单」那张五列表的样式。表已整块删掉、信息压回卡片，
      所以这套样式也一并删干净：留着的死样式会让下一个改这块的人以为还有第二个渲染分支
-     （24.110 删旧 .bl-* 时写过同一条）。规则/风险/回测三块文字改用已有的 .st-gap。 */
+     （24.110 删旧 .bl-* 时写过同一条）。规则/风险/回测三块文字改由 .ord-fold 承载（R100z258）。 */
   /* R91j: 近3日涨幅居前板块 TOP10 */
   .db-tb { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
   @media (max-width: 900px) { .db-tb { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -1537,6 +1558,10 @@
          所以这里只剩两个容器。两块各有独立渲染函数，容器常驻、只切 display，不重复 innerHTML。 -->
     <div id="db-od" class="db-subpage" style="display:none;">
       <div id="db-od-nav"></div>
+      <!-- R100z258（用户 2026-10-28 截图 1）：「今日可下单」从固定区整块挪进开盘预测页。
+           位置在菜单之后、前瞻之前——盘前这一页的动作顺序是「先看昨晚挂什么单，再读为什么」。
+           #db-fixed 里的 TOP10 + 开盘精选仍常显在最上面，所以摘要里「已在上面开盘精选卡里」依旧成立。 -->
+      <div id="db-ord"></div>
       <div id="weekend-news"></div>
       <!-- R100z248（用户 2026-10-27「大盘趋势状态放到主页面，加到原有模块」）：
            趋势档已并进主页面「大盘指数」卡（见 renderTrendStrip / renderIndexCards），
@@ -5921,54 +5946,20 @@ function renderDuanban() {
     });
     starTech.sort(function (a, b) { return (b.score || b.probability || 0) - (a.score || a.probability || 0); });
     var starPicks = starPool.concat(starTech);
-    // R100z198（2026-10-24 用户拍板「先只展示不改逻辑」）：把「追高」这组回测数字挂到页面上。
-    // 依据 = 技术池 1174 条样本（2026-09-30~10-22，日聚类口径，见记忆 24.60）：
-    // 次日开盘涨超 +1% 的当日开→收 −1.34%（t=−2.90、日胜 31%），涨超 +3% 的 −1.71%。
-    // ⚠️ 这里**只标注是哪几只，不剔除、不参与排序**——观察一周后再由用户决定要不要变成规则。
-    // 加这条的目的不是好看：没有逐只标注，「追高」这个结论在页面上就无法被验证。
-    var _chaseList = starPicks.filter(function (p) {
-      if (p.openPct === null || p.openPct === undefined || p.openPct === '') return false;
-      var g = Number(p.openPct);
-      return isFinite(g) && g >= 1.0;
-    });
-    // 「没有追高票」和「开盘价没抓到」是两件事，不能都写成「无」——
-    // 前者是结论，后者是数据缺口，混在一起会让人以为今天真的没高开。
-    var _gapKnown = starPicks.some(function (p) {
-      if (p.openPct === null || p.openPct === undefined || p.openPct === '') return false;
-      return isFinite(Number(p.openPct));
-    });
-    var _chaseTxt = _chaseList.length
-      ? '开盘涨超 +1% 的 ' + _chaseList.length + ' 只：' + _chaseList.map(function (p) {
-          var g = Number(p.openPct);
-          return esc(String(p.name || p.code)) + ' ' + (g > 0 ? '+' : '') + g.toFixed(1) + '%';
-        }).join('、')
-      : (_gapKnown ? '今日精选无开盘涨超 +1% 的标的' : '开盘价缺失，今日无法判定');
-    // R100z257（2026-10-28 用户「今日可下单标的也要增加标的页面」）：这一块的位置与形态都不动，
-    // 补的是**接线**——每张卡带 data-k（o|<code>）并注册进 DB_INDEX，点开就是完整标的页。
-    // 24.112 补卡时漏了这一步，页面上有卡片、点了没反应（R100z219 陈学长子页踩过同一个坑）。
-    fixed += ordBlockHtml();
+    // R100z258（用户 2026-10-28 截图 3「开盘精选这部分删除」）：开盘价位置 / 盘口结构 / 追高区
+    // 三块整段下线，连同这段算「追高」的数据准备一起删——留着计算却没人用，下一个人会以为还有第二个渲染出口。
+    // 数据侧不动：duanban.star.gapSummary / tapeSummary / openPct 仍由脚本产出（闸门与复盘还用得到），
+    // 只是页面不再单独读它。要恢复，回记忆 24.114 看这三块原本长什么样，别凭印象重写。
+    // R100z257 曾把「今日可下单」放在这里（固定区，卡片补 data-k 接线）。
+    // R100z258（用户 2026-10-28 截图 1 红框）：「挪到开盘预测里面」——已移到 #db-od 的 #db-ord，
+    // 固定区只留 TOP10 + 开盘精选。别再挪回来：固定区在所有子页常显，放这里等于每页都印一遍。
     fixed += '<div class="db-pool p-star"><h2>🌟 开盘精选 · ' + starPicks.length + ' 只</h2>' +
       // R100z228：副标题原文只列了「谐波/横盘启动/吸筹」，而 R100z222 起陈学长也有 2 个名额——
       // 名册里有、说明书里没有，读者就不知道那两枚「陈学长·XX池」徽标是怎么进来的。顺手把各池名额写出来。
       '<div class="db-sub">' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：断板池按「板块情绪正向+主力净流入正向」挂钩+上涨概率降序，并可从谐波/横盘启动/吸筹/陈学长池直接取标的（名额 横盘启动 3 · 谐波 3 · 吸筹 2 · 陈学长 2）；弹窗与池内一致）</div>' +
       // R100z232 的下单清单 → R100z254 两表并一张 → **R100z255 表整块删掉**（用户二次拍板）。
       // 现在价格的出口只有一个：每张票自己卡片底部的「下单」行。这里不再插任何表格。
-      // R100z193（2026-10-24 用户口径）：开盘价位置**不是强弱信号**，只是价格事实；
-      // 动作口径下移到「盘口结构」那一行（tape.py 的分时量价诊断）。
-      (st.gapSummary && st.gapSummary.text
-        ? '<div class="st-gap"><span class="st-gap-t">开盘价位置</span>' + esc(String(st.gapSummary.text)) + '</div>'
-        : '') +
-      // R100z193：盘口结构——均价线、跌破次数、下跌分钟量占比、爆量倍数，脚本算，只读。
-      (st.tapeSummary && st.tapeSummary.text
-        ? '<div class="st-gap"><span class="st-gap-t">盘口结构</span>' + esc(String(st.tapeSummary.text)) +
-          '<span class="st-gap-r">' + esc(String(st.tapeSummary.rule || '')) + '</span></div>'
-        : '') +
-      // R100z198（2026-10-24 用户拍板「先只展示不改逻辑」）：追高区。
-      // 左半是「今天哪几只落在负期望区」，右半是回测出处。**没有加入任何筛选/排序逻辑**——
-      // 形态票开盘涨超 1% 目前只是被标出来，仍然照常进精选、照常展示。
-      '<div class="st-gap"><span class="st-gap-t">追高区</span>' + _chaseTxt +
-        '<span class="st-gap-r">回测（2026-09-30~10-22 · 技术池 1174 条）：次日开盘 ≥+1% 当日开→收 −1.34%' +
-        '（日聚类 t=−2.90、日胜 31%），≥+3% 更差 −1.71%。此处只标注，不剔除、不排序、不改选股。</span></div>' +
+      // R100z258：开盘价位置 / 盘口结构 / 追高区 三块按用户截图 3 删除（正文见 24.114）。
       // R99c：页面只放深度分析（pushText），指数/情绪/集合竞价等均在其中，不再单列 marketLine/sentiment
       (st.pushText ? '<div style="font-size: var(--fs-base);color:var(--ink2);line-height:1.8;margin:6px 0 10px;white-space:pre-line;">' + esc(st.pushText) + '</div>' : '') +
       '<div class="db-chips">';
@@ -6037,6 +6028,11 @@ function renderDuanban() {
   // 且 dbSubTab 会记住 'od'，下次再进还是它，等于把人锁死在这一页。
   var odNav = document.getElementById('db-od-nav');
   if (odNav) odNav.innerHTML = subnavHtml();
+  // R100z258：今日可下单在开盘预测页（容器 #db-ord 常驻 HTML）。必须在本函数开头那次
+  // DB_INDEX/DB_ORDER 重置之后渲染——ordBlockHtml() 边渲染边注册 o| 键，早于重置就等于没注册，
+  // 点开是空白（R100z84 的坑）。
+  var ordWrap = document.getElementById('db-ord');
+  if (ordWrap) ordWrap.innerHTML = ordBlockHtml();
 
   // R100i：🧰 工具箱另两个子页——谐波形态 / 横盘启动（从主页面挪入 / 新建，见 index 渲染段注释）
   // R100k：子页菜单嵌入页首（空数据态也保留菜单，避免困在子页无法返回）
@@ -6844,6 +6840,18 @@ function ordHitCard(r) {
   });
 }
 
+/* R100z258（用户 2026-10-28 截图 2「规则全部增加展开按钮，默认隐藏」）：
+   三块口径统一走原生 <details>，不写 JS 状态、不存 localStorage——折叠只是「现在想不想看」。
+   摘要行固定给「这是什么 + 几条/几笔」，正文才是口径原文：收起状态也必须能判断值不值得点开，
+   否则「默认隐藏」就等于把结论删了（24.112：空着＝有结论没写）。
+   组合回测的胜率/年化/回撤留在摘要行、衰减告警也在摘要行——把「今年已经不行了」藏进折叠块，
+   等于让这条最该被看见的警告消失。 */
+function ordFold(title, hint, body) {
+  return '<details class="ord-fold"><summary><span class="ord-fold-ic">▸</span>' + title +
+    (hint ? '<span class="ord-fold-h">' + hint + '</span>' : '') + '</summary>' +
+    '<div class="ord-fold-b">' + body + '</div></details>';
+}
+
 /* 规则 / 风险 / 回测三块：两块清单共用，只出一份（同一句在两组卡下各印一遍＝两条约束）。 */
 function ordRuleBlocks(P) {
   var te = P.te, bl = P.bl, bs = P.bs, h = '';
@@ -6874,15 +6882,15 @@ function ordRuleBlocks(P) {
     + '不是今天没命中，也不是抓空。它们在「开盘精选」里，看形态不看价。' });
   if (rules.length) {
     var NUM = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'], no = 0;
-    h += '<div class="st-gap"><span class="st-gap-t">下单规则</span>' +
+    h += ordFold('下单规则', rules.length + ' 条',
       rules.map(function (x) {
         var l = x.s ? '·' : (NUM[no++] || '·');
-        return '<span class="st-gap-r">' + l + '　' + esc(x.t) + '</span>';
-      }).join('') + '</div>';
+        return '<div class="ord-li"><i>' + l + '</i><span>' + esc(x.t) + '</span></div>';
+      }).join(''));
   }
   if (te && te.riskNote) {
-    h += '<div class="st-gap"><span class="st-gap-t">风险口径</span>' +
-      '<span class="st-gap-r">' + esc(ordMd(te.riskNote)) + '</span></div>';
+    h += ordFold('风险口径', '',
+      '<div class="ord-li"><i>·</i><span>' + esc(ordMd(te.riskNote)) + '</span></div>');
   }
   var b = te && te.bt;
   if (b && b.n) {
@@ -6891,29 +6899,31 @@ function ordRuleBlocks(P) {
     var last = ys.length ? (by[ys[ys.length - 1]] || {}) : {};
     var la = Number(last.avg);
     var decay = ys.length && isFinite(la) && isFinite(avgN) && la < avgN * 0.5;
-    h += '<div class="st-gap"><span class="st-gap-t">组合回测</span>' +
-      esc(String((b.span || []).join(' ~ '))) + ' · ' + b.n + ' 笔 · 胜率 ' +
-      Number(b.win).toFixed(1) + '% · 均 ' + Number(b.avg).toFixed(2) + '% · 年化 ' +
-      (Number(b.ann) * 100).toFixed(1) + '% · 最大回撤 ' + (Number(b.mdd) * 100).toFixed(1) +
-      '%（限价成交、每只 1/32 资金、含双边 0.16% 成本）' +
-      // R100z253：全期数字会把「今年已经衰减」盖住，所以分年必须同时露面，
-      // 当年低于全期均值一半时自动告警——不许靠作者自觉。
+    // R100z253：全期数字会把「今年已经衰减」盖住，所以分年必须同时露面，
+    // 当年低于全期均值一半时自动告警——不许靠作者自觉。R100z258 折叠后这条告警提到摘要行。
+    h += ordFold('组合回测',
+      b.n + ' 笔 · 胜率 ' + Number(b.win).toFixed(1) + '% · 年化 ' +
+      (Number(b.ann) * 100).toFixed(1) + '% · 最大回撤 ' + (Number(b.mdd) * 100).toFixed(1) + '%' +
+      (decay ? '　⚠️ 最新一年不到全期均值的一半，别拿全期当现在的水位' : ''),
+      '<div class="ord-li"><i>·</i><span>' + esc(String((b.span || []).join(' ~ '))) +
+      '　单笔均 ' + Number(b.avg).toFixed(2) + '%；限价成交、每只 1/32 资金、含双边 0.16% 成本；' +
+      '最大回撤＝净值自最高点回落的最大幅度。</span></div>' +
       (ys.length
-        ? '<span class="st-gap-r">分年单笔：' + ys.map(function (y) {
+        ? '<div class="ord-li"><i>·</i><span>分年单笔：' + ys.map(function (y) {
             var v = by[y] || {}, a = Number(v.avg);
             return esc(y) + ' ' + (isFinite(a) ? ((a > 0 ? '+' : '') + a.toFixed(2) + '%') : '—');
           }).join('　|　') +
           (isFinite(Number(last.ann)) ? '　（' + esc(ys[ys.length - 1]) + ' 年化 ' +
             (Number(last.ann) > 0 ? '+' : '') + (Number(last.ann) * 100).toFixed(1) + '%）' : '') +
-          (decay ? '　⚠️ 最新一年不到全期均值的一半——别拿全期数字当现在的水位' : '') +
-          '</span>'
-        : '') +
-      '</div>';
+          '</span></div>'
+        : ''));
   }
   return h;
 }
 
-/* 断板反包页固定区这一块（R100z255 的形态 + R100z257 的接线）：
+/* 「今日可下单」整块（R100z255 的形态 + R100z257 的接线 + R100z258 的家）：
+   ⚠️ 家已从 #db-fixed（断板页固定区）搬到 #db-od（开盘预测子页）的 #db-ord 容器里——
+      别按旧注释把它写回 fixed，固定区在所有子页常显，放那儿等于每页都印一遍。
    摘要一行 + 卡片 + 规则/风险/回测三段。
    R100z257 只做了一件事：每张卡带 data-k（o|<code>），走 #db-fixed 已有的点击代理，
    点开就是完整的标的页（K线 / 消息面 / 退出纪律 / 下单口径）。24.112 那次只补了卡片没接线——
@@ -7897,6 +7907,17 @@ document.getElementById('db-fixed').addEventListener('click', function (ev) {
   var cb = document.getElementById('db-chen');
   if (!cb) return;
   cb.addEventListener('click', function (ev) {
+    var chip = ev.target ? ev.target.closest('.tc[data-k], .db-chip[data-k]') : null;
+    if (chip) { DB_NAV = null; openDbModal(chip.getAttribute('data-k')); }
+  });
+})();
+// R100z258：「今日可下单」从 #db-fixed 搬进开盘预测页（#db-ord 在 #db-od 内）——卡片换了容器，
+// 点击代理必须跟过去。这就是 24.113 立的铁律：卡区一挪，data-k / DB_INDEX / 容器代理三件一起查，
+// 少一件就是「渲染得出来、点了没反应」。容器静态存在，绑一次即可。
+(function () {
+  var od = document.getElementById('db-od');
+  if (!od) return;
+  od.addEventListener('click', function (ev) {
     var chip = ev.target ? ev.target.closest('.tc[data-k], .db-chip[data-k]') : null;
     if (chip) { DB_NAV = null; openDbModal(chip.getAttribute('data-k')); }
   });
