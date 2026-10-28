@@ -118,6 +118,8 @@ NON_DATA_WRITERS = {
                       '读 data.js 只为 --add 校验目标板块是否存在',
     'goldpit_study.py': 'R100z234：黄金坑原型研究脚本，原子写的是 goldpit_study.json（--dump 时才写，'
                         '可达数百 MB、已在 .gitignore 排除），纯离线统计、从不碰 data.js、不进任何自动化',
+    'check_automations.py': 'R100z261：B6 规则 ⑥ 的哨兵状态，原子写 .cache/b6_selfwrite_state.json'
+                            '（本机滚动状态，.cache/ 已在 .gitignore 排除）；data.js 只读不写',
 }
 
 # 死脚本白名单：合法的「手工跑、不进自动化」工具，写明用途才准留
