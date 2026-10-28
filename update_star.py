@@ -90,6 +90,30 @@ BUY_SRC_ZH = {
 }
 BUY_ORDER = ('chen_strict', 'duanban', 'bp', 'chen_loose')
 
+# ---------------------------------------------------------------- R102 候选两档
+# 用户 2026-10-28 第 2 条：「9:45 肯定是要根据当日早上大盘开盘的节奏、板块的强弱，去从
+# 明日可下单、陈学长、断板反包、吸筹、谐波这些技术池去选标的的，**待确认的我认为也可以
+# 进去，但是排序是确认池在最前面**」。
+# 于是候选分两档（不是两个新池，是同一批池子的成熟度）：
+#   confirm 确认档：断板 confirmed（已企稳/已脱离）+ 陈学长 strict/loose（形态已确认）
+#   watch   待确认档：断板 watching（待企稳/待脱离）+ 陈学长 watching（还差一根确认 K 线）
+#                    + 缩量回踩档（放量阴后刚缩 1~2 天，见 shrink_scan.py）
+# 三条硬规矩：
+#   ① **确认档永远排在待确认档之前**，待确认档内部才比概率/分；
+#   ② 待确认档**不给买点**（build_buy_list 里 skip）——「再等一根确认 K 线」这个前提不能
+#      被一张带价格的卡悄悄删掉；档位标签写进 picks[].tier 供前端与推送区分；
+#   ③ 待确认档**不占**技术池配额（配额是给确认形态的座位），另设总量上限
+#      MAX_WATCH_PICKS，宁缺勿滥：没有回测支持「待确认票该给多少仓」，就先不放大数量。
+TIER_CONFIRM, TIER_WATCH = "confirm", "watch"
+TIER_ZH = {TIER_CONFIRM: "确认", TIER_WATCH: "待确认"}
+_TIER_RANK = {TIER_CONFIRM: 0, TIER_WATCH: 1}
+# 待确认档的**每源配额** + 全局上限。为什么按源配而不是一个大池取头部：
+# 陈学长观察池 12 只、缩量回踩档 4 只，合并按分取头部会让池大的那个把另一个挤空
+# （R100z85 已经栽过一次：量纲/池大小决定名额，等于小池永远不出现）。
+# 缩量回踩是**独立图形**，被挤掉就等于这一档没接上，所以先给它留座。
+MAX_WATCH_PICKS = 10
+WATCH_QUOTA = {"shrink": 3, "chen": 5}
+
 # R100z254（用户 2026-10-28「回测数据很低要么删掉，要么就辅佐卡片」）：
 # **横盘启动·贴沿 不再进买入清单**。理由不是口味，是它自己的回测：
 #   `N字形态研究报告-20261026.md` §8.2 —— 贴沿提前买 70.4% 胜率、**单笔仅 +0.22%**、盈亏比 1.16、均持 3.5 日；
@@ -274,8 +298,13 @@ def build_buy_list(D, picks, quotes, blacklist):
     # ---- ① 断板反包确认池：只收 9:45 已过「板块情绪+资金」双闸的 picks（src=pool）----
     # 观察池（watching，stage=待企稳）一律不给买点：还没企稳就没有可执行的买点，
     # 给了就是把「再等一根确认 K 线」这个前提悄悄删掉。
+    # R102：这条纪律在候选层被放开（观察池进候选、排在确认档之后），但**在买点层原样保留**——
+    # `tier == watch` 的票一只都不进这张表。候选是「要不要盯」，买点是「现在下不下单」，
+    # 两件事不能因为候选放宽就一起放宽。
     for p in (picks or []):
         if p.get("src") != "pool":
+            continue
+        if p.get("tier") == TIER_WATCH:
             continue
         c = str(p.get("code"))
         q = _q(c)
@@ -633,8 +662,15 @@ def build_star(D, base=None):
     blacklist = load_blacklist(base)
     db = D.get("duanban") or {}
     pools = []
-    for pool in ("confirmed", "watching"):
-        pools.extend(db.get(pool) or [])
+    # R102：断板双池一律进候选，但要记住各自是「确认」还是「待确认」——
+    # 同一只票同时出现（观察池里的票被 07:00 复核提进确认池）时取更成熟的确认档。
+    pool_tier = {}
+    for pool, _tier in (("confirmed", TIER_CONFIRM), ("watching", TIER_WATCH)):
+        for e in (db.get(pool) or []):
+            pools.append(e)
+            _c = str(e.get("code"))
+            if pool_tier.get(_c) != TIER_CONFIRM:
+                pool_tier[_c] = _tier
 
     # ---- R100m（需求7）：技术池候选——直接从 谐波/横盘启动/吸筹 池取标的（前一日 16:00 数据步结果） ----
     # 这些标的无 sentiment/probability（neutral 兜底），按池内得分排序，取头部，宁缺勿滥。
@@ -709,10 +745,67 @@ def build_star(D, base=None):
                               "label": ("陈学长·严格池·" if _tier == "strict" else "陈学长·放宽池·")
                                        + (f"{_lbs}板" if _lbs > 1 else "首板"),
                               "score": _base_sc + 4 * min(_lbs, 3)})
+    # ---- R102：待确认档的两个新来源（观察池 / 缩量回踩）----
+    # R100z221 当年写的是「观察中不进」——那是**在没有候选缺口时**的选择。用户 2026-10-28
+    # 明确改了口径：「待确认的我认为也可以进去，但是排序是确认池在最前面」。
+    # 所以观察池不再被丢掉，而是**降档**：进候选、不给买点、排在确认档之后。
+    # 为什么可以这么改而不违背「还差一根确认 K 线」那条纪律：纪律约束的是「买点」而不是
+    # 「关注对象」——不给价、只写形态与还差什么，读者不会被诱导提前下单。
+    chen_watch_list = []
+    for it in (ch.get("watching") or []):
+        c = str(it.get("code") or "")
+        if not c.startswith(("60", "00")) or c in _seen_ch:
+            continue  # 同时进了严格/放宽池的票已在确认档，不重复占位
+        if (it.get("sentiment") or "") == "bear":
+            continue
+        _seen_ch.add(c)
+        _m = it.get("metrics") or {}
+        try:
+            _lbs = max(1, int(_m.get("lbc") or 1))
+        except Exception:
+            _lbs = 1
+        chen_watch_list.append({"code": c, "name": it.get("name"),
+                                "sector": it.get("sector") or "",
+                                "src": "chen", "tier": TIER_WATCH,
+                                "sentiment": it.get("sentiment") or "neutral",
+                                "label": "陈学长·观察池·" + (f"{_lbs}板" if _lbs > 1 else "首板"),
+                                # 观察档基准分明显低于确认档（80/70）：跨档本来就不比大小，
+                                # 这里只是让它在本档内部的排序稳定（板数多的略靠前）。
+                                "score": 50 + 4 * min(_lbs, 3)})
+
+    # 缩量回踩档（shrink_scan.py）：放量阴之后缩了 1~2 天、小实体、还没反包。
+    # 这是用户 2026-10-28 说的「赌次日反包」那一类，正好切在断板池「待缩量」（还没缩量）
+    # 与「待企稳」（已缩到 MA5 下方并站住）之间的缝里——现有任何池子都不收它。
+    # 前端「明日可下单」用 ordShrinkScan 现扫同一套条件出卡，本脚本读 Python 孪生实现，
+    # 两边口径由 check_shrink_parity.py 对账（不一致直接 FAIL），不靠人记。
+    shr_list, shr_err = [], None
+    try:
+        import shrink_scan as SS
+        _rs = SS.scan(D, exclude=SS.pool_codes(D))
+        for r in _rs["rows"][:12]:
+            shr_list.append({"code": r["code"], "name": r["name"], "sector": r["sector"] or "",
+                             "src": "shrink", "tier": TIER_WATCH, "sentiment": "neutral",
+                             "label": "缩量回踩第%d天·放量%.2f倍" % (r["shrinkDays"], r["volRatio"]),
+                             # 缩量越久越接近该动（与前端 poolC 的排序同方向），仅决定本档内顺序
+                             "score": 50 + 5 * max(0, int(r["shrinkDays"]) - 1),
+                             # 卡片四格要用的形态事实（前端不自己算价位：作废位在 Python 侧算一次，
+                             # 与断板池 eval_stage 的「不破 T 日低点 ×0.98」用同一条线）
+                             "ztDate": r["ztDate"], "shrinkDays": r["shrinkDays"],
+                             "volRatio": r["volRatio"],
+                             "stop": round(float(r["lowT"]) * 0.98, 2) if r.get("lowT") else None})
+        print(f"[shrink] 扫描 {_rs['nCand']} 只主板票 → 缩量回踩命中 {len(_rs['rows'])} 只"
+              f"（剔断板/陈学长池内后），候选 {len(shr_list)} 只")
+    except Exception as _e:                                   # noqa: BLE001
+        # 失败不阻断选股：这一档没有了要显式说出来，不能安静地少一整个来源。
+        shr_err = f"{type(_e).__name__}: {_e}"
+        print(f"[shrink][WARN] 缩量回踩扫描失败，本次候选不含这一档：{shr_err}")
+
     # ⚠️ 配额装配挪到 picks 定稿之后（R100z221）——理由见下面 `pool_codes` 那一段。
-    # 这里只先把四个池的候选代码汇总出来，供下面批量抓个股快照用。
+    # 这里只先把各池的候选代码汇总出来，供下面批量抓个股快照用。
+    # 待确认档的两个列表也并进来抓（否则它们进 picks 时 price 为空，渲染成「行情抓空」——
+    # 那正是 R100z241 踩过的坑：不是数据源坏，是自己没去抓）。
     _tech_codes = []
-    for _l in (bp_list, hz_list, acc_list, chen_list):
+    for _l in (bp_list, hz_list, acc_list, chen_list, chen_watch_list, shr_list):
         _tech_codes.extend([t["code"] for t in _l])
     # R100z241（2026-10-27 用户问「开盘精选和今日买入清单两块的区别」时抓到）：
     # 买入清单要覆盖**整池**，而上面四个 _list 是为「精选配额」截断过的（bp 只取 passed[:10]、
@@ -838,6 +931,7 @@ def build_star(D, base=None):
         q = quotes.get(str(e.get("code"))) or {}
         cand.append({"code": str(e.get("code")), "name": e.get("name"),
                      "sector": sec, "sentiment": sent,
+                     "tier": pool_tier.get(str(e.get("code")), TIER_CONFIRM),
                      "probability": (round(p, 1) if p is not None else None),
                      "pctLive": q.get("pct"), "openPct": q.get("openPct"),
                      # R100z170：双池标的的板块涨幅必须跟着搬过去。此前只搬 sector，
@@ -848,11 +942,15 @@ def build_star(D, base=None):
                      "bkCode": e.get("bkCode")})
 
     # R100z197：缺失（None）排最后，其次是概率降序，再按情绪。与前端 starPool 排序同口径。
-    cand.sort(key=lambda x: (x["probability"] is None,
+    # R102：排序键**第一维是档位**——用户 2026-10-28「排序是确认池在最前面」。
+    # 以前只按概率排，导致观察池里概率 70 的票压在确认池概率 66 的票前面，
+    # 读者第一眼看到的是「还差一根确认 K 线」的那只，等于把纪律暗示反了。
+    cand.sort(key=lambda x: (_TIER_RANK.get(x["tier"], 1),
+                             x["probability"] is None,
                              -(x["probability"] if x["probability"] is not None else 0.0),
                              sent_rank.get(x["sentiment"], 1)))
     picks = []
-    for c in cand:  # 有基线概率的降序在前，无基线的排后（概率同则利好优先）
+    for c in cand:  # 确认档在前、同档内概率降序（概率同则利好优先）
         sent_cn = {"bull": "利好", "neutral": "中性"}.get(c["sentiment"], c["sentiment"])
         # R100z197：无基线时写「基线未给」，不再编一个 50% 出来冒充概率。
         note = f"{c['sector']}·{sent_cn}·" + (
@@ -862,8 +960,13 @@ def build_star(D, base=None):
             note += f"·开盘{c['openPct']:+.1f}%({_gzh})"
         if c.get("pctLive") is not None:
             note += f"·现涨{c['pctLive']:+.1f}%"
+        # R102：档位写进 note 首位——前端徽标、AI 改写、推送都从这一处读同一个词，
+        # 不在三个地方各自拼「待确认」。
+        if c["tier"] == TIER_WATCH:
+            note = "待确认·还差一根确认K线·" + note
         picks.append({"code": c["code"], "name": c["name"], "sector": c["sector"],
                       "sentiment": c["sentiment"], "probability": c["probability"],
+                      "tier": c["tier"],
                       # R100z192：开盘价位置标注；R100z193 起它**不再是动作依据**
                       # （用户 2026-10-24：竞价可撤单、不可信；动作交给 picks[].tape）。
                       "gapTag": _gt, "gapZh": _gzh, "openPct": c.get("openPct"),
@@ -906,8 +1009,11 @@ def build_star(D, base=None):
     tech = tech[:10]
 
     # ---- R100m（需求7）：技术池候选并入精选（排在断板池之后）----
+    # R102：12 席上限只数**确认档**——待确认档不占席位，否则断板观察池一多，
+    # 有买点的技术池标的会被挤出去，等于「待确认挤掉确认」，与用户要的顺序正好相反。
+    _n_confirm = sum(1 for p in picks if p.get("tier") == TIER_CONFIRM)
     for t in tech:
-        if t["code"] in pool_codes or len(picks) >= 12:
+        if t["code"] in pool_codes or _n_confirm >= 12:
             continue
         q = quotes.get(t["code"]) or {}
         live = q.get("pct")
@@ -930,7 +1036,62 @@ def build_star(D, base=None):
                       # R100z170：技术池标的补板块涨幅（名字精确命中同花顺一级行业才写）
                       "boardPctToday": (sec_map.get(t["sector"]) or {}).get("pct"),
                       "bkCode": (sec_map.get(t["sector"]) or {}).get("code"),
-                      "note": note, "src": t["src"]})
+                      "note": note, "src": t["src"], "tier": TIER_CONFIRM})
+        _n_confirm += 1
+
+    # ---- R102：待确认档（技术池那一侧的观察池 + 缩量回踩）----
+    # 不占技术池配额、不进 build_buy_list（那里按 tier 跳过），只进候选与页面/推送的清单。
+    # 先跑缩量回踩再跑陈学长观察：两档各留配额，谁池子大谁也不能把另一个挤空。
+    # 拼进去之后立刻按档位做一次稳定排序，使 picks 的**数据顺序**就是展示顺序
+    # （前端会再排一次，但 AI 写 pushText、微信推送都按数据顺序念，两处必须一致）。
+    _emitted = {p["code"] for p in picks}
+    _watch_n = sum(1 for p in picks if p.get("tier") == TIER_WATCH)
+    _watch_add = []
+    for _lst, _key in ((shr_list, "shrink"), (chen_watch_list, "chen")):
+        _got = 0
+        for t in _lst:
+            if _got >= WATCH_QUOTA.get(_key, 3) or _watch_n >= MAX_WATCH_PICKS:
+                break
+            c = t["code"]
+            if c in _emitted or blacklist.get(c) == "red":
+                continue
+            q = quotes.get(c) or {}
+            _lv = q.get("pct")
+            if _lv is not None and _lv < -2.0:
+                continue  # 开盘深跌：形态当下已经坏，连「待确认」都不该挂出来
+            if _lv is not None and _lv >= 9.5:
+                continue  # 开盘即涨停，追不进，也不该占候选位
+            note = f"待确认·{t['label']}·前日16:00筛选"
+            _gt, _gzh = gap_tag(q.get("openPct"))
+            if q.get("openPct") is not None:
+                note += f"·开盘{q['openPct']:+.1f}%({_gzh})"
+            if _lv is not None:
+                note += f"·现涨{_lv:+.1f}%"
+            _row = {"code": c, "name": t["name"], "sector": t["sector"],
+                    "sentiment": t.get("sentiment") or "neutral",
+                    "probability": None, "tier": TIER_WATCH,
+                    "gapTag": _gt, "gapZh": _gzh, "openPct": q.get("openPct"),
+                    "boardPctToday": (sec_map.get(t["sector"]) or {}).get("pct"),
+                    "bkCode": (sec_map.get(t["sector"]) or {}).get("code"),
+                    "note": note, "src": t["src"]}
+            if _key == "shrink":
+                # 缩量回踩的形态事实随 picks 一起带走：页面四格与推送都读这里，
+                # 不让人在前端再从 K 线反推一遍（那会与 shrink_scan 的四条硬条件分叉）。
+                for _k in ("ztDate", "shrinkDays", "volRatio", "stop"):
+                    if t.get(_k) is not None:
+                        _row[_k] = t.get(_k)
+            _watch_add.append(_row)
+            _emitted.add(c)
+            _got += 1
+            _watch_n += 1
+    # 同档内先陈学长（有止损/目标，读者好照做）再缩量回踩（只有形态与还差什么）
+    _watch_add.sort(key=lambda p: 0 if p.get("src") == "chen" else 1)
+    picks.extend(_watch_add)
+    picks.sort(key=lambda p: _TIER_RANK.get(p.get("tier") or TIER_CONFIRM, 1))
+    if shr_err:
+        # 显式降级：少一整档要写在数据里，不能只在日志里（页面/推送读者看不到 stdout）
+        _shr_note = f"缩量回踩扫描失败（{shr_err}），本次候选不含这一档——是脚本故障不是没有此类形态"
+        print(f"[WARN] {_shr_note}")
 
     # ---- R100z193（2026-10-24）：分时量价结构诊断 ----
     # 用户原话：「竞价往往都是虚的，9:25 之前都可以撤单……可以看开盘的分时量：
@@ -1037,6 +1198,25 @@ def build_star(D, base=None):
                        "rule": "挂单清单核对失败（%s）——这是脚本故障，不是今日无单。" % _e,
                        "riskNote": "", "bt": {}, "asOf": "", "time": ""}
 
+    # R102：档位小账（页面副标题与推送直接读，别在三个地方各数一遍）
+    _by_tier = {"confirm": 0, "watch": 0}
+    _watch_src = {}
+    for _p in picks:
+        _t = _p.get("tier") or TIER_CONFIRM
+        _by_tier[_t] = _by_tier.get(_t, 0) + 1
+        if _t == TIER_WATCH:
+            _watch_src[_p.get("src") or "?"] = _watch_src.get(_p.get("src") or "?", 0) + 1
+    tier_summary = {
+        "confirm": _by_tier.get("confirm", 0), "watch": _by_tier.get("watch", 0),
+        "watchBySrc": _watch_src, "maxWatch": MAX_WATCH_PICKS,
+        "rule": ("确认档（断板已确认 + 陈学长严格/放宽）永远排在待确认档（断板观察 + 陈学长观察 + "
+                 "缩量回踩）之前；待确认档不给买点、只给形态与还差什么"),
+        "text": (f"确认档 {_by_tier.get('confirm', 0)} 只 / 待确认档 {_by_tier.get('watch', 0)} 只"
+                 + ("（" + "、".join(f"{k} {v}" for k, v in sorted(_watch_src.items())) + "）"
+                    if _watch_src else "")),
+        "shrinkErr": shr_err,
+    }
+
     star = {
         "date": now.strftime("%Y-%m-%d"),
         "time": now.strftime("%H:%M"),
@@ -1048,8 +1228,9 @@ def build_star(D, base=None):
         "timingExec": timing_exec,
         "gapSummary": _gap_summary(picks),
         "tapeSummary": tape_summary,
+        "tierSummary": tier_summary,
         "pushText": push_text,
-        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波/吸筹池直接取标的；R100z85：技术池按池配额 防单池量纲垄断；R100z232：九门下线换横盘启动（配额 横盘启动3/谐波3/吸筹2）+ 新增 star.buyList 今日买入清单（三池买区/证伪价/目标/持有天数/仓位，不含离场提示）；R100z156：行业/资金接口抓空重试+显式降级；R100z192：picks 增 gapTag 开盘价位置标注 + star.gapSummary 分布，只标注不排序；R100z193：接入 tape.py 分时量价结构（均价线/跌破次数/下跌分钟量占比/爆量倍数），picks 增 tape 字段 + star.tapeSummary，动作口径由盘口结构决定，gapTag 降级为价格事实；R101：新增 star.timingExec——读 16:00 timing_plan.py 生成的挂单清单，用 9:45 实时行情核对开盘是否破位，只核对不改单） + 自动化 AI 复核",
+        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波/吸筹池直接取标的；R100z85：技术池按池配额 防单池量纲垄断；R100z232：九门下线换横盘启动（配额 横盘启动3/谐波3/吸筹2）+ 新增 star.buyList 今日买入清单（三池买区/证伪价/目标/持有天数/仓位，不含离场提示）；R100z156：行业/资金接口抓空重试+显式降级；R100z192：picks 增 gapTag 开盘价位置标注 + star.gapSummary 分布，只标注不排序；R100z193：接入 tape.py 分时量价结构（均价线/跌破次数/下跌分钟量占比/爆量倍数），picks 增 tape 字段 + star.tapeSummary，动作口径由盘口结构决定，gapTag 降级为价格事实；R101：新增 star.timingExec——读 16:00 timing_plan.py 生成的挂单清单，用 9:45 实时行情核对开盘是否破位，只核对不改单；R102：候选分「确认/待确认」两档（确认档恒在前、待确认档不给买点），待确认档新增陈学长观察池与缩量回踩档（shrink_scan.py，与前端 ordShrinkScan 孪生、由 check_shrink_parity.py 对账），star 增 tierSummary） + 自动化 AI 复核",
     }
     return star, None
 
@@ -1065,10 +1246,12 @@ def main():
     if err:
         print(f"[FAIL] {err}，不写入")
         sys.exit(1)
-    print(f"[star] {star['date']} {star['time']} | 精选 {len(star['picks'])} 只:")
+    print(f"[star] {star['date']} {star['time']} | 精选 {len(star['picks'])} 只:"
+          f" {(star.get('tierSummary') or {}).get('text', '')}")
     for p in star["picks"]:
         _pv = p["probability"]
-        print(f"  {p['code']} {p['name']} | {p['note']} | "
+        print(f"  {p['code']} {p['name']} | [{TIER_ZH.get(p.get('tier') or TIER_CONFIRM, '确认')}] "
+              + f"{p['note']} | "
               + (f"score源概率 {_pv}%" if _pv is not None else "score源概率 未给"))
     print("[star] marketLine:", star["marketLine"])
     # R100z232：今日买入清单（用户第 4 项）——落库前先在日志里打出来，

@@ -4390,6 +4390,36 @@ def g50_markdown_leak(r):
                 % (len(js), len(fields), len(st.get("buyList") or [])))
 
 
+def g52_shrink_parity(r):
+    """G52 缩量回踩的两份实现必须同口径（R102，2026-10-28）。
+
+    由来：用户 2026-10-28 第 2 条要求 9:45 的候选也要覆盖「放量阴之后刚缩 1~2 天」这一段。
+    这个图形原本只有前端 `ordShrinkScan()` 一份实现（从浏览器 `D.stkKlines` 现扫，给
+    「明日可下单」出卡）；9:45 的开盘精选跑在 Python 里，读不到 JS，于是有了
+    `shrink_scan.py` 这份**孪生实现**。孪生的固有风险是「改一边忘另一边」——
+    四条硬条件（T 日涨停 / T+1 放量收阴 1.1~3.5 倍 / 之后缩量小实体未反包 / 未破 T 日低×0.98）
+    任何一条被单侧改动，前端卡片与 9:45 候选就会各说一套，而**两边都不报错**。
+
+    判据：跑 `check_shrink_parity.py`（headless Chrome 取前端 poolC 的代码 + 缩量天数 +
+    放量倍数，与 Python 结果逐只比）。rc=0 一致；rc=1 不一致 → FAIL；跑不起来 → WARN
+    （本机没 Chrome 时 SKIP 是允许的，但不能当成「一致」）。
+    """
+    rc, out, err = _run_tool("check_shrink_parity.py", timeout=300)
+    if rc == 0:
+        if "[SKIP]" in (out or ""):
+            r.warn("G52", "缩量回踩口径对账未执行（%s）——本机无 Chrome 时允许跳过，"
+                          "但这份孪生实现就没被验证过，改条件后务必手动补跑"
+                          % _tail(out, 1))
+        else:
+            r.ok("G52", "缩量回踩前端/Python 口径一致：" + _tail(out, 1))
+    elif rc == 1:
+        r.fail("G52", "缩量回踩两份实现口径不一致（前端 ordShrinkScan vs shrink_scan.py）："
+                      + _tail(out, 4) + "——改一边漏了另一边，页面卡片与 9:45 候选会各说一套")
+    else:
+        r.warn("G52", "缩量回踩口径对账没跑成（%s）——这是检查器故障，不代表一致"
+                      % (_tail(err, 2) or _tail(out, 2) or "rc=%s" % rc))
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -4453,6 +4483,7 @@ def main():
     g49_excess_benchmark_consistency(r)
     g50_markdown_leak(r)
     g51_buy_ledger_wiring(r)
+    g52_shrink_parity(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))

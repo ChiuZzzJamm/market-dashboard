@@ -5750,11 +5750,20 @@ var ORD_HINT = {
   hz: '不下单价 · 谐波池不在清单来源',
   acc: '不下单价 · 吸筹池不在清单来源',
   chen: '不下单价 · 放宽池只观察',
+  shrink: '不下单价 · 待确认档（放量阴后刚缩量，等它自己走出方向）',
   pool: '未进清单 · 被硬门槛挡（深跌/涨停/硬风险）'
 };
 function ordHintOf(e) {
   if (!e) return '';
   if (orderLineOf(e.code)) return '';                 // 有价就不写原因，两行会把卡片撑长
+  /* R102：待确认档的「没有价」是**设计如此**，不是被门槛挡掉——
+     原样落进 ORD_HINT.pool 会印成「被硬门槛挡（深跌/涨停/硬风险）」，
+     而那三样它一条都没触发，等于给读者一个假原因。档位优先于来源。 */
+  if (e.tier === 'watch') {
+    return e.src === 'shrink'
+      ? ORD_HINT.shrink
+      : '不下单价 · 待确认档（还差一根确认 K 线，候选进了、买点不给）';
+  }
   return ORD_HINT[String(e.src || '')] || ORD_HINT.pool;
 }
 /* R100z36：统一卡片骨架。o = {code,name,sector,pills[],sent,chg,cells[],foot,dim,attrs,onclick,title,fresh}
@@ -5886,7 +5895,22 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
   // 改为按来源分派四格：断板=板块涨幅/上涨概率/建议买入价(MA5)/止损；谐波=买入区(PRZ)/距PRZ/止损(D点)/T1；
   // 吸筹=吸筹评分/信号阶段/特征命中/止损(纪律位)；横盘启动=买入区间/证伪价/距箱顶/箱体振幅（无止损格）。取不到如实「—」，绝不编数。
   var cells;
-  if (star && (e.src === 'hz' || e.src === 'acc' || e.src === 'bp' || e.src === 'chen')) {
+  if (star && e.src === 'shrink') {
+    /* R102：缩量回踩档四格（票不在任何池里，回源查池必然空——所以不走下面那个按 src 分派的
+       分支，事实全部来自 9:45 picks 里随身带的形态字段）。四格回答「这图形走到第几天、
+       还能不能拿」：缩量天数 / 放量倍数 / 涨停日 / 作废位。
+       **不给买价**：这一档是待确认档，按纪律不给买点（build_buy_list 里按 tier 跳过）。 */
+    cells = [
+      tcCell('缩量天数', e.shrinkDays == null ? '—' : ('第 ' + e.shrinkDays + ' 天'), ''),
+      tcCell('放量倍数', e.volRatio == null ? '—' : (Number(e.volRatio).toFixed(2) + ' 倍'), ''),
+      tcCell('涨停日', e.ztDate ? esc(String(e.ztDate).slice(5)) : '—', ''),
+      tcCell('作废位', e.shrinkStop == null ? '—'
+        : '<span class="xt" title="涨停日最低价×0.98：收盘跌破它，「不破T日低点」这条前提就没了，这段缩量回踩作废">'
+          + Number(e.shrinkStop).toFixed(2) + '</span>', 'down')
+    ];
+    foot = '<span class="xt">放量阴后已缩量 ' + (e.shrinkDays == null ? '—' : e.shrinkDays + ' 天')
+      + '、小实体未反包 —— 待确认，不给买价</span>';
+  } else if (star && (e.src === 'hz' || e.src === 'acc' || e.src === 'bp' || e.src === 'chen')) {
     var te = starTechOf(e.code, e.src);
     if (e.src === 'hz' && te && te.prz) {
       var hzDist = (typeof te.distToPrzPct === 'number') ? te.distToPrzPct : null;
@@ -5973,7 +5997,8 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
     // 四子页的池卡保持原样——那里没有「今天下不下单」这个问题，硬加一行会变成噪音。
     ordHint: star ? ordHintOf(e) : '',
     fresh: poolFresh(e, modD), // R100z44：新入池首日黄色+「新」徽章
-    pills: [showSec ? (e.sector || '其他') : null], sent: true,
+    pills: [star && e.tier === 'watch' ? '待确认' : null,
+            showSec ? (e.sector || '其他') : null], sent: true,
     cells: cells,
     foot: foot,
     attrs: ' data-k="' + escAttr(key) + '"',
@@ -5984,7 +6009,8 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
         hz: '建议买入区＝PRZ 潜在反转区（回踩入区企稳介入）· 止损＝D 点结构失效位 · T1＝一级目标位',
         acc: '吸筹评分＝六项特征加权（命中越多分越高）· 止损＝全站统一纪律位（最近收盘 −2.5%，非形态位）',
         bp: '买入区间＝箱顶×0.985~×1.005（越过上限不追）· 证伪价＝平台下沿×0.99（跌破即横盘作废）· 固定持有 10 日、不设百分比止损',
-        chen: '目标 +3.5% 次日冲高兑现 · 止损＝洗盘段最低价（破位按收盘算）· 仓位＝1.5% 风险预算 ÷ 止损宽度 · 持仓 ≤2 日'
+        chen: '目标 +3.5% 次日冲高兑现 · 止损＝洗盘段最低价（破位按收盘算）· 仓位＝1.5% 风险预算 ÷ 止损宽度 · 持仓 ≤2 日',
+        shrink: '四格＝缩量第几天 / 放量阴的量比 / 涨停日 / 作废位（涨停日最低×0.98）；这是待确认档，不给买价'
       }[e.src] || '观察位＝MA5（回踩5日线企稳介入，非成交价）· 止损＝断板日最低价 · 照什么价买看卡片底部「下单」行') : '') +
       '\n点击查看K线与利好依据'
   });
@@ -6129,9 +6155,19 @@ function renderDuanban() {
     // R100z222：陈学长池也进映射表（严格先于放宽，与 starTechOf 同序）。精选条目是 update_star.py
     // 合成的精简版（只有 code/name/sector/src/sentiment/label/score），story / probability / 形态原文
     // 全在池条目里——不挂进来，弹窗「个股消息」和利好依据就是空白，这正是 R100z4t 当初加 _techMap 的原因。
-    [].concat(((D0.chenPool || {}).strict) || [], ((D0.chenPool || {}).loose) || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
+    [].concat(((D0.chenPool || {}).strict) || [], ((D0.chenPool || {}).loose) || [],
+              ((D0.chenPool || {}).watching) || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
     starTech.forEach(function (p) { var tp = _techMap[String(p.code)]; if (tp) { if (tp.score != null) p.score = tp.score; if (tp.grade) p.grade = tp.grade; } });
+    /* R102（用户 2026-10-28「待确认的我认为也可以进去，但是排序是确认池在最前面」）：
+       picks 自 9:45 起带 tier（confirm / watch），排序**第一维就是档位**。
+       原来只按概率/分数排，观察池里概率 70 的票会压在确认池 66 的前面——读者第一眼
+       看到的是「还差一根确认 K 线」那只，等于把纪律暗示反了。同档内维持原口径
+       （断板按概率、技术池按分数）。缺 tier 的老数据一律当确认档，不让页面因为
+       一个字段缺失就整体降档。 */
+    var _tierRank = function (p) { return (p && p.tier === 'watch') ? 1 : 0; };
     starPool.sort(function (a, b) {
+      var ta = _tierRank(a), tb = _tierRank(b);
+      if (ta !== tb) return ta - tb;
       var ea = poolByCode[String(a.code)], eb = poolByCode[String(b.code)];
       var pa = (ea.probability == null) ? -1 : ea.probability, pb = (eb.probability == null) ? -1 : eb.probability;
       if (pb !== pa) return pb - pa;
@@ -6139,7 +6175,11 @@ function renderDuanban() {
       var rb = eb.sentiment === 'bull' ? 0 : (eb.sentiment === 'bear' ? 2 : 1);
       return ra - rb;
     });
-    starTech.sort(function (a, b) { return (b.score || b.probability || 0) - (a.score || a.probability || 0); });
+    starTech.sort(function (a, b) {
+      var ta = _tierRank(a), tb = _tierRank(b);
+      if (ta !== tb) return ta - tb;
+      return (b.score || b.probability || 0) - (a.score || a.probability || 0);
+    });
     var starPicks = starPool.concat(starTech);
     // R100z258（用户 2026-10-28 截图 3「开盘精选这部分删除」）：开盘价位置 / 盘口结构 / 追高区
     // 三块整段下线，连同这段算「追高」的数据准备一起删——留着计算却没人用，下一个人会以为还有第二个渲染出口。
@@ -6151,7 +6191,10 @@ function renderDuanban() {
     fixed += '<div class="db-pool p-star"><h2>🌟 开盘精选 · ' + starPicks.length + ' 只</h2>' +
       // R100z228：副标题原文只列了「谐波/横盘启动/吸筹」，而 R100z222 起陈学长也有 2 个名额——
       // 名册里有、说明书里没有，读者就不知道那两枚「陈学长·XX池」徽标是怎么进来的。顺手把各池名额写出来。
-      '<div class="db-sub">' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：断板池按「板块情绪正向+主力净流入正向」挂钩+上涨概率降序，并可从谐波/横盘启动/吸筹/陈学长池直接取标的（名额 横盘启动 3 · 谐波 3 · 吸筹 2 · 陈学长 2）；弹窗与池内一致）</div>' +
+      '<div class="db-sub">' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：断板池按「板块情绪正向+主力净流入正向」挂钩+上涨概率降序，并可从谐波/横盘启动/吸筹/陈学长池直接取标的（名额 横盘启动 3 · 谐波 3 · 吸筹 2 · 陈学长 2）；确认档永远排在待确认档之前，待确认档＝断板观察池 + 陈学长观察池 + 缩量回踩（放量阴后缩 1~2 天），只给形态与作废位、不给买点；弹窗与池内一致）' +
+        (st.tierSummary && st.tierSummary.text ? '　｜　' + esc(String(st.tierSummary.text)) : '') +
+        (st.tierSummary && st.tierSummary.shrinkErr ? '　｜　⚠️ 缩量回踩档本次未生成（脚本故障，不是没有此类形态）' : '') +
+        '</div>' +
       // R100z232 的下单清单 → R100z254 两表并一张 → **R100z255 表整块删掉**（用户二次拍板）。
       // 现在价格的出口只有一个：每张票自己卡片底部的「下单」行。这里不再插任何表格。
       // R100z258：开盘价位置 / 盘口结构 / 追高区 三块按用户截图 3 删除（正文见 24.114）。
@@ -6166,13 +6209,24 @@ function renderDuanban() {
       var e2;
       if (e) {
         e2 = Object.assign({}, e, { stage: '精选' });
+        if (p.tier === 'watch') e2.tier = 'watch';
       } else {
         e2 = { code: code, name: p.name || '', sector: p.sector || '', stage: '精选',
                sentiment: p.sentiment || 'neutral', probability: p.probability,
                src: p.src || '',
-               form: ({ hz: '谐波形态', bp: '横盘启动', acc: '主力吸筹', chen: '陈学长断板反包' }[p.src] || '技术池候选'), note: p.note || '' };
+               form: ({ hz: '谐波形态', bp: '横盘启动', acc: '主力吸筹', chen: '陈学长断板反包',
+                        shrink: '缩量回踩（放量阴后缩量）' }[p.src] || '技术池候选'), note: p.note || '' };
         if (p.score != null) e2.score = p.score;
         if (p.grade) e2.grade = p.grade;
+        /* R102：档位与缩量回踩的形态事实都从 picks 直接搬——票不在任何池里（缩量回踩档就是
+           「谁都没收的那一段」），回源查池必然查不到，不搬就等于四格全「—」。 */
+        if (p.tier) e2.tier = p.tier;
+        if (p.src === 'shrink') {
+          if (p.ztDate) e2.ztDate = p.ztDate;
+          if (p.shrinkDays != null) e2.shrinkDays = p.shrinkDays;
+          if (p.volRatio != null) e2.volRatio = p.volRatio;
+          if (p.stop != null) e2.shrinkStop = p.stop;
+        }
         // R100z4t：合并技术池条目字段——story/deduce（AI 写回后弹窗可见）、sector 补全。
         // 注意不合并 pw.pct（那是涨停日涨幅，弹窗「今日」位会误标）。
         (function () {
@@ -7432,7 +7486,10 @@ function ordHasPrice(o) {
 }
 /* 只有一张过期的今日买区、没有明日可用价——排序不回第一档，摘要里要单说一句。 */
 function ordStalePrice(o) {
-  return !ordHasPrice(o) && !!(o && o.buy);
+  /* 「只剩一张过期买区」= 没有明早挂单、没有缩量回踩档、**也没有断板形态价**。
+     R100z272 之后断板池都能按当日收盘给形态价了，所以这一档会很少见；
+     但它不能删：没有 kline 的票（数据缺口）仍会落在这里，而「抓空」与「没价」是两回事。 */
+  return !ordHasPrice(o) && !!(o && o.buy) && !ordShapeBand(o);
 }
 function ordPrep() {
   var D = window.DASHBOARD_DATA || {};
@@ -7744,11 +7801,31 @@ function ordShapeOrderLine(o) {
       out.push(when + (ct.posPct ? ' · 仓位 ' + ct.posPct + '%' : '') + stx);
     }
   }
+  /* 断板形态价位（R100z272，用户 2026-10-28「价位要根据当日收盘更新」）：
+     断板池过去在这里印「本池不给价」——一只票被推荐了，却不告诉你明早挂多少、
+     破多少撤，只在止损格给一个和形态无关的技术位。现在：上限按**当日收盘**重算，
+     失效位按 T 日低点算，两个数都有出处（见 ordShapeBand 头注）。
+     ② 档（待确认）**不写「明早买」**：形态还差一根确认 K 线，写「明早买」等于把
+     「观察」写成「动手」——与陈学长那条 while(phase==='B') 的纪律同一个理由。 */
+  if (!out.length) {
+    var _bd = ordShapeBand(o);
+    if (_bd) {
+      if (o.phase === 'A') {
+        out.push('明早 ≤ <b>' + ordP2(_bd.cap) + '</b> 买（今收 ' + ordP2(_bd.close) +
+          ' 的 −0.5%，高于不追）' + stx);
+      } else {
+        out.push('待确认·明日不挂单 · 确认后按当日收盘 −0.5% 挂' + stx);
+      }
+    }
+  }
   /* 今日盘中买区：只在上面都没给出「明日能用的价」时补一句，且写明已收盘。
      它不删掉——读者会拿它跟 ⑤ 栏对账；但措辞必须让人一眼看出这不是明天的指令。 */
   if (!out.length && o.buy) {
+    /* 不再印 o.buy.stateZh（R100z272）：那是 9:45 按当时现价算的「在买区内」，
+       收盘后 price 已经变了，实测 002929 润建股份 收 56.25 仍印「在买区内」，
+       而它的买区下沿是 57.95——现价已经跌破下沿 3%。印一个当下已错的状态，
+       比不印更坏；整句本来就写着「已收盘，明日不照这个价」。 */
     out.push('今日盘中买区 <b>' + ordP2(o.buy.low) + '~' + ordP2(o.buy.high) + '</b>' +
-      (o.buy.stateZh ? '（' + esc(String(o.buy.stateZh)) + '）' : '') +
       '——已收盘，明日不照这个价' + stx);
   }
   if (!out.length) {
@@ -7781,22 +7858,67 @@ function ordShrinkLevels(o) {
   return sk._lv;
 }
 /* 形态档**唯一**的撤单价出口——卡片止损格、弹窗「退出纪律」都从这里取，不各算一套。
-   五级回落＝「可执行优先」：
-     明早挂单 stop → 盘中买点证伪价 → 陈学长洗盘段低点 → 缩量回踩的涨停日低点 → 全站技术位
+   六级回落＝「可执行优先 + 当日口径优先于快照」：
+     明早挂单 stop → 陈学长洗盘段低点 → 缩量回踩的涨停日低点 → 断板形态（T日低×0.98，
+     与 eval_stage 判失效同一个数）→ 盘中买点证伪价（9:45 快照，只剩它时才用）→ 全站技术位
    实测踩到两处并存：603565 中谷物流（纪律位 11.60 vs 挂单 12.16，差 5%）、
    603160 汇顶科技（纪律位 vs 买点证伪价 50.00）。同一只票两个止损，用户不知道该照哪个
    ——24.115「仓位三套数互相不认」的同一个病，只是换成了止损。
    `src==='tech'` 表示这套就是 exitForCode，调用方别再包一层（弹窗要靠它决定是否覆盖）。 */
+/* ============================================================================
+   断板反包形态自带的价位（R100z272，用户 2026-10-28「价位要根据当日收盘更新」）
+   ----------------------------------------------------------------------------
+   为什么必须有这一层：探针实测 603713 密尔克卫 收 67.09，卡上印「破 66.00 撤」——
+   那是全站技术位（exitForCode 的 ATR 口径），距收盘只有 1.6%，明天开盘一个正常波动
+   就把止损打掉，而形态根本没坏。断板形态的失效条件从来不是技术位，而是 check_duanban
+   里 eval_stage 那一句 `min(C) < T日最低价 × 0.98`：破这个数才叫「不破 T 日低点」
+   这条前提没了。所以撤单价取 lowT×0.98，**与程序判「形态作废」用的是同一个数**。
+   三个价全部有出处，一个都不新编：
+     · 买入上限 = 当日收盘 ×(1 + LIMIT_K%)，LIMIT_K = -0.5 —— 与 timing_plan.py 的
+       LIMIT_K 逐字同源（回测里买入贵 0.5%，年化从 +33.6% 掉到 -6.8%，所以要求回踩）；
+     · 撤单价   = T日最低价 × 0.98 —— 与 check_duanban.eval_stage 的失效判据同源；
+     · 反包目标 = 涨停日最高价 —— 反包的定义；现价已高出就如实说「已反包」，
+       不另编目标（断板反包没有回测过的目标价，与 buyList「断板/横盘两池不给目标」同一纪律）。
+   「随当日收盘更新」落在买入上限这一项：票在池里待了几天、价格已经走开，
+   还照三天前的数买就买在高位；上限跟着当日收盘走，每天重算。
+   跨日重复出现是**用户要的**（2026-10-28「第四天反包概率更大，应该继续在里面」），
+   所以这里不做任何「已推荐过 N 次就降权」的处理，只保证价位不过期。
+   ============================================================================ */
+var ORD_SHAPE_LIMIT_K = -0.5;
+var ORD_SHAPE_FLOOR_K = 0.98;
+function ordShapeBand(o) {
+  if (!o) return null;
+  if (o._band !== undefined) return o._band;
+  o._band = null;
+  var e = o.db || null;                 // 只有断板池条目带 kline + ztDate
+  if (!e) return null;
+  var rows = e.kline || [], zt = String(e.ztDate || '').slice(0, 10);
+  if (!rows.length || !zt) return null;
+  var iT = -1;
+  for (var i = rows.length - 1; i > 0; i--) {
+    if (String(rows[i][0]).indexOf(zt) === 0) { iT = i; break; }
+  }
+  if (iT < 1) return null;
+  var close = Number(rows[rows.length - 1][2]) || 0;
+  var lowT = Number(rows[iT][4]) || 0, highT = Number(rows[iT][3]) || 0;
+  if (!(close > 0 && lowT > 0)) return null;
+  var cap = Math.round(close * (1 + ORD_SHAPE_LIMIT_K / 100) * 100) / 100;
+  var stop = Math.round(lowT * ORD_SHAPE_FLOOR_K * 100) / 100;
+  /* 上限已经压到失效位以下（票跌得太深）：形态本来就在边缘，不给价才是诚实的。
+     给了会读成「明天还能在 41 块买、破 40 撤」——那 2% 的窗口不是买点，是刀口。 */
+  if (!(cap > stop)) return null;
+  o._band = { close: close, lowT: lowT, highT: highT, cap: cap, stop: stop,
+              gapT: highT > 0 ? (highT / close - 1) * 100 : null,
+              days: rows.length - 1 - iT };
+  return o._band;
+}
+
 function ordShapeStopOf(o) {
   if (!o) return null;
   var pl = o.plan || null, by = o.buy || null, ct = (o.chen || {}).trade || {};
   if (pl && pl.stop != null && isFinite(Number(pl.stop))) {
     return { stop: Number(pl.stop), src: 'plan', basis: '明早挂单口径',
              tip: '明早挂单的持仓止损位：成交后跌破即撤' };
-  }
-  if (by && by.invalid != null && isFinite(Number(by.invalid))) {
-    return { stop: Number(by.invalid), src: 'buy', basis: '盘中买点口径',
-             tip: '买点的证伪价：收盘跌破即形态作废，先撤不留' };
   }
   if (ct.stopPrice != null && isFinite(Number(ct.stopPrice))) {
     return { stop: Number(ct.stopPrice), src: 'chen', basis: '陈学长口径',
@@ -7806,6 +7928,22 @@ function ordShapeStopOf(o) {
   if (lv && lv.lowT > 0) {
     return { stop: lv.lowT, src: 'shrink', basis: '缩量回踩口径',
              tip: '涨停日最低价：收盘跌破即「不破T日低点」这条前提没了，图形作废' };
+  }
+  /* 断板形态口径（R100z272）：排在技术位之前——技术位是 ATR/趋势口径，与「破没破
+     T 日低点」不是一回事；实测 603713 两者差 9%，照技术位撤会在形态完好时被打掉。 */
+  var bd = ordShapeBand(o);
+  if (bd && bd.stop > 0) {
+    return { stop: bd.stop, src: 'shape', basis: '断板形态口径',
+             tip: '涨停日最低价的 -2% 容忍线：收盘跌破它，「不破T日低点」这条前提就没了，图形作废' };
+  }
+  /* 盘中买点（9:45 快照）挪到 shape 之后（R100z272）：它给的证伪价是 T日低点本身
+     （update_star 的 mech_stop 返回「T日低点」，不打 2% 容忍），而程序判形态作废用的是
+     T日低×0.98——实测 002929 两者是 52.42 与 51.37。同一只票两个破位线，读者只会信
+     印在卡上的那个，然后发现「破了卡上的数，票却还在池里」。现在：有断板形态就按形态
+     口径（与程序同源），只有「没有 kline 的纯买点票」才回落到这一级。 */
+  if (by && by.invalid != null && isFinite(Number(by.invalid))) {
+    return { stop: Number(by.invalid), src: 'buy', basis: '盘中买点口径',
+             tip: '买点的证伪价：收盘跌破即形态作废，先撤不留' };
   }
   var t = tcStopOf((o.db || o.chen || {}).code || o.code);
   return (t === null) ? null : { stop: t, src: 'tech', basis: '' };
@@ -8227,6 +8365,18 @@ function ordBlockHtml() {
   sum.push('形态确认 ' + P.poolA.length + ' 只 · 缩量回踩 ' + P.poolC.length +
     ' 只 · 即将确认 ' + P.poolB.length + ' 只（其中 ' + nPriced + ' 只有「明日可用」的价：' +
     '明早挂单价或缩量回踩档的涨停日高低点）');
+  /* R100z272：断板池现在也有价位了（按当日收盘算的「明早 ≤ X 才买」）。但它**不进第一档**——
+     第一档是「明早可以直接挂出去」的指令（挂单价 / 缩量回踩档），而它只是「低于这个数才值得买」
+     的参考线。不解释这一句，读者会拿「有价」去对排序，发现它们排在后面就以为排序坏了。 */
+  var nShape = P.poolA.concat(P.poolB, P.poolC).filter(function (o) {
+    if (ordHasPrice(o)) return false;
+    var _st = ordShapeStopOf(o);
+    return !!(_st && _st.src === 'shape');   // 与卡片止损格同一个出口，不另算一遍
+  }).length;
+  if (nShape) {
+    sum.push('另有 ' + nShape + ' 只断板票按当日收盘给了形态价位（明早 ≤ 今收−0.5% 才买、' +
+      '跌破 T日低×0.98 作废）——那是参考线不是挂单指令，所以按「陈学长参数 → 概率」往下排');
+  }
   if (P.teRowsOut.length) {
     sum.push((P.isNextPlan ? '明日 ' + buyD + ' 开盘挂单 ' : '昨晚挂单 ') + P.teRowsOut.length + ' 只' +
       (P.fallback ? '（未开盘，照限价挂；可挂/破位要等明早 9:25 集合竞价后才知道，现在不编）'
@@ -8250,8 +8400,8 @@ function ordBlockHtml() {
   var nStale = (P.poolA.concat(P.poolB, P.poolC).filter(ordStalePrice)).length;
   var dedupTxt = [];
   if (nMerge) dedupTxt.push(nMerge + ' 只同时在池与明早挂单里，挂单价已并进形态卡，不重复出卡');
-  if (nStale) dedupTxt.push(nStale + ' 只没有明日可用的价（只有一张已过期的今日盘中买区），' +
-    '按「陈学长参数 → 概率」往下排，卡上照旧印出来对账');
+  if (nStale) dedupTxt.push(nStale + ' 只只有一张已过期的今日盘中买区（连形态价都算不出来，' +
+    '多半是 K 线缺口），按「陈学长参数 → 概率」往下排，卡上照旧印出来对账');
   /* 「已在精选」这句只对没有形态卡的票说。汇顶科技 603160 既在买点清单、又在精选固定区、
      还在断板确认池 —— 它已经在本页 ① 档出了卡，再说它「已在开盘精选卡里，不重复建卡」
      会让读者以为这张卡不存在（实测 2026-10-28 就是这三个名字一起冒出来）。 */
