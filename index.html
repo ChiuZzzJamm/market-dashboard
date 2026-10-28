@@ -2000,10 +2000,17 @@ function mcapCutBadgeHtml(code, cls) {
   if (!mc) return '';
   var lo = mc.side === 'lo';
   var txt = '断板·市值剔除';
+  /* R100z264：徽章只回答「它为什么不在池里」，不负责回答「同类的还有谁」。
+     但读者知道原因后的下一个问题必然是「那还有哪些也一样被挡了」——
+     完整名单在页面底部那个折叠块里，不说一句他就不知道那儿有东西可点。
+     mcapCutTotal 是当天真实剔除数（由 check_duanban.py 同批写入），取不到就不提这句。 */
+  var tot = Number(((window.DASHBOARD_DATA || {}).duanban || {}).mcapCutTotal) || 0;
   var tip = '断板反包·确认池没收它，不是形态不成立，是「流通市值 ' + mc.mcap + ' 亿」' +
     (lo ? '低于下限 100 亿' : '高于上限 400 亿') + '。\n' +
     '这条门槛是回测出来的（100~400 亿：全样本 +0.73%、样本外 +0.91%；去掉下限只剩 +0.06%），' +
-    '所以没有为单只票放开。\n形态判定本身仍然有效，可以看别的池或自己判断。';
+    '所以没有为单只票放开。\n形态判定本身仍然有效，可以看别的池或自己判断。' +
+    (tot ? '\n今天被这道门槛挡掉的共 ' + tot + ' 只，完整名单在本页最下方「被市值门槛剔掉的 '
+      + tot + ' 只」，点开可见。' : '');
   return '<span class="hz-badge ' + (cls || '') + '" style="margin-left:0;background:#f3f4f6;' +
     'color:#4b5563;border-color:#d1d5db" title="' + escAttr(tip) + '">' + esc(txt) + '</span>';
 }
