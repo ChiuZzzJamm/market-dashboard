@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610280958"></script>
+<script src="data.js?v=202610281011"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -5987,7 +5987,33 @@ function renderDuanban() {
           esc(String((b.span || []).join(' ~ '))) + ' · ' + b.n + ' 笔 · 胜率 ' +
           Number(b.win).toFixed(1) + '% · 均 ' + Number(b.avg).toFixed(2) +
           '% · 年化 ' + (Number(b.ann) * 100).toFixed(1) + '% · 最大回撤 ' +
-          (Number(b.mdd) * 100).toFixed(1) + '%（限价成交、每只 1/32 资金、含双边 0.16% 成本）</div>';
+          (Number(b.mdd) * 100).toFixed(1) + '%（限价成交、每只 1/32 资金、含双边 0.16% 成本）';
+        // R100z253（用户 2026-10-28「回测过数据吗？如果回测数据很低要么删掉」）：
+        // 上面那行只是**全期**数字——3.7 年 33.6% 年化会把「今年已经衰减」这件事盖住。
+        // 分年摆出来，读者才知道现在的水位在哪：2026 单笔只剩 +0.14%、年化 +6.0%。
+        // 这是「报喜也要报忧」的机器保证：只要 bt.byYear 在，最新一年就必须露面，
+        // 且当年低于全期均值时自动加一句「今年明显衰减」，不许靠作者自觉。
+        var _by = b.byYear || {};
+        var _ys = Object.keys(_by).sort();
+        if (_ys.length) {
+          var _avgN = Number(b.avg);
+          var _cells = _ys.map(function (y) {
+            var v = _by[y] || {};
+            var a = Number(v.avg);
+            var isLast = (y === _ys[_ys.length - 1]);
+            return '<span' + (isLast ? ' style="font-weight:800;color:#8a5410;"' : '') + '>' +
+              esc(y) + ' ' + (isFinite(a) ? ((a > 0 ? '+' : '') + a.toFixed(2) + '%') : '—') + '</span>';
+          });
+          var _last = _by[_ys[_ys.length - 1]] || {};
+          var _la = Number(_last.avg);
+          var _decay = isFinite(_la) && isFinite(_avgN) && _la < _avgN * 0.5;
+          h += '<br>分年单笔：' + _cells.join(' <span style="opacity:.35;">|</span> ') +
+            (isFinite(Number(_last.ann)) ? '　（' + esc(_ys[_ys.length - 1]) + ' 年化 ' +
+              (Number(_last.ann) > 0 ? '+' : '') + (Number(_last.ann) * 100).toFixed(1) + '%）' : '') +
+            (_decay ? '　⚠️ 最新一年不到全期均值的一半——别拿全期数字当现在的水位'
+                    : '');
+        }
+        h += '</div>';
       }
       h += '</div>';
       return h;
