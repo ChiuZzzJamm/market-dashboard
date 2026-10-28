@@ -19,6 +19,8 @@ CHECKLIST.md 的 L1/L2/L5 早就写明「抽 .py 逐个 test -f」「按变体�
                   —— 「prompt 让写的、闸门判 FAIL」那类分裂（PROJECT-MEMORY 24.10 第四层）
   F 时间戳契约    每条任务是否知道自己负责哪一格 updatedAt（R100z167 后）
   G 冗余          跨 prompt 逐字重复的长行（瘦身依据，仅 --verbose 详列）
+  B7 执行约定     开头声明的「带 cd / 不加 cd」是否 7 份唯一、且与代码块里的命令一致
+                  —— 「约定说带 cd、示例不带 cd」这类分叉只有这层能抓
 
 ★ 四个必须记住的坑（本脚本逐版踩出来的）：
   1. **否定语境要按「整行」判，不能只开 45 字窗口**：`build_patchN.py` 在 17:00 出现两次，
@@ -743,6 +745,113 @@ def chk_fields(T, r, verbose=False):
                    % (n_stale, SW_WARN_DAYS))
 
 
+# ------------------------------------------------- B7 执行约定一致性
+# 事故（2026-10-28 全量核查实测，用户「逐条代码仔仔细细检查」）：
+#   7 份 prompt 里 5 份明文写「每条命令统一以 `cd /Users/.../market dashboard && ` 开头
+#   （automation 的 shell 不保证 cwd）」，另外 2 份（周日 21:00 / 22:00）写的是相反口径
+#   「本任务 cwd 即项目目录，命令直接执行、不加 `cd` 前缀」——**同一件事两个说法**。
+#   更讽刺的是：这 7 份的代码块里 **69 条命令一条都没带 cd**，即「约定」与「示例」
+#   全部相反；而那 2 份写「不加 cd」的，自己正文里又有 5 处 / 3 处带 cd 的命令。
+#
+# 为什么这不只是「文档难看」：
+#   现在不会炸，因为 7 条 automation 的 cwds 都是有效目录，cwd 有保证。
+#   但 cwds 是**最容易静默坏掉**的一环——历史上踩过 `["/path"]` 手抖写成 `[/path]`，
+#   automation_update 渲染成 []，任务静默跑空、不报错。那一天一旦到来：
+#   所有 `run-python xxx.py` 全部在错误目录执行 → 每个脚本都「找不到文件」→
+#   没有任何一层闸门会报（脚本连启动都没启动，日志里连 traceback 都没有）。
+#   而模型看到「约定说带 cd、示例不带 cd」，只能自己挑一种，下次改 prompt 继续飘。
+#
+# 判据两件事，分级不同：
+#   ① 7 份之间的声明口径必须唯一 —— 分叉 = FAIL（CHECKLIST L18 明文：只留一种写法）
+#   ② 单份内部「声明 vs 代码块实际」不一致 = WARN（有 cwds 兜底，属文档不一致）
+_CMD_HEAD = re.compile(
+    r'^(/Users/loccco/\.workbuddy/binaries/(?:run-python|run-node)'
+    r'|run-python|run-node|bash|sh|python3|\./)')
+
+
+def _code_block_cmds(prompt):
+    """只取 ``` 围栏内的可执行命令行，返回 (带cd, 不带cd) 两个 [(行号, 文本)]。
+
+    为什么要按围栏切：prompt 正文里大量出现 `xxx.py` 的**行内引用**（「执行
+    `stock_risk_blacklist.py --write`」），那些不是要执行的命令，算进去会 10 倍虚报。
+    """
+    with_cd, without = [], []
+    inblk = False
+    for i, ln in enumerate(prompt.split('\n'), 1):
+        s = ln.strip()
+        if s.startswith('```'):
+            inblk = not inblk
+            continue
+        if not inblk or not s:
+            continue
+        if s.startswith('cd '):
+            with_cd.append((i, s))
+            continue
+        # 注释/说明行不是命令（A1700 曾出现「（该步内部接 stop_tracker.main()…）」）
+        if s.startswith(('#', '（', '//', '—', '⚠')):
+            continue
+        if _CMD_HEAD.match(s):
+            without.append((i, s))
+    return with_cd, without
+
+
+def _cd_decl(prompt):
+    """识别执行约定的声明口径：'cd' / 'no-cd' / None。"""
+    head = prompt[:2000]                      # 声明只在开头，避免正文里误命中
+    if re.search(r'不加\s*`?cd`?\s*前缀', head):
+        return 'no-cd'
+    if re.search(r'(统一|一律|必须|都要?|均)\s*以\s*`?cd\b', head):
+        return 'cd'
+    return None
+
+
+def chk_cdconv(T, r, verbose=False):
+    decl = {t['key']: _cd_decl(t['prompt']) for t in T}
+    stated = {k: v for k, v in decl.items() if v}
+
+    # ① 跨份口径唯一性
+    kinds = set(stated.values())
+    if len(kinds) > 1:
+        by = {}
+        for k, v in stated.items():
+            by.setdefault(v, []).append(k)
+        r.fail('B7', '执行约定口径分叉：%s —— 同一件事两种写法，模型只能自己猜一种；'
+                     'CHECKLIST L18 要求 7 份只留一种（本项目：一律带 cd）。'
+                     '带 cd 的分支才有 cwds 失效时的兜底能力，建议把「不加 cd」改成「一律带 cd」'
+               % '；'.join('%s ← %s' % (v, ','.join(ks)) for v, ks in by.items()))
+    elif kinds:
+        r.ok('B7', '执行约定口径统一（%s）：%d/%d 份有明文声明'
+             % (list(kinds)[0], len(stated), len(T)))
+    else:
+        r.warn('B7', '7 份都没有明确的执行约定（cd / 不加 cd）—— 命令能否跑全看 cwds，'
+                     'cwds 一坏就是全体静默跑空')
+
+    # ② 单份内部一致
+    nbad = 0
+    for t in T:
+        d = decl[t['key']]
+        with_cd, without = _code_block_cmds(t['prompt'])
+        if d == 'cd' and without:
+            nbad += 1
+            r.warn('B7', '%s 声明「命令统一以 cd 开头」，但代码块 %d/%d 条命令没带（首个 L%d: %s）'
+                   % (t['key'], len(without), len(with_cd) + len(without),
+                      without[0][0], without[0][1][:58]))
+            if verbose:
+                for i, c in without:
+                    print('        · L%d: %s' % (i, c[:90]))
+        elif d == 'no-cd' and with_cd:
+            nbad += 1
+            r.warn('B7', '%s 声明「不加 cd 前缀」，但代码块里有 %d 条命令带了 cd（首个 L%d）——'
+                         '同一份 prompt 自相矛盾'
+                   % (t['key'], len(with_cd), with_cd[0][0]))
+        elif d is None and (with_cd or without):
+            nbad += 1
+            r.warn('B7', '%s 没有执行约定声明，却有 %d 条命令 —— 无法判定该不该带 cd'
+                   % (t['key'], len(with_cd) + len(without)))
+    if not nbad:
+        r.ok('B7', '各份的「声明口径」与「代码块实际写法」一致')
+
+
 # ---------------------------------------------------------------- D 死步骤
 def chk_steps(T, r):
     bad = []
@@ -1048,6 +1157,7 @@ def main():
     run('B', lambda: chk_deadlink(T, r))
     run('B', lambda: chk_baseline(T, r))
     run('B', lambda: chk_fields(T, r, a.verbose))
+    run('B', lambda: chk_cdconv(T, r, a.verbose))
     run('D', lambda: chk_steps(T, r))
     run('E', lambda: chk_coverage(T, r, a.verbose))
     run('F', lambda: chk_stamp_contract(T, r))
