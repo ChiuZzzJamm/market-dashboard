@@ -95,12 +95,9 @@ def _f(x):
 
 
 def load_ledger():
-    if os.path.exists(LEDGER):
-        try:
-            return json.load(open(LEDGER, encoding='utf-8'))
-        except Exception:
-            pass
-    return {'entries': {}}
+    # R100z273：读坏不许静默变空账本——save_ledger 整份覆盖写，读成空就把历史冲掉。
+    l = common.load_json_quarantine(LEDGER, None, tag='[signal_attribution] 归因台账')
+    return l if isinstance(l, dict) else {'entries': {}}
 
 
 def save_ledger(L):

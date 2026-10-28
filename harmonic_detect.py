@@ -420,8 +420,12 @@ def _save_state(st):
     try:
         with open(STATE_FILE, 'w', encoding='utf-8') as f:
             json.dump(st, f, ensure_ascii=False)
-    except Exception:
-        pass
+    except Exception as e:
+        # R100z273：与 check_duanban._save_duanban_state 同一条规矩——状态文件存的是
+        # 首次入池日/连续在池天数，写失败本次结果不错，但下次会把所有形态当新入池，
+        # 属于跨日才显形的错，必须留一句痕迹。
+        print("[warn] 形态状态文件写入失败（下次运行入池日期/天数会被重置）: %s"
+              % str(e)[:120], file=sys.stderr)
 
 
 def _clean_fail(fp, today):

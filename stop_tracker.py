@@ -38,6 +38,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import common           # noqa: E402  (load_json_quarantine：台账读坏不许静默变空账本)
 import kline_cache as K  # noqa: E402  (只取网络数，不走 K 线缓存，避免污染 320 根缓存)
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -444,12 +445,10 @@ def self_test():
 
 
 def load_ledger():
-    if os.path.exists(LEDGER):
-        try:
-            return json.load(open(LEDGER, encoding='utf-8'))
-        except Exception:
-            pass
-    return {}
+    # R100z273：原来 `except: pass` → 返回 {}，而 save_ledger 是整份覆盖写，
+    # 读坏一次就等于把止损台账的历史冲干净（且不报错）。改为坏文件留档 + warn。
+    led = common.load_json_quarantine(LEDGER, None, tag='[stop_tracker] 止损台账')
+    return led if isinstance(led, dict) else {}
 
 
 def save_ledger(L):

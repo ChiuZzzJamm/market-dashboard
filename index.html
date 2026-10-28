@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610282348"></script>
+<script src="data.js?v=202610282358"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -817,39 +817,19 @@
   .db-pool.p-star .tc:hover { border-color: #e8a013; background: rgba(255,248,228,.9); }
   /* R100s：卡片 db-stage 阶段徽标（已确认/待企稳/待缩量）已删，对应 CSS 一并清理 */
   .db-pool .db-sub { font-size: var(--fs-base); color: var(--ink2); margin-bottom: 14px; }
-  /* R100z258（用户 2026-10-28 截图 1/2/3）：
-     ① 卡片区与「下单规则」之间要留白——红框圈出的就是那段空档，两块贴着会被读成同一段；
-     ② 下单规则 / 风险口径 / 组合回测 三块改成可折叠、默认收起（原生 <details>，不写 JS 状态、
-        也不存 localStorage：折叠是「现在想不想看」，不是「这个人是谁」）；
-     ③ 原 .st-gap（虚线小提示块）随「开盘精选」的开盘价位置/盘口结构/追高区一起删掉（截图 3）。
-        同类提示块从此只有 .ord-fold 一套，不再有第二套语气相同的样式。 */
-  .ord-fold { margin: 0 0 10px; border: 1px solid var(--line); border-radius: var(--r-block);
-    background: var(--bg-2); }
-  .ord-fold:first-of-type { margin-top: 20px; }
-  .ord-fold > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px;
-    cursor: pointer; padding: 9px 12px; font-size: var(--fs-sm); font-weight: 700;
-    color: var(--ink); list-style: none; }
-  .ord-fold > summary::-webkit-details-marker { display: none; }
-  .ord-fold-ic { display: inline-block; font-size: var(--fs-xs); color: var(--ink2);
-    transition: transform .15s ease; }
-  .ord-fold[open] .ord-fold-ic { transform: rotate(90deg); }
-  /* R100z258 手机实测（500px）：组合回测摘要「6115 笔 · 胜率 56% · 年化 33.6% · 最大回撤 -8.2%
-     ⚠️ 最新一年…」一行放不下，被容器硬切（没有省略号，是半个字）。摘要行允许换行，
-     而不是截断——这条行上的衰减告警是全块最该被看见的一句。 */
-  .ord-fold-h { flex: 1 1 auto; min-width: 0; font-weight: 400; font-size: var(--fs-xs);
-    color: var(--ink2); overflow-wrap: anywhere; }
-  .ord-fold-b { padding: 0 12px 11px; font-size: var(--fs-xs); color: var(--ink2); line-height: 1.75; }
-  .ord-fold-b .ord-li { display: flex; gap: 7px; margin-top: 6px; }
-  .ord-fold-b .ord-li > i { flex: 0 0 auto; font-style: normal; font-weight: 700; color: var(--ink2); }
-  .ord-fold-b .ord-li > span { flex: 1 1 auto; min-width: 0; }
-  /* 卡片区下沿再让 6px，与第一个折叠块的 20px 叠成清晰的一段留白 */
+  /* R100z273（用户 2026-10-28 红框）：这里原来有一整套 .ord-fold / .ord-fold-h / .ord-fold-b /
+     .ord-fold-ic / .ord-li ——「下单规则 / 风险口径 / 组合回测」那六条折叠口径的样式（R100z258 建的）。
+     六块折叠内容已整块下线，DOM 生产者 ordFold / ordRuleBlocks 也一起删了，样式留着就是死代码：
+     下一个改这块的人会以为还有第二个折叠渲染分支（24.110 删旧 .bl-* 时写过同一条）。
+     要恢复折叠块，得连 DOM 生产者一起写回来，只恢复 CSS 不会让任何东西出现。 */
+  /* 卡片区下沿留 6px：原来是与第一个折叠块的 20px 叠加用的，折叠块下线后只剩这一段。 */
   .p-ord .db-chips { margin-bottom: 6px; }
-  @media (max-width: 720px) { .ord-fold > summary { font-size: var(--fs-xs); } }
   /* R100z255（2026-10-28 用户二次拍板「这两个模块删掉，改成给卡片赋能」）：
      原来这里有一整套 .tb-wrap / .tb-head / .tb-th / .tb-row / .tb-grp / .tb-rule /
      .tb-risk / .tb-bt ——「今日可下单」那张五列表的样式。表已整块删掉、信息压回卡片，
      所以这套样式也一并删干净：留着的死样式会让下一个改这块的人以为还有第二个渲染分支
-     （24.110 删旧 .bl-* 时写过同一条）。规则/风险/回测三块文字改由 .ord-fold 承载（R100z258）。 */
+     （24.110 删旧 .bl-* 时写过同一条）。当时的规则/风险/回测三块文字后来改由 .ord-fold 承载
+     （R100z258），R100z273 又连折叠块一起下线了——三块文字的最终归宿是卡片本身，别去这两处找。 */
   /* R91j: 近3日涨幅居前板块 TOP10 */
   .db-tb { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
   @media (max-width: 900px) { .db-tb { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
