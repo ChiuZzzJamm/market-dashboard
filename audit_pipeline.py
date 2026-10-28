@@ -81,6 +81,9 @@
                       forecastBasis 五路依据齐全且互不复制、direction 取自固定词表。
                       原「fundCheck.passed 决定方向」的机械映射已被用户当面否掉
                       （「怎么变成复盘了？」），R100z248 改口径并重写本闸（FAIL）
+G50 文案记法泄漏    渲染层不许出现 markdown 的 ** 记法（2026-10-28 截图上真的印出过
+                      「**不改清单、不新增标的**」）：内联 JS 剥注释后逐处点名，
+                      data.js 的 rule/riskNote 等直通 DOM 字段一并扫（FAIL）。
 """
 import ast
 import json
@@ -4219,6 +4222,80 @@ def g49_excess_benchmark_consistency(r):
                 "underperform=%s 与符号一致" % (float(auth), "赢" if auth >= 0 else "输", up))
 
 
+def g50_markdown_leak(r):
+    """G50 渲染文案里不许漏 markdown 记法（R100z254，2026-10-28）。
+
+    症状（当天截图实测两次）：页面正文出现「**不改清单、不新增标的**」「买区是**能下单的价格带**」——
+    星号是给 markdown 看的，浏览器不解析，原样印在中文句子中间。
+
+    两处来源，缺一不可：
+      ① index.html 内联 JS 的**字符串字面量**里手写了 **  （改文案时顺手写下的强调）；
+      ② data.js 的文案字段（rule / riskNote 这类直通 DOM 的）沿用了 ** ——
+         生成端改掉 + 渲染端 mdPlain() 兜底，但别的字段没有兜底，所以这里盯源头。
+
+    为什么值得单开一闸：它不报错、不影响任何数字、所有闸门全绿，只是每天让用户看到一堆星号。
+    这类「安静的错误」只能靠固定判据盯——靠人截图时正好看见，等于没查。
+
+    查法：剥掉 JS 注释后再数 **（本文件的 docstring 里大量用 ** 当强调，
+    不剥注释会把注释当泄漏，反过来逼着以后不许写注释）。
+    """
+    # ---- ① 内联 JS 的字符串字面量 ----
+    try:
+        htm = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G50", f"读不到 index.html，无法检查文案：{e}")
+        return
+    blocks = re.findall(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", htm, re.S)
+    if not blocks:
+        r.warn("G50", "index.html 未找到内联 script 块，跳过（渲染层检查失效）")
+        return
+    js = blocks[-1]
+    js = re.sub(r"/\*.*?\*/", "", js, flags=re.S)           # 块注释
+    js = re.sub(r"(?m)^\s*//.*$", "", js)                   # 整行注释
+    js = re.sub(r"\s//[^\"'\n]*$", "", js, flags=re.M)       # 行尾注释
+    bad = []
+    for m in re.finditer(r"\*\*", js):
+        ctx = js[max(0, m.start() - 34):m.start() + 26].replace("\n", " ")
+        bad.append("index.html：…" + ctx + "…")
+
+    # ---- ② data.js 里直通 DOM 的文案字段 ----
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G50", f"data.js 读取失败，文案检查失效：{e}")
+        return
+    st = ((D.get("duanban") or {}).get("star") or {})
+    fields = [
+        ("duanban.star.timingExec.rule", (st.get("timingExec") or {}).get("rule")),
+        ("duanban.star.timingExec.riskNote", (st.get("timingExec") or {}).get("riskNote")),
+        ("duanban.star.buySummary.rule", (st.get("buySummary") or {}).get("rule")),
+        ("duanban.star.buySummary.text", (st.get("buySummary") or {}).get("text")),
+        ("timingPlan.rule", (D.get("timingPlan") or {}).get("rule")),
+        ("timingPlan.riskNote", (D.get("timingPlan") or {}).get("riskNote")),
+        # 趋势档这条目前只在 title/弹窗里露脸，但它是「给渲染层读的文案」——
+        # 下一个把它贴进正文的人不会记得剥星号，所以源头一并盯住（本闸上线时它就带着 **）。
+        ("trendState.rule", (D.get("trendState") or {}).get("rule")),
+        ("trendState.marketBasis", (D.get("trendState") or {}).get("marketBasis")),
+        ("trendState.staleNote", (D.get("trendState") or {}).get("staleNote")),
+    ]
+    for i, row in enumerate(st.get("buyList") or []):
+        if not isinstance(row, dict):
+            continue
+        fields.append(("duanban.star.buyList[%d].rule" % i, row.get("rule")))
+        fields.append(("duanban.star.buyList[%d].riskNote" % i, row.get("riskNote")))
+    for path, val in fields:
+        if isinstance(val, str) and "**" in val:
+            bad.append(path + "：" + val[max(0, val.find("**") - 20):val.find("**") + 24])
+
+    if bad:
+        r.fail("G50", "文案里漏出 markdown 星号（** 会被原样印在页面上）：" +
+                      "；".join(bad[:4]) + ("（共 %d 处）" % len(bad) if len(bad) > 4 else ""))
+        return
+    r.ok("G50", "渲染文案无 markdown 记法泄漏（内联 JS %d 字符剥注释后 0 处；"
+                "data.js %d 个文案字段 + %d 条买点逐条干净）"
+                % (len(js), len(fields), len(st.get("buyList") or [])))
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -4280,6 +4357,7 @@ def main():
     g47_buy_list_truth(r)
     g48_forecast_contract(r)
     g49_excess_benchmark_consistency(r)
+    g50_markdown_leak(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
