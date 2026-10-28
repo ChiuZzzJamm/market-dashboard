@@ -1813,13 +1813,39 @@ function stkSecOf(code) {
        题材掘金/全球要闻等不在任何池内的标的也能出板块徽章 */
     var sm = D.sectorMap;
     if (sm) { for (var c in sm) { if (!M[c] && sm[c]) M[c] = sm[c]; } }
+    /* R100z264（用户 2026-10-28 21:0x 截图 1/2「部分标的前面的板块徽标没有了，参考图 3」）：
+       陈学长三池、今日清单三源、市值剔除名单、两份失效归档**每条都带 sector**，但一个都没在
+       这张表里建过键。于是「被市值门槛挡在断板池外、只活在陈学长池／今日可下单」的票
+       （实测 7 只：002795 永和智控、603719 良品铺子、601900、603081、603758、603813、002988）
+       卡片上有板块胶囊、点开弹窗那枚却不见了——同一个字段，页面上有两种结论。
+       **这一块必须排在 sectorMap 之后**：它只负责补 sectorMap 的洞（新浪行业表 3,587 条里
+       确实没有这 7 只）；放在前面会让 64 处已有的行业名被静默改写（600558 钢铁行业→通用设备、
+       002178 建筑建材→软件开发…），那不是修 bug，那是换全站口径。东财 hybk 排在陈学长
+       （同花顺口径）之前，两套行业分类的差异另记 PROJECT-MEMORY 24.119。 */
+    var _st = (db.star || {});
+    [(_st.timingExec || {}).rows, _st.buyList, (D.timingPlan || {}).orders, db.mcapCut, db.failPool]
+      .forEach(function (arr) {
+        (arr || []).forEach(function (x) {
+          if (x && x.code && x.sector && !M[String(x.code)]) M[String(x.code)] = x.sector;
+        });
+      });
+    var _cp = D.chenPool || {};
+    [_cp.strict, _cp.loose, _cp.watching, _cp.failPool].forEach(function (arr) {
+      (arr || []).forEach(function (x) {
+        if (x && x.code && x.sector && !M[String(x.code)]) M[String(x.code)] = x.sector;
+      });
+    });
     window._SEC_MAP = M;
   }
   return M[code] || '';
 }
-/* R100o：弹窗标题行板块徽章（代码 与 数量/池标签 之间），替代弹窗内「所属板块：」文字行 */
-function stkSecBadge(code) {
-  var sec = stkSectorOf(code);
+/* R100o：弹窗标题行板块徽章（代码 与 数量/池标签 之间），替代弹窗内「所属板块：」文字行。
+   R100z264：**第二个参数 prefer 必须传**（条目自带的 sector）。同一个 code 在全站有三套行业名
+   （东财 hybk／同花顺／新浪 sectorMap），弹窗只按 code 查表时，83 张卡里有 22 张出现
+   「卡片写通用设备、点开写钢铁行业」——同一只票两种说法。以「你点开的那个条目的 sector」
+   为准，卡片与弹窗就必然一致；条目没带 sector 才回落到全局表。 */
+function stkSecBadge(code, prefer) {
+  var sec = prefer || stkSectorOf(code);
   return sec ? '<span class="chip-sec" style="font-size: var(--fs-sm);max-width:120px;padding:1px 7px;border-radius:4px;margin-left:4px" title="所属板块：' + escAttr(sec) + '">' + esc(sec) + '</span>' : '';
 }
 
@@ -5490,7 +5516,7 @@ function lbShow(idx) {
     '<span class="lb-lbc">' + esc((st.lbc || 1) + ' 连板') + '</span>' +
     '<span class="rt" style="font-size: var(--fs-md);">' + pct + '</span>' +
     '<button class="db-modal-close" onclick="lbClose()">×</button>' +
-    '<div class="m-badge-row">' + stkSecBadge(st.code) + stkTechBadgeHtml(st.code) + stkPoolBadge(st.code) + '</div>'; // R100s：徽标统一第二行，池徽章最后
+    '<div class="m-badge-row">' + stkSecBadge(st.code, st.hybk || st.sector) + stkTechBadgeHtml(st.code) + stkPoolBadge(st.code) + '</div>'; // R100s：徽标统一第二行，池徽章最后
   var meta = // R100v2：板块行删除（徽标第二行已承载），仅留封单资金/涨停原因
     // R100z157：梯队角色 + 情绪阶段（脚本确定性产出：龙头/卡位/跟风 · 一致/换手/分歧）
     ((st.role || st.phase) ? '<span class="lab">梯队角色：</span>' + esc(st.role || '—')
@@ -7908,7 +7934,7 @@ function openDbModal(key) {
     modalFreshBadgeHtml(key, e.code) + // R100z121：弹窗「新」徽章移到标题行（代码右侧，用户 2026-10-13 截图指定）
     '<button class="db-modal-close" onclick="closeDbModal()">×</button>' +
     '<div class="m-badge-row">' + // R100s：徽标统一第二行
-    stkSecBadge(e.code) +
+    stkSecBadge(e.code, e.sector) +
     (function () { // R100z4：池归属并入断板反包徽章（断板反包·确认池 / 断板反包·观察池，金色样式与全站一致）；异常兜底回退独立池徽章
       var tb = stkTechBadgeHtml(e.code);
       // R100z257：从清单卡点进来，第一枚徽标必须是「今日可下单 · 昨晚挂单/盘中买点」——
