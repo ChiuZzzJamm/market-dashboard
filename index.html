@@ -1558,15 +1558,19 @@
          所以这里只剩两个容器。两块各有独立渲染函数，容器常驻、只切 display，不重复 innerHTML。 -->
     <div id="db-od" class="db-subpage" style="display:none;">
       <div id="db-od-nav"></div>
-      <!-- R100z258（用户 2026-10-28 截图 1）：「今日可下单」从固定区整块挪进开盘预测页。
-           位置在菜单之后、前瞻之前——盘前这一页的动作顺序是「先看昨晚挂什么单，再读为什么」。
-           #db-fixed 里的 TOP10 + 开盘精选仍常显在最上面，所以摘要里「已在上面开盘精选卡里」依旧成立。 -->
-      <div id="db-ord"></div>
       <div id="weekend-news"></div>
       <!-- R100z248（用户 2026-10-27「大盘趋势状态放到主页面，加到原有模块」）：
            趋势档已并进主页面「大盘指数」卡（见 renderTrendStrip / renderIndexCards），
            这里不再留独立容器——留着的空 div 只会让人以为它还在这一页。 -->
       <div id="ai-prediction"></div>
+      <!-- R100z260（用户 2026-10-28 20:00「今日可下单放在开盘预测最下面」）：
+           从「菜单之后、前瞻之前」再往下挪到本子页**末尾**（AI 预测分析之后）。
+           上一版（R100z258）的理由是「盘前先看挂什么单，再读为什么」——用户实际读法是
+           「先读为什么（前瞻+预测），最后才看执行参数」，所以按他说的放最下面。
+           ⚠️ 位置可以再挪，但**必须在本函数开头那次 DB_INDEX/DB_ORDER 重置之后渲染**
+           （ordBlockHtml 边渲染边注册 o| 键），DOM 位置不影响这一点——渲染入口在
+           renderDuanban 里，不在这里的标签顺序。 -->
+      <div id="db-ord"></div>
     </div>
     <div id="db-pools" class="db-subpage"></div>
     <!-- R100z218：陈学长「断板反包」独立技术指标（chen_pool.py 产出，与断板反包并行对照，
@@ -1815,14 +1819,25 @@ function stkSecBadge(code) {
   return sec ? '<span class="chip-sec" style="font-size: var(--fs-sm);max-width:120px;padding:1px 7px;border-radius:4px;margin-left:4px" title="所属板块：' + escAttr(sec) + '">' + esc(sec) + '</span>' : '';
 }
 
-/* R100q：技术池归属（断板/谐波/横盘启动/吸筹）——供弹窗技术徽章 + 主页金框共用。
-   R100t：池归属并入技术徽章（断板反包·确认池 / 谐波·XX·确认池 单枚徽标），美股代码非 6 位数字天然不命中。 */
+/* R100q：技术池归属（断板/陈学长/横盘启动/谐波/吸筹）——供弹窗技术徽章 + 全站分级边框共用。
+   R100t：池归属并入技术徽章（断板反包·确认池 / 谐波·XX·确认池 单枚徽标），美股代码非 6 位数字天然不命中。
+   R100z260（用户 2026-10-28 20:00 第 6、7 条）：
+     ① **陈学长算进技术池**——原来它被有意排除（R100z228 的理由是「16 只里 13 只与断板重叠，并进去等于
+        把同一件事数两遍」）。实测 2026-10-28：陈学长 23 只里只有 3 只同时命中断板池，**20 只独有**
+        → 不并进去，陈学长页 20 张卡一张边框都没有，与其它四个技术指标页明显不一致（用户截图 4）。
+        他原话「陈学长这个也要统一」，所以并入；以后若重叠率又高起来，是**数据**的问题，不是这条的错。
+     ② **失效也算一种归属**——每只票对每个技术指标只有三种状态：在池（确认/观察）、失效归档、
+        不在池。原来只有从失效池点进来才画一枚徽章，于是「陈学长观察池 + 断板失效池」这种票
+        点开只看到陈学长（用户截图 5 的原话：「这两个徽章都要放」）。现在五个池子逐一对账，
+        在池画池徽章、失效画失效徽章、两者都写同一条时间线。
+     ③ 同一模块内「在池」优先于「失效」（两者本就互斥，只是防止脏数据把两枚都画出来）。 */
 function stkTechMeta(code) {
   code = String(code || '');
   if (!/^\d{6}$/.test(code)) return null;
   var T = window._TECH_MAP;
   if (!T) {
-    T = { db: {}, hz: {}, bp: {}, acc: {} };
+    T = { db: {}, hz: {}, bp: {}, acc: {}, chen: {},
+          fail: { db: {}, chen: {}, bp: {}, hz: {}, acc: {} } };
     var D = window.DASHBOARD_DATA || {};
     var db = D.duanban || {};
     (db.confirmed || []).forEach(function (x) { if (x && x.code) T.db[String(x.code)] = '确认池'; });
@@ -1834,39 +1849,79 @@ function stkTechMeta(code) {
     (hz.watchPool || []).forEach(function (x) { if (x && x.code && !T.hz[String(x.code)]) T.hz[String(x.code)] = { p: x.pattern || '谐波', pool: '观察池', g1: x.t1GapPct, g2: x.t2GapPct, r1: x.t1Reached, r2: x.t2Reached }; });
     ((D.breakoutPool || {}).passed || []).forEach(function (x) { if (x && x.code) T.bp[String(x.code)] = 1; });
     ((D.accumulation || {}).scored || []).forEach(function (x) { if (x && x.code) T.acc[String(x.code)] = 1; });
+    var cp = D.chenPool || {};
+    (cp.strict || []).forEach(function (x) { if (x && x.code) T.chen[String(x.code)] = '严格池'; });
+    (cp.loose || []).forEach(function (x) { if (x && x.code && !T.chen[String(x.code)]) T.chen[String(x.code)] = '放宽池'; });
+    (cp.watching || []).forEach(function (x) { if (x && x.code && !T.chen[String(x.code)]) T.chen[String(x.code)] = '观察中'; });
+    // 五份失效归档。键名与 failPoolOf/failKindCn 的白名单逐字一致（db/chen/breakoutPool/…）
+    [['db', db.failPool], ['chen', cp.failPool],
+     ['bp', (D.breakoutPool || {}).failPool], ['hz', hz.failPool],
+     ['acc', (D.accumulation || {}).failPool]].forEach(function (pr) {
+      (pr[1] || []).forEach(function (x) {
+        var c = String((x || {}).code || '');
+        if (!c) return;
+        // 同一只能在同一模块的失效池里只留一条：保留归档日较新的那条
+        var old = T.fail[pr[0]][c];
+        if (old && String(old.entryDate || '') > String(x.entryDate || '')) return;
+        T.fail[pr[0]][c] = { entryDate: x.entryDate, reason: x.reason, limitDay: x.limitDay, washDays: x.washDays };
+      });
+    });
     window._TECH_MAP = T;
   }
   var out = [];
+  var failOf = function (k, label) {
+    var f = T.fail[k][code];
+    if (!f) return;
+    out.push({ k: k, label: label, pool: '失效', fail: true,
+               failDate: f.entryDate, failReason: f.reason, limitDay: f.limitDay });
+  };
+  // 顺序＝子页菜单顺序（断板反包 → 陈学长 → 横盘启动 → 谐波 → 吸筹），读者横向对账时顺序不变
   if (T.db[code]) out.push({ k: 'db', label: '断板反包', pool: T.db[code] });
+  else failOf('db', '断板反包');
+  if (T.chen[code]) out.push({ k: 'chen', label: '陈学长', pool: T.chen[code] });
+  else failOf('chen', '陈学长');
+  if (T.bp[code]) out.push({ k: 'bp', label: '横盘启动' });
+  else failOf('bp', '横盘启动');
   if (T.hz[code]) {
-    var hz = T.hz[code];
-    var lbl = '谐波·' + hz.p;
+    var hz0 = T.hz[code];
+    var lbl = '谐波·' + hz0.p;
     /* R100z52：目标位倒挂提示——目标①/②若已 ≤ 现价，标成「已达成」，
        否则徽章会显示一个比现价还低的「目标位」，读者会误以为还有上涨空间。 */
-    if (hz.r1 || hz.r2) {
+    if (hz0.r1 || hz0.r2) {
       var done = [];
-      if (hz.r1) { done.push('①' + (hz.g1 === 0 ? '已到现价' : '已达成')); }
-      if (hz.r2) { done.push('②' + (hz.g2 === 0 ? '已到现价' : '已达成')); }
+      if (hz0.r1) { done.push('①' + (hz0.g1 === 0 ? '已到现价' : '已达成')); }
+      if (hz0.r2) { done.push('②' + (hz0.g2 === 0 ? '已到现价' : '已达成')); }
       lbl += '（目标' + done.join('/') + '）';
     }
-    out.push({ k: 'hz', label: lbl, pool: hz.pool, warn: hz.r1 || hz.r2 });
-  }
-  if (T.bp[code]) out.push({ k: 'bp', label: '横盘启动' });
+    out.push({ k: 'hz', label: lbl, pool: hz0.pool, warn: hz0.r1 || hz0.r2,
+               g1: hz0.g1, g2: hz0.g2 });
+  } else failOf('hz', '谐波');
   if (T.acc[code]) out.push({ k: 'acc', label: '主力吸筹' });
+  else failOf('acc', '主力吸筹');
   return out.length ? out : null;
 }
 /* 弹窗第二行技术徽章（板块徽章之后）。R100t：确认池/观察池并入对应技术徽章文案——
    谐波命中池 → 单枚金色徽标（谐波·AB=CD · 确认池）；断板命中池 → 断板反包 · 确认池（黄标）。
-   noPoolMerge=true（断板弹窗用）时不合并，池归属由弹窗末尾专属徽章承载，避免重复。 */
+   noPoolMerge=true（断板弹窗用）时不合并，池归属由弹窗末尾专属徽章承载，避免重复。
+   R100z260：**五个技术指标全出，失效也出**。失效用 .pool-badge.fail（灰），与在池的金标区分开；
+   tooltip 写清失效原因 + 归档日，读者能自己判断「是形态走坏，还是口径收紧」。 */
 function stkTechBadgeHtml(code, noPoolMerge) {
   var tags = stkTechMeta(code);
   if (!tags) return '';
+  var all = tags.map(function (x) { return x.label + (x.pool ? '（' + x.pool + '）' : ''); }).join(' · ');
   return tags.map(function (t) {
     var merge = !noPoolMerge && t.pool;
     var label = t.label + (merge ? ' · ' + t.pool : '');
-    var tip = '技术面归属：' + tags.map(function (x) { return x.label + (x.pool ? '（' + x.pool + '）' : ''); }).join(' · ');
+    var tip = '技术面归属：' + all;
+    if (t.fail) {
+      tip += '｜' + t.label + '早在 ' + (t.failDate || '—') + ' 就归档为失效：' +
+        (t.failReason || '未记录原因') +
+        '｜失效归档保留 5 个交易日后自动清理，期间它仍可能在别的指标池里有效（两边都是事实，不是矛盾）';
+      return '<span class="pool-badge fail" title="' + escAttr(tip) + '">' + esc(label) + '</span>';
+    }
     /* R100z52：目标位倒挂（T1 ≤ 现价）时在 tooltip 里把差距写清楚，
-       徽章本身也换成灰绿警告色，别让读者以为「目标位在下方＝还有空间」。 */
+       徽章本身也换成灰绿警告色，别让读者以为「目标位在下方＝还有空间」。
+       ⚠️ t.g1/t.g2 必须由 stkTechMeta 带出来——原来没带，这里会印成「undefined%」（已修）。 */
     if (t.warn) {
       tip += '｜目标①距现价 ' + (t.g1 >= 0 ? '+' : '') + '' + (t.g1 === 0 ? '0' : t.g1) + '%'
            + '，目标②距现价 ' + (t.g2 >= 0 ? '+' : '') + '' + (t.g2 === 0 ? '0' : t.g2)
@@ -1887,8 +1942,10 @@ function stkTechBadgeHtml(code, noPoolMerge) {
    精选卡上出（那里本来就只有一套数）。徽标 title 里写明这层关系，并指出去哪看参数。
    ⚠️ 也**不进 stkTechMeta**：那张表同时喂 stkGoldCls（金框分级＝命中池数），陈学长与断板 16 只里 13 只
    重叠，并进去等于把同一件事数两遍、断板票边框整体提一档（R100z76-③ 已定过这条，别改）。
-   同理**不改 stkTechBadgeHtml**：要闻/板块行与连板弹窗的徽标集合＝「共振」集合（与金框分级 1:1 对应），
-   把陈学长塞进去会让「看得见的徽标数」与「边框档位」对不上。只在弹窗徽标行旁路补一枚。 */
+   ⚠️ **R100z260 已按用户要求推翻上一条**：2026-10-28 实测重叠只有 3/23（20 只陈学长独有），
+   不进 stkTechMeta 的结果是陈学长页 20 张卡一张边框都没有。用户原话「陈学长这个也要统一」，
+   所以陈学长已并入技术池归一档。本函数与 chenBadgeHtml 保留只为外部/历史调用，
+   **弹窗徽章行已改由 stkTechBadgeHtml 统一出**，不要再在这里旁路补一枚（会印两遍）。 */
 function chenPoolHit(code0) {
   var c = String(code0 || '').replace(/\D/g, '');
   if (!/^\d{6}$/.test(c)) return null;
@@ -1903,10 +1960,14 @@ function chenBadgeHtml(tier) {
     '。他的买点/目标/仓位在「陈学长」页，与断板反包的退出纪律不是同一套数，别混着用') +
     '">陈学长·' + t + '</span>';
 }
-/* R100z80：技术池命中分级边框（stkTechMeta 命中池数 → reso-1/2/3/4：1黄/2橙/3红/4紫）；全站标的胶囊/卡片共用 */
+/* R100z80：技术池命中分级边框（stkTechMeta 在池命中数 → reso-1/2/3：1黄/2橙/3红）；全站标的胶囊/卡片共用。
+   R100z260（用户 2026-10-28 20:00 第 6 条「只要符合形态边框就是黄色或者橙色或者红色的吧」）：
+     ① 只数**在池**命中，失效不算——边框是「这套形态现在成立」的记号，形态死了再描红等于骗人。
+     ② 封顶 3 档（红）：「命中 4 池」那一档原来是紫色，用户点名只要黄/橙/红三种，
+        所以 ≥3 一律红。reso-4 的 CSS 留着不用（删掉风险大于收益，别处可能有历史引用）。 */
 function stkGoldCls(code) {
-  var n = (stkTechMeta(code) || []).length;
-  return n >= 1 ? ' reso-' + Math.min(n, 4) : '';
+  var n = (stkTechMeta(code) || []).filter(function (t) { return !t.fail; }).length;
+  return n >= 1 ? ' reso-' + Math.min(n, 3) : '';
 }
 /* R100s→R100t：独立池徽章仅保留开盘精选（断板/谐波池已并入技术徽章文案） */
 function stkPoolBadge(code) {
@@ -6726,9 +6787,29 @@ function ordPrep() {
   // 昨晚定单：timingExec 由 9:45 写（要有开盘价才能核对）；16:00 之后到次日 9:45 之间
   // 只有 timingPlan（不含开盘价）→ 回退，状态写「未开盘」。回退态不许编 go/broken/missed：
   // 昨晚不可能知道今开，写「可挂」就是编；而 22:00 打开看到完全空白，会被读成「今晚没生成」。
-  var te = st.timingExec, fallback = false;
-  if (!te || !te.rows || !te.rows.length) {
-    var tp = D.timingPlan || {};
+  // ---------------------------------------------------------------------------
+  // R100z260（用户 2026-10-28 20:00 第 4 条「今日可下单选的标的全是断板反包即将反包的形态，
+  //   为什么这些标的都不在断板反包确认池？？？」）——查清了，是两个坑叠在一起：
+  //   ① **时点错**：20:00 打开时 timingExec（今早 10-28 的执行结果、tradeDate 10-27）还在
+  //      preempt（压过）16:43 刚生成的 timingPlan（tradeDate 10-28、buyDate 10-29）。
+  //      于是页面在晚上 20 点还印着**今早已经执行完的单**，读者拿它去对「今天收盘后重建的池子」，
+  //      当然一只都对不上。今天这批票确实不在今日池里——它们在**昨天**的池里。
+  //   ② **口径独立**：timingPlan 根本不读 duanban.confirmed（见 timing_plan.py 头部），
+  //      它只要「T 日首板涨停 + T+1 断板 + 放量 1.1~3.5 倍 + 成交额≥2 亿」，
+  //      **不等缩量、不等站稳 MA5**；确认池要四步全走完（多等 1~3 个交易日）。
+  //      挂单要 T+2 开盘就买，等形态确认完就买不到了——所以两池天然几乎不重叠（今日重叠 0/8）。
+  //      这不是 bug，是「同一批票的两个时点」，但页面过去一句都没写，读起来就像矛盾。
+  // 修法：谁的日子新就显示谁。plan 的 buyDate 晚于 exec 的 buyDate → 主列表换成**明天要挂的单**，
+  //   今早的执行结果降成摘要里一句（可挂/高于限价/破下沿各几只），两边都不丢。
+  var te = st.timingExec, fallback = false, execHist = null, isNextPlan = false;
+  var tp = D.timingPlan || {};
+  var planNewer = !!(tp.buyDate && (tp.orders || []).length &&
+                     (!te || !te.buyDate || String(tp.buyDate) > String(te.buyDate)));
+  if (planNewer) {
+    execHist = te || null;
+    isNextPlan = true;
+  }
+  if (planNewer || !te || !te.rows || !te.rows.length) {
     if ((tp.orders || []).length) {
       te = { rows: (tp.orders || []).map(function (o) {
               return { code: o.code, name: o.name, sector: o.sector, limit: o.limit,
@@ -6766,6 +6847,7 @@ function ordPrep() {
   var blDupPick = bl.filter(function (r) { return pickCodes[String(r.code)]; });
   var blRest = bl.filter(function (r) { return !teCodes[key(r)] && !pickCodes[String(r.code)]; });
   return { D: D, st: st, te: te, fallback: fallback, bs: bs,
+           execHist: execHist, isNextPlan: isNextPlan,
            bl: bl, blRest: blRest, blDupPlan: blDupPlan, blDupPick: blDupPick,
            nBpCut: nBpCut, nBuy: nBuy, teRows: teRows,
            n: teRows.length + blRest.length };
@@ -6813,7 +6895,7 @@ function ordPlanCard(r) {
     // 同卡两行各说一遍，会被读成「下单」和「昨收」是两个互相独立的结论。
     foot: (r.t1Close == null ? '昨收 —' : '昨收 ' + ordP2(r.t1Close)),
     attrs: ' data-k="' + escAttr(k) + '"',
-    title: r.name + ' ' + r.code + '（' + (r.sector || '') + '）\n昨晚按涨停日结构定的限价单：' +
+    title: r.name + ' ' + r.code + '（' + (r.sector || '') + '）\n按涨停日结构定的限价单（16:00 数据步生成、9:45 只核对开盘）：' +
       '挂多少、破多少撤写在卡片底部「下单」行\n今开高于限价＝不成交（不追）；跌破下沿＝作废\n点击查看K线与消息'
   });
 }
@@ -6924,6 +7006,8 @@ function ordRuleBlocks(P) {
 /* 「今日可下单」整块（R100z255 的形态 + R100z257 的接线 + R100z258 的家）：
    ⚠️ 家已从 #db-fixed（断板页固定区）搬到 #db-od（开盘预测子页）的 #db-ord 容器里——
       别按旧注释把它写回 fixed，固定区在所有子页常显，放那儿等于每页都印一遍。
+      R100z260（用户 2026-10-28 20:00）：容器在 #db-od 里的位置又从「菜单之后」挪到**本子页末尾**
+      （#ai-prediction 之后）。DOM 顺序不影响注册，渲染入口仍在 renderDuanban 的重置之后。
    摘要一行 + 卡片 + 规则/风险/回测三段。
    R100z257 只做了一件事：每张卡带 data-k（o|<code>），走 #db-fixed 已有的点击代理，
    点开就是完整的标的页（K线 / 消息面 / 退出纪律 / 下单口径）。24.112 那次只补了卡片没接线——
@@ -6933,10 +7017,18 @@ function ordBlockHtml() {
   var P = ordPrep(), te = P.te;
   if (!P.n) return '';
   var sum = [];
+  var buyD = (te && te.buyDate) ? String(te.buyDate).slice(5) : '';
   if (P.teRows.length) {
-    sum.push('昨晚挂单 ' + P.teRows.length + ' 只' +
-      (P.fallback ? '（未开盘，照限价挂）'
+    sum.push((P.isNextPlan ? '明日 ' + buyD + ' 开盘挂单 ' : '昨晚挂单 ') + P.teRows.length + ' 只' +
+      (P.fallback ? '（未开盘，照限价挂；可挂/破位要等明早 9:25 集合竞价后才知道，现在不编）'
         : '（可挂 ' + (te.nGo || 0) + ' · 高于限价 ' + (te.nMissed || 0) + ' · 已破下沿 ' + (te.nBroken || 0) + '）'));
+  }
+  // R100z260：今早那一批的执行结果降成一句——换掉主列表不等于把它藏了。
+  //   两个日期必须同时出现：读者要能看出「现在看的是明天的单，不是今早那批」。
+  if (P.execHist && P.execHist.rows && P.execHist.rows.length) {
+    sum.push('今早 ' + String(P.execHist.buyDate || '').slice(5) + ' 执行 ' + P.execHist.rows.length + ' 只' +
+      '（可挂 ' + (P.execHist.nGo || 0) + ' · 高于限价 ' + (P.execHist.nMissed || 0) +
+      ' · 已破下沿 ' + (P.execHist.nBroken || 0) + '）');
   }
   if (P.bl.length) {
     sum.push('盘中买点 ' + P.bl.length + ' 只（现价在买区内 ' + P.nBuy + ' 只' +
@@ -6945,9 +7037,14 @@ function ordBlockHtml() {
       // 不说这一句，读者就得拿「8 只」去减卡片数（减法不该由读者做）。
       (P.blDupPlan.length ? '，另 ' + P.blDupPlan.length + ' 只昨晚已挂单' : '') + '）');
   }
-  return '<div class="db-pool p-ord"><h2>💵 今日可下单 · ' + P.n + ' 只</h2>' +
+  return '<div class="db-pool p-ord"><h2>💵 今日可下单 · ' + P.n + ' 只' +
+      (P.isNextPlan && buyD ? '（' + buyD + ' 开盘挂）' : '') + '</h2>' +
     '<div class="db-sub">' + esc(sum.join('　·　')) +
       '。挂多少钱、破多少撤写在每只票自己卡片底部那行「下单」里，不再另开表格' +
+      (P.isNextPlan
+        ? '。这批只走完「T 日首板涨停 → 次日放量断板」两步就下单——断板确认池要四步全走完（多等 1~3 个交易日缩量确认），' +
+          '等它确认完价格早走了；所以同一只票不会同时出现在两边，这是时点差异（两套口径见下方规则）'
+        : '') +
       (P.blDupPick.length
         ? '；' + P.blDupPick.map(function (r) {
             return '<span class="ord-nw">' + esc(r.name || String(r.code)) + '</span>';
@@ -7694,28 +7791,16 @@ function openDbModal(key) {
       var tb = stkTechBadgeHtml(e.code);
       // R100z257：从清单卡点进来，第一枚徽标必须是「今日可下单 · 昨晚挂单/盘中买点」——
       //   否则打开的是同一只票，徽标却只写「陈学长·观察中」，读者会怀疑点错了入口。
-      //   池归属仍然跟在后面（它本来就同时在那个池里，两边都在是事实）。
+      // R100z260：后面的池归属**全部由 tb 出**（五个指标＋失效），不再旁路补 chenBadgeHtml /
+      //   「XX失效归档池」。原来的旁路有两个病：① 陈学长徽章只有从这里补，别的行没有；
+      //   ② 从陈学长页点开一只「陈学长观察池 + 断板失效」的票，只看得到陈学长——
+      //   用户 2026-10-28 截图 5 的原话就是「这两个徽章都要放」。
       if (isOrd) {
-        var c0 = chenPoolHit(String(e.code));
         return '<span class="pool-badge hold">今日可下单 · ' +
-          (e.ordKind === 'plan' ? '昨晚挂单' : '盘中买点') + '</span>' +
-          (c0 ? chenBadgeHtml(c0.tier) : '') + tb;
+          (e.ordKind === 'plan' ? '昨晚挂单' : '盘中买点') + '</span>' + tb;
       }
-      if (isFail) return tb + '<span class="pool-badge fail">' + failKindCn(kindFail) + '失效归档池</span>';
-      // R100z218：先判身份再谈技术徽章——陈学长条目即使同时躺在断板池里，
-      //   也要先把自己是哪个池说清楚（tb 若命中断板池仍追加在后面，读者能看到「两边都在」）。
-      // R100z220（用户 2026-10-26 截图5/6/7）：徽章颜色与断板反包 / 日线横盘启动 / 谐波统一。
-      //   原来走 .pool-badge.hold/.done：hold 是浅蓝（与左侧板块徽章 .chip-sec 同色，两枚蓝标贴在一起读不出区别）、
-      //   done 是涨色红（与「利好」撞色，还被误读成利好）。三类技术徽章统一用 .hz-badge（金），
-      //   池子差别由文案（严格池/放宽池/观察中）承担，不再靠颜色。
-      if (isChen) return chenBadgeHtml(e.tier) + tb;
-      // R100z228：**非陈学长入口也要按 code 查一遍**——精选/断板入口打开同一只票时必须同样多出这枚徽标，
-      //   否则「你在哪一页点开」决定了这票是不是陈学长选的（用户 2026-10-26 截图 1 vs 2）。
-      var ch = chenPoolHit(e.code);
-      if (ch) return chenBadgeHtml(ch.tier) + tb;
-      return tb || (isOrd
-        ? '<span class="pool-badge hold">今日可下单 · ' + (e.ordKind === 'plan' ? '昨晚挂单' : '盘中买点') + '</span>'
-        : ('<span class="pool-badge ' + (done ? 'done' : 'hold') + '">' + (done ? '确认池' : ('观察池 · ' + esc(e.stage))) + '</span>'));
+      return tb || ('<span class="pool-badge ' + (done ? 'done' : 'hold') + '">' +
+        (done ? '确认池' : ('观察池 · ' + esc(e.stage || '待定'))) + '</span>');
     })() +
     stkLhbBadge(String(e.code)) + // R100z201：当日龙虎榜归属（用户：标的页面里要写）
     riskTipBadge(String(e.code)) + // R100z87：可见风险提示徽章（手机端也能看到，原 ⚠️ 悬停信息不可达）
