@@ -747,7 +747,18 @@ def build_star(D, base=None):
     # ---- 个股快照（当日实时涨幅）：断板池 + 四个技术池候选一并快照 ----
     # R100z221：原来抓的是「配额装配后那 10 只」，而装配已挪到后面（要看断板池选走了谁），
     # 所以这里改成抓四个池的全部候选——多抓十几只，换来装配阶段能按实时涨幅顺位递补。
-    quotes = fetch_stock_quotes([str(e.get("code")) for e in pools] + _tech_codes)
+    # R101b（2026-10-28 实测抓到的漏抓）：`timingPlan.orders`（昨夜挂单清单）的代码原本
+    # 不在抓取列表里，8 只挂单只有 1 只因为「碰巧也在横盘启动池」拿到行情，其余 7 只被
+    # build_timing_exec 全部渲染成「行情抓空」——但同一批代码当时直接用 curl 抓腾讯接口
+    # 8/8 有返回。这与 R100z241 的 buyList 是同一个错：**不是数据源坏，是自己没去抓**。
+    # 挂单核对是 9:45 的核心动作之一，7/8 抓空等于这张表作废；故把挂单代码并进同一次
+    # 批量快照（多抓 8 只，忽略不计的成本）。注意：只并入抓取，不并入候选装配。
+    _fetch_codes = [str(e.get("code")) for e in pools] + _tech_codes
+    for _o in (((D.get("timingPlan") or {}).get("orders")) or []):
+        _c = str(_o.get("code") or "")
+        if _c.startswith(("60", "00")):
+            _fetch_codes.append(_c)
+    quotes = fetch_stock_quotes(list(dict.fromkeys(_fetch_codes)))
 
     # ---- R99c：确定性筛选——仅「板块情绪正向 + 主力净流入正向」板块挂钩的池内标的 ----
     # 合格板块：涨幅>0 且 主力净流入>0；池内板块与合格板块名互含即视为挂钩。

@@ -2733,6 +2733,31 @@
      "close": 51.78
     }
    ]
+  },
+  "2026-10-28": {
+   "leadLag": [
+    {
+     "code": "002137",
+     "name": "实益达",
+     "sector": "电子器件",
+     "screen": "leadLag",
+     "rule": "secGap>1.0&lag>2.0&yret>0"
+    },
+    {
+     "code": "600865",
+     "name": "百大集团",
+     "sector": "零售",
+     "screen": "leadLag",
+     "rule": "secGap>1.0&lag>2.0&yret>0"
+    },
+    {
+     "code": "600693",
+     "name": "东百集团",
+     "sector": "零售",
+     "screen": "leadLag",
+     "rule": "secGap>1.0&lag>2.0&yret>0"
+    }
+   ]
   }
  },
  "updatedAt": "2026-10-27 16:19:19"
