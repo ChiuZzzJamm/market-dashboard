@@ -87,6 +87,10 @@ G50 文案记法泄漏    渲染层不许出现 markdown 的 ** 记法（2026-10
     G51 清单台账接线    「今日可下单」这份清单必须真的在 signal_ledger 里逐日登记
                       （源键 buy）：bySrc 少了这一行页面只会「少一行」，不会报错，
                       所以用 asOf 与登记条数双判（接线断 = FAIL / 名单被重跑 = WARN）。
+    G53 名字解析卫生    调用了从未绑定的名字（Python 用 ast 判，误报 0）= FAIL；
+                      定义了全仓零引用的函数 = WARN。py_compile / node --check 与其余
+                      全部闸门都拦不住这一类：语法合法、脚本照常启动，跑到那行才炸，
+                      前端则是点进子页才炸（R100z274，删 ④⑤ 后手工扫出 6 个前端死函数）。
 """
 import ast
 import json
@@ -3413,8 +3417,8 @@ def g40_score_page_and_slots(r):
         # 先用 `var 变量 = getElementById('id')` 反解成 id 再比，改名不会误报。
         amap = dict(re.findall(r"var\s+(\w+)\s*=\s*document\.getElementById\('([\w-]+)'\)", s))
         pairs = re.findall(r"slot:\s*g\.children\[(\d+)\]\s*,\s*iPage:\s*(\w+)", rb)
-        want = {"gn-jump": 0, "gn-entry-in": 1, "db-entry-in": 2, "sc-entry-in": 3}
-        names = {"gn-jump": "🐼", "gn-entry-in": "📄", "db-entry-in": "🧰", "sc-entry-in": "📋"}
+        want = {"gn-jump": 0, "gn-entry-in": 1, "sc-entry-in": 3}
+        names = {"gn-jump": "🐼", "gn-entry-in": "📄", "sc-entry-in": "📋"}
         got = {}
         for idx, var in pairs:
             got[amap.get(var, var)] = int(idx)
@@ -3424,8 +3428,10 @@ def g40_score_page_and_slots(r):
             elif got[el_id] != idx:
                 bad.append("RAIL 把 %s 指到第 %d 槽（应为第 %d 槽）——点进去按钮会跳一格"
                            % (el_id, got[el_id] + 1, idx + 1))
-        if len(pairs) > 4:
-            bad.append("RAIL 有 %d 条（应 4 条）——多出的槽位没有对应按钮" % len(pairs))
+        # R100z273：第 3 槽（🧰 → #db-back）已随「返回键改静态」一并撤出槽位表，所以是 3 条。
+        if len(pairs) > 3:
+            bad.append("RAIL 有 %d 条（应 3 条：🐼/📄/📋）——多出的槽位没有对应按钮"
+                       "（#db-back 已改页头静态按钮，不该再回到槽位表）" % len(pairs))
 
     # ---- e2) 落位必须走实测偏移，CSS 不许再抄一份槽位 ----
     il = s.find("function layout(")
@@ -3513,17 +3519,30 @@ def g41_visual_norms(r):
     # 保留 a) 那条「源码里不许出现『次日交易预案』」，防止有人把旧标题抄回来。
 
     # ---- c) 悬浮按钮三件套 ----
+    # R100z273（用户 2026-10-28）：「断板页那个 🧰 有 bug，还遮掉了利好/利空/中性，还是不要显示了」。
+    # 几何上无解：浮动层用 --float-x = max(12px,(100vw−1080)/2−60)，视口 ≤1200px 时退化成 12px，
+    # 而内容区在那档宽度下铺满 → 圆钮必然压在卡片右上角，正好盖住「断板·市值剔除」与情绪标签。
+    # 所以断板页返回键改成页头静态按钮 #db-back，**不再属于浮动替身三件套**。
+    # 判据随之改成双向：新键必须在、必须接 closeDuanban、且不许再挂回浮动层
+    # （挂了就会写 style.left/top 把它从 topbar 拽出去，症状与改之前一模一样）。
     entry = ["gn-entry", "db-entry", "sc-entry"]
-    back = ["db-entry-in", "gn-entry-in", "sc-entry-in"]
+    back = ["gn-entry-in", "sc-entry-in"]
     for i in entry + back:
         if ('id="%s"' % i) not in s:
             bad.append("缺悬浮按钮 #%s" % i)
+    if 'id="db-back"' not in s:
+        bad.append("缺断板页返回键 #db-back（R100z273 把它从浮动圆钮改成页头按钮）")
+    elif not re.search(r"getElementById\('db-back'\)[\s\S]{0,400}?closeDuanban\(\)", s):
+        bad.append("#db-back 没接 closeDuanban()——断板页进去就出不来")
+    if 'id="db-entry-in"' in s:
+        bad.append('id="db-entry-in" 又出现了：断板页返回键已改静态 #db-back，'
+                   '它一旦回到浮动层就会压住卡片右上角的池标签与情绪标签（R100z273）')
     # R100z165：槽位体系重做后不再有 slotIndex()，改成「每个页内替身都必须 bindDrag(变量, 槽号)」。
     # 判据走 id→变量名解析，不写死变量名（变量名属于实现细节，改个名不该让闸门误报）。
     alias = dict(re.findall(r"var\s+(\w+)\s*=\s*document\.getElementById\('([\w-]+)'\)", s))
     id2var = {v: k for k, v in alias.items()}
     for iid, nm in (("gn-jump", "🐼"), ("gn-entry-in", "📄"),
-                    ("db-entry-in", "🧰"), ("sc-entry-in", "📋")):
+                    ("sc-entry-in", "📋")):
         var = id2var.get(iid)
         if not var:
             bad.append("#%s 没有绑定到变量（三件套第一环就断了）" % iid)
@@ -3531,6 +3550,14 @@ def g41_visual_norms(r):
         if not re.search(r"bindDrag\(\s*%s\s*,\s*\d+\s*\)" % re.escape(var), s):
             bad.append("%s 页内键(#%s) 没接 bindDrag()——位置会跟随、自己拖不动"
                        "（用户 2026-10-24 原话「他怎么不能拖拽」）" % (nm, iid))
+    # 反向锁：#db-back 不许挂 bindDrag，也不许进 RAIL 槽位表（两者都会把它变成浮层）
+    _dbvar = id2var.get("db-back")
+    if _dbvar:
+        if re.search(r"bindDrag\(\s*%s\s*,\s*\d+\s*\)" % re.escape(_dbvar), s):
+            bad.append("#db-back 挂了 bindDrag()——bindDrag 会写 style.left/top，"
+                       "静态按钮会从 topbar 脱出去变回压卡片的浮层")
+        if re.search(r"iPage:\s*%s\s*\}" % re.escape(_dbvar), s):
+            bad.append("#db-back 出现在 RAIL 槽位表里——applySaved 会按 top:50% 把它拽到屏幕右侧")
     # 拖拽后的 click 抑制必须是「时间戳窗口」，不能是粘性布尔：
     # 指针落在按钮外松手时浏览器不补发 click，粘性标记会永久留 true，下一次正常点击先被吃掉
     # （2026-10-24 线上实测踩到：拖完 📋 想返回，第一下没反应）。
@@ -4420,6 +4447,37 @@ def g52_shrink_parity(r):
                       % (_tail(err, 2) or _tail(out, 2) or "rc=%s" % rc))
 
 
+def g53_name_hygiene(r):
+    """G53 名字解析卫生：调用了不存在的名字 / 定义了没人调的名字（R100z274，2026-10-28）。
+
+    由来：24.x 记过一条硬教训——「改工具模块函数名 = 改所有引用点（会 NameError 炸全链）」。
+    这类错 py_compile、node --check、以及现有全部闸门都拦不住：语法完全合法，
+    脚本照常启动，跑到那一行才炸；前端更晚——点进子页才炸，而闸门只测首页。
+    2026-10-28 删掉 ④⑤ 两档后手工扫出 6 个前端死函数（ordSg / ordMd / ordBoardOf /
+    ordProbRows / mcapBandZh / chenPoolHit＋chenBadgeHtml），说明这个方向平时没人看。
+
+    判据分两级：
+      · 调用了从未绑定的名字 = FAIL（Python 用 ast 判，误报为 0）
+      · 定义了全仓零引用的函数 = WARN（不影响运行，但下次改同名逻辑会被当成活代码改）
+    前端只查反向那半边，理由写在 check_undefined_calls.py 的文件头（没有真 JS 词法器，
+    正向查会把 style 字符串里的 calc(...)/rgba(...) 全当成函数调用）。
+    """
+    rc, out, err = _run_tool("check_undefined_calls.py", timeout=240)
+    tail = _tail(out, 1)
+    if rc == 0:
+        if "dead=0" in (out or ""):
+            r.ok("G53", "无调用了不存在的名字、无死函数（%s）" % tail)
+        else:
+            r.warn("G53", "有死函数（%s）——不影响运行，但下次改同名逻辑时会被当活代码改：%s"
+                   % (tail, _tail(out, 6)))
+    elif rc == 1:
+        r.fail("G53", "调用了从未绑定的名字——运行到那一行必 NameError 炸全链"
+                       "（前端则是点开子页才炸）：" + _tail(out, 6))
+    else:
+        r.warn("G53", "名字解析检查没跑成（%s）——这是检查器故障，不代表干净"
+               % (_tail(err, 2) or "rc=%s" % rc))
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -4484,6 +4542,7 @@ def main():
     g50_markdown_leak(r)
     g51_buy_ledger_wiring(r)
     g52_shrink_parity(r)
+    g53_name_hygiene(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
