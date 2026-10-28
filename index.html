@@ -7591,7 +7591,7 @@ function ordPrep() {
 
 /* 注册弹窗条目（key = o|<code>）。R100z84 的坑：不注册 = 点开空白；
    不单独分组 = 左右箭头串到别的池（R100z170/R100z219 都修过同一个病）。 */
-function ordReg(k, r, kind) {
+function ordReg(k, r, kind, zh) {
   var code = String(r.code || '');
   DB_INDEX[k] = {
     code: code, name: r.name, sector: r.sector, ztDate: r.ztDate,
@@ -7605,7 +7605,9 @@ function ordReg(k, r, kind) {
       ? ('涨停日 ' + (r.ztDate || '—') + '，按涨停日结构定单')
       : ((r.srcZh || '清单命中') + '，买区单')),
     ordKind: kind,
-    ordZh: (kind === 'plan' ? '昨晚挂单' : '盘中买点'),
+    /* 档名由调用方传（④ 栏同一批卡在「明早挂单」与「昨晚挂单」之间随看盘时点切换，
+       写死一处就等于另一处说错）。R100z270：区块已改名「明日可下单」，徽标跟着改。 */
+    ordZh: (kind === 'plan' ? (zh || '明早挂单') : '盘中买点'),
     // 弹窗里那一行下单口径直接复用卡片行（剥标签），不另写一份——两份文案迟早对不上。
     ordLine: orderLineOf(code).replace(/<[^>]+>/g, '').replace(/^\s*下单\s*/, '').replace(/\s+/g, ' ').trim()
   };
@@ -7633,12 +7635,12 @@ function ordReg(k, r, kind) {
    限价与下沿已经写在底部那行「下单」里（那才是要照抄的），四格放「今开是否溢价 / 目标 / 涨停日 / 放量」。
    今开那格 wrap=true（vwrap）：它是「开盘价 + 相对限价的溢价」合成值，手机 199px 卡宽下
    nowrap 会把「–2.77%」吞成「-2.7…」，而溢价恰恰是「为什么没成交」的那半句（24.75）。 */
-function ordPlanCard(r) {
+function ordPlanCard(r, zh) {
   var k = 'o|' + String(r.code || '').replace(/\D/g, '');
-  ordReg(k, r, 'plan');
+  ordReg(k, r, 'plan', zh);
   return tcCard({
     code: r.code, name: r.name, chg: tcPctOf(r.code, r.pct),
-    pills: ['昨晚挂单', r.sector || null], badges: stkTechShortBadges(r.code), sent: true,
+    pills: [zh || '明早挂单', r.sector || null], badges: stkTechShortBadges(r.code), sent: true,
     cells: [
       tcCell('今开', r.open == null ? '—' : ordP2(r.open) + ordSg(r.vsLimit), '', false, true),
       tcCell('目标', r.tp == null ? '—' : ordP2(r.tp), 'up'),
@@ -8287,10 +8289,12 @@ function ordBlockHtml() {
      它与①②③是同一批票的不同时点（24.120）：等形态确认完，那个开盘价就没了。
      只有「不在池里」的才出现在这里——在池的已经把挂单价并进那张卡。 */
   if (P.teRowsOut.length) {
+    // 栏题与卡片 pill 用同一个档名（planZh）：一处写「明早」一处写「昨晚」= 两个功能（R100z270）
+    var planZh = P.isNextPlan ? '明早挂单' : '昨晚挂单';
     h += '<div class="db-sec">④ ' + (P.isNextPlan ? '明早 ' + buyD + ' 开盘挂单' : '昨晚挂单') +
       '<span class="db-sec-n">' + P.teRowsOut.length +
       ' 只 · 不等形态确认（只走完「涨停→断板」两步）</span></div>' +
-      '<div class="db-chips">' + P.teRowsOut.map(ordPlanCard).join('') + '</div>';
+      '<div class="db-chips">' + P.teRowsOut.map(function (r) { return ordPlanCard(r, planZh); }).join('') + '</div>';
   }
   /* —— ⑤ 今日盘中买点（已收盘，不照价执行）——
      它在「明日可下单」里是**记录**不是指令：那些价是今天盘中用现价算出来的，
@@ -9049,8 +9053,10 @@ function openDbModal(key) {
         // R100z268：ordKind 现在有三档（shape/plan/hit）。原来只判 'plan'，其余一律印
         // 「盘中买点」——实测 603565 明明是「形态即将确认」卡，点开徽标却写「盘中买点」，
         // 读者会以为点错了入口。档名由卡片自己注册（ordZh），弹窗不再猜。
-        return '<span class="pool-badge hold">今日可下单 · ' +
-          esc(e.ordZh || (e.ordKind === 'plan' ? '昨晚挂单' : '盘中买点')) + '</span>' + tb + mcapCutBadgeHtml(e.code);
+        // R100z270：区块已改名「明日可下单」（收盘后生成、面向下一交易日），徽标跟着改——
+        //   一处留旧名，读者会以为是两个功能。
+        return '<span class="pool-badge hold">明日可下单 · ' +
+          esc(e.ordZh || (e.ordKind === 'plan' ? '明早挂单' : '盘中买点')) + '</span>' + tb + mcapCutBadgeHtml(e.code);
       }
       return (tb || ('<span class="pool-badge ' + (done ? 'done' : 'hold') + '">' +
         (done ? '确认池' : ('观察池 · ' + esc(e.stage || '待定'))) + '</span>')) +
