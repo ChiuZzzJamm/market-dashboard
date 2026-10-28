@@ -1172,7 +1172,11 @@
     "ashare.lhb.note"
    ],
    "writesFields": [
-    "ashare.* 叙事字段（sectorsUp/Down.reason / 五节要闻 / themePicks / outlook / lianban story / updatedAt）",
+    "ashare.sectorsUp[].reason",
+    "ashare.sectorsDown[].reason",
+    "ashare.lianban[].story",
+    "ashare.fundNote",
+    "ashare.* 其余叙事字段（五节要闻 title/summary/deduce、themePicks、outlook、updatedAt）",
     "aiPrediction.verification",
     "openOutlook.verification",
     "stkKlines/stkKlineNames（embed_klines）",
