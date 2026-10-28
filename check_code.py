@@ -23,8 +23,9 @@
                  —— 硬约束 11 的自动化版：**谁漏了**不再靠人看
   K4 网络超时     `requests.get/post`、`urlopen` 等直调必须带 `timeout=`
                  （不带就是「可能永久挂住」，而平台 90 分钟硬上限会直接杀掉整条链）
-  K5 死脚本       既没被 7 份 prompt / deploy.sh 引用、也没被任何脚本 import 的 .py
-                 → WARN（手工工具是合法的，故不 FAIL；只防「写了忘接」）
+  K5 死脚本       四类引用任何一个都没有的 .py → WARN（手工工具是合法的，故不 FAIL；
+                 只防「写了忘接」）：7 份 prompt 点名 / deploy.sh 点名 / 被 import /
+                 被其它脚本按文件名调用（`_run_tool("x.py")`、`subprocess … "x.py"`）
   K6 字段契约     7 份 prompt 里出现的 `a.b.c` 路径，逐个对着 data.js 下钻
                  （`panorama.us` / `aiPrediction.source` 这类「看着合理但不存在」的路径，
                  会让 AI 白跑一步或写出野字段 —— L18 的自动化版）
@@ -704,6 +705,15 @@ def k5_dead(r, verbose=False):
             mod = m.group(1) or m.group(2)
             if mod != stem:
                 refs.setdefault(mod + '.py', set()).add('import')
+        # 4) 被其它脚本「按文件名」调用（audit_pipeline._run_tool / subprocess 直接点名）
+        #    这类接线既不写 import、也不进 prompt，K5 原来认不出来：把工具接进审计链当 G 闸门后
+        #    仍被判「死脚本」，逼人往 DEAD_OK 里塞一句假话（它明明在链上）。
+        #    只认「字符串字面量 + .py」这种强形式，避免散文里提一嘴就算引用（那会让 K5 失效）。
+        for m in re.finditer(r'_run_tool\(\s*[\'"]([A-Za-z0-9_]+\.py)[\'"]', s):
+            refs.setdefault(m.group(1), set()).add('run_tool')
+        for m in re.finditer(r'subprocess\.\w+\(\s*[\[\(][^\]\)]{0,120}?'
+                             r'[\'"]([A-Za-z0-9_]+\.py)[\'"]', s):
+            refs.setdefault(m.group(1), set()).add('subprocess')
 
     dead = []
     for p in _py_files():

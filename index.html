@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610282305"></script>
+<script src="data.js?v=202610282348"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -693,7 +693,18 @@
   }
   .db-entry-in:hover { transform: scale(1.1); }
   .db-entry-in:active { transform: scale(.92); cursor: grabbing; }
-  body.db-open .db-entry-in { display: flex; }
+  /* R100z273：原 `body.db-open .db-entry-in { display:flex }` 已删——断板页的返回键
+     不再走浮动替身那套（几何上必然压住卡片右上角的标签，见 #db-back 的 markup 注释）。
+     `.db-entry-in` 这个 class 仍被 📄/📋 两个页内返回使用，它们各自的 open 规则在下面。 */
+  .db-backbar { display: flex; margin: 0 0 10px; }
+  .db-back {
+    font: inherit; font-size: var(--fs-sm); color: var(--ink2);
+    background: rgba(255,255,255,.72); border: 1px solid rgba(255,255,255,.95);
+    border-radius: 999px; padding: 5px 14px; cursor: pointer; line-height: 1.5;
+    box-shadow: var(--shadow); transition: background .15s ease, color .15s ease;
+  }
+  .db-back:hover { background: #fff; color: var(--ink); }
+  .db-back:active { transform: scale(.97); }
   @media (max-width: 700px), (max-height: 460px) {
     :root { --float-x: 12px; }
     /* R100z165：手机端（用户 2026-10-24 截图：4 个图标竖排压在正文上）——
@@ -1195,7 +1206,6 @@
      默认对齐时看不出问题，但组一旦改成横排（手机端贴右下角）或按钮尺寸变了，
      CSS 那套计算就整体作废——这正是 R100z162「点进去按钮跳一格」的同族隐患。
      现在 CSS 只留一个兜底（right + top:50%），真实位置由 layout() 按实测几何写入。 */
-  body.db-open #db-entry-in { display: flex; }
   body.score-open #sc-entry-in { display: flex; }
   /* R100z162：复盘台账独立页（🌟）——与 📄/#gnews-view 同款「打开即独占」模式 */
   #score-view { display: none; }
@@ -1546,12 +1556,20 @@
   </footer>
 
   <div id="duanban-view">
+    <!-- R100z273（用户 2026-10-28 截图：「有bug，并且遮掉了利好/利空/中性，所以还是不要显示了」）：
+         返回键从「右侧浮动 46px 圆钮」改成页头这颗文字胶囊。
+         原因不是偏好，是几何上无解：浮动层用 --float-x = max(12px, (100vw−1080)/2−60)，
+         视口 ≤1200px 时它退化成 12px，而内容区在这档宽度下是铺满的——圆钮必然压在卡片右上角，
+         正好盖住「断板·市值剔除」与情绪标签，而那几个标签正是判断「它为什么不在池里」的唯一线索。
+         浮动层没有可挪的安全区（往上一格压标题、往下一格压批注），所以改成不再浮动。
+         ⚠️ 它不再是 #db-entry-in：那个 id 绑着 bindDrag 与槽位同步（组顶+组高−46），
+            留用会把这个静态按钮定位到屏幕右侧，症状与改之前一模一样。 -->
+    <div class="db-backbar"><button class="db-back" id="db-back" title="返回每日市场看板">← 返回看板</button></div>
     <div class="db-topbar">
       <div class="db-title">技术看板</div>
       <div class="db-sub2">断板反包 · 陈学长 · 横盘启动 · 谐波形态 · 主力吸筹 · 开盘预测</div>
       <div class="db-date" id="db-date"></div>
     </div>
-    <button class="db-entry-in" id="db-entry-in" title="点击返回每日市场看板">🧰</button>
     <!-- R100k：子页菜单已移入各子页内容流（断板页位于开盘精选与确认池说明之间；谐波/横盘启动页位于页首） -->
 
     <!-- R100m：TOP10 + 开盘精选固定区——切换谐波/横盘启动/吸筹子页时保持显示（用户要求固定不动） -->
@@ -1974,22 +1992,11 @@ function stkTechBadgeHtml(code, noPoolMerge) {
    重叠，并进去等于把同一件事数两遍、断板票边框整体提一档（R100z76-③ 已定过这条，别改）。
    ⚠️ **R100z260 已按用户要求推翻上一条**：2026-10-28 实测重叠只有 3/23（20 只陈学长独有），
    不进 stkTechMeta 的结果是陈学长页 20 张卡一张边框都没有。用户原话「陈学长这个也要统一」，
-   所以陈学长已并入技术池归一档。本函数与 chenBadgeHtml 保留只为外部/历史调用，
-   **弹窗徽章行已改由 stkTechBadgeHtml 统一出**，不要再在这里旁路补一枚（会印两遍）。 */
-function chenPoolHit(code0) {
-  var c = String(code0 || '').replace(/\D/g, '');
-  if (!/^\d{6}$/.test(c)) return null;
-  var cp = (window.DASHBOARD_DATA || {}).chenPool || {};
-  var arr = [].concat(cp.strict || [], cp.loose || [], cp.watching || []); // 严格先于放宽，与 starTechOf 同序
-  for (var i = 0; i < arr.length; i++) { if (String((arr[i] || {}).code || '') === c) return arr[i]; }
-  return null;
-}
-function chenBadgeHtml(tier) {
-  var t = tier === 'strict' ? '严格池' : (tier === 'loose' ? '放宽池' : '观察中');
-  return '<span class="hz-badge" title="' + escAttr('陈学长口径（与断板反包并列的第二套指标）：陈学长·' + t +
-    '。他的买点/目标/仓位在「陈学长」页，与断板反包的退出纪律不是同一套数，别混着用') +
-    '">陈学长·' + t + '</span>';
-}
+   所以陈学长已并入技术池归一档。**徽标行已由 stkTechBadgeHtml 统一出**（在池与失效都在那里出），
+   不要再在这个位置旁路补一枚——两处各出一枚就是「同一只票两行徽标」。
+   R100z273：原 chenPoolHit（按 code 查陈学长池条目）与 chenBadgeHtml（出「陈学长·严格池」徽标）
+   已删：全文件与全仓库零调用，留着只会在下次改徽标时被当成活代码去改。查陈学长池归属改走
+   stkTechMeta（R100z260 起它已含陈学长池，并带失效状态）。 */
 /* R100z80：技术池命中分级边框（stkTechMeta 在池命中数 → reso-1/2/3：1黄/2橙/3红）；全站标的胶囊/卡片共用。
    R100z260（用户 2026-10-28 20:00 第 6 条「只要符合形态边框就是黄色或者橙色或者红色的吧」）：
      ① 只数**在池**命中，失效不算——边框是「这套形态现在成立」的记号，形态死了再描红等于骗人。
@@ -2021,21 +2028,19 @@ function mcapCutOf(code) {
   }
   return null;
 }
-/* 市值带的唯一前端文案出口，与 check_duanban.py 的 mcap_band_txt() 对齐。
-   两边各写一遍的结果就是「脚本印 400 亿以内、页面印 100~400 亿」——
-   24.110 同一量两套数，只不过这次两套数在两套语言里。 */
-function mcapBandZh(lo, hi) {
-  lo = Number(lo) || 0; hi = Number(hi) || 0;
-  return lo > 0 ? ('流通市值 ' + lo + '~' + hi + ' 亿') : ('流通市值 ' + hi + ' 亿以内');
-}
+/* R100z273：原 mcapBandZh（市值带文案，与 check_duanban.py 的 mcap_band_txt() 对齐）已删。
+   它唯一的读者是「被市值门槛剔掉的 N 只」那张折叠名单，名单随 ④⑤ 一起下线后全文件零调用。
+   徽章 mcapCutBadgeHtml 只报当天剔除数、不印市值带——要恢复市值带文案，得连名单一起恢复，
+   否则又是一个「自称唯一出口、实际没人读」的死函数。 */
 function mcapCutBadgeHtml(code, cls) {
   var mc = mcapCutOf(code);
   if (!mc) return '';
   var lo = mc.side === 'lo';
   var txt = '断板·市值剔除';
   /* R100z264：徽章只回答「它为什么不在池里」，不负责回答「同类的还有谁」。
-     但读者知道原因后的下一个问题必然是「那还有哪些也一样被挡了」——
-     完整名单在页面底部那个折叠块里，不说一句他就不知道那儿有东西可点。
+     R100z273：原来这里还有半句「完整名单在本页最下方那个折叠块里，点开可见」——
+     那个折叠块已随 ④⑤ 一起下线，这半句会指向一处不存在的东西（悬停提示里点了空）。
+     现在只报数、不指路：名单仍在 data.js 的 duanban.mcapCut 里，只是不再展开在页面上。
      mcapCutTotal 是当天真实剔除数（由 check_duanban.py 同批写入），取不到就不提这句。 */
   var tot = Number(((window.DASHBOARD_DATA || {}).duanban || {}).mcapCutTotal) || 0;
   /* R100z265（用户 2026-10-28 21:30 追问「今日可下单标的依据什么」时自查）：不能写
@@ -2048,8 +2053,7 @@ function mcapCutBadgeHtml(code, cls) {
   var tip = '断板反包·确认池没收它，卡在「' + (lo ? '市值偏低' : '流通市值 ' + mc.mcap + ' 亿，超过 400 亿上限') + '」。\n' +
     '注意：市值过滤在抓 K 线之前，所以这只票没跑过形态校验——系统不知道它形态成不成立；' +
     '也正因为没跑，它不会出现在失效池（失效池只收「曾在池、今日滑出」的票）。' +
-    (tot ? '\n今天被这道门槛挡掉的共 ' + tot + ' 只，完整名单在本页最下方「被市值门槛剔掉的 '
-      + tot + ' 只」，点开可见。' : '');
+    (tot ? '\n今天被这道门槛挡掉的共 ' + tot + ' 只（名单不再展开在页面上，需要时问我要）。' : '');
   return '<span class="hz-badge ' + (cls || '') + '" style="margin-left:0;background:#f3f4f6;' +
     'color:#4b5563;border-color:#d1d5db" title="' + escAttr(tip) + '">' + esc(txt) + '</span>';
 }
@@ -5743,10 +5747,12 @@ function orderLineOf(code) {
      chen 放宽池：形态成立但没进严格池，清单只给严格池的价；
      pool 断板反包确认池命中却没进清单：被硬门槛挡了（深跌不接 / 涨停买不进 / 硬风险），
           具体原因在 buySummary.skipped 里逐条列着。 */
-// 卡片上只写**短标签**，完整理由只写一次（写在「今日可下单」的下单规则里）：
+// 卡片上只写**短标签**，完整理由只写一次（原本写在「下单规则」那段折叠口径里）：
 // 同一句长解释在 3 张 bp 卡、3 张谐波卡上各印一遍，会被读成六条不同的约束（G17 同型）。
+// R100z273：那段折叠口径已下线，短标签里的「（见下单规则）」会指向不存在的东西——
+// 理由直接压缩进标签本身，不再让人去找。
 var ORD_HINT = {
-  bp: '不下单价 · 横盘启动无 edge（见下单规则）',
+  bp: '不下单价 · 横盘启动单笔仅 +0.22%、T+5 超额不显著',
   hz: '不下单价 · 谐波池不在清单来源',
   acc: '不下单价 · 吸筹池不在清单来源',
   chen: '不下单价 · 放宽池只观察',
@@ -6961,12 +6967,9 @@ function dbFailHtml(failPool, kind) {
 function ordP2(v) {
   return (v === null || v === undefined || v === '' || !isFinite(Number(v))) ? '—' : Number(v).toFixed(2);
 }
-function ordSg(v, d) {
-  if (v === null || v === undefined || v === '' || !isFinite(Number(v))) return '';
-  var n = Number(v);
-  return ' ' + (n > 0 ? '+' : '') + n.toFixed(d == null ? 2 : d) + '%';
-}
-function ordMd(s) { return String(s || '').replace(/\*\*/g, '').trim(); }
+/* R100z273：原 ordSg（带正负号的百分比片段）/ ordMd（去 ** 标记）已删——
+   两个函数只服务被下线的 ④明早挂单 / ⑤今日盘中买点 两档卡片，删档后全文件零调用。
+   同批删掉的还有 ordBoardOf / ordProbRows / mcapBandZh / chenPoolHit / chenBadgeHtml。 */
 
 /* 形态档的池子成员表（①断板确认/陈学长严格+放宽 → A；②断板观察/陈学长进行中 → B）。
    R100z268：抽成独立函数，因为**卡片与弹窗必须用同一份成员判定**——
@@ -7110,7 +7113,8 @@ function ordBoardInfo(e) {
   if (bk && ctx.byBk[bk]) return { b: ctx.byBk[bk], how: 'bkCode' };
   return ordSecBoard(e.sector);
 }
-function ordBoardOf(e) { var r = ordBoardInfo(e); return r ? r.b : null; }
+/* R100z273：ordBoardOf 已删（`ordBoardInfo(e)` 的一层解包，只被 ④⑤ 两档卡片调用）。
+   ordBoardInfo 本身仍在用——明日概率的板块加减项那一路（ordProbOf）走的就是它。 */
 /* 全市场代码→简称。stkKlines 有 1499 只，但没名字的一律不出卡——
    印一排「600xxx」的卡片读者认不出是哪只票，宁可少列，并在摘要里说少了几只。 */
 function ordNameMap() {
@@ -7382,25 +7386,10 @@ function ordProbOf(it) {
            why: baseSrc + ' ' + base + '%' +
              (top.length ? '，' + top.join('、') : '') + ' → ' + p + '%' };
 }
-/* 概率拆解表（弹窗与折叠块共用）：一行一个因子，正负用涨跌色。
-   0 分的因子不删——「同板块没有连板股」这种 0 本身就是结论，删了就变成没算过。
-   boardNote 是板块对不上的显式降级说明，写在基线下面，别让它安静消失。 */
-function ordProbRows(x) {
-  if (!x) return '';
-  var h = '<div class="ord-li"><i>·</i><span>' + esc(x.baseSrc) + ' ' + x.base + '%</span></div>';
-  (x.notes || []).forEach(function (nt) {
-    h += '<div class="ord-li"><i>·</i><span class="flat">' + esc(nt) + '</span></div>';
-  });
-  (x.parts || []).forEach(function (it) {
-    h += '<div class="ord-li"><i>' + (it.v > 0 ? '＋' : (it.v < 0 ? '－' : '·')) + '</i><span>' +
-      esc(it.k) + (it.v ? ' <b class="' + (it.v > 0 ? 'up' : 'down') + '">' +
-        (it.v > 0 ? '+' : '') + it.v + '</b>' : ' <b class="flat">0</b>') +
-      (it.d ? '　' + esc(it.d) : '') + '</span></div>';
-  });
-  h += '<div class="ord-li"><i>＝</i><span>明日概率 <b>' + x.p + '%</b>（基线 ' + x.base +
-    (x.sum >= 0 ? ' + ' : ' − ') + Math.abs(x.sum) + '）</span></div>';
-  return h;
-}
+/* R100z273：ordProbRows 已删。它出的是 .ord-li 行式的概率拆解表，读者是「明日概率怎么算」
+   那张折叠块（随 ④⑤ 下线）。弹窗里的概率拆解没有丢——exitForCode 那一支已经把同一份
+   ent.prob（baseSrc / notes / parts / sum / p）按 exit-row 行式内联印出来了，而且只读卡片
+   注册的那一份、不重算，所以「卡片 68%、点开 62%」那种分叉不会从这里回来。 */
 
 /* 「缩量回踩」扫描（用户 2026-10-28 22:0x 第 2 条）：
    「断板反包这个图形也安排进去（不是要反包完成的，是放量阴后面缩量的第一天，
@@ -7494,68 +7483,21 @@ function ordStalePrice(o) {
 function ordPrep() {
   var D = window.DASHBOARD_DATA || {};
   var st = ((D.duanban || {}).star) || {};
-  // 昨晚定单：timingExec 由 9:45 写（要有开盘价才能核对）；16:00 之后到次日 9:45 之间
-  // 只有 timingPlan（不含开盘价）→ 回退，状态写「未开盘」。回退态不许编 go/broken/missed：
-  // 昨晚不可能知道今开，写「可挂」就是编；而 22:00 打开看到完全空白，会被读成「今晚没生成」。
-  // ---------------------------------------------------------------------------
-  // R100z260（用户 2026-10-28 20:00 第 4 条「今日可下单选的标的全是断板反包即将反包的形态，
-  //   为什么这些标的都不在断板反包确认池？？？」）——查清了，是两个坑叠在一起：
-  //   ① **时点错**：20:00 打开时 timingExec（今早 10-28 的执行结果、tradeDate 10-27）还在
-  //      preempt（压过）16:43 刚生成的 timingPlan（tradeDate 10-28、buyDate 10-29）。
-  //      于是页面在晚上 20 点还印着**今早已经执行完的单**，读者拿它去对「今天收盘后重建的池子」，
-  //      当然一只都对不上。今天这批票确实不在今日池里——它们在**昨天**的池里。
-  //   ② **口径独立**：timingPlan 根本不读 duanban.confirmed（见 timing_plan.py 头部），
-  //      它只要「T 日首板涨停 + T+1 断板 + 放量 1.1~3.5 倍 + 成交额≥2 亿」，
-  //      **不等缩量、不等站稳 MA5**；确认池要四步全走完（多等 1~3 个交易日）。
-  //      挂单要 T+2 开盘就买，等形态确认完就买不到了——所以两池天然几乎不重叠（今日重叠 0/8）。
-  //      这不是 bug，是「同一批票的两个时点」，但页面过去一句都没写，读起来就像矛盾。
-  // 修法：谁的日子新就显示谁。plan 的 buyDate 晚于 exec 的 buyDate → 主列表换成**明天要挂的单**，
-  //   今早的执行结果降成摘要里一句（可挂/高于限价/破下沿各几只），两边都不丢。
-  var te = st.timingExec, fallback = false, execHist = null, isNextPlan = false;
-  var tp = D.timingPlan || {};
-  var planNewer = !!(tp.buyDate && (tp.orders || []).length &&
-                     (!te || !te.buyDate || String(tp.buyDate) > String(te.buyDate)));
-  if (planNewer) {
-    execHist = te || null;
-    isNextPlan = true;
-  }
-  if (planNewer || !te || !te.rows || !te.rows.length) {
-    if ((tp.orders || []).length) {
-      te = { rows: (tp.orders || []).map(function (o) {
-              return { code: o.code, name: o.name, sector: o.sector, limit: o.limit,
-                       floor: o.floor, stop: o.stop, tp: o.tp, t1Close: o.t1Close,
-                       volRatio: o.volRatio, ztDate: o.ztDate, open: null, last: null,
-                       vsLimit: null, state: 'pending', stateZh: '未开盘·照限价挂' };
-            }),
-            n: (tp.orders || []).length, nGo: 0, nBroken: 0, nMissed: 0,
-            tradeDate: tp.tradeDate, buyDate: tp.buyDate, time: null,
-            rule: tp.rule, riskNote: tp.riskNote, bt: tp.bt };
-      fallback = true;
-    } else { te = null; }
-  }
+  /* R100z273（用户 2026-10-28 红框「这一块都删掉」）：④ 明早挂单 / ⑤ 今日盘中买点下线。
+     这里原本是「timingExec 与 timingPlan 谁的日期新就显示谁」（R100z260 修时点错位的产物），
+     它存在的唯一目的是给那两档挑主列表——档没了，整段也没了。
+     挂单价没有跟着丢：下面 _planMap 直接读 D.timingPlan.orders、按 code 并进池卡卡脚。 */
   // 盘中买点：st.buyList 只该收有回测 edge 的源。生成端已剔横盘启动，这里同口径再兜一层
   // （当天 data.js 可能是旧口径生成的），并把被剔只数显式说出来——静默少 21 行会被读成「今天没这东西」。
-  var blAll = st.buyList || [], bs = st.buySummary || {}, bl = [], nBpCut = 0;
+  var blAll = st.buyList || [], bl = [], nBpCut = 0;
   blAll.forEach(function (r) {
     if (String(r.src || '') === 'bp') { nBpCut++; return; }
     bl.push(r);
   });
-  var nBuy = 0;
-  bl.forEach(function (r) { if (r.state === 'buy') nBuy++; });
-  var teRows = te ? (te.rows || []) : [];
-  // 同一只票可能既在昨晚挂单、又在今天的买区里——同页两卡会被读成两个标的，去重。
-  var teCodes = {};
-  teRows.forEach(function (r) { teCodes[String(r.code || '').replace(/\D/g, '')] = 1; });
   var pickCodes = {};
   (st.picks || []).forEach(function (p) { pickCodes[String(p.code)] = 1; });
-  var key = function (r) { return String(r.code || '').replace(/\D/g, ''); };
-  // 三种「不建卡」的理由要分开数、分开说，否则摘要里的减法只能由读者自己做：
-  //   blDupPlan 已在昨晚挂单卡里（同一只票两个时点合并成一张，价格更全）
-  //   blDupPick 已在开盘精选卡里（同一页两处同名卡片＝并表之前那份「两份清单」）
-  //   blRest    本页要建的卡
-  var blDupPlan = bl.filter(function (r) { return teCodes[key(r)] && !pickCodes[String(r.code)]; });
+  // 已在开盘精选卡里的票不再建卡（同一页两处同名卡片＝并表之前那份「两份清单」）
   var blDupPick = bl.filter(function (r) { return pickCodes[String(r.code)]; });
-  var blRest = bl.filter(function (r) { return !teCodes[key(r)] && !pickCodes[String(r.code)]; });
 
   /* ==========================================================================
      R100z267（用户 2026-10-28 22:0x「你今天提供的今日可下单标的很多都没有陈学长啊，
@@ -7645,111 +7587,16 @@ function ordPrep() {
   });
   poolC.sort(_ordCmp);
   var inC = function (c) { return poolC.some(function (x) { return x.code === String(c || '').replace(/\D/g, ''); }); };
-  // ④⑤ 只收「不在池里、也不在缩量回踩档里」的票——在的已经把价并进那张卡，不能同页两卡。
-  var teRowsOut = teRows.filter(function (r) { return !inPool(r.code) && !inC(r.code); });
-  var blOut = blRest.filter(function (r) { return !inPool(r.code) && !inC(r.code); });
-  return { D: D, st: st, te: te, fallback: fallback, bs: bs,
-           execHist: execHist, isNextPlan: isNextPlan,
-           bl: bl, blRest: blRest, blDupPlan: blDupPlan, blDupPick: blDupPick,
-           nBpCut: nBpCut, nBuy: nBuy, teRows: teRows,
+  /* R100z273：④⑤ 两档下线后，返回体只留池档三项——teRowsOut / blOut / execHist /
+     teRows / blDupPlan 全部随档删除。挂单价仍按 code 并进池卡（_planMap），不受影响。 */
+  return { D: D, st: st,
+           bl: bl, blDupPick: blDupPick,
+           nBpCut: nBpCut,
            poolA: poolA, poolB: poolB, poolC: poolC,
            nShrinkCand: _shr.nCand,
-           teRowsOut: teRowsOut, blOut: blOut,
-           n: poolA.length + poolB.length + poolC.length + teRowsOut.length + blOut.length };
+           n: poolA.length + poolB.length + poolC.length };
 }
 
-/* 注册弹窗条目（key = o|<code>）。R100z84 的坑：不注册 = 点开空白；
-   不单独分组 = 左右箭头串到别的池（R100z170/R100z219 都修过同一个病）。 */
-function ordReg(k, r, kind, zh) {
-  var code = String(r.code || '');
-  DB_INDEX[k] = {
-    code: code, name: r.name, sector: r.sector, ztDate: r.ztDate,
-    // pct 走 tcPctOf：timingExec/timingPlan 的行本身不带涨跌幅，直接取 r.pct 会让弹窗
-    // 印出「今日：—」，而卡片右上角明明有涨跌幅（同一只票两种说法）。
-    pct: tcPctOf(code, r.pct),
-    sentiment: stkSentiment(code),
-    // form 里不能出现「·」：弹窗那行会做 `.replace(/·/, '：')`（R100z4e），
-    // 会把「涨停日 2026-10-26 · 按结构定单」印成「涨停日 2026-10-26 ： 按结构定单」。
-    form: (kind === 'plan'
-      ? ('涨停日 ' + (r.ztDate || '—') + '，按涨停日结构定单')
-      : ((r.srcZh || '清单命中') + '，买区单')),
-    ordKind: kind,
-    /* 档名由调用方传（④ 栏同一批卡在「明早挂单」与「昨晚挂单」之间随看盘时点切换，
-       写死一处就等于另一处说错）。R100z270：区块已改名「明日可下单」，徽标跟着改。 */
-    ordZh: (kind === 'plan' ? (zh || '明早挂单') : '盘中买点'),
-    // 弹窗里那一行下单口径直接复用卡片行（剥标签），不另写一份——两份文案迟早对不上。
-    ordLine: orderLineOf(code).replace(/<[^>]+>/g, '').replace(/^\s*下单\s*/, '').replace(/\s+/g, ' ').trim()
-  };
-  /* R100z268：撤单价一起注册——弹窗「退出纪律」只读卡片这一份。
-     实测：600271 航天信息 ④ 买点卡写「破 6.72 撤」，点开后弹窗印 6.96（exitForCode 的形态位），
-     同一只票两个止损。卡片上印多少，点开就必须是多少。
-     ③ 明早挂单的「撤」＝下沿 floor（跌破即作废，与 orderLineOf 的措辞同源），不是 plan.stop
-     ——那张卡没印 stop，弹窗突然多一个更松的止损，读者会以为系统又改主意了。 */
-  var _x = (kind === 'hit')
-    ? { stop: r.invalid, tgt: r.target, pos: r.posPct,
-        basis: '盘中买点口径',
-        fal: '收盘跌破买点证伪价即形态作废，先撤不留' }
-    : { stop: r.floor, tgt: r.tp, pos: null,
-        basis: '明早挂单口径（下沿）',
-        fal: '开盘高于限价即不成交（不追）；跌破下沿即作废' };
-  if (_x.stop !== null && _x.stop !== undefined && isFinite(Number(_x.stop))) {
-    DB_INDEX[k].exStop = Number(_x.stop);
-    DB_INDEX[k].exTgt = _x.tgt; DB_INDEX[k].exPos = _x.pos;
-    DB_INDEX[k].exBasis = _x.basis; DB_INDEX[k].exFalsify = _x.fal;
-  }
-  if (DB_ORDER.indexOf(k) < 0) DB_ORDER.push(k);
-}
-
-/* —— 昨晚挂单卡：四格不重复价格 ——
-   限价与下沿已经写在底部那行「下单」里（那才是要照抄的），四格放「今开是否溢价 / 目标 / 涨停日 / 放量」。
-   今开那格 wrap=true（vwrap）：它是「开盘价 + 相对限价的溢价」合成值，手机 199px 卡宽下
-   nowrap 会把「–2.77%」吞成「-2.7…」，而溢价恰恰是「为什么没成交」的那半句（24.75）。 */
-function ordPlanCard(r, zh) {
-  var k = 'o|' + String(r.code || '').replace(/\D/g, '');
-  ordReg(k, r, 'plan', zh);
-  return tcCard({
-    code: r.code, name: r.name, chg: tcPctOf(r.code, r.pct),
-    pills: [zh || '明早挂单', r.sector || null], badges: stkTechShortBadges(r.code), sent: true,
-    cells: [
-      tcCell('今开', r.open == null ? '—' : ordP2(r.open) + ordSg(r.vsLimit), '', false, true),
-      tcCell('目标', r.tp == null ? '—' : ordP2(r.tp), 'up'),
-      tcCell('涨停日', r.ztDate ? esc(String(r.ztDate).slice(5)) : '—', ''),
-      tcCell('放量', r.volRatio == null ? '—' : Number(r.volRatio).toFixed(2) + ' 倍', '')
-    ],
-    // 卡片脚只留昨收：stateZh（「开盘在限价内，可挂」）已经写在「下单」行尾，
-    // 同卡两行各说一遍，会被读成「下单」和「昨收」是两个互相独立的结论。
-    foot: (r.t1Close == null ? '昨收 —' : '昨收 ' + ordP2(r.t1Close)),
-    attrs: ' data-k="' + escAttr(k) + '"',
-    title: r.name + ' ' + r.code + '（' + (r.sector || '') + '）\n按涨停日结构定的限价单（16:00 数据步生成、9:45 只核对开盘）：' +
-      '挂多少、破多少撤写在卡片底部「下单」行\n今开高于限价＝不成交（不追）；跌破下沿＝作废\n点击查看K线与消息'
-  });
-}
-
-/* —— 盘中买点卡：四格 目标 / 持有 / 仓位 / 现价 ——
-   买区与撤单价写在「下单」行；srcZh 只在顶部徽标印一次，卡脚留空
-   （「买区按现价上下 1%」是五张卡共用的一条口径，重复五遍等于降级成噪音，口径写在下方规则里）。 */
-function ordHitCard(r) {
-  var k = 'o|' + String(r.code || '').replace(/\D/g, '');
-  ordReg(k, r, 'hit');
-  /* R100z262：srcZh（如「陈学长·放宽池」）与技术池徽章说的是同一件事，同出会印两枚一样的
-     胶囊。有真实池归属时以徽章为准（它可能命中多个池、信息更全）；一只技术池都没命中时，
-     srcZh 是 timing_plan 唯一给的来源线索，不能丢。 */
-  var tb = stkTechShortBadges(r.code);
-  return tcCard({
-    code: r.code, name: r.name, chg: tcPctOf(r.code, r.pct),
-    pills: [tb ? null : (r.srcZh || '三池命中'), r.sector || null], badges: tb, sent: true,
-    cells: [
-      tcCell('目标', r.target == null ? '—' : ordP2(r.target) + ordSg(r.targetPct, 1), 'up', false, true),
-      tcCell('持有', r.holdDays == null ? '—' : r.holdDays + ' 日', ''),
-      tcCell('仓位', r.posPct == null ? '—' : r.posPct + '%', ''),
-      tcCell('现价', ordP2(r.price), '')
-    ],
-    foot: '',
-    attrs: ' data-k="' + escAttr(k) + '"',
-    title: r.name + ' ' + r.code + '（' + (r.sector || '') + '）\n来源：' + (r.srcZh || '清单命中') +
-      '\n买区＝现价上下 1%（随价重算），超出区间不追\n点击查看K线与消息'
-  });
-}
 
 /* —— 形态档卡（①②：「形态确认」/「形态即将确认」）——
    R100z267（用户 2026-10-28 22:0x）：这两档是「今日可下单」的新主档，回答的是
@@ -8151,215 +7998,28 @@ function ordShapeCard(o) {
 }
 
 
-/* R100z258（用户 2026-10-28 截图 2「规则全部增加展开按钮，默认隐藏」）：
-   三块口径统一走原生 <details>，不写 JS 状态、不存 localStorage——折叠只是「现在想不想看」。
-   摘要行固定给「这是什么 + 几条/几笔」，正文才是口径原文：收起状态也必须能判断值不值得点开，
-   否则「默认隐藏」就等于把结论删了（24.112：空着＝有结论没写）。
-   组合回测的胜率/年化/回撤留在摘要行、衰减告警也在摘要行——把「今年已经不行了」藏进折叠块，
-   等于让这条最该被看见的警告消失。 */
-function ordFold(title, hint, body) {
-  return '<details class="ord-fold"><summary><span class="ord-fold-ic">▸</span>' + title +
-    (hint ? '<span class="ord-fold-h">' + hint + '</span>' : '') + '</summary>' +
-    '<div class="ord-fold-b">' + body + '</div></details>';
-}
-
-/* 规则 / 风险 / 回测三块：两块清单共用，只出一份（同一句在两组卡下各印一遍＝两条约束）。 */
-function ordRuleBlocks(P) {
-  var te = P.te, bl = P.bl, bs = P.bs, h = '';
-  // 24.110 的教训：文案里 markdown 的 ** 会原样印到页面上，统一用 ordMd 剥掉。
-  // 序号不手写：手写过一次 ①②②（bs.rule 与断板证伪价都用了 ②），看着像有两条「第二条」。
-  // 现在按 push 顺序自动编号，补充说明用 s:true 走「·」——序号不可能再撞。
-  var rules = [];
-  if (te && te.rule) rules.push({ t: ordMd(te.rule) });
-  if (bl.length && bs.rule) rules.push({ t: ordMd(bs.rule) });
-  if (bl.length && bl.every(function (r) { return r.anchor === 'live'; })) {
-    rules.push({ t: '盘中买点的「今可买」区间＝该票「现价」上下 1%，随盘中价格实时重算，'
-      + '不是昨晚定死的价——9:45 看到的区间与 14:00 打开时不一样，以点开那一刻为准；'
-      + '超出区间就不买这一笔，不追。' });
-  }
-  var noTarget = false;
-  bl.forEach(function (r) { if (r.target == null) noTarget = true; });
-  if (noTarget) {
-    rules.push({ t: '断板反包确认池的「证伪价」＝ T 日最低价，目标与持有期本轮不给——'
-      + '回测只验证到次日盘口成交 + 该价位作废，凑一个目标价就是编数字。' });
-  }
-  if (P.nBpCut) {
-    rules.push({ s: true, t: '另有 ' + P.nBpCut + ' 只「横盘启动·贴沿」命中未列入：该源 7,783 个状态日'
-      + '单笔仅 +0.22%、盈亏比 1.16、T+5 超额 t=0.41（不显著），且它占了旧清单的 72%——'
-      + '不是形态失效，是它不该冒充今天该买什么。形态与买区仍在「横盘启动」子页。' });
-  }
-  rules.push({ s: true, t: '谐波形态与主力吸筹没有下单价：清单只收有回测支撑的三个来源'
-    + '（陈学长严格池 / 断板反包确认池 / 横盘启动），这两个池从来没有下单价口径——'
-    + '不是今天没命中，也不是抓空。它们在「开盘精选」里，看形态不看价。' });
-  /* R100z267：分栏的分工必须写在页面上。用户 2026-10-28 的原话是
-     「你今天提供的今日可下单标的很多都没有陈学长啊」——问题不在数据，在这块原来
-     只按「执行时点」组织，形态最成熟的那批反而排在后面甚至不在里面。
-     R100z269：加「缩量回踩」档（用户 22:0x 点名要的图形），共五栏；
-     每栏的准入来源一句说清，同一只票只出一次卡（价并进那张卡）。 */
-  var _nA = (P.poolA || []).length, _nB = (P.poolB || []).length, _nC = (P.poolC || []).length;
-  if (_nA || _nB || _nC) {
-    h += ordFold('五栏的分工（同一只票只出一张卡）', _nA + ' + ' + _nC + ' + ' + _nB + ' 只形态档',
-      '<div class="ord-li"><i>①</i><span>形态确认 = 断板反包确认池（四步全走完：涨停→放量断板→缩量→站稳MA5）'
-        + ' ∪ 陈学长严格池/放宽池（缩量确认）。这一档是「按图形能下单」的那批，'
-        + '目标与仓位都有回测口径。</span></div>' +
-      '<div class="ord-li"><i>②</i><span>缩量回踩 = 涨停 → 次日<b>放量收阴</b> → 之后 1~2 天<b>缩量</b>且'
-        + '收小实体（阴 / 十字 / 微红都算），同时没跌破涨停日最低价、也没涨过涨停日收盘 3%（没反包）。'
-        + '这一档赌的是「明早开盘买、它当天把阴线收回去」，所以止损就是涨停日最低价、'
-        + '目标就是涨停日最高价，两个价都不是预测。它不在断板/陈学长任何一个池里——'
-        + '池子要么只看断板当天（待缩量），要么已经走到 MA5 附近（待企稳/待脱离），中间这段谁都不收。</span></div>' +
-      '<div class="ord-li"><i>③</i><span>形态即将确认 = 断板观察池（待缩量/待脱离）∪ 陈学长形态进行中。'
-        + '共同点是还差一根确认K线——卡片上的目标/止损是确认之后才生效的参数，明天不是买点。</span></div>' +
-      '<div class="ord-li"><i>④</i><span>明早挂单 = 只走完「T日首板涨停 → T+1 放量断板」两步就下单，'
-        + '不等缩量、不等站稳MA5。它与①②③是同一批票的不同时点：等形态确认完，那个开盘价就没了。</span></div>' +
-      '<div class="ord-li"><i>⑤</i><span>今日盘中买点 = 今天盘中按现价算出来的买区，'
-        + '已经收盘、明天不照这个价执行，只作记录。</span></div>' +
-      '<div class="ord-li"><i>·</i><span>一张卡只有一个目标、一个止损：有明早挂单就取挂单那套（唯一可执行价），'
-        + '没有再取陈学长形态参数或涨停日高低点；两套都印出来就是两个止损，没人知道该照哪个。</span></div>' +
-      '<div class="ord-li"><i>·</i><span>记账分开记：①②③的票记在断板反包 / 陈学长 / 缩量回踩三本台账里，'
-        + '④⑤才是「明日挂单」和「盘中买点」那两本。各算各的胜率，别拿一个的准确率去核另一个的票。</span></div>');
-  }
-  /* 明日概率的算法必须公开——它是这一页的排序依据，也是用户 2026-10-28 特别要求的
-     「要包括当天板块情况 + 资金情况 + 连板标的里是否有对应板块」。
-     把权重和口径摊开，是为了让读者能判断「这个百分比我信几分」；
-     并明确它不是回测胜率——没有任何回测支持「+6 分等于多 6% 胜率」这种换算。 */
-  if (_nA || _nB || _nC) {
-    /* 这里的数字全部从 ORD_PROB_WEIGHT 读，不手写——上一版就是因为手写，
-       权重下调之后页面还印着「×1.5 / 封顶 ±12」，读者按页面的算法自己复算会对不上。
-       算法公开是给读者验算用的，印错等于骗人。 */
-    var _W = ORD_PROB_WEIGHT;
-    var _lbc = Object.keys(_W.lbcMap).map(function (k) { return k + ' 板 +' + _W.lbcMap[k]; }).join('、');
-    var _shr = _W.shrinkT.map(function (t) { return '≤' + t[0] + ' 倍 +' + t[1]; }).join('、');
-    var _gap = _W.gapT.map(function (t) { return '≥' + t[0] + '% +' + t[1]; }).join('、');
-    h += ordFold('明日概率怎么算（排序依据）', '新闻面基线 + 6 类因子',
-      '<div class="ord-li"><i>·</i><span>起点是脚本按新闻面打的<b>基线</b>（断板池那条「上涨概率」，'
-        + '断板页印的也是它），然后按下面六类加减，封顶 ' + _W.floor + '%~' + _W.cap + '%。'
-        + '所以卡片上这个数会比断板页的「上涨概率」高或低几分——差异全部来自下面这几项，不是两套数。</span></div>' +
-      '<div class="ord-li"><i>①</i><span><b>板块今日涨幅</b>（×' + _W.boardPct + '，封顶 ±' + _W.boardPctCap + '）：'
-        + '板块在涨说明钱在这个方向，明天承接有人接。</span></div>' +
-      '<div class="ord-li"><i>②</i><span><b>板块主力净流入</b>（每亿 ×' + _W.netInflow + '，封顶 ±' + _W.netInflowCap + '）、'
-        + '<b>板块涨停家数</b>（每家 +' + _W.ztCount + '，封顶 +' + _W.ztCap + '）、'
-        + '<b>板块内上涨占比</b>（占比超出 50% 的部分 ×' + _W.breadth + '，封顶 ±' + _W.breadthCap + '）：'
-        + '这三项一起回答「这个板块今天是真强，还是只有一两只在撑」。</span></div>' +
-      '<div class="ord-li"><i>③</i><span><b>同板块连板梯队</b>（按 sectorMap 归到同一细分行业，'
-        + '没有连板股也留一行 0 分并写明）：' + _lbc + '。'
-        + '2 板给得最多不是笔误——4~5 板是龙头自己到了高位、补涨已近尾声，'
-        + '2 板梯队刚成型、扩散才开始。</span></div>' +
-      '<div class="ord-li"><i>④</i><span><b>补涨位</b>（+' + _W.catchUp + '）：板块在涨而它自己今天没动'
-        + '（收在 −5%~+' + _W.chaseDamp.t0 + '% 之间），说明同板块的钱还没进它这里——'
-        + '这正是大洋电机 10/26 的处境：那天别的羊字辈涨停或收红，它自己收阴，次日直接补涨涨停。'
-        + '<br>反过来，<b>板块这四项的正分要按它自己今天涨没涨打折</b>：'
-        + '今日涨幅 ≤' + _W.chaseDamp.t0 + '% 全额、<' + _W.chaseDamp.t1 + '% 打 '
-        + Math.round(_W.chaseDamp.k1 * 100) + ' 折、≥' + _W.chaseDamp.t1 + '% 只留 '
-        + Math.round(_W.chaseDamp.k2 * 100) + '%，另外再扣 ' + _W.chasePenalty
-        + ' 分记「已先行」。原因：不打折就等于「板块涨了一周、它今天也跟涨 5%」和'
-        + '「板块刚启动、它自己还在收阴」拿一样的分，前者是追高不是补涨。负分不打折（板块在跌与它自己涨没涨无关）。</span></div>' +
-      '<div class="ord-li"><i>⑤</i><span><b>名字辈分</b>（≥2 只连板股共字 +' + _W.namePeers[0] + '、1 只 +'
-        + _W.namePeers[1] + '）：生肖 / 字辈这种玄学抱团按「名称共字」近似，不是行业归属，'
-        + '所以它单列一项、不混进「同板块连板」那份计数。</span></div>' +
-      '<div class="ord-li"><i>⑥</i><span><b>个股自身</b>：缩量质量（当日量/均量 ' + _shr + '、>1.5 倍 '
-        + _W.shrinkFat + '）、反包空间（距涨停日最高价 ' + _gap + '、<1.5% ' + _W.gapTight + '）、'
-        + '消息面（利好 +' + _W.sentBull + ' / 利空 ' + _W.sentBear + '）、爆量风险（'
-        + _W.tailRisk + '）、市值（<60 亿 +' + _W.mcapSmall + ' / >300 亿 ' + _W.mcapLarge + '）。</span></div>' +
-      '<div class="ord-li"><i>·</i><span>板块行情用行业代码（bkCode）对 <b>今日 90 个一级行业</b>；'
-        + '个股行业名是另一套口径（汽车零部 / 塑料 / 物资外贸），对不上的走一张归一化表，'
-        + '并且文案里标「按行业名近似匹配」；<b>连对照表都对不上的，这一项就不算</b>，'
-        + '并在拆解里写明「板块行情没算」——宁可空着，也不拿别的板块的分给它。</span></div>' +
-      '<div class="ord-li"><i>·</i><span>这是<b>因子打分</b>，不是回测胜率：没有任何一组回测支持'
-        + '「+6 分等于多 6% 胜率」这种换算。它的用途是<b>排序与解释</b>，'
-        + '不是预测精度——点开任意一张卡可以看到它自己的逐项拆解。</span></div>');
-  }
-  if (rules.length) {
-    var NUM = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'], no = 0;
-    h += ordFold('下单规则', rules.length + ' 条',
-      rules.map(function (x) {
-        var l = x.s ? '·' : (NUM[no++] || '·');
-        return '<div class="ord-li"><i>' + l + '</i><span>' + esc(x.t) + '</span></div>';
-      }).join(''));
-  }
-  if (te && te.riskNote) {
-    h += ordFold('风险口径', '',
-      '<div class="ord-li"><i>·</i><span>' + esc(ordMd(te.riskNote)) + '</span></div>');
-  }
-  /* R100z262（用户 2026-10-28 20:32 第二次问「这些标的为什么不在断板反包确认池」）：
-     断板确认池有一道市值门槛，市值过滤发生在抓 K 线**之前**，
-     被剔的票既不进确认池、观察池，也不进失效池——它们在系统里等于不存在。
-     过去这道门槛只出现在 16:00 的 stderr 一行日志里，页面一点痕迹都没有，所以
-     「挂单收了它、池子没有它」看起来就是 bug。这里把名单摆出来，让读者自己能判断
-     「是形态没成立，还是被门槛挡住了」。
-     R100z266：下限撤掉后这块只剩「超过 400 亿」一种情况，标题与 tag 一并改口，
-     别再写「100 亿下限」。 */
-  (function () {
-    var db = (P.D || {}).duanban || {};
-    var arr = db.mcapCut || [];
-    var tot = db.mcapCutTotal || arr.length;
-    if (!tot) return;
-    var nShow = Math.min(arr.length, 24);
-    var rows = arr.slice(0, nShow).map(function (x) {
-      var tag = x.side === 'lo' ? '市值偏低' : '超过 400 亿';
-      return '<div class="ord-li"><i>·</i><span>' + esc(x.code + ' ' + (x.name || '') +
-        '　' + x.mcap + ' 亿' + '（' + tag + '）') + '</span></div>';
-    }).join('');
-    // 三个数字必须各自说清，否则读者会拿 161 和 24 相减得出「漏了 137 只」：
-    //   tot = 今天被门槛剔掉的全部；arr.length = 本清单收录的（展示票优先）；
-    //   nShow = 这次展开列出的。少一个，减法就要读者自己做（24.110）。
-    var more = arr.length > nShow
-      ? '<div class="ord-li"><i>·</i><span>本清单收录 ' + arr.length +
-        ' 只，此处显示前 ' + nShow + ' 只；另有 ' + (arr.length - nShow) +
-        ' 只未展开，其余 ' + Math.max(0, tot - arr.length) + ' 只未收录（离门槛更远）。</span></div>'
-      : '';
-    h += ordFold('被市值门槛剔掉的 ' + tot + ' 只', '点开看名单',
-      '<div class="ord-li"><i>·</i><span>' + esc(db.mcapCutNote ||
-        (mcapBandZh(0, 400) + ' 是断板反包确认池的口径。市值过滤发生在抓 K 线之前，'
-         + '所以这些票的形态根本没被判定过——不在确认池不代表形态不成立。')) + '</span></div>' + rows + more);
-  })();
-  var b = te && te.bt;
-  if (b && b.n) {
-    var by = b.byYear || {}, ys = Object.keys(by).sort();
-    var avgN = Number(b.avg);
-    var last = ys.length ? (by[ys[ys.length - 1]] || {}) : {};
-    var la = Number(last.avg);
-    var decay = ys.length && isFinite(la) && isFinite(avgN) && la < avgN * 0.5;
-    // R100z253：全期数字会把「今年已经衰减」盖住，所以分年必须同时露面，
-    // 当年低于全期均值一半时自动告警——不许靠作者自觉。R100z258 折叠后这条告警提到摘要行。
-    h += ordFold('组合回测',
-      b.n + ' 笔 · 胜率 ' + Number(b.win).toFixed(1) + '% · 年化 ' +
-      (Number(b.ann) * 100).toFixed(1) + '% · 最大回撤 ' + (Number(b.mdd) * 100).toFixed(1) + '%' +
-      (decay ? '　⚠️ 最新一年不到全期均值的一半，别拿全期当现在的水位' : ''),
-      '<div class="ord-li"><i>·</i><span>' + esc(String((b.span || []).join(' ~ '))) +
-      '　单笔均 ' + Number(b.avg).toFixed(2) + '%；限价成交、每只 1/32 资金、含双边 0.16% 成本；' +
-      '最大回撤＝净值自最高点回落的最大幅度。</span></div>' +
-      (ys.length
-        ? '<div class="ord-li"><i>·</i><span>分年单笔：' + ys.map(function (y) {
-            var v = by[y] || {}, a = Number(v.avg);
-            return esc(y) + ' ' + (isFinite(a) ? ((a > 0 ? '+' : '') + a.toFixed(2) + '%') : '—');
-          }).join('　|　') +
-          (isFinite(Number(last.ann)) ? '　（' + esc(ys[ys.length - 1]) + ' 年化 ' +
-            (Number(last.ann) > 0 ? '+' : '') + (Number(last.ann) * 100).toFixed(1) + '%）' : '') +
-          '</span></div>'
-        : ''));
-  }
-  return h;
-}
 
 /* 「今日可下单」整块（R100z255 的形态 + R100z257 的接线 + R100z258 的家）：
    ⚠️ 家已从 #db-fixed（断板页固定区）搬到 #db-od（开盘预测子页）的 #db-ord 容器里——
       别按旧注释把它写回 fixed，固定区在所有子页常显，放那儿等于每页都印一遍。
       R100z260（用户 2026-10-28 20:00）：容器在 #db-od 里的位置又从「菜单之后」挪到**本子页末尾**
       （#ai-prediction 之后）。DOM 顺序不影响注册，渲染入口仍在 renderDuanban 的重置之后。
-   摘要一行 + 卡片 + 规则/风险/回测三段。
+   摘要一行 + ①②③ 三档卡片。
+   R100z273（用户 2026-10-28 红框）：原本的 ④ 明早挂单 / ⑤ 今日盘中买点两档、
+   以及下方六条折叠口径（五栏分工 / 明日概率怎么算 / 下单规则 / 风险口径 /
+   市值剔除名单 / 组合回测）整块下线，ordFold / ordRuleBlocks / ordReg /
+   ordPlanCard / ordHitCard 随之删除——函数没了就不能再被调用，留着只会被后来的人当活口。
    R100z257 只做了一件事：每张卡带 data-k（o|<code>），走 #db-fixed 已有的点击代理，
    点开就是完整的标的页（K线 / 消息面 / 退出纪律 / 下单口径）。24.112 那次只补了卡片没接线——
    渲染得出来但点了没反应，用户 2026-10-28 说的「今日可下单标的也要增加标的页面」就是这个
    （同一个说法在 R100z219 出现过一次，当时是陈学长子页的卡片没接线）。 */
 function ordBlockHtml() {
-  var P = ordPrep(), te = P.te;
+  var P = ordPrep();
   if (!P.n) return '';
   var sum = [];
-  var buyD = (te && te.buyDate) ? String(te.buyDate).slice(5) : '';
   /* R100z267：摘要顺序跟着分档走——先说形态（本区块现在的主档），再说执行时点。
-     两个日期必须同时出现，读者要能看出「现在看的是明天的单，不是今早那批」（R100z260）。
-     R100z269：加「缩量回踩」一档；且区块改名「明日可下单」——它是收盘后跑的，
-     面向的是**下一个交易日**，叫「今日可下单」会让人以为现在还能按这些价下单。 */
+     R100z273：④⑤ 下线后「两个日期必须同时出现」那句前提没了（buyDate 只属于那两档），
+     摘要里也不再出现任何日期——它现在只回答「今天收盘后哪几只按图形能买、哪几只还差一根」。 */
   var nPriced = P.poolA.concat(P.poolB, P.poolC).filter(ordHasPrice).length;
   /* 摘要整行会过 esc()，这里不许写标签——写 <b> 会原样印成 &lt;b&gt;（R100z271 探针抓到）。 */
   sum.push('形态确认 ' + P.poolA.length + ' 只 · 缩量回踩 ' + P.poolC.length +
@@ -8377,21 +8037,8 @@ function ordBlockHtml() {
     sum.push('另有 ' + nShape + ' 只断板票按当日收盘给了形态价位（明早 ≤ 今收−0.5% 才买、' +
       '跌破 T日低×0.98 作废）——那是参考线不是挂单指令，所以按「陈学长参数 → 概率」往下排');
   }
-  if (P.teRowsOut.length) {
-    sum.push((P.isNextPlan ? '明日 ' + buyD + ' 开盘挂单 ' : '昨晚挂单 ') + P.teRowsOut.length + ' 只' +
-      (P.fallback ? '（未开盘，照限价挂；可挂/破位要等明早 9:25 集合竞价后才知道，现在不编）'
-        : '（可挂 ' + (te.nGo || 0) + ' · 高于限价 ' + (te.nMissed || 0) + ' · 已破下沿 ' + (te.nBroken || 0) + '）'));
-  }
-  // R100z260：今早那一批的执行结果降成一句——换掉主列表不等于把它藏了。
-  if (P.execHist && P.execHist.rows && P.execHist.rows.length) {
-    sum.push('今早 ' + String(P.execHist.buyDate || '').slice(5) + ' 执行 ' + P.execHist.rows.length + ' 只' +
-      '（可挂 ' + (P.execHist.nGo || 0) + ' · 高于限价 ' + (P.execHist.nMissed || 0) +
-      ' · 已破下沿 ' + (P.execHist.nBroken || 0) + '）');
-  }
-  if (P.blOut.length) {
-    sum.push('今日盘中买点 ' + P.blOut.length + ' 只（现价在买区内 ' +
-      P.blOut.filter(function (r) { return r.state === 'buy'; }).length + ' 只）');
-  }
+  /* R100z273：④⑤ 两档下线后，摘要里原本报它们只数/执行结果的三句一并删——
+     摘要说「明日开盘挂单 5 只」而下面没有那 5 张卡，比不显示更坏。 */
   /* 去重的账要说清：读者会拿「池 18 只 + 挂单 8 只 + 买点 29 只」去减卡片数，
      减法不该由他做（24.110）。这三个数各自是并入别卡 / 剔出的，不是丢了。
      R100z271：并入的「价」只算明日可用的（明早挂单）；只有今日买区的票单列一句——
@@ -8413,7 +8060,10 @@ function ordBlockHtml() {
       return '<span class="ord-nw">' + esc(r.name || String(r.code)) + '</span>';
     }).join('、') + ' 的买点已在开盘精选固定区展示，不重复建卡');
   }
-  if (P.nBpCut) dedupTxt.push(P.nBpCut + ' 只「横盘启动·贴沿」未列入（理由见下方下单规则）');
+  /* R100z273：「理由见下方下单规则」失效——那段折叠口径已随 ④⑤ 一起下线，
+     指路话会点空。理由本身要留在摘要里（删了就成了「静默剔掉 21 只」）。 */
+  if (P.nBpCut) dedupTxt.push(P.nBpCut + ' 只「横盘启动·贴沿」未列入（该源回测单笔仅 +0.22%、' +
+    '盈亏比 1.16、T+5 超额 t=0.41 不显著，且曾占旧清单 72%——形态仍在「横盘启动」子页）');
   /* 缩量回踩这一档是**现算的**（scan stkKlines），扫了多少只必须说出来：
      否则「今天缩量回踩 0 只」会被读成「没这功能」或「抓空了」，
      而实际它可能只是扫了 900 只、一个都没满足那四条硬条件。 */
@@ -8459,33 +8109,18 @@ function ordBlockHtml() {
       '卡片上的目标与止损是确认之后才生效的参数，不是明天的买点。' +
       (P.poolB.filter(function (o) { return o.plan; }).length
         ? '其中 ' + P.poolB.filter(function (o) { return o.plan; }).length +
-          ' 只另有明早挂单——那套口径不等确认（见④栏说明），价格已写在卡脚。' : '') +
+          ' 只另有明早挂单（那张单只走「涨停→断板」两步、不等这根确认K线），价格已写在卡脚。' : '') +
       '</div><div class="db-chips">' + P.poolB.map(ordShapeCard).join('') + '</div>';
   }
-  /* —— ④ 明早挂单（不等形态确认的那套）——
-     这一档的准入是「T日首板涨停 + T+1 断板放量 1.1~3.5 + 成交额≥2亿」，不等缩量、不等站稳 MA5。
-     它与①②③是同一批票的不同时点（24.120）：等形态确认完，那个开盘价就没了。
-     只有「不在池里」的才出现在这里——在池的已经把挂单价并进那张卡。 */
-  if (P.teRowsOut.length) {
-    // 栏题与卡片 pill 用同一个档名（planZh）：一处写「明早」一处写「昨晚」= 两个功能（R100z270）
-    var planZh = P.isNextPlan ? '明早挂单' : '昨晚挂单';
-    h += '<div class="db-sec">④ ' + (P.isNextPlan ? '明早 ' + buyD + ' 开盘挂单' : '昨晚挂单') +
-      '<span class="db-sec-n">' + P.teRowsOut.length +
-      ' 只 · 不等形态确认（只走完「涨停→断板」两步）</span></div>' +
-      '<div class="db-chips">' + P.teRowsOut.map(function (r) { return ordPlanCard(r, planZh); }).join('') + '</div>';
-  }
-  /* —— ⑤ 今日盘中买点（已收盘，不照价执行）——
-     它在「明日可下单」里是**记录**不是指令：那些价是今天盘中用现价算出来的，
-     明天开盘价与它无关。给它改名并加一句，是因为区块改名后「盘中买点」会被读成
-     「明天盘中也能这么买」——这是会让人照着一个过期的价去下单的那种错。 */
-  if (P.blOut.length) {
-    h += '<div class="db-sec">⑤ 今日盘中买点（已收盘）<span class="db-sec-n">' + P.blOut.length +
-      ' 只 · 仅作记录，明天不照这个价执行</span></div>' +
-      '<div class="db-sub" style="margin:-2px 0 6px">这些买区是今天盘中按现价重算出来的，' +
-      '明天开盘价与它无关——列出来只是让你核对「今天这几个买点后来走成什么样」，别当明日指令用。</div>' +
-      '<div class="db-chips">' + P.blOut.map(ordHitCard).join('') + '</div>';
-  }
-  return h + ordRuleBlocks(P) + '</div>';
+  /* R100z273（用户 2026-10-28 23:2x 红框「这一块都删掉」）：④ 明早挂单 / ⑤ 今日盘中买点
+     两档卡片与下方六条折叠口径（五栏分工 / 明日概率 / 下单规则 / 风险口径 / 市值剔除名单 /
+     组合回测）整块下线。
+     为什么删的是这两档而不是①②③：它们在池外**另起一套名单**，与池档天然几乎不重叠
+     （timingPlan 只走「涨停→断板」两步，不等缩量、不等 MA5），同一个页面于是同时存在
+     「按图形能买的票」和「按时间点能买的票」两份名单，而后者既没有形态依据、又占着
+     一半版面。它们的价并没有丢——在池的票挂单价仍并进①②③那张卡，卡脚「下单」行照旧印。
+     口径原文（te.rule / bs.rule / riskNote / 回测）是数据源，留在 data.js 里不删。 */
+  return h + '</div>';
 }
 
 /* R100k：子页菜单改为字符串渲染（可嵌入各子页内容流任意位置）；switchSubTab 经 querySelectorAll
@@ -9023,10 +8658,13 @@ document.addEventListener('click', function (ev) {
   }
 });
 /* R99g：🐼/💰 悬浮组合并为一个整体，整组可拖拽（>6px 位移判定为拖动，否则视为点击）+ 位置记忆（floatGroupPos）；
-   断板反包页内返回 💰(#db-entry-in) 与组内 💰 位置实时同步（组顶 + 组高 - 46） */
+   R100z273 起断板页返回不再跟随槽位（改页头静态按钮 #db-back），仍跟随的是
+   📄 全球要闻 / 📋 复盘台账两个页内返回（组顶 + 组高 − 46 那套只对它们生效）。 */
 (function () {
   var de = document.getElementById('db-entry');
-  var dei = document.getElementById('db-entry-in');
+  // R100z273：断板页返回改成页头静态按钮（#db-back）——它不在浮动层，不参与槽位同步。
+  // 变量名保留 dei：下面 click 绑定与 RAIL 都按这个名字走，改名只会多一处漏改的风险。
+  var dei = document.getElementById('db-back');
   if (de) de.addEventListener('click', function () { openDuanban(); });
   if (dei) dei.addEventListener('click', function () { closeDuanban(); });
   // R100z109：📄 全球要闻入口 / 页内返回
@@ -9063,10 +8701,13 @@ document.addEventListener('click', function (ev) {
      新实现只有一条规则：**组内第 i 个按钮的实测偏移 = 页内替身的偏移**，
      几何每次现算（读 flex-direction + gap + 按钮宽高，display:none 也读得到 computed），
      不缓存像素、不写死槽距、CSS 不再参与定位。 */
+  /* R100z273：🧰 那一行（g.children[2] → dei）已从槽位表撤掉——断板页的返回键
+     不再是固定定位的页内替身，而是页头里的静态按钮，没有「槽位」这个概念。
+     漏撤的后果不是不报错：applySaved 会拿 top:50% 把它从文档流里拽到屏幕右侧，
+     症状与改之前一模一样（还是压卡片）。 */
   var RAIL = [
     { slot: g.children[0], iPage: gnj },   // 🐼 → 全球要闻页的 🐼/🦅 定位键
     { slot: g.children[1], iPage: gnei },  // 📄 → 全球要闻返回
-    { slot: g.children[2], iPage: dei },   // 🧰 → 策略工具箱返回
     { slot: g.children[3], iPage: scei }   // 📋 → 复盘台账返回
   ];
 
@@ -9186,7 +8827,9 @@ document.addEventListener('click', function (ev) {
   bindDrag(g, 0);
   bindDrag(gnj, 0);
   bindDrag(gnei, 1);
-  bindDrag(dei, 2);
+  /* R100z273：dei 那一行的 bindDrag 已删——#db-back 是页头静态按钮，不拖不浮动。
+     bindDrag 会写 style.left/top，一旦挂上，它会从 topbar 里脱出去变成浮层。
+     ⚠️ 连注解里都别再写那个函数调用的字面量：G41 是按字符串匹配的，写了就报「还挂着」。 */
   bindDrag(scei, 3);
   window.addEventListener('resize', applySaved);
   window.addEventListener('orientationchange', applySaved);
@@ -9223,18 +8866,19 @@ function openDbModal(key) {
       var tb = stkTechBadgeHtml(e.code);
       // R100z257：从清单卡点进来，第一枚徽标必须是「今日可下单 · 昨晚挂单/盘中买点」——
       //   否则打开的是同一只票，徽标却只写「陈学长·观察中」，读者会怀疑点错了入口。
-      // R100z260：后面的池归属**全部由 tb 出**（五个指标＋失效），不再旁路补 chenBadgeHtml /
-      //   「XX失效归档池」。原来的旁路有两个病：① 陈学长徽章只有从这里补，别的行没有；
+      // R100z260：后面的池归属**全部由 tb 出**（五个指标＋失效），不再走「按入口补一枚陈学长徽标」/
+      //   「XX失效归档池」这两条旁路。原来的旁路有两个病：① 陈学长徽章只有从这里补，别的行没有；
       //   ② 从陈学长页点开一只「陈学长观察池 + 断板失效」的票，只看得到陈学长——
       //   用户 2026-10-28 截图 5 的原话就是「这两个徽章都要放」。
       if (isOrd) {
-        // R100z268：ordKind 现在有三档（shape/plan/hit）。原来只判 'plan'，其余一律印
-        // 「盘中买点」——实测 603565 明明是「形态即将确认」卡，点开徽标却写「盘中买点」，
-        // 读者会以为点错了入口。档名由卡片自己注册（ordZh），弹窗不再猜。
+        // R100z268：ordKind 现在只由形态档注册（shape）。原来还有 plan/hit 两档，
+        // 但 R100z273 把「明早挂单 / 今日盘中买点」两张卡连同它们的注册函数一起删了，
+        // 兜底再印「盘中买点」就是把一个已经不存在的档名写到弹窗上。
+        // 档名仍由卡片自己注册（ordZh），弹窗不猜；只有旧 data 缺字段时才落到「形态档」。
         // R100z270：区块已改名「明日可下单」（收盘后生成、面向下一交易日），徽标跟着改——
         //   一处留旧名，读者会以为是两个功能。
         return '<span class="pool-badge hold">明日可下单 · ' +
-          esc(e.ordZh || (e.ordKind === 'plan' ? '明早挂单' : '盘中买点')) + '</span>' + tb + mcapCutBadgeHtml(e.code);
+          esc(e.ordZh || '形态档') + '</span>' + tb + mcapCutBadgeHtml(e.code);
       }
       return (tb || ('<span class="pool-badge ' + (done ? 'done' : 'hold') + '">' +
         (done ? '确认池' : ('观察池 · ' + esc(e.stage || '待定'))) + '</span>')) +
