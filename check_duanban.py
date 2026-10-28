@@ -528,6 +528,9 @@ def match_ths_industry(hybk, ths_names):
         # 归入其上位大类）。缺这两条时二者只能退回东财板块口径，且东财板块日K
         # 接口已失效（实测 BK1382/BK1221/BK1471 全返回 None），涨停日板块涨幅长期空。
         "地面兵装": "军工装备", "数字媒体": "文化传媒",
+        # R100z179：申万传媒二级「电视广播」同属传媒大类，同花顺 90 一级归「文化传媒」。
+        # 缺这条时 000156 华数传媒 只能落到东财兜底，而东财板块日K 已失效 → 板块涨幅「—」。
+        "电视广播": "文化传媒",
     }
     if clean in SPECIAL and SPECIAL[clean] in ths_names:
         return SPECIAL[clean]
@@ -1723,6 +1726,9 @@ def build_module(pairs, D):
         #      电机Ⅱ / IT服务Ⅱ / 贸易Ⅱ / 白酒Ⅱ / 燃气Ⅱ 全部 'XⅡ'.startswith('X') → 置 None，
         #      退回东财口径后一批标的连板块涨幅都取不到（用户 2026-10-21 截图「板块涨幅 —」）。
         #   正确方向：只有 ths_name 是 hybk 的**延长**才算截断。
+        # R100z179：护栏前先留一份完整同花顺行业名——后面若东财兜底也取不到涨幅，
+        # 宁可用「完整名 + 真实涨幅」，也不能写「截断名 + 板块数据暂缺」（用户实报过板块—）。
+        _ths_full = ths_name
         if ths_name and p["hybk"] and ths_name.startswith(p["hybk"]) and ths_name != p["hybk"]:
             ths_name = None
         if ths_name:
@@ -1741,7 +1747,18 @@ def build_module(pairs, D):
             else:
                 bk_code, bpt = resolve_board(p["hybk"], board_map)
                 bpz = fetch_board_pct_on(bk_code, p["ztDate"]) if bk_code else None
-            sector = p["hybk"] or "其他"
+            if bpt is None and _ths_full:
+                # R100z179：东财兜底（push2delay / 板块日K 常不可达）也拿不到涨幅时，
+                # 退回同花顺完整行业名口径。截断名（汽车零部/自动化设）匹配到的
+                # 完整行业名与涨幅都是真实数据，比「板块数据暂缺」更接近事实。
+                ths_name = _ths_full
+                bpt = round(ths_map[ths_name]["pct"], 2)
+                ths_code = ths_map[ths_name]["code"]
+                bpz = fetch_ths_board_pct_on(ths_code, p["ztDate"])
+                sector = ths_name
+                bk_code = ths_code
+            else:
+                sector = p["hybk"] or "其他"
         entries.append({"code": p["code"], "name": p["name"],
                         "sector": sector, "ztDate": p["ztDate"],
                         "stage": p["stage_info"]["stage"], "form": p["stage_info"]["form"],
