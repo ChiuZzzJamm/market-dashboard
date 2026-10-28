@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610281031"></script>
+<script src="data.js?v=202610281056"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -3766,6 +3766,11 @@ function renderSignalPerf() {
       '<div class="rv-vd' + (bad ? ' bad' : '') + '">' + esc(vdShort(r.verdict)) + '</div></div>';
   });
   h += '</div>';
+  /* R100z255：清单这一行的入场时点与其余七行不同（9:45 生成、当天可下单，其余是 16:00
+     选出、最早次日开盘买）。台账只有收盘价，两列都是近似——不把这句话摆出来，
+     读者会把「当日收盘买」当成清单的真实成绩。文案由 signal_attribution.py 生成
+     （样本数天天变，禁写死），这里只负责渲染。 */
+  if (P.buyNote) h += '<div class="rv-legend">' + esc(P.buyNote) + '</div>';
   // 陈学长是按它自己的口径（+5% 止盈 / 10 个交易日）结算的，与这张表的「1 日胜率」不是同一把尺子。
   // 硬塞进 win1 就是混口径；不写出来又像没在跑——所以单独一行说明，样本数一起给（不让 2 笔当结论）。
   var subs = P.ranking.filter(function (r) { return r.sub; });

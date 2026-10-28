@@ -84,6 +84,9 @@
 G50 文案记法泄漏    渲染层不许出现 markdown 的 ** 记法（2026-10-28 截图上真的印出过
                       「**不改清单、不新增标的**」）：内联 JS 剥注释后逐处点名，
                       data.js 的 rule/riskNote 等直通 DOM 字段一并扫（FAIL）。
+    G51 清单台账接线    「今日可下单」这份清单必须真的在 signal_ledger 里逐日登记
+                      （源键 buy）：bySrc 少了这一行页面只会「少一行」，不会报错，
+                      所以用 asOf 与登记条数双判（接线断 = FAIL / 名单被重跑 = WARN）。
 """
 import ast
 import json
@@ -4222,6 +4225,91 @@ def g49_excess_benchmark_consistency(r):
                 "underperform=%s 与符号一致" % (float(auth), "赢" if auth >= 0 else "输", up))
 
 
+def g51_buy_ledger_wiring(r):
+    """G51 「今日可下单」必须真的在记账（R100z255，2026-10-28）。
+
+    ## 背景
+
+    断板页那张「今日可下单」表，是全站唯一明确回答「现在能买哪只、买在哪个价带、
+    破哪个价撤」的出口——却也是**唯一没有后续台账**的模块。24.109 用回测证明了各源
+    edge 大小，但从没有一张表回答「照着这份清单真买，会怎样」。R100z255 把它接进
+    signal_attribution（源键 'buy'），这里盯住那条接线不断。
+
+    ## 为什么需要闸门
+
+    接线类失败的典型长相不是报错，而是**安静地断掉**：某天 buyList 换了字段名、
+    或 snapshot() 里那一段被重构掉，页面看起来完全正常——指标复盘卡还是那几行，
+    只是永远少了「今日可下单」这一行，没有任何人会发现「少了一行」。
+    与本项目反复踩的「登记了就当查过了」同源。
+
+    ## 判据（三段，越往后越严）
+
+      ① signalPerf.asOf 比清单日期旧 → 16:00 还没跑，WARN 放行（这不是错，只是还没到）。
+      ② asOf ≥ 清单日期，但 bySrc 里没有 buy → FAIL：接线断了，账面看不出来。
+      ③ 台账里该日 buy 条数 ≠ 当前清单非 bp 条数 → WARN：大概率是 9:45 重跑改了名单
+         （24.108 真实发生过一次），不是接线问题，但必须留痕，否则「登记过」会变成
+         「登记的是另一份名单」。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G51", f"data.js 读取失败，清单台账接线无法检查：{e}")
+        return
+    st = ((D.get("duanban") or {}).get("star") or {})
+    star_date = str(st.get("date") or "")[:10]
+    if not star_date:
+        r.warn("G51", "duanban.star.date 缺失，无法判断清单台账是否跟上（跳过）")
+        return
+    # 与生成端同口径：bp 源（横盘启动·贴沿）不进清单，也不进台账
+    cur = [x for x in (st.get("buyList") or [])
+           if isinstance(x, dict) and str(x.get("src") or "") != "bp"]
+    if not cur:
+        r.warn("G51", f"{star_date} 清单无非 bp 标的（空清单），本轮无法验证接线")
+        return
+
+    sp = D.get("signalPerf") or {}
+    as_of = str(sp.get("asOf") or "")[:10]
+    has_buy = bool((sp.get("bySrc") or {}).get("buy"))
+    if not as_of:
+        r.warn("G51", "signalPerf.asOf 缺失，无法判断归因台账跑到哪一天（跳过）")
+        return
+    if as_of < star_date:
+        r.warn("G51", f"归因台账停在 {as_of}，早于清单 {star_date} —— 16:00 数据步还没跑，"
+                      f"届时应自动出现「今日可下单」一行（非错误）")
+        return
+    if not has_buy:
+        r.fail("G51", f"清单 {star_date} 有 {len(cur)} 只非 bp 标的，但 signalPerf.bySrc 里没有 "
+                      f"buy —— 归因台账没登记这份清单，接线断了（页面只会少一行，不会报错）")
+        return
+
+    # 口径说明不能随代码一起丢：这一行的入场时点与另外七行不同（9:45 当天可买 vs 次日开盘）
+    if not (sp.get("criteria") or {}).get("buyBasis"):
+        r.warn("G51", "signalPerf.criteria.buyBasis 缺失 —— 「今日可下单」行的入场口径说明丢了，"
+                      "读者会把「当日收盘买」当成清单真实成交价")
+
+    # 台账条数 vs 当前清单条数
+    led_path = os.path.join(HERE, "signal_ledger.json")
+    if not os.path.exists(led_path):
+        r.warn("G51", "signal_ledger.json 不在，无法核对登记条数（接线本身已在上面验过）")
+        return
+    try:
+        led = json.load(open(led_path, encoding="utf-8"))
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G51", f"signal_ledger.json 读取失败，跳过条数核对：{e}")
+        return
+    rows = ((led.get("entries") or {}).get(star_date) or {}).get("buy") or []
+    if not rows:
+        r.fail("G51", f"signal_ledger 里没有 {star_date} 的 buy 记录 —— bySrc 有行但台账没有来源，"
+                      f"说明统计与登记脱节")
+        return
+    if len(rows) != len(cur):
+        r.warn("G51", f"{star_date} 登记 {len(rows)} 只 / 当前清单 {len(cur)} 只 —— "
+                      f"通常是 9:45 重跑改了名单（登记的是当时那份），不是接线问题，但账要留痕")
+        return
+    r.ok("G51", f"今日可下单已在记账：{star_date} 登记 {len(rows)} 只（与清单同口径，bp 源已剔），"
+                f"口径说明在位")
+
+
 def g50_markdown_leak(r):
     """G50 渲染文案里不许漏 markdown 记法（R100z254，2026-10-28）。
 
@@ -4358,6 +4446,7 @@ def main():
     g48_forecast_contract(r)
     g49_excess_benchmark_consistency(r)
     g50_markdown_leak(r)
+    g51_buy_ledger_wiring(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
