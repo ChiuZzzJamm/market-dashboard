@@ -2007,10 +2007,10 @@ function stkGoldCls(code) {
    取名用短词＋截短池名：tc-top 是四列网格里的一行，印「断板反包 · 确认池」全称会把板块
    胶囊挤到换行，整块高度跳一档。失效徽章这里**不出**（位置窄、且失效已在弹窗徽标行出全），
    折成「+N」让人知道点开还有。 */
-/* R100z262：duanban.mcapCut = 今天被「流通市值 100~400 亿」这道门槛剔掉的票。
-   它回答的是「形态看着挺好、为什么不在池里」——此前这个答案只存在于 16:00 的
-   stderr 一行日志里，页面上一点痕迹都没有，于是用户只能反复问同一句话
-   （2026-10-28 已经是第二次问）。门槛不改（有回测支撑），但必须可见。 */
+/* R100z262：duanban.mcapCut = 今天被市值门槛剔掉的票。
+   R100z266（2026-10-28 22:5x 用户定「直接放开到 400 亿以内」）：下限已撤，这道门槛
+   现在只剩上限 ≥400 亿一条，所以名单里 side 恒为 'hi'。文案不再写「100~400 亿」——
+   留这句会让读者以为小盘票还在被挡，而用户刚要求放开。 */
 function mcapCutOf(code) {
   code = String(code || '').replace(/\D/g, '');
   if (!/^\d{6}$/.test(code)) return null;
@@ -2020,6 +2020,13 @@ function mcapCutOf(code) {
     if (String((arr[i] || {}).code || '') === code) return arr[i];
   }
   return null;
+}
+/* 市值带的唯一前端文案出口，与 check_duanban.py 的 mcap_band_txt() 对齐。
+   两边各写一遍的结果就是「脚本印 400 亿以内、页面印 100~400 亿」——
+   24.110 同一量两套数，只不过这次两套数在两套语言里。 */
+function mcapBandZh(lo, hi) {
+  lo = Number(lo) || 0; hi = Number(hi) || 0;
+  return lo > 0 ? ('流通市值 ' + lo + '~' + hi + ' 亿') : ('流通市值 ' + hi + ' 亿以内');
 }
 function mcapCutBadgeHtml(code, cls) {
   var mc = mcapCutOf(code);
@@ -2031,16 +2038,14 @@ function mcapCutBadgeHtml(code, cls) {
      完整名单在页面底部那个折叠块里，不说一句他就不知道那儿有东西可点。
      mcapCutTotal 是当天真实剔除数（由 check_duanban.py 同批写入），取不到就不提这句。 */
   var tot = Number(((window.DASHBOARD_DATA || {}).duanban || {}).mcapCutTotal) || 0;
-  /* R100z265（用户 2026-10-28 21:30 追问「今日可下单标的依据什么」时自查）：上一版写的是
+  /* R100z265（用户 2026-10-28 21:30 追问「今日可下单标的依据什么」时自查）：不能写
      「不是形态不成立，是市值…」——**这句话我们并不知道**。市值过滤发生在抓 K 线之前
      （check_duanban.py 2098 行，为的是省 420s 预算），被剔的票**从来没跑过 check_form**。
      说「形态没问题」等于替一个没跑过的校验背书；而用户会拿它去下单。改成讲清机制：
      它没过的是市值那道，形态根本没校验——**这也正是它不进失效池的原因**（失效池只收
-     「曾在池、今日滑出」的票）。真要回答「它形态成不成立」，得有 16:00 步补跑校验，那是另一件事。 */
-  var tip = '断板反包·确认池没收它，卡在「流通市值 ' + mc.mcap + ' 亿」' +
-    (lo ? '低于下限 100 亿' : '高于上限 400 亿') + '。\n' +
-    '这条门槛是回测出来的（100~400 亿：全样本 +0.73%、样本外 +0.91%；去掉下限只剩 +0.06%），' +
-    '所以没有为单只票放开。\n' +
+     「曾在池、今日滑出」的票）。真要回答「它形态成不成立」，得有 16:00 步补跑校验，那是另一件事。
+     R100z266：下限撤掉后「低于下限」分支已成死路，留着不删（回滚不用改前端）。 */
+  var tip = '断板反包·确认池没收它，卡在「' + (lo ? '市值偏低' : '流通市值 ' + mc.mcap + ' 亿，超过 400 亿上限') + '」。\n' +
     '注意：市值过滤在抓 K 线之前，所以这只票没跑过形态校验——系统不知道它形态成不成立；' +
     '也正因为没跑，它不会出现在失效池（失效池只收「曾在池、今日滑出」的票）。' +
     (tot ? '\n今天被这道门槛挡掉的共 ' + tot + ' 只，完整名单在本页最下方「被市值门槛剔掉的 '
@@ -3072,6 +3077,10 @@ function fbIsDuanban(code0) {
 /* R100z18：弹窗内单条退出纪律行——有止损位就给「止损/目标/证伪」三件套，
    只有证伪口径没有止损位（断板池等）时退化为纯证伪行，同样不编数字。 */
 function exitMetaLine(code) {
+  // R100z268：从「今日可下单 · 形态档」卡片点进来，退出纪律取**那张卡**的撤单价。
+  // 不许在这里另算一套——卡片写 12.16、点开变 11.60，等于这一行白写（见 ordCardExitMeta）。
+  var _ov = ordCardExitMeta(String(code || '').replace(/\D/g, ''));
+  if (_ov) return _ov;
   var ex = exitForCode(code);
   if (!ex || typeof ex !== 'object') return '';
   // R100z151：止损/目标必须是可用数字。数据层若误写「-8%」这类字符串，
@@ -5785,7 +5794,10 @@ function sortByReso(arr) {
   });
 }
 function tcCard(o) {
-  var ord = orderLineOf(o.code);   // R100z254：进今日下单清单的票，卡片底部多一行价
+  // R100z267：允许调用方**覆盖**「下单」行（o.ord）。默认仍走 orderLineOf（唯一价源）。
+  // 只有「今日可下单」的形态档需要覆盖——那一档不能印 timingExec 里今早已执行完的限价
+  // （详见 ordShapeOrderLine 的注释），但两处仍然共用同一套措辞与 .tc-ord 样式。
+  var ord = (o.ord === null || o.ord === undefined) ? orderLineOf(o.code) : o.ord;
   var pills = '';
   (o.pills || []).forEach(function (p) { if (p) pills += '<span class="db-sec-pill">' + esc(p) + '</span>'; });
   // R100z262：技术池徽章（HTML 片段，由 stkTechShortBadges 生产）。**不再 esc**——
@@ -6902,6 +6914,72 @@ function ordSg(v, d) {
 }
 function ordMd(s) { return String(s || '').replace(/\*\*/g, '').trim(); }
 
+/* 形态档的池子成员表（①断板确认/陈学长严格+放宽 → A；②断板观察/陈学长进行中 → B）。
+   R100z268：抽成独立函数，因为**卡片与弹窗必须用同一份成员判定**——
+   弹窗侧要在「退出纪律」里认出「这只票在形态档里、该取哪个撤单价」，
+   如果各写一份 _pAdd，两边的阶段/优先级一旦分叉，卡片说「形态确认」而弹窗按「即将确认」取价，
+   就是 24.110「同一量两套数」的最脏形态：连档位都对不上，还没人看得出是哪里错。 */
+function ordPoolCore() {
+  var D = window.DASHBOARD_DATA || {};
+  var idx = {}, codes = [];
+  var add = function (e, src, phase, tier) {
+    if (!e || !e.code) return;
+    var c = String(e.code).replace(/\D/g, '');
+    if (!/^\d{6}$/.test(c)) return;
+    var o = idx[c];
+    if (!o) {
+      o = idx[c] = { code: c, name: e.name || c, sector: e.sector || '',
+                     phase: phase, db: null, chen: null, chenTier: null, srcs: [] };
+      codes.push(c);
+    }
+    // 阶段取最成熟的：同一只票在断板观察池（待脱离）与陈学长放宽池（缩量确认）里
+    // 同时出现时，它已经是「形态确认」——不能被另一边的「即将确认」拽回低档。
+    if (phase === 'A') o.phase = 'A';
+    if (src === 'chen') { if (!o.chen || (tier === 'strict' && o.chenTier !== 'strict')) { o.chen = e; o.chenTier = tier; } }
+    else if (!o.db) o.db = e;
+    if (!o.sector && e.sector) o.sector = e.sector;
+    if (!o.name || o.name === c) o.name = e.name || o.name;
+    if (o.srcs.indexOf(src) < 0) o.srcs.push(src);
+  };
+  var _dbp = D.duanban || {}, _cp = D.chenPool || {};
+  (_dbp.confirmed || []).forEach(function (e) { add(e, 'duanban', 'A', null); });
+  (_cp.strict || []).forEach(function (e) { add(e, 'chen', 'A', 'strict'); });
+  (_cp.loose || []).forEach(function (e) { add(e, 'chen', 'A', 'loose'); });
+  (_dbp.watching || []).forEach(function (e) { add(e, 'duanban', 'B', null); });
+  (_cp.watching || []).forEach(function (e) { add(e, 'chen', 'B', 'watching'); });
+  return { idx: idx, codes: codes };
+}
+
+/* 单只票的形态档条目（含明早挂单 / 盘中买点的价，口径与 ordPrep 逐个字段对齐）。
+   懒建一次缓存：data.js 一个会话内只加载一次，与 orderMap() 的 _ORD_MAP 同一套前提。 */
+var _ORD_ENT = null;
+function ordShapeEntOf(code0) {
+  var c = String(code0 || '').replace(/\D/g, '');
+  if (!/^\d{6}$/.test(c)) return null;
+  if (!_ORD_ENT) {
+    var D = window.DASHBOARD_DATA || {};
+    var core = ordPoolCore();
+    var planMap = {}, buyMap = {};
+    ((D.timingPlan || {}).orders || []).forEach(function (o) {
+      var k = String(o.code || '').replace(/\D/g, '');
+      if (/^\d{6}$/.test(k)) planMap[k] = o;
+    });
+    // 与 ordPrep 同口径：src==='bp'（横盘启动·贴沿）不参与，生成端已剔、前端再兜一层
+    (((D.duanban || {}).star || {}).buyList || []).forEach(function (r) {
+      var k = String(r.code || '').replace(/\D/g, '');
+      if (String(r.src || '') === 'bp') return;
+      if (/^\d{6}$/.test(k) && !buyMap[k]) buyMap[k] = r;
+    });
+    core.codes.forEach(function (k) {
+      var o = core.idx[k];
+      o.plan = planMap[k] || null;
+      o.buy = buyMap[k] || null;
+    });
+    _ORD_ENT = core.idx;
+  }
+  return _ORD_ENT[c] || null;
+}
+
 /* 数据准备：页面里所有数字都从这里出，卡片/摘要/规则三处共用同一份，不各算一遍。 */
 function ordPrep() {
   var D = window.DASHBOARD_DATA || {};
@@ -6968,11 +7046,78 @@ function ordPrep() {
   var blDupPlan = bl.filter(function (r) { return teCodes[key(r)] && !pickCodes[String(r.code)]; });
   var blDupPick = bl.filter(function (r) { return pickCodes[String(r.code)]; });
   var blRest = bl.filter(function (r) { return !teCodes[key(r)] && !pickCodes[String(r.code)]; });
+
+  /* ==========================================================================
+     R100z267（用户 2026-10-28 22:0x「你今天提供的今日可下单标的很多都没有陈学长啊，
+       我要的是断板反包 + 陈学长 + 形态即将确认 + 形态确认」）
+     -------------------------------------------------------------------------
+     诊断（当日 data.js 实测，不是印象）：
+       · 明日挂单 8 只里只有 3 只落在断板/陈学长池（603565 中谷物流、002187 广百股份、603028 赛福天）；
+       · 盘中买点 29 只里 21 只是「横盘启动·贴沿」（前端本就剔除），剩下 8 只还有 2 只不在池
+         （002696 百洋股份是**昨天**的严格池、600271 航天信息两边都已在失效池）。
+       所以用户看到的「可下单」列表，绝大多数票**跟断板反包/陈学长毫无关系**——他说的没错。
+     根因不是数据错，是**这个区块以「执行时点」组织，而不是以「形态」组织**：
+       timingPlan 的准入是「T日首板涨停 + T+1 断板放量 1.1~3.5 + 成交额≥2亿」，
+       **不等缩量、不等站稳 MA5**；断板确认池要四步全走完（多等 1~3 个交易日）。
+       两者天然几乎不重叠（24.120 已记），但页面把「时点最早的那批」放在了最前面，
+       于是「形态最成熟的那批」（确认池 / 陈学长缩量确认）反而要翻到别的子页才看得到。
+     改法：把池档提到最前，按时点排序，**一票一卡**：
+       ① 形态确认     断板 confirmed ∪ 陈学长 strict/loose
+       ② 即将确认     断板 watching  ∪ 陈学长 watching
+       ③ 明早挂单     timingPlan（已出卡的只加一行挂单价，不重复出卡）
+       ④ 盘中买点     star.buyList 非 bp（同上不重复）
+     去重规则：一个 code 只在**最靠前的那一档**出现一次。挂单/买点的价并进那张卡，
+     所以不会出现「同一只票两套止损」——卡上只有一个目标、一个止损，来源见 orderLineOf。
+     ========================================================================== */
+  var _core = ordPoolCore();
+  var poolIdx = _core.idx, poolCodes = _core.codes;
+  // 把明早挂单 / 盘中买点的价挂到对应票上（同一票只出一次卡，价并进那张卡）
+  var _planMap = {};
+  ((D.timingPlan || {}).orders || []).forEach(function (o) {
+    var c = String(o.code || '').replace(/\D/g, '');
+    if (/^\d{6}$/.test(c)) _planMap[c] = o;
+  });
+  var _buyMap = {};
+  bl.forEach(function (r) {
+    var c = String(r.code || '').replace(/\D/g, '');
+    if (/^\d{6}$/.test(c) && !_buyMap[c]) _buyMap[c] = r;
+  });
+  var poolA = [], poolB = [];
+  poolCodes.forEach(function (c) {
+    var o = poolIdx[c];
+    o.plan = _planMap[c] || null;
+    o.buy = _buyMap[c] || null;
+    (o.phase === 'A' ? poolA : poolB).push(o);
+  });
+  // 排序：有可执行价的先（能今天决定），再按陈学长口径（连板多 → 放量大 → 利好），
+  // 纯断板票按上涨概率降序。同分组内的先后只影响第一眼看到谁，不改变任何口径。
+  var _sentRank = function (e) { return e.sentiment === 'bull' ? 0 : (e.sentiment === 'bear' ? 2 : 1); };
+  var _ordCmp = function (x, y) {
+    var px = (x.plan || x.buy) ? 0 : 1, py = (y.plan || y.buy) ? 0 : 1;
+    if (px !== py) return px - py;
+    var tx = x.chen ? 0 : 1, ty = y.chen ? 0 : 1;      // 有陈学长参数的在前（口径更全）
+    if (tx !== ty) return tx - ty;
+    if (x.chen && y.chen) {
+      var tm = function (o) { return ((o.chen.metrics || {}).tailRisk) ? 1 : 0; };
+      var t = tm(x) - tm(y); if (t !== 0) return t;    // 爆量票（>8 倍）沉底，与陈学长页同规则
+      var a = ((x.chen.metrics || {}).lbc || 0) - ((y.chen.metrics || {}).lbc || 0); if (a !== 0) return -a;
+      var b = ((x.chen.metrics || {}).volRatio || 0) - ((y.chen.metrics || {}).volRatio || 0); if (b !== 0) return -b;
+      return _sentRank(x.chen) - _sentRank(y.chen);
+    }
+    var qx = Number(((x.db || {}).probability)) || -1, qy = Number(((y.db || {}).probability)) || -1;
+    return qy - qx;
+  };
+  poolA.sort(_ordCmp); poolB.sort(_ordCmp);
+  var inPool = function (c) { return !!poolIdx[String(c || '').replace(/\D/g, '')]; };
+  // ③④ 只收「不在池里」的票——在池的已经把价并进①②那卡，不能同页两卡。
+  var teRowsOut = teRows.filter(function (r) { return !inPool(r.code); });
+  var blOut = blRest.filter(function (r) { return !inPool(r.code); });
   return { D: D, st: st, te: te, fallback: fallback, bs: bs,
            execHist: execHist, isNextPlan: isNextPlan,
            bl: bl, blRest: blRest, blDupPlan: blDupPlan, blDupPick: blDupPick,
            nBpCut: nBpCut, nBuy: nBuy, teRows: teRows,
-           n: teRows.length + blRest.length };
+           poolA: poolA, poolB: poolB, teRowsOut: teRowsOut, blOut: blOut,
+           n: poolA.length + poolB.length + teRowsOut.length + blOut.length };
 }
 
 /* 注册弹窗条目（key = o|<code>）。R100z84 的坑：不注册 = 点开空白；
@@ -6991,9 +7136,27 @@ function ordReg(k, r, kind) {
       ? ('涨停日 ' + (r.ztDate || '—') + '，按涨停日结构定单')
       : ((r.srcZh || '清单命中') + '，买区单')),
     ordKind: kind,
+    ordZh: (kind === 'plan' ? '昨晚挂单' : '盘中买点'),
     // 弹窗里那一行下单口径直接复用卡片行（剥标签），不另写一份——两份文案迟早对不上。
     ordLine: orderLineOf(code).replace(/<[^>]+>/g, '').replace(/^\s*下单\s*/, '').replace(/\s+/g, ' ').trim()
   };
+  /* R100z268：撤单价一起注册——弹窗「退出纪律」只读卡片这一份。
+     实测：600271 航天信息 ④ 买点卡写「破 6.72 撤」，点开后弹窗印 6.96（exitForCode 的形态位），
+     同一只票两个止损。卡片上印多少，点开就必须是多少。
+     ③ 明早挂单的「撤」＝下沿 floor（跌破即作废，与 orderLineOf 的措辞同源），不是 plan.stop
+     ——那张卡没印 stop，弹窗突然多一个更松的止损，读者会以为系统又改主意了。 */
+  var _x = (kind === 'hit')
+    ? { stop: r.invalid, tgt: r.target, pos: r.posPct,
+        basis: '盘中买点口径',
+        fal: '收盘跌破买点证伪价即形态作废，先撤不留' }
+    : { stop: r.floor, tgt: r.tp, pos: null,
+        basis: '明早挂单口径（下沿）',
+        fal: '开盘高于限价即不成交（不追）；跌破下沿即作废' };
+  if (_x.stop !== null && _x.stop !== undefined && isFinite(Number(_x.stop))) {
+    DB_INDEX[k].exStop = Number(_x.stop);
+    DB_INDEX[k].exTgt = _x.tgt; DB_INDEX[k].exPos = _x.pos;
+    DB_INDEX[k].exBasis = _x.basis; DB_INDEX[k].exFalsify = _x.fal;
+  }
   if (DB_ORDER.indexOf(k) < 0) DB_ORDER.push(k);
 }
 
@@ -7048,6 +7211,211 @@ function ordHitCard(r) {
   });
 }
 
+/* —— 形态档卡（①②：「形态确认」/「形态即将确认」）——
+   R100z267（用户 2026-10-28 22:0x）：这两档是「今日可下单」的新主档，回答的是
+   「按断板反包/陈学长这个图形，现在有哪几只」，而不是「系统今晚能给哪几个价」。
+   与另外两档卡的**分工**写死在这里，避免同一只票两张卡两套数：
+     · 四格 = 形态口径：目标/止损 优先取**明早挂单**（可执行的那套），没有才取陈学长 trade；
+       纯断板票（本池不产价位）退回断板页同款四格。**一张卡只有一个目标、一个止损。**
+     · 底部「下单」行 = orderLineOf（唯一价源），没有就显示「本池不出价」+ 原因。
+     · 持仓/仓位只在陈学长有 trade 时出现——断板确认池从来不产仓位，硬填一个数是编。 */
+/* 形态档的「下单」行——**不复用 orderLineOf**。
+   原因（实测踩到）：orderMap() 里 `ord` 优先取 `duanban.star.timingExec.rows`，那是**今早 9:45
+   已经执行完的**那批限价单。塞力医疗 603716 在陈学长放宽池里，用 orderLineOf 会在
+   「形态确认」卡上印出「昨挂 16.45 · 开盘在限价内，可挂」——一个已经过去的动作，被写成今天可挂。
+   本档只出**往前看**的价：明早挂单 / 盘中买区 / 陈学长「确认日次日开盘买」这三条，其余如实说没有。 */
+function ordShapeOrderLine(o) {
+  var out = [];
+  if (o.plan) {
+    // 用 plan.stop（真正持仓止损位）而不是 plan.floor（限价单作废价）。
+    // 实测 603028 赛福天 limit=floor=10.35 → 「挂 10.35 · 破 10.35 撤」自相矛盾；
+    // 而 stop=10.33 与卡片止损格是同一个数——**一张卡只能有一个撤单价**。
+    out.push('明早挂 <b>' + ordP2(o.plan.limit) + '</b> · 破 ' +
+      ordP2(o.plan.stop == null ? o.plan.floor : o.plan.stop) + ' 撤');
+  }
+  if (o.buy) {
+    out.push('今可买 <b>' + ordP2(o.buy.low) + '~' + ordP2(o.buy.high) + '</b>' +
+      (o.buy.stateZh ? '（' + esc(String(o.buy.stateZh)) + '）' : '') +
+      ' · 破 ' + ordP2(o.buy.invalid) + ' 撤');
+  }
+  if (!out.length) {
+    var ct = (o.chen || {}).trade || {};
+    if (ct.buyRule) {
+      // R100z267b：**② 档不能说「明早开盘买」**。陈学长 trade.buyRule 的字面前提是
+      // 「确认日次日开盘买入」，而 ② 档的票今天**还没确认**（待缩量 / 待脱离）——
+      // 照抄那句等于把「形态观察」写成了「明早动手」，这是会让人提前进场的那种错。
+      var when = (o.phase === 'A') ? '明早开盘买' : '确认后次日开盘买（今天不是买点）';
+      out.push(when + ' · 仓位 ' + (ct.posPct || '—') + '% · 破 ' + ordP2(ct.stopPrice) + ' 撤');
+    }
+  }
+  if (!out.length) {
+    return '<i>下单</i> <span class="xt" title="断板反包确认池只判形态、不产价位：这里的价由 16:00 挂单步'
+      + '（T日涨停 + T+1 断板放量）生成；没有挂单就自己按 T 日最低价定撤单价">本池不给价</span>';
+  }
+  return '<i>下单</i> ' + out.join('<span style="opacity:.3;"> ｜ </span>');
+}
+/* 形态档**唯一**的撤单价出口——卡片止损格、弹窗「退出纪律」都从这里取，不各算一套。
+   四级回落＝「可执行优先」：
+     明早挂单 stop → 盘中买点证伪价 → 陈学长洗盘段低点 → 全站技术位（exitForCode）
+   实测踩到两处并存：603565 中谷物流（纪律位 11.60 vs 挂单 12.16，差 5%）、
+   603160 汇顶科技（纪律位 vs 买点证伪价 50.00）。同一只票两个止损，用户不知道该照哪个
+   ——24.115「仓位三套数互相不认」的同一个病，只是换成了止损。
+   `src==='tech'` 表示这套就是 exitForCode，调用方别再包一层（弹窗要靠它决定是否覆盖）。 */
+function ordShapeStopOf(o) {
+  if (!o) return null;
+  var pl = o.plan || null, by = o.buy || null, ct = (o.chen || {}).trade || {};
+  if (pl && pl.stop != null && isFinite(Number(pl.stop))) {
+    return { stop: Number(pl.stop), src: 'plan', basis: '明早挂单口径',
+             tip: '明早挂单的持仓止损位：成交后跌破即撤' };
+  }
+  if (by && by.invalid != null && isFinite(Number(by.invalid))) {
+    return { stop: Number(by.invalid), src: 'buy', basis: '盘中买点口径',
+             tip: '买点的证伪价：收盘跌破即形态作废，先撤不留' };
+  }
+  if (ct.stopPrice != null && isFinite(Number(ct.stopPrice))) {
+    return { stop: Number(ct.stopPrice), src: 'chen', basis: '陈学长口径',
+             tip: '洗盘段最低价：破位按收盘算' };
+  }
+  var t = tcStopOf((o.db || o.chen || {}).code || o.code);
+  return (t === null) ? null : { stop: t, src: 'tech', basis: '' };
+}
+
+/* 弹窗「退出纪律」在**今日可下单卡片**入口下的覆盖值。
+   R100z268（弹窗实测）：从「形态确认」卡点开 603565，卡片与下单行都写「破 12.16 撤」，
+   而弹窗退出纪律印的是 11.60（技术位）、目标 15.03、仓位 6.4%——同一只票两个止损，
+   正是卡片上刚修掉的病，换到了弹窗里。第二批实测还抓到 600271（④盘中买点卡写「破 6.72 撤」，
+   弹窗印 6.96），说明**这不是形态档独有的**：任何一张卡都会犯，只要弹窗另算一套。
+   所以改法不是「给形态档打补丁」，而是：**卡片出卡时把自己的撤单价一起注册**（exStop/exTgt/…），
+   弹窗只读这张卡注册的那套，一个数字都不自己算。
+   取舍：**弹窗跟着你点进来的那张卡走**。从断板页/陈学长页的池卡进来，卡上没注册这套，
+   仍走 exitForCode（那页的四格也是这么算的）——两处各自自洽，不会「卡片 12.16、点开变 11.60」。
+   目标与仓位只在**与止损同源**时印：挂单不产仓位，就不拿 ATR 反算的仓位顶上（24.115）。 */
+function ordCardExitMeta(code0) {
+  var key = String((typeof DB_CURR === 'undefined' ? '' : DB_CURR) || '');
+  if (key.indexOf('o|') !== 0) return '';
+  var ent = DB_INDEX[key];
+  if (!ent || ent.exStop == null) return '';
+  if (String(ent.code || '').replace(/\D/g, '') !== code0) return '';
+  var st = Number(ent.exStop);
+  if (!isFinite(st)) return '';
+  var _t = Number(ent.exTgt), _okT = (ent.exTgt !== null && ent.exTgt !== undefined && isFinite(_t));
+  var _p = Number(ent.exPos), _okP = (ent.exPos !== null && ent.exPos !== undefined && isFinite(_p));
+  return '<div class="exit-row exit-line"><b>退出纪律</b> 止损 ' + st.toFixed(2) +
+    (_okT ? ' · 目标 <span class="xt">' + _t.toFixed(2) + '</span>' : '') +
+    (_okP ? ' · 仓位 ' + _p.toFixed(1) + '%' : '') +
+    ' <span class="xs">✖</span> ' + esc(ent.exFalsify || '跌破止损位即离场，不摊不扛') +
+    '<span class="xb">（' + esc(ent.exBasis || '') + '；与卡片同源）</span></div>';
+}
+/* 形态档的退出纪律字段（供 ordShapeReg 注册；`tech` 源不注册——那套就是 exitForCode 本身）。 */
+function ordShapeExitMeta(o) {
+  var st = ordShapeStopOf(o);
+  if (!st || st.src === 'tech') return null;
+  var pl = o.plan || {}, by = o.buy || {}, ct = (o.chen || {}).trade || {};
+  return {
+    stop: st.stop, basis: st.basis, src: st.src,
+    tgt: st.src === 'plan' ? pl.tp : (st.src === 'buy' ? by.target : ct.targetPrice),
+    pos: st.src === 'plan' ? null : (st.src === 'buy' ? by.posPct : ct.posPct),
+    falsify: st.src === 'plan'
+      ? '开盘低于下沿即不成交（不追）；成交后跌破这个止损位无条件离场'
+      : (st.src === 'buy' ? '收盘跌破买点证伪价即形态作废，先撤不留'
+                          : '跌破洗盘段最低价即断板反包形态失败，无条件离场')
+  };
+}
+function ordShapeReg(k, o) {
+  var e = o.chen || o.db || {};
+  var phase = o.phase === 'A' ? '形态确认' : '形态即将确认';
+  var srcZh = (o.srcs.indexOf('duanban') >= 0 ? '断板反包' : '') +
+    (o.srcs.length > 1 ? ' + ' : '') + (o.chen ? ('陈学长·' + (o.chenTier === 'strict' ? '严格池'
+      : (o.chenTier === 'loose' ? '放宽池' : '进行中'))) : '');
+  var ol = ordShapeOrderLine(o);
+  DB_INDEX[k] = {
+    code: o.code, name: o.name, sector: o.sector, ztDate: e.ztDate,
+    pct: tcPctOf(o.code, e.pct),
+    sentiment: stkSentiment(o.code) || e.sentiment,
+    // form 不能带「·」：弹窗那行会 .replace(/·/, '：')，会把阶段名切成两段（R100z4e）
+    form: phase + '（' + srcZh + '），' + String(e.stage || '').replace(/·/g, '：'),
+    ordKind: 'shape',
+    ordZh: phase,          // 弹窗徽标用：形态确认 / 形态即将确认（弹窗不猜档名）
+    ordLine: ol.replace(/<[^>]+>/g, '').replace(/^\s*下单\s*/, '').replace(/\s+/g, ' ').trim()
+  };
+  // R100z268：卡片自己的撤单价一起注册 → 弹窗「退出纪律」只读这一份（不另调 exitForCode）
+  var _xm = ordShapeExitMeta(o);
+  if (_xm) {
+    DB_INDEX[k].exStop = _xm.stop; DB_INDEX[k].exTgt = _xm.tgt; DB_INDEX[k].exPos = _xm.pos;
+    DB_INDEX[k].exBasis = _xm.basis; DB_INDEX[k].exFalsify = _xm.falsify;
+  }
+  if (DB_ORDER.indexOf(k) < 0) DB_ORDER.push(k);
+}
+function ordShapeCard(o) {
+  var k = 'o|' + o.code;
+  ordShapeReg(k, o);
+  var e = o.chen || o.db || {};
+  var pl = o.plan, ct = (o.chen || {}).trade || {}, cm = (o.chen || {}).metrics || {};
+  var cells, foot;
+  /* 止损格：**一张卡只许有一个撤单价**，来源统一在 ordShapeStopOf 里（弹窗退出纪律同源）。
+     旧实现在此内联四级回落，与弹窗的那份是两套代码——修了卡片就漏了弹窗，实测正是如此。 */
+  var _stp = ordShapeStopOf(o);
+  var stpCell = _stp
+    ? tcCell('止损', '<span class="xt"' + ((_stp.tip || _stp.basis) ? ' title="' + escAttr(_stp.tip || _stp.basis) + '"' : '')
+        + '>' + _stp.stop.toFixed(2) + '</span>', 'down')
+    : tcCell('止损', '—', 'flat');
+  if (o.chen) {
+    var lbcTxt = cm.lbc ? (cm.lbc === 1 ? '首板' : cm.lbc + ' 板') : '—';
+    var volTxt = cm.volRatio ? cm.volRatio + ' 倍' : '—';
+    // 目标：有明早挂单就用挂单那个（可执行），没有再退回陈学长 trade。
+    var tgt = pl ? pl.tp : ct.targetPrice;
+    var tgtPct = (pl && pl.t1Close) ? ((pl.tp / pl.t1Close - 1) * 100) : ct.targetPct;
+    cells = [
+      tcCell('目标' + (tgtPct ? ' +' + Number(tgtPct).toFixed(1) + '%' : ''),
+        tgt == null ? '—' : Number(tgt).toFixed(2), 'up'),
+      stpCell,
+      tcCell('仓位', ct.posPct ? ct.posPct + '%' : '—', ''),
+      tcCell('连板 / 放量', '<span class="nw">' + lbcTxt + '</span> <span class="nw">' + volTxt +
+        '</span>', '', false, true)
+    ];
+    foot = '<span class="xt">' + esc(String(o.chen.form || '').replace(/·/, '：')) + '</span>';
+  } else {
+    // 纯断板票：与断板页 dbCardHtml 逐格同源（板块涨幅 / 上涨概率 / MA5观察位 / 止损），
+    // 不套陈学长那四格——断板确认池没有目标价、没有仓位，硬套只会渲染一排「—」。
+    var bpNow = boardPctOf(e), prob = e.probability;
+    cells = [
+      tcCell('板块涨幅', bpNow == null ? '—' : fmtPct(bpNow), bpNow > 0 ? 'up' : (bpNow < 0 ? 'down' : '')),
+      tcCell('上涨概率', prob == null ? '—' : prob + '%',
+        e.sentiment === 'bull' ? 'up' : (e.sentiment === 'bear' ? 'down' : '')),
+      tcCell('MA5观察位', (function () {
+        var ma5 = stkMa5Of(e.code, e.kline);
+        return ma5 === null ? '—'
+          : '<span class="xt" title="5 日均线，形态观察位；不是成交价">' + ma5.toFixed(2) + '</span>';
+      })(), ''),
+      stpCell
+    ];
+    foot = '<span class="xt">' + esc(String(e.form || '').replace(/^.*?断板/, '断板').replace(/·/, '：')) + '</span>';
+  }
+  // 阶段徽章 + 板块。池名（断板/陈学长）由 stkTechShortBadges 给，这里只补阶段，
+  // 不重复印两个同色蓝标（R100z220 同一坑）。
+  var pill = o.phase === 'A' ? '形态确认' : ('即将确认·' + String(e.stage || '待信号').replace(/·.*$/, ''));
+  // 明早挂单的时点必须自己说出来：读者要知道这价是「今晚定的、明早核对开盘」，
+  // 不是「现在就能按这个价买」。价写在「下单」行，这里只说时点（同卡两处印同一个数＝两种说法）。
+  if (pl) foot = '<span class="xt warn">明早 ' + esc(String(((window.DASHBOARD_DATA || {}).timingPlan || {}).buyDate || '').slice(5)) +
+    ' 开盘挂单　</span>' + foot;
+  return tcCard({
+    code: o.code, name: o.name, chg: tcPctOf(o.code, e.pct),
+    pills: [pill, o.sector || null], badges: stkTechShortBadges(o.code),
+    sent: true,
+    ord: ordShapeOrderLine(o),
+    cells: cells, foot: foot,
+    attrs: ' data-k="' + escAttr(k) + '"',
+    title: o.name + ' ' + o.code + '（' + (o.sector || '') + ' · ' + pill + '）\n' +
+      '命中：' + ((o.srcs.indexOf('duanban') >= 0 ? '断板反包池　' : '') +
+        (o.chen ? ('陈学长·' + (o.chenTier === 'strict' ? '严格池' : (o.chenTier === 'loose' ? '放宽池' : '形态进行中'))) : '')) +
+      '\n' + (o.chen ? String(o.chen.form || '') : String(e.form || '')) +
+      (pl ? ('\n明早挂单：限价 ' + ordP2(pl.limit) + '｜下沿 ' + ordP2(pl.floor) + ' 破了撤｜目标 '
+        + ordP2(pl.tp) + '｜' + (pl.exitNote || '') ) : '') +
+      '\n点开看K线、个股消息与池归属'
+  });
+}
+
+
 /* R100z258（用户 2026-10-28 截图 2「规则全部增加展开按钮，默认隐藏」）：
    三块口径统一走原生 <details>，不写 JS 状态、不存 localStorage——折叠只是「现在想不想看」。
    摘要行固定给「这是什么 + 几条/几笔」，正文才是口径原文：收起状态也必须能判断值不值得点开，
@@ -7088,6 +7456,26 @@ function ordRuleBlocks(P) {
   rules.push({ s: true, t: '谐波形态与主力吸筹没有下单价：清单只收有回测支撑的三个来源'
     + '（陈学长严格池 / 断板反包确认池 / 横盘启动），这两个池从来没有下单价口径——'
     + '不是今天没命中，也不是抓空。它们在「开盘精选」里，看形态不看价。' });
+  /* R100z267：四栏的分工必须写在页面上。用户 2026-10-28 的原话是
+     「你今天提供的今日可下单标的很多都没有陈学长啊」——问题不在数据，在这块原来
+     只按「执行时点」组织，形态最成熟的那批反而排在后面甚至不在里面。
+     现在四栏各有准入来源，一栏一句说清；同一只票只出一次卡（价并进那张卡）。 */
+  var _nA = (P.poolA || []).length, _nB = (P.poolB || []).length;
+  if (_nA || _nB) {
+    h += ordFold('四栏的分工（同一只票只出一张卡）', _nA + ' + ' + _nB + ' 只形态档',
+      '<div class="ord-li"><i>①</i><span>形态确认 = 断板反包确认池（四步全走完：涨停→放量断板→缩量→站稳MA5）'
+        + ' ∪ 陈学长严格池/放宽池（缩量确认）。这一档是「按图形能下单」的那批。</span></div>' +
+      '<div class="ord-li"><i>②</i><span>形态即将确认 = 断板观察池（待缩量/待脱离）∪ 陈学长形态进行中。'
+        + '共同点是还差一根确认K线——卡片上的目标/止损是确认之后才生效的参数，今天不是买点。</span></div>' +
+      '<div class="ord-li"><i>③</i><span>明早挂单 = 只走完「T日首板涨停 → T+1 放量断板」两步就下单，'
+        + '不等缩量、不等站稳MA5。它与①②是同一批票的不同时点：等形态确认完，那个开盘价就没了。'
+        + '所以①②里的票如果同时有挂单，价写在卡脚，不另出一张卡。</span></div>' +
+      '<div class="ord-li"><i>④</i><span>盘中买点 = 现价落进买区（现价上下1%）才成立，随价重算。</span></div>' +
+      '<div class="ord-li"><i>·</i><span>一张卡只有一个目标、一个止损：有明早挂单就取挂单那套（唯一可执行价），'
+        + '没有再取陈学长形态参数；两套都印出来就是两个止损，没人知道该照哪个。</span></div>' +
+      '<div class="ord-li"><i>·</i><span>记账分开记：①②的票记在断板反包 / 陈学长两个池的复盘台账里，'
+        + '③④才是「明日挂单」那本账。三本账各算各的胜率，别拿一个的准确率去核另一个的票。</span></div>');
+  }
   if (rules.length) {
     var NUM = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'], no = 0;
     h += ordFold('下单规则', rules.length + ' 条',
@@ -7101,11 +7489,13 @@ function ordRuleBlocks(P) {
       '<div class="ord-li"><i>·</i><span>' + esc(ordMd(te.riskNote)) + '</span></div>');
   }
   /* R100z262（用户 2026-10-28 20:32 第二次问「这些标的为什么不在断板反包确认池」）：
-     断板确认池有一道「流通市值 100~400 亿」的门槛，市值过滤发生在抓 K 线**之前**，
+     断板确认池有一道市值门槛，市值过滤发生在抓 K 线**之前**，
      被剔的票既不进确认池、观察池，也不进失效池——它们在系统里等于不存在。
      过去这道门槛只出现在 16:00 的 stderr 一行日志里，页面一点痕迹都没有，所以
      「挂单收了它、池子没有它」看起来就是 bug。这里把名单摆出来，让读者自己能判断
-     「是形态没成立，还是被门槛挡住了」。 */
+     「是形态没成立，还是被门槛挡住了」。
+     R100z266：下限撤掉后这块只剩「超过 400 亿」一种情况，标题与 tag 一并改口，
+     别再写「100 亿下限」。 */
   (function () {
     var db = (P.D || {}).duanban || {};
     var arr = db.mcapCut || [];
@@ -7113,7 +7503,7 @@ function ordRuleBlocks(P) {
     if (!tot) return;
     var nShow = Math.min(arr.length, 24);
     var rows = arr.slice(0, nShow).map(function (x) {
-      var tag = x.side === 'lo' ? '低于下限 100 亿' : '高于上限 400 亿';
+      var tag = x.side === 'lo' ? '市值偏低' : '超过 400 亿';
       return '<div class="ord-li"><i>·</i><span>' + esc(x.code + ' ' + (x.name || '') +
         '　' + x.mcap + ' 亿' + '（' + tag + '）') + '</span></div>';
     }).join('');
@@ -7127,8 +7517,8 @@ function ordRuleBlocks(P) {
       : '';
     h += ordFold('被市值门槛剔掉的 ' + tot + ' 只', '点开看名单',
       '<div class="ord-li"><i>·</i><span>' + esc(db.mcapCutNote ||
-        ('流通市值必须在 100~400 亿之间。市值过滤发生在抓 K 线之前，所以这些票的形态'
-         + '根本没被判定过——不在确认池不代表形态不成立。')) + '</span></div>' + rows + more);
+        (mcapBandZh(0, 400) + ' 是断板反包确认池的口径。市值过滤发生在抓 K 线之前，'
+         + '所以这些票的形态根本没被判定过——不在确认池不代表形态不成立。')) + '</span></div>' + rows + more);
   })();
   var b = te && te.bt;
   if (b && b.n) {
@@ -7174,42 +7564,86 @@ function ordBlockHtml() {
   if (!P.n) return '';
   var sum = [];
   var buyD = (te && te.buyDate) ? String(te.buyDate).slice(5) : '';
-  if (P.teRows.length) {
-    sum.push((P.isNextPlan ? '明日 ' + buyD + ' 开盘挂单 ' : '昨晚挂单 ') + P.teRows.length + ' 只' +
+  /* R100z267：摘要顺序跟着分档走——先说形态（本区块现在的主档），再说执行时点。
+     两个日期必须同时出现，读者要能看出「现在看的是明天的单，不是今早那批」（R100z260）。 */
+  var nPriced = P.poolA.concat(P.poolB).filter(function (o) { return !!(o.plan || o.buy); }).length;
+  sum.push('形态确认 ' + P.poolA.length + ' 只 · 即将确认 ' + P.poolB.length + ' 只（其中 ' + nPriced + ' 只有可执行价）');
+  if (P.teRowsOut.length) {
+    sum.push((P.isNextPlan ? '明日 ' + buyD + ' 开盘挂单 ' : '昨晚挂单 ') + P.teRowsOut.length + ' 只' +
       (P.fallback ? '（未开盘，照限价挂；可挂/破位要等明早 9:25 集合竞价后才知道，现在不编）'
         : '（可挂 ' + (te.nGo || 0) + ' · 高于限价 ' + (te.nMissed || 0) + ' · 已破下沿 ' + (te.nBroken || 0) + '）'));
   }
   // R100z260：今早那一批的执行结果降成一句——换掉主列表不等于把它藏了。
-  //   两个日期必须同时出现：读者要能看出「现在看的是明天的单，不是今早那批」。
   if (P.execHist && P.execHist.rows && P.execHist.rows.length) {
     sum.push('今早 ' + String(P.execHist.buyDate || '').slice(5) + ' 执行 ' + P.execHist.rows.length + ' 只' +
       '（可挂 ' + (P.execHist.nGo || 0) + ' · 高于限价 ' + (P.execHist.nMissed || 0) +
       ' · 已破下沿 ' + (P.execHist.nBroken || 0) + '）');
   }
-  if (P.bl.length) {
-    sum.push('盘中买点 ' + P.bl.length + ' 只（现价在买区内 ' + P.nBuy + ' 只' +
-      (P.blDupPick.length ? '，其中 ' + P.blDupPick.length + ' 只已在精选' : '') +
-      // 与「昨晚挂单」同码的那几只已经在那 8 张卡里（同一只票两个时点合并成一张），
-      // 不说这一句，读者就得拿「8 只」去减卡片数（减法不该由读者做）。
-      (P.blDupPlan.length ? '，另 ' + P.blDupPlan.length + ' 只昨晚已挂单' : '') + '）');
+  if (P.blOut.length) {
+    sum.push('盘中买点 ' + P.blOut.length + ' 只（现价在买区内 ' +
+      P.blOut.filter(function (r) { return r.state === 'buy'; }).length + ' 只）');
   }
-  return '<div class="db-pool p-ord"><h2>💵 今日可下单 · ' + P.n + ' 只' +
-      (P.isNextPlan && buyD ? '（' + buyD + ' 开盘挂）' : '') + '</h2>' +
+  /* 去重的账要说清：读者会拿「池 18 只 + 挂单 8 只 + 买点 29 只」去减卡片数，
+     减法不该由他做（24.110）。这三个数各自是**并入别卡 / 剔出**的，不是丢了。 */
+  var nMerge = (P.poolA.concat(P.poolB).filter(function (o) { return !!(o.plan || o.buy); })).length;
+  var dedupTxt = [];
+  if (nMerge) dedupTxt.push(nMerge + ' 只同时在池与挂单/买点里，价已并进形态卡，不重复出卡');
+  /* 「已在精选」这句只对**没有形态卡**的票说。汇顶科技 603160 既在买点清单、又在精选固定区、
+     还在断板确认池 —— 它已经在本页 ① 档出了卡，再说它「已在开盘精选卡里，不重复建卡」
+     会让读者以为这张卡不存在（实测 2026-10-28 就是这三个名字一起冒出来）。 */
+  var blPickNoPool = P.blDupPick.filter(function (r) { return !P.poolA.concat(P.poolB).some(function (o) {
+    return o.code === String(r.code || '').replace(/\D/g, '');
+  }); });
+  if (blPickNoPool.length) {
+    dedupTxt.push(blPickNoPool.map(function (r) {
+      return '<span class="ord-nw">' + esc(r.name || String(r.code)) + '</span>';
+    }).join('、') + ' 的买点已在开盘精选固定区展示，不重复建卡');
+  }
+  if (P.nBpCut) dedupTxt.push(P.nBpCut + ' 只「横盘启动·贴沿」未列入（理由见下方下单规则）');
+
+  var h = '<div class="db-pool p-ord"><h2>💵 今日可下单 · ' + P.n + ' 只</h2>' +
     '<div class="db-sub">' + esc(sum.join('　·　')) +
-      '。挂多少钱、破多少撤写在每只票自己卡片底部那行「下单」里，不再另开表格' +
-      (P.isNextPlan
-        ? '。这批只走完「T 日首板涨停 → 次日放量断板」两步就下单——断板确认池要四步全走完（多等 1~3 个交易日缩量确认），' +
-          '等它确认完价格早走了；所以同一只票不会同时出现在两边，这是时点差异（两套口径见下方规则）'
-        : '') +
-      (P.blDupPick.length
-        ? '；' + P.blDupPick.map(function (r) {
-            return '<span class="ord-nw">' + esc(r.name || String(r.code)) + '</span>';
-          }).join('、') + ' 已在上面开盘精选卡里，不重复建卡'
-        : '') +
-      (P.nBpCut ? '；另有 ' + P.nBpCut + ' 只「横盘启动·贴沿」命中未列入，理由见下方下单规则' : '') +
-    '</div><div class="db-chips">' +
-      P.teRows.map(ordPlanCard).join('') + P.blRest.map(ordHitCard).join('') +
-    '</div>' + ordRuleBlocks(P) + '</div>';
+      (dedupTxt.length ? '。' + dedupTxt.join('；') : '') +
+      '。挂多少钱、破多少撤写在每只票自己卡片底部那行「下单」里，不再另开表格</div>';
+
+  /* —— ① 形态确认 ——
+     这是用户 2026-10-28 明确要的那一档：「断板反包 + 陈学长 + 形态确认」。
+     排在最前是因为它才是「能按图形下单」的那批；挂单/买点是更早的时点，排在后面。 */
+  if (P.poolA.length) {
+    h += '<div class="db-sec">① 形态确认<span class="db-sec-n">' + P.poolA.length +
+      ' 只 · 断板确认池 + 陈学长缩量确认</span></div>' +
+      '<div class="db-chips">' + P.poolA.map(ordShapeCard).join('') + '</div>';
+  }
+  /* —— ② 形态即将确认 ——
+     必须写「现在不能下单」。这一档的形态就是用户截图里那 8 只「只差最后一个反包」，
+     它们的共同点是**还差一根确认K线**；把它当买点直接上手，等于在形态没成立时进场。 */
+  if (P.poolB.length) {
+    h += '<div class="db-sec">② 形态即将确认<span class="db-sec-n">' + P.poolB.length +
+      ' 只 · 还差一根确认K线，现在不能下单</span></div>' +
+      '<div class="db-sub" style="margin:-2px 0 6px">这一档列出来是为了让你明天第一时间看到它走没走出来；' +
+      '卡片上的目标与止损是确认之后才生效的参数，不是今天的买点。' +
+      (P.poolB.filter(function (o) { return o.plan; }).length
+        ? '其中 ' + P.poolB.filter(function (o) { return o.plan; }).length +
+          ' 只另有明早挂单——那套口径不等确认（见③栏说明），价格已写在卡脚。' : '') +
+      '</div><div class="db-chips">' + P.poolB.map(ordShapeCard).join('') + '</div>';
+  }
+  /* —— ③ 明早挂单（不等形态确认的那套）——
+     这一档的准入是「T日首板涨停 + T+1 断板放量 1.1~3.5 + 成交额≥2亿」，**不等缩量、不等站稳 MA5**。
+     它与①②是同一批票的不同时点（24.120）：等形态确认完，那个开盘价就没了。
+     只有「不在池里」的才出现在这里——在池的已经把挂单价并进①②那张卡。 */
+  if (P.teRowsOut.length) {
+    h += '<div class="db-sec">③ ' + (P.isNextPlan ? '明早 ' + buyD + ' 开盘挂单' : '昨晚挂单') +
+      '<span class="db-sec-n">' + P.teRowsOut.length +
+      ' 只 · 不等形态确认（只走完「涨停→断板」两步）</span></div>' +
+      '<div class="db-chips">' + P.teRowsOut.map(ordPlanCard).join('') + '</div>';
+  }
+  /* —— ④ 盘中买点 —— */
+  if (P.blOut.length) {
+    h += '<div class="db-sec">④ 盘中买点<span class="db-sec-n">' + P.blOut.length +
+      ' 只 · 现价落在买区内才成立</span></div>' +
+      '<div class="db-chips">' + P.blOut.map(ordHitCard).join('') + '</div>';
+  }
+  return h + ordRuleBlocks(P) + '</div>';
 }
 
 /* R100k：子页菜单改为字符串渲染（可嵌入各子页内容流任意位置）；switchSubTab 经 querySelectorAll
@@ -7952,8 +8386,11 @@ function openDbModal(key) {
       //   ② 从陈学长页点开一只「陈学长观察池 + 断板失效」的票，只看得到陈学长——
       //   用户 2026-10-28 截图 5 的原话就是「这两个徽章都要放」。
       if (isOrd) {
+        // R100z268：ordKind 现在有三档（shape/plan/hit）。原来只判 'plan'，其余一律印
+        // 「盘中买点」——实测 603565 明明是「形态即将确认」卡，点开徽标却写「盘中买点」，
+        // 读者会以为点错了入口。档名由卡片自己注册（ordZh），弹窗不再猜。
         return '<span class="pool-badge hold">今日可下单 · ' +
-          (e.ordKind === 'plan' ? '昨晚挂单' : '盘中买点') + '</span>' + tb + mcapCutBadgeHtml(e.code);
+          esc(e.ordZh || (e.ordKind === 'plan' ? '昨晚挂单' : '盘中买点')) + '</span>' + tb + mcapCutBadgeHtml(e.code);
       }
       return (tb || ('<span class="pool-badge ' + (done ? 'done' : 'hold') + '">' +
         (done ? '确认池' : ('观察池 · ' + esc(e.stage || '待定'))) + '</span>')) +
