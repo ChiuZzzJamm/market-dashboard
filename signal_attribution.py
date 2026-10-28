@@ -70,12 +70,17 @@ SRC_LABEL = {
     'breakoutPool': '横盘启动',
     'harmonic': '谐波形态',
     'accumulation': '主力吸筹',
+    # R100z255：全站唯一「明确告诉你现在能买」的清单，此前是唯一没有台账的源。
+    'buy': '今日可下单',
 }
 
 # 页面展示顺序（用户 2026-10-26 指定）：七个指标逐行分开，不再合并成「机械池」一行。
 # 不在这个元组里的 src 一律不展示——powerScreen（九门）已废弃，台账里还留着 30 条历史记录，
 # 不过滤就会在页面上挂一行永久「累积中」的死指标。
-ROW_ORDER = ('ai', 'mech', 'duanban', 'chen', 'breakoutPool', 'harmonic', 'accumulation')
+# R100z255：'buy'（今日可下单）排在最后，**不动用户点名的那七个的顺序**——
+# 它是一个「组合清单」而非第八个指标，放在末尾既不打乱原有对照，又能一眼看到
+# 「这份清单按自己的口径算下来是什么水平」。
+ROW_ORDER = ('ai', 'mech', 'duanban', 'chen', 'breakoutPool', 'harmonic', 'accumulation', 'buy')
 
 # stop_ledger 的 stopSrc → 主台账键名。stop_ledger 无法区分吸筹与横盘启动
 # （两者都落进 default-3%），所以合成一个 'mech'，不硬拆成两个假精度。
@@ -153,7 +158,38 @@ def snapshot(D):
         for x in cp.get(pool) or []:
             _put('chen', x.get('code'), x.get('name'), x.get('sector'))
 
+    # ---- R100z255：今日可下单（duanban.star.buyList） ----
+    # 为什么单独登记这一源：它是全站唯一「明确告诉你现在能买、买在哪个价带、破哪个价撤」的清单，
+    # 却也是唯一没有任何后续台账的出口——24.109 用**回测**证明过各源 edge 大小，
+    # 但「按这套清单真买会怎样」从来没被自己的实盘快照验证过。剔掉横盘启动源
+    # （24.110）这个决定是否正确，只能靠这张表回答。
+    # 口径必须与生成端一致：剔除 src='bp'（T+5 超额 t=0.41 不显著），否则台账里会多出
+    # 21 条「本来就不让人买」的记录，把这份清单的胜率拉向一个没人执行过的结果。
+    bl = ((D.get('duanban') or {}).get('star') or {}).get('buyList') or []
+    for x in bl:
+        if str(x.get('src') or '') == 'bp':
+            continue
+        _put('buy', x.get('code'), x.get('name'), x.get('sector'))
+
     return {s: list(v.values()) for s, v in out.items()}
+
+
+def buy_entry_date(D):
+    """清单的登记日 = **清单生成日**（star.date），不是 ashare.tradeDate。
+
+    ## 为什么必须分开算（2026-10-28 实测）
+
+    `ashare.tradeDate` 是「数据步最近一次跑出来的交易日」，在 16:00 数据步之前它仍是 **T−1**
+    （实测 10-28 10:49：star.date=2026-10-28，ashare.tradeDate=2026-10-27）。
+    若拿它当登记日，今天 9:45 生成的清单会被记到**昨天**名下，次日回算就变成
+    「昨天买的、今天已经涨了」——凭空生出一笔从不存在的收益，而且**没有任何闸门会拦**
+    （条目结构完全合法，只是日期错了）。
+
+    这与 24.101「加护栏必须验证拦住之后落到哪」是同一类错：错在标杆选错了对象，
+    而不是算错了数。清单的可下单日，只由清单自己的生成日决定。
+    """
+    d = str((((D.get('duanban') or {}).get('star') or {}).get('date')) or '')[:10]
+    return d or None
 
 
 def fwd_ret(bars, entry_day, n):
@@ -430,18 +466,29 @@ def build(D, do_snapshot=True):
 
     if do_snapshot and trade_date:
         snap = snapshot(D)
-        cur = ent.get(trade_date) or {}
         added = 0
+        # R100z255：'buy' 用自己那天的日期（清单生成日），其余源仍用 trade_date。
+        # 混用会把清单记到 T−1（见 buy_entry_date 的实测说明），凭空造出收益。
+        _buy_day = buy_entry_date(D)
+        per_day = {}
         for src, items in snap.items():
-            known = {x['code'] for x in cur.get(src, [])}
-            new = [x for x in items if x['code'] not in known]
-            if new:
-                cur[src] = (cur.get(src) or []) + new
-                added += len(new)
-        if cur:
-            ent[trade_date] = cur
+            day = _buy_day if src == 'buy' else trade_date
+            if not day:
+                continue
+            per_day.setdefault(day, {}).setdefault(src, []).extend(items)
+        for day, groups in per_day.items():
+            cur = ent.get(day) or {}
+            for src, items in groups.items():
+                known = {x['code'] for x in cur.get(src, [])}
+                new = [x for x in items if x['code'] not in known]
+                if new:
+                    cur[src] = (cur.get(src) or []) + new
+                    added += len(new)
+            if cur:
+                ent[day] = cur
         if added:
-            print('[OK] 登记 %s：新增 %d 条指标选股记录' % (trade_date, added))
+            print('[OK] 登记 %s：新增 %d 条指标选股记录'
+                  % ('/'.join(sorted(per_day)) if len(per_day) > 1 else trade_date, added))
 
     stats, bench = compute(L, D)
     summ = summarize(stats)
@@ -500,6 +547,20 @@ def build(D, do_snapshot=True):
 
     weights, wmsg = suggest_weights(summ)
 
+    # R100z255：清单这一行的入场时点与另外七行**不同**，必须自己说出来。
+    # 其余七行是「16:00 复盘时选出的票」，最早能买是次日开盘（所以 x = T+1 开盘买入）。
+    # 而「今日可下单」是 9:45 出的、当天就能在买区内下单，真实成交落在当日盘中——
+    # 台账里没有盘中价，只有收盘价，所以两列都是**近似**：T+h 收盘（偏保守或偏乐观）
+    # 与 T+1 开盘（晚一天）。不写这句，读者会把「0 日买入」当成它的真实成绩。
+    _bn = (summ.get('buy') or {}).get('n') or 0
+    _buy_note = (
+        '「今日可下单」这行的入场时点与其余七行不同：清单 9:45 生成、当天就能在买区内下单，'
+        '而台账只有收盘价。所以两列都是近似——T+h 收盘是「当日收盘才买」（偏晚），'
+        'x 是「次日开盘才买」（更晚），真实成交价落在两者之间。'
+        '按清单口径已结算 ' + str(_bn) + ' 笔；样本满 ' + str(MIN_N) + ' 笔且覆盖 '
+        + str(MIN_DAYS) + ' 个交易日才给判定。'
+    )
+
     ranking = []
     for s, r in summ.items():
         e5 = r['h']['5'].get('exc')
@@ -536,7 +597,10 @@ def build(D, do_snapshot=True):
                      'bench': '全市场等权（1300+ 只当日涨幅中位数累乘）',
                      'excess': '标的收益 − 同期基准收益（仅「收盘买入」口径有）',
                      'hBasis': '收盘买入：登记日收盘 → T+h 收盘（旧口径，复盘写完时已收盘，买不到）',
-                     'xBasis': '可执行：T+1 开盘 → T+h 收盘（1 日 = 当日收盘卖，2 日 = 次日收盘卖）'},
+                     'xBasis': '可执行：T+1 开盘 → T+h 收盘（1 日 = 当日收盘卖，2 日 = 次日收盘卖）',
+                     'buyBasis': '今日可下单：清单 9:45 生成、当天可下单；两列均为近似，'
+                                 '真实成交价落在「当日收盘买」与「次日开盘买」之间'},
+        'buyNote': _buy_note,
         'bySrc': summ,
         'ranking': ranking,
         'weights': weights,
