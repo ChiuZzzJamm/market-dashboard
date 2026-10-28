@@ -6950,35 +6950,10 @@ function ordPoolCore() {
   return { idx: idx, codes: codes };
 }
 
-/* 单只票的形态档条目（含明早挂单 / 盘中买点的价，口径与 ordPrep 逐个字段对齐）。
-   懒建一次缓存：data.js 一个会话内只加载一次，与 orderMap() 的 _ORD_MAP 同一套前提。 */
-var _ORD_ENT = null;
-function ordShapeEntOf(code0) {
-  var c = String(code0 || '').replace(/\D/g, '');
-  if (!/^\d{6}$/.test(c)) return null;
-  if (!_ORD_ENT) {
-    var D = window.DASHBOARD_DATA || {};
-    var core = ordPoolCore();
-    var planMap = {}, buyMap = {};
-    ((D.timingPlan || {}).orders || []).forEach(function (o) {
-      var k = String(o.code || '').replace(/\D/g, '');
-      if (/^\d{6}$/.test(k)) planMap[k] = o;
-    });
-    // 与 ordPrep 同口径：src==='bp'（横盘启动·贴沿）不参与，生成端已剔、前端再兜一层
-    (((D.duanban || {}).star || {}).buyList || []).forEach(function (r) {
-      var k = String(r.code || '').replace(/\D/g, '');
-      if (String(r.src || '') === 'bp') return;
-      if (/^\d{6}$/.test(k) && !buyMap[k]) buyMap[k] = r;
-    });
-    core.codes.forEach(function (k) {
-      var o = core.idx[k];
-      o.plan = planMap[k] || null;
-      o.buy = buyMap[k] || null;
-    });
-    _ORD_ENT = core.idx;
-  }
-  return _ORD_ENT[c] || null;
-}
+/* R100z268：这里原有一个 ordShapeEntOf(code)（按 code 查形态档条目，带 _ORD_ENT 全局缓存），
+   在弹窗改成「只读卡片注册的 exStop」之后**没有调用方了**——留着就是一个带缓存的死函数，
+   下次有人想「按 code 查形态档」会先看见它、然后拿到一份和卡片不同的数（缓存不清、口径独立）。
+   要按 code 查，正路是 DB_INDEX['o|'+code]（卡片出卡时注册的那份），别再建第二份索引。 */
 
 /* 数据准备：页面里所有数字都从这里出，卡片/摘要/规则三处共用同一份，不各算一遍。 */
 function ordPrep() {
