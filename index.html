@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202610282358"></script>
+<script src="data.js?v=202610290014"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -427,6 +427,26 @@
   .exit-row.exit-line { margin-top: 6px; margin-bottom: 2px; padding: 6px 8px; border-radius: 5px;
     background: var(--down-soft, rgba(15,157,120,.07)); border: 1px solid var(--down-soft, rgba(15,157,120,.18)); }
   .exit-row .xb { color: #98a6b5; }
+  /* R100z274（用户 2026-10-29 00:06「明日概率占的面积太大了」）：概率拆解原来是
+     「每条一个 .exit-line 盒子」，9 条各自带背景/边框/6px 外边距/12px 内边距 ≈ 400px。
+     改成整块一个盒子 + 三列行（名称定宽 / 数值定宽右对齐 / 依据吃剩余宽度），≈ 200px。
+     `.pb-d` 用 #98a6b5 而不是继承，是为了让「加减值」成列之后依据仍明显退到第二层。 */
+  .pb-box { padding: 7px 10px 8px; }
+  .pb-h { font-size: var(--fs-sm); line-height: 1.5; margin-bottom: 3px; }
+  .pb-i { display: flex; align-items: baseline; gap: 8px; font-size: var(--fs-sm); line-height: 1.5; }
+  .pb-k { flex: 0 0 5.6em; color: var(--ink2); }
+  .pb-v { flex: 0 0 3.2em; text-align: left; font-variant-numeric: tabular-nums; }
+  .pb-d { flex: 1 1 auto; min-width: 0; color: #98a6b5; }
+  .pb-sum { margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(15,157,120,.35); }
+  .pb-sum .pb-v { color: var(--ink); }
+  /* 手机上原先想「名称+数值一行、依据换行占满」，实测**更差**：390px 窗口下整块
+     586px，而保持三列（依据列自然换行）只要 406px——强制换行等于每行多垫一行高度。
+     所以这一档不再分叉，全宽统一三列。 */
+  @media (max-width: 720px) {
+    .pb-k { flex: 0 0 4.6em; }
+    .pb-v { flex: 0 0 2.8em; }
+    .pb-i { gap: 6px; }
+  }
   .excess-dot { display: inline-block; padding: 0 5px; margin-left: 4px; border-radius: 3px; font-size: var(--fs-xs);
     border: 1px dashed currentColor; vertical-align: 1px; }
   .excess-dot.pos { color: var(--up); }
@@ -2012,10 +2032,25 @@ function mcapCutOf(code) {
    它唯一的读者是「被市值门槛剔掉的 N 只」那张折叠名单，名单随 ④⑤ 一起下线后全文件零调用。
    徽章 mcapCutBadgeHtml 只报当天剔除数、不印市值带——要恢复市值带文案，得连名单一起恢复，
    否则又是一个「自称唯一出口、实际没人读」的死函数。 */
+function mcapBandOf() {
+  var b = ((window.DASHBOARD_DATA || {}).duanban || {}).mcapBand;
+  return (b && typeof b === 'object') ? b : null;
+}
 function mcapCutBadgeHtml(code, cls) {
   var mc = mcapCutOf(code);
   if (!mc) return '';
+  /* R100z274（用户 2026-10-29 00:06「断板市值是小于等于 400 亿，它市值 30 亿应该不剔除的吧？」）：
+     这条不是判定错了，是**数据和规则不同龄**。16:02 那次运行还在旧口径（100~400 亿）下，
+     159 只小盘票全带 side='lo' 进了 mcapCut；21:5x 下限撤到 0 之后代码不再产出 lo，
+     但 data.js 里那份名单要到下一次 16:00 才被覆盖 —— 中间这段时间，30 亿的永和智控
+     卡片上照印「断板·市值剔除」。
+     ⇒ 判据不给前端硬编码 400/0（那是第二套口径，改一处忘一处就复发），而是问数据自己：
+     `duanban.mcapBand` 是脚本写这份名单时**实际用的带子**。侧别为 'lo' 但数据没自报下限
+     （或自报 lo<=0）＝这条来自已废的规则，不出徽章。回滚 CAP_MIN 时数据自带 lo=100，
+     徽章自动回来，前端一个字都不用改。 */
+  var band = mcapBandOf();
   var lo = mc.side === 'lo';
+  if (lo && !(band && Number(band.lo) > 0)) return '';
   var txt = '断板·市值剔除';
   /* R100z264：徽章只回答「它为什么不在池里」，不负责回答「同类的还有谁」。
      R100z273：原来这里还有半句「完整名单在本页最下方那个折叠块里，点开可见」——
@@ -2030,7 +2065,11 @@ function mcapCutBadgeHtml(code, cls) {
      它没过的是市值那道，形态根本没校验——**这也正是它不进失效池的原因**（失效池只收
      「曾在池、今日滑出」的票）。真要回答「它形态成不成立」，得有 16:00 步补跑校验，那是另一件事。
      R100z266：下限撤掉后「低于下限」分支已成死路，留着不删（回滚不用改前端）。 */
-  var tip = '断板反包·确认池没收它，卡在「' + (lo ? '市值偏低' : '流通市值 ' + mc.mcap + ' 亿，超过 400 亿上限') + '」。\n' +
+  var _hi = (band && Number(band.hi) > 0) ? Number(band.hi) : null;
+  var tip = '断板反包·确认池没收它，卡在「' + (lo
+      ? ('流通市值 ' + mc.mcap + ' 亿，低于下限'
+         + ((band && Number(band.lo) > 0) ? ' ' + Number(band.lo) + ' 亿' : ''))
+      : ('流通市值 ' + mc.mcap + ' 亿，超过' + (_hi ? ' ' + _hi + ' 亿' : '') + '上限')) + '」。\n' +
     '注意：市值过滤在抓 K 线之前，所以这只票没跑过形态校验——系统不知道它形态成不成立；' +
     '也正因为没跑，它不会出现在失效池（失效池只收「曾在池、今日滑出」的票）。' +
     (tot ? '\n今天被这道门槛挡掉的共 ' + tot + ' 只（名单不再展开在页面上，需要时问我要）。' : '');
@@ -7806,20 +7845,31 @@ function ordCardExitMeta(code0) {
      拆解只读卡片注册的那一份（ent.prob），不在这里重算——
      重算就会出现「卡片 68%、点开 62%」，正是刚修完的那类病。 */
   if (ent.prob && ent.prob.p != null) {
-    h += '<div class="exit-row exit-line"><b>明日概率 ' + ent.prob.p + '%</b>' +
+    /* R100z274（用户 2026-10-29 00:06「这一部分显示看下如何优化，占的面积太大了」）：
+       原来每一条加减项各套一层 .exit-row.exit-line —— 各自一条背景、一圈边框、6px 外边距 +
+       12px 内边距，八九条排下来 400px 出头，整屏都是浅绿空盒子，真正要看的「哪一项在加、
+       哪一项在减」反而被淹掉。现在**整块只留一个盒子**，里按「名称 / 加减值 / 依据」三列排：
+       名称列定宽、数字列定宽右对齐（tabular-nums，加减号成列能顺着扫），依据列吃掉剩余宽度，
+       窄屏自然换行——**不截断**，截断就是 24.110「空着＝有结论没写」的翻版。
+       同样 9 条压到 200px 上下。 */
+    var pbSum = Number(ent.prob.sum) || 0;
+    h += '<div class="exit-row exit-line pb-box"><div class="pb-h"><b>明日概率 ' + ent.prob.p + '%</b>' +
       '<span class="xb">（' + esc(ent.prob.baseSrc) + ' ' + ent.prob.base + '%，逐项加减如下）</span></div>';
     (ent.prob.notes || []).forEach(function (nt) {
-      h += '<div class="exit-row exit-line">&nbsp;&nbsp;· <span class="xb">' + esc(nt) + '</span></div>';
+      h += '<div class="pb-i pb-note"><span class="pb-k">说明</span><span class="pb-d">' + esc(nt) + '</span></div>';
     });
     (ent.prob.parts || []).forEach(function (x) {
-      h += '<div class="exit-row exit-line">&nbsp;&nbsp;· ' + esc(x.k) +
-        (x.v ? ' <b class="' + (x.v > 0 ? 'up' : 'down') + '">' + (x.v > 0 ? '+' : '') + x.v + '</b>'
-             : ' <b>0</b>') +
-        (x.d ? '<span class="xb">　' + esc(x.d) + '</span>' : '') + '</div>';
+      var v = Number(x.v) || 0;
+      h += '<div class="pb-i"><span class="pb-k">' + esc(x.k) + '</span>' +
+        '<b class="pb-v ' + (v > 0 ? 'up' : (v < 0 ? 'down' : '')) + '">' +
+        (v > 0 ? '+' + v : String(v)) + '</b>' +
+        '<span class="pb-d">' + esc(x.d || '') + '</span></div>';
     });
-    h += '<div class="exit-row exit-line">&nbsp;&nbsp;＝ 基线 ' + ent.prob.base +
-      (ent.prob.sum >= 0 ? ' + ' : ' − ') + Math.abs(ent.prob.sum) + ' → <b>' + ent.prob.p + '%</b>' +
-      '<span class="xb">（因子打分，不是回测胜率；排序与解释用）</span></div>';
+    /* 合计行原来是「＝ 基线 52 + 12.1 → 64%」独立一个盒子；现在并进同一块做脚注，
+       数字列照样对齐，读者能一眼看出 64% 是 52 加出来的一条一条。 */
+    h += '<div class="pb-i pb-sum"><span class="pb-k">合计</span><b class="pb-v">' + ent.prob.p + '%</b>' +
+      '<span class="pb-d">基线 ' + ent.prob.base + (pbSum >= 0 ? ' + ' : ' − ') + Math.abs(pbSum) +
+      '（因子打分，不是回测胜率；排序与解释用）</span></div></div>';
   }
   return h;
 }
