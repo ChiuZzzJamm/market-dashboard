@@ -3691,6 +3691,17 @@
      "close": 30.17
     }
    ]
+  },
+  "2026-10-29": {
+   "leadLag": [
+    {
+     "code": "603013",
+     "name": "亚普股份",
+     "sector": "汽车零部",
+     "screen": "leadLag",
+     "rule": "secGap>1.0&lag>2.0&yret>0"
+    }
+   ]
   }
  },
  "updatedAt": "2026-10-28 16:42:59"
