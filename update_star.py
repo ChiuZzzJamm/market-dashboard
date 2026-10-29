@@ -914,7 +914,7 @@ def build_star(D, base=None):
         if sent == "bear":
             continue  # 利空标的不进精选
         if blacklist.get(str(e.get("code"))) == "red":
-            continue  # R100z9y：硬风险黑名单（减持实施中/ST/预亏）不进精选
+            continue  # R100z9y：硬风险黑名单（red = 减持进行中 / ST）不进精选
         sec = str(e.get("sector") or "")
         if not _linked(sec):
             continue  # R99b：板块不挂钩的不进精选

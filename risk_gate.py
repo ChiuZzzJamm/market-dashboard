@@ -29,6 +29,10 @@ risk_gate.py —— 把「个股硬风险黑名单 red」落到四个推荐池�
     · 公告型 red           → 公告日 <= 交易日 ⇒ 剔；全部公告日 > 交易日 ⇒ 保留
       （盘后新披露的，当天盘中确实无法预知，指标本身有效；次日 09:45 会被剔）
 
+    R100z276：本闸只认 severity=red。而自 2026-10-29 起 red 只剩「ST/退市」与
+    「减持进行中」两类 —— 「减持已回购股份（库存股处置）」与「减持已结束」都降为
+    yellow，不参与剔除。分类口径在 stock_risk_blacklist.cut_kind，别在这里另写关键词。
+
 用法：
     python3 risk_gate.py            # 只报告
     python3 risk_gate.py --write    # 清理并写回 data.js（_tmp + os.replace）
@@ -60,6 +64,33 @@ TARGETS = [
 ]
 
 DATE_RE = re.compile(r'20\d{2}-\d{2}-\d{2}')
+
+# 核心维度（决定「这次红灯名单可不可信」）。R100z276：loss 已随业绩口径下线。
+CORE_DIMS = ('st', 'cut', 'lift')
+
+
+def coverage():
+    """返回 (full|partial|none, 说明)。给 deploy.sh 判断「该拦还是该放行」。
+
+    full    = ST/减持/解禁三个维度全部核查过（红灯名单可当结论用）
+    partial = 部分维度源不可达（名单偏漏，不能当「无风险」）
+    none    = 核心维度全挂，或文件缺失/解析失败（等于**没有任何红灯数据**）
+    ★清单列在这里一处，别在 bash 里再抄一份——两处各写一份正是历史 bug 的形态。
+    """
+    if not os.path.exists(BL_JSON):
+        return 'none', 'risk_blacklist.json 不存在（黑名单本次没跑）'
+    try:
+        bl = json.load(open(BL_JSON, encoding='utf-8'))
+    except Exception as e:                                   # noqa: BLE001
+        return 'none', 'risk_blacklist.json 解析失败：%r' % (e,)
+    dims = bl.get('dims') or {}
+    ok = [k for k in CORE_DIMS if (dims.get(k) or {}).get('status') == 'ok']
+    if len(ok) == len(CORE_DIMS):
+        return 'full', '三个核心维度均已核查'
+    if not ok:
+        return 'none', '核心维度全部未核查：%s' % '；'.join(
+            str(x) for x in (bl.get('uncheckedDims') or []))[:180]
+    return 'partial', '未核查维度：%s' % '、'.join(k for k in CORE_DIMS if k not in ok)
 
 
 def load_data():
@@ -118,7 +149,15 @@ def main():
     g = ap.add_mutually_exclusive_group()
     g.add_argument('--write', action='store_true', help='清理并写回 data.js')
     g.add_argument('--check', action='store_true', help='有残留则 exit 1（闸门用）')
+    g.add_argument('--coverage', action='store_true',
+                   help='只打印红灯名单覆盖度 full/partial/none（deploy.sh 决策用）')
     args = ap.parse_args()
+
+    if args.coverage:
+        cov, why = coverage()
+        print(cov)
+        print(why, file=sys.stderr)
+        return 0
 
     D = load_data()
     red, st = load_red()
