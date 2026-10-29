@@ -160,11 +160,37 @@ echo "🕒 归一时间戳（refresh_stamp.py）..."
 #      10-09 就公告减持，到 10-21 仍挂在「断板确认池」「量化筛选」里当推荐标的。
 #      risk_gate.py 把 red 清出四个推荐池（公告日晚于交易日的「盘后新披露」保留：
 #      当日盘中不可知，指标有效，次日 09:45 自动剔）。
-# 两个脚本都幂等、原子写、异常 exit 0（真拦截交给 G29，避免外部源抖动阻断部署）。
+# 两个脚本都幂等、原子写；sync_names 异常 exit 0 不阻断（外部源抖动不该拦住部署）。
+# ⚠️ risk_gate 自 R100z276 起**不再无条件放行**：见下面独立段落，有残留就拦。
 echo "🏷️  对齐个股简称（sync_names.py）..."
 "$PY" sync_names.py --write || true
+
+# ---------- 硬风险红灯闸（R100z276，2026-10-29 用户拍板「不能靠自律」）----------
+# 原先是 `risk_gate.py --write || true`：一刀切放行，失败也不拦。等于这层防线全靠自觉。
+# 现在按用户口径分两档：
+#   · 红灯标的清完**仍在推荐位**          → 拦部署（真事故，红灯不该带着上线）
+#   · 黑名单核心维度**全挂**（源不可达）  → 放行，但必须显式打标，
+#     部署输出与报告里不许写成「已核查无风险」——「没查到」不等于「没风险」。
+# 覆盖度由 risk_gate.py --coverage 判定（核心维度清单只写一处，不在 bash 里再抄一份）。
 echo "🛡️  硬风险 red 清出推荐位（risk_gate.py）..."
-"$PY" risk_gate.py --write || true
+RG_RC=0
+"$PY" risk_gate.py --write || RG_RC=$?
+RG_COV="$("$PY" risk_gate.py --coverage 2>/dev/null | head -1 || true)"
+case "$RG_COV" in
+    full|partial) ;;
+    *) RG_COV=none ;;
+esac
+if [ "$RG_COV" = "none" ]; then
+    echo "⚠️  黑名单核心维度全部未核查（源不可达/名单缺失）→ 本次**未做红灯剔除**，按口径放行"
+    echo "    ⚠️ 报告里必须写明「本次未做红灯剔除」，不得写「已核查无风险」（G24 会拦）。"
+elif ! "$PY" risk_gate.py --check; then
+    echo "❌ 红灯标的仍在推荐位 → 拒绝部署。"
+    echo "   可能原因：risk_gate 与池写入顺序冲突（先剔后被重算覆盖），或 data.js 被手改过。"
+    exit 1
+fi
+if [ "$RG_RC" -ne 0 ]; then
+    echo "⚠️  risk_gate.py --write 退出码 ${RG_RC}（已用 --check 复核残留）"
+fi
 
 # ---------- R100z224：板块买点（承接/不追/证伪）补齐 ----------
 # 背景：entry_zone.py 原本只在 08:30 的 prompt 里被调 `--write`。而 aiPrediction.sectors 是

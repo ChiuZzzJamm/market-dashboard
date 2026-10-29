@@ -778,8 +778,10 @@ def check_openoutlook(D):
 def check_risk_blacklist(D, scope='all'):
     """R100z13：个股硬风险黑名单（FAIL 硬拦）。
 
-    用户口径：一只票遭大股东减持 / 限售解禁 / ST / 业绩预减，方向说得再对也会被市场锤，
-    命中即换股、不进 8 只池。本闸读 stock_risk_blacklist.py --write 产出的
+    用户口径：一只票遭大股东减持 / 限售解禁 / ST，方向说得再对也会被市场锤，
+    命中即换股、不进 8 只池。（R100z276：业绩类公告不看 —— 用户 2026-10-29 明确
+    「不看业绩炒股，亏的票也可能利空落地开始涨」，stock_risk_blacklist 已删 loss 维度。）
+    本闸读 stock_risk_blacklist.py --write 产出的
     risk_blacklist.json（源不可达的维度走 unknown，不判安全也不算命中）。
 
     注意：文件缺失只 WARN（脚本还没跑），只有「黑名单里确实有、且又被选进 8 只池」

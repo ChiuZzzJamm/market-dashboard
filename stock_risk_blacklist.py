@@ -2,13 +2,17 @@
 """个股硬风险黑名单（R100z13-t2o，用户 2026-10-01 点名「最大缺口」）。
 
 背景：
-    选股对不对原先只看 8 只标的当天涨跌幅，但一只票遭大股东减持 / 限售解禁 / ST /
-    业绩预减，方向说得再对也会被市场锤。本脚本把「确定性风险」变成机械闸门：
+    选股对不对原先只看 8 只标的当天涨跌幅，但一只票遭大股东减持 / 限售解禁 / ST，
+    方向说得再对也会被市场锤。本脚本把「确定性风险」变成机械闸门：
 
     1. ST / *ST / 退市（名称带 ST，行情名或 data.js 内 name 判定）
     2. 限售解禁落在 T+2 ~ T+5 窗口（东财 RPT_LIFT_STAGE 的 FREE_DATE）
     3. 减持公告 30 日内（东财 np-anotice-stock 公告标题）
-    4. 业绩预减 / 预亏公告 30 日内（同上，负面词表命中）
+
+    ★业绩类公告**刻意不看**（R100z276，用户 2026-10-29 拍板原话）：
+      「关于业绩的公告、预公告不用管，就算是亏的 A 股也可能利空落地开始涨，
+        所以不看业绩炒股。」
+      故本脚本已删除 loss 维度。别再把「业绩预减 / 预亏」加回来，那是被否掉的口径。
 
     附带「参考」不硬命中：股东质押比例（RPT_CSDC_LIST），且只认 1 年内的行——
     2014 年的质押记录不代表今天的风险，硬命中会天天误杀。
@@ -17,7 +21,8 @@
 
     用法：
     python3 stock_risk_blacklist.py                 # 默认扫 data.js：aiPrediction + us/ashare 五节要闻
-                                                    #   + bullish/bearish + 四技术池（R100z70 扩域）
+                                                    #   + bullish/bearish + 四技术池 + 陈学长池
+                                                    #   + 开盘精选（R100z70 扩域；R100z276 补齐后两者）
     python3 stock_risk_blacklist.py --json          # 只输出 JSON
     python3 stock_risk_blacklist.py --write         # 同时写 risk_blacklist.json（前端+闸门读）
     python3 stock_risk_blacklist.py --codes-file c.txt
@@ -82,6 +87,12 @@ for (const st of (hz.watchPool || [])) add(st);
 const acc = d.accumulation || {};
 for (const st of (acc.scored || [])) add(st);
 for (const st of (((d.breakoutPool || {}).passed) || [])) add(st);
+// R100z276：陈学长池此前漏在扫描域外 —— risk_gate.py 明确把它当「推荐位」剔，
+//   但本文件的扫描域不含它，于是只在陈学长池里的票**从来没被扫过**，
+//   risk_gate 拿不到它的 red 记录自然也剔不掉（闸门对这两池全程失明）。
+for (const k of ['strict', 'loose']) for (const st of (((d.chenPool || {})[k]) || [])) add(st);
+// 同理：开盘精选（9:45 产物）也是 risk_gate 的剔除目标，同样要进扫描域。
+for (const st of (((db.star || {}).picks) || [])) add(st);
 process.stdout.write(JSON.stringify({ date: (d.aiPrediction || {}).date || null, codes: codes, names: names }));
 """
 
@@ -367,7 +378,7 @@ def _ann_rows_cninfo(code, days):
     """巨潮资讯（法定披露渠道）→ [(date, title)]。
 
     R100z167：np-anotice 在本机实测 19/20 请求返回 HTTP 567（WAF 段封），
-    旧逻辑熔断后直接放弃 → 减持/业绩预减两个维度整轮未核查。巨潮是该数据的
+    旧逻辑熔断后直接放弃 → 减持维度整轮未核查。巨潮是该数据的
     **一手源**（沪深交易所指定披露平台），实测稳定，故作为 np-anotice 的接手源。
     """
     c = str(code)[-6:]
@@ -410,11 +421,55 @@ def _ann_rows_cninfo(code, days):
     return out
 
 
+# ---------------- 减持公告分类（R100z276，2026-10-29 用户实报） ----------------
+# 旧版只用「标题里有没有『计划』两个字」区分 orange / red，语义全丢，两边都判错：
+#   ① 「关于集中竞价减持已回购股份的进展公告」（塞力医疗 603716，2026-10-09）
+#      没有「计划」二字 → 判成「减持公告」→ red「减持实施中」硬剔。
+#      但这是公司卖出自己回购的库存股：总股本不变、不摊薄每股收益，监管按 1% 一档
+#      要求披露进展。**不是内部人看空**（大股东/董监高减持才是）。
+#   ② 「减持计划期限届满暨实施完成」（好上好 001298，2026-10-09）含「计划」
+#      → 判成「减持计划（预披露）」orange。但它**已经减完**、利空出尽，
+#      被当成「将来还要减」，方向正好反了。
+# 现在按「谁在减 / 减到哪一步」分类，判定顺序即优先级，**不可调换**：
+#     库存股 > 已结束 > 预披露 > 进行中
+# DONE 必须先于 PLAN，否则「减持计划期限届满暨实施完成」又会被 PLAN 抢走。
+CUT_KW = ('减持', '减仓')
+TREASURY_KW = ('已回购股份', '回购股份', '库存股')
+DONE_KW = ('实施完成', '实施完毕', '期限届满', '时间届满', '结果公告',
+           '减持结果', '减持完成', '减持届满')
+PLAN_KW = ('减持计划', '预披露', '拟减持', '减持股份计划')
+
+# 分类结果 → 写进 risk_blacklist.json 的 reasons 文本、并由 grade_reasons 反查分级。
+# **只在这里定义一次**：审计闸门 G54 直接 import cut_kind 复算，不许另写一套关键词，
+# 否则「产出口径」和「校验口径」会各跑各的（这正是旧版出错的形态）。
+KIND_TREASURY = '减持已回购股份（库存股处置）'
+KIND_DONE = '减持已结束（利空出尽）'
+KIND_PLAN = '减持计划（预披露）'
+KIND_ONGOING = '减持进行中'
+
+
+def cut_kind(title):
+    """把命中「减持」的公告标题分类，返回固定串；不算减持公告返回 None。
+
+    ★这是全项目唯一的减持分类口径。改这里，audit_pipeline 的 G54 自动跟着变。
+    """
+    t = str(title or '')
+    if not any(k in t for k in CUT_KW) and not any(k in t for k in PLAN_KW):
+        return None
+    if any(k in t for k in TREASURY_KW):
+        return KIND_TREASURY
+    if any(k in t for k in DONE_KW):
+        return KIND_DONE
+    if any(k in t for k in PLAN_KW):
+        return KIND_PLAN
+    return KIND_ONGOING
+
+
 def fetch_ann(code, days=30):
     """公告源：np-anotice（快、易被 567）→ 连续失败即切巨潮（稳、一手）。
 
     ★R100z167：旧逻辑把「熔断」当成「本维度放弃」（剩余标的直接返回标记），
-    结果减持/业绩预减永远 partial。熔断应该只是**换源**，不是弃查。
+    结果减持维度永远 partial。熔断应该只是**换源**，不是弃查。
     """
     rows, err = None, None
     if ANN_BREAK.get('src', 'em') == 'em':
@@ -455,50 +510,56 @@ def fetch_ann(code, days=30):
     if rows is None:
         return None, err or '公告源不可达'
 
-    CUT_KW = ('减持', '减仓', '减持计划', '减持股份')
-    PLAN_KW = ('减持计划', '预披露', '拟减持', '减持股份计划')
-    LOSS_KW = ('业绩预减', '预亏', '首亏', '业绩下滑', '净利润较上年同期下降',
-               '归母净利润为负值', '业绩预告为亏损', '净利润同比下降')
     cutoff = d8(date.today()) - timedelta(days=days)
-    cuts, losses = [], []
+    cuts = []
     for d, title in rows[:50]:
         if d is None or d < cutoff:
             continue
-        if any(k in title for k in CUT_KW):
-            # R100z167：必须保留「计划 / 实施」区别。旧版一律写成「减持公告」，
-            # grade_reasons 认不出「减持计划」→ 预披露被误判 red 硬剔（把好票杀掉）。
-            tag = '减持计划（预披露）' if any(k in title for k in PLAN_KW) else '减持公告'
-            cuts.append('%s %s' % (d.isoformat(), tag))
-        elif any(k in title for k in LOSS_KW):
-            losses.append('%s 业绩预减公告' % d.isoformat())
-        if len(cuts) + len(losses) >= 4:
+        kind = cut_kind(title)
+        if kind:
+            cuts.append('%s %s' % (d.isoformat(), kind))
+        if len(cuts) >= 4:
             break
-    return cuts + losses, None
+    return cuts, None
 
 
 def grade_reasons(reasons, watch):
-    """R100z76-④：把命中原因分级为 severity（red/orange/yellow），并抽减持进度。
+    """把命中原因分级为 severity（red/orange/yellow/none），并抽减持进度。
 
-    red   = 硬剔（ST/退市、业绩预减/预亏、减持实施中）
-    orange = 警示但可保留（减持预披露/计划、限售解禁窗口）
-    yellow = 参考（股东质押≥阈值，仅作风险参考）
+    R100z276 重写：旧版按「标题里有没有『计划』」判，把库存股处置判成 red 硬剔、
+    把「已减完」判成「还要减」。现在按语义分级：
+
+    red    = 硬剔（ST/退市、减持进行中）
+    orange = 警示可保留（减持预披露/计划、限售解禁窗口）
+    yellow = 参考（库存股处置、减持已结束、股东质押≥阈值）
     默认 none；调用方对 red 才 FAIL、orange 给 WARN、yellow 跳过。
+
+    ★业绩类（预减/预亏）**不再参与判定**：用户 2026-10-29 明确「不看业绩炒股，
+      亏的票也可能利空落地开始涨」。别加回来。
     """
     sev = 0  # 0 none, 1 yellow, 2 orange, 3 red
     progress = []
     for r in (reasons or []):
         if 'ST' in r or '退' in r:
             sev = max(sev, 3)
-        elif '业绩预减' in r or '预亏' in r:
-            sev = max(sev, 3)
-        elif '减持计划' in r:
+        elif KIND_TREASURY in r:
+            # 公司卖库存股：总股本不变、不是内部人看空，只作参考。
+            sev = max(sev, 1)
+            if '库存股处置（非大股东减持）' not in progress:
+                progress.append('库存股处置（非大股东减持）')
+        elif KIND_DONE in r:
+            # 已经减完 = 利空出尽，留一条参考即可，不报 orange。
+            sev = max(sev, 1)
+            if '减持已结束（利空出尽）' not in progress:
+                progress.append('减持已结束（利空出尽）')
+        elif KIND_PLAN in r:
             sev = max(sev, 2)
             if '减持预披露' not in progress:
                 progress.append('减持预披露')
-        elif '减持' in r or '减仓' in r:
+        elif KIND_ONGOING in r:
             sev = max(sev, 3)
-            if '减持实施中' not in progress:
-                progress.append('减持实施中')
+            if '减持进行中' not in progress:
+                progress.append('减持进行中')
         elif '解禁' in r:
             sev = max(sev, 2)
     for w in (watch or []):
@@ -575,7 +636,7 @@ def main():
                 stat['ann_fail'] += 1        # 熔断后不再逐只堆 unknown，出口统一成一条
             elif e3:
                 stat['ann_fail'] += 1
-                unknown.append('%s 公告源不可达（np-anotice %s），减持/业绩预减未下结论' % (code, e3))
+                unknown.append('%s 公告源不可达（np-anotice %s），减持未下结论' % (code, e3))
             else:
                 stat['ann_ok'] += 1
                 reasons += (ann or [])
@@ -599,7 +660,7 @@ def main():
 
     if ANN_BREAK['open']:
         unknown.append('公告源（np-anotice）本轮连续 %d 只失败（%s）→ 已切巨潮资讯；'
-                       '巨潮成功 %d 只 / 失败 %d 只，失败部分减持·业绩预减维度未核查'
+                       '巨潮成功 %d 只 / 失败 %d 只，失败部分减持维度未核查'
                        % (ANN_BREAK['run'], ANN_BREAK['msg'],
                           ANN_STAT['cn_ok'], ANN_STAT['cn_fail']))
 
@@ -625,19 +686,17 @@ def main():
         'cut': {'status': ann_cov,
                 'cover': '公告源 %d/%d 只取到（东财%d/巨潮%d）' % (
                     ann_ok, n_all, ANN_STAT['em_ok'], ANN_STAT['cn_ok'])},
-        'loss': {'status': ann_cov,
-                 'cover': '公告源 %d/%d 只取到（东财%d/巨潮%d）' % (
-                     ann_ok, n_all, ANN_STAT['em_ok'], ANN_STAT['cn_ok'])},
         'lift': {'status': lift_cov, 'cover': '解禁源 %d/%d 只取到' % (lift_ok, n_all)},
         'pledge': {'status': ple_cov, 'cover': '质押源 %d/%d 只取到（仅供参考）' % (ple_ok, n_all)},
     }
-    core = [dims[k]['status'] for k in ('st', 'cut', 'loss', 'lift')]
+    # R100z276：core 里删掉 loss —— 业绩类已下线，留着会让 verdict 永远算不完整。
+    core = [dims[k]['status'] for k in ('st', 'cut', 'lift')]
     verdict = ('full' if all(x == 'ok' for x in core)
                else ('none' if all(x == 'unchecked' for x in core) else 'partial'))
-    label = {'st': 'ST/退市（行情名源）', 'cut': '减持公告', 'loss': '业绩预减/预亏',
+    label = {'st': 'ST/退市（行情名源）', 'cut': '减持公告',
              'lift': '限售解禁', 'pledge': '股东质押（参考）'}
     unchecked = ['%s——%s' % (label[k], dims[k]['cover'])
-                 for k in ('st', 'cut', 'loss', 'lift', 'pledge')
+                 for k in ('st', 'cut', 'lift', 'pledge')
                  if dims[k]['status'] != 'ok']
 
     res = {
@@ -655,9 +714,12 @@ def main():
         'blacklist': blacklist,
         'unknown': sorted(set(unknown)),
         'failed': sorted(set(failed)),
-        'note': '硬风险黑名单（R100z76-④ severity 分级）：red=硬剔(ST/退市·业绩预减/预亏·减持实施中)、'
-                 'orange=警示可保留(减持预披露/计划·限售解禁窗口)、yellow=参考(质押≥%.0f%%)；'
-                 'ST/退市、T+%d~T+%d 解禁、减持公告 %d 日内；源不可达不判安全（verdict=full 才算各维度全核查）' % (
+        'note': '硬风险黑名单（R100z276 severity 分级）：red=硬剔(ST/退市·减持进行中)、'
+                 'orange=警示可保留(减持预披露/计划·限售解禁窗口)、'
+                 'yellow=参考(库存股处置·减持已结束·股东质押≥%.0f%%)；'
+                 'ST/退市、T+%d~T+%d 解禁、减持公告 %d 日内；'
+                 '业绩类公告不参与判定（不看业绩炒股）；'
+                 '源不可达不判安全（verdict=full 才算各维度全核查）' % (
             args.pledge, args.lift_lo, args.lift_hi, args.cut_days),
     }
 

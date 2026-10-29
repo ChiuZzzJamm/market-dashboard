@@ -91,6 +91,15 @@ G50 文案记法泄漏    渲染层不许出现 markdown 的 ** 记法（2026-10
                       定义了全仓零引用的函数 = WARN。py_compile / node --check 与其余
                       全部闸门都拦不住这一类：语法合法、脚本照常启动，跑到那行才炸，
                       前端则是点进子页才炸（R100z274，删 ④⑤ 后手工扫出 6 个前端死函数）。
+    G54 扫描域覆盖      risk_gate 剔除的 9 个推荐位，其上的每只票都必须在黑名单扫描域里；
+                      不在 = FAIL（那只票的硬风险永远扫不到，闸门对它失明）。
+                      R100z276 实测：陈学长 strict/loose 与开盘精选 picks 长期未进扫描域。
+    G55 红灯理由档位    severity=red 的记录，理由不得是「库存股处置 / 减持已结束 / 仅预披露」，
+                      用 stock_risk_blacklist.cut_kind **同一个函数**复算（R100z276：
+                      旧口径按「标题有没有『计划』二字」判，把两类公告都判反了方向）。
+    G56 变量展开卫生    deploy.sh / run_push.sh 里 `$VAR` 紧跟中文/全角字符 = FAIL ——
+                      bash 会把多字节首字节吞进变量名，`set -u` 下当场 unbound variable
+                      中断部署；review 时看着只是一句普通 echo，完全看不出来。
 """
 import ast
 import json
@@ -2271,16 +2280,50 @@ def g27_memory_reachability(r):
 
 # G28 分格时间戳表：与 refresh_stamp.py 的 SLOTS **必须逐项一致**，G28 会跨文件并排比。
 # 历史 bug 类型就是这类「两处各写一份清单」——只在一边加字段，另一边静默漏取。
+# 每格写成「路径组」：组内多条路径的值按序拼接后再找时间戳，用来兼容
+#   「日期和时间拆成两个字段」的数据（duanban.star 的 date + time 就是这种）。
 STAMP_SLOTS = [
-    (("ashare", "updatedAt"), "A股收盘"),
-    (("us", "updatedAt"), "美股收盘"),
-    (("panorama", "updatedAt"), "全球市场全景"),
-    (("harmonic", "updatedAt"), "谐波形态"),
-    (("accumulation", "updatedAt"), "吸筹打分"),
-    (("breakoutPool", "updatedAt"), "横盘启动"),
-    (("fullScan", "updatedAt"), "全量扫描"),
-    (("stopTrack", "updatedAt"), "止损跟踪"),
+    ([("ashare", "updatedAt")], "A股收盘"),
+    ([("us", "updatedAt")], "美股收盘"),
+    ([("panorama", "updatedAt")], "全球市场全景"),
+    ([("harmonic", "updatedAt")], "谐波形态"),
+    ([("accumulation", "updatedAt")], "吸筹打分"),
+    ([("breakoutPool", "updatedAt")], "横盘启动"),
+    ([("fullScan", "updatedAt")], "全量扫描"),
+    ([("stopTrack", "updatedAt")], "止损跟踪"),
+    ([("duanban", "star", "date"), ("duanban", "star", "time")], "开盘精选"),
 ]
+
+
+def _norm_slots(items):
+    """把 SLOTS 归一成 {路径组 tuple}，兼容「单路径 (a,b)」与「路径组 [(a,b),(c,)]」两种写法。"""
+    out = set()
+    for pth, _ in items:
+        if pth and isinstance(pth[0], (tuple, list)):
+            out.add(tuple(tuple(x) for x in pth))
+        else:
+            out.add((tuple(pth),))
+    return out
+
+
+# G28 用的时间戳正则。模块级定义：_slot_ts 是独立函数，不能依赖 g28 里的局部 TS。
+_SLOT_TS_RE = re.compile(r"(20\d{2}-\d{2}-\d{2})\s+(\d{2}:\d{2})")
+
+
+def _slot_ts(D, paths):
+    """按路径组取值拼串后找时间戳，返回 'YYYY-MM-DD HH:MM' 或 None。与 refresh_stamp 同构。"""
+    vals = []
+    for p in paths:
+        cur = D
+        for k in p:
+            if not isinstance(cur, dict):
+                cur = None
+                break
+            cur = cur.get(k)
+        if isinstance(cur, str) and cur.strip():
+            vals.append(cur.strip())
+    mm = _SLOT_TS_RE.search(" ".join(vals))
+    return ("%s %s" % (mm.group(1), mm.group(2))) if mm else None
 
 
 def _stamp_slots_from_script():
@@ -2294,7 +2337,7 @@ def _stamp_slots_from_script():
         if isinstance(node, ast.Assign) and any(
                 isinstance(t, ast.Name) and t.id == "SLOTS" for t in node.targets):
             try:
-                return [(tuple(pth), lbl) for pth, lbl in ast.literal_eval(node.value)]
+                return list(ast.literal_eval(node.value))
             except Exception:                                # noqa: BLE001
                 return None
     return None
@@ -2341,16 +2384,17 @@ def g28_freshness_consistency(r):
         r.warn("G28", "读不到 refresh_stamp.py 的 SLOTS（文件缺失或写法变了），"
                       "无法并排比对各格清单，请确认该脚本仍在部署链里")
     else:
-        mine = {tuple(p) for p, _ in STAMP_SLOTS}
-        theirs = {tuple(p) for p, _ in script_slots}
+        mine = _norm_slots(STAMP_SLOTS)
+        theirs = _norm_slots(script_slots)
         if mine != theirs:
-            only_a = sorted(".".join(p) for p in mine - theirs)
-            only_b = sorted(".".join(p) for p in theirs - mine)
+            only_a = sorted(".".join(p[0]) for p in mine - theirs)
+            only_b = sorted(".".join(p[0]) for p in theirs - mine)
             r.fail("G28", f"分格清单漂移：audit 有而 refresh_stamp 没有 {only_a or '无'}；"
                           f"refresh_stamp 有而 audit 没有 {only_b or '无'} —— "
                           f"两处必须逐项一致，否则新加的那一格永远进不了页头（R100z167）")
         else:
-            r.ok("G28", f"分格清单一致：{len(mine)} 格（ashare/us/panorama/四模块/stopTrack）")
+            r.ok("G28", f"分格清单一致：{len(mine)} 格"
+                        f"（ashare/us/panorama/四模块/stopTrack/开盘精选）")
 
     a = D.get("ashare") or {}
     td = str(a.get("tradeDate") or "").strip()[:10]
@@ -2381,14 +2425,13 @@ def g28_freshness_consistency(r):
 
     # ---- a) 顶层 = 各格最大值 ----
     rows, old_slots = [], []
-    for path, label in STAMP_SLOTS:
-        v = dig(path)
-        mm = TS.search(str(v or ""))
-        if not mm:
+    for paths, label in STAMP_SLOTS:
+        ts = _slot_ts(D, paths)
+        if not ts:
             continue
-        rows.append(("%s %s" % (mm.group(1), mm.group(2)), label))
-        if mm.group(1) < td:
-            old_slots.append(f"{label}={mm.group(1)}")
+        rows.append((ts, label))
+        if ts[:10] < td:
+            old_slots.append(f"{label}={ts[:10]}")
     if not rows:
         r.warn("G28", "各分格都没有可解析的 updatedAt，无法核对页头权威值")
     else:
@@ -4515,6 +4558,157 @@ def g53_name_hygiene(r):
                % (_tail(err, 2) or "rc=%s" % rc))
 
 
+def _risk_targets():
+    """从 risk_gate.py 里取 TARGETS（不 import，避免执行副作用）。"""
+    p = os.path.join(HERE, "risk_gate.py")
+    try:
+        tree = ast.parse(open(p, encoding="utf-8").read())
+    except Exception:                                        # noqa: BLE001
+        return None
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+                isinstance(t, ast.Name) and t.id == "TARGETS" for t in node.targets):
+            try:
+                return [(tuple(pth), lbl) for pth, lbl in ast.literal_eval(node.value)]
+            except Exception:                                # noqa: BLE001
+                return None
+    return None
+
+
+def g54_risk_scan_scope(r):
+    """G54 黑名单扫描域必须覆盖所有「推荐位」（R100z276，2026-10-29）。
+
+    由来：risk_gate.py 把 9 个列表当推荐位剔 red，但 stock_risk_blacklist.py 的扫描域
+    只覆盖其中一部分 —— **陈学长 strict/loose 与 duanban.star.picks 从来没进过扫描域**。
+    后果是「只在陈学长池里推出来的票从未被扫过」，risk_gate 手里没有它的 red 记录，
+    自然也剔不掉：闸门对这两池全程失明，而 TARGETS 里明明写着它俩。
+    实测扩域当刻补回 3 只（002982 湘佳股份 / 601900 南方传媒 / 605488 福莱新材）。
+
+    判据：遍历 risk_gate.TARGETS 的每一条，把该列表里的 code 全取出来，
+    逐个查是否在 stock_risk_blacklist 的实际扫描域内（跑它的 node 段取，不靠文本匹配）。
+    有任何一个不在 → FAIL（那就等于这只票的硬风险永远扫不到）。
+    """
+    targets = _risk_targets()
+    if not targets:
+        r.warn("G54", "读不到 risk_gate.py 的 TARGETS（文件缺失或写法变了），跳过扫描域覆盖核对")
+        return
+    try:
+        sys.path.insert(0, HERE)
+        import stock_risk_blacklist as RB
+        info = RB.load_stocks()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G54", f"取黑名单扫描域失败，无法核对：{e}")
+        return
+    if not info or not (info.get("codes") or []):
+        r.warn("G54", "黑名单扫描域为空（data.js 里没取到标的），无法核对覆盖")
+        return
+    domain = {str(c) for c in info["codes"]}
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G54", f"data.js 解析失败，跳过扫描域覆盖核对：{e}")
+        return
+
+    gaps = []
+    for path, label in targets:
+        node = D
+        for k in path:
+            node = node.get(k) if isinstance(node, dict) else None
+        if not isinstance(node, list):
+            continue
+        for it in node:
+            c = re.sub(r"\D", "", str((it or {}).get("code") or ""))
+            if len(c) == 6 and c not in domain:
+                gaps.append(f"{label}:{c}")
+    if gaps:
+        r.fail("G54", f"{len(gaps)} 只票在推荐位上、但不在黑名单扫描域里 —— "
+                      f"risk_gate 拿不到它们的 red 记录，等于闸门对它们失明："
+                      f"{'、'.join(sorted(set(gaps))[:8])}")
+    else:
+        r.ok("G54", f"黑名单扫描域 {len(domain)} 只，覆盖 risk_gate 全部 {len(targets)} 个推荐位")
+
+
+def g55_red_reason_grade(r):
+    """G55 红灯理由必须真的够红（R100z276，2026-10-29）。
+
+    由来：旧版 grade_reasons 只看标题里有没有「计划」二字，把两类公告判反了方向——
+      · 「减持已回购股份的进展公告」（库存股处置，不是内部人减持）被判 red「减持实施中」，
+        603716 塞力医疗就是这么被硬剔的；
+      · 「减持计划期限届满暨实施完成」（已经减完、利空出尽）被判 orange「减持预披露」。
+    现在分类口径收在 stock_risk_blacklist.cut_kind 一处，本闸用**同一个函数**复算：
+    severity=red 的记录里，若出现库存股 / 已结束 / 预披露 这三类理由 → FAIL。
+    （用同一函数是关键，否则校验口径会和产出口径各跑各的，回到旧版的错法。）
+    """
+    p = os.path.join(HERE, "risk_blacklist.json")
+    if not os.path.exists(p):
+        r.ok("G55", "未找到 risk_blacklist.json，跳过（黑名单本次没跑）")
+        return
+    try:
+        bl = json.load(open(p, encoding="utf-8"))
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G55", f"risk_blacklist.json 解析失败，无法核对红灯理由：{e}")
+        return
+    try:
+        sys.path.insert(0, HERE)
+        import stock_risk_blacklist as RB
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G55", f"导入 stock_risk_blacklist 失败，无法核对红灯理由：{e}")
+        return
+
+    not_red = (RB.KIND_TREASURY, RB.KIND_DONE, RB.KIND_PLAN)
+    bad = []
+    n_red = 0
+    for code, v in (bl.get("blacklist") or {}).items():
+        if (v or {}).get("severity") != "red":
+            continue
+        n_red += 1
+        for rs in (v.get("reasons") or []):
+            txt = re.sub(r"^\d{4}-\d{2}-\d{2}\s*", "", str(rs)).strip()
+            if txt in not_red:
+                bad.append(f"{code} {v.get('name', '')} 判 red 但理由是「{txt}」")
+    if bad:
+        r.fail("G55", f"{len(bad)} 条红灯理由降错档（这些不该硬剔）：{'; '.join(bad[:6])}")
+    elif n_red == 0:
+        r.ok("G55", "本日无 red 标的，无需核对理由档位")
+    else:
+        r.ok("G55", f"{n_red} 条 red 标的理由档位正确（无库存股/已结束/仅预披露被误判硬剔）")
+
+
+def g56_shell_var_expansion(r):
+    """G56 部署脚本的变量展开卫生（R100z276，2026-10-29）。
+
+    由来：本轮改 deploy.sh 时实测踩到 —— `echo "... $RG_RC（已用 --check 复核）"`
+    里 `$RG_RC` 后面紧跟全角括号，bash 把全角括号的首字节吞进了变量名，
+    在 `set -u` 下直接 `RG_COVx: unbound variable` 并 exit 1。
+    症状在 review 里完全看不出来（看着就是一句普通 echo），却能让整条部署链当场中断。
+
+    判据：deploy.sh / run_push.sh 里凡是 `$VAR` 紧跟非 ASCII 字符的，一律要求写成
+    `${VAR}`。纯 ASCII 写法本来就该加花括号，这条只是把中文紧邻这一种情况揪出来。
+    """
+    import re as _re
+    bad = []
+    for fn in ("deploy.sh", "run_push.sh"):
+        p = os.path.join(HERE, fn)
+        if not os.path.exists(p):
+            continue
+        try:
+            lines = open(p, encoding="utf-8").read().split("\n")
+        except Exception as e:                               # noqa: BLE001
+            r.warn("G56", f"读 {fn} 失败，跳过变量展开核对：{e}")
+            return
+        for i, line in enumerate(lines, 1):
+            if line.lstrip().startswith("#"):
+                continue
+            for m in _re.finditer(r"\$[A-Za-z_][A-Za-z0-9_]*[^\x00-\x7f]", line):
+                bad.append(f"{fn}:{i} {m.group(0)!r}")
+    if bad:
+        r.fail("G56", f"{len(bad)} 处 `$VAR` 紧跟中文/全角字符，bash 会把多字节吞进变量名"
+                      f"（set -u 下直接 unbound variable 中断部署），必须写成 ${{VAR}}："
+                      f"{'、'.join(bad[:6])}")
+    else:
+        r.ok("G56", "部署脚本无「变量名紧跟中文」的展开陷阱")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -4580,6 +4774,9 @@ def main():
     g51_buy_ledger_wiring(r)
     g52_shrink_parity(r)
     g53_name_hygiene(r)
+    g54_risk_scan_scope(r)
+    g55_red_reason_grade(r)
+    g56_shell_var_expansion(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))

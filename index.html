@@ -1004,7 +1004,7 @@
   /* R100m：横盘启动评分徽章——红色、与代码同行平行（与吸筹评级徽章 acc-grd 区分） */
   /* R100m：全站标的池角标（谐波🌟/吸筹👀/横盘启动💡/断板❗️），可叠加 */
   .stk-tag { font-size: var(--fs-xs); line-height:1; margin-left:2px; flex-shrink:0; }
-  /* R100z13：个股硬风险角标（减持/解禁/ST/业绩预减）——hover 看原因 */
+  /* R100z13：个股硬风险角标（减持/解禁/ST）——hover 看原因 */
   .risk-dot { font-size: var(--fs-sm); line-height:1; margin-left:3px; padding:2px 5px; border-radius:999px;
     color:#fff; background:#111; flex-shrink:0; cursor:help; border:1px solid transparent;
     box-shadow:0 0 0 1px rgba(0,0,0,.05); }
@@ -3256,7 +3256,7 @@ function renderCalHistory() {
   } catch (e) { /* file:// 下 fetch/XHR 被拦，静默跳过 */ }
 }
 
-/* R100z13：个股硬风险黑名单（ST / 解禁 T+2~T+5 / 减持 30 日 / 业绩预减 30 日）。
+/* R100z13：个股硬风险黑名单（ST / 解禁 T+2~T+5 / 减持 30 日；业绩类不看）。
    risk_blacklist.json 由 stock_risk_blacklist.py --write 产出；取不到就 RISK_BL 保持 null，
    全站不渲染 ❗️ 风险角标，但不影响任何其它逻辑（不白屏、不报错）。 */
 var RISK_BL = null;
@@ -3308,7 +3308,7 @@ function riskBadge(code0, poolMode) {
   } else {  // yellow / none
     cls = ' sev-yellow';
     sym = '⚠️';
-    tip = '参考（如股东质押，仅提示）：' + rs;
+    tip = '参考（仅提示，不影响入选）：' + rs;
   }
   return '<span class="risk-dot' + cls + '" title="' + escAttr(tip) + '">' + sym + '</span>';
 }
@@ -3334,7 +3334,7 @@ function riskTipBadge(code0, poolMode) {
     tip = '警示（可保留但需重点关注）：' + rs;
   } else {
     cls = ' sev-yellow';
-    tip = '风险参考（如股东质押）：' + rs;
+    tip = '风险参考（仅提示，不影响入选）：' + rs;
   }
   return '<span class="risk-tip' + cls + '" title="' + escAttr(tip) + '">⚠️ 风险提示 · ' + esc(rs) + '</span>';
 }
@@ -3588,7 +3588,7 @@ function loadPortfolioCash(box) {
 }
 
 /* R100z13：8 只池里的硬风险标的汇总一行（无命中返回空串）。
-   口径与 stock_risk_blacklist.py 一致：ST / 解禁 T+2~T+5 / 减持 30 日 / 业绩预减 30 日。 */
+   口径与 stock_risk_blacklist.py 一致：ST / 解禁 T+2~T+5 / 减持 30 日（业绩类不看）。 */
 function riskLineHtml(p) {
   if (!RISK_BL || !p || !p.sectors) return '';
   var hits = [];
