@@ -713,27 +713,16 @@
   }
   .db-entry-in:hover { transform: scale(1.1); }
   .db-entry-in:active { transform: scale(.92); cursor: grabbing; }
-  /* R100z281（用户 2026-10-29：「技术看板的 icon 还是没加回来」「这个删掉」＝页头那颗文字胶囊）：
-     技术看板的返回键改回 🧰 圆钮，但**不再跟随浮动组槽位**——槽位是「贴右缘 + 垂直居中」，
-     视口 ≤1200px 时 --float-x 退化成 12px、内容区同宽，圆钮必压在卡片右上角（那是 R100z273
-     撤它的真实原因，与徽章无关）。改成右下角固定站位：压的是页面底边留白，不会盖住任何一行正文；
-     实心底 + 投影让它读成按钮（透明 emoji 浮在正文上才会被看成「压字」）。
-     `body.db-open` 才显示——它是这一页的返回键，别的页有各自的那颗。 */
-  #db-entry-in {
-    position: fixed; right: 14px; bottom: 18px; top: auto;
-    width: 46px; height: 46px; border-radius: 50%;
-    background: var(--paper); border: 1px solid var(--line);
-    box-shadow: 0 6px 18px rgba(17, 17, 26, .16);
-    z-index: 1200; padding: 0;
-    display: none; align-items: center; justify-content: center;
-    font-size: var(--fs-emoji-lg); line-height: 1; cursor: pointer;
-    transition: transform .15s ease, box-shadow .15s ease;
-  }
-  body.db-open #db-entry-in { display: flex; }
-  #db-entry-in:hover { transform: scale(1.08); box-shadow: 0 8px 22px rgba(17, 17, 26, .22); }
-  #db-entry-in:active { transform: scale(.94); }
-  /* 圆钮固定在右下角，最后一张卡的下沿要能滚出它——否则「按钮压住卡片底部那行下单」 */
-  body.db-open #duanban-view { padding-bottom: 64px; }
+  /* R100z282（用户 2026-10-29 21:35「我就要原来的 🧰，要有拖拽的，给我还原」）：
+     **还原成原样**——页内替身 + RAIL 槽位 + 可拖拽，坐标由 layout() 现算。
+     上一轮（R100z281）我把它改成右下角固定站位、不进槽位表，理由是「贴右缘垂直居中在
+     ≤1200px 时必压卡片右上角」。几何判断没错，但那是我替用户做的取舍，不是他要的。
+     他要的是**能拖动**：压住了就自己拖走，拖完记住（localStorage floatGroupPos）。
+     固定站位反而夺走了这个能力——这才是这次被退回的原因。
+     所以原地恢复：`body.db-open` 时显示、跟随槽位、bindDrag 拖。
+     （R100z273 撤它的归因仍然是错的：用户那句「遮掉了利好/利空/中性」说的是卡片上的
+     技术池徽章，不是这颗圆钮。这次不再拿那个误读当依据。） */
+  body.db-open .db-entry-in { display: flex; }
   @media (max-width: 700px), (max-height: 460px) {
     :root { --float-x: 12px; }
     /* R100z165：手机端（用户 2026-10-24 截图：4 个图标竖排压在正文上）——
@@ -1566,23 +1555,17 @@
   </footer>
 
   <div id="duanban-view">
-    <!-- 返回键＝右下角那颗 🧰（用户 2026-10-29 21:1x：「技术看板的 icon 还是没加回来」＋红框圈着
-         页头那颗「← 返回看板」说「这个删掉」）。R100z273 当初撤掉圆钮的依据是我把
-         「有 bug，并且遮掉了利好/利空/中性」读成了圆钮遮标签——其实那句说的是卡片上的技术池徽章
-         （R100z275 已删那批徽章），圆钮是被误伤的。现在按他的要求恢复，但**位置换掉**：
-         不再回到「视口垂直居中、贴右缘」那个槽位，因为 --float-x 在 ≤1200px 时退化成 12px、
-         内容区同宽，那个位置必压卡片右上角（真正的原因不是徽章，是几何）。
-         改成右下角固定站位（`#db-entry-in` 的 CSS）：收起是常态，它压的是页面底边留白，
-         且带实心底+投影，读起来是按钮而不是浮在正文上的 emoji。
-         ⚠️ 它不进 RAIL、不接 bindDrag：一旦进槽位表，applySaved/ layout 会把
-            left/top 写死成组内第 3 槽（屏幕右侧垂直居中），又回到压卡片的老位置。
-            G41 现在双向锁着这一条。 -->
+    <!-- R100z282：这颗 🧰 是「浮动组第 3 槽的页内替身」，与 📄/📋 完全同构——
+         进 RAIL 表（第 2 槽 → g.children[2]）、挂拖拽（见下方 bindDrag 调用）、点击 closeDuanban()。
+         三件套缺一个的症状是「拖不动」或「点了没反应」，不是报错（R100z163 踩过）。
+         用户 2026-10-29 21:35 原话：「我就要原来的 🧰，要有拖拽的，给我还原」——
+         上一轮我把它挪到右下角固定站位、拿掉拖拽，等于替他做了取舍，被退回。 -->
     <div class="db-topbar">
       <div class="db-title">技术看板</div>
       <div class="db-sub2">断板反包 · 陈学长 · 横盘启动 · 谐波形态 · 主力吸筹 · 开盘预测</div>
       <div class="db-date" id="db-date"></div>
     </div>
-    <button class="db-entry-in" id="db-entry-in" title="返回每日市场看板" aria-label="返回每日市场看板"><span class="db-emoji">🧰</span></button>
+    <button class="db-entry-in" id="db-entry-in" title="点击返回每日市场看板（可拖动）">🧰</button>
     <!-- R100k：子页菜单已移入各子页内容流（断板页位于开盘精选与确认池说明之间；谐波/横盘启动页位于页首） -->
 
     <!-- R100m：TOP10 + 开盘精选固定区——切换谐波/横盘启动/吸筹子页时保持显示（用户要求固定不动） -->
@@ -8707,9 +8690,10 @@ document.addEventListener('click', function (ev) {
    📄 全球要闻 / 📋 复盘台账两个页内返回（组顶 + 组高 − 46 那套只对它们生效）。 */
 (function () {
   var de = document.getElementById('db-entry');
-  /* R100z281：断板页返回键回到 🧰 页内替身（#db-entry-in，右下角固定站位）。
-     它**不进 RAIL 槽位表、不接 bindDrag**——那两样会把 left/top 写死成「贴右缘 + 垂直居中」，
-     又压回卡片右上角（R100z273 撤它的真实原因，见 CSS 注释）。变量名仍叫 dei，只为少改一处。 */
+  /* R100z282：🧰 页内替身（#db-entry-in）**恢复原样**——进 RAIL 表、接 bindDrag。
+     它与 📄/📋 是同构的三件套（表 + 拖 + 点击），少一样就是「拖不动/点了没反应」。
+     上一轮（R100z281）把它改成右下角固定站位并拿掉拖拽，用户 21:35 明确退回：
+     「我就要原来的 🧰，要有拖拽的，给我还原」。 */
   var dei = document.getElementById('db-entry-in');
   if (de) de.addEventListener('click', function () { openDuanban(); });
   if (dei) dei.addEventListener('click', function () { closeDuanban(); });
@@ -8747,14 +8731,14 @@ document.addEventListener('click', function (ev) {
      新实现只有一条规则：**组内第 i 个按钮的实测偏移 = 页内替身的偏移**，
      几何每次现算（读 flex-direction + gap + 按钮宽高，display:none 也读得到 computed），
      不缓存像素、不写死槽距、CSS 不再参与定位。 */
-  /* R100z281：🧰 那一行（g.children[2] → dei）**仍然不进这张表**。
-     它已经回到页面（用户 2026-10-29 要求恢复），但站位是右下角固定（CSS `#db-entry-in`），
-     不跟随浮动组。进了表就会被 applySaved/layout 写死 left/top = 「贴右缘 + 垂直居中」，
-     视口 ≤1200px 时那个位置正是压卡片右上角的老坑——这正是它当初被撤的原因。
-     📄/📋 两颗必须留在表里：它们的定位就是跟着浮动组走，别一起删。 */
+  /* R100z282：🧰（g.children[2] → dei）**回到表里，第 2 位**。
+     位置不能挪：layout() 用 `gm.off[i]` 取偏移、i 就是这张表的下标，
+     顺序错一格 → 替身落到别的槽上（症状就是「点进去按钮跳一格」）。
+     第 2 位对应组内第 3 个按钮（🐼/📄/🧰/📋 的顺序里 🧰 是 children[2]）。 */
   var RAIL = [
     { slot: g.children[0], iPage: gnj },   // 🐼 → 全球要闻页的 🐼/🦅 定位键
     { slot: g.children[1], iPage: gnei },  // 📄 → 全球要闻返回
+    { slot: g.children[2], iPage: dei },   // 🧰 → 策略工具箱返回
     { slot: g.children[3], iPage: scei }   // 📋 → 复盘台账返回
   ];
 
@@ -8874,9 +8858,7 @@ document.addEventListener('click', function (ev) {
   bindDrag(g, 0);
   bindDrag(gnj, 0);
   bindDrag(gnei, 1);
-  /* R100z273：dei 那一行的 bindDrag 已删——#db-back 是页头静态按钮，不拖不浮动。
-     bindDrag 会写 style.left/top，一旦挂上，它会从 topbar 里脱出去变成浮层。
-     ⚠️ 连注解里都别再写那个函数调用的字面量：G41 是按字符串匹配的，写了就报「还挂着」。 */
+  bindDrag(dei, 2);   // R100z282：🧰 恢复可拖拽（用户 21:35「要有拖拽的，给我还原」）
   bindDrag(scei, 3);
   window.addEventListener('resize', applySaved);
   window.addEventListener('orientationchange', applySaved);
