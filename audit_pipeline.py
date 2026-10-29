@@ -798,9 +798,20 @@ def g8_g9_g10_data(r):
             skipped.add(path)
             continue
         # R100z162：check_duanban 的 nd()/add_bull_code() 对 aiPrediction 来源的 ref 刻意留
-        #   time=""（_fmt_ref 用 `if x` 跳过、前端完全不读 bullRefs/bearRefs），属结构性空值。
+        #   time=""（_fmt_ref 用 `if x` 跳过），属结构性空值。
         #   不豁免则每天固定报 5 条「bullRefs[1].time=空串」假 WARN，久而久之闸门被无视。
-        if re.search(r"\.(?:bull|bear)Refs\[\d+\]\.time$", path):
+        # R100z275（2026-10-29 早盘核查）：time 豁免后仍每天报 20~33 处 sec/summary 空串，
+        #   逐条查证后确认同样是结构性、且**空值不会印到页面上**：
+        #   ① sec 为空：全部是 kind="stock" 的个股新闻（来源 stockNews 的个股公告/新闻，
+        #      个股本身没有「所属板块」概念）。实测当日 20 处，kind≠stock 的 0 处（G9c 反查）；
+        #   ② summary 为空：全部是公告原文（如「关于股份回购实施结果暨股份变动的公告」），
+        #      公告正文本身就是标题，没有摘要。
+        #   前端两处渲染都是三目兜底：pushRef 用 `kw = isStock ? '' : (r.kw || r.sec || '')`
+        #   且 `kw ? '·'+esc(kw) : ''`（不印空板块名）；refItem/pushRef 都用
+        #   `(r.summary ? '<div…>' : '')`（不印空摘要块）。故页面无空白块。
+        #   **但豁免不能笼统**——见下面 G9c：反向证明「没有 kind≠stock 的板块新闻把 sec 写空」，
+        #   否则这条豁免就成了盲区。
+        if re.search(r"\.(?:bull|bear)Refs\[\d+\]\.(?:time|sec|summary)$", path):
             skipped.add(path)
             continue
         if v == "":
@@ -813,6 +824,32 @@ def g8_g9_g10_data(r):
     else:
         r.ok("G9", f"无白名单外的空串/空数组（豁免 {len(skipped)} 处结构性空值，"
                    f"由 G9b 反证其前端安全）")
+
+    # G9c refs 豁免的反向证明（R100z275）：G9 放行 sec/summary 空串的前提是
+    #   「个股新闻本来就没有板块概念」。所以必须反向查两件事，否则豁免就是盲区：
+    #   ① 有没有 kind≠stock 的板块新闻把 sec 写空（板块新闻本该有板块名）；
+    #   ② 有没有 title 为空的 ref（前端 `if (!r || !r.title) return` 会整条跳过，
+    #      等于这条依据静默消失，而 G9 只查空串、不看「前端会丢弃」这层语义）。
+    refs_bad = []
+    for grp in ("confirmed", "watching"):
+        for ent in ((D.get("duanban") or {}).get(grp) or []):
+            if not isinstance(ent, dict):
+                continue
+            for fld in ("bullRefs", "bearRefs"):
+                for rf in (ent.get(fld) or []):
+                    if not isinstance(rf, dict):
+                        continue
+                    if (rf.get("kind") != "stock"
+                            and not str(rf.get("sec") or "").strip()):
+                        refs_bad.append("%s.%s.%s.sec 空但 kind=%r"
+                                        % (grp, ent.get("code"), fld, rf.get("kind")))
+                    if not str(rf.get("title") or "").strip():
+                        refs_bad.append("%s.%s.%s.title 空（前端整条跳过）"
+                                        % (grp, ent.get("code"), fld))
+    if refs_bad:
+        r.warn("G9c", "refs 板块新闻缺 sec / 缺 title：" + "; ".join(sorted(set(refs_bad))[:8]))
+    else:
+        r.ok("G9c", "refs 的 sec/summary 豁免成立（无 kind≠stock 的空 sec，无空 title）")
 
     # G9b 前端兜底反证：被白名单豁免的空字段，前端必须①不引用 ②有真值兜底
     # —— 目的是让「空内容安全」这一点机器可复验，而不是每次靠人翻 index.html。
