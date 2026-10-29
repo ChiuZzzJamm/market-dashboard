@@ -310,7 +310,15 @@
    "cross": "db",
    "ztDate": "2026-10-20",
    "stopPrice": 38.4,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-10-29",
+    "exitPrice": 38.29,
+    "buyPrice": 41.26,
+    "retPct": -7.2,
+    "note": "收盘跌破止损位"
+   },
    "tgtPct": 5.0,
    "holdDays": 10,
    "ruleFrom": "2026-10-26"
@@ -497,7 +505,15 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-10-29",
+    "exitPrice": 8.49,
+    "buyPrice": 8.09,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   }
   },
   {
    "pool": "chen_loose",
@@ -529,7 +545,15 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-10-29",
+    "exitPrice": 22.5,
+    "buyPrice": 23.36,
+    "retPct": -3.68,
+    "note": "收盘跌破止损位"
+   }
   },
   {
    "pool": "duanban",
@@ -713,7 +737,15 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-10-29",
+    "exitPrice": 49.04,
+    "buyPrice": 46.7,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   }
   },
   {
    "pool": "chen_loose",
@@ -777,7 +809,15 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-10-29",
+    "exitPrice": 53.55,
+    "buyPrice": 51.0,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   }
   },
   {
    "pool": "chen_loose",
@@ -793,7 +833,15 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-10-29",
+    "exitPrice": 11.88,
+    "buyPrice": 11.31,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   }
   },
   {
    "pool": "duanban",
@@ -858,7 +906,119 @@
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "600838",
+   "name": "上海九百",
+   "confirmDate": "2026-10-29",
+   "firstSeenDate": "2026-10-28",
+   "entryDate": "2026-10-29",
+   "cross": "chen",
+   "ztDate": "2026-10-27",
+   "stopPrice": 12.78,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "601086",
+   "name": "国芳集团",
+   "confirmDate": "2026-10-29",
+   "firstSeenDate": "2026-10-29",
+   "entryDate": "2026-10-29",
+   "cross": "db",
+   "ztDate": "2026-10-27",
+   "stopPrice": 11.36,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "001318",
+   "name": "阳光乳业",
+   "confirmDate": "2026-10-29",
+   "firstSeenDate": "2026-10-29",
+   "entryDate": "2026-10-29",
+   "cross": "db",
+   "ztDate": "2026-10-27",
+   "stopPrice": 12.56,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "603565",
+   "name": "中谷物流",
+   "confirmDate": "2026-10-29",
+   "firstSeenDate": "2026-10-29",
+   "entryDate": "2026-10-29",
+   "cross": "db",
+   "ztDate": "2026-10-27",
+   "stopPrice": 12.35,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "002086",
+   "name": "东方海洋",
+   "confirmDate": "2026-10-29",
+   "firstSeenDate": "2026-10-29",
+   "entryDate": "2026-10-29",
+   "cross": "db",
+   "ztDate": "2026-10-26",
+   "stopPrice": 2.25,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "002612",
+   "name": "朗姿股份",
+   "confirmDate": "2026-10-29",
+   "firstSeenDate": "2026-10-29",
+   "entryDate": "2026-10-29",
+   "cross": "db",
+   "ztDate": "2026-10-23",
+   "stopPrice": 16.62,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "600261",
+   "name": "阳光照明",
+   "confirmDate": "2026-10-29",
+   "firstSeenDate": "2026-10-29",
+   "entryDate": "2026-10-29",
+   "cross": "db",
+   "ztDate": "2026-10-22",
+   "stopPrice": 3.22,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
   }
  ],
- "updatedAt": "2026-10-28 16:07"
+ "updatedAt": "2026-10-29 16:06"
 }
