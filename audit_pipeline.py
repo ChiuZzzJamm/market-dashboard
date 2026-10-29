@@ -100,6 +100,11 @@ G50 文案记法泄漏    渲染层不许出现 markdown 的 ** 记法（2026-10
     G56 变量展开卫生    deploy.sh / run_push.sh 里 `$VAR` 紧跟中文/全角字符 = FAIL ——
                       bash 会把多字节首字节吞进变量名，`set -u` 下当场 unbound variable
                       中断部署；review 时看着只是一句普通 echo，完全看不出来。
+    G57 趋势档时效      trendState.asOf 必须等于 ashare.tradeDate，落后 = FAIL（R100z278）。
+                      为什么必须机器判：档位方向常常两天都一样（连续「弱」），只有点位与
+                      60 日分位在变 —— 页面看不出任何异常，而「仓位上限」是拿昨日收盘算的。
+                      2026-10-29 实测：16:00 算出的 asOf 恒为 T−1，靠 --fetch 才对齐。
+                      跨日补跑时 asOf 晚于 tradeDate 只 WARN（那是 tradeDate 漏更新，不是点位旧）。
 """
 import ast
 import json
@@ -162,6 +167,10 @@ EMPTY_WHITELIST = [
      "08:30 未写 verification 时前端不渲染验证卡"),
     (r"openOutlook\.verification",      # 08:30 未写 pos 时 [SKIP]
      "同上，未写 pos 时 score_openoutlook 直接 [SKIP]，前端不渲染"),
+    (r"trendState\.staleNote$",
+     "R100z278：staleNote 是「asOf 落后交易日」时的自曝文案，当日就对齐时空串是**正常态**"
+     "（trend_state.py 刻意不加噪音），前端 `if (T.staleNote)` 三目跳过、不印空块。"
+     "不豁免则每天固定报一条假 WARN（16:00 带 --fetch 后此条恒空），闸门会被无视"),
     (r"aiPrediction\.sectors\[\d+\]\.exp",
      "R100z11：非预期型板块不落 exp，expBadge 返回空串不渲染"),
     (r"(bullish|bearish)$",
@@ -4709,6 +4718,58 @@ def g56_shell_var_expansion(r):
         r.ok("G56", "部署脚本无「变量名紧跟中文」的展开陷阱")
 
 
+def g57_trend_asof(r):
+    """G57 趋势档时效（R100z278，2026-10-29）：trendState.asOf 必须等于 ashare.tradeDate。
+
+    ## 为什么这条必须存在（这是「闸门该盯什么」的教科书样本）
+
+    trendState 判的是档位（强/偏强/中性/偏弱/弱），而档位由「收盘 vs MA20 / MA20 斜率 /
+    60 日分位」三项合成——**连续的下跌里，档位会连续多天都是「弱」，一个字都不变**。
+    于是「点位是昨天的、分位是昨天的、仓位上限是拿昨天收盘算的」这件事，在页面上
+    完全看不出来：2026-10-27 实测显示上证 3697.52、下方 2.52%，当日真实收盘 3648.30、
+    下方 3.44%、60 日分位 0% —— 结论对、数字旧，比结论错更难发现。
+
+    staleNote 文案解决的是「人看得到」，解决不了「机器拦得住」：文案没写、或写了没人读，
+    部署照样过。所以这里把 asOf 与 tradeDate 直接对撞。
+
+    ## 三段判据
+      ① asOf < tradeDate → FAIL：点位基准日是上一交易日，页面「仓位上限」基于旧收盘。
+         修法：`trend_state.py --write --fetch`（--fetch 现抓 5 个指数当日日线）。
+      ② asOf > tradeDate → WARN：跨日补跑残留，多半是 tradeDate 漏更新（不是点位旧）。
+      ③ 相等 → PASS。
+    非交易日（周末汇总部署）天然相等：tradeDate 停在上一个交易日，asOf 也停在同一天。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.fail("G57", f"data.js 读取失败，趋势档时效无法检查：{e}")
+        return
+    ts = D.get("trendState") or {}
+    if not isinstance(ts, dict) or not ts:
+        r.warn("G57", "trendState 整个缺失（trend_state.py 未跑？），页面趋势档与仓位上限都没有")
+        return
+    aof = str(ts.get("asOf") or "")[:10]
+    td = str((D.get("ashare") or {}).get("tradeDate") or "")[:10]
+    if not aof:
+        r.warn("G57", "trendState.asOf 为空，无法核对点位基准日")
+        return
+    if not td:
+        r.warn("G57", "ashare.tradeDate 为空，无法核对 trendState 时效")
+        return
+    if aof < td:
+        r.fail("G57", f"trendState 点位基准日 {aof} 落后交易日 {td} —— 页面「仓位上限 "
+                      f"{ts.get('marketCapPct')}%」是拿 {aof} 收盘算的，而档位方向多半没变、"
+                      f"看不出来。跑 trend_state.py --write --fetch 重算")
+        return
+    if aof > td:
+        r.warn("G57", f"trendState.asOf {aof} 晚于 tradeDate {td} —— 跨日补跑残留，"
+                      f"核对 ashare.tradeDate 是否漏更新（点位本身不旧）")
+        return
+    r.ok("G57", f"trendState 点位基准日 = 交易日 {aof}（档位 {ts.get('marketLevel') or '—'} / "
+                f"仓位上限 {ts.get('marketCapPct')}% / 落后自曝"
+                f"{'有' if ts.get('staleNote') else '无'}）")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -4777,6 +4838,7 @@ def main():
     g54_risk_scan_scope(r)
     g55_red_reason_grade(r)
     g56_shell_var_expansion(r)
+    g57_trend_asof(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))

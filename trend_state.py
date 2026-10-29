@@ -26,7 +26,13 @@
 
 ## 口径纪律
 
-· 只用 `stkKlines` 里的日线，**不抓网络**（本脚本可离线跑，失败写空不阻断流水线）。
+· **默认零网络**：读 `stkKlines` 里的日线算完就走（本脚本可离线跑，失败写空不阻断流水线）。
+  `--fetch` 是唯一例外：只抓 IDX 里那 5 个指数的日线（复用 embed_klines.fetch_kline，
+  腾讯主源→新浪备源），**不回写 stkKlines**，只在本进程内替换输入。
+  为什么需要它（2026-10-29 实测）：指数日线原先只在 19:30 的 embed_klines 才刷到当日，
+  于是 16:00 算出的 asOf 恒为 T−1。但实测收盘后（16:4x）新浪源已有当日日线
+  （沪指 3651.434），「必须等 19:30」这个前提并不成立——只是 16:00 那步没人抓。
+  抓取失败一律沿用 data.js 既有日线，此时 staleNote 照常自曝，不编造。
 · 所有阈值是经验值，写在 `TREND_BANDS` 里可改；**没有回测过的部分不许写成胜率**。
 · 输出写 `data.js` 顶层 `trendState`，并在 `audit_pipeline.py` 登记 PRODUCT_OWNERSHIP。
 
@@ -150,8 +156,44 @@ def one_idx(rows):
     )
 
 
-def build(D):
-    K = D.get('stkKlines') or {}
+def fetch_indices(D, bars=90):
+    """收盘后现取 5 个指数的日线（--fetch 专用），返回新的 {code: rows}。
+
+    ★为什么复用 embed_klines.fetch_kline 而不是自己写一份抓取：它的输出格式
+      `[date, open, close, high, low, vol]` 正是本脚本 one_idx() 吃的形状，
+      且腾讯 WAF 拦截时自动切新浪备源。自己再写一份，两边复权/字段口径迟早分叉。
+    ★为什么不回写 stkKlines：刷全站 K 线是 embed_klines 的职责（19:30 第 5 步），
+      这里只借用当天的指数日线做一次计算。写回去等于两个写者共管同一节点，
+      而它们的抓取时机不同（16:00 vs 19:30），必然后写覆盖先写、口径谁也说不清。
+    """
+    try:
+        import embed_klines as EK
+    except Exception as e:                                    # noqa: BLE001
+        print('[trend][fetch] 无法 import embed_klines（%s）→ 改用 data.js 既有日线' % e)
+        return None
+    old = D.get('stkKlines') or {}
+    out, got = {}, 0
+    for code, nm, _ in IDX:
+        rows = None
+        try:
+            rows = EK.fetch_kline(code, bars=bars)
+        except Exception as e:                                # noqa: BLE001
+            print('[trend][fetch] %s %s 抓取异常（%s）' % (code, nm, e))
+        if rows and len(rows) >= 65:
+            out[code] = rows
+            got += 1
+            print('[trend][fetch] %-9s %-6s 最新 %s（%d 根）'
+                  % (code, nm, rows[-1][0], len(rows)))
+        else:
+            if code in old:
+                out[code] = old[code]
+            print('[trend][fetch] %-9s %-6s 抓取失败 → 沿用 data.js 既有日线' % (code, nm))
+    print('[trend][fetch] 当日指数日线 %d/%d 只' % (got, len(IDX)))
+    return out if got else None
+
+
+def build(D, K=None):
+    K = K if K is not None else (D.get('stkKlines') or {})
     out, levels = [], []
     for code, nm, kind in IDX:
         rows = K.get(code)
@@ -225,11 +267,14 @@ def build(D):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--write', action='store_true')
+    ap.add_argument('--fetch', action='store_true',
+                    help='现取 5 个指数当日日线再算（16:00 用；失败自动退回 data.js 既有日线）')
     a = ap.parse_args()
 
     path = os.path.join(HERE, 'data.js')
     D = common.load_dashboard_data(HERE)
-    st = build(D)
+    K = fetch_indices(D) if a.fetch else None
+    st = build(D, K)
     if not st:
         print('[trend] stkKlines 缺指数日线，不写')
         return 1
