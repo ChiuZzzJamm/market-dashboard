@@ -128,6 +128,11 @@ echo "📅 生成宏观事件日历（macro_calendar.py）..."
 # 必须排在 strategy_engine 前面：strategy_engine 读 trendState.marketCapPct 当仓位上限，
 # 顺序反了会让仓位纪律滞后一天（日历说 6-7 成、趋势已判「弱」却没压下去）。
 # 指数日线仍不是当日时（如 09:45 早盘部署）脚本自己会产出 staleNote 明示，不编造。
+# ⚠️ 这里刻意**不带 --fetch**（R100z278）：16:00 数据步已用 --fetch 现抓过指数日线，
+#    deploy 时 embed_klines 又刷过一遍，两个源都指向同一份收盘价，再抓一次只增加失败面。
+#    --fetch 是给「16:00 那一步」用的（那时 stkKlines 的指数日线还是 T−1）；这里已经是当日。
+#    换句话说：16:00 保证 16:00~19:30 之间页面不显示旧点位，deploy 这步保证最终态与 tradeDate 对齐，
+#    两者由 G57（trendState.asOf 必须等于 ashare.tradeDate）硬校，漏一个就拦部署。
 echo "📉 重算指数趋势档（trend_state.py --write）..."
 "$PY" trend_state.py --write || true
 
