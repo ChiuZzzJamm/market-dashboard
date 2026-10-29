@@ -26,6 +26,7 @@
     "5.5",
     "5.6",
     "5.7",
+    "5.8",
     "6",
     "7"
    ],
@@ -94,6 +95,22 @@
      "step": "5.7"
     },
     {
+     "cmd": "python3 risk_gate.py",
+     "flags": [
+      "--write"
+     ],
+     "file": "risk_gate.py",
+     "step": "5.8"
+    },
+    {
+     "cmd": "python3 risk_gate.py",
+     "flags": [
+      "--check"
+     ],
+     "file": "risk_gate.py",
+     "step": "5.8"
+    },
+    {
      "cmd": "python3 validate_stocks.py",
      "flags": [
       "--no-fix",
@@ -111,6 +128,7 @@
     "update_us_from_quotes.py",
     "check_duanban.py --days 7 --limit 300 --json",
     "stock_risk_blacklist.py --write",
+    "risk_gate.py --check",
     "validate_stocks.py --no-fix --scope us",
     "--no-fix --scope us",
     "check_duanban.py --days 7 --limit 300 --module --out /tmp/duanban_am.json",

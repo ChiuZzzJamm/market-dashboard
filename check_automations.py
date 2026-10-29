@@ -21,6 +21,8 @@ CHECKLIST.md 的 L1/L2/L5 早就写明「抽 .py 逐个 test -f」「按变体�
   G 冗余          跨 prompt 逐字重复的长行（瘦身依据，仅 --verbose 详列）
   B7 执行约定     开头声明的「带 cd / 不加 cd」是否 7 份唯一、且与代码块里的命令一致
                   —— 「约定说带 cd、示例不带 cd」这类分叉只有这层能抓
+  H 口径漂移      黑名单口径是否回退到「含业绩预亏」的旧四条（R100z276 用户口径
+                  是不看业绩）；跑黑名单的 prompt 是否写明了「不参与判定」
 
 ★ 四个必须记住的坑（本脚本逐版踩出来的）：
   1. **否定语境要按「整行」判，不能只开 45 字窗口**：`build_patchN.py` 在 17:00 出现两次，
@@ -1122,12 +1124,62 @@ def chk_dup(T, r, verbose=False):
             print('    x%d %s' % (n, s[:100]))
 
 
+# ---------------------------------------------------------------- H 口径漂移
+# R100z276（2026-10-29）：用户给了硬口径「业绩的公告、预公告不用管，就算是亏的
+# A 股也可能利空落地开始涨，所以不看业绩炒股」——黑名单从「四条风险」压回
+# 「三条（ST/解禁/减持）」，代码侧删了 LOSS_KW / dims.loss / core 里的 loss。
+#
+# 为什么必须有这道闸：这次改动落在**代码**里能靠单测兜住，落在 **prompt** 里
+# 没有任何东西兜 —— 而 prompt 才是 AI 实际执行的说明书。七份 prompt 里同一句
+# 口径被复制了 5 处，半年后任何一次「顺手补一条风险维度」都会把它悄悄加回去，
+# 而 audit_pipeline 只判 data.js、看不见 prompt。
+#
+# 判据两条，都是**字面级**（不做语义推断，避免误杀）：
+#   ① 禁用旧形态：出现下列任一原句 = 口径回退 → FAIL
+#   ② 强制留痕：凡跑 stock_risk_blacklist.py 的 prompt，必须写明「不参与判定」
+#      —— 防的是「删了旧句、也没写新口径」，AI 两手空空自己发挥。
+LEGACY_RISK = [
+    '30 日内业绩预减',        # 旧 ④ 项
+    '业绩预减/预亏公告',       # 旧 ④ 项另一种写法
+    '预减预亏',               # 旧 severity 措辞
+    '减持或业绩预减',          # 旧「绝对禁止」里的括注
+]
+NEED_NOTE = '不参与判定'
+
+
+def chk_risk_scope(T, r):
+    bad = []
+    for t in T:
+        p = t['prompt']
+        for s in LEGACY_RISK:
+            n = p.count(s)
+            if n:
+                bad.append((t['key'], s, n))
+    for k, s, n in bad:
+        r.fail('H1', '%s 里仍有旧的业绩黑名单口径「%s」x%d —— 用户口径是**不看业绩**'
+                      '（R100z276），这会让 AI 照旧去剔业绩预亏股' % (k, s, n))
+    if not bad:
+        r.ok('H1', '%d 份 prompt 均无旧的「业绩预亏进黑名单」口径（%d 种旧形态全灭）'
+             % (len(T), len(LEGACY_RISK)))
+
+    # ② 留痕：跑黑名单的 prompt 必须写明业绩类不参与判定
+    runs_bl = [t for t in T if 'stock_risk_blacklist.py' in t['prompt']]
+    no_note = [t['key'] for t in runs_bl if NEED_NOTE not in t['prompt']]
+    if no_note:
+        r.fail('H2', '%s 会跑 stock_risk_blacklist.py 但没写明业绩类公告「%s」—— '
+                      '删了旧句又没写新口径，AI 会自己猜该不该剔业绩预亏'
+               % (','.join(no_note), NEED_NOTE))
+    else:
+        r.ok('H2', '%d 份跑黑名单的 prompt 都写明了业绩类公告「%s」'
+             % (len(runs_bl), NEED_NOTE))
+
+
 # ---------------------------------------------------------------- main
 def main():
     ap_ = argparse.ArgumentParser(description='7 条看板自动化的机检（死链/死步骤/排程/区间冲突/冗余）')
     ap_.add_argument('--verbose', action='store_true')
     ap_.add_argument('--dump', action='store_true', help='导出 7 份 prompt 到 /tmp/ap/')
-    ap_.add_argument('--only', default='', help='只跑某类：A B D E F G')
+    ap_.add_argument('--only', default='', help='只跑某类：A B D E F G H')
     a = ap_.parse_args()
 
     T, miss = load()
@@ -1162,6 +1214,7 @@ def main():
     run('E', lambda: chk_coverage(T, r, a.verbose))
     run('F', lambda: chk_stamp_contract(T, r))
     run('G', lambda: chk_dup(T, r, a.verbose))
+    run('H', lambda: chk_risk_scope(T, r))
 
     sys.exit(r.dump())
 
