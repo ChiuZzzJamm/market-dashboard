@@ -63,7 +63,7 @@
     G40 复盘页与槽位  🌟 复盘台账独占页（三卡 + 独占 CSS + hash 直达）与悬浮组四槽位对齐
                       （返回按钮按槽位落位、槽距 offsetTop 实测；旧贴底写法会让第 4 个按钮
                       掉出组外）（R100z162，FAIL）
-    G41 视觉规范全链  标题/账户块/AI 关系行/四入口返回键齐全（📄📋可拖、🧰右下角定位）/拖后不吞点击/字体继承/字号 10 档
+    G41 视觉规范全链  标题/账户块/AI 关系行/四入口返回键齐全（📄📋🧰 均可拖）/拖后不吞点击/字体继承/字号 10 档
     G42 设计令牌      字号/圆角必须走 --fs-* / --radius-* 变量，禁止硬编码（白名单里的也算）
     G43 股票卡排版    「名称+代码」不可断（.nm 包裹）+ 机械池只标少数派且用压角圆点不占布局
     G44 僵尸镜像节点  ashare 下不得存在与顶层同名的容器——旧副本没删干净时，它既不被渲染
@@ -3421,6 +3421,45 @@ def g39_open_desk_page(r):
         r.ok("G39", "开盘预测子页两块齐全且顺序正确（前瞻→AI预测），od 为默认子页且可切走")
 
 
+def strip_js_comments(s):
+    """去掉 JS/CSS 注释（字符串字面量原样保留），供「语法级」闸门做匹配。
+
+    为什么必须有：G40/G41 的判据是字符串匹配，而**注释里的字面量会骗过它们**。
+    2026-10-29 埋雷实测：把真正的 `bindDrag(dei, 2);` 调用删掉、只在上面留一句注释
+    「接 bindDrag(dei,2)」，闸门照样 PASS —— 注释成了免死金牌。
+    极简状态机：引号三态（' " `）内不做任何剥离，遇到未闭合就原样吐回（宁可少剥，不要剥错）。
+    """
+    out, i, n, quote = [], 0, len(s), None
+    while i < n:
+        ch = s[i]
+        if quote:
+            out.append(ch)
+            if ch == '\\' and i + 1 < n:
+                out.append(s[i + 1]); i += 2; continue
+            if ch == quote:
+                quote = None
+            i += 1; continue
+        if ch in '\'"`':
+            quote = ch; out.append(ch); i += 1; continue
+        if ch == '/' and i + 1 < n and s[i + 1] == '/':
+            j = s.find('\n', i)
+            if j < 0:
+                break
+            i = j; continue
+        if ch == '/' and i + 1 < n and s[i + 1] == '*':
+            j = s.find('*/', i + 2)
+            i = n if j < 0 else j + 2
+            continue
+        # HTML 注释也要剥：markup 里的 `<!-- 接 bindDrag(dei,2) -->` 同样能骗过匹配
+        # （2026-10-29 实测：JS 注释剥干净了，「删掉真调用」那颗雷仍然 PASS，就栽在这）。
+        if s.startswith('<!--', i):
+            j = s.find('-->', i + 4)
+            i = n if j < 0 else j + 3
+            continue
+        out.append(ch); i += 1
+    return ''.join(out)
+
+
 def g40_score_page_and_slots(r):
     """G40 🌟 复盘台账页 + 悬浮组四槽位对齐（R100z162，2026-10-24）。
 
@@ -3458,6 +3497,7 @@ def g40_score_page_and_slots(r):
     except Exception as e:                                    # noqa: BLE001
         r.warn("G40", "index.html 读不到，跳过复盘台账页校验：%s" % e)
         return
+    code = strip_js_comments(s)   # 槽位表判据只认代码，不认注释（见 strip_js_comments 的由来）
 
     bad = []
 
@@ -3511,17 +3551,17 @@ def g40_score_page_and_slots(r):
         bad.append("hash '#score' 只出现 %d 处——初始直达与 popstate 返回须各一处" % nh)
 
     # ---- e) 槽位表顺序（页内替身 → 组内第 i 个按钮）----
-    mrail = re.search(r"var RAIL = \[([\s\S]{0,900}?)\];", s)
+    mrail = re.search(r"var RAIL = \[([\s\S]{0,900}?)\];", code)
     if not mrail:
         bad.append("找不到槽位表 RAIL——页内替身与组内按钮的对应关系没有单一来源")
     else:
         rb = mrail.group(1)
         # 表的条目是 `{ slot: g.children[N], iPage: 变量 }`；变量名是实现细节，
         # 先用 `var 变量 = getElementById('id')` 反解成 id 再比，改名不会误报。
-        amap = dict(re.findall(r"var\s+(\w+)\s*=\s*document\.getElementById\('([\w-]+)'\)", s))
+        amap = dict(re.findall(r"var\s+(\w+)\s*=\s*document\.getElementById\('([\w-]+)'\)", code))
         pairs = re.findall(r"slot:\s*g\.children\[(\d+)\]\s*,\s*iPage:\s*(\w+)", rb)
-        want = {"gn-jump": 0, "gn-entry-in": 1, "sc-entry-in": 3}
-        names = {"gn-jump": "🐼", "gn-entry-in": "📄", "sc-entry-in": "📋"}
+        want = {"gn-jump": 0, "gn-entry-in": 1, "db-entry-in": 2, "sc-entry-in": 3}
+        names = {"gn-jump": "🐼", "gn-entry-in": "📄", "db-entry-in": "🧰", "sc-entry-in": "📋"}
         got = {}
         for idx, var in pairs:
             got[amap.get(var, var)] = int(idx)
@@ -3531,10 +3571,10 @@ def g40_score_page_and_slots(r):
             elif got[el_id] != idx:
                 bad.append("RAIL 把 %s 指到第 %d 槽（应为第 %d 槽）——点进去按钮会跳一格"
                            % (el_id, got[el_id] + 1, idx + 1))
-        # R100z273：第 3 槽（🧰 → #db-back）已随「返回键改静态」一并撤出槽位表，所以是 3 条。
-        if len(pairs) > 3:
-            bad.append("RAIL 有 %d 条（应 3 条：🐼/📄/📋）——多出的槽位没有对应按钮"
-                       "（#db-back 已改页头静态按钮，不该再回到槽位表）" % len(pairs))
+        # R100z282：🧰 回到第 2 槽（用户「要有拖拽的，给我还原」），组内 4 个按钮 ⟺ 表内 4 条。
+        if len(pairs) != 4:
+            bad.append("RAIL 有 %d 条（应 4 条：🐼/📄/🧰/📋）——槽位表与浮动组按钮必须一一对应，"
+                       "少一条那颗页内替身就落不到自己槽上" % len(pairs))
 
     # ---- e2) 落位必须走实测偏移，CSS 不许再抄一份槽位 ----
     il = s.find("function layout(")
@@ -3612,6 +3652,9 @@ def g41_visual_norms(r):
         r.warn("G41", "index.html 读不到，跳过视觉规范校验：%s" % e)
         return
     bad = []
+    # 语法级判据（c 段的三件套、槽位表匹配）只认**代码**：注释里的字面量会骗过它们。
+    # 2026-10-29 埋雷实测教训：删掉真调用、只在注释写「接 bindDrag(dei,2)」→ 闸门 PASS。
+    code = strip_js_comments(s)
 
     # ---- a) 标题 ----
     if "次日交易预案" in s:
@@ -3622,58 +3665,48 @@ def g41_visual_norms(r):
     # 保留 a) 那条「源码里不许出现『次日交易预案』」，防止有人把旧标题抄回来。
 
     # ---- c) 悬浮按钮三件套 ----
-    # R100z281（用户 2026-10-29：「技术看板的 icon 还是没加回来」＋红框圈着页头那颗文字胶囊
-    # 「这个删掉」）：R100z273 撤掉 🧰 圆钮的依据是我把「有bug，并且遮掉了利好/利空/中性」
-    # 读成了圆钮遮标签——那句说的是卡片上的技术池徽章（R100z275 已删那批徽章），圆钮被误伤。
-    # 现在：返回键回到 #db-entry-in（右下角固定站位，不跟随浮动组），页头文字胶囊 #db-back 删除。
+    # 历史：R100z273 把 🧰 圆钮撤成页头文字胶囊；R100z281 换回右下角固定站位；
+    # R100z282（用户 2026-10-29 21:35「我就要原来的 🧰，要有拖拽的，给我还原」）
+    # 回到**原样**：页内替身 + RAIL 槽位 + 可拖拽。
     # 判据双向锁：
-    #   ① #db-entry-in 必须在、必须接 closeDuanban；
-    #   ② 它**不许进 RAIL 槽位表、不许挂 bindDrag**——那两样会把 left/top 写死成
-    #      「贴右缘 + 垂直居中」，视口 ≤1200px 时正好压在卡片右上角（当初撤它的真实原因）；
+    #   ① #db-entry-in 必须在、必须接 closeDuanban、**必须挂 bindDrag**（与 📄/📋 同构）；
+    #   ② 它必须出现在 RAIL 槽位表第 2 槽（下面 e) 段按 var 反解 id 核对，顺序错一格会跳槽）；
     #   ③ #db-back 不许回来（用户明确要删的那颗文字胶囊）。
+    # 上一轮那条「不许挂 bindDrag / 不许进槽位表」的反向锁已删——现在反过来，
+    # 谁再把 🧰 拎回固定角、拿掉拖拽，这里立刻 FAIL。
     entry = ["gn-entry", "db-entry", "sc-entry"]
     back = ["gn-entry-in", "sc-entry-in", "db-entry-in"]
     for i in entry + back:
-        if ('id="%s"' % i) not in s:
+        if ('id="%s"' % i) not in code:
             bad.append("缺悬浮按钮 #%s" % i)
-    if not re.search(r"getElementById\('db-entry-in'\)[\s\S]{0,400}?closeDuanban\(\)", s):
+    if not re.search(r"getElementById\('db-entry-in'\)[\s\S]{0,400}?closeDuanban\(\)", code):
         bad.append("#db-entry-in 没接 closeDuanban()——技术看板进去就出不来")
-    if 'id="db-back"' in s:
+    if 'id="db-back"' in code:
         bad.append('页头文字胶囊 #db-back 又出现了：用户 2026-10-29 明确要删（'
-                   '返回键统一走右下角 🧰 #db-entry-in）')
+                   '返回键统一走 🧰 页内替身 #db-entry-in）')
     # R100z165：槽位体系重做后不再有 slotIndex()，改成「每个页内替身都必须 bindDrag(变量, 槽号)」。
     # 判据走 id→变量名解析，不写死变量名（变量名属于实现细节，改个名不该让闸门误报）。
-    alias = dict(re.findall(r"var\s+(\w+)\s*=\s*document\.getElementById\('([\w-]+)'\)", s))
+    alias = dict(re.findall(r"var\s+(\w+)\s*=\s*document\.getElementById\('([\w-]+)'\)", code))
     id2var = {v: k for k, v in alias.items()}
     for iid, nm in (("gn-jump", "🐼"), ("gn-entry-in", "📄"),
-                    ("sc-entry-in", "📋")):
+                    ("db-entry-in", "🧰"), ("sc-entry-in", "📋")):
         var = id2var.get(iid)
         if not var:
             bad.append("#%s 没有绑定到变量（三件套第一环就断了）" % iid)
             continue
-        if not re.search(r"bindDrag\(\s*%s\s*,\s*\d+\s*\)" % re.escape(var), s):
+        if not re.search(r"bindDrag\(\s*%s\s*,\s*\d+\s*\)" % re.escape(var), code):
             bad.append("%s 页内键(#%s) 没接 bindDrag()——位置会跟随、自己拖不动"
-                       "（用户 2026-10-24 原话「他怎么不能拖拽」）" % (nm, iid))
-    # 反向锁：#db-entry-in 是右下角固定站位，不许进槽位表、不许挂 bindDrag
-    _ebvar = id2var.get("db-entry-in")
-    if not _ebvar:
-        bad.append("#db-entry-in 没有绑定到变量——点不动也查不到它是否被拽回浮动层")
-    else:
-        if re.search(r"bindDrag\(\s*%s\s*,\s*\d+\s*\)" % re.escape(_ebvar), s):
-            bad.append("#db-entry-in 挂了 bindDrag()——它现在是右下角固定站位，"
-                       "挂上会被写死 left/top，回到压卡片右上角的老位置（R100z281）")
-        if re.search(r"iPage:\s*%s\s*\}" % re.escape(_ebvar), s):
-            bad.append("#db-entry-in 出现在 RAIL 槽位表里——applySaved 会按浮动组槽位"
-                       "把它拽到屏幕右侧垂直居中（R100z281）")
+                       "（用户 2026-10-24 原话「他怎么不能拖拽」，2026-10-29 又强调一次"
+                       "「要有拖拽的」）" % (nm, iid))
     # 拖拽后的 click 抑制必须是「时间戳窗口」，不能是粘性布尔：
     # 指针落在按钮外松手时浏览器不补发 click，粘性标记会永久留 true，下一次正常点击先被吃掉
     # （2026-10-24 线上实测踩到：拖完 📋 想返回，第一下没反应）。
     # 判据必须查「判定式 + 盖戳」两处，只查字符串存在会被一行 `var suppressClick = 0;` 蒙过去
     # —— 埋雷实测：把判定改回粘性 moved、把盖戳删掉，只查存在性的版本两颗雷全漏。
-    if not re.search(r"if\s*\(\s*Date\.now\(\)\s*<\s*suppressClick\s*\)", s):
+    if not re.search(r"if\s*\(\s*Date\.now\(\)\s*<\s*suppressClick\s*\)", code):
         bad.append("拖拽后的 click 抑制不是时间戳窗口（应判 Date.now() < suppressClick）——"
                    "粘性 moved 在指针落于按钮外时会残留，下一次正常点击被吞一次")
-    if not re.search(r"suppressClick\s*=\s*Date\.now\(\)\s*\+", s):
+    if not re.search(r"suppressClick\s*=\s*Date\.now\(\)\s*\+", code):
         bad.append("拖拽结束时没盖抑制戳（suppressClick = Date.now() + N）——"
                    "没有这行，判定式永远为假，拖完会误触按钮本身")
 
@@ -3694,7 +3727,7 @@ def g41_visual_norms(r):
         r.fail("G41", "；".join(bad[:4]))
     else:
         r.ok("G41", "视觉规范与悬浮按钮全链路完整（标题/账户块/AI 关系行/四入口返回键齐全"
-                    "（📄📋 可拖、🧰 右下角定位）/拖后不吞点击/字体继承/字号 10 档）")
+                    "（📄📋🧰 均可拖，四槽位对齐）/拖后不吞点击/字体继承/字号 10 档）")
 
 
 def g42_design_tokens(r):
