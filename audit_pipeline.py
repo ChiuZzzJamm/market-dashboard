@@ -63,7 +63,7 @@
     G40 复盘页与槽位  🌟 复盘台账独占页（三卡 + 独占 CSS + hash 直达）与悬浮组四槽位对齐
                       （返回按钮按槽位落位、槽距 offsetTop 实测；旧贴底写法会让第 4 个按钮
                       掉出组外）（R100z162，FAIL）
-    G41 视觉规范全链  标题/账户块/AI 关系行/四入口四返回可拖+拖后不吞点击/字体继承/字号 10 档
+    G41 视觉规范全链  标题/账户块/AI 关系行/四入口返回键齐全（📄📋可拖、🧰右下角定位）/拖后不吞点击/字体继承/字号 10 档
     G42 设计令牌      字号/圆角必须走 --fs-* / --radius-* 变量，禁止硬编码（白名单里的也算）
     G43 股票卡排版    「名称+代码」不可断（.nm 包裹）+ 机械池只标少数派且用压角圆点不占布局
     G44 僵尸镜像节点  ashare 下不得存在与顶层同名的容器——旧副本没删干净时，它既不被渲染
@@ -217,6 +217,20 @@ EMPTY_WHITELIST = [
      "五个指数全在弱侧时 strong 为空、全在强侧时 weak 为空——**这正是全市场单边状态的证据**，"
      "不是取数失败。2026-10-27 实测 five 指数全部空头排列，strong 就该是空数组。"
      "前端 renderTrendState 只读 indices/marketLevel/marketCapPct，不引用 reasons（不渲染空段）"),
+    # --- R100z280（2026-10-29 21:2x）：G9 每天固定刷这三条假 WARN，逐条核实后登记 ---
+    (r"chenPool\.strict$",
+     "R100z280：严格池口径比断板反包严得多（连板≥2 + 断板日放量≥2 倍），空池是常态"
+     "——2026-10-29 实测就是 0 只（放宽池 10 只、观察中 18 只）。同族 watching/failPool/failedDates "
+     "R100z218 已豁免，唯独 strict 漏了，于是每天报一条。前端 (cp.strict || []) 全带兜底、"
+     "分节渲染走 `if (!list.length) return 暂无标的`"),
+    (r"accumulation\.strong$",
+     "R100z280：strong 是 scored 里 grade='强' 的镜像分池，当天没有强吸筹标的即空数组，"
+     "属正常日度状态（今天 0 只、观察池有货）。前端**根本不读**这个键——吸筹页按 scored 内"
+     "每张卡自己的 grade 现分组（R100z21），分池副本只有生成侧在下游用"),
+    (r"atrStops\.summary\.concentrationWarn$",
+     "R100z280：atr_stops 的集中度告警只在「多只候选止损位挤在同一价格带」时才追加，"
+     "无告警＝当日候选分散，是正常结果。前端只读 atrStops.items / evidenceRows，"
+     "不引用 summary.concentrationWarn（不渲染空段）"),
 ]
 
 DATA_KEYS_REQUIRED = [
@@ -3608,24 +3622,25 @@ def g41_visual_norms(r):
     # 保留 a) 那条「源码里不许出现『次日交易预案』」，防止有人把旧标题抄回来。
 
     # ---- c) 悬浮按钮三件套 ----
-    # R100z273（用户 2026-10-28）：「断板页那个 🧰 有 bug，还遮掉了利好/利空/中性，还是不要显示了」。
-    # 几何上无解：浮动层用 --float-x = max(12px,(100vw−1080)/2−60)，视口 ≤1200px 时退化成 12px，
-    # 而内容区在那档宽度下铺满 → 圆钮必然压在卡片右上角，正好盖住「断板·市值剔除」与情绪标签。
-    # 所以断板页返回键改成页头静态按钮 #db-back，**不再属于浮动替身三件套**。
-    # 判据随之改成双向：新键必须在、必须接 closeDuanban、且不许再挂回浮动层
-    # （挂了就会写 style.left/top 把它从 topbar 拽出去，症状与改之前一模一样）。
+    # R100z281（用户 2026-10-29：「技术看板的 icon 还是没加回来」＋红框圈着页头那颗文字胶囊
+    # 「这个删掉」）：R100z273 撤掉 🧰 圆钮的依据是我把「有bug，并且遮掉了利好/利空/中性」
+    # 读成了圆钮遮标签——那句说的是卡片上的技术池徽章（R100z275 已删那批徽章），圆钮被误伤。
+    # 现在：返回键回到 #db-entry-in（右下角固定站位，不跟随浮动组），页头文字胶囊 #db-back 删除。
+    # 判据双向锁：
+    #   ① #db-entry-in 必须在、必须接 closeDuanban；
+    #   ② 它**不许进 RAIL 槽位表、不许挂 bindDrag**——那两样会把 left/top 写死成
+    #      「贴右缘 + 垂直居中」，视口 ≤1200px 时正好压在卡片右上角（当初撤它的真实原因）；
+    #   ③ #db-back 不许回来（用户明确要删的那颗文字胶囊）。
     entry = ["gn-entry", "db-entry", "sc-entry"]
-    back = ["gn-entry-in", "sc-entry-in"]
+    back = ["gn-entry-in", "sc-entry-in", "db-entry-in"]
     for i in entry + back:
         if ('id="%s"' % i) not in s:
             bad.append("缺悬浮按钮 #%s" % i)
-    if 'id="db-back"' not in s:
-        bad.append("缺断板页返回键 #db-back（R100z273 把它从浮动圆钮改成页头按钮）")
-    elif not re.search(r"getElementById\('db-back'\)[\s\S]{0,400}?closeDuanban\(\)", s):
-        bad.append("#db-back 没接 closeDuanban()——断板页进去就出不来")
-    if 'id="db-entry-in"' in s:
-        bad.append('id="db-entry-in" 又出现了：断板页返回键已改静态 #db-back，'
-                   '它一旦回到浮动层就会压住卡片右上角的池标签与情绪标签（R100z273）')
+    if not re.search(r"getElementById\('db-entry-in'\)[\s\S]{0,400}?closeDuanban\(\)", s):
+        bad.append("#db-entry-in 没接 closeDuanban()——技术看板进去就出不来")
+    if 'id="db-back"' in s:
+        bad.append('页头文字胶囊 #db-back 又出现了：用户 2026-10-29 明确要删（'
+                   '返回键统一走右下角 🧰 #db-entry-in）')
     # R100z165：槽位体系重做后不再有 slotIndex()，改成「每个页内替身都必须 bindDrag(变量, 槽号)」。
     # 判据走 id→变量名解析，不写死变量名（变量名属于实现细节，改个名不该让闸门误报）。
     alias = dict(re.findall(r"var\s+(\w+)\s*=\s*document\.getElementById\('([\w-]+)'\)", s))
@@ -3639,14 +3654,17 @@ def g41_visual_norms(r):
         if not re.search(r"bindDrag\(\s*%s\s*,\s*\d+\s*\)" % re.escape(var), s):
             bad.append("%s 页内键(#%s) 没接 bindDrag()——位置会跟随、自己拖不动"
                        "（用户 2026-10-24 原话「他怎么不能拖拽」）" % (nm, iid))
-    # 反向锁：#db-back 不许挂 bindDrag，也不许进 RAIL 槽位表（两者都会把它变成浮层）
-    _dbvar = id2var.get("db-back")
-    if _dbvar:
-        if re.search(r"bindDrag\(\s*%s\s*,\s*\d+\s*\)" % re.escape(_dbvar), s):
-            bad.append("#db-back 挂了 bindDrag()——bindDrag 会写 style.left/top，"
-                       "静态按钮会从 topbar 脱出去变回压卡片的浮层")
-        if re.search(r"iPage:\s*%s\s*\}" % re.escape(_dbvar), s):
-            bad.append("#db-back 出现在 RAIL 槽位表里——applySaved 会按 top:50% 把它拽到屏幕右侧")
+    # 反向锁：#db-entry-in 是右下角固定站位，不许进槽位表、不许挂 bindDrag
+    _ebvar = id2var.get("db-entry-in")
+    if not _ebvar:
+        bad.append("#db-entry-in 没有绑定到变量——点不动也查不到它是否被拽回浮动层")
+    else:
+        if re.search(r"bindDrag\(\s*%s\s*,\s*\d+\s*\)" % re.escape(_ebvar), s):
+            bad.append("#db-entry-in 挂了 bindDrag()——它现在是右下角固定站位，"
+                       "挂上会被写死 left/top，回到压卡片右上角的老位置（R100z281）")
+        if re.search(r"iPage:\s*%s\s*\}" % re.escape(_ebvar), s):
+            bad.append("#db-entry-in 出现在 RAIL 槽位表里——applySaved 会按浮动组槽位"
+                       "把它拽到屏幕右侧垂直居中（R100z281）")
     # 拖拽后的 click 抑制必须是「时间戳窗口」，不能是粘性布尔：
     # 指针落在按钮外松手时浏览器不补发 click，粘性标记会永久留 true，下一次正常点击先被吃掉
     # （2026-10-24 线上实测踩到：拖完 📋 想返回，第一下没反应）。
@@ -3675,7 +3693,8 @@ def g41_visual_norms(r):
     if bad:
         r.fail("G41", "；".join(bad[:4]))
     else:
-        r.ok("G41", "视觉规范与悬浮按钮全链路完整（标题/账户块/AI 关系行/四入口四返回可拖+拖后不吞点击/字体继承/字号 10 档）")
+        r.ok("G41", "视觉规范与悬浮按钮全链路完整（标题/账户块/AI 关系行/四入口返回键齐全"
+                    "（📄📋 可拖、🧰 右下角定位）/拖后不吞点击/字体继承/字号 10 档）")
 
 
 def g42_design_tokens(r):

@@ -713,18 +713,27 @@
   }
   .db-entry-in:hover { transform: scale(1.1); }
   .db-entry-in:active { transform: scale(.92); cursor: grabbing; }
-  /* R100z273：原 `body.db-open .db-entry-in { display:flex }` 已删——断板页的返回键
-     不再走浮动替身那套（几何上必然压住卡片右上角的标签，见 #db-back 的 markup 注释）。
-     `.db-entry-in` 这个 class 仍被 📄/📋 两个页内返回使用，它们各自的 open 规则在下面。 */
-  .db-backbar { display: flex; margin: 0 0 10px; }
-  .db-back {
-    font: inherit; font-size: var(--fs-sm); color: var(--ink2);
-    background: rgba(255,255,255,.72); border: 1px solid rgba(255,255,255,.95);
-    border-radius: 999px; padding: 5px 14px; cursor: pointer; line-height: 1.5;
-    box-shadow: var(--shadow); transition: background .15s ease, color .15s ease;
+  /* R100z281（用户 2026-10-29：「技术看板的 icon 还是没加回来」「这个删掉」＝页头那颗文字胶囊）：
+     技术看板的返回键改回 🧰 圆钮，但**不再跟随浮动组槽位**——槽位是「贴右缘 + 垂直居中」，
+     视口 ≤1200px 时 --float-x 退化成 12px、内容区同宽，圆钮必压在卡片右上角（那是 R100z273
+     撤它的真实原因，与徽章无关）。改成右下角固定站位：压的是页面底边留白，不会盖住任何一行正文；
+     实心底 + 投影让它读成按钮（透明 emoji 浮在正文上才会被看成「压字」）。
+     `body.db-open` 才显示——它是这一页的返回键，别的页有各自的那颗。 */
+  #db-entry-in {
+    position: fixed; right: 14px; bottom: 18px; top: auto;
+    width: 46px; height: 46px; border-radius: 50%;
+    background: var(--paper); border: 1px solid var(--line);
+    box-shadow: 0 6px 18px rgba(17, 17, 26, .16);
+    z-index: 1200; padding: 0;
+    display: none; align-items: center; justify-content: center;
+    font-size: var(--fs-emoji-lg); line-height: 1; cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease;
   }
-  .db-back:hover { background: #fff; color: var(--ink); }
-  .db-back:active { transform: scale(.97); }
+  body.db-open #db-entry-in { display: flex; }
+  #db-entry-in:hover { transform: scale(1.08); box-shadow: 0 8px 22px rgba(17, 17, 26, .22); }
+  #db-entry-in:active { transform: scale(.94); }
+  /* 圆钮固定在右下角，最后一张卡的下沿要能滚出它——否则「按钮压住卡片底部那行下单」 */
+  body.db-open #duanban-view { padding-bottom: 64px; }
   @media (max-width: 700px), (max-height: 460px) {
     :root { --float-x: 12px; }
     /* R100z165：手机端（用户 2026-10-24 截图：4 个图标竖排压在正文上）——
@@ -830,6 +839,9 @@
   /* R100z255：今日可下单卡片区——用主色圆点，与「开盘精选」的金色区分开：
      一个是「9:45 选出来的强名单」，一个是「今天真的能挂/能补的价」，不是同一件事。 */
   .db-pool.p-ord h2::before { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+  /* R100z281：标题里「＋81 只等确认」的后缀——比 h2 小一档、常规字重、灰字，
+     读起来是同一行的补充说明而不是第二个标题。字号走 --fs-sm（G42 拦写死 px）。 */
+  .p-ord h2 .ord-h2-x { font-size: var(--fs-sm); font-weight: 400; color: var(--ink2); margin-left: 8px; }
   /* 摘要行里的股票名不许被中文折行劈成两半（实测「百/洋股份」断在行尾，
      读者会以为是个叫「百」的票）。名字整体 nowrap，只在名字之间断。 */
   .db-sub .ord-nw { white-space: nowrap; }
@@ -1554,20 +1566,23 @@
   </footer>
 
   <div id="duanban-view">
-    <!-- R100z273（用户 2026-10-28 截图：「有bug，并且遮掉了利好/利空/中性，所以还是不要显示了」）：
-         返回键从「右侧浮动 46px 圆钮」改成页头这颗文字胶囊。
-         原因不是偏好，是几何上无解：浮动层用 --float-x = max(12px, (100vw−1080)/2−60)，
-         视口 ≤1200px 时它退化成 12px，而内容区在这档宽度下是铺满的——圆钮必然压在卡片右上角，
-         正好盖住「断板·市值剔除」与情绪标签，而那几个标签正是判断「它为什么不在池里」的唯一线索。
-         浮动层没有可挪的安全区（往上一格压标题、往下一格压批注），所以改成不再浮动。
-         ⚠️ 它不再是 #db-entry-in：那个 id 绑着 bindDrag 与槽位同步（组顶+组高−46），
-            留用会把这个静态按钮定位到屏幕右侧，症状与改之前一模一样。 -->
-    <div class="db-backbar"><button class="db-back" id="db-back" title="返回每日市场看板">← 返回看板</button></div>
+    <!-- 返回键＝右下角那颗 🧰（用户 2026-10-29 21:1x：「技术看板的 icon 还是没加回来」＋红框圈着
+         页头那颗「← 返回看板」说「这个删掉」）。R100z273 当初撤掉圆钮的依据是我把
+         「有 bug，并且遮掉了利好/利空/中性」读成了圆钮遮标签——其实那句说的是卡片上的技术池徽章
+         （R100z275 已删那批徽章），圆钮是被误伤的。现在按他的要求恢复，但**位置换掉**：
+         不再回到「视口垂直居中、贴右缘」那个槽位，因为 --float-x 在 ≤1200px 时退化成 12px、
+         内容区同宽，那个位置必压卡片右上角（真正的原因不是徽章，是几何）。
+         改成右下角固定站位（`#db-entry-in` 的 CSS）：收起是常态，它压的是页面底边留白，
+         且带实心底+投影，读起来是按钮而不是浮在正文上的 emoji。
+         ⚠️ 它不进 RAIL、不接 bindDrag：一旦进槽位表，applySaved/ layout 会把
+            left/top 写死成组内第 3 槽（屏幕右侧垂直居中），又回到压卡片的老位置。
+            G41 现在双向锁着这一条。 -->
     <div class="db-topbar">
       <div class="db-title">技术看板</div>
       <div class="db-sub2">断板反包 · 陈学长 · 横盘启动 · 谐波形态 · 主力吸筹 · 开盘预测</div>
       <div class="db-date" id="db-date"></div>
     </div>
+    <button class="db-entry-in" id="db-entry-in" title="返回每日市场看板" aria-label="返回每日市场看板"><span class="db-emoji">🧰</span></button>
     <!-- R100k：子页菜单已移入各子页内容流（断板页位于开盘精选与确认池说明之间；谐波/横盘启动页位于页首） -->
 
     <!-- R100m：TOP10 + 开盘精选固定区——切换谐波/横盘启动/吸筹子页时保持显示（用户要求固定不动） -->
@@ -4678,6 +4693,20 @@ function stockNewsItems(code) {
    里 impacts 命中该股的条目。原来 stkNewsHtml / failNewsScan 各写一遍、且都标成「个股消息」
    （其实是板块级要闻，用户 2026-10-25 点名「个股消息基本都是空的」），现已统一到这里、
    统一标「板块新闻」，方向仍按 direction 映射（看涨=利好 / 看跌=利空）。 */
+/* R100z280：五节要闻 → 一条要闻的方向。**唯一出口**，两个读者共用：
+   sectorNewsItems（弹窗「板块新闻」条目与口径计数）与 stkSentiment（卡片情绪徽标）。
+   两处原来各写一遍 `it.direction === '看涨' ? ...`，同一个 bug 于是有两份拷贝。
+   口径：
+     · bullNews / bearNews 没有 direction（validate_stocks.py 第 5 条明写不处理），
+       方向由**栏目**承载——不看栏目就等于把整节判成中性；
+     · macroNews / intlNews / bankViews 的 direction 是逐条语义（看涨/看跌/中性），
+       缺失或非法值一律按中性（validate_stocks 写回时会补成「中性」并 WARN）。 */
+function sectorNewsDir(k, it) {
+  if (k === 'bullNews') return 'bull';
+  if (k === 'bearNews') return 'bear';
+  var d = (it || {}).direction;
+  return d === '看涨' ? 'bull' : (d === '看跌' ? 'bear' : 'neutral');
+}
 function sectorNewsItems(code) {
   code = String(code || '').trim();
   if (!/^\d{6}$/.test(code)) return [];
@@ -4685,7 +4714,13 @@ function sectorNewsItems(code) {
   var out = [];
   ['bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews'].forEach(function (k) {
     ((D.ashare || {})[k] || []).forEach(function (it) {
-      var dir = it.direction === '看涨' ? 'bull' : (it.direction === '看跌' ? 'bear' : 'neutral');
+      /* R100z280（2026-10-29 21:2x 核查 19:30 日志时发现）：方向先看**栏目本身**——
+         bullNews / bearNews 按设计不带 direction（validate_stocks.py 第 5 条原话
+         「bullNews/bearNews 无 direction，不处理」，方向由栏目承载）。原来只读 it.direction，
+         这两节命中的标的一律被判成中性：实测当日 40 只标的、全库 101 处引用（含
+         aiPrediction.sectors[1] 整组 8 只）在弹窗里把「利空要闻」印成「中性口径」。
+         判定收进 sectorNewsDir 一处，stkSentiment（卡片情绪徽标）与这里共用同一个出口。 */
+      var dir = sectorNewsDir(k, it);
       (it.impacts || []).forEach(function (im) {
         (im.stocks || []).forEach(function (st) {
           if (String(st.code) !== code) return;
@@ -5556,7 +5591,10 @@ function stkSentiment(code) {
   var nB = 0, nBe = 0;
   ['bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews'].forEach(function (k) {
     ((D.ashare || {})[k] || []).forEach(function (it) {
-      var dir = it.direction === '看涨' ? 'bull' : (it.direction === '看跌' ? 'bear' : 'neutral');
+      /* R100z280：原来这里只读 it.direction，bullNews/bearNews 没有该字段 →
+         这两节命中的票：利好一票不算、利空一票不算，情绪徽标被系统性拉向「中性」。
+         现在与弹窗共用 sectorNewsDir（栏目承载方向的那两节按栏目算）。 */
+      var dir = sectorNewsDir(k, it);
       (it.impacts || []).forEach(function (im) {
         (im.stocks || []).forEach(function (st) { if (String(st.code) === code) { if (dir === 'bull') nB++; else if (dir === 'bear') nBe++; } });
       });
@@ -8015,8 +8053,8 @@ function ordBlockHtml() {
   var nPriced = P.poolA.concat(P.poolB, P.poolC).filter(ordHasPrice).length;
   /* 摘要整行会过 esc()，这里不许写标签——写 <b> 会原样印成 &lt;b&gt;（R100z271 探针抓到）。 */
   sum.push('形态确认 ' + P.poolA.length + ' 只 · 缩量回踩 ' + P.poolC.length +
-    ' 只 · 即将确认 ' + P.poolB.length + ' 只（其中 ' + nPriced + ' 只有「明日可用」的价：' +
-    '明早挂单价或缩量回踩档的涨停日高低点）');
+    ' 只 · 即将确认 ' + P.poolB.length + ' 只（还差一根确认K线，今天不是买点，只用来明天盯它走没走出来；' +
+    '其中 ' + nPriced + ' 只有「明日可用」的价：明早挂单价或缩量回踩档的涨停日高低点）');
   /* R100z272：断板池现在也有价位了（按当日收盘算的「明早 ≤ X 才买」）。但它**不进第一档**——
      第一档是「明早可以直接挂出去」的指令（挂单价 / 缩量回踩档），而它只是「低于这个数才值得买」
      的参考线。不解释这一句，读者会拿「有价」去对排序，发现它们排在后面就以为排序坏了。 */
@@ -8063,7 +8101,22 @@ function ordBlockHtml() {
     dedupTxt.push('缩量回踩档是从 ' + P.nShrinkCand + ' 只带 K 线的主板票里现扫的（涨停→放量阴→缩量 1~2 天，四条硬条件全中才算）');
   }
 
-  var h = '<div class="db-pool p-ord"><h2>💵 明日可下单 · ' + P.n + ' 只</h2>' +
+  /* R100z281（用户 2026-10-29 21:1x：「怎么明日可下单有 98 只标的？陈学长形态进行中才 18 只、
+     放宽池才 10 只、断板确认池才 10 只、观察池才 74 只」）——
+     98 是**五个池去重后的并集**：确认 10 + 陈学长放宽 10 + 陈学长观察中 18 + 断板观察 74 = 112，
+     减去 14 只重复（同一票同时在两池：3 只确认∩放宽、2 只放宽∩断板观察、9 只两套观察重叠）＝ 98。
+     但其中能明早下单的只有 ① 形态确认 17 只（+② 缩量回踩 0 只），
+     另外 81 只是 ③「形态即将确认」——本页自己的档头写着「还差一根确认K线，现在不能下单」。
+     标题把这个并集整个叫「明日可下单」＝**同一个数字同时表示「能买」和「在等」**，
+     读者只能自己减，而这就是他这次问的那句。故标题只报能下单的只数（①②），
+     等的只数交给摘要与③档自己说清楚（81 这个数在摘要里照旧出现，不是藏起来）。 */
+  var nNow = P.poolA.length + P.poolC.length;
+  /* 只报 17 也不对：下面一共 98 张卡（①17 + ③81），读者数一遍会发现标题少报 81。
+     所以数字后面**把等的那批并排写出来**——98 = 17 能下单 + 81 在等，一行讲完，
+     既不再拿并集冒充可下单，也不留「卡片数与标题不符」这个新坑。 */
+  var h = '<div class="db-pool p-ord"><h2>💵 明日可下单 · ' + nNow + ' 只' +
+    (P.poolB.length ? '<span class="ord-h2-x">＋' + P.poolB.length + ' 只等确认（③档，今天不是买点）</span>' : '') +
+    '</h2>' +
     '<div class="db-sub">收盘后生成，面向<b>下一个交易日</b>——下面每个价都是明天开盘要用的，' +
       '不是现在还能成交的价。' + esc(sum.join('　·　')) +
       (dedupTxt.length ? '。' + dedupTxt.join('；') : '') +
@@ -8654,9 +8707,10 @@ document.addEventListener('click', function (ev) {
    📄 全球要闻 / 📋 复盘台账两个页内返回（组顶 + 组高 − 46 那套只对它们生效）。 */
 (function () {
   var de = document.getElementById('db-entry');
-  // R100z273：断板页返回改成页头静态按钮（#db-back）——它不在浮动层，不参与槽位同步。
-  // 变量名保留 dei：下面 click 绑定与 RAIL 都按这个名字走，改名只会多一处漏改的风险。
-  var dei = document.getElementById('db-back');
+  /* R100z281：断板页返回键回到 🧰 页内替身（#db-entry-in，右下角固定站位）。
+     它**不进 RAIL 槽位表、不接 bindDrag**——那两样会把 left/top 写死成「贴右缘 + 垂直居中」，
+     又压回卡片右上角（R100z273 撤它的真实原因，见 CSS 注释）。变量名仍叫 dei，只为少改一处。 */
+  var dei = document.getElementById('db-entry-in');
   if (de) de.addEventListener('click', function () { openDuanban(); });
   if (dei) dei.addEventListener('click', function () { closeDuanban(); });
   // R100z109：📄 全球要闻入口 / 页内返回
@@ -8693,10 +8747,11 @@ document.addEventListener('click', function (ev) {
      新实现只有一条规则：**组内第 i 个按钮的实测偏移 = 页内替身的偏移**，
      几何每次现算（读 flex-direction + gap + 按钮宽高，display:none 也读得到 computed），
      不缓存像素、不写死槽距、CSS 不再参与定位。 */
-  /* R100z273：🧰 那一行（g.children[2] → dei）已从槽位表撤掉——断板页的返回键
-     不再是固定定位的页内替身，而是页头里的静态按钮，没有「槽位」这个概念。
-     漏撤的后果不是不报错：applySaved 会拿 top:50% 把它从文档流里拽到屏幕右侧，
-     症状与改之前一模一样（还是压卡片）。 */
+  /* R100z281：🧰 那一行（g.children[2] → dei）**仍然不进这张表**。
+     它已经回到页面（用户 2026-10-29 要求恢复），但站位是右下角固定（CSS `#db-entry-in`），
+     不跟随浮动组。进了表就会被 applySaved/layout 写死 left/top = 「贴右缘 + 垂直居中」，
+     视口 ≤1200px 时那个位置正是压卡片右上角的老坑——这正是它当初被撤的原因。
+     📄/📋 两颗必须留在表里：它们的定位就是跟着浮动组走，别一起删。 */
   var RAIL = [
     { slot: g.children[0], iPage: gnj },   // 🐼 → 全球要闻页的 🐼/🦅 定位键
     { slot: g.children[1], iPage: gnei },  // 📄 → 全球要闻返回
