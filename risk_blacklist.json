@@ -2,12 +2,12 @@
  "ok": true,
  "nameSrc": "tx",
  "nameSrcDetail": {
-  "tx": 377,
+  "tx": 397,
   "sina": 0,
   "em": 0
  },
  "date": "2026-10-29",
- "checked": 377,
+ "checked": 397,
  "liftWindow": [
   2,
   5
@@ -17,24 +17,36 @@
  "dims": {
   "st": {
    "status": "ok",
-   "cover": "行情名源（腾讯377/新浪0/东财0）377/377 只取到"
+   "cover": "行情名源（腾讯397/新浪0/东财0）397/397 只取到"
   },
   "cut": {
    "status": "ok",
-   "cover": "公告源 377/377 只取到（东财377/巨潮0）"
+   "cover": "公告源 397/397 只取到（东财397/巨潮0）"
   },
   "lift": {
    "status": "ok",
-   "cover": "解禁源 377/377 只取到"
+   "cover": "解禁源 397/397 只取到"
   },
   "pledge": {
    "status": "ok",
-   "cover": "质押源 377/377 只取到（仅供参考）"
+   "cover": "质押源 397/397 只取到（仅供参考）"
   }
  },
  "verdict": "full",
  "uncheckedDims": [],
  "blacklist": {
+  "002202": {
+   "name": "金风科技",
+   "reasons": [
+    "解禁 2026-11-04（股权激励限售股份，占总股本 0.0%）"
+   ],
+   "count": 1,
+   "watch": [
+    "参考·质押 0.1%（截至 2026-06-12）"
+   ],
+   "severity": "orange",
+   "progress": []
+  },
   "603716": {
    "name": "塞力医疗",
    "reasons": [
@@ -114,18 +126,6 @@
    "progress": [
     "减持已结束（利空出尽）"
    ]
-  },
-  "002207": {
-   "name": "*ST准油",
-   "reasons": [
-    "ST/退市（当前名称 *ST准油）"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 12.0%（截至 2026-06-12）"
-   ],
-   "severity": "red",
-   "progress": []
   }
  },
  "unknown": [],
