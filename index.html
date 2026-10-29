@@ -8888,6 +8888,7 @@ function openDbModal(key) {
   document.getElementById('db-modal-head').innerHTML =
     '<span class="nm">' + esc(e.name) + '</span><span class="cd2">' + esc(e.code) + '</span>' +
     modalFreshBadgeHtml(key, e.code) + // R100z121：弹窗「新」徽章移到标题行（代码右侧，用户 2026-10-13 截图指定）
+    dbIdxHtml(key) + // R100z283：组内数量 i/N，形态与技术池弹窗（#stk-modal）一致；与 dbStep 同源
     '<button class="db-modal-close" onclick="closeDbModal()">×</button>' +
     '<div class="m-badge-row">' + // R100s：徽标统一第二行
     stkSecBadge(e.code, e.sector) +
@@ -9041,32 +9042,42 @@ function openDbModal(key) {
   document.getElementById('db-modal').classList.add('open');
 }
 function closeDbModal() { DB_CURR = null; DB_NAV = null; document.getElementById('db-modal').classList.remove('open'); }
+/* R100z283（用户 2026-10-29 23:2x：「所有标的页面这里增加一个数量，参考图 2」）：
+   断板弹窗（#db-modal）标题行原来**没有** i/N，而技术池弹窗（#stk-modal）与连板弹窗（#lb-modal）
+   都早就有了——同一个「能左右翻的组」，只有断板这边不自曝数量，读者不知道自己在多少只里、
+   也不知道箭头还能按几下。图 2 那颗 1/5 就是他要的形态。
+
+   这里把「这个 key 属于哪个翻页组」抽成**单一出口**：dbStep 翻页与标题序号必须同源。
+   各写一套 filter 就会出现「标题写 3/17、箭头却在 98 只里翻」——正是 24.110 同一量两套数。
+   分组口径沿用 R100z170 / R100z219 / R100z257：按 key 前缀分组，只在同一个区块内循环：
+     s| = 🌟开盘精选（含技术池并入项）  c| / w| = 断板反包确认池+观察池（同区合并）
+     x| = 陈学长池  o| = 明日可下单清单  f| = 失效归档池（DB_NAV 自带顺序） */
+function dbOrderOf(key) {
+  if (DB_NAV) return DB_NAV;
+  var pre = String(key || '').charAt(0);
+  if (pre === 's') return DB_ORDER.filter(function (k) { return k.charAt(0) === 's'; });
+  // R100z219：陈学长池单独一组——不分组就会串到断板反包（R100z170 修过的同一个病）。
+  // 用 charAt(0) === 'x' 而不是 indexOf('x|')，与其余几行同一写法。
+  // R100z257：今日可下单条目（o|）单独一组，不分组就落进 DB_ORDER 全序列。
+  if (pre === 'c' || pre === 'w') return DB_ORDER.filter(function (k) { var c = k.charAt(0); return c === 'c' || c === 'w'; });
+  if (pre === 'x') return DB_ORDER.filter(function (k) { return k.charAt(0) === 'x'; });
+  if (pre === 'o') return DB_ORDER.filter(function (k) { return k.charAt(0) === 'o'; });
+  return DB_ORDER;
+}
+/* 标题行数量：与 stk-modal 同一形态（`<span class="cd2">i/N</span>`，紧跟「新」徽章之后）。
+   组里只有它一个时不显示——「1/1」是噪音，还会让人以为能翻。
+   title 写清「本组第几只 / 共几只」：明日可下单那一组的 N 是**卡片总数**（形态确认 17 ＋ 等确认 81
+   ＝ 98），与标题上那两段是同一个加法，悬停即可自证，不用读者自己减。 */
+function dbIdxHtml(key) {
+  var ord = dbOrderOf(key) || [];
+  if (ord.length < 2) return '';
+  var i = ord.indexOf(key);
+  if (i < 0) return '';
+  return '<span class="cd2" title="本组第 ' + (i + 1) + ' 只，共 ' + ord.length +
+    ' 只（可用 ← → 切换）">' + (i + 1) + '/' + ord.length + '</span>';
+}
 function dbStep(delta) {
-  // R100z170（用户 2026-10-21 反馈）：左右箭头原先一律走 DB_ORDER（确认/观察/精选合并主序列），
-  // 于是「开盘精选」弹窗能翻到断板反包、「断板反包」弹窗能翻到开盘精选 —— 两个区块互相串票。
-  // 现按 key 前缀分组，只在**同一个区块**内循环：
-  //   s| = 🌟开盘精选（含技术池并入项）  c| / w| = 断板反包确认池+观察池（同区合并）  f| = 失效归档池（DB_NAV 自带顺序）
-  var ord;
-  if (DB_NAV) {
-    ord = DB_NAV;
-  } else {
-    var pre = String(DB_CURR || '').charAt(0);
-    if (pre === 's') {
-      ord = DB_ORDER.filter(function (k) { return k.charAt(0) === 's'; });
-    } else if (pre === 'c' || pre === 'w') {
-      ord = DB_ORDER.filter(function (k) { var c = k.charAt(0); return c === 'c' || c === 'w'; });
-    // R100z219：陈学长池单独一组——不分组就会串到断板反包（R100z170 修过的同一个病）。
-    // 用 charAt(0) === 'x' 而不是 indexOf('x|')，与上面两行同一写法。
-    } else if (pre === 'x') {
-      ord = DB_ORDER.filter(function (k) { return k.charAt(0) === 'x'; });
-    // R100z257：今日可下单条目（o|）单独一组。不分组就落进下面的 else（DB_ORDER 全序列），
-    // 从清单卡点开却能用箭头翻到断板双池/精选——R100z170/R100z219 修的是同一个病。
-    } else if (pre === 'o') {
-      ord = DB_ORDER.filter(function (k) { return k.charAt(0) === 'o'; });
-    } else {
-      ord = DB_ORDER;
-    }
-  }
+  var ord = dbOrderOf(DB_CURR);
   if (!ord || !ord.length) return;
   var i = ord.indexOf(DB_CURR);
   if (i < 0) i = 0; else i = (i + delta + ord.length) % ord.length;

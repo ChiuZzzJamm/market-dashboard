@@ -4822,6 +4822,96 @@ def g57_trend_asof(r):
                 f"{'有' if ts.get('staleNote') else '无'}）")
 
 
+def g58_modal_head_count(r):
+    """G58 弹窗标题数量与翻页组同源（R100z283，2026-10-29）。
+
+    事故：用户 2026-10-29 23:2x 给两张截图，原话「所有标的页面这里增加一个数量，参考图 2」。
+    图 2（龙江交通）标题行有「1/5」，图 1（日盈电子）同一位置空着。
+
+    根因不是漏写一个 span，而是**三个弹窗各有自己的标题渲染**：
+      · #stk-modal（技术池/龙虎榜/清单）在 openStkModal 里写 (STK_IDX+1)/STK_GRP.length；
+      · #lb-modal（连板梯队）在 lbShow 里写 (idx+1)/LB_LIST.length；
+      · #db-modal（断板双池/精选/陈学长/明日可下单/失效池）**一处都没写**。
+    同一个「能按 ←/→ 翻的组」，只有断板这边不自曝数量——读者不知道自己在多少只里、
+    也不知道箭头还能按几下，只能一只只翻到底才发现。
+
+    为什么必须上闸门：这类缺口**不报错、不缺数据**，只是少一行字。任何一次标题渲染重写、
+    任何一个新弹窗入口都会重新把它漏掉，而页面看上去「一切正常」——只会被用户截图指出来。
+
+    判据（三条，缺一条拦不住）：
+      a) dbIdxHtml(key) 存在，且**只能从 dbOrderOf 取顺序**：各写一套 filter 就会出现
+         「标题写 3/17、箭头却在 98 只里翻」——24.110 同一量两套数；
+      b) openDbModal 的头部串必须调 dbIdxHtml(key)；三处序号形态统一用 .cd2 小字；
+      c) dbStep 必须走 dbOrderOf，**不许**自己再 DB_ORDER.filter（反向锁：防长出第二套分组）。
+    判据在 strip_js_comments() 之后的源码上匹配——注释里留一句「已接」不能算数
+    （G40/G41 踩过：注释能当免死金牌）。
+    """
+    p = os.path.join(HERE, "index.html")
+    try:
+        s = open(p, encoding="utf-8").read()
+    except Exception as e:                                    # noqa: BLE001
+        r.warn("G58", "index.html 读不到，跳过弹窗标题数量校验：%s" % e)
+        return
+    code = strip_js_comments(s)
+
+    def body_of(fn, span=2600):
+        i = code.find("function %s(" % fn)
+        if i < 0:
+            return None
+        ends = [x for x in (code.find("\nfunction ", i + 1),
+                            code.find("\ndocument.addEventListener", i + 1)) if x > 0]
+        end = min(ends) if ends else len(code)
+        return code[i:min(end, i + span)]
+
+    bad = []
+
+    bi = body_of("dbIdxHtml")
+    if bi is None:
+        bad.append("找不到 dbIdxHtml()——断板弹窗标题不再自曝组内数量")
+    else:
+        if "dbOrderOf(" not in bi:
+            bad.append("dbIdxHtml() 没走 dbOrderOf()——自己另算一套组，会和箭头不同源")
+        if "ord.length" not in bi:
+            bad.append("dbIdxHtml() 没读 ord.length——斜线后的总数没有来源")
+
+    bo = body_of("dbOrderOf")
+    if bo is None:
+        bad.append("找不到 dbOrderOf()——翻页组没有单一出口")
+    else:
+        for pre, why in (("'s'", "开盘精选"), ("'c'", "断板确认池"), ("'w'", "断板观察池"),
+                         ("'x'", "陈学长池"), ("'o'", "明日可下单")):
+            if pre not in bo:
+                bad.append("dbOrderOf() 没有 %s 前缀分组（%s 会串到别的区块翻）" % (pre, why))
+        if "DB_NAV" not in bo:
+            bad.append("dbOrderOf() 没处理 DB_NAV——失效归档池会掉进主序列里翻")
+
+    bm = body_of("openDbModal", 4000)
+    if bm is None:
+        bad.append("找不到 openDbModal()——断板弹窗入口没了")
+    elif "dbIdxHtml(key)" not in bm:
+        bad.append("openDbModal() 头部没调 dbIdxHtml(key)——断板弹窗又变回没有 i/N"
+                   "（用户 2026-10-29 截图 1 指的就是这个空位）")
+
+    bs = body_of("dbStep", 900)
+    if bs is None:
+        bad.append("找不到 dbStep()——左右箭头没了")
+    elif "dbOrderOf(" not in bs:
+        bad.append("dbStep() 没走 dbOrderOf()——箭头顺序与标题数量成了两套算法")
+    elif "DB_ORDER.filter" in bs:
+        bad.append("dbStep() 里又长出 DB_ORDER.filter——第二套分组，迟早与标题数量对不上")
+
+    for fn, why in (("openStkModal", "技术池弹窗"), ("lbShow", "连板弹窗")):
+        b = body_of(fn)
+        if b and 'class="cd2"' not in b:
+            bad.append("%s（%s）的标题序号不再用 .cd2 小字——三处形态不一致" % (fn, why))
+
+    if bad:
+        r.fail("G58", "；".join(bad[:3]))
+    else:
+        r.ok("G58", "三处弹窗标题都自曝组内数量（i/N），断板弹窗与 dbStep 同源"
+                    "（dbOrderOf 单一出口，o/x/s/c·w/f 五组不串票）")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -4891,6 +4981,7 @@ def main():
     g55_red_reason_grade(r)
     g56_shell_var_expansion(r)
     g57_trend_asof(r)
+    g58_modal_head_count(r)
 
     if as_json:
         print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
