@@ -1394,6 +1394,91 @@ def k11_tape_degrade(r, verbose=False):
              % len(diag_keys))
 
 
+def k12_earnings_scope(r, verbose=False):
+    """K12 业绩不得参与方向判定（R100z276）。
+
+    用户口径（2026-10-29 原话）：「关于业绩的公告、预公告不用管，就算是亏的 A 股
+    也可能利空落地开始涨，所以不看业绩炒股」。
+
+    为什么需要这道闸：这条口径被**三处**实现分别执行过，且互不知情 ——
+      ① `stock_risk_blacklist`（硬风险黑名单，已删 dims.loss）
+      ② `check_duanban.NOTICE_*_KW` + `classify_earnings`（断板池个股打标）
+      ③ `stock_news.NEWS_*_PAIRS`（消息面净差）
+    只改 ①，②③ 仍会把「预亏」标成 bear：个股级×2 权重、观察池排末位、
+    probability −2、消息面净差被拉负 —— 页面看起来一切正常，只是把用户
+    明确否掉的口径反向执行了一遍。这类「在同一件事上写三份口径」正是
+    旧 bug 的形态，所以用闸门把它们钉在一起。
+
+    判据两组，**双向**：
+      A 业绩不许回来：公告词表/新闻词对里不得再出现业绩词；`classify_earnings`
+        不许被重新定义（有人加回来必被这一步抓住）；
+      B 真事件不许被顺手删：摘词时容易连坐，「终止收购」「立案」「减持」这些
+        确定性利空必须仍判 bear（实测这三类是 000700/002249 等票唯一的看空依据）。
+    """
+    import importlib.util
+    bad = []
+
+    def _load(fname, alias):
+        spec = importlib.util.spec_from_file_location(alias, os.path.join(HERE, fname))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    try:
+        cd = _load('check_duanban.py', '_k12_cd')
+        sn = _load('stock_news.py', '_k12_sn')
+    except Exception as e:                                   # noqa: BLE001
+        r.fail('K12', '无法载入 check_duanban.py / stock_news.py（%s）—— 业绩口径自检失效' % e)
+        return
+
+    # ---- A 业绩不许回来
+    EPS_WORDS = ('预亏', '业绩预减', '业绩快亏', '下调业绩', '下修业绩', '预增', '业绩预增')
+    for name in ('NOTICE_BEAR_KW', 'NOTICE_BULL_KW'):
+        kw = tuple(getattr(cd, name, ()) or ())
+        hit = [w for w in EPS_WORDS if w in kw]
+        if hit:
+            bad.append('%s 里又有业绩词 %s —— 业绩不参与方向判定（R100z276）' % (name, hit))
+    for name in ('NEWS_BEAR_PAIRS', 'NEWS_BULL_PAIRS'):
+        prs = tuple(getattr(sn, name, ()) or ())
+        hit = [a for a, _b in prs if a in EPS_WORDS or a == '下滑']
+        if hit:
+            bad.append('%s 里又有业绩词对 %s —— 公告与新闻两侧必须同时摘' % (name, hit))
+    if hasattr(cd, 'classify_earnings'):
+        bad.append('classify_earnings() 又被定义了 —— 数值方向判业绩已被用户否掉，'
+                   '留着它等于留了一条绕过词表的后门')
+
+    # ---- 行为验证：业绩标题必须判 None（光看词表不够，防有人换个写法绕过）
+    EPS_TITLES = (
+        '关于2026年前三季度业绩预亏的公告',
+        '2026年第三季度报告（净利润同比下降70.58%）',
+        '2026年半年度业绩预增公告',
+        '关于2026年度业绩预告的公告',
+    )
+    for t in EPS_TITLES:
+        got = cd.classify_notice(t)
+        if got is not None:
+            bad.append('业绩标题被判成 %r：%s —— 应恒为 None' % (got, t[:28]))
+
+    # ---- B 真事件不许被顺手删（摘业绩时最容易被连坐）
+    REAL_BEAR = (
+        ('关于终止收购杭州快灵光电科技有限公司的公告', '终止收购'),
+        ('关于收到中国证监会立案告知书的公告', '立案'),
+        ('关于持股5%以上股东减持股份的公告', '减持'),
+    )
+    for t, why in REAL_BEAR:
+        if cd.classify_notice(t) != 'bear':
+            bad.append('「%s」类确定性利空不再判 bear（%r）—— 摘业绩词时把它连坐删掉了'
+                       % (why, cd.classify_notice(t)))
+
+    if bad:
+        for m in bad:
+            r.fail('K12', m)
+    else:
+        r.ok('K12', '业绩不参与方向判定（公告词表/新闻词对双向清零、classify_earnings 已退役、'
+                    '%d 条业绩标题恒 None）；终止收购·立案·减持仍判 bear'
+             % len(EPS_TITLES))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--verbose', action='store_true')
@@ -1425,6 +1510,8 @@ def main():
         k10_news_order(r, a.verbose)
     if not only or only == 'K11':
         k11_tape_degrade(r, a.verbose)
+    if not only or only == 'K12':
+        k12_earnings_scope(r, a.verbose)
     return r.dump()
 
 
