@@ -969,10 +969,8 @@
 
   /* ===== 选股扩展模块（谐波/吸筹/量化/必带数据，2026-09-26） ===== */
   .hz-badge { display:inline-block; font-size: var(--fs-sm); font-weight:700; color:#7a4d00; background:var(--paper)3d6; border:1px solid #f0c36d; border-radius:4px; padding:1px 7px; line-height:1.5; white-space:nowrap; flex-shrink:0; vertical-align:middle; margin-left:4px; }
-  /* R100z262：今日可下单卡片的紧凑技术池徽章。比 .hz-badge 再小一档、留白更省，
-     因为这个位置是四列网格里的一行，四个「断板·确认」并排会把板块胶囊挤到第二行、
-     整块卡片高度跟着跳。字号不写 px，跟 --fs-xs 走（G42 拦写死字号）。 */
-  .tc-pill-tech { font-size: var(--fs-xs); padding:0 5px; margin-left:0 !important; margin-right:4px; line-height:1.45; }
+  /* R100z275：`.tc-pill-tech`（R100z262 为今日可下单卡片的紧凑技术池徽章而加）已随徽章一起删除——
+     那条通道上已经没有徽章了，留着这条规则只会让下次改徽章的人以为卡片上还有东西要调。 */
   /* R100z80：跨池共振分级边框——命中池数→颜色：1黄 / 2橙 / 3红 / 4紫；stkGoldCls 全站标的共用，原 gold-ring 单一紫框已按此分级取代 */
   .reso-1 { border-color: #f59e0b !important; box-shadow: 0 0 0 1px rgba(245,158,11,.35) !important; }
   .reso-1:hover { border-color: #d97706 !important; }
@@ -2006,14 +2004,10 @@ function stkGoldCls(code) {
   var n = (stkTechMeta(code) || []).filter(function (t) { return !t.fail; }).length;
   return n >= 1 ? ' reso-' + Math.min(n, 3) : '';
 }
-/* R100z262（用户 2026-10-28 20:32 第 2 次问同一件事：「这些标的为什么不在断板反包确认池
-   或陈学长池？」）：今日可下单卡片此前只印「昨晚挂单 / 来源标签」，**池归属一枚都不出**——
-   于是一只明明在陈学长放宽池的票，在页面上跟「哪个池都不在」长得完全一样，用户只能逐只
-   点开弹窗才查得到，查不到就直接当成系统漏了它。
-   ⇒ 池归属是 code 的事实，不该由「你在哪张卡上看它」决定（R100z228 已为弹窗立过同一条）。
-   取名用短词＋截短池名：tc-top 是四列网格里的一行，印「断板反包 · 确认池」全称会把板块
-   胶囊挤到换行，整块高度跳一档。失效徽章这里**不出**（位置窄、且失效已在弹窗徽标行出全），
-   折成「+N」让人知道点开还有。 */
+/* R100z275：这里原是 stkTechShortBadges（今日可下单卡片顶部的「断板·确认 / 陈学长·放宽」短徽章，
+   R100z262 建）。用户 2026-10-29 截图要求撤掉——它把情绪徽标挤到第二行甚至压没，
+   而情绪才是决策项；池归属改由卡片左边框分级 + 标的页徽标行承担，见 ordShapeCard 的注释。
+   函数连同唯一调用点一起删，不留「看起来还在用」的死代码。 */
 /* R100z262：duanban.mcapCut = 今天被市值门槛剔掉的票。
    R100z266（2026-10-28 22:5x 用户定「直接放开到 400 亿以内」）：下限已撤，这道门槛
    现在只剩上限 ≥400 亿一条，所以名单里 side 恒为 'hi'。文案不再写「100~400 亿」——
@@ -2075,46 +2069,6 @@ function mcapCutBadgeHtml(code, cls) {
     (tot ? '\n今天被这道门槛挡掉的共 ' + tot + ' 只（名单不再展开在页面上，需要时问我要）。' : '');
   return '<span class="hz-badge ' + (cls || '') + '" style="margin-left:0;background:#f3f4f6;' +
     'color:#4b5563;border-color:#d1d5db" title="' + escAttr(tip) + '">' + esc(txt) + '</span>';
-}
-function stkTechShortBadges(code, max) {
-  var meta = stkTechMeta(code) || [];
-  var tags = meta.filter(function (t) { return !t.fail; });
-  var mc = mcapCutBadgeHtml(code, 'tc-pill-tech');
-  /* R100z262b：一只「在池」都没有、却存在失效归档时，**不能什么都不出**——
-     那样这张卡在「有池归属但徽章没渲染」和「查无此票」两种含义下长得完全一样，
-     正是 24.110「空着＝有结论没写」的翻版。实测 600271 航天信息就撞在这里：
-     断板与陈学长两边都在失效池，卡片上一片空白，看着像系统不认识它。 */
-  if (!tags.length) {
-    if (!meta.length) return mc;
-    var f0 = meta[0];
-    // 已经「断板·已失效」的票，市值剔除是更弱的原因（它压根没走到那一步）——
-    // 两枚并排会被读成「两件事都要处理」。失效在，就只出失效。
-    var hasDbFail = meta.some(function (t) { return t.fail && t.k === 'db'; });
-    if (hasDbFail) mc = '';
-    var tip = '技术面已全部失效：' + meta.map(function (x) {
-      return x.label + '（' + (x.failDate || '—') + ' 归档：' + (x.failReason || '未记录原因') + '）';
-    }).join('；') + '。失效归档保留 5 个交易日后自动清理，点开卡片可看详情。';
-    return '<span class="hz-badge tc-pill-tech" style="margin-left:0;background:#f3f4f6;' +
-      'color:#6b7280;border-color:#d1d5db" title="' + escAttr(tip) + '">' +
-      esc(({ db: '断板', chen: '陈学长', bp: '横盘', hz: '谐波', acc: '吸筹' }[f0.k] || f0.label) +
-          '·已失效') + '</span>' + mc;
-  }
-  max = max || 3;
-  var shortK = { db: '断板', chen: '陈学长', bp: '横盘', hz: '谐波', acc: '吸筹' };
-  var all = tags.map(function (x) { return x.label + (x.pool ? '（' + x.pool + '）' : ''); }).join(' · ');
-  var html = tags.slice(0, max).map(function (t) {
-    var nm = shortK[t.k] || t.label;
-    var pl = String(t.pool || '').replace(/池$/, '').replace('观察中', '观察');
-    var txt = pl ? (nm + '·' + pl) : nm;
-    return '<span class="hz-badge tc-pill-tech" style="margin-left:0" title="' +
-      escAttr('技术面归属：' + all) + '">' + esc(txt) + '</span>';
-  }).join('');
-  var more = tags.length - Math.min(tags.length, max);
-  if (more > 0) {
-    html += '<span class="hz-badge tc-pill-tech" style="margin-left:0" title="' +
-      escAttr('另有 ' + more + ' 个池命中，点开卡片看全部徽章') + '">+' + more + '</span>';
-  }
-  return html + mc;
 }
 /* R100s→R100t：独立池徽章仅保留开盘精选（断板/谐波池已并入技术徽章文案） */
 function stkPoolBadge(code) {
@@ -5834,16 +5788,15 @@ function tcCard(o) {
   var ord = (o.ord === null || o.ord === undefined) ? orderLineOf(o.code) : o.ord;
   var pills = '';
   (o.pills || []).forEach(function (p) { if (p) pills += '<span class="db-sec-pill">' + esc(p) + '</span>'; });
-  // R100z262：技术池徽章（HTML 片段，由 stkTechShortBadges 生产）。**不再 esc**——
-  // 那是本页自己的构造器，进来的是已转义文本的 HTML；再 esc 一遍会把 <span> 印成字面量。
-  var badges = o.badges || '';
+  // R100z275：技术池短徽章（o.badges）这条通道已随唯一调用点一起撤掉——不再支持外部塞徽章，
+  // 徽章行只放 pills（阶段/板块）与右侧情绪，见下方 tc-top 的拼接顺序。
   // R100z220：sentKind 给「条目自带结论」的池用（陈学长条目直接带 sentiment 字段）——
   // 不传时仍按全站口径 stkSentiment(code) 从要闻 impacts 推，两者渲染同一套 DB_SENT 文案/配色。
   var sent = o.sent === false ? '' : (o.sentKind ? dbSentBadge({ sentiment: o.sentKind }, 'margin-left:4px') : sentBadgeHtml(o.code));
   var nb = o.fresh ? '<span class="nb">新</span>' : '';
   return '<div class="tc' + stkGoldCls(o.code) + (o.dim ? ' dim' : '') + (o.fresh ? ' fresh' : '') + '"' + (o.attrs || '') + (o.onclick ? ' onclick="' + escAttr(o.onclick) + '"' : '') +
     (o.title ? ' title="' + escAttr(o.title) + '"' : '') + '>' +
-    '<div class="tc-top">' + pills + badges + nb + '<span class="tc-sp"></span>' + sent + '</div>' +
+    '<div class="tc-top">' + pills + nb + '<span class="tc-sp"></span>' + sent + '</div>' +
     '<div class="tc-id"><b>' + esc(o.name || o.code) + '</b>' + riskBadge(o.code, 1) +
     ((o.name && o.name !== o.code) ? '<span class="cd">' + esc(o.code) + '</span>' : '') + tcChgHtml(o.chg) + '</div>' +
     '<div class="tc-g">' + (o.cells || []).join('') + '</div>' +
@@ -7998,8 +7951,14 @@ function ordShapeCard(o) {
     ];
     foot = '<span class="xt">' + esc(String(e.form || '').replace(/^.*?断板/, '断板').replace(/·/, '：')) + '</span>';
   }
-  // 阶段徽章 + 板块。池名（断板/陈学长）由 stkTechShortBadges 给，这里只补阶段，
-  // 不重复印两个同色蓝标（R100z220 同一坑）。
+  /* 阶段徽章 + 板块。R100z275（用户 2026-10-29 17:39 截图）：池名徽章（「断板·确认」「陈学长·放宽」）
+     从卡片顶部**撤掉**。原文原话：「这些技术徽章把利好/利空/中性遮掉了……反正标的页面也能看到」。
+     实测成因：徽章行是 pills → badges → 弹簧 → 情绪徽标，一行放不下时情绪徽标被顶到第二行甚至被裁，
+     而情绪是这张卡上唯一直连决策的结论，池归属不是——它已经在两处还开着：
+       ① 卡片左边框按命中池数描黄/橙/红（stkGoldCls，仍在 tcCard 里出）；
+       ② 点开标的页，徽标行由 stkTechBadgeHtml 出全部五个指标（含失效）。
+     所以这里只出阶段 + 板块，不再重复印池名。 */
+
   var pill = o.phase === 'A' ? '形态确认'
     : (o.phase === 'S' ? ('缩量回踩·第' + ((o.shrink && o.shrink.shrinkDays) || 1) + '天')
                        : ('即将确认·' + String(e.stage || '待信号').replace(/·.*$/, '')));
@@ -8009,7 +7968,7 @@ function ordShapeCard(o) {
     ' 开盘挂单　</span>' + foot;
   return tcCard({
     code: o.code, name: o.name, chg: tcPctOf(o.code, e.pct),
-    pills: [pill, o.sector || null], badges: stkTechShortBadges(o.code),
+    pills: [pill, o.sector || null],
     sent: true,
     ord: ordShapeOrderLine(o),
     cells: cells, foot: foot,
