@@ -537,6 +537,10 @@ def match_ths_industry(hybk, ths_names):
         # R100z179：申万传媒二级「电视广播」同属传媒大类，同花顺 90 一级归「文化传媒」。
         # 缺这条时 000156 华数传媒 只能落到东财兜底，而东财板块日K 已失效 → 板块涨幅「—」。
         "电视广播": "文化传媒",
+        # R100z180：申万「炼化及贸易」→ 同花顺同名口径叫「石油加工贸易」；
+        # 东财涨停池给的 hybk 常截成「炼化及贸」（4 字），两个键都要写，
+        # 否则 600506 统一股份 整只标的板块涨幅取不到（story 只能写「板块当日数据暂缺」）。
+        "炼化及贸易": "石油加工贸易", "炼化及贸": "石油加工贸易",
     }
     if clean in SPECIAL and SPECIAL[clean] in ths_names:
         return SPECIAL[clean]
@@ -1849,8 +1853,11 @@ def build_module(pairs, D):
         # R100z179：护栏前先留一份完整同花顺行业名——后面若东财兜底也取不到涨幅，
         # 宁可用「完整名 + 真实涨幅」，也不能写「截断名 + 板块数据暂缺」（用户实报过板块—）。
         _ths_full = ths_name
-        if ths_name and p["hybk"] and ths_name.startswith(p["hybk"]) and ths_name != p["hybk"]:
-            ths_name = None
+        # ★R100z180：截断名（hybk 比同花顺行业名短，如「自动化设」⊂「自动化设备」）**不再丢弃同花顺匹配**。
+        # 原 R100z4k 护栏把 THS 完整名置 None，随后退回东财口径，而东财分支又拿 p["hybk"]（截断名）当 sector
+        # → 板块名截断 + 涨幅换成东财等权口径（2026-10-29 实测「自动化设 −1.99%」，同花顺同行业 −5.17%），
+        # 页面徽章与 story 的板块句双双失真。ths_names 来自 90 行业全量列表，前缀匹配到的必是完整名，
+        # 与 hybk 的完整度无关，故此处保留匹配结果、不再置 None。
         if ths_name:
             bpt = round(ths_map[ths_name]["pct"], 2)
             ths_code = ths_map[ths_name]["code"]
