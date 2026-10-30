@@ -4569,8 +4569,9 @@ def g52_shrink_parity(r):
     任何一条被单侧改动，前端卡片与 9:45 候选就会各说一套，而**两边都不报错**。
 
     判据：跑 `check_shrink_parity.py`（headless Chrome 取前端 poolC 的代码 + 缩量天数 +
-    放量倍数，与 Python 结果逐只比）。rc=0 一致；rc=1 不一致 → FAIL；跑不起来 → WARN
-    （本机没 Chrome 时 SKIP 是允许的，但不能当成「一致」）。
+    放量倍数，与 Python 结果逐只比）。
+    rc=0 一致；rc=1 不一致 → FAIL；rc=2 检查器跑不起来（没有 Chrome / 跑挂）→ WARN，
+    本机没有 Chrome 时不能当成「一致」。
     """
     rc, out, err = _run_tool("check_shrink_parity.py", timeout=300)
     # R100z284：对账器自己的生活卫生（用户 2026-10-30 截图：废纸篓里 13 个 722KB 的
@@ -4618,12 +4619,9 @@ def g52_shrink_parity(r):
             r.fail("G52", "对账器的探针页没落在系统临时目录（应走 tempfile.gettempdir()）——"
                           "它会污染项目根目录，且删除动作在沙箱里会被转成废纸篓垃圾（R100z284）")
     if rc == 0:
-        if "[SKIP]" in (out or ""):
-            r.warn("G52", "缩量回踩口径对账未执行（%s）——本机无 Chrome 时允许跳过，"
-                          "但这份孪生实现就没被验证过，改条件后务必手动补跑"
-                          % _tail(out, 1))
-        else:
-            r.ok("G52", "缩量回踩前端/Python 口径一致：" + _tail(out, 1))
+        # 不再有 [SKIP] 分支：对账器本机没 Chrome 时返回 2（检查器故障 → 下面判 WARN），
+        # 不会再有「跳过还返回 0」这种让「没跑」长得像「一致」的路径。
+        r.ok("G52", "缩量回踩前端/Python 口径一致：" + _tail(out, 1))
     elif rc == 1:
         r.fail("G52", "缩量回踩两份实现口径不一致（前端 ordShrinkScan vs shrink_scan.py）："
                       + _tail(out, 4) + "——改一边漏了另一边，页面卡片与 9:45 候选会各说一套")
