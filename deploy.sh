@@ -30,8 +30,13 @@ fi
 #    不加引号会被 ssh 拆成 `Identity file /Users/.../market` + 主机名 `dashboard/.deploy_key`，
 #    表现为 "Could not resolve hostname dashboard/.deploy_key"（2026-10-04 实测踩坑）。
 #    这里用 -F 传临时 config 避免 shell 分词，最稳妥。
-SSH_CFG="$(mktemp -t gitssh.XXXXXX)"
-trap 'rm -f "$SSH_CFG"' EXIT
+# R100z285：原来是 `mktemp -t gitssh.XXXXXX` + `trap 'rm -f' EXIT` —— 每次 push 一个新名字，
+# 而**沙箱把 rm 接管成「移到废纸篓」**（不报错、也不真删），于是每部署一次就留一个
+# `gitssh.*.XXXX` 垃圾（2026-10-30 实测废纸篓里就躺着一个 202 字节的）。
+# 改固定路径 + 覆盖写 + 永不删除：下面整段内容是常量（只取决于 $DEPLOY_KEY），幂等；
+# 两个 deploy 同时写同一份内容也无害（deploy.sh 本来就要持 pipeline 锁）。
+SSH_CFG="${TMPDIR:-/tmp}/mdashboard_gitssh.conf"
+( umask 077; : > "$SSH_CFG" )
 {
     # Host 必须与 remote URL 里的主机名一致（ssh://git@ssh.github.com:443/...），
     # 否则整段配置不匹配、被 ssh 静默忽略 → 回落到默认密钥 → Permission denied (publickey)。
