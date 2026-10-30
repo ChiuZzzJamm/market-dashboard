@@ -1695,6 +1695,19 @@ def build_story(e, refs=None, bear_refs=None):
         story = "；".join(segs)
         if not story.endswith(("。", "！", "？")):
             story = story.rstrip("，；") + "。"
+    # R100z285：上面的「，」级剥尾会切在括号内，产出「…站稳MA5（距MA5 +1.9%。」这种
+    # 残句（2026-10-30 实测 13/55 只）。括号不配对时先补右括号；补完仍剩孤立「（」
+    # 或空括号，就把那半截括号整段丢掉。宁可少一句形态描述，也不留半句。
+    if story.count("（") != story.count("）"):
+        story = story.rstrip("。！？")
+        while story.count("（") > story.count("）"):
+            idx = story.rfind("（")
+            tail = story[idx + 1:]
+            if len(tail.strip("，、；： ")) < 2:      # 括号里什么都没有 → 整段丢
+                story = story[:idx].rstrip("，、；： ")
+                continue
+            story += "）"
+        story = story.rstrip("，、；： ") + "。"
     return story
 
 
