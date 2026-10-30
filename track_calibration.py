@@ -47,6 +47,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 from datetime import date
 
 import stop_tracker  # R100z59：止损台账接线（见 main() 内「R100z59 止损台账」段）
@@ -683,11 +684,14 @@ def main():
                                       capture_output=True, text=True)
                 if blob.returncode != 0 or not blob.stdout:
                     continue
-                tmp = os.path.join(ROOT, '.calibration_tmp.js')
+                # R100z285：原来 tmp 落在**项目根**（`.calibration_tmp.js`），每个 git hash
+                # 复制一份整份 data.js，用完 os.remove —— 沙箱把 remove 接管成「移到废纸篓」，
+                # backfill N 次就往废纸篓塞 N 个几百 KB 的副本。
+                # 改固定路径（系统临时目录）+ 覆盖写 + 永不删除：循环内同名复用，
+                # 每一轮 git show 的 blob 覆盖上一份，盘上恒定 1 个文件。
+                tmp = os.path.join(tempfile.gettempdir(), 'mdashboard_calibration_tmp.js')
                 open(tmp, 'w', encoding='utf-8').write(blob.stdout)
                 pd = load_prediction(tmp)
-                if os.path.exists(tmp):
-                    os.remove(tmp)
                 if not pd or not pd.get('date') or not (pd.get('verification') or {}).get('details'):
                     continue
                 if pd['date'] in log['log']:

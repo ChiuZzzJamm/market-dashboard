@@ -229,17 +229,18 @@ def _module_names(src):
 # ---------------------------------------------------------------- K1
 def k1_syntax(r):
     bad = []
+    # R100z285：原来每个 .py 都 `tempfile.mktemp()` 起一个 .pyc、编译完 `os.remove`。
+    # 项目 100+ 个脚本 = **每跑一次 check_code 就往废纸篓塞 100+ 个文件**（沙箱把
+    # remove 接管成 trash，不报错也不真删）。改固定路径 + 覆盖写 + 永不删除：
+    # py_compile 是 for 循环串行调用的，同一时刻只有一个文件在用这个路径。
+    tmp = os.path.join(tempfile.gettempdir(), 'mdashboard_k1_syntax.pyc')
     for p in _py_files():
-        tmp = tempfile.mktemp(suffix='.pyc')
         try:
             import py_compile
             py_compile.compile(p, cfile=tmp, doraise=True)
         except Exception as e:
             msg = [x for x in str(e).strip().split('\n') if x.strip()]
             bad.append('%s: %s' % (os.path.basename(p), (msg[-1] if msg else '')[:140]))
-        finally:
-            if os.path.exists(tmp):
-                os.remove(tmp)
     if bad:
         for b in bad:
             r.fail('K1', 'Python 语法错误：%s' % b)
@@ -1284,10 +1285,11 @@ C.forEach(function (x) {
 if (bad.length) { console.log('BAD'); bad.forEach(function (b) { console.log('  ' + b); }); }
 else console.log('OK');
 '''
-            tmp = None
+            # R100z285：原来 mkstemp + finally unlink —— 沙箱把 unlink 接管成「移到废纸篓」，
+            # 于是**每跑一次 check_code 就多一个垃圾**。固定路径 + 覆盖写 + 永不删除。
+            tmp = os.path.join(tempfile.gettempdir(), 'mdashboard_k10_tape_check.js')
             try:
-                fd, tmp = tempfile.mkstemp(suffix='.js', prefix='k10_')
-                with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                with open(tmp, 'w', encoding='utf-8') as f:
                     f.write(js)
                 pr = subprocess.run([node, tmp], capture_output=True, text=True, timeout=30)
                 out = (pr.stdout or '') + (pr.stderr or '')
@@ -1299,12 +1301,6 @@ else console.log('OK');
                         bad.append('口径语义测试异常退出：%s' % out.strip()[:120])
             except Exception as e:
                 bad.append('口径语义测试跑不起来（%r）' % (e,))
-            finally:
-                if tmp and os.path.exists(tmp):
-                    try:
-                        os.unlink(tmp)
-                    except OSError:
-                        pass
 
     if bad:
         for x in bad:
@@ -1578,6 +1574,57 @@ def k13_gate_readable(r, verbose=False):
                     '该行，且 refresh_stamp/sync_names 前置在审计之前' % readers)
 
 
+def k14_no_bare_delete(r, verbose=False):
+    """K14 全项目不得出现「裸删除」调用（R100z285）。
+
+    要防的事故（2026-10-30，用户截图废纸篓里 13 个 722KB 的 `_probe_shrink_*.html`）：
+    自动化沙箱把 `os.remove` / `os.unlink` / `shutil.rmtree` 接管成「移到废纸篓」
+    （`safeDeleteEvents: {operation: "trash"}`）——**既不报错、也不真删**。
+    于是「写临时文件再删」这种最平常的写法，在自动化里就是垃圾制造机；
+    而本机 shell 跑同一份代码完全正常，肉眼根本复现不了。
+
+    正确形态（三种，按场景选）：
+      · 临时文件 → **固定路径 + 覆盖写 + 永不删除**，幂等靠内容而不是唯一文件名；
+      · 要释放空间 → `os.truncate(path, 0)`（`common.purge_tmp` / `kline_cache._purge_cache_file`）；
+      · 要留档 → `os.replace` 到固定槽位，覆盖不增长（`pipeline_lock` 的 `.released`/`.stale`）。
+
+    判据走 AST：只认 `ast.Call`，注释和字符串里的字面量不算 —— 字符串型判据会被
+    自己写的「为什么不能这么写」说明文字骗成假绿（R100z282 的教训）。
+    """
+    banned = {'os.remove', 'os.unlink', 'shutil.rmtree', 'os.rmdir'}
+    bad, scanned = [], 0
+    for path in sorted(glob.glob(os.path.join(HERE, '*.py'))):
+        fn = os.path.basename(path)
+        try:
+            tree = ast.parse(open(path, encoding='utf-8').read())
+        except OSError as e:
+            r.fail('K14', '%s 读不了（%s）—— 没法确认它是否在裸删除' % (fn, e))
+            continue
+        except SyntaxError as e:
+            r.fail('K14', '%s 语法错误（%s）' % (fn, e))
+            continue
+        scanned += 1
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            f = node.func
+            name = ''
+            if isinstance(f, ast.Attribute) and isinstance(f.value, ast.Name):
+                name = '%s.%s' % (f.value.id, f.attr)
+            if name in banned:
+                bad.append('%s:%d 在调 %s()' % (fn, node.lineno, name))
+
+    if bad:
+        for m in bad[:10]:
+            r.fail('K14', m)
+        r.fail('K14', '裸删除 %d 处 —— 沙箱会把它变成「移到废纸篓」，每跑一次多一份垃圾，'
+                      '而本机测不出来。改固定路径+覆盖写+永不删除，或 os.truncate(p, 0)'
+                      '（R100z285）' % len(bad))
+    else:
+        r.ok('K14', '全项目无裸删除（扫 %d 个 .py）：临时文件一律固定路径+覆盖写，'
+                    '要释放空间走 truncate 归零' % scanned)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--verbose', action='store_true')
@@ -1613,6 +1660,8 @@ def main():
         k12_earnings_scope(r, a.verbose)
     if not only or only == 'K13':
         k13_gate_readable(r, a.verbose)
+    if not only or only == 'K14':
+        k14_no_bare_delete(r, a.verbose)
     return r.dump()
 
 

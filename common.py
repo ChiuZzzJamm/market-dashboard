@@ -226,6 +226,22 @@ def int_ify(o):
     return o
 
 
+def purge_tmp(path):
+    """把不再需要的临时文件**原地清空**，而不是删掉（R100z285）。
+
+    为什么不删：自动化沙箱把 `os.remove` 接管成「移到废纸篓」（不报错、也不真删）。
+    于是「清理半成品」这个动作本身变成垃圾制造机——一次 node --check 失败就往废纸篓
+    塞一个几百 KB 的 data.js 副本。truncate 到 0 字节能把空间真还回来，语义也等价：
+    这些 tmp 下次都被**同名覆盖写**，根本不需要「消失」。
+
+    任何异常吞掉：保洁动作绝不能影响主流程（调用点本来就在 raise / except 里）。
+    """
+    try:
+        os.truncate(path, 0)
+    except OSError:
+        pass
+
+
 def write_data_js(path_or_base, D, label=''):
     """原子写 data.js —— 全项目唯一写盘入口（R100z179b）。
 
@@ -260,7 +276,7 @@ def write_data_js(path_or_base, D, label=''):
             p = None
             print('[WARN] %s node 调用失败（%s），跳过语法校验' % (label or '[write_data_js]', e))
         if p is not None and p.returncode != 0:
-            os.remove(_tmp)
+            purge_tmp(_tmp)
             raise RuntimeError('%s data.js 语法校验失败（未落盘）：%s'
                                % (label or '[write_data_js]', (p.stderr or '')[:300]))
     os.replace(_tmp, path)
@@ -283,11 +299,8 @@ def write_json_atomic(path, obj, label='', indent=1):
             json.dump(obj, f, ensure_ascii=False, indent=indent)
         os.replace(_tmp, path)
     except Exception:
-        if os.path.exists(_tmp):
-            try:
-                os.remove(_tmp)
-            except OSError:
-                pass
+        # R100z285：原来这里 `if exists: os.remove` —— 沙箱把 remove 变废纸篓。
+        purge_tmp(_tmp)
         raise
     return path
 

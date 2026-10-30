@@ -25,6 +25,7 @@ from datetime import datetime
 # 改为把本脚本所在目录插到最前，永远 import 到当前项目内的 check_duanban。
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import check_duanban as cd  # noqa: E402
+import common  # noqa: E402  R100z285：清临时文件用 purge_tmp（不删，见 common.purge_tmp）
 
 TZ8 = cd.TZ8 if hasattr(cd, "TZ8") else None
 
@@ -131,7 +132,7 @@ def main():
         f.write(out)
     _chk = subprocess.run([NODE_BIN, "--check", _tmp], capture_output=True, text=True)
     if _chk.returncode != 0:
-        os.remove(_tmp)
+        common.purge_tmp(_tmp)      # R100z285：清空而不删——沙箱把 remove 变废纸篓
         print("[FAIL] 重打标结果未通过 node --check，已丢弃、data.js 保持原样：")
         print(_chk.stderr[:800])
         return 1

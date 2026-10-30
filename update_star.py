@@ -30,6 +30,7 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import update_ashare_sectors as uas  # noqa: E402  （复用 curl/UA/同花顺解析）
+import common  # noqa: E402  R100z285：清临时文件用 purge_tmp（不删，见 common.purge_tmp）
 
 # R100z55：原为无兜底硬编码路径，托管 node 升版后目录消失即崩；改为存在性判断 + PATH 兜底。
 _NODE_CAND = "/Users/loccco/.workbuddy/binaries/run-node"
@@ -1323,7 +1324,7 @@ def main():
         f.write(out)
     _chk = subprocess.run([NODE, "--check", _tmp], capture_output=True, text=True, timeout=30)
     if _chk.returncode != 0:
-        os.remove(_tmp)
+        common.purge_tmp(_tmp)      # R100z285：清空而不删——沙箱把 remove 变废纸篓
         raise SystemExit("[FAIL] star 写回未通过 node --check，已丢弃、data.js 保持原样：\n"
                          + (_chk.stderr or "")[:800])
     os.replace(_tmp, data_path)

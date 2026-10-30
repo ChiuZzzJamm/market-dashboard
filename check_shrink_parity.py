@@ -55,32 +55,6 @@ def load_data():
     return json.loads(s[s.index("{"):s.rindex("}") + 1])
 
 
-def clean_legacy_probes():
-    """清掉老版本留在项目根目录的探针页（R100z284）。
-
-    老版本用 `tempfile.mkstemp(dir=HERE)` 把 722KB 的 index.html 副本写在**项目根目录**，
-    靠 finally 里的 os.remove 收尾。本机 shell 里没问题，但在自动化沙箱里删除会被拦
-    （os.remove 抛 OSError → 被 `except OSError: pass` 吞掉），残留文件随后被沙箱的
-    收尾清理挪进废纸篓 —— 用户 2026-10-30 截图：一天 13 个 `_probe_shrink_*.html`、
-    每个 723KB，全在废纸篓里躺着。
-
-    探针页现在写系统临时目录（见 js_pool），这里只是把历史残渣顺手扫掉。
-    删不掉不报错：外面已经有 .gitignore 兜底，不该为清理失败让对账闸门变红。
-    """
-    n = 0
-    try:
-        for fn in os.listdir(HERE):
-            if fn.startswith("_probe_shrink_") and fn.endswith(".html"):
-                try:
-                    os.remove(os.path.join(HERE, fn))
-                    n += 1
-                except OSError:
-                    pass
-    except OSError:
-        pass
-    return n
-
-
 def js_pool():
     """跑前端拿 poolC，返回 (rows, err)。rows/list 元素 {code, shrinkDays, volRatio}。"""
     src = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
@@ -132,9 +106,9 @@ def main():
     if not shutil.which("python3") and not sys.executable:
         print("[SKIP] 无 python3")
         return 0
-    n = clean_legacy_probes()
-    if n:
-        print("[clean] 清掉项目根目录的历史探针页 %d 个（R100z284：它们曾被挪进废纸篓）" % n)
+    # R100z285：原来这里先跑 clean_legacy_probes() 扫项目根的历史探针页。它靠 os.remove
+    # 实现，而**删不掉本身也会进废纸篓**——为了清垃圾再造垃圾。现在探针页根本不落项目目录，
+    # 该函数已删（K14 因此可以零例外地禁掉全项目的裸删除）。
     D = load_data()
     js_rows, err = js_pool()
     if err:

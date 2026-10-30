@@ -78,16 +78,18 @@ def main():
         if not body.strip():
             continue          # 空块（占位/注释）不送检
         checked += 1
-        fd, tmp = tempfile.mkstemp(suffix='.js')
+        # R100z285：原来 `mkstemp` + `finally: os.unlink` —— 自动化沙箱把 unlink 接管成
+        # 「移到废纸篓」（不报错、不真删），于是**每跑一次校验就多一个废纸篓垃圾**，
+        # 和 722KB 探针页同源。改固定路径 + 覆盖写 + 永不删除：
+        # 块是 for 循环串行处理的，同一时刻只有一个块在用这个文件。
+        tmp = os.path.join(tempfile.gettempdir(), 'mdashboard_inline_js_check.js')
         try:
-            with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            with open(tmp, 'w', encoding='utf-8') as f:
                 f.write(body)
-            r = subprocess.run([node, '--check', tmp], capture_output=True, text=True)
-        finally:
-            try:
-                os.unlink(tmp)
-            except OSError:
-                pass
+        except OSError as e:
+            print(f'❌ 内联 JS 临时文件写不进 {tmp}：{e} —— 无法校验，拒绝放行。')
+            return 2
+        r = subprocess.run([node, '--check', tmp], capture_output=True, text=True)
         if r.returncode != 0:
             bad += 1
             # node 的行号是「块内行号」，换算回 index.html 的行号才可点

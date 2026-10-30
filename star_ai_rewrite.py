@@ -11,6 +11,9 @@ import os
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import common  # noqa: E402  R100z285：清临时文件用 purge_tmp（不删，见 common.purge_tmp）
+
 BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data.js")
 NODE = "/Users/loccco/.workbuddy/binaries/run-node"
@@ -86,7 +89,7 @@ def main():
         f.write(out)
     _chk = subprocess.run([NODE, "--check", _tmp], capture_output=True, text=True, timeout=60)
     if _chk.returncode != 0:
-        os.remove(_tmp)
+        common.purge_tmp(_tmp)      # R100z285：清空而不删——沙箱把 remove 变废纸篓
         raise SystemExit("[FAIL] 改写结果未通过 node --check，已丢弃、data.js 保持原样：\n"
                          + (_chk.stderr or "")[:800])
     os.replace(_tmp, DATA)
