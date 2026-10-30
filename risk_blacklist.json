@@ -2,12 +2,12 @@
  "ok": true,
  "nameSrc": "tx",
  "nameSrcDetail": {
-  "tx": 397,
+  "tx": 386,
   "sina": 0,
   "em": 0
  },
- "date": "2026-10-29",
- "checked": 397,
+ "date": "2026-10-30",
+ "checked": 386,
  "liftWindow": [
   2,
   5
@@ -17,24 +17,36 @@
  "dims": {
   "st": {
    "status": "ok",
-   "cover": "行情名源（腾讯397/新浪0/东财0）397/397 只取到"
+   "cover": "行情名源（腾讯386/新浪0/东财0）386/386 只取到"
   },
   "cut": {
    "status": "ok",
-   "cover": "公告源 397/397 只取到（东财397/巨潮0）"
+   "cover": "公告源 386/386 只取到（东财386/巨潮0）"
   },
   "lift": {
    "status": "ok",
-   "cover": "解禁源 397/397 只取到"
+   "cover": "解禁源 386/386 只取到"
   },
   "pledge": {
    "status": "ok",
-   "cover": "质押源 397/397 只取到（仅供参考）"
+   "cover": "质押源 386/386 只取到（仅供参考）"
   }
  },
  "verdict": "full",
  "uncheckedDims": [],
  "blacklist": {
+  "600237": {
+   "name": "铜峰电子",
+   "reasons": [
+    "解禁 2026-11-02（股权激励限售股份，占总股本 0.0%）"
+   ],
+   "count": 1,
+   "watch": [
+    "参考·质押 6.8%（截至 2026-06-12）"
+   ],
+   "severity": "orange",
+   "progress": []
+  },
   "002202": {
    "name": "金风科技",
    "reasons": [

@@ -1552,12 +1552,15 @@ def _story_sector_seg(e, code):
     # 异常值按「暂缺」处理，宁缺勿错（不编也不展示假数据）。
     if bpt is not None and abs(float(bpt)) > 12:
         bpt = None
+    # R100z284：G17 按「。！？；」切句后要求「每个整句必含股票名」——原模板写
+    # 「所属X今日涨Y%」，切句后整句无个股标识，每轮 84 只逐句手补。这里直接带名。
+    _nm0 = e.get("name") or ""
     if bpt is None:
-        sec = f"所属{sector}板块当日数据暂缺"
+        sec = f"{_nm0}所属{sector}板块当日无板块指数披露，按个股量价定价"
     elif bpt >= 0:
-        sec = f"所属{sector}今日涨{bpt}%，{_pick(SECTOR_UP_PHRASE, code, 1)}"
+        sec = f"{_nm0}所属{sector}板块今日涨{bpt}%，{_pick(SECTOR_UP_PHRASE, code, 1)}"
     else:
-        sec = f"所属{sector}今日跌{abs(bpt)}%，{_pick(SECTOR_DOWN_PHRASE, code, 1)}"
+        sec = f"{_nm0}所属{sector}板块今日跌{abs(bpt)}%，{_pick(SECTOR_DOWN_PHRASE, code, 1)}"
     if bpz is None:
         bz = ""
     elif bpz >= 0:
@@ -1569,7 +1572,9 @@ def _story_sector_seg(e, code):
     # 整句 → 踩 G17 复读闸。把个股名称并入形态句，保证整句唯一（G17 按句切分）。
     nm = e.get("name") or ""
     st = f"{nm}{st0}" if nm else st0
-    tail = f"；{form}，{st}。" if form else f"；{st}。"
+    # R100z284：含名句放前、形态串放后——超长剥尾时先剥形态串，含名句永远留着，
+    # 否则会剥出「10/26涨停→次1.6倍量断板…」这种不带个股标识的残段。
+    tail = f"；{st}，{form}。" if form else f"；{st}。"
     return f"【板块消息】{sec}{bz}{tail}"
 
 
@@ -1629,6 +1634,8 @@ def build_story(e, refs=None, bear_refs=None):
                                         _src_show) if x)
             head = (" " + head) if head else ""
             body = _story_first_sentence(ref.get("summary"))
+            # R100z284：摘要原文同样可能带 ！？；，切句后产生不含个股名的半句。
+            body = (body or "").replace("！", "，").replace("？", "，").replace("；", "，")
             phrase = _pick(BULL_PHRASE if sent == "bull"
                            else (BEAR_PHRASE if sent == "bear" else NEUTRAL_PHRASE),
                            code, 1)
@@ -1639,7 +1646,12 @@ def build_story(e, refs=None, bear_refs=None):
             # 标识即可消除复读；并入 drv 会让名称在相邻两处重复出现，读感冗余）。
             # R100z223：summary 为空时原样拼出「《标题》：，短期抛压增加」——冒号后直接逗号。
             # 公告类 ref 的 summary 存的是 column（栏目名），常为空。
-            seg1 = (f"【个股消息】{name}{head}《{ref.get('title')}》"
+            # R100z284：标题原文常带「！」「？」，G17 按 。！？； 切句时会把它切成
+            # 半句（「双环传动、绿的谐波领衔，560770顺势大涨」）而整句不含个股名 →
+            # 每轮被判违规。引用标题时把这三类标点降级为逗号，保证切句不越界。
+            _ttl = (str(ref.get("title") or "")
+                    .replace("！", "，").replace("？", "，").replace("；", "，"))
+            seg1 = (f"【个股消息】{name}{head}《{_ttl}》"
                     + (f"：{body}" if body else "")
                     + f"，{phrase}；{drv}，{name}{tail}。")
         elif notices:
@@ -1653,12 +1665,12 @@ def build_story(e, refs=None, bear_refs=None):
             # 于是同屏出现「未见方向性催化」+ 一条业绩暴雷，自相矛盾。
             # 改为只陈述"本条公告的属性"，不对整体下"无方向"的断言。
             seg1 = (f"【个股消息】{name}近期信披以{n0.get('column') or '常规公告'}类为主（{d0}），"
-                    f"该条公告本身不含涨跌方向指向，{phrase}；该股{zt}涨停入池。")
+                    f"该条公告本身不含涨跌方向指向，{phrase}；{name}{zt}涨停入池。")
         else:
             zt = str(e.get("ztDate") or "")[5:].replace("-", "/")
             phrase = _pick(NO_NEWS_PHRASE, code)
             seg1 = (f"【个股消息】{name}的公开信息焦点仍在板块与产业链层面，{phrase}，"
-                    f"短期观察点集中在{e.get('sector') or '所属'}板块风向；该股{zt}涨停入池。")
+                    f"短期观察点集中在{e.get('sector') or '所属'}板块风向；{name}{zt}涨停入池。")
     story = seg1 + _story_sector_seg(e, code)
     if len(story) < 100:
         # 兜底加长（含 zt/stage/sector 个股特定数据，防 G17）
@@ -1668,6 +1680,21 @@ def build_story(e, refs=None, bear_refs=None):
                     "待企稳": "缩量后待企稳确认阶段"}.get(stage, "断板跟踪阶段")
         story += (f"{name}{zt}涨停入池，当前处于{stage_zh}，"
                   f"{e.get('sector') or '所属'}板块联动强度是后续确认的关键变量。")
+    # R100z284：ref 段（新闻标题+首句摘要）常把底稿顶到 240~300 字，AI 复核每次都要
+    # 逐只压回 180。这里先做两级剥尾（先「；」再「，」），保证底稿落在 100~180 区间，
+    # 只剥整句、不留半句尾巴。
+    if len(story) > 180:
+        segs = story.split("；")
+        while len("；".join(segs)) > 180 and len(segs) > 1:
+            last = segs[-1]
+            parts = last.split("，")
+            if len(parts) >= 2 and name in "，".join(parts[:-1]):
+                segs[-1] = "，".join(parts[:-1])
+            else:
+                segs.pop()
+        story = "；".join(segs)
+        if not story.endswith(("。", "！", "？")):
+            story = story.rstrip("，；") + "。"
     return story
 
 
