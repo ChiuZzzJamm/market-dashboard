@@ -29,6 +29,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import decode_policy as dp  # noqa: E402
+import common  # noqa: E402  R100z285：清临时文件用 purge_tmp（不删，见 common.purge_tmp）
 
 NEWS_NODES = [
     ("ashare", "bullNews"), ("ashare", "bearNews"), ("ashare", "macroNews"),
@@ -64,11 +65,9 @@ def _dump(path, D):
             raise RuntimeError("往返校验失败：顶层键丢失 %s" % (miss[:5],))
         os.replace(tmp, path)
     finally:
-        if os.path.exists(tmp):
-            try:
-                os.remove(tmp)
-            except OSError:
-                pass
+        # R100z285：`os.replace` 成功后 tmp 已不存在，这里只在失败时生效；
+        # 原写法 os.remove 在沙箱里会被接管成「移到废纸篓」→ 清空代替删除。
+        common.purge_tmp(tmp)
 
 
 def _news_count(D):

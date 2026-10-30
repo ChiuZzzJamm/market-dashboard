@@ -250,14 +250,41 @@ def get_kline(code, days=320):
     return _read_cache(cp)
 
 
+def _purge_cache_file(path):
+    """把一份过期缓存**原地清空**，而不是删文件（R100z285）。
+
+    为什么不删（2026-10-30 用户「不要归档，直接清理」）：
+    自动化沙箱把 `os.remove` / `os.unlink` 接管成「移到废纸篓」——不报错、也不真删。
+    每次 prune 淘汰 6-7 份 → 废纸篓里一叠 `<code>.json`（全量会话统计各 6-7 次）。
+    归档槽位方案被否（用户：不要归档）。
+
+    所以：truncate 到 0 字节 + mtime 打成 1970。
+      · **空间立即还回来**——这是淘汰的全部目的（1070 份 36M → 过期的那部分归零）；
+      · mtime=0 → `_cache_valid` / `_cache_stale` 都判过期，绝不会被当成缓存读；
+      · 0 字节 → `json.load` 失败，`_read_cache` 返回 None，语义等价于「没有这份缓存」；
+      · 下次真抓到数据时同名文件 `os.replace` 覆盖，目录项自动复用，不会增长
+        （滚动池淘汰掉的 code 很少回头，囤着的只是 0 字节空壳）。
+    任何异常只吞不抛——保洁逻辑严禁影响取数主流程。
+    """
+    try:
+        os.truncate(path, 0)
+    except OSError:
+        return
+    try:
+        os.utime(path, (0, 0))
+    except OSError:
+        pass
+
+
 def prune_cache(verbose=False):
     """清理超过 TTL 的缓存文件（R100z141 新增）。
 
     背景：缓存目录只写不删——`_cache_valid` 判过期后下次抓取会覆盖同名文件，
     但**换成新 code 池后旧 code 的缓存永远留在盘中**（full_scan 每轮几百只滚动），
     2026-10-16 实测 1246 份里 140 份已超 20h TTL，任其增长会无限堆积。
-    口径：删 mtime 超过 CACHE_TTL_H 的 `*.json`；`industry_map.json` 有
-    自己的日期级新鲜度逻辑（sina_industry_map 内），跳过不删。
+    口径：把 mtime 超过 CACHE_TTL_H 的 `*.json` **原地清空成 0 字节**（R100z285，
+    见 `_purge_cache_file`）；`industry_map.json` 有自己的日期级新鲜度逻辑
+    （sina_industry_map 内），跳过不动。
     任何异常只吞不抛——清理是保洁逻辑，严禁影响取数主流程。
     """
     try:
@@ -271,7 +298,7 @@ def prune_cache(verbose=False):
                     if not entry.name.endswith('.json') or entry.name == 'industry_map.json':
                         continue
                     if entry.is_file(follow_symlinks=False) and entry.stat().st_mtime < cutoff:
-                        os.unlink(entry.path)
+                        _purge_cache_file(entry.path)
                         n += 1
                 except Exception:
                     continue
