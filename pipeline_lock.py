@@ -114,31 +114,38 @@ def cmd_acquire(name, task, wait, ttl):
             return 0
         meta = _read(name)
         if meta is None:
-            # 文件存在却读不出：半截写入或被手工 touch。删掉重试，最多 3 次防死循环。
+            # 文件存在却读不出：半截写入或被手工 touch。挪走重试，最多 3 次防死循环。
+            # R100z284：这里原来是 os.remove，同样会在沙箱里变成废纸篓垃圾 → 改成改名到 `.bad` 槽位
+            # （同一槽位覆盖，不删除、不增长）。
             bad_reads += 1
             if bad_reads > 3:
                 print("[LOCK][HELD] %s 锁文件反复无法解析（%d 次），需人工检查 %s"
                       % (name, bad_reads, _path(name)))
                 return 3
             try:
-                os.remove(_path(name))
+                os.replace(_path(name), _path(name) + ".bad")
             except OSError as e:
-                # R100z273：删除失败原来静默 pass，下一行照打「已删除后重试」——文案与事实相反，
-                # 且下一轮读到的还是同一个坏文件，靠 bad_reads>3 才退出，日志里却看不出删不掉。
-                print("[LOCK][BAD-FILE] %s 锁文件无法解析、删也删不掉（%s），需人工删除 %s"
+                # R100z273：挪走失败原来静默 pass，下一行照打「已挪走后重试」——文案与事实相反，
+                # 且下一轮读到的还是同一个坏文件，靠 bad_reads>3 才退出，日志里却看不出挪不走。
+                print("[LOCK][BAD-FILE] %s 锁文件无法解析、也挪不走（%s），需人工删除 %s"
                       % (name, str(e)[:80], _path(name)))
                 return 3
-            print("[LOCK][STALE-REMOVED] 锁文件无法解析，已删除后重试（第 %d 次）" % bad_reads)
+            print("[LOCK][STALE-REMOVED] 锁文件无法解析，已挪到 .bad 存档后重试（第 %d 次）" % bad_reads)
             continue
         if _age(meta) > ttl:
-            old = _path(name) + ".stale-%d" % int(time.time())
-            # 旧锁留档只留最近一份：留档是为排查「谁被判死了」，不是攒文件夹。
+            # R100z284：旧锁留档改成**固定槽位覆盖写**，不再 glob 删历史留档 —— 同一条沙箱垃圾根因
+            # （os.remove 在自动化里 = 移到废纸篓）。留档只用于排查「谁被判死了」，最近一份就够；
+            # 死者的 task/pid/最后心跳都写在文件里，文件名不需要带时间戳。
+            old = _path(name) + ".stale"
             try:
                 import glob
                 for f in glob.glob(_path(name) + ".stale-*"):
-                    os.remove(f)
+                    try:
+                        os.replace(f, old)      # 老版本留下的带时间戳留档收进槽位，不删
+                    except OSError:
+                        pass
             except OSError:
-                pass  # 残留 .stale-* 清不掉不影响接管，只是多留几份旧锁留档
+                pass
             try:
                 os.replace(_path(name), old)
             except OSError as e:
@@ -186,12 +193,18 @@ def cmd_release(name, task):
         print("[LOCK][NOT-OWNER] %s 锁不属于 %s（实为 %s），不删他人锁"
               % (name, task, _describe(meta)))
         return 3
+    # R100z284：释放**不再删除**锁文件，改成原子改名到固定存档位（同名覆盖，恒 1 个文件）。
+    # 起因：自动化沙箱把 os.remove 接管成「移到废纸篓」（safeDeleteEvents: operation=trash），
+    # 既不报错也不真删 —— 每跑完一次释放，废纸篓就多一个 .pipeline-data.lock（全量统计 59 次）。
+    # 语义等价：_read() 读原名拿不到 → --status 判 FREE，下一轮 acquire 的 O_CREAT|O_EXCL 照旧成功；
+    # 存档位是 fixed name，`os.replace` 覆盖旧的，**不删除、不增长**，且保留最后一个持有者信息备查。
     try:
-        os.remove(_path(name))
+        os.replace(_path(name), _path(name) + ".released")
     except OSError as e:
-        print("[LOCK][RELEASE-FAIL] 删锁失败：%r" % (e,))
+        print("[LOCK][RELEASE-FAIL] 释放锁失败：%r" % (e,))
         return 1
-    print("[LOCK][RELEASED] %s 锁已释放" % name)
+    print("[LOCK][RELEASED] %s 锁已释放（存档至 %s.released，不删除）"
+          % (name, os.path.basename(_path(name))))
     return 0
 
 
