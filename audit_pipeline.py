@@ -4573,6 +4573,50 @@ def g52_shrink_parity(r):
     （本机没 Chrome 时 SKIP 是允许的，但不能当成「一致」）。
     """
     rc, out, err = _run_tool("check_shrink_parity.py", timeout=300)
+    # R100z284：对账器自己的生活卫生（用户 2026-10-30 截图：废纸篓里 13 个 722KB 的
+    # `_probe_shrink_*.html`，一天跑十几次就攒一堆）。
+    # 它在项目根复制一份 index.html 当探针页，然后用 os.remove 收尾 —— 本机 shell 没事，
+    # 但自动化跑在沙箱里，删除被接管成「移到废纸篓」（会话记录里的 safeDeleteEvents
+    # operation=trash），于是每跑一次对账就往废纸篓扔一个 722KB。
+    # 判据：探针页必须落在系统临时目录、且脚本里不许把 tempfile 指到项目目录（dir=HERE）。
+    # 这条跟「口径一致」无关，但它决定了这条闸门能不能每天跑几十次还不脏用户的桌面。
+    _sp = os.path.join(HERE, "check_shrink_parity.py")
+    try:
+        _spsrc = open(_sp, encoding="utf-8").read()
+    except OSError:
+        _spsrc = ""
+    if _spsrc:
+        # 判据走 AST。这里不能用 strip_js_comments：它剥 `//` `/* */` `<!-- -->`，
+        # 而这是 Python 文件，注释是 `#` —— 文件头那段"为什么不能再写 dir=HERE"的说明
+        # 里正好有这个字面量，用正则判会把说明当违规（第一版就踩了，② 号埋雷误报）。
+        try:
+            _sptree = ast.parse(_spsrc)
+        except SyntaxError:
+            _sptree = None
+            r.fail("G52", "对账器 check_shrink_parity.py 语法错误，口径对账跑不起来")
+        _tmp_bad, _has_gettmp = False, False
+        for _node in ast.walk(_sptree) if _sptree is not None else []:
+            if not (isinstance(_node, ast.Call)
+                    and isinstance(_node.func, ast.Attribute)):
+                continue
+            _fn = _node.func
+            _obj = _fn.value.id if isinstance(_fn.value, ast.Name) else ""
+            if _obj != "tempfile":
+                continue
+            if _fn.attr == "gettempdir":
+                _has_gettmp = True
+            if _fn.attr in ("mkstemp", "mkdtemp", "NamedTemporaryFile"):
+                for _kw in _node.keywords:
+                    if (_kw.arg == "dir" and isinstance(_kw.value, ast.Name)
+                            and _kw.value.id == "HERE"):
+                        _tmp_bad = True
+        if _tmp_bad:
+            r.fail("G52", "对账器又把探针页写进项目目录了（tempfile(..., dir=HERE)）——"
+                          "沙箱会把 os.remove 变成移到废纸篓，每跑一次多一个 722KB 的"
+                          "`_probe_shrink_*.html`（R100z284，用户 2026-10-30 截图）")
+        elif not _has_gettmp:
+            r.fail("G52", "对账器的探针页没落在系统临时目录（应走 tempfile.gettempdir()）——"
+                          "它会污染项目根目录，且删除动作在沙箱里会被转成废纸篓垃圾（R100z284）")
     if rc == 0:
         if "[SKIP]" in (out or ""):
             r.warn("G52", "缩量回踩口径对账未执行（%s）——本机无 Chrome 时允许跳过，"
@@ -4983,8 +5027,26 @@ def main():
     g57_trend_asof(r)
     g58_modal_head_count(r)
 
+    # R100z284：机器可读的结论行。
+    #
+    # 起因（2026-10-30 07:00 日志复盘）：自动化里常见的写法是
+    #     python3 audit_pipeline.py 2>&1 | tail -30; echo "AUDIT_RC=$?"
+    # `$?` 拿到的是 **tail** 的退出码，恒 0 —— 那一轮实际 `FAIL=1`（G29 简称不一致），
+    # 日志里却写着 `AUDIT_RC=0`。09:45 那条换成 `${PIPESTATUS[0]}` 也一样空，因为
+    # 自动化跑在 sh 而不是 bash。**退出码一过管道就丢**，靠它判成败等于没判。
+    #
+    # 所以把结论写进输出正文：即使被 tail 截断、被管道吞掉退出码，只要读到这一行就知道
+    # 结果；反过来，**看不到 AUDIT_GATE 行就说明审计根本没跑完**（崩溃/超时/被截断），
+    # 这条比退出码更硬，因为它不依赖任何 shell 语义。
+    gate = "FAIL" if r.counts.get("FAIL", 0) else "PASS"
+    gate_line = ("AUDIT_GATE=%s PASS=%d WARN=%d FAIL=%d" %
+                 (gate, r.counts.get("PASS", 0), r.counts.get("WARN", 0),
+                  r.counts.get("FAIL", 0)))
+
     if as_json:
-        print(json.dumps({"counts": r.counts, "items": r.items}, ensure_ascii=False, indent=2))
+        print(json.dumps({"gate": gate, "gateLine": gate_line,
+                          "counts": r.counts, "items": r.items},
+                         ensure_ascii=False, indent=2))
     else:
         groups = []
         for g, lv, msg in r.items:
@@ -5001,6 +5063,7 @@ def main():
         print("\n" + "-" * 78)
         print(f"  PASS={r.counts.get('PASS',0)}  WARN={r.counts.get('WARN',0)}  "
               f"FAIL={r.counts.get('FAIL',0)}  INFO={r.counts.get('INFO',0)}")
+        print("  " + gate_line)
         print("-" * 78)
     return r.exit_code()
 
