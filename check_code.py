@@ -1489,6 +1489,95 @@ def k12_earnings_scope(r, verbose=False):
              % len(EPS_TITLES))
 
 
+def k13_gate_readable(r, verbose=False):
+    """K13 审计结论必须「不依赖退出码」、且「下游真会读」。
+
+    R100z284 实撞（2026-10-30 07:00 自动化日志）：
+        python3 audit_pipeline.py 2>&1 | tail -30; echo "AUDIT_RC=$?"
+    这一轮实际 `FAIL=1`（G29：600006 东风汽车→东风股份 简称没同步），日志里却印着
+    `AUDIT_RC=0` —— **`$?` 拿到的是 tail 的退出码**。09:45 那条换成 `${PIPESTATUS[0]}`
+    也一样是空字符串，因为自动化跑在 sh 不是 bash（PIPESTATUS 是 bash 专有）。
+
+    两件事同时成立才会出事故：
+      ① 判据只有退出码这一条通道（一进管道就丢）；
+      ② 丢了自己也没察觉（日志里看着是 0）。
+    于是「FAIL 了但记成 success」这一整类问题都没有症状，只有翻代码才能发现。
+
+    修法不是教模型写对命令（它每次自由拼，教不完），而是让结论**活在输出正文里**：
+    `audit_pipeline.py` 末尾固定打印 `AUDIT_GATE=PASS|FAIL PASS=.. WARN=.. FAIL=..`，
+    一进管道也能被 tail 带出来；看不到这一行，就说明审计根本没跑完。
+
+    判据（产出端 + 消费端，缺一头就是半成品）：
+      a) audit_pipeline.py 里真的构造了 AUDIT_GATE 行并 print 出来；
+      b) 每条会跑审计的自动化 prompt 都点名 `AUDIT_GATE`（否则模型仍只盯退出码）；
+      c) 这些 prompt 必须把 refresh_stamp / sync_names 放在审计**之前**——
+         这两步 deploy.sh 里本来就有，模型单独跑审计时却常常漏，于是每天必撞一次
+         G28（页头时间戳落后）/ G29（简称是旧的），白跑一轮再审。
+    """
+    bad = []
+    ap = os.path.join(HERE, 'audit_pipeline.py')
+    try:
+        s = open(ap, encoding='utf-8').read()
+        tree = ast.parse(s)
+    except OSError as e:                                     # noqa: BLE001
+        r.warn('K13', '读不到 audit_pipeline.py（%s），跳过结论行校验' % e)
+        return
+    except SyntaxError as e:                                 # noqa: BLE001
+        r.fail('K13', 'audit_pipeline.py 语法错误（%s），审计根本跑不起来' % e)
+        return
+
+    # 判据走 AST，不走正则：注释掉的行不进语法树。
+    # R100z282 的教训——正则会被 `<!-- 接 bindDrag(dei,2) -->` 骗过；审计脚本这边同理，
+    # 把 gate_line 注释掉、只在注释里留一句 `AUDIT_GATE=%s` 就能让文本匹配变绿。
+    has_assign, has_print = False, False
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and any(
+                isinstance(t, ast.Name) and t.id == 'gate_line' for t in node.targets):
+            for sub in ast.walk(node.value):
+                if (isinstance(sub, ast.Constant) and isinstance(sub.value, str)
+                        and sub.value.startswith('AUDIT_GATE=')):
+                    has_assign = True
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                and node.func.id == 'print' and 'gate_line' in ast.dump(node)):
+            has_print = True
+    if not has_assign:
+        bad.append('audit_pipeline.py 不再构造 AUDIT_GATE 行——结论又只剩退出码一条通道，'
+                   '一旦进了 `| tail` 就永久是 0（R100z284）')
+    if not has_print:
+        bad.append('AUDIT_GATE 行构造了却没打印——下游读不到等于没有')
+
+    try:
+        con = sqlite3.connect(DB)
+        con.row_factory = sqlite3.Row
+        rows = [(x['name'], x['prompt'] or '') for x in con.execute(
+            "select name,prompt from automations where cwds like '%market dashboard%'")]
+        con.close()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn('K13', '读不到自动化库（%s），跳过消费端校验' % e)
+        rows = []
+
+    readers = 0
+    for nm, pm in rows:
+        if 'audit_pipeline' not in pm:
+            continue
+        readers += 1
+        if 'AUDIT_GATE' not in pm:
+            bad.append('%s：prompt 里没提 AUDIT_GATE —— 模型仍会去读 `$?`，'
+                       '而 `| tail` 后面的 `$?` 恒 0（R100z284）' % nm)
+        for tool, why in (('refresh_stamp', '页头时间戳 G28'),
+                          ('sync_names', '个股简称 G29')):
+            if tool not in pm:
+                bad.append('%s：prompt 里没有 %s —— 审计前没先修%s，'
+                           '每天必白跑一轮「FAIL→修→再审」' % (nm, tool, why))
+
+    if bad:
+        for m in bad:
+            r.fail('K13', m)
+    else:
+        r.ok('K13', '审计结论走 AUDIT_GATE 行（不依赖退出码）；%d 条会跑审计的自动化都点名了'
+                    '该行，且 refresh_stamp/sync_names 前置在审计之前' % readers)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--verbose', action='store_true')
@@ -1522,6 +1611,8 @@ def main():
         k11_tape_degrade(r, a.verbose)
     if not only or only == 'K12':
         k12_earnings_scope(r, a.verbose)
+    if not only or only == 'K13':
+        k13_gate_readable(r, a.verbose)
     return r.dump()
 
 

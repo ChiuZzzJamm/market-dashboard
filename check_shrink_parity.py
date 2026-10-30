@@ -15,6 +15,7 @@
 import html
 import json
 import os
+import pathlib
 import shutil
 import subprocess
 import sys
@@ -54,36 +55,74 @@ def load_data():
     return json.loads(s[s.index("{"):s.rindex("}") + 1])
 
 
+def clean_legacy_probes():
+    """清掉老版本留在项目根目录的探针页（R100z284）。
+
+    老版本用 `tempfile.mkstemp(dir=HERE)` 把 722KB 的 index.html 副本写在**项目根目录**，
+    靠 finally 里的 os.remove 收尾。本机 shell 里没问题，但在自动化沙箱里删除会被拦
+    （os.remove 抛 OSError → 被 `except OSError: pass` 吞掉），残留文件随后被沙箱的
+    收尾清理挪进废纸篓 —— 用户 2026-10-30 截图：一天 13 个 `_probe_shrink_*.html`、
+    每个 723KB，全在废纸篓里躺着。
+
+    探针页现在写系统临时目录（见 js_pool），这里只是把历史残渣顺手扫掉。
+    删不掉不报错：外面已经有 .gitignore 兜底，不该为清理失败让对账闸门变红。
+    """
+    n = 0
+    try:
+        for fn in os.listdir(HERE):
+            if fn.startswith("_probe_shrink_") and fn.endswith(".html"):
+                try:
+                    os.remove(os.path.join(HERE, fn))
+                    n += 1
+                except OSError:
+                    pass
+    except OSError:
+        pass
+    return n
+
+
 def js_pool():
     """跑前端拿 poolC，返回 (rows, err)。rows/list 元素 {code, shrinkDays, volRatio}。"""
     src = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
     page = src.replace("</body>", PROBE + "</body>") if "</body>" in src else src + PROBE
-    fd, path = tempfile.mkstemp(prefix="_probe_shrink_", suffix=".html", dir=HERE)
-    os.close(fd)
+    # R100z284：探针页不再落在项目目录，也**不再删除**。
+    #
+    # 两个坑叠在一起才逼出这个写法：
+    #   ① 老版本把 722KB 的 index.html 副本写在项目根（`tempfile.mkstemp(dir=HERE)`），
+    #      一天跑十几次，项目根随时躺着半打大文件；
+    #   ② 更狠的是**删不掉**：自动化跑在沙箱里，`os.remove` 被安全删除机制接管成
+    #      「移到废纸篓」（会话记录里能直接看到 `safeDeleteEvents: {operation:"trash"}`）。
+    #      finally 里删一次 = 废纸篓多一个 722KB。用户 2026-10-30 截图：一天 13 个。
+    #
+    # 所以：固定路径 + 每次覆盖写 + 永不删除。系统临时目录由 macOS 自己轮转清理，
+    # 用户视野里再也看不到它。并发安全靠「内容幂等」——两个进程写出的是同一份
+    # index.html + 同一段 PROBE，谁后写都是同一个字节串。
+    path = os.path.join(tempfile.gettempdir(), "mdashboard_probe_shrink.html")
+    # index.html 里 `<script src="data.js?v=...">` 是相对路径，挪到临时目录就找不到数据，
+    # 插一条 <base> 让相对 URL 仍按项目根解析（只影响相对 URL，不影响 location.hash 逻辑）。
+    if "<base " not in page:
+        page = page.replace("<head>", '<head>\n<base href="%s/">' % pathlib.Path(HERE).as_uri(), 1)
     try:
         with open(path, "w", encoding="utf-8") as f:
             f.write(page)
-        cmd = [CHROME, "--headless=new", "--disable-gpu", "--no-sandbox",
-               "--allow-file-access-from-files", "--virtual-time-budget=45000",
-               "--dump-dom", "file://" + path]
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
-        dom = r.stdout or ""
-        i = dom.find('id="%s">' % PROBE_MARK)
-        if i < 0:
-            return None, "探针页没有回读到 PROBEBOX（chrome exit=%s，dom %d 字符）" % (r.returncode, len(dom))
-        j = dom.find("</pre>", i)
-        raw = html.unescape(dom[i + len('id="%s">' % PROBE_MARK):j])
-        if not raw.strip().startswith("{"):
-            return None, "探针块内容不是 JSON（前 80 字：%r）——大概率是页面脚本未执行完" % raw[:80]
-        obj = json.loads(raw)
-        if obj.get("err"):
-            return None, "页面内异常：" + str(obj["err"])[:400]
-        return obj.get("rows") or [], None
-    finally:
-        try:
-            os.remove(path)
-        except OSError:
-            pass
+    except OSError as e:
+        return None, "探针页写不进临时目录 %s：%s" % (path, e)
+    cmd = [CHROME, "--headless=new", "--disable-gpu", "--no-sandbox",
+           "--allow-file-access-from-files", "--virtual-time-budget=45000",
+           "--dump-dom", "file://" + path]
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+    dom = r.stdout or ""
+    i = dom.find('id="%s">' % PROBE_MARK)
+    if i < 0:
+        return None, "探针页没有回读到 PROBEBOX（chrome exit=%s，dom %d 字符）" % (r.returncode, len(dom))
+    j = dom.find("</pre>", i)
+    raw = html.unescape(dom[i + len('id="%s">' % PROBE_MARK):j])
+    if not raw.strip().startswith("{"):
+        return None, "探针块内容不是 JSON（前 80 字：%r）——大概率是页面脚本未执行完" % raw[:80]
+    obj = json.loads(raw)
+    if obj.get("err"):
+        return None, "页面内异常：" + str(obj["err"])[:400]
+    return obj.get("rows") or [], None
 
 
 def main():
@@ -93,6 +132,9 @@ def main():
     if not shutil.which("python3") and not sys.executable:
         print("[SKIP] 无 python3")
         return 0
+    n = clean_legacy_probes()
+    if n:
+        print("[clean] 清掉项目根目录的历史探针页 %d 个（R100z284：它们曾被挪进废纸篓）" % n)
     D = load_data()
     js_rows, err = js_pool()
     if err:
