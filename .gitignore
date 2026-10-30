@@ -20,6 +20,11 @@ router-wol-schedule.sh
 *.tmp.js
 .pipeline-*.lock
 .pipeline-*.lock.stale-*
+# R100z284：锁不再删除，改成改名到固定存档槽位（沙箱里 os.remove = 移到废纸篓）。
+# 三个槽位各恒 1 个文件、互相覆盖，不会增长；这里必须排除，否则 deploy.sh 的 git add -A 会把它们推上公开仓库。
+.pipeline-*.lock.released
+.pipeline-*.lock.stale
+.pipeline-*.lock.bad
 draft.json
 .DS_Store
 __pycache__/
