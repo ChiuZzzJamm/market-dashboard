@@ -383,6 +383,25 @@ if trade_iso == "未知日期":
     td = fetch_trade_date()
     if td:
         trade_iso = td
+
+# R100z181：/tmp 预取文件可能是上一次运行的遗留（例如 07:00 步骤在美东前一交易日收盘后写入，
+# 到周日 21:00 仍是旧日期）。此时不能直接判「过期保留旧值」，先改用实时行情覆盖一次，
+# 否则每个周日都会停在周四收盘、看板显示错的一天。实时抓不到时才回落到过期闸门。
+_now_bj_early = datetime.now(timezone(timedelta(hours=8)))
+_expected_early = prior_us_trading_day(_now_bj_early.date())
+if trade_iso != "未知日期" and _expected_early:
+    try:
+        _date_now = datetime.strptime(trade_iso, "%Y-%m-%d").date()
+    except Exception:
+        _date_now = None
+    if _date_now and _date_now < _expected_early:
+        print(f"[info] 预取行情日期 {trade_iso} 早于应更新交易日 {_expected_early.isoformat()}，改为实时抓取")
+        _live = fetch_us_quotes_live()
+        if _live:
+            q = _live
+            _live_td = fetch_trade_date()
+            if _live_td:
+                trade_iso = _live_td
 if trade_iso != "未知日期":
     trade_md = f"{int(trade_iso[5:7])}/{int(trade_iso[8:10])}"
 else:
