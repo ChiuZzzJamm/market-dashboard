@@ -24,6 +24,15 @@
 止损锚（T 日最低价 vs 洗盘段最低价）、止盈持有（3%/5 日 vs 3.5%/2 日）。
 这三处恰恰是「胜率差」的全部来源——所以必须分开量，不能合并。
 
+## ⚠️ 2026-11-01 修了未来函数（R100z289）
+
+`collect()` 的 S7（不破 T 日低点）原来写成 `min(st.c[i1:n])`，n 是数据末尾而不是
+信号日，等于站在今天回看整段未来。跌破 T 日低点恰好是止损触发条件，所以**所有止损
+出局的样本都被从分母里抹掉了**：`rule_final_check` 里「候选 g（zt_low/TP5/H10 +
+距MA5≥3%）+3.054% / 胜率 83.9%」就是在这个样本上量出来的。
+窗口截到确认日后同口径复算为 +0.4% 量级、胜率 6x%。**本文件以前打印的任何收益都
+不可引用**，要用就重跑。
+
 用法：python3 chen_study.py
 """
 import statistics
@@ -76,7 +85,7 @@ def collect(stocks):
                 iT += 1
                 continue
             lowT = st.l[iT]
-            if lowT <= 0 or min(st.c[i1:n]) < lowT * LOW_TOL:
+            if lowT <= 0:
                 iT += 1
                 continue
             i2 = iT + 2
@@ -91,6 +100,17 @@ def collect(stocks):
                     conf = j
                     break
             if conf is None or conf + 1 >= n:
+                iT += 1
+                continue
+            # S7 不破 T 日低点：**窗口必须截到确认日**。
+            # 原写法是 `min(st.c[i1:n])`，n 是「到数据末尾（2026-11）」的全长——等于
+            # 站在今天回看：凡确认后（甚至持有窗口之后）曾经收盘跌破 T 日低点×0.98 的票，
+            # 整条样本被删掉。而跌破 T 日低点正是止损触发条件 → **止损出局的样本全部消失**，
+            # 只留下赢的和没破位的，胜率凭空变成 83.9%。
+            # 线上 chen_pool._structure 用的是 `range(i1, len(kl))`，len(kl) 就是「今天」，
+            # 所以线上没有未来数据、只有回测脚本有。按线上窗口对齐 = 截到 conf。
+            # 实测（2026-11-01）：修前 829 笔/+3.054%，修后同口径 5.7k 笔/+0.4% 量级。
+            if min(st.c[i1:conf + 1]) < lowT * LOW_TOL:
                 iT += 1
                 continue
             b = conf + 1
