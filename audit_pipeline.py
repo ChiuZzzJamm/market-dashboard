@@ -1266,6 +1266,51 @@ def g13_holiday_table(r):
                 r.ok("G13", f"节假日表覆盖到 {max_d}（剩 {left} 天，暂无需更新）")
     except Exception as e:                                   # noqa: BLE001
         r.fail("G13", f"节假日表覆盖前瞻检查失败：{e}")
+    # ③ 第三方交叉校验（R100z288）：与深交所官方逐日比对，不一致即 FAIL
+    #
+    # 为什么必须有这一段：① 只保证「两份手工表彼此一致」，两份同时写错时它照样绿。
+    # 2026-02-23 就是实例——春节两份都写成 02-15~02-21，官方实际休市到 02-23，
+    # 闸门全绿，而 08:30 的交易日守卫会在那天当交易日跑全链（休市日生成假数据并部署）。
+    # 判据：只在「官方确实有该月数据」的月份比对；抓不到一律降级 WARN——
+    # 断网 / 源改版不能拦部署，闸门只拦「确定的错」，不拦「不知道」。
+    try:
+        import cal_official as _co
+        from datetime import date as _dt, timedelta as _td
+        _ranges, _ = _cf.holiday_ranges(getattr(_cf, "HOLIDAYS", {}) or {},
+                                        getattr(_cf, "REOPEN_OVERRIDE", set()) or set())
+        _today = _dt.today()
+        _months = _co.months_of_ranges(_ranges) | {(_today.year, _today.month)}
+        _off, _meta = _co.get_months(_months)
+        if not _off:
+            _why = '网络失败 %d 个月' % _meta['netfail'] if _meta['netfail'] else '官方无数据'
+            r.warn("G13", f"第三方交叉校验跳过：官方日历不可用（{_why}，涉及 "
+                          f"{', '.join(_meta['empty'][:4])} 等 {_meta['months_empty']} 个月）"
+                          "——本次仅凭两份手工表同源，未能独立验证")
+        else:
+            _ours = {}
+            _d = _dt.fromisoformat(min(_off))
+            _hi = _dt.fromisoformat(max(_off))
+            while _d <= _hi:
+                _ours[_d.isoformat()] = _cf.is_trading_day(_d, _ranges)
+                _d += _td(days=1)
+            _diff = _co.diff_days(_ours, _off)
+            if _diff:
+                _txt = '；'.join('%s 我方=%s 官方=%s' % (k, '开市' if a else '休市',
+                                                      '开市' if b else '休市')
+                                for k, a, b in _diff[:8])
+                _future = sum(1 for k, _a, _b in _diff if k > _today.isoformat())
+                r.fail("G13", f"与深交所官方日历不一致 {len(_diff)} 天（其中未来 {_future} 天）："
+                              f"{_txt}{' 等' if len(_diff) > 8 else ''}"
+                              "——手工表错会导致休市日跑全链（我方=开市）或交易日裸奔（我方=休市），"
+                              "必须改 common.HOLIDAY_RANGES 与 cal_factor.HOLIDAYS 两处")
+            else:
+                _tag = f"，stale {_meta['stale']} 月用的是旧缓存" if _meta['stale'] else ''
+                r.ok("G13", f"与深交所官方日历逐日一致（{_meta['months_ok']} 个月 / "
+                            f"{len(_off)} 天比对，无差异{_tag}）")
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G13", f"第三方交叉校验执行失败（不拦部署）：{e}")
+
+
 def g14_prompt_broken_path(r):
     """G14 路径断裂闸门（R100z71）：prompt 内禁止出现「/WorkBuddy/market <空格><脚本>.py」
     这类签名——合法路径是 /WorkBuddy/market dashboard/...（含空格需整体引号或走 cd 相对调用）。

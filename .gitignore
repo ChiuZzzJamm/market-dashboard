@@ -68,3 +68,6 @@ _weekend_*.py
 
 # 研究脚本的原始统计产物（goldpit_study.py --dump，单个可达数百 MB，公开仓库绝不提交）
 goldpit_study.json
+
+# 深交所官方交易日历缓存（cal_official.py 的按月缓存，G13 第三方交叉校验用，R100z288）
+.trade_cal/
