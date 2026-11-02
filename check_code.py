@@ -36,6 +36,9 @@
   K9 环比闸门     池子轮换不许把内容悄悄带走（R100z208）
   K10 消息面顺序  时间倒序 / 三段顺序 / 口径净差判定（R100z210）
                  —— 这类退步**页面看起来还在**，只是顺序乱、口径错，肉眼很难发现
+  K15 检查器自检  `check_narrative.py --only` 必须真的收窄：正向（目标字段真出现在结果里）、
+                 收窄（受检数 < 全量）、负向（无其它前缀混入）三向同判（R100z292）
+                 —— 「检查器自己坏了」不报错，只安静地变绿，只能靠拿已知字段反问它来发现
 
 ★ 写规则时踩过的两个坑（别重犯）：
   1. **`s.get(...)` 不是网络调用**：`s` 在多数脚本里是 dict，`s.get('f5Tier')` 是 dict.get。
@@ -46,7 +49,7 @@
 用法:
     python3 check_code.py            # 全部检查（FAIL 时 exit 1）
     python3 check_code.py --verbose  # 附明细（谁引用了谁、每个写者的原子实现位置）
-    python3 check_code.py --only K3  # 只跑某一类（K1-K11）
+    python3 check_code.py --only K3  # 只跑某一类（K1-K15）
 """
 import argparse
 import ast
@@ -1625,6 +1628,88 @@ def k14_no_bare_delete(r, verbose=False):
                     '要释放空间走 truncate 归零' % scanned)
 
 
+def k15_selftest(r, verbose=False):
+    """K15 检查器自检：`check_narrative.py --only` 必须真的收窄、且不是「匹配一切」（R100z292）。
+
+    要防的事故（2026-11-02 实撞，静默漏检约两周）：
+        `--only` 的实现是**无条件**给参数补一个「.」再 `label.startswith(only)`。
+        带点的前缀（`ashare.` / `us.` / `aiPrediction.`）没事，但**顶层单标签字段本身不带点**：
+        `--only openOutlook` 于是搜的是 `"openOutlook."` → 恒 False → 一条都不匹配，
+        脚本报「0 处过短 / 0 处超上限」，看着比全量还干净；实测该字段 1683 字、超上限 1033。
+        危害的形状是：**检查器坏了不报错，只安静地变绿**。这一整类问题没有任何症状，
+        只能靠「拿一个已知存在的字段去问它」才能发现。
+
+    判据（正负双向，缺一个方向都自欺）：
+      a) 正向：`--only openOutlook` 的受检数 > 0，且表里**真有** openOutlook 这一行
+         （只判 >0 会被 `deduce` 兜底骗过 —— deduce 恒受检，任何前缀都能凑出非零）；
+      b) 收窄：该次受检数**严格小于**全量受检数（否则等于 `--only` 被当成「全查」）；
+      c) 负向：该次结果里不得出现 `ashare.` / `aiPrediction.` 的行（否则收窄是假的）。
+
+    为什么不直接 import 函数来测：`wanted()` 是 main() 里的闭包，坏就坏在 CLI 参数这条路径上，
+    单测函数体会漏掉「参数怎么进来」这一段 —— 而那正是出事的地方。
+    """
+    script = os.path.join(HERE, 'check_narrative.py')
+    if not os.path.exists(script):
+        r.warn('K15', '找不到 check_narrative.py，跳过检查器自检')
+        return
+
+    def run(args):
+        try:
+            p = subprocess.run([sys.executable, script] + args, cwd=HERE,
+                               capture_output=True, text=True, timeout=300)
+        except subprocess.TimeoutExpired:
+            return None, '超时 300s'
+        return p.stdout + p.stderr, None
+
+    def field_count(out):
+        m = re.search(r'\[G16\] 叙事字数：(\d+) 处受检', out)
+        return int(m.group(1)) if m else None
+
+    out_only, err = run(['--only', 'openOutlook', '--table'])
+    if err:
+        r.fail('K15', '`--only openOutlook` 跑不起来（%s）—— 检查器先坏了，'
+                      '后面所有字数结论都不可信' % err)
+        return
+    out_all, err2 = run(['--table'])
+    if err2:
+        r.fail('K15', '全量跑 `check_narrative.py --table` 失败（%s）' % err2)
+        return
+
+    n_only, n_all = field_count(out_only), field_count(out_all)
+    if n_only is None:
+        # 解析不到「N 处受检」说明输出格式变了：自检本身失效，必须喊出来而不是静默跳过
+        r.fail('K15', '解析不到 check_narrative.py 的「N 处受检」行 —— 输出格式变了，'
+                      '自检已失效（改格式时同步改这里，否则这道闸门变成摆设）')
+        return
+    if n_all is None:
+        r.fail('K15', '全量跑的输出里没有「N 处受检」行')
+        return
+
+    bad = []
+    has_row = bool(re.search(r'(?m)^\s{2}openOutlook\s+\d+\s+\d+\s+\S+\s+(SHORT|OVER|NEAR|ok)', out_only))
+    if not has_row:
+        bad.append('`--only openOutlook` 的实测表里没有 openOutlook 这一行——'
+                   '要么字段不在 data.js（K6 会报），要么 **--only 又恒不匹配了**（R100z292 原样复发）')
+    if n_only <= 0:
+        bad.append('`--only openOutlook` 受检 0 处，恒不匹配')
+    if n_all and n_only >= n_all:
+        bad.append('`--only openOutlook` 受检 %d 处 ≥ 全量 %d 处 —— --only 等于没写，'
+                   '收窄失效（所有「只查这一块」的结论都不成立）' % (n_only, n_all))
+    leaked = re.findall(r'(?m)^\s{2}((?:ashare|aiPrediction)\.\S+)\s+\d+', out_only)
+    if leaked:
+        bad.append('`--only openOutlook` 的结果里混入了 %d 条其它前缀的字段（如 %s）—— '
+                   '收窄是假的' % (len(leaked), leaked[0]))
+
+    if bad:
+        for m in bad:
+            r.fail('K15', m)
+    else:
+        if verbose:
+            print('[K15] --only openOutlook 受检 %d 处 / 全量 %d 处，表内确含 openOutlook' % (n_only, n_all))
+        r.ok('K15', '检查器自检通过：`--only openOutlook` 受检 %d 处（全量 %d 处）、表内确含该字段、'
+                    '无其它前缀混入 —— --only 的收窄是真的在收窄' % (n_only, n_all))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--verbose', action='store_true')
@@ -1662,6 +1747,8 @@ def main():
         k13_gate_readable(r, a.verbose)
     if not only or only == 'K14':
         k14_no_bare_delete(r, a.verbose)
+    if not only or only == 'K15':
+        k15_selftest(r, a.verbose)
     return r.dump()
 
 
