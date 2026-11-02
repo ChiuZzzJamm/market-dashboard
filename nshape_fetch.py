@@ -140,6 +140,63 @@ def fetch_kline(code, last_day):
     return rows if len(rows) >= 60 else None
 
 
+def _eastmoney_seg(code, last_day):
+    """东财 push2his 单段日K（前复权，一次给全区间，带成交额）。返回 [(day,o,c,h,l,vol_hands,amt)]。
+
+    R100z294（2026-11-02）：腾讯 ifzq 当日开始返回反爬 HTML（`<!DOCTYPE html>…window.btoa`），
+    `_tencent_seg` 全线拿空串 → 抓 5563 只写了 0 个文件、还白跑了两轮（每轮 3 次重试 × 0.3s）。
+    东财 push2his 实测 925 根 / 0.1s 且带成交额（比 volume×close 估算更准）。
+    两个源都保留：东财优先，失败再退腾讯 —— 单源被封是常态，不是意外。
+    """
+    secid = ('1.' if code.startswith(('6', '5')) else '0.') + code
+    url = ('https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=' + secid
+           + '&fields1=f1,f2,f3,f4,f5,f6'
+             '&fields2=f51,f52,f53,f54,f55,f56,f57,f58'
+             '&klt=101&fqt=1&beg=20230101&end=' + last_day.replace('-', ''))
+    for _ in range(3):
+        raw = _curl(url, timeout=15)
+        if raw:
+            try:
+                d = (json.loads(raw) or {}).get('data') or {}
+                kl = d.get('klines') or []
+            except Exception:
+                kl = []
+            out = []
+            for line in kl:
+                x = line.split(',')
+                try:
+                    if x[0] > last_day:
+                        continue
+                    out.append((x[0], float(x[1]), float(x[2]), float(x[3]),
+                                float(x[4]), float(x[5]), float(x[6]) if len(x) > 6 else 0.0))
+                except Exception:
+                    continue
+            if out:
+                return out
+        time.sleep(0.5)
+    return []
+
+
+def fetch_kline_em(code, last_day):
+    """东财源（优先）：成交额用源给的 f57，比 volume×close 估算更准。"""
+    arr = _eastmoney_seg(code, last_day)
+    rows = []
+    for d, o, c, h, l, v, amt in arr:
+        if min(o, c, h, l) <= 0:
+            continue
+        vol = v * 100.0                 # 手 -> 股
+        rows.append([d, o, c, h, l, vol, amt if amt > 0 else vol * c, 0.0])
+    return rows if len(rows) >= 60 else None
+
+
+def fetch_kline_any(code, last_day):
+    """东财优先 → 腾讯兜底（R100z294）。两个源都拿空才算缺失。"""
+    rows = fetch_kline_em(code, last_day)
+    if rows:
+        return rows
+    return fetch_kline(code, last_day)
+
+
 def last_trade_day():
     """最近一个已收盘交易日：今天 15:05 前则取前一交易日。直接按 K 线末根对齐。"""
     today = datetime.date.today()
@@ -177,8 +234,10 @@ def main():
 
     ok, miss = 0, []
     t0 = time.time()
-    with ThreadPoolExecutor(max_workers=10) as ex:
-        futs = {ex.submit(fetch_kline, r['code'], last_day): r for r in todo}
+    # 并发降到 4：东财对高频请求敏感（R100z294 实测 10 线程跑约 1300 只后整段限流）。
+    # 4 线程 × 0.1s/只 ≈ 40 只/秒，全市场 ~2.5 分钟，且不会触发限流。
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        futs = {ex.submit(fetch_kline_any, r['code'], last_day): r for r in todo}
         for i, f in enumerate(as_completed(futs), 1):
             r = futs[f]
             try:
