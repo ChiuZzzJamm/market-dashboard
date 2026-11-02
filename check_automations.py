@@ -15,6 +15,7 @@ CHECKLIST.md 的 L1/L2/L5 早就写明「抽 .py 逐个 test -f」「按变体�
   C 命令 flag     code block 里的 `xxx.py --flag` 是否被该脚本源码支持
   D 死步骤        「第 N 步」引用是否有定义（**带 markdown 排版变体集**）
                   + 括号步号序列是否与基线 stepOrder 一致（整步被删只有这层能抓）
+                  + 字母清单（a. b. c.）是否有空洞（= 照抄清单后删项没重编号的痕迹，WARN）
   E 口径对账      prompt 给 AI 的字数下限 ≥ G16 地板、上限 ≤ check_narrative 的 ceil_of
                   —— 「prompt 让写的、闸门判 FAIL」那类分裂（PROJECT-MEMORY 24.10 第四层）
   F 时间戳契约    每条任务是否知道自己负责哪一格 updatedAt（R100z167 后）
@@ -899,6 +900,40 @@ def chk_steps(T, r):
                         '（B5 只比短语，整步被删它查不出来）')
     if not drift:
         r.ok('D2', '%d 条任务的括号步号序列与基线 stepOrder 完全一致（点号子项已排除）' % checked)
+
+    # D3 字母清单连续性（R100z292）：照抄清单后删项、没重编号。
+    # 2026-11-02 实测 21:00 的自检项是 a/d/f/g/h/j/k/l —— b/c/e/i/k 全缺，
+    # 是从 22:00 那份 a-l 清单剪出来的痕迹。字母空洞本身只是排版问题，
+    # 但它**标记着「这段被人工剪过」**：顺着空洞往下读，被剪坏的那一条就在旁边
+    # （那一版把 `aiPrediction`/`openOutlook` 写成了 21:00 的必过项，而同一份 prompt
+    # 开头明令「严禁写 aiPrediction / openOutlook」→ 该检查永远无法通过 → AI 学会静默跳过）。
+    # 做 WARN 不做 FAIL：排版不拦部署，但要让它在体检里看得见。
+    LET = re.compile(r'(?m)^\s{2,}([a-z])\.\s')
+    gaps = []
+    for t in T:
+        seq = LET.findall(t['prompt'] or '')
+        if len(seq) < 3:
+            continue
+        groups, cur = [], []
+        for ch in seq:
+            if ch == 'a' and cur:          # 见到 a 就开新组：一份 prompt 里可以有多个清单
+                groups.append(cur)
+                cur = [ch]
+            else:
+                cur.append(ch)
+        if cur:
+            groups.append(cur)
+        for g in groups:
+            if len(g) < 3:
+                continue
+            want = [chr(ord('a') + k) for k in range(len(g))]
+            if g != want:
+                gaps.append('%s 字母清单 %s（应为 %s）' % (t['key'], ''.join(g), ''.join(want)))
+    for m in gaps:
+        r.warn('D3', m + ' —— 像是照抄别处的清单后删项没重编号；'
+                        '空洞附近常留着被剪坏的那一条（读一遍，别只补字母）')
+    if not gaps:
+        r.ok('D3', '字母清单无空洞（7 份 prompt 的 a/b/c… 序列连续，无「删项未重编号」痕迹）')
 
 
 
