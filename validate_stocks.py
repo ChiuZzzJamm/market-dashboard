@@ -1397,6 +1397,19 @@ def check_star_module(D):
                                         if isinstance(e, dict)}
                             if c in _w_codes:
                                 continue
+                    # R102（2026-11-02）：src='shrink'（缩量回踩档，shrink_scan.py，待确认档的合法来源）
+                    # 之前不在白名单 → 每天误报「非合规来源」。同样**不能只信 src**：
+                    # 只认 tier='watch'，且必须带 shrink_scan 产出的四要素（ztDate/shrinkDays/volRatio/stop），
+                    # 数值还要落在四条硬条件的区间内（缩量 1~2 天、放量 1.1~3.5 倍）。
+                    # 缺任一或数值越界＝不是该扫描器的产物，照旧 WARN，堵住「随便标个 shrink 就绕过」。
+                    if src == 'shrink' and name_ok and str(p.get('tier') or 'confirm') == 'watch':
+                        _days = p.get('shrinkDays')
+                        _vr = p.get('volRatio')
+                        if (str(p.get('ztDate') or '').strip()
+                                and isinstance(_days, int) and 1 <= _days <= 2
+                                and isinstance(_vr, (int, float)) and 1.1 <= float(_vr) <= 3.5
+                                and isinstance(p.get('stop'), (int, float))):
+                            continue
                     warns.append(f"duanban.star.picks {c} {p.get('name')} 不在断板反包双池内且非合规来源标的（精选只能从双池/板块动量/技术池筛）")
             if not str(star.get('pushText') or '').strip():
                 warns.append("duanban.star.pushText 为空（微信推送深度分析缺失，10:00 自动化 AI 须补写）")

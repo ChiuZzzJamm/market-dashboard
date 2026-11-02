@@ -629,8 +629,22 @@ def g4_baseline(r, exp):
 
 
 # ---------------------------------------------------------------- G5 源码纪律
+def _star_retain_ok(src):
+    """G5-1 的源码级判据：star 保留逻辑必须真的做了「不早于某个下界」的比较。
+
+    两种合法形态：
+      ① 老写法 `od >= yesterday`（自然日昨天）；
+      ② R100z291 起的写法 `floor = _last_trading_day()` + `od >= floor`（最近一个交易日，
+         比老写法更严：长假后不会把节前最后一个交易日的 star 当过期丢掉）。
+    只出现 `_last_trading_day(` 而没有任何比较 = 算出了下界却没拿来判，视为没判定。
+    """
+    if "> yesterday" in src or ">= yesterday" in src:
+        return True
+    return "_last_trading_day(" in src and "od >= floor" in src
+
+
 def g5_source_assertions(r):
-    # 1) merge_duanban.py 必须保留最近交易日 star（R100z16 时序修复）
+    # 1) merge_duanban.py 必须保留最近交易日 star（R100z16 时序修复，R100z291 换判据）
     p = os.path.join(HERE, "merge_duanban.py")
     if not os.path.exists(p):
         r.fail("G5", "merge_duanban.py 缺失")
@@ -638,10 +652,10 @@ def g5_source_assertions(r):
         src = open(p, encoding="utf-8").read()
         if "timedelta" not in src:
             r.fail("G5", "merge_duanban.py 未导入 timedelta（star 过期判定会算错）")
-        elif "> yesterday" not in src and ">= yesterday" not in src:
-            r.fail("G5", "merge_duanban.py 未采用「>= yesterday 保留 star」逻辑（会清场 duanban.star）")
+        elif not _star_retain_ok(src):
+            r.fail("G5", "merge_duanban.py 未采用「不早于最近交易日保留 star」逻辑（会清场 duanban.star）")
         else:
-            r.ok("G5", "merge_duanban.py：保留最近交易日 star（od >= yesterday），不会清场")
+            r.ok("G5", "merge_duanban.py：保留最近交易日 star（od >= 下界），不会清场")
 
     # 2) validate_stocks.py 必须支持 --no-fix/--scope，且 --no-fix 时不写盘
     p = os.path.join(HERE, "validate_stocks.py")
