@@ -47,9 +47,7 @@
     python3 nextday_bt.py --quick         # 只打单笔
 """
 import argparse
-import math
 import os
-import random
 import statistics
 import sys
 
@@ -127,7 +125,7 @@ def collect(stocks, mode, sell='limit'):
             if buy <= 0:
                 iT += 1
                 continue
-            o2, h2, l2 = st.o[i2], st.h[i2], st.l[i2]
+            _, h2, l2 = st.o[i2], st.h[i2], st.l[i2]
             if l2 == h2 and st.pct(i2) > 0.09:   # 一字涨停
                 iT = i2 + 1
                 continue

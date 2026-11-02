@@ -2581,6 +2581,170 @@
      "volExpect": "缩量"
     }
    }
+  ],
+  "2026-11-02": [
+   {
+    "date": "2026-11-02",
+    "sector": "银行",
+    "sectorKey": "银行",
+    "predicted": "走强",
+    "dirClass": "up",
+    "actualPct": -0.83,
+    "benchPct": 1.75,
+    "benchSecPct": 1.97,
+    "benchUsed": "sector",
+    "excessPct": -2.8,
+    "excessPctIdx": -2.58,
+    "benchMainPct": 1.355,
+    "result": "未命中",
+    "conf": "中",
+    "avgPct": -0.89,
+    "excessAvg": -2.86,
+    "hit": 0,
+    "hitAbs": 0,
+    "hitStock": 0,
+    "pos": {
+     "tendency": "承压",
+     "bandLo": 3530,
+     "bandHi": 3620,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-11-02",
+    "sector": "白酒",
+    "sectorKey": "白酒",
+    "predicted": "偏强",
+    "dirClass": "up",
+    "actualPct": 4.95,
+    "benchPct": 1.75,
+    "benchSecPct": 1.97,
+    "benchUsed": "sector",
+    "excessPct": 2.98,
+    "excessPctIdx": 3.2,
+    "benchMainPct": 1.355,
+    "result": "命中",
+    "conf": "中",
+    "avgPct": 5.48,
+    "excessAvg": 3.51,
+    "hit": 1,
+    "hitAbs": 1,
+    "hitStock": 1,
+    "pos": {
+     "tendency": "承压",
+     "bandLo": 3530,
+     "bandHi": 3620,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-11-02",
+    "sector": "油气开采及服务",
+    "sectorKey": "油气开采及服务",
+    "predicted": "走强",
+    "dirClass": "up",
+    "actualPct": 0.09,
+    "benchPct": 1.75,
+    "benchSecPct": 1.97,
+    "benchUsed": "sector",
+    "excessPct": -1.88,
+    "excessPctIdx": -1.66,
+    "benchMainPct": 1.355,
+    "result": "部分兑现",
+    "conf": "中",
+    "avgPct": 0.45,
+    "excessAvg": -1.52,
+    "hit": 0,
+    "hitAbs": 0.5,
+    "hitStock": 0,
+    "pos": {
+     "tendency": "承压",
+     "bandLo": 3530,
+     "bandHi": 3620,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-11-02",
+    "sector": "军工装备",
+    "sectorKey": "军工装备",
+    "predicted": "偏强",
+    "dirClass": "up",
+    "actualPct": 1.89,
+    "benchPct": 1.75,
+    "benchSecPct": 1.97,
+    "benchUsed": "sector",
+    "excessPct": -0.08,
+    "excessPctIdx": 0.14,
+    "benchMainPct": 1.355,
+    "result": "命中",
+    "conf": "中",
+    "avgPct": 2.29,
+    "excessAvg": 0.32,
+    "hit": 0.5,
+    "hitAbs": 1,
+    "hitStock": 1,
+    "pos": {
+     "tendency": "承压",
+     "bandLo": 3530,
+     "bandHi": 3620,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-11-02",
+    "sector": "半导体",
+    "sectorKey": "半导体",
+    "predicted": "承压",
+    "dirClass": "down",
+    "actualPct": 2.76,
+    "benchPct": 1.75,
+    "benchSecPct": 1.97,
+    "benchUsed": "sector",
+    "excessPct": 0.79,
+    "excessPctIdx": 1.01,
+    "benchMainPct": 1.355,
+    "result": "未命中",
+    "conf": "中",
+    "avgPct": 2.04,
+    "excessAvg": 0.07,
+    "hit": 0,
+    "hitAbs": 0,
+    "hitStock": 0.5,
+    "pos": {
+     "tendency": "承压",
+     "bandLo": 3530,
+     "bandHi": 3620,
+     "volExpect": "平量"
+    }
+   },
+   {
+    "date": "2026-11-02",
+    "sector": "通信设备",
+    "sectorKey": "通信设备",
+    "predicted": "承压",
+    "dirClass": "down",
+    "actualPct": 2.73,
+    "benchPct": 1.75,
+    "benchSecPct": 1.97,
+    "benchUsed": "sector",
+    "excessPct": 0.76,
+    "excessPctIdx": 0.98,
+    "benchMainPct": 1.355,
+    "result": "未命中",
+    "conf": "中",
+    "avgPct": 2.96,
+    "excessAvg": 0.99,
+    "hit": 0,
+    "hitAbs": 0,
+    "hitStock": 0,
+    "pos": {
+     "tendency": "承压",
+     "bandLo": 3530,
+     "bandHi": 3620,
+     "volExpect": "平量"
+    }
+   }
   ]
  },
  "open": {
@@ -2950,6 +3114,29 @@
    "volHit": 0,
    "score": 0.8,
    "verdict": "部分兑现",
+   "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；★量能口径 R100z158b 起 = 成交额环比（≥+10% 放量 / ≤−10% 缩量 / 界内平量），环比基准取台账内上一交易日成交额（首日无前值时该项不计入）；口径固定不可调"
+  },
+  "2026-11-02": {
+   "date": "2026-11-02",
+   "openDate": "2026-11-02",
+   "tendency": "承压",
+   "bandLo": 3530,
+   "bandHi": 3620,
+   "volExpect": "平量",
+   "actual": {
+    "point": 3638.03,
+    "changePct": 1.08,
+    "upRate": 0.8512,
+    "volumeText": "成交约 1.78 万亿",
+    "amountYi": 16700,
+    "amountPrevYi": 15600,
+    "amountChgPct": 7.05
+   },
+   "tendencyHit": 0,
+   "bandHit": 0.5,
+   "volHit": 1,
+   "score": 0.35,
+   "verdict": "未命中",
    "note": "权重：倾向 0.5 / 点位 0.3 / 量能 0.2；★量能口径 R100z158b 起 = 成交额环比（≥+10% 放量 / ≤−10% 缩量 / 界内平量），环比基准取台账内上一交易日成交额（首日无前值时该项不计入）；口径固定不可调"
   }
  }
