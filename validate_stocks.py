@@ -239,9 +239,16 @@ def check4(stocks, where, violations):
         violations.append(f"{where}: 共 {len(stocks)} 只（应为 4）")
 
 
-def fix_direction_inplace(D):
+def fix_direction_inplace(D, dry_run=False):
     """macroNews/intlNews/bankViews 每条应带 direction（看涨/看跌/中性）；缺失/非法自动补为 中性。
-    返回 WARNING 信息列表（非致命，不阻断部署；direction 在写回 data.js 时一并修正）。"""
+
+    R100z291 修空转：原实现只有「检查 + 修复」一个函数，main 里写成
+    `fix_direction_inplace(D) if not no_fix else []`——于是 7 条自动化（全带 --no-fix）
+    **从来没有执行过 direction 检查**，而 main 尾部仍无条件打印「均含合法 direction」。
+    实证：2026-11-01 21:00 步把 us.macroNews/intlNews/bankViews 七条写成 `level`，
+    `validate --no-fix --scope us` 报 ALL OK，最后靠 check_automations B6 才抓到。
+    dry_run=True 时只检查、只报告，不动 D。
+    """
     warns = []
     for mk in ('ashare', 'us'):
         sec = D.get(mk) or {}
@@ -251,9 +258,15 @@ def fix_direction_inplace(D):
                     continue
                 d = nw.get('direction')
                 if d not in VALID_DIR:
-                    nw['direction'] = '中性'
-                    warns.append(
-                        f"{mk}.{key}[{i}]({(nw.get('sector') or '')[:14]}): direction 缺失/非法（{d!r}）→ 自动补为 中性")
+                    if dry_run:
+                        warns.append(
+                            f"{mk}.{key}[{i}]({(nw.get('sector') or '')[:14]}): direction 缺失/非法"
+                            f"（{d!r}）—— 必须由本步写对（--no-fix 只报不补）")
+                    else:
+                        nw['direction'] = '中性'
+                        warns.append(
+                            f"{mk}.{key}[{i}]({(nw.get('sector') or '')[:14]}): direction 缺失/非法"
+                            f"（{d!r}）→ 自动补为 中性")
     return warns
 
 
@@ -773,6 +786,83 @@ def check_openoutlook(D):
     if miss:
         warns.append(f"openOutlook 缺维度标题：{'、'.join(miss)}")
     return warns
+
+
+def check_forecast_basis(D, scope='all'):
+    """R100z291：forecastBasis 里的指数涨跌幅必须与 indexLine 自洽。
+
+    为什么必须有（2026-11-02 08:30 实测）：周一 08:30 按规则**复用周日 22:00 预生成的
+    aiPrediction**（六板块×8 只不重选），但周日版 forecastBasis 的 us/asia 两句里
+    还嵌着周日当时的数据（纳指−1.38%/韩股−3.53%），而 indexLine 已被 07:00 侧更新成
+    10-30 真值（纳指−2.86%/费半−8.24%）——**同一张卡里两个字段互相打脸**。
+    那天靠 AI 自己读出来并重写，但没有任何闸门，所以每个周一都会复现一次。
+
+    判据只做「同一指数、两处数值必须一致」：解析不到的跳过，绝不猜。
+    差异 ≥ 0.5pp 判 FAIL（那必然是两天的数据拼在一起）；< 0.5pp 判 WARN（可能是四舍五入）。
+    """
+    fails, warns = [], []
+    if scope == 'us':
+        return fails, warns
+    ai = D.get('aiPrediction') or {}
+    idx_line = str(ai.get('indexLine') or '')
+    fb = ai.get('forecastBasis') or {}
+    if not idx_line or not isinstance(fb, dict):
+        return fails, warns
+    base = _parse_idx_pct(idx_line)
+    if not base:
+        return fails, warns
+    for slot in ('us', 'asia'):
+        txt = str(fb.get(slot) or '')
+        if not txt:
+            continue
+        for name, val in _parse_idx_pct(txt).items():
+            if name not in base:
+                continue
+            diff = abs(val - base[name])
+            if diff >= 0.5:
+                fails.append(
+                    f'aiPrediction.forecastBasis.{slot}: 「{name}」写 {val:+.2f}%，'
+                    f'而 indexLine 是 {base[name]:+.2f}% —— 差 {diff:.2f}pp，'
+                    f'是两天数据拼在一起（同一张卡自相矛盾）。按 indexLine 的真值重写这一句；'
+                    f'周一复用周日产物时必须逐项核对再改。')
+            elif diff > 0.02:
+                warns.append(
+                    f'aiPrediction.forecastBasis.{slot}: 「{name}」{val:+.2f}% 与 indexLine '
+                    f'{base[name]:+.2f}% 有 {diff:.2f}pp 出入（可能四舍五入）')
+    return fails, warns
+
+
+# 同一指数的多种写法 → 归一化。只登记 indexLine / forecastBasis 里真出现过的名字。
+_IDX_ALIAS = {
+    '道指': '道指', '道琼斯': '道指',
+    '纳指': '纳指', '纳斯达克': '纳指',
+    '标普500': '标普', '标普': '标普',
+    '费城半导体': '费半', '费半': '费半',
+    '上证': '上证', '上证指数': '上证',
+}
+_IDX_RE = re.compile('(' + '|'.join(sorted(_IDX_ALIAS, key=len, reverse=True)) + ')')
+
+
+def _parse_idx_pct(text):
+    """从一段话里抽 {归一化指数名: 涨跌幅%}。方向靠「涨/跌」字或 ± 号判定。
+
+    「纳指跌2.86%收25437」「费半−8.24%」「道指涨 1.2%」都要吃得下。
+    同一指数出现多次时取第一次（结论句里先写的那个）。
+    """
+    out = {}
+    for m in _IDX_RE.finditer(text):
+        seg = text[m.end():m.end() + 20]
+        mm = re.search(r'(涨|跌|升|降|−|-|\+)?\s*(\d+(?:\.\d+)?)\s*%', seg)
+        if not mm:
+            continue
+        key = _IDX_ALIAS[m.group(1)]
+        if key in out:
+            continue
+        sign, val = mm.group(1), float(mm.group(2))
+        if sign in ('跌', '降', '−', '-'):
+            val = -val
+        out[key] = val
+    return out
 
 
 def check_risk_blacklist(D, scope='all'):
@@ -1567,7 +1657,8 @@ def main():
 
     # 先自动补救 direction（缺失/非法 → 中性）、duanban 软闸门（剔除非主板/补概率），
     # 再无破坏性地按统一顺序重排（龙头→概念→小盘人气→断板反包）；均写回但不阻断部署。
-    dir_warns = fix_direction_inplace(D) if not no_fix else []
+    # R100z291：--no-fix 只读也必须**检查** direction（原先是整段跳过 → 空转，见函数注释）
+    dir_warns = fix_direction_inplace(D, dry_run=no_fix)
     duanban_changed, duanban_warns = (fix_duanban_inplace(D) if not no_fix else (False, []))
     if (not no_fix) and ('--no-fix-order' not in sys.argv or duanban_changed):
         reorder_inplace(D)
@@ -1614,6 +1705,7 @@ def main():
     sel_warns = check_selection_modules(D)
     oo_warns = check_openoutlook(D)                    # R100z13：开盘前瞻六维度深度
     ooloop_warns = check_openoutlook_loop(D)           # R100z13：前瞻兑现闭环两头闸
+    fb_fails, fb_warns = check_forecast_basis(D, scope=scope)  # R100z291：forecastBasis 与 indexLine 自洽
     risk_fails, risk_warns = check_risk_blacklist(D, scope=scope)   # R100z76-④：个股硬风险黑名单（red=FAIL / orange=WARN / yellow=跳过）
     board_fails, board_warns = check_sector_board(D, scope=scope)   # R100z224：预测板块名必须能落到 allBoards（否则买点整块缺失）
     logic_hards, logic_warns = check_logic_depth(D)    # R100z15：内容深度机器闸
@@ -1649,6 +1741,7 @@ def main():
 
     if scope in ('all', 'ai'):
         violations.extend(board_fails)
+        violations.extend(fb_fails)   # R100z291：forecastBasis 与 indexLine 打架（数据自相矛盾）
         ai = D.get('aiPrediction') or {}
         for i, s in enumerate(ai.get('sectors') or []):
             if isinstance(s, dict):
@@ -1672,6 +1765,7 @@ def main():
                           'calibration_warnings': calib_warns,
                           'openoutlook_warnings': oo_warns,
                           'openoutlook_loop_warnings': ooloop_warns,
+                          'forecast_basis_warnings': fb_warns,
                           'risk_blacklist_violations': risk_fails,
                           'risk_blacklist_warnings': risk_warns,
                           'sector_board_violations': board_fails,
@@ -1721,6 +1815,8 @@ def main():
         print("[WARN] calibration:", w)
     for w in oo_warns:
         print("[WARN] openOutlook:", w)
+    for w in fb_warns:
+        print("[WARN] forecastBasis 自洽:", w)
     for w in ooloop_warns:
         print("[WARN] openOutlook兑现闭环:", w)
     for w in sel_warns:
@@ -1748,10 +1844,16 @@ def main():
         for v in violations:
             print("  -", v)
         sys.exit(1)
+    # R100z291：末句原先无条件断言 direction 合法 —— --no-fix 下该检查根本不执行，
+    # 属于「打印了一句没人验证过的结论」。改为按实测结果说话。
+    _dir_tail = ('macroNews/intlNews/bankViews 均含合法 direction（看涨/看跌/中性）。'
+                 if not dir_warns else
+                 f'macroNews/intlNews/bankViews 有 {len(dir_warns)} 条 direction 缺失/非法'
+                 f'（见上方 [WARN]，前端涨跌徽标会错）。')
     print("ALL OK: 五节要闻每条 impacts 主组（第 1 组）恰好 8 只且配比符合 N 分层表、"
           "顺序为龙头→概念→小盘人气→断板反包；次生组（第 2~4 组）各 2~4 只、只装小盘人气/断板反包；"
           "aiPrediction 每板块恰好 8 只，bullish/bearish 恰好 4 只，全部标的为沪深主板；"
-          "macroNews/intlNews/bankViews 均含合法 direction（看涨/看跌/中性）。")
+          + _dir_tail)
 
 
 if __name__ == '__main__':
