@@ -39,6 +39,8 @@
   K15 检查器自检  `check_narrative.py --only` 必须真的收窄：正向（目标字段真出现在结果里）、
                  收窄（受检数 < 全量）、负向（无其它前缀混入）三向同判（R100z292）
                  —— 「检查器自己坏了」不报错，只安静地变绿，只能靠拿已知字段反问它来发现
+  K16 回测未来函数  回测/研究脚本的判定窗口右端不得取「全长 n」切片（`x[a:n]`，n=len 全序列）
+                 —— chen_study S7 就这样把止损样本从分母抹掉，胜率 83.9%（R100z289/293）
 
 ★ 写规则时踩过的两个坑（别重犯）：
   1. **`s.get(...)` 不是网络调用**：`s` 在多数脚本里是 dict，`s.get('f5Tier')` 是 dict.get。
@@ -49,7 +51,7 @@
 用法:
     python3 check_code.py            # 全部检查（FAIL 时 exit 1）
     python3 check_code.py --verbose  # 附明细（谁引用了谁、每个写者的原子实现位置）
-    python3 check_code.py --only K3  # 只跑某一类（K1-K15）
+    python3 check_code.py --only K3  # 只跑某一类（K1-K16）
 """
 import argparse
 import ast
@@ -1710,6 +1712,80 @@ def k15_selftest(r, verbose=False):
                     '无其它前缀混入 —— --only 的收窄是真的在收窄' % (n_only, n_all))
 
 
+def k16_backtest_lookahead(r, verbose=False):
+    """K16 回测脚本不得用「全长 n」当判定窗口右端（R100z293，chen_study 同型事故）。
+
+    要防的事故（2026-11-01 实撞，R100z289）：
+        `chen_study.collect` 的 S7（不破 T 日低点）原写 `min(st.c[i1:n])` ——
+        n 是「到数据末尾」的全长，不是信号日下标。等于站在今天回看：凡确认后
+        （甚至持有窗口之后）曾收盘跌破 T 日低点的票，整条样本被删掉；而跌破 T 日
+        低点正是止损触发条件 → **止损出局的样本全部从分母消失**，胜率凭空 83.9%。
+        形状是：**判定窗口右端 = 整条序列长度**，而不是信号/确认下标。
+
+    为什么必须机检：修一个 chen_study 不够——同型写法散落在 14 个回测脚本里，
+    下次新写一个（或把线上判定抄进回测）大概率又犯。这层与 K15 不同：
+    K15 查「检查器自己」，K16 查「被回测的代码自己」。
+
+    判据（AST，不看注释字符串——注释里引用老写法是合法的演进记录）：
+      扫描 backtest_*.py / *_study.py / *_bt.py / *_backtest.py / *_final.py：
+      任何 `x[<信号下标>:n]` 或 `x[n]`（n = len(整条序列)）出现在**样本/判定**上下文
+      → FAIL。豁免：n 是 `range(max(WARMUP,start), n)` 这种**信号迭代循环**的终点
+      （信号在 k 处判定、只用 `[:k+1]`，这是合法的前向扫描），不算。
+    """
+    import ast as _ast
+    scripts = sorted(glob.glob(os.path.join(HERE, '*.py')))
+    targets = [f for f in scripts
+               if any(t in os.path.basename(f) for t in
+                      ('backtest_', '_study', '_bt', '_backtest', '_final'))]
+    bad = []
+    for path in targets:
+        fn = os.path.basename(path)
+        try:
+            tree = _ast.parse(open(path, encoding='utf-8').read())
+        except (OSError, SyntaxError):
+            continue
+        for node in _ast.walk(tree):
+            if not isinstance(node, _ast.Subscript):
+                continue
+            try:
+                sl = node.slice
+            except Exception:                                        # noqa: BLE001
+                continue
+            # 只认 `x[a:n]`（a 是下标变量/表达式，n 是名字）与 `x[n]`
+            if isinstance(sl, _ast.Name) and sl.id == 'n':
+                bad.append('%s:%d `x[n]` 全序列长度下标 —— 疑似未来函数' % (fn, node.lineno))
+                continue
+            # `[i1:n]` 在 AST 里是 ast.Slice（lower/upper/step），不是 Tuple ——
+            # Python 里 `[a:b]` 与 `[a, b]` 是两种不同节点，都必须认
+            hi = None
+            if isinstance(sl, _ast.Slice):
+                hi = sl.upper
+            elif isinstance(sl, _ast.Tuple) and len(sl.elts) == 2:
+                hi = sl.elts[1]
+            if not (isinstance(hi, _ast.Name) and hi.id == 'n'):
+                continue
+            # 排除「range(..., n) 信号迭代循环」形态：node 在 range 调用里
+            is_range = False
+            p = node
+            while isinstance(p, _ast.Subscript):
+                p = p.value
+            if isinstance(p, _ast.Call) and isinstance(p.func, _ast.Name) \
+                    and p.func.id == 'range':
+                is_range = True
+            if not is_range:
+                bad.append('%s:%d 切片右端取全长 n —— 判定窗口必须收在信号/确认下标'
+                           '（R100z289：chen_study S7 就这样把止损样本抹掉，胜率 83.9%%）'
+                           % (fn, node.lineno))
+    if bad:
+        for m in bad:
+            r.fail('K16', m)
+        r.fail('K16', '共 %d 处回测未来函数嫌疑 —— 窗口右端一律用信号下标 `[:k]`/`[:conf]`，'
+                      '别用 `[:n]`（n=len 全序列）' % len(bad))
+    else:
+        r.ok('K16', '%d 个回测/研究脚本无「全长 n 当判定窗口」切片 —— '
+                    'chen_study 那个 83.9%% 的坑没有复发形态' % len(targets))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--verbose', action='store_true')
@@ -1749,6 +1825,8 @@ def main():
         k14_no_bare_delete(r, a.verbose)
     if not only or only == 'K15':
         k15_selftest(r, a.verbose)
+    if not only or only == 'K16':
+        k16_backtest_lookahead(r, a.verbose)
     return r.dump()
 
 

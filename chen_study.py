@@ -102,7 +102,7 @@ def collect(stocks):
             if conf is None or conf + 1 >= n:
                 iT += 1
                 continue
-            # S7 不破 T 日低点：**窗口必须截到确认日**。
+            # S7 不破 T 日低点：**窗口必须截到信号日**。
             # 原写法是 `min(st.c[i1:n])`，n 是「到数据末尾（2026-11）」的全长——等于
             # 站在今天回看：凡确认后（甚至持有窗口之后）曾经收盘跌破 T 日低点×0.98 的票，
             # 整条样本被删掉。而跌破 T 日低点正是止损触发条件 → **止损出局的样本全部消失**，
@@ -110,10 +110,16 @@ def collect(stocks):
             # 线上 chen_pool._structure 用的是 `range(i1, len(kl))`，len(kl) 就是「今天」，
             # 所以线上没有未来数据、只有回测脚本有。按线上窗口对齐 = 截到 conf。
             # 实测（2026-11-01）：修前 829 笔/+3.054%，修后同口径 5.7k 笔/+0.4% 量级。
-            if min(st.c[i1:conf + 1]) < lowT * LOW_TOL:
+            # R100z293（2026-11-02）：再把窗口右端从 conf 扩到**买入持有结束**——
+            # 线上池每天重建，`range(i1, n)` 的 n 随「今天」逐日前移，一只票在买入日
+            # （conf+1）或持有期（conf+2）才收盘跌破 T 日低点的，线上当日就被踢出池、
+            # 根本不会被买/继续持有；旧回测只查到 conf，这类票被算进样本 → 回测比线上松、
+            # 胜率被轻微抬高。对齐到「直到不再持有」= 查到 `b + HOLD_DAYS`（不含，
+            # 即最后一个可能的持仓日）。
+            b = conf + 1
+            if min(st.c[i1:min(b + HOLD_DAYS, n)]) < lowT * LOW_TOL:
                 iT += 1
                 continue
-            b = conf + 1
             buy = st.o[b]
             if buy <= 0 or buy < PRICE_MIN:
                 iT += 1
