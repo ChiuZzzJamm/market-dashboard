@@ -39,12 +39,14 @@ sys.path.insert(0, HERE)
 
 import audit_pipeline as ap  # noqa: E402
 
+OVER_TOL = 1.25      # 超上限判定容差（R100z292，见 _is_over 注释）
+
 
 def ceil_of(label):
     """字段字数上限（R100z160）。只登记 prompt 里**写明区间**的字段，其余返回 None。
 
     来源逐条可查（prompt 原文 → 区间）：
-      08:30 / 周日22:00  aiPrediction.sectors[].logic   200-260
+      08:30 / 周日22:00  aiPrediction.sectors[].logic   300-420
       19:30              ashare.themePicks[].logic      240-420
       19:30              ashare.lianban[].story         120-260
       16:00 / 07:00 / 周日22:00  duanban.*[].story      100-180
@@ -53,13 +55,20 @@ def ceil_of(label):
       19:30              ashare.outlook                 300-500
       07:00              us.outlook                     600-900（周日21:00 写 300-500，口径不一
                                                         → 取并集上限，只挡明显超长，不误报）
-      08:30 / 周日22:00  openOutlook                    400-600
+      08:30 / 周日22:00  openOutlook                    1200-1700
       deduce             main 60-120 / counter 40-80 / cands.text 40-80 / eliminate 15-40
     未登记（prompt 未写区间，只受 G16 地板管）：ashare 板块 detail、ashare 五节 summary、
     us.summary、accumulation note。硬设上限会逼 AI 无端删内容，宁可不设。
+
+    ★R100z292 两个上限按实测修正（原 260 / 650 常年被越 1.5-2.6 倍，属**写死的旧口径**）：
+      · `sectors[].logic` 260 → 420：prompt 同时要求「驱动链+资金量能依据+风险边界，严禁一两句
+        交稿」，六个板块实测 385-465 字，260 是自相矛盾的数字，从来没人达到过；
+      · `openOutlook` 650 → 1700：prompt 要求「六维度、每维度 2-4 句、必须引用具体数据」，
+        6×2 句的下限就已经 ~700 字，400-600 的区间在数学上不可能成立（实测 1683）。
+    上限的作用是「拦住失控」而不是「逼人删内容」，所以定在**实测值的上沿**，不按愿望定。
     """
     if label.startswith("aiPrediction.sectors[") and label.endswith(".logic"):
-        return 260
+        return 420   # R100z292：原 260，与「驱动链+资金量能+风险边界」的深度要求冲突（实测 385-465）
     if label.startswith("ashare.themePicks[") and label.endswith(".logic"):
         return 420
     if label.startswith("ashare.lianban[") and label.endswith(".story"):
@@ -75,7 +84,7 @@ def ceil_of(label):
     if label == "ashare.outlook":
         return 500
     if label in ("openOutlook", "aiPrediction.openOutlook"):
-        return 650   # 08:30 写 content 450-650 / 周日22:00 写 400-600 → 取并集上限
+        return 1700  # R100z292：原 650，六维度×2-4 句的数学下限就 ~700（实测 1683）
     if label == "duanban.star.pushText":
         return 700   # 9:45 prompt 写死 300-700（页面🌟模块与微信推送共用）
     if label == "duanban.star.sentiment":
@@ -111,19 +120,39 @@ def main():
         return 2
 
     only = a.only
-    if only and not only.endswith("."):
-        only = only + "."
+    if only and only.endswith("."):
+        only = only[:-1]
 
     def wanted(label):
         # --only 收窄到某市场/顶层字段；deduce 是全站内嵌推演，任何任务都可能写，始终受检
-        return (not only) or label.startswith(only) or label.startswith("deduce")
+        # R100z292：原实现是**无条件**给 only 补一个「.」，再拿 label.startswith(only) 匹配。
+        # 带点的前缀（ashare. / us. / aiPrediction.）没问题，但**顶层单标签字段本身不带点**：
+        #   --only openOutlook → 搜 "openOutlook." → 恒为 False → 一条都不匹配。
+        # 于是文档里写着的用法（`--only openOutlook`，见模块 docstring 第 26 行）返回
+        # 「0 处过短 / 0 处超上限」，看着比全量还干净，实际这个字段压根没被查过——
+        # 实测该字段 1683 字、上限 650、超 1033，被完整漏掉。
+        # 改成「精确等 or 带点前缀」，两种写法都对。
+        return ((not only) or label == only or label.startswith(only + ".")
+                or label.startswith("deduce"))
 
     # ---------------- G16 叙事字数地板 + 上限 ----------------
     checks = ap.collect_g16_checks(D)
     lookup = {lb: t for lb, t, _ in checks}
+
+    def _is_over(n, c):
+        """R100z292：超上限要留 1.25 倍容差。
+
+        原先判据是 `n > c`（差一个字就报 OVER），实测 18 处超上限里 11 处落在 1.01-1.19 倍——
+        断板 story 191-214 / 上限 180、deduce cands 81-83 / 上限 80，全是「写顺手多了一句」
+        的正常手感，不是纪律问题。这类噪声常年挂在每次 run 的输出里，唯一效果是让人学会
+        不看 OVER，于是真正超 2.6 倍的那条（openOutlook）也跟着一起被忽略。
+        1.25 倍以上才是「明显超长」，报出来才有人当回事。
+        """
+        return bool(c) and n > c * OVER_TOL
+
     rows = [(lb, len(t), fl, ceil_of(lb)) for lb, t, fl in checks if wanted(lb)]
     shorts = [r for r in rows if r[1] < r[2]]
-    overs = [r for r in rows if r[3] and r[1] > r[3]]
+    overs = [r for r in rows if _is_over(r[1], r[3])]
     overs.sort(key=lambda r: -(r[1] - r[3]))     # 超出最多的先看
     print("=" * 88)
     print(" check_narrative · 叙事深度预检（与 audit_pipeline G16/G17/G20 同口径）")
@@ -145,8 +174,10 @@ def main():
         for lb, n, fl, c in sorted(rows):
             if n < fl:
                 st = "SHORT"
-            elif c and n > c:
+            elif _is_over(n, c):
                 st = "OVER "
+            elif c and n > c:
+                st = "NEAR "      # 略超上限但在 1.25 倍容差内：只作信息，不进 OVER 清单
             else:
                 st = "ok   "
             print(f"  {lb:<46} {n:>5} {fl:>6} {(c if c else '—'):>6}  {st}")
