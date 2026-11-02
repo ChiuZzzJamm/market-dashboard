@@ -315,6 +315,40 @@ def open_pct(code):
     v = get(code).get('openPct')
     return round(v, 2) if v is not None else None
 
+# 交易日期：优先用 /tmp 文件时间戳（自动化预取），缺失时从实时行情 parts[30]（美东日期）兜底
+trade_iso = "未知日期"
+raw = open('/tmp/us_quote.txt', encoding='utf-8').read() if os.path.exists('/tmp/us_quote.txt') else ''
+m = re.search(r'~(\d{4}-\d{2}-\d{2}) \d{2}:\d{2}:\d{2}~', raw)
+if m:
+    trade_iso = m.group(1)
+if trade_iso == "未知日期":
+    td = fetch_trade_date()
+    if td:
+        trade_iso = td
+
+# R100z181：/tmp 预取文件可能是上一次运行的遗留（例如 07:00 步骤在美东前一交易日收盘后写入，
+# 到周日 21:00 仍是旧日期）。此时不能直接判「过期保留旧值」，先改用实时行情覆盖一次，
+# 否则每个周日都会停在周四收盘、看板显示错的一天。实时抓不到时才回落到过期闸门。
+# R100z296：本段必须在「板块聚合」之前——板块涨跌由 q 逐只成分股聚合，若先聚合再刷新 q，
+# 会写出「指数是当日、板块还是上一交易日」的混合日数据（2026-11-03 实测：道指 11/2 收盘、
+# 板块仍是 10/30，涨跌方向完全相反）。因此把日期判定与刷新整体提到聚合之前。
+_now_bj_early = datetime.now(timezone(timedelta(hours=8)))
+_expected_early = prior_us_trading_day(_now_bj_early.date())
+if trade_iso != "未知日期" and _expected_early:
+    try:
+        _date_now = datetime.strptime(trade_iso, "%Y-%m-%d").date()
+    except Exception:
+        _date_now = None
+    if _date_now and _date_now < _expected_early:
+        print(f"[info] 预取行情日期 {trade_iso} 早于应更新交易日 {_expected_early.isoformat()}，改为实时抓取")
+        _live = fetch_us_quotes_live()
+        if _live:
+            q = _live
+            _live_td = fetch_trade_date()
+            if _live_td:
+                trade_iso = _live_td
+            print(f"[info] 实时行情已接管，行情日期 {trade_iso}，成分股 {len(q)} 只")
+
 # 板块映射：panorama.us.items 与 us.sectorsUp/Down 共用同一组口径（真实成分股聚合，非 ETF）
 pano_items = []
 for cfg in US_SECTORS:
@@ -373,35 +407,7 @@ def to_us_sector(it, is_up):
         obj["reason"] = old_reason_map[it["name"]]
     return obj
 
-# 交易日期：优先用 /tmp 文件时间戳（自动化预取），缺失时从实时行情 parts[30]（美东日期）兜底
-trade_iso = "未知日期"
-raw = open('/tmp/us_quote.txt', encoding='utf-8').read() if os.path.exists('/tmp/us_quote.txt') else ''
-m = re.search(r'~(\d{4}-\d{2}-\d{2}) \d{2}:\d{2}:\d{2}~', raw)
-if m:
-    trade_iso = m.group(1)
-if trade_iso == "未知日期":
-    td = fetch_trade_date()
-    if td:
-        trade_iso = td
-
-# R100z181：/tmp 预取文件可能是上一次运行的遗留（例如 07:00 步骤在美东前一交易日收盘后写入，
-# 到周日 21:00 仍是旧日期）。此时不能直接判「过期保留旧值」，先改用实时行情覆盖一次，
-# 否则每个周日都会停在周四收盘、看板显示错的一天。实时抓不到时才回落到过期闸门。
-_now_bj_early = datetime.now(timezone(timedelta(hours=8)))
-_expected_early = prior_us_trading_day(_now_bj_early.date())
-if trade_iso != "未知日期" and _expected_early:
-    try:
-        _date_now = datetime.strptime(trade_iso, "%Y-%m-%d").date()
-    except Exception:
-        _date_now = None
-    if _date_now and _date_now < _expected_early:
-        print(f"[info] 预取行情日期 {trade_iso} 早于应更新交易日 {_expected_early.isoformat()}，改为实时抓取")
-        _live = fetch_us_quotes_live()
-        if _live:
-            q = _live
-            _live_td = fetch_trade_date()
-            if _live_td:
-                trade_iso = _live_td
+# 交易日期已在板块聚合之前判定并刷新（见上方 R100z296），此处只做展示格式转换
 if trade_iso != "未知日期":
     trade_md = f"{int(trade_iso[5:7])}/{int(trade_iso[8:10])}"
 else:

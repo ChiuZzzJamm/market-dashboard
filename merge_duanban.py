@@ -37,7 +37,14 @@ def _last_trading_day():
         import cal_factor as CF
         ranges, _ = CF.holiday_ranges(CF.HOLIDAYS,
                                       getattr(CF, 'REOPEN_OVERRIDE', set()) or set())
-        d = datetime.now().date()
+        now = datetime.now()
+        d = now.date()
+        # R100z297：07:00 复核任务早于 9:45 生成 star，若 floor 直接取「包含今天」，
+        # 交易日的 star 永远是昨天 → 每天早间都被清一次场（2026-11-03 实测复现）。
+        # 因此开盘前（<09:45）把起点回退一天，取「最近一个已收盘交易日」；
+        # 周日/长假 22:00 跑时起点不早于 09:45，逻辑不变仍能走到周五/节前最后一天。
+        if (now.hour, now.minute) < (9, 45):
+            d -= timedelta(days=1)
         for _ in range(20):
             if CF.is_trading_day(d, ranges):
                 return d.strftime('%Y-%m-%d')
