@@ -794,14 +794,12 @@
   .cc-tbl-w { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   /* R100z300：7 列降到 3 列（赢/亏/平 收进「样本」的悬停）后不再需要横向滚动 */
   .cc-tbl { min-width: 0; }
-  /* 名单折叠：三组股票默认收起，summary 上留三个数量 */
-  .cc-lists { margin: 8px 0 2px; }
-  .cc-lists > summary { cursor: pointer; font-size: var(--fs-sm); font-weight: 700;
-                        color: var(--ink2); list-style: none; }
-  .cc-lists > summary::-webkit-details-marker { display: none; }
-  .cc-lists > summary::before { content: '▸'; display: inline-block; width: 14px; color: var(--accent-deep); }
-  .cc-lists[open] > summary::before { content: '▾'; }
-  .cc-lists > summary > span { font-weight: 400; opacity: .72; }
+  /* R100z304：名单常显后，标题行右侧那串「今天收盘后选出 / 交集 6 · …」用 .cc-sub。
+     原来的 .cc-lists 折叠壳（含 ▸/▾ 三角）随折叠一起删——留着就是没人用的墓碑。 */
+  .cc-sub { font-weight: 400; font-size: var(--fs-xs); color: var(--ink2); margin-left: 8px; }
+  /* 组标题（今日名单）比下面三组的 .cc-t 高一级：它是这三组的父亲，不是第四个分组 */
+  .cc-hd { font-size: var(--fs-base); font-weight: 800; color: var(--ink);
+           margin-bottom: 6px; line-height: 1.55; }
   /* 表格第一列的样本数：跟在口径名后面做小字，不再单占一列 */
   .cc-tbl td s { text-decoration: none; margin-left: 6px; font-size: var(--fs-xs);
                  font-weight: 400; color: var(--ink2); opacity: .72; }
@@ -6621,15 +6619,17 @@ function chenCompareHtml(c) {
     ' ｜ 两个都选中 <b class="up">' + both.length + '</b> 只' +
     ' ｜ 只有陈学长选中 <b>' + co.length + '</b> 只' +
     ' ｜ 只有断板反包选中 <b>' + doOnly.length + '</b> 只</div>' +
-    /* R100z300：三组名单（今天最多 22 只）原来把整张卡撑到两屏。名单是「对账用」不是
-       「每天要看的结论」——收进一个折叠，summary 上保留三个数量，想核对再展开。
+    /* R100z300：三组名单（今天最多 22 只）原来把整张卡撑到两屏，故收进折叠。
        R100z301（用户 2026-11-03 第 5 问「今日名单是不是昨天买、今天卖的」）：
        ⛔ 不是。这三段是**今天 16:00 收盘后**各池的票（`chen.compare.today`，登记日＝今天），
        按台账规则下一交易日开盘才买、之后走 10 个交易日窗口——名单里没有「已卖出」的票。
-       已走完窗口的结算结果在表格里，两者不是同一批。这句话必须写在 summary 上，
-       因为折叠状态下读者只看得到标题。 */
-    '<details class="cc-lists"><summary>今日名单 <span>今天收盘后选出、下一交易日开盘买 ｜ 交集 ' +
-      both.length + ' · 只有陈学长 ' + co.length + ' · 只有断板反包 ' + doOnly.length + '</span></summary>' +
+       已走完窗口的结算结果在表格里，两者不是同一批。这句话必须跟名单一起常显。
+       R100z304（用户 2026-11-04 00:26「今日名单不用隐藏，一直显示」）：折叠壳去掉，
+       三组直接铺开，标题行右侧保留那三个数量。代价是这张卡长了一屏——用户要的就是
+       「一眼看到今天选了什么」，不是「点一下才知道」。别再折回去。 */
+    '<div class="cc-sec"><div class="cc-hd">今日名单' +
+      '<span class="cc-sub">今天收盘后选出、下一交易日开盘买 ｜ 交集 ' + both.length +
+      ' · 只有陈学长 ' + co.length + ' · 只有断板反包 ' + doOnly.length + '</span></div></div>' +
     '<div class="cc-sec"><div class="cc-t">两个都选中（' + both.length + '）</div><div class="cc-list">' +
       chipsOf(both) + '</div></div>' +
     /* R100z230（用户 2026-10-27「文字太多」）：差异说明原来各 61 / 42 字摊在名单上方，
@@ -6649,7 +6649,6 @@ function chenCompareHtml(c) {
       '<div class="cc-why-x">他的硬条件：放量 ≥2 倍 ／ 洗盘 ≤3 日 ／ 收盘不破 T 日最低价 2% ／ ' +
       '站稳 5 日线。任一条不满足就剔，所以断板有、他没有。</div></details></div>' +
       '<div class="cc-list">' + chipsOf(doOnly) + '</div></div>' +
-    '</details>' +
     '<div class="cc-sec"><div class="cc-t">留痕回测进度</div>' +
       '<div class="cc-note">起始 <b>' + esc(tr.since || '—') + '</b> ｜ 已结算 <b>' + (tr.settledN || 0) +
       '</b> 条 ｜ 待结算 <b>' + (tr.openN || 0) + '</b> 条' +
