@@ -832,6 +832,10 @@
   .stl-tbl thead th { position: sticky; top: 0; z-index: 1; background: var(--paper);
                       color: var(--ink2); font-weight: 500; }
   .stl-tbl .nm { font-weight: 700; color: var(--ink); }
+  /* R100z305：明细里的名字是这张表唯一的交互点。.stk-go 的虚线下划线默认用 --line，
+     和行分隔线同色，40 行看下来根本看不出哪儿能点——这里换成 --ink2。 */
+  .stl-tbl .nm.stk-go { cursor: pointer; border-bottom-color: var(--ink2); }
+  .stl-tbl .nm.stk-go:hover { color: var(--accent-deep); border-bottom-color: var(--accent-deep); }
   .stl-tbl .cd2 { font-size: var(--fs-xs); color: var(--ink2); margin-left: 5px; }
   .stl-tbl .pl { display: block; font-size: var(--fs-xs); color: var(--ink2); font-weight: 400; }
   .stl-tbl td.up { color: var(--up); font-weight: 700; }
@@ -6758,7 +6762,8 @@ function openSettleDetail() {
   var h = '<div class="stl-hd"><div>' +
     '<div class="stl-t">结算明细</div>' +
     '<div class="stl-sub">陈学长 / 断板反包 两套口径的逐笔成交。买价＝确认日<b>次一交易日开盘</b>；' +
-    '卖价＝盘中触止盈线 / 收盘破止损 / 窗口末收盘——就是上面那张胜率表的原始样本。</div></div>' +
+    '卖价＝盘中触止盈线 / 收盘破止损 / 窗口末收盘——就是上面那张胜率表的原始样本。' +
+    '点标的名称可看 K 线与个股消息（弹窗里能左右翻）。</div></div>' +
     '<button class="db-modal-close" onclick="closeSettleDetail()" aria-label="关闭">×</button></div>' +
     '<div class="stl-sub">显示 <b>' + rows.length + '</b> 条' +
     (meta.legacyShown ? '（含旧口径 ' + meta.legacyShown + ' 条）' : '') +
@@ -6769,6 +6774,13 @@ function openSettleDetail() {
   if (!rows.length) {
     h += '<div class="db-empty" style="margin-top:12px">暂无已结算样本（或都超过 30 个交易日已清除）</div>';
   } else {
+    /* R100z305（用户 2026-11-04 00:33「这里面的标的也能点开看到 k 线」）：
+       明细里的名字做成可点，走全站同一个出口 stkOpenIn —— 组内能左右翻，
+       翻的就是这份明细的顺序（与「今日名单」胶囊的行为一致）。
+       为什么不用 <a>：站内可点击语汇是 .stk-go（虚线下划线 + 悬停变深），不是链接色；
+       换一套视觉读者会以为这是外链（24.113 的教训：同一个动作两种长相）。
+       z-index：#stk-modal 是 230、本弹窗 210，所以股票弹窗盖在上面，关掉后还回到这份明细。 */
+    var _grp = [];
     h += '<div class="stl-bd"><table class="stl-tbl"><thead><tr>' +
       '<th>标的</th><th>买入日</th><th>买入价</th><th>卖出日</th><th>卖出价</th><th>盈亏</th>' +
       '</tr></thead><tbody>';
@@ -6776,7 +6788,11 @@ function openSettleDetail() {
       var ret = Number(r.retPct);
       var cls = !isFinite(ret) ? '' : (ret > 0 ? 'up' : (ret < 0 ? 'down' : ''));
       var txt = !isFinite(ret) ? '—' : (ret > 0 ? '+' : '') + ret.toFixed(2) + '%';
-      h += '<tr><td><span class="nm">' + esc(r.name || r.code) + '</span>' +
+      var gi = _grp.length;
+      _grp.push({ c: String(r.code || ''), n: String(r.name || ''),
+                  t: '结算明细 · ' + (r.name || r.code) + (r.exitDay ? '（卖出 ' + r.exitDay + '）' : '') });
+      h += '<tr><td><span class="nm stk-go" title="点击查看 K 线与个股消息" onclick="stkOpenIn(window._STL_GRP,' +
+        gi + ')">' + esc(r.name || r.code) + '</span>' +
         '<span class="cd2">' + esc(r.code) + '</span>' +
         '<span class="pl">' + esc(r.poolZh || '') + (r.legacy ? ' · 旧口径' : '') + '</span></td>' +
         '<td>' + mmdd(r.buyDay) + '</td><td>' + pxf(r.buyPx) + '</td>' +
@@ -6784,6 +6800,7 @@ function openSettleDetail() {
         '<td class="' + cls + '">' + txt + '</td></tr>';
     });
     h += '</tbody></table></div>';
+    window._STL_GRP = _grp;
   }
   h += '<div class="stl-foot">日期年份 ' + esc(String(meta.today || '').slice(0, 4) || '2026') +
     '；按卖出日倒序，最新的在上面。' +
