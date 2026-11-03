@@ -631,6 +631,12 @@
      "step": "0"
     },
     {
+     "cmd": "python3 track_calibration.py",
+     "flags": [],
+     "file": "track_calibration.py",
+     "step": "4.7"
+    },
+    {
      "cmd": "python3 update_ashare_sectors.py",
      "flags": [],
      "file": "update_ashare_sectors.py",
@@ -753,7 +759,7 @@
     "atrStops",
     "signalPerf",
     "止损口径只由 atr_stop.py 产出",
-    "4.7) 预测成绩单",
+    "4.7) 预测结算 + 成绩单",
     "/Users/loccco/.workbuddy/binaries/run-python forecast_scorecard.py",
     "forecastScore",
     "按阈值自动生成",
@@ -828,7 +834,8 @@
     "chen_pool.py 对 duanban 节点**只读不写**（只取 confirmed/watching 做当日差异对比）；这条是脚本行为，不登记进 neverWrites——B6 的路径解析会把「duanban（…）」的首词当成字段路径，与 writesFields 的 duanban 撞成「台账自相矛盾」。",
     "R100z219（2026-10-25）：口径修订——用户指出「陈学长没有要求连板≥2，首板也可以」，删掉连板门槛（连板数仍算、仍展示、仍排序）；同时按要求删掉 funnel 漏斗字段（dataFields/writesFields 已同步）。本步命令与步骤号不变，无需 reorder。",
     "R100z219b（2026-10-26 00:09）：chenPool 新增 tradeDate（= 命中票最新一根 K 线的日期）。跨午夜跑批时 generatedAt 会写成第二天、行情仍是上一交易日收盘，页面「数据日」照抄 generatedAt 会误导。同时修两处口径 bug：① settle_one 由 days.index(entryDate) 改「≤ entryDate 的最后一根 K 线」，否则 entryDate 落在周末/节假日时永远结算不了且不报错（实测 13 条样本全是周日入口）；② 断板反包对照的「今日新入池」基准由本脚本运行日改为 duanban 模块自己的 generatedAt 日期，否则跨午夜时一条也记不进来、胜率表第三行永远 0 样本。",
-    "R100z234（2026-10-26）：用户拍板删掉「交易预案」整块（与开盘精选同日给出两套几乎不重叠的执行清单：精选 10 只 / 预案 8 只 / 交集 1 只，两套止损与仓位并存等于任何一套都无法照做）。第 4.6 步为「止损与归因两件套」（atr_stop → signal_attribution）。"
+    "R100z234（2026-10-26）：用户拍板删掉「交易预案」整块（与开盘精选同日给出两套几乎不重叠的执行清单：精选 10 只 / 预案 8 只 / 交集 1 只，两套止损与仓位并存等于任何一套都无法照做）。第 4.6 步为「止损与归因两件套」（atr_stop → signal_attribution）。",
+    "R100z296（2026-11-03）：4.7 步补「先 track_calibration.py 结算当日、再 forecast_scorecard.py 出成绩单」。此前 16:00 只出成绩单不结算（track_calibration 只在 08:30/19:30 跑），于是 16:00 收盘后明明能结算今天却没人结算，成绩单命中率永远不含今天；19:30 虽结算却不出成绩单，读者看不到当晚这一版。已同步 mustContain/scripts/stepOrder。"
    ]
   },
   {
