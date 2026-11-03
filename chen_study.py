@@ -199,7 +199,10 @@ def sim(smp, tp=TARGET_PCT / 100.0, hold=HOLD_DAYS, stop_mode='wash_low'):
     stop = smp['wash_low'] if stop_mode == 'wash_low' else smp['lowT']
     if (buy - stop) / buy < 0.02:                  # 最小 2% 距离（chen_pool 同口径）
         stop = buy * 0.98
-    for j in range(b, min(b + hold, n)):
+    # R100z299：买入日 b 当天不能卖（A 股 T+1 交割）。原窗口从 b 起，等于把「当天开盘买、
+    # 当天盘中冲高卖」算成兑现——实测这类同日止盈占赢家的一大半，胜率被系统性抬高。
+    # 改成 b+1 起，并把窗口整体后移一根，保持「持 hold 个交易日」的语义不变。
+    for j in range(b + 1, min(b + hold + 1, n)):
         if o[j] <= stop:
             return (o[j] / buy - 1) * 100 - COST * 100, 'stop_gap', j - b + 1
         if l[j] <= stop:
@@ -208,7 +211,7 @@ def sim(smp, tp=TARGET_PCT / 100.0, hold=HOLD_DAYS, stop_mode='wash_low'):
             return (o[j] / buy - 1) * 100 - COST * 100, 'tp_gap', j - b + 1
         if h[j] >= buy * (1 + tp):
             return tp * 100 - COST * 100, 'tp', j - b + 1
-    j = min(b + hold, n) - 1
+    j = min(b + hold + 1, n) - 1
     return (c[j] / buy - 1) * 100 - COST * 100, 'time', j - b + 1
 
 

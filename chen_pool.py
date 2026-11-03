@@ -635,7 +635,10 @@ def settle_one(e, kl):
     """统一结算口径（两个池、两套指标共用，不然胜率不可比）。
 
     买价 = 确认日**次一交易日开盘**（唯一可成交的时点；用确认日收盘价属偷看未来）。
-    窗口 = 次日起 `holdDays` 个交易日（**取条目自带的参数**，缺省才用当前常量）。
+    窗口 = 买入日起 `holdDays` 个交易日（**取条目自带的参数**，缺省才用当前常量）。
+    ⚠️ 最早卖点 = **买入日的下一个交易日**（R100z299）：原循环从 `idx+1`（买入当天）开始判止盈，
+    等于「早盘买入、当天盘中冲高卖出」——A 股 T+1 交割下这笔卖单不存在。实测 2026-11-03
+    就是这么把陈学长放宽池算成 14 笔 92.9%、均 +4.25%（几乎全是「当天摸到 +5%」）。
       · 止盈：**盘中最高** ≥ +tgtPct% → 赢（可挂单，按 +tgtPct% 计）
       · 止损：**收盘**跌破止损价 → 亏（按当日收盘价计）
         ⚠️ 为什么止损看收盘、止盈看盘中：这是实盘可执行的不对称——
@@ -686,8 +689,11 @@ def settle_one(e, kl):
                 "exitPrice": round(buy, 2), "buyPrice": round(buy, 2), "retPct": 0.0,
                 "note": "开盘价 %.2f 已跌破止损位 %.2f，按纪律不进场" % (buy, stop)}
     tgt = buy * (1 + tgt_pct / 100)
-    last = min(idx + hold_days, len(kl) - 1)
-    for j in range(idx + 1, last + 1):
+    # R100z299：买入日 = idx+1，最早能卖的是 idx+2（T+1 交割）。原从 idx+1 起判，
+    # 「当天开盘买、当天盘中触 +5% 卖」是卖不出去的；止损同理——买入当天收盘破位也只能次日再走。
+    # 窗口同步后移一天，保证「持 holdDays 个交易日」的语义不变（原先实际只持了 holdDays-1 天）。
+    last = min(idx + 1 + hold_days, len(kl) - 1)
+    for j in range(idx + 2, last + 1):
         hi = float(kl[j].get("high") or 0)
         cl = float(kl[j].get("close") or 0)
         hit_stop = stop > 0 and cl <= stop
@@ -703,9 +709,9 @@ def settle_one(e, kl):
                     "exitPrice": round(tgt, 2), "buyPrice": round(buy, 2),
                     "retPct": round(tgt_pct, 2),
                     "note": "盘中触 +%.1f%% 当天兑现" % tgt_pct}
-    if len(kl) - 1 >= idx + hold_days:
-        c = float(kl[idx + hold_days].get("close") or 0)
-        return {"status": "settled", "result": "expired", "exitDay": days[idx + hold_days],
+    if len(kl) - 1 >= idx + 1 + hold_days:
+        c = float(kl[idx + 1 + hold_days].get("close") or 0)
+        return {"status": "settled", "result": "expired", "exitDay": days[idx + 1 + hold_days],
                 "exitPrice": round(c, 2), "buyPrice": round(buy, 2),
                 "retPct": round((c - buy) / buy * 100, 2),
                 "note": "持仓 %d 日未触目标也未破止损，收盘平" % hold_days}
@@ -955,6 +961,34 @@ def build_compare(chen_codes, db_codes, ledger):
         "legacyN": sum(1 for e in ents
                        if (e.get("ruleFrom") or "legacy") != RULE_FROZEN_AT),
         "settledN": sum(1 for e in ents if (e.get("result") or {}).get("status") == "settled"),
+    }
+
+
+def build_track(ledger, just_settled=0, compare=None, today=None):
+    """留痕回测的进度与口径说明（页面「起始 / 已结算 / 待结算」那一行）。
+
+    R100z299：从 main() 里抽出来，因为离线重算脚本（resettle_ledger.py）也要写这两个键。
+    两份各写一遍，改口径时必然漏一处——页面上的口径说明就会和结算代码对不上。
+    """
+    today = today or datetime.now().strftime("%Y-%m-%d")
+    cur = [e for e in ledger.get("entries") or []
+           if (e.get("ruleFrom") or "legacy") == RULE_FROZEN_AT]
+    return {
+        "since": min([e.get("confirmDate") or e.get("entryDate")
+                      for e in cur
+                      if (e.get("confirmDate") or e.get("entryDate"))] or [today]),
+        # 与 since 同口径：只数当前口径的已结算条数（旧口径由 legacyN 单独交代）
+        "settledN": sum(1 for e in cur
+                        if (e.get("result") or {}).get("status") == "settled"),
+        "openN": sum(1 for e in cur
+                     if (e.get("result") or {}).get("status") != "settled"),
+        "justSettled": just_settled,
+        "legacyN": (compare or {}).get("legacyN", 0),
+        "settleRule": ("买价=确认日（数据日）次一交易日开盘；最早卖点=买入日次一交易日（T+1 交割）；"
+                       "窗口 %d 个交易日；"
+                       "止盈按盘中触 +%.1f%% 算（可挂单），止损按收盘跌破止损位算（盘中不算），"
+                       "开盘即破止损视为不进场（不进胜负分母），都不触按窗口末收盘计。"
+                       "两个池用同一口径，胜率才可比。" % (HOLD_DAYS, TARGET_PCT)),
     }
 
 
@@ -1261,24 +1295,7 @@ def main():
     # R100z233b：`since` 只从**当前口径**的样本里取。原写法取全台账最小值，
     # 换口径后页面会写成「起始日 2026-10-22 / 已结算 13 条」而表格里样本是 0——
     # 两个数字各说一套，读者只会认为这张表算错了。
-    _cur = [e for e in ledger.get("entries") or []
-            if (e.get("ruleFrom") or "legacy") == RULE_FROZEN_AT]
-    mod["track"] = {
-        "since": min([e.get("confirmDate") or e.get("entryDate")
-                      for e in _cur
-                      if (e.get("confirmDate") or e.get("entryDate"))] or [today]),
-        # 与 since 同口径：只数当前口径的已结算条数（旧口径由 legacyN 单独交代）
-        "settledN": sum(1 for e in _cur
-                        if (e.get("result") or {}).get("status") == "settled"),
-        "openN": sum(1 for e in _cur
-                     if (e.get("result") or {}).get("status") != "settled"),
-        "justSettled": n_settled,
-        "legacyN": mod["compare"].get("legacyN", 0),
-        "settleRule": ("买价=确认日（数据日）次一交易日开盘；窗口 %d 个交易日；"
-                       "止盈按盘中触 +%.1f%% 算（可挂单），止损按收盘跌破止损位算（盘中不算），"
-                       "开盘即破止损视为不进场（不进胜负分母），都不触按窗口末收盘计。"
-                       "两个池用同一口径，胜率才可比。" % (HOLD_DAYS, TARGET_PCT)),
-    }
+    mod["track"] = build_track(ledger, n_settled, mod["compare"], today)
 
     old["chenPool"] = mod
     write_data_js(args.dashboard or DATA_JS, old, label="[chen]")

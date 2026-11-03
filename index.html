@@ -3951,7 +3951,7 @@ function renderSignalPerf() {
     }).join('；') + '</div>';
   }
   if (withX.length && !passed.length) {
-    h += '<div class="rv-legend">没一条过线——四个池都在买「已经涨过的票」，正期望在对面（见下方 🎯 卡）。</div>';
+    h += '<div class="rv-legend">没一条过线——这些池挑的都是「已经涨过的票」，正期望不一定在下一根 K 线上。</div>';
   }
 
   // 建议权重：超额为正才给权重，跑输基准的归零——不做「平均主义」配置
@@ -6619,7 +6619,8 @@ function chenCompareHtml(c) {
     '<div class="cc-note">上表只统计<b>已走完持有窗口</b>的样本，上面今日名单里 <b>' + (tr.openN || 0) +
       '</b> 条还在窗口内——所以「100%」与今天几只下跌并不矛盾。</div>' +
     '<details class="rv-det"><summary>结算规则与口径变更 <span>· 买价、止盈止损、旧样本怎么算</span></summary>' +
-      '<div class="pf-sub">确认日次日开盘买，持有 10 个交易日；止盈按盘中触及 +5.0% 算（可挂单），' +
+      '<div class="pf-sub">确认日次日开盘买、<b>最早次日再卖</b>（A 股 T+1 交割），持有 10 个交易日；' +
+      '止盈按盘中触及 +5.0% 算（可挂单），' +
         '止损按<b>收盘</b>跌破止损位算（盘中不算），开盘即破止损视为不进场（不进胜负分母），' +
         '两条线都不触按窗口末收盘计。两个池用同一口径，胜率才可比。</div>' +
       ((skipTotal || noStopTotal)

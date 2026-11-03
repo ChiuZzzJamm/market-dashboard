@@ -190,7 +190,10 @@ def sim(smp, tp=TP, hold=HOLD, use_struct_sl=True, sl_pct=-5.0):
     stop = smp['stop'] if use_struct_sl else buy * (1 + sl_pct / 100.0)
     if stop >= buy:
         stop = buy * 0.95
-    for j in range(b, min(b + hold, n)):
+    # R100z299：买入日 b 当天不能卖（A 股 T+1 交割）。原窗口从 b 起，等于把「当天开盘买、
+    # 当天盘中冲高卖」算成兑现——实测这类同日止盈占赢家的一大半，胜率被系统性抬高。
+    # 改成 b+1 起，并把窗口整体后移一根，保持「持 hold 个交易日」的语义不变。
+    for j in range(b + 1, min(b + hold + 1, n)):
         if o[j] <= stop:                       # 开盘即破位 → 按开盘价走
             return (o[j] / buy - 1) * 100 - COST * 100, 'stop_gap', j - b + 1
         if l[j] <= stop:                       # 盘中破位（同日双触发按先止损，保守）
@@ -199,7 +202,7 @@ def sim(smp, tp=TP, hold=HOLD, use_struct_sl=True, sl_pct=-5.0):
             return (o[j] / buy - 1) * 100 - COST * 100, 'tp_gap', j - b + 1
         if h[j] >= buy * (1 + tp):
             return tp * 100 - COST * 100, 'tp', j - b + 1
-    j = min(b + hold, n) - 1
+    j = min(b + hold + 1, n) - 1
     return (c[j] / buy - 1) * 100 - COST * 100, 'time', j - b + 1
 
 

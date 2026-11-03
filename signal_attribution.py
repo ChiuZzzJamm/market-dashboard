@@ -64,6 +64,15 @@ MIN_N = 30          # 出结论最少样本数
 MIN_DAYS = 5        # 出结论最少覆盖交易日
 REVERSE_T = -2.0    # 1 日期望的 t 值低于此 → 判「负期望」，不是「运气差」
 
+# R100z299（用户 2026-11-03「AI 预测 10/1 早上 7:00 和 8:30 更新的，那它的标的就该 10/1 买、10/2 卖」）：
+# 买点不是统一「次日开盘」——**要看信号什么时候发布**。默认（池类）是 16:00 数据步收盘后才成形，
+# 最早只能次日开盘买；但 `ai` 是 08:30 盘前写的，当天开盘就能买，按次日开盘记账等于系统性晚一天、
+# 把「预测当天的兑现」记成「第二天的兑现」。这里按源声明入口：
+#   'open'       = 登记日当天开盘买（盘前发布）
+#   'next_open'  = 登记日次日开盘买（收盘后发布，默认）
+#   'close'      = 登记日收盘买（盘中发布、当天只剩收盘价可参考）
+ENTRY_MODE = {'ai': 'open'}
+
 SRC_LABEL = {
     'ai': 'AI 预测',
     'mech': '机械池（吸筹+横盘启动）',
@@ -278,7 +287,7 @@ def bench_ret(bench, entry_day, n):
     return round((acc - 1) * 100, 3)
 
 
-def exec_ret(bars, entry_day, h):
+def exec_ret(bars, entry_day, h, mode='next_open'):
     """**可执行口径**：T+1 开盘买入 → 买入日之后第 h 个交易日收盘卖出（%）。
 
     h=1 ＝ 次日收盘卖（买入日 b 的下一交易日）—— 这是 A 股 T+1 交割下最早的合法卖点。
@@ -308,10 +317,12 @@ def exec_ret(bars, entry_day, h):
     # A 股 T+1 交割下根本卖不掉，等于给 1 日列编了一个不存在的收益。
     # 改成 `i1 = i0 + h`：买入日 b = idx+1，卖出 = b 之后第 h 个交易日收盘。
     # h=1 → 次日（b+1）收盘，这才是「持 1 日」在 A 股的真实最早卖点。
-    i0, i1 = idx + 1, idx + 1 + h
+    # 入口按信号发布时点决定（见 ENTRY_MODE）：盘前发布→当天开盘；收盘后发布→次日开盘。
+    i0 = idx if mode == 'open' else idx + 1
+    i1 = i0 + h                      # 卖出 = 买入日之后第 h 个交易日收盘（T+1 交割）
     if i1 >= len(bars) or i0 >= len(bars):
         return None
-    op = bars[i0][1]
+    op = bars[i0][2] if mode == 'close' else bars[i0][1]
     c1 = bars[i1][2]
     if not op or op <= 0 or c1 is None:
         return None
@@ -392,7 +403,7 @@ def compute(L, D):
                     b = bench_ret(bench, day, h)
                     if b is not None:
                         st['h'][str(h)]['excs'].append(r - b)
-                    xr = exec_ret(bars, day, h)
+                    xr = exec_ret(bars, day, h, ENTRY_MODE.get(src, 'next_open'))
                     if xr is not None:
                         st['x'][str(h)]['rets'].append(xr)
                         st['x'][str(h)]['byday'].setdefault(day, []).append(xr)
@@ -813,7 +824,9 @@ def build(D, do_snapshot=True, backfill=0):
                      'bench': '全市场等权（1300+ 只当日涨幅中位数累乘）',
                      'excess': '标的收益 − 同期基准收益（仅「收盘买入」口径有）',
                      'hBasis': '收盘买入：登记日收盘 → T+h 收盘（旧口径，复盘写完时已收盘，买不到）',
-                     'xBasis': '可执行：T 日次日开盘买入 → 买入日之后第 h 个交易日收盘卖出（1 日 = 次日收盘卖；A 股 T+1 交割，当天买当天卖不成立）',
+                     'xBasis': ('可执行：T+1 开盘买入 → 买入日之后第 h 个交易日收盘卖出'
+                                 '（1 日 = 次日收盘卖；A 股 T+1 交割，当天买当天卖不成立）。'
+                                 'AI 预测例外：08:30 盘前发布，按当日开盘买入'),
                      'buyBasis': '今日可下单：清单 9:45 生成、当天可下单；两列均为近似，'
                                  '真实成交价落在「当日收盘买」与「次日开盘买」之间'},
         'buyNote': _buy_note,

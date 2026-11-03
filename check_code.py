@@ -96,6 +96,7 @@ DATA_WRITERS = [
     'market_structure.py',      # 市场结构
     'merge_duanban.py',         # 断板合并
     'breakout_pool.py',         # 横盘启动池（涨停锚口径；走 write_data_js）
+    'resettle_ledger.py',      # R100z299：按当前 settle_one 口径重算 chen_ledger 全部条目，并只刷新 chenPool.compare/track（走 write_data_js）
     'refresh_stamp.py',         # updatedAt 单一主人（正则手术式改写）
     'retag_duanban.py',         # 断板重打标
     'risk_gate.py',             # 个股风险闸
@@ -135,6 +136,7 @@ NON_DATA_WRITERS = {
 
 # 死脚本白名单：合法的「手工跑、不进自动化」工具，写明用途才准留
 DEAD_OK = {
+    'resettle_ledger.py': 'R100z299：结算规则本身改过时（本轮：止盈从买入当天改成次日），把 chen_ledger 全部条目按新规则重算并只刷新 chenPool.compare/track。手工触发（--dry 只打对照），不进流水线',
     'migrate_ledger_pools.py': 'R100z297：一次性数据迁移（历史台账补池归属），迁移完即不再需要，'
                                '手工触发、幂等可重跑；留着是为了「同一份台账在别的机器/别的分支上'
                                '也能重放同一次迁移」，不是死脚本',
