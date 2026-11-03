@@ -807,6 +807,48 @@
                  font-weight: 400; color: var(--ink2); opacity: .72; }
   /* R100z302：胜率格里的「8赢 · 2亏」换行挂在百分比下面——窄屏三列时跟在数字右侧会把列挤宽 */
   .cc-tbl td s.cc-wl { display: block; margin-left: 0; }
+  /* R100z303：结算明细入口（行内文字按钮，看起来像链接、实际是 button） */
+  .cc-link { background: none; border: 0; padding: 0; margin-left: 10px; cursor: pointer;
+             font: inherit; font-size: var(--fs-sm); font-weight: 700; color: var(--accent-deep);
+             text-decoration: underline; text-underline-offset: 3px; }
+  .cc-link:hover { color: var(--ink); }
+  /* R100z303：结算明细弹窗——遮罩/面板复用 #db-modal 那套观感（.db-modal-box / -close），
+     但**独立 id**：断板弹窗自带 dbStep/DB_ORDER 导航状态，复用同一容器会串票。 */
+  #settle-modal { display: none; position: fixed; inset: 0; z-index: 210;
+                  background: rgba(30,45,60,.45); align-items: center; justify-content: center; padding: 16px; }
+  #settle-modal.open { display: flex; }
+  #settle-modal .db-modal-box { max-width: 720px; width: 100%; max-height: 86vh;
+                                display: flex; flex-direction: column; padding: 16px 18px; }
+  .stl-hd { display: flex; align-items: flex-start; gap: 10px; }
+  .stl-hd > div:first-child { flex: 1 1 auto; min-width: 0; }
+  .stl-t { font-size: var(--fs-h1); font-weight: 900; color: var(--ink); line-height: 1.3; }
+  .stl-sub { font-size: var(--fs-xs); color: var(--ink2); line-height: 1.7; margin-top: 2px; }
+  .stl-bd { overflow: auto; -webkit-overflow-scrolling: touch; margin-top: 10px;
+            border-top: 1px solid var(--line); }
+  .stl-tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm);
+             font-variant-numeric: tabular-nums; }
+  .stl-tbl th, .stl-tbl td { padding: 7px 6px; border-bottom: 1px solid var(--line);
+                             white-space: nowrap; text-align: right; }
+  .stl-tbl th:first-child, .stl-tbl td:first-child { text-align: left; }
+  /* 表头吸顶：滚动时列名不能跟着走，否则 20 行以后就不知道那列是买价还是卖价 */
+  .stl-tbl thead th { position: sticky; top: 0; z-index: 1; background: var(--paper);
+                      color: var(--ink2); font-weight: 500; }
+  .stl-tbl .nm { font-weight: 700; color: var(--ink); }
+  .stl-tbl .cd2 { font-size: var(--fs-xs); color: var(--ink2); margin-left: 5px; }
+  .stl-tbl .pl { display: block; font-size: var(--fs-xs); color: var(--ink2); font-weight: 400; }
+  .stl-tbl td.up { color: var(--up); font-weight: 700; }
+  .stl-tbl td.down { color: var(--down); font-weight: 700; }
+  .stl-foot { margin-top: 9px; font-size: var(--fs-xs); color: var(--ink2); line-height: 1.7; }
+  /* 窄屏：六列在 390px 上按原尺寸会挤出横向滚动条。缩内边距 + 降一级字号，
+     让它一屏放下；真放不下时 .stl-bd 仍可横向滑（宁可滑，也不砍掉买/卖价两列——
+     那两列是这张表存在的理由）。 */
+  @media (max-width: 560px) {
+    #settle-modal { padding: 10px; }
+    #settle-modal .db-modal-box { padding: 14px 12px; }
+    .stl-tbl { font-size: var(--fs-xs); }
+    .stl-tbl th, .stl-tbl td { padding: 6px 4px; }
+    .stl-tbl .cd2 { display: block; margin-left: 0; }
+  }
   .cc-note { margin-top: 10px; font-size: var(--fs-sm); color: var(--ink2); line-height: 1.8; }
   .cc-note b { color: var(--ink); font-weight: 600; }
   .cc-tbl { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: var(--fs-sm); }
@@ -6612,7 +6654,14 @@ function chenCompareHtml(c) {
       '<div class="cc-note">起始 <b>' + esc(tr.since || '—') + '</b> ｜ 已结算 <b>' + (tr.settledN || 0) +
       '</b> 条 ｜ 待结算 <b>' + (tr.openN || 0) + '</b> 条' +
       (tr.justSettled ? '（本次 +' + tr.justSettled + '）' : '') +
-      (tr.legacyN ? ' ｜ 旧口径 ' + tr.legacyN + ' 条另结' : '') + '</div></div>' +
+      (tr.legacyN ? ' ｜ 旧口径 ' + tr.legacyN + ' 条另结' : '') +
+      /* R100z303（用户 2026-11-04）：「这块能不能增加结算明细？列清楚标的、买入日期、
+         卖出日期、买入价格、卖出价格，默认隐藏，点击以后跳出小窗口，能往下滑，
+         卖出后 30 个交易日清除」。默认折叠 → 一个入口，点开是独立弹窗（不是页内展开：
+         22 行 × 6 列会把整张卡再撑两屏，那正是上一轮刚删掉的东西）。 */
+      ((cmp.settles || []).length
+        ? '<button class="cc-link" onclick="openSettleDetail()">结算明细 · ' +
+          (cmp.settles || []).length + ' 条 ›</button>' : '') + '</div></div>' +
     // 表头顺序与结算三结局对齐：赢 + 亏 + 平 = 样本（平＝持仓满窗口两条线都没触，按窗口末收盘平）。
     // R100z233b：窗口已从 2 日拉到 10 日（见 chen_pool.py RULE_FROZEN_AT），标题不再写死「2 日」——
     // 台账里每条样本各自带 holdDays，旧样本 2 日、新样本 10 日，写死哪个都是错的。
@@ -6665,6 +6714,87 @@ function chenCompareHtml(c) {
   // 提前挂会挂上一份长度还在变的数组引用（虽然 JS 里引用同一份也对，但显式放末尾读起来更清楚）。
   window._CC_GRP = _grp;
   return out;
+}
+
+/* ============================ 结算明细弹窗（R100z303） ============================
+   用户 2026-11-04：「这块能不能增加结算明细？列清楚标的名称、买入日期、卖出日期、
+   买入价格、卖出价格，默认隐藏，我点击以后会跳出一个小窗口，然后能往下拉滑动，
+   这里面的结算明细卖出后 30 个交易日清除」。
+
+   四个设计取舍：
+   ① **弹窗而不是页内展开**：22 行 × 6 列会把复盘卡再撑两屏，而上一轮刚把这张卡压短；
+   ② **独立 id `#settle-modal`**：断板弹窗 #db-modal 里挂着 key/dbStep/DB_ORDER 导航状态，
+      借它的容器迟早串票（24.113 的教训）。只借样式类 .db-modal-box / .db-modal-close；
+   ③ **只读 data.js 的 compare.settles**：明细的条数、清零窗口都在 chen_pool 里算好
+      （SETTLE_KEEP_DAYS），前端不自己按日期过滤——两处各算一次必然漂移；
+   ④ **卖出行必须标来源池与旧口径**：同一天两个池各卖一只，只写名字分不清是谁的账。
+   ================================================================================= */
+function settleModalEl() {
+  var el = document.getElementById('settle-modal');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'settle-modal';
+  el.innerHTML = '<div class="db-modal-box" role="dialog" aria-modal="true" aria-label="结算明细"></div>';
+  // 点遮罩关闭（点面板内部不关）——与他参考的那个弹窗一致
+  el.addEventListener('click', function (e) { if (e.target === el) closeSettleDetail(); });
+  document.body.appendChild(el);
+  return el;
+}
+function settleEsc(e) { if (e.key === 'Escape' || e.keyCode === 27) closeSettleDetail(); }
+function closeSettleDetail() {
+  var el = document.getElementById('settle-modal');
+  if (el) el.classList.remove('open');
+  document.removeEventListener('keydown', settleEsc);
+}
+function openSettleDetail() {
+  var D = window.DASHBOARD_DATA || {};
+  var cmp = (D.chenPool || {}).compare || {};
+  var rows = cmp.settles || [];
+  var meta = cmp.settleMeta || {};
+  var mmdd = function (d) { var t = String(d || ''); return t.length >= 10 ? t.slice(5) : (t || '—'); };
+  var pxf = function (v) {
+    var n = Number(v);
+    return (v === null || v === undefined || v === '' || !isFinite(n)) ? '—' : n.toFixed(2);
+  };
+  var h = '<div class="stl-hd"><div>' +
+    '<div class="stl-t">结算明细</div>' +
+    '<div class="stl-sub">陈学长 / 断板反包 两套口径的逐笔成交。买价＝确认日<b>次一交易日开盘</b>；' +
+    '卖价＝盘中触止盈线 / 收盘破止损 / 窗口末收盘——就是上面那张胜率表的原始样本。</div></div>' +
+    '<button class="db-modal-close" onclick="closeSettleDetail()" aria-label="关闭">×</button></div>' +
+    '<div class="stl-sub">显示 <b>' + rows.length + '</b> 条' +
+    (meta.legacyShown ? '（含旧口径 ' + meta.legacyShown + ' 条）' : '') +
+    '｜卖出后 <b>' + (meta.keepDays || 30) + '</b> 个交易日自动清除' +
+    (meta.cleared ? '（已清除 ' + meta.cleared + ' 条）' : '（当前还没有到期清除的）') +
+    (meta.skip ? '｜另有 ' + meta.skip + ' 条开盘即破止损、按纪律没进场，没有成交所以不列' : '') +
+    '</div>';
+  if (!rows.length) {
+    h += '<div class="db-empty" style="margin-top:12px">暂无已结算样本（或都超过 30 个交易日已清除）</div>';
+  } else {
+    h += '<div class="stl-bd"><table class="stl-tbl"><thead><tr>' +
+      '<th>标的</th><th>买入日</th><th>买入价</th><th>卖出日</th><th>卖出价</th><th>盈亏</th>' +
+      '</tr></thead><tbody>';
+    rows.forEach(function (r) {
+      var ret = Number(r.retPct);
+      var cls = !isFinite(ret) ? '' : (ret > 0 ? 'up' : (ret < 0 ? 'down' : ''));
+      var txt = !isFinite(ret) ? '—' : (ret > 0 ? '+' : '') + ret.toFixed(2) + '%';
+      h += '<tr><td><span class="nm">' + esc(r.name || r.code) + '</span>' +
+        '<span class="cd2">' + esc(r.code) + '</span>' +
+        '<span class="pl">' + esc(r.poolZh || '') + (r.legacy ? ' · 旧口径' : '') + '</span></td>' +
+        '<td>' + mmdd(r.buyDay) + '</td><td>' + pxf(r.buyPx) + '</td>' +
+        '<td>' + mmdd(r.exitDay) + '</td><td>' + pxf(r.exitPx) + '</td>' +
+        '<td class="' + cls + '">' + txt + '</td></tr>';
+    });
+    h += '</tbody></table></div>';
+  }
+  h += '<div class="stl-foot">日期年份 ' + esc(String(meta.today || '').slice(0, 4) || '2026') +
+    '；按卖出日倒序，最新的在上面。' +
+    '⚠️ 明细只影响显示，台账一条不删——上面的胜率/均值仍按<b>全量</b>样本算，' +
+    '所以「已结算 N 条」可能多于这里的条数。</div>';
+  var el = settleModalEl();
+  el.querySelector('.db-modal-box').innerHTML = h;
+  el.classList.add('open');
+  el.querySelector('.stl-bd') && (el.querySelector('.stl-bd').scrollTop = 0);
+  document.addEventListener('keydown', settleEsc);
 }
 
 /* 池区块：严格 / 放宽 / 观察。卡片四格与他给的交易参数一一对应。

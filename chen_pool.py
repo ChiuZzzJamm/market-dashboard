@@ -129,7 +129,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 import check_duanban as CD                       # 复用抓取/打标（只 import，不改它）
-from common import write_data_js, write_json_atomic, roll_fail_pool
+from common import (write_data_js, write_json_atomic, roll_fail_pool,
+                    trading_days_between, today_trade_date, is_trade_day)
 
 DATA_JS = os.path.join(HERE, "data.js")
 LEDGER = os.path.join(HERE, "chen_ledger.json")
@@ -164,6 +165,9 @@ TARGET_PCT = 5.0         # 卖点 +5%（为什么从 3.5% 改到 5%：见下方�
 STOP_PCT_FALLBACK = -3.0  # 止损兜底（无 T 日最低价时）
 HOLD_DAYS = 10           # 持仓上限（交易日；为什么从 2 日改到 10 日：同上）
 RISK_BUDGET = 1.5        # 单笔最大亏总仓 %
+# 结算明细（页面弹窗）保留多少个交易日 —— 用户 2026-11-04：「卖出后 30 个交易日清除」。
+# ⚠️ 只作用于**渲染**，台账一条不删：统计（胜率/均值）用的是全量，删了就是把历史胜率改写一遍。
+SETTLE_KEEP_DAYS = 30
 # R100z233b：**旧口径的数值必须留在代码里**，不是为了兼容旧代码，而是为了让台账里
 # 换版前就开仓的样本能按它自己的参数结算。settle_one 改读条目自带的 tgtPct/holdDays 之后，
 # 这两个常量是「历史条目的缺省值」——删掉它们，那 9 条 2026-10-25 的样本会被 5%/10 日
@@ -686,6 +690,7 @@ def settle_one(e, kl):
     if stop > 0 and buy <= stop:
         # §9：开盘就在止损位之下 → 纪律上不进场。记为 notExecuted，不进胜负分母。
         return {"status": "settled", "result": "notExecuted", "exitDay": days[idx + 1],
+                "buyDay": days[idx + 1],
                 "exitPrice": round(buy, 2), "buyPrice": round(buy, 2), "retPct": 0.0,
                 "note": "开盘价 %.2f 已跌破止损位 %.2f，按纪律不进场" % (buy, stop)}
     tgt = buy * (1 + tgt_pct / 100)
@@ -700,18 +705,21 @@ def settle_one(e, kl):
         hit_tgt = hi >= tgt
         if hit_stop:
             return {"status": "settled", "result": "loss", "exitDay": days[j],
+                    "buyDay": days[idx + 1],
                     "exitPrice": round(cl, 2), "buyPrice": round(buy, 2),
                     "retPct": round((cl - buy) / buy * 100, 2),
                     "note": "收盘跌破止损位"
                             + ("（同日也触过 +%.1f%%，保守算亏）" % tgt_pct if hit_tgt else "")}
         if hit_tgt:
             return {"status": "settled", "result": "win", "exitDay": days[j],
+                    "buyDay": days[idx + 1],
                     "exitPrice": round(tgt, 2), "buyPrice": round(buy, 2),
                     "retPct": round(tgt_pct, 2),
                     "note": "盘中触 +%.1f%% 当天兑现" % tgt_pct}
     if len(kl) - 1 >= idx + 1 + hold_days:
         c = float(kl[idx + 1 + hold_days].get("close") or 0)
         return {"status": "settled", "result": "expired", "exitDay": days[idx + 1 + hold_days],
+                "buyDay": days[idx + 1],
                 "exitPrice": round(c, 2), "buyPrice": round(buy, 2),
                 "retPct": round((c - buy) / buy * 100, 2),
                 "note": "持仓 %d 日未触目标也未破止损，收盘平" % hold_days}
@@ -926,7 +934,85 @@ def build_entries(hits, D, tier_filter=None):
     return entries
 
 
-def build_compare(chen_codes, db_codes, ledger):
+POOL_ZH = {"chen_strict": "陈学长·严格池", "chen_loose": "陈学长·放宽池",
+           "duanban": "断板反包·确认池"}
+
+
+def _next_trade_day(day):
+    """确认日之后的下一个交易日。
+
+    为什么需要它：`settle_one` 从 2026-11-04 起才在 result 里写 `buyDay`（那才是 K 线里
+    真实的买点，停牌复牌的票会隔好几天）。旧条目没有这个字段，明细要显示「买入日期」，
+    只能按「确认日的下一个交易日」回退。
+    ⚠️ 回退值**只用于显示**，不参与任何收益计算——收益用 result.buyPrice / exitPrice，
+    那是结算当时从 K 线取的价，两者不会因此不一致（除非停牌，此时日期偏早、价格仍真）。
+    """
+    import datetime as _dt
+    cur = _dt.datetime.strptime(str(day)[:10], "%Y-%m-%d").date()
+    for _ in range(15):
+        cur += _dt.timedelta(days=1)
+        if is_trade_day(cur):
+            return cur.strftime("%Y-%m-%d")
+    return cur.strftime("%Y-%m-%d")
+
+
+def settle_rows(ledger, today=None, keep_days=None):
+    """结算明细（复盘台账弹窗）：逐笔带买卖两端的日期与价格。
+
+    与 pool_stats 的分工：那边回答「这套口径准不准」（全量样本、按池聚合、不设窗口），
+    这边回答「最近到底成交了哪几笔」（逐笔、有保留窗口）。
+    ⛔ 两个不能合并：明细一旦设窗口，用它算胜率就等于「按最近 30 个交易日重新判分」。
+
+    保留窗口 = 卖出后 `SETTLE_KEEP_DAYS` 个交易日（用户 2026-11-04 指定 30）。
+    超出窗口的只从**这个列表**里消失，台账一条不删；`cleared` 记着消失了多少条，
+    这样「已结算 28 条 / 明细只有 20 条」不会变成一个没人能解释的差。
+
+    `notExecuted`（开盘就破止损、按纪律没进场）不列——它没有成交，没有卖出价；
+    条数单独进 `skip`，与 pool_stats 的 skip 同源。
+    """
+    rows, cleared, skip, legacy_n = [], 0, 0, 0
+    keep = SETTLE_KEEP_DAYS if keep_days is None else int(keep_days)
+    today = str(today or today_trade_date())[:10]
+    for e in (ledger.get("entries") or []):
+        r = e.get("result") or {}
+        if r.get("status") != "settled":
+            continue
+        if r.get("result") == "notExecuted":
+            skip += 1
+            continue
+        ed = str(r.get("exitDay") or "")[:10]
+        if not ed:
+            continue
+        if keep and ed <= today and trading_days_between(ed, today) > keep:
+            cleared += 1
+            continue
+        is_legacy = (e.get("ruleFrom") or "legacy") != RULE_FROZEN_AT
+        if is_legacy:
+            legacy_n += 1
+        pool = str(e.get("pool") or "")
+        rows.append({
+            "code": str(e.get("code") or ""),
+            "name": str(e.get("name") or ""),
+            "pool": pool,
+            "poolZh": POOL_ZH.get(pool, pool or "—"),
+            "buyDay": str(r.get("buyDay") or _next_trade_day(
+                e.get("confirmDate") or e.get("entryDate") or ed))[:10],
+            "buyPx": r.get("buyPrice"),
+            "exitDay": ed,
+            "exitPx": r.get("exitPrice"),
+            "retPct": r.get("retPct"),
+            "result": r.get("result"),
+            "legacy": is_legacy,
+            "tgtPct": e.get("tgtPct"),
+            "holdDays": e.get("holdDays"),
+        })
+    # 新的在上：读者最关心「昨天那笔怎么样了」，不是两个月前那笔
+    rows.sort(key=lambda x: (x["exitDay"], x["code"]), reverse=True)
+    return rows, {"keepDays": keep, "shown": len(rows), "cleared": cleared,
+                  "skip": skip, "legacyShown": legacy_n, "today": today}
+
+
+def build_compare(chen_codes, db_codes, ledger, today=None):
     """当日池差异 + 历史胜率对比。
 
     R100z222（审核意见 §14）：`chen_codes` / `db_codes` 由调用方统一传**确认池**，
@@ -947,7 +1033,12 @@ def build_compare(chen_codes, db_codes, ledger):
     stats = {k: pool_stats(v) for k, v in groups.items()}
     for k, v in cross.items():
         stats["cross_" + k] = pool_stats(v)
+    settles, settle_meta = settle_rows(ledger, today)
     return {
+        # R100z303（用户 2026-11-04）：「留痕回测进度」那块要能点开看逐笔买卖。
+        # 明细与统计同源（同一个 ledger、同一个 settle_one 结果），只是多了一个保留窗口。
+        "settles": settles,
+        "settleMeta": settle_meta,
         "today": {
             "both": sorted(chen_s & db_s),
             "chenOnly": sorted(chen_s - db_s),
