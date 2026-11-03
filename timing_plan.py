@@ -78,6 +78,26 @@ def _prev_trade_days(n, end=None):
     return sorted(out)
 
 
+def _clean_sector(hybk):
+    """挂单卡展示用的板块名：去申万罗马数字后缀 + 补常见截断名。
+
+    R100z296（2026-11-03）：16:00 数据步报「timing_plan 挂单卡出现『汽车零部/证券Ⅱ/
+    白酒Ⅱ/光学光电/水泥』截断名」——涨停池 hybk 是申万原始名（含 Ⅱ/Ⅲ 分级后缀）或东财
+    短名（4 字截断）。check_duanban 用 match_ths_industry/SPECIAL 补全，timing_plan 直接
+    落原始值。这里做**展示层去后缀 + 已知截断补全**，不改匹配逻辑、不加 ths_names 依赖。
+    """
+    import re
+    if not hybk:
+        return hybk
+    base = re.sub(r'[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]$', '', hybk)
+    FIX = {
+        "汽车零部": "汽车零部件",
+        "光学光电": "光学光电子",
+        "炼化及贸": "石油加工贸易",
+    }
+    return FIX.get(base, base) if base else hybk
+
+
 def load_klines(codes, base):
     """优先读 .kline_cache（16:00 数据步已灌满），缺失再走 check_duanban 现抓。
 
@@ -158,7 +178,7 @@ def build_plan(D, base=None, trade_date=None):
         nm = str(it.get('n') or '')
         if 'ST' in nm.upper() or nm.startswith('*') or '退' in nm:
             continue
-        cands.append(dict(code=c, name=nm, sector=it.get('hybk') or ''))
+        cands.append(dict(code=c, name=nm, sector=_clean_sector(it.get('hybk'))))
     if not cands:
         return None, ('T 日（%s）首板 0 只（涨停池 %d 只里没有主板首板）——'
                       '这是正常结果，不是抓取失败' % (t0s, len(pool)))
