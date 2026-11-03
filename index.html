@@ -3987,7 +3987,7 @@ function renderSignalPerf() {
            唯一的解释（权重规则）也随「口径与证据」一起下线了——不写「权重」两个字，
            它就会被读成第二个胜率。徽章本身是 .rv-w，字号 --fs-xs，加两个字不挤。 */
         (num(r.weight) !== null && num(r.weight) > 0
-          ? '<em class="rv-w" title="建议权重：按 5 日超额归一化（跑输基准的归零）">权重 ' + Math.round(num(r.weight) * 100) + '%</em>' : '') +
+          ? '<em class="rv-w" title="建议权重＝按 5 日超额（每项 +1 后归一化）定；超额为负的归零。开盘精选是上面几行的子集，不参与定权，所以这一行没有徽章。">权重 ' + Math.round(num(r.weight) * 100) + '%</em>' : '') +
         (r.sub ? '<s>自有口径</s>' : (r.legacy ? '<s>历史台账</s>' : '')) +
         '<small>' + (r.n || 0) + ' 条 / ' + (r.days || 0) + ' 日' +
         (subLine(r.src) ? ' · ' + subLine(r.src) : '') + '</small></div>' +
