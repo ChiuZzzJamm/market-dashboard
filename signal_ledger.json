@@ -6934,6 +6934,17 @@
      "close": 63.68
     }
    ]
+  },
+  "2026-11-03": {
+   "leadLag": [
+    {
+     "code": "603602",
+     "name": "纵横通信",
+     "sector": "文化传媒",
+     "screen": "leadLag",
+     "rule": "secGap>1.0&lag>2.0&yret>0"
+    }
+   ]
   }
  },
  "updatedAt": "2026-11-02 16:32:10"
