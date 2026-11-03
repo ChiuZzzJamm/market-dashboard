@@ -84,7 +84,7 @@
 G50 文案记法泄漏    渲染层不许出现 markdown 的 ** 记法（2026-10-28 截图上真的印出过
                       「**不改清单、不新增标的**」）：内联 JS 剥注释后逐处点名，
                       data.js 的 rule/riskNote 等直通 DOM 字段一并扫（FAIL）。
-    G51 清单台账接线    「今日可下单」这份清单必须真的在 signal_ledger 里逐日登记
+    G51 清单台账接线    「开盘精选」这份清单必须真的在 signal_ledger 里逐日登记
                       （源键 buy）：bySrc 少了这一行页面只会「少一行」，不会报错，
                       所以用 asOf 与登记条数双判（接线断 = FAIL / 名单被重跑 = WARN）。
     G53 名字解析卫生    调用了从未绑定的名字（Python 用 ast 判，误报 0）= FAIL；
@@ -4467,11 +4467,11 @@ def g49_excess_benchmark_consistency(r):
 
 
 def g51_buy_ledger_wiring(r):
-    """G51 「今日可下单」必须真的在记账（R100z255，2026-10-28）。
+    """G51 「开盘精选」必须真的在记账（R100z255，2026-10-28）。
 
     ## 背景
 
-    断板页那张「今日可下单」表，是全站唯一明确回答「现在能买哪只、买在哪个价带、
+    9:45 那份「开盘精选」清单（duanban.star.buyList），是全站唯一明确回答「现在能买哪只、买在哪个价带、
     破哪个价撤」的出口——却也是**唯一没有后续台账**的模块。24.109 用回测证明了各源
     edge 大小，但从没有一张表回答「照着这份清单真买，会怎样」。R100z255 把它接进
     signal_attribution（源键 'buy'），这里盯住那条接线不断。
@@ -4480,7 +4480,7 @@ def g51_buy_ledger_wiring(r):
 
     接线类失败的典型长相不是报错，而是**安静地断掉**：某天 buyList 换了字段名、
     或 snapshot() 里那一段被重构掉，页面看起来完全正常——指标复盘卡还是那几行，
-    只是永远少了「今日可下单」这一行，没有任何人会发现「少了一行」。
+    只是永远少了「开盘精选」这一行，没有任何人会发现「少了一行」。
     与本项目反复踩的「登记了就当查过了」同源。
 
     ## 判据（三段，越往后越严）
@@ -4516,7 +4516,7 @@ def g51_buy_ledger_wiring(r):
         return
     if as_of < star_date:
         r.warn("G51", f"归因台账停在 {as_of}，早于清单 {star_date} —— 16:00 数据步还没跑，"
-                      f"届时应自动出现「今日可下单」一行（非错误）")
+                      f"届时应自动出现「开盘精选」一行（非错误）")
         return
     if not has_buy:
         r.fail("G51", f"清单 {star_date} 有 {len(cur)} 只非 bp 标的，但 signalPerf.bySrc 里没有 "
@@ -4525,7 +4525,7 @@ def g51_buy_ledger_wiring(r):
 
     # 口径说明不能随代码一起丢：这一行的入场时点与另外七行不同（9:45 当天可买 vs 次日开盘）
     if not (sp.get("criteria") or {}).get("buyBasis"):
-        r.warn("G51", "signalPerf.criteria.buyBasis 缺失 —— 「今日可下单」行的入场口径说明丢了，"
+        r.warn("G51", "signalPerf.criteria.buyBasis 缺失 —— 「开盘精选」行的入场口径说明丢了，"
                       "读者会把「当日收盘买」当成清单真实成交价")
 
     # 台账条数 vs 当前清单条数
@@ -4550,7 +4550,7 @@ def g51_buy_ledger_wiring(r):
         r.warn("G51", f"{star_date} 登记 {len(rows)} 只 / 当前清单 {len(cur)} 只 —— "
                       f"通常是 9:45 重跑改了名单（登记的是当时那份），不是接线问题，但账要留痕")
         return
-    r.ok("G51", f"今日可下单已在记账：{star_date} 登记 {len(rows)} 只（与清单同口径，bp 源已剔），"
+    r.ok("G51", f"开盘精选已在记账：{star_date} 登记 {len(rows)} 只（与清单同口径，bp 源已剔），"
                 f"口径说明在位")
 
 

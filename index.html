@@ -3946,7 +3946,10 @@ function renderSignalPerf() {
     if (!arr.length) return '';
     return arr.map(function (x) {
       var w = num(x.win1);
-      return esc(String(x.label).split('·').pop()) + ' ' + (w === null ? '待结算' : rt(w));
+      /* R100z301：n=0 的头一天原来印成「待结算」，读起来像「已经在跑、等结果」；
+         它其实是「一条样本都还没有」。两种状态分开写。 */
+      var val = (x.n || 0) === 0 ? '暂无样本' : (w === null ? '待结算' : rt(w));
+      return esc(String(x.label).split('·').pop()) + ' ' + val;
     }).join(' · ');
   };
 
@@ -3980,8 +3983,11 @@ function renderSignalPerf() {
     h += '<div class="rv-bar' + (w === null ? ' rv-na' : '') + (r.sub_of ? ' rv-sub' : '') +
       '" title="' + escAttr(tip) + '">' +
       '<div class="rv-nm">' + esc(r.label) +
+        /* R100z301（用户 2026-11-03「这个百分比是什么」）：原来只有「27%」四个字符，
+           唯一的解释（权重规则）也随「口径与证据」一起下线了——不写「权重」两个字，
+           它就会被读成第二个胜率。徽章本身是 .rv-w，字号 --fs-xs，加两个字不挤。 */
         (num(r.weight) !== null && num(r.weight) > 0
-          ? '<em class="rv-w" title="按 5 日超额定权">' + Math.round(num(r.weight) * 100) + '%</em>' : '') +
+          ? '<em class="rv-w" title="建议权重：按 5 日超额归一化（跑输基准的归零）">权重 ' + Math.round(num(r.weight) * 100) + '%</em>' : '') +
         (r.sub ? '<s>自有口径</s>' : (r.legacy ? '<s>历史台账</s>' : '')) +
         '<small>' + (r.n || 0) + ' 条 / ' + (r.days || 0) + ' 日' +
         (subLine(r.src) ? ' · ' + subLine(r.src) : '') + '</small></div>' +
@@ -3992,98 +3998,21 @@ function renderSignalPerf() {
       '<div class="rv-vd' + (bad ? ' bad' : '') + '">' + esc(vdShort(r.verdict)) + '</div></div>';
   });
   h += '</div>';
-  /* R100z255：清单这一行的入场时点与其余七行不同（9:45 生成、当天可下单，其余是 16:00
-     选出、最早次日开盘买）。台账只有收盘价，两列都是近似——不把这句话摆出来，
-     读者会把「当日收盘买」当成清单的真实成绩。文案由 signal_attribution.py 生成
-     （样本数天天变，禁写死），这里只负责渲染。 */
-  /* R100z300：这段 650 字原来直接铺在表格下面，是整张卡最大的一块文字。
-     它很重要，但只在「想核对清单怎么记账」时才需要——收进折叠，标题里点明是哪件事。 */
-  var _notes = '';
-  if (P.buyNote) _notes += '<div class="pf-sub"><b>今日可下单怎么记账</b>：' + esc(P.buyNote) + '</div>';
-  // 陈学长是按它自己的口径（+5% 止盈 / 10 个交易日）结算的，与这张表的「1 日胜率」不是同一把尺子。
-  // 硬塞进 win1 就是混口径；不写出来又像没在跑——所以单独一行说明，样本数一起给（不让 2 笔当结论）。
-  var subs = P.ranking.filter(function (r) { return r.sub; });
-  if (subs.length) {
-    _notes += '<div class="pf-sub"><b>另计的口径</b>：' + subs.map(function (r) {
-      return esc(r.label) + '：' + esc(r.sub) + '（' + (r.n || 0) + ' 笔，样本不足）';
-    }).join('；') + '</div>';
-  }
+  /* R100z301（用户 2026-11-03 截图「删掉」）：表格下面那整块「口径与证据」折叠
+     （清单怎么记账 / 权重规则 / 日聚类 t / 相对强弱那一段注 / 换止损口径前后对比表 /
+     止损口径实测 / 数据来源）整段下线。它回答的是「怎么核对口径」，不是「今天该看什么」，
+     11 行条形 + 一张对比表已经超出这张卡该有的长度。
+     ⛔ 数据侧不动：buyNote / weightNote / stopEvidence / dataSourceNote / evidenceRows
+     仍由 signal_attribution.py 与 atr_stop.py 产出、仍留在 data.js 里——要恢复渲染，
+     回记忆 24.146 看这一块原本长什么样，别凭印象重写（这些文案的样本数天天变，禁写死）。
+     只留一行：那一行的入场时点与其余七行不同，不写，读者会把「次日收盘卖」当成
+     9:45 那批票的真实成交，而它其实是当天盘中的盘口价买。 */
   if (withX.length && !passed.length) {
     h += '<div class="rv-legend">没一条过线——这些池挑的都是「已经涨过的票」，正期望不一定在下一根 K 线上。</div>';
   }
-
-  // 建议权重：超额为正才给权重，跑输基准的归零——不做「平均主义」配置
-  /* R100z300：权重原来是第二套条形图（每条来源再画一根），与上面的胜率条并排看像两张表。
-     现在权重是行名后的一个小徽章（一个来源的属性），这里只留规则说明。 */
-  if (P.weightNote) _notes += '<div class="pf-sub"><b>权重规则</b>：' + esc(P.weightNote) + '</div>';
-
-  // ---- 以下全部下沉到折叠区：需要核对口径时才展开，不再抢占首屏 ----
-  h += '<details class="rv-det"><summary>口径与证据 <span>· 清单怎么记账 / 权重规则 / 日聚类 t / 换止损口径前后</span></summary>';
-  h += _notes;
-
-  h += '<div class="pf-sub">「日聚类t」是判定用的那一个：同一天选出 40 只票不是 40 个独立样本，' +
-    '它们共享同一个大盘，按「日」压成 1 个收益再求 t 才不虚高。逐票 t 值只作参考，' +
-    '旧版曾用它得出「t=−2.4、应停用」，而按日聚类其实是 −1.0、不显著——这正是拿噪声当证据。' +
-    '样本不足 10 个交易日时，判定只写「疑似」，不写「应停用」。</div>';
-
-  // 普跌环境里「收益负、超额正」是有效而不是无效——不解释清楚，读者会把它当成失败。
-  var mixed = P.ranking.filter(function (r) {
-    var a = num(r.ret5), b = num(r.exc5);
-    return a !== null && b !== null && a < 0 && b > 0;
-  });
-  if (mixed.length) {
-    h += '<div class="pf-sub">注：' + mixed.length + ' 个指标的 5 日收益为负、超额为正——' +
-      '它们选的票这 5 天里也跌了，但跌得比全市场少。普跌环境里这叫相对强弱，不叫无效。' +
-      '但「判定」那一列<b>不看这一列</b>：它看的是可执行口径（次日开盘买、买入日次日收盘卖）的' +
-      '1 日胜率与日聚类 t——因为 5 日收益用的是「登记日收盘价」，那个价格复盘写完时已经不存在了。</div>';
-  }
-
-  // 换止损口径前后：同一批入场点、同一持有窗口，只有止损规则不同。
-  // 这是「止损位跟着波动率走到底有没有用」的唯一硬证据——数字由 atr_stop.py 实时回测产出，
-  // 不在前端算，也不写死（写死过一次：K 线一长就和实际脱节）。
-  var ER = ((D.atrStops || {}).evidenceRows) || [];
-  if (ER.length >= 2) {
-    var f0 = ER[0], ac = ER[ER.length - 1];
-    h += '<div class="pf-cmp"><div class="pf-cmp-h">换止损口径前后 · 同一批 ' +
-      (f0.n || 0).toLocaleString('en-US') + ' 个入场点、同样持有 10 个交易日，只有止损规则不同</div>' +
-      '<div class="pf-cmp-r pf-cmp-cols"><div></div>' +
-      '<div class="pf-c">触及</div><div class="pf-c">胜率</div><div class="pf-c">收益</div></div>';
-    ER.forEach(function (e, i) {
-      var cls = i === ER.length - 1 ? ' pf-new pf-last' : '';
-      h += '<div class="pf-cmp-r' + cls + '">' +
-        '<div class="pf-nm">' + esc(e.label) + '</div>' +
-        '<div class="pf-c">' + rt(e.touchRate) + '</div>' +
-        '<div class="pf-c">' + rt(e.winRate) + '</div>' +
-        '<div class="pf-c ' + sgn(e.retPct) + '">' + pc(e.retPct) + '</div></div>';
-    });
-    var dTouch = (f0.touchRate - ac.touchRate) * 100;
-    var dWin = (ac.winRate - f0.winRate) * 100;
-    h += '<div class="pf-sub">被止损打出场的比例 ' + rt(f0.touchRate) + ' → ' + rt(ac.touchRate) +
-      '（' + (dTouch >= 0 ? '降 ' : '升 ') + Math.abs(dTouch).toFixed(1) + ' 个百分点），' +
-      '胜率 ' + rt(f0.winRate) + ' → ' + rt(ac.winRate) +
-      '（' + (dWin >= 0 ? '升 ' : '降 ') + Math.abs(dWin).toFixed(1) + ' 个百分点）。' +
-      '差别全部来自「止损位按 ATR 与结构位定、且等收盘确认」：固定的 −3% 会把正常的日内波动当成破位，' +
-      '高波动的票几乎必然被打掉，低波动的票止损又形同虚设。</div></div>';
-  }
-
-  var se = P.stopEvidence;
-  if (se && se.rows && se.rows.length) {
-    var worst = se.rows.slice().sort(function (a, b) {
-      return (num(b.touchRate) || 0) - (num(a.touchRate) || 0);
-    })[0];
-    h += '<div class="pf-sub">止损口径实测（旧固定百分比口径的历史台账，' + (se.total || 0) + ' 条已完成跟踪、触及 ' +
-      (se.touched || 0) + ' 条）：' +
-      se.rows.map(function (x) {
-        return esc(x.label) + ' ' + (x.n || 0) + ' 条 / 触及 ' + rt(x.touchRate) +
-               ' / 入场后 5 日 ' + pc(x.p5);
-      }).join('　·　') + '。这是换口径<b>之前</b>入库的记录，正好交代旧口径有多糟' +
-      (worst ? '（最差的一档是' + esc(worst.label) + '，触及率 ' + rt(worst.touchRate) + '）' : '') +
-      '；自 R100z160 起页面弹窗与台账都已改用 ATR 止损，新口径的实测见上方对比表。' +
-      '此表量的是「止损位会不会被触及」，与上面的「指标选股赚不赚」也是两个口径。</div>';
-  }
-
-  if (P.dataSourceNote) h += '<div class="pf-sub">数据来源：' + esc(P.dataSourceNote) + '</div>';
-  h += '</details>';
+  h += '<div class="rv-legend">开盘精选＝9:45 那份带买点的清单：买价取当时盘口价、次日收盘卖（T+1 交割），' +
+    '和上面七行「16:00 选票、次日开盘买」不是同一个入场时点。</div>';
+  return h + '</div>';
   return h + '</div>';
 }
 
@@ -6576,8 +6505,12 @@ function chenCompareHtml(c) {
     return '<span class="cc-chip go" title="点击查看 K 线与个股消息" onclick="stkOpenIn(window._CC_GRP,' +
       i + ')"><b>' + esc(nm || code) + '</b><span class="cd">' + esc(code) + '</span></span>';
   };
-  var doShow = doOnly.slice(0, 14).map(lab).join('') +
-    (doOnly.length > 14 ? '<span class="cc-more">…等 ' + doOnly.length + ' 只</span>' : '');
+  /* R100z301（用户 2026-11-03 截图「格式不一致」）：原来只有「只有断板」截到 14 只、
+     另两段全量渲染，同一张卡里三段名单三种规则。抽成一个函数，三段同上限、同省略写法。 */
+  var chipsOf = function (arr) {
+    return (arr.length ? arr.slice(0, 14).map(lab).join('') : '<span class="cc-more">无</span>') +
+      (arr.length > 14 ? '<span class="cc-more">…等 ' + arr.length + ' 只</span>' : '');
+  };
   var poolName = { chen_strict: '陈学长·严格池', chen_loose: '陈学长·放宽池', duanban: '断板反包·确认池' };
   /* R100z222（审核意见 §11 / §7）：把「平 / 跳过 / 无止损」三件事说清楚——
      样本 = 赢 + 亏 + 平；`skip`＝开盘就破止损按纪律没进场；`noStop`＝止损位取不到、
@@ -6609,7 +6542,9 @@ function chenCompareHtml(c) {
   };
   // §19.1：「交集分组」才是回答「谁更准」的关键。cross 标签是记账当时打死的（见 chen_pool.py
   // record_entries），不会因为今天的池子变了而漂移。样本为 0 时不渲染，免得表里排一堆 0。
-  var crossName = { cross_both: '两个都选中', cross_chen: '只有陈学长选中', cross_db: '只有断板选中' };
+  /* R100z301：row 名与上面名单标题**逐字同款**——原来表里叫「只有断板选中」、
+     名单里叫「只有断板反包选中」，读者要自己确认这两个是不是同一组。 */
+  var crossName = { cross_both: '两个都选中', cross_chen: '只有陈学长选中', cross_db: '只有断板反包选中' };
   var crossRows = Object.keys(crossName).filter(function (k) {
     var s = stats[k] || {};
     return (s.n || 0) + (s.skip || 0) + (s.noStop || 0) > 0;
@@ -6628,32 +6563,42 @@ function chenCompareHtml(c) {
        没写明由哪些池拼成，读者会以为是把 confirm/watching/strict/loose 四池全加起来了。
        实测 chenN = strict(0) + loose(11)、断板 = confirmed(17)（= both 交集 + doOnly 独有），
        观察池 watching(68) 与 chenPool.watching(26) 都**不在**其中。这里把构成直接写出来。 */
-    '<div class="cc-sum">今日：陈学长 <b>' + chenN + '</b> 只' +
+    '<div class="cc-sum">今日选出：陈学长 <b>' + chenN + '</b> 只' +
     '<span class="cc-src">严格池 ' + (c.strict || []).length + ' + 放宽池 ' + (c.loose || []).length +
     '（观察池 ' + ((c.watching || []).length) + ' 只未计入）</span>' +
     ' ｜ 断板反包 <b>' + (both.length + doOnly.length) + '</b> 只' +
     '<span class="cc-src">确认池（观察池 ' + (((window.DASHBOARD_DATA || {}).duanban || {}).watching || []).length + ' 只未计入）</span>' +
-    ' ｜ 两个都选中 <b class="up">' + both.length + '</b> 只 ｜ 只有陈学长选中 <b>' + co.length + '</b> 只</div>' +
+    ' ｜ 两个都选中 <b class="up">' + both.length + '</b> 只' +
+    ' ｜ 只有陈学长选中 <b>' + co.length + '</b> 只' +
+    ' ｜ 只有断板反包选中 <b>' + doOnly.length + '</b> 只</div>' +
     /* R100z300：三组名单（今天最多 22 只）原来把整张卡撑到两屏。名单是「对账用」不是
-       「每天要看的结论」——收进一个折叠，summary 上保留三个数量，想核对再展开。 */
-    '<details class="cc-lists"><summary>今日名单 <span>交集 ' + both.length +
-      ' · 只有陈学长 ' + co.length + ' · 只有断板 ' + doOnly.length + '</span></summary>' +
+       「每天要看的结论」——收进一个折叠，summary 上保留三个数量，想核对再展开。
+       R100z301（用户 2026-11-03 第 5 问「今日名单是不是昨天买、今天卖的」）：
+       ⛔ 不是。这三段是**今天 16:00 收盘后**各池的票（`chen.compare.today`，登记日＝今天），
+       按台账规则下一交易日开盘才买、之后走 10 个交易日窗口——名单里没有「已卖出」的票。
+       已走完窗口的结算结果在表格里，两者不是同一批。这句话必须写在 summary 上，
+       因为折叠状态下读者只看得到标题。 */
+    '<details class="cc-lists"><summary>今日名单 <span>今天收盘后选出、下一交易日开盘买 ｜ 交集 ' +
+      both.length + ' · 只有陈学长 ' + co.length + ' · 只有断板反包 ' + doOnly.length + '</span></summary>' +
     '<div class="cc-sec"><div class="cc-t">两个都选中（' + both.length + '）</div><div class="cc-list">' +
-      (both.length ? both.map(lab).join('') : '<span class="cc-more">无</span>') + '</div></div>' +
-    /* R100z230（用户 2026-10-27「文字太多」）：这两段差异说明原来各 61 / 42 字直接摊在名单上方，
-       每段都要读完才知道下面在列什么。现在标题只留「他多做几层 / 被他剔掉的」，
-       五条具体规则挂 title + 折叠——名单本身才是内容，规则差异是核对用的。 */
+      chipsOf(both) + '</div></div>' +
+    /* R100z230（用户 2026-10-27「文字太多」）：差异说明原来各 61 / 42 字摊在名单上方，
+       现在收进折叠、标题只留一句「谁有谁没有」。
+       R100z301（用户 2026-11-03 截图「格式不一致」）：两段原来一个从**陈学长的条件**正面写
+       （「他多做的几层」）、一个从**被剔除的原因**反面写（「被他剔掉的」），方向相反，
+       并排看像两套标准。改成同一句式：都是「陈学长的条件 → 所以谁有谁没有」，
+       条目用同一个「／」分隔、结尾同一句「所以…有、…没有」。 */
     '<div class="cc-sec"><div class="cc-t">只有陈学长选中（' + co.length + '）' +
-      '<details class="cc-why"><summary>他多做的几层</summary>' +
-      '<div class="cc-why-x">首板也算 ／ 断板日放量 ≥2 倍且<b>不设上限</b>（断板卡砍在 3.5 倍）／ ' +
-      '只比 T+2 一根缩量、不看趋势 ／ 洗盘 ≤3 日 ／ 破位与 MA5 各给容忍度（2% / 3%）。' +
-      '注意方向不全是「他更严」——放量上限与缩量根数这两条比断板反包更松。</div></details></div>' +
-      '<div class="cc-list">' + (co.length ? co.map(lab).join('') : '<span class="cc-more">无</span>') + '</div></div>' +
+      '<details class="cc-why"><summary>他有、断板没有</summary>' +
+      '<div class="cc-why-x">陈学长多给的两条：断板日放量<b>不设上限</b>（断板砍在 3.5 倍）／ ' +
+      '只比 T+2 一根缩量、不看趋势。另外他连首板也收、洗盘容忍 3 日、破位与 MA5 各留 2% / 3% 容忍度。' +
+      '所以他有、断板没有。</div></details></div>' +
+      '<div class="cc-list">' + chipsOf(co) + '</div></div>' +
     '<div class="cc-sec"><div class="cc-t">只有断板反包选中（' + doOnly.length + '）' +
-      '<details class="cc-why"><summary>被他剔掉的</summary>' +
-      '<div class="cc-why-x">放量不足 2 倍 ／ 洗盘超 3 日 ／ 收盘破了 T 日最低价 2% ／ ' +
-      '站不稳 5 日线。任一不满足即剔。</div></details></div>' +
-      '<div class="cc-list">' + (doOnly.length ? doShow : '<span class="cc-more">无</span>') + '</div></div>' +
+      '<details class="cc-why"><summary>断板有、他没有</summary>' +
+      '<div class="cc-why-x">他的硬条件：放量 ≥2 倍 ／ 洗盘 ≤3 日 ／ 收盘不破 T 日最低价 2% ／ ' +
+      '站稳 5 日线。任一条不满足就剔，所以断板有、他没有。</div></details></div>' +
+      '<div class="cc-list">' + chipsOf(doOnly) + '</div></div>' +
     '</details>' +
     '<div class="cc-sec"><div class="cc-t">留痕回测进度</div>' +
       '<div class="cc-note">起始 <b>' + esc(tr.since || '—') + '</b> ｜ 已结算 <b>' + (tr.settledN || 0) +

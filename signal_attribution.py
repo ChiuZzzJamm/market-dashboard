@@ -42,7 +42,7 @@ AI 预测。它们**各自独立推荐**，但从来没有人回答一个最基�
     python3 signal_attribution.py            # 登记今日 + 回算 + 写 data.js
     python3 signal_attribution.py --view     # 只打印统计，不登记
     python3 signal_attribution.py --dry      # 不写盘
-    python3 signal_attribution.py --backfill 80   # 从 git 历史补「今日可下单」清单（幂等）
+    python3 signal_attribution.py --backfill 80   # 从 git 历史补「开盘精选」清单（幂等）
     python3 signal_attribution.py --self-test
 """
 import argparse
@@ -91,21 +91,25 @@ SRC_LABEL = {
     'harmonic': '谐波形态',
     'accumulation': '主力吸筹',
     # R100z255：全站唯一「明确告诉你现在能买」的清单，此前是唯一没有台账的源。
-    'buy': '今日可下单',
+    # R100z301（用户 2026-11-03「今日可下单是不是开盘精选？是的话就改成开盘精选」）：
+    # 是——它就是 9:45 那步「🌟 开盘精选」里带买点的那批（`duanban.star.buyList`），
+    # 换名是为了让台账这一行和页面上的卡片同名，不再出现「同一份清单两个名字」。
+    # 注意与 16:00 那张「💵 明日可下单」卡片区分：那张是收盘后给下一交易日用的挂单价。
+    'buy': '开盘精选',
     # R100z297：按来源池拆开
-    'buy_duanban': '今日可下单·断板确认',
-    'buy_chen': '今日可下单·陈学长放宽',
-    'buy_tech': '今日可下单·技术池',
-    'buy_other': '今日可下单·其他来源',
+    'buy_duanban': '开盘精选·断板确认',
+    'buy_chen': '开盘精选·陈学长放宽',
+    'buy_tech': '开盘精选·技术池',
+    'buy_other': '开盘精选·其他来源',
     # R100z299c：与上面四个「按来源」的子行不同，这一行是**按当时能不能下单**过滤的同一批票——
     # 清单全部 vs 现价真落在买区里的。两者只差一个 state 字段，但答案差很远。
-    'buy_zone': '今日可下单·当时在买区内',
+    'buy_zone': '开盘精选·当时在买区内',
 }
 
 # 页面展示顺序（用户 2026-10-26 指定）：七个指标逐行分开，不再合并成「机械池」一行。
 # 不在这个元组里的 src 一律不展示——powerScreen（九门）已废弃，台账里还留着 30 条历史记录，
 # 不过滤就会在页面上挂一行永久「累积中」的死指标。
-# R100z255：'buy'（今日可下单）排在最后，**不动用户点名的那七个的顺序**——
+# R100z255：'buy'（开盘精选）排在最后，**不动用户点名的那七个的顺序**——
 # 它是一个「组合清单」而非第八个指标，放在末尾既不打乱原有对照，又能一眼看到
 # 「这份清单按自己的口径算下来是什么水平」。
 # R100z297（用户 2026-11-03「是汇总的话拆开」）：duanban / chen / buy 三个汇总行下面
@@ -228,7 +232,7 @@ def snapshot(D):
         for x in cp.get(pool) or []:
             _put(key, x.get('code'), x.get('name'), x.get('sector'))
 
-    # ---- R100z255：今日可下单（duanban.star.buyList） ----
+    # ---- R100z255：开盘精选（duanban.star.buyList） ----
     # 为什么单独登记这一源：它是全站唯一「明确告诉你现在能买、买在哪个价带、破哪个价撤」的清单，
     # 却也是唯一没有任何后续台账的出口——24.109 用**回测**证明过各源 edge 大小，
     # 但「按这套清单真买会怎样」从来没被自己的实盘快照验证过。剔掉横盘启动源
@@ -406,7 +410,7 @@ def compute(L, D):
 
     def _fill(st, it, day, mode, px):
         """把一条样本累加进某个统计桶。抽成函数是因为同一条样本可能进两个桶
-        （如「今日可下单」全部 + 「当时在买区内」子集）——复制一遍算法必然漂移。"""
+        （如「开盘精选」全部 + 「当时在买区内」子集）——复制一遍算法必然漂移。"""
         bars = A.norm_bars(K.get(it.get('code')))
         if len(bars) < 2:
             return False
@@ -616,7 +620,7 @@ def verdict_of(r):
 
 
 def backfill_buy(L, D, commits=80, quiet=False):
-    """从 git 历史 data.js 补登记过去的「今日可下单」清单（幂等）。
+    """从 git 历史 data.js 补登记过去的「开盘精选」清单（幂等）。
 
     ## 为什么需要这个口
 
@@ -787,7 +791,7 @@ def build(D, do_snapshot=True, backfill=0):
 
     # R100z255：清单这一行的入场时点与另外七行**不同**，必须自己说出来。
     # 其余七行是「16:00 复盘时选出的票」，最早能买是次日开盘（所以 x = T+1 开盘买入）。
-    # 而「今日可下单」是 9:45 出的、当天就能在买区内下单，真实成交落在当日盘中——
+    # 而「开盘精选」是 9:45 出的、当天就能在买区内下单，真实成交落在当日盘中——
     # 台账里没有盘中价，只有收盘价，所以两列都是**近似**：T+h 收盘（偏保守或偏乐观）
     # 与 T+1 开盘（晚一天）。不写这句，读者会把「0 日买入」当成它的真实成绩。
     _bn = (summ.get('buy') or {}).get('n') or 0
@@ -836,7 +840,7 @@ def build(D, do_snapshot=True, backfill=0):
                   '不拿清单全量顶上。')
 
     _buy_note = (
-        '「今日可下单」不是第八个指标，是「照这份清单真买」的成绩：成分全部来自上面几行（本次：'
+        '「开盘精选」不是第八个指标，是「照这份清单真买」的成绩：成分全部来自上面几行（本次：'
         + _comp + '），与它们重叠是刻意的——那边量「池选的票赚不赚」，这里量「9:45 按买区下单赚不赚」。'
         + _strict_txt +
         '按清单口径记账：买价 = 清单生成时抓到的现价（9:45 那步的盘口价），'
@@ -890,7 +894,7 @@ def build(D, do_snapshot=True, backfill=0):
                      'xBasis': ('可执行：T+1 开盘买入 → 买入日之后第 h 个交易日收盘卖出'
                                  '（1 日 = 次日收盘卖；A 股 T+1 交割，当天买当天卖不成立）。'
                                  'AI 预测例外：08:30 盘前发布，按当日开盘买入'),
-                     'buyBasis': '今日可下单（= 9:45 开盘精选的买点清单）：买价取清单生成时的现价，'
+                     'buyBasis': '开盘精选（9:45 那份带买点的清单）：买价取清单生成时的现价，'
                                  '卖点为次日收盘（T+1 交割）'},
         'buyNote': _buy_note,
         'bySrc': summ,
@@ -1129,7 +1133,7 @@ def main():
     ap.add_argument('--self-test', action='store_true')
     ap.add_argument('--json', action='store_true')
     ap.add_argument('--backfill', type=int, default=0, metavar='N',
-                    help='从 git 历史 data.js 回填过去 N 个提交里的「今日可下单」清单（幂等，只补这一源）')
+                    help='从 git 历史 data.js 回填过去 N 个提交里的「开盘精选」清单（幂等，只补这一源）')
     a = ap.parse_args()
     if a.self_test:
         return self_test()
