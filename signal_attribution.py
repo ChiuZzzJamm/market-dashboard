@@ -95,11 +95,16 @@ SRC_LABEL = {
 # R100z297（用户 2026-11-03「是汇总的话拆开」）：duanban / chen / buy 三个汇总行下面
 # **紧跟各自的子池行**（缩进由前端按 `sub_of` 处理）。汇总行保留历史（改版前的条目
 # 没有池归属，拆不开），子行从改版当天起重新积累——两边不重复计数。
+# R100z298（用户 2026-11-03 截图圈出：「今日可下单·断板确认 / ·陈学长放宽 不是重复的吗」）：
+# buy 的四个子行**不再单独占行**。原因不是数据错，是它们与上面「断板反包·确认池」
+# 「陈学长·放宽池」是同一批票的子集——并排摆着会让人以为是两组独立成绩。台账里仍按
+# 来源分开登记（note 里报构成用），只是页面压成一行：`buy` 回答的是「照清单买赚不赚」，
+# 上面几行回答的是「池选出来的票赚不赚」，两个问题，一行足够。
 ROW_ORDER = ('ai', 'mech',
              'duanban', 'duanban_confirmed', 'duanban_watching',
              'chen', 'chen_strict', 'chen_loose',
              'breakoutPool', 'harmonic', 'accumulation',
-             'buy', 'buy_duanban', 'buy_chen', 'buy_tech', 'buy_other')
+             'buy')
 
 # 子池行 → 它的父汇总行。前端据此把子行缩进、去掉重复的「断板反包」前缀感。
 SUB_OF = {
@@ -274,7 +279,10 @@ def bench_ret(bench, entry_day, n):
 
 
 def exec_ret(bars, entry_day, h):
-    """**可执行口径**：T+1 开盘买入 → T+h 收盘卖出（%）。h=1 即当日收盘卖。
+    """**可执行口径**：T+1 开盘买入 → 买入日之后第 h 个交易日收盘卖出（%）。
+
+    h=1 ＝ 次日收盘卖（买入日 b 的下一交易日）—— 这是 A 股 T+1 交割下最早的合法卖点。
+    （R100z298 前写的是 `T+h 收盘卖`，h=1 会退化成「当天开盘买、当天收盘卖」，卖不掉。）
 
     ## 为什么必须另算一套
 
@@ -295,7 +303,12 @@ def exec_ret(bars, entry_day, h):
             break
     if idx is None:
         return None
-    i0, i1 = idx + 1, idx + h        # 买入 = 次日开盘；卖出 = 第 h 日收盘
+    # R100z298（用户 2026-11-03「交易都是 T+1 的，你次日开盘买、次日收盘同时卖怎么卖得出去」）：
+    # 原写 `i1 = idx + h`，h=1 时 i0 == i1 == idx+1 —— **当天开盘买、当天收盘卖**，
+    # A 股 T+1 交割下根本卖不掉，等于给 1 日列编了一个不存在的收益。
+    # 改成 `i1 = i0 + h`：买入日 b = idx+1，卖出 = b 之后第 h 个交易日收盘。
+    # h=1 → 次日（b+1）收盘，这才是「持 1 日」在 A 股的真实最早卖点。
+    i0, i1 = idx + 1, idx + 1 + h
     if i1 >= len(bars) or i0 >= len(bars):
         return None
     op = bars[i0][1]
@@ -733,13 +746,32 @@ def build(D, do_snapshot=True, backfill=0):
     # 再看这一行，它已经是当天早上的过期快照。不写清生成时刻，读者会拿它当「明日清单」。
     _st = (D.get('duanban') or {}).get('star') or {}
     _st_when = ('%s %s' % (_st.get('date') or '', _st.get('time') or '')).strip()
+    # R100z298（用户 2026-11-03「同色圈出来的不是重复的吗？为什么还要合并成今日可下单」）：
+    # 子行不再占页面行（见 ROW_ORDER 注释），构成改由这里一句话说清——否则读者看不出
+    # 60% 是哪个池贡献的；同时**明说重叠是刻意的**，两个问题不同，不是统计错误。
+    _parts = []
+    for _k, _zh in (('buy_duanban', '断板反包·确认池'), ('buy_chen', '陈学长池'),
+                    ('buy_tech', '技术池'), ('buy_other', '其他来源')):
+        _r = summ.get(_k) or {}
+        if not _r.get('n'):
+            continue
+        _w = ((_r.get('x') or {}).get('1') or {}).get('win')
+        _parts.append('%s %d 条%s' % (_zh, _r['n'],
+                      ('（1 日胜率 %d%%）' % int(round(_w * 100)) if _w is not None else '')))
+    _comp = '、'.join(_parts) if _parts else '本次清单为空'
+    _strict_n = len(((D.get('chenPool') or {}).get('strict') or []))
+    _strict_txt = ''
+    if not _strict_n:
+        _strict_txt = ('陈学长严格池本次 0 只，所以上面没有它——它排在清单最前，有票就先收它。')
     _buy_note = (
-        '「今日可下单」这行的入场时点与其余七行不同：清单' + ('（' + _st_when + ' 生成）' if _st_when else ' 9:45')
-        + '当天就能在买区内下单，而台账只有收盘价。所以两列都是近似——T+h 收盘是「当日收盘才买」（偏晚），'
-        'x 是「次日开盘才买」（更晚），真实成交价落在两者之间。'
-        '这份清单只在生成当日有效：19:30 的叙事步只更新断板池（那是给下一交易日用的），'
-        '不改这份清单，所以收盘后再看它就是当天早上的快照，不要当成明日清单。'
-        '按清单口径已结算 ' + str(_bn) + ' 笔；样本满 ' + str(MIN_N) + ' 笔且覆盖 '
+        '「今日可下单」不是第八个指标，是「照这份清单真买」的成绩：成分全部来自上面几行（本次：'
+        + _comp + '），与它们重叠是刻意的——那边量「池选的票赚不赚」，这里量「9:45 按买区下单赚不赚」。'
+        + _strict_txt +
+        '两列都是近似（台账只有收盘价）：真实成交价落在「当日收盘买」与「次日开盘买」之间。'
+        '清单' + ('（' + _st_when + ' 生成）' if _st_when else ' 9:45')
+        + '只在生成当日有效——19:30 只更新断板池（那是给下一交易日用的）、不动它，'
+        '收盘后看到的就是当天早上的快照，别当明日清单。'
+        '已结算 ' + str(_bn) + ' 笔，满 ' + str(MIN_N) + ' 笔且覆盖 '
         + str(MIN_DAYS) + ' 个交易日才给判定。'
     )
 
@@ -751,7 +783,7 @@ def build(D, do_snapshot=True, backfill=0):
         ranking.append({'src': s, 'label': r['label'], 'n': r['n'], 'days': r['days'],
                         'ret5': r['h']['5'].get('ret'), 'exc5': e5,
                         'win5': r['h']['5'].get('winExc'),
-                        # 可执行口径：1 日（当日收盘卖）/ 2 日（次日收盘卖）
+                        # 可执行口径：1 日＝买入日次日收盘卖 / 2 日＝后日收盘卖（T+1 交割）
                         'ret1': x1.get('ret'), 'win1': x1.get('win'),
                         't1': x1.get('tDaily'), 't1raw': x1.get('t'),
                         'days1': x1.get('days'),
@@ -781,7 +813,7 @@ def build(D, do_snapshot=True, backfill=0):
                      'bench': '全市场等权（1300+ 只当日涨幅中位数累乘）',
                      'excess': '标的收益 − 同期基准收益（仅「收盘买入」口径有）',
                      'hBasis': '收盘买入：登记日收盘 → T+h 收盘（旧口径，复盘写完时已收盘，买不到）',
-                     'xBasis': '可执行：T+1 开盘 → T+h 收盘（1 日 = 当日收盘卖，2 日 = 次日收盘卖）',
+                     'xBasis': '可执行：T 日次日开盘买入 → 买入日之后第 h 个交易日收盘卖出（1 日 = 次日收盘卖；A 股 T+1 交割，当天买当天卖不成立）',
                      'buyBasis': '今日可下单：清单 9:45 生成、当天可下单；两列均为近似，'
                                  '真实成交价落在「当日收盘买」与「次日开盘买」之间'},
         'buyNote': _buy_note,
@@ -1046,8 +1078,8 @@ def main():
         print('[来源] ' + out['dataSourceNote'])
     print('本台账 %d 个交易日 / %d 条记录｜判定门槛 ≥%d 条且 ≥%d 日'
           % (out['ledger']['dates'], out['ledger']['entries'], MIN_N, MIN_DAYS))
-    print('\n  【可执行口径】T+1 开盘买入（这是唯一买得到的价格）')
-    print('  指标             样本  覆盖    1日(当日收盘卖)      2日(次日收盘卖)     判定')
+    print('\n  【可执行口径】T+1 开盘买入 → 买入日之后第 h 个交易日收盘卖（A股 T+1 交割，当天买当天卖不成立）')
+    print('  指标             样本  覆盖    1日(次日收盘卖)      2日(后日收盘卖)     判定')
     for r in out['ranking']:
         print('  %-14s %4d条/%2d日  %s 胜%3s t=%5s  %s 胜%3s  %s'
               % (r['label'], r['n'], r['days'],

@@ -1300,6 +1300,20 @@
   .fc-hist-sep > span::before { content: ''; display: inline-block; width: 3px; height: 11px;
                                 background: var(--accent-deep); border-radius: 2px;
                                 margin-right: 6px; vertical-align: -1px; }
+  /* R100z298（用户 2026-11-03「看着好复杂，能不能简化」）：台账明细默认收起。
+     曲线 / 5 日胶囊 / 止损跟踪是「想核对时才看」的东西，不该和判定结论抢首屏。 */
+  .fc-hist { margin: 18px 0 2px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .fc-hist > summary { cursor: pointer; font-size: var(--fs-sm); font-weight: 700;
+                       color: var(--ink2); letter-spacing: .03em; list-style: none; }
+  .fc-hist > summary::-webkit-details-marker { display: none; }
+  .fc-hist > summary::before { content: '▸'; display: inline-block; width: 14px; color: var(--accent-deep); }
+  .fc-hist[open] > summary::before { content: '▾'; }
+  .fc-hist > summary > span { font-weight: 400; color: var(--ink2); opacity: .75; }
+  /* 一句话判定：与上面三张大数字同色系但更实，让「所以能不用它」第一眼就有答案 */
+  .fc-verdict { margin: 10px 0 2px; padding: 7px 10px; border-radius: var(--r-note);
+                background: var(--accent-soft); border-left: 3px solid var(--accent-deep);
+                font-size: var(--fs-base); line-height: 1.6; color: var(--ink); }
+  .fc-verdict b { margin-right: 6px; }
   /* 窄屏：hero 改两列 + 第三张跨行。
      三列各约 120px 时「严格命中 66 条 / 11 日」会被折断成三行，读不下去。
      （R100z221 删掉 .fc-h2/.fc-sub 的窄屏收起规则：标题副句「· 谁准谁不准」已整句删除，
@@ -3859,7 +3873,7 @@ function renderStopTrack() {
    R100z190：加「1 日胜率」并把它排到第一列。起因是用户直接问：
    「次日选的标的胜率连 60% 都不到，那前一日复盘的内容是什么？」
    旧表只有 5 日收益/5 日超额，那是**买入价不可得**的口径（登记日收盘买，
-   而复盘写完时已经收盘）；真正回答「照它买赚不赚」的是 T+1 开盘买、当日收盘卖。
+   而复盘写完时已经收盘）；真正回答「照它买赚不赚」的是 T+1 开盘买、买入日次日收盘卖（R100z298：A 股 T+1 交割，当天买当天卖不成立）。
    所以这张表现在先给可执行口径，再给旧口径，并且把 60% 这条线画出来。 */
 function renderSignalPerf() {
   /* R100z202（用户 2026-10-25：「复盘台账页面…看着有点太乱了，文字有点太多了，
@@ -3971,7 +3985,7 @@ function renderSignalPerf() {
   if (mixed.length) {
     h += '<div class="pf-sub">注：' + mixed.length + ' 个指标的 5 日收益为负、超额为正——' +
       '它们选的票这 5 天里也跌了，但跌得比全市场少。普跌环境里这叫相对强弱，不叫无效。' +
-      '但「判定」那一列<b>不看这一列</b>：它看的是可执行口径（T+1 开盘买、当日收盘卖）的' +
+      '但「判定」那一列<b>不看这一列</b>：它看的是可执行口径（次日开盘买、买入日次日收盘卖）的' +
       '1 日胜率与日聚类 t——因为 5 日收益用的是「登记日收盘价」，那个价格复盘写完时已经不存在了。</div>';
   }
 
@@ -4065,6 +4079,20 @@ function renderForecastScore() {
     cell('开盘前瞻均分', num(fw.scoreAvg) === null ? '—' : fw.scoreAvg.toFixed(2),
          tone(fw.scoreAvg, 0.5), '合格线 0.50 · 过线 ' + (fw.passDays || 0) + '/' + (fw.days || 0) + ' 天') +
     '</div>';
+  /* R100z298（用户 2026-11-03「这个模块看着好复杂，能不能简化，突出重点信息」）：
+     原来第一眼是 11 根条形 + 4 条结论 + 5 个日期胶囊 + 一张曲线，读者得自己拼结论。
+     把脚本算好的 verdict（一句话判定）提到首屏——它就是这张卡要回答的唯一问题。 */
+  if (F.verdict) {
+    // 整句照搬脚本的判定（它自己会随命中率变温和/严厉），只把「评定为「弱有效」」这半句加粗
+    var vt = String(F.verdict);
+    var gd = String(F.grade || '');
+    if (gd && vt.indexOf(gd) > 0) {
+      vt = esc(vt).replace(esc(gd), '<b>' + esc(gd) + '</b>');
+      h += '<div class="fc-verdict">' + vt + '</div>';
+    } else {
+      h += '<div class="fc-verdict">' + esc(vt) + '</div>';
+    }
+  }
 
   // 一条 bar：左边维度名（+样本数），中间命中率条，右边宽口径。flag 是「这组数据本身有问题」的标记，
   // 例如「高置信反而比中置信低 10 个百分点」——那是过度自信的直接证据，必须贴在名字后面。
@@ -4088,22 +4116,17 @@ function renderForecastScore() {
   var hi = null, mid = null;
   byConf.forEach(function (c) { if (c.conf === '高') hi = c; if (c.conf === '中') mid = c; });
   var confBad = (hi && mid && (mid.strictHit || 0) - (hi.strictHit || 0) >= 10);
-  h += '<div class="fc-sec">按置信度（AI 自己标的把握程度）</div>';
+  h += '<div class="fc-sec">分档命中率（置信度 · 方向）</div>';
   byConf.forEach(function (c) { h += bar(c.conf + '置信', c, (confBad && c.conf === '高') ? '反向指标' : ''); });
 
   // 方向：看涨 vs 看跌的能力差，决定「哪些结论能当买入理由」
   var up = null, dn = null;
   byDir.forEach(function (c) { if (c.dir === 'up') up = c; if (c.dir === 'down') dn = c; });
   var dirBad = (up && dn && (dn.strictHit || 0) - (up.strictHit || 0) >= 15);
-  h += '<div class="fc-sec">按方向（这套判断擅长哪边）</div>';
   byDir.forEach(function (c) { h += bar(c.label || c.dir, c, (dirBad && c.dir === 'up') ? '明显偏弱' : ''); });
 
-  var r5 = s.recent5 || {};
-  if (r5.n) {
-    h += '<div class="fc-sec">近 ' + (F.criteria || {}).recentDays + ' 日' +
-      (r5.range && r5.range.length === 2 ? '（' + esc(r5.range[0]) + ' ~ ' + esc(r5.range[1]) + '）' : '') + '</div>' +
-      bar('近 ' + (F.criteria || {}).recentDays + ' 日', r5, '');
-  }
+  /* R100z298：原有一段「近 5 日」单条条形，与下方「📅 最近 5 个预测日」讲同一件事，
+     保留下面那份（有日期、能逐日看），删掉这里的重复条。 */
   if (byConf.length || byDir.length) {
     h += '<div class="rv-legend">竖线＝50%（抛硬币）；条短于线＝不如随机。带 * 的样本 &lt; 5 条，百分比是巧合。</div>';
   }
@@ -4171,8 +4194,11 @@ function renderForecastScore() {
      内容高度重叠（都在讲命中率/分档/方向/开盘三项），并排看像两份文档。合并成一张。
      下面两个容器由 renderCalHistory() / renderStopTrack() 异步填充，本函数只负责给位置——
      容器 id 保持 `cal-hist` / `st-track-box` 不动，填充逻辑与口径一个字没改。 */
-  h += '<div class="fc-hist-sep"><span>台账细节</span></div>' +
-       '<div id="cal-hist" class="cal-hist"></div><div id="st-track-box"></div>';
+  /* R100z298：pills / 组合曲线 / 止损跟踪属于「想核对时才看」的明细，默认收起。
+     曲线在 clientWidth=0 时不画（initPfChart 自带判断），所以这里挂 ontoggle 补一次。 */
+  h += '<details class="fc-hist" ontoggle="if(this.open&&window.initPfChart){try{initPfChart()}catch(e){}}">' +
+       '<summary>台账明细 <span>· 最近 5 日命中 / 组合曲线 / 止损跟踪</span></summary>' +
+       '<div id="cal-hist" class="cal-hist"></div><div id="st-track-box"></div></details>';
   return h + '</div>';
 }
 
