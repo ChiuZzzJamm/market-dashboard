@@ -2,12 +2,12 @@
  "ok": true,
  "nameSrc": "tx",
  "nameSrcDetail": {
-  "tx": 337,
+  "tx": 316,
   "sina": 0,
   "em": 0
  },
- "date": "2026-11-02",
- "checked": 337,
+ "date": "2026-11-03",
+ "checked": 316,
  "liftWindow": [
   2,
   5
@@ -17,38 +17,24 @@
  "dims": {
   "st": {
    "status": "ok",
-   "cover": "行情名源（腾讯337/新浪0/东财0）337/337 只取到"
+   "cover": "行情名源（腾讯316/新浪0/东财0）316/316 只取到"
   },
   "cut": {
    "status": "ok",
-   "cover": "公告源 337/337 只取到（东财337/巨潮0）"
+   "cover": "公告源 316/316 只取到（东财316/巨潮0）"
   },
   "lift": {
    "status": "ok",
-   "cover": "解禁源 337/337 只取到"
+   "cover": "解禁源 316/316 只取到"
   },
   "pledge": {
    "status": "ok",
-   "cover": "质押源 337/337 只取到（仅供参考）"
+   "cover": "质押源 316/316 只取到（仅供参考）"
   }
  },
  "verdict": "full",
  "uncheckedDims": [],
  "blacklist": {
-  "600184": {
-   "name": "光电股份",
-   "reasons": [
-    "2026-10-14 减持已结束（利空出尽）"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 0.6%（截至 2025-11-07）"
-   ],
-   "severity": "yellow",
-   "progress": [
-    "减持已结束（利空出尽）"
-   ]
-  },
   "600732": {
    "name": "爱旭股份",
    "reasons": [
