@@ -41,6 +41,8 @@
                  —— 「检查器自己坏了」不报错，只安静地变绿，只能靠拿已知字段反问它来发现
   K16 回测未来函数  回测/研究脚本的判定窗口右端不得取「全长 n」切片（`x[a:n]`，n=len 全序列）
                  —— chen_study S7 就这样把止损样本从分母抹掉，胜率 83.9%（R100z289/293）
+  K17 --help 守卫  会写 data.js 的脚本必须接住 `--help`（argparse / 显式判断 / _help_guard）
+                 —— validate_stocks 手写 sys.argv，`--help` 被忽略后直接重写 data.js（R100z296）
 
 ★ 写规则时踩过的两个坑（别重犯）：
   1. **`s.get(...)` 不是网络调用**：`s` 在多数脚本里是 dict，`s.get('f5Tier')` 是 dict.get。
@@ -51,7 +53,7 @@
 用法:
     python3 check_code.py            # 全部检查（FAIL 时 exit 1）
     python3 check_code.py --verbose  # 附明细（谁引用了谁、每个写者的原子实现位置）
-    python3 check_code.py --only K3  # 只跑某一类（K1-K16）
+    python3 check_code.py --only K3  # 只跑某一类（K1-K17）
 """
 import argparse
 import ast
@@ -1788,6 +1790,53 @@ def k16_backtest_lookahead(r, verbose=False):
                     'chen_study 那个 83.9%% 的坑没有复发形态' % len(targets))
 
 
+def k17_help_guard(r, verbose):
+    """K17：会写 data.js 的脚本必须接住 `--help`（R100z296）。
+
+    2026-11-03 实测踩到的坑：`validate_stocks.py` 手写 sys.argv 解析、没有 argparse，
+    于是 `--help` 被当普通参数忽略，直奔默认（非 --no-fix）路径 ——
+    **全量校验并重写 data.js**（把 85 处 `probability: 52` 归一成 `52.0`）。
+    「想查参数」这个最无害的动作，变成了「改线上数据」。
+
+    判据三选一即可（任一成立算通过）：
+      a) 用了 argparse（默认自带 -h/--help）；
+      b) 显式判断 `'--help' in sys.argv` / `'-h' in sys.argv`；
+      c) 有 `_help_guard()` 这类封装。
+    `common.py` 是库、无 __main__ 入口，豁免。
+
+    判 WARN 不判 FAIL：warn 能进体检报告，但不会拦部署（部署链路自己都带 --no-fix，
+    正常情况下不会踩）；真正的目的是让「新增写盘脚本忘了接 --help」在体检里看得见。
+    """
+    EXEMPT = {'common.py'}          # 库，无入口
+    bad = []
+    for f in DATA_WRITERS:
+        if f in EXEMPT:
+            continue
+        path = os.path.join(HERE, f)
+        if not os.path.exists(path):
+            continue
+        src = open(path, encoding='utf-8', errors='ignore').read()
+        # 注意：`_help_guard` 要匹配**调用行**（`    _help_guard()`），不能只匹配字符串。
+        # 首版写成 `'_help_guard' in src`，负向测试立刻暴露问题：只删调用、留着函数定义
+        # 也照样 PASS —— 判据太松等于没有。这类「只看符号在不在、不看它有没有被用」
+        # 的检测，是本体论错误里最常见的一种（同 24.12b）。
+        ok = (re.search(r'\bargparse\b', src)
+              or re.search(r"['\"]--help['\"]\s+in\s+sys\.argv", src)
+              or re.search(r"['\"]-h['\"]\s+in\s+sys\.argv", src)
+              or re.search(r'(?m)^\s+_help_guard\(\)\s*$', src))
+        if not ok:
+            bad.append(f)
+    if bad:
+        for f in bad:
+            r.warn('K17', '%s 会写 data.js 但没接住 `--help` —— 探参数会直接跑主流程'
+                           '（validate_stocks 2026-11-03 就这样重写了 data.js）。'
+                           '加 argparse，或 `if \'--help\' in sys.argv: print(__doc__); raise SystemExit(0)`'
+                           % f)
+    else:
+        r.ok('K17', '%d 个 data.js 写者全部接住 `--help`（argparse / 显式判断 / _help_guard）——'
+                    '「探参数变成改数据」这一类不会再发生' % (len(DATA_WRITERS) - len(EXEMPT)))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--verbose', action='store_true')
@@ -1829,6 +1878,8 @@ def main():
         k15_selftest(r, a.verbose)
     if not only or only == 'K16':
         k16_backtest_lookahead(r, a.verbose)
+    if not only or only == 'K17':
+        k17_help_guard(r, a.verbose)
     return r.dump()
 
 

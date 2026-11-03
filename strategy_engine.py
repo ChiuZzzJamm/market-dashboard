@@ -308,5 +308,18 @@ def main():
         return 0
 
 
+def _help_guard():
+    """R100z296：`--help` / `-h` 只打用法，绝不执行主流程。
+
+    本脚本会写 data.js 顶层 strategy（聚合政策/AI预测/断板三类信号）。手写 sys.argv
+    解析时 `--help` 会被当普通参数忽略、直奔默认流程（validate_stocks 同类坑）。
+    """
+    import sys as _sys
+    if '--help' in _sys.argv or '-h' in _sys.argv:
+        print(__doc__ or '(本脚本无说明)')
+        raise SystemExit(0)
+
+
 if __name__ == '__main__':
+    _help_guard()
     sys.exit(main())

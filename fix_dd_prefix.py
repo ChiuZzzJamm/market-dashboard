@@ -120,5 +120,18 @@ def main():
     return 1 if left else 0
 
 
+def _help_guard():
+    """R100z296：`--help` / `-h` 只打用法，绝不执行主流程。
+
+    本脚本会写 data.js（本节点），手写 sys.argv 解析时 `--help` 会被当普通参数
+    忽略、直奔默认流程（与 validate_stocks 同一类坑：探参数变成改数据）。
+    """
+    import sys as _sys
+    if '--help' in _sys.argv or '-h' in _sys.argv:
+        print(__doc__ or '(本脚本无说明)')
+        raise SystemExit(0)
+
+
 if __name__ == "__main__":
+    _help_guard()
     sys.exit(main())

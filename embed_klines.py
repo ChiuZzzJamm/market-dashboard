@@ -481,5 +481,19 @@ def main():
     return 0
 
 
+def _help_guard():
+    """R100z296：`--help` / `-h` 只打用法，绝不执行主流程。
+
+    本脚本会写 data.js / 花 LLM 额度 / 全市场抓 K 线，手写 sys.argv 解析时
+    `--help` 会被当普通参数忽略、直奔默认流程（与 validate_stocks 同一类坑：
+    探参数变成改数据）。这里显式接住，用法直接打模块 docstring。
+    """
+    import sys as _sys
+    if '--help' in _sys.argv or '-h' in _sys.argv:
+        print(__doc__ or '(本脚本无说明)')
+        raise SystemExit(0)
+
+
 if __name__ == "__main__":
+    _help_guard()
     sys.exit(main())
