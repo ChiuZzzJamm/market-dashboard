@@ -38,6 +38,7 @@ import argparse
 import json
 import os
 import sys
+from datetime import datetime
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ROOT)
@@ -375,6 +376,18 @@ def build_verdict(sector, fwd, enough):
 
 # ---------------------------------------------------------------- 组装
 
+def _now_str():
+    """本脚本自己的生成时间（本机时区）。
+
+    R100z296 新增：main() 原先把**顶层 `updatedAt`** 抄进 `forecastScore.updatedAt`
+    （`r['updatedAt'] = D.get('updatedAt') or ''`）。顶层那个值是 refresh_stamp.py
+    从各个模块里挑最新的一格拼出来的，谁最后更新就是谁的文案 —— 实测当晚写成了
+    「2026-11-03 19:42（止损跟踪 已更新）」，于是成绩单下面挂着「止损跟踪」的戳。
+    读者看成绩单会误以为它是止损模块更新的。这里一律用本脚本自己的时间。
+    """
+    return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+
 def build(D=None):
     log, op = load_log()
     rows = []
@@ -399,7 +412,11 @@ def build(D=None):
     usage = build_usage(sector, conf, dirs, fwd, enough)
 
     return {
-        'updatedAt': common.now_str() if hasattr(common, 'now_str') else '',
+        # R100z296：原写 `common.now_str() if hasattr(common, 'now_str') else ''` ——
+        # common.py 根本没有 now_str，hasattr 恒 False，所以这里**永远是空串**，
+        # 看着像有兜底、实际是死分支。改成真实时间（main() 也会用同一个 helper 覆盖，
+        # 两处保持一致，避免「读 build() 以为有值、实际靠 main() 补」的误会）。
+        'updatedAt': _now_str(),
         'asOf': (sorted(log.keys())[-1] if log else None),
         'criteria': {
             'minN': MIN_N, 'minDays': MIN_DAYS, 'recentDays': RECENT_DAYS,
@@ -637,7 +654,7 @@ def main():
     if D is None:
         print('[FAIL] data.js 解析失败')
         return 1
-    r['updatedAt'] = D.get('updatedAt') or ''
+    r['updatedAt'] = _now_str()
     D['forecastScore'] = r
     common.write_data_js(base, D, label='[forecastScore]')
     print('\n[OK] forecastScore 已写入 data.js')

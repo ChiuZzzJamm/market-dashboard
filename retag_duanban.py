@@ -27,7 +27,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import check_duanban as cd  # noqa: E402
 import common  # noqa: E402  R100z285：清临时文件用 purge_tmp（不删，见 common.purge_tmp）
 
-TZ8 = cd.TZ8 if hasattr(cd, "TZ8") else None
+# R100z296 清理：`TZ8 = cd.TZ8 if hasattr(cd, "TZ8") else None` 删除。
+# check_duanban 里根本没有 TZ8（全库零定义），定义后也零引用 —— 与上面 BAND 同一类死常量：
+# 它会让人以为「本脚本按东八区取时」，实际时间全走 datetime.now()。
+# 保留 hasattr 兜底只会让读者更确信那个不存在的约定是真的。
 
 # R100z179：原子写盘前要先 node --check 临时文件，node 路径与其它脚本同源。
 _NODE_CAND = "/Users/loccco/.workbuddy/binaries/run-node"

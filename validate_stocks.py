@@ -1648,7 +1648,31 @@ def check_sector_board(D, scope='all'):
     return fails, warns
 
 
+def _print_help():
+    """`--help` / `-h`：只打用法，绝不执行校验。
+
+    R100z296（2026-11-03 实测踩到）：本脚本是**手写 sys.argv 解析、没有 argparse**，
+    于是 `--help` 不被识别、被当普通参数忽略，直接走默认（非 --no-fix）路径 ——
+    **全量校验并重写 data.js**（实测把 85 处 `probability: 52` 归一成 `52.0`）。
+    一个会写盘的脚本对 `--help` 不设防，是「最小惊讶原则」的反面：任何人想查参数
+    就会改掉线上数据文件。这里显式接住，用法与风险一次说清。
+    """
+    print(__doc__ or '')
+    print("""
+用法：
+  python3 validate_stocks.py --no-fix [--scope all|ai|us|star] [--json]   # 只读校验（自动化都用这个）
+  python3 validate_stocks.py [--scope ...]                                # 自动修复并**重写 data.js**
+  python3 validate_stocks.py --help | -h                                  # 只看用法，不动任何文件
+
+⚠️ 不带 --no-fix 会重写 data.js：补 direction / 剔非主板 / probability 归一成
+   round(float(p),1) / 按统一顺序重排。7 条自动化全部带 --no-fix，别手跑默认模式。
+""")
+    sys.exit(0)
+
+
 def main():
+    if '--help' in sys.argv or '-h' in sys.argv:
+        _print_help()
     as_json = '--json' in sys.argv
     # R100z16 --no-fix：纯只读校验，不自动补 direction / 不剔 duanban / 不重排 / 不写盘。
     # 9:45 唯一写入口是 duanban.star，跑默认模式反会被 validate 改掉 duanban 池内

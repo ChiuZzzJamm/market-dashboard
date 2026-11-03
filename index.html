@@ -5008,7 +5008,9 @@ function sectorNewsHtml(name, market) {
 }
 
 /* R100g：弹窗右上角谐波迷你示意图——X-A-B-C-D 五点结构折线 + PRZ 绿带
-   + 止损红虚线 + T1/T2 蓝虚线。数据直接取 harmonic.points/prz/stop/targets。 */
+   + 止损红虚线 + T1/T2 蓝虚线。数据取单个池条目的 points/prz/stop/target1/target2
+   （注意：不是顶层 harmonic.points，也不是 targets —— 每条都在 confirmPool/watchPool 元素上；
+     R100z296 更正旧注释，与实际字段对齐）。 */
 function hzMiniSvg(hz) {
   try {
     var p = hz && hz.points;

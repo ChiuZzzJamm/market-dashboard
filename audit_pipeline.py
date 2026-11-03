@@ -263,7 +263,10 @@ VALIDATE_SCOPES = ("all", "ai", "us", "star")
 PRODUCT_OWNERSHIP = {
     "aiPrediction": {
         "require": ("aiPrediction", "AI 预测", "预测卡"),
-        "note": "19:30 叙事步写回 AI 叙事/概率，前端 AI 预测卡直接用",
+        "note": "AI 预测卡数据源。写者三条、边界不许混：08:30 周二至五**主生成** 6 板块"
+                "（周一复用 22:00 已生成版）、周日 22:00 生成下一交易日版、19:30 **仅**写 "
+                "verification 子字段（其余子字段一律不动）。旧 note 只写「19:30 写回」"
+                "（R100z296 更正：与实现不符，会把 19:30 误当主人）",
     },
     "ashare": {
         "require": ("ashare", "A 股", "A股", "大盘"),
@@ -271,7 +274,10 @@ PRODUCT_OWNERSHIP = {
     },
     "us": {
         "require": ("us", "美股"),
-        "note": "美股行情节点，07:00 / 08:30 两条任务各自负责一段",
+        "note": "美股行情节点。三段分包：07:00 update_us_from_quotes.py 覆盖行情字段"
+                "（+panorama.markets 的 key=us）、08:30 写 bullish/bearish（A股休市则整步跳过）、"
+                "周日 21:00 写五节要闻/outlook/sectorsUp·Down 的 reason；22:00 只读不改"
+                "（R100z296 更正：旧 note 写「07:00 / 08:30 各负责一段」，漏了 21:00 这个五节要闻主写者）",
     },
     "panorama": {
         "require": ("panorama", "全景", "韩", "日"),
@@ -307,7 +313,9 @@ PRODUCT_OWNERSHIP = {
     },
     "openOutlook": {
         "require": ("openOutlook", "开盘前瞻", "前瞻"),
-        "note": "开盘前瞻节点",
+        "note": "开盘前瞻卡。写者两条：08:30 写每日版、周日 22:00 写下一交易日版；"
+                "周日 21:00 严禁写（归 22:00）、19:30 保持既有内容不变"
+                "（R100z296 补：旧 note 只说「开盘前瞻节点」，没写谁维护）",
     },
     "stkKlines": {
         "require": ("stkKlines", "K 线", "K线"),
