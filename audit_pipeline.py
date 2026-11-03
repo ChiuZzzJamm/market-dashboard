@@ -4538,7 +4538,10 @@ def g51_buy_ledger_wiring(r):
     except Exception as e:                                   # noqa: BLE001
         r.warn("G51", f"signal_ledger.json 读取失败，跳过条数核对：{e}")
         return
-    rows = ((led.get("entries") or {}).get(star_date) or {}).get("buy") or []
+    # R100z299c：清单的登记键在 R100z297 已按来源拆成 buy_duanban / buy_chen / … 等，
+    # 只找 `buy` 会把「有记录」误判成「没记录」——闸门自己也得跟着口径走。
+    _g = ((led.get("entries") or {}).get(star_date) or {})
+    rows = [x for k, xs in _g.items() if k.startswith("buy") for x in (xs or [])]
     if not rows:
         r.fail("G51", f"signal_ledger 里没有 {star_date} 的 buy 记录 —— bySrc 有行但台账没有来源，"
                       f"说明统计与登记脱节")

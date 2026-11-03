@@ -97,6 +97,9 @@ SRC_LABEL = {
     'buy_chen': '今日可下单·陈学长放宽',
     'buy_tech': '今日可下单·技术池',
     'buy_other': '今日可下单·其他来源',
+    # R100z299c：与上面四个「按来源」的子行不同，这一行是**按当时能不能下单**过滤的同一批票——
+    # 清单全部 vs 现价真落在买区里的。两者只差一个 state 字段，但答案差很远。
+    'buy_zone': '今日可下单·当时在买区内',
 }
 
 # 页面展示顺序（用户 2026-10-26 指定）：七个指标逐行分开，不再合并成「机械池」一行。
@@ -117,13 +120,14 @@ ROW_ORDER = ('ai', 'mech',
              'duanban', 'duanban_confirmed', 'duanban_watching',
              'chen', 'chen_strict', 'chen_loose',
              'breakoutPool', 'harmonic', 'accumulation',
-             'buy')
+             'buy', 'buy_zone')
 
 # 子池行 → 它的父汇总行。前端据此把子行缩进、去掉重复的「断板反包」前缀感。
 SUB_OF = {
     'duanban_confirmed': 'duanban', 'duanban_watching': 'duanban',
     'chen_strict': 'chen', 'chen_loose': 'chen',
     'buy_duanban': 'buy', 'buy_chen': 'buy', 'buy_tech': 'buy', 'buy_other': 'buy',
+    'buy_zone': 'buy',
 }
 
 # stop_ledger 的 stopSrc → 主台账键名。stop_ledger 无法区分吸筹与横盘启动
@@ -176,7 +180,7 @@ def snapshot(D):
     K = D.get('stkKlines') or {}
     out = {}
 
-    def _put(s, code, name, sector, px=None):
+    def _put(s, code, name, sector, px=None, inZone=None):
         c = str(code or '').strip()
         if not c:
             return
@@ -189,7 +193,11 @@ def snapshot(D):
                       # R100z299b：清单类来源带上「生成时抓到的现价」。收盘价是当天最后一价，
                       # 而买点清单 9:45 就发布了——用收盘价记账等于假设你拖到尾盘才买，
                       # 用次日开盘记账则晚一天还多吃一次跳空。有现价就用现价。
-                      'px': px}
+                      'px': px,
+                      # R100z299c：清单里每只票有自己的 state（buy / over / under / unknown）。
+                      # 只记「在清单里」会把「现价已高于买区、当时不该下单」的票也当成成交，
+                      # 那正是 buyNote 里「在买区内 N 只」想区分的东西。
+                      'inZone': inZone}
 
     # R100z297（用户 2026-11-03）：`duanban` / `chen` / `buy` 这三行原来是**汇总口径**，
     # 页面上只给一个总胜率，读者没法知道是哪个池拉高/拉低的：
@@ -243,7 +251,8 @@ def snapshot(D):
             key = 'buy_tech'
         else:
             key = 'buy_other'
-        _put(key, x.get('code'), x.get('name'), x.get('sector'), px=x.get('price'))
+        _put(key, x.get('code'), x.get('name'), x.get('sector'), px=x.get('price'),
+             inZone=(x.get('state') == 'buy'))
 
     return {s: list(v.values()) for s, v in out.items()}
 
@@ -389,36 +398,53 @@ def compute(L, D):
     K = D.get('stkKlines') or {}
     bench = market_bench(K)
     stats = {}
+
+    def _blank():
+        return {'n': 0, 'days': set(),
+                'h': {str(h): {'rets': [], 'excs': []} for h in HORIZONS},
+                'x': {str(h): {'rets': [], 'byday': {}} for h in HORIZONS}}
+
+    def _fill(st, it, day, mode, px):
+        """把一条样本累加进某个统计桶。抽成函数是因为同一条样本可能进两个桶
+        （如「今日可下单」全部 + 「当时在买区内」子集）——复制一遍算法必然漂移。"""
+        bars = A.norm_bars(K.get(it.get('code')))
+        if len(bars) < 2:
+            return False
+        got = False
+        for h in HORIZONS:
+            r = fwd_ret(bars, day, h)
+            if r is None:
+                continue
+            got = True
+            st['h'][str(h)]['rets'].append(r)
+            bm = bench_ret(bench, day, h)
+            if bm is not None:
+                st['h'][str(h)]['excs'].append(r - bm)
+            xr = exec_ret(bars, day, h, mode, px)
+            if xr is not None:
+                st['x'][str(h)]['rets'].append(xr)
+                st['x'][str(h)]['byday'].setdefault(day, []).append(xr)
+        if got:
+            st['n'] += 1
+        return got
+
     for day, groups in sorted((L.get('entries') or {}).items()):
         for src, items in groups.items():
-            st = stats.setdefault(src, {
-                'n': 0, 'days': set(),
-                'h': {str(h): {'rets': [], 'excs': []} for h in HORIZONS},
-                'x': {str(h): {'rets': [], 'byday': {}} for h in HORIZONS},
-            })
+            st = stats.setdefault(src, _blank())
             st['days'].add(day)
+            mode = ENTRY_MODE.get(src) or ENTRY_MODE.get(src.split('_')[0], 'next_open')
+            is_buy = src.startswith('buy')
             for it in items:
-                bars = A.norm_bars(K.get(it.get('code')))
-                if len(bars) < 2:
-                    continue
-                got = False
-                for h in HORIZONS:
-                    r = fwd_ret(bars, day, h)
-                    if r is None:
-                        continue
-                    got = True
-                    st['h'][str(h)]['rets'].append(r)
-                    b = bench_ret(bench, day, h)
-                    if b is not None:
-                        st['h'][str(h)]['excs'].append(r - b)
-                    _m = ENTRY_MODE.get(src) or ENTRY_MODE.get(src.split('_')[0], 'next_open')
-                    xr = exec_ret(bars, day, h, _m,
-                                  buy_px=(it.get('px') if src.startswith('buy') else None))
-                    if xr is not None:
-                        st['x'][str(h)]['rets'].append(xr)
-                        st['x'][str(h)]['byday'].setdefault(day, []).append(xr)
-                if got:
-                    st['n'] += 1
+                px = it.get('px') if is_buy else None
+                _fill(st, it, day, mode, px)
+                # R100z299c（用户 2026-11-03「把清单全部和真能下单的分开统计」）：
+                # 清单里有 state=over（现价已高于买区，不该追）和 unknown（行情抓空）的票，
+                # 把它们算进「照清单买」的成绩里，等于假设你会在不该买的时候买。
+                # 这一桶只收 state=='buy' 的样本；`inZone` 缺失的历史条目不进（不猜）。
+                if is_buy and it.get('inZone'):
+                    z = stats.setdefault('buy_zone', _blank())
+                    z['days'].add(day)
+                    _fill(z, it, day, mode, px)
 
     # R100z297（用户 2026-11-03「拆开」）：登记口径改成子池后，三个汇总行不再有自己的
     # entries，合计要由子源**现算**——否则页面只剩「确认池 70 条 / 观察池 126 条」，
@@ -488,7 +514,12 @@ def summarize(stats):
 
 def suggest_weights(summary):
     """建议权重。只有样本够的指标参与，超额为负的归零。"""
-    usable = {s: r for s, r in summary.items() if r['sampleEnough']}
+    # R100z299c：`buy` / `buy_zone` 都不是独立信号——它们是上面几个池在 9:45 这个时点、
+    # 经价格闸门过滤后的子集。放进权重表会把同一批票算两遍，还会让人以为「加一个清单
+    # 就等于多一个策略」。清单的价值是「能不能执行」，不是「多加一份权重」。
+    SKIP = {'buy', 'buy_zone'}
+    usable = {s: r for s, r in summary.items()
+              if r['sampleEnough'] and s not in SKIP}
     if not usable:
         return {}, '样本不足（需 ≥%d 条且 ≥%d 个交易日），暂不给建议权重' % (MIN_N, MIN_DAYS)
     raw = {}
@@ -784,6 +815,26 @@ def build(D, do_snapshot=True, backfill=0):
     _strict_txt = ''
     if not _strict_n:
         _strict_txt = ('陈学长严格池本次 0 只，所以上面没有它——它排在清单最前，有票就先收它。')
+    # R100z299c：把「清单全部」与「当时真在买区内」分开报——清单里有 state=over（已高于买区、
+    # 不该追）和 unknown（抓空）的票，算进同一行等于假设你会在不该买的时候买。
+    _z = summ.get('buy_zone') or {}
+    _zwin = ((_z.get('x') or {}).get('1') or {}).get('win')
+    _zs = []
+    for d, g in (L.get('entries') or {}).items():
+        if any(k.startswith('buy') and x.get('inZone') is not None
+               for k, xs in (g or {}).items() for x in (xs or [])):
+            _zs.append(d)
+    _zs.sort()
+    if _z.get('n'):
+        _zone_txt = ('其中「当时真在买区内」（state=buy）的 %d 条，1 日胜率 %s；'
+                     % (_z['n'], ('%d%%' % int(round(_zwin * 100))) if _zwin is not None else '—'))
+    else:
+        _zone_txt = ('「当时真在买区内」这一档刚开始积累（%s 起记录 state）：'
+                     % (_zs[0] if _zs else '今日'))
+    _zone_txt += ('清单里 state=over（现价已高于买区）与 unknown（行情抓空）的票不算能下单，'
+                  '但那批在历史条目里没有留档、无法回溯——所以这一档只从有记录的日期起算，'
+                  '不拿清单全量顶上。')
+
     _buy_note = (
         '「今日可下单」不是第八个指标，是「照这份清单真买」的成绩：成分全部来自上面几行（本次：'
         + _comp + '），与它们重叠是刻意的——那边量「池选的票赚不赚」，这里量「9:45 按买区下单赚不赚」。'
@@ -793,7 +844,8 @@ def build(D, do_snapshot=True, backfill=0):
         '清单' + ('（' + _st_when + ' 生成）' if _st_when else ' 9:45')
         + '只在生成当日有效——19:30 只更新断板池（那是给下一交易日用的）、不动它，'
         '收盘后看到的就是当天早上的快照，别当明日清单。'
-        '已结算 ' + str(_bn) + ' 笔，满 ' + str(MIN_N) + ' 笔且覆盖 '
+        + _zone_txt +
+        '清单全部已结算 ' + str(_bn) + ' 笔，满 ' + str(MIN_N) + ' 笔且覆盖 '
         + str(MIN_DAYS) + ' 个交易日才给判定。'
     )
 
