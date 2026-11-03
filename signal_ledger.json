@@ -8340,13 +8340,15 @@
      "code": "002623",
      "name": "亚玛顿",
      "sector": "光伏设备",
-     "close": 19.28
+     "close": 19.28,
+     "px": 19.28
     },
     {
      "code": "002865",
      "name": "钧达股份",
      "sector": "光伏设备",
-     "close": null
+     "close": null,
+     "px": 41.71
     }
    ],
    "buy_chen": [
@@ -8354,34 +8356,39 @@
      "code": "000701",
      "name": "厦门信达",
      "sector": "贸易",
-     "close": 5.85
+     "close": 5.85,
+     "px": 5.84
     },
     {
      "code": "605598",
      "name": "上海港湾",
      "sector": "建筑装饰",
-     "close": null
+     "close": null,
+     "px": 25.38
     },
     {
      "code": "603612",
      "name": "索通发展",
      "sector": "非金属材",
-     "close": 16.48
+     "close": 16.48,
+     "px": 16.89
     },
     {
      "code": "603868",
      "name": "飞科电器",
      "sector": "小家电",
-     "close": null
+     "close": null,
+     "px": 36.79
     },
     {
      "code": "000678",
      "name": "襄阳轴承",
      "sector": "汽车零部",
-     "close": 19.89
+     "close": 19.89,
+     "px": 19.74
     }
    ]
   }
  },
- "updatedAt": "2026-11-03 22:25:32"
+ "updatedAt": "2026-11-03 22:35:17"
 }

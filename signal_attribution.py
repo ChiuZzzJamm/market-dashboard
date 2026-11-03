@@ -71,7 +71,11 @@ REVERSE_T = -2.0    # 1 日期望的 t 值低于此 → 判「负期望」，不
 #   'open'       = 登记日当天开盘买（盘前发布）
 #   'next_open'  = 登记日次日开盘买（收盘后发布，默认）
 #   'close'      = 登记日收盘买（盘中发布、当天只剩收盘价可参考）
-ENTRY_MODE = {'ai': 'open'}
+ENTRY_MODE = {'ai': 'open', 'buy': 'close'}
+# `buy` = 9:45「🌟 开盘精选」的买点清单（duanban.star.buyList 由 update_star.py 生成）。
+# 它在**盘中**发布，当天就能在买区内下单，最早卖点是次日收盘（T+1 交割）。
+# 按「次日开盘」记账会把它整体推迟一天，还额外吃一次隔夜跳空（系统选出的票跳空均值 −0.465%）。
+# mode='close' 时用当日收盘兜底；清单本身带 `px`（9:57 抓的现价）时优先用它——那才是你看到的价。
 
 SRC_LABEL = {
     'ai': 'AI 预测',
@@ -172,7 +176,7 @@ def snapshot(D):
     K = D.get('stkKlines') or {}
     out = {}
 
-    def _put(s, code, name, sector):
+    def _put(s, code, name, sector, px=None):
         c = str(code or '').strip()
         if not c:
             return
@@ -181,7 +185,11 @@ def snapshot(D):
         if c not in grp:
             grp[c] = {'code': c, 'name': name or '',
                       'sector': (sector or '').strip(),
-                      'close': bars[-1][2] if bars else None}
+                      'close': bars[-1][2] if bars else None,
+                      # R100z299b：清单类来源带上「生成时抓到的现价」。收盘价是当天最后一价，
+                      # 而买点清单 9:45 就发布了——用收盘价记账等于假设你拖到尾盘才买，
+                      # 用次日开盘记账则晚一天还多吃一次跳空。有现价就用现价。
+                      'px': px}
 
     # R100z297（用户 2026-11-03）：`duanban` / `chen` / `buy` 这三行原来是**汇总口径**，
     # 页面上只给一个总胜率，读者没法知道是哪个池拉高/拉低的：
@@ -235,7 +243,7 @@ def snapshot(D):
             key = 'buy_tech'
         else:
             key = 'buy_other'
-        _put(key, x.get('code'), x.get('name'), x.get('sector'))
+        _put(key, x.get('code'), x.get('name'), x.get('sector'), px=x.get('price'))
 
     return {s: list(v.values()) for s, v in out.items()}
 
@@ -287,7 +295,7 @@ def bench_ret(bench, entry_day, n):
     return round((acc - 1) * 100, 3)
 
 
-def exec_ret(bars, entry_day, h, mode='next_open'):
+def exec_ret(bars, entry_day, h, mode='next_open', buy_px=None):
     """**可执行口径**：T+1 开盘买入 → 买入日之后第 h 个交易日收盘卖出（%）。
 
     h=1 ＝ 次日收盘卖（买入日 b 的下一交易日）—— 这是 A 股 T+1 交割下最早的合法卖点。
@@ -322,7 +330,7 @@ def exec_ret(bars, entry_day, h, mode='next_open'):
     i1 = i0 + h                      # 卖出 = 买入日之后第 h 个交易日收盘（T+1 交割）
     if i1 >= len(bars) or i0 >= len(bars):
         return None
-    op = bars[i0][2] if mode == 'close' else bars[i0][1]
+    op = buy_px if buy_px else (bars[i0][2] if mode == 'close' else bars[i0][1])
     c1 = bars[i1][2]
     if not op or op <= 0 or c1 is None:
         return None
@@ -403,7 +411,9 @@ def compute(L, D):
                     b = bench_ret(bench, day, h)
                     if b is not None:
                         st['h'][str(h)]['excs'].append(r - b)
-                    xr = exec_ret(bars, day, h, ENTRY_MODE.get(src, 'next_open'))
+                    _m = ENTRY_MODE.get(src) or ENTRY_MODE.get(src.split('_')[0], 'next_open')
+                    xr = exec_ret(bars, day, h, _m,
+                                  buy_px=(it.get('px') if src.startswith('buy') else None))
                     if xr is not None:
                         st['x'][str(h)]['rets'].append(xr)
                         st['x'][str(h)]['byday'].setdefault(day, []).append(xr)
@@ -778,7 +788,8 @@ def build(D, do_snapshot=True, backfill=0):
         '「今日可下单」不是第八个指标，是「照这份清单真买」的成绩：成分全部来自上面几行（本次：'
         + _comp + '），与它们重叠是刻意的——那边量「池选的票赚不赚」，这里量「9:45 按买区下单赚不赚」。'
         + _strict_txt +
-        '两列都是近似（台账只有收盘价）：真实成交价落在「当日收盘买」与「次日开盘买」之间。'
+        '按清单口径记账：买价 = 清单生成时抓到的现价（9:45 那步的盘口价），'
+        '早期条目没有存这个字段、退回当日收盘；卖点 = 次日收盘（A 股 T+1，当天买当天卖不成立）。'
         '清单' + ('（' + _st_when + ' 生成）' if _st_when else ' 9:45')
         + '只在生成当日有效——19:30 只更新断板池（那是给下一交易日用的）、不动它，'
         '收盘后看到的就是当天早上的快照，别当明日清单。'
@@ -827,8 +838,8 @@ def build(D, do_snapshot=True, backfill=0):
                      'xBasis': ('可执行：T+1 开盘买入 → 买入日之后第 h 个交易日收盘卖出'
                                  '（1 日 = 次日收盘卖；A 股 T+1 交割，当天买当天卖不成立）。'
                                  'AI 预测例外：08:30 盘前发布，按当日开盘买入'),
-                     'buyBasis': '今日可下单：清单 9:45 生成、当天可下单；两列均为近似，'
-                                 '真实成交价落在「当日收盘买」与「次日开盘买」之间'},
+                     'buyBasis': '今日可下单（= 9:45 开盘精选的买点清单）：买价取清单生成时的现价，'
+                                 '卖点为次日收盘（T+1 交割）'},
         'buyNote': _buy_note,
         'bySrc': summ,
         'ranking': ranking,
