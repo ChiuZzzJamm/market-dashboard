@@ -71,3 +71,7 @@ goldpit_study.json
 
 # 深交所官方交易日历缓存（cal_official.py 的按月缓存，G13 第三方交叉校验用，R100z288）
 .trade_cal/
+
+# 台账迁移的一次性备份（migrate_ledger_pools.py --write 每次生成一份，R100z297）
+# 本体 signal_ledger.json 是跟踪的，备份只留本地用于回滚，不进公开仓库。
+signal_ledger.json.bak-*

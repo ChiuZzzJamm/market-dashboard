@@ -128,10 +128,16 @@ NON_DATA_WRITERS = {
                         '可达数百 MB、已在 .gitignore 排除），纯离线统计、从不碰 data.js、不进任何自动化',
     'check_automations.py': 'R100z261：B6 规则 ⑥ 的哨兵状态，原子写 .cache/b6_selfwrite_state.json'
                             '（本机滚动状态，.cache/ 已在 .gitignore 排除）；data.js 只读不写',
+    'migrate_ledger_pools.py': 'R100z297：一次性迁移，把 signal_ledger.json 里三个汇总源的条目'
+                               '按当日池归属拆成子源。原子写的是 signal_ledger.json（先 .bak 备份），'
+                               'data.js 只读、用来取池成员与 K 线，从不写它',
 }
 
 # 死脚本白名单：合法的「手工跑、不进自动化」工具，写明用途才准留
 DEAD_OK = {
+    'migrate_ledger_pools.py': 'R100z297：一次性数据迁移（历史台账补池归属），迁移完即不再需要，'
+                               '手工触发、幂等可重跑；留着是为了「同一份台账在别的机器/别的分支上'
+                               '也能重放同一次迁移」，不是死脚本',
     'goldpit_study.py': '「黄金坑」形态/外盘映射原型研究，手工触发（--dump 才落盘），不进流水线',
     'dryveto_study.py': 'R100z241：「昨日大跌+极度缩量」可否作为横盘启动池否决条件的事前验证，'
                         '手工触发、只打印不落盘，不进流水线',

@@ -68,12 +68,22 @@ SRC_LABEL = {
     'ai': 'AI 预测',
     'mech': '机械池（吸筹+横盘启动）',
     'duanban': '断板反包',
+    # R100z297：断板反包按池拆开（历史合并口径仍用上面那行，见 ROW_ORDER 的说明）
+    'duanban_confirmed': '断板反包·确认池',
+    'duanban_watching': '断板反包·观察池',
     'chen': '陈学长',
+    'chen_strict': '陈学长·严格池',
+    'chen_loose': '陈学长·放宽池',
     'breakoutPool': '横盘启动',
     'harmonic': '谐波形态',
     'accumulation': '主力吸筹',
     # R100z255：全站唯一「明确告诉你现在能买」的清单，此前是唯一没有台账的源。
     'buy': '今日可下单',
+    # R100z297：按来源池拆开
+    'buy_duanban': '今日可下单·断板确认',
+    'buy_chen': '今日可下单·陈学长放宽',
+    'buy_tech': '今日可下单·技术池',
+    'buy_other': '今日可下单·其他来源',
 }
 
 # 页面展示顺序（用户 2026-10-26 指定）：七个指标逐行分开，不再合并成「机械池」一行。
@@ -82,7 +92,21 @@ SRC_LABEL = {
 # R100z255：'buy'（今日可下单）排在最后，**不动用户点名的那七个的顺序**——
 # 它是一个「组合清单」而非第八个指标，放在末尾既不打乱原有对照，又能一眼看到
 # 「这份清单按自己的口径算下来是什么水平」。
-ROW_ORDER = ('ai', 'mech', 'duanban', 'chen', 'breakoutPool', 'harmonic', 'accumulation', 'buy')
+# R100z297（用户 2026-11-03「是汇总的话拆开」）：duanban / chen / buy 三个汇总行下面
+# **紧跟各自的子池行**（缩进由前端按 `sub_of` 处理）。汇总行保留历史（改版前的条目
+# 没有池归属，拆不开），子行从改版当天起重新积累——两边不重复计数。
+ROW_ORDER = ('ai', 'mech',
+             'duanban', 'duanban_confirmed', 'duanban_watching',
+             'chen', 'chen_strict', 'chen_loose',
+             'breakoutPool', 'harmonic', 'accumulation',
+             'buy', 'buy_duanban', 'buy_chen', 'buy_tech', 'buy_other')
+
+# 子池行 → 它的父汇总行。前端据此把子行缩进、去掉重复的「断板反包」前缀感。
+SUB_OF = {
+    'duanban_confirmed': 'duanban', 'duanban_watching': 'duanban',
+    'chen_strict': 'chen', 'chen_loose': 'chen',
+    'buy_duanban': 'buy', 'buy_chen': 'buy', 'buy_tech': 'buy', 'buy_other': 'buy',
+}
 
 # stop_ledger 的 stopSrc → 主台账键名。stop_ledger 无法区分吸筹与横盘启动
 # （两者都落进 default-3%），所以合成一个 'mech'，不硬拆成两个假精度。
@@ -145,17 +169,34 @@ def snapshot(D):
                       'sector': (sector or '').strip(),
                       'close': bars[-1][2] if bars else None}
 
+    # R100z297（用户 2026-11-03）：`duanban` / `chen` / `buy` 这三行原来是**汇总口径**，
+    # 页面上只给一个总胜率，读者没法知道是哪个池拉高/拉低的：
+    #   duanban = confirmed + watching（观察池还没确认就记账，等于抢跑）
+    #   chen    = strict + loose（观察池已排除，但严格/放宽两档被合成一行）
+    #   buy     = buyList 的 duanban(2) + chen_loose(5)（剔了 bp）
+    # 现在按子池分开登记，各算各的胜率。`_SUB` 里的源不再从 A.collect 的共振结果里取，
+    # 改由下面按池逐个登记——**注意**不能两边都加，同一只票会被记两次。
+    _SUB = ('duanban', 'chen')
     for code, meta in A.collect(D):
         for s in meta['_srcs']:
+            if s in _SUB:
+                continue
             _put(s, code, meta['name'], meta['sector'])
 
-    # 陈学长：只登记「已确认」的两档（strict + loose）。watching 是观察池、还没确认，
+    # 断板反包：确认池 / 观察池分开登记。观察池是「还差确认」的票，混进确认池会把
+    # 「没确认就买」的抢跑样本算成命中——与陈学长那边排除 watching 的理由完全一样。
+    db = D.get('duanban') or {}
+    for pool, key in (('confirmed', 'duanban_confirmed'), ('watching', 'duanban_watching')):
+        for x in db.get(pool) or []:
+            _put(key, x.get('code'), x.get('name'), x.get('sector'))
+
+    # 陈学长：拆成严格池 / 放宽池。仍只登记「已确认」的两档，watching 是观察池、还没确认，
     # 记进来会把「没确认的票」算成指标命中，凭空抬高它的胜率。
     # 注：不往 atr_stop.collect 里加——那会把这批票塞进全站止损清单，改变 atrStops 的覆盖口径。
     cp = D.get('chenPool') or {}
-    for pool in ('strict', 'loose'):
+    for pool, key in (('strict', 'chen_strict'), ('loose', 'chen_loose')):
         for x in cp.get(pool) or []:
-            _put('chen', x.get('code'), x.get('name'), x.get('sector'))
+            _put(key, x.get('code'), x.get('name'), x.get('sector'))
 
     # ---- R100z255：今日可下单（duanban.star.buyList） ----
     # 为什么单独登记这一源：它是全站唯一「明确告诉你现在能买、买在哪个价带、破哪个价撤」的清单，
@@ -164,11 +205,23 @@ def snapshot(D):
     # （24.110）这个决定是否正确，只能靠这张表回答。
     # 口径必须与生成端一致：剔除 src='bp'（T+5 超额 t=0.41 不显著），否则台账里会多出
     # 21 条「本来就不让人买」的记录，把这份清单的胜率拉向一个没人执行过的结果。
+    # R100z297：再按来源池拆开（断板反包·确认池 / 陈学长·放宽池），否则读者看到一个
+    # 60.9% 却不知道是哪个池贡献的。srcZh 由 update_star.py 写好，按它分流。
     bl = ((D.get('duanban') or {}).get('star') or {}).get('buyList') or []
     for x in bl:
-        if str(x.get('src') or '') == 'bp':
+        src = str(x.get('src') or '')
+        if src == 'bp':
             continue
-        _put('buy', x.get('code'), x.get('name'), x.get('sector'))
+        _zh = str(x.get('srcZh') or '')
+        if '陈学长' in _zh:
+            key = 'buy_chen'
+        elif '断板' in _zh:
+            key = 'buy_duanban'
+        elif '技术池' in _zh or '板块' in _zh:
+            key = 'buy_tech'
+        else:
+            key = 'buy_other'
+        _put(key, x.get('code'), x.get('name'), x.get('sector'))
 
     return {s: list(v.values()) for s, v in out.items()}
 
@@ -332,7 +385,47 @@ def compute(L, D):
                         st['x'][str(h)]['byday'].setdefault(day, []).append(xr)
                 if got:
                     st['n'] += 1
+
+    # R100z297（用户 2026-11-03「拆开」）：登记口径改成子池后，三个汇总行不再有自己的
+    # entries，合计要由子源**现算**——否则页面只剩「确认池 70 条 / 观察池 126 条」，
+    # 读者看不到 196 条的总账。合计与子行不重复计数：duanban 的两个池互斥、
+    # chen 的严格/放宽互斥、buyList 每只票只带一个 src。
+    for parent, kids in (('duanban', ('duanban_confirmed', 'duanban_watching')),
+                         ('chen', ('chen_strict', 'chen_loose')),
+                         ('buy', ('buy_duanban', 'buy_chen', 'buy_tech', 'buy_other'))):
+        subs = [stats[k] for k in kids if k in stats]
+        if not subs:
+            continue
+        merged = _merge_stats(subs)
+        if parent in stats:          # 改版前的历史条目还在父键上 → 一起并进来
+            merged = _merge_stats([stats[parent], merged])
+        stats[parent] = merged
     return stats, bench
+
+
+def _merge_stats(subs):
+    """把多个 src 的原始统计块合并成一个（用于「子池 → 合计」）。
+
+    注意只能合**原始列表**，不能合已经算好的统计量：胜率不能简单平均
+    （70 条 44% + 126 条 47% ≠ 两条平均 45.5%，要按样本数加权），t 值更不能加。
+    所以这一步必须在 summarize() 之前做。
+    """
+    out = {'n': 0, 'days': set(),
+           'h': {str(h): {'rets': [], 'excs': []} for h in HORIZONS},
+           'x': {str(h): {'rets': [], 'byday': {}} for h in HORIZONS}}
+    for st in subs:
+        out['n'] += st.get('n') or 0
+        out['days'] |= set(st.get('days') or ())
+        for h in HORIZONS:
+            k = str(h)
+            sh = (st.get('h') or {}).get(k) or {}
+            out['h'][k]['rets'] += sh.get('rets') or []
+            out['h'][k]['excs'] += sh.get('excs') or []
+            sx = (st.get('x') or {}).get(k) or {}
+            out['x'][k]['rets'] += sx.get('rets') or []
+            for d, arr in (sx.get('byday') or {}).items():
+                out['x'][k]['byday'].setdefault(d, []).extend(arr)
+    return out
 
 
 def summarize(stats):
@@ -633,10 +726,19 @@ def build(D, do_snapshot=True, backfill=0):
     # 台账里没有盘中价，只有收盘价，所以两列都是**近似**：T+h 收盘（偏保守或偏乐观）
     # 与 T+1 开盘（晚一天）。不写这句，读者会把「0 日买入」当成它的真实成绩。
     _bn = (summ.get('buy') or {}).get('n') or 0
+    # R100z297（用户 2026-11-03 问「今日可下单是不是该改成明日可下单」）：
+    # 核实结论是**不改名**——star.buyList 由 9:45 那步生成（star.date/time），标的是前一交易日
+    # 16:00 的池，当天就能在买区下单，所以「今日」是对的。但 19:30 的叙事步只更新 duanban 池
+    # （那是给**明日**用的），**不动 star**（merge_duanban 保留 9:45 产物），于是 19:30 之后
+    # 再看这一行，它已经是当天早上的过期快照。不写清生成时刻，读者会拿它当「明日清单」。
+    _st = (D.get('duanban') or {}).get('star') or {}
+    _st_when = ('%s %s' % (_st.get('date') or '', _st.get('time') or '')).strip()
     _buy_note = (
-        '「今日可下单」这行的入场时点与其余七行不同：清单 9:45 生成、当天就能在买区内下单，'
-        '而台账只有收盘价。所以两列都是近似——T+h 收盘是「当日收盘才买」（偏晚），'
+        '「今日可下单」这行的入场时点与其余七行不同：清单' + ('（' + _st_when + ' 生成）' if _st_when else ' 9:45')
+        + '当天就能在买区内下单，而台账只有收盘价。所以两列都是近似——T+h 收盘是「当日收盘才买」（偏晚），'
         'x 是「次日开盘才买」（更晚），真实成交价落在两者之间。'
+        '这份清单只在生成当日有效：19:30 的叙事步只更新断板池（那是给下一交易日用的），'
+        '不改这份清单，所以收盘后再看它就是当天早上的快照，不要当成明日清单。'
         '按清单口径已结算 ' + str(_bn) + ' 笔；样本满 ' + str(MIN_N) + ' 笔且覆盖 '
         + str(MIN_DAYS) + ' 个交易日才给判定。'
     )
@@ -659,6 +761,8 @@ def build(D, do_snapshot=True, backfill=0):
                         'verdict': verdict_of(r), 'sampleEnough': r['sampleEnough'],
                         'legacy': bool(r.get('legacy')),
                         'sub': r.get('sub'),
+                        # R100z297：子池行标记它的父汇总行，前端据此缩进
+                        'sub_of': SUB_OF.get(s),
                         'weight': weights.get(s)})
     # 只留用户点名的那七个指标，并按固定顺序排（不再按 t 值排序）。
     # 按 t 排序会让行序每天变，读者没法「昨天那行今天还在原位」地对照。
@@ -926,7 +1030,13 @@ def main():
     if D is None:
         print('[ERR] data.js 解析失败', file=sys.stderr)
         return 1
-    out = build(D, do_snapshot=not a.view, backfill=a.backfill)
+    # R100z297：`--dry` 的 help 一直写「不写 data.js」，但原实现是 `do_snapshot=not a.view`——
+    # 于是 `--dry` 时 snapshot 仍为 True，**照样覆盖 signal_ledger.json 当日快照**。
+    # 2026-11-03 21:39 实测：手跑一次 `--dry` 就把 11-03 的 ai 43→48、duanban 59→61、
+    # harmonic 31→32 覆盖掉了（16:33 登记时部分标的还没 K 线，21:39 全了）。
+    # 同一天两个时点的池不是同一个快照，覆盖等于改写已登记的样本 → 回算口径会漂。
+    # 「dry」就该什么都不写，与 --help 那类「探参数变成改数据」是同一个病。
+    out = build(D, do_snapshot=(not a.view and not a.dry), backfill=a.backfill)
     if a.json:
         print(json.dumps(out, ensure_ascii=False))
         return 0

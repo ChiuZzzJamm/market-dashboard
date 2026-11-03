@@ -758,6 +758,9 @@
                font-size: var(--fs-sm); color: #8a5a00; line-height: 1.7; }
 
   .cc-sum { font-size: var(--fs-base); color: var(--ink); line-height: 1.8; }
+  /* R100z297：汇总数字后面跟的「由哪些池拼成」小注——压低字号、降一级灰度，
+     让「11 / 17」仍是视觉主角，构成说明只在需要核对时看得见。 */
+  .cc-src { font-size: var(--fs-xs); color: var(--ink2); margin-left: 4px; white-space: nowrap; }
   .cc-sec { padding: 9px 0; border-top: 1px solid var(--line); }
   .cc-t { font-size: var(--fs-sm); color: var(--ink2); margin-bottom: 7px; line-height: 1.6; }
   /* R100z230：名单上方的规则差异收成 <summary>，与 .cc-t 同字号同一行，
@@ -1289,6 +1292,14 @@
   .fc-chip { display: inline-block; font-size: var(--fs-sm); color: var(--ink2); background: var(--paper);
              border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; margin: 0 5px 5px 0; line-height: 1.5; }
   .fc-chip em { font-style: normal; font-weight: 700; color: var(--accent-deep); margin-right: 5px; }
+  /* R100z297：合并后卡内的分段分隔（成绩单 → 台账细节）。用细分隔线 + 小标题，
+     不加背景块，避免把一张卡又切回「两张卡」的观感。 */
+  .fc-hist-sep { margin: 20px 0 8px; padding-top: 13px; border-top: 1px solid var(--line); }
+  .fc-hist-sep > span { display: inline-block; font-size: var(--fs-sm); font-weight: 700;
+                        color: var(--ink2); letter-spacing: .03em; }
+  .fc-hist-sep > span::before { content: ''; display: inline-block; width: 3px; height: 11px;
+                                background: var(--accent-deep); border-radius: 2px;
+                                margin-right: 6px; vertical-align: -1px; }
   /* 窄屏：hero 改两列 + 第三张跨行。
      三列各约 120px 时「严格命中 66 条 / 11 日」会被折断成三行，读不下去。
      （R100z221 删掉 .fc-h2/.fc-sub 的窄屏收起规则：标题副句「· 谁准谁不准」已整句删除，
@@ -1423,6 +1434,15 @@
             border-bottom: 1px dashed var(--line); font-size: var(--fs-sm); }
   .rv-bar.g4 { grid-template-columns: minmax(0,1.2fr) minmax(0,1.5fr) 56px 74px; }
   .rv-bar:last-child { border-bottom: 0; }
+  /* R100z297：子池行（确认池/观察池、严格池/放宽池、断板确认/陈学长放宽）——
+     左缩进 + 淡一档的字色 + 更细的虚线，读起来是「上一条的明细」而不是又一个指标。
+     条形与数字列不动，方便与合计行横向直接对比。 */
+  .rv-bar.rv-sub { padding-left: 14px; border-bottom-style: dotted; opacity: .92; }
+  .rv-bar.rv-sub .rv-nm { font-weight: 600; color: var(--ink2); font-size: var(--fs-sm);
+                          position: relative; }
+  .rv-bar.rv-sub .rv-nm::before { content: '└'; position: absolute; left: -11px;
+                                  color: var(--ink2); opacity: .55; font-weight: 400; }
+  .rv-bar.rv-sub .rv-nm small { font-size: 10px; }
   .rv-nm { font-weight: 700; color: var(--ink); font-size: var(--fs-base); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rv-nm s { text-decoration: none; font-weight: 400; font-size: var(--fs-xs); color: var(--ink2); margin-left: 4px; }
   .rv-nm small { display: block; font-weight: 400; font-size: var(--fs-xs); color: var(--ink2); }
@@ -3889,7 +3909,10 @@ function renderSignalPerf() {
       '｜日聚类 t ' + (num(r.t1) === null ? '—' : num(r.t1).toFixed(2)) +
       '｜止损触及 ' + rt(r.touchRate) +
       '｜判定 ' + (r.verdict || '—');
-    h += '<div class="rv-bar' + (w === null ? ' rv-na' : '') + '" title="' + escAttr(tip) + '">' +
+    // R100z297：子池行（断板反包·确认池 / 陈学长·放宽池 …）挂一行 rv-sub 做缩进 + 降字重，
+    // 视觉上从属于紧邻上方的合计行。数据层已经把「合计 = 子行之和」算好，前端不再二次求和。
+    h += '<div class="rv-bar' + (w === null ? ' rv-na' : '') + (r.sub_of ? ' rv-sub' : '') +
+      '" title="' + escAttr(tip) + '">' +
       '<div class="rv-nm">' + esc(r.label) +
         (r.sub ? '<s>自有口径</s>' : (r.legacy ? '<s>历史台账</s>' : '')) +
         '<small>' + (r.n || 0) + ' 条 / ' + (r.days || 0) + ' 日</small></div>' +
@@ -4144,6 +4167,12 @@ function renderForecastScore() {
     ' 个交易日，不足则不给结论；带 <b>*</b> 的分组样本少于 ' + ((F.criteria || {}).minGroupN || 5) +
     ' 条，百分比只是巧合、不代表能力。与「指标复盘」的分工：那张量选出来的票赚不赚，这张量方向判得准不准。</div>';
   h += '</details>';
+  /* R100z297（用户 2026-11-03 截图 1+2）：「预测复盘」和「预测复盘 · 台账细节」是两张独立卡，
+     内容高度重叠（都在讲命中率/分档/方向/开盘三项），并排看像两份文档。合并成一张。
+     下面两个容器由 renderCalHistory() / renderStopTrack() 异步填充，本函数只负责给位置——
+     容器 id 保持 `cal-hist` / `st-track-box` 不动，填充逻辑与口径一个字没改。 */
+  h += '<div class="fc-hist-sep"><span>台账细节</span></div>' +
+       '<div id="cal-hist" class="cal-hist"></div><div id="st-track-box"></div>';
   return h + '</div>';
 }
 
@@ -6519,8 +6548,16 @@ function chenCompareHtml(c) {
   var out = '<div class="card cc-card"><h2 class="td-h2">反包复盘' +
     (chenDataDay(c) ? ' <span class="h2-date">' + esc(chenDataDay(c)) + '</span>' : '') +
     '<span class="src-tag td-tag">两套口径对比</span></h2>' +
-    '<div class="cc-sum">今日：陈学长 <b>' + chenN + '</b> 只 ｜ 断板反包 <b>' + (both.length + doOnly.length) +
-    '</b> 只 ｜ 两个都选中 <b class="up">' + both.length + '</b> 只 ｜ 只有陈学长选中 <b>' + co.length + '</b> 只</div>' +
+    /* R100z297（用户 2026-11-03 截图 5）：「陈学长 11 只 / 断板反包 17 只」这两个汇总数字
+       没写明由哪些池拼成，读者会以为是把 confirm/watching/strict/loose 四池全加起来了。
+       实测 chenN = strict(0) + loose(11)、断板 = confirmed(17)（= both 交集 + doOnly 独有），
+       观察池 watching(68) 与 chenPool.watching(26) 都**不在**其中。这里把构成直接写出来。 */
+    '<div class="cc-sum">今日：陈学长 <b>' + chenN + '</b> 只' +
+    '<span class="cc-src">严格池 ' + (c.strict || []).length + ' + 放宽池 ' + (c.loose || []).length +
+    '（观察池 ' + ((c.watching || []).length) + ' 只未计入）</span>' +
+    ' ｜ 断板反包 <b>' + (both.length + doOnly.length) + '</b> 只' +
+    '<span class="cc-src">确认池（观察池 ' + (((window.DASHBOARD_DATA || {}).duanban || {}).watching || []).length + ' 只未计入）</span>' +
+    ' ｜ 两个都选中 <b class="up">' + both.length + '</b> 只 ｜ 只有陈学长选中 <b>' + co.length + '</b> 只</div>' +
     '<div class="cc-sec"><div class="cc-t">两个都选中（' + both.length + '）</div><div class="cc-list">' +
       (both.length ? both.map(lab).join('') : '<span class="cc-more">无</span>') + '</div></div>' +
     /* R100z230（用户 2026-10-27「文字太多」）：这两段差异说明原来各 61 / 42 字直接摊在名单上方，
@@ -8479,17 +8516,18 @@ function renderScoreView() {
   // 一个是「选出来的票赚不赚」、一个是「方向判断对不对」，中间不该夹第三套选股口径。
   var fs = renderForecastScore();
   if (!fs) {
+    // R100z297：成绩单与台账细节已合并成一张卡，但两者数据源不同（forecastScore / calibration_log），
+    // 成绩单还没攒够时台账可能已有数据 —— 所以这里也要把容器摆出来，不能因为没成绩单就丢掉入口。
     body += '<div class="card"><h2 class="td-h2">预测复盘</h2>' +
-      '<div class="db-empty">暂无台账数据（需累计至少 1 个预测日）</div></div>';
+      '<div class="db-empty">暂无成绩单（需累计至少 1 个预测日）</div>' +
+      '<div class="fc-hist-sep"><span>台账细节</span></div>' +
+      '<div id="cal-hist" class="cal-hist"></div><div id="st-track-box"></div></div>';
   } else {
     body += fs;
   }
-  // R100z248（用户 2026-10-27「把这里一堆废话全部删了，我只要结果」）：
-  // 命中率条 / 口径拆分 / 分档校准 / 开盘前瞻兑现 / 组合实盘 / 止损跟踪，
-  // 原本全部堆在 AI 预测卡内部——它们回答的是「过去准不准」，属复盘不属于盘前。
-  // 整块搬到本页，渲染函数与口径一个字没改，只换挂载点。
-  body += '<div class="card"><h2 class="td-h2">预测复盘 · 台账细节</h2>' +
-    '<div id="cal-hist" class="cal-hist"></div><div id="st-track-box"></div></div>';
+  // R100z297（用户 2026-11-03 截图 1+2）：原「预测复盘 · 台账细节」独立卡已并入
+  // renderForecastScore() 的同一张卡（由它输出 #cal-hist / #st-track-box 容器），
+  // 这里不再单独渲染。容器 id 与填充逻辑（renderCalHistory / renderStopTrack）一字未改。
   // 后段＝「哪套选股口径更准」：反包复盘（断板反包 vs 陈学长）在前，落后股规则回测在后。
   // R100z219：用户 2026-10-25 要求把这块放进复盘台账、标题写成两套指标的对比——
   // 整块只换挂载点，判定口径一字未改。
