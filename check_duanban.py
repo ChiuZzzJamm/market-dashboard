@@ -541,6 +541,12 @@ def match_ths_industry(hybk, ths_names):
         # 东财涨停池给的 hybk 常截成「炼化及贸」（4 字），两个键都要写，
         # 否则 600506 统一股份 整只标的板块涨幅取不到（story 只能写「板块当日数据暂缺」）。
         "炼化及贸易": "石油加工贸易", "炼化及贸": "石油加工贸易",
+        # R100z297（2026-11-04）：东财 hybk 的 4 字截断名，三个键在 SPECIAL 里都缺，
+        # 前缀匹配也救不回（'旅游及酒店' 不以 '旅游及景' 开头）→ 返回 None → 退回东财截断名，
+        # 池内 sector 直接存「旅游及景 / 铁路公路」，页面板块徽章与 story 板块段全部截断。
+        # 601188 龙江交通 10-30 就报过「铁路公路」，本轮 600576 祥源文旅 / 603402 陕西旅游 复发。
+        "旅游及景": "旅游及酒店", "铁路公路": "公路铁路运输",
+        "焦炭": "煤炭开采加工", "焦炭Ⅱ": "煤炭开采加工",
     }
     if clean in SPECIAL and SPECIAL[clean] in ths_names:
         return SPECIAL[clean]
@@ -1007,8 +1013,14 @@ NOTICE_BEAR_KW = ("终止收购", "终止协议", "终止合作", "终止框架"
                   "被冻结", "轮候冻结", "被动减持", "违约", "否决")
 # 利好关键词（同样保守）
 # 同理：业绩预增也不给利好加分（不因业绩加减分，两个方向都摘）。
-NOTICE_BULL_KW = ("中标", "签约", "签订", "涨价", "提价", "回购", "增持",
-                  "获批", "投产", "量产", "定增", "重组",
+# R100z297：**「回购」「定增」从利好词表摘除**。这两类是不含方向的股本动作：
+#   回购进展＝常规披露、回购注销/变更用途＝股本调整（股本变小不等于基本面变好）、
+#   定增＝融资摊薄。它们连续六轮被 AI 逐只手改回中性（10-30、11-02、11-03、11-04 各一批），
+#   每改一次明天又从新冒出的票上复发——与 R100z276 摘业绩词是同一个道理：
+#   **词表里留着它，AI 就只能天天当人肉过滤器**。「增持」保留（真实的增量买盘信号，
+#   且「增持计划」已由 NOTICE_NEUTRAL_OVERRIDE 拦掉）。
+NOTICE_BULL_KW = ("中标", "签约", "签订", "涨价", "提价", "增持",
+                  "获批", "投产", "量产", "重组",
                   "获奖", "通过认证", "战略合作", "中标候选")
 # 「终止减持/增持/回购计划」是中性偏好事件，含「减持」会被错标 bear——显式排除。
 # 「解除冻结/解除质押/解除限售」同属解除类公告（利好方向但不标 bull，保守不标）。
@@ -1591,6 +1603,42 @@ def _story_sector_seg(e, code):
     return f"【板块消息】{sec}{bz}{tail}"
 
 
+def _close_parens(t):
+    """剥尾可能切在括号内 → 先补右括号，括号里什么都没有就把半截括号整段丢掉。"""
+    if t.count("（") == t.count("）"):
+        return t
+    while t.count("（") > t.count("）"):
+        idx = t.rfind("（")
+        tail = t[idx + 1:]
+        if len(tail.strip("，、；： ")) < 2:
+            t = t[:idx].rstrip("，、；： ")
+            break
+        t = t + "）"
+        break
+    return t
+
+
+def _trim_seg1(text, budget):
+    """把【个股消息】段压到 budget 字以内（只压这一段，不动板块段）。
+
+    剥尾粒度：先整句（；）再分句（，），剥完必过括号收口 + 补句号——
+    直接硬切会产出「…理由是AI服务器供应」这类半句。
+    """
+    if len(text) <= budget:
+        return text
+    parts = text.split("；")
+    while len("；".join(parts)) > budget and len(parts) > 1:
+        parts.pop()
+    t = "；".join(parts)
+    if len(t) > budget:
+        sub = t.split("，")
+        while len("，".join(sub)) > budget and len(sub) > 1:
+            sub.pop()
+        t = "，".join(sub)
+    t = _close_parens(t.rstrip("，；、： "))
+    return t if t.endswith(("。", "！", "？")) else t + "。"
+
+
 def build_story(e, refs=None, bear_refs=None):
     """R100z148：数据驱动 story 底稿（素材全部来自真实字段，零编造）。
 
@@ -1684,7 +1732,16 @@ def build_story(e, refs=None, bear_refs=None):
             phrase = _pick(NO_NEWS_PHRASE, code)
             seg1 = (f"【个股消息】{name}的公开信息焦点仍在板块与产业链层面，{phrase}，"
                     f"短期观察点集中在{e.get('sector') or '所属'}板块风向；{name}{zt}涨停入池。")
-    story = seg1 + _story_sector_seg(e, code)
+    # R100z297（2026-11-04）：**【板块消息】段必须永远活着**。
+    # 原实现 `story = seg1 + seg2` 之后再统一剥尾，而「有要闻 ref」分支的 seg1 单独就有
+    # 170~180 字（新闻标题 + 首句摘要 + 个股尾巴），加上 seg2 必然 >180 → 剥尾按「；」
+    # 从后往前 pop，第一个被弹掉的就是整段【板块消息】，产出只剩单段的 story。
+    # 这个缺陷 10/19、11/02（601083/002946/603198/603680）、11/04（10 只）各报一次，
+    # 每次都是 AI 手工补段。此处改成给 seg2 预留位置、只压 seg1。
+    seg2 = _story_sector_seg(e, code)
+    if len(seg1) + len(seg2) > 180:
+        seg1 = _trim_seg1(seg1, max(60, 180 - len(seg2)))
+    story = seg1 + seg2
     if len(story) < 100:
         # 兜底加长（含 zt/stage/sector 个股特定数据，防 G17）
         stage = e.get("stage") or ""
