@@ -2,12 +2,12 @@
  "ok": true,
  "nameSrc": "tx",
  "nameSrcDetail": {
-  "tx": 377,
+  "tx": 368,
   "sina": 0,
   "em": 0
  },
- "date": "2026-11-03",
- "checked": 377,
+ "date": "2026-11-04",
+ "checked": 368,
  "liftWindow": [
   2,
   5
@@ -17,38 +17,24 @@
  "dims": {
   "st": {
    "status": "ok",
-   "cover": "行情名源（腾讯377/新浪0/东财0）377/377 只取到"
+   "cover": "行情名源（腾讯368/新浪0/东财0）368/368 只取到"
   },
   "cut": {
    "status": "ok",
-   "cover": "公告源 377/377 只取到（东财377/巨潮0）"
+   "cover": "公告源 368/368 只取到（东财368/巨潮0）"
   },
   "lift": {
    "status": "ok",
-   "cover": "解禁源 377/377 只取到"
+   "cover": "解禁源 368/368 只取到"
   },
   "pledge": {
    "status": "ok",
-   "cover": "质押源 377/377 只取到（仅供参考）"
+   "cover": "质押源 368/368 只取到（仅供参考）"
   }
  },
  "verdict": "full",
  "uncheckedDims": [],
  "blacklist": {
-  "600732": {
-   "name": "爱旭股份",
-   "reasons": [
-    "2026-10-09 减持已结束（利空出尽）"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 15.7%（截至 2026-06-18）"
-   ],
-   "severity": "yellow",
-   "progress": [
-    "减持已结束（利空出尽）"
-   ]
-  },
   "002028": {
    "name": "思源电气",
    "reasons": [
@@ -80,6 +66,20 @@
    ],
    "count": 1,
    "watch": [],
+   "severity": "yellow",
+   "progress": [
+    "减持已结束（利空出尽）"
+   ]
+  },
+  "600732": {
+   "name": "爱旭股份",
+   "reasons": [
+    "2026-10-09 减持已结束（利空出尽）"
+   ],
+   "count": 1,
+   "watch": [
+    "参考·质押 15.7%（截至 2026-06-18）"
+   ],
    "severity": "yellow",
    "progress": [
     "减持已结束（利空出尽）"
