@@ -48,6 +48,16 @@ SSH_CFG="${TMPDIR:-/tmp}/mdashboard_gitssh.conf"
     echo "  IdentitiesOnly yes"
     echo "  StrictHostKeyChecking no"
     echo "  BatchMode yes"
+    # R100z306：补一个 22 端口的 Host 块。443 被中间设备 reset 时（2026-11-04 两次实测），
+    # 22 有时还通——没有这一段，走 22 的那次重试就拿不到密钥，会伪装成「公钥没加」。
+    echo "Host github.com"
+    echo "  HostName github.com"
+    echo "  Port 22"
+    echo "  User git"
+    echo "  IdentityFile \"$DEPLOY_KEY\""
+    echo "  IdentitiesOnly yes"
+    echo "  StrictHostKeyChecking no"
+    echo "  BatchMode yes"
 } > "$SSH_CFG"
 export GIT_SSH_COMMAND="ssh -F \"$SSH_CFG\""
 
@@ -274,20 +284,72 @@ if ! git diff --cached --quiet; then
     git commit -m "update: $(date '+%Y-%m-%d %H:%M') market data"
 fi
 
-# 带重试的 push（网络波动时）
-for i in 1 2 3; do
-    echo "   推送尝试 $i/3..."
-    if GIT_TERMINAL_PROMPT=0 git push origin main 2>&1; then
-        echo "✅ 推送成功！GitHub Pages 将在 1-2 分钟内自动部署。"
-        echo "   公开访问地址: https://chiuzzzjamm.github.io/market-dashboard"
-        exit 0
+# ---------- 带重试的 push ----------
+# R100z306（2026-11-04 09:1x，用户「部署一直失败，什么原因？修复一下」）：
+# 原来只重试 3 次 × 固定 5 秒，且失败信息一律写「公钥可能没加」——但 04 日 00:38 与 08:57
+# 两次真事故都不是凭证问题：`Connection closed by 140.82.113.35 port 443`，
+# 同时 HTTPS `SSL_ERROR_SYSCALL`、而 `github.io` 200 正常 —— 是到 github.com 的连接被 reset。
+# 于是三处改动：
+#   ① 重试 5 次、退避 5/10/20/30/45 秒（抖动通常 1 分钟内恢复，固定 5 秒等于三次连发）；
+#   ② 443 连续失败两次就改走 22 端口试一次（两条路都断才是真断），试完把 remote 换回来；
+#   ③ 失败原因按探测分流：认证失败 / 连接被 reset / 其它，不再一律甩「公钥」。
+SUCCESS() {
+    echo "✅ 推送成功！GitHub Pages 将在 1-2 分钟内自动部署。"
+    echo "   公开访问地址: https://chiuzzzjamm.github.io/market-dashboard"
+    exit 0
+}
+# `ssh -T` 认证成功时退出码也是 1（GitHub 不给 shell），所以只能看输出内容，不能看退出码
+probe_ssh() {
+    local out
+    out=$(ssh -F "$SSH_CFG" -o ConnectTimeout=10 -o BatchMode=yes -T git@ssh.github.com 2>&1 || true)
+    case "$out" in
+        *"successfully authenticated"*) echo "ok" ;;
+        *"Permission denied"*|*"publickey"*) echo "auth" ;;
+        *"Connection closed"*|*"Connection reset"*|*"Connection timed out"*|*"Connection refused"*|*"kex_exchange"*) echo "net" ;;
+        *) echo "other" ;;
+    esac
+}
+
+REMOTE_443="ssh://git@ssh.github.com:443/ChiuZzzJamm/market-dashboard.git"
+REMOTE_22="ssh://git@github.com/ChiuZzzJamm/market-dashboard.git"
+DELAYS="5 10 20 30 45"
+i=0
+for d in $DELAYS; do
+    i=$((i + 1))
+    echo "   推送尝试 $i/5..."
+    if GIT_TERMINAL_PROMPT=0 git push origin main 2>&1; then SUCCESS; fi
+
+    # 443 连挂两次 → 换 22 试一次（成功后 remote 保持在 22，下次直接走通的这条路）
+    if [ "$i" -eq 2 ]; then
+        echo "   443 已连续失败 2 次，改走 22 端口试一次..."
+        git remote set-url origin "$REMOTE_22"
+        if GIT_TERMINAL_PROMPT=0 git push origin main 2>&1; then SUCCESS; fi
+        git remote set-url origin "$REMOTE_443"
+        echo "   22 也不通，换回 443。"
     fi
-    echo "   推送失败，${i}<3 时 5 秒后重试..."
-    sleep 5
+    echo "   推送失败，${d} 秒后重试..."
+    sleep "$d"
 done
 
-# 全部重试失败
-echo "❌ git push 连续 3 次失败，部署未触发。"
-echo "   可能原因: 公钥尚未添加到 GitHub，或网络异常。"
-echo "   请确认已将 .deploy_key.pub 的内容添加到 GitHub → Settings → SSH and GPG keys。"
+# ---------- 全部重试失败：给能据此动手的原因，而不是一律甩「公钥」----------
+echo "❌ git push 连续 5 次失败（443 与 22 都试过），部署未触发。"
+case "$(probe_ssh)" in
+    auth)
+        echo "   原因: SSH 认证被拒（Permission denied）——.deploy_key 的公钥可能没加到 GitHub。"
+        echo "   处置: 把 .deploy_key.pub 内容贴到 GitHub → Settings → SSH and GPG keys。"
+        ;;
+    net)
+        echo "   原因: 到 github.com 的连接被重置/超时（不是密钥问题）——本机网络或代理把它掐了。"
+        echo "   判据: github.io 能打开、github.com 连不上 → 网络侧；两者都打不开 → 本地断网。"
+        echo "   处置: 检查路由器/代理规则里对 github.com 的分流；恢复后重跑 ./deploy.sh 即可（提交已留在本地）。"
+        ;;
+    ok)
+        echo "   原因: SSH 认证本身是通的（本次探测成功），说明是推送瞬间的抖动或仓库侧限流。"
+        echo "   处置: 稍后直接重跑 ./deploy.sh；本地提交没丢，不会重复提交。"
+        ;;
+    *)
+        echo "   原因: 未知（探测未给出明确结论）。"
+        echo "   处置: 手动跑一次 ssh -F $SSH_CFG -T git@ssh.github.com 看输出。"
+        ;;
+esac
 exit 1
