@@ -1025,7 +1025,14 @@ NOTICE_BULL_KW = ("中标", "签约", "签订", "涨价", "提价", "增持",
 # 「终止减持/增持/回购计划」是中性偏好事件，含「减持」会被错标 bear——显式排除。
 # 「解除冻结/解除质押/解除限售」同属解除类公告（利好方向但不标 bull，保守不标）。
 NOTICE_NEUTRAL_OVERRIDE = ("终止减持", "终止增持", "终止回购", "减持计划", "增持计划",
-                           "解除冻结", "解除质押", "解除限售", "解除冻结及")
+                           "解除冻结", "解除质押", "解除限售", "解除冻结及",
+                           # R100z310（2026-11-05）：**关联交易不进方向判定**。
+                           # 「…租赁合同之补充协议暨关联交易」命中「签订」被判 bull，
+                           # 10-30、11-02、11-03、11-05 四轮被 AI 逐只手改回中性——
+                           # 关联交易是关联方之间的程序性安排（定价是否公允需看细节），
+                           # 不含可交易的方向指向。与摘「回购/定增」同理：词表留着它，
+                           # AI 就只能天天当人肉过滤器。
+                           "关联交易")
 
 
 # ---------- R100z276 已退役：业绩方向判定（原 R100z223 的 classify_earnings） ----------
@@ -1896,6 +1903,18 @@ def tag_entries(entries, D):
         def _w(rs):
             return sum(2 if r.get("kind") == "stock" else 1 for r in rs)
         bw, rw = _w(bear_refs), _w(refs)
+        # R100z310（2026-11-05）：**自家 08:30 预测不能单独撑起「利好」**。
+        # aiPrediction 是我方盘前判断，不是新闻事件；只用它给标的打 bull 等于
+        # 自我循环（预测说板块强 → 池子标利好 → 页面看起来又被验证一次）。
+        # 10-30/11-02/11-03/11-04/11-05 五轮 AI 复核都把这类标的改回中性。
+        # 口径：利好依据里只要还有一条非 aiPrediction 的新闻/公告，就仍判 bull；
+        # 全部来自 aiPrediction 时判 neutral 并清空 bullRefs，避免中性卡片挂利好线索。
+        _ai_only = bool(refs) and not bear_refs and all(
+            (r.get("src") == "aiPrediction") for r in refs)
+        if _ai_only:
+            refs = []
+            bull_type = None
+            rw = 0
         sent = "bear" if bw > rw else ("bull" if rw > bw else "neutral")
         # 小作文化：R100z148 起改为 build_story 数据驱动生成——底稿即达
         # G16 ≥100 字与 R100z3 段落格式（【个股消息】/【板块消息】），

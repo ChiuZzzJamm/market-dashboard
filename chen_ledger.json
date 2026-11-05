@@ -518,7 +518,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-05",
+    "buyDay": "2026-10-27",
+    "exitPrice": 62.82,
+    "buyPrice": 59.83,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -560,7 +569,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-05",
+    "buyDay": "2026-10-28",
+    "exitPrice": 14.27,
+    "buyPrice": 13.59,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -920,7 +938,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-05",
+    "buyDay": "2026-10-29",
+    "exitPrice": 14.8,
+    "buyPrice": 14.1,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -1171,7 +1198,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-05",
+    "buyDay": "2026-11-02",
+    "exitPrice": 17.16,
+    "buyPrice": 16.34,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -1230,7 +1266,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-05",
+    "buyDay": "2026-11-02",
+    "exitPrice": 19.06,
+    "buyPrice": 18.15,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -1324,7 +1369,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-05",
+    "buyDay": "2026-11-03",
+    "exitPrice": 11.08,
+    "buyPrice": 11.57,
+    "retPct": -4.24,
+    "note": "收盘跌破止损位"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -1375,7 +1429,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-05",
+    "buyDay": "2026-11-03",
+    "exitPrice": 35.7,
+    "buyPrice": 34.0,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -1461,7 +1524,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-05",
+    "buyDay": "2026-11-03",
+    "exitPrice": 41.57,
+    "buyPrice": 39.59,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -1538,7 +1610,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-05",
+    "buyDay": "2026-11-03",
+    "exitPrice": 10.08,
+    "buyPrice": 9.6,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -1683,7 +1764,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-05",
+    "buyDay": "2026-11-04",
+    "exitPrice": 6.97,
+    "buyPrice": 6.64,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -2166,8 +2256,200 @@
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "002805",
+   "name": "丰元股份",
+   "confirmDate": "2026-11-05",
+   "firstSeenDate": "2026-11-04",
+   "entryDate": "2026-11-05",
+   "cross": "both",
+   "ztDate": "2026-11-03",
+   "stopPrice": 12.86,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "002580",
+   "name": "圣阳股份",
+   "confirmDate": "2026-11-05",
+   "firstSeenDate": "2026-11-04",
+   "entryDate": "2026-11-05",
+   "cross": "chen",
+   "ztDate": "2026-11-03",
+   "stopPrice": 16.8,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "002292",
+   "name": "奥飞娱乐",
+   "confirmDate": "2026-11-05",
+   "firstSeenDate": "2026-11-04",
+   "entryDate": "2026-11-05",
+   "cross": "both",
+   "ztDate": "2026-11-03",
+   "stopPrice": 9.38,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "000608",
+   "name": "阳光股份",
+   "confirmDate": "2026-11-05",
+   "firstSeenDate": "2026-11-05",
+   "entryDate": "2026-11-05",
+   "cross": "db",
+   "ztDate": "2026-11-03",
+   "stopPrice": 5.61,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "600778",
+   "name": "友好集团",
+   "confirmDate": "2026-11-05",
+   "firstSeenDate": "2026-11-05",
+   "entryDate": "2026-11-05",
+   "cross": "db",
+   "ztDate": "2026-11-03",
+   "stopPrice": 4.94,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "600241",
+   "name": "时代万恒",
+   "confirmDate": "2026-11-05",
+   "firstSeenDate": "2026-11-05",
+   "entryDate": "2026-11-05",
+   "cross": "db",
+   "ztDate": "2026-11-03",
+   "stopPrice": 8.49,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "603402",
+   "name": "陕西旅游",
+   "confirmDate": "2026-11-05",
+   "firstSeenDate": "2026-11-05",
+   "entryDate": "2026-11-05",
+   "cross": "db",
+   "ztDate": "2026-11-03",
+   "stopPrice": 55.81,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "600802",
+   "name": "福建水泥",
+   "confirmDate": "2026-11-05",
+   "firstSeenDate": "2026-11-05",
+   "entryDate": "2026-11-05",
+   "cross": "db",
+   "ztDate": "2026-11-03",
+   "stopPrice": 7.36,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "600865",
+   "name": "百大集团",
+   "confirmDate": "2026-11-05",
+   "firstSeenDate": "2026-11-05",
+   "entryDate": "2026-11-05",
+   "cross": "db",
+   "ztDate": "2026-11-02",
+   "stopPrice": 11.02,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "603016",
+   "name": "新宏泰",
+   "confirmDate": "2026-11-05",
+   "firstSeenDate": "2026-11-05",
+   "entryDate": "2026-11-05",
+   "cross": "db",
+   "ztDate": "2026-11-02",
+   "stopPrice": 26.1,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "001266",
+   "name": "宏英智能",
+   "confirmDate": "2026-11-05",
+   "firstSeenDate": "2026-11-05",
+   "entryDate": "2026-11-05",
+   "cross": "db",
+   "ztDate": "2026-11-02",
+   "stopPrice": 33.42,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "600506",
+   "name": "统一股份",
+   "confirmDate": "2026-11-05",
+   "firstSeenDate": "2026-11-05",
+   "entryDate": "2026-11-05",
+   "cross": "db",
+   "ztDate": "2026-11-02",
+   "stopPrice": 17.81,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
   }
  ],
- "updatedAt": "2026-11-04 16:06",
+ "updatedAt": "2026-11-05 16:05",
  "resettleAt": "R100z299"
 }
