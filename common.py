@@ -443,6 +443,81 @@ def trading_days_between(d0, d1):
     return n
 
 
+def last_bar_day(kl):
+    """K 线最后一根的日期 'YYYY-MM-DD'；空/异常一律返回 ''。
+
+    兼容两种结构：`[{'day':..}]`（腾讯/新浪原始）与 `[['2026-11-04', o, c, h, l, v], ...]`
+    （data.js 的 stkKlines 内嵌格式）——两处都用得上，各写一份必然有一处写错。
+    """
+    if not kl:
+        return ''
+    last = kl[-1]
+    try:
+        if isinstance(last, dict):
+            return str(last.get('day') or last.get('date') or '')[:10]
+        return str(last[0] or '')[:10]
+    except Exception:
+        return ''
+
+
+def market_last_day(D, klines=None):
+    """市场最近交易日：优先 `ashare.tradeDate`，缺失时取 stkKlines 里出现最多的末日。
+
+    为什么不信 `datetime.today()`：跨午夜跑批时今天已经是「明天」，而数据还是昨天的；
+    停牌判定一旦拿错基准，全市场的票都会被判成停牌。
+    """
+    d = str(((D or {}).get('ashare') or {}).get('tradeDate') or '')[:10]
+    if d:
+        return d
+    kl = klines if klines is not None else ((D or {}).get('stkKlines') or {})
+    cnt = {}
+    for v in (kl or {}).values():
+        day = last_bar_day(v)
+        if day:
+            cnt[day] = cnt.get(day, 0) + 1
+    return max(cnt, key=cnt.get) if cnt else ''
+
+
+def is_suspended(kl, market_day):
+    """「末根 K 线早于市场最近交易日」= 当天没有成交（停牌/退市残壳）。
+
+    ⚠️ 为什么不用「成交量 == 0」：16:00 收盘后跑池子时没有实时行情，K 线日期是唯一稳的判据；
+    成交量字段在停牌当天压根不会生出一根新 K 线，用成交量为 0 反而会漏。
+    9:45 那份有实时行情，再叠加 `行情状态 == 'S'` 兜一层（见 update_star）。
+    """
+    if not market_day:
+        return False
+    day = last_bar_day(kl)
+    return bool(day) and day < market_day
+
+
+def split_suspended(items, klines, market_day, code_key='code', kl_key='kl'):
+    """把停牌票从候选里挑出来 → (kept, dropped)。
+
+    R100z309（2026-11-05 用户：「你推荐了几天亚玛顿，但这只标的停牌几天了，这个 bug 你没修复」）：
+    亚玛顿 002623 的 K 线停在 11-02，却连续几天出现在断板确认池 / 开盘精选 / 买点清单里，
+    买区还拿「停牌前最后一根收盘价」当现价、标成「在买区内」——**不可交易的票被当成能下单的**。
+
+    `klines` 可以是 {code: kl} 映射，也可以是 None（此时用 items 自带 `kl_key` 字段）。
+    `dropped` 元素为 {code, name, lastDay, why}，调用方**必须**把它打进日志或页面：
+    池子少了几只而页面不说，读者只会以为是抓数失败（G: 抓不到 ≠ 没有）。
+    """
+    kept, dropped = [], []
+    for it in (items or []):
+        if not isinstance(it, dict):
+            continue
+        code = str(it.get(code_key) or '')
+        kl = (klines or {}).get(code) if klines is not None else it.get(kl_key)
+        if is_suspended(kl, market_day):
+            dropped.append({'code': code, 'name': str(it.get('name') or ''),
+                            'lastDay': last_bar_day(kl),
+                            'why': '停牌：最后一根 K 线 %s，早于最近交易日 %s'
+                                   % (last_bar_day(kl) or '—', market_day)})
+            continue
+        kept.append(it)
+    return kept, dropped
+
+
 def roll_fail_pool(old_fail, new_entries, today, keep_days=5, exclude_codes=None,
                    name_map=None):
     """失效归档池滚动窗口（R100z56，用户 2026-10-04 要求「失效当天入池、5 个交易日后剔除」）。

@@ -228,6 +228,29 @@ def _num(x):
     return None if v != v else v
 
 
+def is_suspended_q(D, quotes, code):
+    """停牌判定（R100z309，用户 2026-11-05：「你推荐了几天亚玛顿，但这只标的停牌几天了」）。
+
+    两条判据，任一命中即算停牌：
+
+      ① data.js 内嵌 K 线（stkKlines）的**末根日期** < 市场最近交易日 —— 16:00 那步刚嵌进来的
+         K 线，稳且不需要额外请求；
+      ② 实时行情「今开为 NULL 且成交额 0」—— 停牌票腾讯接口给的就是 open=''、成交额 0；
+         这一条覆盖「K 线还没嵌到 data.js」的窗口（例如当天新停牌）。
+
+    ⚠️ 为什么必须在这里判、而不是只在池子里判：池子是 16:00 生成的，停牌是**盘中随时可能发生**的。
+    002623 亚玛顿就是这样：K 线停在 11-02，但 11-03/11-04/11-05 的精选与买点清单都还带着它，
+    还按停牌前收盘价 19.28 给了买区、标成「在买区内」——不可交易的票被当成能下单的。
+    """
+    c = str(code or '')
+    kl = ((D or {}).get('stkKlines') or {}).get(c)
+    mday = common.market_last_day(D)
+    if common.is_suspended(kl, mday):
+        return True
+    q = (quotes or {}).get(c) or {}
+    return q.get('open') is None and not (q.get('amount') or 0)
+
+
 def build_buy_list(D, picks, quotes, blacklist):
     """三个池 → (今日买入清单 rows, 汇总 summary)。
 
@@ -252,6 +275,11 @@ def build_buy_list(D, picks, quotes, blacklist):
         c = str(code or "")
         if not c.startswith(("60", "00")):
             skipped.append({"code": c, "src": src_zh, "why": "非沪深主板（不在交易范围）"})
+            return False
+        # R100z309：停牌票不给买点。放在最前——黑名单/涨跌幅那些判据对停牌票没有意义，
+        # 而「现价」此时是停牌前的收盘价，算出来的买区、状态全是假的。
+        if is_suspended_q(D, quotes, c):
+            skipped.append({"code": c, "src": src_zh, "why": "停牌（最近交易日无成交），不给买点"})
             return False
         if blacklist.get(c) == "red":
             skipped.append({"code": c, "src": src_zh, "why": "硬风险黑名单（red）"})
@@ -1179,6 +1207,25 @@ def build_star(D, base=None):
     # 放在 picks 定稿之后、star 组装之前：它读的是 picks（断板池已过双闸）+ 三个池的
     # 原始条目（横盘启动/陈学长 的买区字段只在池条目里，picks 是精简副本）。
     # 失败不阻断：清单拿不到就只少一块，picks/pushText 照常出。
+    # ---- R100z309：picks 自身的停牌闸门 ----
+    # build_buy_list 的 _guard 只管买点清单；精选卡片（picks）是另一条出口，同样会显示不可交易的票。
+    # 两条出口都要拦——002623 当初正是「精选里有、买点里也有」，只拦一边等于没拦。
+    _susp = []
+    if picks:
+        _keep = []
+        for _p in picks:
+            if is_suspended_q(D, quotes, _p.get("code")):
+                _susp.append({"code": str(_p.get("code")), "name": str(_p.get("name") or ""),
+                              "lastDay": common.last_bar_day(
+                                  (D.get("stkKlines") or {}).get(str(_p.get("code"))))})
+            else:
+                _keep.append(_p)
+        if _susp:
+            print("[停牌] 精选剔除 %d 只：%s"
+                  % (len(_susp), "、".join("%s %s(%s)" % (x["name"], x["code"], x["lastDay"] or "—")
+                                          for x in _susp)), file=sys.stderr)
+            picks = _keep
+
     buy_rows, buy_summary = [], None
     try:
         buy_rows, buy_summary = build_buy_list(D, picks, quotes, blacklist)
@@ -1224,6 +1271,8 @@ def build_star(D, base=None):
         "marketLine": market_line,
         "sentiment": sentiment,
         "picks": picks,
+        # R100z309：本次因停牌剔除的票（页面「开盘精选」副标题会点明，别让它无声消失）
+        "suspended": _susp,
         "buyList": buy_rows,
         "buySummary": buy_summary,
         "timingExec": timing_exec,

@@ -130,7 +130,8 @@ sys.path.insert(0, HERE)
 
 import check_duanban as CD                       # 复用抓取/打标（只 import，不改它）
 from common import (write_data_js, write_json_atomic, roll_fail_pool,
-                    trading_days_between, today_trade_date, is_trade_day)
+                    trading_days_between, today_trade_date, is_trade_day,
+                    split_suspended)
 
 DATA_JS = os.path.join(HERE, "data.js")
 LEDGER = os.path.join(HERE, "chen_ledger.json")
@@ -1176,6 +1177,16 @@ def build_module(args):
         d = dates[0]
         trade_date = "%s-%s-%s" % (d[:4], d[4:6], d[6:]) if len(d) == 8 else d
 
+    # ---- 停牌闸门（R100z309）----
+    # trade_date 是这批命中里最新的 K 线日期（= 市场最近交易日）。末根 K 线早于它的票，
+    # 当天没有成交，不能进池——否则会出现「池里有它、买区还按停牌前收盘价算」那种假买点。
+    hits, _susp = split_suspended(hits, None, trade_date)
+    if _susp:
+        print("[停牌] 陈学长池剔除 %d 只（末根 K 线早于 %s）：%s"
+              % (len(_susp), trade_date,
+                 "、".join("%s %s(%s)" % (x["name"], x["code"], x["lastDay"] or "—") for x in _susp)),
+              file=sys.stderr)
+
     D = {}
     try:
         D = CD.load_dashboard(args.dashboard or DATA_JS)
@@ -1211,6 +1222,8 @@ def build_module(args):
         # 就进不了 hits，于是被失效池滚动写成「形态失效」，而页面上看不出任何异常
         # （违反「抓不到 ≠ 没有」）。现在给它出口：落盘 + 前端显式告警 + 不进失效池。
         "failedCodes": sorted(set(failed_kl)),
+        # R100z309：因停牌被剔除的票（与 failedCodes 分开：那个是抓空，这个是抓到了但没成交）
+        "suspended": _susp,
         "compare": {},
         "track": {},
     }

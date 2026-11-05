@@ -6098,6 +6098,19 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
   });
 }
 
+/* R100z309（用户 2026-11-05「亚玛顿停牌几天了你还推荐」）：
+   被停牌闸门剔掉的票必须**显式说出来**——池子少几只而页面不说，读者只会以为是抓数失败，
+   下一轮又会问「昨天那只怎么没了」。文案只报名称/代码/末次成交日，不展开原因。
+   空着不等于没事：空着 = 有结论没写。 */
+function suspNoteHtml(list) {
+  if (!list || !list.length) return '';
+  return '　｜　⚠️ 已剔除停牌 ' + list.length + ' 只：' +
+    list.map(function (x) {
+      return esc(x.name || x.code) + '（' + esc(x.code) + '，末次成交 ' +
+        esc(String(x.lastDay || '—').slice(5)) + '）';
+    }).join('、') + '——停牌期间没有成交，不给买点、不进精选';
+}
+
 function dbPoolHtml(title, cls, sub, list, done, poolKey) {
   var h = '<div class="db-pool ' + cls + '"><h2>' + esc(title) + ' · ' + list.length + ' 只</h2>' +
     '<div class="db-sub">' + esc(sub) + '</div>';
@@ -6275,6 +6288,8 @@ function renderDuanban() {
       // 名册里有、说明书里没有，读者就不知道那两枚「陈学长·XX池」徽标是怎么进来的。顺手把各池名额写出来。
       '<div class="db-sub">' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：断板池按「板块情绪正向+主力净流入正向」挂钩+上涨概率降序，并可从谐波/横盘启动/吸筹/陈学长池直接取标的（名额 横盘启动 3 · 谐波 3 · 吸筹 2 · 陈学长 2）；确认档永远排在待确认档之前，待确认档＝断板观察池 + 陈学长观察池 + 缩量回踩（放量阴后缩 1~2 天），只给形态与作废位、不给买点；弹窗与池内一致）' +
         (st.tierSummary && st.tierSummary.text ? '　｜　' + esc(String(st.tierSummary.text)) : '') +
+        /* R100z309：停牌剔除留痕（不写这句，读者会以为「昨天那只今天怎么没了」是故障） */
+        suspNoteHtml(st.suspended) +
         (st.tierSummary && st.tierSummary.shrinkErr ? '　｜　⚠️ 缩量回踩档本次未生成（脚本故障，不是没有此类形态）' : '') +
         '</div>' +
       // R100z232 的下单清单 → R100z254 两表并一张 → **R100z255 表整块删掉**（用户二次拍板）。
@@ -6350,7 +6365,9 @@ function renderDuanban() {
   // 比没有更坏。所以整块撤掉，只留复盘台账那一份回测（它自己会写「近 90 个交易日 · 末笔 X」，
   // 从标题上就说明自己不是当日指令）。「提前一天提醒买哪只」由 22:00 的 aiPrediction / 开盘预测
   // 承担——那两处才是真的提前一天。
-  html += dbPoolHtml('确认池', 'p-conf', '已走完「涨停 → 放量断板 → 缩量 → 不破T日低点与MA5」全流程', conf, true, 'c');
+  html += dbPoolHtml('确认池', 'p-conf',
+    '已走完「涨停 → 放量断板 → 缩量 → 不破T日低点与MA5」全流程' +
+    suspNoteHtml((db && db.suspended) || []), conf, true, 'c');
   html += dbPoolHtml('观察池', 'p-watch', '形态进行中、只差最后一根确认K线（待缩量 ＞ 待企稳 ＞ 待脱离）', watch, false, 'w');
   // R100i：断板反包失败池（破位 / 超期失效归档，5 交易日后自动清理）
   html += dbFailHtml(db && db.failPool, 'duanban');

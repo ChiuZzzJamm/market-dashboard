@@ -54,7 +54,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # R100z6：THS 抓取收口到 common（原 curl_ths_text/curl_ths_json/parse_ths_industries/
 # fetch_ths_industries 双副本合一，与 update_ashare_sectors 共用单一来源）
 from common import (ths_json as curl_ths_json, fetch_ths_industries,
-                    is_trade_day)
+                    is_trade_day, market_last_day, split_suspended)
 
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
@@ -1926,6 +1926,18 @@ def build_module(pairs, D):
     每只附近 60 根日K（前端渲染近 30 根并计算 MA5/10/20/30）与当日涨跌幅；
     sentiment 由 tag_entries 按要闻/AI预测打标；probability 留空由自动化 AI 填写。"""
     entries = []
+    # ---- 停牌闸门（R100z309）----
+    # 用户 2026-11-05：「你推荐了几天亚玛顿，但这只标的停牌几天了」。002623 的 K 线停在 11-02，
+    # 却仍在确认池 / 开盘精选 / 买点清单里，买区还拿停牌前收盘价当现价。
+    # 判定：末根 K 线早于市场最近交易日 → 当天没有成交，不可交易。剔掉的票写进 module.suspended，
+    # 页面与日志都要能看到——池子少几只而不说，读者只会以为抓数失败。
+    _mday = market_last_day(D)
+    pairs, _susp = split_suspended(pairs, None, _mday)
+    if _susp:
+        print("[停牌] 剔除 %d 只（末根 K 线早于 %s）：%s"
+              % (len(_susp), _mday,
+                 "、".join("%s %s(%s)" % (x["name"], x["code"], x["lastDay"] or "—") for x in _susp)),
+              file=sys.stderr)
     # R98: 同花顺行业口径优先（topBoards/boardPctToday/boardPctZt）
     ths_map = fetch_ths_board_map()  # {THS行业名: {code,pct}}
     ths_names = set(ths_map.keys())
@@ -2040,6 +2052,9 @@ def build_module(pairs, D):
         "topBoards": fetch_top_boards(D),
         "confirmed": confirmed,
         "watching": watching,
+        # R100z309：本次因停牌剔除的票（页面显示一行「已剔除停牌 N 只」）。
+        # 与「失效池」不同——失效是形态破了，停牌是没有成交，两者不能混着归档。
+        "suspended": _susp,
     }
 
 
