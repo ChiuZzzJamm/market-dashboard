@@ -100,6 +100,21 @@ def _clean_sector(hybk):
         # R100z297：申万「一般零售」同花顺叫「零售」。不改会让同一张页面里
         # 断板卡写「零售」、挂单卡写「一般零售」，读者以为是两个板块。
         "一般零售": "零售",
+        # R100z311（2026-11-06）：上面只覆盖「截断名」，申万二级**完整名**照样漏——
+        # 002135 东南网架 hybk=「专业工程」，不是截断、FIX 里也没有，于是挂单卡
+        # 板块写「专业工程」而页面别处写「建筑装饰」（同花顺 90 一级）。
+        # 这里与 check_duanban.SPECIAL 的语义归并保持同源，避免两张卡各说各话。
+        "专业工程": "建筑装饰", "工程咨询": "建筑装饰", "装修装饰": "建筑装饰",
+        "基础建设": "建筑装饰", "装修建材": "建筑材料", "水泥制造": "建筑材料",
+        "地面兵装": "军工装备", "航空装备": "军工装备", "航天装备": "军工装备",
+        "数字媒体": "文化传媒", "电视广播": "文化传媒", "出版": "文化传媒",
+        "广告营销": "文化传媒", "文娱用品": "文化传媒",
+        "航空机场": "机场航运", "航运港口": "港口航运", "酒店餐饮": "旅游及酒店",
+        "旅游及景区": "旅游及酒店", "休闲食品": "食品加工制造",
+        "调味发酵": "食品加工制造", "饮料乳品": "饮料制造", "饲料": "养殖业",
+        "林业": "种植业与林业", "商用车": "汽车整车", "其他家电": "小家电",
+        "家电零部": "小家电", "玻璃玻纤": "建筑材料", "普钢": "钢铁", "特钢": "钢铁",
+        "煤炭开采": "煤炭开采加工", "焦炭": "煤炭开采加工", "炼化及贸易": "石油加工贸易",
     }
     return FIX.get(base, base) if base else hybk
 
@@ -146,6 +161,27 @@ def load_klines(codes, base):
     return out
 
 
+def _sector_from_pools(D, code):
+    """hybk 为空时的兜底：复用 data.js 各池里已落盘的板块名（同为同花顺口径）。
+
+    2026-11-06 实测：603185 弘元绿能 / 603876 鼎胜新材 的东财 hybk 为空串，
+    挂单卡板块位就留空，与页面其他位置（断板卡/横盘卡）写法不一致。
+    池里已有正确板块名，直接借用比留空好——不新增取数、不改任何口径。
+    """
+    pools = []
+    db = D.get('duanban') or {}
+    pools += [db.get('confirmed') or [], db.get('watching') or []]
+    for k in ('harmonic', 'accumulation', 'breakoutPool'):
+        blk = D.get(k) or {}
+        for kk in ('confirmPool', 'watchPool', 'scored', 'passed'):
+            pools.append(blk.get(kk) or [])
+    for arr in pools:
+        for e in arr:
+            if str(e.get('code') or '') == str(code) and e.get('sector'):
+                return e['sector']
+    return ''
+
+
 def build_plan(D, base=None, trade_date=None):
     """产出挂单清单。trade_date = T+1（已收盘那个交易日，YYYY-MM-DD）。"""
     base = base or BASE
@@ -184,7 +220,8 @@ def build_plan(D, base=None, trade_date=None):
         nm = str(it.get('n') or '')
         if 'ST' in nm.upper() or nm.startswith('*') or '退' in nm:
             continue
-        cands.append(dict(code=c, name=nm, sector=_clean_sector(it.get('hybk'))))
+        cands.append(dict(code=c, name=nm,
+                          sector=_clean_sector(it.get('hybk')) or _sector_from_pools(D, c)))
     if not cands:
         return None, ('T 日（%s）首板 0 只（涨停池 %d 只里没有主板首板）——'
                       '这是正常结果，不是抓取失败' % (t0s, len(pool)))

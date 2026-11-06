@@ -550,6 +550,20 @@ def main():
         print('[BREAKOUT] 补名：需要 %d 只，取到 %d 只（仍无名 %d 只）'
               % (len(_miss), len(_got), len(_miss) - len(_got)))
 
+    # ---- ST/退市按「最新简称」刷新（R100z311，2026-11-06）----
+    # 原来只靠入池时 data.js 里的 name 判 ST，而 data.js 的名字要等
+    # sync_names 才刷新，顺序上永远晚一步：002207 原名「准油股份」，
+    # 戴帽后仍以旧名通过过滤、当天上卡进了推荐位（ST 禁在受益位）。
+    # 这里先按行情源最新简称（与 sync_names 同源）把名字统一刷一遍，
+    # 真正剔除放到「池内沿用 kept」合并之后 —— 老成员会走 kept 路径回到池里，
+    # 只在此处剔等于白剔（首跑实测：剔除 1 只，最终上卡仍有它）。
+    if passed:
+        _fresh = common.fetch_names([i['code'] for i in passed]) or {}
+        for i in passed:
+            nm2 = _fresh.get(i['code'])
+            if nm2:
+                i['name'] = nm2
+
     old = D.get('breakoutPool') or {}
     old_passed = [x for x in (old.get('passed') or []) if isinstance(x, dict)]
     new_codes = {i['code'] for i in passed}
@@ -596,6 +610,14 @@ def main():
         passed = passed + kept
         passed.sort(key=lambda x: (-x['score'], abs(x.get('posPct') or 0)))
         print('[BREAKOUT] 池内沿用 %d 只（事件仍有效、但今天不贴沿）' % len(kept))
+
+    # ---- ST/退市最终闸（R100z311）：kept 合并之后才剔，否则老成员原路返回 ----
+    _st = [i for i in passed
+           if 'ST' in str(i.get('name') or '').upper() or '退' in str(i.get('name') or '')]
+    if _st:
+        passed = [i for i in passed if i not in _st]
+        print('[BREAKOUT] 按最新简称剔除 ST/退市 %d 只：%s'
+              % (len(_st), '、'.join('%s %s' % (x['code'], x['name']) for x in _st)))
 
     # ---- R100z246：名额挤占必须显式归档，不许人间蒸发（2026-10-27）----
     # 实测：10-26 收盘池里 30 只，到 10-27 收盘重算后其中 9 只被 passed[:30] 截掉，

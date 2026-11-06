@@ -12249,7 +12249,2115 @@
      "inZone": true
     }
    ]
+  },
+  "2026-11-06": {
+   "ai": [
+    {
+     "code": "600547",
+     "name": "山东黄金",
+     "sector": "贵金属",
+     "close": 26.59,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601899",
+     "name": "紫金矿业",
+     "sector": "贵金属",
+     "close": 29.48,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600489",
+     "name": "中金黄金",
+     "sector": "贵金属",
+     "close": 21.02,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002237",
+     "name": "恒邦股份",
+     "sector": "贵金属",
+     "close": 11.69,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002716",
+     "name": "湖南白银",
+     "sector": "贵金属",
+     "close": 7.9,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601069",
+     "name": "西部黄金",
+     "sector": "贵金属",
+     "close": 24.45,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000506",
+     "name": "招金黄金",
+     "sector": "贵金属",
+     "close": 14.33,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "001337",
+     "name": "四川黄金",
+     "sector": "贵金属",
+     "close": 40.73,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601857",
+     "name": "中国石油",
+     "sector": "油气开采及服务",
+     "close": 12.54,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600938",
+     "name": "中国海油",
+     "sector": "油气开采及服务",
+     "close": 30.98,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601808",
+     "name": "中海油服",
+     "sector": "油气开采及服务",
+     "close": 12.79,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600583",
+     "name": "海油工程",
+     "sector": "油气开采及服务",
+     "close": 6.36,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002554",
+     "name": "惠博普",
+     "sector": "油气开采及服务",
+     "close": 2.55,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000554",
+     "name": "泰山石油",
+     "sector": "油气开采及服务",
+     "close": 6.33,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002828",
+     "name": "贝肯能源",
+     "sector": "油气开采及服务",
+     "close": 9.59,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603727",
+     "name": "博迈科",
+     "sector": "油气开采及服务",
+     "close": 20.54,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002027",
+     "name": "分众传媒",
+     "sector": "文化传媒",
+     "close": 5.51,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600637",
+     "name": "东方明珠",
+     "sector": "文化传媒",
+     "close": 7.71,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600088",
+     "name": "中视传媒",
+     "sector": "文化传媒",
+     "close": 13.27,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000917",
+     "name": "电广传媒",
+     "sector": "文化传媒",
+     "close": 6.83,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603598",
+     "name": "引力传媒",
+     "sector": "文化传媒",
+     "close": 21.66,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002181",
+     "name": "粤传媒",
+     "sector": "文化传媒",
+     "close": 11.06,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000156",
+     "name": "华数传媒",
+     "sector": "文化传媒",
+     "close": 7.81,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002371",
+     "name": "北方华创",
+     "sector": "半导体",
+     "close": 561.01,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600584",
+     "name": "长电科技",
+     "sector": "半导体",
+     "close": 53.63,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600460",
+     "name": "士兰微",
+     "sector": "半导体",
+     "close": 24.56,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600703",
+     "name": "三安光电",
+     "sector": "半导体",
+     "close": 9.54,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002079",
+     "name": "苏州固锝",
+     "sector": "半导体",
+     "close": 8.28,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603061",
+     "name": "金海通",
+     "sector": "半导体",
+     "close": 245.5,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "605111",
+     "name": "新洁能",
+     "sector": "半导体",
+     "close": 40.96,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002409",
+     "name": "雅克科技",
+     "sector": "半导体",
+     "close": 89.7,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000063",
+     "name": "中兴通讯",
+     "sector": "通信设备",
+     "close": 28.85,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600498",
+     "name": "烽火通信",
+     "sector": "通信设备",
+     "close": 28.15,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002281",
+     "name": "光迅科技",
+     "sector": "通信设备",
+     "close": 97.29,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000988",
+     "name": "华工科技",
+     "sector": "通信设备",
+     "close": 66.54,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002396",
+     "name": "星网锐捷",
+     "sector": "通信设备",
+     "close": 23.78,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603083",
+     "name": "剑桥科技",
+     "sector": "通信设备",
+     "close": 116.45,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600487",
+     "name": "亨通光电",
+     "sector": "通信设备",
+     "close": 43.71,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002446",
+     "name": "盛路通信",
+     "sector": "通信设备",
+     "close": 6.91,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002463",
+     "name": "沪电股份",
+     "sector": "元件",
+     "close": 81.0,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600183",
+     "name": "生益科技",
+     "sector": "元件",
+     "close": 77.78,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002138",
+     "name": "顺络电子",
+     "sector": "元件",
+     "close": 40.0,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600563",
+     "name": "法拉电子",
+     "sector": "元件",
+     "close": 109.44,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603989",
+     "name": "艾华集团",
+     "sector": "元件",
+     "close": 23.73,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002815",
+     "name": "崇达技术",
+     "sector": "元件",
+     "close": 15.38,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603228",
+     "name": "景旺电子",
+     "sector": "元件",
+     "close": 59.25,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603115",
+     "name": "海星股份",
+     "sector": "元件",
+     "close": 45.66,
+     "px": null,
+     "inZone": null
+    }
+   ],
+   "accumulation": [
+    {
+     "code": "600703",
+     "name": "三安光电",
+     "sector": "半导体",
+     "close": 9.54,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000560",
+     "name": "我爱我家",
+     "sector": "商业百货",
+     "close": 3.04,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002275",
+     "name": "桂林三金",
+     "sector": "中药",
+     "close": 17.56,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "605189",
+     "name": "富春染织",
+     "sector": "纺织制造",
+     "close": 15.14,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601118",
+     "name": "海南橡胶",
+     "sector": "化工行业",
+     "close": 5.28,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000559",
+     "name": "万向钱潮",
+     "sector": "汽车制造",
+     "close": 13.03,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000630",
+     "name": "铜陵有色",
+     "sector": "有色金属",
+     "close": 5.04,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000722",
+     "name": "湖南发展",
+     "sector": "电力行业",
+     "close": 11.93,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000815",
+     "name": "美利云",
+     "sector": "造纸行业",
+     "close": 13.95,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000977",
+     "name": "浪潮信息",
+     "sector": "电子信息",
+     "close": 56.41,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000993",
+     "name": "闽东电力",
+     "sector": "电力行业",
+     "close": 12.23,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002041",
+     "name": "登海种业",
+     "sector": "农林牧渔",
+     "close": 8.79,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002245",
+     "name": "蔚蓝锂芯",
+     "sector": "交通运输",
+     "close": 11.41,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002407",
+     "name": "多氟多",
+     "sector": "化工行业",
+     "close": 23.99,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600392",
+     "name": "盛和资源",
+     "sector": "稀土",
+     "close": 16.03,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600909",
+     "name": "华安证券",
+     "sector": "未分类",
+     "close": 7.07,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601179",
+     "name": "中国西电",
+     "sector": "发电设备",
+     "close": 11.22,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601628",
+     "name": "中国人寿",
+     "sector": "金融行业",
+     "close": 35.85,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601699",
+     "name": "潞安环能",
+     "sector": "煤炭行业",
+     "close": 13.58,
+     "px": null,
+     "inZone": null
+    }
+   ],
+   "harmonic": [
+    {
+     "code": "600256",
+     "name": "广汇能源",
+     "sector": "煤炭开采加工",
+     "close": 6.54,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000690",
+     "name": "宝新能源",
+     "sector": "电力行业",
+     "close": 5.57,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601225",
+     "name": "陕西煤业",
+     "sector": "煤炭行业",
+     "close": 25.52,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600426",
+     "name": "华鲁恒升",
+     "sector": "农药化肥",
+     "close": 20.2,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002594",
+     "name": "比亚迪",
+     "sector": "汽车制造",
+     "close": 86.25,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002432",
+     "name": "九安医疗",
+     "sector": "医疗器械",
+     "close": 54.63,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603288",
+     "name": "海天味业",
+     "sector": "食品行业",
+     "close": 35.65,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603680",
+     "name": "今创集团",
+     "sector": "轨交设备",
+     "close": 11.14,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603501",
+     "name": "豪威集团",
+     "sector": "半导体",
+     "close": 87.98,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002271",
+     "name": "东方雨虹",
+     "sector": "建筑建材",
+     "close": 11.09,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600570",
+     "name": "恒生电子",
+     "sector": "电子信息",
+     "close": 21.63,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600094",
+     "name": "大名城",
+     "sector": "房地产",
+     "close": 4.56,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600667",
+     "name": "太极实业",
+     "sector": "电子器件",
+     "close": 13.22,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600110",
+     "name": "诺德股份",
+     "sector": "电力行业",
+     "close": 8.75,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002119",
+     "name": "康强电子",
+     "sector": "电子器件",
+     "close": 19.27,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601868",
+     "name": "中国能建",
+     "sector": "未分类",
+     "close": 2.33,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002946",
+     "name": "新乳业",
+     "sector": "饮料制造",
+     "close": 17.13,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601519",
+     "name": "大智慧",
+     "sector": "电子信息",
+     "close": 8.68,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601975",
+     "name": "招商南油",
+     "sector": "未分类",
+     "close": 3.64,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603777",
+     "name": "来伊份",
+     "sector": "食品加工制造",
+     "close": 14.62,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600188",
+     "name": "兖矿能源",
+     "sector": "煤炭开采加工",
+     "close": 17.0,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600048",
+     "name": "保利发展",
+     "sector": "房地产",
+     "close": 5.68,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600875",
+     "name": "东方电气",
+     "sector": "发电设备",
+     "close": 23.09,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600863",
+     "name": "华能蒙电",
+     "sector": "电力行业",
+     "close": 5.24,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "001216",
+     "name": "华瓷股份",
+     "sector": "家居用品",
+     "close": 17.9,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002230",
+     "name": "科大讯飞",
+     "sector": "电子信息",
+     "close": 39.15,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000792",
+     "name": "盐湖股份",
+     "sector": "农药化肥",
+     "close": 23.47,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002465",
+     "name": "海格通信",
+     "sector": "电子信息",
+     "close": 10.09,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002475",
+     "name": "立讯精密",
+     "sector": "电子器件",
+     "close": 50.86,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000893",
+     "name": "亚钾国际",
+     "sector": "食品行业",
+     "close": 37.75,
+     "px": null,
+     "inZone": null
+    }
+   ],
+   "breakoutPool": [
+    {
+     "code": "600094",
+     "name": "大名城",
+     "sector": "房地产",
+     "close": 4.56,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "001283",
+     "name": "豪鹏科技",
+     "sector": "未分类",
+     "close": 57.46,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603728",
+     "name": "鸣志电器",
+     "sector": "电机",
+     "close": 60.17,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002286",
+     "name": "保龄宝",
+     "sector": "食品行业",
+     "close": 8.96,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002541",
+     "name": "鸿路钢构",
+     "sector": "钢铁行业",
+     "close": 20.57,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "001201",
+     "name": "东瑞股份",
+     "sector": "畜禽养殖",
+     "close": 16.53,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002813",
+     "name": "路畅科技",
+     "sector": "汽车零部件",
+     "close": 26.29,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002244",
+     "name": "滨江集团",
+     "sector": "房地产",
+     "close": 9.58,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002368",
+     "name": "太极股份",
+     "sector": "电子信息",
+     "close": 13.73,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "001301",
+     "name": "尚太科技",
+     "sector": "锂",
+     "close": 52.15,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000498",
+     "name": "山东路桥",
+     "sector": "建筑建材",
+     "close": 6.39,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603893",
+     "name": "瑞芯微",
+     "sector": "半导体",
+     "close": 217.81,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002510",
+     "name": "天汽模",
+     "sector": "汽车制造",
+     "close": 6.28,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002241",
+     "name": "歌尔股份",
+     "sector": "电子器件",
+     "close": 24.89,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002812",
+     "name": "恩捷股份",
+     "sector": "电池",
+     "close": 52.85,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002881",
+     "name": "美格智能",
+     "sector": "电子零部件制造",
+     "close": 44.53,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002207",
+     "name": "*ST准油",
+     "sector": "石油行业",
+     "close": 5.36,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000700",
+     "name": "模塑科技",
+     "sector": "汽车零部件",
+     "close": 15.0,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "001388",
+     "name": "信通电子",
+     "sector": "仪器仪表",
+     "close": 21.97,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603305",
+     "name": "旭升集团",
+     "sector": "汽车零部件",
+     "close": 11.73,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603160",
+     "name": "汇顶科技",
+     "sector": "未分类",
+     "close": 62.88,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002623",
+     "name": "亚玛顿",
+     "sector": "玻璃行业",
+     "close": 19.28,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002945",
+     "name": "华林证券",
+     "sector": "未分类",
+     "close": 15.38,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600267",
+     "name": "海正药业",
+     "sector": "生物制药",
+     "close": 13.83,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "001328",
+     "name": "登康口腔",
+     "sector": "未分类",
+     "close": 35.67,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002238",
+     "name": "天威视讯",
+     "sector": "传媒娱乐",
+     "close": 6.9,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600699",
+     "name": "均胜电子",
+     "sector": "汽车零部件",
+     "close": 21.65,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002931",
+     "name": "锋龙股份",
+     "sector": "未分类",
+     "close": 41.77,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000810",
+     "name": "创维数字",
+     "sector": "电子器件",
+     "close": 11.11,
+     "px": null,
+     "inZone": null
+    }
+   ],
+   "duanban_confirmed": [
+    {
+     "code": "001330",
+     "name": "博纳影业",
+     "sector": "影视院线",
+     "close": 6.16,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603598",
+     "name": "引力传媒",
+     "sector": "文化传媒",
+     "close": 21.66,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603283",
+     "name": "赛腾股份",
+     "sector": "自动化设备",
+     "close": 37.29,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002716",
+     "name": "湖南白银",
+     "sector": "贵金属",
+     "close": 7.9,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002741",
+     "name": "光华科技",
+     "sector": "电子化学品",
+     "close": 20.38,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000962",
+     "name": "东方钽业",
+     "sector": "小金属",
+     "close": 40.17,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002992",
+     "name": "宝明科技",
+     "sector": "光学光电子",
+     "close": 31.5,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601069",
+     "name": "西部黄金",
+     "sector": "贵金属",
+     "close": 24.45,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603061",
+     "name": "金海通",
+     "sector": "半导体",
+     "close": 245.5,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000506",
+     "name": "招金黄金",
+     "sector": "贵金属",
+     "close": 14.33,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002409",
+     "name": "雅克科技",
+     "sector": "半导体",
+     "close": 89.7,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002876",
+     "name": "三利谱",
+     "sector": "光学光电子",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600391",
+     "name": "航发科技",
+     "sector": "军工装备",
+     "close": 43.03,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "605111",
+     "name": "新洁能",
+     "sector": "半导体",
+     "close": 40.96,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "001337",
+     "name": "四川黄金",
+     "sector": "贵金属",
+     "close": 40.73,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600371",
+     "name": "万向德农",
+     "sector": "种植业与林业",
+     "close": 11.26,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603955",
+     "name": "大千生态",
+     "sector": "建筑装饰",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "605577",
+     "name": "龙版传媒",
+     "sector": "文化传媒",
+     "close": 16.8,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002181",
+     "name": "粤传媒",
+     "sector": "文化传媒",
+     "close": 11.06,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000892",
+     "name": "欢瑞世纪",
+     "sector": "影视院线",
+     "close": 4.89,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000156",
+     "name": "华数传媒",
+     "sector": "文化传媒",
+     "close": 7.81,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601339",
+     "name": "百隆东方",
+     "sector": "纺织制造",
+     "close": 7.55,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603587",
+     "name": "地素时尚",
+     "sector": "服装家纺",
+     "close": 14.14,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600801",
+     "name": "华新建材",
+     "sector": "建筑材料",
+     "close": null,
+     "px": null,
+     "inZone": null
+    }
+   ],
+   "duanban_watching": [
+    {
+     "code": "000599",
+     "name": "青岛双星",
+     "sector": "汽车零部件",
+     "close": 4.12,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "605333",
+     "name": "沪光股份",
+     "sector": "汽车零部件",
+     "close": 19.9,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600506",
+     "name": "统一股份",
+     "sector": "石油加工贸易",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601099",
+     "name": "太平洋",
+     "sector": "证券",
+     "close": 3.48,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600293",
+     "name": "三峡新材",
+     "sector": "建筑材料",
+     "close": 3.9,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603880",
+     "name": "南卫股份",
+     "sector": "医疗器械",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601086",
+     "name": "国芳集团",
+     "sector": "零售",
+     "close": 14.02,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002094",
+     "name": "青岛金王",
+     "sector": "家居用品",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "001266",
+     "name": "宏英智能",
+     "sector": "自动化设备",
+     "close": 35.88,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000417",
+     "name": "合百集团",
+     "sector": "零售",
+     "close": 6.11,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000603",
+     "name": "盛达资源",
+     "sector": "贵金属",
+     "close": 26.05,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601929",
+     "name": "吉视传媒",
+     "sector": "文化传媒",
+     "close": 2.5,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002865",
+     "name": "钧达股份",
+     "sector": "光伏设备",
+     "close": 43.67,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002307",
+     "name": "北新路桥",
+     "sector": "建筑装饰",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "001269",
+     "name": "欧晶科技",
+     "sector": "光伏设备",
+     "close": 19.06,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002309",
+     "name": "中利集团",
+     "sector": "电网设备",
+     "close": 2.92,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "605376",
+     "name": "博迁新材",
+     "sector": "金属新材料",
+     "close": 79.28,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "001282",
+     "name": "三联锻造",
+     "sector": "汽车零部件",
+     "close": 16.88,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002805",
+     "name": "丰元股份",
+     "sector": "电池",
+     "close": 14.49,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603906",
+     "name": "龙蟠科技",
+     "sector": "电池",
+     "close": 15.78,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002292",
+     "name": "奥飞娱乐",
+     "sector": "文化传媒",
+     "close": 9.68,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600358",
+     "name": "国旅联合",
+     "sector": "文化传媒",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600259",
+     "name": "中稀有色",
+     "sector": "小金属",
+     "close": 62.65,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603990",
+     "name": "麦迪科技",
+     "sector": "软件开发",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "605069",
+     "name": "正和生态",
+     "sector": "环境治理",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000428",
+     "name": "华天酒店",
+     "sector": "旅游及酒店",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000889",
+     "name": "中嘉博创",
+     "sector": "通信服务",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600206",
+     "name": "有研新材",
+     "sector": "半导体",
+     "close": 38.39,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603500",
+     "name": "祥和实业",
+     "sector": "轨交设备",
+     "close": 10.29,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "001393",
+     "name": "维通利",
+     "sector": "电网设备",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600865",
+     "name": "百大集团",
+     "sector": "零售",
+     "close": 12.56,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002343",
+     "name": "慈文传媒",
+     "sector": "影视院线",
+     "close": 8.89,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "605488",
+     "name": "福莱新材",
+     "sector": "塑料制品",
+     "close": 49.27,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603151",
+     "name": "邦基科技",
+     "sector": "养殖业",
+     "close": 19.68,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600569",
+     "name": "安阳钢铁",
+     "sector": "钢铁",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603682",
+     "name": "锦和商管",
+     "sector": "零售",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002773",
+     "name": "康弘药业",
+     "sector": "生物制品",
+     "close": 22.28,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000700",
+     "name": "模塑科技",
+     "sector": "汽车零部件",
+     "close": 15.0,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600986",
+     "name": "浙文互联",
+     "sector": "文化传媒",
+     "close": 7.65,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "605287",
+     "name": "德才股份",
+     "sector": "建筑装饰",
+     "close": 55.57,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603876",
+     "name": "鼎胜新材",
+     "sector": "工业金属",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "605188",
+     "name": "国光连锁",
+     "sector": "零售",
+     "close": 12.42,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002318",
+     "name": "久立特材",
+     "sector": "钢铁",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002131",
+     "name": "利欧股份",
+     "sector": "通用设备",
+     "close": 4.39,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000635",
+     "name": "英力特",
+     "sector": "化学原料",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603185",
+     "name": "弘元绿能",
+     "sector": "光伏设备",
+     "close": 14.82,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002135",
+     "name": "东南网架",
+     "sector": "建筑装饰",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600481",
+     "name": "双良节能",
+     "sector": "光伏设备",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000530",
+     "name": "冰山冷热",
+     "sector": "通用设备",
+     "close": 9.04,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002980",
+     "name": "华盛昌",
+     "sector": "电网设备",
+     "close": 70.32,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002975",
+     "name": "博杰股份",
+     "sector": "自动化设备",
+     "close": 80.56,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002652",
+     "name": "扬子新材",
+     "sector": "建筑材料",
+     "close": 4.41,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603662",
+     "name": "柯力传感",
+     "sector": "通用设备",
+     "close": 56.53,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603248",
+     "name": "锡华科技",
+     "sector": "风电设备",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603777",
+     "name": "来伊份",
+     "sector": "食品加工制造",
+     "close": 14.62,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603767",
+     "name": "中马传动",
+     "sector": "汽车零部件",
+     "close": 16.28,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000919",
+     "name": "金陵药业",
+     "sector": "化学制药",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "605288",
+     "name": "凯迪股份",
+     "sector": "自动化设备",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600715",
+     "name": "文投控股",
+     "sector": "游戏",
+     "close": 2.52,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000608",
+     "name": "阳光股份",
+     "sector": "房地产",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601366",
+     "name": "利群股份",
+     "sector": "零售",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600778",
+     "name": "友好集团",
+     "sector": "零售",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603402",
+     "name": "陕西旅游",
+     "sector": "旅游及酒店",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600630",
+     "name": "龙头股份",
+     "sector": "服装家纺",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603258",
+     "name": "电魂网络",
+     "sector": "游戏",
+     "close": 16.85,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "000591",
+     "name": "太阳能",
+     "sector": "电力",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600241",
+     "name": "时代万恒",
+     "sector": "电池",
+     "close": 9.17,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600802",
+     "name": "福建水泥",
+     "sector": "建筑材料",
+     "close": 7.7,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "605378",
+     "name": "野马电池",
+     "sector": "电池",
+     "close": 14.73,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002425",
+     "name": "凯撒文化",
+     "sector": "游戏",
+     "close": 3.3,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603096",
+     "name": "新经典",
+     "sector": "文化传媒",
+     "close": 17.12,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603755",
+     "name": "日辰股份",
+     "sector": "食品加工制造",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603633",
+     "name": "徕木股份",
+     "sector": "消费电子",
+     "close": 6.37,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600576",
+     "name": "祥源文旅",
+     "sector": "旅游及酒店",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600199",
+     "name": "金种子酒",
+     "sector": "白酒",
+     "close": 7.83,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603171",
+     "name": "税友股份",
+     "sector": "IT服务",
+     "close": 48.21,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002983",
+     "name": "芯瑞达",
+     "sector": "光学光电子",
+     "close": 22.82,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603863",
+     "name": "松炀资源",
+     "sector": "造纸",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "003019",
+     "name": "宸展光电",
+     "sector": "光学光电子",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "605189",
+     "name": "富春染织",
+     "sector": "纺织制造",
+     "close": 15.14,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002187",
+     "name": "广百股份",
+     "sector": "零售",
+     "close": 5.93,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "001219",
+     "name": "青岛食品",
+     "sector": "食品加工制造",
+     "close": 23.23,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600779",
+     "name": "水井坊",
+     "sector": "白酒",
+     "close": 28.95,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600299",
+     "name": "安迪苏",
+     "sector": "化学制品",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600109",
+     "name": "国金证券",
+     "sector": "证券",
+     "close": 8.42,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603115",
+     "name": "海星股份",
+     "sector": "元件",
+     "close": 45.66,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603016",
+     "name": "新宏泰",
+     "sector": "电网设备",
+     "close": 28.59,
+     "px": null,
+     "inZone": null
+    }
+   ],
+   "chen_loose": [
+    {
+     "code": "002805",
+     "name": "丰元股份",
+     "sector": "电池",
+     "close": 14.49,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002580",
+     "name": "圣阳股份",
+     "sector": "电池",
+     "close": 19.23,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "002292",
+     "name": "奥飞娱乐",
+     "sector": "文化传媒",
+     "close": 9.68,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "601595",
+     "name": "上海电影",
+     "sector": "影视院线",
+     "close": 32.51,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "603628",
+     "name": "清源股份",
+     "sector": "光伏设备",
+     "close": 10.93,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600259",
+     "name": "中稀有色",
+     "sector": "小金属",
+     "close": 62.65,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "003019",
+     "name": "宸展光电",
+     "sector": "光学光电",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600801",
+     "name": "华新建材",
+     "sector": "建筑材料",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600779",
+     "name": "水井坊",
+     "sector": "白酒",
+     "close": 28.95,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600299",
+     "name": "安迪苏",
+     "sector": "化学制品",
+     "close": null,
+     "px": null,
+     "inZone": null
+    },
+    {
+     "code": "600109",
+     "name": "国金证券",
+     "sector": "证券",
+     "close": 8.42,
+     "px": null,
+     "inZone": null
+    }
+   ],
+   "buy_duanban": [
+    {
+     "code": "002865",
+     "name": "钧达股份",
+     "sector": "光伏设备",
+     "close": 43.67,
+     "px": 47.3,
+     "inZone": true
+    }
+   ],
+   "buy_chen": [
+    {
+     "code": "002805",
+     "name": "丰元股份",
+     "sector": "电池",
+     "close": 14.49,
+     "px": 14.49,
+     "inZone": true
+    },
+    {
+     "code": "601595",
+     "name": "上海电影",
+     "sector": "影视院线",
+     "close": 32.51,
+     "px": 33.2,
+     "inZone": true
+    },
+    {
+     "code": "603628",
+     "name": "清源股份",
+     "sector": "光伏设备",
+     "close": 10.93,
+     "px": 11.03,
+     "inZone": true
+    },
+    {
+     "code": "600259",
+     "name": "中稀有色",
+     "sector": "小金属",
+     "close": 62.65,
+     "px": 62.16,
+     "inZone": true
+    },
+    {
+     "code": "600801",
+     "name": "华新建材",
+     "sector": "建筑材料",
+     "close": null,
+     "px": 27.51,
+     "inZone": true
+    },
+    {
+     "code": "600299",
+     "name": "安迪苏",
+     "sector": "化学制品",
+     "close": null,
+     "px": 8.65,
+     "inZone": true
+    },
+    {
+     "code": "600779",
+     "name": "水井坊",
+     "sector": "白酒",
+     "close": 28.95,
+     "px": 28.37,
+     "inZone": true
+    },
+    {
+     "code": "600109",
+     "name": "国金证券",
+     "sector": "证券",
+     "close": 8.42,
+     "px": 8.41,
+     "inZone": true
+    },
+    {
+     "code": "600960",
+     "name": "渤海汽车",
+     "sector": "汽车零部",
+     "close": 4.29,
+     "px": 4.28,
+     "inZone": true
+    },
+    {
+     "code": "601083",
+     "name": "锦江航运",
+     "sector": "港口航运",
+     "close": 14.46,
+     "px": 14.27,
+     "inZone": true
+    },
+    {
+     "code": "600285",
+     "name": "羚锐制药",
+     "sector": "中药",
+     "close": null,
+     "px": 23.72,
+     "inZone": true
+    },
+    {
+     "code": "603198",
+     "name": "迎驾贡酒",
+     "sector": "白酒",
+     "close": 46.16,
+     "px": 45.33,
+     "inZone": true
+    },
+    {
+     "code": "000676",
+     "name": "智度股份",
+     "sector": "文化传媒",
+     "close": null,
+     "px": 6.9,
+     "inZone": true
+    }
+   ]
   }
  },
- "updatedAt": "2026-11-05 16:34:07"
+ "updatedAt": "2026-11-06 16:34:27"
 }

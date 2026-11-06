@@ -547,6 +547,14 @@ def match_ths_industry(hybk, ths_names):
         # 601188 龙江交通 10-30 就报过「铁路公路」，本轮 600576 祥源文旅 / 603402 陕西旅游 复发。
         "旅游及景": "旅游及酒店", "铁路公路": "公路铁路运输",
         "焦炭": "煤炭开采加工", "焦炭Ⅱ": "煤炭开采加工",
+        # R100z311（2026-11-06）：8 只标的的申万二级名在同花顺 90 一级里没有同名键，
+        # 前缀匹配也救不回（'航空装备' 与 '军工装备' 互不为前缀）→ bpt=None →
+        # 【板块消息】写成「当日无板块指数披露」。按申万归属并到同花顺上位大类。
+        # 「其他」历史仅 002992 宝明科技（PET 铜箔/光学膜）取到，按光学光电子口径；
+        # 若日后出现别的票落此键，改按 code 映射，别在这里硬扩。
+        "航空装备": "军工装备", "玻璃玻纤": "建筑材料", "文娱用品": "文化传媒",
+        "酒店餐饮": "旅游及酒店", "普钢": "钢铁", "特钢": "钢铁",
+        "调味发酵": "食品加工制造", "其他": "光学光电子",
     }
     if clean in SPECIAL and SPECIAL[clean] in ths_names:
         return SPECIAL[clean]
@@ -1704,6 +1712,11 @@ def build_story(e, refs=None, bear_refs=None):
             body = _story_first_sentence(ref.get("summary"))
             # R100z284：摘要原文同样可能带 ！？；，切句后产生不含个股名的半句。
             body = (body or "").replace("！", "，").replace("？", "，").replace("；", "，")
+            # R100z311（2026-11-06）：ref 的 summary 是**该条新闻发布日**写的，
+            # 里面常带「今天文化传媒涨 4.21%」。原样拼进当日 story 就变成「今天涨」，
+            # 而当日文化传媒实际 −1.19%（实测 5 只传媒票全中招，属事实错误）。
+            # 相对时点一律改写成「报道当日」，指代明确且不会跨日错。
+            body = re.sub(r"今天|今日", "报道当日", body)
             phrase = _pick(BULL_PHRASE if sent == "bull"
                            else (BEAR_PHRASE if sent == "bear" else NEUTRAL_PHRASE),
                            code, 1)
