@@ -2,12 +2,12 @@
  "ok": true,
  "nameSrc": "tx",
  "nameSrcDetail": {
-  "tx": 355,
+  "tx": 335,
   "sina": 0,
   "em": 0
  },
- "date": "2026-11-05",
- "checked": 355,
+ "date": "2026-11-06",
+ "checked": 335,
  "liftWindow": [
   2,
   5
@@ -17,19 +17,19 @@
  "dims": {
   "st": {
    "status": "ok",
-   "cover": "行情名源（腾讯355/新浪0/东财0）355/355 只取到"
+   "cover": "行情名源（腾讯335/新浪0/东财0）335/335 只取到"
   },
   "cut": {
    "status": "ok",
-   "cover": "公告源 355/355 只取到（东财355/巨潮0）"
+   "cover": "公告源 335/335 只取到（东财335/巨潮0）"
   },
   "lift": {
    "status": "ok",
-   "cover": "解禁源 355/355 只取到"
+   "cover": "解禁源 335/335 只取到"
   },
   "pledge": {
    "status": "ok",
-   "cover": "质押源 355/355 只取到（仅供参考）"
+   "cover": "质押源 335/335 只取到（仅供参考）"
   }
  },
  "verdict": "full",
@@ -71,18 +71,6 @@
    "severity": "orange",
    "progress": [
     "减持预披露"
-   ]
-  },
-  "002300": {
-   "name": "太阳电缆",
-   "reasons": [
-    "2026-10-09 减持进行中"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "red",
-   "progress": [
-    "减持进行中"
    ]
   },
   "002741": {
