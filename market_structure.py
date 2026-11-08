@@ -204,6 +204,7 @@ def build_text(m, dh, dr, da, ref, n):
             parts.append("高位分歧 %d 只（%.0f%%）" % (m["divCount"], (m["divRatio"] or 0) * 100))
     body = "；".join(parts) + "。"
     tail = ""
+    trend_seg = ""
 
     if ref and (dh is not None or dr is not None):
         seg = []
@@ -213,7 +214,8 @@ def build_text(m, dh, dr, da, ref, n):
             seg.append("连板高度 %+d 板" % dh)
         if da is not None:
             seg.append("成交额 %+.0f 亿" % da)
-        tail += "较 %d 个交易日前（%s）：%s。" % (n, ref, "、".join(seg))
+        trend_seg = "较 %d 个交易日前（%s）：%s。" % (n, ref, "、".join(seg))
+        tail += trend_seg
 
     # 结论句：按「广度 × 分歧度 × 拥挤度」的优先顺序给唯一判断，避免并列多结论
     r = m.get("upDownRatio")
@@ -228,8 +230,12 @@ def build_text(m, dh, dr, da, ref, n):
         tail += "普跌且赚钱效应弱，宜降仓等缩量企稳。"
     else:
         tail += "结构性行情，胜负手在板块而非指数。"
-    # text=完整句（供 AI 引用/复制）；brief=趋势+结论（前端指标行已经显示数字，只留判断，避免同卡重复数字）
-    return body + tail, tail
+    # text=完整句（供 AI 引用/复制）；brief=**只留结论句**。
+    # ⚠️ R100z310 修正：原来注释写「只留判断、避免同卡重复数字」，但实现返回的是 tail，
+    # 而 tail 里带着「较 5 个交易日前：涨跌比…连板高度…成交额…」——前端 chips 已经用
+    # trendN/ratio5/height5/amt5 把同一串数字渲染过一遍，结果同一张卡里那段话出现两次。
+    # 现在 brief 从 tail 里**扣掉 trend 段**，只留结论；text 仍是完整句（AI 引用需要上下文）。
+    return body + tail, tail[len(trend_seg):] if trend_seg else tail
 
 
 

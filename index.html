@@ -842,6 +842,11 @@
   .pre-score.s-strong { color: #a8541a; }
   .pre-score.s-weak { color: #8a94a0; }
   /* 退潮/冰点期提示条（R100z310） */
+  /* R100z310：结构面里的「情绪 vs 昨日」一行（比绝对值多一层边际信息） */
+  .s-mood { display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+            margin-top: 6px; font-size: var(--fs-xs); color: var(--ink2); }
+  .s-mood .pre-tag { margin: 0; }
+  .s-mood-x s { text-decoration: none; opacity: .78; }
   .pre-warn { margin-top: 7px; padding: 7px 10px; border-radius: 8px;
               background: #fdf2f2; border: 1px solid #f0cfcf; color: #8d3a3a;
               font-size: var(--fs-xs); line-height: 1.65; }
@@ -1938,8 +1943,29 @@ function renderStructure(s, tradeDate) {
     if (s.amt5 !== null && s.amt5 !== undefined) seg.push('成交额 ' + (s.amt5 > 0 ? '+' : '') + Math.round(s.amt5) + ' 亿');
     if (seg.length) chips.push('较 ' + s.trendN + ' 个交易日前：' + seg.join('、'));
   }
+  /* R100z310：情绪「vs 昨日」。
+     用户 2026-11-08：「反包能不能成，市场情绪有很大因素」——但这一行原来全是绝对值
+     （连板 10 只、最高 5 板），读者看不出「比昨天好还是差」。同一个 10 只，昨天 20 和昨天 5
+     是两种盘面。边际比绝对值有信息量，这是整块结构面里唯一的前瞻信号。
+     deltas 由 market_structure.py 写好（六项 cur/prev/diff），前端只挑有对比值的显示。 */
+  var moodLine = '';
+  if (s.mood && s.mood.label) {
+    var mv = [];
+    (s.mood.deltas || []).forEach(function (d) {
+      if (!d || d.diff === null || d.diff === undefined || d.cur === null || d.cur === undefined) return;
+      var dv = Math.abs(d.diff) < 1 ? d.diff.toFixed(1) : String(Math.round(d.diff));
+      mv.push(esc(d.name) + ' <b>' + Math.round(d.cur) + '</b><s>（' + (d.diff > 0 ? '+' : '') + dv + '）</s>');
+    });
+    var mcls = (s.mood.label === '回暖') ? ' s-strong'
+      : ((s.mood.label === '退潮' || s.mood.label === '冰点') ? ' s-weak' : '');
+    moodLine = '<div class="s-mood"><span class="pre-tag' + mcls + '">情绪·' +
+      esc(s.mood.label) + '</span>' +
+      (mv.length ? '<span class="s-mood-x">较昨日：' + mv.join(' · ') + '</span>' : '') +
+      (s.mood.verdict ? '<span class="s-mood-x">' + esc(s.mood.verdict) + '</span>' : '') + '</div>';
+  }
   return '<div class="struct" title="' + esc(s.basis || '') + '"><span class="s-tag">结构面</span>' +
     chips.map(function (c) { return '<span>' + c + '</span>'; }).join('') +
+    moodLine +
     (s.brief ? '<div class="s-judge">' + esc(s.brief) + '</div>' : '') + '</div>';
 }
 
