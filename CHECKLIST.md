@@ -374,13 +374,35 @@ GIT_SSH_COMMAND="ssh -i .deploy_key -o StrictHostKeyChecking=no -p 443" git push
 不许写「检查完了」「已仔细检查」。必须写：
 
 ```
-跑了 L0–L19 共 20 层 + M0–M13（记忆）共 13 层
+跑了 L0–L19 共 20 层 + L20（前端字段探针）+ M0–M13（记忆）共 13 层
 L0 PASS / L1 PASS / L2 修了 n 处 / L3 PASS / … / L16 PASS（视觉层：贴图 + 三问）/ L17 PASS（线上独有标记已上）/ L18 PASS（prompt 字段名对账）/ L19 PASS（写盘自证：两侧各跑一次 + 哈希对比）
 自动化体检：check_automations.py → FAIL=0（报「哪类几项」与总数，不写死项数——闸门随时会加）
 闸门：FAIL=0 exit=0（WARN 条数 + 逐条性质，不写 PASS 数字——WARN 随时段浮动）
 未覆盖：<哪一层没跑、为什么、风险是什么>
 剩余 WARN：<逐条 + 性质（真信号 / 已知噪音 / 正常态）>
 ```
+
+## L20 前端字段探针（R100z315，2026-11-09）
+
+```
+node check_fields.js            # 只报高频 miss（≥3 次），exit 1 = 有
+node check_fields.js --verbose  # 全量（含条件字段，噪音大，只在追某条时用）
+```
+
+**为什么需要它**：JS 读一个不存在的键**不报错**，只返回 undefined，然后页面显示「—」或悄悄走
+兜底分支 —— 闸门全绿、页面看着也正常，但那段逻辑其实没生效。`check_undefined_calls.py`
+只扫 Python，前端这一层此前完全没覆盖。
+
+做法：把 `window.DASHBOARD_DATA` 包一层 Proxy，记录「键不在对象里」的 get，用桩 DOM 跑一遍
+主要渲染函数，按命中次数排序。
+
+**只报高频**：本项目「前端判空 + 数据不一定有」的写法很普遍（谐波 T1 到位、impact horizon、
+观察池 shrinkT…），全列约 1300 条，真正那条 `duanban.star.code`（47 次）差点被淹掉。
+**高频＝同一次渲染里反复读，通常是「遍历整池读不存在的键」这类真 bug；低频多是条件字段。**
+
+白名单（脚本里 `KNOWN`）每条都要写清「为什么不是 bug」。2026-11-09 首跑抓到的真 bug：
+`fbIsDuanban` 把 `duanban.star`（对象）当数组元素 concat 进池子，遍历时多出一个
+`code=undefined` 的垃圾项。
 
 **判据一：给不出「未覆盖」的检查报告，等同于没检查。**
 **判据二：闸门没做过故障注入 = 不知道它拦不拦得住。**（G27 首版就是这么发现漏判的）

@@ -857,15 +857,14 @@
   /* R100z311：标的弹窗里的三因子行（题材/人气/情绪/综合） */
   .m-pre-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 0 0 7px; }
   .m-pre-row .pre-tag, .m-pre-row .pre-total { font-size: var(--fs-sm); line-height: 1.8; padding: 0 7px; }
-  .m-pre-tier { font-size: var(--fs-xs); color: var(--ink2); opacity: .8; }
+  /* R100z315（2026-11-09 体检）：.m-pre-tier / .m-pre-note 两条 CSS 随
+     「池内中」那一枚标签和「降级说明」一起下线了，样式留着就是孤儿（探针实测 0 次使用）。 */
   /* R100z312：补涨判断一行——「可补涨」用暖色底强调（这是唯一带方向的结论） */
   .m-ladder-note { margin: 0 0 7px; padding: 5px 9px; border-radius: var(--r-note);
                    font-size: var(--fs-xs); line-height: 1.65; color: var(--ink2);
                    background: var(--paper); border: 1px solid var(--line); }
   .m-ladder-note.ok { background: #fdf4e8; border-color: #e8c79a; color: #8a4a12; }
   .m-ladder-note.dim { opacity: .78; }
-  .m-pre-note { margin: 0 0 7px; font-size: var(--fs-xs); color: var(--ink2);
-                line-height: 1.6; opacity: .85; }
   /* R100z310：结构面里的「情绪 vs 昨日」一行（比绝对值多一层边际信息） */
   .s-mood { display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
             margin-top: 6px; font-size: var(--fs-xs); color: var(--ink2); }
@@ -2097,7 +2096,7 @@ function stkTechMeta(code) {
     (cp.strict || []).forEach(function (x) { if (x && x.code) T.chen[String(x.code)] = '严格池'; });
     (cp.loose || []).forEach(function (x) { if (x && x.code && !T.chen[String(x.code)]) T.chen[String(x.code)] = '放宽池'; });
     (cp.watching || []).forEach(function (x) { if (x && x.code && !T.chen[String(x.code)]) T.chen[String(x.code)] = '观察中'; });
-    // 五份失效归档。键名与 failPoolOf/failKindCn 的白名单逐字一致（db/chen/breakoutPool/…）
+    // 五份失效归档。键名与 failPoolOf 白名单、dbFailHtml 的 onclick 逐字一致（db/chen/breakoutPool/…）
     [['db', db.failPool], ['chen', cp.failPool],
      ['bp', (D.breakoutPool || {}).failPool], ['hz', hz.failPool],
      ['acc', (D.accumulation || {}).failPool]].forEach(function (pr) {
@@ -3341,8 +3340,12 @@ function preModalRowHtml(pre) {
 function fbIsDuanban(code0) {
   try {
     var d = (window.DASHBOARD_DATA || {}).duanban || {};
-    var pool = [].concat(d.confirmed || [], d.watching || [], d.star || [],
-                         (d.star && Array.isArray(d.star)) ? [] : ((d.star && d.star.stocks) || []));
+    /* R100z315（2026-11-09 体检，Proxy 探针抓到）：原来写 `[].concat(d.star || [], ...)`，
+       而 `d.star` 是**对象** `{picks, buyList, date…}`——`concat(对象)` 会把它整个当成
+       **一个元素**塞进 pool，于是遍历时多出一个 `pool[i].code === undefined` 的垃圾项
+       （探针实测 `duanban.star.code` / `duanban.star.stocks` 各被读 47 次）。
+       那句 `Array.isArray(d.star)` 是「star 曾经是数组」时代的兼容分支，早已不成立。 */
+    var pool = [].concat(d.confirmed || [], d.watching || [], (d.star && d.star.picks) || []);
     for (var i = 0; i < pool.length; i++) {
       if (String((pool[i] && pool[i].code) || '').replace(/\D/g, '') === code0) return true;
     }
@@ -4722,14 +4725,10 @@ function failPoolOf(kind) {
   if (kind === 'chen') return (D.chenPool || {}).failPool || [];  // R100z218：陈学长池自己的归档
   return (D.duanban || {}).failPool || []; // 兜底：断板反包（默认）
 }
-/* ⚠️ 新增 kind 必须同步 D 里（failPoolOf 白名单 + 本映射 + dbFailHtml 的 onclick）。 */
-function failKindCn(kind) {
-  return kind === 'harmonic' ? '谐波·'
-    : kind === 'breakoutPool' ? '横盘启动·'
-    : kind === 'accumulation' ? '吸筹·'
-    : kind === 'chen' ? '陈学长·'
-    : '断板·';
-}
+/* R100z315（2026-11-09 体检）：这里原有 failKindCn()（kind→中文前缀映射），
+   全仓零调用——失效池的中文前缀改由 dbFailHtml 内部拼，这个函数从那时起就没用了。
+   注释里那句「新增 kind 必须同步本映射」也跟着失效：现在只有 failPoolOf 白名单
+   + dbFailHtml 的 onclick 两处要对齐。 */
 // R100z4x：失效池弹窗同组导航——DB_NAV=失效归档池键数组，左右箭头/键盘 ←→ 在池内循环
 // R100z84（用户 2026-10-08）：弹窗改走 openDbModal（与确认池/观察池同款富弹窗：徽标行/形态/
 // 失效原因/消息三口径/技术面/K线）——原走 openStkModal 只有 K 线+板块徽章，信息量远低于双池。
