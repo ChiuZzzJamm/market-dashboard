@@ -382,6 +382,15 @@ def main():
     node = dict(m)
     node.update({"date": cur_date, "height5": dh, "ratio5": dr, "amt5": da,
                  "trendRef": ref, "trendN": n, "basis": BASIS})
+    # ---- R100z310：情绪「vs 昨日」边际 ----
+    # 用户 2026-11-08：「反包能不能成，市场情绪有很大因素」。但看板原来只报
+    # 「今天涨停 32 家」这种绝对值——同一个 32，昨天 15 家和昨天 50 家是两种盘面。
+    # 昨日取台账里**早于今天**的最后一个交易日（台账在下文才写今天的，顺序天然正确）。
+    _log = led.get("log") or {}
+    _prev_days = sorted([d for d in _log if str(d) < cur_date])
+    _prev = _log[_prev_days[-1]] if _prev_days else {}
+    node["mood"] = common.mood_state(m, _prev)
+    node["prevDate"] = _prev_days[-1] if _prev_days else ""
     node["text"], node["brief"] = build_text(m, dh, dr, da, ref, n)
     print("[info] 结构面：%s" % node["text"])
     if args.dry:

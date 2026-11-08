@@ -54,7 +54,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # R100z6：THS 抓取收口到 common（原 curl_ths_text/curl_ths_json/parse_ths_industries/
 # fetch_ths_industries 双副本合一，与 update_ashare_sectors 共用单一来源）
 from common import (ths_json as curl_ths_json, fetch_ths_industries,
-                    is_trade_day, market_last_day, split_suspended)
+                    is_trade_day, market_last_day, split_suspended,
+                    board_life, mood_state)
 
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
@@ -1953,6 +1954,285 @@ def tag_entries(entries, D):
     return out
 
 
+# ---------------------------------------------------------------- 反包条件三因子（R100z310）
+# 用户 2026-11-08：「陈学长说过反包能不能成，题材、人气股、市场情绪有很大因素，
+# 但看板的板块异动/题材掘金往往涨好了才更新，是马后炮」。
+# 这三件事在**盘后就能算清、且次日仍然成立**，只是原来没算、也没参与排序。
+# ⚠️ R100z310 修正（2026-11-08 回测发现）：情绪**不进加权分**。
+# 情绪分来自整个盘面（breadth + 连板），同一天对池内每只票都是同一个值——
+# `total = a*题材 + b*人气 + c*情绪` 里第三项只是给所有票加同一个常数，
+# **排序完全不变**，那 25% 权重在数学上是装饰，只会把绝对分整体压低、让 tier 分档失真。
+# 情绪的真实作用是闸门（退潮/冰点 → 明日盯盘只留启动板块 + 页面出警告条），不是排序。
+# 回测 55 条样本也印证：中性 78.3% vs 分歧 77.4%，情绪档位之间没有区分度。
+THEME_W, POP_W = 0.55, 0.45
+
+
+def _mood_now(D):
+    """当日盘面指标（与 market_structure.compute_metrics 同口径，但不依赖它）。
+
+    ⚠️ 时序：16:00 数据步里 market_structure.py 排在**最后**跑，而本脚本在第 4 步。
+    所以这里不能用 `D.ashare.structure`（那是昨天的），必须自己从 breadth/lianban 现算。
+    """
+    a = (D or {}).get("ashare") or {}
+    b = a.get("breadth") or {}
+    lb = [x for x in (a.get("lianban") or []) if isinstance(x, dict)]
+    cur = {"limitUp": b.get("limitUp"), "limitDown": b.get("limitDown")}
+    if lb:
+        cur["maxLb"] = max(int(x.get("lbc") or 1) for x in lb)
+        cur["lianbanCount"] = len(lb)
+        div = sum(1 for x in lb if x.get("phase") == "分歧")
+        cur["divRatio"] = round(div / len(lb), 2)
+        lu = b.get("limitUp")
+        if lu:
+            cur["relayRatio"] = round(len(lb) / lu, 2)
+    return cur
+
+
+def _prev_mood(today):
+    """昨日盘面指标：从 market_structure.json 的历史台账取「最近一个早于今天的日期」。
+
+    台账形状 {"log": {"YYYY-MM-DD": {...}}}，由 market_structure.py 每日追加。
+    取不到就返回空 dict——mood_state 会把缺项写成「—」，不会假装有数据。
+    """
+    import json as _json
+    import os as _os
+    fp = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "market_structure.json")
+    try:
+        with open(fp, encoding="utf-8") as f:
+            log = (_json.load(f) or {}).get("log") or {}
+        days = [d for d in log if str(d) < str(today)]
+        return log[max(days)] if days else {}
+    except Exception:
+        return {}
+
+
+def _pre_ctx(D, today):
+    """三因子上下文：板块表 / 连板表 / 龙虎榜净买集合 / 情绪状态。"""
+    a = (D or {}).get("ashare") or {}
+    boards = {}
+    for b in (a.get("allBoards") or []):
+        if isinstance(b, dict) and b.get("name"):
+            boards[str(b["name"])] = b
+    lbs = {}
+    for x in (a.get("lianban") or []):
+        if isinstance(x, dict) and x.get("code"):
+            lbs[str(x["code"])] = x
+    lhb = {}
+    for x in (((a.get("lhb") or {}).get("top")) or []):
+        if isinstance(x, dict) and x.get("code"):
+            try:
+                lhb[str(x["code"])] = float(x.get("netAmt") or 0)
+            except (TypeError, ValueError):
+                pass
+    cur = _mood_now(D)
+    mood = mood_state(cur, _prev_mood(today))
+    mood["cur"] = cur
+    return {"boards": boards, "lb": lbs, "lhb": lhb, "mood": mood}
+
+
+def _amt_of(e):
+    """个股成交额（元，粗估）：末根 K 线 volume × close。取不到返回 0。"""
+    kl = e.get("kline") or []
+    try:
+        last = kl[-1]
+        if isinstance(last, list) and len(last) >= 6:
+            return float(last[5] or 0) * float(last[2] or 0)
+    except Exception:
+        pass
+    return 0.0
+
+
+def _pct_rank(vals, v):
+    """v 在 vals 里的百分位（0~100，越大越高）；并列取中点。"""
+    n = len(vals)
+    if n <= 1:
+        return 60.0
+    less = sum(1 for x in vals if x < v)
+    equal = sum(1 for x in vals if x == v)
+    return round(100.0 * (less + 0.5 * equal) / n, 1)
+
+
+def _pop_raw(e, ctx):
+    """人气原始分（0~100）+ 依据。**不用绝对分排序**，见 pre_batch 的说明。"""
+    code = str(e.get("code") or "")
+    lb = ctx["lb"].get(code) or {}
+    role = lb.get("role")
+    base = 78.0 if role == "龙头" else (55.0 if role else 35.0)
+    why = ["龙头" if role == "龙头" else ("连板梯队" if role else "不在连板梯队")]
+    # 断板日放量倍数：form 形如「11/02涨停→次1.1倍量断板→3日缩量·站稳MA5」
+    m = re.search(r"([\d.]+)\s*倍量", str(e.get("form") or ""))
+    if m:
+        try:
+            vr = float(m.group(1))
+            if 2.0 <= vr <= 3.5:
+                base += 18
+                why.append("放量%.1f倍" % vr)
+            elif vr > 3.5:
+                base += 6
+                why.append("爆量%.1f倍" % vr)
+            elif vr < 1.2:
+                base -= 8
+                why.append("缩量断板")
+        except ValueError:
+            pass
+    net = ctx["lhb"].get(code)
+    if net and net > 0:
+        base += 8
+        why.append("龙虎榜净买")
+    return max(0.0, min(100.0, base)), "·".join(why)
+
+
+def pre_batch(entries, ctx):
+    """批量算三因子 → 直接写进每条 `e["pre"]`。
+
+    ⚠️ 2026-11-08 实测修正（第一版是逐条算绝对分的）：
+      ① **人气绝对分对断板票几乎无区分度**——池里的票都是「断板后」的，本来就不在当日连板梯队，
+         10 只连板股覆盖不到它们，结果全池一律 30 分。改成「基础分（是否龙头/放量倍数/龙虎榜）
+         × 成交额池内分位」。
+      ② **题材绝对分在普跌日全挤成 16.8 / 28.x**——11-06 全市场 758 涨 4741 跌，
+         所有板块不是「休整」就是「退潮」，按绝对分排序等于没排序。
+         改成**池内分位**：就算全市场退潮，资金相对流向哪仍能分出高下。
+      ③ 退潮/无板块的票不给分位（统一 8 分）——「退潮里也要排名」是假区分。
+
+    情绪分保持绝对值（25/55/85）：它描述的是**整个盘面**，本来就该全体共享——
+    盘面差的时候所有票都该降级，这正是「市场情绪」这个因子的含义。
+    """
+    rows = []
+    for e in (entries or []):
+        bd = ctx["boards"].get(str(e.get("sector") or ""))
+        life = board_life(bd) if bd else {"label": "无板块", "score": 40, "day": None,
+                                          "why": "板块名未匹配到行业表", "fake": False}
+        pop, pop_why = _pop_raw(e, ctx)
+        rows.append({"e": e, "life": life, "pop": pop, "pop_why": pop_why, "amt": _amt_of(e)})
+    if not rows:
+        return
+    # 题材分位：只对「非退潮」板块排名，退潮统一 8 分
+    live = [r["life"]["score"] for r in rows
+            if r["life"]["label"] not in ("退潮", "无板块", "未知", "")]
+    amts = [r["amt"] for r in rows]
+    for r in rows:
+        lab = r["life"]["label"]
+        if lab in ("退潮", "无板块", "未知", ""):
+            theme = 8.0
+        else:
+            # ⚠️ 纯池内分位有个副作用（2026-11-08 实测）：全市场板块都弱时，「最不烂」的那档
+            # 也能拿到 97 分——今天「种植业与林业（温和，实测最差档 61.5%）」就被抬到 97，
+            # 综合 79 分标「强」。分位只该回答「同批里谁更好」，不该改写「这档本身值多少分」。
+            # 改成绝对档位 × 0.7 + 池内分位 × 0.3：排序保留，绝对值不失真。
+            theme = round(0.7 * r["life"]["score"] + 0.3 * _pct_rank(live, r["life"]["score"]), 1)
+        pop = round(0.6 * _pct_rank(amts, r["amt"]) + 0.4 * r["pop"], 1)
+        m = ctx["mood"]
+        total = round(THEME_W * theme + POP_W * pop, 1)
+        r["e"]["pre"] = {
+            "theme": {"label": lab or "—", "day": r["life"].get("day"), "score": round(theme, 1),
+                      "why": r["life"].get("why") or "", "fake": r["life"].get("fake")},
+            # ⚠️ 标签口径必须与分数一致：原来不在梯队的票一律叫「梯队外」，但人气分＝
+            # 成交额分位×0.6 + 原始分×0.4，一只放量的断板龙头能拿到 78 分——「梯队外 78」
+            # 加暖色底，读者会以为标签和分数打架。不在梯队的按最终分档叫「活跃/一般/清淡」。
+            "pop": {"label": ("龙头" if r["pop_why"].startswith("龙头") else
+                              ("梯队" if r["pop_why"].startswith("连板梯队") else
+                               ("活跃" if pop >= 70 else ("一般" if pop >= 45 else "清淡")))),
+                    "score": pop, "why": r["pop_why"]},
+            # 情绪只记录、不参与 total（理由见 THEME_W 上方的注释）
+            "mood": {"label": m["label"], "score": m["score"], "text": m["text"],
+                     "gate": ("block" if m["label"] in ("退潮", "冰点") else "open")},
+            "total": total, "tier": "",   # tier 在下面按池内分位给
+            "why": "题材%s(%.0f)×55%% + 人气%.0f×45%% = %.0f（情绪%s 作闸门）"
+                   % (lab or "—", theme, pop, total, m["label"]),
+        }
+    # tier 用池内分位：普跌日绝对分都低，按绝对值分档会全员「弱」，看不出差别
+    totals = sorted([r["e"]["pre"]["total"] for r in rows], reverse=True)
+    if totals:
+        hi = totals[max(0, int(len(totals) * 0.3) - 1)]
+        lo = totals[min(len(totals) - 1, int(len(totals) * 0.7))]
+        for r in rows:
+            t = r["e"]["pre"]["total"]
+            r["e"]["pre"]["tier"] = "强" if t >= hi else ("弱" if t <= lo else "中")
+
+
+def _is_junk(e, boards):
+    """杂毛硬门槛（不进池）：低价 / 无板块归属 / 板块没涨停且 5 日还在跌。
+
+    市值门槛（100~400 亿）在 filter_by_mcap 已经筛过，这里不重复。
+    为什么要硬剔除而不是减分：陈学长的原话是「杂毛不做」——这不是排序偏好，
+    是「这类票反包了也没人接力」的形态事实，减分后它仍可能挤到前排。
+    """
+    kl = e.get("kline") or []
+    try:
+        px = float(kl[-1][2]) if kl and isinstance(kl[-1], list) else 0
+    except Exception:
+        px = 0
+    sec = str(e.get("sector") or "")
+    if not sec or sec == "其他":
+        return "无板块归属"
+    b = boards.get(sec)
+    zt, p5 = None, None
+    if b:
+        try:
+            zt = int(b.get("ztCount") or 0)
+            p5 = float(b.get("pct5") or 0)
+        except (TypeError, ValueError):
+            zt, p5 = None, None
+    # R100z310 修正：初版「低价 **或** 板块没资金」一刀切，watching 里 18 只低价股被全剔。
+    # 陈学长说的杂毛是「低价 + 没人做」，两个条件同时成立才算——单看价格会误杀钢铁/银行这类低价蓝筹。
+    if 0 < px < 5 and zt == 0 and p5 is not None and p5 < 0:
+        return "低价 %.2f 元 + 板块无涨停且 5 日 %+.1f%%（杂毛）" % (px, p5)
+    return ""
+
+
+def watch_next(confirmed, watching, ctx, limit=3, per=2):
+    """明日盯盘（R100z310）：活题材 + 每题材最值得盯的 1~2 只 + 触发条件。
+
+    这是整页唯一「盘前」能用的东西：题材还活着、票还没有买点，告诉你明天看什么、什么信号算确认。
+    为什么不是把池子按分排序就完事：池子是「今天形态达标的票」，而盯盘要的是
+    「明天可能达标、且题材还没死」——两者交集不大，混在一起读者只会按分数瞎买。
+
+    「退潮/无板块」直接不当盯盘对象：题材死了，形态再漂亮也是接刀。
+    """
+    def tot(e):
+        return float(((e.get("pre") or {}).get("total") or 0))
+
+    cands = sorted([e for e in (list(confirmed) + list(watching)) if e.get("pre")],
+                   key=tot, reverse=True)
+    # R100z310：情绪退潮/冰点 → 明日盯盘只留「启动」板块。
+    # 回测（55 条）里情绪档位对胜率没有区分度，所以它不该参与打分；但「退潮期别追主升尾巴」
+    # 是纪律不是统计——退潮日把「温和/主升」剔掉，等于强制只做刚启动的第一天。
+    # 白名单只留「板块顺风」两档：启动（刚有资金进场）/ 主升（有涨停确认）。
+    # 回踩、阴跌、温和都属于「板块没给顺风」——回测里它们不是最差就是样本不足，
+    # 放进「明日盯盘」会让读者以为板块在支持这只票。宁缺毋滥：今天只有 1 个就只出 1 个。
+    _allow = ("启动", "主升")
+    groups = {}
+    for e in cands:
+        pre = e.get("pre") or {}
+        life = (pre.get("theme") or {}).get("label") or ""
+        # 白名单而不是黑名单：只有「还在往上走」的板块才值得盯。
+        # 2026-11-08 实测「电网设备 今日-1.34% 休整」也进了盯盘——黑名单只排了退潮，
+        # 休整/高位就漏进来了。休整＝今天没资金，高位＝接力尾声，两者都不该出现在「明日」。
+        if life not in _allow:
+            continue
+        sec = str(e.get("sector") or "其他")
+        g = groups.get(sec)
+        if not g:
+            g = groups[sec] = {
+                "sector": sec, "life": life,
+                "why": (pre.get("theme") or {}).get("why") or "",
+                "mood": (pre.get("mood") or {}).get("label") or "",
+                "picks": [],
+            }
+        if len(g["picks"]) < per:
+            confirmed_flag = (e.get("stage") == "全流程达标")
+            g["picks"].append({
+                "code": str(e.get("code") or ""), "name": str(e.get("name") or ""),
+                "total": round(tot(e), 1), "tier": pre.get("tier") or "",
+                "stage": str(e.get("stage") or ""),
+                "trigger": ("明早开盘不高于今收 +1% 即可买（高于就是追）" if confirmed_flag
+                            else "再收一根缩量小阳、且收盘不破 T 日低点才算确认"),
+            })
+    out = [g for g in groups.values() if g["picks"]]
+    out.sort(key=lambda g: max(p["total"] for p in g["picks"]), reverse=True)
+    return out[:limit]
+
+
 def build_module(pairs, D):
     """pairs: [{code,name,hybk,ztDate,stage_info,kl}] → 断板反包模块 dict。
     每只附近 60 根日K（前端渲染近 30 根并计算 MA5/10/20/30）与当日涨跌幅；
@@ -2058,6 +2338,26 @@ def build_module(pairs, D):
               % (n_hit, len(entries), NOTICE_WINDOW_DAYS), file=sys.stderr)
     except Exception as ex:
         print("[warn] 公告抓取失败（不影响主流程）: %s" % ex, file=sys.stderr)
+    # ---- R100z310：反包条件三因子 + 杂毛硬门槛 ----
+    # 形态已由上面的 stage 筛过（必要条件）；这里补「题材/人气/情绪」（充分条件）。
+    # 剔掉的杂毛写进 module.junkCut 并在页面显示——静默少几只，读者会当成抓数失败。
+    _mday2 = market_last_day(D)
+    _ctx = _pre_ctx(D, _mday2)
+    _junk, _keep = [], []
+    for e in entries:
+        _why = _is_junk(e, _ctx["boards"])
+        if _why:
+            _junk.append({"code": e["code"], "name": e["name"], "why": _why})
+            continue
+        _keep.append(e)
+    entries = _keep
+    # 批量算（题材/人气用池内分位——逐条算绝对分在普跌日会全挤在一起，见 pre_batch 注释）
+    pre_batch(entries, _ctx)
+    if _junk:
+        print("[杂毛] 剔除 %d 只：%s" % (len(_junk),
+              "、".join("%s %s(%s)" % (x["name"], x["code"], x["why"]) for x in _junk)),
+              file=sys.stderr)
+
     tagged = tag_entries(entries, D)
     confirmed = [e for e in tagged if e["stage"] == "全流程达标"]
     watching = [e for e in tagged if e["stage"] != "全流程达标"]
@@ -2076,7 +2376,10 @@ def build_module(pairs, D):
         if isinstance(_p, (int, float)):
             e["probability"] = max(15, min(88, round(_p - 2)))
     # 观察池内更接近确认的（待企稳）排前，同阶段利空靠后
-    watching.sort(key=lambda e: (0 if e["stage"] == "待企稳" else 1,
+    # R100z310：观察池排序也改成「三因子分优先」——原来只按 stage，等于把「形态最接近」
+    # 当成「最值得盯」，但题材退潮时形态再近也没人接力。
+    watching.sort(key=lambda e: (-((e.get("pre") or {}).get("total") or 0),
+                                 0 if e["stage"] == "待企稳" else 1,
                                  {"bull": 0, "neutral": 1, "bear": 2}[e["sentiment"]]))
     return {
         "generatedAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -2087,6 +2390,10 @@ def build_module(pairs, D):
         # R100z309：本次因停牌剔除的票（页面显示一行「已剔除停牌 N 只」）。
         # 与「失效池」不同——失效是形态破了，停牌是没有成交，两者不能混着归档。
         "suspended": _susp,
+        # R100z310：情绪状态（含 vs 昨日边际）与杂毛剔除留痕、明日盯盘
+        "mood": {k: _ctx["mood"].get(k) for k in ("label", "score", "text", "deltas")},
+        "junkCut": _junk,
+        "watchNext": watch_next(confirmed, watching, _ctx),
     }
 
 

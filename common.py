@@ -443,6 +443,149 @@ def trading_days_between(d0, d1):
     return n
 
 
+def board_life(b):
+    """板块生命周期（R100z310，2026-11-08 用户：「板块异动往往是涨好了才更新，马后炮」）。
+
+    输入 `ashare.allBoards` 的一条：`pct`（今日）/ `pct5`（5 日累计）/ `ztCount`（板块内涨停数）
+    / `upCount` `downCount`（扩散度）/ `netInflow`。
+    输出 `{label, day, score, diffuse, fake, why}`——**score 用于排序，不用于胜率**。
+
+    判据为什么用「5 日累计 vs 今日」而不是只今日涨幅：同样涨 2%，D1（今天才动）与 D6（涨了一周）
+    的含义完全相反——前者是资金刚进来、后者是接力尾声。看板原来按今日 pct 降序，
+    等于把「已经涨完的」排在最前，这就是用户说的马后炮。
+
+    ⚠️ 参数是可回测的假设，不是定论：门槛写在返回值里（why），回测跑完按实测改。
+    """
+    if not isinstance(b, dict):
+        return {"label": "未知", "day": None, "score": 40, "diffuse": None,
+                "fake": False, "why": "无板块数据"}
+    pct = _fnum(b.get("pct"))
+    pct5 = _fnum(b.get("pct5"))
+    zt = b.get("ztCount")
+    zt = int(zt) if isinstance(zt, (int, float)) else 0
+    up, down = _fnum(b.get("upCount")), _fnum(b.get("downCount"))
+    diffuse = round(up / (up + down), 2) if (up is not None and down and (up + down) > 0) else None
+    if pct is None:
+        return {"label": "未知", "day": None, "score": 40, "diffuse": diffuse,
+                "fake": False, "why": "今日涨幅缺失"}
+    if pct5 is None:
+        pct5 = pct
+    # 假板块：涨幅靠一只票拉起来（板块内没涨停、上涨家数不过半）
+    fake = bool(pct >= 1.5 and zt == 0 and (diffuse is None or diffuse < 0.6))
+    if pct5 > 5 and pct < -0.5:
+        label, day, score = "退潮", None, 0
+    elif pct5 >= 15:
+        label, day, score = "高位", None, 30
+    elif pct > 0 and pct5 <= max(4.0, pct * 2.0) and (zt >= 1 or pct >= 2.5):
+        label, day, score = "启动", 1, 100
+    elif pct > 0 and pct5 <= 15 and zt >= 1:
+        # 「主升」必须有涨停确认：2026-11-08 实测「种植业与林业 今日+1.67% / 涨停0只」
+        # 也被判成主升——板块里一只板都没有，那是温和上行，不是主升（接力资金没进场）。
+        label, day, score = "主升", 2, 70
+    elif pct > 0:
+        # 实测「温和」（涨但板块内一只涨停都没有）胜率只有 61.5%，是全样本最差的一档——
+        # 分数从 55 降到 40：涨 ≠ 有资金，没有涨停就没有接力盘。
+        label, day, score = "温和", None, 40
+    elif pct <= 0 and pct5 > 0:
+        # 「今天跌、5 日还在涨」＝板块涨了一段今天歇一脚（缩量回踩）。
+        # R100z310 回测（7 条样本）：这一档胜率只有 42.9%——买在下跌中继，不是买在启动。
+        # ⚠️ 7 条样本的 95% 区间约 15%~75%，**不足以定论**，分数只略低于中位。
+        label, day, score = "回踩", None, 48
+    elif pct <= 0:
+        # 「今天跌、5 日也在跌」＝板块阴跌。R100z310 回测（13 条样本）：胜率 92.3%，最好的一档。
+        # 反直觉但成立：板块在跌、这只票还能走完断板反包全流程 → 说明它是**逆势强势股**，
+        # 池子的形态筛选已经替我们做了「个股强度」这件事，板块跌反而是筛选器。
+        # ⚠️ 同样是小样本（13 条，区间约 66%~99%），分数只略高于中位，不给极端值。
+        label, day, score = "阴跌", None, 55
+    else:
+        label, day, score = "观察", None, 50
+    if diffuse is not None:
+        score = score * (0.6 + 0.4 * diffuse)      # 扩散度越低越像「一只票的行情」
+    if fake:
+        score *= 0.5
+    why = "今日%+.2f%% / 5日%+.2f%% / 涨停%d只 / 扩散%s" % (
+        pct, pct5, zt, ("%.0f%%" % (diffuse * 100)) if diffuse is not None else "—")
+    if fake:
+        why += "（假板块：无涨停且不过半）"
+    return {"label": label, "day": day, "score": round(score, 1),
+            "diffuse": diffuse, "fake": fake, "why": why}
+
+
+def mood_state(cur, prev=None):
+    """情绪状态与边际（R100z310）。`cur`/`prev` 为涨跌/连板指标 dict。
+
+    为什么要有这个：看板原来只报「今天涨停 32 家」这种绝对值——但反包能不能做，
+    看的不是今天几家涨停，而是**比昨天更好还是更差**。同一个 32 家，昨天 15 家和昨天 50 家
+    是两种完全不同的盘面。
+
+    返回 `{label, score, deltas:[{name,cur,prev,diff,txt}], text}`；
+    `label` 四档：回暖 / 分歧 / 退潮 / 冰点（判据写死，可回测）。
+    """
+    cur = cur or {}
+    prev = prev or {}
+
+    def g(d, k):
+        v = d.get(k)
+        return float(v) if isinstance(v, (int, float)) else None
+
+    lu, lu0 = g(cur, "limitUp"), g(prev, "limitUp")
+    ld, ld0 = g(cur, "limitDown"), g(prev, "limitDown")
+    hb, hb0 = g(cur, "maxLb"), g(prev, "maxLb")
+    lbn, lbn0 = g(cur, "lianbanCount"), g(prev, "lianbanCount")
+    dv, dv0 = g(cur, "divRatio"), g(prev, "divRatio")
+    rl, rl0 = g(cur, "relayRatio"), g(prev, "relayRatio")
+
+    def mk(name, a, b, unit=""):
+        if a is None or b is None:
+            return {"name": name, "cur": a, "prev": b, "diff": None, "txt": "%s —" % name}
+        diff = a - b
+        arrow = "↑" if diff > 0 else ("↓" if diff < 0 else "→")
+        fmt = ("%.0f" if abs(a) >= 3 or unit == "" else "%.2f")
+        return {"name": name, "cur": a, "prev": b, "diff": round(diff, 3),
+                "txt": "%s %s%s（昨 %s，%s）" % (name, fmt % a, unit, fmt % b, arrow)}
+
+    deltas = [mk("涨停", lu, lu0), mk("跌停", ld, ld0), mk("最高板", hb, hb0),
+              mk("连板股", lbn, lbn0), mk("分歧率", (dv * 100 if dv is not None else None),
+                                     (dv0 * 100 if dv0 is not None else None), "%"),
+              mk("接力率", (rl * 100 if rl is not None else None),
+                 (rl0 * 100 if rl0 is not None else None), "%")]
+
+    # 判定顺序＝从最坏往最好：有明确恶化证据先判坏，避免把退潮读成回暖。
+    # ⚠️ 2026-11-08 实测修正：初版要求「涨停降 **且** 最高板降」才算退潮，
+    #    结果 11-06 那天涨停 83→32（腰斩）、连板 20→10、跌停 0→15，
+    #    只因最高板 4→5（独苗连板）就被判成「中性」——**最高板是幸存者，不是盘面**。
+    #    改成看「涨停变化率」和「跌停增量」，最高板只作辅助。
+    lu_chg = ((lu - lu0) / lu0) if (lu is not None and lu0) else None
+    lbn_chg = ((lbn - lbn0) / lbn0) if (lbn is not None and lbn0) else None
+    lower_hb = (hb is not None and hb0 is not None and hb < hb0)
+    dt_add = (ld - ld0) if (ld is not None and ld0 is not None) else None
+    if (lu is not None and lu < 20 and ld is not None and ld >= lu):
+        label, score = "冰点", 10
+    elif (((lu_chg is not None and lu_chg <= -0.30) or (dt_add is not None and dt_add >= 10))
+          and (lbn_chg is None or lbn_chg <= -0.20)):
+        label, score = "退潮", 25
+    elif (lower_hb or (dv is not None and dv0 is not None and dv - dv0 >= 0.10)
+          or (lu_chg is not None and lu_chg <= -0.15)):
+        label, score = "分歧", 55
+    elif ((lu_chg is not None and lu_chg >= 0.20) and not lower_hb
+          and (rl is None or rl0 is None or rl >= rl0)):
+        label, score = "回暖", 85
+    else:
+        label, score = "中性", 65
+    text = " · ".join(x["txt"] for x in deltas if x["cur"] is not None)
+    return {"label": label, "score": score, "deltas": deltas, "text": text}
+
+
+def _fnum(v):
+    """宽松取数：非数字一律 None（不补 0）。"""
+    if isinstance(v, bool) or v is None or v == "":
+        return None
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
 def last_bar_day(kl):
     """K 线最后一根的日期 'YYYY-MM-DD'；空/异常一律返回 ''。
 

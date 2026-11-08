@@ -25,7 +25,8 @@ import json, re, subprocess, os, sys, time, argparse, random
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutTimeout
 from datetime import datetime, timezone, timedelta
 from common import (find_node, ths_get, ths_json, fetch_ths_industries,
-                    THS_REFERER, THS_DATACENTER_REFERER)  # R100z6：THS 抓取收口到 common
+                    THS_REFERER, THS_DATACENTER_REFERER,
+                    board_life)  # R100z6：THS 抓取收口到 common；R100z310：板块生命周期
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(BASE)
@@ -1294,7 +1295,28 @@ def main():
             # 全板块涨幅榜（同花顺/东财push2delay/新浪，供 19:30 叙事步 AI 预测验证按板块名匹配实际涨跌幅；不参与页面展示）
             all_b = all_boards
             if all_b:
+                # R100z310（用户 2026-11-08「板块异动往往是涨好了才更新」）：
+                # 给每个板块挂生命周期（启动/主升/高位/退潮/休整）+ 扩散度 + 假板块标记。
+                # 只加字段不改原有 pct/netInflow，19:30 的 AI 预测验证仍按 pct 匹配，不受影响。
+                for _b in all_b:
+                    if isinstance(_b, dict):
+                        try:
+                            _b["life"] = board_life(_b)
+                        except Exception:
+                            pass
                 a["allBoards"] = all_b
+                # R100z310：sectorsUp/Down（领涨/领跌 TOP5）本身没有 ztCount/pct5，
+                # 按板块名从 allBoards 借一份再算生命周期，避免退化成「只看今日涨幅」。
+                _by_name = {x.get("name"): x for x in all_b if isinstance(x, dict)}
+                for _arr in (a.get("sectorsUp") or [], a.get("sectorsDown") or []):
+                    for _s in _arr:
+                        if not isinstance(_s, dict):
+                            continue
+                        _src = _by_name.get(_s.get("name")) or _s
+                        try:
+                            _s["life"] = board_life(_src)
+                        except Exception:
+                            pass
                 # 行业全景 A股 tab：全板块涨幅同步到 panorama.markets（前端 A股 tab 板块网格）。
                 # 与 us/kr/jp 市场项并列，in-place 更新，不动其他市场项。
                 pano_mk = D.setdefault("panorama", {}).setdefault("markets", [])
@@ -1327,8 +1349,14 @@ def main():
                                "lead", "leadPct", "ztCount", "pct5"):
                         if _b.get(_k) is not None:
                             _it[_k] = _b[_k]
+                    # R100z310：生命周期一起透传（前端按它排序/上色，不再只看 pct）
+                    if isinstance(_b.get("life"), dict):
+                        _it["life"] = _b["life"]
                     _items.append(_it)
-                _items.sort(key=lambda x: -x["pct"])
+                # R100z310：排序从「今日涨幅降序」改成「生命周期分优先」——
+                # 同样涨 2%，D1 启动与 D6 高位的意义相反，按 pct 排等于把涨完的顶到最前。
+                _items.sort(key=lambda x: (-((x.get("life") or {}).get("score") or 0),
+                                           -x["pct"]))
                 ash_m["items"] = _items
         if fund_in is not None:
             a["fundIn"] = fund_in

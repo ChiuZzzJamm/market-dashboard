@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611061944"></script>
+<script src="data.js?v=202611082254"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -806,6 +806,45 @@
   /* R100z302：胜率格里的「8赢 · 2亏」换行挂在百分比下面——窄屏三列时跟在数字右侧会把列挤宽 */
   .cc-tbl td s.cc-wl { display: block; margin-left: 0; }
   /* R100z303：结算明细入口（行内文字按钮，看起来像链接、实际是 button） */
+  /* R100z310：反包条件三因子标签（题材/人气/情绪）——强暖色、弱灰色，一眼看出「形态够了但题材死了」 */
+  /* 用 flex+gap 而不是 margin-right：换行后不会在行尾留一段空隙（实测三个标签挤两行时尾随空隙明显） */
+  .pre-row { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 2px; }
+  .pre-tag { display: inline-block; padding: 0 5px; border-radius: 999px;
+             font-size: var(--fs-xs); line-height: 1.7; border: 1px solid var(--line);
+             color: var(--ink2); background: var(--paper); white-space: nowrap; }
+  .pre-total { display: inline-block; padding: 0 6px; border-radius: 999px;
+               font-size: var(--fs-xs); line-height: 1.7; font-weight: 700;
+               border: 1px solid var(--line); color: var(--ink2);
+               background: var(--accent-soft); white-space: nowrap; }
+  .pre-tag.s-strong { color: #a8541a; border-color: #e8c79a; background: #fdf4e8; font-weight: 600; }
+  .pre-tag.s-weak { color: #8a94a0; border-color: #e3e8ee; background: #f6f8fa; }
+  /* R100z310：明日盯盘块（断板页顶部，确认池之前） */
+  .db-pool.p-pre { border-left: 3px solid var(--accent); }
+  .pre-grp { margin-top: 9px; }
+  .pre-grp-h { font-size: var(--fs-sm); font-weight: 700; color: var(--ink);
+               display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .pre-grp-h .xt { font-weight: 400; }
+  .pre-life { font-size: var(--fs-xs); padding: 0 6px; border-radius: 999px;
+              background: var(--accent-soft); color: var(--accent-deep); font-weight: 700; }
+  .pre-picks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+  /* R100z310 修正：胶囊原来只有 inline-flex + wrap，名称与分数会被压成两行
+     （实测「太阳/能」「67.6/分」）。名称、代码、分数一律 nowrap，触发条件整句独占一行。 */
+  .pre-pick { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 9px;
+              border: 1px solid var(--line); border-radius: var(--r-note); background: var(--paper);
+              cursor: pointer; font-size: var(--fs-sm); max-width: 100%; box-sizing: border-box; }
+  .pre-pick:hover { border-color: var(--accent); }
+  .pre-pick b { font-weight: 700; color: var(--ink); white-space: nowrap; }
+  .pre-pick .cd { font-size: var(--fs-xs); color: var(--ink2); white-space: nowrap; }
+  .pre-pick small { flex-basis: 100%; font-size: var(--fs-xs); color: var(--ink2);
+                    white-space: normal; line-height: 1.5; }
+  .pre-score { font-style: normal; font-size: var(--fs-xs); color: var(--ink2);
+               font-weight: 700; white-space: nowrap; }
+  .pre-score.s-strong { color: #a8541a; }
+  .pre-score.s-weak { color: #8a94a0; }
+  /* 退潮/冰点期提示条（R100z310） */
+  .pre-warn { margin-top: 7px; padding: 7px 10px; border-radius: 8px;
+              background: #fdf2f2; border: 1px solid #f0cfcf; color: #8d3a3a;
+              font-size: var(--fs-xs); line-height: 1.65; }
   .cc-link { background: none; border: 0; padding: 0; margin-left: 10px; cursor: pointer;
              font: inherit; font-size: var(--fs-sm); font-weight: 700; color: var(--accent-deep);
              text-decoration: underline; text-underline-offset: 3px; }
@@ -2329,8 +2368,16 @@ function renderReasons(list, tradeDate, isUp, market) {
     var pctHtml = (s.pct !== null && s.pct !== undefined)
       ? '<span class="pct ' + (s.pct >= 0 ? 'u' : 'd') + '"' + klAttr + '>' + esc(s.name) + ' ' + fmtPct(s.pct) + '</span>'
       : '<span class="sec"' + klAttr + '>' + esc(s.name) + '</span>';
+    /* R100z310：板块生命周期标签——D1 启动最有价值，退潮期涨幅再高也不该追。
+       只在脚本给了 life 时渲染（19:30 之前/旧 data 不显示，不会画坏）。 */
+    var lifeHtml = '';
+    if (s.life && s.life.label) {
+      var _lc = s.life.score >= 70 ? ' s-strong' : (s.life.score < 40 ? ' s-weak' : '');
+      lifeHtml = '<span class="pre-tag' + _lc + '" title="' + escAttr(s.life.why || '') + '">' +
+        esc(s.life.label) + (s.life.day ? ' D' + s.life.day : '') + '</span>';
+    }
     html += '<div class="reason-block ' + (isUp === false ? 'rz-down' : 'rz-up') + '"><div class="reason-head">' +
-      pctHtml +
+      pctHtml + lifeHtml +
       (s.rank ? '<span class="sec-rank">第 ' + s.rank + ' 名</span>' : '') +
       (hasReason ? '<span class="kw">' + esc(s.reason.title) + '</span>' : '') +
       '</div>' +
@@ -2712,7 +2759,15 @@ function renderPano() {
   }
   var html = '';
   // 行业全景板块按当日涨幅降序排列（无涨幅的置底）
+  /* R100z310：「行业全景」改成按生命周期分排序，不再纯按今日涨幅。
+     同样涨 2%，D1 启动与 D6 高位的意义相反——按 pct 排等于把「已经涨完的」顶到最前，
+     这正是用户说的「板块异动马后炮」。没有 life 字段（旧 data）时退回 pct 排序。 */
   var panoItems = (cur.items || []).slice().sort(function (a, b) {
+    var la = (a && a.life && typeof a.life.score === 'number') ? a.life.score : null;
+    var lb = (b && b.life && typeof b.life.score === 'number') ? b.life.score : null;
+    if (la !== null || lb !== null) {
+      if ((lb || 0) !== (la || 0)) return (lb || 0) - (la || 0);
+    }
     var pa = (a && typeof a.pct === 'number') ? a.pct : null;
     var pb = (b && typeof b.pct === 'number') ? b.pct : null;
     if (pa === null && pb === null) return 0;
@@ -5960,6 +6015,35 @@ function modalFreshBadgeHtml(key, code) {
      解析不到就显示「—」，不编数字。
    - 板块涨幅取自 e.boardPctToday，已前置到格子内（原 foot 里「板块今日」去重）。
    - 止损走 tcStopOf → exitForCode⓪（断板日最低价，形态位），与弹窗退出纪律同源。 */
+/* R100z310：反包条件三因子标签（题材/人气/情绪）。
+   用户 2026-11-08：「反包能不能成，题材、人气股、市场情绪有很大因素」——
+   原来这三件事只写在 story 文字里，不参与排序、也看不出状态。现在压成三枚小标签，
+   强（走好）用暖色、弱（退潮/梯队外）用灰，读者一眼能看出「形态够了但题材死了」。
+   ⚠️ 只在有 pre 字段时渲染：旧 data.js 没有它，不能因此把卡片画坏（降级为零标签）。 */
+function preTagsHtml(pre) {
+  if (!pre || !pre.theme) return '';
+  var t = pre.theme, p = pre.pop || {}, m = pre.mood || {};
+  var cls = function (score) {
+    return score >= 70 ? ' s-strong' : (score < 40 ? ' s-weak' : '');
+  };
+  /* 分数必须跟标签一起显示：26 只票在退潮日里「情绪·退潮」「人气·梯队外」完全一样，
+     只出标签等于三枚同样的胶囊，看不出差别。分数才是排序依据（pre.total 就是它加权来的）。 */
+  var sc = function (v) { var n = Number(v); return isFinite(n) ? ' ' + Math.round(n) : ''; };
+  var out = '<span class="pre-tag' + cls(t.score) + '" title="' + escAttr(t.why || '') + '">题材·' +
+    esc(t.label || '—') + sc(t.score) + '</span>';
+  out += '<span class="pre-tag' + cls(p.score) + '" title="' + escAttr(p.why || '') + '">人气·' +
+    esc(p.label || '—') + sc(p.score) + '</span>';
+  /* 情绪不出分数：它对全池是同一个值，不参与综合分（加进去只是整体平移、不改变排序）。
+     出个分会让人以为「情绪 25 分」拉低了这只票——那是误读。它只是闸门。 */
+  out += '<span class="pre-tag' + cls(m.score) + '" title="' +
+    escAttr((m.text || '') + '　—— 情绪是市场级闸门，不参与个股排序') + '">情绪·' +
+    esc(m.label || '—') + '</span>';
+  return out + (pre.total !== undefined && pre.total !== null
+    ? '<span class="pre-total" title="反包条件综合分＝题材 55% + 人气 45%（都在池内做分位），池内排序用它。' +
+      '情绪不进分数：它对同一天全池是同一个值，加权只整体平移、不改变排序。">综合 ' +
+      esc(String(Math.round(Number(pre.total) || 0))) + '</span>' : '');
+}
+
 function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
   var form = String(e.form || '');
   var mS = form.match(/(\d+)\s*日缩量/);
@@ -6082,7 +6166,7 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
     pills: [star && e.tier === 'watch' ? '待确认' : null,
             showSec ? (e.sector || '其他') : null], sent: true,
     cells: cells,
-    foot: foot,
+    foot: (e.pre ? '<div class="pre-row">' + preTagsHtml(e.pre) + '</div>' : '') + foot,
     attrs: ' data-k="' + escAttr(key) + '"',
     title: e.name + ' ' + e.code + '（' + (e.sector || '') + '）\n' + (done ? '确认池 · 全流程达标' : '观察池 · ' + e.stage) +
       '\n今日：' + fmtPct(e.pct) + ' · 板块今日：' + (bpNow == null ? '—' : fmtPct(bpNow)) +
@@ -6111,6 +6195,50 @@ function suspNoteHtml(list) {
     }).join('、') + '——停牌期间没有成交，不给买点、不进精选';
 }
 
+/* R100z310：明日盯盘 + 情绪一行。
+   这是整页唯一「盘前」能用的东西：题材还活着、票还没有买点，告诉你明天看什么、什么信号算确认。
+   原来这一页所有内容都是「今天怎么样」，读者要自己在脑子里做「明天买什么」的转换——
+   而这个转换正是陈学长那套方法里最容易被情绪带偏的一步，所以把它写死在页面上。 */
+function preBlockHtml(db) {
+  var mood = db && db.mood;
+  var wn = (db && db.watchNext) || [];
+  if (!mood && !wn.length) return '';
+  window._PRE_GRP = [];
+  var h = '<div class="db-pool p-pre"><h2>🎯 明日盯盘' +
+    (wn.length ? ' · ' + wn.length + ' 个题材' : '') + '</h2>';
+  if (mood) {
+    h += '<div class="db-sub">市场情绪 <b>' + esc(mood.label || '—') + '</b>　' +
+      esc(mood.text || '') + '</div>';
+    /* R100z310：退潮/冰点期必须说一句「这三只不是让你明天满仓上」——
+       否则「明日盯盘」四个字在退潮日会读成「明天买这三只」。反包成功率本身就跟情绪强相关，
+       情绪差的时候题材再活也只是「相对不差」，不是「值得下手」。 */
+    if (mood.label === '退潮' || mood.label === '冰点') {
+      h += '<div class="pre-warn">⚠️ 现在是<b>' + esc(mood.label) +
+        '</b>期：题材再活也只是「相对不差」，不是「值得下手」。退潮期只做<b>启动首日</b>的票，' +
+        '不追主升尾巴、不接高位反包——想清楚再动手，宁可空仓。</div>';
+    }
+  } else {
+    h += '<div class="db-sub">情绪数据缺失（breadth/连板未生成），本次只给题材与标的</div>';
+  }
+  wn.forEach(function (g) {
+    h += '<div class="pre-grp"><div class="pre-grp-h">' + esc(g.sector) +
+      '<span class="pre-life">' + esc(g.life || '') + '</span>' +
+      '<span class="xt">' + esc(g.why || '') + '</span></div><div class="pre-picks">';
+    (g.picks || []).forEach(function (p) {
+      var gi = window._PRE_GRP.length;
+      window._PRE_GRP.push({ c: p.code, n: p.name, t: '明日盯盘 · ' + p.name });
+      var cls = p.tier === '强' ? ' s-strong' : (p.tier === '弱' ? ' s-weak' : '');
+      h += '<span class="pre-pick" onclick="stkOpenIn(window._PRE_GRP,' + gi + ')" ' +
+        'title="点击看 K 线与个股消息">' +
+        '<b>' + esc(p.name) + '</b><span class="cd">' + esc(p.code) + '</span>' +
+        '<em class="pre-score' + cls + '">' + esc(String(p.total)) + '分</em>' +
+        '<small>' + esc(p.trigger || '') + '</small></span>';
+    });
+    h += '</div></div>';
+  });
+  return h + '</div>';
+}
+
 function dbPoolHtml(title, cls, sub, list, done, poolKey) {
   var h = '<div class="db-pool ' + cls + '"><h2>' + esc(title) + ' · ' + list.length + ' 只</h2>' +
     '<div class="db-sub">' + esc(sub) + '</div>';
@@ -6120,13 +6248,19 @@ function dbPoolHtml(title, cls, sub, list, done, poolKey) {
   // R89b 紧凑排版：≥3 只的板块独立成组；1~2 只的小板块合并进末尾「其他板块」，
   // 「其他板块」内部同样按 上涨概率→利好 排序（不再按板块名排序），连续排满网格不留空位。
   var sentRank = function (e) { return e.sentiment === 'bull' ? 0 : (e.sentiment === 'bear' ? 2 : 1); };
+  /* R100z310：排序第一维从「上涨概率」改成「反包条件分」。
+     形态是必要条件（进池门槛），三因子才是区分「能反包/反包不了」的东西——
+     退潮期里概率 80 的票，反包成功率低于启动期概率 60 的票。概率只在同分时作次级。 */
+  var preOf = function (e) { return (e && e.pre && e.pre.total) || 0; };
   var stockCmp = function (x, y) {
-    var p = (y.probability || 0) - (x.probability || 0);
-    return p !== 0 ? p : sentRank(x) - sentRank(y);
+    var p = preOf(y) - preOf(x);
+    if (p !== 0) return p;
+    var q = (y.probability || 0) - (x.probability || 0);
+    return q !== 0 ? q : sentRank(x) - sentRank(y);
   };
   var groups = {};
   list.forEach(function (e) { var s = e.sector || '其他'; (groups[s] = groups[s] || []).push(e); });
-  var maxP = function (a) { return Math.max.apply(null, a.map(function (x) { return x.probability || 0; })); };
+  var maxP = function (a) { return Math.max.apply(null, a.map(preOf)); };
   var bullN = function (a) { return a.filter(function (x) { return x.sentiment === 'bull'; }).length; };
   var secKeys = Object.keys(groups).sort(function (a, b) {
     var p = maxP(groups[b]) - maxP(groups[a]);
@@ -6365,9 +6499,15 @@ function renderDuanban() {
   // 比没有更坏。所以整块撤掉，只留复盘台账那一份回测（它自己会写「近 90 个交易日 · 末笔 X」，
   // 从标题上就说明自己不是当日指令）。「提前一天提醒买哪只」由 22:00 的 aiPrediction / 开盘预测
   // 承担——那两处才是真的提前一天。
+  html += preBlockHtml(db);
   html += dbPoolHtml('确认池', 'p-conf',
     '已走完「涨停 → 放量断板 → 缩量 → 不破T日低点与MA5」全流程' +
-    suspNoteHtml((db && db.suspended) || []), conf, true, 'c');
+    suspNoteHtml((db && db.suspended) || []) +
+    (function () {
+      var jk = (db && db.junkCut) || [];
+      return jk.length ? '　｜　⚠️ 杂毛剔除 ' + jk.length + ' 只：' +
+        jk.map(function (x) { return esc(x.name) + '（' + esc(x.why) + '）'; }).join('、') : '';
+    })(), conf, true, 'c');
   html += dbPoolHtml('观察池', 'p-watch', '形态进行中、只差最后一根确认K线（待缩量 ＞ 待企稳 ＞ 待脱离）', watch, false, 'w');
   // R100i：断板反包失败池（破位 / 超期失效归档，5 交易日后自动清理）
   html += dbFailHtml(db && db.failPool, 'duanban');
