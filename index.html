@@ -832,6 +832,10 @@
              border: 1px solid var(--line); color: var(--ink2); white-space: nowrap; }
   .pre-lad.on { background: #fdf4e8; border-color: #e8c79a; color: #8a4a12; font-weight: 700; }
   .pre-lad-xw { margin: 3px 0 0; }
+  /* R100z314：并入「明日可下单」卡后的卡内小节（不抢卡片标题的层级） */
+  .ord-sec { margin: 4px 0 12px; padding: 10px 12px; border-radius: var(--r-block);
+             background: var(--paper); border: 1px solid var(--line); }
+  .ord-sec-t { font-size: var(--fs-base); font-weight: 800; color: var(--ink); margin-bottom: 5px; }
   .pre-lad-x { font-size: var(--fs-xs); color: #8a4a12; }
   .pre-picks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
   /* R100z310 修正：胶囊原来只有 inline-flex + wrap，名称与分数会被压成两行
@@ -840,6 +844,7 @@
               border: 1px solid var(--line); border-radius: var(--r-note); background: var(--paper);
               cursor: pointer; font-size: var(--fs-sm); max-width: 100%; box-sizing: border-box; }
   .pre-pick:hover { border-color: var(--accent); }
+  .pre-pick.pre-chen { border-style: dashed; }
   .pre-pick b { font-weight: 700; color: var(--ink); white-space: nowrap; }
   .pre-pick .cd { font-size: var(--fs-xs); color: var(--ink2); white-space: nowrap; }
   .pre-pick small { flex-basis: 100%; font-size: var(--fs-xs); color: var(--ink2);
@@ -3314,24 +3319,19 @@ function preModalRowHtml(pre) {
        这不是矛盾：板块整体涨过一轮在回落，但龙头还没死。 */
     var weakLife = ['退潮', '阴跌', '回踩', '高位'].indexOf(String((pre.theme || {}).label)) >= 0;
     var conflict = (weakLife && (ld.maxLb || 0) >= 2)
-      ? '　<b>注意</b>：板块整体已在走弱（题材分低），只有龙头还站着——'
-        + '这是「跟龙头做补涨」，不是「板块启动」，仓位和止损都要更紧。' : '';
+      ? '（板块在走弱，只跟龙头节奏，仓位收紧）' : '';
+    /* R100z314：括号里的解释全删——「→ 可补涨」本身已经说清结论，
+       后面再补一句「板块有主线、本票还没启动，等它跟」是同一个意思说两遍。 */
     h += '<div class="m-ladder-note' + cls2 + '"><b>补涨判断</b>　' +
-      esc(ld.why) + '　→ <b>' + esc(ld.tag || '—') + '</b>' +
-      (ld.tag === '可补涨' ? '（板块有主线、本票还没启动，等它跟）' : '') +
-      (ld.tag === '接力' ? '（本票自己就在梯队，不是补涨，是接力）' : '') +
-      (ld.tag === '无主线' ? '（板块今天没资金做，只能跟大盘）' : '') +
-      conflict + '</div>';
+      esc(ld.why) + '　→ <b>' + esc(ld.tag || '—') + '</b>' + conflict + '</div>';
   } else if (ld && (ld.maxLb || 0) >= 2) {
     // 降级版（票不在断板池）：只有原始连板数据，不做打分——打分规则在后端一处，别在前端再写一套
     h += '<div class="m-ladder-note"><b>板块连板</b>　' +
       esc((ld.names || []).join('、') || '—') + ' 最高 ' + esc(String(ld.maxLb)) + ' 板' +
       ((ld.themes && ld.themes.length) ? '，题材「' + esc(ld.themes.join('+')) + '」' : '') + '</div>';
   }
-  if (pre.partial) {
-    h += '<div class="m-pre-note">该票不在断板反包池：题材 / 连板 / 情绪按当日盘面现算，' +
-      '<b>人气与综合分不适用</b>——那两项要「当日全池成交额分位」，单只票算不出来，不编。</div>';
-  }
+  /* R100z314（用户 2026-11-09「说明删除」）：降级说明整段删掉。
+     人气与综合本来就是「没有」，标签不出现即为空——写一段解释比空着更吵。 */
   return h;
 }
 
@@ -6349,13 +6349,19 @@ function suspNoteHtml(list) {
    这是整页唯一「盘前」能用的东西：题材还活着、票还没有买点，告诉你明天看什么、什么信号算确认。
    原来这一页所有内容都是「今天怎么样」，读者要自己在脑子里做「明天买什么」的转换——
    而这个转换正是陈学长那套方法里最容易被情绪带偏的一步，所以把它写死在页面上。 */
-function preBlockHtml(db) {
+function preBlockHtml(db, bare) {
   var mood = db && db.mood;
   var wn = (db && db.watchNext) || [];
   if (!mood && !wn.length) return '';
   window._PRE_GRP = [];
-  var h = '<div class="db-pool p-pre"><h2>🎯 明日盯盘' +
-    (wn.length ? ' · ' + wn.length + ' 个题材' : '') + '</h2>';
+  /* R100z314（用户 2026-11-09 00:29「这个挪到开盘预测这里，放在明日可下单上面…
+     不然模块太多了」）：并入「💵 明日可下单」卡，作为卡内第一段 —— 两张卡讲的都是
+     「明天开盘怎么办」，分成两块读者要来回对照（哪些能挂单、哪些还要等）。 */
+  var h = bare
+    ? '<div class="ord-sec p-pre"><div class="ord-sec-t">🎯 明日盯盘' +
+      (wn.length ? ' · ' + wn.length + ' 个题材' : '') + '</div>'
+    : '<div class="db-pool p-pre"><h2>🎯 明日盯盘' +
+      (wn.length ? ' · ' + wn.length + ' 个题材' : '') + '</h2>';
   if (mood) {
     h += '<div class="db-sub">市场情绪 <b>' + esc(mood.label || '—') + '</b>　' +
       esc(mood.text || '') + '</div>';
@@ -6367,10 +6373,10 @@ function preBlockHtml(db) {
          往往是「退潮/回踩」。原警告条写「只做启动首日」，会和下面列出的票直接打架。
          改成说清「退潮日还能做什么」：只跟龙头所在的板块、只做还没启动的后排（补涨），
          不追已经高位的、不做没有龙头的板块。 */
-      h += '<div class="pre-warn">⚠️ 现在是<b>' + esc(mood.label) +
-        '</b>期：<b>只做「有连板龙头」的板块</b>——龙头还在，后排才有补涨对象；' +
-        '板块里一只连板都没有的，退潮日就是没人接。同时<b>只做还没启动的后排</b>，' +
-        '不追已经高位的、不接主升尾巴。想不清楚就空仓。</div>';
+      /* R100z314：用户 2026-11-09「说明删除，我不要那么多说明」。60 字压到 30 字，
+         只留可执行的约束（做哪个板块 / 不做哪种票），理由删掉。 */
+      h += '<div class="pre-warn">⚠️ <b>' + esc(mood.label) +
+        '</b>期：只做有连板龙头的板块，只做还没启动的后排，不追高位、不接主升尾巴。</div>';
     }
   } else {
     h += '<div class="db-sub">情绪数据缺失（breadth/连板未生成），本次只给题材与标的</div>';
@@ -6388,19 +6394,21 @@ function preBlockHtml(db) {
         (_lth.length ? ' · ' + esc(String(_lth[0])) : '') +
         (_lg.topName ? '（' + esc(String(_lg.topName)) + '）' : '') + '</span>'
       : '<span class="pre-lad">无连板</span>';
-    // 题材词与板块名并列时，读者要能分辨「这是行业分类，不是炒作方向」
-    var _lx = (_lg.maxLb >= 2 && _lth.length)
-      ? '<span class="pre-lad-x">连板股 ' + esc(String(_lg.topName || '')) + ' 的题材是「' +
-        esc(_lth.join('+')) + '」——下面这几只是<b>同行业</b>的票，' +
-        '不等于同一个题材，补涨关系要自己核对</span>' : '';
+    /* R100z314（用户 2026-11-09 第一条）：「这句话删掉，然后你下面直接给我匹配连板对应
+       题材的标的，不要我自己去找」。原来那句「同行业的票，不等于同一个题材，补涨关系要自己
+       核对」是一句免责声明——把判断推回给读者，等于这段没做完。删掉。
+       ⛔ 但同时要承认：断板池的票只有「行业」没有「题材词」（story 全是模板文，
+       没有可用题材），所以「同行业」仍是最强的可算信号。删了说明不等于解决了匹配问题，
+       这一点已记在 24.160，等有题材图谱再补。 */
     var _warnX = ((g.life === '退潮' || g.life === '阴跌' || g.life === '回踩') && _lg.maxLb >= 2)
-      ? '<span class="pre-lad-x">板块整体在走弱，但龙头还在 → 只跟龙头节奏，别按板块强弱做</span>' : '';
+      ? '<span class="pre-lad-x">板块在走弱，只跟龙头节奏</span>' : '';
     h += '<div class="pre-grp"><div class="pre-grp-h">' + esc(g.sector) +
       '<span class="pre-life">' + esc(g.life || '') + '</span>' + _lbadge +
       '<span class="xt">' + esc(g.why || '') + '</span></div>' +
-      (_warnX ? '<div class="pre-lad-xw">' + _warnX + '</div>' : '') +
-      (_lx ? '<div class="pre-lad-xw">' + _lx + '</div>' : '') + '<div class="pre-picks">';
+      (_warnX ? '<div class="pre-lad-xw">' + _warnX + '</div>' : '') + '<div class="pre-picks">';
+    var _used = {};
     (g.picks || []).forEach(function (p) {
+      _used[String(p.code)] = 1;
       var gi = window._PRE_GRP.length;
       window._PRE_GRP.push({ c: p.code, n: p.name, t: '明日盯盘 · ' + p.name });
       var cls = p.tier === '强' ? ' s-strong' : (p.tier === '弱' ? ' s-weak' : '');
@@ -6410,6 +6418,32 @@ function preBlockHtml(db) {
         '<em class="pre-score' + cls + '">' + esc(String(p.total)) + '分</em>' +
         '<small>' + esc(p.trigger || '') + '</small></span>';
     });
+    /* R100z314（用户 2026-11-09「这里面的标的也包含陈学长的」）：
+       同板块里陈学长池的票补进来一只（陈学长池 11 只里只有 1 只与断板池重合，
+       另外 10 只原来根本不在这块出现）。⚠️ 它们**没有断板三因子评分**——不是藏起来，
+       是这个分只在断板池里算（人气要池内成交额分位）。所以不显示分数、不参与排序。 */
+    (function () {
+      var cp = (window.DASHBOARD_DATA || {}).chenPool || {};
+      var sec = String(g.sector || '');
+      var added = 0;
+      ['strict', 'loose', 'watching'].forEach(function (k) {
+        if (added >= 1) return;
+        (cp[k] || []).forEach(function (e) {
+          if (added >= 1 || !e) return;
+          var c = String(e.code || '');
+          if (!c || _used[c] || String(e.sector || '') !== sec) return;
+          _used[c] = 1; added++;
+          var gi = window._PRE_GRP.length;
+          window._PRE_GRP.push({ c: c, n: String(e.name || ''), t: '明日盯盘 · ' + String(e.name || '') });
+          h += '<span class="pre-pick pre-chen" onclick="stkOpenIn(window._PRE_GRP,' + gi + ')" ' +
+            'title="陈学长池 · ' + escAttr(String(k === 'strict' ? '严格池' : (k === 'loose' ? '放宽池' : '观察池'))) +
+            '　无断板三因子评分（那套分只在断板池里算），不参与排序">' +
+            '<b>' + esc(String(e.name || '')) + '</b><span class="cd">' + esc(c) + '</span>' +
+            '<em class="pre-score">陈学长</em>' +
+            '<small>' + esc(String(e.stage || '待确认')) + '</small></span>';
+        });
+      });
+    })();
     h += '</div></div>';
   });
   return h + '</div>';
@@ -6675,7 +6709,8 @@ function renderDuanban() {
   // 比没有更坏。所以整块撤掉，只留复盘台账那一份回测（它自己会写「近 90 个交易日 · 末笔 X」，
   // 从标题上就说明自己不是当日指令）。「提前一天提醒买哪只」由 22:00 的 aiPrediction / 开盘预测
   // 承担——那两处才是真的提前一天。
-  html += preBlockHtml(db);
+  /* R100z314：明日盯盘已并入「开盘预测 → 明日可下单」卡（见 ordBlockHtml），
+     断板页不再出这块——同一个内容在两页各出现一次，等于维护两份。 */
   html += dbPoolHtml('确认池', 'p-conf',
     '已走完「涨停 → 放量断板 → 缩量 → 不破T日低点与MA5」全流程' +
     suspNoteHtml((db && db.suspended) || []) +
@@ -8687,6 +8722,10 @@ function ordBlockHtml() {
   var h = '<div class="db-pool p-ord"><h2>💵 明日可下单 · ' + nNow + ' 只' +
     (P.poolB.length ? '<span class="ord-h2-x">＋' + P.poolB.length + ' 只等确认（③档，今天不是买点）</span>' : '') +
     '</h2>' +
+    /* R100z314：明日盯盘并进本卡第一段（见 preBlockHtml 的 bare 参数说明）。
+       顺序＝先「明天要盯什么」（还没买点）、再「明天挂什么价」（已有买点）——
+       读者的动作顺序就是这样：先看有没有要等的，再看能下的单。 */
+    preBlockHtml(duanbanData(), true) +
     '<div class="db-sub">收盘后生成，面向<b>下一个交易日</b>——下面每个价都是明天开盘要用的，' +
       '不是现在还能成交的价。' + esc(sum.join('　·　')) +
       (dedupTxt.length ? '。' + dedupTxt.join('；') : '') +
