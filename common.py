@@ -477,11 +477,16 @@ def board_life(b):
     elif pct5 >= 15:
         label, day, score = "高位", None, 30
     elif pct > 0 and pct5 <= max(4.0, pct * 2.0) and (zt >= 1 or pct >= 2.5):
-        label, day, score = "启动", 1, 100
+        # ⚠️ R100z311：「启动第几天」目前**算不出来**，所以 day 一律 None。
+        # 原先固定写 day=1（启动）/ day=2（主升），前端显示成「启动 D1」「主升 D2」——
+        # 那是**假精度**：它只是档位代号，不是真的连续上涨天数。真算需要板块日 K
+        # （`sectorsUp[].kline` 有 30 根，但 `allBoards` 90 个板块没有），
+        # 拿不到就别印数字——印了就等于告诉用户「这是第 1 天」，而实际可能是第 3 天。
+        label, day, score = "启动", None, 100
     elif pct > 0 and pct5 <= 15 and zt >= 1:
         # 「主升」必须有涨停确认：2026-11-08 实测「种植业与林业 今日+1.67% / 涨停0只」
         # 也被判成主升——板块里一只板都没有，那是温和上行，不是主升（接力资金没进场）。
-        label, day, score = "主升", 2, 70
+        label, day, score = "主升", None, 70
     elif pct > 0:
         # 实测「温和」（涨但板块内一只涨停都没有）胜率只有 61.5%，是全样本最差的一档——
         # 分数从 55 降到 40：涨 ≠ 有资金，没有涨停就没有接力盘。
@@ -573,7 +578,20 @@ def mood_state(cur, prev=None):
     else:
         label, score = "中性", 65
     text = " · ".join(x["txt"] for x in deltas if x["cur"] is not None)
-    return {"label": label, "score": score, "deltas": deltas, "text": text}
+    # R100z311：判定依据要能读出来。11-06 那天「最高板 4→5↑」「接力率 24→31↑」两个指标是改善的，
+    # 却判「退潮」——因为涨停家数腰斩。读者只看到六个数字，会以为判反了。
+    if label == "退潮":
+        why = "涨停家数腰斩（%s→%s）+ 连板股收缩，高度和接力率是幸存者指标，不改变结论" % (
+            (("%.0f" % lu0) if lu0 is not None else "—"), (("%.0f" % lu) if lu is not None else "—"))
+    elif label == "冰点":
+        why = "涨停不足 20 家且跌停不少于涨停，赚钱效应基本消失"
+    elif label == "分歧":
+        why = "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮"
+    elif label == "回暖":
+        why = "涨停家数明显增加、连板高度没降、接力率没恶化"
+    else:
+        why = "各项指标没有明确方向，按中性处理"
+    return {"label": label, "score": score, "deltas": deltas, "text": text, "why": why}
 
 
 def _fnum(v):

@@ -842,6 +842,10 @@
   .pre-score.s-strong { color: #a8541a; }
   .pre-score.s-weak { color: #8a94a0; }
   /* 退潮/冰点期提示条（R100z310） */
+  /* R100z311：标的弹窗里的三因子行（题材/人气/情绪/综合） */
+  .m-pre-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 0 0 7px; }
+  .m-pre-row .pre-tag, .m-pre-row .pre-total { font-size: var(--fs-sm); line-height: 1.8; padding: 0 7px; }
+  .m-pre-tier { font-size: var(--fs-xs); color: var(--ink2); opacity: .8; }
   /* R100z310：结构面里的「情绪 vs 昨日」一行（比绝对值多一层边际信息） */
   .s-mood { display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
             margin-top: 6px; font-size: var(--fs-xs); color: var(--ink2); }
@@ -3229,6 +3233,44 @@ function exitMetaLineAsync(code, boxId, entry, kind) {
   var h = entry ? failExitMetaLine(entry)
     : (kind === 'chen' ? chenAtrNote(code) : exitMetaLine(code)); // R100z86：失效条目走失效专用口径（断板日位/统一风控位），其余沿用全站口径
   if (h) box.insertAdjacentHTML('beforeend', h);
+}
+
+/* R100z311（用户 2026-11-08 23:24「题材、情绪、人气、综合也展示在标的页面」）：
+   弹窗顶部四枚标签。按 code 从断板池反查 `pre`——从精选/明日可下单/失效池点进来时，
+   条目本身没有 pre 字段，但同一只票在断板池里可能有，反查一处就全覆盖（不必每个入口都搬字段）。
+   ⚠️ 反查不到就整行不渲染：不给「—」，也不给默认分。
+   为什么单独一行而不是塞进徽章行：徽章行是「归属」（哪个池），这行是「判断依据」，
+   混在一起会让读者以为「温和」也是一枚池徽章。 */
+function preOfCode(code) {
+  var c = String(code || '').replace(/\D/g, '');
+  if (!c) return null;
+  var d = (window.DASHBOARD_DATA || {}).duanban || {};
+  var pool = [].concat(d.confirmed || [], d.watching || [], (d.star && d.star.picks) || []);
+  for (var i = 0; i < pool.length; i++) {
+    if (pool[i] && String(pool[i].code || '').replace(/\D/g, '') === c && pool[i].pre) return pool[i].pre;
+  }
+  return null;
+}
+function preModalRowHtml(pre) {
+  if (!pre || !pre.theme) return '';
+  var t = pre.theme, p = pre.pop || {}, m = pre.mood || {};
+  var sc = function (v) { var n = Number(v); return isFinite(n) ? ' ' + Math.round(n) : ''; };
+  var cls = function (v) { return v >= 70 ? ' s-strong' : (v < 40 ? ' s-weak' : ''); };
+  return '<div class="m-pre-row">' +
+    '<span class="pre-tag' + cls(Number(t.score)) + '" title="' +
+      escAttr('板块生命周期：' + (t.why || '') +
+        '　⚠️ 当前用同花顺「行业」代理题材（真题材词聚类未做），所以标签写的是行业状态，不是题材强度') +
+      '">题材·' + esc(t.label || '—') + sc(t.score) + '</span>' +
+    '<span class="pre-tag' + cls(Number(p.score)) + '" title="' + escAttr('人气：' + (p.why || '')) +
+      '">人气·' + esc(p.label || '—') + sc(p.score) + '</span>' +
+    '<span class="pre-tag' + cls(Number(m.score)) + '" title="' +
+      escAttr((m.text || '') + (m.why ? '　→ 判「' + m.label + '」：' + m.why : '') +
+        '　—— 情绪是市场级闸门，同一天对全池相同，不参与个股排序') +
+      '">情绪·' + esc(m.label || '—') + '</span>' +
+    '<span class="pre-total" title="' + escAttr(pre.why || '') + '">综合 ' +
+      esc(String(Math.round(Number(pre.total) || 0))) + '</span>' +
+    ((pre.tier) ? '<span class="m-pre-tier">池内' + esc(pre.tier) + '</span>' : '') +
+    '</div>';
 }
 
 /* R100z19：该代码是否属断板池（确认/观察/精选）——用于兜底退出纪律挑对证伪口径。
@@ -6062,7 +6104,8 @@ function preTagsHtml(pre) {
   /* 情绪不出分数：它对全池是同一个值，不参与综合分（加进去只是整体平移、不改变排序）。
      出个分会让人以为「情绪 25 分」拉低了这只票——那是误读。它只是闸门。 */
   out += '<span class="pre-tag' + cls(m.score) + '" title="' +
-    escAttr((m.text || '') + '　—— 情绪是市场级闸门，不参与个股排序') + '">情绪·' +
+    escAttr((m.text || '') + (m.why ? '　→ 判「' + m.label + '」：' + m.why : '') +
+      '　—— 情绪是市场级闸门，同一天对全池相同，不参与个股排序') + '">情绪·' +
     esc(m.label || '—') + '</span>';
   return out + (pre.total !== undefined && pre.total !== null
     ? '<span class="pre-total" title="反包条件综合分＝题材 55% + 人气 45%（都在池内做分位），池内排序用它。' +
@@ -9348,6 +9391,9 @@ function openDbModal(key) {
   // 由「断板池同码条目」补上，不再因 picks 没搬字段而整片「—」。
   var mBpNow = boardPctOf(e), mBpZt = boardPctZtOf(e);
   document.getElementById('db-modal-meta').innerHTML =
+    /* R100z311：三因子行放在最前面——读者先要知道「这套判断的依据」，
+       再读涨停日/形态这些事实。「池内强/中/弱」是相对档（前 30%），不是绝对分档。 */
+    preModalRowHtml(preOfCode(e.code)) +
     // R100z257：两个字段各自判空，不再「有其一就整行渲染」——昨晚挂单的票没有今日涨跌幅，
     // 原来会印出「今日：—」，看着像抓空；有值的一侧照常显示，缺的一侧整段不写。
     ((e.ztDate || e.pct != null)

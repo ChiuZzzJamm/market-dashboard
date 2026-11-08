@@ -2052,34 +2052,47 @@ def _pct_rank(vals, v):
     return round(100.0 * (less + 0.5 * equal) / n, 1)
 
 
-def _pop_raw(e, ctx):
-    """人气原始分（0~100）+ 依据。**不用绝对分排序**，见 pre_batch 的说明。"""
+def _pop_bonus(e, ctx):
+    """人气**加分项**（在成交额分位之上加减），返回 (delta, why 片段列表)。
+
+    ⚠️ R100z311 修正（2026-11-08 实测）：原实现是 `pop = 0.6×成交额分位 + 0.4×基础分`，
+    而基础分对断板票**恒为 35**（池里的票都是「断板后」的，本来就不在当日连板梯队）——
+    等于每只票白拿 14 分（`min=14` 就是分位 0 的那只）。45% 权重里有 18% 是常量，
+    与「情绪进加权」是同一类错误，只是小一号。
+
+    现在：主体是**成交额池内分位**（全变异），下面这些只在分位之上加减。
+    """
     code = str(e.get("code") or "")
     lb = ctx["lb"].get(code) or {}
     role = lb.get("role")
-    base = 78.0 if role == "龙头" else (55.0 if role else 35.0)
-    why = ["龙头" if role == "龙头" else ("连板梯队" if role else "不在连板梯队")]
-    # 断板日放量倍数：form 形如「11/02涨停→次1.1倍量断板→3日缩量·站稳MA5」
+    delta, why = 0.0, []
+    if role == "龙头":
+        delta += 15
+        why.append("龙头")
+    elif role:
+        delta += 8
+        why.append("连板梯队")
+    # 断板日放量倍数：form 形如「11/02涨停→次1.9倍量断板→1日缩量·站稳MA5」
     m = re.search(r"([\d.]+)\s*倍量", str(e.get("form") or ""))
     if m:
         try:
             vr = float(m.group(1))
             if 2.0 <= vr <= 3.5:
-                base += 18
+                delta += 8
                 why.append("放量%.1f倍" % vr)
             elif vr > 3.5:
-                base += 6
+                delta += 3
                 why.append("爆量%.1f倍" % vr)
             elif vr < 1.2:
-                base -= 8
+                delta -= 8
                 why.append("缩量断板")
         except ValueError:
             pass
     net = ctx["lhb"].get(code)
     if net and net > 0:
-        base += 8
+        delta += 6
         why.append("龙虎榜净买")
-    return max(0.0, min(100.0, base)), "·".join(why)
+    return delta, why
 
 
 def pre_batch(entries, ctx):
@@ -2102,8 +2115,8 @@ def pre_batch(entries, ctx):
         bd = ctx["boards"].get(str(e.get("sector") or ""))
         life = board_life(bd) if bd else {"label": "无板块", "score": 40, "day": None,
                                           "why": "板块名未匹配到行业表", "fake": False}
-        pop, pop_why = _pop_raw(e, ctx)
-        rows.append({"e": e, "life": life, "pop": pop, "pop_why": pop_why, "amt": _amt_of(e)})
+        pop_d, pop_why = _pop_bonus(e, ctx)
+        rows.append({"e": e, "life": life, "pop_d": pop_d, "pop_why": pop_why, "amt": _amt_of(e)})
     if not rows:
         return
     # 题材分位：只对「非退潮」板块排名，退潮统一 8 分
@@ -2120,7 +2133,8 @@ def pre_batch(entries, ctx):
             # 综合 79 分标「强」。分位只该回答「同批里谁更好」，不该改写「这档本身值多少分」。
             # 改成绝对档位 × 0.7 + 池内分位 × 0.3：排序保留，绝对值不失真。
             theme = round(0.7 * r["life"]["score"] + 0.3 * _pct_rank(live, r["life"]["score"]), 1)
-        pop = round(0.6 * _pct_rank(amts, r["amt"]) + 0.4 * r["pop"], 1)
+        # 人气＝成交额池内分位（主体，全变异）＋ 龙头/放量/龙虎榜 加减（见 _pop_bonus）
+        pop = round(max(0.0, min(100.0, _pct_rank(amts, r["amt"]) + r["pop_d"])), 1)
         m = ctx["mood"]
         total = round(THEME_W * theme + POP_W * pop, 1)
         r["e"]["pre"] = {
@@ -2129,12 +2143,20 @@ def pre_batch(entries, ctx):
             # ⚠️ 标签口径必须与分数一致：原来不在梯队的票一律叫「梯队外」，但人气分＝
             # 成交额分位×0.6 + 原始分×0.4，一只放量的断板龙头能拿到 78 分——「梯队外 78」
             # 加暖色底，读者会以为标签和分数打架。不在梯队的按最终分档叫「活跃/一般/清淡」。
-            "pop": {"label": ("龙头" if r["pop_why"].startswith("龙头") else
-                              ("梯队" if r["pop_why"].startswith("连板梯队") else
+            "pop": {"label": ("龙头" if "龙头" in r["pop_why"] else
+                              ("梯队" if "连板梯队" in r["pop_why"] else
                                ("活跃" if pop >= 70 else ("一般" if pop >= 45 else "清淡")))),
-                    "score": pop, "why": r["pop_why"]},
+                    # why 必须写出「成交额分位」这个主体，否则读者只看到「不在连板梯队」，
+                    # 完全推不出 57 分是从哪来的（这是上一版被用户追问「准不准」的直接原因）。
+                    "score": pop,
+                    "why": ("成交额池内分位 %.0f" % _pct_rank(amts, r["amt"]))
+                           + (" · " + "·".join(r["pop_why"]) if r["pop_why"] else "")
+                           + ("（%+.0f）" % r["pop_d"] if abs(r["pop_d"]) >= 1 else "")},
             # 情绪只记录、不参与 total（理由见 THEME_W 上方的注释）
             "mood": {"label": m["label"], "score": m["score"], "text": m["text"],
+                     # why＝判定依据（为什么不看最高板/接力率那两项改善）。
+                     # 11-06 那天六个数字里两个是↑却判退潮，不写依据读者会以为判反了。
+                     "why": m.get("why"),
                      "gate": ("block" if m["label"] in ("退潮", "冰点") else "open")},
             "total": total, "tier": "",   # tier 在下面按池内分位给
             "why": "题材%s(%.0f)×55%% + 人气%.0f×45%% = %.0f（情绪%s 作闸门）"

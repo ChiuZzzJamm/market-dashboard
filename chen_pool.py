@@ -790,7 +790,7 @@ def settle_ledger(ledger, kl_cache):
     return n_settled
 
 
-def record_entries(ledger, pool_key, entries, today, tier=None, cross=None):
+def record_entries(ledger, pool_key, entries, today, tier=None, cross=None, pre_map=None):
     """把当日池内标的写入台账。同一 (pool, code, confirmDate) 只记一次。
 
     R100z222（审核意见 §1/§10）：字段拆成语义明确的两个日期 ——
@@ -828,6 +828,13 @@ def record_entries(ledger, pool_key, entries, today, tier=None, cross=None):
             # §19.1：记账当时的两池交集标签（both / chen / db）——事后按今天的池子反推
             # 会把历史样本标错，标签必须一次定死。批次内有混合时由条目自带的 `_cross` 覆盖。
             "cross": e.get("_cross") or cross,
+            # R100z311（2026-11-08）：冻结当时的**反包条件三因子分**。
+            # 为什么必须存：2026-11-08 拿历史 data.js 回测三因子时发现，人气分在历史样本里
+            # 恒为常数（断板票都不在连板梯队），四种权重扫出来的分档结果**完全一样**——
+            # 等于这一项永远无法验证。要验证，只能在记账当天把分数写进台账。
+            # 现在不写，三个月后还是同一句「人气未经验证」。
+            # 取不到留空 dict（不是 None，避免下游 .get 报错）。
+            "preSnapshot": dict(pre_map.get(code) or {}) if pre_map else {},
             "ztDate": e.get("ztDate") or "",
             # 止损价必须与页面展示的、能成交的那个一致（trade.stopPrice 含 2% 最小距离），
             # 否则会出现「页面写 30、回测按 31 结算」的静默口径分叉。
@@ -1350,8 +1357,19 @@ def main():
     _db_set = {str(e.get("code")) for e in (db_mod.get("confirmed") or [])}
     for e in mod["strict"] + mod["loose"]:
         e["_cross"] = "both" if str(e.get("code")) in _db_set else "chen"
-    record_entries(ledger, "chen_strict", mod["strict"], today, tier="strict")
-    record_entries(ledger, "chen_loose", mod["loose"], today, tier="loose")
+    # R100z311：三因子快照的取值表——断板池是唯一产出 pre 的地方，按 code 建索引，
+    # 陈学长池与断板池同一只票时也能拿到（当天 16:00 的 pre_batch 已经算好）。
+    _pre_map = {}
+    # 用 `old`（= 当日 data.js 的整份 dict，上面 db_mod 就是从它取的）而不是 `D`——
+    # 本函数作用域里没有 `D`，写错会 pyflakes 直接拦（K 闸门就是这么救回来的）。
+    _dbd = (old.get("duanban") or {}) if isinstance(old, dict) else {}
+    for _arr in (_dbd.get("confirmed") or [], _dbd.get("watching") or [],
+                 (_dbd.get("star") or {}).get("picks") or []):
+        for _x in _arr:
+            if isinstance(_x, dict) and _x.get("code") and _x.get("pre"):
+                _pre_map.setdefault(str(_x["code"]), _x["pre"])
+    record_entries(ledger, "chen_strict", mod["strict"], today, tier="strict", pre_map=_pre_map)
+    record_entries(ledger, "chen_loose", mod["loose"], today, tier="loose", pre_map=_pre_map)
     # 断板反包对照：只读它的池，不写它。
     # R100z222（审核意见 §3）：判断「新入池」不能看 entryDate == 今天——entryDate 是会被沿用的
     # 入池日，这个等式几乎永远不成立（实测 40 只票的 entryDate 全在 10-19~10-22，没有一只等于
@@ -1368,7 +1386,7 @@ def main():
                            "confirmDate": _data_day, "firstSeenDate": _data_day,
                            "_cross": "db",
                            "metrics": {"stopPrice": _db_stop(e)}})
-    record_entries(ledger, "duanban", db_entries, today, cross="db")
+    record_entries(ledger, "duanban", db_entries, today, cross="db", pre_map=_pre_map)
     for e in mod["strict"] + mod["loose"]:
         e.pop("_cross", None)
 
