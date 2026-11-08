@@ -516,6 +516,37 @@ def board_life(b):
             "diffuse": diffuse, "fake": fake, "why": why}
 
 
+def theme_words(reason, limit=3):
+    """从连板梯队的 `reason` 里抽**题材词**（去掉业绩类）。
+
+    R100z313（用户 2026-11-09 00:13：「浙文影业的连板难道不是 AI 短剧的原因吗？
+    和纺织有什么关系？？？」）。
+
+    实测：浙文影业 `hybk=纺织制造`、`reason=AI漫剧+微短剧+三季报增长`——同花顺行业
+    还是它转型前的「鹿港文化·纺织」，**行业分类跟不上题材**。同类还有：
+    闽发铝业（工业金属 / 光伏边框+液冷铝材）、润建股份（通信服务 / 词元出海+算力网络）、
+    阳光照明（照明设备 / 商业航天+激光通信）。
+
+    ⛔ **行业 ≠ 题材，这不是个别错标，是静态分类的系统性滞后。**
+    所以连板徽章必须显示题材词，而不是只显示行业名——否则读者会以为「纺织制造有连板」
+    就代表纺织在炒，进而误判同板块其他真纺织股会补涨。
+
+    只剔「业绩类」后缀（季报/增长/扭亏…），因为那是驱动力但不是题材方向；
+    不剔「XX布局」「XX收购」这类，那些常常正是炒作由头。
+    """
+    parts = re.split(r"[+＋、,，/]", str(reason or ""))
+    out = []
+    for p in parts:
+        p = p.replace("“", "").replace("”", "").strip().strip("\"'")
+        if not p or len(p) > 12:
+            continue
+        if re.search(r"季报|年报|中报|业绩|预增|预盈|扭亏|增长|净利润|同比", p):
+            continue
+        if p not in out:
+            out.append(p)
+    return out[:limit]
+
+
 def board_ladder(lianban):
     """按板块聚合连板梯队 → {板块名: {n, maxLb, names, codes, topName}}。
 
@@ -537,20 +568,31 @@ def board_ladder(lianban):
         sec = str(x.get("hybk") or "").strip()
         if not sec:
             continue
-        g = out.setdefault(sec, {"n": 0, "maxLb": 0, "names": [], "codes": []})
+        g = out.setdefault(sec, {"n": 0, "maxLb": 0, "names": [], "codes": [],
+                                 "topReason": "", "topThemes": []})
         g["n"] += 1
         try:
             lbc = int(x.get("lbc") or 1)
         except (TypeError, ValueError):
             lbc = 1
-        g["maxLb"] = max(g["maxLb"], lbc)
+        _words = theme_words(x.get("reason"))
+        # 最高板那只的题材词才是「这个板块的连板在炒什么」——后排 2 板的不代表主线
+        if lbc >= int(g.get("maxLb") or 0):
+            g["maxLb"] = lbc
+            g["topName"] = str(x.get("name") or "")
+            g["topReason"] = str(x.get("reason") or "")
+            g["topThemes"] = _words
         if x.get("name"):
             g["names"].append(str(x["name"]))
         if x.get("code"):
             g["codes"].append(str(x["code"]))
+        g.setdefault("themes", [])
+        for w in _words:
+            if w not in g["themes"]:
+                g["themes"].append(w)
     for g in out.values():
-        # 龙头名取板数最高的那只（同板块多只时读者最关心「最高的那个是谁」）
-        g["topName"] = g["names"][0] if g["names"] else ""
+        g.setdefault("topName", g["names"][0] if g["names"] else "")
+        g.setdefault("topThemes", [])
     return out
 
 
@@ -583,8 +625,13 @@ def ladder_score(entry, ladder, is_lianban=False):
         sc, lab = 70.0, "2板"
     else:
         sc, lab = 50.0, "仅首板"
-    why = ("板块 %s 有 %d 只连板、最高 %d 板（%s）"
-           % (sec, n, mx, "、".join(g.get("names") or [])[:24]))
+    _themes = g.get("topThemes") or []
+    _top = g.get("topName") or ""
+    why = "板块 %s 有 %d 只连板、最高 %d 板（%s）" % (sec, n, mx, "、".join(g.get("names") or [])[:24])
+    if _themes:
+        # R100z313：必须写「这只连板在炒什么」，不能只写行业名——
+        # 浙文影业行业=纺织制造、题材=AI漫剧，只写行业会让读者以为纺织在炒。
+        why += "，%s 的题材是「%s」" % (_top or "龙头", "+".join(_themes))
     if mx < 2:
         why += "　⚠️ 只有首板，不构成主线（首板每日几十家）"
     return sc, lab, why

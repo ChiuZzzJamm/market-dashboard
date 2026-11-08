@@ -797,6 +797,7 @@
   /* R100z304：名单常显后，标题行右侧那串「今天收盘后选出 / 交集 6 · …」用 .cc-sub。
      原来的 .cc-lists 折叠壳（含 ▸/▾ 三角）随折叠一起删——留着就是没人用的墓碑。 */
   .cc-sub { font-weight: 400; font-size: var(--fs-xs); color: var(--ink2); margin-left: 8px; }
+  .cc-perf-x { font-size: var(--fs-xs); color: var(--ink2); margin-left: 5px; opacity: .85; }
   /* 组标题（今日名单）比下面三组的 .cc-t 高一级：它是这三组的父亲，不是第四个分组 */
   .cc-hd { font-size: var(--fs-base); font-weight: 800; color: var(--ink);
            margin-bottom: 6px; line-height: 1.55; }
@@ -858,6 +859,8 @@
                    background: var(--paper); border: 1px solid var(--line); }
   .m-ladder-note.ok { background: #fdf4e8; border-color: #e8c79a; color: #8a4a12; }
   .m-ladder-note.dim { opacity: .78; }
+  .m-pre-note { margin: 0 0 7px; font-size: var(--fs-xs); color: var(--ink2);
+                line-height: 1.6; opacity: .85; }
   /* R100z310：结构面里的「情绪 vs 昨日」一行（比绝对值多一层边际信息） */
   .s-mood { display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
             margin-top: 6px; font-size: var(--fs-xs); color: var(--ink2); }
@@ -3256,63 +3259,82 @@ function exitMetaLineAsync(code, boxId, entry, kind) {
 function preOfCode(code) {
   var c = String(code || '').replace(/\D/g, '');
   if (!c) return null;
-  var d = (window.DASHBOARD_DATA || {}).duanban || {};
-  var pool = [].concat(d.confirmed || [], d.watching || [], (d.star && d.star.picks) || []);
+  var D = window.DASHBOARD_DATA || {};
+  var d = D.duanban || {};
+  var cp = D.chenPool || {}, hz = D.harmonic || {}, ac = D.accumulation || {},
+      bp = D.breakoutPool || {};
+  // R100z313：反查范围扩到**全部池**——原来只查断板三处，失效池/陈学长/谐波/吸筹的弹窗
+  // 就都没有三因子标签（用户 2026-11-09 截图圈的正是这两种）。
+  var pool = [].concat(
+    d.confirmed || [], d.watching || [], (d.star && d.star.picks) || [], d.failPool || [],
+    cp.strict || [], cp.loose || [], cp.watching || [],
+    hz.confirmPool || [], hz.watchPool || [],
+    ac.scored || [], bp.passed || []
+  );
   for (var i = 0; i < pool.length; i++) {
     if (pool[i] && String(pool[i].code || '').replace(/\D/g, '') === c && pool[i].pre) return pool[i].pre;
   }
   return null;
 }
-function preModalRowHtml(pre) {
-  if (!pre || !pre.theme) return '';
-  var t = pre.theme, p = pre.pop || {}, m = pre.mood || {};
-  var sc = function (v) { var n = Number(v); return isFinite(n) ? ' ' + Math.round(n) : ''; };
-  var cls = function (v) { return v >= 70 ? ' s-strong' : (v < 40 ? ' s-weak' : ''); };
-  return '<div class="m-pre-row">' +
-    '<span class="pre-tag' + cls(Number(t.score)) + '" title="' +
-      escAttr('板块生命周期：' + (t.why || '') +
-        '　⚠️ 当前用同花顺「行业」代理题材（真题材词聚类未做），所以标签写的是行业状态，不是题材强度') +
-      '">题材·' + esc(t.label || '—') + sc(t.score) + '</span>' +
-    (pre.ladder ? (function () {
-      var ld = pre.ladder;
-      var lcls = (ld.score >= 70) ? ' s-strong' : (ld.score < 40 ? ' s-weak' : '');
-      return '<span class="pre-tag' + lcls + '" title="' +
-        escAttr((ld.why || '') + (ld.tag ? '　→ ' + ld.tag : '') +
-          (ld.bonus ? '　（综合分 +' + ld.bonus + '）' : '')) + '">连板·' +
-        esc(ld.label || '—') + (ld.maxLb ? ' ' + ld.maxLb + '板' : '') + '</span>';
-    })() : '') +
-    '<span class="pre-tag' + cls(Number(p.score)) + '" title="' + escAttr('人气：' + (p.why || '')) +
-      '">人气·' + esc(p.label || '—') + sc(p.score) + '</span>' +
-    '<span class="pre-tag' + cls(Number(m.score)) + '" title="' +
-      escAttr((m.text || '') + (m.why ? '　→ 判「' + m.label + '」：' + m.why : '') +
-        '　—— 情绪是市场级闸门，同一天对全池相同，不参与个股排序') +
-      '">情绪·' + esc(m.label || '—') + '</span>' +
-    '<span class="pre-total" title="' + escAttr(pre.why || '') + '">综合 ' +
-      esc(String(Math.round(Number(pre.total) || 0))) + '</span>' +
-    ((pre.tier) ? '<span class="m-pre-tier">池内' + esc(pre.tier) + '</span>' : '') +
-    '</div>' +
-    /* R100z312（用户 2026-11-08「这样就可以猜可不可以补涨」）：
-       补涨结论必须**写成一句话**，不能只藏在 title 里——title 在手机上根本不显示。
-       三种语义分开写：已在梯队＝接力／板块有主线＝可补涨／板块无连板＝没有对象可跟。 */
-    (function () {
-      var ld = pre.ladder;
-      if (!ld || !ld.why) return '';
-      var cls2 = ld.tag === '可补涨' ? ' ok' : (ld.tag === '无主线' ? ' dim' : '');
-      /* R100z312：板块生命周期弱、但连板还在 → 两个标签会看起来打架
-         （「题材·退潮 8」vs「连板·有龙头 4板」）。这不是矛盾，是这个画面的真实描述：
-         板块整体已经涨过一轮开始回落，但龙头还没死。必须说清，否则读者以为算错了。 */
-      var weakLife = ['退潮', '阴跌', '回踩', '高位'].indexOf(String((pre.theme || {}).label)) >= 0;
-      var conflict = (weakLife && (ld.maxLb || 0) >= 2)
-        ? '　<b>注意</b>：板块整体已在走弱（题材分低），只有龙头还站着——'
-          + '这是「跟龙头做补涨」，不是「板块启动」，仓位和止损都要更紧。' : '';
-      return '<div class="m-ladder-note' + cls2 + '"><b>补涨判断</b>　' +
-        esc(ld.why) + '　→ <b>' + esc(ld.tag || '—') + '</b>' +
-        (ld.tag === '可补涨' ? '（板块有主线、本票还没启动，等它跟）' : '') +
-        (ld.tag === '接力' ? '（本票自己就在梯队，不是补涨，是接力）' : '') +
-        (ld.tag === '无主线' ? '（板块今天没资金做，只能跟大盘）' : '') +
-        conflict + '</div>';
-    })();
+
+/* R100z313：降级版三因子——票不在断板池（失效池/陈学长/谐波/吸筹/横盘启动）时现算。
+   能算的三项：题材（板块生命周期）、连板（duanban.ladder）、情绪（duanban.mood）；
+   **人气算不了**（需要「当日全池成交额分位」，前端没有那份池子），所以不给人气、不给综合。
+   宁可少两格，也不给一个编出来的分。 */
+function preFallback(code) {
+  var D = window.DASHBOARD_DATA || {};
+  var sec = '';
+  try { sec = stkSecOf(String(code || '')); } catch (e) { sec = ''; }
+  if (!sec || sec === '其他') return null;
+  var a = D.ashare || {};
+  var life = null;
+  (a.allBoards || []).forEach(function (x) { if (!life && x && x.name === sec && x.life) life = x.life; });
+  var d = D.duanban || {};
+  var g = ((d.ladder || {})[sec]) || null;
+  var mood = d.mood || null;
+  if (!life && !g && !mood) return null;
+  return {
+    partial: true, sec: sec,
+    theme: life ? { label: life.label, day: life.day, score: life.score, why: life.why } : null,
+    ladder: g ? { maxLb: g.maxLb || 0, n: g.n || 0, names: g.names || [],
+                  themes: g.topThemes || [], topName: g.topName || '' } : { maxLb: 0 },
+    mood: mood ? { label: mood.label, text: mood.text, why: mood.why } : null,
+    pop: null, total: null
+  };
 }
+function preModalRowHtml(pre) {
+  if (!pre || (!pre.theme && !pre.ladder && !pre.mood)) return '';
+  /* R100z313：改成复用 preTagsHtml —— 原来这里把四枚标签又抄了一遍，
+     于是「卡片上改了、弹窗忘了改」的概率翻倍（这次连板显示题材词就差点只改了一半）。 */
+  var h = '<div class="m-pre-row">' + preTagsHtml(pre) + '</div>';
+  var ld = pre.ladder;
+  if (ld && ld.why) {
+    var cls2 = ld.tag === '可补涨' ? ' ok' : (ld.tag === '无主线' ? ' dim' : '');
+    /* 板块生命周期弱、但连板还在 → 「题材·退潮 8」和「连板·4板 AI漫剧」并排会像算错。
+       这不是矛盾：板块整体涨过一轮在回落，但龙头还没死。 */
+    var weakLife = ['退潮', '阴跌', '回踩', '高位'].indexOf(String((pre.theme || {}).label)) >= 0;
+    var conflict = (weakLife && (ld.maxLb || 0) >= 2)
+      ? '　<b>注意</b>：板块整体已在走弱（题材分低），只有龙头还站着——'
+        + '这是「跟龙头做补涨」，不是「板块启动」，仓位和止损都要更紧。' : '';
+    h += '<div class="m-ladder-note' + cls2 + '"><b>补涨判断</b>　' +
+      esc(ld.why) + '　→ <b>' + esc(ld.tag || '—') + '</b>' +
+      (ld.tag === '可补涨' ? '（板块有主线、本票还没启动，等它跟）' : '') +
+      (ld.tag === '接力' ? '（本票自己就在梯队，不是补涨，是接力）' : '') +
+      (ld.tag === '无主线' ? '（板块今天没资金做，只能跟大盘）' : '') +
+      conflict + '</div>';
+  } else if (ld && (ld.maxLb || 0) >= 2) {
+    // 降级版（票不在断板池）：只有原始连板数据，不做打分——打分规则在后端一处，别在前端再写一套
+    h += '<div class="m-ladder-note"><b>板块连板</b>　' +
+      esc((ld.names || []).join('、') || '—') + ' 最高 ' + esc(String(ld.maxLb)) + ' 板' +
+      ((ld.themes && ld.themes.length) ? '，题材「' + esc(ld.themes.join('+')) + '」' : '') + '</div>';
+  }
+  if (pre.partial) {
+    h += '<div class="m-pre-note">该票不在断板反包池：题材 / 连板 / 情绪按当日盘面现算，' +
+      '<b>人气与综合分不适用</b>——那两项要「当日全池成交额分位」，单只票算不出来，不编。</div>';
+  }
+  return h;
+}
+
 
 /* R100z19：该代码是否属断板池（确认/观察/精选）——用于兜底退出纪律挑对证伪口径。
    取不到就返回 false，不猜。 */
@@ -6130,27 +6152,36 @@ function modalFreshBadgeHtml(key, code) {
    强（走好）用暖色、弱（退潮/梯队外）用灰，读者一眼能看出「形态够了但题材死了」。
    ⚠️ 只在有 pre 字段时渲染：旧 data.js 没有它，不能因此把卡片画坏（降级为零标签）。 */
 function preTagsHtml(pre) {
-  if (!pre || !pre.theme) return '';
-  var t = pre.theme, p = pre.pop || {}, m = pre.mood || {};
+  if (!pre || (!pre.theme && !pre.ladder && !pre.mood)) return '';
+  var t = pre.theme || null, p = pre.pop || null, m = pre.mood || {};
   var cls = function (score) {
     return score >= 70 ? ' s-strong' : (score < 40 ? ' s-weak' : '');
   };
   /* 分数必须跟标签一起显示：26 只票在退潮日里「情绪·退潮」「人气·梯队外」完全一样，
      只出标签等于三枚同样的胶囊，看不出差别。分数才是排序依据（pre.total 就是它加权来的）。 */
   var sc = function (v) { var n = Number(v); return isFinite(n) ? ' ' + Math.round(n) : ''; };
-  var out = '<span class="pre-tag' + cls(t.score) + '" title="' + escAttr(t.why || '') + '">题材·' +
-    esc(t.label || '—') + sc(t.score) + '</span>';
+  var out = '';
+  if (t) {
+    out += '<span class="pre-tag' + cls(Number(t.score)) + '" title="' + escAttr(t.why || '') + '">题材·' +
+      esc(t.label || '—') + sc(t.score) + '</span>';
+  }
   /* R100z312：连板标签紧跟题材（都是「板块维度」）。有主线才给暖色，
      无连板给灰——但要说清「无连板 ≠ 票差」，只是这个方向今天没资金做。 */
   if (pre.ladder) {
     var ld = pre.ladder;
     var lcls = (ld.score >= 70) ? ' s-strong' : (ld.score < 40 ? ' s-weak' : '');
+    /* R100z313：有连板时显示**题材词**而不是「有龙头」三个字——「有龙头」不告诉你炒什么，
+       而行业名又会误导（浙文影业行业=纺织制造、题材=AI漫剧，同板块真纺织股不会跟着补涨）。 */
+    var ltxt = (ld.maxLb >= 2)
+      ? ('连板 ' + ld.maxLb + '板' + ((ld.themes && ld.themes.length) ? ' · ' + ld.themes[0] : ''))
+      : ('连板·' + (ld.label || '无'));
     out += '<span class="pre-tag' + lcls + '" title="' +
-      escAttr((ld.why || '') + (ld.tag ? '　→ ' + ld.tag : '')) + '">连板·' +
-      esc(ld.label || '—') + (ld.maxLb ? ' ' + ld.maxLb + '板' : '') + '</span>';
+      escAttr((ld.why || '') + (ld.tag ? '　→ ' + ld.tag : '')) + '">' + esc(ltxt) + '</span>';
   }
-  out += '<span class="pre-tag' + cls(p.score) + '" title="' + escAttr(p.why || '') + '">人气·' +
-    esc(p.label || '—') + sc(p.score) + '</span>';
+  if (p) {
+    out += '<span class="pre-tag' + cls(Number(p.score)) + '" title="' + escAttr(p.why || '') + '">人气·' +
+      esc(p.label || '—') + sc(p.score) + '</span>';
+  }
   /* 情绪不出分数：它对全池是同一个值，不参与综合分（加进去只是整体平移、不改变排序）。
      出个分会让人以为「情绪 25 分」拉低了这只票——那是误读。它只是闸门。 */
   out += '<span class="pre-tag' + cls(m.score) + '" title="' +
@@ -6348,16 +6379,27 @@ function preBlockHtml(db) {
     /* R100z312：分组标题加「板块连板」——明日盯盘最该先看的不是板块涨了多少，
        而是「这个板块里还有没有龙头在」。有连板＝资金有记忆、补涨有对象；没有＝只能跟大盘。 */
     var _lg = g.ladder || {};
+    /* R100z313（用户 2026-11-09：「浙文影业的连板难道不是 AI 短剧吗？和纺织有什么关系？」）：
+       徽章必须写**这只连板在炒什么题材**，不能只写行业名——浙文影业行业归「纺织制造」，
+       题材其实是「AI漫剧+微短剧」，同板块的真纺织股不会因为它 5 板而补涨。 */
+    var _lth = (_lg.themes || []);
     var _lbadge = (_lg.maxLb >= 2)
       ? '<span class="pre-lad on">连板 ' + _lg.maxLb + ' 板' +
-        ((_lg.names || []).length ? '（' + esc(String(_lg.names[0])) + '）' : '') + '</span>'
+        (_lth.length ? ' · ' + esc(String(_lth[0])) : '') +
+        (_lg.topName ? '（' + esc(String(_lg.topName)) + '）' : '') + '</span>'
       : '<span class="pre-lad">无连板</span>';
+    // 题材词与板块名并列时，读者要能分辨「这是行业分类，不是炒作方向」
+    var _lx = (_lg.maxLb >= 2 && _lth.length)
+      ? '<span class="pre-lad-x">连板股 ' + esc(String(_lg.topName || '')) + ' 的题材是「' +
+        esc(_lth.join('+')) + '」——下面这几只是<b>同行业</b>的票，' +
+        '不等于同一个题材，补涨关系要自己核对</span>' : '';
     var _warnX = ((g.life === '退潮' || g.life === '阴跌' || g.life === '回踩') && _lg.maxLb >= 2)
       ? '<span class="pre-lad-x">板块整体在走弱，但龙头还在 → 只跟龙头节奏，别按板块强弱做</span>' : '';
     h += '<div class="pre-grp"><div class="pre-grp-h">' + esc(g.sector) +
       '<span class="pre-life">' + esc(g.life || '') + '</span>' + _lbadge +
       '<span class="xt">' + esc(g.why || '') + '</span></div>' +
-      (_warnX ? '<div class="pre-lad-xw">' + _warnX + '</div>' : '') + '<div class="pre-picks">';
+      (_warnX ? '<div class="pre-lad-xw">' + _warnX + '</div>' : '') +
+      (_lx ? '<div class="pre-lad-xw">' + _lx + '</div>' : '') + '<div class="pre-picks">';
     (g.picks || []).forEach(function (p) {
       var gi = window._PRE_GRP.length;
       window._PRE_GRP.push({ c: p.code, n: p.name, t: '明日盯盘 · ' + p.name });
@@ -6946,7 +6988,25 @@ function chenCompareHtml(c) {
       '<div class="cc-list">' + chipsOf(doOnly) + '</div></div>' +
     '<div class="cc-sec"><div class="cc-t">留痕回测进度</div>' +
       '<div class="cc-note">起始 <b>' + esc(tr.since || '—') + '</b> ｜ 已结算 <b>' + (tr.settledN || 0) +
-      '</b> 条 ｜ 待结算 <b>' + (tr.openN || 0) + '</b> 条' +
+      '</b> 条' +
+      /* R100z313（用户 2026-11-09 00:13：「增加一个累计盈利百分比多少」）：
+         口径是**资金曲线**，不是把每笔收益加起来——一天选 11 只、每只 +5%，资金只有一份，
+         相加等于把同一份钱算 11 遍；而且各组持仓时间重叠，连乘也不成立。
+         「累计」= 满仓等权滚动的净值涨幅（详见 chen_pool.perf_of 的注释）。 */
+      (function () {
+        var pf = cmp.perf;
+        if (!pf || pf.cumPct === null || pf.cumPct === undefined) return '';
+        var up = Number(pf.cumPct) >= 0;
+        return ' ｜ <b class="' + (up ? 'up' : 'down') + '" title="' +
+          escAttr('累计收益 = 起始 100 做到 ' + (100 + Number(pf.cumPct)).toFixed(2) + '（' +
+            pf.model + '）。' + pf.buyDays + ' 个买入日 / ' + pf.n + ' 笔，' +
+            '平均每笔 ' + (pf.avgPct >= 0 ? '+' : '') + pf.avgPct + '%，胜率 ' + pf.winRate + '%。' +
+            '⚠️ 这是「当天选出的票等权全买」的成绩，不是你实际只买 1~2 只的成绩。') +
+          '">累计 ' + (up ? '+' : '') + Number(pf.cumPct).toFixed(1) + '%</b>' +
+          '<span class="cc-perf-x">' + pf.buyDays + ' 个买入日 · 平均每笔 ' +
+          (pf.avgPct >= 0 ? '+' : '') + pf.avgPct + '%</span>';
+      })() +
+      ' ｜ 待结算 <b>' + (tr.openN || 0) + '</b> 条' +
       (tr.justSettled ? '（本次 +' + tr.justSettled + '）' : '') +
       (tr.legacyN ? ' ｜ 旧口径 ' + tr.legacyN + ' 条另结' : '') +
       /* R100z303（用户 2026-11-04）：「这块能不能增加结算明细？列清楚标的、买入日期、
@@ -9458,7 +9518,7 @@ function openDbModal(key) {
   document.getElementById('db-modal-meta').innerHTML =
     /* R100z311：三因子行放在最前面——读者先要知道「这套判断的依据」，
        再读涨停日/形态这些事实。「池内强/中/弱」是相对档（前 30%），不是绝对分档。 */
-    preModalRowHtml(preOfCode(e.code)) +
+    preModalRowHtml(preOfCode(e.code) || preFallback(e.code)) +
     // R100z257：两个字段各自判空，不再「有其一就整行渲染」——昨晚挂单的票没有今日涨跌幅，
     // 原来会印出「今日：—」，看着像抓空；有值的一侧照常显示，缺的一侧整段不写。
     ((e.ztDate || e.pct != null)

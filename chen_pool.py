@@ -1020,6 +1020,64 @@ def settle_rows(ledger, today=None, keep_days=None):
                   "skip": skip, "legacyShown": legacy_n, "today": today}
 
 
+def perf_of(rows):
+    """已结算样本的**累计收益**（资金曲线模型，不是「逐笔相加」）。
+
+    R100z313（用户 2026-11-09 00:13 截图圈「留痕回测进度」那行：「增加一个累计盈利百分比多少」）。
+
+    ⛔ 为什么不能直接把每笔收益加起来：
+    ① 同一笔的收益不能重复计——一天选出 11 只、每只都记 +5%，但资金只有一份；
+    ② 各组持仓**时间重叠**（10-23 买的持到 11-06，10-27 买的也在同一周），
+       所以「按日等权再累加」在数学上也不成立，更不能连乘。
+    唯一站得住的做法是**资金曲线**：每天先结算到期、再用可用资金等权买入当天的新票。
+
+    口径：满仓等权滚动（当天把可用资金平分给当天所有新票），不复利之外的费用、不扣手续费。
+    **这是「池子等权」的成绩，不是「你只买 1~2 只」的成绩**——后者会差很远，页面必须写明。
+    """
+    cur = [r for r in (rows or []) if not r.get("legacy") and r.get("buyDay")]
+    if not cur:
+        return None
+    bybuy = {}
+    for r in cur:
+        bybuy.setdefault(str(r["buyDay"]), []).append(r)
+    days = sorted({str(r["buyDay"]) for r in cur} | {str(r["exitDay"]) for r in cur})
+    cash, pos, curve = 100.0, [], []
+    for d in days:
+        still = []
+        for ed, amt, ret in pos:
+            if ed <= d:
+                cash += amt * (1 + ret / 100.0)
+            else:
+                still.append((ed, amt, ret))
+        pos = still
+        picks = bybuy.get(d) or []
+        if picks and cash > 1:
+            per = cash / len(picks)
+            seen = set()
+            for r in picks:
+                # 同一只票同日只买一次（台账里同码多池会各记一条）
+                code = str(r.get("code") or "")
+                if code and code in seen:
+                    continue
+                seen.add(code)
+                pos.append((str(r["exitDay"]), per, float(r["retPct"] or 0)))
+            cash = 0.0
+        curve.append({"day": d, "equity": round(cash + sum(a for _, a, _ in pos), 2)})
+    tail = sum(a * (1 + ret / 100.0) for _, a, ret in pos)
+    final = cash + tail
+    rets = [float(r["retPct"] or 0) for r in cur]
+    return {
+        "n": len(cur), "startDay": days[0], "endDay": days[-1],
+        "buyDays": len(bybuy), "totalDays": len(days),
+        "avgPct": round(sum(rets) / len(rets), 2),
+        "cumPct": round(final - 100.0, 2),
+        "bestPct": round(max(rets), 2), "worstPct": round(min(rets), 2),
+        "winRate": round(100.0 * sum(1 for x in rets if x > 0) / len(rets), 1),
+        "curve": curve[-12:],
+        "model": "满仓等权滚动（每天把可用资金平分给当天新票，卖出回笼；不扣手续费）",
+    }
+
+
 def build_compare(chen_codes, db_codes, ledger, today=None):
     """当日池差异 + 历史胜率对比。
 
@@ -1042,11 +1100,14 @@ def build_compare(chen_codes, db_codes, ledger, today=None):
     for k, v in cross.items():
         stats["cross_" + k] = pool_stats(v)
     settles, settle_meta = settle_rows(ledger, today)
+    perf = perf_of(settles)
     return {
         # R100z303（用户 2026-11-04）：「留痕回测进度」那块要能点开看逐笔买卖。
         # 明细与统计同源（同一个 ledger、同一个 settle_one 结果），只是多了一个保留窗口。
         "settles": settles,
         "settleMeta": settle_meta,
+        # R100z313：累计收益（资金曲线口径，不是逐笔相加）
+        "perf": perf,
         "today": {
             "both": sorted(chen_s & db_s),
             "chenOnly": sorted(chen_s - db_s),

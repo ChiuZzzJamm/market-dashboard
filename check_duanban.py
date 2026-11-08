@@ -2176,6 +2176,10 @@ def pre_batch(entries, ctx):
                        "n": _lab.get("n", 0),
                        "maxLb": _lab.get("maxLb", 0),
                        "names": _lab.get("names", []),
+                       # R100z313：题材词（from 连板 reason）——行业名 ≠ 题材，
+                       # 前端徽章显示这个而不是行业名，否则「纺织制造有连板」会被读成「纺织在炒」
+                       "themes": _lab.get("topThemes") or [],
+                       "topName": _lab.get("topName") or "",
                        "inLadder": r["isLb"], "bonus": lbonus,
                        # 补涨结论：板块有主线、本票还没启动 → 有补涨对象；
                        # 本票已在梯队 → 那是接力不是补涨；板块无连板 → 没有主线可跟。
@@ -2280,7 +2284,11 @@ def watch_next(confirmed, watching, ctx, limit=3, per=2):
                 # 因为补涨/接力的资金来自板块内部，没有连板的板块只能靠大盘带。
                 "ladder": {"label": _ld.get("label") or "无连板",
                            "maxLb": _ld.get("maxLb") or 0,
-                           "names": _ld.get("names") or []},
+                           "names": _ld.get("names") or [],
+                           # R100z313：题材词跟着进盯盘分组——「纺织制造」下面挂
+                           # 「连板 5 板（浙文影业）」会误导，必须同时说出它在炒 AI漫剧
+                           "themes": _ld.get("themes") or [],
+                           "topName": _ld.get("topName") or ""},
                 "hasLadder": bool((_ld.get("maxLb") or 0) >= 2),
                 "picks": [],
             }
@@ -2461,6 +2469,12 @@ def build_module(pairs, D):
         "suspended": _susp,
         # R100z310：情绪状态（含 vs 昨日边际）与杂毛剔除留痕、明日盯盘
         "mood": {k: _ctx["mood"].get(k) for k in ("label", "score", "text", "deltas")},
+        # R100z313：板块→连板映射整份下发给前端。为什么要给前端：
+        # 失效池 / 陈学长池 / 谐波池的票不在断板池里，前端拿不到它们的 pre，
+        # 于是那些弹窗缺「题材/连板/情绪」三枚标签。这三项都能从公开数据现算
+        # （板块生命周期在 allBoards.life、连板在这里、情绪在 mood），只有「人气」
+        # 需要池内成交额分位算不了——所以降级版只给三项，不给综合分。
+        "ladder": _ctx["ladder"],
         "junkCut": _junk,
         "watchNext": watch_next(confirmed, watching, _ctx),
     }
