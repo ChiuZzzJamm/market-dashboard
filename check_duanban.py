@@ -55,7 +55,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # fetch_ths_industries 双副本合一，与 update_ashare_sectors 共用单一来源）
 from common import (ths_json as curl_ths_json, fetch_ths_industries,
                     is_trade_day, market_last_day, split_suspended,
-                    board_life, mood_state)
+                    board_life, mood_state, board_ladder, ladder_score)
 
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
@@ -2027,7 +2027,10 @@ def _pre_ctx(D, today):
     cur = _mood_now(D)
     mood = mood_state(cur, _prev_mood(today))
     mood["cur"] = cur
-    return {"boards": boards, "lb": lbs, "lhb": lhb, "mood": mood}
+    # R100z312（用户 2026-11-08）：「题材最好和连板梯队里面找」——连板梯队里的板块才是
+    # 当天资金真正在做的主线，同花顺行业只是静态分类。
+    ladder = board_ladder(a.get("lianban") or [])
+    return {"boards": boards, "lb": lbs, "lhb": lhb, "mood": mood, "ladder": ladder}
 
 
 def _amt_of(e):
@@ -2116,7 +2119,12 @@ def pre_batch(entries, ctx):
         life = board_life(bd) if bd else {"label": "无板块", "score": 40, "day": None,
                                           "why": "板块名未匹配到行业表", "fake": False}
         pop_d, pop_why = _pop_bonus(e, ctx)
-        rows.append({"e": e, "life": life, "pop_d": pop_d, "pop_why": pop_why, "amt": _amt_of(e)})
+        # 板块连板（R100z312）：本票自己在梯队 → 是「接力」不是「补涨」，单独给满
+        _is_lb = str(e.get("code") or "") in (ctx.get("lb") or {})
+        _lsc, _llab, _lwhy = ladder_score(e, ctx.get("ladder") or {}, is_lianban=_is_lb)
+        rows.append({"e": e, "life": life, "pop_d": pop_d, "pop_why": pop_why,
+                     "amt": _amt_of(e), "lsc": _lsc, "llab": _llab, "lwhy": _lwhy,
+                     "isLb": _is_lb})
     if not rows:
         return
     # 题材分位：只对「非退潮」板块排名，退潮统一 8 分
@@ -2125,6 +2133,7 @@ def pre_batch(entries, ctx):
     amts = [r["amt"] for r in rows]
     for r in rows:
         lab = r["life"]["label"]
+        _lab = (ctx.get("ladder") or {}).get(str(r["e"].get("sector") or "")) or {}
         if lab in ("退潮", "无板块", "未知", ""):
             theme = 8.0
         else:
@@ -2136,7 +2145,12 @@ def pre_batch(entries, ctx):
         # 人气＝成交额池内分位（主体，全变异）＋ 龙头/放量/龙虎榜 加减（见 _pop_bonus）
         pop = round(max(0.0, min(100.0, _pct_rank(amts, r["amt"]) + r["pop_d"])), 1)
         m = ctx["mood"]
-        total = round(THEME_W * theme + POP_W * pop, 1)
+        # 连板是**加分项**不是权重项：它天生稀缺（今天 100 只里只有 8 只所在板块有连板），
+        # 若占权重，另外 92 只会被压成同一个常数——那就又变成「情绪进加权」那个错误。
+        # 加分档：≥4 板龙头 +12 / 3 板 +9 / 2 板 +6 / 仅首板 +2 / 无连板 0
+        lbonus = (12.0 if r["lsc"] >= 100 else (9.0 if r["lsc"] >= 85 else
+                  (6.0 if r["lsc"] >= 70 else (2.0 if r["lsc"] >= 50 else 0.0))))
+        total = round(min(100.0, THEME_W * theme + POP_W * pop + lbonus), 1)
         r["e"]["pre"] = {
             "theme": {"label": lab or "—", "day": r["life"].get("day"), "score": round(theme, 1),
                       "why": r["life"].get("why") or "", "fake": r["life"].get("fake")},
@@ -2152,6 +2166,22 @@ def pre_batch(entries, ctx):
                     "why": ("成交额池内分位 %.0f" % _pct_rank(amts, r["amt"]))
                            + (" · " + "·".join(r["pop_why"]) if r["pop_why"] else "")
                            + ("（%+.0f）" % r["pop_d"] if abs(r["pop_d"]) >= 1 else "")},
+            # 板块连板（R100z312）：题材的「资金验证」——行业涨 2% 可能是权重拉的，
+            # 但板块里有 4 板龙头就是真金白银在投票。独立成标签，同时给综合分加分。
+            # ⚠️ 必须用 r["e"] 取板块，不能写 e——第二个循环的变量是 r，`e` 只是上一个循环
+            # 残留的最后一只票。实测症状：label（来自 r["llab"]）是对的，但 n/maxLb/names
+            # 全是「最后那只票的板块」，于是「光伏设备 有龙头」却 maxLb=0，
+            # 连带 watchNext 的「有连板就放行」判断也一起失效。
+            "ladder": {"label": r["llab"], "score": r["lsc"], "why": r["lwhy"],
+                       "n": _lab.get("n", 0),
+                       "maxLb": _lab.get("maxLb", 0),
+                       "names": _lab.get("names", []),
+                       "inLadder": r["isLb"], "bonus": lbonus,
+                       # 补涨结论：板块有主线、本票还没启动 → 有补涨对象；
+                       # 本票已在梯队 → 那是接力不是补涨；板块无连板 → 没有主线可跟。
+                       "tag": ("接力" if r["isLb"] else
+                               ("可补涨" if r["lsc"] >= 70 else
+                                ("待观察" if r["lsc"] >= 50 else "无主线")))},
             # 情绪只记录、不参与 total（理由见 THEME_W 上方的注释）
             "mood": {"label": m["label"], "score": m["score"], "text": m["text"],
                      # why＝判定依据（为什么不看最高板/接力率那两项改善）。
@@ -2159,8 +2189,10 @@ def pre_batch(entries, ctx):
                      "why": m.get("why"),
                      "gate": ("block" if m["label"] in ("退潮", "冰点") else "open")},
             "total": total, "tier": "",   # tier 在下面按池内分位给
-            "why": "题材%s(%.0f)×55%% + 人气%.0f×45%% = %.0f（情绪%s 作闸门）"
-                   % (lab or "—", theme, pop, total, m["label"]),
+            "why": "题材%s(%.0f)×55%% + 人气%.0f×45%%%s = %.0f（情绪%s 作闸门）"
+                   % (lab or "—", theme, pop,
+                      (" + 连板%s%+.0f" % (r["llab"], lbonus)) if lbonus else "",
+                      total, m["label"]),
         }
     # tier 用池内分位：普跌日绝对分都低，按绝对值分档会全员「弱」，看不出差别
     totals = sorted([r["e"]["pre"]["total"] for r in rows], reverse=True)
@@ -2227,18 +2259,29 @@ def watch_next(confirmed, watching, ctx, limit=3, per=2):
     for e in cands:
         pre = e.get("pre") or {}
         life = (pre.get("theme") or {}).get("label") or ""
-        # 白名单而不是黑名单：只有「还在往上走」的板块才值得盯。
-        # 2026-11-08 实测「电网设备 今日-1.34% 休整」也进了盯盘——黑名单只排了退潮，
-        # 休整/高位就漏进来了。休整＝今天没资金，高位＝接力尾声，两者都不该出现在「明日」。
-        if life not in _allow:
+        # 准入＝「板块顺风」**或**「板块有连板龙头」。
+        # R100z312（2026-11-08 实测漏了一个）：原先只按生命周期白名单，结果「光伏设备」
+        # 今天不在启动/主升里，就被挡掉了——可它有一只 4 板龙头（永臻股份），池里还有 4 只
+        # 后排票在观察。**有连板龙头比「今天涨了多少」更强**：那是资金已经投票、有补涨对象。
+        # 所以只要有 ≥2 板连板，生命周期不进白名单也照样盯。
+        _ld0 = ((pre.get("theme") and e.get("pre") or {}).get("ladder") or {})
+        _hasLad = int(_ld0.get("maxLb") or 0) >= 2
+        if life not in _allow and not _hasLad:
             continue
         sec = str(e.get("sector") or "其他")
         g = groups.get(sec)
         if not g:
+            _ld = ((e.get("pre") or {}).get("ladder") or {})
             g = groups[sec] = {
                 "sector": sec, "life": life,
                 "why": (pre.get("theme") or {}).get("why") or "",
                 "mood": (pre.get("mood") or {}).get("label") or "",
+                # R100z312：这个板块有没有连板龙头——「明日盯盘」优先盯有主线的方向，
+                # 因为补涨/接力的资金来自板块内部，没有连板的板块只能靠大盘带。
+                "ladder": {"label": _ld.get("label") or "无连板",
+                           "maxLb": _ld.get("maxLb") or 0,
+                           "names": _ld.get("names") or []},
+                "hasLadder": bool((_ld.get("maxLb") or 0) >= 2),
                 "picks": [],
             }
         if len(g["picks"]) < per:
@@ -2251,7 +2294,11 @@ def watch_next(confirmed, watching, ctx, limit=3, per=2):
                             else "再收一根缩量小阳、且收盘不破 T 日低点才算确认"),
             })
     out = [g for g in groups.values() if g["picks"]]
-    out.sort(key=lambda g: max(p["total"] for p in g["picks"]), reverse=True)
+    # 排序：有连板主线的板块优先，其次按组内最高分。
+    # 为什么主线优先而不是纯按分：明日盯盘要回答「明天钱会往哪去」，
+    # 有连板的板块自带资金记忆（龙头还在，跟风有对象），没连板的只能靠大盘。
+    out.sort(key=lambda g: (1 if g.get("hasLadder") else 0,
+                            max(p["total"] for p in g["picks"])), reverse=True)
     return out[:limit]
 
 

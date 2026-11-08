@@ -826,6 +826,12 @@
   .pre-grp-h .xt { font-weight: 400; }
   .pre-life { font-size: var(--fs-xs); padding: 0 6px; border-radius: 999px;
               background: var(--accent-soft); color: var(--accent-deep); font-weight: 700; }
+  /* R100z312：板块连板徽章（明日盯盘的分组标题上）——「有龙头」比「涨了多少」更有信息量 */
+  .pre-lad { font-size: var(--fs-xs); padding: 0 6px; border-radius: 999px;
+             border: 1px solid var(--line); color: var(--ink2); white-space: nowrap; }
+  .pre-lad.on { background: #fdf4e8; border-color: #e8c79a; color: #8a4a12; font-weight: 700; }
+  .pre-lad-xw { margin: 3px 0 0; }
+  .pre-lad-x { font-size: var(--fs-xs); color: #8a4a12; }
   .pre-picks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
   /* R100z310 修正：胶囊原来只有 inline-flex + wrap，名称与分数会被压成两行
      （实测「太阳/能」「67.6/分」）。名称、代码、分数一律 nowrap，触发条件整句独占一行。 */
@@ -846,6 +852,12 @@
   .m-pre-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 0 0 7px; }
   .m-pre-row .pre-tag, .m-pre-row .pre-total { font-size: var(--fs-sm); line-height: 1.8; padding: 0 7px; }
   .m-pre-tier { font-size: var(--fs-xs); color: var(--ink2); opacity: .8; }
+  /* R100z312：补涨判断一行——「可补涨」用暖色底强调（这是唯一带方向的结论） */
+  .m-ladder-note { margin: 0 0 7px; padding: 5px 9px; border-radius: var(--r-note);
+                   font-size: var(--fs-xs); line-height: 1.65; color: var(--ink2);
+                   background: var(--paper); border: 1px solid var(--line); }
+  .m-ladder-note.ok { background: #fdf4e8; border-color: #e8c79a; color: #8a4a12; }
+  .m-ladder-note.dim { opacity: .78; }
   /* R100z310：结构面里的「情绪 vs 昨日」一行（比绝对值多一层边际信息） */
   .s-mood { display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
             margin-top: 6px; font-size: var(--fs-xs); color: var(--ink2); }
@@ -3261,6 +3273,14 @@ function preModalRowHtml(pre) {
       escAttr('板块生命周期：' + (t.why || '') +
         '　⚠️ 当前用同花顺「行业」代理题材（真题材词聚类未做），所以标签写的是行业状态，不是题材强度') +
       '">题材·' + esc(t.label || '—') + sc(t.score) + '</span>' +
+    (pre.ladder ? (function () {
+      var ld = pre.ladder;
+      var lcls = (ld.score >= 70) ? ' s-strong' : (ld.score < 40 ? ' s-weak' : '');
+      return '<span class="pre-tag' + lcls + '" title="' +
+        escAttr((ld.why || '') + (ld.tag ? '　→ ' + ld.tag : '') +
+          (ld.bonus ? '　（综合分 +' + ld.bonus + '）' : '')) + '">连板·' +
+        esc(ld.label || '—') + (ld.maxLb ? ' ' + ld.maxLb + '板' : '') + '</span>';
+    })() : '') +
     '<span class="pre-tag' + cls(Number(p.score)) + '" title="' + escAttr('人气：' + (p.why || '')) +
       '">人气·' + esc(p.label || '—') + sc(p.score) + '</span>' +
     '<span class="pre-tag' + cls(Number(m.score)) + '" title="' +
@@ -3270,7 +3290,28 @@ function preModalRowHtml(pre) {
     '<span class="pre-total" title="' + escAttr(pre.why || '') + '">综合 ' +
       esc(String(Math.round(Number(pre.total) || 0))) + '</span>' +
     ((pre.tier) ? '<span class="m-pre-tier">池内' + esc(pre.tier) + '</span>' : '') +
-    '</div>';
+    '</div>' +
+    /* R100z312（用户 2026-11-08「这样就可以猜可不可以补涨」）：
+       补涨结论必须**写成一句话**，不能只藏在 title 里——title 在手机上根本不显示。
+       三种语义分开写：已在梯队＝接力／板块有主线＝可补涨／板块无连板＝没有对象可跟。 */
+    (function () {
+      var ld = pre.ladder;
+      if (!ld || !ld.why) return '';
+      var cls2 = ld.tag === '可补涨' ? ' ok' : (ld.tag === '无主线' ? ' dim' : '');
+      /* R100z312：板块生命周期弱、但连板还在 → 两个标签会看起来打架
+         （「题材·退潮 8」vs「连板·有龙头 4板」）。这不是矛盾，是这个画面的真实描述：
+         板块整体已经涨过一轮开始回落，但龙头还没死。必须说清，否则读者以为算错了。 */
+      var weakLife = ['退潮', '阴跌', '回踩', '高位'].indexOf(String((pre.theme || {}).label)) >= 0;
+      var conflict = (weakLife && (ld.maxLb || 0) >= 2)
+        ? '　<b>注意</b>：板块整体已在走弱（题材分低），只有龙头还站着——'
+          + '这是「跟龙头做补涨」，不是「板块启动」，仓位和止损都要更紧。' : '';
+      return '<div class="m-ladder-note' + cls2 + '"><b>补涨判断</b>　' +
+        esc(ld.why) + '　→ <b>' + esc(ld.tag || '—') + '</b>' +
+        (ld.tag === '可补涨' ? '（板块有主线、本票还没启动，等它跟）' : '') +
+        (ld.tag === '接力' ? '（本票自己就在梯队，不是补涨，是接力）' : '') +
+        (ld.tag === '无主线' ? '（板块今天没资金做，只能跟大盘）' : '') +
+        conflict + '</div>';
+    })();
 }
 
 /* R100z19：该代码是否属断板池（确认/观察/精选）——用于兜底退出纪律挑对证伪口径。
@@ -6099,6 +6140,15 @@ function preTagsHtml(pre) {
   var sc = function (v) { var n = Number(v); return isFinite(n) ? ' ' + Math.round(n) : ''; };
   var out = '<span class="pre-tag' + cls(t.score) + '" title="' + escAttr(t.why || '') + '">题材·' +
     esc(t.label || '—') + sc(t.score) + '</span>';
+  /* R100z312：连板标签紧跟题材（都是「板块维度」）。有主线才给暖色，
+     无连板给灰——但要说清「无连板 ≠ 票差」，只是这个方向今天没资金做。 */
+  if (pre.ladder) {
+    var ld = pre.ladder;
+    var lcls = (ld.score >= 70) ? ' s-strong' : (ld.score < 40 ? ' s-weak' : '');
+    out += '<span class="pre-tag' + lcls + '" title="' +
+      escAttr((ld.why || '') + (ld.tag ? '　→ ' + ld.tag : '')) + '">连板·' +
+      esc(ld.label || '—') + (ld.maxLb ? ' ' + ld.maxLb + '板' : '') + '</span>';
+  }
   out += '<span class="pre-tag' + cls(p.score) + '" title="' + escAttr(p.why || '') + '">人气·' +
     esc(p.label || '—') + sc(p.score) + '</span>';
   /* 情绪不出分数：它对全池是同一个值，不参与综合分（加进去只是整体平移、不改变排序）。
@@ -6282,17 +6332,32 @@ function preBlockHtml(db) {
        否则「明日盯盘」四个字在退潮日会读成「明天买这三只」。反包成功率本身就跟情绪强相关，
        情绪差的时候题材再活也只是「相对不差」，不是「值得下手」。 */
     if (mood.label === '退潮' || mood.label === '冰点') {
+      /* R100z312：盯盘口径变了——现在优先盯「有连板龙头」的板块，而这些板块的生命周期
+         往往是「退潮/回踩」。原警告条写「只做启动首日」，会和下面列出的票直接打架。
+         改成说清「退潮日还能做什么」：只跟龙头所在的板块、只做还没启动的后排（补涨），
+         不追已经高位的、不做没有龙头的板块。 */
       h += '<div class="pre-warn">⚠️ 现在是<b>' + esc(mood.label) +
-        '</b>期：题材再活也只是「相对不差」，不是「值得下手」。退潮期只做<b>启动首日</b>的票，' +
-        '不追主升尾巴、不接高位反包——想清楚再动手，宁可空仓。</div>';
+        '</b>期：<b>只做「有连板龙头」的板块</b>——龙头还在，后排才有补涨对象；' +
+        '板块里一只连板都没有的，退潮日就是没人接。同时<b>只做还没启动的后排</b>，' +
+        '不追已经高位的、不接主升尾巴。想不清楚就空仓。</div>';
     }
   } else {
     h += '<div class="db-sub">情绪数据缺失（breadth/连板未生成），本次只给题材与标的</div>';
   }
   wn.forEach(function (g) {
+    /* R100z312：分组标题加「板块连板」——明日盯盘最该先看的不是板块涨了多少，
+       而是「这个板块里还有没有龙头在」。有连板＝资金有记忆、补涨有对象；没有＝只能跟大盘。 */
+    var _lg = g.ladder || {};
+    var _lbadge = (_lg.maxLb >= 2)
+      ? '<span class="pre-lad on">连板 ' + _lg.maxLb + ' 板' +
+        ((_lg.names || []).length ? '（' + esc(String(_lg.names[0])) + '）' : '') + '</span>'
+      : '<span class="pre-lad">无连板</span>';
+    var _warnX = ((g.life === '退潮' || g.life === '阴跌' || g.life === '回踩') && _lg.maxLb >= 2)
+      ? '<span class="pre-lad-x">板块整体在走弱，但龙头还在 → 只跟龙头节奏，别按板块强弱做</span>' : '';
     h += '<div class="pre-grp"><div class="pre-grp-h">' + esc(g.sector) +
-      '<span class="pre-life">' + esc(g.life || '') + '</span>' +
-      '<span class="xt">' + esc(g.why || '') + '</span></div><div class="pre-picks">';
+      '<span class="pre-life">' + esc(g.life || '') + '</span>' + _lbadge +
+      '<span class="xt">' + esc(g.why || '') + '</span></div>' +
+      (_warnX ? '<div class="pre-lad-xw">' + _warnX + '</div>' : '') + '<div class="pre-picks">';
     (g.picks || []).forEach(function (p) {
       var gi = window._PRE_GRP.length;
       window._PRE_GRP.push({ c: p.code, n: p.name, t: '明日盯盘 · ' + p.name });

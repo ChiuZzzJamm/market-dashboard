@@ -516,6 +516,80 @@ def board_life(b):
             "diffuse": diffuse, "fake": fake, "why": why}
 
 
+def board_ladder(lianban):
+    """按板块聚合连板梯队 → {板块名: {n, maxLb, names, codes, topName}}。
+
+    R100z312（用户 2026-11-08：「题材最好和连板梯队里面找，或者单独增加个标的所在板块
+    是否有连板的，这样就可以猜可不可以补涨」）。
+
+    为什么这件事比「同花顺行业 + 今日涨幅」更接近题材：**连板梯队里的票才是当天资金真正在
+    做的方向**。一个行业今天涨 2% 可能只是权重股拉的；但如果这个行业里有 3 只连板（含一只
+    4 板），那就是有主线、有龙头、有接力。反过来，行业分类是静态的——「种植业与林业」不会
+    告诉你今天有没有资金在做它。
+
+    ⚠️ `hybk` 是**同花顺行业**口径，与断板池的 `sector` 同一套（已核对匹配率）。
+    它不是真题材词（「光伏边框+液冷铝材」那种在 `reason` 里），但同一套分类才能对上池子。
+    """
+    out = {}
+    for x in (lianban or []):
+        if not isinstance(x, dict):
+            continue
+        sec = str(x.get("hybk") or "").strip()
+        if not sec:
+            continue
+        g = out.setdefault(sec, {"n": 0, "maxLb": 0, "names": [], "codes": []})
+        g["n"] += 1
+        try:
+            lbc = int(x.get("lbc") or 1)
+        except (TypeError, ValueError):
+            lbc = 1
+        g["maxLb"] = max(g["maxLb"], lbc)
+        if x.get("name"):
+            g["names"].append(str(x["name"]))
+        if x.get("code"):
+            g["codes"].append(str(x["code"]))
+    for g in out.values():
+        # 龙头名取板数最高的那只（同板块多只时读者最关心「最高的那个是谁」）
+        g["topName"] = g["names"][0] if g["names"] else ""
+    return out
+
+
+def ladder_score(entry, ladder, is_lianban=False):
+    """板块连板档 → (score 0~100, label, why)。**没有连板不等于没机会，只是没有主线。**
+
+    分档为什么这么给：
+      · 4 板以上龙头 → 100，这是「有主线」的强证据（接力资金已经用真金白银投票）；
+      · 3 板 → 85，主线确立但高度还没打满；
+      · 2 板 → 70，有资金试盘，能不能成看第三天；
+      · 只有首板（lbc=1）→ 50，**首板不算连板**，因为首板每天几十家，不构成「主线」；
+      · 无连板 → 25，只说明「这个板块今天没有资金在做」，不是「这只票差」。
+
+    `is_lianban`：本票自己就在连板梯队里 → 那它不是「补涨」而是「接力」，语义不同，
+    分数不再叠加（它已经拿满了）。
+    """
+    if is_lianban:
+        return 100.0, "本票在梯队", "本票本身就在连板梯队，属于接力而非补涨"
+    sec = str((entry or {}).get("sector") or "")
+    g = (ladder or {}).get(sec)
+    if not g or not g.get("n"):
+        return 25.0, "无连板", "板块 %s 今日无连板股——没有资金在做这个方向，补涨只能跟大盘" % (sec or "—")
+    mx = int(g.get("maxLb") or 1)
+    n = int(g.get("n") or 0)
+    if mx >= 4:
+        sc, lab = 100.0, "有龙头"
+    elif mx == 3:
+        sc, lab = 85.0, "3板"
+    elif mx == 2:
+        sc, lab = 70.0, "2板"
+    else:
+        sc, lab = 50.0, "仅首板"
+    why = ("板块 %s 有 %d 只连板、最高 %d 板（%s）"
+           % (sec, n, mx, "、".join(g.get("names") or [])[:24]))
+    if mx < 2:
+        why += "　⚠️ 只有首板，不构成主线（首板每日几十家）"
+    return sc, lab, why
+
+
 def mood_state(cur, prev=None):
     """情绪状态与边际（R100z310）。`cur`/`prev` 为涨跌/连板指标 dict。
 
