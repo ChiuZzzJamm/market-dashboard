@@ -1476,6 +1476,17 @@ def collect_g16_checks(D):
         if sec.get("outlook"):
             add(f"{mk}.outlook", sec.get("outlook"), 300)
 
+    # 周末要闻（R100z322）。它是**多条消息的汇总**，一写薄就退化成「一条消息换个说法」。
+    # 2026-11-09 实测：AI 只写到 136~361 字（同一天工作日五节均值 423 字），
+    # 用户当场问「商业航天那么多条新闻，你筛 2 条汇总，那其他的是不是也该多找内容再汇总？
+    # 现在是否已经做到了？」——没做到，所以补机器闸。
+    # 阈值 300 比单条要闻（240）高一档：它是合并稿，低于 300 基本等于复述单一来源。
+    # 不检查「数据点个数」：事件型新闻（如「某会议定调」）天生没有数字，硬卡会误伤。
+    for i, it in enumerate((D.get("weekendNews") or {}).get("items") or []):
+        if isinstance(it, dict):
+            add(f"weekendNews.items[{i}].summary({it.get('theme') or '?'})",
+                it.get("summary"), 300)
+
     # 美股顶层 summary（脚本生成；2026-10-12 前仅 ~124 字偏薄，用户要求与 A 股同口径扩充）
     _us_sum = (D.get("us") or {}).get("summary")
     if _us_sum:
