@@ -1810,7 +1810,11 @@ def g19_summary_freshness(r):
         if isinstance(it, dict) and isinstance(it.get("point"), (int, float)):
             idx_pts.append(float(it.get("point")))
     stale_pts = []
-    for num in re.findall(r"(\d{4}\.\d{2})", summary):
+    # R100z297：旧写法 `(\d{4}\.\d{2})` 会把 5 位指数点位截断——「深证成指报 11145.49 点」
+    # 被截成 1145.49，与任何 indices.point 都对不上，直接判「陈旧收盘点位」FAIL。
+    # 2026-11-09 19:30 实测撞过一次：summary 明明写的是当日真实点位，却被判陈旧。
+    # 加前后断言（前面不能是数字/小数点、后面不能是数字），并把位数放宽到 4~5 位。
+    for num in re.findall(r"(?<![\d.])(\d{4,5}\.\d{2})(?![\d])", summary):
         v = float(num)
         if not (1000 <= v <= 20000):
             continue
