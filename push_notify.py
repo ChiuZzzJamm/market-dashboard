@@ -94,6 +94,38 @@ def build_lianban_line(a):
         return None
     return '🔥 连板：' + ' / '.join(pieces)
 
+
+def build_breakout_line(D):
+    """🔴 启动 推送行：横盘启动池里「今天刚开始启动」的票。
+
+    R100z321（用户 2026-11-09 22:19：「这个推送内容你看是 16:00 更新还是 19:30 更新，
+    反正推送肯定是安排在 19:30 的吧？」）—— 分工：
+      16:00 数据步跑 breakout_watch.py 算好写 breakoutPool.watch（**只算不推**）；
+      19:30 run_push.sh ashare 才推送（这里是唯一出口）。
+    为什么不在 16:00 推：推送清单与其它段（研判/资金/连板）是同一份文件，
+    分成两个时点发，读者会收到两条内容重叠的消息。
+
+    ⚠️ 只推 triggered（今天开始启动），不推 near（接近）：near 每天几十只，
+    推了等于没有提醒可言。没有 triggered 就返回 None，调用方跳过（静默）。
+    """
+    w = ((D.get('breakoutPool') or {}).get('watch') or {}) if isinstance(D, dict) else {}
+    rows = [r for r in (w.get('triggered') or []) if isinstance(r, dict) and r.get('name')]
+    if not rows:
+        return None
+    try:
+        rows = sorted(rows, key=lambda x: (x.get('todayPct') or 0), reverse=True)
+    except Exception:
+        pass
+    pieces = []
+    for r in rows[:6]:
+        pct = r.get('todayPct')
+        pc = ('%+.2f' % float(pct)).rstrip('0').rstrip('.') if isinstance(pct, (int, float)) else ''
+        pieces.append('%s%s' % (r.get('name', ''), pc))
+    if not pieces:
+        return None
+    tail = '' if len(rows) <= 6 else f" 等{len(rows)}只"
+    return '🔴 启动：' + ' / '.join(pieces) + tail + '（洗盘结束刚放量，非已涨完）'
+
 def fmt_ai_line(ap, label):
     """AI 预测紧凑摘要：每板块「板块名方向(置信度)」，一行带过（微信不宜展开 6×8 明细）。
     若板块带 counter / deduce（fin-strategy-engine 内嵌推演），追加「↘反证/推演」附注。
@@ -293,6 +325,10 @@ if mode == 'ashare':
         ]
         if lianban_line:
             desp_parts.append(lianban_line)
+        # R100z321：横盘启动「今天开始启动」预警——16:00 算好、19:30 随本条推送发出
+        breakout_line = build_breakout_line(D)
+        if breakout_line:
+            desp_parts.append(breakout_line)
         desp_parts.append(build_panorama_line(D.get('panorama')))
         # R100z4f：19:30 推送定稿清单=💡研判/💰资金/📈领涨/📉领跌/🔥连板/🌏日韩，删除「🧩 题材掘金」独立段（页面模块与 deduce 内嵌保留）
         desp = '\n\n'.join(desp_parts)

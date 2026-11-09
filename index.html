@@ -4640,10 +4640,34 @@ function newsSort(arr) {
    为什么要有这一层：五节的渲染函数（newsEntryInner）认的是 sector/impacts/deduce，
    而 items 用的是 theme/stocks，字段名不同、结构不同，不转换就渲染成一堆空白。 */
 function wkAsNewsItems(market) {
-  if (market === 'us') return [];
   var w = (window.DASHBOARD_DATA || {}).weekendNews || {};
-  return (w.items || []).map(function (it) {
+  var its = (w.items || []);
+  if (!its.length) return [];
+  /* R100z321（用户 2026-11-09 22:19）三处修正，逐条对应：
+
+     ① **归属必须按「事件主体在哪个市场」，不能一律塞 A 股。**
+        上一版这里写的是 `if (market === 'us') return []` —— 于是马斯克/SpaceX/苹果这些
+        纯海外消息全跑到 A 股卡里。用户的质问很准：「如果这条新闻不是周末出的而是工作日出的，
+        你是不是就把它放在美股那块呢？」答案是「是」，那周末就必须守同一条规则。
+        现在读 items[].market（A股 / 美股），按卡分派；漏写时兜底 A 股（主战场）。
+
+     ② **全球要闻只放最新，周末消息不能挂到下周。**
+        数据侧 weekendNews 是独立节点，周日 21:00 写、下周日才覆盖——中间六天一直挂着，
+        用户的原话是「难道这几条新闻要到下周周末才覆盖吗？」。
+        规则：只在本周末 + 次日（周一）显示，周二起自动隐藏——周一 19:30 的当日要闻已经接手了。
+
+     ③ 同一题材的多条已在数据侧合并成一条（商业航天 6 条 → A 股 1 条 + 美股 1 条），
+        前端不再需要按 sector 归并。 */
+  var wd = w.date ? new Date(String(w.date).replace(/-/g, '/')) : null;
+  if (wd && !isNaN(wd.getTime())) {
+    var age = Math.floor((Date.now() - wd.getTime()) / 86400000);
+    if (age > 1) return [];
+  }
+  var want = (market === 'us') ? '美股' : 'A股';
+  return its.map(function (it) {
     if (!it || !it.title) return null;
+    // 漏写 market 时按 A 股兜底：那是主战场，宁可少放一条也不要把国内消息塞进美股卡
+    if (String(it.market || 'A股') !== want) return null;
     var d = String(it.direction || '中性');
     var imp = (it.impacts && it.impacts.length) ? it.impacts
       : ((it.stocks && it.stocks.length) ? [{ theme: String(it.theme || ''), stocks: it.stocks }] : []);

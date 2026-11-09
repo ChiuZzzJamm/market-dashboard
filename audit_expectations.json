@@ -1395,7 +1395,6 @@
         "weekendNews.items",
         "weekendNews.items[].title",
         "weekendNews.items[].theme",
-        "weekendNews.items[].sectors",
         "weekendNews.items[].direction",
         "weekendNews.items[].summary",
         "weekendNews.items[].source",
@@ -1409,7 +1408,8 @@
         "weekendNews.items[].deduce.cands",
         "weekendNews.items[].deduce.main",
         "weekendNews.items[].deduce.conf",
-        "weekendNews.items[].deduce.counter"
+        "weekendNews.items[].deduce.counter",
+        "weekendNews.items[].market"
       ],
       "writesFields": [
         "us 五节要闻（含 deduce）",
