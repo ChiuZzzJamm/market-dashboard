@@ -1401,7 +1401,15 @@
         "weekendNews.items[].source",
         "weekendNews.items[].stocks",
         "weekendNews.items[].stocks[].code",
-        "weekendNews.items[].stocks[].name"
+        "weekendNews.items[].stocks[].name",
+        "weekendNews.items[].impacts",
+        "weekendNews.items[].impacts[].theme",
+        "weekendNews.items[].impacts[].stocks",
+        "weekendNews.items[].deduce",
+        "weekendNews.items[].deduce.cands",
+        "weekendNews.items[].deduce.main",
+        "weekendNews.items[].deduce.conf",
+        "weekendNews.items[].deduce.counter"
       ],
       "writesFields": [
         "us 五节要闻（含 deduce）",

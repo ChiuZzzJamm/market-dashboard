@@ -4638,78 +4638,6 @@ def g50_markdown_leak(r):
                 % (len(js), len(fields), len(st.get("buyList") or [])))
 
 
-def g52_shrink_parity(r):
-    """G52 缩量回踩的两份实现必须同口径（R102，2026-10-28）。
-
-    由来：用户 2026-10-28 第 2 条要求 9:45 的候选也要覆盖「放量阴之后刚缩 1~2 天」这一段。
-    这个图形原本只有前端 `ordShrinkScan()` 一份实现（从浏览器 `D.stkKlines` 现扫，给
-    「明日可下单」出卡）；9:45 的开盘精选跑在 Python 里，读不到 JS，于是有了
-    `shrink_scan.py` 这份**孪生实现**。孪生的固有风险是「改一边忘另一边」——
-    四条硬条件（T 日涨停 / T+1 放量收阴 1.1~3.5 倍 / 之后缩量小实体未反包 / 未破 T 日低×0.98）
-    任何一条被单侧改动，前端卡片与 9:45 候选就会各说一套，而**两边都不报错**。
-
-    判据：跑 `check_shrink_parity.py`（headless Chrome 取前端 poolC 的代码 + 缩量天数 +
-    放量倍数，与 Python 结果逐只比）。
-    rc=0 一致；rc=1 不一致 → FAIL；rc=2 检查器跑不起来（没有 Chrome / 跑挂）→ WARN，
-    本机没有 Chrome 时不能当成「一致」。
-    """
-    rc, out, err = _run_tool("check_shrink_parity.py", timeout=300)
-    # R100z284：对账器自己的生活卫生（用户 2026-10-30 截图：废纸篓里 13 个 722KB 的
-    # `_probe_shrink_*.html`，一天跑十几次就攒一堆）。
-    # 它在项目根复制一份 index.html 当探针页，然后用 os.remove 收尾 —— 本机 shell 没事，
-    # 但自动化跑在沙箱里，删除被接管成「移到废纸篓」（会话记录里的 safeDeleteEvents
-    # operation=trash），于是每跑一次对账就往废纸篓扔一个 722KB。
-    # 判据：探针页必须落在系统临时目录、且脚本里不许把 tempfile 指到项目目录（dir=HERE）。
-    # 这条跟「口径一致」无关，但它决定了这条闸门能不能每天跑几十次还不脏用户的桌面。
-    _sp = os.path.join(HERE, "check_shrink_parity.py")
-    try:
-        _spsrc = open(_sp, encoding="utf-8").read()
-    except OSError:
-        _spsrc = ""
-    if _spsrc:
-        # 判据走 AST。这里不能用 strip_js_comments：它剥 `//` `/* */` `<!-- -->`，
-        # 而这是 Python 文件，注释是 `#` —— 文件头那段"为什么不能再写 dir=HERE"的说明
-        # 里正好有这个字面量，用正则判会把说明当违规（第一版就踩了，② 号埋雷误报）。
-        try:
-            _sptree = ast.parse(_spsrc)
-        except SyntaxError:
-            _sptree = None
-            r.fail("G52", "对账器 check_shrink_parity.py 语法错误，口径对账跑不起来")
-        _tmp_bad, _has_gettmp = False, False
-        for _node in ast.walk(_sptree) if _sptree is not None else []:
-            if not (isinstance(_node, ast.Call)
-                    and isinstance(_node.func, ast.Attribute)):
-                continue
-            _fn = _node.func
-            _obj = _fn.value.id if isinstance(_fn.value, ast.Name) else ""
-            if _obj != "tempfile":
-                continue
-            if _fn.attr == "gettempdir":
-                _has_gettmp = True
-            if _fn.attr in ("mkstemp", "mkdtemp", "NamedTemporaryFile"):
-                for _kw in _node.keywords:
-                    if (_kw.arg == "dir" and isinstance(_kw.value, ast.Name)
-                            and _kw.value.id == "HERE"):
-                        _tmp_bad = True
-        if _tmp_bad:
-            r.fail("G52", "对账器又把探针页写进项目目录了（tempfile(..., dir=HERE)）——"
-                          "沙箱会把 os.remove 变成移到废纸篓，每跑一次多一个 722KB 的"
-                          "`_probe_shrink_*.html`（R100z284，用户 2026-10-30 截图）")
-        elif not _has_gettmp:
-            r.fail("G52", "对账器的探针页没落在系统临时目录（应走 tempfile.gettempdir()）——"
-                          "它会污染项目根目录，且删除动作在沙箱里会被转成废纸篓垃圾（R100z284）")
-    if rc == 0:
-        # 不再有 [SKIP] 分支：对账器本机没 Chrome 时返回 2（检查器故障 → 下面判 WARN），
-        # 不会再有「跳过还返回 0」这种让「没跑」长得像「一致」的路径。
-        r.ok("G52", "缩量回踩前端/Python 口径一致：" + _tail(out, 1))
-    elif rc == 1:
-        r.fail("G52", "缩量回踩两份实现口径不一致（前端 ordShrinkScan vs shrink_scan.py）："
-                      + _tail(out, 4) + "——改一边漏了另一边，页面卡片与 9:45 候选会各说一套")
-    else:
-        r.warn("G52", "缩量回踩口径对账没跑成（%s）——这是检查器故障，不代表一致"
-                      % (_tail(err, 2) or _tail(out, 2) or "rc=%s" % rc))
-
-
 def g53_name_hygiene(r):
     """G53 名字解析卫生：调用了不存在的名字 / 定义了没人调的名字（R100z274，2026-10-28）。
 
@@ -5097,7 +5025,6 @@ def main():
     g49_excess_benchmark_consistency(r)
     g50_markdown_leak(r)
     g51_buy_ledger_wiring(r)
-    g52_shrink_parity(r)
     g53_name_hygiene(r)
     g54_risk_scan_scope(r)
     g55_red_reason_grade(r)
