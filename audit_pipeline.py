@@ -197,16 +197,26 @@ EMPTY_WHITELIST = [
     (r"atrStops\.skipped$",
      "R100z160：atr_stops 没有「K 线不足被跳过」的标的时为空数组（正常日度状态，不是漏跑）；"
      "被跳过的票根本不会进 atrStops.items，前端只读 items、不引用 skipped"),
-    # --- 2026-10-27 清理：这 4 处长期报假 WARN，逐条核实前端都有空值兜底后登记 ---
+    # --- 2026-10-27 清理：这 3 处长期报假 WARN，逐条核实前端都有空值兜底后登记 ---
     (r"ashare\.lhb\.seatRepeat$",
      "R100z195：seatRepeat 只在「同一营业部席位同时净买 ≥2 只」时才有值，空数组＝当日没有"
      "这种席位结构，是常态。前端 `if (l.seatRepeat && l.seatRepeat.length)` 才渲染，空值不渲染"),
-    (r"strategy\.risks$",
-     "R100z242：strategy.risks 无风险条目时为空数组；前端 `(st.risks || []).map(...).filter(Boolean)` "
-     "再 slice(0,6)，空数组渲染出空串、不占版面"),
     (r"chenPool\.failedCodes$",
      "R100z218：failedCodes 只在「K 线缺口导致取不到价」时才有值，空数组＝全部标的取数正常。"
      "前端 `var fc = c.failedCodes || []` 后 `if (fc.length)` 才渲染⚠️行"),
+    (r"duanban\.(confirmed|watching|watchNext)\[\d+\]\.(pre\.)?ladder\.(names|themes|topName)$",
+     "R100z323：板块当日无连板时 check_duanban._pre_ctx 写 names=[]/themes=[]/topName=''，"
+     "89 只票里 87 只如此（真报会淹没闸门）。同一对象里 label='无连板'、why='板块 X 今日无连板股——…' "
+     "把原因写在页面上；反向证明见 G9d（n=0 必须有 label+why，n>0 必须有 names）"),
+    (r"(duanban|duanban\.star|chenPool)\.suspended$",
+     "R100z323：停牌名单，当日无停牌即为空数组（常态，不是漏抓）。前端 `if (list.length)` 才渲染"),
+    (r"duanban\.junkCut$",
+     "R100z323：垃圾剔除名单，当日没有命中剔除规则的标的即为空数组。前端按长度判断后整块隐藏"),
+    (r"duanban\.leadLag\.bt\.pending$",
+     "R100z323：待结算名单——当日所有已出信号都已到 T+1、无未结算项时为空数组"),
+    (r"breakoutPool\.watch\.(triggered|near|started)$",
+     "R100z323：横盘启动三档，没有命中票就是空数组（`bpWatchHtml` 里 `if (!trig.length) return ''` "
+     "整卡不渲染，空值不会印到页面）"),
     (r"duanban\.star\.picks\[\d+\]\.sector$",
      "R100z242：开盘精选个股的行业映射随行情源覆盖度浮动，个别票当天查不到行业即留空串。"
      "前端 line 1733 用 `if (x && x.code && x.sector && !M[...])` 过滤——空 sector 直接不参与"
@@ -383,9 +393,11 @@ PRODUCT_OWNERSHIP = {
     },
     "strategy": {
         "require": (),
-        "note": "R100z117 ①：strategy_engine.py 聚合政策/AI预测/断板反包三类信号为盘前关注清单+仓位纪律+回测反馈闭环，"
-                "由 deploy.sh 流水线调用（读 cal_factor/calibration_state/portfolio_curve，兜底写空 exit 0）；"
-                "前端「🎯 盘前策略」卡渲染（renderStrategy）",
+        "note": "R100z117 ①，R100z323 收缩：strategy_engine.py 只产两样东西——`positionBand`（日历窗口因子给基础带、"
+                "趋势档压上限，取更保守者）与 `feedback`（组合净值对行业基准的读数，落 strategy_feedback.json 供 G49 对账）；"
+                "由 deploy.sh 流水线调用（读 cal_factor/trendState/portfolio_curve，兜底写空 exit 0）；"
+                "前端唯一消费点是趋势条的「仓位上限」tooltip（positionBand.trendCapPct）。"
+                "**不再产关注清单/风险提示**：那两段全站零消费方，内容又与 AI 预测板块 + 五节要闻 impacts 重复",
     },
     "stockNews": {
         "require": ("stock_news.py", "个股消息库", "stockNews"),
@@ -715,6 +727,45 @@ def g5_source_assertions(r):
     else:
         r.ok("G5", "check_risk_blacklist(D, scope=) 已扩扫 us/ashare 五节与 bullish/bearish")
 
+    # 4) 未来函数防线：判定/回测代码必须只用「决策时刻及之前」的 bar（R100z323，2026-11-09）
+    #
+    # 由来：用户 2026-11-09 问「回测部分 AI 会不会偷懒」。回测数字本身不由 AI 产出
+    # （脚本算、写 json），但**一旦有人「顺手优化」判定逻辑把当日 bar 混进基准，
+    # 收益会立刻变好看，而页面上没有任何东西会露馅**——这是回测里最难自查的一类错，
+    # 加限制条件后收益反而变好，就是它的指纹（PROJECT-MEMORY 二节亦有记载）。
+    # 三条断言都是「已经写在代码里的正确做法」，闸门只负责防止它们被改回去：
+    #   · breakout_pool.py  `bars = [b for b in bars if b.get('day') <= asof]`
+    #     —— --asof 只读复现时，绝不能看到 asof 之后的 bar；
+    #   · breakout_watch.py `wash = kl[idx + 1:-1]`
+    #     —— 洗盘期基准必须**剔掉当日**（-1），否则当日的量会污染基准，量比恒偏大；
+    #   · backtest_entry.py `d[i + 1]` 出场 + `len(d) - 1` 边界丢弃
+    #     —— 信号在 i、出场在 i+1，且末尾无次日数据时必须丢弃而不是回退用 i 的收盘。
+    # 判据去空白后比对，纯格式化改动不会误伤。
+    def _norm(s):
+        return re.sub(r"\s+", "", s)
+
+    guards = []
+    for fname, needle, why in (
+        ("breakout_pool.py", "<=asof",
+         "--asof 不再过滤 asof 之后的 bar（历史复现会读到未来数据）"),
+        ("breakout_watch.py", "kl[idx+1:-1]",
+         "洗盘期不再剔掉当日 bar（量比基准被当日污染，启动判定失真）"),
+        ("backtest_entry.py", "d[i+1]",
+         "回测出场不再取次日 bar（信号日与出场日重合＝未来函数）"),
+        ("backtest_entry.py", "len(d)-1",
+         "缺「末尾无次日数据即丢弃」的边界判断（不足两日时会倒用当日收盘）"),
+    ):
+        p = os.path.join(HERE, fname)
+        if not os.path.exists(p):
+            guards.append(f"{fname} 不存在")
+            continue
+        if needle not in _norm(open(p, encoding="utf-8").read()):
+            guards.append(f"{fname}: {why}")
+    if guards:
+        r.fail("G5", "未来函数防线被破坏：" + "；".join(guards))
+    else:
+        r.ok("G5", "回测/判定代码只用决策时刻及之前的 bar（as-of 过滤 / 洗盘期剔当日 / 次日出场 三处都在）")
+
 
 # ---------------------------------------------------------------- G6 语义
 def g6_calendar(r):
@@ -884,6 +935,42 @@ def g8_g9_g10_data(r):
     else:
         r.ok("G9", f"无白名单外的空串/空数组（豁免 {len(skipped)} 处结构性空值，"
                    f"由 G9b 反证其前端安全）")
+
+    # G9d pre.ladder 豁免的反向证明（R100z323）：断板池每只票都带 `pre.ladder`
+    #   （补涨预判：本票板块当天有没有连板）。板块当日无连板时 `_pre_ctx` 写
+    #   names=[]/themes=[]/topName='' —— 89 只票里 87 只如此，G9 每天固定报 260+ 处
+    #   假 WARN，闸门被噪音淹没（「每天报同一句」＝读者不再看）。所以豁免这三个字段，
+    #   但**豁免不能笼统**，必须反向证明「空值旁边写着原因、有连板时一定不空」：
+    #   ① n==0 时 `label` 必须是「无连板」且 `why` 非空（页面靠它解释「为什么没得补涨」）；
+    #   ② n>0 时 names 必须非空（否则「有连板」却给不出名字，是最坏的一种：页面像有数据）。
+    ladder_bad, ladder_n = [], 0
+    for grp in ("confirmed", "watching", "watchNext"):
+        for ent in ((D.get("duanban") or {}).get(grp) or []):
+            if not isinstance(ent, dict):
+                continue
+            is_pre = isinstance(ent.get("pre"), dict)
+            lad = (ent.get("pre") or {}).get("ladder") or ent.get("ladder")
+            if not isinstance(lad, dict):
+                continue
+            ladder_n += 1
+            nm2 = ent.get("name") or ent.get("code") or ent.get("topName") or f"{grp}[?]"
+            names = lad.get("names") or []
+            has_lb = bool(names) or (lad.get("n") or 0) > 0 or (lad.get("maxLb") or 0) > 0
+            # ① 「有连板」却给不出名字＝最坏的一种：页面像有数据、点开是空的
+            if has_lb and not names:
+                ladder_bad.append(f"{nm2}: 标了连板却给不出 names")
+            # ② 「无连板」但 label 写成别的（有龙头/2板）＝字段自相矛盾
+            if not has_lb and lad.get("label") != "无连板":
+                ladder_bad.append(f"{nm2}: 无连板但 label={lad.get('label')!r}")
+            # ③ 只有 pre.ladder 带 why（watchNext 的 ladder 是三字段简版，无 why 属正常）
+            if is_pre and not has_lb and not str(lad.get("why") or "").strip():
+                ladder_bad.append(f"{nm2}: 无连板且 why 为空（页面只剩一句「无连板」）")
+    if ladder_bad:
+        r.warn("G9d", f"断板/盯盘 ladder {ladder_n} 处里 {len(ladder_bad)} 处自相矛盾："
+                      + "；".join(ladder_bad[:6]))
+    else:
+        r.ok("G9d", f"断板/盯盘 ladder {ladder_n} 处空值均带原因（无连板→label「无连板」+why 非空；"
+                    f"有连板→必给 names），豁免不放水")
 
     # G9c refs 豁免的反向证明（R100z275）：G9 放行 sec/summary 空串的前提是
     #   「个股新闻本来就没有板块概念」。所以必须反向查两件事，否则豁免就是盲区：
@@ -4973,6 +5060,44 @@ def g58_modal_head_count(r):
                     "（dbOrderOf 单一出口，o/x/s/c·w/f 五组不串票）")
 
 
+def g59_news_section_volume(r):
+    """G59 五节要闻条数下限（R100z323，WARN 级，2026-11-09）。
+
+    由来：用户 2026-11-09 问「内容部分 AI 会不会偷懒」。深度那层已有 G16（641 处字段
+    的字数地板）+ G17（跨字段复读）+ G20（跨板块模板）+ G23（跨票复读），但**「量」没有闸**：
+    G16 管的是「每条写多长」，管不到「每节有几条」——某节只剩 1 条或整节空着时，G16 只
+    校验存在的条目，全绿，而页面那节看起来像「今天这方向没消息」。要闻条数是 AI 自己
+    决定抓几条的，这正是最容易悄悄缩水的地方。
+
+    **刻意 WARN 不 FAIL**：逼 AI 凑条数会造假新闻；且 16:00/19:30 两步之间数据在流转，
+    当场 FAIL 会卡住正常中间态。阈值 2 条是「一个方向至少有一主一辅」的经验底线。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G59", f"data.js 读取失败，跳过要闻条数校验：{e}")
+        return
+
+    SECS = ("bullNews", "bearNews", "macroNews", "intlNews", "bankViews")
+    thin, markets = [], 0
+    for mk in ("ashare", "us"):
+        sec = D.get(mk) or {}
+        if not isinstance(sec, dict):
+            continue
+        counts = {s: len([x for x in (sec.get(s) or []) if isinstance(x, dict)]) for s in SECS}
+        if sum(counts.values()) == 0:
+            continue                                          # 该市场当日无要闻（周末/休市）不判
+        markets += 1
+        for s, n in counts.items():
+            if n < 2:
+                thin.append(f"{mk}.{s}={n}条")
+    if thin:
+        r.warn("G59", "五节要闻有节次少于 2 条（AI 自主决定抓几条 → 最易悄悄缩水）："
+                      + "、".join(thin))
+    else:
+        r.ok("G59", f"五节要闻条数达标（{markets} 个市场、每节 ≥2 条）")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -5042,6 +5167,7 @@ def main():
     g56_shell_var_expansion(r)
     g57_trend_asof(r)
     g58_modal_head_count(r)
+    g59_news_section_volume(r)
 
     # R100z284：机器可读的结论行。
     #

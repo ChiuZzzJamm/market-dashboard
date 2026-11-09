@@ -1,6 +1,5 @@
 {
  "underperform": true,
  "excessPct": -3.95,
- "highConfCap": 2,
- "note": "近期回测跑输基准（超额 -3.95%），高确信层已按后验闸门收紧至 2 条"
+ "note": "组合净值跑输行业基准（超额 -3.95%）"
 }

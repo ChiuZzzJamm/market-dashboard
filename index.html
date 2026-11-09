@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611092307"></script>
+<script src="data.js?v=202611100716"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -3919,12 +3919,9 @@ function riskLineHtml(p) {
     + esc(hits.join('；')) + '</div>';
 }
 
-/* 2026-10-27 用户截图要求删除的两块，删因（不是精简口味，是内容重复）：
-   · 五路依据条（隔夜美股/日韩早盘/前日A股/全球要闻/国内要闻）：summary 首两句已经把
-     这五路串成一句话说完了，并排五格是同一句话说两遍。forecastBasis 字段仍然照写——
-     G48 拿它做契约校验、复盘时靠它回溯「当时看到什么」，只是不再上版面。
-   · 风险预警名单（strategy.risks）：点名的两只在断板池里已各自挂「利空」徽章 + 原因
-     （bearRefs 带原文标题），聚合条只是把它们再列一次。风险信息没丢，只是回到标的身上。 */
+/* 2026-10-27 用户截图要求删除的五路依据条（隔夜美股/日韩早盘/前日A股/全球要闻/国内要闻）：
+   summary 首两句已经把五路串成一句话说完了，并排五格是同一句话说两遍。forecastBasis 字段
+   仍然照写——G48 拿它做契约校验、复盘时靠它回溯「当时看到什么」，只是不再上版面。 */
 
 /* R100z248（用户 2026-10-27「大盘趋势状态放到主页面，不是直接塞进去，是加到原有模块」）：
    趋势档不再单独成卡、也不再塞进 AI 预测卡——它收进「大盘指数」卡底部一条结论带。
@@ -7841,46 +7838,6 @@ function dbFailHtml(failPool, kind) {
    下次有人想「按 code 查形态档」会先看见它、然后拿到一份和卡片不同的数（缓存不清、口径独立）。
    要按 code 查，正路是 DB_INDEX['o|'+code]（卡片出卡时注册的那份），别再建第二份索引。 */
 
-/* ==========================================================================
-   R100z269 · 上下文：板块行情表 / 连板天梯按行业归堆 / 全市场代码→简称
-   --------------------------------------------------------------------------
-   为什么「同板块」必须走 sectorMap 而不是条目自带的 sector：
-     条目的 sector 是 90 个一级名（汽车零部件 / 零售 / 游戏），连板天梯的 hybk
-     是细分名（汽车零部 / 一般零售 / 游戏Ⅱ），两套名字直接比永远不相等——
-     实测 8 条连板里只有「专用设备」一条能精确命中，其余 7 条会被判成「没有同板块连板」。
-     而 sectorMap 对全市场（含连板股）都有值，该票与连板股按 code 各查一次，
-     两边同源同细分口径，才比得出「同板块」。
-   板块行情（涨幅/资金/涨停数）反过来必须走 bkCode 去 join allBoards：
-     bkCode 是生成侧写进条目的一级行业代码，实测 chenPool 21 条里 19 条命中，
-     比按名字模糊匹配可靠；命中不了就返回 null，不拿邻近板块顶替。
-   ========================================================================== */
-var _ORD_CTX = null, _ORD_CTX_KEY = '';
-function ordCtx() {
-  var D = window.DASHBOARD_DATA || {};
-  var key = String(D.updatedAt || '') + '|' + (((D.ashare || {}).allBoards || []).length);
-  if (_ORD_CTX && _ORD_CTX_KEY === key) return _ORD_CTX;
-  var ab = (D.ashare || {}).allBoards || [];
-  var byBk = {}, byName = {};
-  for (var i = 0; i < ab.length; i++) {
-    var b = ab[i];
-    if (!b) continue;
-    if (b.code) byBk[String(b.code)] = b;
-    if (b.name) byName[String(b.name)] = b;
-  }
-  var sm = D.sectorMap || {};
-  var lb = ((D.ashare || {}).lianban || []).slice();
-  var lbBySec = {}, lbByName = {};
-  for (var j = 0; j < lb.length; j++) {
-    var x = lb[j], c = String(x.code || '').replace(/\D/g, '');
-    var sec = sm[c] || '';
-    if (sec) (lbBySec[sec] = lbBySec[sec] || []).push(x);
-    if (x.name) (lbByName[String(x.name)] = lbByName[String(x.name)] || []).push(x);
-  }
-  _ORD_CTX = { D: D, byBk: byBk, byName: byName, sm: sm, lianban: lb,
-               lbBySec: lbBySec, lbByName: lbByName, names: null };
-  _ORD_CTX_KEY = key;
-  return _ORD_CTX;
-}
 /* 行业名归一化表（R100z270）。两套名字为什么对不上：
      sectorMap（个股行业）写的是「行业缩写 / 词典口径」——汽车零部、塑料、物资外贸；
      allBoards（行情源）写的是「同花顺一级行业名」——汽车零部件、塑料制品、贸易。
@@ -7889,80 +7846,8 @@ function ordCtx() {
    与 pctAlias（主题名→行业名，给 AI 预测板块聚合涨幅用）不是一回事，故单列一张：
    那个由 board_alias.json 锁源给 entry_zone 用，别往一起混。
    目标名必须真实存在于 allBoards——写错不报错，只会安静地回落到「对不上」。 */
-var ORD_SEC_ALIAS = {
-  '汽车零部': '汽车零部件', '塑料': '塑料制品', '物资外贸': '贸易',
-  '电机Ⅱ': '电机', '游戏Ⅱ': '游戏', 'IT服务Ⅱ': 'IT服务',
-  '半导体·设备材料': '半导体', '半导体材料': '半导体', '半导体设备': '半导体',
-  '集成电路': '半导体', '电子器件': '元件', '印制电路板': '元件',
-  '光学光电': '光学光电子', '光模块': '通信设备', '光通信·光模块': '通信设备',
-  '通信传输设备': '通信设备', '通信配套服务': '通信服务',
-  '一般零售': '零售', '商业百货': '零售', '百货': '零售', '超市': '零售',
-  '食品加工': '食品加工制造', '食品行业': '食品加工制造', '食品综合': '食品加工制造',
-  '休闲食品': '食品加工制造', '食品饮料': '食品加工制造', '肉制品': '食品加工制造',
-  '调味发酵': '食品加工制造', '消费·食品加工': '食品加工制造',
-  '乳品': '饮料制造', '软饮料': '饮料制造', '饮料乳品': '饮料制造',
-  '房地产开发': '房地产', '生物制药': '生物制品', '电力行业': '电力', '新能源发电': '电力',
-  '钢铁行业': '钢铁', '煤炭行业': '煤炭开采加工', '环保行业': '环境治理', '造纸行业': '造纸',
-  '化纤行业': '化学纤维', '其他化学制品': '化学制品', '其他化学原料': '化学原料',
-  '涂料油漆油墨制造': '化学制品', '纺织化学用品': '化学制品', '民爆用品': '化学制品',
-  '家纺': '服装家纺', '服装鞋类': '服装家纺', '棉纺': '纺织制造', '纺织行业': '纺织制造',
-  '其他纺织': '纺织制造',
-  '建筑建材': '建筑材料', '水泥行业': '建筑材料', '玻璃行业': '建筑材料',
-  '装修装饰': '建筑装饰', '园林工程': '建筑装饰',
-  '家具': '家居用品', '家具行业': '家居用品', '家电家居': '家居用品', '其他家用轻工': '家居用品',
-  '新型电池·固态电池': '电池', '光伏逆变器': '光伏设备', '发电设备': '其他电源设备',
-  '机器人·自动化': '自动化设备', '自动化设': '自动化设备', '其它专用机械': '专用设备',
-  '铁路设备': '轨交设备', '地面兵装': '军工装备', '军工': '军工装备',
-  '数字媒体': '文化传媒', '平面媒体': '文化传媒', '传媒娱乐': '文化传媒',
-  '印刷包装': '包装印刷', '石油行业': '石油加工贸易', '炼化及贸': '石油加工贸易',
-  '公路桥梁': '公路铁路运输', '酒店旅游': '旅游及酒店', '种植业': '种植业与林业',
-  '农药化肥': '农化制品', '供水供气': '燃气', '综合行业': '综合', '其它行业': '综合',
-  '大金融·券商': '证券', '有色·工业金属': '工业金属', '黄金避险': '贵金属'
-};
 /* 返回 {b, how}：how = bkCode（行业代码直接命中）/ name（同名）/ alias（归一化）。
    alias 命中的必须在文案里标出来——「按行业名近似匹配」，读者才知道这一项是推的。 */
-function ordSecBoard(sec) {
-  sec = String(sec || '');
-  if (!sec) return null;
-  var ctx = ordCtx();
-  if (ctx.byName[sec]) return { b: ctx.byName[sec], how: 'name' };
-  var hit = ORD_SEC_ALIAS[sec];
-  if (!hit) {
-    var t = sec.replace(/[ⅠⅡⅢ]+$/, '').replace(/(行业|板块)$/, '');
-    if (t && ctx.byName[t]) hit = t;
-    else if (t && ORD_SEC_ALIAS[t]) hit = ORD_SEC_ALIAS[t];
-  }
-  if (hit && ctx.byName[hit]) return { b: ctx.byName[hit], how: 'alias' };
-  return null;   // 对不上就不猜：宁可这一项空着，也不拿别的板块的分给它
-}
-function ordBoardInfo(e) {
-  if (!e) return null;
-  var ctx = ordCtx();
-  var bk = e.bkCode ? String(e.bkCode) : '';
-  if (bk && ctx.byBk[bk]) return { b: ctx.byBk[bk], how: 'bkCode' };
-  return ordSecBoard(e.sector);
-}
-/* 名字字辈（用户举的「羊字辈」）：与连板股共用某个非通用字，就算同字辈。
-   这是题材横向扩散的近似——不是行业归属，也不进「同板块连板」那份计数，
-   单独成一项并在拆解表里写明是「按名称共字」。停用字是必须的：
-   不停用的话「XX 科技 / XX 股份」会让半数票互相认亲，这一项就变成人人 +5。 */
-var ORD_NAME_STOP = {};
-('股份有限科技电子新能源华中国东南西北大小新光线智能精密装备制造材料生物医药食品环保建设发展产业集团控股国际实业投资本环宇恒通达成方正盛泰宏远昌隆鑫源丰润泽坤和顺安信德利隆环球东方南钢').split('')
-  .forEach(function (ch) { if (ch) ORD_NAME_STOP[ch] = 1; });
-function ordNamePeers(name) {
-  var ctx = ordCtx(), out = [];
-  name = String(name || '');
-  if (name.length < 2) return out;
-  Object.keys(ctx.lbByName).forEach(function (nm) {
-    if (nm === name) return;
-    for (var i = 0; i < name.length; i++) {
-      var ch = name.charAt(i);
-      if (ORD_NAME_STOP[ch]) continue;
-      if (nm.indexOf(ch) >= 0) { out.push(nm); return; }
-    }
-  });
-  return out;
-}
 
 /* ==========================================================================
    R100z269 · 「明日概率」：新闻面基线 + 板块 + 资金 + 连板补涨位
@@ -7984,214 +7869,6 @@ function ordNamePeers(name) {
    不是回测胜率。没有任何一组回测支持「+6 分等于多 6% 胜率」这种换算，
    它的用途是排序与解释，不是预测精度。
    ========================================================================== */
-var ORD_PROB_WEIGHT = {
-  /* 权重整体比第一版小一档（第一版跑出来 74 分的票一加就顶到 95，
-     高基线票全挤在天花板上，排序反而没有区分度）。现在单项合计上限约 +50，
-     base 74 的最强票落在 88~92，base 50 的落在 60~70，档与档拉得开。 */
-  // 板块今日涨幅：+4.85% 的板块 ≈ +4.9（封顶 ±8）
-  boardPct: 1.0,
-  boardPctCap: 8,
-  // 主力净流入（亿元）：+100 亿 ≈ +5（封顶 ±5）
-  netInflow: 0.15,
-  netInflowCap: 5,
-  // 板块涨停家数：每家 +0.7，封顶 +4——涨停 6 家以上就饱和了
-  ztCount: 0.7,
-  ztCap: 4,
-  // 板块内上涨占比：(占比−50%)×16，封顶 ±4
-  breadth: 16,
-  breadthCap: 4,
-  // 同板块最高连板数 → 加分。2 板给得最多，不是笔误：
-  // 4~5 板是龙头自己走到高位，板块已被充分定价、补涨尾声；
-  // 2 板梯队刚成型，扩散才开始，跟风票的次日承接最好。
-  lbcMap: { 1: 3, 2: 5, 3: 4, 4: 2, 5: 1 },
-  // 补涨前夜：板块在涨、它自己还没动 → 次日最容易补涨（用户 2026-10-28 的例子就是这一条）
-  catchUp: 7,
-  /* 追高折扣（R100z270）：板块这四项（涨幅/资金/涨停/涨跌家数）原本无差别加给所有票，
-     结果是「板块涨了一周、它今天也跟涨 5%」和「板块刚启动、它自己还在收阴」拿一样的分——
-     前者是追高，后者才是补涨。板块的正分按它自己今天走没走来打折：
-       今日涨幅 ≤ t0(1%)  → 全额（这就是补涨场景：板块的钱还没进它这里）
-       < t1(5%)          → 打 k1(45%) 折，已经跟涨了一半，强度被它吃掉一部分
-       ≥ t1(5%)          → 只留 k2(15%)，明天是承接不是补涨
-     负分不打折：板块在跌是客观坏消息，跟它自己涨没涨没关系。 */
-  chaseDamp: { t0: 1, t1: 5, k1: 0.45, k2: 0.15 },
-  // 板块在涨、它今天也已追到 5% 以上 → 另扣一笔：明天买它等于接力昨天的涨幅
-  chasePenalty: -3,
-  // 名字辈分（羊字辈这种玄学抱团）：≥2 只连板股共字 +4，1 只 +1
-  namePeers: [4, 1],
-  // 缩量质量：shrinkT＝当日量/均量，越缩越干净
-  shrinkT: [[0.6, 5], [0.9, 2]],
-  shrinkFat: -5,           // >1.5 倍说明没缩量，洗盘没走完
-  // 反包空间：距涨停日最高价的百分比
-  gapT: [[8, 3], [4, 2]],
-  gapTight: -3,            // 不到 1.5% 空间，反包也赚不到
-  // 情绪 / 风险 / 市值
-  sentBull: 4, sentBear: -8, tailRisk: -6,
-  mcapSmall: 2, mcapLarge: -3,
-  // 封顶：95 会让强票全撞顶，92 留出区分度；下限 5 保留（极端利空票不该显示 0%）
-  cap: 92, floor: 5
-};
-function ordProbOf(it) {
-  var ctx = ordCtx(), W = ORD_PROB_WEIGHT;
-  it = it || {};
-  var db = it.db || {}, ch = it.chen || {};
-  var code = String(it.code || db.code || ch.code || '').replace(/\D/g, '');
-  var name = it.name || db.name || ch.name || code;
-  var e = (db.code ? db : ch);
-  var parts = [];
-  var push = function (k, v, d) { if (v && isFinite(v)) parts.push({ k: k, v: Math.round(v * 10) / 10, d: d || '' }); };
-
-  // —— 基线：断板池（AI 已校准）优先，其次陈学长池脚本基线 ——
-  var base = Number(db.probability), baseSrc = '断板池新闻面基线';
-  if (!isFinite(base)) { base = Number(ch.probability); baseSrc = '陈学长池脚本基线'; }
-  if (!isFinite(base)) { base = 50; baseSrc = '无新闻基线，按中性 50 起算'; }
-
-  /* —— 它自己今天涨了多少：板块因子要不要打折、算不算补涨位，全看这个数 ——
-     （R100z270 前这段在 C 里，A 用不到 → 板块强度四项无差别加分 = 变相追高） */
-  var myPct = (it.pct != null && isFinite(Number(it.pct))) ? Number(it.pct) : tcPctOf(code);
-  if (myPct != null && !isFinite(myPct)) myPct = null;
-  var sec = ctx.sm[code] || String(db.sector || ch.sector || it.sector || '');
-
-  // —— A 板块行情（涨幅 / 资金 / 涨停 / 涨跌家数）——
-  var bi = ordBoardInfo({ bkCode: db.bkCode || ch.bkCode || '',
-                          sector: db.sector || ch.sector || it.sector || '' });
-  var b = bi ? bi.b : null, notes = [];
-  var _cd = W.chaseDamp, damp = 1;
-  if (myPct != null) {
-    damp = myPct <= _cd.t0 ? 1 : (myPct < _cd.t1 ? _cd.k1 : _cd.k2);
-    if (damp < 1) {
-      notes.push('板块四项强度已按它自己今日 ' + fmtPct(myPct) + ' 打折到 ' +
-        Math.round(damp * 100) + '%：这波涨幅已经进过它这里一截，明天是承接不是补涨');
-    }
-  }
-  /* 板块正分打折、负分原样：板块在跌是客观坏消息，跟它自己涨没涨无关。 */
-  var bPush = function (k, v, d) {
-    if (!(v && isFinite(v))) return;
-    if (v > 0 && damp < 1) push(k, v * damp, d + '（×' + damp + '，原因见上）');
-    else push(k, v, d);
-  };
-  if (b) {
-    var bn = String(b.name || '') + (bi.how === 'alias' ? '（按行业名近似匹配）' : '');
-    var bp = Number(b.pct) || 0;
-    bPush('板块涨幅', Math.max(-W.boardPctCap, Math.min(W.boardPctCap, bp * W.boardPct)),
-      bn + ' ' + fmtPct(bp));
-    var ni = Number(b.netInflow);
-    if (isFinite(ni)) {
-      bPush('主力资金', Math.max(-W.netInflowCap, Math.min(W.netInflowCap, ni * W.netInflow)),
-        bn + ' 主力净流入 ' + ni.toFixed(1) + ' 亿' +
-        (b.lead ? '，领涨 ' + b.lead + ' ' + fmtPct(b.leadPct) : ''));
-    }
-    var zt = Number(b.ztCount) || 0;
-    bPush('板块涨停', Math.min(W.ztCap, zt * W.ztCount), bn + ' 今日 ' + zt + ' 家涨停');
-    var up = Number(b.upCount) || 0, dn = Number(b.downCount) || 0;
-    if (up + dn > 0) {
-      var tone = up / (up + dn);
-      bPush('涨跌家数', Math.max(-W.breadthCap, Math.min(W.breadthCap, (tone - 0.5) * W.breadth)),
-        '板块内 ' + up + ' 涨 / ' + dn + ' 跌（上涨占比 ' + Math.round(tone * 100) + '%）');
-    }
-  } else {
-    notes.push('板块行情没算：' + (sec || '这只票无行业标注') +
-      ' 对不上今日 90 个一级行业名，宁可空着也不拿别的板块的分给它');
-  }
-
-  // —— B 同板块连板（有没有龙头在上面撑着）——
-  var peers = (ctx.lbBySec[sec] || []).filter(function (x) {
-    return String(x.code || '').replace(/\D/g, '') !== code;
-  });
-  var maxLbc = 0, lbWho = [];
-  peers.forEach(function (x) {
-    var v = Number(x.lbc) || 0;
-    if (v > maxLbc) maxLbc = v;
-    lbWho.push(x.name + ' ' + (x.high_days || v + '板'));
-  });
-  if (peers.length) {
-    push('同板块连板', W.lbcMap[maxLbc] || 0, sec + ' 有 ' + peers.length + ' 家连板：' +
-      lbWho.join('、') + '（最高 ' + maxLbc + ' 板）');
-  } else {
-    // 0 分也要留一行：用户要判的就是「同板块有没有连板股」，没有本身就是结论
-    parts.push({ k: '同板块连板', v: 0,
-      d: '今日连板天梯里没有 ' + (sec || '同行业') + ' 的票——上面没有龙头撑着，补涨缺参照' });
-  }
-
-  // —— C 补涨位 / 追高扣分：板块在涨，看它自己是没动还是已经追上去 ——
-  if (b && Number(b.pct) > 1 && myPct != null) {
-    if (myPct <= 1 && myPct >= -5) {
-      push('补涨位', W.catchUp, '板块 ' + fmtPct(Number(b.pct)) + '，它自己 ' + fmtPct(myPct) +
-        '——同板块的钱还没进它这里，次日最容易补涨');
-    } else if (myPct >= 5) {
-      push('已先行', W.chasePenalty, '板块 ' + fmtPct(Number(b.pct)) + '，它自己今天已经涨 ' +
-        fmtPct(myPct) + '——明天买它等于接力今天的涨幅，不是补涨');
-    }
-  }
-
-  // —— D 名字辈分（按名称共字，不是行业）——
-  var np = ordNamePeers(name), npAdd = np.length >= 2 ? W.namePeers[0] : (np.length === 1 ? W.namePeers[1] : 0);
-  push('名字辈分', npAdd, np.length
-    ? ('与连板股 ' + np.slice(0, 3).join('、') + ' 共字（按名称近似，不是行业归属）')
-    : '');
-
-  // —— E 缩量质量 ——
-  var m = it.metrics || ch.metrics || {};
-  var sT = Number(m.shrinkT);
-  if (isFinite(sT) && sT > 0) {
-    var sAdd = 0;
-    for (var si = 0; si < W.shrinkT.length; si++) {
-      if (sT <= W.shrinkT[si][0]) { sAdd = W.shrinkT[si][1]; break; }
-    }
-    if (sT > 1.5) sAdd = W.shrinkFat;
-    push('缩量质量', sAdd, '今日量是均量的 ' + sT.toFixed(2) + ' 倍' +
-      (sT <= 0.9 ? '（洗盘干净）' : (sT > 1.5 ? '（没缩下来，卖压还在）' : '')));
-  }
-
-  // —— F 反包空间：距涨停日最高价多远 ——
-  var rows = stkParseKline(it.kline || ch.kline || (ctx.D.stkKlines || {})[code]);
-  var gapT = null, iT = -1;
-  if (rows && rows.length > 5) {
-    var zt = String(it.ztDate || ch.ztDate || db.ztDate || '').slice(0, 10);
-    if (zt) {
-      for (var i = rows.length - 1; i > 0; i--) {
-        if (String(rows[i][0]).indexOf(zt) === 0) { iT = i; break; }
-      }
-    }
-    if (iT < 0) {
-      for (var i2 = rows.length - 2; i2 > 0; i2--) {
-        if (rows[i2 - 1][2] > 0 && (rows[i2][2] / rows[i2 - 1][2] - 1) * 100 >= 9.7) { iT = i2; break; }
-      }
-    }
-    if (iT > 0 && rows[rows.length - 1][2] > 0) {
-      gapT = (rows[iT][3] / rows[rows.length - 1][2] - 1) * 100;
-    }
-  }
-  if (gapT != null) {
-    var gAdd = gapT < 1.5 ? W.gapTight : (gapT >= W.gapT[0][0] ? W.gapT[0][1]
-      : (gapT >= W.gapT[1][0] ? W.gapT[1][1] : 0));
-    push('反包空间', gAdd, (gapT >= 0
-      ? '还差 ' + gapT.toFixed(1) + '% 才回到涨停日最高价'
-      : '现价已经高出涨停日最高价 ' + Math.abs(gapT).toFixed(1) + '%') +
-      (gapT < 1.5 ? '（脚下没有空间，反包也赚不到）' : ''));
-  }
-
-  // —— G 情绪 / 爆量风险 / 市值 ——
-  var sent = it.sentiment || stkSentiment(code) || e.sentiment;
-  if (sent === 'bull') push('消息面', W.sentBull, '有利好依据');
-  else if (sent === 'bear') push('消息面', W.sentBear, '被利空点名');
-  if (m.tailRisk) push('爆量风险', W.tailRisk, '断板日量能超过 8 倍，筹码已换手一轮');
-  var mc = Number(it.mcap != null ? it.mcap : (e.mcap != null ? e.mcap : ch.mcap));
-  if (isFinite(mc) && mc > 0) {
-    push('市值', mc < 60 ? W.mcapSmall : (mc > 300 ? W.mcapLarge : 0),
-      '流通市值 ' + mc.toFixed(0) + ' 亿' + (mc < 60 ? '（小盘弹性大）' : (mc > 300 ? '（大票拉不动）' : '')));
-  }
-
-  var sum = 0;
-  for (var k = 0; k < parts.length; k++) sum += parts[k].v;
-  var p = Math.max(W.floor, Math.min(W.cap, Math.round(base + sum)));
-  var top = parts.slice().filter(function (x) { return x.v !== 0; })
-    .sort(function (x, y) { return Math.abs(y.v) - Math.abs(x.v); }).slice(0, 3)
-    .map(function (x) { return x.k + (x.v > 0 ? '+' : '') + x.v; });
-  return { p: p, base: base, baseSrc: baseSrc, sum: Math.round(sum * 10) / 10,
-           parts: parts, notes: notes, myPct: myPct, damp: damp,
-           why: baseSrc + ' ' + base + '%' +
-             (top.length ? '，' + top.join('、') : '') + ' → ' + p + '%' };
-}
 /* R100z273：ordProbRows 已删。它出的是 .ord-li 行式的概率拆解表，读者是「明日概率怎么算」
    那张折叠块（随 ④⑤ 下线）。弹窗里的概率拆解没有丢——exitForCode 那一支已经把同一份
    ent.prob（baseSrc / notes / parts / sum / p）按 exit-row 行式内联印出来了，而且只读卡片

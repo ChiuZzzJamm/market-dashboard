@@ -38,6 +38,7 @@
 `triggered` 非空时 `push_notify.py` 会推一条；空则静默（不推「今天没有」）。
 """
 import argparse
+import datetime
 import os
 import sys
 
@@ -136,12 +137,17 @@ def main():
         print("[SKIP] breakoutPool.passed 为空")
         return 0
     kls = _kl_map(D)
+    secmap = D.get("sectorMap") or {}
     triggered, near, started = [], [], []
     unscanned = 0
     for it in passed:
         code = str(it["code"])
         grade, det = judge(it, kls.get(code))
-        row = {"code": code, "name": it.get("name"), "sector": it.get("sector"),
+        # R100z323：池子里 30 只有 2 只没带 sector（002931/603081），而 sectorMap 里有——
+        # 卡片上的板块 pill 靠这个字段，空着就是「有结论没写」。按 sectorMap 兜底，
+        # 兜不到才留空（前端会整块不渲染 pill，不会出现空标签）。
+        row = {"code": code, "name": it.get("name"),
+               "sector": it.get("sector") or secmap.get(code) or "",
                "score": it.get("score")}
         row.update(det)
         if grade == "brewing":
@@ -157,7 +163,10 @@ def main():
 
     out = {
         "tradeDate": (D.get("ashare") or {}).get("tradeDate") or bp.get("tradeDate"),
-        "asOf": common.now_str() if hasattr(common, "now_str") else "",
+        # R100z323：原来写 `common.now_str() if hasattr(common,"now_str") else ""`，
+        # 而 common 里根本没有 now_str → asOf 恒为空串，页面上的「取数时刻」静默消失
+        # （G9 每天报一条 breakoutPool.watch.asOf=空串）。改为本地时间戳，不再依赖不存在的函数。
+        "asOf": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
         "params": {"vol": BREW_VOL, "pct": BREW_PCT, "startLine": START_LINE},
         "triggered": triggered[:8],
         "near": near[:8],
