@@ -14357,6 +14357,31 @@
      "inZone": true
     }
    ]
+  },
+  "2026-11-09": {
+   "leadLag": [
+    {
+     "code": "600644",
+     "name": "乐山电力",
+     "sector": "电力",
+     "screen": "leadLag",
+     "rule": "secGap>1.0&lag>2.0&yret>0"
+    },
+    {
+     "code": "002506",
+     "name": "协鑫集成",
+     "sector": "电子器件",
+     "screen": "leadLag",
+     "rule": "secGap>1.0&lag>2.0&yret>0"
+    },
+    {
+     "code": "000333",
+     "name": "美的集团",
+     "sector": "家电行业",
+     "screen": "leadLag",
+     "rule": "secGap>1.0&lag>2.0&yret>0"
+    }
+   ]
   }
  },
  "updatedAt": "2026-11-06 16:34:27"
