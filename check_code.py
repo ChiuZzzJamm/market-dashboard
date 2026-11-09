@@ -79,6 +79,7 @@ DATA_WRITERS = [
     'annotate_pool_meta.py',    # 池元信息
     'apply_narrative.py',       # AI 叙事写回
     'atr_stop.py',              # R100z160：atrStops（全站唯一权威止损源）
+    'breakout_watch.py',        # R100z320：breakoutPool.watch（横盘启动「开始启动」预警；走 write_data_js）
     'build_stock_pool.py',      # 机械选股池
     'chen_pool.py',             # R100z218：chenPool（陈学长第二套断板反包口径；走 write_data_js）
     'common.py',                # write_data_js() 本体（唯一入口，自身即实现）

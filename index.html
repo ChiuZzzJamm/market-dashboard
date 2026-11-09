@@ -798,6 +798,18 @@
      原来的 .cc-lists 折叠壳（含 ▸/▾ 三角）随折叠一起删——留着就是没人用的墓碑。 */
   .cc-sub { font-weight: 400; font-size: var(--fs-xs); color: var(--ink2); margin-left: 8px; }
   .cc-perf-x { font-size: var(--fs-xs); color: var(--ink2); margin-left: 5px; opacity: .85; }
+  /* R100z320：横盘启动的「今日开始启动」横幅 */
+  .p-bpw { border-left: 3px solid #f0435c; }
+  .bpw-x { font-weight: 400; font-size: var(--fs-xs); color: var(--ink2); margin-left: 8px; opacity: .8; }
+  .bpw-chip { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 6px;
+              padding: 5px 10px; margin: 0 8px 8px 0; border-radius: var(--r-note);
+              border: 1px solid #f3c3ca; background: #fdf2f4; cursor: pointer; max-width: 100%; }
+  .bpw-chip:hover { border-color: #f0435c; }
+  .bpw-chip b { font-weight: 800; color: var(--ink); white-space: nowrap; }
+  .bpw-chip .cd { font-size: var(--fs-xs); color: var(--ink2); white-space: nowrap; }
+  .bpw-chip em { font-style: normal; font-size: var(--fs-xs); font-weight: 700;
+                 color: #f0435c; white-space: nowrap; }
+  .bpw-chip small { flex-basis: 100%; font-size: var(--fs-xs); color: var(--ink2); line-height: 1.5; }
   /* R100z318：连板梯队卡内的「题材 / 明日盯谁」小节 + 情绪行 */
   .lb-mood { margin: 6px 0 8px; padding: 7px 10px; border-radius: var(--r-note);
              background: var(--paper); border: 1px solid var(--line);
@@ -5677,6 +5689,35 @@ function renderAccumulation() {
       「止盈你不用管」）。离场、止盈由用户自己决定。
    ⚠️ 卡片点击复用 openGrpModal(BP_SORTED, idx)：渲染与弹窗回取必须共用同一份数组，
       否则左右箭头串票（R100z82 在横盘启动页踩过）。 */
+/* R100z320（用户 2026-11-09 21:37：「横盘启动我认为你需要观察，若哪天开始启动了
+   （参考之前给你的例图走势和成交额），你就要提醒我」）：本池的「启动」横幅。
+
+   ⚠️ 与池子自带的移出线要分清：池子规则里「收盘较首板 +30% = 已经启动、移出本池」
+   是**退场**判据（已经涨完别追）。这里要提醒的是**进场**判据——洗盘结束、刚开始放量上攻。
+   实测京城股份现价距涨停收盘只有 +3.2%，启动线在 +30%，中间还差 26 个点：
+   等它跨过 +30% 再喊人，就是在鱼尾喊。
+   判据由 breakout_watch.py 算好（放量 + 上攻 + 站上箱体，涨停单独放行），前端只读不加工。 */
+function bpWatchHtml(b) {
+  var w = (b && b.watch) || {};
+  var trig = w.triggered || [];
+  if (!trig.length) return '';
+  window._BP_GRP = [];
+  var h = '<div class="db-pool p-bpw"><h2>🔴 今日开始启动 · ' + trig.length + ' 只' +
+    '<span class="bpw-x">洗盘结束、刚放量上攻（不是「已涨完」那批）</span></h2>' +
+    '<div class="db-sub">' + esc(String(w.note || '')) + '</div><div class="db-chips">';
+  trig.forEach(function (r) {
+    window._BP_GRP.push({ c: r.code, n: r.name, t: '横盘启动 · ' + r.name });
+    var gi = window._BP_GRP.length - 1;
+    h += '<span class="bpw-chip" onclick="stkOpenIn(window._BP_GRP,' + gi + ')" title="' +
+      escAttr('今日 ' + (r.todayPct > 0 ? '+' : '') + r.todayPct + '% · 量比 ' + r.todayVolRatio +
+        ' · 站上洗盘区上沿 ' + (r.vsBoxHigh || 0) + '%　' + String(r.why || '')) + '">' +
+      '<b>' + esc(String(r.name || r.code)) + '</b><span class="cd">' + esc(String(r.code)) + '</span>' +
+      '<em>' + (r.todayPct > 0 ? '+' : '') + r.todayPct + '%</em>' +
+      '<small>量比 ' + r.todayVolRatio + (r.vsBoxHigh != null ? ' · 站上箱体 ' + (r.vsBoxHigh > 0 ? '+' : '') + r.vsBoxHigh + '%' : '') + '</small></span>';
+  });
+  return h + '</div></div>';
+}
+
 function renderBreakoutPool() {
   var b = (window.DASHBOARD_DATA || {}).breakoutPool;
   if (!b || !b.passed || !b.passed.length) return '';
@@ -5732,7 +5773,7 @@ function renderBreakoutPool() {
     '＝「主力还在」这个前提没了，形态作废；站上失效线就不再跟。</div>' +
     '</div></details>';
   var fail = dbFailHtml(b.failPool || [], 'breakoutPool');
-  return legend +
+  return bpWatchHtml(b) + legend +
     '<div class="db-pool p-conf"><h2>涨停后洗盘 · ' + BP_SORTED.length + ' 只</h2>' +
     '<div class="db-sub">涨停后缩量洗盘、还没启动的票——按卡上的买入区间挂低吸；收盘跌破证伪价即形态作废，站上失效线就算已经启动、本池不再跟踪</div>' +
     // R100z233：把筛选漏斗写出来。只有「N 只」这一行时，读者无法区分
