@@ -637,6 +637,165 @@ def ladder_score(entry, ladder, is_lianban=False):
     return sc, lab, why
 
 
+
+_THEME_MAP = None
+
+
+def theme_map(reload=False):
+    """加载 theme_map.json（进程内缓存）。**取不到就返回空列表，不抛异常。**
+
+    R100z316（用户 2026-11-09：「商业航天有什么利好？…你昨天更新的内容怎么没提到这块？」）。
+    词表是「新增功能」，不是「核心链路依赖」——文件缺失/损坏时应当静默降级成
+    「不做题材聚合」，而不是让 16:00 数据步整个崩掉。这一点和 sectorMap 的处理一致。
+    """
+    global _THEME_MAP
+    if _THEME_MAP is not None and not reload:
+        return _THEME_MAP
+    here = os.path.dirname(os.path.abspath(__file__))
+    fp = os.path.join(here, "theme_map.json")
+    try:
+        with open(fp, encoding="utf-8") as f:
+            d = json.load(f)
+        items = [t for t in (d.get("themes") or []) if isinstance(t, dict) and t.get("name")]
+    except (OSError, ValueError):
+        items = []
+    _THEME_MAP = items
+    return items
+
+
+def _theme_exclude_codes(t):
+    """词表里 exclude 写成「002648 卫星化学（化工…）」的自然语言，这里只取代码。
+    为什么要排除：名字像但业务不是的票（卫星化学是化工、航天彩虹主业无人机）如果参与匹配，
+    题材会一路错下去——而错的方向恰好是「看起来很像对的」。"""
+    out = set()
+    for x in (t.get("exclude") or []):
+        m = re.match(r"\s*(\d{6})", str(x))
+        if m:
+            out.add(m.group(1))
+    return out
+
+
+def match_themes(text, name="", code=""):
+    """一段文本（连板 reason / 新闻标题）→ 命中的题材名列表。
+
+    ⚠️ 按 kw **长度降序**匹配：长词优先，避免「卫星」把「卫星互联网」拆掉。
+    但**不做排他**——一只票可以同时属于多个题材（永臻股份＝光伏边框+人形机器人），
+    硬排他会丢掉真实的多题材属性。
+    """
+    t = str(text or "")
+    nm = str(name or "")
+    c = re.sub(r"\D", "", str(code or ""))
+    out = []
+    for th in theme_map():
+        if c and c in _theme_exclude_codes(th):
+            continue
+        kws = sorted((th.get("kw") or []), key=len, reverse=True)
+        for k in kws:
+            if k and (k in t or k in nm):
+                out.append(th["name"])
+                break
+    return out
+
+
+def theme_agg(lianban):
+    """按**题材**聚合连板梯队（R100z316）。返回 {题材名: {...}}。
+
+    ⭐ 为什么要有这一层：`board_ladder()` 按 `hybk`（同花顺行业）聚合，而行业分类跟不上题材。
+    实测 2026-11-06：「阳光照明 2板 reason=商业航天+激光通信+照明」被归到 `hybk=照明设备`——
+    于是一个纯正的商业航天连板，在看板上显示成「照明设备有连板」。读者看到「照明设备」，
+    永远想不到那是商业航天。
+
+    输出字段：
+      n / maxLb / names / codes —— 本题材下**今天真在连板梯队里**的票；
+      sectors                   —— 这些票被行业口径分到哪些行业（跨行业＝`crossSector: True`）；
+      refStocks                 —— 词表里的代表票（**已剔除本就在连板里的**，避免读者
+                                   以为它们也连板了——这两个语义必须分开）；
+      sectorsHit                —— 本题材的 sectors 里，今天有哪些行业在涨（>0）。
+    """
+    out = {}
+    lbs = [x for x in (lianban or []) if isinstance(x, dict)]
+    # 匹配规则只写一份：这里调 match_themes，不再内联一份同样的 kw 循环——
+    # 两处各写一遍的话，收紧关键词时改了一处漏一处，就会变成「页面上是 A 口径、
+    # 弹窗里是 B 口径」这种最难查的不一致（本项目在「题材词」上已经踩过一次）。
+    groups = {}
+    for x in lbs:
+        for tn in match_themes(x.get("reason"), x.get("name"), x.get("code")):
+            groups.setdefault(tn, []).append(x)
+    for th in theme_map():
+        name = th["name"]
+        hit = groups.get(name) or []
+        if not hit:
+            continue
+        try:
+            mx = max(int(x.get("lbc") or 1) for x in hit)
+        except (TypeError, ValueError):
+            mx = 1
+        in_lb = set(str(x.get("code") or "") for x in hit)
+        refs = [s for s in (th.get("stocks") or [])
+                if str(s.get("code") or "") and str(s.get("code")) not in in_lb]
+        # ⚠️ boardStocks 才是前端该用的结构：names 与 codes 是两个各自过滤过的列表，
+        # 长度可能不等（names 只收 name 非空的），前端按下标配对必然错位——会把 A 的代码
+        # 配到 B 的名字上。所以这里直接给出成对的 {code,name,lbc}，并按板数降序。
+        _bs = []
+        for x in hit:
+            _c = str(x.get("code") or "")
+            if not _c:
+                continue
+            try:
+                _l = int(x.get("lbc") or 1)
+            except (TypeError, ValueError):
+                _l = 1
+            _bs.append({"code": _c, "name": str(x.get("name") or ""), "lbc": _l})
+        _bs.sort(key=lambda z: (-z["lbc"], z["code"]))
+        out[name] = {
+            "name": name,
+            "alias": list(th.get("alias") or []),
+            "n": len(hit),
+            "maxLb": mx,
+            "boardStocks": _bs,
+            "names": [str(x.get("name") or "") for x in hit if x.get("name")],
+            "codes": sorted(c for c in in_lb if c),
+            "sectors": sorted(set(str(x.get("hybk") or "") for x in hit if x.get("hybk"))),
+            "reasons": [str(x.get("reason") or "") for x in hit][:3],
+            "refStocks": refs[:5],
+            "crossSector": len(set(str(x.get("hybk") or "") for x in hit if x.get("hybk"))) > 1,
+            # ⭐ sectorMismatch＝「题材名和它所在的行业名对不上」。
+            # 这才是用户 2026-11-09 那句「浙文影业的连板难道不是 AI 短剧吗？和纺织有什么关系？」
+            # 的机器可读版本：AI漫剧 归 纺织制造、商业航天 归 照明设备。
+            # 判据用「题材名前 2 字是否出现在任一行业名里」——粗糙但可解释：
+            # 「光伏」在「光伏设备」里 → 不算错配；「商业」不在「照明设备」里 → 错配。
+            # 不用编辑距离之类的模糊匹配：这里要的是「能不能被读者一眼看出不一致」，不是语义相似度。
+            "sectorMismatch": not any(
+                str(name)[:2] in str(x.get("hybk") or "") for x in hit if x.get("hybk")
+            ),
+        }
+    # 板数高的在前：读者先看「几板」，再看「几只」
+    return dict(sorted(out.items(), key=lambda kv: (-kv[1]["maxLb"], -kv[1]["n"])))
+
+
+def theme_by_sector(all_boards):
+    """行业 → 可能被点着的题材（反向映射）。用于「今天哪个行业在涨 → 对应什么题材」。
+
+    只返回**该行业今天确实在涨（pct>0）**的题材，且带上涨的行业名，
+    避免把「题材存在」误读成「题材在涨」。
+    """
+    sectors_up = {}
+    for b in (all_boards or []):
+        if isinstance(b, dict) and b.get("name"):
+            try:
+                pct = float(b.get("pct"))
+            except (TypeError, ValueError):
+                pct = None
+            if pct is not None and pct > 0:
+                sectors_up[str(b["name"])] = {"pct": pct, "life": (b.get("life") or {}).get("label")}
+    out = {}
+    for th in theme_map():
+        hits = [(s, sectors_up[s]) for s in (th.get("sectors") or []) if s in sectors_up]
+        if hits:
+            out[th["name"]] = {"sectors": hits, "alias": list(th.get("alias") or [])}
+    return out
+
+
 def mood_state(cur, prev=None):
     """情绪状态与边际（R100z310）。`cur`/`prev` 为涨跌/连板指标 dict。
 

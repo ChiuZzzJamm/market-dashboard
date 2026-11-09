@@ -354,8 +354,14 @@ PRODUCT_OWNERSHIP = {
                  "③ 点名的三条自动化里任一条改名/换措辞，本闸立刻 FAIL——那是提醒你补回去。"),
     },
     "weekendNews": {
-        "require": (), "proof": "intermediate",
-        "note": "脚本间中间产物：读方是 push_notify/validate_stocks，不进前端渲染",
+        "require": ("weekendNews", "周末要闻"),
+        "note": ("R100z316（2026-11-09，用户「商业航天有什么利好？卫星互联网订单落地是不是有什么"
+                 "重大利好新闻？你昨天更新的内容怎么没提到这块？」）：从 {date,source} 元信息升级为"
+                 "**周末要闻条目**（items 数组），周日 21:00 写、前端「开盘前瞻」卡内渲染。"
+                 "原登记是 proof=intermediate（前端不引用），所以 prompt 明确要求只写 date/source——"
+                 "AI 没做错，是设计把它变成了空壳：SpaceX 5000 亿年化营收、月球基地规划、"
+                 "星舰第 15 次试飞这些周末最大的消息，一条都没进看板。"
+                 "读方：index.html wkNewsHtml（开盘前瞻卡）+ validate_stocks 来源白名单 + push_notify。"),
     },
     "sectorMap": {
         "require": (), "proof": "mapping",

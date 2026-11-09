@@ -55,7 +55,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # fetch_ths_industries 双副本合一，与 update_ashare_sectors 共用单一来源）
 from common import (ths_json as curl_ths_json, fetch_ths_industries,
                     is_trade_day, market_last_day, split_suspended,
-                    board_life, mood_state, board_ladder, ladder_score)
+                    board_life, mood_state, board_ladder, ladder_score,
+                    theme_agg, theme_by_sector)
 
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
@@ -2030,7 +2031,15 @@ def _pre_ctx(D, today):
     # R100z312（用户 2026-11-08）：「题材最好和连板梯队里面找」——连板梯队里的板块才是
     # 当天资金真正在做的主线，同花顺行业只是静态分类。
     ladder = board_ladder(a.get("lianban") or [])
-    return {"boards": boards, "lb": lbs, "lhb": lhb, "mood": mood, "ladder": ladder}
+    # R100z316（用户 2026-11-09）：再按**题材**聚合一层。ladder 按行业（hybk）聚合，
+    # 而行业分类跟不上题材——「阳光照明 2板 reason=商业航天」被归到「照明设备」，
+    # 于是商业航天这个题材在看板上完全看不见。theme_agg 按 reason 里的题材词聚合，
+    # 才能回答「今天商业航天有几只连板」。
+    themes = theme_agg(a.get("lianban") or [])
+    # 行业涨 → 题材（只统计今天真正在涨的行业，避免「题材存在」被读成「题材在涨」）
+    theme_by_sec = theme_by_sector(a.get("allBoards") or [])
+    return {"boards": boards, "lb": lbs, "lhb": lhb, "mood": mood,
+            "ladder": ladder, "themes": themes, "themeBySector": theme_by_sec}
 
 
 def _amt_of(e):
@@ -2475,6 +2484,16 @@ def build_module(pairs, D):
         # （板块生命周期在 allBoards.life、连板在这里、情绪在 mood），只有「人气」
         # 需要池内成交额分位算不了——所以降级版只给三项，不给综合分。
         "ladder": _ctx["ladder"],
+        # R100z316：题材维度（跨行业）。与 ladder 并列下发，不是替代——
+        # ladder 回答「哪个行业有连板」，themes 回答「哪个题材有连板」。
+        # 两者都留是因为它们各自会漏：行业漏掉跨行业题材（商业航天→照明设备），
+        # 题材漏掉没被词表覆盖的连板（羊字辈、预制烘焙）。
+        "themes": _ctx["themes"],
+        # themeBySector（行业涨→题材）暂不落盘：前端还没有读它的地方。
+        # 记忆里有一条判据——「新增 data.js 字段」等于「三件事绑死」，其中一件是
+        # 「前端或某条自动化必须点名叫它」。现在没有读方，写进去就是下一个 weekendNews
+        # （躺在数据里没人看，几个月后被当成死字段查出来）。等真要做「行业涨→哪个题材被点着」
+        # 那块时再一起加。
         "junkCut": _junk,
         "watchNext": watch_next(confirmed, watching, _ctx),
     }

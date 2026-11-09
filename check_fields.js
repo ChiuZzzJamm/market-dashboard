@@ -133,6 +133,9 @@ const KNOWN = [
   /\.direction$/,                            // 只有 macroNews/intlNews/bankViews 逐条要求 direction，
                                              // bullNews/bearNews 的条件渲染会判空
   /\.horizon$/,                              // impacts[].horizon（影响时长）AI 未逐条写，前端判空
+  /^duanban\.star\.picks\.\d+\.score$/,      // 明日可下单的 picks 只有「被技术池覆盖到」的票才由前端
+                                             // 回填 score（index.html 里 `if (tp.score != null) p.score = ...`），
+                                             // 未覆盖的读出 undefined；下游有 `!= null` 判空，不渲染即不显示
   /^us\.sectorRank$/,                        // 美股侧不产出板块排名（A股独有）
   /^us\.sectors(Up|Down)\.\d+\.(upCount|downCount|ztCount|pct5|netInflow|leadPct)$/,
                                              // 美股板块只有涨跌幅与成分股，A 股那套富化字段一律没有；
