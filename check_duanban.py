@@ -1529,19 +1529,37 @@ REF_TAIL_PHRASE = ["映射逻辑主要来自该条消息", "驱动力集中在�
 NOTICE_TAIL_PHRASE = ["后续看该事项兑现进度", "博弈焦点在该事的结果",
                       "定价取决于该事项落地", "预期随该事项进展修正",
                       "关注点已转向该事项后续", "波动或随该事项放大"]
-STAGE_PHRASE = {
-    # R100z296：三个变体一律不出现「形态」二字。原首个变体写「形态已走完确认全流程」，
-    # 让底稿带「形态」，AI 深化时就会顺势补一句「形态仅作背景」——而 validate 的
-    # check_story_quality 明令 story 不许写形态（形态有独立字段）。源头不留这个词，
-    # 后面两步都不用再救。意思不变，只是换说法。
-    "全流程达标": ["确认全流程已走完", "反包前确认步骤已齐",
-                   "确认流程已全部走完"],
-    "待缩量": ["待缩量确认", "处于缩量确认阶段", "等待缩量信号确认"],
-    "待企稳": ["待收复MA5确认", "等待企稳确认K线", "差最后一根确认K线"],
-    # 2026-10-27 新增档：形态已全达标、只差 MA5 溢价那 2 个百分点（原先是判定死区，会被误归失效）
-    "待脱离": ["已站稳MA5、待脱离幅度确认", "缩量与站稳已过，只差脱离MA5的幅度",
-               "待脱离MA5确认（未达最小溢价）"],
-}
+# R100z318（2026-11-09）：**形态句式整块从 story 移除**（此处原为 STAGE_PHRASE）。
+#   原地雷：STAGE_PHRASE 写「确认全流程已走完 / 待缩量确认 / 已站稳MA5、待脱离幅度确认」，
+#   实测今日 89/89 条底稿**全部**带形态词——而「story 只写消息面、形态已在独立字段
+#   form 展示、严禁写进 story」是硬规则。前几轮都靠 AI 逐只手删，删完又怕跌破 100 字
+#   地板不敢删干净，于是每轮都在同一个坑里重来一遍。
+#   现在收尾句改用**板块事实**：近 5 日累积涨幅 + 当日涨停家数 + 扩散面，数据取自
+#   pre.theme.why（脚本已算好的真实值），每句都带个股名，G17 天然安全。
+_THEME_TRACK_RE = re.compile(r"5日([+-]?[\d.]+)%.*?涨停(\d+)只.*?扩散(\d+)%")
+
+
+def _sector_track(e):
+    """【板块消息】收尾句：板块近 5 日累积涨幅 + 扩散面（真实数据，非形态）。"""
+    why = ((e.get("pre") or {}).get("theme") or {}).get("why") or ""
+    nm = e.get("name") or ""
+    m = _THEME_TRACK_RE.search(why)
+    if not m or not nm:
+        return ""
+    try:
+        d5 = float(m.group(1))
+        zt = int(m.group(2))
+        spread = int(m.group(3))
+    except (TypeError, ValueError):
+        return ""
+    # 板块名已在同段前半句出现过，这里只说「所在板块」，省下的字数留给【个股消息】段
+    if d5 >= 8:
+        return f"{nm}所在板块近5日累涨{d5}%，是本轮资金主攻方向"
+    if d5 >= 2:
+        return f"{nm}所在板块5日累涨{d5}%，扩散面{spread}%"
+    if d5 > -2:
+        return f"{nm}所在板块5日基本走平（{d5}%），当日涨停{zt}只"
+    return f"{nm}所在板块5日回落{abs(d5)}%，人气尚待修复"
 
 
 def _pick(lst, code, salt=0):
@@ -1575,13 +1593,12 @@ def _story_first_sentence(text, minlen=20, maxlen=90):
 
 
 def _story_sector_seg(e, code):
-    """【板块消息】段：板块当日/涨停日涨幅 + 形态 stage（全部个股特定数据）。"""
+    """【板块消息】段：板块当日/涨停日涨幅 + 近 5 日累积（全部个股特定数据，零形态）。"""
     sector = e.get("sector") or "所属"
     bpt = e.get("boardPctToday")
     bpz = e.get("boardPctZt")
     # R100z296：不再读 e['form'] —— 箭头形态串不进 story（原因见下方 tail 处注释），
     # 留着读取只会变成未使用变量，让下一个人以为它还在参与拼接。
-    stage = e.get("stage") or ""
     # R100z154：行业板块单日涨跌幅不可能超 12%（实测 IT服务Ⅱ 取到 17.55% 属错映射），
     # 异常值按「暂缺」处理，宁缺勿错（不编也不展示假数据）。
     if bpt is not None and abs(float(bpt)) > 12:
@@ -1601,11 +1618,9 @@ def _story_sector_seg(e, code):
         bz = f"，涨停日板块涨{bpz}%"
     else:
         bz = f"，涨停日板块跌{abs(bpz)}%"
-    st0 = _pick(STAGE_PHRASE.get(stage, STAGE_PHRASE["待缩量"]), code, 2)
-    # R100z154：形态参数偶然全同（同日涨停/同倍数/同缩量天数）时 3 只以上会共用同一
-    # 整句 → 踩 G17 复读闸。把个股名称并入形态句，保证整句唯一（G17 按句切分）。
-    nm = e.get("name") or ""
-    st = f"{nm}{st0}" if nm else st0
+    # R100z318：形态 stage 已不参与拼接（见 _sector_track 注释）。收尾句改成板块事实：
+    # 近 5 日累积涨幅 / 扩散面 / 当日涨停家数，仍含个股名，G17 安全且读者能读到东西。
+    st = _sector_track(e)
     # R100z284：含名句放前，保证超长剥尾时含名句永远留着。
     # R100z296（2026-11-03）：**不再把 form（箭头形态串）拼进 story**。
     #   原写法 `tail = f"；{st}，{form}。"` 让每一条底稿的【板块消息】段都带
@@ -1635,25 +1650,74 @@ def _close_parens(t):
     return t
 
 
+_NEWSWIRE_RE = re.compile(
+    r"^[\u4e00-\u9fa5A-Za-z0-9·]{0,20}?(?:网讯|讯|电)[，：]?"
+    r"(?:（记者[^）]{0,12}）)?[，：]?")
+
+
+def _strip_newswire(t):
+    """去掉通稿电头（「上证报中国证券网讯（记者于祥明）」），只留实质正文。
+
+    R100z318：这类电头在 story 里零信息、还占 15~20 字——正是它把
+    【个股消息】段顶爆预算、逼着剥尾切进正文中间的（实测 000603 被切到
+    「…11月5日。」）。剥完若短于 15 字（说明整条就是一句话快讯）则原样返回。
+    """
+    t = str(t or "").strip()
+    for _ in range(2):
+        n = _NEWSWIRE_RE.sub("", t, count=1)
+        n = re.sub(r"^（记者[^）]{0,12}）[，：]?", "", n).strip()
+        if n == t or len(n) < 15:
+            break
+        t = n
+    return t.lstrip("，： ")
+
+
 def _trim_seg1(text, budget):
     """把【个股消息】段压到 budget 字以内（只压这一段，不动板块段）。
 
-    剥尾粒度：先整句（；）再分句（，），剥完必过括号收口 + 补句号——
-    直接硬切会产出「…理由是AI服务器供应」这类半句。
+    R100z318（2026-11-09）两次修正，都是「剥尾把最有信息的部分先切掉」：
+    ① **末段（方向判定 + 个股尾巴）必须保命**——原实现从后往前 pop，第一个被弹掉的
+       恰好是「…短期预期上修；驱动…，某某后续看…」这段判定，实测 000603 被压成
+       「…（记者于祥明）11月5日。」，读者拿到的是一条没有结论的残缺新闻；
+    ② **《标题》不许切一半**——标题是这条消息的唯一标识，切半既失礼也没信息。
+       预算不够时按「先砍时点/来源前缀 → 再砍标题后的摘要正文」的顺序让位，
+       宁可只留「名称《标题》+ 判定」，也不留半句摘要。
     """
     if len(text) <= budget:
         return text
     parts = text.split("；")
-    while len("；".join(parts)) > budget and len(parts) > 1:
-        parts.pop()
-    t = "；".join(parts)
-    if len(t) > budget:
-        sub = t.split("，")
-        while len("，".join(sub)) > budget and len(sub) > 1:
-            sub.pop()
-        t = "，".join(sub)
-    t = _close_parens(t.rstrip("，；、： "))
-    return t if t.endswith(("。", "！", "？")) else t + "。"
+    keep = parts[-1] if len(parts) >= 2 else ""
+    body = "；".join(parts[:-1]) if keep else text
+
+    def _join(b):
+        if not b:
+            return keep
+        b = _close_parens(b.rstrip("，；、： "))
+        if not b.endswith(("。", "！", "？")):
+            return b + "；" + keep
+        return b + keep
+
+    if len(_join(body)) <= budget:
+        return _join(body)
+
+    m = re.search(r"^(.*?)《[^》]*》(.*)$", body, re.S)
+    if m:
+        pre, rest = m.group(1), m.group(2)
+        ttl_all = body[len(pre):len(body) - len(rest)]
+        # ① 砍掉标题前的「时点 来源」（形如「名称 11/05 14:09 上海证券报·中国证券网」）
+        pre_short = pre.split(" ", 1)[0] if " " in pre else pre
+        # ② 只砍时点/来源，摘要正文照留（实测 000603 预算 102、原文 130，砍前缀就够）
+        cand = _join(pre_short + ttl_all + rest)
+        if len(cand) <= budget:
+            return cand
+        # ③ 仍超预算才连摘要一起砍，只留「名称《标题》+ 判定」（宁可少一句，不留半句）
+        return _join(pre_short + ttl_all)
+
+    # ③ 无标题（公告/无消息分支）：按逗号从后往前收
+    sub = body.split("，")
+    while len("，".join(sub)) > budget and len(sub) > 1:
+        sub.pop()
+    return _join("，".join(sub))
 
 
 def build_story(e, refs=None, bear_refs=None):
@@ -1711,7 +1775,7 @@ def build_story(e, refs=None, bear_refs=None):
             head = " ".join(x for x in (str(ref.get("time") or "")[5:].replace("-", "/"),
                                         _src_show) if x)
             head = (" " + head) if head else ""
-            body = _story_first_sentence(ref.get("summary"))
+            body = _strip_newswire(_story_first_sentence(ref.get("summary")))
             # R100z284：摘要原文同样可能带 ！？；，切句后产生不含个股名的半句。
             body = (body or "").replace("！", "，").replace("？", "，").replace("；", "，")
             # R100z311（2026-11-06）：ref 的 summary 是**该条新闻发布日**写的，
@@ -1740,7 +1804,6 @@ def build_story(e, refs=None, bear_refs=None):
         elif notices:
             n0 = notices[0]
             d0 = str(n0.get("date") or "")[5:].replace("-", "/")
-            zt = str(e.get("ztDate") or "")[5:].replace("-", "/")
             phrase = _pick(NO_NEWS_PHRASE, code)
             # R100z223：原写「未见方向性催化」——但"本函数认定的方向性公告"与
             # "读者点开弹窗看到的公告列表"不是同一个集合：stockNews/news 里的
@@ -1748,12 +1811,12 @@ def build_story(e, refs=None, bear_refs=None):
             # 于是同屏出现「未见方向性催化」+ 一条业绩暴雷，自相矛盾。
             # 改为只陈述"本条公告的属性"，不对整体下"无方向"的断言。
             seg1 = (f"【个股消息】{name}近期信披以{n0.get('column') or '常规公告'}类为主（{d0}），"
-                    f"该条公告本身不含涨跌方向指向，{phrase}；{name}{zt}涨停入池。")
+                    f"该条公告本身不含涨跌方向指向，{phrase}；{name}的定价仍看行业景气与订单能见度。")
         else:
-            zt = str(e.get("ztDate") or "")[5:].replace("-", "/")
             phrase = _pick(NO_NEWS_PHRASE, code)
             seg1 = (f"【个股消息】{name}的公开信息焦点仍在板块与产业链层面，{phrase}，"
-                    f"短期观察点集中在{e.get('sector') or '所属'}板块风向；{name}{zt}涨停入池。")
+                    f"短期观察点集中在{e.get('sector') or '所属'}板块风向；"
+                    f"{name}的定价线索主要由所属板块传导。")
     # R100z297（2026-11-04）：**【板块消息】段必须永远活着**。
     # 原实现 `story = seg1 + seg2` 之后再统一剥尾，而「有要闻 ref」分支的 seg1 单独就有
     # 170~180 字（新闻标题 + 首句摘要 + 个股尾巴），加上 seg2 必然 >180 → 剥尾按「；」
@@ -1765,13 +1828,14 @@ def build_story(e, refs=None, bear_refs=None):
         seg1 = _trim_seg1(seg1, max(60, 180 - len(seg2)))
     story = seg1 + seg2
     if len(story) < 100:
-        # 兜底加长（含 zt/stage/sector 个股特定数据，防 G17）
-        stage = e.get("stage") or ""
-        zt = str(e.get("ztDate") or "")[5:].replace("-", "/")
-        stage_zh = {"全流程达标": "确认流程已走完", "待缩量": "断板后缩量确认阶段",
-                    "待企稳": "缩量后待企稳确认阶段"}.get(stage, "断板跟踪阶段")
-        story += (f"{name}{zt}涨停入池，当前处于{stage_zh}，"
-                  f"{e.get('sector') or '所属'}板块联动强度是后续确认的关键变量。")
+        # R100z318：兜底加长同样不许写形态/「涨停入池」（story 只写消息面与板块面）。
+        nm2 = e.get("name") or code
+        sec2 = e.get("sector") or "所属"
+        add = f"{nm2}的定价线索主要来自{sec2}板块与产业链传导"
+        tr2 = _sector_track(e)
+        if tr2:
+            add = add + "，" + tr2
+        story = story.rstrip("。") + f"；{add}。"
     # R100z284：ref 段（新闻标题+首句摘要）常把底稿顶到 240~300 字，AI 复核每次都要
     # 逐只压回 180。这里先做两级剥尾（先「；」再「，」），保证底稿落在 100~180 区间，
     # 只剥整句、不留半句尾巴。
