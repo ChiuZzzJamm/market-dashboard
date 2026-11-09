@@ -798,12 +798,11 @@
      原来的 .cc-lists 折叠壳（含 ▸/▾ 三角）随折叠一起删——留着就是没人用的墓碑。 */
   .cc-sub { font-weight: 400; font-size: var(--fs-xs); color: var(--ink2); margin-left: 8px; }
   .cc-perf-x { font-size: var(--fs-xs); color: var(--ink2); margin-left: 5px; opacity: .85; }
-  /* R100z316：开盘前瞻卡内的「周末要闻」（摘要默认 2 行，点一下展开） */
-  .wk-news { margin: 10px 0 12px; padding: 9px 11px; border-radius: var(--r-note);
-             background: var(--paper); border: 1px solid var(--line); }
-  .wk-news-h { font-size: var(--fs-sm); font-weight: 800; color: var(--ink); margin-bottom: 6px; }
-  .wk-news-h s { font-weight: 400; font-size: var(--fs-xs); text-decoration: none;
-                 color: var(--ink2); margin-left: 7px; opacity: .8; }
+  /* R100z317：「全球要闻」页里的周末要闻节（原在开盘前瞻卡，属错位，已迁走） */
+  .wk-section.wkend h4 { color: #8a4a12; }
+  .wk-section.wkend h4 s { font-weight: 400; font-size: var(--fs-xs); text-decoration: none;
+                           color: var(--ink2); margin-left: 8px; opacity: .75; letter-spacing: 0; }
+  .wk-card .wk-section:first-of-type { margin-top: 8px; padding-top: 0; border-top: none; }
   .wk-n { padding: 5px 0; border-top: 1px dashed var(--line); }
   .wk-n:first-of-type { border-top: 0; }
   .wk-n-l1 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px; }
@@ -4635,13 +4634,18 @@ function renderNewsCard(d, market) {
   var intl = newsSort(d.intlNews);
   var bank = newsSort(d.bankViews);
   var macro = newsSort(d.macroNews);
-  if (!bn.length && !be.length && !intl.length && !bank.length && !macro.length) return '';
+  var _wk = (market !== 'us') ? wkNewsSection() : '';
+  if (!bn.length && !be.length && !intl.length && !bank.length && !macro.length && !_wk) return '';
   var mkTitle = market === 'us' ? '🇺🇸 美股 · 全球要闻' : '🇨🇳 A股 · 全球要闻';
   // R100z118：角标对齐要闻实际更新日（见 newsUpdatedDate）。交易日与要闻更新日不同时并列显示。
   var _td = String(d.tradeDate || ''), _tdm = _td.match(/(\d{4}-\d{2}-\d{2})/), _ud = newsUpdatedDate(d);
   var _dateLabel = (_ud && _tdm && _ud !== _tdm[1]) ? ('要闻更新 ' + _ud + ' · 数据 ' + _td) : _td;
   var html = '<div class="wk-card"><div class="wk-head"><h2>' + mkTitle + '</h2>'
     + '<span class="date">' + esc(_dateLabel) + '</span></div>';
+  /* R100z317：周末要闻放在最前——它覆盖的是「上一个交易日收盘 → 本交易日开盘」这段，
+     时间上比「利好方向（上一交易日的盘面）」更新。只在 A 股卡出：
+     周末要闻是给「下周 A 股看什么」用的，美股卡有自己的五节要闻，不必再来一份。 */
+  html += _wk;
   // 利好 / 利空方向（短线·盘面）：通栏展开卡，左侧色条表达方向（红=利好 / 绿=利空）
   if (bn.length) {
     html += '<div class="wk-section"><h4 class="bull">利好方向 · 短线盘面</h4>';
@@ -10789,7 +10793,7 @@ function buildPosHtml(o) {
 
    位置：开盘前瞻正文**之前**。先看周末发生了什么，再看所以怎么办——
    顺序反了的话，读者读到「A股映射」时不知道对应的是哪条消息。 */
-function wkNewsHtml() {
+function wkNewsSection() {
   var w = (window.DASHBOARD_DATA || {}).weekendNews || {};
   var its = (w.items || []);
   if (!its.length) return '';
@@ -10802,8 +10806,11 @@ function wkNewsHtml() {
     if (age > 7) return '';
   }
   window._WK_GRP = [];
-  var h = '<div class="wk-news"><div class="wk-news-h">周末要闻<s>' +
-    (w.date ? esc(String(w.date)) + ' · ' : '') + its.length + ' 条</s></div>';
+  /* R100z317：改为「全球要闻」页里的一节，与「利好方向 / 宏观 / 媒体视角 / 投行观点」同级。
+     它本来就是这个身份——周末发生的新闻。放在开盘前瞻里是错位：
+     那张卡回答「明天怎么开」，不回答「周末发生了什么」。 */
+  var h = '<div class="wk-section wkend"><h4>周末要闻 · ' + its.length + ' 条' +
+    (w.date ? '<s>' + esc(String(w.date)) + '</s>' : '') + '</h4>';
   its.forEach(function (it) {
     if (!it || !it.title) return;
     var dir = String(it.direction || '中性');
@@ -10838,7 +10845,10 @@ function buildOpenOutlookHtml(o, title) {
   var html = '<div class="wk-card"><div class="wk-head"><h2>' + title +
     (o.date ? ' <span class="h2-date">' + esc(o.date) + '</span>' : '') + '</h2></div>' +
     buildPosHtml(o) +
-    wkNewsHtml() +
+    /* R100z317（用户 2026-11-09 10:39：「开盘前瞻里面为什么还要放周末要闻？而不是在全球要闻里面去完善？
+       你做事前动脑子了吗？一个看板给了相同信息在那么多地方给，看着都累都乱」）：
+       周末要闻已迁到「📄 全球要闻」页的 A 股卡片里。开盘前瞻的职责是**方向/点位/量能**三条，
+       塞新闻进去等于两张卡讲同一批消息，读者要来回对照还不知道哪份是准的。 */
     '<div class="wk-outlook">' + formatOutlook(o.content) + '</div>';
   if (o.source) html += '<div class="wk-src">来源：' + esc(o.source) + '</div>';
   html += '</div>';
