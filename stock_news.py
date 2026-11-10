@@ -462,6 +462,10 @@ def collect_targets(D):
     for pool in ('confirmed', 'watching', 'failPool'):
         for e in db.get(pool) or []:
             add(e.get('code'), e.get('name'))
+    # R100z329：陈学长三池也要消息面——它们的票在弹窗里会显示公告/新闻，此前漏采就整段空白。
+    for _k in ('strict', 'loose', 'watching'):
+        for _e in ((D.get('chenPool') or {}).get(_k) or []):
+            add(_e.get('code'), _e.get('name'))
     for e in (db.get('star') or {}).get('picks') or []:
         add(e.get('code'), e.get('name'))
     for key in ('harmonic', 'accumulation', 'breakoutPool'):

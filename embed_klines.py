@@ -127,6 +127,11 @@ def collect_stocks(D):
             nm = str(t.get("name") or "").strip()
             if nm and not t.get("code"):
                 names.add(nm)
+    # 5b) 陈学长三池（R100z329）：这个池的票在弹窗里要看 K 线，卡片涨幅也靠最后一根收盘算
+    #     ——此前三个采集器（K线/止损/消息面）都漏了它，于是「弹窗空荡荡、涨幅显示—」。
+    for _k in ("strict", "loose", "watching"):
+        for _e in ((D.get("chenPool") or {}).get(_k) or []):
+            add_code(_e.get("code"))
     # 6) 大盘指数（R98j：指数点击看K线；code 字段优先，历史数据按名称映射兜底）
     for idx in (a.get("indices") or []):
         sym = str(idx.get("code") or "").strip().lower()

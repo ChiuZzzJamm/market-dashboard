@@ -4768,8 +4768,61 @@
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "002876",
+   "name": "三利谱",
+   "confirmDate": "2026-11-10",
+   "firstSeenDate": "2026-11-05",
+   "entryDate": "2026-11-10",
+   "cross": "both",
+   "preSnapshot": {
+    "theme": {
+     "label": "启动",
+     "day": null,
+     "score": 99.1,
+     "why": "今日+4.00% / 5日+2.74% / 涨停1只 / 扩散98%",
+     "fake": false
+    },
+    "pop": {
+     "label": "清淡",
+     "score": 35.8,
+     "why": "成交额池内分位 28 · 放量2.5倍（+8）"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25,
+     "why": "板块 光学光电子 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "回暖",
+     "score": 85,
+     "text": "涨停 93（昨 54，↑） · 跌停 0（昨 1，↓） · 最高板 7（昨 6，↑） · 连板股 20（昨 9，↑） · 分歧率 30%（昨 33，↓） · 接力率 22%（昨 17，↑）",
+     "why": "涨停家数明显增加、连板高度没降、接力率没恶化",
+     "gate": "open"
+    },
+    "total": 70.6,
+    "tier": "强",
+    "why": "题材启动(99)×55% + 人气36×45% = 71（情绪回暖 作闸门）"
+   },
+   "ztDate": "2026-11-04",
+   "stopPrice": 25.14,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
   }
  ],
- "updatedAt": "2026-11-10 16:05",
+ "updatedAt": "2026-11-10 21:23",
  "resettleAt": "R100z299"
 }

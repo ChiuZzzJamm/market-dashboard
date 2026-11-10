@@ -137,8 +137,6 @@ def displayed_codes(D):
         add(b.get("code"), b.get("name"))
     for r in (((db.get("star") or {}).get("timingExec") or {}).get("rows") or []):
         add(r.get("code"), r.get("name"))
-    for x in ((db.get("leadLag") or {}).get("picks") or []):
-        add(x.get("code"), x.get("name"))
     for o in (((D.get("timingPlan") or {}).get("orders")) or []):
         add(o.get("code"), o.get("name"))
     return out

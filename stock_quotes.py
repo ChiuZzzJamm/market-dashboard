@@ -16,7 +16,7 @@
 字段（R100z186 补齐，此前只解析 f[3]/f[4] 两个，其余 86 个字段白拿）：
 
     name/price/pct        名称/现价/涨跌幅（原有）
-    open/prevClose        今开/昨收 —— 开盘跳空 = (open-prevClose)/prevClose，lead_lag 的唯一依据
+    open/prevClose        今开/昨收 —— 开盘跳空 = (open-prevClose)/prevClose，高开/低开判断的唯一依据
     high/low              最高/最低
     volRatio              量比（f[49]）—— 「此刻的量能是否异常」唯一可得口径
     avgPrice              均价（f[51]）—— 现价在均价上/下 = 当日买方是否占优
@@ -141,10 +141,10 @@ def fetch_sina(codes):
 
 
 def open_gap(q):
-    """开盘跳空（%）—— lead_lag 与所有「高开还是低开」判断的统一出口。
+    """开盘跳空（%）—— 所有「高开还是低开」判断的统一出口。
 
     open 缺失（停牌/竞价无成交）时返回 None：**这与「零跳空」是两件事**，
-    混成 0 会把「不知道」当成「不涨不跌」，进而把无关标的选进强板块落后股。
+    混成 0 会把「不知道」当成「不涨不跌」，进而让筛选把无关标的当成平开。
     """
     if not isinstance(q, dict):
         return None

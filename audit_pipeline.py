@@ -180,12 +180,6 @@ EMPTY_WHITELIST = [
      "；前端 dbFailHtml/谐波失效区统一走 if(!x.length) 兜底显示『暂无失效标的』"),
     (r"policySignals\[\d+\]\.(sectors|targets)",
      "R100z107b：政策解码无识别到受益板块/量化目标时为空数组，前端按 '-' 显示"),
-    # R100z190：强板块落后股——「今天没有强板块」是这套规则的正常输出，不是脚本漏跑。
-    (r"duanban\.leadLag\.(picks|sectors)$",
-     "R100z190：lead_lag 约六成交易日无候选（回测 34/90 日有信号），picks/sectors 为空属正常。"
-     "R100z225 起前端**不再引用 picks**（今日清单那半已整块删除，只留复盘台账的回测块），"
-     "属理由①「纯数据层字段、空值无害」；它仍有下行读者——lead_lag 同时把当日候选登记进 "
-     "signal_ledger.entries[date].leadLag，由 signal_attribution 逐日回算真实胜率，不是僵尸字段"),
     # R100z218：陈学长池——他的口径比断板反包严得多（连板≥2 + 断板日放量≥2 倍），空池是常态。
     (r"chenPool\.(watching|failPool|failedDates)$",
      "R100z218：观察池「今天没有走到差一根K线的标的」、失效池「今天没有标的失效」都是正常日度状态；"
@@ -212,8 +206,6 @@ EMPTY_WHITELIST = [
      "R100z323：停牌名单，当日无停牌即为空数组（常态，不是漏抓）。前端 `if (list.length)` 才渲染"),
     (r"duanban\.junkCut$",
      "R100z323：垃圾剔除名单，当日没有命中剔除规则的标的即为空数组。前端按长度判断后整块隐藏"),
-    (r"duanban\.leadLag\.bt\.pending$",
-     "R100z323：待结算名单——当日所有已出信号都已到 T+1、无未结算项时为空数组"),
     (r"duanban\.star\.spillover\.rows\[\d+\]\.matches$",
      "R100z324：补涨映射里「该连板股没有同题材候选」时 matches=[] 就是结论（页面写「池内没有同题材标的 / "
      "未续板不给候选」，不是漏跑）。反向证明在 G60：weak 行带候选即 FAIL、候选必须能回溯到池内"),
@@ -3662,12 +3654,9 @@ def g40_score_page_and_slots(r):
     判据：
       a) #score-view / #score-body / #sc-date / #sc-entry / #sc-entry-in 五个锚点齐全；
       b) CSS 三件套齐（容器默认隐藏 + body.score-open 隐藏其余 + 显示本页）；
-      c) renderScoreView() 同时渲染 renderSignalPerf / renderForecastScore / chenCompareHtml /
-         renderLeadLag（少一张＝用户要的丢一半）；且 renderLeadLag **恰好一个调用点、且无参**——
-         R100z199 把它从断板页搬到复盘页，两处各挂一份就会出现「同一张卡两个页面数字不同步」；
-         R100z221 又按「今天买什么 / 这套口径能不能信」拆成两半，结果用户 2026-10-26 看到两块
-         直接问「这两个是一个东西吗？我不是问你这个模块要不要删掉吗」；R100z225 把 picks 那半
-         整块删掉、函数回到无参，闸门改为「恰好一处 + 不许传参」。将来若再拆，先改这条判据。
+      c) renderScoreView() 同时渲染 renderSignalPerf / renderForecastScore / chenCompareHtml
+         （少一张＝用户要的丢一半）。R100z329 起「强板块落后股」那张卡已整块删除，
+         判据里不再要求 renderLeadLag——它连同 lead_lag.py / duanban.leadLag 一起下线了。
       d) hash '#score' 至少两处（初始直达 + popstate 返回）；
       e) 槽位表 RAIL 把 4 个页内替身按「🐼→📄→🧰→📋」顺序指到组内第 0..3 个按钮；
          layout() 用实测偏移 gm.off[i] 落位，且 CSS 里不再出现 calc(50% ± N) 的槽位副本；
@@ -3708,8 +3697,9 @@ def g40_score_page_and_slots(r):
         bad.append("找不到 renderScoreView()——复盘页没有渲染入口")
     else:
         fb = mf.group(1)
-        miss = [fn for fn in ("renderSignalPerf", "renderForecastScore", "chenCompareHtml",
-                              "renderLeadLag")
+        # R100z329：强板块落后股整块已下线（renderLeadLag/lead_lag.py/duanban.leadLag 全删），
+        # 复盘页现在只有三张卡：指标表现 / 预测复盘 / 反包复盘。
+        miss = [fn for fn in ("renderSignalPerf", "renderForecastScore", "chenCompareHtml")
                 if fn not in fb]
         if miss:
             bad.append("renderScoreView() 未渲染 %s（复盘页的成绩卡少一张）"
@@ -3722,15 +3712,6 @@ def g40_score_page_and_slots(r):
     #   且不许再传 mode：传了就说明有人想把清单拆出去，而拆出去那次正是用户看到两块的原因。
     # ⚠️ 与 G30 同一条规矩：**注释命中也算命中**。写代码注释时不要把这几个字面量原样抄进去，
     #    要么说「mode 取 'bt'」，要么走 prose；否则闸门会把注释数成调用点（本轮踩过一次）。
-    bare = re.findall(r"(?<!function )renderLeadLag\(\s*\)", s)
-    if len(bare) != 1:
-        bad.append("renderLeadLag() 应恰好 1 个调用点（复盘台账），实际 %d 个"
-                   "——多一处就是同一张回测卡在两个页面各渲染一份，数字迟早不同步" % len(bare))
-    witharg = re.findall(r"(?<!function )renderLeadLag\(\s*['\"]", s)
-    if witharg:
-        bad.append("renderLeadLag 被传了 %d 次参数——R100z225 起它无参（picks 那半已删；"
-                   "清单要么并进复盘台账那一块、要么不加，严禁再拆两半各挂一页）" % len(witharg))
-
     # ---- d) hash 直达 ----
     nh = s.count("'#score'") + s.count('"#score"')
     if nh < 2:

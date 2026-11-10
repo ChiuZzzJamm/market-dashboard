@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611102050"></script>
+<script src="data.js?v=202611102128"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -847,6 +847,9 @@
   .wk-n-stk:hover { color: var(--accent); }
   .wk-n-src { font-size: var(--fs-xs); color: var(--ink2); opacity: .62; margin-left: auto; }
   /* 组标题（今日名单）比下面三组的 .cc-t 高一级：它是这三组的父亲，不是第四个分组 */
+  /* R100z329：已兑现组——灰底（不再可买）+ 红色涨幅（涨色） */
+  .cc-chip.done { background: #f4f6f8; border-color: #dfe5ea; color: var(--ink2); }
+  .cc-chip.done .cc-pct { font-style: normal; margin-left: 5px; color: #f0435c; font-weight: 700; }
   .cc-hd { font-size: var(--fs-base); font-weight: 800; color: var(--ink);
            margin-bottom: 6px; line-height: 1.55; }
   /* 表格第一列的样本数：跟在口径名后面做小字，不再单占一列 */
@@ -1277,6 +1280,8 @@
   .nc-pool-hits .nc-ph { display: inline-flex; align-items: baseline; gap: 3px; margin-right: 10px;
     padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; background: #fff; }
   .nc-pool-hits .nc-ph i { font-style: normal; font-size: var(--fs-xs); color: var(--ink2); }
+  .nc-pool-hits .nc-ph { cursor: pointer; }
+  .nc-pool-hits .nc-ph:hover { border-color: var(--accent); background: var(--accent-soft); }
   /* R100z327：口径标签（收盘 / 开盘）——两块内容结构一样，只能靠时点区分 */
   .spill-tag { font-size: var(--fs-xs); font-weight: 600; color: var(--accent-deep);
     background: var(--accent-soft); border-radius: 4px; padding: 0 5px; margin-left: 6px; }
@@ -1622,66 +1627,7 @@
   .pf-sub { font-size: var(--fs-sm); color: var(--ink2); margin-top: 12px; padding-top: 8px; border-top: 1px dashed var(--line); }
   .pf-tip { font-size: var(--fs-sm); color: var(--ink2); margin: 7px 0 0; padding: 6px 10px; background: #f6fafd; border-left: 2px solid var(--accent); border-radius: 0 var(--r-note) var(--r-note) 0; }
 
-  /* ===== 落后股复盘（lead_lag.py → duanban.leadLag） =====
-     R100z225：原先的注释写「左边是今天挑到谁、右边是这套规则历史胜率」，那说的是拆两半时的
-     样子。现在只剩回测一张卡（清单那半已删，见 renderLeadLag 头注释），所以同步删掉了
-     .db-pool.ll-pool / .ll-mode / .ll-row / .ll-empty 这几组样式——没有读者的 CSS 与没有
-     读者的字段一样是僵尸，留着只会让下一个人以为清单还在。 */
-  .ll-wrap { margin: 12px 0 0; border: 1px solid var(--line); border-radius: var(--r-block); background: #fcfdfe; }
-  /* R100z199：整块搬进复盘台账后，外层已有 .card 的白底+阴影，内层再套一层边框会出现「双框」。
-     内层各行的左右 padding 是 12px，所以卡片外壳给 14px（合计 26px，与其他卡的正文左对齐）。
-     断板页旧挂载点已删除，无需兼容。 */
-  .card.ll-card { padding: 22px 14px; }
-  .card.ll-card > .ll-wrap { margin: 0; border: 0; border-radius: 0; background: transparent; }
-  .ll-hd { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; padding: 9px 12px 6px; }
-  .ll-hd b { font-size: var(--fs-h2); color: var(--ink); display: inline-flex; align-items: center; gap: 9px; }
-  /* R100z221：标题补前置圆点。原来 .ll-hd 的标题没有圆点，与同页其他卡（.card h2::before
-     都是一枚 9px 小圆点）并排看像缺了个头。 */
-  .ll-hd b::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--accent);
-                     box-shadow: 0 0 0 4px var(--accent-soft); flex-shrink: 0; }
-  .ll-hd .ll-date { font-size: var(--fs-sm); color: var(--ink2); }
-  .ll-rule { padding: 0 12px 8px; font-size: var(--fs-sm); color: var(--ink2); line-height: 1.7; }
-  .ll-rule em { font-style: normal; color: var(--ink); font-weight: 700; }
-  .ll-bt { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 1px; background: var(--line); border-top: 1px solid var(--line); }
-  .ll-bt > div { background: #fff; padding: 8px 10px 9px; }
-  .ll-bt .ll-bt-k { font-size: var(--fs-xs); color: var(--ink2); }
-  .ll-bt .ll-bt-v { font-size: var(--fs-h2); font-weight: 700; color: var(--ink); margin-top: 1px; }
-  .ll-bt .ll-bt-v small { font-size: var(--fs-sm); font-weight: 400; color: var(--ink2); margin-left: 5px; }
-  .ll-foot { padding: 8px 12px 11px; font-size: var(--fs-sm); color: var(--ink2); line-height: 1.8; border-top: 1px dashed var(--line); }
-  .ll-foot b { color: var(--ink); }
-  /* 最近出手的合计行：单独一条底色，和逐日明细分开——明细是「哪几天」，这是「总共」。 */
-  .ll-rc-sum { margin-top: 4px; padding: 6px 0 2px; border-top: 1px dashed var(--line);
-               font-size: var(--fs-sm); color: var(--ink2); line-height: 1.8; }
-  .ll-rc-sum b { color: var(--ink); }
-  .ll-rc-sum b.up { color: var(--up); }
-  .ll-rc-sum b.down { color: var(--down); }
-  /* t<2 时给「不显著」一个可见样式：用中性灰底而不是警告红——它说明的是
-     「证据还不够」，不是「这套规则错了」，红色会让人误读成负期望。 */
-  /* T+0/T+1 口径对照行：这条必须显眼——它解释「为什么主页数字比历史回测小」。 */
-  .ll-t0 { padding: 8px 12px; font-size: var(--fs-sm); color: var(--ink2); line-height: 1.8;
-           background: #fffaf2; border-top: 1px solid var(--line); }
-  .ll-t0 b { color: var(--ink); }
-  .ll-t0 .ll-warn { color: #b4541e; }
-  .ll-bt .ll-sig { display: inline-block; margin-left: 6px; padding: 0 5px;
-                   border-radius: 4px; background: var(--line); color: var(--ink2);
-                   font-size: var(--fs-xs); font-weight: 400; vertical-align: 2px; }
-  /* 最近几次出手的逐日明细：聚合胜率说服力有限，得让人看见具体哪天挑了哪几只、涨了还是跌了。
-     亏的那几天照样列出来——只报好数字的表，就是用户说的「只汇报今天的情况」。 */
-  .ll-rc { border-top: 1px dashed var(--line); padding: 2px 12px 6px; }
-  .ll-rc-h { font-size: var(--fs-sm); color: var(--ink2); padding: 6px 0 3px; }
-  /* R100z300：整块改成 <details>，summary 承担原来的「最近 N 次」标题 */
-  .ll-rc > summary { cursor: pointer; font-size: var(--fs-sm); font-weight: 700;
-                     color: var(--ink2); padding: 7px 0 4px; list-style: none; }
-  .ll-rc > summary::-webkit-details-marker { display: none; }
-  .ll-rc > summary::before { content: '▸'; display: inline-block; width: 13px; color: var(--accent-deep); }
-  .ll-rc[open] > summary::before { content: '▾'; }
-  .ll-rc > summary > span { font-weight: 400; opacity: .72; }
-  .ll-rc-r { display: grid; grid-template-columns: 58px 62px minmax(0,1fr); gap: 6px; align-items: baseline; padding: 2px 0; font-size: var(--fs-sm); }
-  .ll-rc-r .ll-rc-d { color: var(--ink2); }
-  .ll-rc-r .ll-rc-v { text-align: right; font-weight: 700; }
-  .ll-rc-r .ll-rc-n { color: var(--ink2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   @media (max-width: 720px) {
-    .ll-bt { grid-template-columns: repeat(2, minmax(0,1fr)); }
   }
   @media (max-width: 720px) {
     /* 窄屏 h2：标题、日期、角标三者挤成三行会撑高第一屏。角标在窄屏信息价值最低，直接收起；
@@ -1777,38 +1723,19 @@
   .rv-chip { display: inline-block; font-size: var(--fs-sm); color: var(--ink); background: var(--paper);
              border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; line-height: 1.6; white-space: nowrap; }
   .rv-chip.dim { color: var(--ink2); background: transparent; }
-  .ll-rule { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
-  .ll-rule-note { flex: 1 1 100%; font-size: var(--fs-xs); color: var(--ink2); line-height: 1.6; padding-top: 2px; }
   /* R100z243：规则「定义」与口径「为何不可用」的折叠。原来这两段默认展开共 116 字，
      而它们回答的都是「规则怎么写的」，不是「准不准」——不看也能读懂全卡。
      用 inline details，折叠时只占两个字宽，跟胶囊排在同一行。 */
-  .ll-rule-d { font-size: var(--fs-xs); color: var(--ink2); display: inline; }
-  .ll-rule-d > summary { display: inline-block; cursor: pointer; padding: 0 2px;
                           color: var(--ink2); text-decoration: underline dotted; text-underline-offset: 2px; }
-  .ll-rule-d[open] { display: block; flex: 1 1 100%; line-height: 1.6; padding-top: 2px; }
   /* 待结算：已出信号、T+1 未到。原来这些日子被回测直接丢弃，读者以为没出手。 */
-  .ll-pend { margin: 8px 0 2px; padding: 8px 10px; border-left: 2px solid var(--line);
              background: var(--paper); border-radius: 0 6px 6px 0; }
-  .ll-pend-r { display: flex; align-items: baseline; gap: 8px; font-size: var(--fs-sm); line-height: 1.9; }
-  .ll-pend-r > b { font-variant-numeric: tabular-nums; color: var(--ink2); min-width: 40px; }
-  .ll-pend-tag { font-size: var(--fs-xs); color: var(--ink2); border: 1px solid var(--line);
                  border-radius: 999px; padding: 0 6px; white-space: nowrap; }
-  .ll-pend-n { color: var(--ink); }
-  .ll-pend-x { font-size: var(--fs-xs); color: var(--ink2); margin-top: 4px; line-height: 1.6; }
-  .ll-t0-x { color: var(--ink2); }
-  .ll-rc-warn { font-style: normal; font-size: var(--fs-xs); color: var(--ink2);
                 border-bottom: 1px dotted var(--line); margin-left: 6px; cursor: help; }
   /* 回测逐日的零轴迷你条：从中线往两边长，正红负绿（A 股惯例，别反）。 */
-  .ll-rc-track { height: 12px; }
-  .ll-rc-track > .rv-fill { left: 50%; top: 0; bottom: 0; border-radius: 0 6px 6px 0; background: var(--up); }
-  .ll-rc-track > .rv-fill.dn { left: auto; right: 50%; border-radius: 6px 0 0 6px; background: var(--down); }
-  .ll-rc-r { grid-template-columns: 44px 104px 56px minmax(0,1fr); align-items: center; }
   /* R100z202：名字从「省略号截断」改成「换行」——本来这一列就是为了让你看见是哪几只，
      现在它们还是可点的（点开 K 线），截断等于把一半标的藏起来。 */
-  .ll-rc-r .ll-rc-n { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.75; }
   .rv-bar.rv-hd { border-bottom: 1px solid var(--line); padding: 0 2px 4px; }
   .rv-bar.rv-hd .rv-nm, .rv-bar.rv-hd .rv-v { font-weight: 400; font-size: var(--fs-xs); color: var(--ink2); }
-  .ll-det { margin: 8px 12px 4px; padding-bottom: 2px; }
   /* 可点的股票名（回测记录 / 候选行）——与龙虎榜 .lhb-go 同一套视觉语言：虚线下划线 + 悬停变色。 */
   .stk-go { cursor: pointer; font-weight: 700; border-bottom: 1px dashed var(--line); }
   .stk-go:hover { color: var(--accent-deep); border-bottom-color: var(--accent-deep); }
@@ -1821,8 +1748,6 @@
     .rv-bar .rv-x { display: none; }
     /* 窄屏先把「历史台账」这个后缀让出来：它只说明数据从哪来，不值得挤掉指标名。 */
     .rv-bar .rv-nm s { display: none; }
-    .ll-rc-r { grid-template-columns: 40px minmax(0,1fr) 52px; gap: 5px 8px; }
-    .ll-rc-r .ll-rc-n { grid-column: 1 / -1; }
     /* 趋势表在窄屏砍到 4 列：档位的正负号已经说明了方向，ATR 与「MA20 斜率」让位。 */
     .ts-r { grid-template-columns: minmax(0,1.2fr) 58px 58px 42px; gap: 6px; }
     .ts-r .ts-v:nth-child(4), .ts-r .ts-v:nth-child(5) { display: none; }
@@ -4466,9 +4391,22 @@ function renderForecastScore() {
   var bar = function (dim, r, flag) {
     var hit = num(r.strictHit);
     var w = hit === null ? 0 : Math.max(0, Math.min(100, hit));
-    var mark = r.small ? '<em class="fc-small" title="样本少于 5 条，百分比仅供参考">*</em>' : '';
+    /* R100z329（用户「中性怎么一直都是一条」）：不是计数错——22 个交易日里 AI 只给过 1 次
+       中性（2026-10-19），其余全是看涨/看跌。但旧渲染给这 1 条画了 100% 满格条 + *，
+       看着像「中性百发百中」。样本 <5 条不画条、不给百分比。 */
+    var small = !!r.small || (r.n || 0) < 5;
     var tip = dim + '｜样本 ' + (r.n || 0) + ' 条｜严格命中 ' + p1(r.strictHit) +
-      '｜宽口径 ' + p1(r.wideHit) + (r.small ? '｜样本不足 5 条' : '');
+      '｜宽口径 ' + p1(r.wideHit) + (small ? '｜样本不足 5 条，不计入结论' : '');
+    if (small) {
+      return '<div class="rv-bar g4 rv-na" title="' + escAttr(tip) + '">' +
+        '<div class="rv-nm">' + esc(dim) +
+          (flag ? '<span class="fc-flag">' + esc(flag) + '</span>' : '') +
+          '<small>' + (r.n || 0) + ' 条</small></div>' +
+        '<div class="rv-track"><u class="rv-mark"></u></div>' +
+        '<div class="rv-v">—</div>' +
+        '<div class="rv-x">样本不足，不计入结论</div></div>';
+    }
+    var mark = '';
     return '<div class="rv-bar g4' + (hit === null ? ' rv-na' : '') + '" title="' + escAttr(tip) + '">' +
       '<div class="rv-nm">' + esc(dim) +
         (flag ? '<span class="fc-flag">' + esc(flag) + '</span>' : '') +
@@ -4495,7 +4433,7 @@ function renderForecastScore() {
   /* R100z298：原有一段「近 5 日」单条条形，与下方「📅 最近 5 个预测日」讲同一件事，
      保留下面那份（有日期、能逐日看），删掉这里的重复条。 */
   if (byConf.length || byDir.length) {
-    h += '<div class="rv-legend">竖线＝50%（抛硬币）；条短于线＝不如随机；* ＝样本 &lt; 5 条。</div>';
+    h += '<div class="rv-legend">竖线＝50%（抛硬币）；条短于线＝不如随机；样本 &lt; 5 条的分组不画条、不计入结论。</div>';
   }
 
   // 开盘前瞻：三个分项的可信度差得很远——区间比方向判词可靠得多。
@@ -4674,7 +4612,11 @@ function newsEntryInner(it, showSrc, tag, tradeDate) {
   // 直接挂在条目里，不另开模块。
   if (it.poolHits && it.poolHits.length) {
     s += '<div class="nc-pool-hits">同题材池内：' + it.poolHits.map(function (h) {
-      return '<span class="nc-ph" title="' + escAttr((h.srcZh || '') + ' · ' + (h.tierZh || '') + ' · 命中 ' + (h.hit || '')) + '"><b>' + esc(h.name || '') + '</b><i>' + esc(h.srcZh || '') + '·' + esc(h.tierZh || '') + '</i></span>';
+      /* R100z329（用户 2026-11-10 截图 3）：这排原来点不动，同一页别的标的都能点开。
+         补 data-stk 并进全局点击委托（closest 列表已加 .nc-ph[data-stk]），←/→ 在本条里翻。 */
+      return '<span class="nc-ph" data-stk="' + escAttr((h.code || '') + '|' + (h.name || '') + '|' + (h.srcZh || '') + ' · ' + (h.tierZh || '')) +
+        '" title="' + escAttr((h.srcZh || '') + ' · ' + (h.tierZh || '') + ' · 命中 ' + (h.hit || '') + '（点击看K线与个股消息）') + '">' +
+        '<b>' + esc(h.name || '') + '</b><i>' + esc(h.srcZh || '') + '·' + esc(h.tierZh || '') + '</i></span>';
     }).join('') + '</div>';
   }
   if (it.deduce) s += renderDeduce(it.deduce, true); // R100c：徽章已挪至标题行（利好/利空）或移除（宏观/国际/投行）
@@ -4690,10 +4632,24 @@ function newsEntryInner(it, showSrc, tag, tradeDate) {
 function newsUpdatedDate(d) {
   if (!d) return '';
   var keys = ['bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews'], best = '';
+  var _b = String(d.tradeDate || '').match(/(\d{4})-(\d{2})-(\d{2})/);
+  var _by = _b ? Number(_b[1]) : null, _bmd = _b ? _b[2] + '-' + _b[3] : '';
   keys.forEach(function (k) {
     (d[k] || []).forEach(function (it) {
-      var m = String((it && it.time) || '').match(/(\d{4}-\d{2}-\d{2})/);
-      if (m && m[0] > best) best = m[0];
+      /* R100z329：AI 写的 time 有两种格式——「2026-11-09 15:10」和只写月日「11-10 16:20」。
+         旧实现只认前者，当天 13 条要闻全被忽略，角标永远停在唯一一条写了年份的 11-09 上
+         （用户 2026-11-10「怎么还是显示昨天」——不是没更新，是解析漏了格式）。 */
+      var t = String((it && it.time) || '');
+      var m = t.match(/(\d{4})-(\d{2}-\d{2})/), day = '';
+      if (m) day = m[1] + '-' + m[2];
+      else {
+        var m2 = t.match(/(\d{2})-(\d{2})/);
+        if (m2 && _by) {
+          var _md = m2[1] + '-' + m2[2];
+          day = String((_bmd && _md > _bmd) ? _by - 1 : _by) + '-' + _md;
+        }
+      }
+      if (day && day > best) best = day;
     });
   });
   return best;
@@ -7166,15 +7122,6 @@ function renderDuanban() {
   html += subnavHtml();
   // R100j/R100z4v：断板页口径说明置于确认池上方（TOP10 与 开盘精选 保持置顶不动）；R100z4v 起为静态 HTML，不再 esc
   html += _dbNote;
-  // R100z225（用户 2026-10-26 截图 1/2）：「这两个是一个东西吗？我不是问你这个模块要不要
-  // 删掉吗？你怎么又加了一个？」——是同一个东西：这块与复盘台账那块读的是同一份
-  // duanban.leadLag，只是 R100z221 按「今天买什么 / 这套口径能不能信」拆成了两半、各挂一页。
-  // 拆错的根因是那个诉求本身在这个策略上不成立：规则第一道门是「板块开盘跳空 > +1.0%」，
-  // 跳空要等 9:25 集合竞价才有数，**这套规则物理上给不出「提前一天」的名单**。硬挂到断板页
-  // 的结果就是本页截图里那句「今日 0 只 · 2026-10-23 回放」：标题写今日、数据是三天前的回放，
-  // 比没有更坏。所以整块撤掉，只留复盘台账那一份回测（它自己会写「近 90 个交易日 · 末笔 X」，
-  // 从标题上就说明自己不是当日指令）。「提前一天提醒买哪只」由 22:00 的 aiPrediction / 开盘预测
-  // 承担——那两处才是真的提前一天。
   /* R100z314：明日盯盘已并入「开盘预测 → 明日可下单」卡（见 ordBlockHtml），
      断板页不再出这块——同一个内容在两页各出现一次，等于维护两份。 */
   html += dbPoolHtml('确认池', 'p-conf',
@@ -7367,9 +7314,11 @@ function chenCompareHtml(c) {
   var cmpLegacyN = cmp.legacyN || 0;
   var chenN = (c.strict || []).length + (c.loose || []).length;
   var both = tdy.both || [], co = tdy.chenOnly || [], doOnly = tdy.duanbanOnly || [];
+  // R100z329（用户 2026-11-10：「钧达股份、三利谱今天涨停，怎么还在两个都选中里？明早能买？」）：
+  // 当日涨幅 ≥9.8% ＝ 反包今天已经兑现，**不是明日买入名单**。生成侧已剔除，这里单列。
+  var done = tdy.done || [];
   /* R100z221（用户 2026-10-26 截图 2）：「陈学长模块…标的点击要能打开看k线和丰富的内容以及左右切换按钮」。
      原来这段是纯文本 chip，点不动——同一页的「强板块落后股」回测名单早就可点了，两块并列看就是两套待遇。
-     做法与 .ll-rc 完全一致：渲染时把三段（两个都选中 / 只有陈学长 / 只有断板）**按显示顺序**灌进同一个
      导航组，onclick 传下标走 stkOpenIn——←/→ 就在这份复盘清单里顺着翻，不串到别的页面残留的分组。
      组名挂在 window._CC_GRP，因为 onclick 是内联字符串，闭包拿不到局部变量。 */
   var _grp = [];
@@ -7462,7 +7411,20 @@ function chenCompareHtml(c) {
        「一眼看到今天选了什么」，不是「点一下才知道」。别再折回去。 */
     '<div class="cc-sec"><div class="cc-hd">今日名单' +
       '<span class="cc-sub">今天收盘后选出、下一交易日开盘买 ｜ 交集 ' + both.length +
-      ' · 只有陈学长 ' + co.length + ' · 只有断板反包 ' + doOnly.length + '</span></div></div>' +
+      ' · 只有陈学长 ' + co.length + ' · 只有断板反包 ' + doOnly.length +
+      (done.length ? ' ｜ 今日已涨停 ' + done.length + ' 只不计入' : '') + '</span></div></div>' +
+    (done.length
+      ? '<div class="cc-sec"><div class="cc-t">今日已反包兑现（' + done.length + '）' +
+        '<span class="cc-sub">当日涨幅 ≥9.8% ＝ 形态今天已经走完，<b>不计入明日买入名单</b></span></div>' +
+        '<div class="cc-list">' + done.map(function (x) {
+          var nm = chenNameOf(x.code);
+          var gi = _grp.length;
+          _grp.push({ c: String(x.code), n: String(nm || ''), t: '反包复盘 · 今日已兑现 · ' + (nm || x.code) });
+          return '<span class="cc-chip go done" title="今日已涨停/准涨停：反包已兑现，明天不是在这里买" onclick="stkOpenIn(window._CC_GRP,' + gi + ')">' +
+            '<b>' + esc(nm || x.code) + '</b><span class="cd">' + esc(String(x.code)) + '</span>' +
+            '<em class="cc-pct">+' + Number(x.pct || 0).toFixed(2) + '%</em></span>';
+        }).join('') + '</div></div>'
+      : '') +
     '<div class="cc-sec"><div class="cc-t">两个都选中（' + both.length + '）</div><div class="cc-list">' +
       chipsOf(both) + '</div></div>' +
     /* R100z230（用户 2026-10-27「文字太多」）：差异说明原来各 61 / 42 字摊在名单上方，
@@ -8266,221 +8228,21 @@ function closeGnews() {
   window.scrollTo(0, window._gnHomeScrollY || 0);
 }
 
-/* 强板块落后股（lead_lag.py → duanban.leadLag）—— R100z199（2026-10-25 用户拍板）：
-   「这个是复盘吧？复盘要放在复盘台账这个页面」。原挂在断板页「开盘精选」下方，
-   但它回答的是「这套规则过去赚不赚」，不是「今天买什么」，与断板页的当日决策不同族。
-   整块**一字未改**搬进 📋 复盘台账（#score），只换了挂载点——搬页顺手改口径是这类改动最容易犯的错。
 
-   R100z225（2026-10-26）：R100z221 曾把它拆成 picks / bt 两半各挂一页，用户看到两块后问
-   「这两个是一个东西吗？我不是问你这个模块要不要删掉吗？」——确认是同一个东西（同一份
-   duanban.leadLag、同一个函数），picks 那半已整块删除，函数回到**无参**、只出回测。
-   为什么 picks 那半救不回来：它的第一道门是「板块开盘跳空 > +1.0%」，跳空要等 9:25 集合竞价
-   才有数，这套规则物理上给不出「提前一天」的名单；硬挂到断板页只能显示上一次的数据（当天
-   实为 2026-10-23 的回放），标题写「今日」而数据是三天前的，比不显示更坏。 */
-function renderLeadLag() {
-  // 为什么不删掉这块：它是「这套口径能不能信」在数据上唯一站得住的答案——四个池都在追强，
-  // 回测里追强是负期望；同板块里落后 2pp 以上的那只才是正期望的那一边。
-  /* R100z202（用户 2026-10-25）：两处改版——
-     ① 「规则」原本是一段 90 字连排，现在拆成 4 个条件胶囊（条件本身就是规则，扫一眼就懂）；
-     ② 「最近 6 次出手」加零轴迷你条 + **股票名可点开标的页**（用户：「这一部分标的也增加标的页面」）。
-        名字在回测记录里只有名称没有代码（`bt.recent[].names`），所以点击走 openStkModal 的
-        名称反查路径，分组按「同一批出手」建——←/→ 只在这一天的票里翻，不串到别的日期。 */
-  var D = window.DASHBOARD_DATA || {};
-  var db = D.duanban || {};
-  var LL = db.leadLag;
-  var out = '';
-  if (LL && LL.bt) {
-    var _ln = function (v) { var n = Number(v); return (v === null || v === undefined || v === '' || !isFinite(n)) ? null : n; };
-    var _lp = function (v) { var n = _ln(v); return n === null ? '—' : (n > 0 ? '+' : '') + n.toFixed(2) + '%'; };
-    var _lr = function (v) { var n = _ln(v); return n === null ? '—' : (n * 100).toFixed(1) + '%'; };
-    var _ls = function (v) { var n = _ln(v); return n === null ? 'flat' : (n > 0 ? 'up' : (n < 0 ? 'down' : 'flat')); };
-    var bt = LL.bt || {}, ex = LL.exit || {};
-    var mainEx = ex.main || bt.main || {}, altEx = ex.alt || bt.alt || {};
-    var rule = LL.rule || {};
-    // 没有回测结果就整块不出——否则复盘页会多出一张只有标题和规则胶囊的空卡。
-    if (!bt.main) return '';
-
-    out += '<div class="ll-wrap">';
-    // R100z223：标题从「强板块落后股 · 规则回测」改成「落后股复盘 · 规则回测」——
-    // 同一页四张卡里前三张都已叫「X复盘」，只有它顶着策略原名，扫下来像另一族的东西。
-    // 回测这半原先没有任何时间锚点，并排看比前三张卡少一截。样本窗口与末笔信号日
-    // 都来自 lead_lag.py（bt.days / bt.lastSignalDay），不是写死的。
-    out += '<div class="ll-hd"><b>🎯 落后股复盘 · 规则回测</b>' +
-      '<span class="ll-date">' +
-      (bt.days ? '近 ' + esc(String(bt.days)) + ' 个交易日' : '') +
-      (bt.lastSignalDay ? (bt.days ? ' · ' : '') + '末笔 ' + esc(String(bt.lastSignalDay)) : '') +
-      '</span></div>';
-
-    // 规则四条件：每条一个胶囊，值全是数据里的阈值（不许写死）；完整句子收进「定义」折叠。
-    // R100z243（2026-10-27 用户「文字太多」）：那行 63 字的规则注默认展开，占了整卡最贵的位置，
-    // 而它解释的三个词在胶囊里已经自明。改为默认折叠——想核口径的人点一下就有。
-    var c1 = '板块开盘跳空 &gt; +' + (rule.secGapMin != null ? rule.secGapMin.toFixed(1) : '1.0') + '%';
-    var c2 = '落后板块 &gt; ' + (rule.lagMin != null ? rule.lagMin.toFixed(1) : '2.0') + 'pp';
-    var c3 = '昨日还在涨';
-    var c4 = '现价 ≤ 开盘 +' + (rule.liveVsOpen ? rule.liveVsOpen[1].toFixed(1) : '0.4') + '%';
-    out += '<div class="ll-rule"><span class="rv-chip">' + c1 + '</span>' +
-      '<span class="rv-chip">' + c2 + '</span><span class="rv-chip">' + c3 + '</span>' +
-      '<span class="rv-chip">' + c4 + '</span>' +
-      '<details class="ll-rule-d"><summary>定义</summary>' +
-      '跳空＝成分股开盘价均值，剔除单只 |跳空|&gt;12% 的退市整理股；' +
-      '「昨日还在涨」＝不买破位股；「现价不高于开盘」＝追高即失效。</details></div>';
-
-    if (bt.main) {
-      out += '<div class="ll-bt">' +
-        // 2026-10-27 用户抓到的硬伤：原来的「当日收盘卖」是 **T+0**，A 股当日买当日不可卖，
-        // 那个 +0.95% 在实盘根本拿不到（换成合法 T+1 只剩 +0.19%~+0.70%）。
-        // 现在主口径一律 T+1，标题里把「T+1」写出来，不让读者再自己去推。
-        '<div><div class="ll-bt-k">' + esc(String(mainEx.name || '')) + '（T+1 · 主口径）</div>' +
-        '<div class="ll-bt-v ' + _ls(mainEx.ret) + '">' + _lp(mainEx.ret) + '<small>胜率 ' + _lr(mainEx.win) + '</small></div></div>' +
-        '<div><div class="ll-bt-k">' + esc(String(altEx.name || '')) + '（T+1 · 最保守）</div>' +
-        '<div class="ll-bt-v ' + _ls(altEx.ret) + '">' + _lp(altEx.ret) + '<small>胜率 ' + _lr(altEx.win) + '</small></div></div>' +
-        // 2026-10-27 用户问「这个是什么，需要删吗」——查下来最该改的就是这一格：
-        // 原来只显示 1.10，没有任何「这不显著」的标记，而「胜率 61.8%」摆在最显眼处，
-        // 读者会把它当已验证的策略。t<2 时直接标出来，不靠读者自己去折叠区里找。
-        '<div><div class="ll-bt-k">日聚类 t 值</div>' +
-        '<div class="ll-bt-v">' + (mainEx.tDaily != null ? mainEx.tDaily.toFixed(2) : '—') +
-        (mainEx.tDaily != null && Math.abs(mainEx.tDaily) < 2
-          ? '<small class="ll-sig">不显著</small>'
-          : '') +
-        '<small>' + (mainEx.days || 0) + ' 个信号日</small></div></div>' +
-        '<div><div class="ll-bt-k">有信号的天数</div>' +
-        '<div class="ll-bt-v">' + (bt.signalDays || 0) + '<small>/ ' + (bt.days || 0) + ' 日</small></div></div>' +
-        '</div>';
-      // T+0 对照：把「原口径虚高了多少」直接摆出来。不这么写，读者会以为这套规则
-      // 真有 +1% 的日收益，而那是当天买当天卖才有的数字。
-      var t0i = bt.t0Invalid || {};
-      var t2g = bt.t2 || {};
-      if (t0i.ret != null) {
-        // R100z243：原文案 53 字且带一段说教。压成一句「虚高多少」，把「为什么」收进折叠。
-        var gapT0 = null;
-        if (_ln(t0i.ret) !== null && _ln(mainEx.ret) !== null) {
-          gapT0 = _ln(t0i.ret) - _ln(mainEx.ret);
-        }
-        out += '<div class="ll-t0">T+0 口径（当日买当日卖）<b>' + _lp(t0i.ret) + '</b>' +
-          (gapT0 !== null ? '，比合法 T+1 虚高 <b class="ll-warn">' + _lp(gapT0) + '</b>' : '') +
-          '。<span class="ll-t0-x">A 股 T+1，该价格实盘拿不到</span>' +
-          (t2g.ret != null ? '｜T+2 ' + _lp(t2g.ret) : '') +
-          '<details class="ll-rule-d"><summary>为何不可用</summary>' +
-          'T+0 把「当天下午的情绪」记成利润，等于默认买了当日还能卖。' +
-          'T+0 与 T+1 之差就是「隔夜风险」的实际代价，不能拿前者当业绩。</details></div>';
-      }
-
-      // R100z243：末两天结算不足的日子，原逻辑直接丢弃（用户以为「没出手」）。
-      // 现在明确标出「待结算」——它们是真信号，只是 T+1 还没到。
-      var pd = bt.pending || [];
-      if (pd.length) {
-        out += '<div class="ll-pend">' +
-          pd.map(function (x) {
-            return '<div class="ll-pend-r"><b>' + esc(String(x.date || '').slice(5)) + '</b>' +
-              '<span class="ll-pend-tag">待结算</span>' +
-              '<span class="ll-pend-n">' + (x.n || 0) + '只 ' +
-              (x.names || []).map(function (n) { return esc(String(n)); }).join('、') + '</span></div>';
-          }).join('') +
-          '<div class="ll-pend-x">T+1 收盘价还没出，暂不计胜率——<b>不是没出手</b>。</div></div>';
-      }
-
-      var rc = bt.recent || [];
-      if (rc.length) {
-        // 零轴迷你条：以最差那天为满格，正红负绿（A 股惯例），一眼看出「哪几天亏、亏多大」。
-        var maxAbs = 0;
-        rc.forEach(function (x) { var a = Math.abs(_ln(x.ret) || 0); if (a > maxAbs) maxAbs = a; });
-        if (maxAbs <= 0) maxAbs = 1;
-        window._LL_GRP = rc.map(function (x) {
-          return (x.names || []).map(function (nm) {
-            return { c: '', n: String(nm), t: '回测出手 ' + String(x.date || '') + ' · 当日开盘买、次日收盘卖（T+1）' };
-          });
-        });
-        // 2026-10-27 修：标题原写「当日开盘买、当日收盘卖」，但每一行的 x.ret 是 **T+1 次日收盘卖**
-        // （lead_lag.backtest 的 r1），T+0 那个数是 x.retT0（非法口径，只在上面「口径对照」里出现）。
-        // 也就是说这里一直在用一句做不到的口径标注一组合法的数字——读者会以为看得见的是 T+0。
-        /* R100z300：6 行明细 + 合计占了半屏。主口径数字已在上面，这一段回答的是
-           「最近怎么走的」——收进折叠，summary 说明口径，展开才看逐日。 */
-        out += '<details class="ll-rc"><summary>最近 ' + rc.length +
-          ' 次明细 <span>开盘买、次日收盘卖（T+1，含亏）</span></summary>';
-        rc.slice().reverse().forEach(function (x) {
-          var idx = rc.indexOf(x);
-          var v = _ln(x.ret), half = Math.min(50, Math.abs(v || 0) / maxAbs * 50);
-          var nmHtml = (x.names || []).map(function (nm, k) {
-            return '<b class="stk-go" title="点击查看 K 线" onclick="stkOpenIn(window._LL_GRP[' + idx + '],' + k + ')">' +
-              esc(String(nm)) + '</b>';
-          }).join('、');
-          out += '<div class="ll-rc-r">' +
-            '<div class="ll-rc-d">' + esc(String(x.date || '').slice(5)) + '</div>' +
-            '<div class="rv-track ll-rc-track"><i class="rv-fill' + (v < 0 ? ' dn' : '') +
-              '" style="width:' + half.toFixed(1) + '%"></i></div>' +
-            '<div class="ll-rc-v ' + _ls(v) + '">' + _lp(v) + '</div>' +
-            '<div class="ll-rc-n">' + (x.n || 0) + '只' + (x.up != null ? x.up + '涨' : '') +
-            (nmHtml ? '　' + nmHtml : '') + '</div></div>';
-        });
-        // 汇总行：原来只有 6 行明细，读者得自己心算才知道「最近到底赚不赚」。
-        // 两种平均都要给：按天等权（每次出手算一票，与上面每行的百分比口径一致）
-        // 和按笔加权（票多的那天权重大，更接近满仓照做的实际结果）——
-        // 2026-10-26 实测两者差 0.75 个点（−0.88% vs −0.13%），只给一个都会误导。
-        var _nDay = rc.length, _nStock = 0, _sumDay = 0, _sumStock = 0, _upN = 0;
-        rc.forEach(function (x) {
-          var v = _ln(x.ret) || 0, k = _ln(x.n) || 0;
-          _nStock += k; _sumDay += v; _sumStock += v * k; _upN += (_ln(x.up) || 0);
-        });
-        if (_nDay) {
-          var avgDay = _sumDay / _nDay;
-          var avgStk = _nStock ? _sumStock / _nStock : null;
-          // R100z243：原文案 51 字，其中「六个交易日不足以判断…」是说教，且「六个」是写死的
-          // （持仓天数一变就错）。改成按实际次数说，并把风险句压进 title。
-          out += '<div class="ll-rc-sum">合计 <b>' + _nDay + '</b> 次 / <b>' + _nStock + '</b> 笔：' +
-            '按天 <b class="' + _ls(avgDay) + '">' + _lp(avgDay) + '</b>' +
-            (avgStk === null ? '' : '　按笔 <b class="' + _ls(avgStk) + '">' + _lp(avgStk) + '</b>') +
-            '　上涨 <b>' + _upN + '/' + _nStock + '</b>' +
-            (_nStock ? '（' + (_upN / _nStock * 100).toFixed(1) + '%）' : '') +
-            '<i class="ll-rc-warn" title="样本不足 ' + _nDay + ' 次出手即下结论；连续亏损应停用观察">样本不足</i></div>';
-        }
-        out += '</details>';
-      }
-
-      // 回测口径与逐月记录：核数时才需要，收进折叠区（正文只留「+1.19% / 66.3% / 34 个信号日」）。
-      var mo = (bt.byMonth || []).map(function (m) {
-        return esc(String(m.month || '').slice(5)) + ' ' + _lp(m.ret) + '/胜' + _lr(m.win);
-      }).join('　·　');
-      out += '<details class="rv-det ll-det"><summary>回测口径与逐月 <span>· ' +
-        esc(String((bt.window || ['', ''])[0])) + ' ~ ' + esc(String((bt.window || ['', ''])[1])) + '</span></summary>' +
-        '<div class="ll-foot">' +
-        '回测口径：' + esc(String((bt.window || ['', ''])[0])) + ' ~ ' + esc(String((bt.window || ['', ''])[1])) +
-        '，共 <b>' + (bt.days || 0) + ' 个交易日</b>、样本 <b>' + (bt.samples || 0) + ' 条</b>，' +
-        '入场 = 当日开盘价，双边成本 ' + (bt.cost != null ? bt.cost.toFixed(2) : '0.20') + '%。' +
-        '<b>' + (bt.signalDays || 0) + ' 天有信号、' + ((bt.days || 0) - (bt.signalDays || 0)) + ' 天一只都没有</b>——' +
-        '空仓是这套规则的常态（' + _lr(bt.flatRate) + ' 的交易日不出手），不是故障；' +
-        '它的价值在于「出手就有六成以上胜率」，而不是每天都有票。' +
-        '<br>逐月：' + mo + '。' +
-        '日聚类 t=' + (mainEx.tDaily != null ? mainEx.tDaily.toFixed(2) : '—') +
-        ' 说明<b>方向明确但离「统计显著」还差一点</b>（门槛 2.0）——所以它是加分项，不是可以押注的理由。' +
-        (LL.replayNote ? '<br>' + esc(LL.replayNote) : '') +
-        '</div></details>';
-    }
-    out += '</div>';
-  }
-  return out;
-}
 
 /* R100z162：🌟 复盘台账独立页——与 📄/🧰 同款「打开即独占」（hash=#score，进出都记忆浏览位置）。
    四张卡都是回头看，和「今天做什么」不同族，所以独立成页而不是塞在盘面卡中间。
    四张卡的数据源、阈值、判定文案一字未改——只换了挂载点，避免「搬页顺手改口径」。
 
    R100z221（用户 2026-10-26 截图 1）：「目前几个模块的顺序我觉得不合理，指标后面怎么是
-   断板陈学长然后怎么又是板块和复盘？」——原顺序是
-   「指标表现 → 反包复盘 → 强板块落后股 → 预测复盘」，中间那块「强板块落后股」是**另一套选股口径**
-   的回测，把「指数标准不准」和「方向判断准不准」这两张同族卡硬生生撕开，扫下来没有主线。
-   新顺序只按一个问题分两段：先「准不准」（指标复盘 → 预测复盘），再「哪套选股口径更准」
-   （反包复盘 → 落后股回测）。标题按用户要求统一为「指标复盘 / 反包复盘 / 预测复盘」，
-   日期一律用 .h2-date（与全站其他卡同一处样式，见 CSS 455 行），不再各写各的。
+   断板陈学长然后怎么又是板块和复盘？」——新顺序只按一个问题分两段：先「准不准」
+   （指标复盘 → 预测复盘），再「哪套选股口径更准」（反包复盘排在最后）。
+   标题统一为「指标复盘 / 反包复盘 / 预测复盘」，日期一律用 .h2-date，不再各写各的。
 
-   R100z221 第二件事（截图 7）：「这个模块要不要删掉，他只是告诉我出手后的回测，
-   我也没看到你提前一天提醒我要买入哪只标的」。查证结论：这块**今日清单一直有**
-   （duanban.leadLag.picks，9:45 实时产出，含 4 只以内的可执行名单），问题是它被挂在
-   一个「回头看」的页面上——读者只会把它当成绩单，永远不会照着买。所以不是删模块，
-   是**拆两半、各归其位**：
-     · 今日清单 → 断板页（mode 取 'picks'），紧贴确认池上方，归「今天做什么」那一族；
-     · 规则回测 → 留在这里排最后（mode 取 'bt'），归「这套口径能不能信」。
-   这其实是 R100z199 之前的原始设计（CSS 里 .ll-wrap 的注释就写着「紧贴开盘精选下方」），
-   本轮把它拆回去，不是新发明。 */
+   R100z329（用户 2026-11-10「这块删掉，没什么用」）：原来的「强板块落后股 · 规则回测」
+   整块下线——它的入场条件要等 9:25 集合竞价，给不出「提前一天」的名单；回测本身
+   t 值不显著（−0.20），页面却占一张卡。删除范围：渲染函数、挂载、CSS、lead_lag.py、
+   duanban.leadLag 节点与台账登记，均已清干净，别在这里再把它挂回来。 */
 function renderScoreView() {
   var D = window.DASHBOARD_DATA || {};
   var box = document.getElementById('score-body');
@@ -8516,12 +8278,7 @@ function renderScoreView() {
     body += '<div class="card cc-card"><h2 class="td-h2">反包复盘</h2>' +
       '<div class="db-empty">暂无对比数据（16:00 数据步跑完 chen_pool.py 后出现）</div></div>';
   }
-  // 卡片自带 .ll-hd 标题，所以外层 .card 不再重复写 h2；`.card > .ll-wrap` 已去掉内层边框（见 CSS）。
   // R100z225：全站只剩这一个调用点（picks 那半已删），G40 盯「恰好一处、且不带参数」。
-  var lb = renderLeadLag();
-  if (lb) {
-    body += '<div class="card ll-card">' + lb + '</div>';
-  }
   box.innerHTML = body;
   // R100z248：两个容器刚插进 DOM，必须在这里补齐内容（原来它们挂在 AI 预测卡上，
   // 由 renderAiPrediction 调用；现在本页才是唯一调用点）。
@@ -10190,7 +9947,7 @@ renderOpenDesk();
     });
   }
   document.addEventListener('click', function (e) {
-    var chip = e.target.closest ? e.target.closest('.stock-chip, .tchip, .idx[data-stk]') : null;
+    var chip = e.target.closest ? e.target.closest('.stock-chip, .tchip, .idx[data-stk], .nc-ph[data-stk]') : null;
     if (!chip) { closeChips(); return; }
     // R94：连板芯片走 lbShow（弹窗内已含K线），不弹文字浮层
     if (chip.classList.contains('lb-click')) { closeChips(); return; }

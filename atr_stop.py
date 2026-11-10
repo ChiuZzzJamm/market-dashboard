@@ -307,6 +307,11 @@ def collect(D):
         for x in hz.get(pool) or []:
             add(x.get('code'), x.get('name'), x.get('sector'), 'harmonic')
 
+
+    # R100z329：陈学长三池的退出纪律——弹窗「退出纪律」那一段此前对这 41 只全是空的。
+    for _k in ('strict', 'loose', 'watching'):
+        for x in ((D.get('chenPool') or {}).get(_k) or []):
+            add(x.get('code'), x.get('name'), x.get('sector'), 'chen')
     for x in (D.get('accumulation') or {}).get('scored') or []:
         add(x.get('code'), x.get('name'), x.get('sector'), 'accumulation')
 

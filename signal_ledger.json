@@ -2768,29 +2768,6 @@
    ]
   },
   "2026-10-28": {
-   "leadLag": [
-    {
-     "code": "002137",
-     "name": "实益达",
-     "sector": "电子器件",
-     "screen": "leadLag",
-     "rule": "secGap>1.0&lag>2.0&yret>0"
-    },
-    {
-     "code": "600865",
-     "name": "百大集团",
-     "sector": "零售",
-     "screen": "leadLag",
-     "rule": "secGap>1.0&lag>2.0&yret>0"
-    },
-    {
-     "code": "600693",
-     "name": "东百集团",
-     "sector": "零售",
-     "screen": "leadLag",
-     "rule": "secGap>1.0&lag>2.0&yret>0"
-    }
-   ],
    "ai": [
     {
      "code": "601398",
@@ -3707,15 +3684,6 @@
    ]
   },
   "2026-10-29": {
-   "leadLag": [
-    {
-     "code": "603013",
-     "name": "亚普股份",
-     "sector": "汽车零部",
-     "screen": "leadLag",
-     "rule": "secGap>1.0&lag>2.0&yret>0"
-    }
-   ],
    "ai": [
     {
      "code": "603986",
@@ -6956,15 +6924,6 @@
    ]
   },
   "2026-11-03": {
-   "leadLag": [
-    {
-     "code": "603602",
-     "name": "纵横通信",
-     "sector": "文化传媒",
-     "screen": "leadLag",
-     "rule": "secGap>1.0&lag>2.0&yret>0"
-    }
-   ],
    "ai": [
     {
      "code": "600030",
@@ -14359,29 +14318,6 @@
    ]
   },
   "2026-11-09": {
-   "leadLag": [
-    {
-     "code": "600644",
-     "name": "乐山电力",
-     "sector": "电力",
-     "screen": "leadLag",
-     "rule": "secGap>1.0&lag>2.0&yret>0"
-    },
-    {
-     "code": "002506",
-     "name": "协鑫集成",
-     "sector": "电子器件",
-     "screen": "leadLag",
-     "rule": "secGap>1.0&lag>2.0&yret>0"
-    },
-    {
-     "code": "000333",
-     "name": "美的集团",
-     "sector": "家电行业",
-     "screen": "leadLag",
-     "rule": "secGap>1.0&lag>2.0&yret>0"
-    }
-   ],
    "ai": [
     {
      "code": "600547",
@@ -16250,29 +16186,6 @@
    ]
   },
   "2026-11-10": {
-   "leadLag": [
-    {
-     "code": "000595",
-     "name": "新能股份",
-     "sector": "机械行业",
-     "screen": "leadLag",
-     "rule": "secGap>1.0&lag>2.0&yret>0"
-    },
-    {
-     "code": "603318",
-     "name": "水发燃气",
-     "sector": "机械行业",
-     "screen": "leadLag",
-     "rule": "secGap>1.0&lag>2.0&yret>0"
-    },
-    {
-     "code": "002389",
-     "name": "航天彩虹",
-     "sector": "电子器件",
-     "screen": "leadLag",
-     "rule": "secGap>1.0&lag>2.0&yret>0"
-    }
-   ],
    "ai": [
     {
      "code": "002371",

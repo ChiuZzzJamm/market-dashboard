@@ -25,7 +25,7 @@ MAINBOARD = re.compile(r"^(60|00)\d{4}$")
 
 
 def _last_trading_day():
-    """最近一个交易日（含今天），用于判断 duanban.star / leadLag 是否过期。
+    """最近一个交易日（含今天），用于判断 duanban.star 是否过期。
 
     R100z291：原判据是「不早于自然日昨天」，注释却写着「最近一个交易日一律保留」——
     实现与注释不符。失效场景是周日与长假最后一天：22:00 步跑时「昨天」= 周六/假期，
@@ -245,21 +245,6 @@ def main():
             print(f"[merge] 保留 🌟 开盘精选模块（{od}，不早于最近交易日 {floor}）", file=sys.stderr)
         else:
             print(f"[merge] 丢弃过期 🌟 模块（{od}，早于最近交易日 {floor}），待 9:45 开盘精选自动化重建",
-                  file=sys.stderr)
-    # R100z190：强板块落后股（lead_lag.py → duanban.leadLag）同样必须保留。
-    # 16:00 数据步会整个重造 duanban 节点，不保留就等于每天收盘后把 9:45 算出来的
-    # 候选和回测面板一起洗掉，页面到次日 9:45 之前一直是空的。
-    # 保留判据与 star 一致（「不早于昨天」），因为两者的失效模式完全相同：
-    # 早间任务比 9:45 先跑，会看到 date 是昨天的节点并把它当过期丢掉。
-    old_ll = (D.get("duanban") or {}).get("leadLag")
-    if old_ll and not mod.get("leadLag"):
-        _floor = _last_trading_day()
-        _ld = str(old_ll.get("date") or "")
-        if _ld >= _floor:
-            mod["leadLag"] = old_ll
-            print(f"[merge] 保留 🎯 强板块落后股模块（{_ld}，不早于最近交易日 {_floor}）", file=sys.stderr)
-        else:
-            print(f"[merge] 丢弃过期 🎯 模块（{_ld}，早于最近交易日 {_floor}），待 9:45 自动化重建",
                   file=sys.stderr)
     D["duanban"] = mod
     # R100z170：star.picks 的板块涨幅补齐（必须放在 star 保留逻辑之后，两种来源都覆盖到）

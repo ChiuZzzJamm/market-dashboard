@@ -45,7 +45,7 @@ def _f(v):
 def bars_of(D, code):
     """stkKlines 容器 → [(day, open, close, high, low, vol)]，按日期升序。
 
-    与 lead_lag.bars_of / atr_stop.norm_bars 同口径（**close 在下标 2**，不是 OHLC 顺序）；
+    与 atr_stop.norm_bars 同口径（**close 在下标 2**，不是 OHLC 顺序）；
     与前端 stkParseKline 等价：开收为空的行走丢，不补 0。
     """
     out = []

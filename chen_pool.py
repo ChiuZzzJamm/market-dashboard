@@ -1078,7 +1078,7 @@ def perf_of(rows):
     }
 
 
-def build_compare(chen_codes, db_codes, ledger, today=None):
+def build_compare(chen_codes, db_codes, ledger, today=None, done=None):
     """当日池差异 + 历史胜率对比。
 
     R100z222（审核意见 §14）：`chen_codes` / `db_codes` 由调用方统一传**确认池**，
@@ -1090,6 +1090,12 @@ def build_compare(chen_codes, db_codes, ledger, today=None):
     （见 record_entries 的 cross 参数），所以历史样本不会因为今天的池子变了而漂移。
     """
     chen_s, db_s = set(chen_codes), set(db_codes)
+    # R100z329（用户 2026-11-10：「钧达股份、三利谱今天涨停，怎么还在两个都选中里？明早能买？」）：
+    # 这两只今天已经涨停 = **反包已兑现**，不是「明天开盘待买」。原实现只做集合差集，
+    # 于是它们照旧挂在「两个都选中 → 明早买入」里，读者会去追一个已经走完的形态。
+    # 现在把它们从三组名单里剔除，单列 `done`（今日已兑现），并带上当日涨幅供核对。
+    done = done or {}
+    _done = {str(c) for c in done}
     ents = ledger.get("entries") or []
     groups, cross = {}, {}
     for e in ents:
@@ -1109,9 +1115,11 @@ def build_compare(chen_codes, db_codes, ledger, today=None):
         # R100z313：累计收益（资金曲线口径，不是逐笔相加）
         "perf": perf,
         "today": {
-            "both": sorted(chen_s & db_s),
-            "chenOnly": sorted(chen_s - db_s),
-            "duanbanOnly": sorted(db_s - chen_s),
+            "both": sorted((chen_s & db_s) - _done),
+            "chenOnly": sorted((chen_s - db_s) - _done),
+            "duanbanOnly": sorted((db_s - chen_s) - _done),
+            # 今日已兑现（涨停/准涨停）：不进「明日开盘买」名单，只作为当日结果展示
+            "done": [{"code": c, "pct": done[c]} for c in sorted(_done & (chen_s | db_s))],
         },
         "stats": stats,
         "ledgerN": len(ents),
@@ -1474,7 +1482,20 @@ def main():
     # 对比（§14：两侧都用**确认池**口径，不再一边含观察池一边不含）
     chen_codes = [e["code"] for e in mod["strict"] + mod["loose"]]
     db_codes = [e.get("code") for e in (db_mod.get("confirmed") or [])]
-    mod["compare"] = build_compare(chen_codes, db_codes, ledger)
+    # 当日涨幅：两侧池条目都带 pct（16:00 收盘口径）。>=9.8 视为「今日已涨停/已反包兑现」。
+    _pct = {}
+    for e in mod["strict"] + mod["loose"]:
+        try:
+            _pct[str(e["code"])] = float(e.get("pct"))
+        except (KeyError, TypeError, ValueError):
+            pass
+    for e in (db_mod.get("confirmed") or []):
+        try:
+            _pct.setdefault(str(e["code"]), float(e.get("pct")))
+        except (TypeError, ValueError):
+            pass
+    _done = {c: round(v, 2) for c, v in _pct.items() if v is not None and v >= 9.8}
+    mod["compare"] = build_compare(chen_codes, db_codes, ledger, done=_done)
     # R100z233b：`since` 只从**当前口径**的样本里取。原写法取全台账最小值，
     # 换口径后页面会写成「起始日 2026-10-22 / 已结算 13 条」而表格里样本是 0——
     # 两个数字各说一套，读者只会认为这张表算错了。
