@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611102237"></script>
+<script src="data.js?v=202611102252"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -827,9 +827,6 @@
   .wk-section.wkend h4 s { font-weight: 400; font-size: var(--fs-xs); text-decoration: none;
                            color: var(--ink2); margin-left: 8px; opacity: .75; letter-spacing: 0; }
   .wk-card .wk-section:first-of-type { margin-top: 8px; padding-top: 0; border-top: none; }
-
-
-
 
 
   /* 组标题（今日名单）比下面三组的 .cc-t 高一级：它是这三组的父亲，不是第四个分组 */
@@ -6596,40 +6593,7 @@ function suspNoteHtml(list) {
    ⚠️ 「连板股」与「同题材可看」是两种东西，必须分两行显示：
    前者是当日事实（今天真涨停了），后者是静态词表名单（只是同题材、今天没涨）。
    混在一行，读者会以为名单里那些人今天也都板了。 */
-/* R100z318（用户 2026-11-09 21:37：「这个是根据连板去猜测断板和陈学长池子里面有没有同题材
-   同概念能跟着补涨的，把它融合在这里（连板梯队）吧，不要单独弄出来一块」）：
-   从「明日可下单」卡迁入连板梯队，并**改掉「同题材可看」的取数口径**——
-   原先是读 theme_map.json 里的静态代表票（中国卫星、航天电子…），那只是「这个题材有哪些票」，
-   跟「我池子里谁可能跟着涨」是两件事。现在优先从**断板池 + 陈学长池**里挑同行业的票
-   （这些才是真在跟踪、有形态有买点的），池里没有才退回词表名单。
 
-   ⚠️ 只能按 `sector`（同花顺行业）匹配，不是按题材词——断板池的票只有行业、没有 reason，
-   所以「同题材」在这一层退化成「同行业」。这是当前数据的天花板，不是偷懒。 */
-function lbPoolCands(db, sectors) {
-  var D = window.DASHBOARD_DATA || {};
-  var out = [], seen = {};
-  var arrs = [].concat(
-    (db && db.confirmed) || [], (db && db.watching) || [],
-    ((D.chenPool || {}).strict) || [], ((D.chenPool || {}).loose) || [],
-    ((D.chenPool || {}).watching) || []
-  );
-  arrs.forEach(function (e) {
-    if (!e || !e.code) return;
-    if (sectors.indexOf(String(e.sector || '')) < 0) return;
-    var c = String(e.code);
-    if (seen[c]) return;
-    seen[c] = 1;
-    out.push({ code: c, name: String(e.name || ''),
-               total: (e.pre && e.pre.total != null) ? Number(e.pre.total) : null,
-               from: (e.pre ? '池内' : '池内') });
-  });
-  // 有综合分的排前面（它是池内排序依据），没有的按代码稳定排
-  out.sort(function (a, b) {
-    var x = a.total === null ? -1 : a.total, y = b.total === null ? -1 : b.total;
-    return y - x || a.code.localeCompare(b.code);
-  });
-  return out.slice(0, 5);
-}
 
 function lbThemeSecHtml(db) {
   var th = (db && db.themes) || {};
@@ -6661,14 +6625,16 @@ function lbThemeSecHtml(db) {
       kind = t.candKind || 'theme';
       cands = t.cands.filter(function (x) { return !inLb[String(x.code)]; });
     } else {
-      kind = 'sector';
-      cands = lbPoolCands(db, t.sectors || []).filter(function (x) { return !inLb[x.code]; });
+      /* R100z333：旧数据（theme_cands 还没跑出来的那天）**不再按行业兜底**。
+         原来这里调一个按 sectors 捞票的旧函数（已删除），于是「通用设备」把利欧股份（快手/小红书）、
+         雪人集团（冰雪）、柯力传感（人形机器人）挂到紧固件/光伏等题材下——
+         用户 2026-11-10 两次截图指出。行业不是题材，没有就空着，退回词表代表票。 */
+      kind = 'ref';
+      cands = [];
     }
     var usePool = cands.length > 0;
     var list = usePool ? cands : (t.refStocks || []);
-    var lab = usePool
-      ? (kind === 'sector' ? '池内同行业可补涨（该题材无同题材标的，行业兜底）' : '池内同题材可补涨')
-      : '同题材可看';
+    var lab = usePool ? '池内同题材可补涨' : '同题材可看（词表代表票，非可买名单）';
     var rf = list.map(function (r) {
       window._TH_GRP.push({ c: r.code, n: r.name, t: '题材「' + k + '」同题材 · ' + r.name });
       var gi = window._TH_GRP.length - 1;
@@ -6740,9 +6706,10 @@ function lbWatchSecHtml(db) {
     /* R100z314（用户 2026-11-09 第一条）：「这句话删掉，然后你下面直接给我匹配连板对应
        题材的标的，不要我自己去找」。原来那句「同行业的票，不等于同一个题材，补涨关系要自己
        核对」是一句免责声明——把判断推回给读者，等于这段没做完。删掉。
-       ⛔ 但同时要承认：断板池的票只有「行业」没有「题材词」（story 全是模板文，
-       没有可用题材），所以「同行业」仍是最强的可算信号。删了说明不等于解决了匹配问题，
-       这一点已记在 24.160，等有题材图谱再补。 */
+       R100z333（2026-11-10 更新）：当时写「断板池的票只有行业没有题材词，同行业仍是最强
+       可算信号」——现在不成立了：`stockConcepts`（同花顺概念，G61）已经给每只票主题材，
+       匹配改按概念（`theme_cands.py`），**同行业兜底已整块删除**（见 lbThemeSecHtml 里 ① 的说明）。
+       这条别再当依据——按行业匹配会把利欧股份这种 AI/传媒票挂到紧固件题材下。 */
     var _warnX = ((g.life === '退潮' || g.life === '阴跌' || g.life === '回踩') && _lg.maxLb >= 2)
       ? '<span class="pre-lad-x">板块在走弱，只跟龙头节奏</span>' : '';
     h += '<div class="pre-grp"><div class="pre-grp-h">' + esc(g.sector) +
@@ -8243,7 +8210,6 @@ function closeGnews() {
   document.body.classList.remove('gnews-open');
   window.scrollTo(0, window._gnHomeScrollY || 0);
 }
-
 
 
 /* R100z162：🌟 复盘台账独立页——与 📄/🧰 同款「打开即独占」（hash=#score，进出都记忆浏览位置）。

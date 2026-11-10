@@ -647,14 +647,18 @@ def build_spillover(D, quotes, picks, plan=None):
                     continue
                 hit_theme = [t for t in themes if t and t in c["text"]]
                 hit_canon = [t for t in lb_canon if t in (c["canon"] or [])]
-                hit_sector = bool(hybk) and (
-                    hybk in c["sector"] or (c["sector"] and c["sector"] in hybk))
+                # R100z333（用户 2026-11-10 22:45「利欧不是 AI 或者传媒吗？怎么在航天紧固件这块」）：
+                # 这里原来还有一层「同行业」兜底（候选.sector 与连板 hybk 互为子串），
+                # 于是腾达科技（紧固件，hybk=通用设备）挂出了柯力传感（人形机器人）、
+                # 利欧股份（快手/小红书概念）、雪人集团（冰雪产业）——三只都是「通用设备」，
+                # 跟紧固件毫无关系。同行业不是同题材：通用设备是几百只票的大类，
+                # 拿它当扩散依据等于按「都在 A 股」推荐。
+                # 同题材的池内票一只都没有时就诚实地空着（页面写「池内没有同题材候选」），
+                # 宁可少一行，也不要用行业凑数——读者会照着买。
                 if hit_theme:
                     kind, hit = "theme", hit_theme[0]
                 elif hit_canon:
                     kind, hit = "dict", hit_canon[0]
-                elif hit_sector:
-                    kind, hit = "sector", hybk
                 else:
                     continue
                 matches.append({
@@ -667,8 +671,9 @@ def build_spillover(D, quotes, picks, plan=None):
                     "kind": kind, "hit": hit,
                     "stage": c["stage"], "prob": c["prob"], "inPicks": c["inPicks"],
                 })
-            # 题材词命中最硬，其次题材词典同源，最后同行业；同档里已确认优先、概率高优先
-            order = {"theme": 0, "dict": 1, "sector": 2}
+            # 题材词命中最硬，其次题材词典同源；同档里已确认优先、概率高优先。
+            # R100z333：不再有「同行业」这一档（见上面的删因）。
+            order = {"theme": 0, "dict": 1}
             matches.sort(key=lambda m: (order.get(m["kind"], 9),
                                         0 if m["tier"] == TIER_CONFIRM else 1,
                                         -(m["prob"] or 0)))
@@ -756,9 +761,10 @@ def build_spillover(D, quotes, picks, plan=None):
         "rows": rows,
         "plan": score,
         "text": text,
-        "rule": ("候选只取断板反包双池 + 陈学长三池的非利空主板标的；命中口径三类——"
-                 "同题材（连板题材词出现在候选【题材属性】段里）＞同题材词典（两侧命中同一个题材名，"
-                 "如「光伏边框」与「光伏设备」同归光伏）＞同行业（行业名互含，只算板块轮动不算同题材）；"
+        "rule": ("候选只取断板反包双池 + 陈学长三池的非利空主板标的；命中口径两类——"
+                 "同题材（连板题材词出现在候选的板块/故事/多头类型里）＞同题材词典（两侧命中同一个题材名，"
+                 "如「光伏边框」与「光伏设备」同归光伏）；**不按同行业兜底**：池内没有同题材标的时这一行就空着，"
+                 "宁缺勿滥——「通用设备」这类大类会把无关票全捞进来；"
                  "已确认档可给动作，待确认档只列「差哪一步」；连板未续板且盘中不涨时不给候选；"
                  "带「昨已列」的是昨日收盘题材行给过的候选，带「新增」的是今天开盘才命中的；"
                  "`plan` 是昨日计划的兑现读数（候选涨跌家数 + 点名连板的续板数），不是收益率"),

@@ -5183,8 +5183,11 @@ def g60_spillover_truth(r):
             tier, zh = pool[mc]
             if m.get("tier") != tier:
                 stale.append(f"{nm}→{mnm} 档位 {m.get('tier')} 与当前池归属（{zh}={tier}）不符")
-            if m.get("kind") not in ("theme", "dict", "sector"):
-                bad.append(f"{nm}→{mnm} 命中口径 {m.get('kind')} 非法")
+            # R100z333：不许再有 sector（同行业兜底）——用户 2026-11-10 两次截图指出
+            # 「利欧股份（快手/小红书概念）挂在航天紧固件下」，根因就是按行业匹配。
+            if m.get("kind") not in ("theme", "dict"):
+                bad.append(f"{nm}→{mnm} 命中口径 {m.get('kind')} 非法"
+                           + ("（同行业不是同题材，池内没有就空着）" if m.get("kind") == "sector" else ""))
             if mc in seen:
                 if seen[mc] == nm:
                     bad.append(f"{mnm} 在「{nm}」这一行里重复出现")
@@ -5440,8 +5443,9 @@ def g63_theme_cands_truth(r):
             code = str(c.get("code") or "")
             nm = c.get("name") or code
             kind = c.get("kind")
-            if kind not in ("theme", "sector"):
-                bad.append(f"{name}→{nm} 的 kind={kind!r} 非法")
+            # R100z333：题材行同样禁止同行业兜底（见 theme_cands.build 的删因）
+            if kind != "theme":
+                bad.append(f"{name}→{nm} 的 kind={kind!r} 非法（只允许 theme）")
             if code not in pool:
                 bad.append(f"{name}→{nm} 不在断板/陈学长池里（池外标的冒充池内）")
                 continue
@@ -5465,8 +5469,10 @@ def g63_theme_cands_truth(r):
         r.fail("G63", f"题材候选有 {len(bad)} 处站不住：" + "；".join(bad[:5]))
     else:
         n_th = sum(1 for v in themes.values() if isinstance(v, dict) and v.get("candKind") == "theme")
+        n_ref = len(themes) - n_th
         r.ok("G63", f"题材候选 {n_cand} 只全部可回溯（在池内、非本题材成分、命中属于该题材的概念词）；"
-                    f"{n_th}/{len(themes)} 个题材走同题材口径，其余为行业兜底")
+                    f"{n_th}/{len(themes)} 个题材有同题材候选"
+                    + (f"，{n_ref} 个空着（不按行业凑数）" if n_ref else ""))
 
 
 def g64_plan_scorecard(r):

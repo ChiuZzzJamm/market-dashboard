@@ -82,7 +82,11 @@ def _pool(D):
 
 
 def build(D, limit=4):
-    """返回 {题材名: (cands, kind)}。kind: theme（同题材）/ sector（同行业兜底）/ ref（词表兜底）。"""
+    """返回 {题材名: (cands, kind)}。kind: theme（同题材）/ ref（无同题材候选，前端退回词表代表票）。
+
+    R100z333：原来的 sector（同行业兜底）已删除——行业大类会把无关票挂进题材，
+    用户两次截图指出（利欧股份/雪人集团/柯力传感被挂到五种题材下）。宁缺勿滥。
+    """
     items = ((D.get("stockConcepts") or {}).get("items")) or {}
     pool = _pool(D)
     ckw = {t["name"]: [str(k) for k in (t.get("ckw") or [t["name"]]) if k] for t in common.theme_map()}
@@ -111,18 +115,13 @@ def build(D, limit=4):
                  for _r, _s, c, e, hit in hits[:limit]]
         kind = "theme"
         if not cands:
-            # 兜底一：同行业。只在同题材一条都没有时用，并且页面会写明是「同行业」——
-            # 行业是静态分类，跟题材经常对不上，不能当作同题材的等价物。
-            sec = [str(x) for x in (t.get("sectors") or []) if x]
-            for code, e in pool.items():
-                if code in in_lb or e["sector"] not in sec:
-                    continue
-                cands.append({"code": code, "name": e["name"], "total": e["total"],
-                              "srcZh": e["srcZh"], "tier": e["tier"],
-                              "hit": e["sector"], "kind": "sector"})
-            cands.sort(key=lambda z: -(float(z["total"]) if isinstance(z["total"], (int, float)) else -1))
-            cands = cands[:3]
-            kind = "sector" if cands else "ref"
+            # R100z333：**去掉「同行业」兜底**。原来同题材为空时按 sectors 互含捞一批，
+            # 于是「通用设备」这种大类把雪人集团/利欧股份/柯力传感同时挂到光伏、算力、
+            # 人形机器人、商业航天、核电五行下（用户 2026-11-10 两次截图指出）。
+            # 同行业不是同题材：题材行回答的是「这个方向还在扩散、谁还没涨」，
+            # 拿行业凑数等于按「都属一个大类」推荐。**没有就空着**，kind 置 ref 让前端走
+            # 「同题材可看」（词表代表票，明确不是可买名单）。
+            kind = "ref"
         out[name] = (cands, kind)
     return out
 
