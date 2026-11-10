@@ -961,6 +961,35 @@ POOL_ZH = {"chen_strict": "陈学长·严格池", "chen_loose": "陈学长·放�
            "duanban": "断板反包·确认池"}
 
 
+def pools_of(e):
+    """这只票在**记账当时**被哪几个池选中 → 给页面看的池名列表（R100z339）。
+
+    用户 2026-11-11 00:48：「进行明细和结算明细里面的标的如果是双池的就都写上」。
+    起因是明细里双池的票只显示了一个池名（截图圈的是华升股份那类行），读者看不出
+    「这只票两套口径都选中了」——而这正是他最关心的信息（两套都选中 vs 只有一套）。
+
+    ⛔ 判据只能用条目上**冻结的** `cross`，不能按今天的 `chenPool.strict/loose` /
+    `duanban.confirmed` 反推：`cross` 是记账当时打死的标签（见 record_entries 的注释），
+    今天池子早就换血了，用今天反推会把三个月前的结算明细标成「双池」。
+
+    `cross='both'` 只可能出现在陈学长侧：断板侧条目在构造时就写死了 `cross="db"`
+    （见 main 里 record_entries(..., cross="db")），所以「另一个池」就是断板反包确认池。
+    真出现断板侧 both 的写法（理论不可达），按条目 tier 退化成陈学长严格/放宽。
+
+    第一个元素永远是**这条记录自己的池**——明细里那行账就是按它记的。
+    """
+    pool = str(e.get("pool") or "")
+    names = [POOL_ZH.get(pool, pool or "—")]
+    if str(e.get("cross") or "") == "both":
+        if pool == "duanban":
+            other = POOL_ZH["chen_strict" if str(e.get("tier") or "") == "strict" else "chen_loose"]
+        else:
+            other = POOL_ZH["duanban"]
+        if other not in names:
+            names.append(other)
+    return names
+
+
 def _next_trade_day(day):
     """确认日之后的下一个交易日。
 
@@ -1018,6 +1047,8 @@ def settle_rows(ledger, today=None, keep_days=None):
             "name": str(e.get("name") or ""),
             "pool": pool,
             "poolZh": POOL_ZH.get(pool, pool or "—"),
+            "pools": pools_of(e),
+            "cross": str(e.get("cross") or ""),
             "buyDay": str(r.get("buyDay") or _next_trade_day(
                 e.get("confirmDate") or e.get("entryDate") or ed))[:10],
             "buyPx": r.get("buyPrice"),
@@ -1076,6 +1107,8 @@ def open_rows(ledger, kl_cache=None, today=None):
             "name": str(e.get("name") or ""),
             "pool": pool,
             "poolZh": POOL_ZH.get(pool, pool or "—"),
+            "pools": pools_of(e),
+            "cross": str(e.get("cross") or ""),
             "legacy": (e.get("ruleFrom") or "legacy") != RULE_FROZEN_AT,
             "confirmDay": confirm_day,
             "buyDay": _next_trade_day(confirm_day) if confirm_day else "",

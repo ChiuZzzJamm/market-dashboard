@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611110041"></script>
+<script src="data.js?v=202611110054"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -7568,6 +7568,18 @@ function chenCompareHtml(c) {
       也不自己算收益——两处各算一次必然漂移；
    ④ **已卖出的行必须标来源池与旧口径**：同一天两个池各卖一只，只写名字分不清是谁的账。
    ===================================================================================================== */
+function poolLabel(r) {
+  /* 双池的票要把两个池名都写上（R100z339，用户 2026-11-11 00:48：「进行明细和结算明细
+     里面的标的如果是双池的就都写上」）。原来只写 poolZh ＝ 记账时先确认的那个池，
+     双池的票（两套口径都选中）看起来和单池的一模一样，而「两套都选中 vs 只有一套」
+     正是他最想区分的信息。
+     `pools` 由 chen_pool.pools_of() 给，判据是条目上**冻结的** cross 标签；
+     前端不按今天的池子反推——结算明细里三个月前的样本早就换血了。
+     旧数据没有 pools 字段时退回单个 poolZh，不会显示成空。 */
+  var a = r && r.pools;
+  if (a && a.length) return a.join(' + ');
+  return (r && r.poolZh) || '';
+}
 function stlModalEl(id, label) {
   var el = document.getElementById(id);
   if (el) return el;
@@ -7634,7 +7646,7 @@ function openSettleDetail() {
       h += '<tr><td><span class="nm stk-go" title="点击查看 K 线与个股消息" onclick="stkOpenIn(window._STL_GRP,' +
         gi + ')">' + esc(r.name || r.code) + '</span>' +
         '<span class="cd2">' + esc(r.code) + '</span>' +
-        '<span class="pl">' + esc(r.poolZh || '') + (r.legacy ? ' · 旧口径' : '') + '</span></td>' +
+        '<span class="pl">' + esc(poolLabel(r)) + (r.legacy ? ' · 旧口径' : '') + '</span></td>' +
         '<td>' + mmdd(r.buyDay) + '</td><td>' + pxf(r.buyPx) + '</td>' +
         '<td>' + mmdd(r.exitDay) + '</td><td>' + pxf(r.exitPx) + '</td>' +
         '<td class="' + cls + '">' + txt + '</td></tr>';
@@ -7749,7 +7761,7 @@ function openPendingDetail() {
       h += '<tr><td><span class="nm stk-go" title="点击查看 K 线与个股消息" onclick="stkOpenIn(window._PEND_GRP,' +
         gi + ')">' + esc(r.name || r.code) + '</span>' +
         '<span class="cd2">' + esc(r.code) + '</span>' +
-        '<span class="pl">' + esc(r.poolZh || '') + (r.legacy ? ' · 旧口径' : '') + '</span></td>' +
+        '<span class="pl">' + esc(poolLabel(r)) + (r.legacy ? ' · 旧口径' : '') + '</span></td>' +
         '<td>' + mmdd(r.buyDay) + '</td><td>' + pxf(r.buyPx) + '</td>' +
         '<td' + (ti.length ? ' title="' + escAttr(ti.join('；')) + '"' : '') + '>' + pxf(r.curPx) + '</td>' +
         '<td class="' + cls + '"' + (ti.length ? ' title="' + escAttr(ti.join('；')) + '"' : '') + '>' +

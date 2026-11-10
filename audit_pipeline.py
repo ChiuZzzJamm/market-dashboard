@@ -5918,6 +5918,26 @@ def g68_pending_detail(r):
     if fake:
         bad.append("「待开盘买入」却已经有买价 %d 条（不能编数字）：%s" % (len(fake), fake[:3]))
 
+    # 双池标注（R100z339，用户 2026-11-11 00:48「双池的就都写上」）：
+    # pools 必须非空、首项是这条记录自己的池、只允许出现已知的三个池名，
+    # 且「两项」必须与冻结的 cross='both' 一一对应——多写会说成两套都选中，少写会藏起双池。
+    known_pools = {"陈学长·严格池", "陈学长·放宽池", "断板反包·确认池"}
+    pbad = []
+    for label, rows_ in (("进行", opens), ("结算", cmp_.get("settles") or [])):
+        for x in rows_:
+            pl = x.get("pools")
+            if not isinstance(pl, list) or not pl:
+                pbad.append("%s(%s) 缺 pools" % (x.get("code"), label))
+            elif pl[0] != x.get("poolZh"):
+                pbad.append("%s(%s) 首个池名不是自己那条的池" % (x.get("code"), label))
+            elif any(n not in known_pools for n in pl):
+                pbad.append("%s(%s) 池名不认识：%s" % (x.get("code"), label, pl))
+            elif (str(x.get("cross") or "") == "both") != (len(pl) == 2):
+                pbad.append("%s(%s) cross=%s 但 pools 有 %d 项"
+                            % (x.get("code"), label, x.get("cross") or "—", len(pl)))
+    if pbad:
+        bad.append("双池标注不对 %d 条：%s" % (len(pbad), pbad[:3]))
+
     lefts = [x.get("leftDays") for x in opens if x.get("leftDays") is not None]
     if lefts != sorted(lefts):
         bad.append("没有按窗口剩余天数升序（快到期的最该在上面）")

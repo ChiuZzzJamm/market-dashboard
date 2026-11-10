@@ -38,8 +38,8 @@ INDEX = os.path.join(HERE, "index.html")
 
 REQUIRED_HEADS = ["标的", "买入日", "买入价", "现价", "浮动盈亏", "进度"]
 SETTLE_HEADS = ["标的", "买入日", "买入价", "卖出日", "卖出价", "盈亏"]
-NEED_FUNCS = ["esc", "escAttr", "stlModalEl", "stlEsc", "closeStlDetail", "closeSettleDetail",
-              "closePendingDetail", "openPendingDetail", "openSettleDetail"]
+NEED_FUNCS = ["esc", "escAttr", "poolLabel", "stlModalEl", "stlEsc", "closeStlDetail",
+              "closeSettleDetail", "closePendingDetail", "openPendingDetail", "openSettleDetail"]
 
 
 def extract_func(src, name):
@@ -219,6 +219,24 @@ try {
   if (gotPre !== expPre) bad('「待开盘买入」出现 ' + gotPre + ' 次 ≠ preBuy ' + expPre + ' 条');
   if (gotNoK !== expNoK) bad('「待 K 线」出现 ' + gotNoK + ' 次 ≠ noKline ' + expNoK + ' 条');
 
+  // 双池的票必须把两个池名都写在同一个 .pl 里（R100z339）：
+  // 数据侧 pools 有两项、渲染出来就该有 ' + '，缺一个读者就分不清「两套都选中」和「只有一套」。
+  const expDuo = opens.filter(function (r) { return (r.pools || []).length > 1; }).length;
+  const pls = ph.match(/<span class="pl">[\s\S]*?<\/span>/g) || [];
+  const gotDuo = pls.filter(function (s) { return s.indexOf(' + ') >= 0; }).length;
+  out.info.duo = gotDuo + '/' + expDuo;
+  if (pls.length !== opens.length) {
+    bad('.pl 池名标签 ' + pls.length + ' 个 ≠ ' + opens.length + ' 行');
+  }
+  if (gotDuo !== expDuo) {
+    bad('双池行只写了 ' + gotDuo + ' 条 ≠ 数据里双池的 ' + expDuo + ' 条（另一个池名被吞了）');
+  }
+  // 单池行不许误写成两个（会把「只有一套」说成「两套都选中」）
+  const expSolo = opens.length - expDuo;
+  if (pls.length - gotDuo !== expSolo) {
+    bad('单池行 ' + (pls.length - gotDuo) + ' 条 ≠ 应有的 ' + expSolo + ' 条');
+  }
+
   // 已过止盈线却还在进行里（T+1 当天买的不能当天卖）必须逐条点名，
   // 否则「赚了 9% 还留在进行明细」看起来就是算错了。
   const expOver = opens.filter(function (r) {
@@ -327,10 +345,10 @@ def main():
 
     if res["ok"]:
         info = res["info"]
-        print("[OK] 进行明细 %d 行 × 6 列（涨 %s / 跌 %s / 待开盘 %s / 待K线 %s / 已过止盈线 %s）；"
+        print("[OK] 进行明细 %d 行 × 6 列（涨 %s / 跌 %s / 待开盘 %s / 待K线 %s / 已过止盈线 %s / 双池 %s）；"
               "结算明细 %d 行独立渲染"
               % (info["pendRows"], info["up"], info["down"], info["pre"],
-                 info["noKline"], info["over"], info["settleRows"]))
+                 info["noKline"], info["over"], info["duo"], info["settleRows"]))
         return 0
 
     print("[FAIL] 表格渲染不对：")
