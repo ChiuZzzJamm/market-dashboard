@@ -5788,6 +5788,31 @@ def g66_done_excluded(r):
                     f"{len(tdy.get('duanbanOnly') or [])}")
 
 
+def g67_kline_hz_overlay(r):
+    """G67 谐波 X→A→B→C→D 折线覆盖层能不能真的画出来（R100z336，2026-11-10，FAIL 级）。
+
+    由来（用户 23:29 截图「k线上的谐波线怎么没了」）：`_dbk_hzGraphic()` 里给字母拼字体串时
+    用了 `FONT`，而它只是 `barOption()` 的局部变量 —— 于是函数在 `setOption` 之前抛
+    `ReferenceError`，折线整条消失。K 线本身由前一步画好了，蜡烛/均线/PRZ/止损全在，
+    看起来不像报错；错误又在 `setTimeout` 里，外层 catch 接不到、控制台无痕。
+    `node --check`、`check_inline_js`、本审计 90+ 项全部 PASS —— 因为**没有任何一条真的执行过
+    绘制函数**，全在看数据和字符串。本闸就是那一条：把函数抠出来在 node 里真跑一遍，
+    断言产出 4 段线 + 5 个圆点 + 字母 XABCD + 字体串来自 --font。
+
+    判据：见 check_hz_overlay.py 文件头。rc=1 → FAIL；rc=2（node 缺/函数改名）→ WARN，
+    但要写明「这是闸门没验证成功，不代表干净」，不许当通过。
+    """
+    rc, out, err = _run_tool("check_hz_overlay.py", "--quiet", timeout=90)
+    if rc == 0:
+        r.ok("G67", "谐波折线覆盖层可绘制：4 段线 + 5 个圆点 + 字母 XABCD，字体取自 --font")
+    elif rc == 1:
+        r.fail("G67", "谐波折线覆盖层画不出来（K 线照常、红线消失，页面上看不出来是报错）："
+                       + _tail(out, 3))
+    else:
+        r.warn("G67", "折线覆盖层闸门没验证成功（%s）——这是检查器/环境问题，不代表干净"
+               % (_tail(err or out, 2) or "rc=%s" % rc))
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -5865,6 +5890,7 @@ def main():
     g64_plan_scorecard(r)
     g65_stop_anchor(r)
     g66_done_excluded(r)
+    g67_kline_hz_overlay(r)
 
     # R100z284：机器可读的结论行。
     #

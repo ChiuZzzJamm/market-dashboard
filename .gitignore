@@ -81,3 +81,7 @@ signal_ledger.json.bak-*
 
 # R100z328：昨日题材计划快照（theme_cands 写、update_star 读，是本机两代滚动状态）
 .theme_plan.json
+
+# R100z336：本机一次性渲染探针页（无头 Chrome 验 K 线覆盖层用；固定路径、只覆写不删除，
+# 沙箱里 os.remove 等于移到废纸篓，所以留着但绝不入库）
+_tmp_probe_*.html

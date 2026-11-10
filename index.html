@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611102320"></script>
+<script src="data.js?v=202611102340"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1912,6 +1912,11 @@ function cleanLeak(s) {
   return s;
 }
 function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+/* 画布字体栈：ECharts / canvas 的 font 是字符串，**不认 CSS 变量**，只能把 --font 的真实值取出来拼进去。
+   全站唯一字体栈仍是 CSS 里的 --font（R100z163），这里只是它的读取口——别再各自写死一套字体名
+   （2026-11-10 踩过：_dbk_hzGraphic 里写了个不存在的 FONT 变量，谐波折线整条渲染前就抛 ReferenceError，
+   折线静默消失，而语法检查/闸门全绿）。 */
+function cssFont() { return cssVar('--font') || 'Microsoft YaHei, 微软雅黑, PingFang SC, sans-serif'; }
 function dateTag(tradeDate) { var m = String(tradeDate).match(/(\d{4})-(\d{2})-(\d{2})/); return m ? m[2] + "月" + m[3] + "日" : ""; }
 function formatOutlook(text) {
   if (!text) return '—';
@@ -2513,7 +2518,7 @@ function renderReasons(list, tradeDate, isUp, market) {
 
 function barOption(names, values, unit) {
   var up = cssVar('--up'), down = cssVar('--down'), ink = cssVar('--ink'), ink2 = cssVar('--ink2'), line = cssVar('--line');
-  var FONT = 'Microsoft YaHei, 微软雅黑, PingFang SC, sans-serif';
+  var FONT = cssFont();
   return {
     textStyle: { fontFamily: FONT },
     tooltip: {
@@ -9027,13 +9032,14 @@ function _dbk_hzGraphic(chart, kl, hz) {
   var pts = _dbk_hzPixels(chart, kl, hz);
   if (!pts.length) return;
   var children = [];
+  var hzFont = cssFont(); // 每帧读一次即可（getComputedStyle 不便宜），别放进循环里
   for (var i = 0; i < pts.length - 1; i++) {
     children.push({ type: 'line', shape: { x1: pts[i].x, y1: pts[i].y, x2: pts[i + 1].x, y2: pts[i + 1].y }, style: { stroke: '#f0435c', lineWidth: 2 }, silent: true, z: 60 });
   }
   pts.forEach(function (p) {
     var isD = p.k === 'D'; // D 实际=实心红点，X/A/B/C=白底红边空心圆（与迷你图统一）
     children.push({ type: 'circle', shape: { cx: p.x, cy: p.y, r: isD ? 7 : 4.5 }, style: isD ? { fill: '#f0435c', stroke: '#fff', lineWidth: 2 } : { fill: '#fff', stroke: '#f0435c', lineWidth: 2 }, silent: true, z: 61 });
-    children.push({ type: 'text', style: { text: p.k, x: p.x, y: p.y - 13, fill: '#f0435c', font: '800 15px ' + FONT, align: 'center' }, silent: true, z: 62 }); // R100z4y：字母 10px→15px 加粗（用户反馈太小）
+    children.push({ type: 'text', style: { text: p.k, x: p.x, y: p.y - 13, fill: '#f0435c', font: '800 15px ' + hzFont, align: 'center' }, silent: true, z: 62 }); // R100z4y：字母 10px→15px 加粗（用户反馈太小）；字体走 cssFont() 读 --font
   });
   chart.setOption({ graphic: [{ id: 'dbkhz', type: 'group', children: children }] });
 }
@@ -9193,6 +9199,14 @@ function _dbk_fitY(chart, view, hz, i0, i1) {
   var pad = (ymax - ymin) * 0.03 || 1; // R100z4z 同口径 3% 上下留白
   chart.setOption({ yAxis: [{ min: +(ymin - pad).toFixed(2), max: +(ymax + pad).toFixed(2) }] }); // 仅更新价格轴(索引0)，量轴不动
 }
+/* R100z335：谐波折线绘制统一入口——三处调用点（初始 / dataZoom / resize）都走这里。
+   出错只丢覆盖层 + console 一次性告警，绝不把 K 线图表本身的初始化带崩。
+   起因：_dbk_hzGraphic 里引用了不存在的 FONT，折线在 setOption 之前就抛错，
+   而当时「初始绘制」是裸调、外层又是 setTimeout —— 结果红线整条消失、控制台无痕、闸门全绿。 */
+function _dbkHzDraw(chart, view, hz) {
+  try { _dbk_hzGraphic(chart, view, hz); }
+  catch (e) { if (!window._dbkHzWarned) { window._dbkHzWarned = 1; console.warn('[K线] 谐波折线绘制失败：', e); } }
+}
 function dbKlineSvg(kline, hz) {
   if (!kline || kline.length < 2) return '<div class="db-empty">暂无K线数据</div>';
   var view = _dbk_slice(kline, hz); // R100z6g：渲染前裁切，初始视图=数据全量，任何设备不可能错位
@@ -9221,18 +9235,21 @@ function dbKlineSvg(kline, hz) {
           _dbk_fitY(chart, view, hz, rng[0], rng[1]);
         } catch (e) {}
         if (hz) {
-          if (!chart._dbkRaf) chart._dbkRaf = requestAnimationFrame(function () { chart._dbkRaf = null; try { _dbk_hzGraphic(chart, view, hz); } catch (e) {} });
+          if (!chart._dbkRaf) chart._dbkRaf = requestAnimationFrame(function () { chart._dbkRaf = null; _dbkHzDraw(chart, view, hz); });
         }
       };
       chart.on('dataZoom', chart._dbkFit);
       chart._dbkFit(); // R100z7：初始窗口=近30根时 y 轴立即适配可见区间（startValue 被忽略的平台 visible=全量，fit 自动等价全窗）
       // R100z4w：谐波连线初始绘制 + resize 重算像素位（resize 一并触发 y 自适应，保持缩放态一致）
+      // R100z335：这里原本裸调——一旦折线绘制抛错，下面的 DBK_CHARTS 注册和延时重绘全被跳过，
+      //   表现是「K 线照常、红线整条消失」而外层 catch 看不到（错误发生在 setTimeout 里）。
+      //   现在单点兜住：折线画不出来只是覆盖层缺失，不能连带把图表本身搞死（见 _dbkHzDraw）。
       if (hz) {
-        _dbk_hzGraphic(chart, view, hz);
+        _dbkHzDraw(chart, view, hz);
         chart._dbkHzRef = chart._dbkFit;
       }
       DBK_CHARTS.push(chart);
-      setTimeout(function () { try { chart.resize(); if (hz) _dbk_hzGraphic(chart, view, hz); } catch (e) {} }, 60);
+      setTimeout(function () { try { chart.resize(); } catch (e) {} if (hz) _dbkHzDraw(chart, view, hz); }, 60);
     }, 0);
   });
   return '<div id="' + id + '" class="dbk-chart"></div>';
