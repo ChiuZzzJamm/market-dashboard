@@ -23,6 +23,7 @@
   python3 theme_cands.py --dry      # 只打印，不落盘
 """
 import argparse
+import json
 import os
 import sys
 
@@ -30,6 +31,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 import common  # noqa: E402
+
+# 昨日计划快照（R100z328）：9:45 那步要拿「昨天收盘列了谁」来打分，而 16:00 断板步会把
+# data.js 里的 themes 整份重算——不落一份文件，隔一个白天就查不到「昨天说过什么」。
+PLAN_FILE = os.path.join(HERE, ".theme_plan.json")
 
 
 def _help_guard():
@@ -141,7 +146,41 @@ def main():
     print(f"[theme_cands] {len(res)} 个题材 · 同题材命中 {n_th} 个 · 候选共 {n_c} 只"
           f"（兜底 {len(res) - n_th} 个题材走同行业/词表）")
     if a.dry:
+        # --dry 必须完全不落盘（含这份快照）：试跑改数据是 K17 那一类事故。
         return 0
+
+    # ---- 落「昨日计划」快照：明天 9:45 拿它给开盘补涨打记分牌 ----
+    # 只留最新一份：9:45 只需要「上一份」，多日历史没有消费方（写了就是没人读的死数据）。
+    try:
+        plan = {
+            "date": str((D.get("ashare") or {}).get("tradeDate") or ""),
+            "generatedAt": str((D.get("duanban") or {}).get("generatedAt") or ""),
+            "themes": {k: {"maxLb": v.get("maxLb"), "candKind": v.get("candKind"),
+                           "stocks": [{"code": str(b.get("code") or ""),
+                                       "name": str(b.get("name") or ""),
+                                       "lbc": b.get("lbc")}
+                                      for b in (v.get("boardStocks") or [])],
+                           "cands": [{"code": str(c.get("code") or ""),
+                                      "name": str(c.get("name") or ""),
+                                      "hit": str(c.get("hit") or "")}
+                                     for c in (v.get("cands") or [])]}
+                       for k, v in ((D.get("duanban") or {}).get("themes") or {}).items()
+                       if isinstance(v, dict)},
+        }
+        # 保留上一份：19:30 的审计要拿「今早 9:45 用的那份」对账，而那时 latest 已经
+        # 被今晚 16:00 的计划覆盖。只留两代，多代没有消费方。
+        try:
+            with open(PLAN_FILE, encoding="utf-8") as _f:
+                _old = json.load(_f)
+        except Exception:
+            _old = {}
+        _prev = _old.get("latest") if isinstance(_old, dict) else None
+        common.write_json_atomic(PLAN_FILE, {"latest": plan, "prev": _prev},
+                                 label="[theme_cands.plan]")
+    except Exception as e:                                    # noqa: BLE001
+        # 快照写不进去只影响「明天开盘的记分牌」，不该拦今天的部署。
+        print(f"[theme_cands] 计划快照写入失败（明日开盘会标不出「昨已列」）：{str(e)[:120]}")
+
     common.write_data_js(path, D, label="[theme_cands]")
     return 0
 

@@ -496,7 +496,30 @@ def _spill_text(e):
             + str(e.get("bullType") or "")).strip()
 
 
-def build_spillover(D, quotes, picks):
+def load_theme_plan(base):
+    """读「昨日收盘的题材计划」快照（theme_cands.py 落的 `.theme_plan.json`）。
+
+    为什么要这个文件（R100z328，用户 2026-11-10「再往前一步」）：9:45 这块要变成收盘那块
+    的**记分牌**——「昨天说这几只，今天兑现了没有」。但 16:00 断板步会把 data.js 里的
+    themes 整份重算，只靠 data.js 无法知道「昨天到底列了谁」，所以收盘那步必须留一份快照。
+    缺失/损坏一律返回 {}（当作「没有昨日计划」），绝不因此让 9:45 失败。
+    """
+    try:
+        _base = base or os.path.dirname(os.path.abspath(__file__))
+        with open(os.path.join(_base, ".theme_plan.json"), encoding="utf-8") as f:
+            obj = json.load(f)
+        if not isinstance(obj, dict):
+            return {}
+        # 文件是 {latest, prev} 两代：latest 是「昨晚收盘的计划」，正是今早要打分的那份。
+        # 兼容早期只写单份的格式（顶层就是 date/themes）。
+        if isinstance(obj.get("latest"), dict):
+            return obj["latest"]
+        return obj
+    except Exception:
+        return {}
+
+
+def build_spillover(D, quotes, picks, plan=None):
     """连板延续 → 题材/概念 → 断板·陈学长池内同题材候选（R100z324，用户 2026-11-10）。
 
     用户原话：「连板标的如果继续连板，列出题材+概念，然后匹配断板和陈学长池子里有且符合
@@ -526,6 +549,28 @@ def build_spillover(D, quotes, picks):
     if not lb:
         return {"rows": [], "text": "连板梯队为空（今日无连板股），补涨映射不生成",
                 "rule": "无连板即无扩散方向", "asOf": "", "tradeDate": ""}
+
+    # ---- 昨日收盘的题材计划（这块的记分牌基线，R100z328）----
+    # 三张表就够：连板→题材、候选→题材、以及据此算的兑现率。
+    plan = plan if isinstance(plan, dict) else {}
+    plan_date = str(plan.get("date") or "")
+    plan_themes = plan.get("themes") or {}
+    pl_lb_theme, pl_cand_theme = {}, {}
+    for _th, _v in plan_themes.items():
+        for _s in (_v.get("stocks") or []):
+            _c = str(_s.get("code") or "")
+            if _c:
+                pl_lb_theme.setdefault(_c, _th)
+        for _c in (_v.get("cands") or []):
+            _code = str(_c.get("code") or "")
+            if _code:
+                pl_cand_theme.setdefault(_code, _th)
+    # 只认「早于今天」的计划：收盘那步自己也写快照，同一天的快照拿去给同一天打分，
+    # 会把「今天计划」说成「昨日已列」——那是自我兑现，不是记分牌。
+    _today = str((D.get("ashare") or {}).get("tradeDate") or "")
+    if plan_date and _today and plan_date >= _today:
+        pl_lb_theme, pl_cand_theme, plan_date = {}, {}, ""
+    _plan_ok = bool(pl_lb_theme or pl_cand_theme)
 
     # ---- 候选池（一次装配，120 只左右） ----
     db = D.get("duanban") or {}
@@ -567,6 +612,7 @@ def build_spillover(D, quotes, picks):
     cands = list(_dedup.values())
 
     rows = []
+    lb_state = {}
     for x in lb:
         code = str(x.get("code") or "")
         q = quotes.get(code) or {}
@@ -585,6 +631,10 @@ def build_spillover(D, quotes, picks):
         _nm = str(x.get("name") or "")
         themes = [t for t in common.theme_words(x.get("reason"), limit=4) if t not in _nm]
         hybk = str(x.get("hybk") or "")
+        lb_state[code] = state
+        # 这只连板昨天在收盘计划里属于哪个题材（没有就是「新增」）
+        _pth = (pl_lb_theme.get(code) or "") if _plan_ok else ""
+        _plan_cand_n = len(((plan_themes.get(_pth) or {}).get("cands") or [])) if _pth else 0
 
         matches = []
         if state in ("reboard", "strong"):
@@ -608,6 +658,9 @@ def build_spillover(D, quotes, picks):
                 else:
                     continue
                 matches.append({
+                    # 昨天收盘那句「同题材可补涨」里有没有它——有就是「昨已列」，没有就是今天新增。
+                    "wasListed": bool(_plan_ok and c["code"] in pl_cand_theme),
+                    "plannedUnder": pl_cand_theme.get(c["code"], ""),
                     "code": c["code"], "name": c["name"], "srcZh": c["srcZh"],
                     "sector": c["sector"], "tier": c["tier"],
                     "tierZh": TIER_ZH.get(c["tier"], "确认"),
@@ -625,6 +678,8 @@ def build_spillover(D, quotes, picks):
             "code": code, "name": str(x.get("name") or ""),
             "lbc": x.get("lbc"), "hybk": hybk, "themes": themes,
             "pct": pct, "state": state, "matches": matches,
+            # 收盘计划里这只连板的题材 + 该题材当时列了几只候选（未续板时全部作废）
+            "planTheme": _pth, "planCandN": _plan_cand_n,
         })
 
     # 已续板 > 走强 > 未续板 > 抓空；同状态按板数降序（高度板才是方向标）
@@ -651,28 +706,62 @@ def build_spillover(D, quotes, picks):
             r["sharedWith"] = sorted({_owner[m["code"]] for m in r["matches"]})[:2]
         r["matches"] = kept
 
-    n_re = sum(1 for r in rows if r["state"] == "reboard")
-    n_st = sum(1 for r in rows if r["state"] == "strong")
+    # ---- 记分牌：昨日收盘给的候选今天涨没涨、昨日点名的连板今天续了几只 ----
+    # 这是「收盘计划 → 开盘验证」闭环的度量。没有它，两块永远只是两份长得像的清单。
+    _sc = {"up": 0, "down": 0, "flat": 0, "noQuote": 0}
+    _pcts = []
+    for _c in pl_cand_theme:
+        _p = (quotes.get(_c) or {}).get("pct")
+        try:
+            _p = float(_p) if _p is not None else None
+        except (TypeError, ValueError):
+            _p = None
+        if _p is None:
+            _sc["noQuote"] += 1            # 抓不到 ≠ 跌，单列一档，不并进任何一边
+            continue
+        _pcts.append(_p)
+        _sc["up" if _p > 0 else ("down" if _p < 0 else "flat")] += 1
+    score = {
+        "planDate": plan_date,
+        "nCand": len(pl_cand_theme),
+        "nLb": len(pl_lb_theme),
+        "nReboard": sum(1 for _c in pl_lb_theme if lb_state.get(_c) == "reboard"),
+        "avgPct": round(sum(_pcts) / len(_pcts), 2) if _pcts else None,
+        **_sc,
+    }
+
+    # 计数按**全部连板**算，不按 rows（rows 已被 SPILL_MAX_ROWS 截断）——
+    # 截断前的 19 只和截断后的 8 只混在一句话里，读者会以为昨天只有 8 只连板。
+    n_re = sum(1 for _s in lb_state.values() if _s == "reboard")
+    n_st = sum(1 for _s in lb_state.values() if _s == "strong")
     n_match = sum(len(r["matches"]) for r in rows)
     n_conf = sum(1 for r in rows for m in r["matches"] if m["tier"] == TIER_CONFIRM)
     if not rows:
         text = "昨日无连板股，补涨映射不生成"
     elif n_match:
-        text = (f"昨日 {len(rows)} 只连板：已续板 {n_re} 只、盘中走强 {n_st} 只；"
+        text = (f"昨日 {len(lb_state)} 只连板：已续板 {n_re} 只、盘中走强 {n_st} 只；"
                 f"池内同题材候选 {n_match} 只（已确认 {n_conf} / 待确认 {n_match - n_conf}，同票不同连板只列一次）")
     else:
-        text = (f"昨日 {len(rows)} 只连板：已续板 {n_re} 只、盘中走强 {n_st} 只；"
+        text = (f"昨日 {len(lb_state)} 只连板：已续板 {n_re} 只、盘中走强 {n_st} 只；"
                 f"断板与陈学长池内没有同题材候选")
+    if score["nCand"]:
+        text += (f"；昨日收盘列 {score['nCand']} 只候选 → 今日 {score['up']} 涨 {score['down']} 跌"
+                 + (f"（均值 {score['avgPct']:+.2f}%）" if score["avgPct"] is not None else "")
+                 + (f"；昨日计划覆盖 {score['nLb']} 只连板，已续板 {score['nReboard']} 只"
+                    if score["nLb"] else ""))
     return {
         "asOf": datetime.now().strftime("%H:%M"),
         "tradeDate": str((D.get("ashare") or {}).get("tradeDate") or ""),
         "lianbanDate": str((D.get("ashare") or {}).get("tradeDate") or ""),
         "rows": rows,
+        "plan": score,
         "text": text,
         "rule": ("候选只取断板反包双池 + 陈学长三池的非利空主板标的；命中口径三类——"
                  "同题材（连板题材词出现在候选【题材属性】段里）＞同题材词典（两侧命中同一个题材名，"
                  "如「光伏边框」与「光伏设备」同归光伏）＞同行业（行业名互含，只算板块轮动不算同题材）；"
-                 "已确认档可给动作，待确认档只列「差哪一步」；连板未续板且盘中不涨时不给候选"),
+                 "已确认档可给动作，待确认档只列「差哪一步」；连板未续板且盘中不涨时不给候选；"
+                 "带「昨已列」的是昨日收盘题材行给过的候选，带「新增」的是今天开盘才命中的；"
+                 "`plan` 是昨日计划的兑现读数（候选涨跌家数 + 点名连板的续板数），不是收益率"),
     }
 
 
@@ -1104,6 +1193,14 @@ def build_star(D, base=None):
         _c = str(_o.get("code") or "")
         if _c.startswith(("60", "00")):
             _fetch_codes.append(_c)
+    # R100z328：昨日计划里的候选也要行情——记分牌要判「昨天列的票今天涨没涨」，
+    # 而这些票一半在陈学长池（pools 只含断板双池），不补抓就是一片「抓空」。
+    _theme_plan = load_theme_plan(base)
+    for _th in ((_theme_plan.get("themes") or {}).values()):
+        for _c in (_th.get("cands") or []):
+            _code = str(_c.get("code") or "")
+            if _code.startswith(("60", "00")):
+                _fetch_codes.append(_code)
     quotes = fetch_stock_quotes(list(dict.fromkeys(_fetch_codes)))
 
     # ---- R99c：确定性筛选——仅「板块情绪正向 + 主力净流入正向」板块挂钩的池内标的 ----
@@ -1432,7 +1529,7 @@ def build_star(D, base=None):
     # ---- R100z324：连板延续 → 题材/概念 → 池内同题材候选（补涨传导链） ----
     # 放在 picks 定稿之后：候选要标「在不在今日精选里」，picks 未定的时点拿不到这个信息。
     try:
-        spillover = build_spillover(D, quotes, picks)
+        spillover = build_spillover(D, quotes, picks, plan=_theme_plan)
     except Exception as _e:                                   # noqa: BLE001
         spillover = {"rows": [], "text": "补涨映射生成失败（%s）——脚本故障，不是今日无扩散方向" % _e,
                      "rule": "", "asOf": "", "tradeDate": "", "lianbanDate": ""}

@@ -5488,6 +5488,103 @@ def g63_theme_cands_truth(r):
                     f"{n_th}/{len(themes)} 个题材走同题材口径，其余为行业兜底")
 
 
+def g64_plan_scorecard(r):
+    """G64 「收盘计划 → 开盘验证」记分牌真值（R100z328，2026-11-10）。
+
+    用户「再往前一步」：题材行（收盘口径）与连板补涨（开盘口径）不能只是两份长得像的清单，
+    后者要对前者打分——昨天列的候选今天涨没涨、点名的连板今天续没续、没续板的昨天那批是否作废。
+
+    这一层最容易错的方式是**悄悄对不上**：标签还在、数字还在，但基线换了（16:00 重算把
+    themes 覆盖），于是「昨已列」标在昨天没列过的票上，读者以为计划兑现了。所以每条都要能回溯：
+      a) `.theme_plan.json` 里必须找得到 `spillover.plan.planDate` 那一代（latest 或 prev）；
+      b) nCand / nLb 必须等于基线里去重后的候选数 / 连板数；
+      c) up + down + flat + noQuote 必须等于 nCand（抓空单列，不许并进跌）；
+      d) 每行 planTheme 必须与基线一致（基线里没有这只连板 → 必须为空，前端才标「新增」）；
+      e) 每个候选的 wasListed 必须等于「它在不在基线候选清单里」，plannedUnder 同源；
+      f) 未续板行的 planCandN 必须等于基线该题材的候选数（作废数量不能瞎写）。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G64", f"data.js 读取失败，跳过记分牌校验：{e}")
+        return
+    sp = (((D.get("duanban") or {}).get("star") or {}).get("spillover")) or {}
+    if not sp.get("rows"):
+        r.warn("G64", "star.spillover 未生成（9:45 未跑或旧数据），记分牌无从校验")
+        return
+    score = sp.get("plan") or {}
+    if not score.get("nCand"):
+        # 同一天的快照不参与打分（见 update_star.build_spillover 的日期守卫）：
+        # 开盘那一刻还没有「昨天的计划」时，这块本来就该是空的。
+        r.ok("G64", "本轮没有可打分的昨日计划（当日快照不自我兑现 / 首次运行），记分牌按空处理")
+        return
+    plan_path = os.path.join(HERE, ".theme_plan.json")
+    try:
+        with open(plan_path, encoding="utf-8") as f:
+            raw = json.load(f)
+    except Exception:                                        # noqa: BLE001
+        r.warn("G64", "缺少 .theme_plan.json（昨日计划快照）——这块的兑现读数无法回溯；"
+                      "确认 theme_cands.py 是否在收盘那步跑过")
+        return
+    gens = [g for g in (raw.get("latest"), raw.get("prev")) if isinstance(g, dict)]
+    want = str(score.get("planDate") or "")
+    base = next((g for g in gens if str(g.get("date") or "") == want), None)
+    if not base:
+        r.warn("G64", f"快照里没有 {want or '（空）'} 那一代计划（现有 "
+                      f"{[str(g.get('date') or '') for g in gens]}）——多为隔了两个交易日，"
+                      f"该轮记分牌不具可比性")
+        return
+
+    themes = base.get("themes") or {}
+    lb_theme, cand_theme = {}, {}
+    for th, v in themes.items():
+        if not isinstance(v, dict):
+            continue
+        for x in (v.get("stocks") or []):
+            c = str(x.get("code") or "")
+            if c:
+                lb_theme.setdefault(c, th)
+        for x in (v.get("cands") or []):
+            c = str(x.get("code") or "")
+            if c:
+                cand_theme.setdefault(c, th)
+
+    bad = []
+    if int(score.get("nCand") or 0) != len(cand_theme):
+        bad.append(f"plan.nCand={score.get('nCand')} 与基线候选数 {len(cand_theme)} 不符")
+    if int(score.get("nLb") or 0) != len(lb_theme):
+        bad.append(f"plan.nLb={score.get('nLb')} 与基线连板数 {len(lb_theme)} 不符")
+    tot = sum(int(score.get(k) or 0) for k in ("up", "down", "flat", "noQuote"))
+    if tot != int(score.get("nCand") or 0):
+        bad.append(f"涨/跌/平/抓空合计 {tot} ≠ nCand {score.get('nCand')}")
+
+    for row in (sp.get("rows") or []):
+        code = str(row.get("code") or "")
+        nm = row.get("name") or code
+        exp = lb_theme.get(code, "")
+        if str(row.get("planTheme") or "") != exp:
+            bad.append(f"{nm} 的 planTheme={row.get('planTheme')!r} 与基线（{exp!r}）不符")
+        if exp and row.get("state") == "weak":
+            n_exp = len(((themes.get(exp) or {}).get("cands") or []))
+            if int(row.get("planCandN") or 0) != n_exp:
+                bad.append(f"{nm} 未续板却写「作废 {row.get('planCandN')} 只」，基线是 {n_exp} 只")
+        for m in (row.get("matches") or []):
+            mc = str(m.get("code") or "")
+            listed = mc in cand_theme
+            if bool(m.get("wasListed")) != listed:
+                bad.append(f"{nm}→{m.get('name') or mc} 的 wasListed={m.get('wasListed')} 与基线不符")
+            if listed and str(m.get("plannedUnder") or "") != cand_theme[mc]:
+                bad.append(f"{nm}→{m.get('name') or mc} 的 plannedUnder 与基线（{cand_theme[mc]}）不符")
+
+    if bad:
+        r.fail("G64", f"记分牌有 {len(bad)} 处与昨日计划对不上：" + "；".join(bad[:5]))
+    else:
+        r.ok("G64", f"记分牌可回溯：基线 {want}，候选 {len(cand_theme)} 只（"
+                    f"{score.get('up')} 涨 / {score.get('down')} 跌 / {score.get('noQuote')} 抓空）、"
+                    f"连板 {len(lb_theme)} 只（续板 {score.get('nReboard')}）；"
+                    f"planTheme / wasListed / 作废数全部与快照一致")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -5562,6 +5659,7 @@ def main():
     g61_stock_concepts_truth(r)
     g62_news_theme_truth(r)
     g63_theme_cands_truth(r)
+    g64_plan_scorecard(r)
 
     # R100z284：机器可读的结论行。
     #

@@ -78,3 +78,6 @@ signal_ledger.json.bak-*
 
 # R100z325：个股题材标签的本地缓存（同花顺 F10，按日复用，不入库）
 .concept_cache/
+
+# R100z328：昨日题材计划快照（theme_cands 写、update_star 读，是本机两代滚动状态）
+.theme_plan.json

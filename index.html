@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611102028"></script>
+<script src="data.js?v=202611102050"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1280,6 +1280,19 @@
   /* R100z327：口径标签（收盘 / 开盘）——两块内容结构一样，只能靠时点区分 */
   .spill-tag { font-size: var(--fs-xs); font-weight: 600; color: var(--accent-deep);
     background: var(--accent-soft); border-radius: 4px; padding: 0 5px; margin-left: 6px; }
+  /* R100z328：收盘计划 → 开盘验证的记分牌 */
+  .spill-score { font-size: var(--fs-sm); color: var(--ink2); line-height: 1.7;
+    padding: 3px 0 2px; border-top: 1px dashed var(--line); margin-top: 4px; }
+  .spill-score b.up { color: #f0435c; }
+  .spill-score b.down { color: #0f9d78; }
+  .spill-ptag { font-style: normal; font-size: var(--fs-xs); font-weight: 600; margin-left: 5px;
+    padding: 0 4px; border-radius: 3px; color: var(--ink2); border: 1px dashed var(--line); }
+  .spill-ptag.new { color: var(--accent-deep); border-color: var(--accent-soft);
+    background: var(--accent-soft); border-style: solid; }
+  .spill-c .spill-was, .spill-c .spill-new { font-style: normal; font-size: var(--fs-xs);
+    margin-right: 3px; padding: 0 3px; border-radius: 3px; }
+  .spill-c .spill-was { color: var(--ink2); background: #eef1f4; }
+  .spill-c .spill-new { color: #7a4d00; background: #fdf1d8; }
   /* R100n：技术池「通过」胶囊统一红色（用户要求） */
 
   /* R100h：清单 .cl-* 样式已随必带数据清单模块下线删除 */
@@ -6884,16 +6897,33 @@ function spillHtml(st) {
   if (!rows.length) return '';
   window._SPILL_GRP = [];
   var stateZh = { reboard: '已续板', strong: '走强未封', weak: '未续板', unknown: '行情抓空' };
+  // 只有存在「昨日计划」基线时才显示 昨已列/新增：没有基线就没有相对关系，
+  // 全员标「新增」等于告诉读者「昨天一只都没说过」，那是错的。
+  var hasPlan = !!(sp.plan && sp.plan.nCand);
   var h = '<div class="spill-sec"><div class="spill-h">🔗 连板补涨' +
     '<span class="spill-tag">开盘验证口径</span>' +
     (sp.text ? '<span class="spill-x">' + esc(sp.text) + '</span>' : '') +
-    (sp.asOf ? '<span class="spill-x">取数 ' + esc(String(sp.asOf)) + '</span>' : '') + '</div>';
+    (sp.asOf ? '<span class="spill-x">取数 ' + esc(String(sp.asOf)) + '</span>' : '') + '</div>' +
+    (function () {
+      var pl = sp.plan || {};
+      if (!pl.nCand) return '';
+      var avg = (pl.avgPct === null || pl.avgPct === undefined) ? '' :
+        '，均值 ' + (Number(pl.avgPct) > 0 ? '+' : '') + Number(pl.avgPct).toFixed(2) + '%';
+      var lb = pl.nLb ? '；昨日点名 ' + pl.nLb + ' 只连板，已续板 ' + pl.nReboard + ' 只' : '';
+      return '<div class="spill-score">📋 昨日（' + esc(String(pl.planDate || '—')) + '）收盘列的 ' +
+        pl.nCand + ' 只候选 → 今日 <b class="up">' + pl.up + ' 涨</b> / <b class="down">' +
+        pl.down + ' 跌</b>' + (pl.flat ? ' / ' + pl.flat + ' 平' : '') +
+        (pl.noQuote ? ' / ' + pl.noQuote + ' 只抓空' : '') + esc(avg) + esc(lb) + '</div>';
+    })();
   rows.forEach(function (r) {
     var pct = (r.pct === null || r.pct === undefined) ? '' :
       '（' + (Number(r.pct) > 0 ? '+' : '') + Number(r.pct).toFixed(2) + '%）';
     h += '<div class="spill-row"><span class="spill-lb ' + escAttr(String(r.state || '')) + '">' +
       esc(stateZh[r.state] || '—') + pct + '</span>' +
-      '<span class="spill-nm">' + esc(String(r.name || '')) + '</span>' +
+      '<span class="spill-nm">' + esc(String(r.name || '')) +
+      (!hasPlan ? ''
+        : (r.planTheme ? '<em class="spill-ptag" title="昨日收盘题材行里属于这个题材">昨·' + esc(String(r.planTheme)) + '</em>'
+                       : (r.state && r.state !== 'unknown' ? '<em class="spill-ptag new">新增</em>' : ''))) + '</span>' +
       '<span class="spill-th">' + esc(String(r.lbc || '—') + '板 · ' +
         ((r.themes || []).join(' / ') || '题材未标注')) + '</span></div>';
     if (r.matches && r.matches.length) {
@@ -6902,10 +6932,15 @@ function spillHtml(st) {
         window._SPILL_GRP.push({ c: String(m.code || ''), n: String(m.name || ''),
                                  t: '连板补涨 · ' + String(m.name || '') });
         var gi = window._SPILL_GRP.length - 1;
-        var tip = [m.srcZh, m.tierZh, m.stage, (m.hit ? '命中 ' + m.hit : '')]
+        var tip = [m.srcZh, m.tierZh, m.stage, (m.hit ? '命中 ' + m.hit : ''),
+                   (m.wasListed ? '昨日收盘已列' + (m.plannedUnder ? '（' + m.plannedUnder + '）' : '') : '今日新增')]
           .filter(Boolean).join(' · ');
         h += '<span class="spill-c" onclick="stkOpenIn(window._SPILL_GRP,' + gi + ')" title="' +
-          escAttr(tip) + '">' + esc(String(m.name || m.code)) +
+          escAttr(tip) + '">' +
+          (!hasPlan ? '' :
+            (m.wasListed ? '<em class="spill-was" title="昨日收盘的题材行已列过这只">昨</em>' :
+                           '<em class="spill-new" title="今天开盘才命中的同题材标的">新</em>')) +
+          esc(String(m.name || m.code)) +
           '<i>' + esc(String(m.srcZh || '')) + ' · ' + esc(String(m.tierZh || '')) +
           (m.hit ? ' · ' + esc(String(m.hit)) : '') + '</i></span>';
       });
@@ -6916,7 +6951,12 @@ function spillHtml(st) {
     } else if (r.state === 'unknown') {
       h += '<div class="spill-none">行情抓空，不给方向（抓不到 ≠ 没有）。</div>';
     } else if (r.state === 'weak') {
-      h += '<div class="spill-none">未续板，题材没被当日确认 → 不给补涨候选。</div>';
+      /* R100z328：未续板要明确「昨天那几只是作废的」，而不是只说「今天不给候选」——
+         否则读者会以为昨天那份计划还成立，只是今天没更新。 */
+      h += '<div class="spill-none">未续板 → 题材没被当日确认，今天不给补涨候选' +
+        (hasPlan && r.planTheme && r.planCandN
+          ? '；<b>昨日「' + esc(String(r.planTheme)) + '」列的 ' + r.planCandN + ' 只候选同步作废</b>'
+          : '') + '。</div>';
     } else {
       h += '<div class="spill-none">断板与陈学长池内没有同题材标的（不是漏跑）。</div>';
     }
