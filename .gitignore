@@ -85,3 +85,6 @@ signal_ledger.json.bak-*
 # R100z336：本机一次性渲染探针页（无头 Chrome 验 K 线覆盖层用；固定路径、只覆写不删除，
 # 沙箱里 os.remove 等于移到废纸篓，所以留着但绝不入库）
 _tmp_probe_*.html
+
+# R100z338：同上，验「进行明细」弹窗用（探针页 + 截图放大件）
+_tmp_shot_*.png

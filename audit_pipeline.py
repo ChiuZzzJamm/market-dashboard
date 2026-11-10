@@ -5813,6 +5813,136 @@ def g67_kline_hz_overlay(r):
                % (_tail(err or out, 2) or "rc=%s" % rc))
 
 
+def g68_pending_detail(r):
+    """G68 进行明细：数据自洽 + 渲染函数真跑一遍（R100z338，2026-11-11，FAIL 级）。
+
+    由来（用户 2026-11-11 00:06）：「增加一个进行明细，里面是未结算还在等待完成收益的标的…
+    每日更新，如果完成收益了就挪进结算明细」。这张表的价值全在**数字对得上**：
+      ① 条数必须等于同页那行「待结算 N 条」——两个数出自同一份台账，对不上就是没刷新；
+      ② 出现在进行明细里的，不许同时出现在结算明细里（一笔只能在一个状态）；
+      ③ 「待开盘买入」这种降级必须**真的没有买价**，不能为了好看填一个 0 或昨收；
+      ④ 浮盈浮亏要与买价/现价自洽（各算一次必然漂移）。
+    这类错数据侧看起来都「正常」，所以分两层查：
+      a) 数据层（本函数上半）：条数/唯一性/互斥/自洽/排序；
+      b) 渲染层（check_pend_table.py）：把 openPendingDetail 抠出来在 node 里真调一次，
+         断言六列表头、行数、列数、涨红跌绿落在类上、两个降级态各自出现、无 undefined/NaN。
+    —— b 是因为 R100z336 的教训：函数抛异常时页面照样打开，只是表格空着/满屏 NaN，
+    纯看数据永远查不出来。
+    """
+    D = load_data_json()
+    cp = D.get("chenPool") or {}
+    if not cp.get("generatedAt"):
+        r.warn("G68", "chenPool 未生成（chen_pool.py 还没跑），进行明细无从校验")
+        return
+    cmp_ = cp.get("compare") or {}
+    tr = cp.get("track") or {}
+    opens = cmp_.get("opens")
+    openN = tr.get("openN")
+    if openN and not opens:
+        r.fail("G68", "台账里有 %s 条待结算，但 compare.opens 缺失 —— 页面上「进行明细」"
+                      "入口会整块消失（数据有、入口没接）" % openN)
+        return
+    if not opens:
+        r.warn("G68", "compare.opens 为空（台账没有未结算样本），渲染闸门跳过")
+        return
+
+    bad = []
+    if openN is not None and len(opens) != int(openN):
+        bad.append("条数 %d ≠ 页面「待结算 %s 条」" % (len(opens), openN))
+
+    ledgerN = cmp_.get("ledgerN")
+    if ledgerN is not None:
+        s = len(opens) + int(tr.get("settledN") or 0) + int(tr.get("legacyN") or 0)
+        if s != int(ledgerN):
+            bad.append("进行 %d + 已结算 %s + 旧口径 %s = %d ≠ 台账 %s"
+                       % (len(opens), tr.get("settledN"), tr.get("legacyN"), s, ledgerN))
+
+    def key(x):
+        # 去重键用「代码+池+确认日」：同一只票可能被两个池在同一天各自确认，那是两笔。
+        # ⚠️ 互斥键必须换成两张表**都有**的字段（settles 里没有 confirmDay），
+        # 否则 set 交集恒为空、这条断言等于没写（本闸第一次就是这么写错的）。
+        return (str(x.get("code")), str(x.get("pool")), str(x.get("confirmDay")))
+
+    def okey(x):
+        return (str(x.get("code")), str(x.get("pool")), str(x.get("buyDay")))
+
+    seen = {}
+    dup = []
+    for x in opens:
+        k = key(x)
+        if k in seen:
+            dup.append(k[0])
+        seen[k] = 1
+    if dup:
+        bad.append("同一笔（代码+池+确认日）重复 %d 次：%s" % (len(dup), dup[:3]))
+
+    stl_keys = {okey(y) for y in (cmp_.get("settles") or [])}
+    both = [x.get("code") for x in opens if okey(x) in stl_keys]
+    if both:
+        bad.append("%d 笔同时出现在进行与结算里（一笔只能一个状态）：%s" % (len(both), both[:3]))
+
+    states = {"ok", "preBuy", "noKline"}
+    illegal = sorted({str(x.get("state")) for x in opens} - states)
+    if illegal:
+        bad.append("state 取值非法 %s（只允许 ok/preBuy/noKline）" % illegal)
+
+    need = ("code", "name", "pool", "confirmDay", "buyDay", "holdDays", "state")
+    lack = []
+    for x in opens:
+        miss = [f for f in need if f not in x]
+        if miss:
+            lack.append("%s 缺 %s" % (x.get("code"), ",".join(miss)))
+    if lack:
+        bad.append("字段不全 %d 条：%s" % (len(lack), lack[:2]))
+
+    drift = []
+    for x in opens:
+        if x.get("state") != "ok":
+            continue
+        h, l, w = x.get("heldDays"), x.get("leftDays"), x.get("holdDays")
+        if None in (h, l, w) or int(l) != int(w) - int(h) or not (0 <= int(h) <= int(w)):
+            drift.append(str(x.get("code")))
+            continue
+        bp, cu, rp = x.get("buyPx"), x.get("curPx"), x.get("retPct")
+        try:
+            calc = (float(cu) / float(bp) - 1) * 100
+            if abs(calc - float(rp)) > 0.02:
+                drift.append(str(x.get("code")))
+        except (TypeError, ValueError, ZeroDivisionError):
+            drift.append(str(x.get("code")))
+    if drift:
+        bad.append("%d 条的进度/盈亏与价格不自洽：%s" % (len(drift), drift[:3]))
+
+    fake = [str(x.get("code")) for x in opens
+            if x.get("state") == "preBuy" and x.get("buyPx") is not None]
+    if fake:
+        bad.append("「待开盘买入」却已经有买价 %d 条（不能编数字）：%s" % (len(fake), fake[:3]))
+
+    lefts = [x.get("leftDays") for x in opens if x.get("leftDays") is not None]
+    if lefts != sorted(lefts):
+        bad.append("没有按窗口剩余天数升序（快到期的最该在上面）")
+
+    od = cmp_.get("openMeta") or {}
+    if od.get("shown") is not None and int(od["shown"]) != len(opens):
+        bad.append("openMeta.shown=%s ≠ 实际 %d 条" % (od["shown"], len(opens)))
+
+    if bad:
+        r.fail("G68", "进行明细数据不自洽：" + "；".join(bad[:4]))
+        return
+
+    # 渲染层：真跑一次
+    rc, out, err = _run_tool("check_pend_table.py", "--quiet", timeout=180)
+    if rc == 0:
+        r.ok("G68", "进行明细 %d 条：条数与「待结算」一致、与结算明细互斥、降级不编数字、按剩余天数升序；"
+                    "渲染函数真跑通过（%s）" % (len(opens), _tail(out, 1)))
+    elif rc == 1:
+        r.fail("G68", "进行明细渲染不对（表格会空着或满屏 NaN，页面上看不出是报错）："
+                      + _tail(out, 3))
+    else:
+        r.warn("G68", "进行明细渲染闸门没验证成功（%s）——这是检查器/环境问题，不代表干净"
+               % (_tail(err or out, 2) or "rc=%s" % rc))
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -5891,6 +6021,7 @@ def main():
     g65_stop_anchor(r)
     g66_done_excluded(r)
     g67_kline_hz_overlay(r)
+    g68_pending_detail(r)
 
     # R100z284：机器可读的结论行。
     #

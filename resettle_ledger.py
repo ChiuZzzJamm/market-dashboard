@@ -89,6 +89,7 @@ def main():
     before = copy.deepcopy(ents)          # 修前快照，用来出对照表
 
     miss, changed, back_to_open = [], [], []
+    klc = {}          # R100z337：进行明细要用同一份 K 线（别让它自己再抓一次，两处不同源）
     for e in ents:
         code = str(e.get('code'))
         kl = to_kl(K.get(code))
@@ -97,6 +98,7 @@ def main():
         if len(kl) < 5:
             miss.append(code)
             continue
+        klc[code] = kl
         old = dict(e.get('result') or {})
         new = CP.settle_one(e, kl)
         if new is None:
@@ -145,7 +147,7 @@ def main():
         db_codes = [e.get('code') for e in (D.get('duanban') or {}).get('confirmed') or []]
         # R100z332：必须传 done。原来这里不传，等于把「今日已兑现」的剔除清空——
         # 用户看到的就是「今天涨停的票又回到明日买入名单」。
-        cmp = CP.build_compare(chen_codes, db_codes, led, done=CP.today_done(D))
+        cmp = CP.build_compare(chen_codes, db_codes, led, done=CP.today_done(D), kl_cache=klc)
         cp['compare'] = cmp
         cp['track'] = CP.build_track(led, 0, cmp)
         D['chenPool'] = cp

@@ -636,6 +636,40 @@ def load_ledger():
         return {"entries": [], "updatedAt": ""}
 
 
+def buy_of(e, kl):
+    """确认日 → 买入日 / 买价（`settle_one` 与 `open_rows` 共用，**别各写一遍**）。
+
+    R100z222（审核意见 §1）：结算基准是 confirmDate（数据日）——买入永远是它的
+    **下一根开盘**，语义与「看到信号之后才买」一致；entryDate 只作旧台账的兼容回退。
+    R100z219：原实现按 entryDate 精确 index()，脚本在周日 23:5x 跑时 entryDate 落在
+    非交易日 → ValueError → 该条永不出结果且**不报错**（胜率表永远 0 样本，看着像没到期）。
+    现在改成「≤ 确认日的最后一根 K 线」：确认日恰是交易日时与 index() 完全一致，
+    落在周末/节假日时就近回落到上一个交易日，买价仍是它之后那根的开盘——
+    这才是实盘能成交的时点（周五收盘确认、周一开盘买）。
+
+    返回 None 的两种情况都必须当成「还不能算收益」而不是「亏了」：
+      · 确认日早于全部 K 线（拿不到历史）→ idx < 0；
+      · 下一根还没出现（今天刚确认、明天才开盘）→ idx+1 越界。
+    """
+    days = [str(k.get("day")) for k in kl]
+    key = str(e.get("confirmDate") or e.get("entryDate") or "")
+    if not key:
+        return None
+    idx = -1
+    for i, d in enumerate(days):
+        if d <= key:
+            idx = i
+    if idx < 0:
+        return None
+    if idx + 1 > len(kl) - 1:
+        return None
+    buy = float(kl[idx + 1].get("open") or 0)
+    if buy <= 0:
+        return None
+    return {"idx": idx, "days": days, "buyDay": days[idx + 1], "buy": buy,
+            "lastIdx": len(kl) - 1}
+
+
 def settle_one(e, kl):
     """统一结算口径（两个池、两套指标共用，不然胜率不可比）。
 
@@ -664,29 +698,10 @@ def settle_one(e, kl):
     """
     tgt_pct = float(e.get("tgtPct") or TARGET_PCT)
     hold_days = int(e.get("holdDays") or HOLD_DAYS)
-    days = [str(k.get("day")) for k in kl]
-    # R100z222（审核意见 §1）：结算基准改成 confirmDate（数据日）——买入永远是它的
-    # 下一根开盘，语义与「看到信号之后才买」一致；entryDate 只作旧台账的兼容回退。
-    key = str(e.get("confirmDate") or e.get("entryDate") or "")
-    if not key:
+    _b = buy_of(e, kl)          # 确认日→买入日/买价（与 open_rows 同一份实现）
+    if not _b:
         return None
-    # R100z219：原来是 days.index(entryDate) 精确匹配。踩过一次——脚本在周日 23:5x 跑，
-    # entryDate 写成「周日」这个非交易日，index() 抛 ValueError → 返回 None →
-    # 那 13 条样本永远不会结算，而且**不报错**（胜率表永远 0 样本、看着像"还没到期"）。
-    # 改成「≤ entryDate 的最后一根 K 线」：确认日恰好是交易日时行为与 index() 完全一致；
-    # 落在周末/节假日时就近回落到上一个交易日，买价仍是它之后那根的开盘——
-    # 这才是实盘能成交的时点（周五收盘确认、周一开盘买）。
-    idx = -1
-    for i, d in enumerate(days):
-        if d <= key:
-            idx = i
-    if idx < 0:
-        return None
-    if idx + 1 > len(kl) - 1:
-        return None
-    buy = float(kl[idx + 1].get("open") or 0)
-    if buy <= 0:
-        return None
+    days, idx, buy = _b["days"], _b["idx"], _b["buy"]
     stop = float(e.get("stopPrice") or 0)
     if stop > 0 and buy <= stop:
         # §9：开盘就在止损位之下 → 纪律上不进场。记为 notExecuted，不进胜负分母。
@@ -1020,6 +1035,99 @@ def settle_rows(ledger, today=None, keep_days=None):
                   "skip": skip, "legacyShown": legacy_n, "today": today}
 
 
+def open_rows(ledger, kl_cache=None, today=None):
+    """进行明细（用户 2026-11-11 00:06 指定）：**还没结算、还在等收益**的标的逐条浮盈浮亏。
+
+    用户原话：「增加一个进行明细，里面是未结算还在等待完成收益的标的，这类标的要么收益是负的
+    要么是还未达到 5% 的，每日更新，如果完成收益了就挪进结算明细」。
+
+    ⛔ 与 settle_rows 的分工（两张表不能合并）：
+      · 结算明细 = **已卖出**的逐笔成交（买价/卖价/结果），是胜率表的原始样本；
+      · 进行明细 = **还拿着**的，只有一个当前价和浮动盈亏。
+    两份都从**同一份台账、同一套买价口径**算（`buy_of` + `settle_one` 的 tgtPct/holdDays 常量），
+    所以「这条什么时候从进行明细消失、出现在结算明细」不需要搬数据——结算 `settle_one`
+    一旦能给出结果，它自然就不在这里了。**任何一侧都不自己另算一套**。
+
+    为什么不在这里筛「只列亏的 / 只列没到 5% 的」：
+    用户描述的是**这两类的并集 = 全部未结算**（收益为正但没到止盈线，同样在等）。
+    真按 <0 或 <5% 过滤，等于把「+5.0% 已经摸到、但收盘回落」这类最该看的票藏起来；
+    而且过滤条件一改，条数就和上面「待结算 N 条」对不上，读者会以为漏了。
+
+    降级必须显式（抓不到 ≠ 没有）：
+      · `state='noKline'` 取不到 K 线 → 现价/盈亏留空，不给 0；
+      · `state='preBuy'` 今天刚确认、明天才开盘买 → 买入日写下一交易日、价格留空。
+    两种情况都照常列出来（读者要知道「这条还在队列里」），只是数字空着。
+    """
+    kl_cache = kl_cache or {}
+    today = str(today or today_trade_date())[:10]
+    rows, no_kl, pre_buy = [], 0, 0
+    for e in (ledger.get("entries") or []):
+        if (e.get("result") or {}).get("status") == "settled":
+            continue
+        code = str(e.get("code") or "")
+        if not code:
+            continue
+        pool = str(e.get("pool") or "")
+        tgt_pct = float(e.get("tgtPct") or TARGET_PCT)
+        hold_days = int(e.get("holdDays") or HOLD_DAYS)
+        confirm_day = str(e.get("confirmDate") or e.get("entryDate") or "")[:10]
+        row = {
+            "code": code,
+            "name": str(e.get("name") or ""),
+            "pool": pool,
+            "poolZh": POOL_ZH.get(pool, pool or "—"),
+            "legacy": (e.get("ruleFrom") or "legacy") != RULE_FROZEN_AT,
+            "confirmDay": confirm_day,
+            "buyDay": _next_trade_day(confirm_day) if confirm_day else "",
+            "buyPx": None, "curDay": "", "curPx": None,
+            "retPct": None, "highPct": None,
+            "tgtPct": tgt_pct, "tgtPx": None,
+            "stopPx": e.get("stopPrice") or None,
+            "holdDays": hold_days, "heldDays": None, "leftDays": None,
+            "state": "noKline",
+        }
+        kl = kl_cache.get(code)
+        b = buy_of(e, kl) if kl else None
+        if not kl:
+            no_kl += 1
+        elif not b:
+            # 确认日之后还没有新的 K 线（今天刚确认 / 停牌）→ 明天开盘买，价格还不知道
+            row["state"] = "preBuy"
+            pre_buy += 1
+        else:
+            row["state"] = "ok"
+            row["buyDay"] = b["buyDay"]
+            row["buyPx"] = round(b["buy"], 2)
+            row["tgtPx"] = round(b["buy"] * (1 + tgt_pct / 100.0), 2)
+            last = b["lastIdx"]
+            row["curDay"] = str(kl[last].get("day") or "")[:10]
+            cl = float(kl[last].get("close") or 0)
+            if cl > 0:
+                row["curPx"] = round(cl, 2)
+                row["retPct"] = round((cl - b["buy"]) / b["buy"] * 100.0, 2)
+            # 期间最高（自买入日次一交易日起，与 settle_one 的止盈判定同起点）：
+            # 回答「为什么还没结算」——差多少到止盈线，或曾经摸到过又回落。
+            hi = 0.0
+            for j in range(b["idx"] + 2, last + 1):
+                try:
+                    hi = max(hi, float(kl[j].get("high") or 0))
+                except (TypeError, ValueError):
+                    pass
+            if hi > 0:
+                row["highPct"] = round((hi - b["buy"]) / b["buy"] * 100.0, 2)
+            held = last - (b["idx"] + 1)
+            row["heldDays"] = held
+            row["leftDays"] = max(0, hold_days - held)
+        rows.append(row)
+    # 排序：**快到期的最上面**——这张表是用来决定「明天该不该走」的，
+    # 持了 9/10 天的那条比昨天刚买的更急；还没买/没 K 线的放末尾（没有可读的进度）。
+    # 两级稳定排序：先按确认日倒序（同剩余天数时新的在上），再按剩余天数升序。
+    rows.sort(key=lambda x: (x["confirmDay"], x["code"]), reverse=True)
+    rows.sort(key=lambda x: (x["state"] != "ok", x["leftDays"] if x["state"] == "ok" else 0))
+    return rows, {"shown": len(rows), "noKline": no_kl, "preBuy": pre_buy,
+                  "today": today}
+
+
 def perf_of(rows):
     """已结算样本的**累计收益**（资金曲线模型，不是「逐笔相加」）。
 
@@ -1113,7 +1221,7 @@ def today_done(D):
     return out
 
 
-def build_compare(chen_codes, db_codes, ledger, today=None, done=None):
+def build_compare(chen_codes, db_codes, ledger, today=None, done=None, kl_cache=None):
     """当日池差异 + 历史胜率对比。
 
     R100z222（审核意见 §14）：`chen_codes` / `db_codes` 由调用方统一传**确认池**，
@@ -1141,12 +1249,20 @@ def build_compare(chen_codes, db_codes, ledger, today=None, done=None):
     for k, v in cross.items():
         stats["cross_" + k] = pool_stats(v)
     settles, settle_meta = settle_rows(ledger, today)
+    # R100z337（用户 2026-11-11 00:06）：「进行明细」——未结算、还在等收益的逐条浮盈。
+    # 与 settles 同一份台账、同一套买价口径；结算完成后它自然从这边消失、出现在 settles 里。
+    # kl_cache 由调用方给（main 结算时已经抓过，resettle 重结时也在循环里抓过）——
+    # 不在这里自己再抓一遍：两处各抓一次，盘中/收盘价就可能不同源。
+    opens, open_meta = open_rows(ledger, kl_cache, today)
     perf = perf_of(settles)
     return {
         # R100z303（用户 2026-11-04）：「留痕回测进度」那块要能点开看逐笔买卖。
         # 明细与统计同源（同一个 ledger、同一个 settle_one 结果），只是多了一个保留窗口。
         "settles": settles,
         "settleMeta": settle_meta,
+        # R100z337：进行明细（只读展示，不参与胜率/累计计算）
+        "opens": opens,
+        "openMeta": open_meta,
         # R100z313：累计收益（资金曲线口径，不是逐笔相加）
         "perf": perf,
         "today": {
@@ -1523,7 +1639,7 @@ def main():
     db_codes = [e.get("code") for e in (db_mod.get("confirmed") or [])]
     # 当日已兑现（R100z332：改用 today_done，与 resettle_ledger.py 共用同一份口径）
     _done = today_done({"chenPool": mod, "duanban": db_mod})
-    mod["compare"] = build_compare(chen_codes, db_codes, ledger, done=_done)
+    mod["compare"] = build_compare(chen_codes, db_codes, ledger, done=_done, kl_cache=klc)
     # R100z233b：`since` 只从**当前口径**的样本里取。原写法取全台账最小值，
     # 换口径后页面会写成「起始日 2026-10-22 / 已结算 13 条」而表格里样本是 0——
     # 两个数字各说一套，读者只会认为这张表算错了。

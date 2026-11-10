@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611102340"></script>
+<script src="data.js?v=202611110030"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -937,11 +937,13 @@
              text-decoration: underline; text-underline-offset: 3px; }
   .cc-link:hover { color: var(--ink); }
   /* R100z303：结算明细弹窗——遮罩/面板复用 #db-modal 那套观感（.db-modal-box / -close），
-     但**独立 id**：断板弹窗自带 dbStep/DB_ORDER 导航状态，复用同一容器会串票。 */
-  #settle-modal { display: none; position: fixed; inset: 0; z-index: 210;
+     但**独立 id**：断板弹窗自带 dbStep/DB_ORDER 导航状态，复用同一容器会串票。
+     R100z337：进行明细是**同一套观感的第二张表**（列不同、导航组不同），所以把样式挂到
+     `.stl-modal` 类上、两个弹窗各留自己的 id —— 复制一份 CSS 迟早有一边改漏。 */
+  .stl-modal { display: none; position: fixed; inset: 0; z-index: 210;
                   background: rgba(30,45,60,.45); align-items: center; justify-content: center; padding: 16px; }
-  #settle-modal.open { display: flex; }
-  #settle-modal .db-modal-box { max-width: 720px; width: 100%; max-height: 86vh;
+  .stl-modal.open { display: flex; }
+  .stl-modal .db-modal-box { max-width: 720px; width: 100%; max-height: 86vh;
                                 display: flex; flex-direction: column; padding: 16px 18px; }
   .stl-hd { display: flex; align-items: flex-start; gap: 10px; }
   .stl-hd > div:first-child { flex: 1 1 auto; min-width: 0; }
@@ -967,12 +969,16 @@
   .stl-tbl td.up { color: var(--up); font-weight: 700; }
   .stl-tbl td.down { color: var(--down); font-weight: 700; }
   .stl-foot { margin-top: 9px; font-size: var(--fs-xs); color: var(--ink2); line-height: 1.7; }
+  /* R100z337：进行明细的「进度」列（已持 N/窗口 M 日）与到期提醒 */
+  .stl-tbl .pd { color: var(--ink2); }
+  .stl-tbl .pd-soon { color: #a8541a; font-weight: 800; }
+  .stl-tbl .pd-wait { color: var(--ink2); opacity: .8; }
   /* 窄屏：六列在 390px 上按原尺寸会挤出横向滚动条。缩内边距 + 降一级字号，
      让它一屏放下；真放不下时 .stl-bd 仍可横向滑（宁可滑，也不砍掉买/卖价两列——
      那两列是这张表存在的理由）。 */
   @media (max-width: 560px) {
-    #settle-modal { padding: 10px; }
-    #settle-modal .db-modal-box { padding: 14px 12px; }
+    .stl-modal { padding: 10px; }
+    .stl-modal .db-modal-box { padding: 14px 12px; }
     .stl-tbl { font-size: var(--fs-xs); }
     .stl-tbl th, .stl-tbl td { padding: 6px 4px; }
     .stl-tbl .cd2 { display: block; margin-left: 0; }
@@ -7474,6 +7480,12 @@ function chenCompareHtml(c) {
       ' ｜ 待结算 <b>' + (tr.openN || 0) + '</b> 条' +
       (tr.justSettled ? '（本次 +' + tr.justSettled + '）' : '') +
       (tr.legacyN ? ' ｜ 旧口径 ' + tr.legacyN + ' 条另结' : '') +
+      /* R100z337（用户 2026-11-11 00:06）：「增加一个进行明细，里面是未结算还在等待完成收益的标的…
+         如果完成收益了就挪进结算明细」。与右边「结算明细」并排：左边是**还拿着的**，右边是**已卖出的**，
+         两个数加起来才是全部在跟踪的标的（待结算 N 条 = 进行明细的条数，同一份台账）。 */
+      ((cmp.opens || []).length
+        ? '<button class="cc-link" onclick="openPendingDetail()">进行明细 · ' +
+          (cmp.opens || []).length + ' 条 ›</button>' : '') +
       /* R100z303（用户 2026-11-04）：「这块能不能增加结算明细？列清楚标的、买入日期、
          卖出日期、买入价格、卖出价格，默认隐藏，点击以后跳出小窗口，能往下滑，
          卖出后 30 个交易日清除」。默认折叠 → 一个入口，点开是独立弹窗（不是页内展开：
@@ -7535,36 +7547,45 @@ function chenCompareHtml(c) {
   return out;
 }
 
-/* ============================ 结算明细弹窗（R100z303） ============================
-   用户 2026-11-04：「这块能不能增加结算明细？列清楚标的名称、买入日期、卖出日期、
+/* ============================ 结算明细 / 进行明细 两张表（R100z303 / R100z337） ============================
+   结算明细（用户 2026-11-04）：「这块能不能增加结算明细？列清楚标的名称、买入日期、卖出日期、
    买入价格、卖出价格，默认隐藏，我点击以后会跳出一个小窗口，然后能往下拉滑动，
    这里面的结算明细卖出后 30 个交易日清除」。
+   进行明细（用户 2026-11-11）：「增加一个进行明细，里面是未结算还在等待完成收益的标的，
+   这类标的要么收益是负的要么是还未达到 5% 的，每日更新，如果完成收益了就挪进结算明细」。
 
-   四个设计取舍：
+   设计取舍（两张表共用）：
    ① **弹窗而不是页内展开**：22 行 × 6 列会把复盘卡再撑两屏，而上一轮刚把这张卡压短；
-   ② **独立 id `#settle-modal`**：断板弹窗 #db-modal 里挂着 key/dbStep/DB_ORDER 导航状态，
-      借它的容器迟早串票（24.113 的教训）。只借样式类 .db-modal-box / .db-modal-close；
-   ③ **只读 data.js 的 compare.settles**：明细的条数、清零窗口都在 chen_pool 里算好
-      （SETTLE_KEEP_DAYS），前端不自己按日期过滤——两处各算一次必然漂移；
-   ④ **卖出行必须标来源池与旧口径**：同一天两个池各卖一只，只写名字分不清是谁的账。
-   ================================================================================= */
-function settleModalEl() {
-  var el = document.getElementById('settle-modal');
+   ② **各自独立 id**（#settle-modal / #pend-modal）：断板弹窗 #db-modal 里挂着
+      key/dbStep/DB_ORDER 导航状态，借它的容器迟早串票（24.113 的教训）；
+      两张表也各有自己的导航组（_STL_GRP / _PEND_GRP），在弹窗里点开标的再左右翻，
+      翻的是**这张表**的顺序，不会翻到另一张表去；
+   ③ **只读 data.js 的 compare.settles / compare.opens**：条数、保留窗口、浮盈口径都在
+      chen_pool 里算好（SETTLE_KEEP_DAYS / buy_of / settle_one 常量），前端不自己按日期过滤
+      也不自己算收益——两处各算一次必然漂移；
+   ④ **已卖出的行必须标来源池与旧口径**：同一天两个池各卖一只，只写名字分不清是谁的账。
+   ===================================================================================================== */
+function stlModalEl(id, label) {
+  var el = document.getElementById(id);
   if (el) return el;
   el = document.createElement('div');
-  el.id = 'settle-modal';
-  el.innerHTML = '<div class="db-modal-box" role="dialog" aria-modal="true" aria-label="结算明细"></div>';
+  el.id = id;
+  el.className = 'stl-modal';
+  el.innerHTML = '<div class="db-modal-box" role="dialog" aria-modal="true" aria-label="' + label + '"></div>';
   // 点遮罩关闭（点面板内部不关）——与他参考的那个弹窗一致
-  el.addEventListener('click', function (e) { if (e.target === el) closeSettleDetail(); });
+  el.addEventListener('click', function (e) { if (e.target === el) closeStlDetail(id); });
   document.body.appendChild(el);
   return el;
 }
-function settleEsc(e) { if (e.key === 'Escape' || e.keyCode === 27) closeSettleDetail(); }
-function closeSettleDetail() {
-  var el = document.getElementById('settle-modal');
+function stlEsc(e) { if (e.key === 'Escape' || e.keyCode === 27) { closeSettleDetail(); closePendingDetail(); } }
+function closeStlDetail(id) {
+  var el = document.getElementById(id);
   if (el) el.classList.remove('open');
-  document.removeEventListener('keydown', settleEsc);
+  // 两张表可能一前一后开过，全都关掉了才摘掉键盘监听（否则 Esc 只关得掉最后一张）
+  if (!document.querySelector('.stl-modal.open')) document.removeEventListener('keydown', stlEsc);
 }
+function closeSettleDetail() { closeStlDetail('settle-modal'); }
+function closePendingDetail() { closeStlDetail('pend-modal'); }
 function openSettleDetail() {
   var D = window.DASHBOARD_DATA || {};
   var cmp = (D.chenPool || {}).compare || {};
@@ -7622,11 +7643,106 @@ function openSettleDetail() {
     '；按卖出日倒序，最新的在上面。' +
     '⚠️ 明细只影响显示，台账一条不删——上面的胜率/均值仍按<b>全量</b>样本算，' +
     '所以「已结算 N 条」可能多于这里的条数。</div>';
-  var el = settleModalEl();
+  var el = stlModalEl('settle-modal', '结算明细');
   el.querySelector('.db-modal-box').innerHTML = h;
   el.classList.add('open');
   el.querySelector('.stl-bd') && (el.querySelector('.stl-bd').scrollTop = 0);
-  document.addEventListener('keydown', settleEsc);
+  document.addEventListener('keydown', stlEsc);
+}
+
+/* ============================ 进行明细（R100z337） ============================
+   用户 2026-11-11 00:06：「增加一个进行明细，里面是未结算还在等待完成收益的标的，
+   这类标的要么收益是负的要么是还未达到 5% 的，每日更新，如果完成收益了就挪进结算明细」。
+
+   这张表回答的是「**现在手上这几只怎么样了、还剩几天**」，不是「这套口径准不准」：
+     · 买价、止盈线、持有窗口都来自台账冻结的同一条（buy_of / tgtPct / holdDays），
+       与结算明细、与胜率表**同一个数**；
+     · 浮动盈亏 = 最后一根日 K 收盘 vs 买价——盘中价不落库，所以这里是收盘口径，
+       和「止损按收盘判」一致，不会出现「盘中显示亏、结算却算赢」的错位；
+     · 排序按**窗口剩余天数升序**（快到期的最上面）：这张表每天都会看，
+       最该做决定的那几条必须在前三行；没有可读进度的（今天刚确认待开盘 / 取不到 K 线）沉底。
+   =============================================================================== */
+function openPendingDetail() {
+  var D = window.DASHBOARD_DATA || {};
+  var cmp = (D.chenPool || {}).compare || {};
+  var rows = cmp.opens || [];
+  var meta = cmp.openMeta || {};
+  var mmdd = function (d) { var t = String(d || ''); return t.length >= 10 ? t.slice(5) : (t || '—'); };
+  var pxf = function (v) {
+    var n = Number(v);
+    return (v === null || v === undefined || v === '' || !isFinite(n)) ? '—' : n.toFixed(2);
+  };
+  var h = '<div class="stl-hd"><div>' +
+    '<div class="stl-t">进行明细</div>' +
+    '<div class="stl-sub">还没结算、还在等收益的标的。买价＝确认日<b>次一交易日开盘</b>；' +
+    '现价＝最后一根日 K <b>收盘</b>（与「止损按收盘判」同一口径）；' +
+    '浮动盈亏只作过程记录，<b>不参与</b>胜率与累计收益（那两栏只用已结算样本）。' +
+    '点标的名称可看 K 线与个股消息（弹窗里能左右翻）。</div></div>' +
+    '<button class="db-modal-close" onclick="closePendingDetail()" aria-label="关闭">×</button></div>' +
+    '<div class="stl-sub">显示 <b>' + rows.length + '</b> 条' +
+    (meta.preBuy ? '（含 <b>' + meta.preBuy + '</b> 条今天刚确认、明天开盘才买）' : '') +
+    (meta.noKline ? '｜<b>' + meta.noKline + '</b> 条取不到 K 线（现价空着，不编数字）' : '') +
+    '｜按<b>窗口剩余天数</b>升序：快到期的最上面' +
+    '｜收益摸到止盈线或跌破止损位，第二天就自动移到「结算明细」</div>';
+  if (!rows.length) {
+    h += '<div class="db-empty" style="margin-top:12px">当前没有未结算的标的（池刚清空，或都已走完窗口）</div>';
+  } else {
+    var _grp = [];
+    h += '<div class="stl-bd"><table class="stl-tbl"><thead><tr>' +
+      '<th>标的</th><th>买入日</th><th>买入价</th><th>现价</th><th>浮动盈亏</th><th>进度</th>' +
+      '</tr></thead><tbody>';
+    rows.forEach(function (r) {
+      var ret = Number(r.retPct);
+      var hasRet = r.retPct !== null && r.retPct !== undefined && isFinite(ret);
+      var cls = !hasRet ? '' : (ret > 0 ? 'up' : (ret < 0 ? 'down' : ''));
+      var txt = !hasRet ? '—' : (ret > 0 ? '+' : '') + ret.toFixed(2) + '%';
+      var ti = [];
+      if (r.tgtPx) ti.push('止盈线 ' + Number(r.tgtPx).toFixed(2) + '（+' + r.tgtPct + '%）');
+      if (r.stopPx) ti.push('止损位 ' + Number(r.stopPx).toFixed(2) + '（收盘跌破才算）');
+      if (hasRet) ti.push('距止盈线还差 ' + Math.max(0, r.tgtPct - ret).toFixed(2) + '%');
+      if (r.highPct !== null && r.highPct !== undefined) {
+        ti.push('期间最高 +' + Number(r.highPct).toFixed(2) + '%' +
+          (Number(r.highPct) >= r.tgtPct ? '（摸到过止盈线又回落，收盘没走成）' : ''));
+      }
+      var gi = _grp.length;
+      _grp.push({ c: String(r.code || ''), n: String(r.name || ''),
+                  t: '进行明细 · ' + (r.name || r.code) + (r.buyDay ? '（买入 ' + r.buyDay + '）' : '') });
+      // 进度：正常持仓写「已持 n/窗口 m 日」，最后一天标黄提醒；两种降级各自写明原因
+      var prog;
+      if (r.state === 'ok') {
+        var soon = r.leftDays <= 1;
+        prog = '<span class="pd' + (soon ? ' pd-soon' : '') + '" title="' +
+          escAttr('窗口 ' + r.holdDays + ' 个交易日；已持 ' + r.heldDays + ' 天，' +
+            (r.leftDays > 0 ? '还剩 ' + r.leftDays + ' 天' : '今天到期：两条线都没碰就按今日收盘平')) +
+          '">' + r.heldDays + '/' + r.holdDays + ' 日' +
+          (r.leftDays > 0 ? '（剩 ' + r.leftDays + '）' : '· 到期') + '</span>';
+      } else if (r.state === 'preBuy') {
+        prog = '<span class="pd pd-wait" title="今天刚确认，买价＝明天开盘，现在还不知道">待开盘买入</span>';
+      } else {
+        prog = '<span class="pd pd-wait" title="取不到该股 K 线，现价与盈亏无法计算——不是 0">待 K 线</span>';
+      }
+      h += '<tr><td><span class="nm stk-go" title="点击查看 K 线与个股消息" onclick="stkOpenIn(window._PEND_GRP,' +
+        gi + ')">' + esc(r.name || r.code) + '</span>' +
+        '<span class="cd2">' + esc(r.code) + '</span>' +
+        '<span class="pl">' + esc(r.poolZh || '') + (r.legacy ? ' · 旧口径' : '') + '</span></td>' +
+        '<td>' + mmdd(r.buyDay) + '</td><td>' + pxf(r.buyPx) + '</td>' +
+        '<td' + (ti.length ? ' title="' + escAttr(ti.join('；')) + '"' : '') + '>' + pxf(r.curPx) + '</td>' +
+        '<td class="' + cls + '"' + (ti.length ? ' title="' + escAttr(ti.join('；')) + '"' : '') + '>' +
+        txt + '</td><td>' + prog + '</td></tr>';
+    });
+    h += '</tbody></table></div>';
+    window._PEND_GRP = _grp;
+  }
+  h += '<div class="stl-foot">日期年份 ' + esc(String(meta.today || '').slice(0, 4) || '2026') +
+    '；现价取最后一根已收盘日 K。' +
+    '⚠️ 这张表<b>每天重算</b>、只反映当天收盘状态：同一只票昨天显示 −3%、今天可能已进结算明细，' +
+    '因为「摸到止盈线 / 收盘破止损 / 满窗口平」任一发生，它就结算了。' +
+    '条数与上面那行「待结算 N 条」同源，对不上就是数据没刷新。</div>';
+  var el = stlModalEl('pend-modal', '进行明细');
+  el.querySelector('.db-modal-box').innerHTML = h;
+  el.classList.add('open');
+  el.querySelector('.stl-bd') && (el.querySelector('.stl-bd').scrollTop = 0);
+  document.addEventListener('keydown', stlEsc);
 }
 
 /* 池区块：严格 / 放宽 / 观察。卡片四格与他给的交易参数一一对应。
