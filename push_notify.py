@@ -171,8 +171,9 @@ def fmt_deduce_brief(dd, max_main=26, max_counter=22):
     return ' '.join(parts)
 
 def fmt_bullish(t, idx):
-    """利好板块：保留括号内板块说明 + 核心受益股"""
-    theme = t.get('theme','').strip()
+    """利好板块：优先用题材（R100z326），没有才退回行业名 + 括号说明"""
+    _tags = [str(x) for x in (t.get('themeTags') or []) if str(x).strip()]
+    theme = ' / '.join(_tags) if _tags else t.get('theme', '').strip()
     theme = re.sub(r'\s+', ' ', theme)
     m = re.match(r'^(.+?)[（(]([^）)]+)[）)](.*)$', theme)
     if m:
@@ -194,8 +195,9 @@ def fmt_bullish(t, idx):
     return f"{idx}. {theme}"
 
 def fmt_bearish(t, idx):
-    """利空板块：保留括号内板块/方向说明，明确利空哪些板块"""
-    theme = t.get('theme','').strip()
+    """利空板块：优先题材（R100z326），没有才退回行业/方向说明"""
+    _tags = [str(x) for x in (t.get('themeTags') or []) if str(x).strip()]
+    theme = ' / '.join(_tags) if _tags else t.get('theme', '').strip()
     theme = re.sub(r'\s+', ' ', theme)
     m = re.match(r'^(.+?)[（(]([^）)]+)[）)](.*)$', theme)
     if m:
@@ -469,6 +471,23 @@ elif mode == 'star':
         '📖 分析：' + pt.replace('\n', ' '),
         f"🌟 精选（{len(picks)} 只）：{stars_line}",
     ]
+    # R100z324：连板补涨映射——连板是资金已选出的方向，同题材里还没走的票才是有赔率的一端。
+    # 只列「已续板/盘中走强」且命中池内候选的连板，最多 3 行（推送是手机上看，长了两屏翻不完）。
+    # 名字与命中全部来自 update_star.py 的 spillover，这里不做任何匹配计算。
+    sp = st.get('spillover') or {}
+    _sp_rows = [r for r in (sp.get('rows') or [])
+                if (r.get('matches') or []) and r.get('state') in ('reboard', 'strong')]
+    if _sp_rows:
+        _lines = []
+        for r in _sp_rows[:3]:
+            _ms = '、'.join(
+                '%s（%s%s）' % (m.get('name') or '', m.get('srcZh') or '',
+                               '·' + m.get('hit') if m.get('hit') else '')
+                for m in r['matches'][:3])
+            _lines.append('%s%s板·%s → %s' % (
+                r.get('name') or '', r.get('lbc') or '',
+                '/'.join((r.get('themes') or [])[:2]) or '题材未标注', _ms))
+        desp_parts.append('🔗 补涨映射：' + '；'.join(_lines))
     desp = '\n\n'.join(desp_parts)
 
 else:

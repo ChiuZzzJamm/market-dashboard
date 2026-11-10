@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611101008"></script>
+<script src="data.js?v=202611101949"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1032,6 +1032,25 @@
   .db-sub .ord-nw { white-space: nowrap; }
   .db-pool.p-star .tc { border-color: rgba(232,160,13,.45); }
   .db-pool.p-star .tc:hover { border-color: #e8a013; background: rgba(255,248,228,.9); }
+  /* R100z324：连板补涨映射。连板是资金已经选出的方向，这一块回答「同题材里谁还没走」——
+     与下面「精选 chip」区分开：精选是今天要看的名单，这里是按连板题材倒推的候选。 */
+  .spill-sec { margin: 4px 0 12px; padding: 10px 12px; background: #fffdf5;
+    border: 1px solid rgba(232,160,13,.35); border-radius: var(--r-block); }
+  .spill-h { font-size: var(--fs-md); font-weight: 700; color: var(--ink); }
+  .spill-h .spill-x { font-size: var(--fs-sm); font-weight: 400; color: var(--ink2); margin-left: 8px; }
+  .spill-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+  .spill-lb { font-size: var(--fs-xs); padding: 1px 6px; border-radius: 999px;
+    background: var(--up-soft); color: var(--up); }
+  .spill-lb.strong { background: #fff4e5; color: #b8730c; }
+  .spill-lb.weak, .spill-lb.unknown { background: var(--bg-2); color: var(--ink2); }
+  .spill-nm { font-size: var(--fs-base); font-weight: 700; color: var(--ink); }
+  .spill-th { font-size: var(--fs-sm); color: var(--ink2); }
+  .spill-cands { display: flex; flex-wrap: wrap; gap: 6px; margin: 5px 0 0 2px; }
+  .spill-c { font-size: var(--fs-sm); padding: 2px 8px; border-radius: var(--r-note);
+    background: #fff; border: 1px solid rgba(232,160,13,.35); color: var(--ink); cursor: pointer; }
+  .spill-c:hover { border-color: #e8a013; background: #fff8e4; }
+  .spill-c i { font-style: normal; color: var(--ink2); margin-left: 4px; }
+  .spill-none { font-size: var(--fs-sm); color: var(--ink2); margin: 4px 0 0 2px; }
   /* R100s：卡片 db-stage 阶段徽标（已确认/待企稳/待缩量）已删，对应 CSS 一并清理 */
   .db-pool .db-sub { font-size: var(--fs-base); color: var(--ink2); margin-bottom: 14px; }
   /* R100z273（用户 2026-10-28 红框）：这里原来有一整套 .ord-fold / .ord-fold-h / .ord-fold-b /
@@ -1230,6 +1249,22 @@
   /* R100n：通用标的板块小胶囊——R100p 起仅用于弹窗标题行（stkSecBadge），主页胶囊不再显示 */
   .chip-sec { font-size: var(--fs-sm); font-weight:700; color:var(--accent-deep); background:var(--accent-soft); border:1px solid currentColor; border-radius:4px; padding:1px 7px; line-height:1.5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:96px; flex-shrink:0; }
   .tchip .chip-sec { max-width:88px; }
+  /* R100z325：题材徽章——同花顺概念（第三方客观标签），与灰色行业徽章并排。
+     主/次两个，第二个降级为描边款；行业只留小灰字，标明「仅作兜底」。 */
+  .chip-theme { display:inline-flex; align-items:center; font-size: var(--fs-sm);
+    max-width:140px; padding:1px 7px; border-radius:4px; margin-left:4px;
+    background: var(--accent-soft); color: var(--accent-deep); font-weight: 600; }
+  .chip-theme2 { background: transparent; border: 1px solid var(--line);
+    color: var(--ink2); font-weight: 400; }
+  .chip-sec-ind { font-size: var(--fs-xs); color: var(--ink2); margin-left: 5px; }
+  /* R100z326：要闻的题材口径——题材主标签 + 行业小灰字 + 标的题材小胶囊 + 池内候选行 */
+  .nc-imp-ind { font-size: var(--fs-xs); color: var(--ink2); margin-left: 5px; }
+  .nc-stock-th { font-style: normal; font-size: var(--fs-xs); color: var(--accent-deep);
+    background: var(--accent-soft); padding: 0 4px; border-radius: 4px; margin-left: 4px; }
+  .nc-pool-hits { margin: 5px 0 2px; font-size: var(--fs-sm); color: var(--ink2); line-height: 1.9; }
+  .nc-pool-hits .nc-ph { display: inline-flex; align-items: baseline; gap: 3px; margin-right: 10px;
+    padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; background: #fff; }
+  .nc-pool-hits .nc-ph i { font-style: normal; font-size: var(--fs-xs); color: var(--ink2); }
   /* R100n：技术池「通过」胶囊统一红色（用户要求） */
 
   /* R100h：清单 .cl-* 样式已随必带数据清单模块下线删除 */
@@ -2117,9 +2152,40 @@ function stkSecOf(code) {
    （东财 hybk／同花顺／新浪 sectorMap），弹窗只按 code 查表时，83 张卡里有 22 张出现
    「卡片写通用设备、点开写钢铁行业」——同一只票两种说法。以「你点开的那个条目的 sector」
    为准，卡片与弹窗就必然一致；条目没带 sector 才回落到全局表。 */
+/* R100z325（用户 2026-11-10：「很多标的的板块都是错的，改成题材、相关概念」）：
+   题材优先、行业兜底。题材来自 data.js 顶层 stockConcepts（stock_concept.py 抓同花顺 F10
+   概念题材页），**不是 AI 写的**，可回溯到 clid。
+     · 有题材：弹窗徽章显示「主题材 + 次题材 + 行业（小灰字）」；
+     · 卡片 pill 只放 1 个主题材（多了会挤，见 stkSecPillOf）；
+     · 没有题材（接口失败/老数据）：退回原来的行业徽章，绝不空着、也不编概念。 */
+function stkThemeOf(code) {
+  var sc = ((window.DASHBOARD_DATA || {}).stockConcepts || {}).items || {};
+  var k = String(code || '').replace(/\D/g, '');
+  return k ? (sc[k] || null) : null;
+}
+function stkThemeHot(code, n) {
+  var t = stkThemeOf(code);
+  return ((t && t.hot) || []).slice(0, n || 2);
+}
+/* 卡片/列表 pill：1 个主题材，缺失回退行业（prefer 是条目自带 sector） */
+function stkSecPillOf(code, prefer) {
+  var h = stkThemeHot(code, 1);
+  return h.length ? h[0] : (prefer || stkSectorOf(code) || '');
+}
 function stkSecBadge(code, prefer) {
-  var sec = prefer || stkSectorOf(code);
-  return sec ? '<span class="chip-sec" style="font-size: var(--fs-sm);max-width:120px;padding:1px 7px;border-radius:4px;margin-left:4px" title="所属板块：' + escAttr(sec) + '">' + esc(sec) + '</span>' : '';
+  var t = stkThemeOf(code);
+  var hot = (t && t.hot) || [];
+  var ind = (t && t.industry) || prefer || stkSectorOf(code) || '';
+  if (!hot.length) {
+    return ind ? '<span class="chip-sec" style="font-size: var(--fs-sm);max-width:120px;padding:1px 7px;border-radius:4px;margin-left:4px" title="所属板块：' + escAttr(ind) + '">' + esc(ind) + '</span>' : '';
+  }
+  var all = ((t.concepts || []).map(function (x) { return x.n; })).filter(Boolean);
+  var tip = '题材（同花顺概念 ' + String(t.asOf || '').slice(0, 10) + '）：' + all.join('、') +
+    (ind ? '｜所属行业：' + ind : '');
+  return hot.slice(0, 2).map(function (n, i) {
+    return '<span class="chip-theme' + (i ? ' chip-theme2' : '') + '" title="' + escAttr(tip) + '">' + esc(n) + '</span>';
+  }).join('') +
+    (ind ? '<span class="chip-sec-ind" title="同花顺一级行业（仅作兜底）">' + esc(ind) + '</span>' : '');
 }
 
 /* R100q：技术池归属（断板/陈学长/横盘启动/谐波/吸筹）——供弹窗技术徽章 + 全站分级边框共用。
@@ -4553,15 +4619,33 @@ function newsEntryInner(it, showSrc, tag, tradeDate) {
   Object.keys(_impMap).forEach(function (_k) {
     var im = _impMap[_k];
     var impTheme = im.theme || '';
-    s += '<div class="nc-imp">' + (impTheme ? '<span class="nc-imp-theme">' + esc(impTheme) + '</span>' : '') + (im.horizon ? '<span class="nc-imp-hz">' + esc(im.horizon) + '</span>' : '');
+    // R100z326（用户 2026-11-10「要闻这块原来是行业、板块，现在精确到题材」）：
+    // 主标签改成题材（脚本按该组标的的同花顺概念反推），行业只留一枚小灰字——
+    // 行业是静态分类，跟题材对不上（纺织制造 vs 短剧游戏）。
+    var impTags = (im.themeTags && im.themeTags.length) ? im.themeTags : [];
+    s += '<div class="nc-imp">' +
+      (impTags.length
+        ? '<span class="nc-imp-theme">' + esc(impTags.join(' / ')) + '</span>'
+        : (impTheme ? '<span class="nc-imp-theme">' + esc(impTheme) + '</span>' : '')) +
+      (impTags.length && impTheme ? '<span class="nc-imp-ind">' + esc(impTheme) + '</span>' : '') +
+      (im.horizon ? '<span class="nc-imp-hz">' + esc(im.horizon) + '</span>' : '');
     s += '<div class="nc-stocks">';
     im.stocks.forEach(function (st) {
       // R100n：技术池边框描边 + 所属板块胶囊（琥珀边框即表达技术池命中；R100z73b 已移除重复共振徽标）
       var _t0 = (st.name || '') + ' ' + (st.code || '') + (st.note ? ' · ' + st.note : '') + '（点击查看K线）';
-      s += '<span class="stock-chip' + stkGoldCls(st.code) + '" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (st.note || '')) + '" title="' + escAttr(_t0) + '"><span class="nm"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span></span>' + (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
+      s += '<span class="stock-chip' + stkGoldCls(st.code) + '" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (st.note || '')) + '" title="' + escAttr(_t0) + '"><span class="nm"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') + '</span>' +
+        (function () { var _t = stkSecPillOf(st.code, ''); return _t ? '<em class="nc-stock-th">' + esc(_t) + '</em>' : ''; })() +
+        '</span>' + (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
     });
     s += '</div></div>';
   });
+  // R100z326：同题材池内候选（断板/陈学长）——用户要的是「这条要闻对应哪些能买的票」，
+  // 直接挂在条目里，不另开模块。
+  if (it.poolHits && it.poolHits.length) {
+    s += '<div class="nc-pool-hits">同题材池内：' + it.poolHits.map(function (h) {
+      return '<span class="nc-ph" title="' + escAttr((h.srcZh || '') + ' · ' + (h.tierZh || '') + ' · 命中 ' + (h.hit || '')) + '"><b>' + esc(h.name || '') + '</b><i>' + esc(h.srcZh || '') + '·' + esc(h.tierZh || '') + '</i></span>';
+    }).join('') + '</div>';
+  }
   if (it.deduce) s += renderDeduce(it.deduce, true); // R100c：徽章已挪至标题行（利好/利空）或移除（宏观/国际/投行）
   if (showSrc && it.source) s += '<div class="nc-src">来源：' + esc(it.source) + '</div>';
   return s;
@@ -5536,7 +5620,7 @@ function renderHarmonic() {
     return tcCard({
       code: it.code, name: nm || it.code, chg: tcPctOf(it.code, null), dim: !conf,
       fresh: poolFresh(it, h.tradeDate), // R100z44：新入池首日黄色+「新」徽章
-      pills: [it.sector || stkSectorOf(it.code), it.pattern], sent: true,
+      pills: [stkSecPillOf(it.code, it.sector), it.pattern], sent: true,
       cells: [
         tcCell('距PRZ', dist === null ? '—' : fmtPct(dist), distCls),
         tcCell('止损', '<span class="xt">' + it.stop + '</span>', 'down'),
@@ -5615,7 +5699,7 @@ function renderAccumulation() {
     return tcCard({
       code: it.code, name: nm || it.code, chg: tcPctOf(it.code, null), dim: it.grade !== '强',
       fresh: poolFresh(it, a.tradeDate), // R100z44：新入池首日黄色+「新」徽章
-      pills: [it.sector || stkSectorOf(it.code)], sent: true,
+      pills: [stkSecPillOf(it.code, it.sector)], sent: true,
       cells: [
         tcCell('强度', '<span class="acc-grd ' + gd + '">' + esc(it.grade) + ' ' + it.score + '</span>', it.grade === '强' ? 'up' : ''),
         tcCell('特征命中', (it.hitCount || 0) + ' / 6', ''),
@@ -5759,7 +5843,7 @@ function renderBreakoutPool() {
     return tcCard({
       code: it.code, name: nm || it.code, chg: tcPctOf(it.code, it.pct), dim: false,
       fresh: poolFresh(it, b.tradeDate),
-      pills: [it.sector || stkSectorOf(it.code)], sent: true,
+      pills: [stkSecPillOf(it.code, it.sector)], sent: true,
       cells: [
         tcCell('买入区间', zone, ''),
         tcCell('证伪价', en.stop ? '<span class="xt" title="涨停日最低×0.98：收盘跌破即形态作废">' + en.stop.toFixed(2) + '</span>' : '—', 'down'),
@@ -5881,7 +5965,7 @@ function renderLianban(list) {
   var groups = {};
   lb.forEach(function (s) { var k = s.lbc || 2; (groups[k] = groups[k] || []).push(s); });
   var keys = Object.keys(groups).map(Number).sort(function (a, b) { return b - a; });
-  var s = '<div class="lb-note">连板数取自同花顺涨停池；板块为同花顺行业归类，理由由当日 AI 基于真实新闻补充（缺省显示板块）· <b>点击标的查看深度解读</b></div>';
+  var s = '<div class="lb-note">连板数取自同花顺涨停池；名字下面那行是<b>题材</b>（同花顺概念，R100z325 起；没有题材才退回连板理由/行业）· <b>点击标的查看深度解读</b></div>';
   // R100z318：情绪行（涨停/跌停/连板/分歧率/接力率）与连板梯队同源，放卡顶
   s += lbMoodHtml(duanbanData());
   keys.forEach(function (k) {
@@ -5890,7 +5974,10 @@ function renderLianban(list) {
     stocks.forEach(function (st) {
       var idx = LB_LIST.indexOf(st);
       var pct = (typeof st.pct === 'number') ? (st.pct > 0 ? '+' : '') + st.pct.toFixed(1) + '%' : '';
-      var ctx = st.reason || st.hybk || '';
+      // R100z325：连板股的次级行改用题材（同花顺概念），比 reason 原串干净——
+      // reason 里混着「三季报扭亏」这类业绩词，且不同票写法不一致。
+      var _th = stkThemeHot(st.code, 2);
+      var ctx = _th.length ? _th.join(' / ') : (st.reason || st.hybk || '');
   // R100z157：梯队角色徽标（龙头/卡位）——角色由脚本按封单资金确定性判定，AI 不参与
   var roleBadge = st.role === '龙头' ? '<span class="lb-role lr-lead">龙头</span>'
     : (st.role === '卡位' ? '<span class="lb-role lr-side">卡位</span>' : '');
@@ -6750,6 +6837,56 @@ function dbPoolHtml(title, cls, sub, list, done, poolKey) {
   return h + '</div>';
 }
 
+/* R100z324：连板补涨映射（用户 2026-11-10：「连板标的如果继续连板，列出题材+概念，
+   然后匹配断板和陈学长池子里有且符合形态的标的给我」）。
+   全部字段由 update_star.py::build_spillover 产出，**页面不算任何命中**——命中口径
+   （题材属性段 / 题材词典 / 同行业）只有脚本一份实现，这里只负责排版与点击。
+   候选点开走 stkOpenIn 的独立分组，不进断板弹窗的 DB_ORDER（那是另一套翻页序列）。 */
+function spillHtml(st) {
+  var sp = (st && st.spillover) || {};
+  var rows = sp.rows || [];
+  if (!rows.length) return '';
+  window._SPILL_GRP = [];
+  var stateZh = { reboard: '已续板', strong: '走强未封', weak: '未续板', unknown: '行情抓空' };
+  var h = '<div class="spill-sec"><div class="spill-h">🔗 连板补涨' +
+    (sp.text ? '<span class="spill-x">' + esc(sp.text) + '</span>' : '') +
+    (sp.asOf ? '<span class="spill-x">取数 ' + esc(String(sp.asOf)) + '</span>' : '') + '</div>';
+  rows.forEach(function (r) {
+    var pct = (r.pct === null || r.pct === undefined) ? '' :
+      '（' + (Number(r.pct) > 0 ? '+' : '') + Number(r.pct).toFixed(2) + '%）';
+    h += '<div class="spill-row"><span class="spill-lb ' + escAttr(String(r.state || '')) + '">' +
+      esc(stateZh[r.state] || '—') + pct + '</span>' +
+      '<span class="spill-nm">' + esc(String(r.name || '')) + '</span>' +
+      '<span class="spill-th">' + esc(String(r.lbc || '—') + '板 · ' +
+        ((r.themes || []).join(' / ') || '题材未标注')) + '</span></div>';
+    if (r.matches && r.matches.length) {
+      h += '<div class="spill-cands">';
+      r.matches.forEach(function (m) {
+        window._SPILL_GRP.push({ c: String(m.code || ''), n: String(m.name || ''),
+                                 t: '连板补涨 · ' + String(m.name || '') });
+        var gi = window._SPILL_GRP.length - 1;
+        var tip = [m.srcZh, m.tierZh, m.stage, (m.hit ? '命中 ' + m.hit : '')]
+          .filter(Boolean).join(' · ');
+        h += '<span class="spill-c" onclick="stkOpenIn(window._SPILL_GRP,' + gi + ')" title="' +
+          escAttr(tip) + '">' + esc(String(m.name || m.code)) +
+          '<i>' + esc(String(m.srcZh || '')) + ' · ' + esc(String(m.tierZh || '')) +
+          (m.hit ? ' · ' + esc(String(m.hit)) : '') + '</i></span>';
+      });
+      h += '</div>';
+    } else if (r.sharedWith && r.sharedWith.length) {
+      h += '<div class="spill-none">同题材候选已在「' + esc(String(r.sharedWith.join('、'))) +
+        '」那行列过，这里不重复列票。</div>';
+    } else if (r.state === 'unknown') {
+      h += '<div class="spill-none">行情抓空，不给方向（抓不到 ≠ 没有）。</div>';
+    } else if (r.state === 'weak') {
+      h += '<div class="spill-none">未续板，题材没被当日确认 → 不给补涨候选。</div>';
+    } else {
+      h += '<div class="spill-none">断板与陈学长池内没有同题材标的（不是漏跑）。</div>';
+    }
+  });
+  return h + '</div>';
+}
+
 function renderDuanban() {
   DB_INDEX = {}; DB_ORDER = [];
   var db = duanbanData();
@@ -6892,6 +7029,7 @@ function renderDuanban() {
       // R100z258：开盘价位置 / 盘口结构 / 追高区 三块按用户截图 3 删除（正文见 24.114）。
       // R99c：页面只放深度分析（pushText），指数/情绪/集合竞价等均在其中，不再单列 marketLine/sentiment
       (st.pushText ? '<div style="font-size: var(--fs-base);color:var(--ink2);line-height:1.8;margin:6px 0 10px;white-space:pre-line;">' + esc(st.pushText) + '</div>' : '') +
+      spillHtml(st) +
       '<div class="db-chips">';
     window._STAR_LIST = [];
     starPicks.forEach(function (p) {
@@ -7507,7 +7645,7 @@ function chenPoolBlock(title, cls, sub, list, tierTag) {
       code: e.code, name: e.name, chg: e.pct, dim: tierTag === 'watch',
       // R100z222：新入池高亮改看 firstSeenDate（首次见到），不再看被沿用的 entryDate
       fresh: !!(e.firstSeenDate && modD && String(e.firstSeenDate) === modD),
-      pills: [e.sector || '其他'],
+      pills: [stkSecPillOf(e.code, e.sector || '其他')],
       sentKind: e.sentiment || 'neutral', cells: cells, foot: foot,
       attrs: ' data-k="' + escAttr(key) + '"',
       title: e.name + ' ' + e.code + '（' + (e.sector || '') + ' · 陈学长·' + tierCn + '）\n' + (e.form || '') +
@@ -7670,7 +7808,7 @@ function failTcHtml(e, i, latestD) {
   return tcCard({
     code: e.code, name: e.name, chg: tcPctOf(e.code, e.pct), dim: true,
     fresh: isNew, // R100z44：失效池新归档首日同样整卡黄色（与四模块新入池同一样式）
-    pills: [e.sector || '其他'],
+    pills: [stkSecPillOf(e.code, e.sector || '其他')],
     sent: true, // R100z84：失效卡同样带利好/利空/中性徽章（无 AI 写回，按当日要闻 impacts 加权，与全站同口径）
     cells: [
       tcCell('反包概率', '<span class="xt">失效</span>', 'warn'),
@@ -7706,7 +7844,7 @@ function failHzTcHtml(e, i, latestD) {
   return tcCard({
     code: e.code, name: e.name || e.code, chg: tcPctOf(e.code, null), dim: true,
     fresh: isNew, // R100z44：新归档首日同样整卡黄色
-    pills: [e.sector || stkSectorOf(e.code)], sent: true,
+    pills: [stkSecPillOf(e.code, e.sector)], sent: true,
     cells: [
       tcCell('距PRZ', dist === null ? '—' : fmtPct(dist), distCls),
       tcCell('止损', '<span class="xt">' + (hz.stop !== null && hz.stop !== undefined ? hz.stop : '—') + '</span>', 'down'),
@@ -7761,7 +7899,7 @@ function failGenericTcHtml(e, i, latestD, kind) {
   return tcCard({
     code: e.code, name: e.name || e.code, chg: tcPctOf(e.code, null), dim: true,
     fresh: isNew, // R100z44：新归档首日同样整卡黄色+「新」徽章
-    pills: [e.sector || stkSectorOf(e.code)], sent: true,
+    pills: [stkSecPillOf(e.code, e.sector)], sent: true,
     cells: cells,
     foot: foot,
     onclick: e.code ? ('openFailIdx(\'' + kind + '\',' + i + ')') : '',

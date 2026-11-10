@@ -75,3 +75,6 @@ goldpit_study.json
 # 台账迁移的一次性备份（migrate_ledger_pools.py --write 每次生成一份，R100z297）
 # 本体 signal_ledger.json 是跟踪的，备份只留本地用于回滚，不进公开仓库。
 signal_ledger.json.bak-*
+
+# R100z325：个股题材标签的本地缓存（同花顺 F10，按日复用，不入库）
+.concept_cache/

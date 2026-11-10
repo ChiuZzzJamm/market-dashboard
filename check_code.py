@@ -104,6 +104,8 @@ DATA_WRITERS = [
     'signal_attribution.py',    # R100z160：signalPerf（指标归因台账）
     'star_ai_rewrite.py',       # 09:45 精选文案
     'stock_news.py',            # stockNews
+    'stock_concept.py',        # R100z325：stockConcepts（个股题材/概念，抓同花顺 F10；走 write_data_js）
+    'news_theme.py',           # R100z326：要闻 themeTags / poolHits（走 write_data_js）
     'stop_tracker.py',          # 止损跟踪
     'strategy_engine.py',       # strategy 卡片（走 write_data_js）
     'sweep_news.py',            # 要闻分级（走 write_data_js）

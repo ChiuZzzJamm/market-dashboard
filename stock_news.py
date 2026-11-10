@@ -467,8 +467,15 @@ def collect_targets(D):
     for key in ('harmonic', 'accumulation', 'breakoutPool'):
         m = D.get(key) or {}
         for f in ('confirmPool', 'watchPool', 'passed', 'scored', 'strong', 'watch', 'failPool'):
-            for e in m.get(f) or []:
-                add(e.get('code'), e.get('name'))
+            v = m.get(f)
+            if isinstance(v, dict):
+                # breakoutPool.watch 自 2026-11-10 起是 {tradeDate/asOf/params/triggered/near} 结构体，
+                # 直接迭代拿到的是 key 字符串 → add() 里 .get() 崩（AttributeError）。
+                v = [x for sub in ('triggered', 'near', 'items')
+                     for x in (v.get(sub) or []) if isinstance(x, dict)]
+            for e in v or []:
+                if isinstance(e, dict):
+                    add(e.get('code'), e.get('name'))
     for e in (D.get('ashare') or {}).get('lianban') or []:
         add(e.get('code'), e.get('name'))
     for mk in ('ashare', 'us'):

@@ -130,7 +130,12 @@ const KNOWN = [
   /fundCheck\.staleAsOf$/,                   // 只有「跨日保留」的资金数据才带这个标记，当日数据没有
   /\.metrics\.shrinkT$/,                    // 观察池不产出 shrinkT（只 loose 有），前端判空后不渲染
   /^sectorMap\.\d{6}$/,                     // 代码→板块映射覆盖不全，取不到就不显示板块徽章
-  /\.direction$/,                            // 只有 macroNews/intlNews/bankViews 逐条要求 direction，
+  /\.direction$/,                            // 只有 macroNews/intlNews/bankViews 逐条要
+  // R100z325：题材标签按「当前展示面」抓（约 314 只），页面会因历史/失效池/跨日缓存读到
+  // 不在当日 items 里的代码——stkThemeOf 里 `|| null` 兜底、stkSecBadge 直接回退行业徽章。
+  /^stockConcepts\.items\.\d{6}$/,
+  /^chenPool\.\w+\.\d+\.pre$/,             // pre（涨跌预判）只有断板池产出，陈学长池没有；
+                                             // 前端 all `e.pre && e.pre.total` / `(e.pre ? ...)` 都有兜底求 direction，
                                              // bullNews/bearNews 的条件渲染会判空
   /\.horizon$/,                              // impacts[].horizon（影响时长）AI 未逐条写，前端判空
   /^duanban\.star\.picks\.\d+\.score$/,      // 明日可下单的 picks 只有「被技术池覆盖到」的票才由前端

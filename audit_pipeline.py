@@ -214,6 +214,9 @@ EMPTY_WHITELIST = [
      "R100z323：垃圾剔除名单，当日没有命中剔除规则的标的即为空数组。前端按长度判断后整块隐藏"),
     (r"duanban\.leadLag\.bt\.pending$",
      "R100z323：待结算名单——当日所有已出信号都已到 T+1、无未结算项时为空数组"),
+    (r"duanban\.star\.spillover\.rows\[\d+\]\.matches$",
+     "R100z324：补涨映射里「该连板股没有同题材候选」时 matches=[] 就是结论（页面写「池内没有同题材标的 / "
+     "未续板不给候选」，不是漏跑）。反向证明在 G60：weak 行带候选即 FAIL、候选必须能回溯到池内"),
     (r"breakoutPool\.watch\.(triggered|near|started)$",
      "R100z323：横盘启动三档，没有命中票就是空数组（`bpWatchHtml` 里 `if (!trig.length) return ''` "
      "整卡不渲染，空值不会印到页面）"),
@@ -398,6 +401,14 @@ PRODUCT_OWNERSHIP = {
                 "由 deploy.sh 流水线调用（读 cal_factor/trendState/portfolio_curve，兜底写空 exit 0）；"
                 "前端唯一消费点是趋势条的「仓位上限」tooltip（positionBand.trendCapPct）。"
                 "**不再产关注清单/风险提示**：那两段全站零消费方，内容又与 AI 预测板块 + 五节要闻 impacts 重复",
+    },
+    "stockConcepts": {
+        "require": (),
+        "note": "R100z325：stock_concept.py 抓同花顺 F10「概念题材」页（basic.10jqka.com.cn/<code>/concept.html，"
+                "GBK HTML，概念名在 td.gnName 里，带 clid 可回溯），只抓当天要展示的标的（各池+精选+连板+要闻受益+AI预测，"
+                "约 300 只/50 秒），同日缓存 .concept_cache/ 复用；由 deploy.sh 数据链调用（位置在 refresh_stamp 之前），"
+                "不是七条 prompt 里的一步（故 require 为空）。前端 stkSecBadge/stkSecPillOf 读它做「题材优先、行业兜底」，"
+                "抓不到的票自动回退行业徽章",
     },
     "stockNews": {
         "require": ("stock_news.py", "个股消息库", "stockNews"),
@@ -5098,6 +5109,296 @@ def g59_news_section_volume(r):
         r.ok("G59", f"五节要闻条数达标（{markets} 个市场、每节 ≥2 条）")
 
 
+def g60_spillover_truth(r):
+    """G60 连板补涨映射真值（R100z324，2026-11-10）。
+
+    由来：用户要求「连板标的如果继续连板，列出题材+概念，然后匹配断板和陈学长池子里
+    有且符合形态的标的」。这张表是最容易**看起来很合理、实际全是编的**的一种：
+    连板股名字对、题材词对，但底下挂的候选只要错一只，读者就会去买一只不在池里的票。
+
+    判据（全部落在「会随 bug 变形」的地方）：
+      a) row.code 必须真的是 `ashare.lianban` 里的连板股（防止 AI 手写/旧数据）；
+      b) row.themes 必须是 `common.theme_words(reason)` 的子集（防止自己发明题材词）；
+      c) state 与 pct 自洽：reboard→pct≥9.5；weak→pct<3 且**不得带候选**（未续板就没扩散）；
+      d) matches[].code 必须能在断板双池或陈学长三池里找到（池外标的＝最严重的一类错）；
+      e) 档位与来源自洽：tier=confirm 不能来自「观察池」；kind 只能是 theme/dict/sector；
+      f) 同一只候选不得在两张连板行里重复出现（用户最反感的「同一信息在多处给」）。
+
+    spawn 期（9:45 之前）没有 spillover 是正常的 → WARN，不 FAIL。
+
+    **跨时点换血不算错**（照 G47 对 buyList 的同一口径）：16:00 数据步会重算断板池/陈学长池，
+    9:45 生成的映射里可能有一半票已被换出——那是时点差，不是造票。所以「连板不在梯队 /
+    候选不在池 / 档位变了」一律 WARN 并注明换血；只有**与池无关的生成逻辑错**
+    （state 与 pct 矛盾、kind 非法、同票跨行重复、候选指向自己）才 FAIL。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G60", f"data.js 读取失败，跳过补涨映射校验：{e}")
+        return
+    st = ((D.get("duanban") or {}).get("star") or {})
+    sp = st.get("spillover") or {}
+    rows = sp.get("rows") or []
+    if not rows:
+        r.warn("G60", "star.spillover 未生成（9:45 未跑或旧数据）——补涨映射块不会渲染")
+        return
+
+    lb = {}
+    for x in ((D.get("ashare") or {}).get("lianban") or []):
+        if isinstance(x, dict):
+            lb[str(x.get("code"))] = x
+    db = D.get("duanban") or {}
+    cp = D.get("chenPool") or {}
+    pool = {}
+    for key, tier, zh in (("confirmed", "confirm", "断板·确认池"),
+                          ("watching", "watch", "断板·观察池")):
+        for e in (db.get(key) or []):
+            if isinstance(e, dict):
+                pool[str(e.get("code"))] = (tier, zh)
+    for key, tier, zh in (("strict", "confirm", "陈学长·严格池"),
+                          ("loose", "confirm", "陈学长·放宽池"),
+                          ("watching", "watch", "陈学长·观察池")):
+        for e in (cp.get(key) or []):
+            if isinstance(e, dict) and str(e.get("code")) not in pool:
+                pool[str(e.get("code"))] = (tier, zh)
+
+    from common import theme_words
+    bad, warned, stale = [], [], []
+    _sp_day = str(sp.get("tradeDate") or "")
+    _cur_day = str((D.get("ashare") or {}).get("tradeDate") or "")
+    if _sp_day and _cur_day and _sp_day != _cur_day:
+        r.warn("G60", f"补涨映射生成于 {_sp_day}，当前交易日 {_cur_day}——跨日旧数据，"
+                      f"下一交易日 9:45 自动重建（页面按 star.date 也不渲染它），跳过校验")
+        return
+    seen = {}
+    for i, row in enumerate(rows):
+        code = str(row.get("code") or "")
+        nm = row.get("name") or code or f"[{i}]"
+        x = lb.get(code)
+        if not x:
+            # 16:00 重算后连板梯队会换人：这是时点差，不是造票
+            stale.append(f"{nm} 已不在当前连板梯队（生成后重算）")
+            continue
+        pct = row.get("pct")
+        state = row.get("state")
+        if state == "reboard" and (pct is None or float(pct) < 9.5):
+            bad.append(f"{nm} 标「已续板」但涨幅 {pct}%")
+        if state == "weak" and (row.get("matches") or []):
+            bad.append(f"{nm} 未续板却给了补涨候选（`{len(row['matches'])}` 只）")
+        allow = set(theme_words(x.get("reason"), limit=4))
+        themes = [str(t) for t in (row.get("themes") or [])]
+        extra = [t for t in themes if t not in allow]
+        if extra:
+            # reason 也会随重算变化，同样按时点差处理
+            stale.append(f"{nm} 的题材词 {extra} 与当前 reason 不一致（生成后重算）")
+        if not themes and x.get("reason"):
+            warned.append(f"{nm} 题材词为空")
+        for m in (row.get("matches") or []):
+            mc = str(m.get("code") or "")
+            mnm = m.get("name") or mc
+            if mc not in pool:
+                stale.append(f"{nm}→{mnm} 已不在池内（生成后重算/失效归档）")
+                continue
+            tier, zh = pool[mc]
+            if m.get("tier") != tier:
+                stale.append(f"{nm}→{mnm} 档位 {m.get('tier')} 与当前池归属（{zh}={tier}）不符")
+            if m.get("kind") not in ("theme", "dict", "sector"):
+                bad.append(f"{nm}→{mnm} 命中口径 {m.get('kind')} 非法")
+            if mc in seen:
+                if seen[mc] == nm:
+                    bad.append(f"{mnm} 在「{nm}」这一行里重复出现")
+                else:
+                    bad.append(f"{mnm} 在「{seen[mc]}」与「{nm}」两行重复出现")
+            else:
+                seen[mc] = nm
+            if mc == code:
+                bad.append(f"{nm} 的候选就是它自己")
+    if bad:
+        r.fail("G60", f"补涨映射有 {len(bad)} 处不会报错但会误导："
+                      + "；".join(bad[:6]))
+    elif stale:
+        r.warn("G60", f"补涨映射结构正确，但 {len(stale)} 处已被盘中重算换血"
+                      f"（下一交易日 9:45 自动重建，不拦部署）：" + "；".join(stale[:4]))
+    elif warned:
+        r.warn("G60", f"补涨映射结构正确，但有 {len(warned)} 处题材词为空："
+                      + "；".join(warned[:4]))
+    else:
+        r.ok("G60", f"补涨映射 {len(rows)} 行 / {len(seen)} 只候选全部可回溯"
+                    f"（连板来自梯队、候选来自池内、档位与来源一致、跨行不重复）")
+
+
+def g61_stock_concepts_truth(r):
+    """G61 个股题材标签真值（R100z325，2026-11-10）。
+
+    由来：用户「很多标的的板块都是错的，能不能改成题材、相关概念？」→ 新增
+    `stock_concept.py` 抓同花顺 F10 概念题材页，写 `data.js` 顶层 `stockConcepts`，
+    前端把「行业 pill」换成「题材 pill + 行业小灰字」。
+
+    这类第三方抓取的失效方式**极其安静**：页面改版 → 正则取不到 → 该只不写 →
+    前端回退行业 → 页面一切正常，只是又变回「纺织制造」。所以必须专门盯：
+      a) 覆盖率：当天目标标的里 ≥90% 要取到概念（低于就说明接口/解析坏了）；
+      b) hot ⊆ concepts（防止 hot 是凭空拼的）+ hot 不得是泛概念（国企改革/深股通这类
+         是标签不是题材，用户明确要的是题材）；
+      c) 接线：前端必须真的读 stockConcepts（stkThemeOf/stkSecPillOf 在位），
+         否则数据生成了也没人用——这正是本项目反复踩的「半成品」。
+    跨日旧数据只 WARN（页面按 asOf 展示，次日部署自动重抓）。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G61", f"data.js 读取失败，跳过题材标签校验：{e}")
+        return
+    SC = D.get("stockConcepts") or {}
+    items = SC.get("items") or {}
+    if not items:
+        r.warn("G61", "stockConcepts 未生成（stock_concept.py 未跑）——标的 pill 仍只会显示行业")
+        return
+    cur = str((D.get("ashare") or {}).get("tradeDate") or "")
+    sc_day = str(SC.get("tradeDate") or "")
+    if cur and sc_day and cur != sc_day:
+        r.warn("G61", f"题材标签是 {sc_day} 的、当前交易日 {cur}——跨日旧数据，下次部署自动重抓")
+        return
+
+    cov = SC.get("coverage") or {}
+    want, got = int(cov.get("want") or 0), int(cov.get("got") or 0)
+    ratio = (got * 100.0 / want) if want else 0
+    bad, warn = [], []
+    if want and ratio < 90:
+        # 覆盖率是**数据源健康度**，不是代码正确性：同花顺限流/改版会让它掉下来，
+        # 但部署不该因此被拦（那 300 只票的 pill 退化为行业，页面仍然正确）。
+        # 所以这里 WARN，只有结构性矛盾（hot 不在 concepts / 前端没接线）才 FAIL。
+        warn.append(f"覆盖率只有 {got}/{want}（{ratio:.0f}%），低于 90% —— 多半是同花顺限流或页面改版，"
+                    f"别当成「这些票没有题材」；本次这些票的 pill 会退回行业")
+
+    from stock_concept import GENERIC
+    gen_hot, orphan = [], []
+    for code, it in items.items():
+        names = [str(x.get("n") or "") for x in (it.get("concepts") or []) if isinstance(x, dict)]
+        hot = [str(x) for x in (it.get("hot") or [])]
+        if not names:
+            bad.append(f"{code} 有记录但 concepts 为空")
+            continue
+        absent = [h for h in hot if h not in names]
+        if absent:
+            bad.append(f"{code} 的 hot {absent} 不在 concepts 里（凭空拼的）")
+        if hot and all(h in GENERIC for h in hot):
+            gen_hot.append(code)
+        if not str(it.get("industry") or "").strip():
+            orphan.append(code)
+    if gen_hot:
+        bad.append(f"{len(gen_hot)} 只的 hot 全是泛概念（如 {gen_hot[:3]}）——那是标签不是题材")
+    if orphan:
+        # 行业只是兜底显示，缺了不该拦部署，但要能看见
+        r.warn("G61", f"{len(orphan)} 只缺 industry 兜底字段（{orphan[:3]}…），前端会退回 stkSectorOf")
+
+    # c) 接线
+    try:
+        html = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G61", f"index.html 读不到，跳过接线断言：{e}")
+        html = ""
+    if html and ("stkThemeOf" not in html or "stkSecPillOf" not in html):
+        bad.append("前端没有 stkThemeOf/stkSecPillOf —— 数据生成了但页面还在显示行业（半成品）")
+
+    if bad:
+        r.fail("G61", "题材标签有问题：" + "；".join(bad[:5]))
+    elif warn:
+        r.warn("G61", f"题材标签 {len(items)} 只（{got}/{want}）结构正确，但数据源有问题："
+                      + "；".join(warn[:3]))
+    else:
+        r.ok("G61", f"题材标签 {len(items)} 只 · 覆盖 {got}/{want}（{ratio:.0f}%）· hot 均为概念子集且非泛概念 · "
+                    f"前端已接线（题材优先、行业兜底）")
+
+
+def g62_news_theme_truth(r):
+    """G62 要闻题材与同题材池内候选真值（R100z326，2026-11-10）。
+
+    用户原话：「要闻这块原来是行业、板块，现在精确到题材，而不是新增一个模块。」
+    做法：`news_theme.py` 在 deploy 链里跑，用该条要闻那 8 只标的的**同花顺概念**反推
+    这条要闻的题材（≥2 只共享才算），再拿题材去断板/陈学长池找同题材候选，写回条目内。
+
+    为什么必须上闸：`themeTags` 是脚本推的，但**推错的方式很安静**——多推一个泛概念
+    （国企改革/中报预增）就会让池内候选变成一堆无关票；候选一旦错，读者会照着买。
+    判据：
+      a) 每条 tag 必须能在该条要闻的标的里找到（至少 2 只共享；只有 1 个 tag 时允许退回首只标的）；
+      b) poolHits 的票必须在断板双池/陈学长三池里、不得是本条要闻自己列过的票；
+      c) tier 与池归属一致；命中的题材必须是本条 themeTags 之一；
+      d) 覆盖率（有题材的条数/总条数）<80% 只 WARN —— 数据源问题，不拦部署。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G62", f"data.js 读取失败，跳过要闻题材校验：{e}")
+        return
+    ash = D.get("ashare") or {}
+    sc = ((D.get("stockConcepts") or {}).get("items")) or {}
+    if not sc:
+        r.warn("G62", "stockConcepts 为空，要闻题材无从推导（news_theme 会跳过）")
+        return
+    db = D.get("duanban") or {}
+    cp = D.get("chenPool") or {}
+    pool = {}
+    for key, zh, tier in (("confirmed", "断板·确认池", "confirm"), ("watching", "断板·观察池", "watch")):
+        for e in (db.get(key) or []):
+            if isinstance(e, dict):
+                pool.setdefault(str(e.get("code")), (tier, zh))
+    for key, zh, tier in (("strict", "陈学长·严格池", "confirm"), ("loose", "陈学长·放宽池", "confirm"),
+                          ("watching", "陈学长·观察池", "watch")):
+        for e in (cp.get(key) or []):
+            if isinstance(e, dict):
+                pool.setdefault(str(e.get("code")), (tier, zh))
+
+    def concepts(code):
+        return [str(x.get("n") or "") for x in ((sc.get(code) or {}).get("concepts") or [])
+                if isinstance(x, dict)]
+
+    bad, total, tagged = [], 0, 0
+    for sec in ("bullNews", "bearNews", "macroNews", "intlNews", "bankViews"):
+        for it in (ash.get(sec) or []):
+            if not isinstance(it, dict):
+                continue
+            total += 1
+            codes, seen = [], set()
+            for im in (it.get("impacts") or []):
+                for st in (im.get("stocks") or []):
+                    c = str((st or {}).get("code") or "")
+                    if c and c not in seen:
+                        seen.add(c)
+                        codes.append(c)
+            tags = [str(t) for t in (it.get("themeTags") or [])]
+            if tags:
+                tagged += 1
+            title = str(it.get("title") or "")[:14]
+            for t in tags:
+                share = sum(1 for c in codes if t in concepts(c))
+                if share < 2 and not (len(tags) == 1 and codes and t in concepts(codes[0])):
+                    bad.append(f"「{title}」的题材 {t} 只被 {share} 只标的支持（<2）")
+            for h in (it.get("poolHits") or []):
+                hc = str(h.get("code") or "")
+                if hc not in pool:
+                    bad.append(f"「{title}」的池内候选 {h.get('name') or hc} 不在断板/陈学长池里")
+                    continue
+                if hc in seen:
+                    bad.append(f"「{title}」的池内候选 {h.get('name') or hc} 就是本条要闻自己列过的票")
+                tier, zh = pool[hc]
+                if h.get("tier") != tier:
+                    bad.append(f"「{title}」→{h.get('name') or hc} 档位 {h.get('tier')} 与池归属（{zh}）不符")
+                if tags and str(h.get("hit") or "") not in tags:
+                    bad.append(f"「{title}」→{h.get('name') or hc} 命中 {h.get('hit')} 不在本条题材 {tags} 里")
+    ratio = (tagged * 100.0 / total) if total else 0
+    if bad:
+        r.fail("G62", f"要闻题材有 {len(bad)} 处站不住：" + "；".join(bad[:5]))
+    elif total and ratio < 80:
+        r.warn("G62", f"要闻题材覆盖 {tagged}/{total}（{ratio:.0f}%）低于 80% —— 多半是这些条目的"
+                      f"标的没有概念数据（stockConcepts 缺），页面会退回行业标签")
+    else:
+        n_hits = sum(len(it.get("poolHits") or []) for sec in ("bullNews", "bearNews", "macroNews",
+                                                               "intlNews", "bankViews")
+                     for it in (ash.get(sec) or []) if isinstance(it, dict))
+        r.ok("G62", f"要闻题材 {tagged}/{total} 条可回溯（tag 均≥2 只标的共享）、"
+                    f"池内候选 {n_hits} 只全部在池且档位一致")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -5168,6 +5469,9 @@ def main():
     g57_trend_asof(r)
     g58_modal_head_count(r)
     g59_news_section_volume(r)
+    g60_spillover_truth(r)
+    g61_stock_concepts_truth(r)
+    g62_news_theme_truth(r)
 
     # R100z284：机器可读的结论行。
     #

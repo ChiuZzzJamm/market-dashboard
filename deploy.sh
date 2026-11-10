@@ -127,6 +127,22 @@ echo "🧷 标注机械候选与自选补位（annotate_pool_meta.py）..."
 echo "📜 刷新政策信号解码（enrich_policy.py）..."
 "$PY" enrich_policy.py || true
 
+# ---------- R100z325：个股题材标签（同花顺 F10 概念题材页）----------
+# 标的 pill 原来显示同花顺一级行业，而行业是静态分类、跟不上题材（浙文影业=纺织制造，
+# 实际炒短剧游戏/AI应用）。本步抓当天展示的约 300 只票的概念，写 data.js 顶层
+# stockConcepts；同日缓存 .concept_cache/ 复用，重复部署不重复抓。
+# 单只失败不影响其它票；全失败时脚本保留旧节点（抓不到 ≠ 没有），exit 0 不阻断部署。
+echo "🏷️  抓个股题材概念（stock_concept.py）..."
+"$PY" stock_concept.py || true
+
+# ---------- R100z326：要闻的题材标签 + 同题材池内候选 ----------
+# 要闻 impacts[].theme 一直是同花顺行业（煤炭开采加工/军工装备），跟题材对不上。
+# 本步用该条要闻 8 只标的的同花顺概念反推「这条要闻在说什么题材」（≥2 只共享才算），
+# 再拿题材去断板/陈学长池找同题材且形态就绪的标的，写回条目内的 themeTags / poolHits
+# （嵌在要闻条目里，不新建模块）。口径与 pill 共用 stock_concept.is_generic。
+echo "🏷️  标注要闻题材与池内候选（news_theme.py）..."
+"$PY" news_theme.py || true
+
 # ---------- R100z117 前瞻层 + 信号闭环（确定性脚本，兜底写空 exit 0，绝不阻断部署）----------
 # macro_calendar.py：未来 45 日确定性宏观事件（FOMC/GDP/CPI/PPI/MLF/LPR/工增固投社零），零网络纯函数；
 # strategy_engine.py：聚合政策/AI预测/断板反包三类信号为盘前关注清单+仓位纪律，并写入回测反馈闭环。

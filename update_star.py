@@ -478,6 +478,204 @@ def build_buy_list(D, picks, quotes, blacklist):
     return rows, summary
 
 
+SPILL_MAX_ROWS = 8          # 连板行上限（昨日连板通常 6~12 只，取前 8）
+SPILL_MAX_MATCH = 3         # 每只连板最多给 3 只池内候选
+
+
+def _spill_text(e):
+    """候选条目里承载「题材/概念」的文本：板块 + 整段故事 + 多头类型。
+
+    ⚠️ 2026-11-10 修：原以为断板 story 里有【题材属性】段（连板 story 才有），
+    结果断板/陈学长的 story 是**消息面结构**（【个股消息】【板块消息】）——按
+    【题材属性】抽出来的是空串，题材命中一路空转、全靠行业和词典兜着，
+    等于把「同题材」悄悄降级成了「同行业」。现在用整段故事。
+    ⚠️ 仍然**不用消息标题**（bullRefs）：标题里「东方财富」「上海证券」这类机构名
+    会把「东方」「上海」当题材，实测 1 只连板能匹配出 6 只假候选。
+    """
+    return (str(e.get("sector") or "") + " " + str(e.get("story") or "") + " "
+            + str(e.get("bullType") or "")).strip()
+
+
+def build_spillover(D, quotes, picks):
+    """连板延续 → 题材/概念 → 断板·陈学长池内同题材候选（R100z324，用户 2026-11-10）。
+
+    用户原话：「连板标的如果继续连板，列出题材+概念，然后匹配断板和陈学长池子里有且符合
+    形态的标的给我」。这是**补涨传导链**：连板是资金已经选出的方向，同题材里还没走的票
+    才是有赔率的那一端（追高位板的次日超额为负，这条在 leadLag 的回测里已经验过）。
+
+    ## 三个字段怎么来的（全部确定性，AI 只读）
+      · 题材/概念：`common.theme_words(lianban.reason)`——与连板徽章同一份口径，
+        只剔业绩类词（季报/扭亏/预增…），**不拿行业名顶替题材**（行业分类系统性滞后：
+        浙文影业行业还是纺织、实际炒 AI 短剧）。
+      · 候选池：断板 confirmed/watching + 陈学长 strict/loose/watching，共 120 只上下。
+        剔除 sentiment=bear（利空）、非沪深主板、与连板同一只。
+      · 命中三类，强弱分明（**刻意不做「名字共字」匹配**——东方/羊字辈那类玄学共字
+        10 次里 9 次是误报，写进卡片会把「东方钽业」说成光伏补涨）：
+          theme  —— 连板题材词出现在候选的【题材属性】段里（最硬）
+          dict   —— 两侧命中同一个题材词典名（光伏边框 ↔ 光伏设备 → 都归「光伏」）
+          sector —— 候选行业与连板行业互为子串（同行业轮动，标注「同行业」不称同题材）
+      · 形态档：断板 confirmed 与陈学长 strict/loose → 已确认；两池 watching → 待确认
+        （照 R102 纪律，待确认不给买点，这里只列「差哪一步」）。
+
+    ## 什么情况下不给候选
+    连板股今日 **未续板且盘中不涨（<+3%）** 时不给补涨候选，只写「未续板、题材未强化」——
+    连板断了就谈不上「这个方向还在扩散」，此时硬凑候选等于把假设当结论。
+    行情抓不到（quotes 缺）一律 state=unknown，不给方向、不猜。
+    """
+    lb = (D.get("ashare") or {}).get("lianban") or []
+    if not lb:
+        return {"rows": [], "text": "连板梯队为空（今日无连板股），补涨映射不生成",
+                "rule": "无连板即无扩散方向", "asOf": "", "tradeDate": ""}
+
+    # ---- 候选池（一次装配，120 只左右） ----
+    db = D.get("duanban") or {}
+    cp = D.get("chenPool") or {}
+    picked = {str(p.get("code")) for p in (picks or [])}
+    cands = []
+    srcs = (("duanban", "confirmed", "断板·确认池", TIER_CONFIRM),
+            ("duanban", "watching", "断板·观察池", TIER_WATCH),
+            ("chen", "strict", "陈学长·严格池", TIER_CONFIRM),
+            ("chen", "loose", "陈学长·放宽池", TIER_CONFIRM),
+            ("chen", "watching", "陈学长·观察池", TIER_WATCH))
+    for src, key, zh, tier in srcs:
+        holder = db if src == "duanban" else cp
+        for e in (holder.get(key) or []):
+            if not isinstance(e, dict):
+                continue
+            code = str(e.get("code") or "")
+            if not code.startswith(("60", "00")):
+                continue
+            if str(e.get("sentiment") or "") == "bear":
+                continue                      # 池内利空票不进补涨候选（补涨是买方向）
+            _txt = _spill_text(e)
+            cands.append({
+                "code": code, "name": str(e.get("name") or ""),
+                "sector": str(e.get("sector") or ""),
+                "srcZh": zh, "tier": tier,
+                "stage": str(e.get("stage") or ""),
+                "prob": e.get("probability"),
+                "text": _txt,
+                # 同一只票可能同时出现在多个池（观察池被提进确认池）：保留更成熟的档
+                "canon": common.match_themes(_txt, str(e.get("name") or ""), code),
+                "inPicks": code in picked,
+            })
+    _dedup = {}
+    for c in cands:
+        old = _dedup.get(c["code"])
+        if old is None or (old["tier"] == TIER_WATCH and c["tier"] == TIER_CONFIRM):
+            _dedup[c["code"]] = c
+    cands = list(_dedup.values())
+
+    rows = []
+    for x in lb:
+        code = str(x.get("code") or "")
+        q = quotes.get(code) or {}
+        pct = q.get("pct")
+        if pct is None:
+            state = "unknown"
+        elif pct >= 9.5:
+            state = "reboard"                # 已续板：题材得到当日确认
+        elif pct >= 3:
+            state = "strong"                 # 盘中走强未封板：扩散“待确认”
+        else:
+            state = "weak"                   # 没续上：不给候选
+        # 题材词里剔掉「就是本股名字里的字」的那类（东方/羊字辈）：那是名字辈分玄学，
+        # 不是方向。2026-11-10 实测：大东方 reason 里的「东方」把卡片写成「大东方·东方/百货零售」，
+        # 读者会以为「东方」是个题材；同一天它还让 6 只名字带东方的池内票被误挂成补涨候选。
+        _nm = str(x.get("name") or "")
+        themes = [t for t in common.theme_words(x.get("reason"), limit=4) if t not in _nm]
+        hybk = str(x.get("hybk") or "")
+
+        matches = []
+        if state in ("reboard", "strong"):
+            # 连板股自己的题材落点：题材词 + 它在题材词典里的归属（两只都算“同题材”）
+            lb_canon = common.match_themes(
+                str(x.get("reason") or "") + " " + str(x.get("story") or ""),
+                str(x.get("name") or ""), code)
+            for c in cands:
+                if c["code"] == code:
+                    continue
+                hit_theme = [t for t in themes if t and t in c["text"]]
+                hit_canon = [t for t in lb_canon if t in (c["canon"] or [])]
+                hit_sector = bool(hybk) and (
+                    hybk in c["sector"] or (c["sector"] and c["sector"] in hybk))
+                if hit_theme:
+                    kind, hit = "theme", hit_theme[0]
+                elif hit_canon:
+                    kind, hit = "dict", hit_canon[0]
+                elif hit_sector:
+                    kind, hit = "sector", hybk
+                else:
+                    continue
+                matches.append({
+                    "code": c["code"], "name": c["name"], "srcZh": c["srcZh"],
+                    "sector": c["sector"], "tier": c["tier"],
+                    "tierZh": TIER_ZH.get(c["tier"], "确认"),
+                    "kind": kind, "hit": hit,
+                    "stage": c["stage"], "prob": c["prob"], "inPicks": c["inPicks"],
+                })
+            # 题材词命中最硬，其次题材词典同源，最后同行业；同档里已确认优先、概率高优先
+            order = {"theme": 0, "dict": 1, "sector": 2}
+            matches.sort(key=lambda m: (order.get(m["kind"], 9),
+                                        0 if m["tier"] == TIER_CONFIRM else 1,
+                                        -(m["prob"] or 0)))
+            matches = matches[:SPILL_MAX_MATCH]
+
+        rows.append({
+            "code": code, "name": str(x.get("name") or ""),
+            "lbc": x.get("lbc"), "hybk": hybk, "themes": themes,
+            "pct": pct, "state": state, "matches": matches,
+        })
+
+    # 已续板 > 走强 > 未续板 > 抓空；同状态按板数降序（高度板才是方向标）
+    rank = {"reboard": 0, "strong": 1, "weak": 2, "unknown": 3}
+    rows.sort(key=lambda r: (rank.get(r["state"], 9), -(r["lbc"] or 0)))
+    rows = rows[:SPILL_MAX_ROWS]
+
+    # ---- 跨行去重：同一只候选只挂在最优先的那只连板下面 ----
+    # 2026-11-10 实测：闽发铝业/日出东方/东方新能 三只连板都是光伏，候选原样重复三遍
+    # （钧达/赛伍/欧晶 各出现 3 次）——用户最反感的「同一信息在多处给」。
+    # 保留在「最先出现」的那一行，后来者写「见上方 <连板名> 那行」，不重复列票。
+    _owner, _seen = {}, set()
+    for r in rows:
+        kept, dropped = [], 0
+        for m in r["matches"]:
+            if m["code"] in _seen:
+                dropped += 1
+                continue
+            _seen.add(m["code"])
+            _owner[m["code"]] = r["name"]
+            kept.append(m)
+        if dropped and not kept:
+            # 全部候选都已在上方列过：指出是哪一行，别让读者以为这方向没票
+            r["sharedWith"] = sorted({_owner[m["code"]] for m in r["matches"]})[:2]
+        r["matches"] = kept
+
+    n_re = sum(1 for r in rows if r["state"] == "reboard")
+    n_st = sum(1 for r in rows if r["state"] == "strong")
+    n_match = sum(len(r["matches"]) for r in rows)
+    n_conf = sum(1 for r in rows for m in r["matches"] if m["tier"] == TIER_CONFIRM)
+    if not rows:
+        text = "昨日无连板股，补涨映射不生成"
+    elif n_match:
+        text = (f"昨日 {len(rows)} 只连板：已续板 {n_re} 只、盘中走强 {n_st} 只；"
+                f"池内同题材候选 {n_match} 只（已确认 {n_conf} / 待确认 {n_match - n_conf}，同票不同连板只列一次）")
+    else:
+        text = (f"昨日 {len(rows)} 只连板：已续板 {n_re} 只、盘中走强 {n_st} 只；"
+                f"断板与陈学长池内没有同题材候选")
+    return {
+        "asOf": datetime.now().strftime("%H:%M"),
+        "tradeDate": str((D.get("ashare") or {}).get("tradeDate") or ""),
+        "lianbanDate": str((D.get("ashare") or {}).get("tradeDate") or ""),
+        "rows": rows,
+        "text": text,
+        "rule": ("候选只取断板反包双池 + 陈学长三池的非利空主板标的；命中口径三类——"
+                 "同题材（连板题材词出现在候选【题材属性】段里）＞同题材词典（两侧命中同一个题材名，"
+                 "如「光伏边框」与「光伏设备」同归光伏）＞同行业（行业名互含，只算板块轮动不算同题材）；"
+                 "已确认档可给动作，待确认档只列「差哪一步」；连板未续板且盘中不涨时不给候选"),
+    }
+
+
 def _gap_summary(picks):
     """开盘价位置分布（低开/平开/高开各几只）。
 
@@ -897,6 +1095,11 @@ def build_star(D, base=None):
     # 挂单核对是 9:45 的核心动作之一，7/8 抓空等于这张表作废；故把挂单代码并进同一次
     # 批量快照（多抓 8 只，忽略不计的成本）。注意：只并入抓取，不并入候选装配。
     _fetch_codes = [str(e.get("code")) for e in pools] + _tech_codes
+    # R100z324：连板股也要行情——补涨映射要判断「今日是否续板」，没有 pct 就只能写抓空。
+    for _lb in ((D.get("ashare") or {}).get("lianban") or []):
+        _c = str(_lb.get("code") or "")
+        if _c.startswith(("60", "00")):
+            _fetch_codes.append(_c)
     for _o in (((D.get("timingPlan") or {}).get("orders")) or []):
         _c = str(_o.get("code") or "")
         if _c.startswith(("60", "00")):
@@ -1226,6 +1429,14 @@ def build_star(D, base=None):
                                           for x in _susp)), file=sys.stderr)
             picks = _keep
 
+    # ---- R100z324：连板延续 → 题材/概念 → 池内同题材候选（补涨传导链） ----
+    # 放在 picks 定稿之后：候选要标「在不在今日精选里」，picks 未定的时点拿不到这个信息。
+    try:
+        spillover = build_spillover(D, quotes, picks)
+    except Exception as _e:                                   # noqa: BLE001
+        spillover = {"rows": [], "text": "补涨映射生成失败（%s）——脚本故障，不是今日无扩散方向" % _e,
+                     "rule": "", "asOf": "", "tradeDate": "", "lianbanDate": ""}
+
     buy_rows, buy_summary = [], None
     try:
         buy_rows, buy_summary = build_buy_list(D, picks, quotes, blacklist)
@@ -1275,6 +1486,7 @@ def build_star(D, base=None):
         "suspended": _susp,
         "buyList": buy_rows,
         "buySummary": buy_summary,
+        "spillover": spillover,
         "timingExec": timing_exec,
         "gapSummary": _gap_summary(picks),
         "tapeSummary": tape_summary,
