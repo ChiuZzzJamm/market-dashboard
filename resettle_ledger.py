@@ -89,6 +89,7 @@ def main():
     before = copy.deepcopy(ents)          # 修前快照，用来出对照表
 
     miss, changed, back_to_open = [], [], []
+    newly_settled = 0     # R100z341：本次从「未结算」变成「已结算」的条数（下面传给 build_track）
     klc = {}          # R100z337：进行明细要用同一份 K 线（别让它自己再抓一次，两处不同源）
     for e in ents:
         code = str(e.get('code'))
@@ -110,11 +111,16 @@ def main():
                (old.get('result'), old.get('exitDay'), old.get('retPct')) != \
                (new.get('result'), new.get('exitDay'), new.get('retPct')):
                 changed.append((e.get('pool'), code, e.get('name'), old, new))
+            elif old.get('status') != 'settled':
+                # 原来没结算、这次算出来了 —— 这是「新结算」，不是「结果变动」。
+                # 旧代码只数 changed，于是这一档既不在输出里、也被当成 0 传给 build_track，
+                # 页面「本次 +N」永远是空的（用户 2026-11-11 01:04 说「1 我没看懂」的那条）。
+                newly_settled += 1
             e['result'] = new
         e['settleVer'] = VER
 
-    print('条目 %d ｜ 取不到 K 线 %d ｜ 改回未结算 %d ｜ 结果变动 %d'
-          % (len(ents), len(miss), len(back_to_open), len(changed)))
+    print('条目 %d ｜ 取不到 K 线 %d ｜ 新结算 %d ｜ 改回未结算 %d ｜ 结果变动 %d'
+          % (len(ents), len(miss), newly_settled, len(back_to_open), len(changed)))
 
     gb, gn = by_pool(before), by_pool(ents)
     print('\n%-16s %-22s %s' % ('池', '修前', '修后'))
@@ -149,7 +155,9 @@ def main():
         # 用户看到的就是「今天涨停的票又回到明日买入名单」。
         cmp = CP.build_compare(chen_codes, db_codes, led, done=CP.today_done(D), kl_cache=klc)
         cp['compare'] = cmp
-        cp['track'] = CP.build_track(led, 0, cmp)
+        # R100z341：第二个参数是「本次结算了几条」，页面拿它显示「本次 +N」。
+        # 原来这里硬编码 0 → justSettled 恒为 0 → 那一行永远不出现，读者以为没结算过。
+        cp['track'] = CP.build_track(led, newly_settled, cmp)
         D['chenPool'] = cp
         common.write_data_js(DATA_JS, D, label='[resettle]')
         print('[OK] 已刷新 data.js 的 chenPool.compare / track')

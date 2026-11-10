@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611110054"></script>
+<script src="data.js?v=202611110120"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -40,7 +40,6 @@
          --fs-md    15px    强调正文 / 小节标题
          --fs-h2    16px    卡片标题
          --fs-h1    20px    页面与弹窗大标题
-         --fs-hero  32px    首页主标题
        背景只有三层：--bg（页面底）/ --paper（卡片面）/ --accent-soft（浅色块）。
        中途出现的 #eef1f5、#f7fafd、#dcebfa 等 6 种近似灰蓝统一收进 --bg-2 / --accent-soft。 */
     --fs-xs: 10.5px;
@@ -50,7 +49,6 @@
     --fs-md: 15px;
     --fs-h2: 16px;
     --fs-h1: 20px;
-    --fs-hero: 32px;
     /* R100z164：页面级标题单独一档。四个平级页面（每日市场看板 / 技术看板 / 全球要闻 / 复盘台账）
        必须同字号——上一轮首页 32px、其余三页 20px，用户切页时标题明显跳档（2026-10-24 截图实报）。
        24px 取两者中间：既不会小到 20px 那样在 1036px 内容宽里撑不住场，也不至于像 32px 那样喧宾夺主。
@@ -64,7 +62,6 @@
     --r-card: var(--radius); /* 一级卡片（.card / .db-pool），复用既有 --radius */
     --r-block: 14px;       /* 卡内块（.td-item / .ai-item / .wk-item） */
     --r-note: 10px;        /* 提示条（说明/警告/口径） */
-    --pad-note: 8px 12px;
     --bg-2: #eef1f5;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -322,10 +319,7 @@
   /* 确信：低→浅蓝，中→中蓝，高→深蓝 */
   .conf-badge { font-size: var(--fs-sm); border-radius: 999px; padding: 2px 9px; font-weight: 700; margin-left: 6px; line-height: 1.45; border: 1px solid currentColor; } /* R100y：全站徽标统一带边框 */
   /* R100z11：预期差徽章（price-in 结构化字段落前端）——三档配色对应 4c 结论三选一 */
-  .exp-badge { font-size: var(--fs-sm); border-radius: 999px; padding: 2px 9px; font-weight: 700; margin-left: 6px; line-height: 1.45; border: 1px dashed currentColor; cursor: help; }
-  .exp-add { color: var(--up); }        /* 加确认 */
-  .exp-hold { color: var(--ink2); }     /* 维持 */
-  .exp-trim { color: var(--down); }     /* 兑现降级 */
+  .exp-badge { font-size: var(--fs-sm); border-radius: 999px; padding: 2px 9px; font-weight: 700; margin-left: 6px; line-height: 1.45; border: 1px dashed currentColor; cursor: help; }     /* 兑现降级 */
   .conf-low { background: var(--accent-soft); color: #4a90d9; }
   .conf-mid { background: #85b9ea; color: #fff; }
   .conf-high { background: #2b6cb0; color: #fff; }
@@ -407,8 +401,6 @@
   .pf-curve-lg i.k-mkt { background: #8fa3b8; }
   .pf-curve-lg i.k-base { background: #c9d4df; }
   .ai-verify .v-note { display: block; font-weight: 400; font-size: var(--fs-sm); color: var(--ink-soft, #6b7a8d); margin-top: 1px; }
-  /* R100z81：预测验证并入「大盘趋势研判」卡——块内分隔线 + 与研判文同卡的间距 */
-  .v-divider { height: 1px; background: var(--line); margin: 14px 0 6px; }
   .ai-verify.v-merged { margin-top: 12px; }
   /* R100z82：标的层验证行（stockCheck 下沉到各板块 AI 预测卡底部，日期与验证块一致） */
   .ai-sc { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: var(--fs-sm); line-height: 1.7; font-weight: 700; color: var(--ink); }
@@ -497,7 +489,6 @@
   /* ===== 推演块（fin-strategy-engine 三候选推演，内嵌题材掘金/要闻/预测等模块条目，R99m） ===== */
   .dd-box { margin: 8px 0 2px; background: var(--accent-soft); border: 1px dashed var(--line); border-radius: var(--r-note); padding: 9px 13px; font-size: var(--fs-base); line-height: 1.75; }
   .dd-cand { margin: 1px 0; }
-  .dd-tag { display: inline-block; font-weight: 700; color: var(--accent-deep); margin-right: 4px; }
   .dd-elim { color: var(--ink2); font-size: var(--fs-sm); }
   .dd-main { font-weight: 600; }
   /* R100c：确信度徽章挪至利好/利空卡标题行（nc-theme），主推行不再内嵌 */
@@ -880,11 +871,6 @@
               cursor: pointer; font-size: var(--fs-sm); max-width: 100%; box-sizing: border-box; }
   .pre-pick:hover { border-color: var(--accent); }
   .pre-pick.pre-chen { border-style: dashed; }
-  /* R100z316：今日题材段（跨行业才聚得出来的方向） */
-  .pre-themes { margin: 8px 0 10px; padding: 8px 11px; border-radius: var(--r-note);
-                background: var(--accent-soft); border: 1px solid var(--line); }
-  .pre-th-h { font-size: var(--fs-xs); font-weight: 800; color: var(--ink); margin-bottom: 4px; }
-  .pre-th-h s { font-weight: 400; text-decoration: none; opacity: .62; margin-left: 6px; }
   .pre-th { padding: 3px 0; border-top: 1px dashed var(--line); }
   .pre-th:first-of-type { border-top: 0; padding-top: 0; }
   .pre-th-l1 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px;
@@ -966,6 +952,12 @@
   .stl-tbl .nm.stk-go:hover { color: var(--accent-deep); border-bottom-color: var(--accent-deep); }
   .stl-tbl .cd2 { font-size: var(--fs-xs); color: var(--ink2); margin-left: 5px; }
   .stl-tbl .pl { display: block; font-size: var(--fs-xs); color: var(--ink2); font-weight: 400; }
+  /* R100z340：同码多次确认的「第 N 次」+ 今天已不在池的「已出池」。
+     两个都刻意做「轻」：它们是给读者的上下文，不该抢走标的名的注意力。 */
+  .stl-tbl .nth { font-size: var(--fs-xs); color: var(--ink2); margin-left: 5px;
+    border: 1px solid var(--line); border-radius: 3px; padding: 0 3px; }
+  .stl-tbl .gone { font-style: normal; font-size: var(--fs-xs); color: var(--ink2);
+    opacity: .75; margin-left: 5px; border-bottom: 1px dashed var(--line); cursor: help; }
   .stl-tbl td.up { color: var(--up); font-weight: 700; }
   .stl-tbl td.down { color: var(--down); font-weight: 700; }
   .stl-foot { margin-top: 9px; font-size: var(--fs-xs); color: var(--ink2); line-height: 1.7; }
@@ -1024,9 +1016,6 @@
   /* R100z255：今日可下单卡片区——用主色圆点，与「开盘精选」的金色区分开：
      一个是「9:45 选出来的强名单」，一个是「今天真的能挂/能补的价」，不是同一件事。 */
   .db-pool.p-ord h2::before { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
-  /* R100z281：标题里「＋81 只等确认」的后缀——比 h2 小一档、常规字重、灰字，
-     读起来是同一行的补充说明而不是第二个标题。字号走 --fs-sm（G42 拦写死 px）。 */
-  .p-ord h2 .ord-h2-x { font-size: var(--fs-sm); font-weight: 400; color: var(--ink2); margin-left: 8px; }
   /* 摘要行里的股票名不许被中文折行劈成两半（实测「百/洋股份」断在行尾，
      读者会以为是个叫「百」的票）。名字整体 nowrap，只在名字之间断。 */
   .db-sub .ord-nw { white-space: nowrap; }
@@ -1195,10 +1184,6 @@
   /* R100z80：跨池共振分级边框——命中池数→颜色：1黄 / 2橙 / 3红 / 4紫；stkGoldCls 全站标的共用，原 gold-ring 单一紫框已按此分级取代 */
   .reso-1 { border-color: #f59e0b !important; box-shadow: 0 0 0 1px rgba(245,158,11,.35) !important; }
   .reso-1:hover { border-color: #d97706 !important; }
-  .reso-2 { border-color: #f97316 !important; box-shadow: 0 0 0 1px rgba(249,115,22,.35) !important; }
-  .reso-2:hover { border-color: #ea580c !important; }
-  .reso-3 { border-color: #ef4444 !important; box-shadow: 0 0 0 1px rgba(239,68,68,.35) !important; }
-  .reso-3:hover { border-color: #dc2626 !important; }
   .reso-4 { border-color: #a78bfa !important; box-shadow: 0 0 0 1px rgba(167,139,250,.35) !important; }
   .reso-4:hover { border-color: #8b5cf6 !important; }
   /* R100z36：四子页网格统一为同一列宽（一行 4 个，.tc 卡片 2×2 矩阵需要这个宽度） */
@@ -1211,8 +1196,6 @@
   /* R100j：主力吸筹卡片美化——左侧强调条 + 评分进度条 + 特征胶囊（通过亮/未过灰）。
      R100z102c：原 .acc-grid 网格随池结构改版弃用（统一 .db-chips），仅保留卡内件样式。 */
   .acc-head { display:flex; align-items:center; gap:6px; }
-  .acc-head .acc-id { display:flex; align-items:baseline; gap:6px; min-width:0; }
-  .acc-head .acc-id b { font-weight:800; }
   .acc-head .cd { font-size: var(--fs-sm); color:var(--ink2); }
   .acc-grd { font-size: var(--fs-xs); font-weight:800; border-radius:999px; padding:1px 8px; margin-left:auto; flex-shrink:0; font-variant-numeric:tabular-nums; }
   /* R100z28：强池/强评＝红（A股涨红惯例），观察池沿用琥珀黄 */
@@ -1297,13 +1280,6 @@
     margin-right: 3px; padding: 0 3px; border-radius: 3px; }
   .spill-c .spill-was { color: var(--ink2); background: #eef1f4; }
   .spill-c .spill-new { color: #7a4d00; background: #fdf1d8; }
-  /* R100n：技术池「通过」胶囊统一红色（用户要求） */
-
-  /* R100h：清单 .cl-* 样式已随必带数据清单模块下线删除 */
-
-  .hz-info { margin-top:3px; font-size: var(--fs-base); line-height:1.7; }
-  .hz-info .hz-row { display:flex; flex-wrap:wrap; gap:10px 18px; }
-  .hz-info .hz-k { color:var(--ink2); }
   .hz-info .hz-v { font-weight:700; font-variant-numeric:tabular-nums; }
   /* R100z3：迷你谐波图左侧信息区（填充徽标行右侧空档） */
   /* R100z4：谐波参数+迷你图独立成行（原塞进徽标行导致徽标行换行后左侧大片空白）——
@@ -1312,8 +1288,6 @@
   .hz-side { flex:1 1 auto; min-width:0; font-size: var(--fs-base); line-height:1.65; color:var(--ink); font-variant-numeric:tabular-nums; }
   .hz-side .hz-v { font-weight:700; }
   .hz-side .hz-lg { font-size: var(--fs-xs); color:var(--ink2); }
-  .hz-legend { font-size: var(--fs-xs); }
-  .hz-legend i { font-style:normal; font-weight:700; }
   .hz-sub { font-size: var(--fs-base); font-weight:700; color:var(--ink2); margin:10px 0 2px; }
   /* R100z22：三技术子页（谐波/横盘启动/吸筹）口径说明从「一行文字 + 超长 title 悬停」改成可展开条目块——
      原来要把 200+ 字口径塞进 title 属性，手机上根本看不到（iOS Safari 不显示 title 悬停），
@@ -1502,12 +1476,6 @@
      只剩三条仍被别的卡复用，见下。 */
   .td-h2 { font-size: var(--fs-h2); gap: 6px; flex-wrap: nowrap; }
   .td-tag { display: none; }
-  .td-rel {
-    font-size: var(--fs-sm); color: var(--ink2);
-    background: none; border: 0; border-left: 3px solid var(--accent);
-    border-radius: 0; padding: 2px 0 2px 11px;
-    margin: 0 0 12px; line-height: 1.85;
-  }
   /* R100z161：预测复盘卡。基调是「报数」，不是「汇报成绩」——
      所以坏数字用警示橙而不是红绿（红绿在本站是涨跌语义，别混用）。 */
   .fc-hero { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 11px; }
@@ -1516,13 +1484,7 @@
   .fc-hero span { font-size: var(--fs-sm); color: var(--ink2); }
   .fc-hero .bad b { color: #a8541a; }
   .fc-hero .good b { color: var(--accent-deep); }
-  .fc-row { display: grid; grid-template-columns: minmax(0, 1.25fr) 50px 74px 74px; gap: 6px;
-            align-items: center; padding: 6px 2px; border-bottom: 1px dashed var(--line);
-            font-size: var(--fs-base); color: var(--ink2); }
   .fc-row.head { font-size: var(--fs-sm); border-bottom: 1px solid var(--line); padding-bottom: 4px; }
-  .fc-row:last-child { border-bottom: 0; }
-  .fc-row b { color: var(--ink); font-variant-numeric: tabular-nums; }
-  .fc-row .fc-dim { color: var(--ink); font-weight: 600; }
   .fc-row .fc-flag { font-size: var(--fs-xs); color: #a8541a; font-weight: 700; margin-left: 5px; white-space: nowrap; }
   .fc-sec { font-size: var(--fs-sm); font-weight: 700; color: var(--accent-deep); margin: 12px 0 4px; letter-spacing: .5px; }
   .fc-use { margin-top: 11px; border-top: 1px dashed var(--line); padding-top: 9px; }
@@ -1543,7 +1505,6 @@
   .fc-u-d > summary:hover { color: var(--accent-deep); }
   .fc-u-x { font-size: var(--fs-sm); color: var(--ink2); line-height: 1.7;
             padding: 4px 0 2px 10px; border-left: 2px solid var(--line); margin: 3px 0 2px 3px; }
-  .fc-small { color: #a8541a; font-weight: 700; margin-left: 2px; }
   .fc-note { font-size: var(--fs-sm); color: var(--ink2); line-height: 1.65; padding: 5px 0 0 2px; }
   /* 开关区：重点是「它咬住了下一次预测」，所以用实心浅底 + 左侧竖线，和上面那排结论区分开 */
   .fc-flags { margin-top: 10px; padding: 8px 10px; background: var(--accent-soft);
@@ -1590,39 +1551,10 @@
     .fc-hero { grid-template-columns: 1fr 1fr; }
     .fc-hero > div:nth-child(3) { grid-column: 1 / -1; }
     .fc-hero b { font-size: var(--fs-h2); }
-    .fc-row { grid-template-columns: minmax(0, 1fr) 40px 62px 56px; font-size: var(--fs-sm); gap: 4px; }
     .fc-row.head { font-size: var(--fs-xs); }
     .fc-row .fc-flag { display: none; }
   }
-
-  /* ===== 指标表现（谁准谁不准） ===== */
-  /* R100z190：8 列——指标 / 样本 / 1日胜率 / 1日均值 / 日聚类t / 5日超额 / 止损触及 / 判定。
-     后三列（样本·1日均值·t·止损）在窄屏收起，留下的恰好是「胜率 + 判定」这两个结论。 */
-  .pf-row { display: grid; grid-template-columns: minmax(0,1.25fr) 72px 68px 64px 58px 64px 56px minmax(0,1.2fr); gap: 6px; align-items: center; padding: 7px 2px; border-bottom: 1px dashed var(--line); font-size: var(--fs-base); }
-  .pf-row.pf-head { border-bottom: 1px solid var(--line); color: var(--ink2); font-size: var(--fs-sm); }
-  .pf-row .pf-nm { font-weight: 700; color: var(--ink); }
-  .pf-row .pf-nm s { text-decoration: none; font-weight: 400; font-size: var(--fs-sm); color: var(--ink2); margin-left: 4px; }
-  .pf-row .pf-c { text-align: right; }
-  .pf-row.pf-head .pf-c { text-align: right; }
-  .pf-row .pf-vd { font-size: var(--fs-sm); color: var(--ink2); text-align: right; }
   .pf-row .pf-vd.bad { color: #a8541a; }
-  .pf-wbar { margin: 10px 0 4px; }
-  .pf-w { display: flex; height: 8px; border-radius: 5px; overflow: hidden; background: var(--line); }
-  .pf-w i { display: block; height: 100%; background: var(--accent); }
-  .pf-w i:nth-child(2) { background: var(--accent-deep); opacity: .8; }
-  .pf-w i:nth-child(3) { background: var(--accent-deep); opacity: .55; }
-  .pf-w i:nth-child(4) { background: var(--accent-deep); opacity: .35; }
-  .pf-wl { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: var(--fs-sm); color: var(--ink2); margin-top: 5px; }
-  .pf-wl b { color: var(--ink); }
-  /* 换止损口径前后对比：同一批入场点、同一持有窗口，只有止损规则不同 */
-  .pf-cmp { margin: 12px 0 4px; border: 1px solid var(--line); border-radius: var(--r-block); padding: 8px 10px 6px; }
-  .pf-cmp-h { font-size: var(--fs-sm); color: var(--ink2); margin-bottom: 2px; }
-  .pf-cmp-r { display: grid; grid-template-columns: minmax(0,1.6fr) 88px 76px 88px; gap: 6px; align-items: center; padding: 5px 0; font-size: var(--fs-base); border-bottom: 1px dashed var(--line); }
-  .pf-cmp-r.pf-last { border-bottom: 0; }
-  .pf-cmp-r .pf-nm { font-weight: 700; color: var(--ink); }
-  .pf-cmp-r .pf-c { text-align: right; }
-  .pf-cmp-r.pf-new .pf-nm { color: var(--accent-deep); }
-  .pf-cmp-r.pf-cmp-cols { font-size: var(--fs-sm); color: var(--ink2); border-bottom: 1px solid var(--line); padding-bottom: 3px; }
   .pf-sub { font-size: var(--fs-sm); color: var(--ink2); margin-top: 12px; padding-top: 8px; border-top: 1px dashed var(--line); }
   .pf-tip { font-size: var(--fs-sm); color: var(--ink2); margin: 7px 0 0; padding: 6px 10px; background: #f6fafd; border-left: 2px solid var(--accent); border-radius: 0 var(--r-note) var(--r-note) 0; }
 
@@ -1637,12 +1569,6 @@
     /* R100z165：普通卡 h2 允许把角标整体换到下一行（日期本身 nowrap，不会断在中间），
        否则长标题会把日期挤成两行——比标题折行难读得多。 */
     .card h2, .ai-card h2, .wk-card h2, .mc-card h2 { flex-wrap: wrap; row-gap: 2px; }
-    /* R100z164：.td-port 已并入 .td-mkt 内部，改成竖线分隔的键值流——
-       窄屏再套 grid 2 列会把分隔线和文字割开，改用自然换行。 */
-    .td-port { display: flex; flex-wrap: wrap; gap: 2px 0; }
-    .pf-row { grid-template-columns: minmax(0,1.4fr) 60px minmax(0,.9fr); }
-    .pf-row .pf-hide { display: none; }
-    .pf-cmp-r { grid-template-columns: minmax(0,1.15fr) 60px 54px 64px; font-size: var(--fs-base); }
   }
 
   /* ===== R100z202：复盘台账图表化 =====
@@ -1718,9 +1644,6 @@
   .rv-det > summary::before { content: '▸ '; }
   .rv-det[open] > summary::before { content: '▾ '; }
   .rv-det > summary span { font-weight: 400; color: var(--ink2); }
-  /* 条件胶囊：把一段连排的规则文字拆成 4 个可扫的阈值 —— 规则长什么样，一眼就看完。 */
-  .rv-chip { display: inline-block; font-size: var(--fs-sm); color: var(--ink); background: var(--paper);
-             border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; line-height: 1.6; white-space: nowrap; }
   .rv-chip.dim { color: var(--ink2); background: transparent; }
   /* R100z243：规则「定义」与口径「为何不可用」的折叠。原来这两段默认展开共 116 字，
      而它们回答的都是「规则怎么写的」，不是「准不准」——不看也能读懂全卡。
@@ -1747,9 +1670,6 @@
     .rv-bar .rv-x { display: none; }
     /* 窄屏先把「历史台账」这个后缀让出来：它只说明数据从哪来，不值得挤掉指标名。 */
     .rv-bar .rv-nm s { display: none; }
-    /* 趋势表在窄屏砍到 4 列：档位的正负号已经说明了方向，ATR 与「MA20 斜率」让位。 */
-    .ts-r { grid-template-columns: minmax(0,1.2fr) 58px 58px 42px; gap: 6px; }
-    .ts-r .ts-v:nth-child(4), .ts-r .ts-v:nth-child(5) { display: none; }
   }
 </style>
 </head>
@@ -7575,10 +7495,64 @@ function poolLabel(r) {
      正是他最想区分的信息。
      `pools` 由 chen_pool.pools_of() 给，判据是条目上**冻结的** cross 标签；
      前端不按今天的池子反推——结算明细里三个月前的样本早就换血了。
-     旧数据没有 pools 字段时退回单个 poolZh，不会显示成空。 */
-  var a = r && r.pools;
-  if (a && a.length) return a.join(' + ');
-  return (r && r.poolZh) || '';
+     旧数据没有 pools 字段时退回单个 poolZh，不会显示成空。
+
+     R100z340：两张都写之后手机上太长（用户 2026-11-11 01:04「双池标签在手机上偏长」，
+     并给了写法「陈学长·放宽 + 断板·确认」）→ 只在**显示层**缩写：去掉结尾「池」、
+     把「断板反包·」压成「断板·」。数据侧 `pools` / `poolZh` 仍是全名，
+     闸门对账用的也是全名，所以缩写不会影响任何一条断言。 */
+  var a = (r && r.pools) || null;
+  var names = (a && a.length) ? a : [(r && r.poolZh) || ''];
+  return names.map(function (n) {
+    return String(n || '').replace('断板反包·', '断板·').replace(/池$/, '');
+  }).join(' + ');
+}
+
+/* 「已出池」（R100z340，用户 2026-11-11 01:04 指定要改）：
+   池名标签是**确认当天**的冻结事实，而页面上的池卡片显示的是**今天**谁在池里。
+   实测进行明细 88 条里 52 条、结算明细 82 条里 71 条今天已经不在任何确认池——
+   读者拿着「断板反包·确认池」回断板卡片里找，找不到，只会以为这张表记错了。
+   判据只用三个**确认池**（陈学长严格/放宽 + 断板确认）；观察池不算「在池」，
+   因为明细里的池名从来指的是确认池。 */
+function poolNowSet() {
+  if (window.__POOL_NOW) return window.__POOL_NOW;
+  var D = window.DASHBOARD_DATA || {};
+  var cp = D.chenPool || {}, db = D.duanban || {};
+  var s = {};
+  ['strict', 'loose'].forEach(function (k) {
+    (cp[k] || []).forEach(function (e) { if (e && e.code) s[String(e.code)] = 1; });
+  });
+  (db.confirmed || []).forEach(function (e) { if (e && e.code) s[String(e.code)] = 1; });
+  window.__POOL_NOW = s;
+  return s;
+}
+function goneTip(r) {
+  var now = poolNowSet();
+  if (!now || now[String(r && r.code)]) return '';
+  return '<span class="gone" title="这只票今天已经不在任何确认池了——上面那个池名是它被确认当天的记录，' +
+    '不是今天的池子">已出池</span>';
+}
+
+/* 同一只票被不同日期分别确认、分别买入时，结算明细里会出现 2~3 行（是独立交易，不是重复行）。
+   加「第 N 次」按**买入日升序**编号，读者才分得清先后（R100z340）。 */
+function markNth(rows) {
+  var cnt = {}, i, c;
+  for (i = 0; i < rows.length; i++) { c = String(rows[i].code); cnt[c] = (cnt[c] || 0) + 1; }
+  var idx = rows.map(function (_, k) { return k; }).sort(function (a, b) {
+    var d = String(rows[a].buyDay || '').localeCompare(String(rows[b].buyDay || ''));
+    return d !== 0 ? d : a - b;
+  });
+  var seen = {};
+  idx.forEach(function (k) {
+    var cc = String(rows[k].code);
+    if (cnt[cc] > 1) { seen[cc] = (seen[cc] || 0) + 1; rows[k].__nth = seen[cc]; }
+  });
+  return rows;
+}
+function nthTag(r) {
+  if (!r || !r.__nth) return '';
+  return '<span class="nth" title="同一只票在不同日期被再次确认、分别买入，这是第 ' + r.__nth +
+    ' 次（是两笔独立交易，不是重复行）">第' + r.__nth + '次</span>';
 }
 function stlModalEl(id, label) {
   var el = document.getElementById(id);
@@ -7604,7 +7578,7 @@ function closePendingDetail() { closeStlDetail('pend-modal'); }
 function openSettleDetail() {
   var D = window.DASHBOARD_DATA || {};
   var cmp = (D.chenPool || {}).compare || {};
-  var rows = cmp.settles || [];
+  var rows = markNth(cmp.settles || []);
   var meta = cmp.settleMeta || {};
   var mmdd = function (d) { var t = String(d || ''); return t.length >= 10 ? t.slice(5) : (t || '—'); };
   var pxf = function (v) {
@@ -7645,8 +7619,8 @@ function openSettleDetail() {
                   t: '结算明细 · ' + (r.name || r.code) + (r.exitDay ? '（卖出 ' + r.exitDay + '）' : '') });
       h += '<tr><td><span class="nm stk-go" title="点击查看 K 线与个股消息" onclick="stkOpenIn(window._STL_GRP,' +
         gi + ')">' + esc(r.name || r.code) + '</span>' +
-        '<span class="cd2">' + esc(r.code) + '</span>' +
-        '<span class="pl">' + esc(poolLabel(r)) + (r.legacy ? ' · 旧口径' : '') + '</span></td>' +
+        '<span class="cd2">' + esc(r.code) + '</span>' + nthTag(r) +
+        '<span class="pl">' + esc(poolLabel(r)) + (r.legacy ? ' · 旧口径' : '') + goneTip(r) + '</span></td>' +
         '<td>' + mmdd(r.buyDay) + '</td><td>' + pxf(r.buyPx) + '</td>' +
         '<td>' + mmdd(r.exitDay) + '</td><td>' + pxf(r.exitPx) + '</td>' +
         '<td class="' + cls + '">' + txt + '</td></tr>';
@@ -7680,7 +7654,7 @@ function openSettleDetail() {
 function openPendingDetail() {
   var D = window.DASHBOARD_DATA || {};
   var cmp = (D.chenPool || {}).compare || {};
-  var rows = cmp.opens || [];
+  var rows = markNth(cmp.opens || []);
   var meta = cmp.openMeta || {};
   var mmdd = function (d) { var t = String(d || ''); return t.length >= 10 ? t.slice(5) : (t || '—'); };
   var pxf = function (v) {
@@ -7760,8 +7734,8 @@ function openPendingDetail() {
       }
       h += '<tr><td><span class="nm stk-go" title="点击查看 K 线与个股消息" onclick="stkOpenIn(window._PEND_GRP,' +
         gi + ')">' + esc(r.name || r.code) + '</span>' +
-        '<span class="cd2">' + esc(r.code) + '</span>' +
-        '<span class="pl">' + esc(poolLabel(r)) + (r.legacy ? ' · 旧口径' : '') + '</span></td>' +
+        '<span class="cd2">' + esc(r.code) + '</span>' + nthTag(r) +
+        '<span class="pl">' + esc(poolLabel(r)) + (r.legacy ? ' · 旧口径' : '') + goneTip(r) + '</span></td>' +
         '<td>' + mmdd(r.buyDay) + '</td><td>' + pxf(r.buyPx) + '</td>' +
         '<td' + (ti.length ? ' title="' + escAttr(ti.join('；')) + '"' : '') + '>' + pxf(r.curPx) + '</td>' +
         '<td class="' + cls + '"' + (ti.length ? ' title="' + escAttr(ti.join('；')) + '"' : '') + '>' +

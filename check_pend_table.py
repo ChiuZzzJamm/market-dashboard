@@ -38,7 +38,8 @@ INDEX = os.path.join(HERE, "index.html")
 
 REQUIRED_HEADS = ["标的", "买入日", "买入价", "现价", "浮动盈亏", "进度"]
 SETTLE_HEADS = ["标的", "买入日", "买入价", "卖出日", "卖出价", "盈亏"]
-NEED_FUNCS = ["esc", "escAttr", "poolLabel", "stlModalEl", "stlEsc", "closeStlDetail",
+NEED_FUNCS = ["esc", "escAttr", "poolLabel", "poolNowSet", "goneTip", "markNth", "nthTag",
+              "stlModalEl", "stlEsc", "closeStlDetail",
               "closeSettleDetail", "closePendingDetail", "openPendingDetail", "openSettleDetail"]
 
 
@@ -222,7 +223,8 @@ try {
   // 双池的票必须把两个池名都写在同一个 .pl 里（R100z339）：
   // 数据侧 pools 有两项、渲染出来就该有 ' + '，缺一个读者就分不清「两套都选中」和「只有一套」。
   const expDuo = opens.filter(function (r) { return (r.pools || []).length > 1; }).length;
-  const pls = ph.match(/<span class="pl">[\s\S]*?<\/span>/g) || [];
+  // .pl 里现在嵌了 .gone 的 span，正则必须吃到 </td> 才不会被内层 </span> 截断
+  const pls = ph.match(/<span class="pl">[\s\S]*?<\/span><\/td>/g) || [];
   const gotDuo = pls.filter(function (s) { return s.indexOf(' + ') >= 0; }).length;
   out.info.duo = gotDuo + '/' + expDuo;
   if (pls.length !== opens.length) {
@@ -235,6 +237,35 @@ try {
   const expSolo = opens.length - expDuo;
   if (pls.length - gotDuo !== expSolo) {
     bad('单池行 ' + (pls.length - gotDuo) + ' 条 ≠ 应有的 ' + expSolo + ' 条');
+  }
+
+  // 「已出池」：今天不在任何确认池的票必须逐条标出来（R100z340）。
+  // 不标的话，读者拿着「断板反包·确认池」回断板卡片里找，找不到会以为表记错了。
+  const nowSet = (function () {
+    const D0 = ctx.window.DASHBOARD_DATA || {};
+    const cp0 = D0.chenPool || {}, db0 = D0.duanban || {};
+    const out = {};
+    ['strict', 'loose'].forEach(function (k) {
+      (cp0[k] || []).forEach(function (e) { if (e && e.code) out[String(e.code)] = 1; });
+    });
+    (db0.confirmed || []).forEach(function (e) { if (e && e.code) out[String(e.code)] = 1; });
+    return out;
+  })();
+  const expGone = opens.filter(function (r) { return !nowSet[String(r.code)]; }).length;
+  const gotGone = (ph.match(/class="gone"/g) || []).length;
+  out.info.gone = gotGone + '/' + expGone;
+  if (gotGone !== expGone) {
+    bad('「已出池」标了 ' + gotGone + ' 条 ≠ 今天不在池的 ' + expGone + ' 条');
+  }
+
+  // 「第 N 次」：同码多行才编号，且条数必须等于这些行的总数
+  const codeCnt = {};
+  opens.forEach(function (r) { codeCnt[String(r.code)] = (codeCnt[String(r.code)] || 0) + 1; });
+  const expNth = opens.filter(function (r) { return codeCnt[String(r.code)] > 1; }).length;
+  const gotNth = (ph.match(/class="nth"/g) || []).length;
+  out.info.nth = gotNth + '/' + expNth;
+  if (gotNth !== expNth) {
+    bad('「第 N 次」标了 ' + gotNth + ' 条 ≠ 同码多行共 ' + expNth + ' 条');
   }
 
   // 已过止盈线却还在进行里（T+1 当天买的不能当天卖）必须逐条点名，
@@ -269,6 +300,22 @@ try {
   }
   const sleak = ['undefined', 'NaN', '>null<'].filter(function (t) { return sh.indexOf(t) >= 0; });
   if (sleak.length) bad('结算明细产出里出现字面量 ' + JSON.stringify(sleak));
+
+  // 结算明细同样要标「已出池」与「第 N 次」——这里是同码多行的主场（8 只票 17 行）
+  const sGone = (sh.match(/class="gone"/g) || []).length;
+  const sGoneExp = settles.filter(function (r) { return !nowSet[String(r.code)]; }).length;
+  out.info.sGone = sGone + '/' + sGoneExp;
+  if (sGone !== sGoneExp) {
+    bad('结算明细「已出池」标了 ' + sGone + ' 条 ≠ 今天不在池的 ' + sGoneExp + ' 条');
+  }
+  const sCnt = {};
+  settles.forEach(function (r) { sCnt[String(r.code)] = (sCnt[String(r.code)] || 0) + 1; });
+  const sNthExp = settles.filter(function (r) { return sCnt[String(r.code)] > 1; }).length;
+  const sNth = (sh.match(/class="nth"/g) || []).length;
+  out.info.sNth = sNth + '/' + sNthExp;
+  if (sNth !== sNthExp) {
+    bad('结算明细「第 N 次」标了 ' + sNth + ' 条 ≠ 同码多行共 ' + sNthExp + ' 条');
+  }
 
   // 两张表必须是两个独立容器
   if (REG['pend-modal'] && REG['settle-modal'] && REG['pend-modal'] === REG['settle-modal']) {
@@ -345,10 +392,11 @@ def main():
 
     if res["ok"]:
         info = res["info"]
-        print("[OK] 进行明细 %d 行 × 6 列（涨 %s / 跌 %s / 待开盘 %s / 待K线 %s / 已过止盈线 %s / 双池 %s）；"
-              "结算明细 %d 行独立渲染"
+        print("[OK] 进行明细 %d 行（涨 %s / 跌 %s / 待开盘 %s / 待K线 %s / 已过止盈线 %s / 双池 %s / 已出池 %s）；"
+              "结算明细 %d 行独立渲染（已出池 %s / 第N次 %s）"
               % (info["pendRows"], info["up"], info["down"], info["pre"],
-                 info["noKline"], info["over"], info["duo"], info["settleRows"]))
+                 info["noKline"], info["over"], info["duo"], info["gone"],
+                 info["settleRows"], info["sGone"], info["sNth"]))
         return 0
 
     print("[FAIL] 表格渲染不对：")
