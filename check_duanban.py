@@ -2539,6 +2539,21 @@ def build_module(pairs, D):
     watching.sort(key=lambda e: (-((e.get("pre") or {}).get("total") or 0),
                                  0 if e["stage"] == "待企稳" else 1,
                                  {"bull": 0, "neutral": 1, "bear": 2}[e["sentiment"]]))
+    # R100z327（用户 2026-11-10：光伏里怎么会有锋龙股份/雪人集团）：题材行的「池内可补涨」
+    # 原来由前端按**行业**算（候选.sector ∈ 题材的 sectors），而「通用设备」是几百只票的大类，
+    # 于是同一批票被挂到五个题材下。改成按**同花顺概念**算（候选主题材命中该题材的概念词），
+    # 逻辑收在 theme_cands.py 里一份——这里算好，19:30 部署链还会用当天的概念再刷一次。
+    try:
+        import theme_cands as _tc
+        _td = {"duanban": {"themes": _ctx["themes"], "confirmed": confirmed, "watching": watching},
+               "chenPool": D.get("chenPool") or {},
+               "stockConcepts": D.get("stockConcepts") or {}}
+        for _tn, (_cs, _kd) in _tc.build(_td).items():
+            _ctx["themes"][_tn]["cands"] = _cs
+            _ctx["themes"][_tn]["candKind"] = _kd
+    except Exception as _e:  # noqa: BLE001
+        # 候选算不出来不该拦住断板池落盘：前端 `t.cands` 缺失时会退回旧口径并把标签写成「同行业」。
+        print(f"[check_duanban] 题材候选计算失败（页面退回同行业口径）：{str(_e)[:120]}")
     return {
         "generatedAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "note": "确认池=走完「涨停→放量断板→缩量→不破T日低点与MA5」全流程；观察池=形态进行中、只差最后一根确认K线（待企稳＞待缩量）。形态之外另有三条量化门槛，同时满足才进池：流通市值 100~400 亿、启动前 20 个交易日涨幅 ≤10%、收盘距 MA5 ≥+2%；被任何一条卡住的票在失效池可见并注明是哪一条。每只标的按当日要闻/AI预测自动标注口径：利好（有利好新闻依据且未被看空）/利空（被利空新闻或AI预测看空点名）/中性（暂无明确新闻依据）；利好/利空只看新闻内容，当日涨跌与走势形态不作为依据（R91j）。口径与 probability 由自动化 AI 复核校准。",

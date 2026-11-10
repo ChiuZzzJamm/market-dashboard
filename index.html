@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611101949"></script>
+<script src="data.js?v=202611102020"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1117,7 +1117,12 @@
   .db-modal-box { background: var(--paper); border-radius: var(--radius); padding: 20px 22px; max-width: 760px; width: 100%; max-height: 92vh; overflow: auto; box-shadow: 0 20px 60px rgba(17,17,26,.25); }
   .db-modal-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 8px; }
   /* R100s：弹窗徽标统一第二行——占满整行的徽标容器（板块/技术/利好利空/池归属） */
-  .m-badge-row { flex-basis: 100%; display: flex; align-items: flex-start; gap: 6px; flex-wrap: wrap; }
+  /* R100z327（用户 2026-11-10：徽章没对齐、样式不好看）：
+     原 `align-items:flex-start` 让不同高度的徽章按顶边对齐，10~13px 的视觉落差一眼就看得见；
+     另各处徽章自带 `margin-left:4px`，与行内 gap:6px 叠加成 10px，间距一宽一窄。
+     现在统一 center 对齐 + 由 gap 独占间距（子元素 margin-left 归零）。 */
+  .m-badge-row { flex-basis: 100%; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .m-badge-row > span { margin-left: 0; }
   .m-badge-row:empty { display: none; }
   .db-modal-head .nm { font-size: var(--fs-h1); font-weight: 900; }
   .db-modal-head .cd2 { font-size: var(--fs-base); color: var(--ink2); }
@@ -1251,11 +1256,15 @@
   .tchip .chip-sec { max-width:88px; }
   /* R100z325：题材徽章——同花顺概念（第三方客观标签），与灰色行业徽章并排。
      主/次两个，第二个降级为描边款；行业只留小灰字，标明「仅作兜底」。 */
-  .chip-theme { display:inline-flex; align-items:center; font-size: var(--fs-sm);
-    max-width:140px; padding:1px 7px; border-radius:4px; margin-left:4px;
-    background: var(--accent-soft); color: var(--accent-deep); font-weight: 600; }
-  .chip-theme2 { background: transparent; border: 1px solid var(--line);
-    color: var(--ink2); font-weight: 400; }
+  /* 与 .chip-sec / .hz-badge / .pool-badge 同一套盒模型（inline-block + 1px 7px + line-height 1.5），
+     主/次两枚都用 `border:1px solid` —— 只差颜色。原来次题材多一条边框、主题材没有，
+     高度就差 2px，一行并排必然不齐。 */
+  .chip-theme { display:inline-block; font-size: var(--fs-sm); font-weight:700;
+    max-width:150px; padding:1px 7px; line-height:1.5; border-radius:4px;
+    border:1px solid transparent; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    flex-shrink:0; background: var(--accent-soft); color: var(--accent-deep); }
+  .chip-theme2 { background:#fff; border-color: var(--line);
+    color: var(--ink2); font-weight:400; }
   .chip-sec-ind { font-size: var(--fs-xs); color: var(--ink2); margin-left: 5px; }
   /* R100z326：要闻的题材口径——题材主标签 + 行业小灰字 + 标的题材小胶囊 + 池内候选行 */
   .nc-imp-ind { font-size: var(--fs-xs); color: var(--ink2); margin-left: 5px; }
@@ -1265,6 +1274,9 @@
   .nc-pool-hits .nc-ph { display: inline-flex; align-items: baseline; gap: 3px; margin-right: 10px;
     padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; background: #fff; }
   .nc-pool-hits .nc-ph i { font-style: normal; font-size: var(--fs-xs); color: var(--ink2); }
+  /* R100z327：口径标签（收盘 / 开盘）——两块内容结构一样，只能靠时点区分 */
+  .spill-tag { font-size: var(--fs-xs); font-weight: 600; color: var(--accent-deep);
+    background: var(--accent-soft); border-radius: 4px; padding: 0 5px; margin-left: 6px; }
   /* R100n：技术池「通过」胶囊统一红色（用户要求） */
 
   /* R100h：清单 .cl-* 样式已随必带数据清单模块下线删除 */
@@ -2182,10 +2194,11 @@ function stkSecBadge(code, prefer) {
   var all = ((t.concepts || []).map(function (x) { return x.n; })).filter(Boolean);
   var tip = '题材（同花顺概念 ' + String(t.asOf || '').slice(0, 10) + '）：' + all.join('、') +
     (ind ? '｜所属行业：' + ind : '');
+  /* 行业不再单独占一枚徽章（R100z327）：有题材时它就是「航运概念 / 航运」这种同义重复，
+     既挤位置又把徽章行撑成两种字号两种高度。行业放进 hover，无题材时才顶上（见上）。 */
   return hot.slice(0, 2).map(function (n, i) {
     return '<span class="chip-theme' + (i ? ' chip-theme2' : '') + '" title="' + escAttr(tip) + '">' + esc(n) + '</span>';
-  }).join('') +
-    (ind ? '<span class="chip-sec-ind" title="同花顺一级行业（仅作兜底）">' + esc(ind) + '</span>' : '');
+  }).join('');
 }
 
 /* R100q：技术池归属（断板/陈学长/横盘启动/谐波/吸筹）——供弹窗技术徽章 + 全站分级边框共用。
@@ -6640,7 +6653,11 @@ function lbThemeSecHtml(db) {
   var keys = Object.keys(th);
   if (!keys.length) return '';
   window._TH_GRP = [];
-  var h = '<div class="lb-sec"><div class="lb-sec-h">题材<span>跨行业视角 · 按最高板排序 · 点票名看K线</span></div>';
+  /* 用户 2026-11-10 问「这块和连板补涨是不是重复」——是的，长得几乎一样，差别只有时点：
+     这块是**收盘口径**（16:00 断板步算，回答「明天盯什么」），连板补涨那块是
+     **开盘验证口径**（9:45 用开盘后涨幅判续板/走强/未续板，回答「今天还能不能上」）。
+     两块标题都写清时点，读者才不会再拿它们当同一件事读两遍。 */
+  var h = '<div class="lb-sec"><div class="lb-sec-h">题材<span>收盘口径 · 次日候选 · 跨行业视角 · 按最高板排序</span></div>';
   keys.forEach(function (k) {
     var t = th[k] || {};
     var bs = t.boardStocks || [];
@@ -6652,15 +6669,29 @@ function lbThemeSecHtml(db) {
       return '<span class="pre-th-s" onclick="stkOpenIn(window._TH_GRP,' + gi + ')">' +
         esc(String(b.name || b.code)) + '<i>' + (b.lbc || 1) + '板</i></span>';
     }).join('');
-    // ① 先找池内同行业候选（断板池 + 陈学长池），② 池里没有才用词表代表票
-    var cands = lbPoolCands(db, t.sectors || []).filter(function (x) { return !inLb[x.code]; });
+    /* ① 池内候选：由 theme_cands.py 按**同题材**算好（候选的主题材命中该题材的概念词），
+          不再用「同行业」——行业太粗，光伏的 sectors 里含通用设备，会把雪人集团/利欧股份/
+          柯力传感同时塞进五个题材（用户 2026-11-10 截图指出）。旧数据没有 cands 时才退回行业。
+       ② 池里没有才用词表代表票（那是「这个题材有哪些票」，不是「今天能买谁」）。 */
+    var kind, cands;
+    if (t.cands) {
+      kind = t.candKind || 'theme';
+      cands = t.cands.filter(function (x) { return !inLb[String(x.code)]; });
+    } else {
+      kind = 'sector';
+      cands = lbPoolCands(db, t.sectors || []).filter(function (x) { return !inLb[x.code]; });
+    }
     var usePool = cands.length > 0;
     var list = usePool ? cands : (t.refStocks || []);
+    var lab = usePool
+      ? (kind === 'sector' ? '池内同行业可补涨（该题材无同题材标的，行业兜底）' : '池内同题材可补涨')
+      : '同题材可看';
     var rf = list.map(function (r) {
       window._TH_GRP.push({ c: r.code, n: r.name, t: '题材「' + k + '」同题材 · ' + r.name });
       var gi = window._TH_GRP.length - 1;
       var tip = usePool
-        ? ('池内在跟踪 · ' + (r.total != null ? '综合 ' + r.total + ' 分' : '未评分'))
+        ? ('池内在跟踪 · ' + (r.total != null ? '综合 ' + r.total + ' 分' : '未评分') +
+           (r.hit ? ' · 命中「' + r.hit + '」' : '') + (r.srcZh ? ' · ' + r.srcZh : ''))
         : String(r.role || '词表代表票');
       return '<span class="pre-th-r" onclick="stkOpenIn(window._TH_GRP,' + gi + ')" title="' +
         escAttr(tip) + '">' + esc(String(r.name || r.code)) +
@@ -6676,7 +6707,7 @@ function lbThemeSecHtml(db) {
         escAttr('同花顺行业口径把它归到「' + _sec + '」，不是这个题材名——按行业找永远找不到它') +
         '">行业归' + esc(_sec) + '</span>' : '') +
       '</div>' +
-      (rf ? '<div class="pre-th-l2">' + (usePool ? '池内同行业可补涨 ' : '同题材可看 ') + rf + '</div>' : '') +
+      (rf ? '<div class="pre-th-l2">' + lab + ' ' + rf + '</div>' : '') +
       '</div>';
   });
   return h + '</div>';
@@ -6849,6 +6880,7 @@ function spillHtml(st) {
   window._SPILL_GRP = [];
   var stateZh = { reboard: '已续板', strong: '走强未封', weak: '未续板', unknown: '行情抓空' };
   var h = '<div class="spill-sec"><div class="spill-h">🔗 连板补涨' +
+    '<span class="spill-tag">开盘验证口径</span>' +
     (sp.text ? '<span class="spill-x">' + esc(sp.text) + '</span>' : '') +
     (sp.asOf ? '<span class="spill-x">取数 ' + esc(String(sp.asOf)) + '</span>' : '') + '</div>';
   rows.forEach(function (r) {

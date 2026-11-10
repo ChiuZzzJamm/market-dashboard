@@ -5283,13 +5283,15 @@ def g61_stock_concepts_truth(r):
             bad.append(f"{code} 的 hot {absent} 不在 concepts 里（凭空拼的）")
         if hot and all(h in GENERIC for h in hot):
             gen_hot.append(code)
-        if not str(it.get("industry") or "").strip():
+        # 行业只在「没有题材」时才顶上；有题材的票缺行业不影响显示（悬停里少一句而已），
+        # 所以只对「既无题材又无行业」的票报——那才是页面上真会空掉的那种。
+        if not str(it.get("industry") or "").strip() and not hot:
             orphan.append(code)
     if gen_hot:
         bad.append(f"{len(gen_hot)} 只的 hot 全是泛概念（如 {gen_hot[:3]}）——那是标签不是题材")
     if orphan:
         # 行业只是兜底显示，缺了不该拦部署，但要能看见
-        r.warn("G61", f"{len(orphan)} 只缺 industry 兜底字段（{orphan[:3]}…），前端会退回 stkSectorOf")
+        r.warn("G61", f"{len(orphan)} 只既无题材也无行业（{orphan[:3]}…）——徽章会整个空掉")
 
     # c) 接线
     try:
@@ -5399,6 +5401,93 @@ def g62_news_theme_truth(r):
                     f"池内候选 {n_hits} 只全部在池且档位一致")
 
 
+def g63_theme_cands_truth(r):
+    """G63 题材行「池内可补涨」候选真值（R100z327，2026-11-10）。
+
+    由来：用户截图里「光伏 7 板」下面挂着雪人集团 / 利欧股份 / 柯力传感，而这三只
+    跟光伏没有任何题材关系；同一天它们在算力、人形机器人、商业航天、核电四行里又各出现一次。
+    根因是候选按**行业**算（候选.sector ∈ 题材的 sectors），而「通用设备」是几百只票的大类。
+    改成按同花顺概念算（候选主题材 hot 命中该题材的 ckw）之后，这一层必须上闸——
+    候选一旦错，读者会照着买，而页面看起来完全正常。
+
+    判据：
+      a) cand.code 必须在断板双池/陈学长三池里，且不在本题材的连板成分里；
+      b) kind=theme 时，cand.hit 必须真的在该票的 hot（主题材）里，且命中词必须属于该题材的 ckw
+         —— 这条挡住「把泛概念当题材」和「跨题材串票」；
+      c) tier 与池归属一致；
+      d) 同一只票不得在 ≥3 个题材里被推荐（那就是当年「通用设备」那种泄漏的形态）。
+    16:00 之前 themes 没有 cands 属正常 → WARN。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G63", f"data.js 读取失败，跳过题材候选校验：{e}")
+        return
+    themes = ((D.get("duanban") or {}).get("themes")) or {}
+    if not themes:
+        r.warn("G63", "duanban.themes 为空（今日无连板或 16:00 未跑），题材候选无从校验")
+        return
+    missing = [k for k, v in themes.items() if isinstance(v, dict) and "cands" not in v]
+    if missing:
+        r.warn("G63", f"{len(missing)} 个题材没有 cands（16:00 未跑或旧数据）：{missing[:4]}——"
+                      f"页面会退回按行业算的旧口径")
+        return
+    items = ((D.get("stockConcepts") or {}).get("items")) or {}
+    db = D.get("duanban") or {}
+    cp = D.get("chenPool") or {}
+    pool = {}
+    for key, tier in (("confirmed", "confirm"), ("watching", "watch")):
+        for e in (db.get(key) or []):
+            if isinstance(e, dict):
+                pool.setdefault(str(e.get("code")), tier)
+    for key, tier in (("strict", "confirm"), ("loose", "confirm"), ("watching", "watch")):
+        for e in (cp.get(key) or []):
+            if isinstance(e, dict):
+                pool.setdefault(str(e.get("code")), tier)
+    from common import theme_map
+    ckw = {t["name"]: [str(k) for k in (t.get("ckw") or [t["name"]])] for t in theme_map()}
+
+    bad, seen_in = [], {}
+    n_cand = 0
+    for name, t in themes.items():
+        if not isinstance(t, dict):
+            continue
+        in_lb = set(str(b.get("code") or "") for b in (t.get("boardStocks") or []))
+        keys = ckw.get(name) or [name]
+        for c in (t.get("cands") or []):
+            n_cand += 1
+            code = str(c.get("code") or "")
+            nm = c.get("name") or code
+            kind = c.get("kind")
+            if kind not in ("theme", "sector"):
+                bad.append(f"{name}→{nm} 的 kind={kind!r} 非法")
+            if code not in pool:
+                bad.append(f"{name}→{nm} 不在断板/陈学长池里（池外标的冒充池内）")
+                continue
+            if code in in_lb:
+                bad.append(f"{name}→{nm} 本身就是本题材的连板成分（自己推荐自己）")
+            if c.get("tier") != pool[code]:
+                bad.append(f"{name}→{nm} 档位 {c.get('tier')} 与池归属（{pool[code]}）不符")
+            if kind == "theme":
+                hot = [str(h) for h in (((items.get(code) or {}).get("hot")) or [])]
+                hit = str(c.get("hit") or "")
+                if hit not in hot:
+                    bad.append(f"{name}→{nm} 命中「{hit}」不在该票主题材 {hot[:3]} 里")
+                elif not any(k in hit for k in keys):
+                    bad.append(f"{name}→{nm} 命中「{hit}」不属于题材「{name}」的概念词")
+            seen_in.setdefault(code, []).append(name)
+    leak = {c: th for c, th in seen_in.items() if len(th) >= 3}
+    if leak:
+        bad.append("同一只票被挂到 ≥3 个题材（行业大类泄漏的形态）：" +
+                   "；".join(f"{c}→{'/'.join(th)}" for c, th in list(leak.items())[:3]))
+    if bad:
+        r.fail("G63", f"题材候选有 {len(bad)} 处站不住：" + "；".join(bad[:5]))
+    else:
+        n_th = sum(1 for v in themes.values() if isinstance(v, dict) and v.get("candKind") == "theme")
+        r.ok("G63", f"题材候选 {n_cand} 只全部可回溯（在池内、非本题材成分、命中属于该题材的概念词）；"
+                    f"{n_th}/{len(themes)} 个题材走同题材口径，其余为行业兜底")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -5472,6 +5561,7 @@ def main():
     g60_spillover_truth(r)
     g61_stock_concepts_truth(r)
     g62_news_theme_truth(r)
+    g63_theme_cands_truth(r)
 
     # R100z284：机器可读的结论行。
     #
