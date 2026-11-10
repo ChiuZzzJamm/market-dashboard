@@ -16248,6 +16248,31 @@
      "inZone": true
     }
    ]
+  },
+  "2026-11-10": {
+   "leadLag": [
+    {
+     "code": "000595",
+     "name": "新能股份",
+     "sector": "机械行业",
+     "screen": "leadLag",
+     "rule": "secGap>1.0&lag>2.0&yret>0"
+    },
+    {
+     "code": "603318",
+     "name": "水发燃气",
+     "sector": "机械行业",
+     "screen": "leadLag",
+     "rule": "secGap>1.0&lag>2.0&yret>0"
+    },
+    {
+     "code": "002389",
+     "name": "航天彩虹",
+     "sector": "电子器件",
+     "screen": "leadLag",
+     "rule": "secGap>1.0&lag>2.0&yret>0"
+    }
+   ]
   }
  },
  "updatedAt": "2026-11-09 16:38:16"
