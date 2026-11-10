@@ -5566,6 +5566,121 @@ def g64_plan_scorecard(r):
                     f"planTheme / wasListed / 作废数全部与快照一致")
 
 
+def g65_stop_anchor(r):
+    """G65 止损锚真值：断板/陈学长两池必须同锚「涨停日最低价」（R100z331，2026-11-10，FAIL 级）。
+
+    由来：用户 2026-11-10 22:11「断板和陈学长还是按照涨停日最低点来」。此前三套数并存——
+    台账里 44 条用涨停日低点（陈学长）、43 条用断板日低点（断板）、31 条用洗盘段最低，
+    atrStops 里又是 ATR 位，弹窗再拿断板日低点与 ATR 仲裁一次。同一只票能查出三个止损价。
+
+    为什么锁定涨停日低点：断板日（T+1）那根的 low 常常就是洗盘期最低，买入日开盘极易贴在
+    它上面几分钱——19 笔「按纪律不进场」里 12 笔后来涨超 5%（最大 +36%）；换成断板日口径
+    整体累计从 +17.0% 崩到 +2.0%。而洗盘段最低会随后续 K 线下移，同一笔昨天今天算出不同价。
+
+    判据（四层，全部落在会随 bug 变形的地方）：
+      a) 台账每条 stopAnchor 必须是 zt_low；stopPrice 必须等于该票涨停日那根的 low；
+      b) atrStops 里 src 含 chen/duanban 的票，stopAnchor=zt_low 且 stop=涨停日 low；
+         且 stop 不得被 ATR 宽度上限钳制（钳了就等于退回波动率口径）；
+      c) 前端不得再用断板日（涨停次日）取止损——源码里不允许出现 `[q0 + 1][4]` 这种写法；
+      d) 弹窗目标与卡片同源（exitForCode ⓪ 分支必须读 ax.target）。
+    """
+    import json as _json
+    bad, warn = [], []
+
+    D = load_data_json()
+    K = D.get("stkKlines") or {}
+    led_path = os.path.join(HERE, "chen_ledger.json")
+    try:
+        with open(led_path, encoding="utf-8") as f:
+            ents = _json.load(f).get("entries") or []
+    except Exception as e:                                    # noqa: BLE001
+        r.warn("G65", f"台账读不到，跳过止损锚校验：{e}")
+        return
+
+    def zt_low(code, ztd):
+        bars = K.get(str(code))
+        if not isinstance(bars, list) or not ztd:
+            return None
+        for b in bars:
+            if isinstance(b, list) and len(b) >= 6 and str(b[0]) == str(ztd):
+                try:
+                    v = float(b[4])
+                except (TypeError, ValueError):
+                    return None
+                return v if v > 0 else None
+        return None
+
+    n_ok = n_unk = 0
+    for e in ents:
+        code = str(e.get("code") or "")
+        nm = e.get("name") or code
+        anchor = str(e.get("stopAnchor") or "")
+        sp = float(e.get("stopPrice") or 0)
+        low = zt_low(code, e.get("ztDate"))
+        if anchor == "legacy-unk" or low is None:
+            n_unk += 1
+            continue
+        if anchor != "zt_low":
+            bad.append(f"{nm} 锚标记是 {anchor!r}（应为 zt_low）")
+            continue
+        if sp <= 0:
+            bad.append(f"{nm} stopPrice 为空")
+            continue
+        if abs(sp - low) > 0.011:
+            bad.append(f"{nm} 止损 {sp} ≠ 涨停日最低 {round(low, 2)}")
+        else:
+            n_ok += 1
+
+    items = ((D.get("atrStops") or {}).get("items")) or {}
+    n_atr = 0
+    for code, it in items.items():
+        src = str(it.get("src") or "")
+        if "chen" not in src and "duanban" not in src:
+            continue
+        n_atr += 1
+        nm = it.get("name") or code
+        anc = it.get("stopAnchor")
+        if anc == "atr-broken":
+            # 涨停日最低价已被收盘跌破（启动位失效）→ 退回 ATR 位是正确的，但必须写明原因
+            if "已高于收盘" not in str(it.get("basis") or ""):
+                bad.append(f"atrStops {nm} 标了 atr-broken 但 basis 没说明启动位已破")
+            continue
+        if anc != "zt_low":
+            bad.append(f"atrStops {nm} 的止损锚是 {anc!r}（两池应为 zt_low 或 atr-broken）")
+            continue
+        low = zt_low(code, None) if False else None
+        # atrStops 未存 ztDate，用 basis 里的「涨停日（YYYY-MM-DD）最低价 X」回读
+        m = re.search(r"涨停日（(\d{4}-\d{2}-\d{2})）最低价 ([\d.]+)", str(it.get("basis") or ""))
+        if m:
+            v = zt_low(code, m.group(1))
+            if v is not None and abs(float(it.get("stop") or 0) - v) > 0.011:
+                bad.append(f"atrStops {nm} 止损 {it.get('stop')} ≠ 涨停日最低 {round(v, 2)}")
+        else:
+            bad.append(f"atrStops {nm} 缺少「涨停日最低价」推导（basis 不可回溯）")
+
+    try:
+        html = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
+    except Exception:                                         # noqa: BLE001
+        html = ""
+    if html:
+        if re.search(r"rows0\[q0 \+ 1\]\[4\]", html):
+            bad.append("前端仍在取「涨停次日」的最低价当止损（rows0[q0 + 1][4]）")
+        if "涨停日（' + ztD0 + '）最低价" not in html:
+            bad.append("前端 ⓪ 分支没有改成涨停日最低价")
+        if "ax.target > lastC0" not in html:
+            bad.append("弹窗目标未与卡片同源（应取 ax.target）")
+    else:
+        warn.append("index.html 读不到，跳过前端断言")
+
+    if bad:
+        r.fail("G65", f"止损锚有 {len(bad)} 处不一致：" + "；".join(bad[:5]))
+    elif warn:
+        r.warn("G65", "；".join(warn))
+    else:
+        r.ok("G65", f"止损锚统一为涨停日最低价：台账 {n_ok} 条逐条对齐（{n_unk} 条无 K 线未迁移）、"
+                    f"atrStops 两池 {n_atr} 只同锚、前端已改且目标与卡片同源")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -5641,6 +5756,7 @@ def main():
     g62_news_theme_truth(r)
     g63_theme_cands_truth(r)
     g64_plan_scorecard(r)
+    g65_stop_anchor(r)
 
     # R100z284：机器可读的结论行。
     #

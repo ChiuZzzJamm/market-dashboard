@@ -226,7 +226,33 @@ def stop_of(close, atr, k, bars):
     return raw, basis, over_wide
 
 
-def compute_one(code, name, bars, sector='', src=''):
+def zt_low_of(e):
+    """池条目自带的**涨停日（T 日）最低价**——断板/陈学长的统一止损锚。
+
+    R100z331（用户 2026-11-10 22:11「断板和陈学长还是按照涨停日最低点来」）：
+    为什么是 T 日而不是断板日（T+1）或洗盘段最低：
+      · 断板日那根的 low 常常就是洗盘期最低，次日开盘很容易贴在它上面几分钱——
+        实测 19 笔「开盘即低于断板日低点、按纪律不进场」，其中 12 笔后来涨到 +5% 以上（最大 +36%）；
+        换成断板日口径后整体累计从 +17.0% 崩到 +2.0%。
+      · 洗盘段最低会随确认后的 K 线往下滚，同一笔交易昨天和今天算出的止损价不一样，台账不可复现。
+      · T 日最低价固定在 T 日不动，是「这波启动失败」的定义边界：跌破它，反包的前提就不成立了。
+    取不到（无 kline / 无 ztDate / 那天不在 K 线里）返回 (None, None)，调用方退回 ATR 位。
+    """
+    kl = e.get('kline') or []
+    ztd = str(e.get('ztDate') or '')
+    if not kl or not ztd:
+        return None, None
+    for b in kl:
+        if isinstance(b, list) and len(b) >= 6 and str(b[0]) == ztd:
+            try:
+                low = float(b[4])
+            except (TypeError, ValueError):
+                return None, None
+            return (ztd, low) if low > 0 else (None, None)
+    return None, None
+
+
+def compute_one(code, name, bars, sector='', src='', form_stop=None, form_date=None):
     """单票止损/目标/仓位。返回 dict 或 None（K 线不可用）。"""
     if not bars or len(bars) < 5:
         return None
@@ -248,9 +274,34 @@ def compute_one(code, name, bars, sector='', src=''):
     k = K_TREND if trend == '上行' else K_RANGE
     basis_parts.append('%.1f×ATR（%s）' % (k, trend))
 
-    stop, sbasis, over_wide = stop_of(close, atr, k, bars)
-    basis_parts.extend(sbasis)
+    stop_atr, sbasis, atr_over_wide = stop_of(close, atr, k, bars)
     struct_low = min(b[4] for b in (bars[-STRUCT_LOOKBACK:] if len(bars) >= 5 else bars))
+
+    # R100z331：断板/陈学长两池统一用「涨停日最低价」当止损锚，**不参与 ATR 宽度钳制**。
+    # 理由见 zt_low_of 的 docstring。其余标的（AI/谐波/横盘/吸筹）仍走 ATR 公式。
+    stop_anchor = 'atr'
+    if form_stop and float(form_stop) > 0 and float(form_stop) < close:
+        stop = float(form_stop)
+        wid_f = (close - stop) / close
+        basis_parts.append('止损锚＝涨停日（%s）最低价 %.2f——反包启动位下沿，跌破即这波失败'
+                           % (form_date or '', stop))
+        if wid_f > WID_MAX:
+            basis_parts.append('宽度 %.1f%% 超 ATR 默认上限 %.0f%%：按风险预算反算小仓位，'
+                               '不把止损往上钳（钳上去就落在噪音里）'
+                               % (wid_f * 100, WID_MAX * 100))
+        if abs(stop - stop_atr) > 0.005:
+            basis_parts.append('ATR 位 %.2f 仅作参考、不作止损' % stop_atr)
+        stop_anchor = 'zt_low'
+        over_wide = wid_f > WID_MAX
+    else:
+        stop, over_wide = stop_atr, atr_over_wide
+        basis_parts.extend(sbasis)
+        # R100z331：有形态位但**已被收盘跌破**时，不能拿它当止损（止损位在现价之上毫无意义）。
+        # 这是正确降级，但必须留痕——否则闸门与读者都会以为「这只票没取到涨停日最低价」。
+        if form_stop and float(form_stop) > 0 and float(form_stop) >= close:
+            basis_parts.append('涨停日最低价 %.2f 已高于收盘 %.2f（启动位已破、形态失效）→ 退回 ATR 位'
+                               % (float(form_stop), close))
+            stop_anchor = 'atr-broken'
 
     stop = round(stop, 2)
     wid = (close - stop) / close
@@ -272,6 +323,10 @@ def compute_one(code, name, bars, sector='', src=''):
         'posPct': round(pos, 1),
         'confirm': 'close',
         'overWide': over_wide,
+        # 止损锚：zt_low＝涨停日最低价（断板/陈学长），atr＝ATR 自适应（其余标的）。
+        # 前端与闸门都靠它判断「这枚止损该不该被 ATR 位覆盖」。
+        'stopAnchor': stop_anchor,
+        'atrStop': round(stop_atr, 2),
         'basis': '；'.join(basis_parts),
     }
 
@@ -287,15 +342,20 @@ def collect(D):
     seen = {}
     order = []
 
-    def add(code, name, sector, src):
+    def add(code, name, sector, src, form=None, form_date=None):
         c = str(code or '').strip()
         if not c or c not in K:
             return
         if c in seen:
             if src not in seen[c]['_srcs']:
                 seen[c]['_srcs'].append(src)
+            # R100z331：同一只票可能先进 AI/谐波池（不带形态锚），之后才在断板/陈学长池出现。
+            # 只要**任一来源**能给出涨停日最低价，就补上——两池口径优先于 ATR 位。
+            if form and not seen[c].get('_form'):
+                seen[c]['_form'], seen[c]['_form_date'] = form, form_date
             return
-        seen[c] = {'code': c, 'name': name or '', 'sector': (sector or '').strip() or UNCLASSIFIED, '_srcs': [src]}
+        seen[c] = {'code': c, 'name': name or '', 'sector': (sector or '').strip() or UNCLASSIFIED,
+                   '_srcs': [src], '_form': form, '_form_date': form_date}
         order.append(c)
 
     for s in (D.get('aiPrediction') or {}).get('sectors') or []:
@@ -311,7 +371,8 @@ def collect(D):
     # R100z329：陈学长三池的退出纪律——弹窗「退出纪律」那一段此前对这 41 只全是空的。
     for _k in ('strict', 'loose', 'watching'):
         for x in ((D.get('chenPool') or {}).get(_k) or []):
-            add(x.get('code'), x.get('name'), x.get('sector'), 'chen')
+            _zd, _zl = zt_low_of(x)
+            add(x.get('code'), x.get('name'), x.get('sector'), 'chen', form=_zl, form_date=_zd)
     for x in (D.get('accumulation') or {}).get('scored') or []:
         add(x.get('code'), x.get('name'), x.get('sector'), 'accumulation')
 
@@ -321,7 +382,8 @@ def collect(D):
     db = D.get('duanban') or {}
     for pool in ('confirmed', 'watching'):
         for x in db.get(pool) or []:
-            add(x.get('code'), x.get('name'), x.get('sector'), 'duanban')
+            _zd, _zl = zt_low_of(x)
+            add(x.get('code'), x.get('name'), x.get('sector'), 'duanban', form=_zl, form_date=_zd)
 
     return [(c, seen[c]) for c in order]
 
@@ -333,7 +395,8 @@ def build(D):
     skipped = []
     for code, meta in collect(D):
         bars = norm_bars(K.get(code))
-        r = compute_one(code, meta['name'], bars, meta['sector'], '/'.join(meta['_srcs']))
+        r = compute_one(code, meta['name'], bars, meta['sector'], '/'.join(meta['_srcs']),
+                        form_stop=meta.get('_form'), form_date=meta.get('_form_date'))
         if r is None:
             skipped.append({'code': code, 'name': meta['name'], 'reason': 'K线不足或不可用'})
             continue

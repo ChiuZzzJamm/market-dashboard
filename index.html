@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611102154"></script>
+<script src="data.js?v=202611102221"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -3132,9 +3132,15 @@ function atrExitOf(code0) {
     stopWidPct: isFinite(Number(it.stopWidPct)) ? Number(it.stopWidPct) : null,
     atr: isFinite(atr) ? atr : 0,
     close: close,
-    falsify: '收盘跌破 ' + stop.toFixed(2) + ' 元（' + (it.trend || '') + ' 趋势 ' +
-             (it.k || '') + '×ATR 止损位）——按纪律离场，不摊不扛',
-    stopBasis: 'ATR 自适应：' + String(it.basis || ''),
+    /* R100z331：atrStops 里已混有两类止损锚（zt_low＝涨停日最低价 / atr＝波动率位），
+       统一前缀会让读者以为「8.80 是 1.5×ATR 算出来的」——文案必须跟着锚走。 */
+    falsify: (String(it.stopAnchor || 'atr') === 'zt_low')
+      ? '收盘跌破 ' + stop.toFixed(2) + ' 元（涨停日最低价，反包启动位下沿）——按纪律离场，不摊不扛'
+      : '收盘跌破 ' + stop.toFixed(2) + ' 元（' + (it.trend || '') + ' 趋势 ' +
+        (it.k || '') + '×ATR 止损位）——按纪律离场，不摊不扛',
+    stopBasis: ((String(it.stopAnchor || 'atr') === 'zt_low') ? '止损口径：' : 'ATR 自适应：')
+               + String(it.basis || ''),
+    stopAnchor: String(it.stopAnchor || 'atr'),
     src: 'atr'
   };
 }
@@ -3196,13 +3202,18 @@ function exitForCode(code0, st, allowFb) {
         var stop0 = null, basis0 = '';
         var ztD0 = String(dbEnt0.ztDate || '');
         // 坑：ztDate 是 '2026-09-28'（10 位带连字符），用 /^\d{8}$/ 会整块跳过、静默退回兜底
+        /* R100z331（用户 2026-11-10 22:11「断板和陈学长还是按照涨停日最低点来」）：
+           原来取「断板日（ztDate 次一交易日）」最低价。实测那根常常就是洗盘期最低，
+           买入日开盘极易贴在它上面几分钱——19 笔因此判「按纪律不进场」，其中 12 笔
+           后来涨超 +5%（最大 +36%），且多数只差 1 分钱（3.23 vs 3.23、34.40 vs 34.40）。
+           现在与陈学长池、与 atrStops 同锚：**涨停日当天的最低**。
+           它是「这波反包启动失败」的定义边界，固定在 T 日不随走势移动，可复现。 */
         if (/^\d{4}-\d{2}-\d{2}$/.test(ztD0)) {
-          for (var q0 = 0; q0 < rows0.length - 1; q0++) {
-            // 断板日 = 涨停日的次一交易日（放量断板那根），取其最低价作形态止损
-            if (rows0[q0][0] === ztD0 && rows0[q0 + 1] && rows0[q0 + 1][0] > ztD0) {
-              stop0 = rows0[q0 + 1][4];
-              basis0 = '断板日（' + rows0[q0 + 1][0] + '）最低价 ' + stop0.toFixed(2) +
-                       '，跌破即放量破位、断板反包形态失败';
+          for (var q0 = 0; q0 < rows0.length; q0++) {
+            if (rows0[q0][0] === ztD0) {
+              stop0 = rows0[q0][4];
+              basis0 = '涨停日（' + ztD0 + '）最低价 ' + stop0.toFixed(2) +
+                       '——反包启动位下沿，跌破即这波失败';
               break;
             }
           }
@@ -3213,11 +3224,19 @@ function exitForCode(code0, st, allowFb) {
           stop0 = lastC0 * 0.975;
           basis0 = '最近收盘 ' + lastC0.toFixed(2) + ' 的 −2.5%（全站统一止损纪律位，非形态位）';
         }
-        var dbTarget = Math.round(lastC0 * 1.06 * 100) / 100;
-        var dbFalsify = '放量跌破断板日最低价，或反包日冲高回落收阴——断板反包形态失败，无条件离场';
-        return atrVsForm(ax, stop0, dbTarget, basis0, dbFalsify) ||
-               { stop: stop0, target: dbTarget, falsify: dbFalsify,
-                 stopBasis: basis0, src: 'duanban', fb: true };
+        /* R100z331：目标与卡片同源——卡片读 atrStops.target（2.5R），弹窗原来另算「收盘×1.06」，
+           同一只票卡片写 12.73、弹窗写 9.84。止损放宽后 +6% 目标的盈亏比只有 0.4:1，
+           两套目标并列会让人不知道该信哪条。此处以 atrStops 为准，取不到才退回 +6%。 */
+        var dbTarget = (ax && isFinite(ax.target) && ax.target > lastC0)
+          ? Number(ax.target)
+          : Math.round(lastC0 * 1.06 * 100) / 100;
+        var dbFalsify = '跌破涨停日最低价（反包启动位下沿），或反包日冲高回落收阴——形态失败，无条件离场';
+        /* 不再走 atrVsForm 覆盖：两池口径已统一为涨停日最低价，atrStops 同源，
+           覆盖一次就会重新出现「弹窗一个数、回测另一个数」。ATR 位只进 basis 供参考。 */
+        var basis0x = basis0 + ((ax && isFinite(ax.stop) && Math.abs(ax.stop - stop0) > 0.005)
+          ? '；ATR 位 ' + Number(ax.stop).toFixed(2) + ' 仅供参考，不作止损' : '');
+        return { stop: stop0, target: dbTarget, falsify: dbFalsify,
+                 stopBasis: basis0x, src: 'duanban', fb: true };
       }
     }
   }

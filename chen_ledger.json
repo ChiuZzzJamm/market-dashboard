@@ -7,22 +7,25 @@
    "name": "百洋股份",
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-21",
-   "stopPrice": 9.22,
+   "stopPrice": 9.94,
    "result": {
     "status": "settled",
-    "result": "win",
-    "exitDay": "2026-10-27",
-    "exitPrice": 9.83,
+    "result": "notExecuted",
+    "exitDay": "2026-10-26",
+    "buyDay": "2026-10-26",
+    "exitPrice": 9.5,
     "buyPrice": 9.5,
-    "retPct": 3.5,
-    "note": "盘中触 +3.5% 当天兑现"
+    "retPct": 0.0,
+    "note": "开盘价 9.50 已跌破止损位 9.94，按纪律不进场"
    },
    "confirmDate": "2026-10-25",
    "firstSeenDate": "2026-10-25",
    "tgtPct": 3.5,
    "holdDays": 2,
    "ruleFrom": "legacy",
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -31,11 +34,12 @@
    "name": "福莱新材",
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-20",
-   "stopPrice": 31.0,
+   "stopPrice": 29.65,
    "result": {
     "status": "settled",
     "result": "win",
     "exitDay": "2026-10-27",
+    "buyDay": "2026-10-26",
     "exitPrice": 41.49,
     "buyPrice": 40.09,
     "retPct": 3.5,
@@ -46,7 +50,9 @@
    "tgtPct": 3.5,
    "holdDays": 2,
    "ruleFrom": "legacy",
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -55,11 +61,12 @@
    "name": "润建股份",
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-21",
-   "stopPrice": 52.67,
+   "stopPrice": 52.42,
    "result": {
     "status": "settled",
     "result": "win",
     "exitDay": "2026-10-28",
+    "buyDay": "2026-10-26",
     "exitPrice": 57.45,
     "buyPrice": 55.51,
     "retPct": 3.5,
@@ -70,7 +77,9 @@
    "tgtPct": 3.5,
    "holdDays": 2,
    "ruleFrom": "legacy",
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -79,22 +88,25 @@
    "name": "海正药业",
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-20",
-   "stopPrice": 13.45,
+   "stopPrice": 13.0,
    "result": {
     "status": "settled",
-    "result": "loss",
+    "result": "expired",
     "exitDay": "2026-10-28",
+    "buyDay": "2026-10-26",
     "exitPrice": 13.4,
     "buyPrice": 13.96,
     "retPct": -4.01,
-    "note": "收盘跌破止损位"
+    "note": "持仓 2 日未触目标也未破止损，收盘平"
    },
    "confirmDate": "2026-10-25",
    "firstSeenDate": "2026-10-25",
    "tgtPct": 3.5,
    "holdDays": 2,
    "ruleFrom": "legacy",
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_strict",
@@ -103,22 +115,25 @@
    "name": "九牧王",
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-21",
-   "stopPrice": 8.63,
+   "stopPrice": 9.32,
    "result": {
     "status": "settled",
-    "result": "win",
-    "exitDay": "2026-10-27",
-    "exitPrice": 9.4,
+    "result": "notExecuted",
+    "exitDay": "2026-10-26",
+    "buyDay": "2026-10-26",
+    "exitPrice": 9.08,
     "buyPrice": 9.08,
-    "retPct": 3.5,
-    "note": "盘中触 +3.5% 当天兑现"
+    "retPct": 0.0,
+    "note": "开盘价 9.08 已跌破止损位 9.32，按纪律不进场"
    },
    "confirmDate": "2026-10-25",
    "firstSeenDate": "2026-10-25",
    "tgtPct": 3.5,
    "holdDays": 2,
    "ruleFrom": "legacy",
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_strict",
@@ -127,22 +142,25 @@
    "name": "顺灏股份",
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-21",
-   "stopPrice": 7.26,
+   "stopPrice": 7.97,
    "result": {
     "status": "settled",
-    "result": "loss",
-    "exitDay": "2026-10-27",
-    "exitPrice": 7.08,
+    "result": "notExecuted",
+    "exitDay": "2026-10-26",
+    "buyDay": "2026-10-26",
+    "exitPrice": 7.77,
     "buyPrice": 7.77,
-    "retPct": -8.88,
-    "note": "收盘跌破止损位"
+    "retPct": 0.0,
+    "note": "开盘价 7.77 已跌破止损位 7.97，按纪律不进场"
    },
    "confirmDate": "2026-10-25",
    "firstSeenDate": "2026-10-25",
    "tgtPct": 3.5,
    "holdDays": 2,
    "ruleFrom": "legacy",
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -151,11 +169,12 @@
    "name": "能科科技",
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-19",
-   "stopPrice": 39.02,
+   "stopPrice": 34.7,
    "result": {
     "status": "settled",
     "result": "expired",
     "exitDay": "2026-10-28",
+    "buyDay": "2026-10-26",
     "exitPrice": 42.35,
     "buyPrice": 45.0,
     "retPct": -5.89,
@@ -166,7 +185,9 @@
    "tgtPct": 3.5,
    "holdDays": 2,
    "ruleFrom": "legacy",
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -175,11 +196,12 @@
    "name": "兆威机电",
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-19",
-   "stopPrice": 67.51,
+   "stopPrice": 59.52,
    "result": {
     "status": "settled",
     "result": "win",
     "exitDay": "2026-10-27",
+    "buyDay": "2026-10-26",
     "exitPrice": 96.25,
     "buyPrice": 93.0,
     "retPct": 3.5,
@@ -190,7 +212,9 @@
    "tgtPct": 3.5,
    "holdDays": 2,
    "ruleFrom": "legacy",
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -199,11 +223,12 @@
    "name": "天洋新材",
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-19",
-   "stopPrice": 9.05,
+   "stopPrice": 8.23,
    "result": {
     "status": "settled",
     "result": "expired",
     "exitDay": "2026-10-28",
+    "buyDay": "2026-10-26",
     "exitPrice": 9.58,
     "buyPrice": 10.01,
     "retPct": -4.3,
@@ -214,7 +239,9 @@
    "tgtPct": 3.5,
    "holdDays": 2,
    "ruleFrom": "legacy",
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -223,22 +250,25 @@
    "name": "航天信息",
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-21",
-   "stopPrice": 7.25,
+   "stopPrice": 6.72,
    "result": {
     "status": "settled",
-    "result": "loss",
-    "exitDay": "2026-10-27",
-    "exitPrice": 7.03,
+    "result": "expired",
+    "exitDay": "2026-10-28",
+    "buyDay": "2026-10-26",
+    "exitPrice": 7.14,
     "buyPrice": 7.49,
-    "retPct": -6.14,
-    "note": "收盘跌破止损位"
+    "retPct": -4.67,
+    "note": "持仓 2 日未触目标也未破止损，收盘平"
    },
    "confirmDate": "2026-10-25",
    "firstSeenDate": "2026-10-25",
    "tgtPct": 3.5,
    "holdDays": 2,
    "ruleFrom": "legacy",
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -247,11 +277,12 @@
    "name": "雪人集团",
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-21",
-   "stopPrice": 13.8,
+   "stopPrice": 13.55,
    "result": {
     "status": "settled",
     "result": "expired",
     "exitDay": "2026-10-28",
+    "buyDay": "2026-10-26",
     "exitPrice": 13.94,
     "buyPrice": 14.76,
     "retPct": -5.56,
@@ -262,7 +293,9 @@
    "tgtPct": 3.5,
    "holdDays": 2,
    "ruleFrom": "legacy",
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -271,11 +304,12 @@
    "name": "昂利康",
    "entryDate": "2026-10-25",
    "ztDate": "2026-10-20",
-   "stopPrice": 22.93,
+   "stopPrice": 21.21,
    "result": {
     "status": "settled",
     "result": "expired",
     "exitDay": "2026-10-28",
+    "buyDay": "2026-10-26",
     "exitPrice": 23.28,
     "buyPrice": 24.18,
     "retPct": -3.72,
@@ -286,7 +320,9 @@
    "tgtPct": 3.5,
    "holdDays": 2,
    "ruleFrom": "legacy",
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -300,6 +336,7 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-10-27",
+    "buyDay": "2026-10-26",
     "exitPrice": 58.99,
     "buyPrice": 57.0,
     "retPct": 3.5,
@@ -310,7 +347,8 @@
    "tgtPct": 3.5,
    "holdDays": 2,
    "ruleFrom": "legacy",
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "legacy-unk"
   },
   {
    "pool": "duanban",
@@ -322,20 +360,23 @@
    "entryDate": "2026-10-26",
    "cross": "db",
    "ztDate": "2026-10-20",
-   "stopPrice": 38.4,
+   "stopPrice": 35.2,
    "result": {
     "status": "settled",
-    "result": "loss",
-    "exitDay": "2026-10-29",
-    "exitPrice": 38.29,
+    "result": "expired",
+    "exitDay": "2026-11-10",
+    "buyDay": "2026-10-27",
+    "exitPrice": 40.12,
     "buyPrice": 41.26,
-    "retPct": -7.2,
-    "note": "收盘跌破止损位"
+    "retPct": -2.76,
+    "note": "持仓 10 日未触目标也未破止损，收盘平"
    },
    "tgtPct": 5.0,
    "holdDays": 10,
    "ruleFrom": "2026-10-26",
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_strict",
@@ -355,12 +396,15 @@
     "status": "settled",
     "result": "notExecuted",
     "exitDay": "2026-10-26",
+    "buyDay": "2026-10-26",
     "exitPrice": 9.5,
     "buyPrice": 9.5,
     "retPct": 0.0,
     "note": "开盘价 9.50 已跌破止损位 9.94，按纪律不进场"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -380,12 +424,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-10-26",
+    "buyDay": "2026-10-23",
     "exitPrice": 35.77,
     "buyPrice": 34.07,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -411,7 +458,9 @@
     "retPct": -2.8,
     "note": "持仓 10 日未触目标也未破止损，收盘平"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -423,7 +472,7 @@
    "entryDate": "2026-10-23",
    "cross": "chen",
    "ztDate": "2026-10-21",
-   "stopPrice": 50.23,
+   "stopPrice": 52.42,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -431,12 +480,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-10-28",
+    "buyDay": "2026-10-26",
     "exitPrice": 58.29,
     "buyPrice": 55.51,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -456,12 +508,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-10-26",
+    "buyDay": "2026-10-23",
     "exitPrice": 14.34,
     "buyPrice": 13.66,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -473,20 +528,23 @@
    "entryDate": "2026-10-26",
    "cross": "db",
    "ztDate": "2026-10-19",
-   "stopPrice": 39.02,
+   "stopPrice": 34.7,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": {
     "status": "settled",
-    "result": "loss",
-    "exitDay": "2026-10-30",
-    "exitPrice": 37.22,
+    "result": "expired",
+    "exitDay": "2026-11-10",
+    "buyDay": "2026-10-27",
+    "exitPrice": 40.56,
     "buyPrice": 44.7,
-    "retPct": -16.73,
-    "note": "收盘跌破止损位"
+    "retPct": -9.26,
+    "note": "持仓 10 日未触目标也未破止损，收盘平"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -498,7 +556,7 @@
    "entryDate": "2026-10-26",
    "cross": "db",
    "ztDate": "2026-10-19",
-   "stopPrice": 67.51,
+   "stopPrice": 59.52,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -506,12 +564,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-10-28",
+    "buyDay": "2026-10-27",
     "exitPrice": 98.28,
     "buyPrice": 93.6,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -537,7 +598,8 @@
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "legacy-unk"
   },
   {
    "pool": "chen_loose",
@@ -557,12 +619,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-10-29",
+    "buyDay": "2026-10-28",
     "exitPrice": 8.49,
     "buyPrice": 8.09,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -588,7 +653,9 @@
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -600,20 +667,23 @@
    "entryDate": "2026-10-27",
    "cross": "db",
    "ztDate": "2026-10-23",
-   "stopPrice": 22.85,
+   "stopPrice": 20.58,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": {
     "status": "settled",
-    "result": "loss",
-    "exitDay": "2026-10-29",
-    "exitPrice": 22.5,
-    "buyPrice": 23.36,
-    "retPct": -3.68,
-    "note": "收盘跌破止损位"
+    "result": "win",
+    "exitDay": "2026-11-05",
+    "buyDay": "2026-10-28",
+    "exitPrice": 24.37,
+    "buyPrice": 23.21,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -625,20 +695,14 @@
    "entryDate": "2026-10-27",
    "cross": "db",
    "ztDate": "2026-10-23",
-   "stopPrice": 53.74,
+   "stopPrice": 46.69,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": {
-    "status": "settled",
-    "result": "loss",
-    "exitDay": "2026-10-30",
-    "exitPrice": 50.0,
-    "buyPrice": 55.54,
-    "retPct": -9.97,
-    "note": "收盘跌破止损位"
-   },
-   "settleVer": "R100z299"
+   "result": null,
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -650,7 +714,7 @@
    "entryDate": "2026-10-27",
    "cross": "db",
    "ztDate": "2026-10-23",
-   "stopPrice": 58.12,
+   "stopPrice": 50.0,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -658,12 +722,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-10-29",
+    "buyDay": "2026-10-28",
     "exitPrice": 61.12,
     "buyPrice": 58.21,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -675,7 +742,7 @@
    "entryDate": "2026-10-27",
    "cross": "db",
    "ztDate": "2026-10-23",
-   "stopPrice": 66.0,
+   "stopPrice": 60.65,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -683,12 +750,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-11-02",
+    "buyDay": "2026-10-28",
     "exitPrice": 70.8,
     "buyPrice": 67.43,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -700,7 +770,7 @@
    "entryDate": "2026-10-27",
    "cross": "db",
    "ztDate": "2026-10-23",
-   "stopPrice": 45.64,
+   "stopPrice": 40.79,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -708,12 +778,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-11-02",
+    "buyDay": "2026-10-28",
     "exitPrice": 48.95,
     "buyPrice": 46.62,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -725,7 +798,7 @@
    "entryDate": "2026-10-27",
    "cross": "db",
    "ztDate": "2026-10-22",
-   "stopPrice": 6.84,
+   "stopPrice": 6.34,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -733,12 +806,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-10-29",
+    "buyDay": "2026-10-28",
     "exitPrice": 8.12,
     "buyPrice": 7.73,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_strict",
@@ -758,12 +834,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-11-03",
+    "buyDay": "2026-10-28",
     "exitPrice": 10.61,
     "buyPrice": 10.1,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -780,7 +859,9 @@
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null,
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -797,7 +878,9 @@
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null,
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -817,12 +900,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-10-30",
+    "buyDay": "2026-10-29",
     "exitPrice": 49.04,
     "buyPrice": 46.7,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -842,12 +928,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-11-02",
+    "buyDay": "2026-10-29",
     "exitPrice": 15.39,
     "buyPrice": 14.66,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -864,7 +953,8 @@
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null,
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "legacy-unk"
   },
   {
    "pool": "chen_loose",
@@ -884,12 +974,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-10-30",
+    "buyDay": "2026-10-29",
     "exitPrice": 9.68,
     "buyPrice": 9.22,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -909,12 +1002,15 @@
     "status": "settled",
     "result": "loss",
     "exitDay": "2026-11-03",
+    "buyDay": "2026-10-29",
     "exitPrice": 40.91,
     "buyPrice": 51.0,
     "retPct": -19.78,
     "note": "收盘跌破止损位"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -931,7 +1027,9 @@
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null,
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -943,7 +1041,7 @@
    "entryDate": "2026-10-28",
    "cross": "db",
    "ztDate": "2026-10-26",
-   "stopPrice": 12.66,
+   "stopPrice": 11.66,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -957,7 +1055,9 @@
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -969,12 +1069,14 @@
    "entryDate": "2026-10-28",
    "cross": "db",
    "ztDate": "2026-10-26",
-   "stopPrice": 4.35,
+   "stopPrice": 4.47,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null,
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -986,7 +1088,7 @@
    "entryDate": "2026-10-28",
    "cross": "db",
    "ztDate": "2026-10-26",
-   "stopPrice": 10.5,
+   "stopPrice": 10.1,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -994,12 +1096,15 @@
     "status": "settled",
     "result": "loss",
     "exitDay": "2026-10-30",
+    "buyDay": "2026-10-29",
     "exitPrice": 10.0,
     "buyPrice": 10.87,
     "retPct": -8.0,
     "note": "收盘跌破止损位"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1011,7 +1116,7 @@
    "entryDate": "2026-10-28",
    "cross": "db",
    "ztDate": "2026-10-23",
-   "stopPrice": 27.95,
+   "stopPrice": 25.12,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -1019,12 +1124,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-10-30",
+    "buyDay": "2026-10-29",
     "exitPrice": 30.64,
     "buyPrice": 29.18,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -1044,12 +1152,15 @@
     "status": "settled",
     "result": "loss",
     "exitDay": "2026-11-02",
+    "buyDay": "2026-10-30",
     "exitPrice": 11.75,
     "buyPrice": 12.98,
     "retPct": -9.48,
     "note": "收盘跌破止损位"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1061,7 +1172,7 @@
    "entryDate": "2026-10-29",
    "cross": "db",
    "ztDate": "2026-10-27",
-   "stopPrice": 11.36,
+   "stopPrice": 11.03,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -1069,12 +1180,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-11-03",
+    "buyDay": "2026-10-30",
     "exitPrice": 13.47,
     "buyPrice": 12.83,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1086,7 +1200,7 @@
    "entryDate": "2026-10-29",
    "cross": "db",
    "ztDate": "2026-10-27",
-   "stopPrice": 12.56,
+   "stopPrice": 11.7,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -1094,12 +1208,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-11-02",
+    "buyDay": "2026-10-30",
     "exitPrice": 13.7,
     "buyPrice": 13.05,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1111,12 +1228,14 @@
    "entryDate": "2026-10-29",
    "cross": "db",
    "ztDate": "2026-10-27",
-   "stopPrice": 12.35,
+   "stopPrice": 12.16,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null,
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1128,7 +1247,7 @@
    "entryDate": "2026-10-29",
    "cross": "db",
    "ztDate": "2026-10-26",
-   "stopPrice": 2.25,
+   "stopPrice": 2.04,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -1136,12 +1255,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-11-02",
+    "buyDay": "2026-10-30",
     "exitPrice": 2.84,
     "buyPrice": 2.7,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1153,7 +1275,7 @@
    "entryDate": "2026-10-29",
    "cross": "db",
    "ztDate": "2026-10-23",
-   "stopPrice": 16.62,
+   "stopPrice": 15.05,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -1161,12 +1283,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-11-03",
+    "buyDay": "2026-10-30",
     "exitPrice": 18.0,
     "buyPrice": 17.14,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1178,7 +1303,7 @@
    "entryDate": "2026-10-29",
    "cross": "db",
    "ztDate": "2026-10-22",
-   "stopPrice": 3.22,
+   "stopPrice": 3.35,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -1186,12 +1311,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-11-02",
+    "buyDay": "2026-10-30",
     "exitPrice": 4.29,
     "buyPrice": 4.09,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -1217,7 +1345,9 @@
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -1234,7 +1364,8 @@
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null,
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "legacy-unk"
   },
   {
    "pool": "chen_loose",
@@ -1254,12 +1385,15 @@
     "status": "settled",
     "result": "win",
     "exitDay": "2026-11-03",
+    "buyDay": "2026-11-02",
     "exitPrice": 18.97,
     "buyPrice": 18.07,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -1285,7 +1419,9 @@
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -1311,7 +1447,9 @@
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1323,21 +1461,14 @@
    "entryDate": "2026-10-30",
    "cross": "db",
    "ztDate": "2026-10-28",
-   "stopPrice": 10.95,
+   "stopPrice": 10.03,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": {
-    "status": "settled",
-    "result": "loss",
-    "exitDay": "2026-11-06",
-    "buyDay": "2026-11-02",
-    "exitPrice": 10.92,
-    "buyPrice": 11.42,
-    "retPct": -4.38,
-    "note": "收盘跌破止损位"
-   },
-   "settleVer": "R100z299"
+   "result": null,
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1349,12 +1480,14 @@
    "entryDate": "2026-10-30",
    "cross": "db",
    "ztDate": "2026-10-23",
-   "stopPrice": 5.65,
+   "stopPrice": 5.53,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null,
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -1380,7 +1513,9 @@
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -1406,7 +1541,9 @@
     "retPct": -4.24,
     "note": "收盘跌破止损位"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -1432,7 +1569,8 @@
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "legacy-unk"
   },
   {
    "pool": "duanban",
@@ -1458,7 +1596,8 @@
     "retPct": -5.74,
     "note": "收盘跌破止损位"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "legacy-unk"
   },
   {
    "pool": "duanban",
@@ -1470,7 +1609,7 @@
    "entryDate": "2026-11-02",
    "cross": "db",
    "ztDate": "2026-10-29",
-   "stopPrice": 32.3,
+   "stopPrice": 28.88,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -1484,7 +1623,9 @@
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1496,7 +1637,7 @@
    "entryDate": "2026-11-02",
    "cross": "db",
    "ztDate": "2026-10-29",
-   "stopPrice": 15.6,
+   "stopPrice": 14.9,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -1510,7 +1651,9 @@
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1527,7 +1670,8 @@
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null,
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "legacy-unk"
   },
   {
    "pool": "duanban",
@@ -1539,7 +1683,7 @@
    "entryDate": "2026-11-02",
    "cross": "db",
    "ztDate": "2026-10-29",
-   "stopPrice": 5.1,
+   "stopPrice": 5.12,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -1553,7 +1697,9 @@
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1565,7 +1711,7 @@
    "entryDate": "2026-11-02",
    "cross": "db",
    "ztDate": "2026-10-29",
-   "stopPrice": 37.8,
+   "stopPrice": 34.66,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -1579,7 +1725,9 @@
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1591,7 +1739,7 @@
    "entryDate": "2026-11-02",
    "cross": "db",
    "ztDate": "2026-10-29",
-   "stopPrice": 7.86,
+   "stopPrice": 7.3,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -1605,7 +1753,9 @@
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1617,12 +1767,14 @@
    "entryDate": "2026-11-02",
    "cross": "db",
    "ztDate": "2026-10-28",
-   "stopPrice": 19.02,
+   "stopPrice": 18.3,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null,
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1634,12 +1786,14 @@
    "entryDate": "2026-11-02",
    "cross": "db",
    "ztDate": "2026-10-27",
-   "stopPrice": 17.49,
+   "stopPrice": 16.86,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null,
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1651,7 +1805,7 @@
    "entryDate": "2026-11-02",
    "cross": "db",
    "ztDate": "2026-10-26",
-   "stopPrice": 8.96,
+   "stopPrice": 8.45,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -1665,7 +1819,9 @@
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -1682,7 +1838,9 @@
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null,
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -1699,7 +1857,8 @@
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null,
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "legacy-unk"
   },
   {
    "pool": "chen_loose",
@@ -1716,7 +1875,9 @@
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null,
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1728,12 +1889,14 @@
    "entryDate": "2026-11-03",
    "cross": "db",
    "ztDate": "2026-10-30",
-   "stopPrice": 19.8,
+   "stopPrice": 18.72,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null,
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1745,7 +1908,7 @@
    "entryDate": "2026-11-03",
    "cross": "db",
    "ztDate": "2026-10-30",
-   "stopPrice": 15.3,
+   "stopPrice": 14.26,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -1759,7 +1922,9 @@
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1785,7 +1950,8 @@
     "retPct": 0.0,
     "note": "开盘价 9.81 已跌破止损位 9.81，按纪律不进场"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "legacy-unk"
   },
   {
    "pool": "duanban",
@@ -1797,12 +1963,14 @@
    "entryDate": "2026-11-03",
    "cross": "db",
    "ztDate": "2026-10-30",
-   "stopPrice": 20.15,
+   "stopPrice": 18.35,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null,
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "duanban",
@@ -1828,7 +1996,8 @@
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "legacy-unk"
   },
   {
    "pool": "duanban",
@@ -1845,7 +2014,9 @@
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": null,
-   "settleVer": "R100z299"
+   "settleVer": "R100z299",
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331"
   },
   {
    "pool": "chen_loose",
@@ -1870,7 +2041,10 @@
     "buyPrice": 30.49,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -1895,7 +2069,10 @@
     "buyPrice": 62.0,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -1911,7 +2088,10 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -1927,7 +2107,9 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "legacy-unk",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -1952,7 +2134,9 @@
     "buyPrice": 25.22,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "legacy-unk",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -1968,7 +2152,10 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -1984,7 +2171,9 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "legacy-unk",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -2000,7 +2189,10 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -2016,7 +2208,10 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -2041,7 +2236,10 @@
     "buyPrice": 4.15,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -2057,7 +2255,9 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "legacy-unk",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2069,20 +2269,23 @@
    "entryDate": "2026-11-04",
    "cross": "db",
    "ztDate": "2026-11-02",
-   "stopPrice": 3.16,
+   "stopPrice": 2.69,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
    "result": {
     "status": "settled",
-    "result": "loss",
-    "exitDay": "2026-11-09",
+    "result": "win",
+    "exitDay": "2026-11-10",
     "buyDay": "2026-11-05",
-    "exitPrice": 3.16,
+    "exitPrice": 3.39,
     "buyPrice": 3.23,
-    "retPct": -2.17,
-    "note": "收盘跌破止损位"
-   }
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2094,7 +2297,7 @@
    "entryDate": "2026-11-04",
    "cross": "db",
    "ztDate": "2026-11-02",
-   "stopPrice": 10.32,
+   "stopPrice": 8.73,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -2107,7 +2310,10 @@
     "buyPrice": 10.78,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2119,7 +2325,7 @@
    "entryDate": "2026-11-04",
    "cross": "db",
    "ztDate": "2026-11-02",
-   "stopPrice": 17.35,
+   "stopPrice": 15.42,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -2132,7 +2338,10 @@
     "buyPrice": 21.66,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2144,7 +2353,7 @@
    "entryDate": "2026-11-04",
    "cross": "db",
    "ztDate": "2026-11-02",
-   "stopPrice": 5.41,
+   "stopPrice": 4.85,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -2157,7 +2366,10 @@
     "buyPrice": 5.58,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2173,7 +2385,9 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "legacy-unk",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2185,7 +2399,7 @@
    "entryDate": "2026-11-04",
    "cross": "db",
    "ztDate": "2026-11-02",
-   "stopPrice": 5.83,
+   "stopPrice": 5.19,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -2198,7 +2412,10 @@
     "buyPrice": 6.14,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2210,7 +2427,7 @@
    "entryDate": "2026-11-04",
    "cross": "db",
    "ztDate": "2026-11-02",
-   "stopPrice": 4.42,
+   "stopPrice": 3.8,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -2223,7 +2440,10 @@
     "buyPrice": 4.6,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2235,7 +2455,7 @@
    "entryDate": "2026-11-04",
    "cross": "db",
    "ztDate": "2026-11-02",
-   "stopPrice": 27.97,
+   "stopPrice": 22.95,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -2248,7 +2468,10 @@
     "buyPrice": 29.39,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2260,11 +2483,14 @@
    "entryDate": "2026-11-04",
    "cross": "db",
    "ztDate": "2026-11-02",
-   "stopPrice": 7.41,
+   "stopPrice": 6.56,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2276,20 +2502,14 @@
    "entryDate": "2026-11-04",
    "cross": "db",
    "ztDate": "2026-11-02",
-   "stopPrice": 7.6,
+   "stopPrice": 7.02,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": {
-    "status": "settled",
-    "result": "loss",
-    "exitDay": "2026-11-06",
-    "buyDay": "2026-11-05",
-    "exitPrice": 7.49,
-    "buyPrice": 7.7,
-    "retPct": -2.73,
-    "note": "收盘跌破止损位"
-   }
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2301,11 +2521,14 @@
    "entryDate": "2026-11-04",
    "cross": "db",
    "ztDate": "2026-11-02",
-   "stopPrice": 44.81,
+   "stopPrice": 40.88,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2317,7 +2540,7 @@
    "entryDate": "2026-11-04",
    "cross": "db",
    "ztDate": "2026-11-02",
-   "stopPrice": 21.02,
+   "stopPrice": 19.35,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -2330,7 +2553,10 @@
     "buyPrice": 22.3,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2342,7 +2568,7 @@
    "entryDate": "2026-11-04",
    "cross": "db",
    "ztDate": "2026-11-02",
-   "stopPrice": 7.33,
+   "stopPrice": 7.09,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -2355,7 +2581,10 @@
     "buyPrice": 7.4,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2367,7 +2596,7 @@
    "entryDate": "2026-11-04",
    "cross": "db",
    "ztDate": "2026-11-02",
-   "stopPrice": 13.36,
+   "stopPrice": 13.14,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -2380,7 +2609,10 @@
     "buyPrice": 13.77,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2392,11 +2624,14 @@
    "entryDate": "2026-11-04",
    "cross": "db",
    "ztDate": "2026-11-02",
-   "stopPrice": 5.56,
+   "stopPrice": 5.75,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2408,20 +2643,14 @@
    "entryDate": "2026-11-04",
    "cross": "db",
    "ztDate": "2026-11-02",
-   "stopPrice": 3.41,
+   "stopPrice": 3.29,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": {
-    "status": "settled",
-    "result": "loss",
-    "exitDay": "2026-11-06",
-    "buyDay": "2026-11-05",
-    "exitPrice": 3.39,
-    "buyPrice": 3.48,
-    "retPct": -2.59,
-    "note": "收盘跌破止损位"
-   }
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2433,7 +2662,7 @@
    "entryDate": "2026-11-04",
    "cross": "db",
    "ztDate": "2026-10-28",
-   "stopPrice": 76.23,
+   "stopPrice": 72.26,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -2446,7 +2675,10 @@
     "buyPrice": 85.54,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2458,7 +2690,7 @@
    "entryDate": "2026-11-04",
    "cross": "db",
    "ztDate": "2026-10-28",
-   "stopPrice": 11.44,
+   "stopPrice": 11.85,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -2471,7 +2703,10 @@
     "buyPrice": 12.28,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -2487,7 +2722,10 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -2503,7 +2741,10 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -2528,7 +2769,10 @@
     "buyPrice": 9.35,
     "retPct": 0.0,
     "note": "开盘价 9.35 已跌破止损位 9.38，按纪律不进场"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2553,7 +2797,9 @@
     "buyPrice": 5.71,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "legacy-unk",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2578,7 +2824,9 @@
     "buyPrice": 5.15,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "legacy-unk",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2590,11 +2838,14 @@
    "entryDate": "2026-11-05",
    "cross": "db",
    "ztDate": "2026-11-03",
-   "stopPrice": 8.49,
+   "stopPrice": 8.11,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2619,7 +2870,9 @@
     "buyPrice": 56.2,
     "retPct": -2.65,
     "note": "收盘跌破止损位"
-   }
+   },
+   "stopAnchor": "legacy-unk",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2631,20 +2884,14 @@
    "entryDate": "2026-11-05",
    "cross": "db",
    "ztDate": "2026-11-03",
-   "stopPrice": 7.36,
+   "stopPrice": 6.71,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": {
-    "status": "settled",
-    "result": "loss",
-    "exitDay": "2026-11-09",
-    "buyDay": "2026-11-06",
-    "exitPrice": 7.32,
-    "buyPrice": 7.51,
-    "retPct": -2.53,
-    "note": "收盘跌破止损位"
-   }
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2656,7 +2903,7 @@
    "entryDate": "2026-11-05",
    "cross": "db",
    "ztDate": "2026-11-02",
-   "stopPrice": 11.02,
+   "stopPrice": 10.17,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -2669,7 +2916,10 @@
     "buyPrice": 12.07,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2681,7 +2931,7 @@
    "entryDate": "2026-11-05",
    "cross": "db",
    "ztDate": "2026-11-02",
-   "stopPrice": 26.1,
+   "stopPrice": 25.29,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -2694,7 +2944,10 @@
     "buyPrice": 27.96,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2706,7 +2959,7 @@
    "entryDate": "2026-11-05",
    "cross": "db",
    "ztDate": "2026-11-02",
-   "stopPrice": 33.42,
+   "stopPrice": 33.15,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -2719,7 +2972,10 @@
     "buyPrice": 34.4,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2735,7 +2991,9 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "legacy-unk",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2747,7 +3005,7 @@
    "entryDate": "2026-11-06",
    "cross": "db",
    "ztDate": "2026-11-04",
-   "stopPrice": 34.91,
+   "stopPrice": 32.41,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -2760,7 +3018,10 @@
     "buyPrice": 37.09,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2772,11 +3033,14 @@
    "entryDate": "2026-11-06",
    "cross": "db",
    "ztDate": "2026-11-04",
-   "stopPrice": 7.47,
+   "stopPrice": 6.86,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2788,11 +3052,14 @@
    "entryDate": "2026-11-06",
    "cross": "db",
    "ztDate": "2026-11-04",
-   "stopPrice": 18.93,
+   "stopPrice": 17.01,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2804,11 +3071,14 @@
    "entryDate": "2026-11-06",
    "cross": "db",
    "ztDate": "2026-11-04",
-   "stopPrice": 38.01,
+   "stopPrice": 34.71,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2820,11 +3090,14 @@
    "entryDate": "2026-11-06",
    "cross": "db",
    "ztDate": "2026-11-04",
-   "stopPrice": 29.83,
+   "stopPrice": 30.44,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2836,11 +3109,14 @@
    "entryDate": "2026-11-06",
    "cross": "db",
    "ztDate": "2026-11-04",
-   "stopPrice": 23.58,
+   "stopPrice": 21.23,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2852,11 +3128,14 @@
    "entryDate": "2026-11-06",
    "cross": "db",
    "ztDate": "2026-11-04",
-   "stopPrice": 229.71,
+   "stopPrice": 195.99,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2868,11 +3147,14 @@
    "entryDate": "2026-11-06",
    "cross": "db",
    "ztDate": "2026-11-04",
-   "stopPrice": 13.79,
+   "stopPrice": 12.11,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2884,11 +3166,14 @@
    "entryDate": "2026-11-06",
    "cross": "db",
    "ztDate": "2026-11-04",
-   "stopPrice": 83.66,
+   "stopPrice": 75.51,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2900,7 +3185,7 @@
    "entryDate": "2026-11-06",
    "cross": "db",
    "ztDate": "2026-11-04",
-   "stopPrice": 27.66,
+   "stopPrice": 25.14,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -2913,7 +3198,10 @@
     "buyPrice": 28.99,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2925,11 +3213,14 @@
    "entryDate": "2026-11-06",
    "cross": "db",
    "ztDate": "2026-11-04",
-   "stopPrice": 41.88,
+   "stopPrice": 37.12,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2941,11 +3232,14 @@
    "entryDate": "2026-11-06",
    "cross": "db",
    "ztDate": "2026-11-04",
-   "stopPrice": 39.03,
+   "stopPrice": 35.21,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2957,11 +3251,14 @@
    "entryDate": "2026-11-06",
    "cross": "db",
    "ztDate": "2026-11-04",
-   "stopPrice": 38.6,
+   "stopPrice": 33.68,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -2973,7 +3270,7 @@
    "entryDate": "2026-11-06",
    "cross": "db",
    "ztDate": "2026-11-04",
-   "stopPrice": 10.54,
+   "stopPrice": 9.56,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -2986,7 +3283,10 @@
     "buyPrice": 12.29,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -3011,7 +3311,9 @@
     "buyPrice": 31.8,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "legacy-unk",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -3023,7 +3325,7 @@
    "entryDate": "2026-11-06",
    "cross": "db",
    "ztDate": "2026-11-04",
-   "stopPrice": 15.0,
+   "stopPrice": 14.51,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
@@ -3036,7 +3338,10 @@
     "buyPrice": 15.31,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
-   }
+   },
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_strict",
@@ -3049,11 +3354,14 @@
    "cross": "chen",
    "preSnapshot": {},
    "ztDate": "2026-11-05",
-   "stopPrice": 18.37,
+   "stopPrice": 18.5,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -3106,7 +3414,10 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -3159,7 +3470,10 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -3176,7 +3490,10 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -3193,7 +3510,10 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -3242,11 +3562,14 @@
     "why": "题材退潮(8)×55% + 人气87×45% = 44（情绪分歧 作闸门）"
    },
    "ztDate": "2026-11-05",
-   "stopPrice": 21.11,
+   "stopPrice": 21.43,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -3263,7 +3586,10 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -3280,7 +3606,10 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -3329,11 +3658,14 @@
     "why": "题材温和(46)×55% + 人气94×45% = 68（情绪分歧 作闸门）"
    },
    "ztDate": "2026-11-05",
-   "stopPrice": 25.0,
+   "stopPrice": 25.34,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -3382,11 +3714,14 @@
     "why": "题材回踩(32)×55% + 人气25×45% = 29（情绪分歧 作闸门）"
    },
    "ztDate": "2026-11-05",
-   "stopPrice": 10.0,
+   "stopPrice": 9.35,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -3435,11 +3770,14 @@
     "why": "题材温和(28)×55% + 人气98×45% = 59（情绪分歧 作闸门）"
    },
    "ztDate": "2026-11-05",
-   "stopPrice": 37.0,
+   "stopPrice": 35.42,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -3488,11 +3826,14 @@
     "why": "题材退潮(8)×55% + 人气22×45% = 14（情绪分歧 作闸门）"
    },
    "ztDate": "2026-11-05",
-   "stopPrice": 39.7,
+   "stopPrice": 36.9,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -3541,11 +3882,14 @@
     "why": "题材主升(62)×55% + 人气26×45% = 46（情绪分歧 作闸门）"
    },
    "ztDate": "2026-11-05",
-   "stopPrice": 19.72,
+   "stopPrice": 17.8,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -3594,11 +3938,14 @@
     "why": "题材回踩(42)×55% + 人气60×45% = 50（情绪分歧 作闸门）"
    },
    "ztDate": "2026-11-05",
-   "stopPrice": 22.01,
+   "stopPrice": 20.21,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -3651,7 +3998,9 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "legacy-unk",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -3700,11 +4049,14 @@
     "why": "题材主升(68)×55% + 人气39×45% = 55（情绪分歧 作闸门）"
    },
    "ztDate": "2026-11-05",
-   "stopPrice": 11.8,
+   "stopPrice": 11.27,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -3753,11 +4105,14 @@
     "why": "题材退潮(8)×55% + 人气84×45% = 42（情绪分歧 作闸门）"
    },
    "ztDate": "2026-11-05",
-   "stopPrice": 7.4,
+   "stopPrice": 7.09,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -3806,11 +4161,14 @@
     "why": "题材温和(35)×55% + 人气72×45% = 52（情绪分歧 作闸门）"
    },
    "ztDate": "2026-11-04",
-   "stopPrice": 72.78,
+   "stopPrice": 66.0,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -3859,11 +4217,14 @@
     "why": "题材温和(44)×55% + 人气71×45% = 56（情绪分歧 作闸门）"
    },
    "ztDate": "2026-11-04",
-   "stopPrice": 72.6,
+   "stopPrice": 69.03,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -3912,11 +4273,14 @@
     "why": "题材回踩(41)×55% + 人气49×45% = 45（情绪分歧 作闸门）"
    },
    "ztDate": "2026-11-04",
-   "stopPrice": 13.72,
+   "stopPrice": 13.01,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -3965,11 +4329,14 @@
     "why": "题材温和(40)×55% + 人气30×45% = 35（情绪分歧 作闸门）"
    },
    "ztDate": "2026-11-04",
-   "stopPrice": 15.27,
+   "stopPrice": 13.9,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -4022,7 +4389,9 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "legacy-unk",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -4039,7 +4408,10 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -4056,7 +4428,10 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -4073,7 +4448,10 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -4090,7 +4468,10 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -4149,7 +4530,10 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -4166,7 +4550,10 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -4215,11 +4602,14 @@
     "why": "题材温和(36)×55% + 人气37×45% = 36（情绪回暖 作闸门）"
    },
    "ztDate": "2026-11-06",
-   "stopPrice": 6.93,
+   "stopPrice": 6.17,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -4268,11 +4658,14 @@
     "why": "题材启动(89)×55% + 人气48×45% = 71（情绪回暖 作闸门）"
    },
    "ztDate": "2026-11-06",
-   "stopPrice": 31.76,
+   "stopPrice": 30.8,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -4325,7 +4718,9 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "legacy-unk",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -4374,11 +4769,14 @@
     "why": "题材温和(25)×55% + 人气63×45% = 42（情绪回暖 作闸门）"
    },
    "ztDate": "2026-11-06",
-   "stopPrice": 4.51,
+   "stopPrice": 4.02,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -4427,11 +4825,14 @@
     "why": "题材启动(49)×55% + 人气79×45% = 63（情绪回暖 作闸门）"
    },
    "ztDate": "2026-11-06",
-   "stopPrice": 6.63,
+   "stopPrice": 5.71,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -4480,11 +4881,14 @@
     "why": "题材温和(39)×55% + 人气14×45% = 28（情绪回暖 作闸门）"
    },
    "ztDate": "2026-11-05",
-   "stopPrice": 2.98,
+   "stopPrice": 2.95,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -4537,7 +4941,9 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "legacy-unk",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -4590,7 +4996,9 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "legacy-unk",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -4648,11 +5056,14 @@
     "why": "题材启动(93)×55% + 人气93×45% + 连板2板+6 = 99（情绪回暖 作闸门）"
    },
    "ztDate": "2026-11-05",
-   "stopPrice": 4.18,
+   "stopPrice": 4.08,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -4710,11 +5121,14 @@
     "why": "题材启动(93)×55% + 人气85×45% + 连板2板+6 = 95（情绪回暖 作闸门）"
    },
    "ztDate": "2026-11-04",
-   "stopPrice": 53.0,
+   "stopPrice": 47.5,
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -4767,7 +5181,9 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "legacy-unk",
+   "settleVer": "R100z299"
   },
   {
    "pool": "chen_loose",
@@ -4820,9 +5236,14 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low",
+   "anchorVer": "R100z331",
+   "settleVer": "R100z299"
   }
  ],
  "updatedAt": "2026-11-10 21:23",
- "resettleAt": "R100z299"
+ "resettleAt": "R100z299",
+ "anchorVer": "R100z331",
+ "anchorNote": "止损锚＝涨停日（T日）最低价，断板与陈学长同口径；2026-11-10 22:1x 统一"
 }
