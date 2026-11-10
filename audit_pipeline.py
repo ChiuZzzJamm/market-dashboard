@@ -5686,8 +5686,20 @@ def g65_stop_anchor(r):
             bad.append("前端 ⓪ 分支没有改成涨停日最低价")
         if "ax.target > lastC0" not in html:
             bad.append("弹窗目标未与卡片同源（应取 ax.target）")
+        # R100z335：止损锚改了，**证伪文案必须跟着改**——原来「放量跌破断板日最低价」
+        # 与止损位（涨停日最低价）是两个价（安彩 4.80 vs 4.32），读者照文案执行会走错位置。
+        if "断板日最低价" in html:
+            bad.append("前端仍有「断板日最低价」文案（止损锚已是涨停日最低价）")
     else:
         warn.append("index.html 读不到，跳过前端断言")
+
+    # 证伪条件文案与止损锚一致性（数据层）
+    for sec in (D.get("aiPrediction") or {}).get("sectors") or []:
+        for stk in sec.get("stocks") or []:
+            ex = stk.get("exit") or {}
+            if isinstance(ex, dict) and "断板日最低价" in str(ex.get("falsify") or ""):
+                bad.append(f"AI 预测 {stk.get('name')} 的证伪条件仍写「断板日最低价」"
+                           f"（止损锚已是涨停日最低价）")
 
     # 两处常量必须同值（atr_stop 出目标、chen_pool 出结算止盈线）
     try:

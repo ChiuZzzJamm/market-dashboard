@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611102303"></script>
+<script src="data.js?v=202611102320"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1273,6 +1273,9 @@
   .spill-tag { font-size: var(--fs-xs); font-weight: 600; color: var(--accent-deep);
     background: var(--accent-soft); border-radius: 4px; padding: 0 5px; margin-left: 6px; }
   /* R100z328：收盘计划 → 开盘验证的记分牌 */
+  /* R100z335：连板股名字可点开标的页（与候选胶囊同一套交互） */
+  .spill-nm.go { cursor: pointer; }
+  .spill-nm.go:hover { color: var(--accent); text-decoration: underline; }
   .spill-score { font-size: var(--fs-sm); color: var(--ink2); line-height: 1.7;
     padding: 3px 0 2px; border-top: 1px dashed var(--line); margin-top: 4px; }
   .spill-score b.up { color: #f0435c; }
@@ -3142,7 +3145,9 @@ function atrExitOf(code0) {
   };
 }
 
-/* R100z160：形态位（断板日最低价 / 谐波 D 点）与 ATR 位的仲裁。
+/* R100z160：形态位（谐波 D 点等）与 ATR 位的仲裁。
+   ⚠️ R100z331 起**断板/陈学长两池不再走这里**：它们的止损锚固定为涨停日最低价，
+   与 atrStops 同源，再仲裁一次就会重新出现「弹窗一个数、回测另一个数」。
    形态位有交易含义（形态失败点），但不能无条件优先：
      ① 形态位比 ATR 位更低 = 要扛的亏损更大，而它并没有更可靠 → 用 ATR 位；
      ② 形态位距收盘不足 0.8×ATR = 会被日常波动打掉，止损形同虚设 → 用 ATR 位。
@@ -3186,7 +3191,7 @@ function exitForCode(code0, st, allowFb) {
   if (!code0) return null;
   var ax = atrExitOf(code0);   // ATR 自适应止损（权威源，覆盖 151 只主池标的）
   // ⓪ R100z27 断板池条目内嵌 K 线 —— **优先级高于机械池**。
-  //   理由：断板反包自己的证伪条件就是「放量跌破断板日最低价」，止损位本就该取这个形态位，
+  //   理由：断板反包自己的证伪条件就是「收盘跌破涨停日最低价」，止损位本就该取这个形态位，
   //   而不是机械池/兜底的「最近收盘 −2.5%」统一纪律口径（后者 basis 自述「非形态位」）。
   //   同时补上一处真缺口：此前兜底只认顶层 stkKlines（只内嵌约 700 只），未内嵌的断板票
   //   （如 002347）三级全落空 → 整行不渲染退出纪律，而 605018 恰好在名单里所以有。
@@ -3284,7 +3289,7 @@ function exitForCode(code0, st, allowFb) {
         return { stop: Math.round(lastC * 0.975 * 100) / 100,
                  target: Math.round(lastC * 1.06 * 100) / 100,
                  falsify: isDb
-                   ? '放量跌破断板日最低价，或反包日冲高回落收阴——断板反包形态失败，无条件离场'
+                   ? '收盘跌破涨停日最低价（反包启动位下沿），或反包日冲高回落收阴——断板反包形态失败，无条件离场'
                    : '跌破止损位即形态/纪律失败——无条件离场，不摊不扛',
                  stopBasis: '最近收盘 ' + lastC.toFixed(2) + ' 的 −2.5%（全站统一止损纪律位，非形态位）',
                  src: 'fallback', fb: true };
@@ -4977,25 +4982,27 @@ function failExitMetaLine(e) {
   if (!code) return '';
   // R100z124（用户 2026-10-13 截图问「002724/600230 看着还在 PRZ 区间，也失效了吗」）：① 谐波口径
   //   **只对谐波失效条目**生效。原实现无脑按 code 查 hzFailOf → 同一标的若同时在断板失效池与谐波失效池
-  //   （本批 8 只），断板弹窗会借到谐波的 D 点止损/证伪文案，并把下面 ②「断板日最低价」这条**本模块
+  //   （本批 8 只），断板弹窗会借到谐波的 D 点止损/证伪文案，并把下面 ②「涨停日最低价」这条**本模块
   //   正确口径整段短路成死代码**（截图里断板条目写着「谐波形态作废」即此）。按 failKind 分模块取口径。
   var kind = String((e && e.failKind) || '');
   var hz = (kind === 'harmonic' && typeof hzFailOf === 'function') ? hzFailOf(code) : null;
   if (hz && hz.stop !== null && hz.stop !== undefined) return exitMetaLine(code);
   var rows = stkParseKline(stkEmbeddedKline(code) || stkGlobalKline(code));
   if (rows && rows.length) {
-    // ② 断板失效：解析 form 串的涨停日，复用「断板日最低价」证伪口径
+    /* ② 断板失效：解析 form 串的涨停日，取**涨停日当天**最低价作证伪/风控位（R100z335）。
+       原来取「涨停次日（断板日）」最低价——与主口径（R100z331 统一为涨停日最低价）不是一个价
+       （安彩 4.80 vs 4.32）。失效池与在池标的必须同一个位，否则同一只票在两个页面显示两个止损。 */
     var m = String(e.form || '').match(/(\d{2})\/(\d{2})涨停/);
     var yr = (String(e.entryDate || '').match(/^(\d{4})/) || [])[1];
     if (m && yr) {
       var ztD = yr + '-' + m[1] + '-' + m[2];
-      for (var i = 0; i < rows.length - 1; i++) {
-        if (rows[i][0] === ztD && rows[i + 1] && rows[i + 1][0] > ztD) {
-          var stop = rows[i + 1][4]; // 断板日（涨停次日）最低价
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i][0] === ztD) {
+          var stop = rows[i][4]; // 涨停日当天最低价（反包启动位下沿）
           if (isFinite(stop) && stop > 0) {
             return '<div class="exit-row exit-line"><b>退出纪律</b> 止损 ' + stop.toFixed(2) +
-              ' <span class="xs">✖</span> 放量跌破断板日最低价——断板反包形态已失效，若仍持有无条件离场，不摊不扛' +
-              '<span class="xb">（断板日（' + rows[i + 1][0] + '）最低价 ' + stop.toFixed(2) + '，失效前形态位）</span></div>';
+              ' <span class="xs">✖</span> 收盘跌破涨停日最低价——断板反包形态已失效，若仍持有无条件离场，不摊不扛' +
+              '<span class="xb">（涨停日（' + rows[i][0] + '）最低价 ' + stop.toFixed(2) + '，失效前形态位）</span></div>';
           }
           break;
         }
@@ -6382,7 +6389,7 @@ function modalFreshBadgeHtml(key, code) {
    - 缩量天数从 form 文本解析（check_duanban.py 写的「…→4日缩量·站稳MA5」），
      解析不到就显示「—」，不编数字。
    - 板块涨幅取自 e.boardPctToday，已前置到格子内（原 foot 里「板块今日」去重）。
-   - 止损走 tcStopOf → exitForCode⓪（断板日最低价，形态位），与弹窗退出纪律同源。 */
+   - 止损走 tcStopOf → exitForCode⓪（涨停日最低价，形态位），与弹窗退出纪律同源。 */
 /* R100z310：反包条件三因子标签（题材/人气/情绪）。
    用户 2026-11-08：「反包能不能成，题材、人气股、市场情绪有很大因素」——
    原来这三件事只写在 story 文字里，不参与排序、也看不出状态。现在压成三枚小标签，
@@ -6564,7 +6571,7 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
         bp: '买入区间＝箱顶×0.985~×1.005（越过上限不追）· 证伪价＝平台下沿×0.99（跌破即横盘作废）· 固定持有 10 日、不设百分比止损',
         chen: '目标 +3.5% 次日冲高兑现 · 止损＝洗盘段最低价（破位按收盘算）· 仓位＝1.5% 风险预算 ÷ 止损宽度 · 持仓 ≤2 日',
         shrink: '四格＝缩量第几天 / 放量阴的量比 / 涨停日 / 作废位（涨停日最低×0.98）；这是待确认档，不给买价'
-      }[e.src] || '观察位＝MA5（回踩5日线企稳介入，非成交价）· 止损＝断板日最低价 · 照什么价买看卡片底部「下单」行') : '') +
+      }[e.src] || '观察位＝MA5（回踩5日线企稳介入，非成交价）· 止损＝涨停日最低价 · 照什么价买看卡片底部「下单」行') : '') +
       '\n点击查看K线与利好依据'
   });
 }
@@ -6832,6 +6839,9 @@ function spillHtml(st) {
   var rows = sp.rows || [];
   if (!rows.length) return '';
   window._SPILL_GRP = [];
+  /* R100z335（用户 2026-11-10 23:13 截图 2）：「连板补涨」里候选能点、连板股名字点不动。
+     连板股自己单独一组（←/→ 在 20 只连板之间翻），不与候选混排——两批票的用途不同。 */
+  window._SPILL_LB_GRP = [];
   var stateZh = { reboard: '已续板', strong: '走强未封', weak: '未续板', unknown: '行情抓空' };
   // 只有存在「昨日计划」基线时才显示 昨已列/新增：没有基线就没有相对关系，
   // 全员标「新增」等于告诉读者「昨天一只都没说过」，那是错的。
@@ -6854,9 +6864,14 @@ function spillHtml(st) {
   rows.forEach(function (r) {
     var pct = (r.pct === null || r.pct === undefined) ? '' :
       '（' + (Number(r.pct) > 0 ? '+' : '') + Number(r.pct).toFixed(2) + '%）';
+    window._SPILL_LB_GRP.push({ c: String(r.code || ''), n: String(r.name || ''),
+      t: '连板 · ' + String(r.name || '') + ' · ' + String(r.lbc || '') + '板 · ' + (r.state === 'reboard' ? '已续板' : r.state === 'strong' ? '走强未封' : r.state === 'weak' ? '未续板' : '行情抓空') });
+    var _lgi = window._SPILL_LB_GRP.length - 1;
     h += '<div class="spill-row"><span class="spill-lb ' + escAttr(String(r.state || '')) + '">' +
       esc(stateZh[r.state] || '—') + pct + '</span>' +
-      '<span class="spill-nm">' + esc(String(r.name || '')) +
+      '<span class="spill-nm go" onclick="stkOpenIn(window._SPILL_LB_GRP,' + _lgi + ')" ' +
+      'title="' + escAttr(String(r.name || '') + ' · ' + String(r.lbc || '') + '板 —— 点击看K线与个股消息') + '">' +
+      esc(String(r.name || '')) +
       (!hasPlan ? ''
         : (r.planTheme ? '<em class="spill-ptag" title="昨日收盘题材行里属于这个题材">昨·' + esc(String(r.planTheme)) + '</em>'
                        : (r.state && r.state !== 'unknown' ? '<em class="spill-ptag new">新增</em>' : ''))) + '</span>' +
@@ -8712,7 +8727,7 @@ function openDbModal(key) {
     // 原来这里渲染的是「上涨概率：—」——陈学长不产生 probability，那行是纯占位。
     (isChen && !isFail ? chenTradeMeta(e) : '') +
     // R100z3：对应技术面（横盘启动/吸筹）纯文本行，命中才渲染；R100z18 末尾补退出纪律行
-    // R100z86：失效标的恢复退出纪律——走 failExitMetaLine 失效专用口径（谐波D点位/断板日最低价/统一风控位），
+    // R100z86：失效标的恢复退出纪律——走 failExitMetaLine 失效专用口径（谐波D点位/涨停日最低价/统一风控位），
     //   原 R100z84 一刀切隐藏是因为误以为只会落 −2.5% 兜底，实际断板失效可从 form 串还原断板日形态位
     techMetaLines(String(e.code)) + (isFail ? failExitMetaLine(e) : (isChen ? chenAtrNote(String(e.code)) : exitMetaLine(String(e.code))));
   // R100z6d：断板弹窗主图补画谐波 XABCD 连线（此前 dbKlineSvg 漏传 hz，仅头部迷你图有连线——用户反馈"有谐波技术但K线没连线"）
