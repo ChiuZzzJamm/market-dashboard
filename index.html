@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611102020"></script>
+<script src="data.js?v=202611102028"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1265,6 +1265,9 @@
     flex-shrink:0; background: var(--accent-soft); color: var(--accent-deep); }
   .chip-theme2 { background:#fff; border-color: var(--line);
     color: var(--ink2); font-weight:400; }
+  /* 行业兜底徽章：灰底虚框，和题材徽章一眼区分（题材是实底蓝） */
+  .chip-sec-fb { background: var(--paper); color: var(--ink2); border-color: var(--line);
+    border-style: dashed; font-weight: 400; }
   .chip-sec-ind { font-size: var(--fs-xs); color: var(--ink2); margin-left: 5px; }
   /* R100z326：要闻的题材口径——题材主标签 + 行业小灰字 + 标的题材小胶囊 + 池内候选行 */
   .nc-imp-ind { font-size: var(--fs-xs); color: var(--ink2); margin-left: 5px; }
@@ -2189,7 +2192,9 @@ function stkSecBadge(code, prefer) {
   var hot = (t && t.hot) || [];
   var ind = (t && t.industry) || prefer || stkSectorOf(code) || '';
   if (!hot.length) {
-    return ind ? '<span class="chip-sec" style="font-size: var(--fs-sm);max-width:120px;padding:1px 7px;border-radius:4px;margin-left:4px" title="所属板块：' + escAttr(ind) + '">' + esc(ind) + '</span>' : '';
+    /* 兜底徽章：这枚是「行业」，不是题材，所以用灰底虚框与题材徽章区分——
+       否则读者会把「股份制银行」当成一个题材。 */
+    return ind ? '<span class="chip-sec chip-sec-fb" title="该票没有题材数据，退回所属行业：' + escAttr(ind) + '">' + esc(ind) + '</span>' : '';
   }
   var all = ((t.concepts || []).map(function (x) { return x.n; })).filter(Boolean);
   var tip = '题材（同花顺概念 ' + String(t.asOf || '').slice(0, 10) + '）：' + all.join('、') +
