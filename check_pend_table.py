@@ -219,6 +219,18 @@ try {
   if (gotPre !== expPre) bad('「待开盘买入」出现 ' + gotPre + ' 次 ≠ preBuy ' + expPre + ' 条');
   if (gotNoK !== expNoK) bad('「待 K 线」出现 ' + gotNoK + ' 次 ≠ noKline ' + expNoK + ' 条');
 
+  // 已过止盈线却还在进行里（T+1 当天买的不能当天卖）必须逐条点名，
+  // 否则「赚了 9% 还留在进行明细」看起来就是算错了。
+  const expOver = opens.filter(function (r) {
+    return r.state === 'ok' && typeof r.retPct === 'number' && r.tgtPx &&
+      r.retPct >= Number(r.tgtPct);
+  }).length;
+  const gotOver = (ph.match(/class="pd pd-over"/g) || []).length;
+  out.info.over = gotOver + '/' + expOver;
+  if (gotOver !== expOver) {
+    bad('「已过止盈线 · 次日结算」标了 ' + gotOver + ' 条 ≠ 收盘已达止盈线的 ' + expOver + ' 条');
+  }
+
   // 拼接漏值的指纹
   const leak = ['undefined', 'NaN', '>null<'].filter(function (t) { return ph.indexOf(t) >= 0; });
   if (leak.length) bad('产出里出现字面量 ' + JSON.stringify(leak) + '（拼接漏值）');
@@ -315,10 +327,10 @@ def main():
 
     if res["ok"]:
         info = res["info"]
-        print("[OK] 进行明细 %d 行 × 6 列（涨 %s / 跌 %s / 待开盘 %s / 待K线 %s）；"
+        print("[OK] 进行明细 %d 行 × 6 列（涨 %s / 跌 %s / 待开盘 %s / 待K线 %s / 已过止盈线 %s）；"
               "结算明细 %d 行独立渲染"
               % (info["pendRows"], info["up"], info["down"], info["pre"],
-                 info["noKline"], info["settleRows"]))
+                 info["noKline"], info["over"], info["settleRows"]))
         return 0
 
     print("[FAIL] 表格渲染不对：")

@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611110030"></script>
+<script src="data.js?v=202611110041"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -972,6 +972,9 @@
   /* R100z337：进行明细的「进度」列（已持 N/窗口 M 日）与到期提醒 */
   .stl-tbl .pd { color: var(--ink2); }
   .stl-tbl .pd-soon { color: #a8541a; font-weight: 800; }
+  /* R100z338：已过止盈线、卡在 T+1 等次日结算的那几只。与「到期」同色同级，
+     但**独立类名**——G68 要靠它精确计数（混在 pd-soon 里就没法断言了）。 */
+  .stl-tbl .pd-over { color: #a8541a; font-weight: 800; }
   .stl-tbl .pd-wait { color: var(--ink2); opacity: .8; }
   /* 窄屏：六列在 390px 上按原尺寸会挤出横向滚动条。缩内边距 + 降一级字号，
      让它一屏放下；真放不下时 .stl-bd 仍可横向滑（宁可滑，也不砍掉买/卖价两列——
@@ -7677,6 +7680,8 @@ function openPendingDetail() {
     '<div class="stl-sub">还没结算、还在等收益的标的。买价＝确认日<b>次一交易日开盘</b>；' +
     '现价＝最后一根日 K <b>收盘</b>（与「止损按收盘判」同一口径）；' +
     '浮动盈亏只作过程记录，<b>不参与</b>胜率与累计收益（那两栏只用已结算样本）。' +
+    '标着<b>「已过止盈线 · 次日结算」</b>的是当天买入、收盘就涨过止盈线的那几只——' +
+    '按 <b>T+1</b> 当天不能卖，下一个交易日才结算，所以还列在这里。' +
     '点标的名称可看 K 线与个股消息（弹窗里能左右翻）。</div></div>' +
     '<button class="db-modal-close" onclick="closePendingDetail()" aria-label="关闭">×</button></div>' +
     '<div class="stl-sub">显示 <b>' + rows.length + '</b> 条' +
@@ -7699,7 +7704,19 @@ function openPendingDetail() {
       var ti = [];
       if (r.tgtPx) ti.push('止盈线 ' + Number(r.tgtPx).toFixed(2) + '（+' + r.tgtPct + '%）');
       if (r.stopPx) ti.push('止损位 ' + Number(r.stopPx).toFixed(2) + '（收盘跌破才算）');
-      if (hasRet) ti.push('距止盈线还差 ' + Math.max(0, r.tgtPct - ret).toFixed(2) + '%');
+      /* R100z338：原来写「距止盈线还差 max(0, tgtPct − ret)%」——两个数都以买价为基数时数学上没错，
+         但**它会把"已经超过止盈线"压成 0.00%**：11-10 开盘买、当日收盘就 23.69 > 止盈线 22.74，
+         按 T+1 当天不能卖，读者看到「+9.37% / 还差 0.00%」只会觉得这张表坏了。
+         改成用**价格距离**表述，不涉及基数歧义；已过线的一律明说「等次日照结算」。 */
+      if (hasRet) {
+        if (r.tgtPx && ret >= Number(r.tgtPct)) {
+          ti.push('收盘 ' + Number(r.curPx).toFixed(2) + ' 已过止盈线 ' + Number(r.tgtPx).toFixed(2) +
+            '，但当天买的按 T+1 不能当天卖 —— 下一个交易日按止盈价结算，届时自动移入「结算明细」');
+        } else if (r.tgtPx) {
+          ti.push('距止盈线还差 ' + Math.max(0, Number(r.tgtPx) - Number(r.curPx)).toFixed(2) + ' 元（+' +
+            Math.max(0, (Number(r.tgtPx) / Number(r.curPx) - 1) * 100).toFixed(2) + '%）');
+        }
+      }
       if (r.highPct !== null && r.highPct !== undefined) {
         ti.push('期间最高 +' + Number(r.highPct).toFixed(2) + '%' +
           (Number(r.highPct) >= r.tgtPct ? '（摸到过止盈线又回落，收盘没走成）' : ''));
@@ -7709,7 +7726,15 @@ function openPendingDetail() {
                   t: '进行明细 · ' + (r.name || r.code) + (r.buyDay ? '（买入 ' + r.buyDay + '）' : '') });
       // 进度：正常持仓写「已持 n/窗口 m 日」，最后一天标黄提醒；两种降级各自写明原因
       var prog;
-      if (r.state === 'ok') {
+      if (r.state === 'ok' && hasRet && r.tgtPx && ret >= Number(r.tgtPct)) {
+        /* 已经过了止盈线却还在进行里：只可能是 T+1——买入当日不能卖。
+           不把这一行单独标出来，读者会认为「赚了 9% 还留在进行明细」是算错了。 */
+        prog = '<span class="pd pd-over" title="' +
+          escAttr('收盘 ' + Number(r.curPx).toFixed(2) + ' 已高于止盈线 ' + Number(r.tgtPx).toFixed(2) +
+            '；买入当日按 T+1 不能卖，所以顺延到下一个交易日结算。' +
+            '持有窗口 ' + r.holdDays + ' 个交易日，已持 ' + r.heldDays + ' 天。') +
+          '">已过止盈线 · 次日结算</span>';
+      } else if (r.state === 'ok') {
         var soon = r.leftDays <= 1;
         prog = '<span class="pd' + (soon ? ' pd-soon' : '') + '" title="' +
           escAttr('窗口 ' + r.holdDays + ' 个交易日；已持 ' + r.heldDays + ' 天，' +
