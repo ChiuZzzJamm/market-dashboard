@@ -5681,6 +5681,74 @@ def g65_stop_anchor(r):
                     f"atrStops 两池 {n_atr} 只同锚、前端已改且目标与卡片同源")
 
 
+def g66_done_excluded(r):
+    """G66 「今日已兑现」必须真的从明日买入名单里剔除（R100z332，2026-11-10，FAIL 级）。
+
+    由来：用户 22:34「怎么改完以后今天涨停的又计入明天买入了」——钧达股份 / 三利谱 / 安彩高科
+    当日 +10%，却又出现在「两个都选中 · 计入明日买入」。根因是
+    `resettle_ledger.py` 重建 compare 时**没传 done**：重结一次，这层剔除被静默清空，
+    页面看起来完全正常（名单还在、数还对），只是把已经走完的形态又卖了一遍。
+
+    这类「重建入口绕过一层过滤」的 bug 会反复出现（同一个 compare 有两个写者），
+    所以不能只测 build_compare 本身，要在**产物**上对账：
+      a) compare.today.done 必须等于「池内所有 pct≥9.8 的票」（去重），一个不能少；
+      b) both / chenOnly / duanbanOnly 三组不得含任何 done 里的代码；
+      c) done 里每只必须在池内、且 pct 真的 ≥9.8（防止手写或旧数据残留）。
+    池子为空（无连板/周末）时只 WARN。
+    """
+    D = load_data_json()
+    cp = D.get("chenPool") or {}
+    cmp_ = cp.get("compare") or {}
+    tdy = cmp_.get("today") or {}
+    if not tdy:
+        r.warn("G66", "compare.today 缺失（chen_pool 未跑），无法校验已兑现剔除")
+        return
+
+    want = {}
+    for k in ("strict", "loose", "watching"):
+        for e in (cp.get(k) or []):
+            if not isinstance(e, dict):
+                continue
+            try:
+                v = float(e.get("pct"))
+            except (TypeError, ValueError):
+                continue
+            if v >= 9.8:
+                want[str(e.get("code"))] = round(v, 2)
+    for k in ("confirmed", "watching"):
+        for e in ((D.get("duanban") or {}).get(k) or []):
+            if not isinstance(e, dict):
+                continue
+            try:
+                v = float(e.get("pct"))
+            except (TypeError, ValueError):
+                continue
+            if v >= 9.8:
+                want[str(e.get("code"))] = round(v, 2)
+
+    done = {str(d.get("code")): d.get("pct") for d in (tdy.get("done") or []) if isinstance(d, dict)}
+    bad = []
+    miss = [c for c in want if c not in done]
+    if miss:
+        bad.append(f"{len(miss)} 只当日涨停/准涨停没进「今日已兑现」：{miss[:4]}")
+    extra = [c for c in done if c not in want]
+    if extra:
+        bad.append(f"「今日已兑现」里有 {len(extra)} 只不在池内或涨幅不足 9.8%：{extra[:4]}")
+    for grp, label in (("both", "两个都选中"), ("chenOnly", "只有陈学长"), ("duanbanOnly", "只有断板反包")):
+        leaked = [c for c in (tdy.get(grp) or []) if str(c) in done]
+        if leaked:
+            bad.append(f"「{label}」里仍含当日已兑现的 {leaked[:4]}（会被当成明日买入）")
+
+    if bad:
+        r.fail("G66", "已兑现剔除失效：" + "；".join(bad[:4]))
+    elif not want:
+        r.warn("G66", "当日池内没有涨停/准涨停标的，已兑现剔除无从验证")
+    else:
+        r.ok("G66", f"当日已兑现 {len(done)} 只全部从三组名单剔除（池内 pct≥9.8 共 {len(want)} 只，逐一对齐）；"
+                    f"名字名单剩 {len(tdy.get('both') or [])}/{len(tdy.get('chenOnly') or [])}/"
+                    f"{len(tdy.get('duanbanOnly') or [])}")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -5757,6 +5825,7 @@ def main():
     g63_theme_cands_truth(r)
     g64_plan_scorecard(r)
     g65_stop_anchor(r)
+    g66_done_excluded(r)
 
     # R100z284：机器可读的结论行。
     #

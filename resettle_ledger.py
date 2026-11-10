@@ -143,7 +143,9 @@ def main():
         cp = D.get('chenPool') or {}
         chen_codes = [e.get('code') for e in (cp.get('strict') or []) + (cp.get('loose') or [])]
         db_codes = [e.get('code') for e in (D.get('duanban') or {}).get('confirmed') or []]
-        cmp = CP.build_compare(chen_codes, db_codes, led)
+        # R100z332：必须传 done。原来这里不传，等于把「今日已兑现」的剔除清空——
+        # 用户看到的就是「今天涨停的票又回到明日买入名单」。
+        cmp = CP.build_compare(chen_codes, db_codes, led, done=CP.today_done(D))
         cp['compare'] = cmp
         cp['track'] = CP.build_track(led, 0, cmp)
         D['chenPool'] = cp

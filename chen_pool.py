@@ -1078,6 +1078,41 @@ def perf_of(rows):
     }
 
 
+DONE_PCT = 9.8          # 当日涨幅 ≥ 此值 ＝ 反包今天已兑现（不是明日买入名单）
+
+
+def today_done(D):
+    """当日已兑现（涨停/准涨停）的标的 → 涨幅。**断板与陈学长两池全扫**。
+
+    R100z332（用户 2026-11-10 22:34「怎么改完以后今天涨停的又计入明天买入了」）：
+    这段逻辑原本内联在 build_module 里、只扫 `strict + loose + confirmed`，而
+    `resettle_ledger.py` 重建 compare 时**根本没传 done** —— 重结一次，这层剔除就被静默清空，
+    钧达股份 / 三利谱 / 安彩高科（当日 +10%）又回到「两个都选中 · 计入明日买入」。
+    抽成函数让两个入口共用一份口径，并加闸门 G66 对账（`compare.today.done` 必须覆盖
+    池内所有 pct≥9.8 的票，三组名单里不得再出现它们）。
+    """
+    out = {}
+
+    def take(e):
+        if not isinstance(e, dict):
+            return
+        try:
+            v = float(e.get("pct"))
+        except (KeyError, TypeError, ValueError):
+            return
+        c = str(e.get("code") or "")
+        if c and v >= DONE_PCT:
+            out[c] = round(v, 2)
+
+    for k in ("strict", "loose", "watching"):
+        for e in ((D.get("chenPool") or {}).get(k) or []):
+            take(e)
+    for k in ("confirmed", "watching"):
+        for e in ((D.get("duanban") or {}).get(k) or []):
+            take(e)
+    return out
+
+
 def build_compare(chen_codes, db_codes, ledger, today=None, done=None):
     """当日池差异 + 历史胜率对比。
 
@@ -1486,19 +1521,8 @@ def main():
     # 对比（§14：两侧都用**确认池**口径，不再一边含观察池一边不含）
     chen_codes = [e["code"] for e in mod["strict"] + mod["loose"]]
     db_codes = [e.get("code") for e in (db_mod.get("confirmed") or [])]
-    # 当日涨幅：两侧池条目都带 pct（16:00 收盘口径）。>=9.8 视为「今日已涨停/已反包兑现」。
-    _pct = {}
-    for e in mod["strict"] + mod["loose"]:
-        try:
-            _pct[str(e["code"])] = float(e.get("pct"))
-        except (KeyError, TypeError, ValueError):
-            pass
-    for e in (db_mod.get("confirmed") or []):
-        try:
-            _pct.setdefault(str(e["code"]), float(e.get("pct")))
-        except (TypeError, ValueError):
-            pass
-    _done = {c: round(v, 2) for c, v in _pct.items() if v is not None and v >= 9.8}
+    # 当日已兑现（R100z332：改用 today_done，与 resettle_ledger.py 共用同一份口径）
+    _done = today_done({"chenPool": mod, "duanban": db_mod})
     mod["compare"] = build_compare(chen_codes, db_codes, ledger, done=_done)
     # R100z233b：`since` 只从**当前口径**的样本里取。原写法取全台账最小值，
     # 换口径后页面会写成「起始日 2026-10-22 / 已结算 13 条」而表格里样本是 0——
