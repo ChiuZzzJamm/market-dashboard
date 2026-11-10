@@ -99,7 +99,13 @@ WID_MAX = 0.10             # 止损宽度上限：A 股中小盘 ATR 常见 6-8%
 STRUCT_LOOKBACK = 20       # 结构位回看交易日
 RISK_BUDGET_PCT = 0.5      # 单笔风险预算（账户权益 %）
 MAX_POS_PCT = 20.0         # 单票权重上限（权益 %）
-RR_TARGET = 2.5            # 目标价 = 收盘 + 2.5R
+RR_TARGET = 2.5
+# R100z334（2026-11-10 23:0x，交易员视角复核）：断板/陈学长两池的**目标价必须等于回测止盈线**。
+# 原来 target 一律按 2.5R 算，止损放宽到涨停日最低价（中位 10.8%）后，目标被推到 +37%~+44%
+# （钧达 70.40 / 英力特 12.73），而回测与实盘都按 +5% 卖出——页面写着 70.40、结算按 51.34，
+# 读者照页面挂单永远不成交，这是比"赔率不好看"严重得多的口径分叉。
+# 5.0 与 chen_pool.TARGET_PCT 必须同值（G65 校验），改一处必须改两处。
+SWING_TGT_PCT = 5.0            # 目标价 = 收盘 + 2.5R
 # 板块映射缺失时的占位符。它**不是一个板块**：下游做「同板块集中度」时必须排除，
 # 否则把浙商银行、赤峰黄金、汇顶科技合成一个「板块」算敞口，会报出假警报。
 UNCLASSIFIED = '未分类'
@@ -310,7 +316,18 @@ def compute_one(code, name, bars, sector='', src='', form_stop=None, form_date=N
 
     pos = min(RISK_BUDGET_PCT / (wid * 100) * 100, MAX_POS_PCT)
     r1 = close - stop
-    target = round(close + RR_TARGET * r1, 2)
+    if stop_anchor in ('zt_low', 'atr-broken'):
+        # 两池走回测口径：目标是「止盈线 +5%」，不是 R 倍数。
+        # 交易员视角：这套结构的真实赔率是 5% ÷ 10.8% ≈ 0.46:1，靠 87.5% 胜率撑正期望；
+        # 若为了「赔率好看」把目标提到 1.5R（+16%），胜率会塌、期望反而变差——
+        # 所以要改的是**展示与结算对齐**，不是把目标调漂亮。
+        target = round(close * (1 + SWING_TGT_PCT / 100), 2)
+        target_basis = '止盈线 +%.1f%%（与结算同源）' % SWING_TGT_PCT
+        rr_actual = round(SWING_TGT_PCT / (wid * 100), 2) if wid > 0 else None
+    else:
+        target = round(close + RR_TARGET * r1, 2)
+        target_basis = '%.1fR 理论目标（无回测支撑，仅供参考）' % RR_TARGET
+        rr_actual = RR_TARGET
 
     return {
         'code': str(code), 'name': name or '', 'sector': (sector or '').strip() or UNCLASSIFIED, 'src': src,
@@ -319,7 +336,10 @@ def compute_one(code, name, bars, sector='', src='', form_stop=None, form_date=N
         'trend': trend, 'ma20': ma20, 'ma60': ma60, 'k': k,
         'stop': stop, 'stopWidPct': round(wid * 100, 2),
         'structLow': round(struct_low, 2),
-        'target': target, 'rr': RR_TARGET,
+        'target': target,
+        # rr：两池给**实际赔率**（止盈线 ÷ 止损宽度，通常 <1，如实呈现）；其余标的仍是名义 R 倍数。
+        'rr': rr_actual,
+        'targetBasis': target_basis,
         'posPct': round(pos, 1),
         'confirm': 'close',
         'overWide': over_wide,

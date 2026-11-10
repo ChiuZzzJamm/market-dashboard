@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611102252"></script>
+<script src="data.js?v=202611102303"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -3226,7 +3226,7 @@ function exitForCode(code0, st, allowFb) {
            两套目标并列会让人不知道该信哪条。此处以 atrStops 为准，取不到才退回 +6%。 */
         var dbTarget = (ax && isFinite(ax.target) && ax.target > lastC0)
           ? Number(ax.target)
-          : Math.round(lastC0 * 1.06 * 100) / 100;
+          : Math.round(lastC0 * 1.05 * 100) / 100;   // R100z334：兜底也跟 +5% 走，别再留一个 +6% 的孤岛
         var dbFalsify = '跌破涨停日最低价（反包启动位下沿），或反包日冲高回落收阴——形态失败，无条件离场';
         /* 不再走 atrVsForm 覆盖：两池口径已统一为涨停日最低价，atrStops 同源，
            覆盖一次就会重新出现「弹窗一个数、回测另一个数」。ATR 位只进 basis 供参考。 */
@@ -3318,6 +3318,10 @@ function fbDbEntry(code0) {
 function chenAtrNote(code) {
   var ex = exitForCode(String(code));
   if (!ex || typeof ex !== 'object') return '';
+  /* R100z334：两池的止损锚统一成涨停日最低价后，atrStops 里那枚止损与本模块口径**是同一个数**，
+     这行「通用风控参照 ATR(14) 止损 X」就变成了同一信息说两遍（而且标签还写着 ATR，名不副实）。
+     锚已经是 zt_low 时不渲染；只有真走 ATR 位的票（非两池）才显示参照。 */
+  if (String(ex.stopAnchor || '') === 'zt_low') return '';
   var stop = Number(ex.stop);
   if (ex.stop === null || ex.stop === undefined || !isFinite(stop)) return '';
   // stopBasis 是 atr_stop.py 写的完整推导（ATR14 → 2.0×ATR → 结构位为何不采纳 → 宽度钳制 → 形态位会被打掉），

@@ -5651,9 +5651,20 @@ def g65_stop_anchor(r):
             if "已高于收盘" not in str(it.get("basis") or ""):
                 bad.append(f"atrStops {nm} 标了 atr-broken 但 basis 没说明启动位已破")
             continue
-        if anc != "zt_low":
+        if anc != "zt_low" and anc != "atr-broken":
             bad.append(f"atrStops {nm} 的止损锚是 {anc!r}（两池应为 zt_low 或 atr-broken）")
             continue
+        # R100z334：两池的目标价必须等于**回测止盈线**（chen_pool.TARGET_PCT），
+        # 不能是 2.5R —— 止损放宽后 2.5R 会把目标推到 +37%~+44%，读者照页面挂单永不成交，
+        # 而结算按 +5% 卖出，这比「赔率不好看」严重得多。
+        try:
+            import atr_stop as _AS
+            _exp = round(float(it.get("close") or 0) * (1 + _AS.SWING_TGT_PCT / 100.0), 2)
+            if abs(float(it.get("target") or 0) - _exp) > 0.02:
+                bad.append(f"atrStops {nm} 目标 {it.get('target')} ≠ 止盈线 {_exp}"
+                           f"（+{_AS.SWING_TGT_PCT}%，与结算同源）")
+        except Exception:                                     # noqa: BLE001
+            pass
         low = zt_low(code, None) if False else None
         # atrStops 未存 ztDate，用 basis 里的「涨停日（YYYY-MM-DD）最低价 X」回读
         m = re.search(r"涨停日（(\d{4}-\d{2}-\d{2})）最低价 ([\d.]+)", str(it.get("basis") or ""))
@@ -5677,6 +5688,16 @@ def g65_stop_anchor(r):
             bad.append("弹窗目标未与卡片同源（应取 ax.target）")
     else:
         warn.append("index.html 读不到，跳过前端断言")
+
+    # 两处常量必须同值（atr_stop 出目标、chen_pool 出结算止盈线）
+    try:
+        import atr_stop as _AS2
+        import chen_pool as _CP2
+        if abs(float(_AS2.SWING_TGT_PCT) - float(_CP2.TARGET_PCT)) > 1e-9:
+            bad.append(f"止盈线常量不同源：atr_stop.SWING_TGT_PCT={_AS2.SWING_TGT_PCT} vs "
+                       f"chen_pool.TARGET_PCT={_CP2.TARGET_PCT}")
+    except Exception:                                         # noqa: BLE001
+        pass
 
     if bad:
         r.fail("G65", f"止损锚有 {len(bad)} 处不一致：" + "；".join(bad[:5]))
