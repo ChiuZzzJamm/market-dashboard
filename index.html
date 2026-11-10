@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611102128"></script>
+<script src="data.js?v=202611102136"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -847,6 +847,11 @@
   .wk-n-stk:hover { color: var(--accent); }
   .wk-n-src { font-size: var(--fs-xs); color: var(--ink2); opacity: .62; margin-left: auto; }
   /* 组标题（今日名单）比下面三组的 .cc-t 高一级：它是这三组的父亲，不是第四个分组 */
+  /* R100z330：分组买/不买标记——三段「计入明日买入」实底，已兑现「不计入」灰描边 */
+  .cc-buy { font-style: normal; font-size: var(--fs-xs); font-weight: 700; margin-left: 6px;
+    padding: 0 6px; border-radius: 4px; vertical-align: 1px;
+    color: #7a4d00; background: #fdf1d8; border: 1px solid #f0d9a8; }
+  .cc-buy.off { color: var(--ink2); background: #f4f6f8; border-color: var(--line); font-weight: 400; }
   /* R100z329：已兑现组——灰底（不再可买）+ 红色涨幅（涨色） */
   .cc-chip.done { background: #f4f6f8; border-color: #dfe5ea; color: var(--ink2); }
   .cc-chip.done .cc-pct { font-style: normal; margin-left: 5px; color: #f0435c; font-weight: 700; }
@@ -7415,7 +7420,8 @@ function chenCompareHtml(c) {
       (done.length ? ' ｜ 今日已涨停 ' + done.length + ' 只不计入' : '') + '</span></div></div>' +
     (done.length
       ? '<div class="cc-sec"><div class="cc-t">今日已反包兑现（' + done.length + '）' +
-        '<span class="cc-sub">当日涨幅 ≥9.8% ＝ 形态今天已经走完，<b>不计入明日买入名单</b></span></div>' +
+        '<span class="cc-sub">当日涨幅 ≥9.8% ＝ 形态今天已经走完</span>' +
+        '<em class="cc-buy off">不计入明日买入</em></div>' +
         '<div class="cc-list">' + done.map(function (x) {
           var nm = chenNameOf(x.code);
           var gi = _grp.length;
@@ -7425,7 +7431,11 @@ function chenCompareHtml(c) {
             '<em class="cc-pct">+' + Number(x.pct || 0).toFixed(2) + '%</em></span>';
         }).join('') + '</div></div>'
       : '') +
-    '<div class="cc-sec"><div class="cc-t">两个都选中（' + both.length + '）</div><div class="cc-list">' +
+    /* R100z330（用户 2026-11-10：「那你下面写下计入明日买单」）：已兑现那组写了「不计入」，
+       下面三段却只写数量 —— 读者要自己推「这些到底算不算买」。三段各挂一枚「计入明日买入」，
+       与灰底的「不计入」正面对照，一眼分清哪批是明天开盘要动的。 */
+    '<div class="cc-sec"><div class="cc-t">两个都选中（' + both.length + '）' +
+      '<em class="cc-buy">计入明日买入</em></div><div class="cc-list">' +
       chipsOf(both) + '</div></div>' +
     /* R100z230（用户 2026-10-27「文字太多」）：差异说明原来各 61 / 42 字摊在名单上方，
        现在收进折叠、标题只留一句「谁有谁没有」。
@@ -7434,12 +7444,14 @@ function chenCompareHtml(c) {
        并排看像两套标准。改成同一句式：都是「陈学长的条件 → 所以谁有谁没有」，
        条目用同一个「／」分隔、结尾同一句「所以…有、…没有」。 */
     '<div class="cc-sec"><div class="cc-t">只有陈学长选中（' + co.length + '）' +
+      '<em class="cc-buy">计入明日买入</em>' +
       '<details class="cc-why"><summary>他有、断板没有</summary>' +
       '<div class="cc-why-x">陈学长多给的两条：断板日放量<b>不设上限</b>（断板砍在 3.5 倍）／ ' +
       '只比 T+2 一根缩量、不看趋势。另外他连首板也收、洗盘容忍 3 日、破位与 MA5 各留 2% / 3% 容忍度。' +
       '所以他有、断板没有。</div></details></div>' +
       '<div class="cc-list">' + chipsOf(co) + '</div></div>' +
     '<div class="cc-sec"><div class="cc-t">只有断板反包选中（' + doOnly.length + '）' +
+      '<em class="cc-buy">计入明日买入</em>' +
       '<details class="cc-why"><summary>断板有、他没有</summary>' +
       '<div class="cc-why-x">他的硬条件：放量 ≥2 倍 ／ 洗盘 ≤3 日 ／ 收盘不破 T 日最低价 2% ／ ' +
       '站稳 5 日线。任一条不满足就剔，所以断板有、他没有。</div></details></div>' +
