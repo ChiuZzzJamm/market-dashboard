@@ -185,7 +185,12 @@ def py_recompute(code):
     ratio = None
     if end >= d + 3:
         ratio = min(v[d + 1:end + 1]) / v[d] * 100
-    return {"mult": v[d] / vseg, "ratio": ratio, "nban": z - z0 + 1,
+    # R100z350：前端 ⑥ 的「量能缩到断板日的 X%」用的是**全程最低量**（含最后那根），
+    # 与 ratio（排除启动日）不是一个数——文投控股 52.1% vs 22.4%，差 2.3 倍。
+    # 页面只输出 ⑥ 那一个口径，所以对账也必须用 vratio。
+    vmin_all = min(v[d + 1:]) if d + 1 < n else None
+    vratio = (vmin_all / v[d] * 100) if (vmin_all is not None and v[d]) else None
+    return {"mult": v[d] / vseg, "ratio": ratio, "vratio": vratio, "nban": z - z0 + 1,
             "q": v[n - 1] / v[d] * 100 if n - 1 > d else None,
             "lowPct": (min(l[d + 1:]) / c[z] - 1) * 100 if d + 1 < n else None}
 
@@ -280,23 +285,45 @@ def main():
                 bad.append("%s 输出里找不到「量是连板期均量的 X 倍」" % code)
             elif abs(float(m.group(1)) - ref["mult"]) > 0.2:
                 bad.append("%s 放量倍数 页面写 %s 倍 / 重算 %.2f 倍" % (code, m.group(1), ref["mult"]))
-            if ref["ratio"] is not None:
-                # 两个分支都要对账：缩量够就写「量缩到 X%」，不够就写「量能最低只到 X%」。
-                # 只查前者的话，把分母改错会掉进 else 分支、数字没人看（本轮实测漏过一次）。
-                m2 = re.search(r"量缩到断板日的\s*<b>([\d.]+)%", h)
+            # 「起点」「洗盘第1天」这两档本来就不该有量能百分比（没有可比样本），跳过对账
+            _no_ratio_stage = ("阶段：起点" in h) or ("阶段：洗盘第1天" in h)
+            if ref["vratio"] is not None and not _no_ratio_stage:
+                # ⑥ 的各档说法不同（缩到 / 已缩到 / 最低仍有 / 还有），但都写成「…断板日的 X%」。
+                # 用统一正则覆盖所有出口——上一版只匹配两种写法，改了文案就整条失效
+                # （G69 会报「没有任何数字可对账」，那是在提示断言没覆盖到，不是在提示数据错）。
+                m2 = re.search(r"断板日的\s*(?:<b>)?([\d.]+)%", h)
                 if not m2:
-                    m2 = re.search(r"量能最低只到断板日的\s*([\d.]+)%", h)
-                if not m2:
-                    bad.append("%s 缩量比算得出来，但输出里既没有「量缩到」也没有「量能最低只到」"
+                    bad.append("%s 缩量比算得出来，但输出里找不到任何「…断板日的 X%%」"
                                "——没有任何数字可对账" % code)
-                elif abs(float(m2.group(1)) - ref["ratio"]) > 0.2:
-                    bad.append("%s 缩量比 页面写 %s%% / 重算 %.1f%%" % (code, m2.group(1), ref["ratio"]))
+                elif abs(float(m2.group(1)) - ref["vratio"]) > 0.2:
+                    bad.append("%s 缩量比 页面写 %s%% / 重算 %.1f%%（全程最低量口径）"
+                               % (code, m2.group(1), ref["vratio"]))
             if ref["q"] is not None and "缩量涨停" in h:
                 m3 = re.search(r"只用了断板日\s*<b>([\d.]+)%", h)
                 if not m3:
                     bad.append("%s 说了「缩量涨停」却没给启动量占比" % code)
                 elif abs(float(m3.group(1)) - ref["q"]) > 0.2:
                     bad.append("%s 启动量占比 页面写 %s%% / 重算 %.1f%%" % (code, m3.group(1), ref["q"]))
+
+    # 时间线必须升序（R100z350，用户 2026-11-11 17:41「日期怎么跳来跳去的？」）：
+    # 结构叙事（①~⑤）与分时证据（⑦）原来各自从断板日起算，屏幕上出现
+    # 「11-10 涨 4.0% → 11-05 破线 54% → 11-06 破线 8% → 11-10 破线 38%」。
+    # 这条把「一个日期序列只能往前走」钉死：以后任何人新增带日期的段落都必须服从。
+    # 跨日条目（11-05–11-09）一律不许出现——它插进升序序列必然回跳一次。
+    for _c in CASES:
+        _h = res.get(_c, "")
+        _days = re.findall(r"<p><b>(\d{2})-(\d{2})", _h)
+        _seq = [a + "-" + b for a, b in _days]
+        for _i in range(1, len(_seq)):
+            if _seq[_i] < _seq[_i - 1]:
+                bad.append("%s 时间线回跳：%s 排在 %s 之后（日期必须升序）" % (_c, _seq[_i], _seq[_i - 1]))
+        # 跨日段落只允许「N 连板」——它是一段连续涨停，天然跨日，而且排在最前不会回跳。
+        # 其它任何跨日段落（换手/沉淀）都会插出一次回跳，一律拦。
+        for _a1, _b1, _a2, _b2, _title in re.findall(
+                r"<p><b>(\d{2})-(\d{2})–(\d{2})-(\d{2}) ([^<]*)</b>", _h):
+            if "连板" not in _title:
+                bad.append("%s 出现跨日段落「%s-%s–%s-%s %s」——它会插在中间的单个交易日之前，"
+                           "造成一次回跳" % (_c, _a1, _b1, _a2, _b2, _title.strip()))
 
     # 分时措辞与数据必须一致（R100z346）：只查数字/格式会漏掉「有量↔无量写反」这类
     # ——埋雷实测过，把 ab_==2 和 ab_==1 的文案对调，闸门照样 PASS。

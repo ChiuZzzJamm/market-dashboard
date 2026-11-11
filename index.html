@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611111733"></script>
+<script src="data.js?v=202611111751"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1799,6 +1799,7 @@
     <div class="db-modal-head" id="db-modal-head"></div>
     <div class="db-modal-meta" id="db-modal-meta"></div>
     <div class="db-kline" id="db-kline"></div>
+    <div class="db-energy" id="db-energy"></div>
     <div class="db-refs" id="db-refs"></div>
   </div>
 </div>
@@ -8840,8 +8841,10 @@ function openDbModal(key) {
        用户圈住整块说「陈学长和断板反包这一块都删掉，改成量能解读」。
        差别在**给结论还是给依据**：那几行是「买哪、在哪走」，量能解读是「为什么这么走」。
        ⚠️ 止损/目标从弹窗消失后，仍在「明日可下单」卡与 timingPlan.orders 里（那里才是执行出口），
-       所以不是丢数据，只是这个弹窗不再重复讲一遍。 */
-    stkEnergyHtml(String(e.code)) +
+       所以不是丢数据，只是这个弹窗不再重复讲一遍。
+       R100z350（用户 2026-11-11 17:41「所有标的页面的量能解读都放 k 线下面」）：
+       这块从这里挪到 #db-energy（K 线图下方），与 stk-modal 一致——
+       原来两个弹窗一个在 K 线上、一个在 K 线下，同一只票两种版式。 */
     // R100z257：清单条目进来必须把「照什么价买」再说一遍——卡片底部那行是执行的唯一出口，
     //   点进来反而没有，就成了「点开以后更不清楚」。下单口径不属于被删的那块，保留。
     (isOrd && e.ordLine ? '<div><span class="lab">下单口径：</span><b>' + esc(e.ordLine) + '</b></div>' : '') +
@@ -8884,6 +8887,12 @@ function openDbModal(key) {
       if (gkl && gkl.length > kl0.length) kl0 = gkl;
     }
     document.getElementById('db-kline').innerHTML = dbKlineSvg(_hzFailClip(kl0, hzDb), hzDb);
+  })();
+  // R100z350：量能解读放在 K 线下方（与 stk-modal 同版式）。用独立容器，
+  //   不跟着 K 线异步补拉重画——否则每次补拉都要重算一遍量能文案。
+  (function () {
+    var _en = document.getElementById('db-energy');
+    if (_en) _en.innerHTML = stkEnergyHtml(String(e.code));
   })();
   // R100z209（用户 2026-10-25 三条要求）：消息面统一走 newsFaceBlock ——
   //   ① 汇总条数上移到口径行（原「个股公告与新闻：公告 3 条 · 新闻 6 条」标题行删除）；
@@ -9806,6 +9815,29 @@ function stkEnergyHtml(code) {
   // ③ 洗盘：**日期放最前面**（用户 2026-11-11 15:29「格式统一，前面是日期」）
   var lowPx = null, lowD = -1;
   for (i = d + 1; i < n; i++) { if (lowPx === null || l[i] < lowPx) { lowPx = l[i]; lowD = i; } }
+  /* ④ 缩量比 + 振幅收敛（洗盘期，排除启动日）——**不再单独占一行**。
+     R100z350（用户 2026-11-11 17:41「日期怎么跳来跳去的？」）：
+     这一段原本自己出一行 `11-05–11-09 换手`。区间跨过多天，只要区间里还有单独讲过的日子
+     （洗盘日 / 最新日），插进按日升序的时间线就必然回跳一次——
+     文投控股就变成「11-04 断板 → 11-05–11-09 换手 → 11-06 洗盘 → 11-10 涨停」。
+     现在改成挂在 ③ 洗盘那一段的末尾：日期只有一天，量能与振幅一起收口，不再占位。 */
+  var ampNow = null, endIdx = n - 1;
+  var lp = pct(n - 1);
+  if (lp >= 5 && n - 1 > d + 1) endIdx = n - 2;
+  if (endIdx >= d + 3) {
+    // 只算振幅。缩量比不再在这里算：量能口径统一由 ⑥ 输出（全程最低量），
+    // 两处各算一次就会出现 52.1% 与 22.4% 并存（文投控股实测）。
+    var sa = 0, ca = 0;
+    for (i = Math.max(d + 1, endIdx - 2); i <= endIdx; i++) { sa += (h[i] - l[i]) / c[i - 1] * 100; ca++; }
+    ampNow = ca ? sa / ca : null;
+  }
+  /* ⚠️ 只讲振幅、不讲量能：⑥ 的结论里已经有一句「量能缩到断板日的 X%」，
+     两处并列会暴露口径差异——文投控股洗盘期（11-05~11-09）最低量是断板日的 52.1%，
+     而含启动日的口径是 22.4%，同一块里出现两个数读者只会认为算错了。
+     量能归 ⑥ 说（唯一出口），这里只补 ⑥ 缺的那半句：振幅收敛。 */
+  var washTail = (ampNow !== null)
+    ? '；同期振幅从 ' + f1(ampD) + '% 收到 ' + f1(ampNow) + '%'
+    : '';
   // 最低点恰好是**最后一根**时不在这里说——那根的表现统一交给 ⑤（否则同一天会被写两遍，
   // 思美传媒就出现过「11-10 回踩…」紧接着「11-10：涨 5.8%…」）。
   if (lowD > d && lowD < n - 1) {
@@ -9820,32 +9852,13 @@ function stkEnergyHtml(code) {
         (hasSti ? '（承接情况见下）' : ('，收在 ' + c[lowD].toFixed(2) + '（' + f1(riseNow) + '%）——启动日先洗后拉。')));
     } else if (hasSti) {
       rows.push('<b>' + mmdd(dt[lowD]) + ' ' + (lowPct >= 0 ? '回踩' : '洗盘') + '</b>：洗盘期最低' +
-        lowVerb + ' ' + lowTxt + '，这天的分时承接见下。');
+        lowVerb + ' ' + lowTxt + washTail + '，这天的分时承接见下。');
     } else {
       rows.push('<b>' + mmdd(dt[lowD]) + ' ' + (lowPct >= 0 ? '回踩' : '洗盘') + '</b>：盘中最低' + lowVerb + ' ' +
-        lowTxt + '，收在 ' + c[lowD].toFixed(2) + '。');
+        lowTxt + '，收在 ' + c[lowD].toFixed(2) + washTail + '。');
     }
   }
 
-  // ④ 缩量比 + 振幅收敛（洗盘期，排除启动日）
-  var vmin = null, ratio = null, ampNow = null, endIdx = n - 1;
-  var lp = pct(n - 1);
-  if (lp >= 5 && n - 1 > d + 1) endIdx = n - 2;
-  if (endIdx >= d + 3) {
-    for (i = d + 1; i <= endIdx; i++) { if (vmin === null || v[i] < vmin) vmin = v[i]; }
-    ratio = vmin / v[d] * 100;
-    var sa = 0, ca = 0;
-    for (i = Math.max(d + 1, endIdx - 2); i <= endIdx; i++) { sa += (h[i] - l[i]) / c[i - 1] * 100; ca++; }
-    ampNow = ca ? sa / ca : null;
-    if (ampNow !== null && ratio <= 40) {
-      rows.push('<b>' + mmdd(dt[d + 1]) + '–' + mmdd(dt[endIdx]) + ' 沉淀</b>：量缩到断板日的 <b>' +
-        f1(ratio) + '%</b>、振幅从 ' + f1(ampD) + '% 收到 ' + f1(ampNow) +
-        '%——<b>筹码沉淀，不是出货</b>。');
-    } else if (ampNow !== null) {
-      rows.push('<b>' + mmdd(dt[d + 1]) + '–' + mmdd(dt[endIdx]) + ' 换手</b>：量能最低只到断板日的 ' +
-        f1(ratio) + '%，振幅 ' + f1(ampNow) + '%——<b>换手还没完成</b>。');
-    }
-  }
 
   /* ⑤ 最新一根：**只描述当天发生了什么，不做定性**。
      R100z345（用户 2026-11-11 15:52）：「你现在又一股脑把放量就当成了出货，按你那么说
@@ -9915,9 +9928,8 @@ function stkEnergyHtml(code) {
     if (lowD >= 0) add2(byDay[mmdd(dt[lowD])]);      // 砸得最深那天
     add2(byDay[mmdd(dt[n - 1])]);                    // 最新一天
     picks.sort(function (a, b) { return a[0] < b[0] ? -1 : 1; });
-    if (picks.length > 3) picks = picks.slice(0, 3);
+    // picks 最多 3 个（断板日/最低点日/最新日），不再 slice(0,3)——排序后截断会砍掉最新日
 
-    var lines = [];
     for (var si = 0; si < picks.length; si++) {
       var r0 = picks[si];
       var all_ = r0[1], am_ = r0[2], pm_ = r0[3], dev_ = r0[4], cpos_ = r0[5];
@@ -9966,10 +9978,8 @@ function stkEnergyHtml(code) {
       } else {
         parts.push('　<b>无爆量</b>（没有单根超 3 倍均量的拉升）。');
       }
-      for (var pi = 0; pi < parts.length; pi++) lines.push(parts[pi]);
-      if (si < picks.length - 1) lines.push('<span class="en-sp"></span>');
+      for (var pi = 0; pi < parts.length; pi++) rows.push(parts[pi]);
     }
-    for (var li = 0; li < lines.length; li++) rows.push(lines[li]);
   }
 
   /* ⑥ 阶段判定（R100z345，用户 2026-11-11 15:52）。
@@ -10066,6 +10076,38 @@ function stkEnergyHtml(code) {
     concl = '';
     tone = '';
   }
+
+  /* ⑧ 统一时间线（R100z350，用户 2026-11-11 17:41「日期怎么跳来跳去的？」）。
+     ⛔ 原来分两段输出：①②③④⑤ 是一套（首板→断板→洗盘→换手→最新），⑦ 分时又是另一套
+        （断板日/最低点日/最新日），两段各自从断板日起算，于是屏幕上出现
+        「11-10 涨 4.0% → 11-05 破线 54% → 11-06 破线 8% → 11-10 破线 38%」这种回跳，
+        读者会以为顺序错了或者漏了某几天。
+     ✅ 现在每条都带日期，按 MM-DD 升序重排：同一天里「日线事实在前、分时证据在后」，
+        区间条目（11-06–11-10 换手）的 key 加 `~` 后缀，字符串比较天然排在同一个起始日之后。
+        无日期的条目（连续两日放量下跌）跟随上一条，不单独成组。
+     排序必须稳定：same key 时按原 push 序号，否则 ⑤ 和 ⑦ 在最新日会互串。 */
+  var _grp = [], _cur = null, _ri;
+  for (_ri = 0; _ri < rows.length; _ri++) {
+    var _s = rows[_ri];
+    var _m = /^<b>(\d{2})-(\d{2})/.exec(_s);
+    if (_m) {
+      var _k = _m[1] + '-' + _m[2];
+      if (/^<b>\d{2}-\d{2}–\d{2}-\d{2}/.test(_s)) _k += '~';
+      _cur = { k: _k, i: _ri, items: [_s] };
+      _grp.push(_cur);
+    } else if (_cur) {
+      _cur.items.push(_s);
+    } else {
+      _grp.push({ k: '', i: _ri, items: [_s] });
+    }
+  }
+  _grp.sort(function (a, b) { return a.k === b.k ? a.i - b.i : (a.k < b.k ? -1 : 1); });
+  var _sorted = [];
+  for (_ri = 0; _ri < _grp.length; _ri++) {
+    if (_ri) _sorted.push('<span class="en-sp"></span>');
+    for (var _j = 0; _j < _grp[_ri].items.length; _j++) _sorted.push(_grp[_ri].items[_j]);
+  }
+  rows = _sorted;
 
   /* en-sp 是分隔行、不是段落：不套 <p>，否则「每段必须含数字」的闸门会把它当成空段落
      （G69 实测抓到 600207 第 8 段 / 001360 第 9、14 段无数字，全是这个空壳）。 */
