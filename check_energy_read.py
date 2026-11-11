@@ -188,9 +188,15 @@ def py_recompute(code):
     # R100z350：前端 ⑥ 的「量能缩到断板日的 X%」用的是**全程最低量**（含最后那根），
     # 与 ratio（排除启动日）不是一个数——文投控股 52.1% vs 22.4%，差 2.3 倍。
     # 页面只输出 ⑥ 那一个口径，所以对账也必须用 vratio。
+    # R100z352：涨停分支（⑤）从 R100z344 起改成「量是前一日的 X%」，不再说「只用了断板日 X%」。
+    prev_ratio = (v[n - 1] / v[n - 2] * 100) if (n >= 2 and v[n - 2]) else None
     vmin_all = min(v[d + 1:]) if d + 1 < n else None
     vratio = (vmin_all / v[d] * 100) if (vmin_all is not None and v[d]) else None
-    return {"mult": v[d] / vseg, "ratio": ratio, "vratio": vratio, "nban": z - z0 + 1,
+    # R100z352：把断板日与洗盘期最低点日也返回——前端的 picks（断板日/最低点日/最新日）
+    # 决定分时段出现在哪几天，措辞断言必须按同一口径算，不能写死「11-09/11-10」。
+    low_d = min(range(d + 1, n), key=lambda i: l[i]) if d + 1 < n else d
+    return {"mult": v[d] / vseg, "ratio": ratio, "vratio": vratio,
+            "prev_ratio": prev_ratio, "nban": z - z0 + 1, "d": d, "low_d": low_d,
             "q": v[n - 1] / v[d] * 100 if n - 1 > d else None,
             "lowPct": (min(l[d + 1:]) / c[z] - 1) * 100 if d + 1 < n else None}
 
@@ -298,12 +304,18 @@ def main():
                 elif abs(float(m2.group(1)) - ref["vratio"]) > 0.2:
                     bad.append("%s 缩量比 页面写 %s%% / 重算 %.1f%%（全程最低量口径）"
                                % (code, m2.group(1), ref["vratio"]))
-            if ref["q"] is not None and "缩量涨停" in h:
-                m3 = re.search(r"只用了断板日\s*<b>([\d.]+)%", h)
+            # ⛔ 旧断言找的是「只用了断板日 X%」——那行文案 R100z344 就被改成了
+            #    「量是前一日的 X%」，于是这条断言变成「只要页面出现『缩量涨停』就必然 FAIL」。
+            #    它一直没触发，是因为样本里没有「最新一根是涨停」的票；2026-11-11 K 线补到当天后
+            #    603536（11-11 涨停）立刻把它撞出来。改对账前一日量比。
+            if "缩量涨停" in h:
+                m3 = re.search(r"量是前一日的\s*<b>([\d.]+)%", h)
                 if not m3:
-                    bad.append("%s 说了「缩量涨停」却没给启动量占比" % code)
-                elif abs(float(m3.group(1)) - ref["q"]) > 0.2:
-                    bad.append("%s 启动量占比 页面写 %s%% / 重算 %.1f%%" % (code, m3.group(1), ref["q"]))
+                    bad.append("%s 说了「缩量涨停」却没给前一日量比" % code)
+                elif ref.get("prev_ratio") is not None and \
+                        abs(float(m3.group(1)) - ref["prev_ratio"]) > 0.5:
+                    bad.append("%s 前一日量比 页面写 %s%% / 重算 %.1f%%"
+                               % (code, m3.group(1), ref["prev_ratio"]))
 
     # 时间线必须升序（R100z350，用户 2026-11-11 17:41「日期怎么跳来跳去的？」）：
     # 结构叙事（①~⑤）与分时证据（⑦）原来各自从断板日起算，屏幕上出现
@@ -334,10 +346,42 @@ def main():
     # 否则闸门报的是「文案变了」而不是「逻辑错了」，反而会把人逼去改文案迁就断言）。
     # 计数只用下界：pick 只取 3 天（断板日+最低点日+最新日），实际可能只落 2 天，
     # 写死次数会随 pick 结果漂。下界足够抓住「有量↔无量写反」（会变 0）与「不再判横住」（会变 0）。
-    for _w, _lo, _why in (("无承接", 1, "11-06 必在 picks 且 ab=0"),
-                          ("有量承接", 1, "11-09/11-10 至少一天 ab=2"),
-                          ("横住", 1, "bGive=15 那天应判横住"),
-                          ("诱多", 1, "11-06 回吐 239%")):
+    # ⛔ 这里原来写死「无承接 1 次 / 有量承接 1 次」——它依赖 000533 那三天的具体数据。
+    #    K 线一更新（2026-11-11 补到当天），picks 变成 11-10/11-11，断言立刻失效。
+    #    改成：按**前端同一口径**（断板日 + 洗盘期最低点日 + 最新日）算出这三天各自的 ab，
+    #    再与页面里三类措辞的出现次数对账——数据怎么变都成立。
+    import json as _j2
+
+    def _loadD():
+        _r = open(DATA, encoding="utf-8").read()
+        _pp = "window.DASHBOARD_DATA = "
+        return _j2.loads(_r[len(_pp):].rstrip().rstrip(";"))
+
+    _DD = _loadD()
+    _si = (_DD.get("stkIntraday") or {}).get("000533") or []
+    _byday = {str(r[0]): r for r in _si}
+    _ref533 = py_recompute("000533") or {}
+    _kl = (_DD.get("stkKlines") or {}).get("000533") or []
+    _days = []
+    if _ref533 and _kl:
+        _n = len(_kl)
+        for _idx in {_ref533["d"], _ref533["low_d"], _n - 1}:
+            if 0 <= _idx < _n:
+                _days.append(str(_kl[_idx][0])[5:10])
+    _cnt = {0: 0, 1: 0, 2: 0}
+    for _dm in _days:
+        _r = _byday.get(_dm)
+        if _r and len(_r) > 14:
+            _cnt[int(_r[14])] = _cnt.get(int(_r[14]), 0) + 1
+    for _w, _kind, _why in (("无承接", 0, "ab=0 的天数"), ("无量承接", 1, "ab=1 的天数"),
+                            ("有量承接", 2, "ab=2 的天数")):
+        # 不需要互相减：「无承接」与「无量承接」之间隔着「量」字，子串不重叠
+        _got = _h533.count(_w)
+        if _got != _cnt.get(_kind, 0):
+            bad.append("000533 输出里「%s」出现 %d 次，按 picks(%s) 的 %s 应为 %d 次——措辞与数据不一致"
+                       % (_w, _got, "/".join(_days), _why, _cnt.get(_kind, 0)))
+    for _w, _lo, _why in (("横住", 1, "至少一天回吐<40%"),
+                          ("诱多", 1, "至少一天回吐>100%")):
         _got = _h533.count(_w)
         if _got < _lo:
             bad.append("000533 输出里「%s」出现 %d 次，至少应 %d 次（%s）——措辞与数据不一致"

@@ -99,3 +99,7 @@ _tmp_*.py
 
 # R100z345：5 分钟分时摘要缓存（intraday_digest.py 用，每天重抓，不进仓库）
 .intraday_cache/
+
+# R100z352：一次性探针页统一挡掉（原来只挡 _tmp_probe_*/_tmp_shot_*，
+# 命名换个前缀就漏进来了，2026-11-11 实测被 git add 到暂存区）
+_tmp_*.html

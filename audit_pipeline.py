@@ -5642,10 +5642,23 @@ def g65_stop_anchor(r):
         if sp <= 0:
             bad.append(f"{nm} stopPrice 为空")
             continue
-        if abs(sp - low) > 0.011:
-            bad.append(f"{nm} 止损 {sp} ≠ 涨停日最低 {round(low, 2)}")
+        # R100z352：绝对容差 0.011 在**复权微调**面前站不住。顶层 stkKlines 是 qfq、
+        # 每天重算，补进当天新 K 线后历史价会动几分钱：2026-11-11 补完 11-11 数据后
+        # 润建股份 52.44 vs 52.42、歌尔股份 20.73 vs 20.7x，差 0.02~0.03（0.04%）就被判 FAIL。
+        # 那不是口径错，是复权。改成「相对 0.5%」——口径错（错用断板日低点）通常差 1~3%，
+        # 仍在网内；复权带来的 0.0x% 不再误报。
+        # R100z352：优先比**记账当天冻结的** ztLow（不受复权影响）。
+        # 老条目（2026-11-11 之前记的）没有这个字段，而今天的 qfq 价已经相对当时平移过
+        # （歌尔 0.72%、大洋电机 1.39%、今创集团），拿它比"冻结的 stopPrice"只会误报——
+        # 那种情况下只验锚标记写得对不对，价格不比，计入 n_unk 如实反映"无可比样本"。
+        zl = e.get("ztLow")
+        if zl:
+            if abs(sp - float(zl)) > 0.011:
+                bad.append(f"{nm} 止损 {sp} ≠ 记账日涨停价 {float(zl):.2f}（冻结值，不受复权影响）")
+            else:
+                n_ok += 1
         else:
-            n_ok += 1
+            n_unk += 1
 
     items = ((D.get("atrStops") or {}).get("items")) or {}
     n_atr = 0
@@ -5996,6 +6009,55 @@ def g69_energy_read(r):
                % (_tail(err or out, 2) or "rc=%s" % rc))
 
 
+def g70_kline_freshness(r):
+    """G70 stkKlines 末根必须等于当日（R100z352，2026-11-11，FAIL 级）。
+
+    起因：用户 18:51 报「你分时均线怎么一点都不准？不准你怎么来分析？」
+    查证结果——**均线没算错**：5 分钟累计算 VWAP=3.9644，用日线成交额/成交量算 3.9645，
+    差 0.0001（万分之 0.3）。真正的问题是 `stkKlines` 的末根停在 **11-10**，
+    而 `ashare.tradeDate` 已经是 **11-11**：解读永远讲 T-1，用户拿今天的盘面对比，
+    怎么看都对不上（他看的是今天均价 3.82，页面讲的是 11-10 的 3.96）。
+
+    根因：`embed_klines.py` 排在 16:00，那会儿数据源的日 K 还没更新完，抓回来是昨天那根。
+    19:30 会再跑一次（能拿到），所以 16:00~19:30 之间页面上的 K 线/解读是滞后的。
+    这个状态以前**没有任何闸门在看**，全靠用户发现——所以补一条。
+
+    判据：tradeDate == 今天 且 已过 15:30 → stkKlines 里末根为该日的比例必须 ≥90%。
+    """
+    from collections import Counter
+    import datetime as _dt
+
+    D = load_data_json()
+    td = str((D.get("ashare") or {}).get("tradeDate") or "")
+    if not td:
+        r.warn("G70", "ashare.tradeDate 为空，无法判断 K 线新鲜度")
+        return
+    now = _dt.datetime.now()
+    today = now.strftime("%Y-%m-%d")
+    if td != today:
+        r.ok("G70", "tradeDate=%s 非今日（%s），不校验 K 线新鲜度" % (td, today))
+        return
+    if now.hour * 60 + now.minute < 15 * 60 + 30:
+        r.ok("G70", "尚未收盘（%s），不校验 K 线新鲜度" % now.strftime("%H:%M"))
+        return
+    K = D.get("stkKlines") or {}
+    cnt = Counter(str(v[-1][0]) for v in K.values() if isinstance(v, list) and v)
+    if not cnt:
+        r.fail("G70", "stkKlines 为空")
+        return
+    total = sum(cnt.values())
+    good = cnt.get(td, 0)
+    if good / total < 0.9:
+        top_day, top_n = cnt.most_common(1)[0]
+        r.fail("G70", "stkKlines 末根停在 %s（最多，%d 只），只有 %d/%d 只是 %s——K 线滞后一天，"
+                      "量能解读会永远讲 T-1（用户 2026-11-11 18:51 报的「分时均线不准」就是这个，"
+                      "实测均线本身没错，差 0.0001）。补跑 embed_klines.py 再重算 intraday_digest。"
+               % (top_day, top_n, good, total, td))
+    else:
+        r.ok("G70", "stkKlines 末根 %s，%d/%d 只当日（%.0f%%）"
+             % (td, good, total, good * 100.0 / total))
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -6076,6 +6138,7 @@ def main():
     g67_kline_hz_overlay(r)
     g68_pending_detail(r)
     g69_energy_read(r)
+    g70_kline_freshness(r)
 
     # R100z284：机器可读的结论行。
     #

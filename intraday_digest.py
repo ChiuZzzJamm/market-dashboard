@@ -68,7 +68,11 @@ CACHE_DIR = os.path.join(BASE, '.intraday_cache')
 # 读者会以为「这块对这只票没有」。20 日的代价是体积约 8KB、请求约 50~60 次（实测仍 3 秒内）。
 KEEP_DAYS = 20          # 断板后多少天内继续更新分时
 PRUNE_DAYS = 30         # --prune 时，断板超过这么多天且不在池的键才删
-WORKERS = 6
+# R100z352（2026-11-11 19:00 实测）：并发 6 连拉 90 只后，push2his 直接返回 http=000（连接失败），
+# 整批全灭。80~90 只的规模对东财这个接口已经到限流线了。
+# 降到 3 并给每次请求加 0.15s 间隔——总耗时从 2s 涨到约 8s，但不会再把自己拉黑。
+WORKERS = 3
+REQ_GAP_S = 0.15
 DEADLINE_S = 420        # 整体预算；超时未抓到的按缺失处理（保留旧值）
 UA = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/120.0 Safari/537.36')
@@ -103,6 +107,8 @@ def fetch_5m(code, beg, end):
     url = ('https://push2his.eastmoney.com/api/qt/stock/kline/get'
            '?secid=%s&klt=5&fqt=1&beg=%s&end=%s'
            '&fields1=f1,f2&fields2=f51,f52,f53,f54,f55,f56,f57' % (secid(code), beg, end))
+    # R100z352：每个请求之间退让一下。并发 6 时 90 只连拉会被限流成 http=000（整批全灭）
+    time.sleep(REQ_GAP_S)
     req = urllib.request.Request(url, headers={'User-Agent': UA, 'Referer': 'https://quote.eastmoney.com/'})
     try:
         with urllib.request.urlopen(req, timeout=20) as r:

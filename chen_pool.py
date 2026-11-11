@@ -884,6 +884,12 @@ def record_entries(ledger, pool_key, entries, today, tier=None, cross=None, pre_
             # 判据：metrics 里的原始锚价与最终写进台账的 stopPrice 一致 → 就是那个锚；
             # 不一致说明被 trade_params 的最小 2% 距离调过，如实标 legacy-unk（审计会跳过而不是误报）。
             "stopAnchor": _anchor_tag(e),
+            # R100z352：把**记账当天**的涨停日最低价一起冻结。
+            # 顶层 stkKlines 是 qfq、每天重算，补进新 K 线/遇到除权分红，历史价会整体平移
+            # （2026-11-11 实测歌尔 0.72%、大洋电机 1.39%）。拿今天的复权价去比"当时冻结的
+            # stopPrice"必然对不上，而那个差异不是口径错。存一份当时的 low 才可复现。
+            "ztLow": ((e.get("metrics") or {}).get("stopPrice")
+                      or e.get("stopPrice")),
             # R100z233b：止盈线、持有窗口、口径起始日一起冻结在条目上。
             # 只冻结 stopPrice 是不够的——2026-10-26 改口径时，9 条 10-25 开仓的样本
             # 就是被新的 +5%/10 日重新结算成了 win(5.0)，胜率表在换版当天自己变好看。
