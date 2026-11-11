@@ -5445,7 +5445,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low"
   },
   {
    "pool": "chen_loose",
@@ -5498,7 +5499,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low"
   },
   {
    "pool": "chen_loose",
@@ -5551,7 +5553,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low"
   },
   {
    "pool": "chen_loose",
@@ -5604,7 +5607,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low"
   },
   {
    "pool": "chen_loose",
@@ -5621,7 +5625,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low"
   },
   {
    "pool": "chen_loose",
@@ -5638,7 +5643,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low"
   },
   {
    "pool": "duanban",
@@ -5691,7 +5697,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low"
   },
   {
    "pool": "duanban",
@@ -5744,7 +5751,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low"
   },
   {
    "pool": "duanban",
@@ -5797,7 +5805,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low"
   },
   {
    "pool": "duanban",
@@ -5850,7 +5859,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low"
   },
   {
    "pool": "duanban",
@@ -5903,7 +5913,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low"
   },
   {
    "pool": "duanban",
@@ -5956,7 +5967,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low"
   },
   {
    "pool": "duanban",
@@ -6009,7 +6021,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low"
   },
   {
    "pool": "duanban",
@@ -6062,7 +6075,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low"
   },
   {
    "pool": "duanban",
@@ -6115,7 +6129,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low"
   },
   {
    "pool": "duanban",
@@ -6168,7 +6183,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low"
   },
   {
    "pool": "duanban",
@@ -6221,7 +6237,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low"
   },
   {
    "pool": "duanban",
@@ -6274,7 +6291,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "stopAnchor": "zt_low"
   }
  ],
  "updatedAt": "2026-11-11 16:04",

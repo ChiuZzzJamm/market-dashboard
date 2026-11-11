@@ -232,8 +232,15 @@ def stop_of(close, atr, k, bars):
     return raw, basis, over_wide
 
 
-def zt_low_of(e):
-    """池条目自带的**涨停日（T 日）最低价**——断板/陈学长的统一止损锚。
+def zt_low_of(e, top_kline=None):
+    """池条目的**涨停日（T 日）最低价**——断板/陈学长的统一止损锚。
+
+    R100z351：`top_kline` 是顶层 `stkKlines[code]`，**优先用它**。
+    原来只读条目自带的 `kline`，而那份是入池当天的快照——和顶层（每天由
+    embed_klines 重写）会因复权/补拉差几分钱。实测盘龙药业：条目里 T 日 low=19.86、
+    顶层=19.91，于是 atrStops 写 19.86、审计按顶层算出 19.91，每天报一次
+    「止损 19.86 ≠ 涨停日最低 19.91」。两边同源才是修法，不是把容差放宽。
+    `top_kline` 取不到（顶层没有这只票）时退回条目自带的那份。
 
     R100z331（用户 2026-11-10 22:11「断板和陈学长还是按照涨停日最低点来」）：
     为什么是 T 日而不是断板日（T+1）或洗盘段最低：
@@ -244,17 +251,23 @@ def zt_low_of(e):
       · T 日最低价固定在 T 日不动，是「这波启动失败」的定义边界：跌破它，反包的前提就不成立了。
     取不到（无 kline / 无 ztDate / 那天不在 K 线里）返回 (None, None)，调用方退回 ATR 位。
     """
-    kl = e.get('kline') or []
     ztd = str(e.get('ztDate') or '')
-    if not kl or not ztd:
+    if not ztd:
         return None, None
-    for b in kl:
-        if isinstance(b, list) and len(b) >= 6 and str(b[0]) == ztd:
-            try:
-                low = float(b[4])
-            except (TypeError, ValueError):
-                return None, None
-            return (ztd, low) if low > 0 else (None, None)
+    srcs = []
+    if top_kline:
+        srcs.append(top_kline)
+    if e.get('kline'):
+        srcs.append(e.get('kline'))
+    for kl in srcs:
+        for b in kl:
+            if isinstance(b, list) and len(b) >= 6 and str(b[0]) == ztd:
+                try:
+                    low = float(b[4])
+                except (TypeError, ValueError):
+                    continue
+                if low > 0:
+                    return (ztd, low)
     return None, None
 
 
@@ -391,7 +404,7 @@ def collect(D):
     # R100z329：陈学长三池的退出纪律——弹窗「退出纪律」那一段此前对这 41 只全是空的。
     for _k in ('strict', 'loose', 'watching'):
         for x in ((D.get('chenPool') or {}).get(_k) or []):
-            _zd, _zl = zt_low_of(x)
+            _zd, _zl = zt_low_of(x, K.get(str(x.get('code') or '')))
             add(x.get('code'), x.get('name'), x.get('sector'), 'chen', form=_zl, form_date=_zd)
     for x in (D.get('accumulation') or {}).get('scored') or []:
         add(x.get('code'), x.get('name'), x.get('sector'), 'accumulation')
@@ -402,7 +415,7 @@ def collect(D):
     db = D.get('duanban') or {}
     for pool in ('confirmed', 'watching'):
         for x in db.get(pool) or []:
-            _zd, _zl = zt_low_of(x)
+            _zd, _zl = zt_low_of(x, K.get(str(x.get('code') or '')))
             add(x.get('code'), x.get('name'), x.get('sector'), 'duanban', form=_zl, form_date=_zd)
 
     return [(c, seen[c]) for c in order]

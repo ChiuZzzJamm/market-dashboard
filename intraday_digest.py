@@ -39,8 +39,8 @@ VWAP 下方）＝恐慌砸盘；11/02 最低点在 09:40（开盘，之后 45 �
 
 ## 体积
 
-只存 7 个数字 × 最多 11 个交易日 × 断板后 ≤10 日的票（实测约 73 只）≈ 15KB，
-不存原始 5 分钟线。超过 10 日的票不再更新但保留已有值。
+只存 20 个数字 × 最多 21 个交易日 × 断板后 ≤20 日的票（实测约 60 只）≈ 8KB，
+不存原始 5 分钟线。超过 20 日的票不再更新但保留已有值。
 
 ## 用法
 
@@ -63,7 +63,10 @@ if BASE not in sys.path:
     sys.path.insert(0, BASE)
 
 CACHE_DIR = os.path.join(BASE, '.intraday_cache')
-KEEP_DAYS = 10          # 断板后多少天内继续更新分时
+# R100z351（用户 2026-11-11 18:06 采纳「窗口放到 20 天」）：10 → 20。
+# 原来断板后超过 10 日的票不再抓，页面上大部分标的点开只有日线描述、没有分时，
+# 读者会以为「这块对这只票没有」。20 日的代价是体积约 8KB、请求约 50~60 次（实测仍 3 秒内）。
+KEEP_DAYS = 20          # 断板后多少天内继续更新分时
 PRUNE_DAYS = 30         # --prune 时，断板超过这么多天且不在池的键才删
 WORKERS = 6
 DEADLINE_S = 420        # 整体预算；超时未抓到的按缺失处理（保留旧值）
@@ -339,17 +342,24 @@ def find_break_day(kl):
 
 
 def pool_codes(D):
-    """当前所有"确认池"的代码（陈学长严格/放宽 + 断板反包确认）。观察池不算。"""
+    """需要分时证据的代码：陈学长严格/放宽/观察 + 断板反包确认/观察。
+
+    R100z351（用户 2026-11-11 18:06 采纳「窗口放到 20 天」时一起改）：
+    原来只取**确认池**，观察池一个都不抓。可实际点开弹窗最多的恰恰是观察池——
+    「形态进行中、只差最后一根确认」的票，读者最想看的就是它的承接。
+    结果页面上大部分标的只有日线描述、没有分时，看起来像「这块对这只票没有」。
+    观察池加上后实测约 120 只 / 序列化约 36KB（data.js 是 8MB 量级，可接受）。"""
     out = set()
     cp = D.get('chenPool') or {}
     db = D.get('duanban') or {}
-    for key in ('strict', 'loose'):
+    for key in ('strict', 'loose', 'watching'):
         for e in (cp.get(key) or []):
             if isinstance(e, dict) and e.get('code'):
                 out.add(str(e['code']))
-    for e in (db.get('confirmed') or []):
-        if isinstance(e, dict) and e.get('code'):
-            out.add(str(e['code']))
+    for key in ('confirmed', 'watching'):
+        for e in (db.get(key) or []):
+            if isinstance(e, dict) and e.get('code'):
+                out.add(str(e['code']))
     return out
 
 

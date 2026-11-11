@@ -441,6 +441,10 @@ def chen_stage(code, kl, zt_iso):
         "sinceConfirm": since,      # 确认后又过了几个交易日（0 = 今天确认）
         "washDays": since,          # 兼容旧读者，值同 sinceConfirm（确认后第 N 天）
         "stopPrice": round(stop_anchor, 2) if stop_anchor > 0 else None,
+        # R100z351：把"这个止损价锚在哪"一起记下来。G65 要求台账每条 stopAnchor=zt_low，
+        # 而 record_entries 以前**根本没写这个字段**——2026-11-09 新记的 18 条全是空，
+        # 审计每天报一次 FAIL（"锚标记是 ''（应为 zt_low）"），没人知道是谁没写。
+        "stopAnchor": "zt_low" if st.get("zt_low") else "wash_low",
         "tailRisk": r1 > 8.0,
     }
     return {"pool": "confirmed", "tier": tier, "stage": "缩量确认", "form": form,
@@ -485,7 +489,8 @@ def chen_watch(code, kl, zt_iso):
                 return None
     return {"pool": "watch", "tier": None, "stage": stage, "form": form,
             "metrics": {"lbc": lbc, "volRatio": round(r1, 2),
-                        "stopPrice": round(stop_anchor, 2) if stop_anchor > 0 else None},
+                        "stopPrice": round(stop_anchor, 2) if stop_anchor > 0 else None,
+                        "stopAnchor": "zt_low" if st.get("zt_low") else "wash_low"},
             "days_ago": st["days_ago"], "stop_price": stop_anchor,
             "confirm_day": "", "confirm_idx": None, "since_confirm": None}
 
@@ -805,6 +810,26 @@ def settle_ledger(ledger, kl_cache):
     return n_settled
 
 
+def _anchor_tag(e):
+    """台账条目的止损锚标记：zt_low / wash_low / legacy-unk。
+
+    R100z351：这个字段以前没有任何代码写，G65 每天 FAIL 一次也没人追。
+    现在在写入侧一次写清；判据是"metrics 的原始锚价 ≈ 最终 stopPrice"，
+    被 trade_params 的最小 2% 距离改动过的如实标 legacy-unk。
+    """
+    m = e.get("metrics") or {}
+    a = str(m.get("stopAnchor") or "")
+    raw = m.get("stopPrice")
+    final = ((e.get("trade") or {}).get("stopPrice")
+             or raw or e.get("stopPrice"))
+    try:
+        if a and raw is not None and final is not None and abs(float(final) - float(raw)) < 0.011:
+            return a
+    except (TypeError, ValueError):
+        pass
+    return "legacy-unk"
+
+
 def record_entries(ledger, pool_key, entries, today, tier=None, cross=None, pre_map=None):
     """把当日池内标的写入台账。同一 (pool, code, confirmDate) 只记一次。
 
@@ -855,6 +880,10 @@ def record_entries(ledger, pool_key, entries, today, tier=None, cross=None, pre_
             # 否则会出现「页面写 30、回测按 31 结算」的静默口径分叉。
             "stopPrice": (e.get("trade") or {}).get("stopPrice")
                          or (e.get("metrics") or {}).get("stopPrice") or e.get("stopPrice"),
+            # R100z351：锚标记必须与 stopPrice 一起冻在条目上，否则 G65 每天都有一条看不出来源的 FAIL。
+            # 判据：metrics 里的原始锚价与最终写进台账的 stopPrice 一致 → 就是那个锚；
+            # 不一致说明被 trade_params 的最小 2% 距离调过，如实标 legacy-unk（审计会跳过而不是误报）。
+            "stopAnchor": _anchor_tag(e),
             # R100z233b：止盈线、持有窗口、口径起始日一起冻结在条目上。
             # 只冻结 stopPrice 是不够的——2026-10-26 改口径时，9 条 10-25 开仓的样本
             # 就是被新的 +5%/10 日重新结算成了 win(5.0)，胜率表在换版当天自己变好看。

@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611111751"></script>
+<script src="data.js?v=202611111824"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1173,6 +1173,10 @@
   .en-b p b { color: var(--ink); font-weight: 700; }
   /* R100z346：分时承接段里每天之间留一档空隙，否则四行×3天连成一片读不出边界 */
   .en-sp { display: block; height: 7px; }
+  /* R100z351：同一天有两层内容（日线事实 + 当日分时）。给分时那组打一个「└ 分时」的
+     浅色标记，读者一眼就看出是「同一天的第二个层次」而不是「第二天」。 */
+  .en-sub { color: var(--ink2); font-weight: 400; font-size: var(--fs-xs);
+    border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; }
   .en-c { margin-top: 2px; padding: 7px 10px; background: var(--accent-soft);
     border-radius: var(--r-note); font-size: var(--fs-sm); line-height: 1.7; color: var(--ink); }
   /* R100z345：阶段判定为「出货嫌疑」时，结论块换红底——它是唯一需要立刻行动的一档，
@@ -9806,9 +9810,15 @@ function stkEnergyHtml(code) {
   // 会出现「冲高未封住，冲高 +10.0% 后收 +4.1%」这种同词复读。
   var shapeWord = (hi >= 2 && ampD >= 10) ? '先拉后砸，<b>制造恐慌</b>'
     : (hi >= 2 ? '冲高回落' : '低开砸盘');
+  /* ⛔ R100z351（用户 2026-11-11 18:06）：「没封住是什么，他 10/10 都没涨停没炸板什么叫没封住？」
+     原来只要断板日收阳就写「（没封住）」——可胜通能源 11-10 最高只涨 +8.1%，从头到尾没碰涨停，
+     说「没封住」等于编了一个不存在的封板动作。只有盘中真摸到涨停（≥9.4%，留 0.6pp 容差）
+     才配叫「摸到涨停但没封住」。 */
+  var touched = (hi >= 9.4);
   rows.push('<b>' + mmdd(dt[d]) + ' 断板</b>：' + (dPct < 0 ? shapeWord + '，' : '') +
     (hi >= 2 ? '冲高 +' + f1(hi) + '% 后' : '') +
-    (dPct < 0 ? '收 −' + f1(Math.abs(dPct)) + '%' : '收 +' + f1(dPct) + '%（没封住）') +
+    (dPct < 0 ? '收 −' + f1(Math.abs(dPct)) + '%'
+              : '收 +' + f1(dPct) + '%' + (touched ? '（摸到涨停但没封住）' : '')) +
     '，振幅 ' + f1(ampD) + '%，量是连板期均量的 <b>' + f1(mult) + ' 倍</b>——' + volWord +
     (dPct < 0 ? '，当天追高的人亏 ' + f1(chase) + '%。' : '。'));
 
@@ -9874,9 +9884,9 @@ function stkEnergyHtml(code) {
   var posWord = cpos >= 0.8 ? '收在最高附近（尾盘走强）'
     : (cpos <= 0.2 ? '收在最低附近（尾盘走弱）' : '收在振幅中段');
   if (n - 1 === d) {
-    // 断板当天就是最新一根：② 已经把这一天说完了，这里不能再复述一遍「放量下跌」
-    // （002811 / 003004 都出现过「11-10 断板…」紧接着「11-10 放量下跌…」）。
-    rows.push('<b>' + mmdd(dt[n - 1]) + ' 就是断板当天</b>：洗盘期还没开始，下一步看它能不能缩量止跌、守住 MA5。');
+    // 断板当天就是最新一根：② 已经把这一天说完了，这里什么都不用写。
+    // R100z351（用户 2026-11-11 18:06）：「你不需要告诉我 xxx 就是断板当天，你直接连着写就行了」
+    // ——原来这里补一句过渡，读者看到的是同一天被念了两遍，第二遍还没信息量。
   } else if (lp <= -3 && vr >= 1.5) {
     // ⚠️ 放量下跌本身**不能**判出货：倍量阴就是这套形态的第一根。这里只说"有没有人接"。
     rows.push('<b>' + mmdd(dt[n - 1]) + ' 放量下跌</b>：跌 ' + f1(Math.abs(lp)) + '%，量是近 5 日均量的 <b>' +
@@ -9949,7 +9959,7 @@ function stkEnergyHtml(code) {
         else if (am_ <= 25 && pm_ <= 25) segTxt = '上下午都 ≤' + Math.max(am_, pm_) + '%，全天在线上';
         else segTxt = '上午 ' + am_ + '%→下午 ' + pm_ + '%';
       }
-      var line1 = '<b>' + r0[0] + '</b>　破线 <b>' + all_ + '%</b>' + (segTxt ? '（' + segTxt + '）' : '') +
+      var line1 = '<b>' + r0[0] + '</b>　<span class="en-sub">└ 分时</span> 破线 <b>' + all_ + '%</b>' + (segTxt ? '（' + segTxt + '）' : '') +
         ' · 收盘' + (dev_ >= 0 ? '站上均价线 <b>+' + f1(dev_) + '%</b>' : '跌破均价线 <b>' + f1(dev_) + '%</b>') +
         ' · 振幅第 ' + cpos_ + ' 分位';
       // 昨收基准单独一句：用户看盘时「红绿」就是拿昨收比的，不写会以为「全绿怎么还说站上」
