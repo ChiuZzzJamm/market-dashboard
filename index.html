@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611111703"></script>
+<script src="data.js?v=202611111726"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -9923,70 +9923,48 @@ function stkEnergyHtml(code) {
       var all_ = r0[1], am_ = r0[2], pm_ = r0[3], dev_ = r0[4], cpos_ = r0[5];
       var drop_ = r0[7], hiM = r0[8], loM = r0[9], dnp = r0[10];
       var reb_ = r0[11], rat_ = r0[12], std_ = r0[13], ab_ = r0[14];
-      var up_vol_zero = (loM < 0 || rat_ === 0);   // 低点即收盘/回升段无量
-      var bM = r0[15], bPct = r0[16], bMul = r0[17], bGive = r0[18];
+      var bM = r0[15], bPct = r0[16], bMul = r0[17], bGive = r0[18], bp_ = r0[19];
+      var parts = [];   // ← 重写三行文案时漏了这个声明，G69 报「parts is not defined」，整块渲染直接抛异常
 
-      var parts = [];
-      /* ① 站线：全天 + 上午/下午对比。「上午跌、下午拉回站稳」和「上午站稳、下午跌回去」
-         是完全相反的两种盘面，只给一个全天占比会把这两者混成一样。 */
-      var seg = '';
+      /* 每行一个维度、短句用 · 隔开——用户 2026-11-11 17:18 说「有深度但太复杂字太多了」。
+         原来每天四行（站线/承接/收盘/爆量），三天就是十二行，扫不动。合成三行：
+         ① 均价线 + 昨收两个基准 ② 承接 ③ 爆量。 */
+      var segTxt = '';
       if (am_ >= 0 && pm_ >= 0) {
-        if (am_ >= 60 && pm_ <= 25) seg = '上午还有 ' + am_ + '% 的根在均价线下方、<b>下午降到 ' + pm_ + '%</b>——下午被拉回上方并站稳';
-        else if (am_ <= 25 && pm_ >= 60) seg = '上午只有 ' + am_ + '% 在下方、<b>下午升到 ' + pm_ + '%</b>——上午站得住，下午站不住';
-        else if (am_ >= 85 && pm_ >= 85) seg = '上午 ' + am_ + '%、下午 ' + pm_ + '% 全在下方——<b>全天没站上过</b>';
-        else if (am_ <= 25 && pm_ <= 25) seg = '上午 ' + am_ + '%、下午 ' + pm_ + '% 都在线上——<b>全天基本压在均价线上方</b>';
-        else seg = '上午 ' + am_ + '%、下午 ' + pm_ + '% 的根跌破——<b>反复穿越</b>';
+        if (am_ >= 60 && pm_ <= 25) segTxt = '上午 ' + am_ + '%→下午 ' + pm_ + '%，下午拉回';
+        else if (am_ <= 25 && pm_ >= 60) segTxt = '上午 ' + am_ + '%→下午 ' + pm_ + '%，下午崩了';
+        else if (am_ >= 85 && pm_ >= 85) segTxt = '上下午都 ≥' + Math.min(am_, pm_) + '%，全天没上过';
+        else if (am_ <= 25 && pm_ <= 25) segTxt = '上下午都 ≤' + Math.max(am_, pm_) + '%，全天在线上';
+        else segTxt = '上午 ' + am_ + '%→下午 ' + pm_ + '%';
       }
-      parts.push('<b>' + r0[0] + '</b>　站线：全天 ' + all_ + '% 的 5 分钟根在均价线下方' + (seg ? '；' + seg : '') + '。');
+      var line1 = '<b>' + r0[0] + '</b>　破线 <b>' + all_ + '%</b>' + (segTxt ? '（' + segTxt + '）' : '') +
+        ' · 收盘' + (dev_ >= 0 ? '站上均价线 <b>+' + f1(dev_) + '%</b>' : '跌破均价线 <b>' + f1(dev_) + '%</b>') +
+        ' · 振幅第 ' + cpos_ + ' 分位';
+      // 昨收基准单独一句：用户看盘时「红绿」就是拿昨收比的，不写会以为「全绿怎么还说站上」
+      if (bp_ >= 0) line1 += ' · <b>' + bp_ + '%</b> 时间在昨收之下';
+      parts.push(line1);
 
-      /* ② 下跌承接：跌幅 + 下影质量 + 回升 + 量比 + 站住根数，最后给一句定性 */
-      var abTxt;
-      if (ab_ === 2) abTxt = '<b>有量承接——主力在接</b>';
-      else if (ab_ === 1) abTxt = '<b>无量承接</b>（抛压一次释放后靠情绪拉回，不是主力主动吸）';
-      else abTxt = '<b>无承接</b>（砸下去没人接）';
-      // ⚠️ 原来中间那支写成 `(dnpTxt = ...)`，自我赋值——值碰巧对，但任何人读都会以为写错了
-      var dnpTxt;
-      if (dnp >= 0.6) dnpTxt = '下跌段每根都收在自身高位（下影质量 ' + dnp + '，边跌边有人买）';
-      else if (dnp <= 0.35) dnpTxt = '下跌段每根都收在最低（下影质量 ' + dnp + '，一根比一根低）';
-      else dnpTxt = '下跌段收盘居中（下影质量 ' + dnp + '）';
-      /* 单根砸盘不能写成「10:25→10:25」——起止同一时刻读起来像 bug，而且那种 V 型反转
-         本来就不该拿「回升量/下跌量」去比（一根巨量 vs 之后几根小量，比出来恒小于 0.1）。
-         这种日子改说「一根砸」（跳空/急杀），量能特征用下影质量表达。 */
+      /* 承接：跌幅 + 时刻 + 下影/回升/量比/站住 → 一句定性。单根急杀（跳空/一根大阴）另说，
+         不能写成「10:25→10:25」那种起止同一时刻。 */
+      var abTxt = ab_ === 2 ? '<b>有量承接 · 主力在接</b>'
+        : (ab_ === 1 ? '<b>无量承接</b>（抛压释放后靠情绪拉回）' : '<b>无承接</b>（砸下去没人接）');
       var oneBar = (hiM === loM);
-      var rebTxt = reb_ >= 0.05 ? '回升 <b>' + f1(reb_) + '%</b>' : '<b>没有回升</b>';
-      if (oneBar) {
-        /* 单根急杀：那一根的收盘位置只在**收得高**时才有说服力。000533 的 11-10 是「收在 28%
-           位置」却判了有量承接（靠的是之后 3/3 根站回 + 回升量 1.27 倍），两句话放一起读者
-           只会觉得矛盾——所以位置低就不提，把证据换成量比和站线根数。 */
-        var posTxt = dnp >= 0.55 ? '，这一根收在自身振幅的 <b>' + Math.round(dnp * 100) + '%</b> 位置' : '';
-        var volTxt1 = (reb_ < 0.05 || up_vol_zero) ? '' : '、回升量是下跌段的 <b>' + rat_ + ' 倍</b>';
-        parts.push('　承接：' + mm2(loM) + ' <b>急杀 ' + f1(drop_) + '%</b>' + posTxt + '；之后' +
-          rebTxt + volTxt1 + '、' + std_ + '/3 根站回均价线上 → ' + abTxt + '。');
-      } else {
-        // 已经说了「没有回升」就不必再说「回升段没有量」——同一个事实讲两遍
-        var volTxt = (reb_ < 0.05) ? ''
-          : (up_vol_zero ? '、回升段几乎没有量' : '、回升量是下跌段的 <b>' + rat_ + ' 倍</b>');
-        parts.push('　承接：' + mm2(hiM) + '→' + mm2(loM) + ' <b>连跌 ' + f1(drop_) + '%</b>，' + dnpTxt +
-          '；之后' + rebTxt + volTxt + '、' + std_ + '/3 根站回均价线上 → ' + abTxt + '。');
-      }
+      var volTxt = (reb_ < 0.05 || rat_ === 0) ? ''
+        : ' · 回升 ' + f1(reb_) + '% / 量比 <b>' + rat_ + '</b> / 站住 ' + std_ + '/3';
+      var head = oneBar
+        ? '急杀 <b>' + f1(drop_) + '%</b>' + (dnp >= 0.55 ? '（收在振幅 ' + Math.round(dnp * 100) + '%）' : '')
+        : mm2(hiM) + '→' + mm2(loM) + ' 砸 <b>' + f1(drop_) + '%</b>（下影 ' + dnp + '）';
+      parts.push('　' + head + volTxt + ' → ' + abTxt + '。');
 
-      /* ③ 收盘：站线上还是线下 + 收在当日振幅哪一档 */
-      var cpTxt = cpos_ >= 80 ? '收在当日最高附近' : (cpos_ <= 20 ? '收在当日最低附近' : '收在当日振幅中段');
-      parts.push('　收盘：' + (dev_ >= 0 ? '站上均价线 <b>+' + f1(dev_) + '%</b>' : '跌破均价线 <b>' + f1(dev_) + '%</b>') +
-        '，' + cpTxt + '（振幅第 ' + cpos_ + ' 分位）。');
-
-      /* ④ 爆量拉升 + 之后回落还是横住 */
+      /* 爆量：时刻 + 倍数 + 涨幅 → 回吐多少/横住还是回落 */
       if (bM >= 0) {
-        var hold;
-        if (bGive < 0) hold = '之后一路走强，收盘就是当日最高';
-        else if (bGive < 40) hold = '之后只回吐 <b>' + bGive + '%</b> 的涨幅——<b>横住不回头</b>';
-        else if (bGive < 100) hold = '之后回吐 <b>' + bGive + '%</b> 的涨幅——<b>冲高回落</b>，拉完就有人跑';
-        // >100% 表示不但全部回吐、还跌穿了起涨点。不再报 239% 这种数（分母是涨幅，读者没法换算）
-        else hold = '<b>全部回吐并跌回起涨点下方</b>——纯诱多，拉高出货';
-        parts.push('　爆量：<b>' + mm2(bM) + '</b> 一根放量 <b>' + f1(bMul) + ' 倍</b>（当日均量）、单根涨 <b>' +
-          f1(bPct) + '%</b>，' + hold + '。');
+        var hold = bGive < 0 ? '一路走强'
+          : (bGive < 40 ? '<b>回吐 ' + bGive + '% 横住</b>'
+            : (bGive < 100 ? '回吐 ' + bGive + '% <b>冲高回落</b>'
+              : '<b>全部回吐跌回起涨点 · 诱多</b>'));
+        parts.push('　爆量 <b>' + mm2(bM) + '</b> 放 <b>' + f1(bMul) + ' 倍</b> 拉 ' + f1(bPct) + '% → ' + hold + '。');
       } else {
-        parts.push('　爆量：全天<b>没有</b>单根超 3 倍均量的拉升——没有异动。');
+        parts.push('　<b>无爆量</b>（没有单根超 3 倍均量的拉升）。');
       }
       for (var pi = 0; pi < parts.length; pi++) lines.push(parts[pi]);
       if (si < picks.length - 1) lines.push('<span class="en-sp"></span>');

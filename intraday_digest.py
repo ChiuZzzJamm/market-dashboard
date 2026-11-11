@@ -153,7 +153,7 @@ def minutes_of(hhmm):
     return (am_close - am_open) + max(0, cur - pm_open)
 
 
-def day_digest(bars):
+def day_digest(bars, prev_close=None):
     """把一天的 5 分钟 bar 压成 18 个数字（R100z346，用户 2026-11-11 16:49 要求加深）。
 
     用户原话：「你量能关系写的太浅了……你要告诉我的是上午和下午有没有站分时线，是一直站在
@@ -210,11 +210,15 @@ def day_digest(bars):
     pm_idx = [i for i in range(n) if bars[i][0][11:16] >= '13:00']
 
     # ① 最大回撤段（peak → 其后 trough）
+    # ⛔ 创新高的那一根必须 `continue`，不能同时当回撤终点：安彩高科 11-10 的 13:15 是
+    #    「从 4.98 拉到 5.28」的一根阳线，旧写法把它自己的 (high-low) 算成「急杀 5.7%」，
+    #    方向正好相反（实际 +5.62%）。修完才是 13:15→14:45 真正跌 5.11%。
     peak = 0
     hi_i, lo_i, drop = 0, 0, 0.0
     for i in range(n):
         if bars[i][3] > bars[peak][3]:
             peak = i
+            continue
         d = (bars[peak][3] - bars[i][4]) / bars[peak][3] * 100 if bars[peak][3] else 0
         if d > drop:
             hi_i, lo_i, drop = peak, i, d
@@ -272,6 +276,14 @@ def day_digest(bars):
         m = minutes_of(hhmm)
         return -1 if m is None else int(m)
 
+    # 收在**昨收**下方的根数占比。用户看分时图上「红绿」就是拿昨收当基准的，
+    # 而「站均价线」是另一回事——安彩 11-10 全天 94% 的时间在昨收之下（绿），
+    # 但只有 6% 在均价线下方（因为均价本身也在昨收之下）。两个基准必须同时给，
+    # 否则用户会觉得「明明全绿，怎么说站在线上」。
+    below_prev = -1
+    if prev_close:
+        below_prev = int(round(sum(1 for b in bars if b[2] < prev_close) / float(n) * 100))
+
     return [
         bars[-1][0][5:10],                       # 0  MM-DD
         int(round(below / n * 100)),             # 1  全天均价线下方%
@@ -292,6 +304,7 @@ def day_digest(bars):
         boom_pct,                                # 16 爆量涨幅%
         boom_mult,                               # 17 爆量倍数
         boom_give,                               # 18 爆量后回吐%
+        below_prev,                              # 19 收在昨收下方%（-1=取不到昨收）
     ]
 
 
@@ -403,9 +416,14 @@ def main():
         if not bars:
             continue
         byday = group_by_day(bars)
+        # 日线里建「当日 → 昨日收盘」，供「收在昨收下方%」用（用户看红绿就是这个基准）
+        _kl = K.get(code) or []
+        prev_of = {}
+        for _i in range(1, len(_kl)):
+            prev_of[str(_kl[_i][0])] = _kl[_i - 1][2]
         rows = []
         for day in sorted(byday):
-            dig = day_digest(byday[day])
+            dig = day_digest(byday[day], prev_of.get(day))
             if dig:
                 rows.append(dig)
         if rows:
