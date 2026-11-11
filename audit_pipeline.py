@@ -330,6 +330,16 @@ PRODUCT_OWNERSHIP = {
         "require": ("stkKlineNames",),
         "note": "K 线代码对照表，与 stkKlines 配套",
     },
+    "stkIntraday": {
+        "require": ("stkIntraday", "分时", "均价线"),
+        "note": ("R100z345：断板后 ≤10 日标的的**5 分钟级承接摘要**（intraday_digest.py 产出，"
+                 "每天 16:00 在 embed_klines.py 之后跑）。每天 7 个数字：日期 / 收在当日VWAP下方占比 / "
+                 "收盘偏离VWAP / 最低点分钟 / 日内低点是否逐个抬高 / 砸后回升% / 回升段量÷下砸段量。"
+                 "为什么必须有：日线 OHLC 表达不了「下砸有没有人接」——长下影可能是全天阴跌尾盘拉一下，"
+                 "也可能是开盘砸完立刻被买回，K 线画出来一模一样。用户 2026-11-11 15:52 原话："
+                 "「什么算出货什么算洗盘要看盘中分时……不能一股脑只看量」。"
+                 "只存摘要不存原始 bar（实测 35 只 3.4KB）；抓不到就保留旧值，禁写空覆盖。"),
+    },
     "stopTrack": {
         "require": ("stopTrack", "止损跟踪"),
         "note": "R100z61b 新增的止损台账统计卡，只能由 stop_tracker.py 刷写，AI 禁手写",

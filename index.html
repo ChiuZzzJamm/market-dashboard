@@ -1173,6 +1173,9 @@
   .en-b p b { color: var(--ink); font-weight: 700; }
   .en-c { margin-top: 2px; padding: 7px 10px; background: var(--accent-soft);
     border-radius: var(--r-note); font-size: var(--fs-sm); line-height: 1.7; color: var(--ink); }
+  /* R100z345：阶段判定为「出货嫌疑」时，结论块换红底——它是唯一需要立刻行动的一档，
+     和「洗盘到位」共用一个浅色底会让人一眼扫过去看不出区别。 */
+  .en-c-down { background: #fdf0f2; color: var(--ink); box-shadow: inset 3px 0 0 var(--up); }
   /* 量能解读进 db-modal 的 meta 区后，顶上要留一档空隙，不然会贴着「板块涨幅」那行 */
   .db-modal-meta .en-h { margin-top: 9px; }
   .db-modal-meta .en-b p { margin-bottom: 5px; }
@@ -9711,6 +9714,12 @@ function stkEnergyHtml(code) {
   var mmdd = function (s) { return s.length >= 10 ? s.slice(5) : s; };
   var f1 = function (x) { return (Math.round(x * 10) / 10).toFixed(1); };
   var avgV = function (a, b) { var t = 0, k; for (k = a; k <= b; k++) t += v[k]; return t / (b - a + 1); };
+  /* 分时摘要提前取：③「洗盘/回踩」要用它判断"这天是不是已经有分时证据了"，
+     有的话价格细节就交给 ⑦，避免同一天讲两遍（实测 000506 出现过「11-06 回踩…收在 13.97」
+     紧接着「11-06：几乎全天压在均价线下方」）。 */
+  var sti = (window.DASHBOARD_DATA.stkIntraday || {})[String(code)] || [];
+  var stiByDay = {}, sj;
+  for (sj = 0; sj < sti.length; sj++) stiByDay[sti[sj][0]] = sti[sj];
 
   /* 断板日：前一日涨停 + 当日放量（取两套口径里更宽的 1.1 下界）+ **当日没涨停**。
      ⛔ 原来多加了「收在涨停日收盘之下」（必须收阴），于是华升股份这种
@@ -9800,13 +9809,19 @@ function stkEnergyHtml(code) {
   if (lowD > d && lowD < n - 1) {
     var lowPct = (lowPx / c[z] - 1) * 100;
     var lowTxt = lowPx.toFixed(2) + '（较涨停日收盘 ' + (lowPct >= 0 ? '+' : '−') + f1(Math.abs(lowPct)) + '%）';
+    // 最低价还高于涨停日收盘时不叫"砸"——那只是回踩，说成砸盘会让人误判强弱
+    var lowVerb = lowPct >= 0 ? '回踩到' : '砸到';
     var riseNow = pct(n - 1);
+    var hasSti = !!stiByDay[mmdd(dt[lowD])];
     if (lowD === n - 1 && riseNow >= 5) {
-      rows.push('<b>' + mmdd(dt[lowD]) + ' 回踩</b>：盘中最低到 ' + lowTxt + '，收在 ' +
-        c[lowD].toFixed(2) + '（' + f1(riseNow) + '%）——启动日先洗后拉。');
+      rows.push('<b>' + mmdd(dt[lowD]) + ' 回踩</b>：盘中最低' + lowVerb + ' ' + lowTxt +
+        (hasSti ? '（承接情况见下）' : ('，收在 ' + c[lowD].toFixed(2) + '（' + f1(riseNow) + '%）——启动日先洗后拉。')));
+    } else if (hasSti) {
+      rows.push('<b>' + mmdd(dt[lowD]) + ' ' + (lowPct >= 0 ? '回踩' : '洗盘') + '</b>：洗盘期最低' +
+        lowVerb + ' ' + lowTxt + '，这天的分时承接见下。');
     } else {
-      rows.push('<b>' + mmdd(dt[lowD]) + ' 洗盘</b>：盘中最低砸到 ' + lowTxt + '，收在 ' +
-        c[lowD].toFixed(2) + '。');
+      rows.push('<b>' + mmdd(dt[lowD]) + ' ' + (lowPct >= 0 ? '回踩' : '洗盘') + '</b>：盘中最低' + lowVerb + ' ' +
+        lowTxt + '，收在 ' + c[lowD].toFixed(2) + '。');
     }
   }
 
@@ -9830,11 +9845,12 @@ function stkEnergyHtml(code) {
     }
   }
 
-  /* ⑤ 最新一根：**必须先判出货**（用户 2026-11-11 15:29「你这个量能解读要结合分时线里面的爆量，
-     不然所有出货都被你当成未启动了」）。
-     原来只写「涨 X%／启动中」，放量下跌根本不出声——等于把出货默认成"还没启动"。
-     分时拿不到历史，但日线里有三个可靠的替代证据：量比（相对近 5 日均量）、
-     收盘位置（当日振幅里收在哪一档，分时强弱的最佳代理）、上影/下影。 */
+  /* ⑤ 最新一根：**只描述当天发生了什么，不做定性**。
+     R100z345（用户 2026-11-11 15:52）：「你现在又一股脑把放量就当成了出货，按你那么说
+     惠发食品 10/30-11/3 都是出货了？……不能一股脑只看量」。
+     ⛔ 原来这一段里 `lp<=-3 && vr>=1.5` 直接 `outflow=true`，等于把断板反包的**形态起点**
+       当成出货证据——倍量阴本来就是这套形态的第一根，这么写是自我否定。
+     现在这天只负责说"今天怎么走的、收在哪、有没有人接"，定性交给 ⑥ 的阶段判定。 */
   var v5p = avgV(Math.max(0, n - 6), n - 2);       // 不含当日
   var vr = v5p > 0 ? v[n - 1] / v5p : 1;
   var rng = Math.max(0.0001, h[n - 1] - l[n - 1]);
@@ -9842,20 +9858,19 @@ function stkEnergyHtml(code) {
   var upShadow = (h[n - 1] - Math.max(c[n - 1], l[n - 1])) / rng;
   var posWord = cpos >= 0.8 ? '收在最高附近（尾盘走强）'
     : (cpos <= 0.2 ? '收在最低附近（尾盘走弱）' : '收在振幅中段');
-  var outflow = false;
   if (n - 1 === d) {
     // 断板当天就是最新一根：② 已经把这一天说完了，这里不能再复述一遍「放量下跌」
     // （002811 / 003004 都出现过「11-10 断板…」紧接着「11-10 放量下跌…」）。
-    outflow = dPct < 0;
     rows.push('<b>' + mmdd(dt[n - 1]) + ' 就是断板当天</b>：洗盘期还没开始，下一步看它能不能缩量止跌、守住 MA5。');
   } else if (lp <= -3 && vr >= 1.5) {
-    outflow = true;
+    // ⚠️ 放量下跌本身**不能**判出货：倍量阴就是这套形态的第一根。这里只说"有没有人接"。
     rows.push('<b>' + mmdd(dt[n - 1]) + ' 放量下跌</b>：跌 ' + f1(Math.abs(lp)) + '%，量是近 5 日均量的 <b>' +
-      f1(vr) + ' 倍</b>，' + posWord + '——<b>这是出货，不是洗盘</b>。');
+      f1(vr) + ' 倍</b>，' + posWord + '——' +
+      (cpos >= 0.5 ? '<b>砸下去有人接</b>（收回振幅上半区），要看次日能否守住这个低点。'
+                   : '<b>砸下去没人接</b>（收在低位），次日若再破今日低点就要警惕。'));
   } else if (Math.abs(lp) < 2 && vr >= 2.0) {
-    outflow = true;
     rows.push('<b>' + mmdd(dt[n - 1]) + ' 放量滞涨</b>：量是近 5 日均量的 <b>' + f1(vr) + ' 倍</b>，却只 ' +
-      (lp >= 0 ? '涨 ' : '跌 ') + f1(Math.abs(lp)) + '%，' + posWord + '——<b>对倒／分歧</b>，不是启动。');
+      (lp >= 0 ? '涨 ' : '跌 ') + f1(Math.abs(lp)) + '%，' + posWord + '——<b>多空分歧大</b>，方向还没定。');
   } else if (upShadow >= 0.5 && lp < 3) {
     rows.push('<b>' + mmdd(dt[n - 1]) + '</b>：长上影（上影占振幅 ' + f1(upShadow * 100) + '%），' +
       posWord + '——冲高被打回，上方有抛压。');
@@ -9874,31 +9889,180 @@ function stkEnergyHtml(code) {
       '%，量是近 5 日均量的 ' + f1(vr) + ' 倍，' + posWord + '。');
   }
   // 连续放量下跌：一天是噪音，两天是趋势
-  if (n - 1 !== d && n >= 3 && pct(n - 1) <= -2 && pct(n - 2) <= -2 && v[n - 1] >= v5p && v[n - 2] >= v5p) {
-    outflow = true;
-    rows.push('<b>连续两日放量下跌</b>——<b>结构在走坏</b>，不是洗盘。');
+  var twoDown = (n - 1 !== d && n >= 3 && pct(n - 1) <= -2 && pct(n - 2) <= -2 && v[n - 1] >= v5p && v[n - 2] >= v5p);
+  if (twoDown) {
+    rows.push('<b>连续两日放量下跌</b>——<b>结构在走弱</b>，是不是出货要看有没有跌破断板前的低点（见下）。');
   }
 
-  // 结论：出货优先，不能被"缩量比"洗白
-  var concl = '';
+  /* ⑦ 分时承接（R100z345）。日线 OHLC 表达不了「下砸有没有人接」：一根长下影可能是全天阴跌
+     尾盘拉一下，也可能是开盘砸完立刻被买回，K 线画出来可以一模一样。所以这里读
+     `stkIntraday`（intraday_digest.py 每天从 5 分钟线算好写进来的摘要）：
+       [MM-DD, 收在VWAP下方占比%, 收盘偏离VWAP%, 最低点分钟(09:30起算), 低点逐个抬高1/0, 砸后回升%, 回升段量/下砸段量]
+     只挑四天讲——断板日、洗盘期最低点日、最强势的一天、最新一天，多了就是流水账。
+     ⚠️ 没这只票（不在池 / 断板太老没抓）时**整段不出现**，退回上面 ⑤ 的日线描述，不编。 */
+  if (sti.length) {
+    var byDay = stiByDay, si;
+    var picks = [], seen = {};
+    var push_ = function (row) {
+      if (!row || seen[row[0]]) return;
+      seen[row[0]] = 1; picks.push(row);
+    };
+    push_(byDay[mmdd(dt[d])]);                       // 断板日
+    if (lowD >= 0) push_(byDay[mmdd(dt[lowD])]);     // 洗盘期砸得最深那天
+    /* 最强势的一天（收在均价线下方的根数最少）。
+       ⚠️ 要排除断板日和"洗盘期最低点那天"：000533 的 11-09 既是洗盘期最低价（盘中砸到 9.48）
+       又是收盘最强势的一天（只有 12% 的根跌破均价线），同一天挂两个身份读者只会觉得自相矛盾。
+       那天本来就是"先砸后拉"，③ 已经讲了砸的价位，这里就别再抢一次。 */
+    var strongest = null;
+    var skip20 = {};
+    skip20[mmdd(dt[d])] = 1;
+    if (lowD >= 0) skip20[mmdd(dt[lowD])] = 1;
+    for (si = 0; si < sti.length; si++) {
+      if (skip20[sti[si][0]]) continue;
+      if (!strongest || sti[si][1] < strongest[1]) strongest = sti[si];
+    }
+    push_(strongest);
+    push_(byDay[mmdd(dt[n - 1])]);                   // 最新一天
+    picks.sort(function (a, b) { return a[0] < b[0] ? -1 : 1; });
+
+    var lines = [];
+    for (si = 0; si < picks.length; si++) {
+      var r0 = picks[si], vb = r0[1], lm = r0[3], rb = r0[5], ud = r0[6];
+      var posTxt2;
+      if (vb >= 85) posTxt2 = '几乎全天压在均价线下方（' + vb + '% 的 5 分钟根）';
+      else if (vb <= 20) posTxt2 = '全天基本站在均价线上方（只有 ' + vb + '% 的根跌破）';
+      else posTxt2 = '在均价线上下反复（' + vb + '% 的根在下方）';
+      /* 把「第几分钟」换算成钟点。交易分钟不含午休：lm≤120 走上午（09:30+lm），
+         超过就是下午（13:00 + lm-120）。原来写成 (lm+60)/60，把 240 分钟算成 5:00，
+         实际应是 15:00——一个纯换算错，但读起来是"最低点在凌晨五点"。 */
+      var tClock = function (mm_) {
+        var abs_ = (mm_ <= 120) ? (9 * 60 + 30 + mm_) : (13 * 60 + (mm_ - 120));
+        return ('0' + Math.floor(abs_ / 60)).slice(-2) + ':' + ('0' + (abs_ % 60)).slice(-2);
+      };
+      var tTxt;
+      if (lm >= 0 && lm <= 30) tTxt = '最低点 ' + tClock(lm) + ' 开盘一把砸出';
+      else if (lm >= 180) tTxt = '最低点 ' + tClock(lm) + ' 才出现（尾盘还在创新低）';
+      else tTxt = '最低点出现在盘中 ' + tClock(lm);
+      var rbTxt = '';
+      if (rb >= 3) rbTxt = '，砸完回升 <b>' + f1(rb) + '%</b>' + (ud >= 0.8 ? '、反弹有量' : '、但反弹没量');
+      else if (rb > 0 && rb < 1) rbTxt = '，砸完几乎抬不起来（回升仅 ' + f1(rb) + '%）';
+      lines.push('<b>' + r0[0] + '</b>：' + posTxt2 + '，' + tTxt + rbTxt + '。');
+    }
+    // 跨日趋势：收在均价线下方的占比是否在递减 + 日内低点是否逐个抬高
+    var first = picks[0], last = picks[picks.length - 1];
+    if (picks.length >= 2 && first[1] > last[1] + 15) {
+      lines.push('<b>趋势</b>：收在均价线下方的占比从 <b>' + first[1] + '%</b> 降到 <b>' + last[1] +
+        '%</b>——盘面在一天天转强。');
+    }
+    var lifts = 0;
+    for (si = 0; si < picks.length; si++) lifts += picks[si][4];
+    if (lifts >= 2) {
+      lines.push('<b>低点</b>：有 <b>' + lifts + ' 天</b>日内的低点是逐个抬高的——每次砸都有人接，符合洗盘特征。');
+    }
+    lines.push('<span style="color:var(--ink2)">（分时口径：5 分钟 bar 现算，均价线＝当日累计成交均价）</span>');
+    for (si = 0; si < lines.length; si++) rows.push(lines[si]);
+  }
+
+  /* ⑥ 阶段判定（R100z345，用户 2026-11-11 15:52）。
+     用户原话：「断板反包和陈学长都有一条就是涨停次日倍量阴，然后量能逐日递减，那什么算出货什么算洗盘
+     要看盘中分时……你作为一个专业交易员需要多方面去判断，不能一股脑只看量」。
+
+     ⛔ 旧逻辑（已删）：单日「跌≥3% 且 量≥1.5×近5日均量」→ 出货。
+        这条等于把形态的第一根当成出货证据。实测惠发 10/30（砸 9.4%）、11/02（砸 10%）
+        全被错判成出货，而它们是标准的洗盘。
+     ✅ 新逻辑：出货是**过程**，下面三条**同时**成立才敢说，缺一条就只能说"还在洗"：
+        ① 量能没缩：洗盘期最低量仍 > 断板日的 70%（换手根本没完成）
+        ② 破前低且**没收回**：跌破断板前 10 日最低价，且收盘仍在它下方（砸下去没人接）
+        ③ 低点持续下移：洗盘期后半段最低 < 前半段最低（越砸越低）
+        11/02 满足 ①③ 但当天砸到 8.52 又收回 9.81（收在振幅 95%），**②不成立** →
+        属「破低收回＝挖坑」，这恰恰是洗盘最常见的形态。 */
   var ma5 = 0, i3;
   for (i3 = Math.max(0, n - 5); i3 < n; i3++) ma5 += c[i3];
   ma5 = ma5 / Math.min(5, n);
   var vsMa = (c[n - 1] / ma5 - 1) * 100;
-  if (outflow) {
-    concl = '当前在<b>出货</b>（放量下跌/滞涨），不是"还没启动"——缩量比再好看也不能当洗盘看。';
-  } else if (ratio !== null && ratio <= 40 && vsMa >= 0) {
-    concl = '洗盘接近完成：缩量到 ' + f1(ratio) + '%，收盘在 MA5 上方 ' + f1(vsMa) + '%。';
-  } else if (ratio !== null && ratio <= 40) {
-    concl = '缩量到位（' + f1(ratio) + '%）但还没站上 MA5（距 ' + f1(vsMa) + '%），等启动确认。';
-  } else if (ratio !== null) {
-    concl = '换手未完成（量能还有断板日的 ' + f1(ratio) + '%），现在是"还在洗"，不是"洗完"。';
+
+  var segN = n - 1 - d;                       // 断板后已过交易日数
+  var preLow = null, q0;
+  for (q0 = Math.max(0, d - 10); q0 < d; q0++) {
+    if (preLow === null || l[q0] < preLow) preLow = l[q0];
+  }
+  var segLow = null;
+  for (i3 = d + 1; i3 < n; i3++) { if (segLow === null || l[i3] < segLow) segLow = l[i3]; }
+  var brokeLow = (preLow !== null && segLow !== null && segLow < preLow * 0.995);
+  // 收回 = 最新收盘站回断板前的低点之上（挖坑洗盘的核心特征）；退一步，收在当日振幅上半区也算
+  var recovered = (preLow !== null && c[n - 1] > preLow) || cpos >= 0.5;
+  var lowSlide = false;
+  if (segN >= 3) {
+    var half = Math.floor(segN / 2), lo1 = null, lo2 = null, q1;
+    for (q1 = d + 1; q1 <= d + half; q1++) { if (lo1 === null || l[q1] < lo1) lo1 = l[q1]; }
+    for (q1 = d + half + 1; q1 < n; q1++) { if (lo2 === null || l[q1] < lo2) lo2 = l[q1]; }
+    lowSlide = (lo1 !== null && lo2 !== null && lo2 < lo1 * 0.995);
+  }
+  // 洗盘期最低量（不排除启动日：出货判定要看全程）
+  var vminAll = null;
+  for (i3 = d + 1; i3 < n; i3++) { if (vminAll === null || v[i3] < vminAll) vminAll = v[i3]; }
+  var vRatio = (vminAll !== null && v[d] > 0) ? vminAll / v[d] * 100 : null;
+
+  var stage, concl, tone;
+  if (segN <= 0) {
+    stage = '起点';
+    concl = '断板当天。倍量阴是这套形态的<b>起点</b>，不是出货——接下来看它能不能缩量、能不能守住断板前的低点。';
+    tone = '';
+  } else if (segN === 1) {
+    stage = '洗盘第1天';
+    concl = '洗盘刚开始，才过 1 个交易日，量能与低点都还没有可比样本，不作出货判断。';
+    tone = '';
+  } else if (vRatio !== null && vRatio > 70 && brokeLow && !recovered && lowSlide) {
+    stage = '出货嫌疑';
+    concl = '三条同时成立才判的出货：①量能没缩（仍有断板日的 ' + f1(vRatio) + '%）' +
+      '②破了断板前低点 ' + preLow.toFixed(2) + ' 且收在它下方（' + c[n - 1].toFixed(2) + '，砸下去没人接）' +
+      '③低点还在下移。结构已经走坏，不是洗盘。';
+    tone = 'down';
+  } else if (vRatio !== null && vRatio <= 40 && vsMa >= 3) {
+    /* 洗盘完成必须排在「破低收回」前面：11/10 惠发已经涨停、站上 MA5 6.8%，
+       若仍命中 brokeLow&&recovered 就会一直显示"挖坑洗盘"，永远讲不到"已启动"。
+       顺序＝先说现在处于哪一档，再补"它曾经挖过坑"这个背景。 */
+    stage = '洗盘完成 · 已站上 MA5';
+    concl = '量能缩到断板日的 ' + f1(vRatio) + '%，收盘站上 MA5（上方 ' + f1(vsMa) + '%）' +
+      (brokeLow && recovered ? '；中途跌破过断板前低 ' + preLow.toFixed(2) + '（最低 ' + segLow.toFixed(2) + '）又收回，' : '，') +
+      (lp >= 9.8 ? '今日涨停——<b>洗盘结束、启动确认</b>。' : '<b>洗盘结束，已在启动路上</b>。');
+    tone = '';
+  } else if (brokeLow && recovered) {
+    // 分支名要跟着量能走：11/06、11/09 已经缩到 29%，还叫"缩量未完成"就是自相矛盾
+    stage = (vRatio !== null && vRatio <= 40) ? '挖坑洗盘 · 缩量到位' : '挖坑洗盘 · 换手未完成';
+    concl = '盘中跌破断板前低 ' + preLow.toFixed(2) + '（最低 ' + segLow.toFixed(2) +
+      '）又收回 ' + c[n - 1].toFixed(2) + '，量能' +
+      (vRatio !== null ? (vRatio <= 40 ? '已缩到断板日的 ' + f1(vRatio) + '%' : '还有断板日的 ' + f1(vRatio) + '%') : '未足') +
+      '——这是<b>挖坑洗盘</b>的典型样子：把恐慌盘砸出来后自己接回来。' +
+      (vRatio !== null && vRatio <= 40 ? '' : '还没缩到位，等量能继续降。');
+    tone = '';
+  } else if (vRatio !== null && vRatio <= 40 && !lowSlide) {
+    stage = '洗盘到位';
+    concl = '量能缩到断板日的 ' + f1(vRatio) + '%，低点没有继续下移' +
+      '，但还没站上 MA5（距 ' + f1(vsMa) + '%）——洗盘到位、还没启动。';
+    tone = '';
+  } else if (vRatio !== null && vRatio <= 40) {
+    stage = '缩量但仍破位';
+    concl = '量能已缩到 ' + f1(vRatio) + '%，但低点还在往下走——缩量下跌既可能是洗盘尾声，也可能是没人接的阴跌，' +
+      '要看下一个交易日的低点能不能站住。';
+    tone = '';
+  } else if (vRatio !== null) {
+    stage = '换手未完成';
+    concl = '量能最低仍有断板日的 ' + f1(vRatio) + '%，换手还没完成' +
+      (twoDown ? '，且刚出现连续两日放量下跌' : '') +
+      '——现在是"还在洗"，不是"洗完"，也不是出货。等它缩量。';
+    tone = '';
+  } else {
+    stage = '';
+    concl = '';
+    tone = '';
   }
 
   var body = rows.map(function (x) { return '<p>' + x + '</p>'; }).join('');
   return '<div class="en-h">量能解读 <span class="en-tag">推断 · 非事实</span></div>' +
     '<div class="en-b">' + body +
-    (concl ? '<div class="en-c">' + concl + '</div>' : '') + '</div>';
+    (concl ? '<div class="en-c' + (tone ? ' en-c-' + tone : '') + '">' +
+      (stage ? '<b>阶段：' + stage + '</b>　' : '') + concl + '</div>' : '') + '</div>';
 }
 function stkRenderEnergy(code) {
   var box = document.getElementById('stk-energy');

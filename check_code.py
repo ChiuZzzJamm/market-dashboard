@@ -84,6 +84,7 @@ DATA_WRITERS = [
     'chen_pool.py',             # R100z218：chenPool（陈学长第二套断板反包口径；走 write_data_js）
     'common.py',                # write_data_js() 本体（唯一入口，自身即实现）
     'embed_klines.py',          # 内嵌 stkKlines
+    'intraday_digest.py',       # R100z345：stkIntraday 5 分钟分时摘要（走 write_data_js）
     'enrich_policy.py',         # policySignals 解码
     'entry_zone.py',            # R100z194：aiPrediction.sectors[].fundCheck/entry（走 write_data_js）
     'fix_dd_prefix.py',         # 去掉「DD」前缀

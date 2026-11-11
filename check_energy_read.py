@@ -31,7 +31,38 @@ DATA = os.path.join(HERE, "data.js")
 NEED = ["esc", "escAttr", "stkParseKline", "stkGlobalKline", "stkEnergyInPool", "stkEnergyHtml"]
 # kind: structure=有断板结构 / multi=多连板 / outflow=必须判出货 / degrade=在池无结构 / silent=不显示
 CASES = {"603536": "structure", "600865": "structure", "600207": "structure",
-         "001360": "multi", "600156": "outflow", "600778": "shorts", "600519": "silent"}
+         "001360": "multi", "600156": "structure", "600778": "shorts", "600519": "silent"}
+
+# R100z345：旧断言「600156 最近放量下跌 → 必须判出货」是错的，已删。
+# 它把「倍量阴 + 之后一天的回落」当成出货证据，而这就是断板反包形态本身。
+# 换成下面两组**反向**断言——它们保护的是同一件事，但方向对了：
+#   EARLY：断板后只过 1~2 天的票，绝不能判「出货嫌疑」（洗盘期还没开始，没有可比样本）
+#   WASH ：标准洗盘样本（惠发：10/30 砸 -9.4%、11/02 砸 -10% 后缩量 29% 再涨停），绝不能判出货
+EARLY = {"600156"}
+WASH = {"603536"}
+
+# R100z345：**正向**断言——每个阶段必须出对应结论，不能只检查"不是出货"。
+# 起因：埋雷时发现「把换手未完成分支直接改成出货」「删掉洗盘完成分支」「断板当天也判出货」
+# 三种改坏都能 PASS，因为惠发走的是别的分支、而断言只看反向。
+# 做法：把日线截断到历史某天，再调 stkEnergyHtml，锁住每个时点的结论。
+#   (截止日, 必须出现, 绝不能出现)
+CUTS = {
+    "603536": [
+        ("2026-10-30", "起点", "出货嫌疑"),        # 断板当天：倍量阴是形态起点
+        ("2026-11-02", "洗盘第1天", "出货嫌疑"),    # 砸到 8.52：才第 1 天，无可比样本
+        ("2026-11-03", "挖坑洗盘", "出货嫌疑"),      # 破前低又收回
+        ("2026-11-09", "阶段：", "出货嫌疑"),        # 缩量到 29%，仍未站上 MA5
+        ("2026-11-10", "洗盘完成", "出货嫌疑"),      # 涨停 + 站上 MA5
+    ],
+    "600156": [
+        ("2026-11-10", "洗盘第1天", "出货嫌疑"),
+    ],
+    # 600865 量能仍有断板日的 90%：必须落在「换手未完成」，不能是出货也不能是洗盘完成。
+    # 这条专门盯住那个分支——否则把「换手未完成」直接改成「出货」也没人发现。
+    "600865": [
+        ("2026-11-10", "换手未完成", "出货嫌疑"),
+    ],
+}
 
 
 def extract_func(src, name):
@@ -102,6 +133,19 @@ for (const code of __CODES__) {
   try { out[code] = vm.runInContext('stkEnergyHtml', ctx)(code) || ''; }
   catch (e) { out[code] = 'THROW:' + (e && e.message); }
 }
+// 历史时点：把日线截断到指定日期再跑一遍，验证每个阶段的结论
+const cuts = __CUTS__;
+for (const code of Object.keys(cuts)) {
+  const orig = (window.DASHBOARD_DATA.stkKlines || {})[code];
+  if (!orig) { out['CUT|' + code + '|NOKLINE'] = 'THROW:no kline'; continue; }
+  for (const item of cuts[code]) {
+    const until = item[0];
+    window.DASHBOARD_DATA.stkKlines[code] = orig.filter(function (r) { return r[0] <= until; });
+    try { out['CUT|' + code + '|' + until] = vm.runInContext('stkEnergyHtml', ctx)(code) || ''; }
+    catch (e) { out['CUT|' + code + '|' + until] = 'THROW:' + (e && e.message); }
+  }
+  window.DASHBOARD_DATA.stkKlines[code] = orig;
+}
 process.stdout.write(JSON.stringify(out));
 """
 
@@ -169,7 +213,8 @@ def main():
     open(run, "w", encoding="utf-8").write(
         NODE.replace("__SRC__", repr(DATA))
             .replace("__FNS__", repr(fns))
-            .replace("__CODES__", json.dumps(list(CASES))))
+            .replace("__CODES__", json.dumps(list(CASES)))
+            .replace("__CUTS__", json.dumps(CUTS)))
     p = subprocess.run([node, run], capture_output=True, text=True, timeout=120)
     if p.returncode != 0:
         print("[ERR] 检查器没跑成：%s" % (p.stderr.strip()[-400:] or "rc=%s" % p.returncode))
@@ -214,9 +259,15 @@ def main():
             want = "%d 连板" % (ref0 or {}).get("nban", 0)
             if want not in h:
                 bad.append("%s 是 %s，输出里没写出来（首板/二板没分清）" % (code, want))
-        if kind == "outflow":
-            if "出货" not in h or "不是洗盘" not in h:
-                bad.append("%s 最近是放量下跌，必须判「出货」，实际没写" % code)
+        if "阶段：" not in h:
+            bad.append("%s 没有「阶段：」结论——分不出洗盘/出货就等于没解读" % code)
+        if code in EARLY:
+            if "出货嫌疑" in h:
+                bad.append("%s 断板后只过 1~2 天，量能与低点都没有可比样本，不能判「出货嫌疑」"
+                           "（这正是用户 2026-11-11 15:52 批评的那条：把倍量阴当成出货）" % code)
+        if code in WASH:
+            if "出货嫌疑" in h:
+                bad.append("%s 是标准洗盘样本（砸 -10%% 后缩量再涨停），被判成了「出货嫌疑」" % code)
         if "推断" not in h:
             bad.append("%s 缺「推断」标注——这是判断，不能当事实发出去" % code)
         ref = py_recompute(code)
@@ -246,13 +297,34 @@ def main():
                 elif abs(float(m3.group(1)) - ref["q"]) > 0.2:
                     bad.append("%s 启动量占比 页面写 %s%% / 重算 %.1f%%" % (code, m3.group(1), ref["q"]))
 
+    # 历史时点：每个阶段必须出对应结论，且任何时点都不许是「出货嫌疑」
+    for code, items in CUTS.items():
+        for until, must, mustnot in items:
+            h = res.get("CUT|%s|%s" % (code, until), None)
+            if h is None:
+                bad.append("%s@%s 没跑出结果（node 桩没跑到截断逻辑）" % (code, until))
+                continue
+            if h.startswith("THROW:"):
+                bad.append("%s@%s 截断后渲染抛异常 %s" % (code, until, h[6:]))
+                continue
+            if "undefined" in h or "NaN" in h or ">null<" in h:
+                bad.append("%s@%s 输出里出现 undefined/NaN/null" % (code, until))
+            if must and must not in h:
+                bad.append("%s@%s 应判「%s」，实际没出现（当前结论：%s）"
+                           % (code, until, must, re.sub(r"<[^>]+>", "", h[-160:])))
+            if mustnot and mustnot in h:
+                bad.append("%s@%s 不该出现「%s」——这就是用户 2026-11-11 15:52 批评的"
+                           "「一股脑把放量当出货」" % (code, until, mustnot))
+
     if bad:
         print("[FAIL] 量能解读数字对不上：")
         for b in bad[:8]:
             print("  - " + b)
         return 1
-    print("[OK] 量能解读：结构样本 %d 段且数字与独立重算一致；无结构降级/静默都对"
-          % len(re.findall(r"<p>", res.get("603536", ""))))
+    nc = sum(len(v) for v in CUTS.values())
+    print("[OK] 量能解读：结构样本 %d 段且数字与独立重算一致；历史时点 %d 个阶段结论全对；"
+          "无结构降级/静默都对"
+          % (len(re.findall(r"<p>", res.get("603536", ""))), nc))
     return 0
 
 

@@ -88,6 +88,7 @@ _tmp_probe_*.html
 
 # R100z338：同上，验「进行明细」弹窗用（探针页 + 截图放大件）
 _tmp_shot_*.png
+_tmp_shot_*.html
 
 # R100z341：删死 CSS 时做「新旧像素对比」用的 HEAD 快照与截图（固定路径、只覆写不删）
 _tmp_head.html
@@ -95,3 +96,6 @@ _tmp_cmp_*.png
 
 # 一次性研究/回测脚本（不登记为产品脚本，否则 K5「无未引用脚本」会拦）
 _tmp_*.py
+
+# R100z345：5 分钟分时摘要缓存（intraday_digest.py 用，每天重抓，不进仓库）
+.intraday_cache/
