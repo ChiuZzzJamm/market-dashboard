@@ -154,10 +154,38 @@ def minutes_of(hhmm):
 
 
 def day_digest(bars):
-    """把一天的 5 分钟 bar 压缩成 7 元组。
+    """把一天的 5 分钟 bar 压成 18 个数字（R100z346，用户 2026-11-11 16:49 要求加深）。
 
-    全部用**当日累计**口径，不用 VWAP 的最终值回头套全天——分时图上那条黄线
-    本来就是累计的，盘中看到的就是当时的累计均价。
+    用户原话：「你量能关系写的太浅了……你要告诉我的是上午和下午有没有站分时线，是一直站在
+    分时线上还是想站分时线站不上去，盘中下跌有没有承接，是无量承接靠大盘情绪还是有量承接里面
+    主力在吸筹？以及收盘是站分时线上还是分时线下，全天都在分时线上吗？盘中有没有爆量拉升的，
+    如果有爆量拉升之后有没有回落下来还是拉升以后回落一点点之后横住的？」
+
+    对应到可从 5 分钟线算出来的量（下标见下），全部是**当日累计口径**（分时图那条黄线本来就是累计的）：
+
+    | # | 字段 | 回答哪个问题 |
+    |---|---|---|
+    | 1 | 全天收在均价线下方的根数% | 全天都在线上吗 |
+    | 2 | 上午（≤11:30）% | 上午站没站住 |
+    | 3 | 下午（≥13:00）% | 下午站没站住 |
+    | 4 | 收盘偏离均价% | 收盘在线上还是线下 |
+    | 5 | 收盘处在当日振幅位置% | 尾盘强还是弱 |
+    | 6 | 最低点出现的分钟 | 开盘砸 vs 尾盘砸 |
+    | 7 | **最大回撤段跌幅%** | 盘中这一跌有多深 |
+    | 8 | 回撤段起点分钟 | 从几点开始跌 |
+    | 9 | 回撤段终点分钟 | 跌到几点见底 |
+    | 10 | **下跌段平均下影质量 0~1** | 跌的时候每根有没有被买回来 |
+    | 11 | 回撤后回升% | 砸完弹回来多少 |
+    | 12 | 回升段量÷下跌段量 | **有量还是无量** |
+    | 13 | 回升后 3 根里站住均价线的根数 0~3 | 弹回来站不站得住 |
+    | 14 | **承接类型 0无/1无量/2有量** | 用户要的那一句定性 |
+    | 15 | 爆量根的时刻（-1 为无） | 有没有爆量拉升 |
+    | 16 | 爆量根单根涨幅% | 拉了多少 |
+    | 17 | 爆量根量÷当日均量 | 放量倍数 |
+    | 18 | 爆量后回吐占涨幅的% | 回落还是横住（<40 算横住） |
+
+    ⚠️ 「下跌段」用**最大回撤**（先找 peak、再找其后的 trough）来找，不是「全天最高点往后找最低点」——
+    后者在 11-02 会找到尾盘的小回调，把「砸 8.7% 后回升 14.4%」错判成「无承接」（实测踩过）。
     """
     n = len(bars)
     if n < 8:
@@ -172,36 +200,99 @@ def day_digest(bars):
         vwaps.append(v)
         if b[2] < v:
             below += 1
-    dev = (bars[-1][2] / vwaps[-1] - 1) * 100 if vwaps[-1] else 0.0
 
-    lo_i = min(range(n), key=lambda i: bars[i][4])
-    lo_min = minutes_of(bars[lo_i][0][11:16])
-    dn = [bars[j][5] for j in range(max(0, lo_i - 2), lo_i + 1)]
-    up = [bars[j][5] for j in range(lo_i + 1, min(n, lo_i + 4))]
-    dn_v = (sum(dn) / len(dn)) if dn else 0.0
-    up_v = (sum(up) / len(up)) if up else 0.0
-    tail = bars[lo_i:min(n, lo_i + 6)]
-    rebound = ((max(b[3] for b in tail) / bars[lo_i][4]) - 1) * 100 if bars[lo_i][4] and len(tail) > 1 else 0.0
+    def below_pct(idx):
+        if not idx:
+            return None
+        return int(round(sum(1 for i in idx if bars[i][2] < vwaps[i]) / float(len(idx)) * 100))
 
-    # 日内局部低点（比前后 2 根都低），相邻 15 分钟内只留最低
-    raws = []
-    for i in range(2, n - 2):
-        lw = bars[i][4]
-        if lw <= bars[i-1][4] and lw <= bars[i-2][4] and lw <= bars[i+1][4] and lw <= bars[i+2][4]:
-            raws.append((minutes_of(bars[i][0][11:16]), lw))
-    merged = []
-    for t, px in raws:
-        if merged and t is not None and merged[-1][0] is not None and abs(t - merged[-1][0]) <= 15:
-            if px < merged[-1][1]:
-                merged[-1] = (t, px)
-        else:
-            merged.append((t, px))
-    lift = 1 if (len(merged) >= 2 and all(merged[i][1] >= merged[i-1][1] * 0.998
-                                         for i in range(1, len(merged)))) else 0
+    am_idx = [i for i in range(n) if bars[i][0][11:16] <= '11:30']
+    pm_idx = [i for i in range(n) if bars[i][0][11:16] >= '13:00']
 
-    return [bars[-1][0][5:10], int(round(below / n * 100)), round(dev, 1),
-            int(lo_min if lo_min is not None else -1), lift,
-            round(rebound, 1), round(up_v / dn_v, 2) if dn_v else 0.0]
+    # ① 最大回撤段（peak → 其后 trough）
+    peak = 0
+    hi_i, lo_i, drop = 0, 0, 0.0
+    for i in range(n):
+        if bars[i][3] > bars[peak][3]:
+            peak = i
+        d = (bars[peak][3] - bars[i][4]) / bars[peak][3] * 100 if bars[peak][3] else 0
+        if d > drop:
+            hi_i, lo_i, drop = peak, i, d
+
+    # ② 下跌段内平均收盘位置（下影质量：每根收在自身振幅的哪一档）
+    pos = []
+    for j in range(hi_i, lo_i + 1):
+        rng = max(1e-9, bars[j][3] - bars[j][4])
+        pos.append((bars[j][2] - bars[j][4]) / rng)
+    dn_cpos = (sum(pos) / len(pos)) if pos else 1.0
+
+    # ③ 回升：最低点之后 6 根内的最大反弹 + 量能对比 + 是否站住均价线
+    dn_vol = sum(bars[j][5] for j in range(hi_i, lo_i + 1)) or 1e-9
+    up_end = min(n, lo_i + 7)
+    up_vol = sum(bars[j][5] for j in range(lo_i + 1, up_end))
+    rebound = 0.0
+    if lo_i + 1 < n and bars[lo_i][4]:
+        rebound = (max(bars[j][3] for j in range(lo_i, up_end)) / bars[lo_i][4] - 1) * 100
+    ratio = up_vol / dn_vol
+    stand = sum(1 for j in range(lo_i + 1, min(n, lo_i + 4)) if bars[j][2] >= vwaps[j])
+
+    # ④ 承接定性：先看弹不弹得回来、再分有量/无量
+    if stand >= 2 and rebound >= 1.0:
+        absorb = 2 if (ratio >= 0.8 or dn_cpos >= 0.55) else 1
+    elif rebound >= 0.5:
+        absorb = 1
+    else:
+        absorb = 0
+
+    # ⑤ 爆量拉升：单根 ≥3× 当日均量且收涨，取量最大的那根
+    avgv = sum(b[5] for b in bars) / n
+    boom = None
+    for i in range(1, n - 1):
+        if bars[i][5] < 3 * avgv:
+            continue
+        if (bars[i][2] / bars[i - 1][2] - 1) * 100 < 0.5:
+            continue
+        if boom is None or bars[i][5] > bars[boom][5]:
+            boom = i
+    boom_min, boom_pct, boom_mult, boom_give = -1, 0.0, 0.0, -1
+    if boom is not None:
+        boom_min = minutes_of(bars[boom][0][11:16])
+        boom_pct = round((bars[boom][2] / bars[boom - 1][2] - 1) * 100, 2)
+        boom_mult = round(bars[boom][5] / avgv, 2) if avgv else 0
+        base = bars[boom - 1][2]
+        peak_after = max(bars[j][3] for j in range(boom, n))
+        span = peak_after - base
+        boom_give = int(round((peak_after - bars[-1][2]) / span * 100)) if span > 1e-9 else 0
+
+    dhi = max(b[3] for b in bars)
+    dlo = min(b[4] for b in bars)
+    cpos = int(round((bars[-1][2] - dlo) / max(1e-9, dhi - dlo) * 100))
+
+    def mm(hhmm):
+        m = minutes_of(hhmm)
+        return -1 if m is None else int(m)
+
+    return [
+        bars[-1][0][5:10],                       # 0  MM-DD
+        int(round(below / n * 100)),             # 1  全天均价线下方%
+        below_pct(am_idx) if am_idx else -1,     # 2  上午%
+        below_pct(pm_idx) if pm_idx else -1,     # 3  下午%
+        round((bars[-1][2] / vwaps[-1] - 1) * 100, 1) if vwaps[-1] else 0.0,   # 4 收盘偏离%
+        cpos,                                    # 5  收盘振幅位置%
+        mm(bars[min(range(n), key=lambda i: bars[i][4])][0][11:16]),           # 6 最低点分钟
+        round(drop, 1),                          # 7  最大回撤跌幅%
+        mm(bars[hi_i][0][11:16]),                # 8  回撤起点分钟
+        mm(bars[lo_i][0][11:16]),                # 9  回撤终点分钟
+        round(dn_cpos, 2),                       # 10 下跌段下影质量
+        round(rebound, 1),                       # 11 回撤后回升%
+        round(ratio, 2),                         # 12 回升量/下跌量
+        stand,                                   # 13 回升后站住根数 0~3
+        absorb,                                  # 14 承接类型 0/1/2
+        boom_min,                                # 15 爆量时刻（-1 无）
+        boom_pct,                                # 16 爆量涨幅%
+        boom_mult,                               # 17 爆量倍数
+        boom_give,                               # 18 爆量后回吐%
+    ]
 
 
 def group_by_day(bars):

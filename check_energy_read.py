@@ -31,7 +31,8 @@ DATA = os.path.join(HERE, "data.js")
 NEED = ["esc", "escAttr", "stkParseKline", "stkGlobalKline", "stkEnergyInPool", "stkEnergyHtml"]
 # kind: structure=有断板结构 / multi=多连板 / outflow=必须判出货 / degrade=在池无结构 / silent=不显示
 CASES = {"603536": "structure", "600865": "structure", "600207": "structure",
-         "001360": "multi", "600156": "structure", "600778": "shorts", "600519": "silent"}
+         "001360": "multi", "600156": "structure", "600778": "shorts", "600519": "silent",
+         "000533": "structure"}
 
 # R100z345：旧断言「600156 最近放量下跌 → 必须判出货」是错的，已删。
 # 它把「倍量阴 + 之后一天的回落」当成出货证据，而这就是断板反包形态本身。
@@ -296,6 +297,49 @@ def main():
                     bad.append("%s 说了「缩量涨停」却没给启动量占比" % code)
                 elif abs(float(m3.group(1)) - ref["q"]) > 0.2:
                     bad.append("%s 启动量占比 页面写 %s%% / 重算 %.1f%%" % (code, m3.group(1), ref["q"]))
+
+    # 分时措辞与数据必须一致（R100z346）：只查数字/格式会漏掉「有量↔无量写反」这类
+    # ——埋雷实测过，把 ab_==2 和 ab_==1 的文案对调，闸门照样 PASS。
+    # 用 000533 做精确样本：pick 逻辑取「断板日 11-06 + 最低点日 11-09 + 最新日 11-10」，
+    # 三天的 ab 分别是 0/2/2、爆量回吐 239/5/15，所以措辞次数是确定的。
+    _h533 = res.get("000533", "")
+    for _w, _n, _why in (("无承接", 1, "11-06 是 ab=0"),
+                         ("有量承接", 2, "11-09/11-10 是 ab=2"),
+                         ("横住不回头", 2, "11-09/11-10 回吐 5%/15%"),
+                         ("纯诱多", 1, "11-06 回吐 239%")):
+        _got = _h533.count(_w)
+        if _got != _n:
+            bad.append("000533 输出里「%s」出现 %d 次，应为 %d 次（%s）——措辞与数据不一致"
+                       % (_w, _got, _n, _why))
+
+    # stkIntraday 格式校验（R100z346）：19 个字段，越界就是算错了
+    import json as _j
+    _raw = open(DATA, encoding="utf-8").read()
+    _p = "window.DASHBOARD_DATA = "
+    _D = _j.loads(_raw[len(_p):].rstrip().rstrip(";"))
+    _si = _D.get("stkIntraday") or {}
+    if not _si:
+        bad.append("stkIntraday 为空——分时承接整段会消失（今天该有 30+ 只断板后≤10日的确认池票）")
+    else:
+        _need = 19
+        _cnt = 0
+        for _code, _rows in _si.items():
+            if not isinstance(_rows, list) or not _rows:
+                bad.append("%s 的 stkIntraday 不是非空数组" % _code)
+                continue
+            for _r in _rows:
+                _cnt += 1
+                if len(_r) != _need:
+                    bad.append("%s 有 %d 个字段的分时记录（应为 %d）" % (_code, len(_r), _need))
+                    break
+                if not (0 <= _r[1] <= 100) or not (0 <= _r[5] <= 100):
+                    bad.append("%s %s 的占比/分位越界（%s/%s）" % (_code, _r[0], _r[1], _r[5]))
+                if _r[14] not in (0, 1, 2):
+                    bad.append("%s %s 承接类型是 %s（只能是 0/1/2）" % (_code, _r[0], _r[14]))
+                if _r[15] >= 0 and not (0 <= _r[15] <= 240):
+                    bad.append("%s %s 爆量时刻 %s 不在交易时段内" % (_code, _r[0], _r[15]))
+                if not (0 <= _r[13] <= 3):
+                    bad.append("%s %s 站住根数 %s 越界（0~3）" % (_code, _r[0], _r[13]))
 
     # 历史时点：每个阶段必须出对应结论，且任何时点都不许是「出货嫌疑」
     for code, items in CUTS.items():

@@ -699,7 +699,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-11",
+    "buyDay": "2026-10-28",
+    "exitPrice": 58.32,
+    "buyPrice": 55.54,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299",
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331"
@@ -858,7 +867,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "expired",
+    "exitDay": "2026-11-11",
+    "buyDay": "2026-10-28",
+    "exitPrice": 28.84,
+    "buyPrice": 29.52,
+    "retPct": -2.3,
+    "note": "持仓 10 日未触目标也未破止损，收盘平"
+   },
    "settleVer": "R100z299",
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331"
@@ -952,7 +970,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-11",
+    "buyDay": "2026-10-29",
+    "exitPrice": 7.23,
+    "buyPrice": 6.89,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299",
    "stopAnchor": "legacy-unk"
   },
@@ -1026,7 +1053,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-11",
+    "buyDay": "2026-10-29",
+    "exitPrice": 11.88,
+    "buyPrice": 11.31,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299",
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331"
@@ -1484,7 +1520,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-11",
+    "buyDay": "2026-11-02",
+    "exitPrice": 6.29,
+    "buyPrice": 5.99,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299",
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331"
@@ -1790,7 +1835,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-11",
+    "buyDay": "2026-11-10",
+    "exitPrice": 22.27,
+    "buyPrice": 21.21,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299",
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331"
@@ -2088,7 +2142,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-11",
+    "buyDay": "2026-11-05",
+    "exitPrice": 11.21,
+    "buyPrice": 10.68,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -2888,7 +2951,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-11",
+    "buyDay": "2026-11-06",
+    "exitPrice": 7.89,
+    "buyPrice": 7.51,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -3358,7 +3430,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-11",
+    "buyDay": "2026-11-10",
+    "exitPrice": 20.01,
+    "buyPrice": 19.06,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -3414,7 +3495,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-11",
+    "buyDay": "2026-11-10",
+    "exitPrice": 9.53,
+    "buyPrice": 9.08,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -3470,7 +3560,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-11",
+    "buyDay": "2026-11-10",
+    "exitPrice": 47.39,
+    "buyPrice": 45.13,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -3510,7 +3609,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-11",
+    "buyDay": "2026-11-10",
+    "exitPrice": 10.77,
+    "buyPrice": 10.26,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -3566,7 +3674,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-11",
+    "buyDay": "2026-11-10",
+    "exitPrice": 22.74,
+    "buyPrice": 21.66,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -3774,7 +3891,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-11",
+    "buyDay": "2026-11-10",
+    "exitPrice": 41.05,
+    "buyPrice": 39.1,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -4221,7 +4347,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-11",
+    "buyDay": "2026-11-10",
+    "exitPrice": 84.2,
+    "buyPrice": 80.19,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -4333,7 +4468,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-11",
+    "buyDay": "2026-11-10",
+    "exitPrice": 16.93,
+    "buyPrice": 16.12,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -4389,7 +4533,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-11",
+    "buyDay": "2026-11-10",
+    "exitPrice": 12.64,
+    "buyPrice": 12.04,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "stopAnchor": "legacy-unk",
    "settleVer": "R100z299"
   },
@@ -5240,9 +5393,891 @@
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
+  },
+  {
+   "pool": "chen_strict",
+   "tier": "strict",
+   "code": "003004",
+   "name": "声迅股份",
+   "confirmDate": "2026-11-11",
+   "firstSeenDate": "2026-11-10",
+   "entryDate": "2026-11-11",
+   "cross": "both",
+   "preSnapshot": {
+    "theme": {
+     "label": "主升",
+     "day": null,
+     "score": 68.4,
+     "why": "今日+1.42% / 5日+5.54% / 涨停1只 / 扩散75%",
+     "fake": false
+    },
+    "pop": {
+     "label": "清淡",
+     "score": 18.6,
+     "why": "成交额池内分位 11 · 放量3.0倍（+8）"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 计算机设备 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 84（昨 93，↓） · 跌停 0（昨 0，→） · 最高板 4（昨 7，↓） · 连板股 19（昨 20，↓） · 分歧率 32%（昨 30，↑） · 接力率 23%（昨 22，↑）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 46.0,
+    "tier": "中",
+    "why": "题材主升(68)×55% + 人气19×45% = 46（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-09",
+   "stopPrice": 46.86,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "000026",
+   "name": "飞亚达",
+   "confirmDate": "2026-11-11",
+   "firstSeenDate": "2026-11-10",
+   "entryDate": "2026-11-11",
+   "cross": "both",
+   "preSnapshot": {
+    "theme": {
+     "label": "无板块",
+     "day": null,
+     "score": 8.0,
+     "why": "板块名未匹配到行业表",
+     "fake": false
+    },
+    "pop": {
+     "label": "活跃",
+     "score": 71.8,
+     "why": "成交额池内分位 64 · 放量2.4倍（+8）"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 饰品 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 84（昨 93，↓） · 跌停 0（昨 0，→） · 最高板 4（昨 7，↓） · 连板股 19（昨 20，↓） · 分歧率 32%（昨 30，↑） · 接力率 23%（昨 22，↑）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 36.7,
+    "tier": "弱",
+    "why": "题材无板块(8)×55% + 人气72×45% = 37（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-09",
+   "stopPrice": 18.5,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "603920",
+   "name": "世运电路",
+   "confirmDate": "2026-11-11",
+   "firstSeenDate": "2026-11-10",
+   "entryDate": "2026-11-11",
+   "cross": "both",
+   "preSnapshot": {
+    "theme": {
+     "label": "启动",
+     "day": null,
+     "score": 98.9,
+     "why": "今日+5.01% / 5日+6.23% / 涨停0只 / 扩散98%",
+     "fake": false
+    },
+    "pop": {
+     "label": "活跃",
+     "score": 100.0,
+     "why": "成交额池内分位 92 · 放量2.9倍（+8）"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 元件 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 84（昨 93，↓） · 跌停 0（昨 0，→） · 最高板 4（昨 7，↓） · 连板股 19（昨 20，↓） · 分歧率 32%（昨 30，↑） · 接力率 23%（昨 22，↑）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 99.4,
+    "tier": "强",
+    "why": "题材启动(99)×55% + 人气100×45% = 99（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-09",
+   "stopPrice": 31.49,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "001331",
+   "name": "胜通能源",
+   "confirmDate": "2026-11-11",
+   "firstSeenDate": "2026-11-10",
+   "entryDate": "2026-11-11",
+   "cross": "both",
+   "preSnapshot": {
+    "theme": {
+     "label": "启动",
+     "day": null,
+     "score": 95.2,
+     "why": "今日+2.87% / 5日+4.62% / 涨停3只 / 扩散88%",
+     "fake": false
+    },
+    "pop": {
+     "label": "一般",
+     "score": 47.0,
+     "why": "成交额池内分位 39 · 放量2.7倍（+8）"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 燃气 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 84（昨 93，↓） · 跌停 0（昨 0，→） · 最高板 4（昨 7，↓） · 连板股 19（昨 20，↓） · 分歧率 32%（昨 30，↑） · 接力率 23%（昨 22，↑）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 73.5,
+    "tier": "强",
+    "why": "题材启动(95)×55% + 人气47×45% = 74（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-09",
+   "stopPrice": 28.77,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "603660",
+   "name": "苏州科达",
+   "confirmDate": "2026-11-11",
+   "firstSeenDate": "2026-11-10",
+   "entryDate": "2026-11-11",
+   "cross": "chen",
+   "preSnapshot": {},
+   "ztDate": "2026-11-09",
+   "stopPrice": 8.79,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "002149",
+   "name": "西部材料",
+   "confirmDate": "2026-11-11",
+   "firstSeenDate": "2026-11-10",
+   "entryDate": "2026-11-11",
+   "cross": "chen",
+   "preSnapshot": {},
+   "ztDate": "2026-11-09",
+   "stopPrice": 41.48,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "001388",
+   "name": "信通电子",
+   "confirmDate": "2026-11-11",
+   "firstSeenDate": "2026-11-11",
+   "entryDate": "2026-11-11",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "主升",
+     "day": null,
+     "score": 64.2,
+     "why": "今日+0.89% / 5日+4.83% / 涨停1只 / 扩散72%",
+     "fake": false
+    },
+    "pop": {
+     "label": "一般",
+     "score": 47.2,
+     "why": "成交额池内分位 47"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 电网设备 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 84（昨 93，↓） · 跌停 0（昨 0，→） · 最高板 4（昨 7，↓） · 连板股 19（昨 20，↓） · 分歧率 32%（昨 30，↑） · 接力率 23%（昨 22，↑）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 56.6,
+    "tier": "中",
+    "why": "题材主升(64)×55% + 人气47×45% = 57（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-09",
+   "stopPrice": 21.47,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "002913",
+   "name": "奥士康",
+   "confirmDate": "2026-11-11",
+   "firstSeenDate": "2026-11-11",
+   "entryDate": "2026-11-11",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "启动",
+     "day": null,
+     "score": 98.9,
+     "why": "今日+5.01% / 5日+6.23% / 涨停0只 / 扩散98%",
+     "fake": false
+    },
+    "pop": {
+     "label": "一般",
+     "score": 60.1,
+     "why": "成交额池内分位 60"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 元件 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 84（昨 93，↓） · 跌停 0（昨 0，→） · 最高板 4（昨 7，↓） · 连板股 19（昨 20，↓） · 分歧率 32%（昨 30，↑） · 接力率 23%（昨 22，↑）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 81.4,
+    "tier": "强",
+    "why": "题材启动(99)×55% + 人气60×45% = 81（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-09",
+   "stopPrice": 52.46,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "600278",
+   "name": "东方创业",
+   "confirmDate": "2026-11-11",
+   "firstSeenDate": "2026-11-11",
+   "entryDate": "2026-11-11",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "回踩",
+     "day": null,
+     "score": 39.8,
+     "why": "今日-0.18% / 5日+2.86% / 涨停0只 / 扩散46%",
+     "fake": false
+    },
+    "pop": {
+     "label": "一般",
+     "score": 54.6,
+     "why": "成交额池内分位 55"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 贸易 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 84（昨 93，↓） · 跌停 0（昨 0，→） · 最高板 4（昨 7，↓） · 连板股 19（昨 20，↓） · 分歧率 32%（昨 30，↑） · 接力率 23%（昨 22，↑）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 46.5,
+    "tier": "中",
+    "why": "题材回踩(40)×55% + 人气55×45% = 46（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-09",
+   "stopPrice": 7.31,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "002638",
+   "name": "勤上股份",
+   "confirmDate": "2026-11-11",
+   "firstSeenDate": "2026-11-11",
+   "entryDate": "2026-11-11",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "无板块",
+     "day": null,
+     "score": 8.0,
+     "why": "板块名未匹配到行业表",
+     "fake": false
+    },
+    "pop": {
+     "label": "清淡",
+     "score": 5.0,
+     "why": "成交额池内分位 5"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 照明设备 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 84（昨 93，↓） · 跌停 0（昨 0，→） · 最高板 4（昨 7，↓） · 连板股 19（昨 20，↓） · 分歧率 32%（昨 30，↑） · 接力率 23%（昨 22，↑）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 6.7,
+    "tier": "弱",
+    "why": "题材无板块(8)×55% + 人气5×45% = 7（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-09",
+   "stopPrice": 4.0,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "002596",
+   "name": "海南瑞泽",
+   "confirmDate": "2026-11-11",
+   "firstSeenDate": "2026-11-11",
+   "entryDate": "2026-11-11",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "启动",
+     "day": null,
+     "score": 87.2,
+     "why": "今日+0.85% / 5日+3.74% / 涨停1只 / 扩散64%",
+     "fake": false
+    },
+    "pop": {
+     "label": "清淡",
+     "score": 18.8,
+     "why": "成交额池内分位 19"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 建筑材料 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 84（昨 93，↓） · 跌停 0（昨 0，→） · 最高板 4（昨 7，↓） · 连板股 19（昨 20，↓） · 分歧率 32%（昨 30，↑） · 接力率 23%（昨 22，↑）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 56.4,
+    "tier": "中",
+    "why": "题材启动(87)×55% + 人气19×45% = 56（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-09",
+   "stopPrice": 3.19,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "600121",
+   "name": "郑州煤电",
+   "confirmDate": "2026-11-11",
+   "firstSeenDate": "2026-11-11",
+   "entryDate": "2026-11-11",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "温和",
+     "day": null,
+     "score": 28.9,
+     "why": "今日+0.22% / 5日+0.83% / 涨停0只 / 扩散65%",
+     "fake": false
+    },
+    "pop": {
+     "label": "一般",
+     "score": 67.4,
+     "why": "成交额池内分位 67"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 煤炭开采加工 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 84（昨 93，↓） · 跌停 0（昨 0，→） · 最高板 4（昨 7，↓） · 连板股 19（昨 20，↓） · 分歧率 32%（昨 30，↑） · 接力率 23%（昨 22，↑）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 46.2,
+    "tier": "中",
+    "why": "题材温和(29)×55% + 人气67×45% = 46（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-09",
+   "stopPrice": 4.38,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "002488",
+   "name": "金固股份",
+   "confirmDate": "2026-11-11",
+   "firstSeenDate": "2026-11-11",
+   "entryDate": "2026-11-11",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "主升",
+     "day": null,
+     "score": 66.3,
+     "why": "今日+1.95% / 5日+6.81% / 涨停1只 / 扩散73%",
+     "fake": false
+    },
+    "pop": {
+     "label": "一般",
+     "score": 52.5,
+     "why": "成交额池内分位 44 · 放量2.0倍（+8）"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 汽车零部件 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 84（昨 93，↓） · 跌停 0（昨 0，→） · 最高板 4（昨 7，↓） · 连板股 19（昨 20，↓） · 分歧率 32%（昨 30，↑） · 接力率 23%（昨 22，↑）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 60.1,
+    "tier": "中",
+    "why": "题材主升(66)×55% + 人气52×45% = 60（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-09",
+   "stopPrice": 7.0,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "600853",
+   "name": "龙建股份",
+   "confirmDate": "2026-11-11",
+   "firstSeenDate": "2026-11-11",
+   "entryDate": "2026-11-11",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "主升",
+     "day": null,
+     "score": 56.0,
+     "why": "今日+0.72% / 5日+4.24% / 涨停2只 / 扩散56%",
+     "fake": false
+    },
+    "pop": {
+     "label": "清淡",
+     "score": 28.9,
+     "why": "成交额池内分位 29"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 建筑装饰 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 84（昨 93，↓） · 跌停 0（昨 0，→） · 最高板 4（昨 7，↓） · 连板股 19（昨 20，↓） · 分歧率 32%（昨 30，↑） · 接力率 23%（昨 22，↑）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 43.8,
+    "tier": "中",
+    "why": "题材主升(56)×55% + 人气29×45% = 44（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-09",
+   "stopPrice": 3.6,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "603115",
+   "name": "海星股份",
+   "confirmDate": "2026-11-11",
+   "firstSeenDate": "2026-11-11",
+   "entryDate": "2026-11-11",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "启动",
+     "day": null,
+     "score": 98.9,
+     "why": "今日+5.01% / 5日+6.23% / 涨停0只 / 扩散98%",
+     "fake": false
+    },
+    "pop": {
+     "label": "清淡",
+     "score": 23.4,
+     "why": "成交额池内分位 23"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 元件 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 84（昨 93，↓） · 跌停 0（昨 0，→） · 最高板 4（昨 7，↓） · 连板股 19（昨 20，↓） · 分歧率 32%（昨 30，↑） · 接力率 23%（昨 22，↑）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 64.9,
+    "tier": "中",
+    "why": "题材启动(99)×55% + 人气23×45% = 65（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-04",
+   "stopPrice": 40.32,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "002980",
+   "name": "华盛昌",
+   "confirmDate": "2026-11-11",
+   "firstSeenDate": "2026-11-11",
+   "entryDate": "2026-11-11",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "主升",
+     "day": null,
+     "score": 64.2,
+     "why": "今日+0.89% / 5日+4.83% / 涨停1只 / 扩散72%",
+     "fake": false
+    },
+    "pop": {
+     "label": "活跃",
+     "score": 77.5,
+     "why": "成交额池内分位 78"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 电网设备 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 84（昨 93，↓） · 跌停 0（昨 0，→） · 最高板 4（昨 7，↓） · 连板股 19（昨 20，↓） · 分歧率 32%（昨 30，↑） · 接力率 23%（昨 22，↑）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 70.2,
+    "tier": "强",
+    "why": "题材主升(64)×55% + 人气78×45% = 70（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-04",
+   "stopPrice": 62.35,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "001282",
+   "name": "三联锻造",
+   "confirmDate": "2026-11-11",
+   "firstSeenDate": "2026-11-11",
+   "entryDate": "2026-11-11",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "主升",
+     "day": null,
+     "score": 66.3,
+     "why": "今日+1.95% / 5日+6.81% / 涨停1只 / 扩散73%",
+     "fake": false
+    },
+    "pop": {
+     "label": "清淡",
+     "score": 19.7,
+     "why": "成交额池内分位 20"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 汽车零部件 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 84（昨 93，↓） · 跌停 0（昨 0，→） · 最高板 4（昨 7，↓） · 连板股 19（昨 20，↓） · 分歧率 32%（昨 30，↑） · 接力率 23%（昨 22，↑）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 45.3,
+    "tier": "中",
+    "why": "题材主升(66)×55% + 人气20×45% = 45（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-04",
+   "stopPrice": 14.92,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "605288",
+   "name": "凯迪股份",
+   "confirmDate": "2026-11-11",
+   "firstSeenDate": "2026-11-11",
+   "entryDate": "2026-11-11",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "温和",
+     "day": null,
+     "score": 39.8,
+     "why": "今日+3.14% / 5日+9.14% / 涨停0只 / 扩散85%",
+     "fake": false
+    },
+    "pop": {
+     "label": "清淡",
+     "score": 24.1,
+     "why": "成交额池内分位 16 · 放量2.0倍（+8）"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 自动化设备 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 84（昨 93，↓） · 跌停 0（昨 0，→） · 最高板 4（昨 7，↓） · 连板股 19（昨 20，↓） · 分歧率 32%（昨 30，↑） · 接力率 23%（昨 22，↑）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 32.7,
+    "tier": "弱",
+    "why": "题材温和(40)×55% + 人气24×45% = 33（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-04",
+   "stopPrice": 66.71,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
   }
  ],
- "updatedAt": "2026-11-10 21:23",
+ "updatedAt": "2026-11-11 16:04",
  "resettleAt": "R100z299",
  "anchorVer": "R100z331",
  "anchorNote": "止损锚＝涨停日（T日）最低价，断板与陈学长同口径；2026-11-10 22:1x 统一"

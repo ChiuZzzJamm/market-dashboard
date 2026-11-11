@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611111537"></script>
+<script src="data.js?v=202611111703"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1171,6 +1171,8 @@
   .en-b { border-left: 2px solid var(--accent-soft); padding: 1px 0 1px 11px; }
   .en-b p { margin: 0 0 7px; font-size: var(--fs-sm); line-height: 1.8; color: var(--ink2); }
   .en-b p b { color: var(--ink); font-weight: 700; }
+  /* R100z346：分时承接段里每天之间留一档空隙，否则四行×3天连成一片读不出边界 */
+  .en-sp { display: block; height: 7px; }
   .en-c { margin-top: 2px; padding: 7px 10px; background: var(--accent-soft);
     border-radius: var(--r-note); font-size: var(--fs-sm); line-height: 1.7; color: var(--ink); }
   /* R100z345：阶段判定为「出货嫌疑」时，结论块换红底——它是唯一需要立刻行动的一档，
@@ -9894,73 +9896,102 @@ function stkEnergyHtml(code) {
     rows.push('<b>连续两日放量下跌</b>——<b>结构在走弱</b>，是不是出货要看有没有跌破断板前的低点（见下）。');
   }
 
-  /* ⑦ 分时承接（R100z345）。日线 OHLC 表达不了「下砸有没有人接」：一根长下影可能是全天阴跌
-     尾盘拉一下，也可能是开盘砸完立刻被买回，K 线画出来可以一模一样。所以这里读
-     `stkIntraday`（intraday_digest.py 每天从 5 分钟线算好写进来的摘要）：
-       [MM-DD, 收在VWAP下方占比%, 收盘偏离VWAP%, 最低点分钟(09:30起算), 低点逐个抬高1/0, 砸后回升%, 回升段量/下砸段量]
-     只挑四天讲——断板日、洗盘期最低点日、最强势的一天、最新一天，多了就是流水账。
-     ⚠️ 没这只票（不在池 / 断板太老没抓）时**整段不出现**，退回上面 ⑤ 的日线描述，不编。 */
+  /* ⑦ 分时承接（R100z346，用户 2026-11-11 16:49 要求加深）。
+     原话：「你量能关系写的太浅了…要告诉我上午和下午有没有站分时线、是一直站还是想站站不上、
+     盘中下跌有没有承接（无量承接靠大盘情绪 还是有量承接主力在吸筹）、收盘站线上还是线下、
+     全天都在线上吗、盘中有没有爆量拉升、爆量之后是回落还是横住」。
+     读 `stkIntraday`（intraday_digest.py 从 5 分钟线算的 19 个字段），逐条回答，不再只给一个占比。
+     ⚠️ 没这只票（不在池 / 断板太老没抓）时**整段不出现**，退回 ⑤ 的日线描述，不编。 */
   if (sti.length) {
-    var byDay = stiByDay, si;
-    var picks = [], seen = {};
-    var push_ = function (row) {
-      if (!row || seen[row[0]]) return;
-      seen[row[0]] = 1; picks.push(row);
+    var mm2 = function (m) {
+      if (m < 0 || m === null || m === undefined) return '—';
+      var a = m <= 120 ? (9 * 60 + 30 + m) : (13 * 60 + (m - 120));
+      return ('0' + Math.floor(a / 60)).slice(-2) + ':' + ('0' + (a % 60)).slice(-2);
     };
-    push_(byDay[mmdd(dt[d])]);                       // 断板日
-    if (lowD >= 0) push_(byDay[mmdd(dt[lowD])]);     // 洗盘期砸得最深那天
-    /* 最强势的一天（收在均价线下方的根数最少）。
-       ⚠️ 要排除断板日和"洗盘期最低点那天"：000533 的 11-09 既是洗盘期最低价（盘中砸到 9.48）
-       又是收盘最强势的一天（只有 12% 的根跌破均价线），同一天挂两个身份读者只会觉得自相矛盾。
-       那天本来就是"先砸后拉"，③ 已经讲了砸的价位，这里就别再抢一次。 */
-    var strongest = null;
-    var skip20 = {};
-    skip20[mmdd(dt[d])] = 1;
-    if (lowD >= 0) skip20[mmdd(dt[lowD])] = 1;
-    for (si = 0; si < sti.length; si++) {
-      if (skip20[sti[si][0]]) continue;
-      if (!strongest || sti[si][1] < strongest[1]) strongest = sti[si];
-    }
-    push_(strongest);
-    push_(byDay[mmdd(dt[n - 1])]);                   // 最新一天
+    var byDay = stiByDay;
+    var picks = [], seen2 = {};
+    var add2 = function (row) { if (row && !seen2[row[0]]) { seen2[row[0]] = 1; picks.push(row); } };
+    add2(byDay[mmdd(dt[d])]);                        // 断板日
+    if (lowD >= 0) add2(byDay[mmdd(dt[lowD])]);      // 砸得最深那天
+    add2(byDay[mmdd(dt[n - 1])]);                    // 最新一天
     picks.sort(function (a, b) { return a[0] < b[0] ? -1 : 1; });
+    if (picks.length > 3) picks = picks.slice(0, 3);
 
     var lines = [];
-    for (si = 0; si < picks.length; si++) {
-      var r0 = picks[si], vb = r0[1], lm = r0[3], rb = r0[5], ud = r0[6];
-      var posTxt2;
-      if (vb >= 85) posTxt2 = '几乎全天压在均价线下方（' + vb + '% 的 5 分钟根）';
-      else if (vb <= 20) posTxt2 = '全天基本站在均价线上方（只有 ' + vb + '% 的根跌破）';
-      else posTxt2 = '在均价线上下反复（' + vb + '% 的根在下方）';
-      /* 把「第几分钟」换算成钟点。交易分钟不含午休：lm≤120 走上午（09:30+lm），
-         超过就是下午（13:00 + lm-120）。原来写成 (lm+60)/60，把 240 分钟算成 5:00，
-         实际应是 15:00——一个纯换算错，但读起来是"最低点在凌晨五点"。 */
-      var tClock = function (mm_) {
-        var abs_ = (mm_ <= 120) ? (9 * 60 + 30 + mm_) : (13 * 60 + (mm_ - 120));
-        return ('0' + Math.floor(abs_ / 60)).slice(-2) + ':' + ('0' + (abs_ % 60)).slice(-2);
-      };
-      var tTxt;
-      if (lm >= 0 && lm <= 30) tTxt = '最低点 ' + tClock(lm) + ' 开盘一把砸出';
-      else if (lm >= 180) tTxt = '最低点 ' + tClock(lm) + ' 才出现（尾盘还在创新低）';
-      else tTxt = '最低点出现在盘中 ' + tClock(lm);
-      var rbTxt = '';
-      if (rb >= 3) rbTxt = '，砸完回升 <b>' + f1(rb) + '%</b>' + (ud >= 0.8 ? '、反弹有量' : '、但反弹没量');
-      else if (rb > 0 && rb < 1) rbTxt = '，砸完几乎抬不起来（回升仅 ' + f1(rb) + '%）';
-      lines.push('<b>' + r0[0] + '</b>：' + posTxt2 + '，' + tTxt + rbTxt + '。');
+    for (var si = 0; si < picks.length; si++) {
+      var r0 = picks[si];
+      var all_ = r0[1], am_ = r0[2], pm_ = r0[3], dev_ = r0[4], cpos_ = r0[5];
+      var drop_ = r0[7], hiM = r0[8], loM = r0[9], dnp = r0[10];
+      var reb_ = r0[11], rat_ = r0[12], std_ = r0[13], ab_ = r0[14];
+      var up_vol_zero = (loM < 0 || rat_ === 0);   // 低点即收盘/回升段无量
+      var bM = r0[15], bPct = r0[16], bMul = r0[17], bGive = r0[18];
+
+      var parts = [];
+      /* ① 站线：全天 + 上午/下午对比。「上午跌、下午拉回站稳」和「上午站稳、下午跌回去」
+         是完全相反的两种盘面，只给一个全天占比会把这两者混成一样。 */
+      var seg = '';
+      if (am_ >= 0 && pm_ >= 0) {
+        if (am_ >= 60 && pm_ <= 25) seg = '上午还有 ' + am_ + '% 的根在均价线下方、<b>下午降到 ' + pm_ + '%</b>——下午被拉回上方并站稳';
+        else if (am_ <= 25 && pm_ >= 60) seg = '上午只有 ' + am_ + '% 在下方、<b>下午升到 ' + pm_ + '%</b>——上午站得住，下午站不住';
+        else if (am_ >= 85 && pm_ >= 85) seg = '上午 ' + am_ + '%、下午 ' + pm_ + '% 全在下方——<b>全天没站上过</b>';
+        else if (am_ <= 25 && pm_ <= 25) seg = '上午 ' + am_ + '%、下午 ' + pm_ + '% 都在线上——<b>全天基本压在均价线上方</b>';
+        else seg = '上午 ' + am_ + '%、下午 ' + pm_ + '% 的根跌破——<b>反复穿越</b>';
+      }
+      parts.push('<b>' + r0[0] + '</b>　站线：全天 ' + all_ + '% 的 5 分钟根在均价线下方' + (seg ? '；' + seg : '') + '。');
+
+      /* ② 下跌承接：跌幅 + 下影质量 + 回升 + 量比 + 站住根数，最后给一句定性 */
+      var abTxt;
+      if (ab_ === 2) abTxt = '<b>有量承接——主力在接</b>';
+      else if (ab_ === 1) abTxt = '<b>无量承接</b>（抛压一次释放后靠情绪拉回，不是主力主动吸）';
+      else abTxt = '<b>无承接</b>（砸下去没人接）';
+      // ⚠️ 原来中间那支写成 `(dnpTxt = ...)`，自我赋值——值碰巧对，但任何人读都会以为写错了
+      var dnpTxt;
+      if (dnp >= 0.6) dnpTxt = '下跌段每根都收在自身高位（下影质量 ' + dnp + '，边跌边有人买）';
+      else if (dnp <= 0.35) dnpTxt = '下跌段每根都收在最低（下影质量 ' + dnp + '，一根比一根低）';
+      else dnpTxt = '下跌段收盘居中（下影质量 ' + dnp + '）';
+      /* 单根砸盘不能写成「10:25→10:25」——起止同一时刻读起来像 bug，而且那种 V 型反转
+         本来就不该拿「回升量/下跌量」去比（一根巨量 vs 之后几根小量，比出来恒小于 0.1）。
+         这种日子改说「一根砸」（跳空/急杀），量能特征用下影质量表达。 */
+      var oneBar = (hiM === loM);
+      var rebTxt = reb_ >= 0.05 ? '回升 <b>' + f1(reb_) + '%</b>' : '<b>没有回升</b>';
+      if (oneBar) {
+        /* 单根急杀：那一根的收盘位置只在**收得高**时才有说服力。000533 的 11-10 是「收在 28%
+           位置」却判了有量承接（靠的是之后 3/3 根站回 + 回升量 1.27 倍），两句话放一起读者
+           只会觉得矛盾——所以位置低就不提，把证据换成量比和站线根数。 */
+        var posTxt = dnp >= 0.55 ? '，这一根收在自身振幅的 <b>' + Math.round(dnp * 100) + '%</b> 位置' : '';
+        var volTxt1 = (reb_ < 0.05 || up_vol_zero) ? '' : '、回升量是下跌段的 <b>' + rat_ + ' 倍</b>';
+        parts.push('　承接：' + mm2(loM) + ' <b>急杀 ' + f1(drop_) + '%</b>' + posTxt + '；之后' +
+          rebTxt + volTxt1 + '、' + std_ + '/3 根站回均价线上 → ' + abTxt + '。');
+      } else {
+        // 已经说了「没有回升」就不必再说「回升段没有量」——同一个事实讲两遍
+        var volTxt = (reb_ < 0.05) ? ''
+          : (up_vol_zero ? '、回升段几乎没有量' : '、回升量是下跌段的 <b>' + rat_ + ' 倍</b>');
+        parts.push('　承接：' + mm2(hiM) + '→' + mm2(loM) + ' <b>连跌 ' + f1(drop_) + '%</b>，' + dnpTxt +
+          '；之后' + rebTxt + volTxt + '、' + std_ + '/3 根站回均价线上 → ' + abTxt + '。');
+      }
+
+      /* ③ 收盘：站线上还是线下 + 收在当日振幅哪一档 */
+      var cpTxt = cpos_ >= 80 ? '收在当日最高附近' : (cpos_ <= 20 ? '收在当日最低附近' : '收在当日振幅中段');
+      parts.push('　收盘：' + (dev_ >= 0 ? '站上均价线 <b>+' + f1(dev_) + '%</b>' : '跌破均价线 <b>' + f1(dev_) + '%</b>') +
+        '，' + cpTxt + '（振幅第 ' + cpos_ + ' 分位）。');
+
+      /* ④ 爆量拉升 + 之后回落还是横住 */
+      if (bM >= 0) {
+        var hold;
+        if (bGive < 0) hold = '之后一路走强，收盘就是当日最高';
+        else if (bGive < 40) hold = '之后只回吐 <b>' + bGive + '%</b> 的涨幅——<b>横住不回头</b>';
+        else if (bGive < 100) hold = '之后回吐 <b>' + bGive + '%</b> 的涨幅——<b>冲高回落</b>，拉完就有人跑';
+        // >100% 表示不但全部回吐、还跌穿了起涨点。不再报 239% 这种数（分母是涨幅，读者没法换算）
+        else hold = '<b>全部回吐并跌回起涨点下方</b>——纯诱多，拉高出货';
+        parts.push('　爆量：<b>' + mm2(bM) + '</b> 一根放量 <b>' + f1(bMul) + ' 倍</b>（当日均量）、单根涨 <b>' +
+          f1(bPct) + '%</b>，' + hold + '。');
+      } else {
+        parts.push('　爆量：全天<b>没有</b>单根超 3 倍均量的拉升——没有异动。');
+      }
+      for (var pi = 0; pi < parts.length; pi++) lines.push(parts[pi]);
+      if (si < picks.length - 1) lines.push('<span class="en-sp"></span>');
     }
-    // 跨日趋势：收在均价线下方的占比是否在递减 + 日内低点是否逐个抬高
-    var first = picks[0], last = picks[picks.length - 1];
-    if (picks.length >= 2 && first[1] > last[1] + 15) {
-      lines.push('<b>趋势</b>：收在均价线下方的占比从 <b>' + first[1] + '%</b> 降到 <b>' + last[1] +
-        '%</b>——盘面在一天天转强。');
-    }
-    var lifts = 0;
-    for (si = 0; si < picks.length; si++) lifts += picks[si][4];
-    if (lifts >= 2) {
-      lines.push('<b>低点</b>：有 <b>' + lifts + ' 天</b>日内的低点是逐个抬高的——每次砸都有人接，符合洗盘特征。');
-    }
-    lines.push('<span style="color:var(--ink2)">（分时口径：5 分钟 bar 现算，均价线＝当日累计成交均价）</span>');
-    for (si = 0; si < lines.length; si++) rows.push(lines[si]);
+    for (var li = 0; li < lines.length; li++) rows.push(lines[li]);
   }
 
   /* ⑥ 阶段判定（R100z345，用户 2026-11-11 15:52）。
@@ -10058,7 +10089,11 @@ function stkEnergyHtml(code) {
     tone = '';
   }
 
-  var body = rows.map(function (x) { return '<p>' + x + '</p>'; }).join('');
+  /* en-sp 是分隔行、不是段落：不套 <p>，否则「每段必须含数字」的闸门会把它当成空段落
+     （G69 实测抓到 600207 第 8 段 / 001360 第 9、14 段无数字，全是这个空壳）。 */
+  var body = rows.map(function (x) {
+    return x.indexOf('en-sp') >= 0 ? x : '<p>' + x + '</p>';
+  }).join('');
   return '<div class="en-h">量能解读 <span class="en-tag">推断 · 非事实</span></div>' +
     '<div class="en-b">' + body +
     (concl ? '<div class="en-c' + (tone ? ' en-c-' + tone : '') + '">' +
