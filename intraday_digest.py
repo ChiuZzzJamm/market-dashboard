@@ -330,7 +330,11 @@ def find_break_day(kl):
     c = [r[2] for r in kl]
     v = [r[5] for r in kl]
     n = len(kl)
-    for k in range(n - 2, 20, -1):
+    # ⛔ R100z351：原来是 range(n - 2, ...)，**漏掉最后一根**——而「今天刚断板」的票，
+    #    断板日恰好就是最后一根。实测世运电路 603920（11-09 涨停 → 11-10 放量断板）
+    #    永远抓不到分时，页面上它只有日线描述。
+    #    前端 stkEnergyHtml 一直是从 n-1 开始扫，两份口径不一致才是根因。
+    for k in range(n - 1, 20, -1):
         if c[k-1] / c[k-2] - 1 < 0.098:
             continue
         if v[k] < 1.1 * v[k-1]:
