@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611111459"></script>
+<script src="data.js?v=202611111518"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1173,6 +1173,9 @@
   .en-b p b { color: var(--ink); font-weight: 700; }
   .en-c { margin-top: 2px; padding: 7px 10px; background: var(--accent-soft);
     border-radius: var(--r-note); font-size: var(--fs-sm); line-height: 1.7; color: var(--ink); }
+  /* 量能解读进 db-modal 的 meta 区后，顶上要留一档空隙，不然会贴着「板块涨幅」那行 */
+  .db-modal-meta .en-h { margin-top: 9px; }
+  .db-modal-meta .en-b p { margin-bottom: 5px; }
   .db-refs { margin-top: 10px; font-size: var(--fs-base); color: var(--ink2); line-height: 1.7; border-top: 1px dashed var(--line); padding-top: 8px; }
   .db-refs b { color: var(--accent-deep); }
   .db-ref-p { margin: 5px 0 2px; color: var(--ink); }
@@ -7204,37 +7207,6 @@ function chenLegendHtml(c) {
     '</div></details>';
 }
 
-/* 标的页（弹窗）里的陈学长专属段：交易参数 + 结构指标。
-   R100z219：陈学长池不像断板反包那样只有「形态」，它自带买点/目标/止损/仓位与连板结构，
-   弹窗原来把这些全丢了、只留一行「上涨概率：—」（那个字段陈学长不产生）。
-   用户 2026-10-25：「增加标的页面，内容丰富度参考其他技术指标标的页面」。 */
-function chenTradeMeta(e) {
-  var t = e.trade || {}, m = e.metrics || {};
-  if (!t.targetPrice) return '';
-  // 只留读者真正需要的那半句：首板算数，板数只是排序抓手，不是门票。
-  var lbcTxt = m.lbc ? (m.lbc === 1 ? '首板（连板数只作排序加分，不是门票）' : m.lbc + ' 板') : '—';
-  // R100z225（用户 2026-10-26 截图 5：「这个 146 是啥？要不要删掉？」）：146 是他视频的期数，
-  // 用来内部追溯出处，读者看到只有一个看不懂的数字。源头（chen_pool.py 的 note）已不再写它，
-  // 这里再兜一层——data.js 里的 riskNote 是 16:00 生成时写死的，不兜的话要等下一轮重算才干净。
-  // 顺带删掉「高 4 低 6」：那是他按位置分档的量法，视频里没量化到可复现，留着等于给一个查不到的定义。
-  var _risk = String(t.riskNote || '').replace(/（他\s*146\s*的?「?高\s*4\s*低\s*6」?）/g, '');
-  return '<div><span class="lab">买点：</span>' + esc(t.buyRule || '确认日次日开盘') + '</div>' +
-    '<div><span class="lab">目标：</span><b class="up">' + Number(t.targetPrice).toFixed(2) +
-    '（+' + (t.targetPct || 3.5) + '%）</b>　<span class="lab">止损：</span><b class="down">' +
-    Number(t.stopPrice).toFixed(2) + '（−' + (t.stopPct || 0) + '%）</b>　' +
-    '<span class="lab">持仓 ≤</span>' + (t.holdDays || 2) + ' 个交易日</div>' +
-    '<div><span class="lab">仓位：</span><b>' + (t.posPct || '—') + '%</b>　' +
-    '<span class="lab">风控口径：</span>' + esc(_risk) + '</div>' +
-    '<div><span class="lab">结构：</span>连板 ' + lbcTxt + '　断板日放量 ' + (m.volRatio || '—') + ' 倍' +
-    ((m.shrinkT === null || m.shrinkT === undefined) ? '' : '　T日量 ' + m.shrinkT + ' 倍均量') +
-    '　' + chenSinceTxt(m) + '</div>' +
-    (t.stopFar ? '<div style="color:#b3541e"><span class="lab">止损形同虚设：</span>止损距 ' +
-      (t.stopPct || 0) + '%，而持仓只有 ' + (t.holdDays || 2) + ' 个交易日——两天跌 ' +
-      (t.stopPct || 0) + '% 需要两个跌停连板，止损在窗口内几乎不可能触发，实质是到日收盘平</div>' : '') +
-    (m.tailRisk ? '<div style="color:#b3541e"><span class="lab">尾部风险：</span>断板日放量 ' +
-      m.volRatio + ' 倍（>8 倍均收转负，仓位已按风险预算压缩）</div>' : '');
-}
-
 /* R100z222（审核意见 §4）：`washDays` 的字面意思被读成「缩量了几天」，实际算的是
    「确认后又过了几天」。这里统一成一个不歧义的写法，四张卡和弹窗共用。 */
 function chenSinceTxt(m) {
@@ -8840,7 +8812,6 @@ function openDbModal(key) {
     dbSentBadge(e, 'font-size: var(--fs-sm);padding:1px 7px;border-radius:4px;') +
     '</div>' +
     (function () { var hz = findHarmonic(String(e.code)); return hz ? '<div class="hz-strip">' + hzSideHtml(hz) + hzMiniWrap(hz) + '</div>' : ''; })(); // R100z4：断板弹窗谐波参数+迷你图独立成行（命中谐波池才渲染）
-  var probCls = e.sentiment === 'bear' ? 'down' : (e.sentiment === 'neutral' ? '' : 'up');
   // R100z4t：池内标的带涨停日/板块涨幅；精选技术池标的无这些字段（原样渲染两行「—」像坏了）——
   // 无 ztDate 且无 pct 时隐藏这两行，改显示 note（9:45 写入的竞价/现涨观察）。
   // R100z170：两个板块涨幅改走 boardPctOf/boardPctZtOf 三级取值——精选里的断板来源条目
@@ -8859,22 +8830,23 @@ function openDbModal(key) {
         '</div>' +
         '<div><span class="lab">涨停日板块涨幅：</span><b class="' + (mBpZt >= 0 ? 'up' : 'down') + '">' + (mBpZt == null ? '—' : fmtPct(mBpZt)) + '</b>　<span class="lab">今日板块涨幅：</span><b class="' + (mBpNow >= 0 ? 'up' : 'down') + '">' + (mBpNow == null ? '—' : fmtPct(mBpNow)) + '</b></div>'
       : '') +
-    '<div><span class="lab">形态：</span>' + esc((e.form || '').replace(/·/, '：')) + '</div>' + // R100z4e：仅首个 ·→：
+    /* R100z343（用户 2026-11-11 15:10 两张截图）：原来这里依次是
+         「形态」+「上涨概率」+ 陈学长交易参数（买点/目标/止损/仓位/结构）+「退出纪律」，
+       用户圈住整块说「陈学长和断板反包这一块都删掉，改成量能解读」。
+       差别在**给结论还是给依据**：那几行是「买哪、在哪走」，量能解读是「为什么这么走」。
+       ⚠️ 止损/目标从弹窗消失后，仍在「明日可下单」卡与 timingPlan.orders 里（那里才是执行出口），
+       所以不是丢数据，只是这个弹窗不再重复讲一遍。 */
+    stkEnergyHtml(String(e.code)) +
     // R100z257：清单条目进来必须把「照什么价买」再说一遍——卡片底部那行是执行的唯一出口，
-    //   点进来反而没有，就成了「点开以后更不清楚」。
+    //   点进来反而没有，就成了「点开以后更不清楚」。下单口径不属于被删的那块，保留。
     (isOrd && e.ordLine ? '<div><span class="lab">下单口径：</span><b>' + esc(e.ordLine) + '</b></div>' : '') +
     (e.note ? '<div><span class="lab">盘面观察：</span>' + esc(e.note) + '</div>' : '') +
-    // R100z84：失效条目专有两行（失效原因/归档日）；上涨概率对失效标的无意义，隐藏
+    // R100z84：失效条目专有两行（失效原因/归档日）——这两行说的是「为什么不在池里了」，
+    //   和被删的交易参数不是一回事，必须留。
     (isFail ? '<div><span class="lab">失效原因：</span>' + esc(e.reason || '—') + '</div>' +
       '<div><span class="lab">归档日：</span>' + esc(e.entryDate || '—') + '（自失效日起保留 5 个交易日后自动清理）</div>' : '') +
-    (!isFail && !isChen && !isOrd ? '<div><span class="lab">上涨概率：</span><b class="' + probCls + '">' + (e.probability !== null && e.probability !== undefined ? e.probability + '%' : '—') + '</b></div>' : '') +
-    // R100z219：陈学长标的页的交易参数与结构（断板反包没有 trade 字段，这块是它独有的）。
-    // 原来这里渲染的是「上涨概率：—」——陈学长不产生 probability，那行是纯占位。
-    (isChen && !isFail ? chenTradeMeta(e) : '') +
-    // R100z3：对应技术面（横盘启动/吸筹）纯文本行，命中才渲染；R100z18 末尾补退出纪律行
-    // R100z86：失效标的恢复退出纪律——走 failExitMetaLine 失效专用口径（谐波D点位/涨停日最低价/统一风控位），
-    //   原 R100z84 一刀切隐藏是因为误以为只会落 −2.5% 兜底，实际断板失效可从 form 串还原断板日形态位
-    techMetaLines(String(e.code)) + (isFail ? failExitMetaLine(e) : (isChen ? chenAtrNote(String(e.code)) : exitMetaLine(String(e.code))));
+    // R100z3：对应技术面（横盘启动/吸筹）纯文本行 + 龙虎榜，命中才渲染
+    techMetaLines(String(e.code));
   // R100z6d：断板弹窗主图补画谐波 XABCD 连线（此前 dbKlineSvg 漏传 hz，仅头部迷你图有连线——用户反馈"有谐波技术但K线没连线"）
   // K线兜底链——池条目内嵌 → 顶层 stkKlines（embed 分级内嵌）→ 网络拉取后回填；
   // 谐波形态点在池内短窗之外时优先用顶层长窗（320 根）渲染，避免连线丢失
@@ -8899,7 +8871,7 @@ function openDbModal(key) {
         kl0 = base;
         var el = document.getElementById('db-kline');
         if (el) el.innerHTML = dbKlineSvg(_hzFailClip(base, hzDb), hzDb);
-        exitMetaLineAsync(String(e.code), 'db-modal-meta', isFail ? e : null, isChen ? 'chen' : ''); // R100z27：K线到货后补画退出纪律行；R100z86 失效条目走失效口径；R100z219 陈学长走 ATR 参照行
+        // R100z343：退出纪律行已随「形态/买点/止损」整块删除，这里不再补画（否则 K 线到货后又冒出来）
       });
     }
     if (hzDb && kl0 && hzNeedsLong(kl0, hzDb)) {
@@ -9678,7 +9650,10 @@ function stkApplyResolvedCode(fullCode, note) {
   }
   // meta：note（清单定位）+ 技术指标 + 退出纪律，重新按真实代码渲染一遍
   var meta = document.getElementById('stk-modal-meta');
-  if (meta) meta.innerHTML = (note ? esc(note) + '<br>' : '') + techMetaLines(c6) + exitMetaLine(c6);
+  // R100z343：断板/陈学长体系的票不再显示退出纪律（那块已在 db-modal 整块删掉、换成量能解读）。
+  //   同一个标的从名单点开和从卡片点开必须一个说法，否则读者会以为其中一个漏了。
+  if (meta) meta.innerHTML = (note ? esc(note) + '<br>' : '') + techMetaLines(c6) +
+    (stkEnergyInPool(c6) ? '' : exitMetaLine(c6));
   // 消息面：个股公告/新闻 + 板块要闻映射 + 池归属（此前这一步缺失 → 弹窗只剩 K 线）
   var nw = document.getElementById('stk-news');
   if (nw) nw.innerHTML = stkNewsHtml(c6);
@@ -9740,7 +9715,10 @@ function stkEnergyHtml(code) {
   var d = -1;
   for (var k = n - 1; k >= 21; k--) {
     if (pct(k - 1) < 9.8) continue;          // 前一日必须是涨停
-    if (v[k] < 2.0 * v[k - 1]) continue;      // 次日必须放量 2 倍以上
+    // 放量门槛取**两套口径里更宽的那个下界**：断板反包是 1.1~3.5 倍、陈学长是 ≥2 倍。
+    // 原来写 2.0，结果池子里明明标着「次1.3倍量断板」的票（如 600865）在解读里显示「不适用」，
+    // 卡片和弹窗互相打脸。检测用 1.1，强弱交给下面按倍数分段描述。
+    if (v[k] < 1.1 * v[k - 1]) continue;
     if (c[k] >= c[k - 1]) continue;           // 且收在涨停日收盘之下
     d = k; break;
   }
@@ -9775,12 +9753,19 @@ function stkEnergyHtml(code) {
   var hi = (h[d] / c[z] - 1) * 100;
   var chase = (c[d] / h[d] - 1) * 100;         // 当天买在最高点的人到收盘亏多少
   var dl = Math.abs(pct(d));
+  // 放量倍数分三段说——同一个数在 1.3 倍和 4.3 倍时含义完全不同，不能都叫「恐慌」。
+  //   1.1~2 倍：温和换手（断板反包的常见档，池子门槛 1.1~3.5）；
+  //   2 倍以上：主动制造恐慌；3.5 倍以上：爆量，兑现压力大（断板反包侧直接判超上限）。
+  var volWord;
+  if (mult > 3.5) volWord = '属<b>爆量</b>，兑现压力大';
+  else if (mult >= 2.0) volWord = '<b>主动制造的恐慌</b>';
+  else volWord = '<b>温和换手</b>，不是恐慌';
   if (hi >= 2) {
     rows.push('<b>' + mmdd(dt[d]) + ' 断板</b>：先冲高 +' + f1(hi) + '% 再砸到 −' + f1(dl) +
-      '%，量放到 <b>' + f1(mult) + ' 倍</b>——<b>主动制造的恐慌</b>，当天追高的人亏 ' + f1(Math.abs(chase)) + '%。');
+      '%，量放到 <b>' + f1(mult) + ' 倍</b>——' + volWord + '，当天追高的人亏 ' + f1(Math.abs(chase)) + '%。');
   } else {
     rows.push('<b>' + mmdd(dt[d]) + ' 断板</b>：直接砸 −' + f1(dl) + '%，量放到 <b>' + f1(mult) +
-      ' 倍</b>——用放量把浮筹一次性砸出来。');
+      ' 倍</b>——' + volWord + '。');
   }
 
   // ③ 洗盘深度：用**盘中最低**（断板日之后），收盘最低说明不了恐慌程度——
@@ -9899,7 +9884,7 @@ function openStkModal(code, name, note) {
   // R100z3：横盘启动/吸筹纯文本行（断板弹窗同格式）；R100z18 末尾补退出纪律行（止损/目标/证伪）
   document.getElementById('stk-modal-meta').innerHTML =
     (note ? esc(note) + '<br>' : '') + techMetaLines(code) +
-    exitMetaLine(code); // R100z18：所有带技术指标的标的（机械池/AI内嵌/谐波）弹窗内都给出退出纪律
+    (stkEnergyInPool(code) ? '' : exitMetaLine(code)); // R100z343：断板/陈学长走量能解读，不再重复退出纪律
   var box = document.getElementById('stk-kline');
   box.innerHTML = '<div class="db-empty">K线加载中…</div>';
   document.getElementById('stk-news').innerHTML = stkNewsHtml(code); // R100n：个股消息面（利好/利空/中性，参考断板反包）
@@ -9915,7 +9900,7 @@ function openStkModal(code, name, note) {
       if (gkl && gkl.length > kl.length) {
         done = true;
         box.innerHTML = dbKlineSvg(_hzFailClip(gkl, hz), hz);
-        exitMetaLineAsync(code, 'stk-modal-meta');
+        if (!stkEnergyInPool(code)) exitMetaLineAsync(code, 'stk-modal-meta'); // R100z343
         return;
       }
       // R100z4n：内嵌仍不够长 → 拉网络 320 根长窗重渲染（失败/未变长则回退当前 kl）
@@ -9923,13 +9908,13 @@ function openStkModal(code, name, note) {
       stkFetchKlineLong(code, function (klL) {
         var use = (klL && klL.length > kl.length) ? klL : kl;
         box.innerHTML = dbKlineSvg(_hzFailClip(use, hz), hz);
-        exitMetaLineAsync(code, 'stk-modal-meta');
+        if (!stkEnergyInPool(code)) exitMetaLineAsync(code, 'stk-modal-meta'); // R100z343
       });
       return;
     }
     done = true;
     box.innerHTML = (kl && kl.length > 1) ? dbKlineSvg(kl, hz) : '<div class="db-empty">' + esc(err || '暂无K线数据') + '</div>';
-    exitMetaLineAsync(code, 'stk-modal-meta'); // R100z27：K线到货后才补画得到退出纪律行（下方阶梯多路 render 共用出口）
+    if (!stkEnergyInPool(code)) exitMetaLineAsync(code, 'stk-modal-meta'); // R100z343：断板/陈学长不补画（那块已删）
   }
   if (code) { stkFetchKline(code, render); return; }
   if (name) {

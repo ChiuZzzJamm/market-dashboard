@@ -29,7 +29,7 @@ INDEX = os.path.join(HERE, "index.html")
 DATA = os.path.join(HERE, "data.js")
 
 NEED = ["esc", "escAttr", "stkParseKline", "stkGlobalKline", "stkEnergyInPool", "stkEnergyHtml"]
-CASES = {"603536": "structure", "600207": "degrade", "600519": "silent"}
+CASES = {"603536": "structure", "600865": "structure", "600207": "degrade", "600519": "silent"}
 
 
 def extract_func(src, name):
@@ -120,7 +120,7 @@ def py_recompute(code):
     for k in range(n - 1, 20, -1):
         if c[k - 1] / c[k - 2] - 1 < 0.098:
             continue
-        if v[k] < 2.0 * v[k - 1]:
+        if v[k] < 1.1 * v[k - 1]:   # 与前端同一门槛（断板反包 1.1~3.5 / 陈学长 ≥2，取宽的那端）
             continue
         if c[k] >= c[k - 1]:
             continue
@@ -189,8 +189,14 @@ def main():
             continue
         # structure：分段数 + 每段含数字 + 数字与独立重算一致
         ps = re.findall(r"<p>(.*?)</p>", h, re.S)
-        if len(ps) < 4:
-            bad.append("%s 有断板结构，只输出了 %d 段（应 ≥4）" % (code, len(ps)))
+        # 段数随「走到哪一步」变化：刚到断板只有 首板+断板，洗完才有沉淀，启动后才有第五段。
+        # 所以不卡固定条数，卡**必须出现的两段**（首板、断板）——少这两段说明结构没认出来。
+        if len(ps) < 3:
+            bad.append("%s 有断板结构，只输出了 %d 段（首板+断板+洗盘至少 3 段）" % (code, len(ps)))
+        joined = "".join(ps)
+        for must in ("首板", "断板"):
+            if must not in joined:
+                bad.append("%s 有断板结构，却缺「%s」那一段" % (code, must))
         for i, seg in enumerate(ps):
             if not re.search(r"\d", seg):
                 bad.append("%s 第 %d 段没有任何数字（纯形容词＝没证据）" % (code, i + 1))
