@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611111010"></script>
+<script src="data.js?v=202611111459"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1161,6 +1161,18 @@
   .db-kline svg { width: 100%; height: auto; display: block; }
   .dbk-chart { width: 100%; height: 340px; }
   #db-kline, #lb-kline, #stk-kline { position: relative; min-height: 340px; }
+  /* R100z342：量能解读。刻意做得"轻"——它是推断，不该抢走 K 线和消息面的注意力：
+     左边一条细线代替卡片边框，结论单独一行浅底。空内容整块不占位。 */
+  .db-energy:empty { display: none; }
+  .db-energy { margin-top: 12px; }
+  .en-h { font-size: var(--fs-md); font-weight: 800; color: var(--ink); margin-bottom: 7px; }
+  .en-tag { font-size: var(--fs-xs); font-weight: 400; color: var(--ink2); border: 1px solid var(--line);
+    border-radius: 3px; padding: 0 4px; margin-left: 6px; vertical-align: 2px; }
+  .en-b { border-left: 2px solid var(--accent-soft); padding: 1px 0 1px 11px; }
+  .en-b p { margin: 0 0 7px; font-size: var(--fs-sm); line-height: 1.8; color: var(--ink2); }
+  .en-b p b { color: var(--ink); font-weight: 700; }
+  .en-c { margin-top: 2px; padding: 7px 10px; background: var(--accent-soft);
+    border-radius: var(--r-note); font-size: var(--fs-sm); line-height: 1.7; color: var(--ink); }
   .db-refs { margin-top: 10px; font-size: var(--fs-base); color: var(--ink2); line-height: 1.7; border-top: 1px dashed var(--line); padding-top: 8px; }
   .db-refs b { color: var(--accent-deep); }
   .db-ref-p { margin: 5px 0 2px; color: var(--ink); }
@@ -1811,6 +1823,7 @@
     <div class="db-modal-head" id="stk-modal-head"></div>
     <div class="db-modal-meta" id="stk-modal-meta"></div>
     <div class="db-kline" id="stk-kline"></div>
+    <div class="db-energy" id="stk-energy"></div>
     <div class="db-refs" id="stk-news"></div>
   </div>
 </div>
@@ -9669,8 +9682,193 @@ function stkApplyResolvedCode(fullCode, note) {
   // 消息面：个股公告/新闻 + 板块要闻映射 + 池归属（此前这一步缺失 → 弹窗只剩 K 线）
   var nw = document.getElementById('stk-news');
   if (nw) nw.innerHTML = stkNewsHtml(c6);
+  stkRenderEnergy(c6); // R100z342：翻到下一只票要跟着换，否则留着上一只的解读（串票）
   // 顺手把代码缓存进导航组：翻出去再翻回来不必重新反查一次（每次反查都是一次网络往返）
   if (STK_GRP && STK_GRP[STK_IDX] && !STK_GRP[STK_IDX].c) STK_GRP[STK_IDX].c = c6;
+}
+/* ============================ 量能解读（R100z342） ============================
+   用户 2026-11-11 14:45：「我不是要他的买点也不是要他的止损，我是要他能看懂量能的逻辑…
+   断板反包和陈学长的标的页面能不能加入这种分析」。
+
+   原则（这块最容易变成编故事，所以先把红线写死）：
+   ① **只从已内嵌的日线里算**，不联网、不加数据节点、不改自动化；
+   ② **每条结论都必须由一个可核实的数字触发**——算不出来就不写那句，
+      宁可整块不显示，也不给一句"看起来很像"的废话；
+   ③ 结论一律标「推断」：同样的量价形态，主力和游资的意图可以完全不同，
+      我们只能给概率，不能当事实陈述；
+   ④ 降级要说话：进池了但近期没有断板结构 → 明说"这块不适用"，不留空白。
+
+   五个事实（都是断板反包的核心，缺一个故事就不完整）：
+   ① 首板位置——前 20 日涨幅决定这是"试盘"还是"接力/加速"；
+   ② 断板放量倍数——主力是不是主动砸出来的恐慌；
+   ③ 洗盘深度——断板后最低收盘相对涨停日收盘回撤多少；
+   ④ 缩量比＋振幅收敛——筹码有没有真的沉淀下来；
+   ⑤ 启动量能占比——涨停用掉的量相对断板日越小，上方抛压越轻。
+   ========================================================================== */
+function stkEnergyInPool(code) {
+  var D = window.DASHBOARD_DATA || {};
+  var cp = D.chenPool || {}, db = D.duanban || {};
+  var c = String(code || '');
+  var list = [].concat(cp.strict || [], cp.loose || [], cp.watching || [],
+                       db.confirmed || [], db.watching || [],
+                       cp.failPool || [], db.failPool || []);
+  for (var i = 0; i < list.length; i++) {
+    if (list[i] && String(list[i].code) === c) return true;
+  }
+  return false;
+}
+
+function stkEnergyHtml(code) {
+  var kl = stkParseKline(stkGlobalKline(code));
+  if (!kl || kl.length < 21) {
+    return stkEnergyInPool(code)
+      ? '<div class="en-h">量能解读</div><div class="en-b"><p>内嵌日线不足 21 根，算不出量能结构——' +
+        '这里空着是数据不够，不是没有结论。</p></div>'
+      : '';
+  }
+  var n = kl.length;
+  var c = [], h = [], l = [], v = [], dt = [];
+  for (var i = 0; i < n; i++) {
+    dt.push(String(kl[i][0] || '')); c.push(kl[i][2]);
+    h.push(kl[i][3]); l.push(kl[i][4]); v.push(kl[i][5]);
+  }
+  var pct = function (i) { return i > 0 ? (c[i] / c[i - 1] - 1) * 100 : 0; };
+  var mmdd = function (s) { return s.length >= 10 ? s.slice(5) : s; };
+  var f1 = function (x) { return (Math.round(x * 10) / 10).toFixed(1); };
+
+  // 找最近一次「涨停 → 次日爆量收阴」的断板日（这块解读的锚点）
+  var d = -1;
+  for (var k = n - 1; k >= 21; k--) {
+    if (pct(k - 1) < 9.8) continue;          // 前一日必须是涨停
+    if (v[k] < 2.0 * v[k - 1]) continue;      // 次日必须放量 2 倍以上
+    if (c[k] >= c[k - 1]) continue;           // 且收在涨停日收盘之下
+    d = k; break;
+  }
+  if (d < 0) {
+    if (!stkEnergyInPool(code)) return '';
+    var i2, v20 = 0, v5 = 0;
+    for (i2 = n - 20; i2 < n; i2++) v20 += v[i2];
+    for (i2 = n - 5; i2 < n; i2++) v5 += v[i2];
+    var ratio52 = (v20 / 20) ? (v5 / 5) / (v20 / 20) * 100 : 0;
+    return '<div class="en-h">量能解读</div><div class="en-b"><p>' +
+      '近 90 个交易日里没有「涨停 → 2 倍量断板」结构，这块对这只票<b>不适用</b>' +
+      '（近 5 日均量是近 20 日的 ' + f1(ratio52) + '%，' +
+      (ratio52 >= 120 ? '当前在放量' : (ratio52 <= 80 ? '当前在缩量' : '量能平稳')) + '）。' +
+      '量能解读只对走过断板反包的票有意义，硬套会误导。</p></div>';
+  }
+  var z = d - 1;                               // 首板日
+  var rows = [];
+
+  // ① 首板位置
+  var pre = z >= 20 ? (c[z] / c[z - 20] - 1) * 100 : null;
+  if (pre !== null) {
+    if (pre < 10) rows.push('<b>' + mmdd(dt[z]) + ' 首板</b>：出现在低位（前 20 日仅 ' +
+      (pre >= 0 ? '+' : '') + f1(pre) + '%），这是<b>试盘</b>不是吸筹——主力手里还没有筹码。');
+    else if (pre < 30) rows.push('<b>' + mmdd(dt[z]) + ' 首板</b>：前 20 日已涨 +' + f1(pre) +
+      '%，属于<b>接力位</b>，抛压比低位首板重。');
+    else rows.push('<b>' + mmdd(dt[z]) + ' 首板</b>：前 20 日已涨 +' + f1(pre) +
+      '%，这是<b>高位加速</b>，不是启动。');
+  }
+
+  // ② 断板日：放量倍数 + 当日追高者亏多少
+  var mult = v[d] / v[z];
+  var hi = (h[d] / c[z] - 1) * 100;
+  var chase = (c[d] / h[d] - 1) * 100;         // 当天买在最高点的人到收盘亏多少
+  var dl = Math.abs(pct(d));
+  if (hi >= 2) {
+    rows.push('<b>' + mmdd(dt[d]) + ' 断板</b>：先冲高 +' + f1(hi) + '% 再砸到 −' + f1(dl) +
+      '%，量放到 <b>' + f1(mult) + ' 倍</b>——<b>主动制造的恐慌</b>，当天追高的人亏 ' + f1(Math.abs(chase)) + '%。');
+  } else {
+    rows.push('<b>' + mmdd(dt[d]) + ' 断板</b>：直接砸 −' + f1(dl) + '%，量放到 <b>' + f1(mult) +
+      ' 倍</b>——用放量把浮筹一次性砸出来。');
+  }
+
+  // ③ 洗盘深度：用**盘中最低**（断板日之后），收盘最低说明不了恐慌程度——
+  //    惠发就是 11/02 盘中砸到 8.52、收盘却回到 9.81，只看收盘会漏掉最深那一下。
+  var lowPx = null, lowD = -1;
+  for (i = d + 1; i < n; i++) { if (lowPx === null || l[i] < lowPx) { lowPx = l[i]; lowD = i; } }
+  if (lowD > d) {
+    var lowPct = (lowPx / c[z] - 1) * 100;
+    var lowTxt = lowPx.toFixed(2) + '（较涨停日收盘 ' + (lowPct >= 0 ? '+' : '−') + f1(Math.abs(lowPct)) + '%）';
+    if (lowD === n - 1 && pct(n - 1) >= 5) {
+      // 最深的那一下就发生在最新这根、而它还是涨的 → 这是**启动日的盘中回踩**，不是洗盘。
+      // 写成"洗盘"会让读者以为还在跌，恰好把意思说反。
+      rows.push('<b>回踩</b>：' + mmdd(dt[lowD]) + ' 盘中最低到 ' + lowTxt + '，收在 ' +
+        c[lowD].toFixed(2) + '（' + f1(pct(n - 1)) + '%）——启动日先洗后拉。');
+    } else {
+      rows.push('<b>洗盘</b>：' + mmdd(dt[lowD]) + ' 盘中最低砸到 ' + lowTxt + '，收在 ' +
+        c[lowD].toFixed(2) + '——把不坚定的筹码洗出去。');
+    }
+  }
+
+  // ④ 缩量比 + 振幅收敛（需要断板后有足够的天数）
+  //    ⚠️ 振幅必须算在**洗盘期**里，不能把启动日（涨停那根振幅天然最大）混进去，
+  //    否则会出现「洗得越干净、振幅看起来越大」的倒挂。
+  var vmin = null, ratio = null, ampD = null, ampNow = null, endIdx = n - 1;
+  var lp0 = pct(n - 1);
+  if (lp0 >= 5 && n - 1 > d + 1) endIdx = n - 2;
+  if (endIdx >= d + 3) {
+    for (i = d + 1; i <= endIdx; i++) { if (vmin === null || v[i] < vmin) vmin = v[i]; }
+    ratio = vmin / v[d] * 100;
+    ampD = (h[d] - l[d]) / c[d - 1] * 100;
+    var sa = 0, ca = 0;
+    for (i = Math.max(d + 1, endIdx - 2); i <= endIdx; i++) { sa += (h[i] - l[i]) / c[i - 1] * 100; ca++; }
+    ampNow = ca ? sa / ca : null;
+    if (ampNow !== null) {
+      if (ratio <= 40) {
+        rows.push('<b>' + mmdd(dt[d + 1]) + '–' + mmdd(dt[endIdx]) + ' 沉淀</b>：量缩到断板日的 <b>' +
+          f1(ratio) + '%</b>、振幅从 ' + f1(ampD) + '% 收到 ' + f1(ampNow) +
+          '%——<b>筹码沉淀，不是出货</b>。');
+      } else {
+        rows.push('<b>换手</b>：量能最低只到断板日的 ' + f1(ratio) + '%，振幅 ' + f1(ampNow) +
+          '%——<b>换手还没完成</b>，别当洗盘结束看。');
+      }
+    }
+  }
+
+  // ⑤ 最新一根：涨停用掉多少量
+  var lp = pct(n - 1);
+  if (n - 1 > d) {
+    var q = v[n - 1] / v[d] * 100;
+    if (lp >= 9.8) {
+      rows.push('<b>' + mmdd(dt[n - 1]) + ' 启动</b>：涨停只用了断板日 <b>' + f1(q) +
+        '%</b> 的量——<b>缩量涨停，上方抛压已耗尽</b>。');
+    } else if (lp >= 5) {
+      rows.push('<b>' + mmdd(dt[n - 1]) + '</b>：涨 ' + f1(lp) + '%，量是断板日的 ' + f1(q) +
+        '%——启动中，还没到封板。');
+    }
+  }
+
+  // 结论：只有缩量比算得出来才给结论
+  var concl = '';
+  if (ratio !== null) {
+    var ma5 = 0, i3;
+    for (i3 = Math.max(0, n - 5); i3 < n; i3++) ma5 += c[i3];
+    ma5 = ma5 / Math.min(5, n);
+    var vsMa = (c[n - 1] / ma5 - 1) * 100;
+    if (ratio <= 40 && vsMa >= 0) {
+      concl = '洗盘接近完成：缩量到 ' + f1(ratio) + '%，收盘在 MA5 上方 ' + f1(vsMa) + '%。';
+    } else if (ratio <= 40) {
+      concl = '缩量到位（' + f1(ratio) + '%）但还没站上 MA5（距 ' + f1(vsMa) + '%），等启动确认。';
+    } else {
+      concl = '换手未完成（量能还有断板日的 ' + f1(ratio) + '%），现在是"还在洗"，不是"洗完"。';
+    }
+  }
+
+  var body = rows.map(function (x) { return '<p>' + x + '</p>'; }).join('');
+  return '<div class="en-h">量能解读 <span class="en-tag">推断 · 非事实</span></div>' +
+    '<div class="en-b">' + body +
+    (concl ? '<div class="en-c">' + concl + '</div>' : '') + '</div>';
+}
+function stkRenderEnergy(code) {
+  var box = document.getElementById('stk-energy');
+  if (!box) return;
+  var h = '';
+  try { h = stkEnergyHtml(code); } catch (e) {
+    h = '<div class="en-h">量能解读</div><div class="en-b"><p>这段读不出来（' +
+      esc(String(e && e.message || e)) + '），不是没有结论，是计算出错。</p></div>';
+  }
+  box.innerHTML = h;
 }
 function openStkModal(code, name, note) {
   code = (code || '').trim();
@@ -9705,6 +9903,7 @@ function openStkModal(code, name, note) {
   var box = document.getElementById('stk-kline');
   box.innerHTML = '<div class="db-empty">K线加载中…</div>';
   document.getElementById('stk-news').innerHTML = stkNewsHtml(code); // R100n：个股消息面（利好/利空/中性，参考断板反包）
+  stkRenderEnergy(code); // R100z342：量能解读（断板/洗盘/缩量/启动，全部由日线算，标推断）
   document.getElementById('stk-modal').classList.add('open');
   var done = false;
   function render(kl, err) {
@@ -9817,6 +10016,7 @@ function openBoardKline(name, kline) {
     '<span class="lab">日K线 · 滚轮缩放查看（默认近30根，可拉至全量）</span>';
   document.getElementById('stk-kline').innerHTML = dbKlineSvg(kline);
   document.getElementById('stk-news').innerHTML = sectorNewsHtml(name, 'ashare'); // R100z127：近3日涨幅TOP板块弹窗补行业新闻+利好/利空
+  document.getElementById('stk-energy').innerHTML = ''; // R100z342：板块弹窗没有个股量能结构，留着会串上一只票
   document.getElementById('stk-modal').classList.add('open');
   document.getElementById('stk-prev').style.display = 'none';
   document.getElementById('stk-next').style.display = 'none';
@@ -9888,7 +10088,8 @@ function openSectorKline(name, thsCode, market, boardName, list) {
   document.getElementById('stk-modal-meta').innerHTML =
     '<span class="lab">' + (thsCode ? '日K线 · 滚轮缩放查看（默认近30根，可拉至全量）' : '行业新闻与利好/利空标注') + '</span>';
   document.getElementById('stk-kline').innerHTML = '<div class="db-empty">K线加载中…</div>';
-  document.getElementById('stk-news').innerHTML = sectorNewsHtml(name, market || 'ashare'); // R100z118：板块行业新闻 + 利好/利空标注（参考标的页样式）
+  document.getElementById('stk-news').innerHTML = sectorNewsHtml(name, market || 'ashare'); // R100z118：板块行业新闻 + 利好/利空标注
+  document.getElementById('stk-energy').innerHTML = ''; // R100z342：同上，板块弹窗不显示个股解读（参考标的页样式）
   document.getElementById('stk-modal').classList.add('open');
   document.getElementById('stk-prev').style.display = 'none';
   document.getElementById('stk-next').style.display = 'none';

@@ -5963,6 +5963,29 @@ def g68_pending_detail(r):
                % (_tail(err or out, 2) or "rc=%s" % rc))
 
 
+def g69_energy_read(r):
+    """G69 量能解读的数字对账（R100z342，2026-11-11，FAIL 级）。
+
+    标的弹窗里那块「量能解读」是**把算出来的数字写成断言式中文**
+    （"量放到 2.9 倍"、"缩量到 28.6%"）。算错一个数，读者看到的是一句语气肯定的假事实，
+    比空白危险得多；而页面渲染完全正常，没有任何迹象。
+    所以这条闸门不看字符串在不在，而是用 Python 从 data.js **独立重算**同样的三个量，
+    再和 JS 输出里的数字逐项比对（±0.2）。
+
+    判据见 check_energy_read.py 文件头。rc=1 → FAIL；rc=2（抠不到函数/node 缺）→ WARN。
+    """
+    rc, out, err = _run_tool("check_energy_read.py", timeout=120)
+    if rc == 0:
+        r.ok("G69", "量能解读：段数、每段含数字、「推断」标注齐全，且倍数/缩量比/启动量占比"
+                    "与独立重算一致（%s）" % _tail(out, 1))
+    elif rc == 1:
+        r.fail("G69", "量能解读里写出去的数字与重算对不上（页面看着正常，读起来是假事实）："
+                      + _tail(out, 3))
+    else:
+        r.warn("G69", "量能解读闸门没验证成功（%s）——这是检查器/环境问题，不代表干净"
+               % (_tail(err or out, 2) or "rc=%s" % rc))
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -6042,6 +6065,7 @@ def main():
     g66_done_excluded(r)
     g67_kline_hz_overlay(r)
     g68_pending_detail(r)
+    g69_energy_read(r)
 
     # R100z284：机器可读的结论行。
     #
