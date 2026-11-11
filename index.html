@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611111518"></script>
+<script src="data.js?v=202611111537"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -9710,18 +9710,22 @@ function stkEnergyHtml(code) {
   var pct = function (i) { return i > 0 ? (c[i] / c[i - 1] - 1) * 100 : 0; };
   var mmdd = function (s) { return s.length >= 10 ? s.slice(5) : s; };
   var f1 = function (x) { return (Math.round(x * 10) / 10).toFixed(1); };
+  var avgV = function (a, b) { var t = 0, k; for (k = a; k <= b; k++) t += v[k]; return t / (b - a + 1); };
 
-  // 找最近一次「涨停 → 次日爆量收阴」的断板日（这块解读的锚点）
+  /* 断板日：前一日涨停 + 当日放量（取两套口径里更宽的 1.1 下界）+ **当日没涨停**。
+     ⛔ 原来多加了「收在涨停日收盘之下」（必须收阴），于是华升股份这种
+     「11/06 涨停 → 11/09 涨 4.10%、量 1.7 倍」的红盘断板被跳过，一路回溯到三个月前的老结构，
+     解读里就出现了「08-06 首板…08-10–11-10 沉淀」这种荒谬跨度。
+     池卡片的口径本来就是「次日没连板就算断板」，这里必须一致。 */
   var d = -1;
   for (var k = n - 1; k >= 21; k--) {
-    if (pct(k - 1) < 9.8) continue;          // 前一日必须是涨停
-    // 放量门槛取**两套口径里更宽的那个下界**：断板反包是 1.1~3.5 倍、陈学长是 ≥2 倍。
-    // 原来写 2.0，结果池子里明明标着「次1.3倍量断板」的票（如 600865）在解读里显示「不适用」，
-    // 卡片和弹窗互相打脸。检测用 1.1，强弱交给下面按倍数分段描述。
+    if (pct(k - 1) < 9.8) continue;
     if (v[k] < 1.1 * v[k - 1]) continue;
-    if (c[k] >= c[k - 1]) continue;           // 且收在涨停日收盘之下
+    if (pct(k) >= 9.8) continue;
     d = k; break;
   }
+  // 结构太老就当没有：断板日距最新一根超过 45 个交易日，讲它等于讲别人的故事
+  if (d >= 0 && n - 1 - d > 45) d = -1;
   if (d < 0) {
     if (!stkEnergyInPool(code)) return '';
     var i2, v20 = 0, v5 = 0;
@@ -9729,115 +9733,166 @@ function stkEnergyHtml(code) {
     for (i2 = n - 5; i2 < n; i2++) v5 += v[i2];
     var ratio52 = (v20 / 20) ? (v5 / 5) / (v20 / 20) * 100 : 0;
     return '<div class="en-h">量能解读</div><div class="en-b"><p>' +
-      '近 90 个交易日里没有「涨停 → 2 倍量断板」结构，这块对这只票<b>不适用</b>' +
+      '近 90 个交易日里没有「涨停 → 倍量断板」结构，这块对这只票<b>不适用</b>' +
       '（近 5 日均量是近 20 日的 ' + f1(ratio52) + '%，' +
       (ratio52 >= 120 ? '当前在放量' : (ratio52 <= 80 ? '当前在缩量' : '量能平稳')) + '）。' +
       '量能解读只对走过断板反包的票有意义，硬套会误导。</p></div>';
   }
-  var z = d - 1;                               // 首板日
+
+  /* R100z344（用户 2026-11-11 15:29）：「南钢集团 11/4 才是首板，首板和二板你要分清楚啊，
+     二板也是能做断板反包，把两个板的 k 线当成一个看就行了」。
+     ⛔ 原来直接把断板日前一天当"首板"，于是 11/05 的**二板**被写成首板。
+     更严重的是：11/05 是缩量一字（量只有首板 31%），拿它作分母算断板放量会得到 4.3 倍"爆量"，
+     而相对首板只有 1.3 倍——**一个纯属基数造成的假象，直接把温和换手说成了爆量**。
+     修法：从断板日往前回溯连续涨停，取整段连板作为「一个启动段」，放量倍数用连板段均量作分母。 */
+  var z = d - 1, z0 = z;
+  while (z0 - 1 >= 1 && pct(z0 - 1) >= 9.8) z0--;
+  var nban = z - z0 + 1;
+  var vseg = avgV(z0, z);          // 连板期均量：把两个板当一个整体看的"启动期正常量"
+
   var rows = [];
 
-  // ① 首板位置
-  var pre = z >= 20 ? (c[z] / c[z - 20] - 1) * 100 : null;
+  // ① 启动段：首板 / 连板，并交代每一板的量能特征
+  var pre = z0 >= 20 ? (c[z0] / c[z0 - 20] - 1) * 100 : null;
+  var posTxt = '';
   if (pre !== null) {
-    if (pre < 10) rows.push('<b>' + mmdd(dt[z]) + ' 首板</b>：出现在低位（前 20 日仅 ' +
-      (pre >= 0 ? '+' : '') + f1(pre) + '%），这是<b>试盘</b>不是吸筹——主力手里还没有筹码。');
-    else if (pre < 30) rows.push('<b>' + mmdd(dt[z]) + ' 首板</b>：前 20 日已涨 +' + f1(pre) +
-      '%，属于<b>接力位</b>，抛压比低位首板重。');
-    else rows.push('<b>' + mmdd(dt[z]) + ' 首板</b>：前 20 日已涨 +' + f1(pre) +
-      '%，这是<b>高位加速</b>，不是启动。');
+    if (pre < 10) posTxt = '前 20 日' + (pre >= 0 ? '仅 +' : '反而跌 ') + f1(Math.abs(pre)) +
+      '%——低位启动，这是<b>试盘</b>不是吸筹，主力手里还没有筹码。';
+    else if (pre < 30) posTxt = '前 20 日已涨 +' + f1(pre) + '%，属<b>接力位</b>，抛压比低位首板重。';
+    else posTxt = '前 20 日已涨 +' + f1(pre) + '%，这是<b>高位加速</b>，不是启动。';
   }
-
-  // ② 断板日：放量倍数 + 当日追高者亏多少
-  var mult = v[d] / v[z];
-  var hi = (h[d] / c[z] - 1) * 100;
-  var chase = (c[d] / h[d] - 1) * 100;         // 当天买在最高点的人到收盘亏多少
-  var dl = Math.abs(pct(d));
-  // 放量倍数分三段说——同一个数在 1.3 倍和 4.3 倍时含义完全不同，不能都叫「恐慌」。
-  //   1.1~2 倍：温和换手（断板反包的常见档，池子门槛 1.1~3.5）；
-  //   2 倍以上：主动制造恐慌；3.5 倍以上：爆量，兑现压力大（断板反包侧直接判超上限）。
-  var volWord;
-  if (mult > 3.5) volWord = '属<b>爆量</b>，兑现压力大';
-  else if (mult >= 2.0) volWord = '<b>主动制造的恐慌</b>';
-  else volWord = '<b>温和换手</b>，不是恐慌';
-  if (hi >= 2) {
-    rows.push('<b>' + mmdd(dt[d]) + ' 断板</b>：先冲高 +' + f1(hi) + '% 再砸到 −' + f1(dl) +
-      '%，量放到 <b>' + f1(mult) + ' 倍</b>——' + volWord + '，当天追高的人亏 ' + f1(Math.abs(chase)) + '%。');
+  if (nban === 1) {
+    rows.push('<b>' + mmdd(dt[z0]) + ' 首板</b>：+' + f1(pct(z0)) + '%。' + posTxt);
   } else {
-    rows.push('<b>' + mmdd(dt[d]) + ' 断板</b>：直接砸 −' + f1(dl) + '%，量放到 <b>' + f1(mult) +
-      ' 倍</b>——' + volWord + '。');
+    var seg = [], q;
+    for (q = z0 + 1; q <= z; q++) {
+      var tag = q === z0 + 1 ? '二板' : (q === z0 + 2 ? '三板' : '第' + (q - z0 + 1) + '板');
+      var yz = Math.abs(h[q] - l[q]) / Math.max(0.01, c[q - 1]) < 0.012;  // 一字 / 近似一字
+      seg.push(tag + ' +' + f1(pct(q)) + '%' + (yz ? '（<b>缩量一字</b>）' : '') +
+        '，量 ' + f1(v[q] / v[q - 1] * 100) + '% 前一日');
+    }
+    rows.push('<b>' + mmdd(dt[z0]) + '–' + mmdd(dt[z]) + ' ' + nban + ' 连板</b>：首板 +' + f1(pct(z0)) +
+      '%、' + seg.join('、') + '。' + posTxt);
   }
 
-  // ③ 洗盘深度：用**盘中最低**（断板日之后），收盘最低说明不了恐慌程度——
-  //    惠发就是 11/02 盘中砸到 8.52、收盘却回到 9.81，只看收盘会漏掉最深那一下。
+  // ② 断板日：放量倍数分母改用连板期均量（不再被缩量一字板放大）
+  var mult = v[d] / vseg;
+  var hi = (h[d] / c[z] - 1) * 100;
+  var dPct = pct(d);                      // 断板日可正可负：红盘断板同样是断板
+  var chase = Math.abs((c[d] / h[d] - 1) * 100);
+  var ampD = (h[d] - l[d]) / c[d - 1] * 100;
+  var volWord = mult < 1.5 ? '<b>温和换手</b>' : (mult < 3 ? '<b>放量换手</b>' : '<b>爆量</b>');
+  // 收阴才需要一个"怎么砸的"定性；收阳（红盘断板）本身就是"冲高没封住"，再套一个定性词
+  // 会出现「冲高未封住，冲高 +10.0% 后收 +4.1%」这种同词复读。
+  var shapeWord = (hi >= 2 && ampD >= 10) ? '先拉后砸，<b>制造恐慌</b>'
+    : (hi >= 2 ? '冲高回落' : '低开砸盘');
+  rows.push('<b>' + mmdd(dt[d]) + ' 断板</b>：' + (dPct < 0 ? shapeWord + '，' : '') +
+    (hi >= 2 ? '冲高 +' + f1(hi) + '% 后' : '') +
+    (dPct < 0 ? '收 −' + f1(Math.abs(dPct)) + '%' : '收 +' + f1(dPct) + '%（没封住）') +
+    '，振幅 ' + f1(ampD) + '%，量是连板期均量的 <b>' + f1(mult) + ' 倍</b>——' + volWord +
+    (dPct < 0 ? '，当天追高的人亏 ' + f1(chase) + '%。' : '。'));
+
+  // ③ 洗盘：**日期放最前面**（用户 2026-11-11 15:29「格式统一，前面是日期」）
   var lowPx = null, lowD = -1;
   for (i = d + 1; i < n; i++) { if (lowPx === null || l[i] < lowPx) { lowPx = l[i]; lowD = i; } }
-  if (lowD > d) {
+  // 最低点恰好是**最后一根**时不在这里说——那根的表现统一交给 ⑤（否则同一天会被写两遍，
+  // 思美传媒就出现过「11-10 回踩…」紧接着「11-10：涨 5.8%…」）。
+  if (lowD > d && lowD < n - 1) {
     var lowPct = (lowPx / c[z] - 1) * 100;
     var lowTxt = lowPx.toFixed(2) + '（较涨停日收盘 ' + (lowPct >= 0 ? '+' : '−') + f1(Math.abs(lowPct)) + '%）';
-    if (lowD === n - 1 && pct(n - 1) >= 5) {
-      // 最深的那一下就发生在最新这根、而它还是涨的 → 这是**启动日的盘中回踩**，不是洗盘。
-      // 写成"洗盘"会让读者以为还在跌，恰好把意思说反。
-      rows.push('<b>回踩</b>：' + mmdd(dt[lowD]) + ' 盘中最低到 ' + lowTxt + '，收在 ' +
-        c[lowD].toFixed(2) + '（' + f1(pct(n - 1)) + '%）——启动日先洗后拉。');
+    var riseNow = pct(n - 1);
+    if (lowD === n - 1 && riseNow >= 5) {
+      rows.push('<b>' + mmdd(dt[lowD]) + ' 回踩</b>：盘中最低到 ' + lowTxt + '，收在 ' +
+        c[lowD].toFixed(2) + '（' + f1(riseNow) + '%）——启动日先洗后拉。');
     } else {
-      rows.push('<b>洗盘</b>：' + mmdd(dt[lowD]) + ' 盘中最低砸到 ' + lowTxt + '，收在 ' +
-        c[lowD].toFixed(2) + '——把不坚定的筹码洗出去。');
+      rows.push('<b>' + mmdd(dt[lowD]) + ' 洗盘</b>：盘中最低砸到 ' + lowTxt + '，收在 ' +
+        c[lowD].toFixed(2) + '。');
     }
   }
 
-  // ④ 缩量比 + 振幅收敛（需要断板后有足够的天数）
-  //    ⚠️ 振幅必须算在**洗盘期**里，不能把启动日（涨停那根振幅天然最大）混进去，
-  //    否则会出现「洗得越干净、振幅看起来越大」的倒挂。
-  var vmin = null, ratio = null, ampD = null, ampNow = null, endIdx = n - 1;
-  var lp0 = pct(n - 1);
-  if (lp0 >= 5 && n - 1 > d + 1) endIdx = n - 2;
+  // ④ 缩量比 + 振幅收敛（洗盘期，排除启动日）
+  var vmin = null, ratio = null, ampNow = null, endIdx = n - 1;
+  var lp = pct(n - 1);
+  if (lp >= 5 && n - 1 > d + 1) endIdx = n - 2;
   if (endIdx >= d + 3) {
     for (i = d + 1; i <= endIdx; i++) { if (vmin === null || v[i] < vmin) vmin = v[i]; }
     ratio = vmin / v[d] * 100;
-    ampD = (h[d] - l[d]) / c[d - 1] * 100;
     var sa = 0, ca = 0;
     for (i = Math.max(d + 1, endIdx - 2); i <= endIdx; i++) { sa += (h[i] - l[i]) / c[i - 1] * 100; ca++; }
     ampNow = ca ? sa / ca : null;
-    if (ampNow !== null) {
-      if (ratio <= 40) {
-        rows.push('<b>' + mmdd(dt[d + 1]) + '–' + mmdd(dt[endIdx]) + ' 沉淀</b>：量缩到断板日的 <b>' +
-          f1(ratio) + '%</b>、振幅从 ' + f1(ampD) + '% 收到 ' + f1(ampNow) +
-          '%——<b>筹码沉淀，不是出货</b>。');
-      } else {
-        rows.push('<b>换手</b>：量能最低只到断板日的 ' + f1(ratio) + '%，振幅 ' + f1(ampNow) +
-          '%——<b>换手还没完成</b>，别当洗盘结束看。');
-      }
+    if (ampNow !== null && ratio <= 40) {
+      rows.push('<b>' + mmdd(dt[d + 1]) + '–' + mmdd(dt[endIdx]) + ' 沉淀</b>：量缩到断板日的 <b>' +
+        f1(ratio) + '%</b>、振幅从 ' + f1(ampD) + '% 收到 ' + f1(ampNow) +
+        '%——<b>筹码沉淀，不是出货</b>。');
+    } else if (ampNow !== null) {
+      rows.push('<b>' + mmdd(dt[d + 1]) + '–' + mmdd(dt[endIdx]) + ' 换手</b>：量能最低只到断板日的 ' +
+        f1(ratio) + '%，振幅 ' + f1(ampNow) + '%——<b>换手还没完成</b>。');
     }
   }
 
-  // ⑤ 最新一根：涨停用掉多少量
-  var lp = pct(n - 1);
-  if (n - 1 > d) {
-    var q = v[n - 1] / v[d] * 100;
-    if (lp >= 9.8) {
-      rows.push('<b>' + mmdd(dt[n - 1]) + ' 启动</b>：涨停只用了断板日 <b>' + f1(q) +
-        '%</b> 的量——<b>缩量涨停，上方抛压已耗尽</b>。');
-    } else if (lp >= 5) {
-      rows.push('<b>' + mmdd(dt[n - 1]) + '</b>：涨 ' + f1(lp) + '%，量是断板日的 ' + f1(q) +
-        '%——启动中，还没到封板。');
-    }
+  /* ⑤ 最新一根：**必须先判出货**（用户 2026-11-11 15:29「你这个量能解读要结合分时线里面的爆量，
+     不然所有出货都被你当成未启动了」）。
+     原来只写「涨 X%／启动中」，放量下跌根本不出声——等于把出货默认成"还没启动"。
+     分时拿不到历史，但日线里有三个可靠的替代证据：量比（相对近 5 日均量）、
+     收盘位置（当日振幅里收在哪一档，分时强弱的最佳代理）、上影/下影。 */
+  var v5p = avgV(Math.max(0, n - 6), n - 2);       // 不含当日
+  var vr = v5p > 0 ? v[n - 1] / v5p : 1;
+  var rng = Math.max(0.0001, h[n - 1] - l[n - 1]);
+  var cpos = (c[n - 1] - l[n - 1]) / rng;          // 0=收在最低 1=收在最高
+  var upShadow = (h[n - 1] - Math.max(c[n - 1], l[n - 1])) / rng;
+  var posWord = cpos >= 0.8 ? '收在最高附近（尾盘走强）'
+    : (cpos <= 0.2 ? '收在最低附近（尾盘走弱）' : '收在振幅中段');
+  var outflow = false;
+  if (n - 1 === d) {
+    // 断板当天就是最新一根：② 已经把这一天说完了，这里不能再复述一遍「放量下跌」
+    // （002811 / 003004 都出现过「11-10 断板…」紧接着「11-10 放量下跌…」）。
+    outflow = dPct < 0;
+    rows.push('<b>' + mmdd(dt[n - 1]) + ' 就是断板当天</b>：洗盘期还没开始，下一步看它能不能缩量止跌、守住 MA5。');
+  } else if (lp <= -3 && vr >= 1.5) {
+    outflow = true;
+    rows.push('<b>' + mmdd(dt[n - 1]) + ' 放量下跌</b>：跌 ' + f1(Math.abs(lp)) + '%，量是近 5 日均量的 <b>' +
+      f1(vr) + ' 倍</b>，' + posWord + '——<b>这是出货，不是洗盘</b>。');
+  } else if (Math.abs(lp) < 2 && vr >= 2.0) {
+    outflow = true;
+    rows.push('<b>' + mmdd(dt[n - 1]) + ' 放量滞涨</b>：量是近 5 日均量的 <b>' + f1(vr) + ' 倍</b>，却只 ' +
+      (lp >= 0 ? '涨 ' : '跌 ') + f1(Math.abs(lp)) + '%，' + posWord + '——<b>对倒／分歧</b>，不是启动。');
+  } else if (upShadow >= 0.5 && lp < 3) {
+    rows.push('<b>' + mmdd(dt[n - 1]) + '</b>：长上影（上影占振幅 ' + f1(upShadow * 100) + '%），' +
+      posWord + '——冲高被打回，上方有抛压。');
+  } else if (lp >= 9.8) {
+    /* 涨停用**前一日**量比（缩量/放量涨停的标准口径）。原来拿连板期均量比，惠发 11/10 会算成
+       135% 说"放量"，而相对前一日是 161% 也确实放量——但拿断板日的 40 万手当分母又说"缩量 46%"，
+       同一根 K 线三种说法。统一到前一日，只留一个口径。 */
+    var rp = v[n - 2] > 0 ? v[n - 1] / v[n - 2] : 1;
+    rows.push('<b>' + mmdd(dt[n - 1]) + ' 涨停</b>：量是前一日的 <b>' + f1(rp * 100) + '%</b>，' +
+      (rp < 0.8 ? '<b>缩量涨停，抛压轻</b>' : (rp <= 1.5 ? '平量涨停' : '<b>放量涨停</b>——换手充分，分歧转一致')) + '。');
+  } else if (lp > 0 && vr < 1) {
+    rows.push('<b>' + mmdd(dt[n - 1]) + '</b>：涨 ' + f1(lp) + '%，量只有近 5 日均量的 ' + f1(vr * 100) +
+      '%——<b>缩量上行，抛压轻</b>，' + posWord + '。');
+  } else {
+    rows.push('<b>' + mmdd(dt[n - 1]) + '</b>：' + (lp >= 0 ? '涨 ' : '跌 ') + f1(Math.abs(lp)) +
+      '%，量是近 5 日均量的 ' + f1(vr) + ' 倍，' + posWord + '。');
+  }
+  // 连续放量下跌：一天是噪音，两天是趋势
+  if (n - 1 !== d && n >= 3 && pct(n - 1) <= -2 && pct(n - 2) <= -2 && v[n - 1] >= v5p && v[n - 2] >= v5p) {
+    outflow = true;
+    rows.push('<b>连续两日放量下跌</b>——<b>结构在走坏</b>，不是洗盘。');
   }
 
-  // 结论：只有缩量比算得出来才给结论
+  // 结论：出货优先，不能被"缩量比"洗白
   var concl = '';
-  if (ratio !== null) {
-    var ma5 = 0, i3;
-    for (i3 = Math.max(0, n - 5); i3 < n; i3++) ma5 += c[i3];
-    ma5 = ma5 / Math.min(5, n);
-    var vsMa = (c[n - 1] / ma5 - 1) * 100;
-    if (ratio <= 40 && vsMa >= 0) {
-      concl = '洗盘接近完成：缩量到 ' + f1(ratio) + '%，收盘在 MA5 上方 ' + f1(vsMa) + '%。';
-    } else if (ratio <= 40) {
-      concl = '缩量到位（' + f1(ratio) + '%）但还没站上 MA5（距 ' + f1(vsMa) + '%），等启动确认。';
-    } else {
-      concl = '换手未完成（量能还有断板日的 ' + f1(ratio) + '%），现在是"还在洗"，不是"洗完"。';
-    }
+  var ma5 = 0, i3;
+  for (i3 = Math.max(0, n - 5); i3 < n; i3++) ma5 += c[i3];
+  ma5 = ma5 / Math.min(5, n);
+  var vsMa = (c[n - 1] / ma5 - 1) * 100;
+  if (outflow) {
+    concl = '当前在<b>出货</b>（放量下跌/滞涨），不是"还没启动"——缩量比再好看也不能当洗盘看。';
+  } else if (ratio !== null && ratio <= 40 && vsMa >= 0) {
+    concl = '洗盘接近完成：缩量到 ' + f1(ratio) + '%，收盘在 MA5 上方 ' + f1(vsMa) + '%。';
+  } else if (ratio !== null && ratio <= 40) {
+    concl = '缩量到位（' + f1(ratio) + '%）但还没站上 MA5（距 ' + f1(vsMa) + '%），等启动确认。';
+  } else if (ratio !== null) {
+    concl = '换手未完成（量能还有断板日的 ' + f1(ratio) + '%），现在是"还在洗"，不是"洗完"。';
   }
 
   var body = rows.map(function (x) { return '<p>' + x + '</p>'; }).join('');
