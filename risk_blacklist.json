@@ -2,12 +2,12 @@
  "ok": true,
  "nameSrc": "tx",
  "nameSrcDetail": {
-  "tx": 378,
+  "tx": 367,
   "sina": 0,
   "em": 0
  },
- "date": "2026-11-10",
- "checked": 378,
+ "date": "2026-11-11",
+ "checked": 367,
  "liftWindow": [
   2,
   5
@@ -17,34 +17,36 @@
  "dims": {
   "st": {
    "status": "ok",
-   "cover": "行情名源（腾讯378/新浪0/东财0）378/378 只取到"
+   "cover": "行情名源（腾讯367/新浪0/东财0）367/367 只取到"
   },
   "cut": {
    "status": "ok",
-   "cover": "公告源 378/378 只取到（东财378/巨潮0）"
+   "cover": "公告源 367/367 只取到（东财367/巨潮0）"
   },
   "lift": {
    "status": "ok",
-   "cover": "解禁源 378/378 只取到"
+   "cover": "解禁源 367/367 只取到"
   },
   "pledge": {
    "status": "ok",
-   "cover": "质押源 378/378 只取到（仅供参考）"
+   "cover": "质押源 367/367 只取到（仅供参考）"
   }
  },
  "verdict": "full",
  "uncheckedDims": [],
  "blacklist": {
-  "002885": {
-   "name": "京泉华",
+  "600986": {
+   "name": "浙文互联",
    "reasons": [
-    "2026-10-14 减持已结束（利空出尽）"
+    "2026-10-15 减持计划（预披露）"
    ],
    "count": 1,
-   "watch": [],
-   "severity": "yellow",
+   "watch": [
+    "参考·质押 0.2%（截至 2026-01-09）"
+   ],
+   "severity": "orange",
    "progress": [
-    "减持已结束（利空出尽）"
+    "减持预披露"
    ]
   },
   "600184": {
@@ -90,20 +92,6 @@
    ],
    "count": 1,
    "watch": [],
-   "severity": "orange",
-   "progress": [
-    "减持预披露"
-   ]
-  },
-  "600986": {
-   "name": "浙文互联",
-   "reasons": [
-    "2026-10-15 减持计划（预披露）"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 0.2%（截至 2026-01-09）"
-   ],
    "severity": "orange",
    "progress": [
     "减持预披露"
