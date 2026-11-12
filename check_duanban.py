@@ -1682,6 +1682,51 @@ _NEWSWIRE_RE = re.compile(
     r"^[\u4e00-\u9fa5A-Za-z0-9·]{0,20}?(?:网讯|讯|电)[，：]?"
     r"(?:（记者[^）]{0,12}）)?[，：]?")
 
+# R100z340（2026-11-12）：**汇总型通稿不能当个股依据**。
+# 这类一条里塞七八家公司（「【财闻联播】董明珠回应格力业绩下滑！ST龙大被立案」、
+# 「光伏概念引爆贝特利周涨80%；奥精医疗被立案丨透视一周牛熊股」）。08:30 要闻步
+# 把它们的 impacts 挂到某只个股上之后，check_duanban 就当成了个股级线索——
+# 实测 002343 慈文传媒因此被判**利空**（依据是格力的业绩）、603278 大业股份
+# 同样被判利空（依据是别家周涨幅）。两只有方向、有概率、与标题毫无关联。
+# 同时这类标题自带【】，拼进 story 会造出第二层【】，前端分段识别直接失效。
+_DIGEST_RE = re.compile(
+    r"^\s*【[^】]{0,10}】"                      # 栏目式开头：【财闻联播】/【早报】
+    r"|透视一周牛熊|一周牛熊股|牛熊股榜单"      # 周度汇总栏目
+    r"|(?:早报|午报|晚报|收盘播报|收评|复盘|速览|联播|要闻汇总|公告速递)[丨|:：]"
+)
+
+
+def _is_digest_ref(r):
+    """判断一条线索是否为「多公司汇总稿」（不可作为单只个股的依据）。"""
+    t = str((r or {}).get("title") or "")
+    return bool(_DIGEST_RE.search(t))
+
+
+def _clean_title(t):
+    """story 内的标题消毒：把标题自带的【】换成「」，杜绝第二层【】。
+
+    R100z340：前端按 `【个股消息】/【板块消息】` 切段并加粗，段内再出现【】
+    会把后面整段吃成新段（实测 002343 被切成三段，正文首句错位）。
+    """
+    t = str(t or "")
+    return t.replace("【", "「").replace("】", "」")
+
+
+# R100z340：利好线索的标题本身陈述的是负面事实时，不能拿来撑「利好」。
+# 实测 002362 汉王科技被判利好 70，依据是「前三季度亏损1.38亿元，扩大超五成」——
+# 08:30 把它挂在某条看涨要闻的 impacts 里，这里就当成了利好证据。
+# 只收「强负面且无歧义」的词（「终止减持」这类含否定的组合交由 NOTICE_* 处理）。
+_NEG_TITLE_RE = re.compile(
+    r"亏损|预亏|净利下滑|净利下降|业绩下滑|业绩变脸|由盈转亏|商誉减值|计提减值"
+    r"|被立案|立案调查|行政处罚|警示函|退市风险|财务造假|被问询|下修")
+
+
+def _is_neg_title(r):
+    t = str((r or {}).get("title") or "")
+    if re.search(r"扭亏|减亏|亏损收窄|降幅收窄|亏损同比收窄", t):
+        return False
+    return bool(_NEG_TITLE_RE.search(t))
+
 
 def _strip_newswire(t):
     """去掉通稿电头（「上证报中国证券网讯（记者于祥明）」），只留实质正文。
@@ -1778,7 +1823,7 @@ def build_story(e, refs=None, bear_refs=None):
         col = n.get("column") or "公司公告"
         # 尾巴并入主句（；前是同一句，G17 不切）——主句带个股名称，天然防复读
         tail = _pick(NOTICE_TAIL_PHRASE, code, 1)
-        seg1 = (f"【个股消息】{name}{date}东方财富公告《{n.get('title')}》："
+        seg1 = (f"【个股消息】{name}{date}东方财富公告《{_clean_title(n.get('title'))}》："
                 f"{col}，{phrase}，{tail}。")
     else:
         # 优先用要闻 ref（真实新闻标题）。
@@ -1826,6 +1871,8 @@ def build_story(e, refs=None, bear_refs=None):
             # 每轮被判违规。引用标题时把这三类标点降级为逗号，保证切句不越界。
             _ttl = (str(ref.get("title") or "")
                     .replace("！", "，").replace("？", "，").replace("；", "，"))
+            # R100z340：标题可能自带【栏目名】，拼进 story 会造出第二层【】→ 前端分段失效
+            _ttl = _clean_title(_ttl)
             seg1 = (f"【个股消息】{name}{head}《{_ttl}》"
                     + (f"：{body}" if body else "")
                     + f"，{phrase}；{drv}，{name}{tail}。")
@@ -2002,6 +2049,32 @@ def tag_entries(entries, D):
             else:
                 if not any(b.get("title") == ref["title"] for b in refs):
                     refs.append(ref)
+        # R100z340：汇总型通稿（一条覆盖多家公司）剔除——它不是这只票的依据，
+        # 留着就会像 002343/603278 那样用别家的消息给本票定方向。
+        if any(_is_digest_ref(r) for r in (refs + bear_refs)):
+            refs = [r for r in refs if not _is_digest_ref(r)]
+            bear_refs = [r for r in bear_refs if not _is_digest_ref(r)]
+        # R100z340：个股级线索必须真的提到这只票。08:30 的 impacts 常把「产业链/
+        # 板块」级标题挂到个股上（实测把「光模块禁令松动」挂给安检设备股 003004、
+        # 把「覆铜板涨价」挂给 PCB 厂），标成个股级会让权重×2、卡片显示「个股利好」。
+        # 标题与摘要里都没有本股名称/代码的一律降为板块级（权重×1、bullType=sector）：
+        # 口径诚实，具体业务映射对不对交 AI 复核判断。
+        def _names_stock(r):
+            t = str(r.get("title") or "") + str(r.get("summary") or "")
+            nm = str(e.get("name") or "")
+            return bool((nm and nm in t) or (str(e.get("code") or "") in t))
+        for r in refs:
+            if r.get("kind") == "stock" and r.get("src") != "notice" and not _names_stock(r):
+                r["kind"] = "sector"
+        # R100z340：标题本身在讲负面事实（亏损扩大/被立案/计提减值）时不能撑利好，
+        # 改挂到利空列——实测 002362 汉王科技被判利好 70，依据却是「前三季度亏损
+        # 1.38 亿元、扩大超五成」。
+        _neg_refs = [r for r in refs if _is_neg_title(r)]
+        if _neg_refs:
+            refs = [r for r in refs if not _is_neg_title(r)]
+            for r in _neg_refs:
+                if not any(b.get("title") == r.get("title") for b in bear_refs):
+                    bear_refs.append(dict(r, kind="stock"))
         bull_type = "stock" if any(r.get("kind") == "stock" for r in refs) else ("sector" if refs else None)
         # R91p 加权打标（2026-09-23 用户反馈修复：有研新材 12 条利好被 1 条间接利空
         # 一票否决）：个股级线索×2、板块级线索×1，bear 加权 > bull 加权才判 bear；

@@ -236,6 +236,33 @@ EMPTY_WHITELIST = [
      "R100z280：atr_stops 的集中度告警只在「多只候选止损位挤在同一价格带」时才追加，"
      "无告警＝当日候选分散，是正常结果。前端只读 atrStops.items / evidenceRows，"
      "不引用 summary.concentrationWarn（不渲染空段）"),
+    (r"duanban\.star\.spillover\.rows\[\d+\]\.(planTheme|planCandN)$",
+     "R100z353（2026-11-12）：补涨映射的「昨日计划」比对位。**空串就是结论本身**——"
+     "昨日收盘题材行里没有这只连板，前端据此打「今日新增」标签（index.html 用 "
+     "`r.planTheme ? 昨·X : 新增` 三目；planCandN=0 时不印「作废 N 只」）。"
+     "G64 反向证明：planTheme 必须与 .theme_plan.json 基线一致，基线没有就必须为空串，"
+     "不许为了不留空而编一个近似题材（那才是把「新增」标成「昨已列」）。"),
+    (r"duanban\.star\.spillover\.rows\[\d+\]\.matches\[\d+\]\.plannedUnder$",
+     "R100z353：候选的「昨日挂在哪一列」同理——wasListed=false（今日新增）时本来就是空串，"
+     "前端只在 `m.wasListed` 为真时才拼「（plannedUnder）」。反向证明同 G64："
+     "wasListed 为真时 plannedUnder 必须等于基线里的题材名，不能空"),
+    (r"duanban\.star\.spillover\.plan\.planDate$",
+     "R100z353：记分牌基线的日期。当日快照不自我兑现（G64 顶部就是这条守卫），"
+     "首次运行 / 隔了两个交易日以上时没有可比基线 → planDate 空串、nCand=0，"
+     "前端按 nCand 判断后整块不出分。G64 已在「nCand 为空」时直接 PASS 并说明原因"),
+    (r"chenPool\.compare\.(settles|opens)\[\d+\]\.cross$",
+     "R100z353：cross 是**记账时冻结**的池标签（db/chen/both）。旧口径样本（legacy）当年没有这个标签，"
+     "空串＝当时未打标，不是漏写。前端不用它渲染——poolLabel() 读的是 pools/poolZh，"
+     "`pools` 为空时退回 poolZh 全名（旧数据也不会显示成空）"),
+    (r"chenPool\.compare\.opens\[\d+\]\.curDay$",
+     "R100z353：进行明细里「现价是哪天收的」——state=preBuy/noKline（今天刚确认、停牌、K 线未到）时"
+     "还没有现价，curDay 与 curPx 一起为空/None，行状态字段 state 同时写着原因。"
+     "前端 pxf() 对 None/''/非数一律渲染「—」，不印空单元格"),
+    (r"stockConcepts\.items\.[0-9]{6}\.(hot|industry)$",
+     "R100z353：题材 pill 的**两级兜底**本来就是这个设计——hot 为空＝这只票没有热门题材，"
+     "industry 为空＝同花顺没给行业，两者互不替代时才真的空。G61 已有反向证明"
+     "（hot 必须 ⊆ concepts、不得全是泛概念；既无题材又无行业会单独 WARN「徽章会整个空掉」）。"
+     "前端 stkSecPillOf 依次退回 prefer/行业，不渲染空 pill"),
 ]
 
 DATA_KEYS_REQUIRED = [
@@ -1066,10 +1093,23 @@ def g8_g9_g10_data(r):
         ("ashare.tradeDate", (D.get("ashare") or {}).get("tradeDate")),
     ]
     stale = [f"{k}={v}" for k, v in checks if v and last and v < last]
-    if stale:
+    # R100z353（2026-11-12）：盘前的「ashare.tradeDate 还是上一交易日」不是缺陷——16:00 数据步
+    # 根本没跑。原来这条 07:00 / 08:30 / 09:45 各报一次，永远为真（24.16d 那类噪音），
+    # 现在只有**过了 17:00 数据步窗口仍未换日**才 WARN（那时才是真没跑）。
+    _now = datetime.now()
+    _pre_step = (_now.strftime("%Y-%m-%d") == last and _now.hour < 17)
+    _only_ashare = [k for k, _ in checks if k == "ashare.tradeDate" and
+                    (D.get("ashare") or {}).get("tradeDate") and last and
+                    str((D.get("ashare") or {}).get("tradeDate")) < last]
+    if stale and _pre_step and _only_ashare and len(_only_ashare) == len(stale):
+        r.ok("G10", f"ashare.tradeDate={(D.get('ashare') or {}).get('tradeDate')} 还没换到 {last} —— "
+                    f"{_now.strftime('%H:%M')} 盘前，16:00 数据步尚未运行，属正常；"
+                    f"17:00 之后仍未换日才会由本条拦下")
+    elif stale:
         r.warn("G10", f"日期早于最近交易日 {last}：{'; '.join(stale)}（休市期正常，换日前需复核）")
     else:
         r.ok("G10", f"各模块日期均 ≥ 最近交易日 {last}")
+
 
     # 美股单独口径（R100z167 / R100z181 修）：美东收盘落在北京时间次日凌晨，美股交易日历又与 A 股不同。
     # 旧写法把 us.tradeDate 塞进上面那张表与 A 股最近交易日比 —— 结果**每天晚上必然命中**
@@ -4625,9 +4665,12 @@ def g51_buy_ledger_wiring(r):
         r.warn("G51", "signalPerf.asOf 缺失，无法判断归因台账跑到哪一天（跳过）")
         return
     if as_of < star_date:
-        r.warn("G51", f"归因台账停在 {as_of}，早于清单 {star_date} —— 16:00 数据步还没跑，"
-                      f"届时应自动出现「开盘精选」一行（非错误）")
+        # R100z353：归因台账按「已收盘数据」结算，16:00 数据步还没跑时它必然停在前一交易日。
+        # 原文本自己都写着「非错误」，却占着一个 WARN 位置——每天固定一条，闸门被稀释。
+        r.ok("G51", f"归因台账停在 {as_of}（早于清单 {star_date}）—— 16:00 数据步还没跑，"
+                    f"那之后应自动出现「开盘精选」一行；届时仍缺才是接线问题，由本条下方逻辑拦")
         return
+
     if not has_buy:
         r.fail("G51", f"清单 {star_date} 有 {len(cur)} 只非 bp 标的，但 signalPerf.bySrc 里没有 "
                       f"buy —— 归因台账没登记这份清单，接线断了（页面只会少一行，不会报错）")
@@ -4964,9 +5007,19 @@ def g57_trend_asof(r):
                       f"看不出来。跑 trend_state.py --write --fetch 重算")
         return
     if aof > td:
+        # R100z353：盘中补算（09:45 开盘精选会跑 trend_state --fetch）时 asOf 必然是**今天**，
+        # 而 ashare.tradeDate 还是上一交易日收盘 —— 这是正常时序，不是「tradeDate 漏更新」。
+        # 只有过了 17:00 数据步窗口、asOf 仍是今天而 tradeDate 还停在更早，才说明换日漏了。
+        import datetime as _dt
+        _n = _dt.datetime.now()
+        if aof == _n.strftime("%Y-%m-%d") and _n.hour < 17:
+            r.ok("G57", f"trendState.asOf {aof} 是盘中补算（{_n.strftime('%H:%M')}），"
+                        f"ashare.tradeDate {td} 为上一交易日收盘 —— 16:00 数据步换日后自然对齐")
+            return
         r.warn("G57", f"trendState.asOf {aof} 晚于 tradeDate {td} —— 跨日补跑残留，"
                       f"核对 ashare.tradeDate 是否漏更新（点位本身不旧）")
         return
+
     r.ok("G57", f"trendState 点位基准日 = 交易日 {aof}（档位 {ts.get('marketLevel') or '—'} / "
                 f"仓位上限 {ts.get('marketCapPct')}% / 落后自曝"
                 f"{'有' if ts.get('staleNote') else '无'}）")
@@ -5112,7 +5165,8 @@ def g60_spillover_truth(r):
       b) row.themes 必须是 `common.theme_words(reason)` 的子集（防止自己发明题材词）；
       c) state 与 pct 自洽：reboard→pct≥9.5；weak→pct<3 且**不得带候选**（未续板就没扩散）；
       d) matches[].code 必须能在断板双池或陈学长三池里找到（池外标的＝最严重的一类错）；
-      e) 档位与来源自洽：tier=confirm 不能来自「观察池」；kind 只能是 theme/dict/sector；
+      e) 档位与来源自洽：tier 必须**有某一个池支持它**（双池票可以既是断板·观察池、又是陈学长·严格池，
+        此时 confirm 成立）；kind 只能是 theme/dict/sector；
       f) 同一只候选不得在两张连板行里重复出现（用户最反感的「同一信息在多处给」）。
 
     spawn 期（9:45 之前）没有 spillover 是正常的 → WARN，不 FAIL。
@@ -5140,18 +5194,22 @@ def g60_spillover_truth(r):
             lb[str(x.get("code"))] = x
     db = D.get("duanban") or {}
     cp = D.get("chenPool") or {}
-    pool = {}
+    pool = {}          # code -> {tier: [池名…]}。一只票可以同时在两个池里（见下方注释）
     for key, tier, zh in (("confirmed", "confirm", "断板·确认池"),
                           ("watching", "watch", "断板·观察池")):
         for e in (db.get(key) or []):
             if isinstance(e, dict):
-                pool[str(e.get("code"))] = (tier, zh)
+                pool.setdefault(str(e.get("code")), {}).setdefault(tier, []).append(zh)
     for key, tier, zh in (("strict", "confirm", "陈学长·严格池"),
                           ("loose", "confirm", "陈学长·放宽池"),
                           ("watching", "watch", "陈学长·观察池")):
         for e in (cp.get(key) or []):
-            if isinstance(e, dict) and str(e.get("code")) not in pool:
-                pool[str(e.get("code"))] = (tier, zh)
+            if isinstance(e, dict):
+                pool.setdefault(str(e.get("code")), {}).setdefault(tier, []).append(zh)
+    # R100z353（2026-11-12）：原来按「先断板池、后陈学长池，已存在就不覆盖」建单值 pool，
+    # 于是**双池票**（声迅股份：断板·观察池=待再缩量 + 陈学长·严格池=缩量确认，两套口径本就不同）
+    # 每次都被判「档位 confirm 与当前池归属（断板·观察池=watch）不符」——一条永远为真的 WARN。
+    # 正确口径是「档位必须有**某一个**池支持它」，不是「必须等于某个优先级最高的池」。
 
     from common import theme_words
     bad, warned, stale = [], [], []
@@ -5190,9 +5248,10 @@ def g60_spillover_truth(r):
             if mc not in pool:
                 stale.append(f"{nm}→{mnm} 已不在池内（生成后重算/失效归档）")
                 continue
-            tier, zh = pool[mc]
-            if m.get("tier") != tier:
-                stale.append(f"{nm}→{mnm} 档位 {m.get('tier')} 与当前池归属（{zh}={tier}）不符")
+            tiers = pool[mc]
+            if m.get("tier") not in tiers:
+                stale.append(f"{nm}→{mnm} 档位 {m.get('tier')} 与当前池归属"
+                             f"（{'/'.join('%s=%s' % (z, t) for t, zs in tiers.items() for z in zs)}）不符")
             # R100z333：不许再有 sector（同行业兜底）——用户 2026-11-10 两次截图指出
             # 「利欧股份（快手/小红书概念）挂在航天紧固件下」，根因就是按行业匹配。
             if m.get("kind") not in ("theme", "dict"):
@@ -6058,6 +6117,219 @@ def g70_kline_freshness(r):
              % (td, good, total, good * 100.0 / total))
 
 
+def g71_intraday_freshness(r):
+    """G71 分时摘要必须追到 ashare.tradeDate（R100z353，2026-11-12，FAIL 级）。
+
+    由来：用户 11-11 18:51 报「分时均线一点都不准」。真因不是算法，是 `stkKlines` 末根停在 11-10，
+    `intraday_digest.py` 拿 `kl[-1][0]` 当抓取上界 → 分时的最后一天也只有 11-10。页面于是
+    「日线讲 11-11、分时讲 11-10」，读者拿当天均价去比前一天的分时，怎么算都对不上。
+
+    G70 只查日 K，G69 又因为「没分时就退回日线描述」而 PASS —— 这一层当时**没有任何闸门在看**。
+    补它的理由：分时是「承接 / 洗盘 vs 出货」的唯一证据源，它悄悄落后一天，结论就整体错一天，
+    而页面看起来完全正常。
+
+    判据：数据步应已跑完时（tradeDate 早于今天，或今天且已过 18:00），
+    对**已经被跟踪**（stkIntraday 里有键）且在池的票，最后一行的日期必须 ≥ tradeDate。
+      · 落后 ≥5 只或 ≥20% → FAIL（整批没追，说明抓取/上界算错）
+      · 落后 1~4 只 → WARN（个别票限流/停牌，保留旧值属正常防清场）
+    """
+    import datetime as _dt
+
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G71", f"data.js 读取失败，分时新鲜度无法检查：{e}")
+        return
+    td = str((D.get("ashare") or {}).get("tradeDate") or "")[:10]
+    if not td:
+        r.warn("G71", "ashare.tradeDate 为空，无法核对分时新鲜度")
+        return
+    now = _dt.datetime.now()
+    today = now.strftime("%Y-%m-%d")
+    if td == today and now.hour * 60 + now.minute < 18 * 60:
+        r.ok("G71", "tradeDate=%s 是今天且未到 18:00（16:00/19:30 数据步之后才算应到），"
+                    "不校验分时新鲜度" % td)
+        return
+    if td > today:
+        r.ok("G71", "tradeDate=%s 晚于今天，日历异常交给 G6，这里跳过" % td)
+        return
+
+    SI = D.get("stkIntraday") or {}
+    if not SI:
+        r.warn("G71", "stkIntraday 整个缺失（intraday_digest.py 未跑？）——"
+                      "量能解读会退回纯日线，承接/洗盘证据全无")
+        return
+
+    def _full(mmdd, ref):
+        """MM-DD → 完整日期。只有 **12 月 ↔ 1 月** 的跨年才回退一年；
+        其余情况一律同年（「比交易日更晚」是数据异常，不该被当成「去年所以很旧」而掩盖）。"""
+        y, rm = ref[:4], ref[5:]
+        d = "%s-%s" % (y, mmdd)
+        # 行在 11~12 月、基准在 1~2 月 → 那是**上一年**的 11/12 月（跨年），必须回退一年；
+        # 反过来（基准 11~12 月、行在 1~2 月）是同一年的年初，不回退。
+        if mmdd >= "11" and rm <= "02":
+            d = "%d-%s" % (int(y) - 1, mmdd)
+        return d
+
+    def _stale_of(rows, ref):
+        """纯函数：返回该票最后一行的完整日期（无数据/异常返回 ''）。"""
+        if not isinstance(rows, list) or not rows:
+            return ""
+        last = rows[-1]
+        if not isinstance(last, list) or not last:
+            return ""
+        mmdd = str(last[0] or "")
+        if len(mmdd) != 5 or mmdd[2] != "-":
+            return ""
+        return _full(mmdd, ref)
+
+    # 自检（24.173：新断言必须能证明「该被拦下的样本真的会被拦下」）
+    _cases = [
+        ("已追平", [["11-10", 1], ["11-11", 2]], "2026-11-11", False),
+        ("落后一天", [["11-09", 1], ["11-10", 2]], "2026-11-11", True),
+        ("跨年回退", [["01-02", 1], ["12-31", 2]], "2026-01-05", True),
+        ("无数据", [], "2026-11-11", True),
+    ]
+    _selftest_bad = []
+    for nm, rows, ref, want_stale in _cases:
+        got = _stale_of(rows, ref)
+        is_stale = (got == "") or (got < ref)
+        if is_stale != want_stale:
+            _selftest_bad.append("%s（判 %s）" % (nm, got or "无行"))
+    if _selftest_bad:
+        r.fail("G71", "自检失败：判定函数对样本给出相反结论 —— %s；先修闸门，别信它的结论"
+               % "、".join(_selftest_bad))
+        return
+
+    db = D.get("duanban") or {}
+    cp = D.get("chenPool") or {}
+    inpool = set()
+    for key in ("confirmed", "watching"):
+        for e in (db.get(key) or []):
+            if isinstance(e, dict) and e.get("code"):
+                inpool.add(str(e["code"]))
+    for key in ("strict", "loose", "watching"):
+        for e in (cp.get(key) or []):
+            if isinstance(e, dict) and e.get("code"):
+                inpool.add(str(e["code"]))
+
+    tracked = [(c, _stale_of(v, td)) for c, v in SI.items() if c in inpool]
+    if not tracked:
+        r.warn("G71", "stkIntraday 里没有任何池内标的（%d 个键）—— 抓取步可能整批失败（限流）" % len(SI))
+        return
+    stale = [(c, d) for c, d in tracked if d == "" or d < td]
+    if not stale:
+        r.ok("G71", "分时已追到交易日 %s：%d 只池内标的最后一行均 ≥ 该日" % (td, len(tracked)))
+        return
+    ratio = len(stale) / float(len(tracked))
+    _ex = "、".join("%s(%s)" % (c, d or "无行") for c, d in sorted(stale)[:6])
+    # R100z353：区分「上界算错/没跑」和「数据源限流」。intraday_digest 会把本轮体检写进
+    # `.intraday_cache/_last_run.json`（ban=true 表示连续连接被重置、主动停手）。
+    # 源侧限流不是我们的 bug，拦部署只会让整页停更——降 WARN 并在文案里说清。
+    _ban = False
+    try:
+        with open(os.path.join(HERE, ".intraday_cache", "_last_run.json"), encoding="utf-8") as _f:
+            _lr = json.load(_f)
+        # 必须同时满足：同一天跑过、tradeDate 对得上、且真的被拒过。
+        # 只用「上个月的 ban 记录」来免罪不算数——那等于给「这一步今天压根没跑」开后门。
+        _ban = (bool(_lr.get("ban"))
+                and str(_lr.get("tradeDate") or "") == td
+                and str(_lr.get("at") or "")[:10] == now.strftime("%Y-%m-%d"))
+        _lrn = "%s 抓到 %d/待抓 %d、失败 %d" % (
+            str(_lr.get("at") or ""), int(_lr.get("fetched") or 0),
+            int(_lr.get("tasks") or 0), int(_lr.get("failed") or 0))
+    except Exception:                                        # noqa: BLE001
+        _lrn = ""
+    if ratio >= 0.9 and _ban:
+        r.warn("G71", "分时整批没追上交易日 %s：%d/%d 只（上一次抓取 %s，连续连接被重置后主动停手）——"
+                      "数据源限流，不是上界算错；旧值已保留，下一轮只补缺的。"
+                      "若连续多个交易日都这样，才需要换源" % (td, len(stale), len(tracked), _lrn or "无记录"))
+        return
+    if ratio >= 0.9:
+        r.fail("G71", "分时整批没追上交易日 %s：%d/%d 只（%s）—— %s%s。"
+                      "量能解读的承接/洗盘结论会整体晚一天，而页面看起来完全正常。"
+                      "先查抓取上界：intraday_digest.py 必须用 ashare.tradeDate 而不是 "
+                      "stkKlines 末根（K 线滞后会把分时一起拖住）；再查日志里的失败原因（多为限流）"
+               % (td, len(stale), len(tracked), _lrn or "无体检记录",
+                  _ex, "…" if len(stale) > 6 else ""))
+    elif stale:
+        # 部分落后＝数据源限流（东财 kline 端点按速率封，实测串行 4 秒/次才稳）。
+        # 不拦部署：页面对这些票仍显示前一日分时，属显式降级；下一轮只补缺的（缓存已最新会跳过）。
+        r.warn("G71", "分时最新日落后交易日 %s：%d/%d 只 —— %s（多为限流的部分抓取；"
+                      "下一轮只补缺的，不拦部署）" % (td, len(stale), len(tracked), _ex))
+    else:
+        r.ok("G71", "分时已追到交易日 %s：%d 只池内标的最后一行均 ≥ 该日" % (td, len(tracked)))
+
+
+def g72_pool_industry_mix(r):
+    """G72 机械池成分的行业纯度（R100z353，2026-11-12，WARN 级）。
+
+    由来：08:30 日志第二次出现「机械池跨行业污染」——电子化学品池 4 只里 3 只的行业是
+    光学光电子/化学制品/照明（联创电子、华体科技、晶华新材），AI 只敢取 1 只、其余自选。
+    build_stock_pool 的匹配只看候选自带的 `sector` 字段（板块名），**不看行业**，
+    所以「板块名」一旦是概念而非行业（电子化学品 vs 光学光电子），池子就成了拼盘。
+
+    这里不硬拦（板块名本来就是概念名，「同题材 ≠ 同行业」也常见），只在**过半成员对不上**时
+    点名，让 08:30 那步知道「这个板块的池子不能直接拿去用」。判据：
+      · 成员行业（data.js 的 sectorMap）与板块名的段级/Jaccard 匹配都不过 → 记为「异业」；
+      · 异业 ≥2 且占池内 ≥50% → WARN，列出名字与真实行业。
+    """
+    import os as _os
+    try:
+        pool = json.load(open(_os.path.join(HERE, "stock_pool.json"), encoding="utf-8"))
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G72", f"stock_pool.json 解析失败：{e}")
+        return
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G72", f"data.js 读取失败，跳过行业纯度检查：{e}")
+        return
+    smap = D.get("sectorMap") or {}
+    by = pool.get("bySector") or {}
+    if not by or not smap:
+        r.ok("G72", "机械池或行业映射为空，本轮无成分可查（不影响决策链）")
+        return
+
+    def segs(x):
+        return [y.strip() for y in re.split(r"[·、/／,，\s]+", str(x or "")) if y.strip()]
+
+    def same(a, b):
+        """行业 a 与板块名 b 是否算同类：同名，或段级包含（「光学元件」⊂「元件」）。
+        ⛔ 不做字符级 Jaccard：「光学光电子」与「电子化学品」共享 电子/学 三字，
+        算出来正好 0.5，会把拼盘判成同类——build_stock_pool 早就踩过这个坑（同 NOISE_WORDS 那段）。"""
+        if not a or not b:
+            return True                     # 查不到行业就不断言（宁缺毋滥）
+        if a == b:
+            return True
+        for x in segs(a):
+            for y in segs(b):
+                if x == y or x in y or y in x:
+                    return True
+        return False
+
+    bad_pools, checked = [], 0
+    for sec, rows in by.items():
+        rows = [x for x in (rows or []) if isinstance(x, dict)]
+        if len(rows) < 2:
+            continue
+        checked += 1
+        odd = []
+        for x in rows:
+            code = str(x.get("code") or "").replace(".SH", "").replace(".SZ", "").zfill(6)
+            ind = str(smap.get(code) or "").strip()
+            if ind and not same(ind, sec):
+                odd.append("%s(%s)" % (x.get("name") or code, ind))
+        if len(odd) >= 2 and len(odd) * 2 >= len(rows):
+            bad_pools.append("「%s」%d/%d 只异业：%s" % (sec, len(odd), len(rows), "、".join(odd[:4])))
+    if bad_pools:
+        r.warn("G72", "机械池有 %d 个板块的成分过半是别的行业（板块名多为概念名，池子成拼盘）：%s —— "
+                      "08:30 取候选前要逐只核行业，只留真同业的；不足就换板块，不许拿异业凑数"
+               % (len(bad_pools), "；".join(bad_pools[:3])))
+    else:
+        r.ok("G72", "机械池 %d 个板块的成分行业与板块名基本对得上（异业均未过半）" % checked)
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -6139,6 +6411,8 @@ def main():
     g68_pending_detail(r)
     g69_energy_read(r)
     g70_kline_freshness(r)
+    g71_intraday_freshness(r)
+    g72_pool_industry_mix(r)
 
     # R100z284：机器可读的结论行。
     #

@@ -71,9 +71,61 @@ PRUNE_DAYS = 30         # --prune 时，断板超过这么多天且不在池的�
 # R100z352（2026-11-11 19:00 实测）：并发 6 连拉 90 只后，push2his 直接返回 http=000（连接失败），
 # 整批全灭。80~90 只的规模对东财这个接口已经到限流线了。
 # 降到 3 并给每次请求加 0.15s 间隔——总耗时从 2s 涨到约 8s，但不会再把自己拉黑。
-WORKERS = 3
-REQ_GAP_S = 0.15
-DEADLINE_S = 420        # 整体预算；超时未抓到的按缺失处理（保留旧值）
+WORKERS = 1
+# R100z353（2026-11-12 实测）：东财 `kline/get` 是**按端点**限流的——
+#   同一时刻 `push2/api/qt/ulist.np/get`（报价）200 正常、`quote.eastmoney.com` 页面也正常，
+#   只有 `kline/get` / `trends2/get` 这类历史接口被 RST。一次 30 秒内拉 12 只即触发，
+#   之后**单发也会被拒**，冷却远超 1 分钟（实测 7 分钟仍在封）。所以只能把速率本身压下来：
+#   串行 + 4 秒间隔（15 次/分钟），104 只约 7 分钟；比"并发冲一把全灭"划算得多。
+REQ_GAP_S = 4.0
+DEADLINE_S = 900        # 整体预算；超时未抓到的按缺失处理（保留旧值）
+# 多域只作为「单域被单点封」时的备选（实测裸域被封时 1./82. 分片仍可 200），
+# 但**不做并行分摊**——限流是按端点算的，换域救不了，只会把请求量翻倍。
+HOSTS = ['push2his.eastmoney.com', '1.push2his.eastmoney.com', '82.push2his.eastmoney.com']
+BAN_COOL_S = 15         # 撞到连接级失败后的全局冷静期（所有线程共享）
+BAN_STREAK = 4          # 连续多少次连接级失败就认定「整机被限流」，本轮直接放弃
+ERRORS = []             # [(code, 异常摘要)]，只用于日志诊断，不影响防清场
+
+
+import threading                                        # noqa: E402
+_PACE = {'next': 0.0}
+_PLOCK = threading.Lock()
+_STOP = threading.Event()       # 被限流后置位：所有线程立刻停手，不再重试
+_STREAK = {'n': 0}              # 连续连接级失败计数（成功一次即归零）
+
+
+def _wait_turn(gap):
+    """全局节流：第 i 个请求的放行时刻 = max(now, 上一个 + gap)。"""
+    with _PLOCK:
+        now = time.time()
+        t = max(now, _PACE['next'])
+        _PACE['next'] = t + gap
+    if t > now:
+        time.sleep(t - now)
+
+
+def _cool(sec):
+    """撞限流后把**所有人**的放行时刻一起往后推，避免并发线程各自硬冲。"""
+    with _PLOCK:
+        _PACE['next'] = max(_PACE['next'], time.time() + sec)
+
+
+def _mark(fail):
+    """记一次成败。连续 BAN_STREAK 次连接级失败 → 整批停手。
+
+    2026-11-12 实测：被限流时每只票还要走满 3 个域 × 12s 冷却，104 只就是 20 分钟，
+    而且越试越封（日志里叫「抓取超时」，看不出是自己在打自己）。宁可按本轮缺失处理。
+    """
+    loop = 0
+    with _PLOCK:
+        _STREAK['n'] = _STREAK['n'] + 1 if fail else 0
+        loop = _STREAK['n']
+    if loop >= BAN_STREAK and not _STOP.is_set():
+        _STOP.set()
+        print('[BAN] 连续 %d 次连接被重置 —— 认定整机限流，本轮停止抓取（保留旧值，'
+              '16:00/19:30 下一轮再补）' % loop)
+
+
 UA = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/120.0 Safari/537.36')
 
@@ -102,20 +154,40 @@ def fetch_5m(code, beg, end):
     """东财 5 分钟线。成功返回 [[day, open, close, high, low, vol, amt], ...]，失败 None。
 
     一次请求就能拿到整个区间（实测 9 个交易日 432 根），不必按天循环。
+    多域轮转 + 全局节流见 HOSTS 注释：不是「一个域名试三次」，而是让不同票**分摊**到三个域，
+    撞到连接级失败就全体退让（_cool），避免把重试变成对同一 IP 的三倍压力。
     """
     import urllib.request
-    url = ('https://push2his.eastmoney.com/api/qt/stock/kline/get'
-           '?secid=%s&klt=5&fqt=1&beg=%s&end=%s'
-           '&fields1=f1,f2&fields2=f51,f52,f53,f54,f55,f56,f57' % (secid(code), beg, end))
-    # R100z352：每个请求之间退让一下。并发 6 时 90 只连拉会被限流成 http=000（整批全灭）
-    time.sleep(REQ_GAP_S)
-    req = urllib.request.Request(url, headers={'User-Agent': UA, 'Referer': 'https://quote.eastmoney.com/'})
-    try:
-        with urllib.request.urlopen(req, timeout=20) as r:
-            d = json.loads(r.read().decode('utf-8', 'ignore'))
-    except Exception:
+    if _STOP.is_set():
+        return None
+    q = ('/api/qt/stock/kline/get?secid=%s&klt=5&fqt=1&beg=%s&end=%s'
+         '&fields1=f1,f2&fields2=f51,f52,f53,f54,f55,f56,f57' % (secid(code), beg, end))
+    base = int(str(code)[-3:] or 0)                     # 固定偏移：同一只票每次落同一域，便于复现
+    last_err = ''
+    for i in range(len(HOSTS)):
+        if _STOP.is_set():
+            return None
+        host = HOSTS[(base + i) % len(HOSTS)]
+        _wait_turn(REQ_GAP_S)
+        req = urllib.request.Request('https://' + host + q,
+                                     headers={'User-Agent': UA, 'Referer': 'https://quote.eastmoney.com/'})
+        try:
+            with urllib.request.urlopen(req, timeout=20) as r:
+                d = json.loads(r.read().decode('utf-8', 'ignore'))
+            _mark(False)
+            break
+        except Exception as e:                              # noqa: BLE001
+            last_err = '%s@%s' % (type(e).__name__, host.split('.')[0])
+            # 连接级失败（reset / 超时 / DNS）= 被限流，全体冷静；HTTP 层错误不冷静
+            if not isinstance(e, urllib.error.HTTPError):
+                _mark(True)
+                _cool(BAN_COOL_S)
+            continue
+    else:
+        ERRORS.append((str(code), last_err or 'unknown'))
         return None
     kl = ((d or {}).get('data') or {}).get('klines') or []
+
     out = []
     for k in kl:
         p = k.split(',')
@@ -393,8 +465,15 @@ def main():
         return 0
 
     # 1) 挑出要更新的票：断板后 ≤KEEP_DAYS 日
+    # R100z353（2026-11-12）：`end` 原来取 `kl[-1][0]`（K 线末根）。11-11 晚上 embed_klines 没更新、
+    # 末根还停在 11-10，于是分时也只抓到 11-10 —— 页面「日线讲 11-11、分时讲 11-10」，
+    # 用户当场看出「分时均线不准」。K 线滞后时不能拿它当上界，要用 **ashare.tradeDate**（数据日的权威口径）。
+    td = str((D.get('ashare') or {}).get('tradeDate') or '')
     tasks = []
     skipped_old = 0
+    skipped_fresh = 0
+    lag_kline = 0
+    fresh_rows = {}          # 缓存已最新的票：不抓网络，但仍要把 rows 带进 out
     for code in sorted(inpool):
         kl = K.get(code) or []
         if len(kl) < 26:
@@ -406,31 +485,63 @@ def main():
         if passed > KEEP_DAYS:
             skipped_old += 1
             continue
-        tasks.append((code, kl[d][0].replace('-', ''), kl[-1][0].replace('-', ''), d))
+        _last = str(kl[-1][0])[:10]
+        _end = max(_last, td) if td else _last
+        if td and _last < td:
+            lag_kline += 1
+        # 缓存已经追到 end 的票不再请求（16:00 跑过一次、19:30 又跑时白拉 100 次，
+        # 正是这种重复请求把自己送进限流）。缺日才抓。
+        _c = read_cache(code)
+        if _c and (_c.get('rows') or []) and str(_c['rows'][-1][0]) >= _end[5:]:
+            skipped_fresh = skipped_fresh + 1
+            fresh_rows[code] = _c['rows']
+            continue
+        tasks.append((code, kl[d][0].replace('-', ''), _end.replace('-', ''), d))
+
+    if not quiet and lag_kline:
+        print('[WARN] %d 只的 stkKlines 末根早于 tradeDate %s —— 分时上界按 tradeDate 补，'
+              '但日线本身滞后（G70 会拦），先补跑 embed_klines' % (lag_kline, td))
 
     if not quiet:
-        print('确认池 %d 只｜断板后 ≤%d 日待更新 %d 只｜断板过久跳过 %d 只｜已有旧数据 %d 只'
-              % (len(inpool), KEEP_DAYS, len(tasks), skipped_old, len(old)))
+        print('确认池 %d 只｜断板后 ≤%d 日待更新 %d 只｜断板过久跳过 %d 只｜缓存已是最新 %d 只｜已有旧数据 %d 只'
+              % (len(inpool), KEEP_DAYS, len(tasks), skipped_old, skipped_fresh, len(old)))
 
     # 2) 并发抓取
     t0 = time.time()
     fetched, failed = {}, []
     if tasks:
-        with ThreadPoolExecutor(max_workers=WORKERS) as ex:
-            futs = {ex.submit(fetch_5m, code, beg, end): code for code, beg, end, _ in tasks}
+        # 用显式 executor 而不是 with：`with ThreadPoolExecutor` 退出时会 join 所有线程，
+        # 被限流时等于把「超时」变成「再等十分钟」——DEADLINE 形同虚设。
+        ex = ThreadPoolExecutor(max_workers=WORKERS)
+        futs = {ex.submit(fetch_5m, code, beg, end): code for code, beg, end, _ in tasks}
+        try:
             for fu in as_completed(futs, timeout=DEADLINE_S + 30):
                 code = futs[fu]
                 try:
                     r = fu.result()
-                except Exception:
+                except Exception:                       # noqa: BLE001
                     r = None
                 if r:
                     fetched[code] = r
                 else:
                     failed.append(code)
+        except Exception as e:                          # noqa: BLE001
+            # 整体超时（被限流时很容易）：还没回来的按失败处理，绝不让异常冒出去
+            _STOP.set()
+            print('[WARN] 抓取超时（%s），未返回的 %d 只按缺失处理，保留旧值'
+                  % (type(e).__name__, len(tasks) - len(fetched) - len(failed)))
+        finally:
+            for f in futs:
+                f.cancel()
+            ex.shutdown(wait=False)
+        got = set(fetched) | set(failed)
+        failed += [c for c, _, _, _ in tasks if c not in got]
 
     # 3) 算摘要
     fresh = {}
+    _now = datetime.datetime.now()
+    _today = _now.strftime('%Y-%m-%d')
+    _partial_guard = _now.hour * 60 + _now.minute < 15 * 60
     for code, beg, end, d in tasks:
         bars = fetched.get(code)
         if not bars:
@@ -443,9 +554,14 @@ def main():
             prev_of[str(_kl[_i][0])] = _kl[_i - 1][2]
         rows = []
         for day in sorted(byday):
+            # 当日没收盘就抓回来的是半天：48 根只有 20 来根，却会被当成「全天」读
+            # （「上下午都 ≤25%」这种结论在半天数据上毫无意义）。宁可少一天。
+            if day == _today and _partial_guard:
+                continue
             dig = day_digest(byday[day], prev_of.get(day))
             if dig:
                 rows.append(dig)
+
         if rows:
             fresh[code] = rows
             write_cache(code, {'at': datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),
@@ -453,6 +569,7 @@ def main():
 
     # 4) 合并（防清场：抓不到就保留旧值）
     out = dict(old)
+    out.update(fresh_rows)          # 缓存已最新：直接沿用，不发请求
     for code, rows in fresh.items():
         out[code] = rows
     for code in failed:
@@ -474,20 +591,51 @@ def main():
                 out.pop(code, None)
                 pruned += 1
 
+    # 本轮体检记录（R100z353）：给 G71 区分「我们自己的 bug」和「数据源限流」。
+    # 没有它，G71 只能看到「分时落后」；有了它就能说清是上界算错、还是这一步整批被东财拒了。
+    _stat = {'at': datetime.datetime.now().strftime('%Y-%m-%d %H:%M'), 'tradeDate': td,
+             'tasks': len(tasks), 'fetched': len(fresh), 'failed': len(failed),
+             'cached': skipped_fresh, 'ban': bool(_STOP.is_set()),
+             'errs': [e for _, e in ERRORS[:3]]}
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        with open(os.path.join(CACHE_DIR, '_last_run.json'), 'w', encoding='utf-8') as f:
+            json.dump(_stat, f, ensure_ascii=False)
+    except OSError:
+        pass
+
     if not quiet:
         print('抓到 %d 只｜失败 %d 只｜prune %d 只｜最终条目 %d 只｜耗时 %.0fs'
               % (len(fresh), len(failed), pruned, len(out), time.time() - t0))
+
         if failed:
-            print('  失败：%s' % ('、'.join(failed[:8]) + ('…' if len(failed) > 8 else '')))
+            print('  失败：%s%s' % ('、'.join(failed[:8]), '…' if len(failed) > 8 else ''))
+            # 失败原因（第 1 条起）：限流/域名被封/接口改字段，三者处置完全不同
+            if ERRORS:
+                print('  失败原因：%s' % ('；'.join('%s %s' % (c, e) for c, e in ERRORS[:3])))
         size = len(json.dumps(out, ensure_ascii=False, separators=(',', ':')))
         print('  stkIntraday 序列化体积 %.1f KB' % (size / 1024.0))
+        # 新鲜度自检（R100z353）：分时最新一天必须追上 ashare.tradeDate。
+        # 11-11 那次就是这里没人看——日线讲 11-11、分时讲 11-10，G69 因为「分时缺失就退回日线」
+        # 照样 PASS。显式打出来，16:00/19:30 的日志里一眼能看到。
+        if td:
+            _td_md = td[5:]
+            stale = [c for c, rows in out.items()
+                     if rows and str(rows[-1][0]) < _td_md and c in inpool]
+            if stale:
+                print('[STALE] %d 只分时最新日停在 %s 之前（交易日 %s）：%s%s'
+                      % (len(stale), _td_md, td, '、'.join(sorted(stale)[:6]),
+                         '…' if len(stale) > 6 else ''))
+            else:
+                print('  分时新鲜度：池内 %d 只最新日均为 %s' % (len(out), _td_md))
+
 
     if not do_write:
         if not quiet:
             print('（干跑，未写盘；加 --write 落盘）')
         return 0 if fetched or not tasks else 1
 
-    if not fresh and old:
+    if not fresh and not fresh_rows and old:
         print('[WARN] 本轮一只都没抓到，保留旧值不写盘（防清场）')
         return 1
 

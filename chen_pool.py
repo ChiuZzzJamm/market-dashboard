@@ -1337,8 +1337,14 @@ def build_compare(chen_codes, db_codes, ledger, today=None, done=None, kl_cache=
             "both": sorted((chen_s & db_s) - _done),
             "chenOnly": sorted((chen_s - db_s) - _done),
             "duanbanOnly": sorted((db_s - chen_s) - _done),
-            # 今日已兑现（涨停/准涨停）：不进「明日开盘买」名单，只作为当日结果展示
-            "done": [{"code": c, "pct": done[c]} for c in sorted(_done & (chen_s | db_s))],
+            # 今日已兑现（涨停/准涨停）：不进「明日开盘买」名单，只作为当日结果展示。
+            # R100z352b（2026-11-12）：原来写的是 _done & (chen_s | db_s)，把**观察池**里
+            # 当日涨停的票过滤掉了（002021 中捷资源 +10.04% 在 duanban.watching，
+            # 不在确认池 db_s 里 → done 里没有它）。而 G66 的判据是「池内所有 pct≥9.8 的票
+            # 都要进 done」，两处口径不一致 → 闸门 FAIL 且报的是「已兑现剔除失效」，
+            # 指向的却是展示层的过滤。已兑现是**事实**（这票今天确实涨停了），
+            # 不该因为它不在确认池就不展示；三组名单的剔除仍走 _done，逻辑不变。
+            "done": [{"code": c, "pct": done[c]} for c in sorted(_done)],
         },
         "stats": stats,
         "ledgerN": len(ents),

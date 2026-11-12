@@ -380,12 +380,25 @@ def main():
         if _got != _cnt.get(_kind, 0):
             bad.append("000533 输出里「%s」出现 %d 次，按 picks(%s) 的 %s 应为 %d 次——措辞与数据不一致"
                        % (_w, _got, "/".join(_days), _why, _cnt.get(_kind, 0)))
-    for _w, _lo, _why in (("横住", 1, "至少一天回吐<40%"),
-                          ("诱多", 1, "至少一天回吐>100%")):
-        _got = _h533.count(_w)
-        if _got < _lo:
-            bad.append("000533 输出里「%s」出现 %d 次，至少应 %d 次（%s）——措辞与数据不一致"
-                       % (_w, _got, _lo, _why))
+    # R100z352b：这两条下界断言**依赖当日分时**（「横住/诱多」只出现在分时段落里，
+    # 而分时段落只覆盖 stkIntraday 有数据的交易日）。分时源被限流时 stkIntraday 停在旧日，
+    # 当日那根 K 线没有分时段 → 「横住」必然 0 次，报出来的是「分时缺数据」而不是
+    # 「文案在造假」。分时新鲜度已由 G71 单独判 WARN，这里再判 FAIL 等于同一件事罚两次，
+    # 且会把 19:30 这一步整体卡死（2026-11-12 实测：push2his 连续重置，三次重抓 0 只）。
+    # 所以：分时覆盖到 K 线最新日才做措辞对账；没覆盖就明说跳过，绝不改文案去迁就断言。
+    _fresh_days = set(_byday.keys())
+    _has_fresh = bool(_kl) and (str(_kl[-1][0])[5:10] in _fresh_days)
+    if _has_fresh:
+        for _w, _lo, _why in (("横住", 1, "至少一天回吐<40%"),
+                              ("诱多", 1, "至少一天回吐>100%")):
+            _got = _h533.count(_w)
+            if _got < _lo:
+                bad.append("000533 输出里「%s」出现 %d 次，至少应 %d 次（%s）——措辞与数据不一致"
+                           % (_w, _got, _lo, _why))
+    else:
+        print("[WARN] 000533 分时未覆盖最新交易日（stkIntraday 最新 %s / K 线最新 %s）——"
+              "分时段落不完整，「横住/诱多」下界跳过；分时新鲜度见 G71"
+              % (max(_fresh_days) if _fresh_days else "无", str(_kl[-1][0])[:10] if _kl else "无"))
 
     # stkIntraday 格式校验（R100z346/347）：20 个字段，越界就是算错了
     import json as _j
