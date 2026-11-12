@@ -2,12 +2,12 @@
  "ok": true,
  "nameSrc": "tx",
  "nameSrcDetail": {
-  "tx": 411,
+  "tx": 408,
   "sina": 0,
   "em": 0
  },
- "date": "2026-11-11",
- "checked": 411,
+ "date": "2026-11-12",
+ "checked": 408,
  "liftWindow": [
   2,
   5
@@ -17,19 +17,19 @@
  "dims": {
   "st": {
    "status": "ok",
-   "cover": "行情名源（腾讯411/新浪0/东财0）411/411 只取到"
+   "cover": "行情名源（腾讯408/新浪0/东财0）408/408 只取到"
   },
   "cut": {
    "status": "ok",
-   "cover": "公告源 411/411 只取到（东财411/巨潮0）"
+   "cover": "公告源 408/408 只取到（东财408/巨潮0）"
   },
   "lift": {
    "status": "ok",
-   "cover": "解禁源 411/411 只取到"
+   "cover": "解禁源 408/408 只取到"
   },
   "pledge": {
    "status": "ok",
-   "cover": "质押源 411/411 只取到（仅供参考）"
+   "cover": "质押源 408/408 只取到（仅供参考）"
   }
  },
  "verdict": "full",
@@ -106,18 +106,6 @@
    "watch": [],
    "severity": "orange",
    "progress": []
-  },
-  "603215": {
-   "name": "比依股份",
-   "reasons": [
-    "2026-10-28 减持进行中"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "red",
-   "progress": [
-    "减持进行中"
-   ]
   },
   "605188": {
    "name": "国光连锁",
