@@ -212,6 +212,13 @@
    "benchSectorPct": 0.765,
    "sectorN": 90,
    "src": "git-backfill:1fe81fb"
+  },
+  "2026-11-12": {
+   "date": "2026-11-12",
+   "benchPct": null,
+   "benchSectorPct": -1.335,
+   "sectorN": 90,
+   "src": "git-backfill:2401ffd"
   }
  }
 }
