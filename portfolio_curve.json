@@ -350,24 +350,38 @@
    "benchMissing": false,
    "benchSecMissing": false,
    "poolConf": "中"
+  },
+  {
+   "date": "2026-11-13",
+   "avgPct": -2.57,
+   "pf": 0.8683,
+   "bench": 0.8865,
+   "benchMain": 0.9424,
+   "benchSec": 0.9182,
+   "dd": -13.17,
+   "nSec": 6,
+   "nStocks": 48,
+   "benchMissing": false,
+   "benchSecMissing": false,
+   "poolConf": "中"
   }
  ],
  "stat": {
-  "days": 25,
-  "totRetPct": -10.88,
-  "benchRetPct": -9.16,
-  "excessPct": -1.72,
-  "comparableDays": 23,
-  "excessComparablePct": 2.88,
-  "totRetComparablePct": -6.28,
-  "benchRetComparablePct": -9.16,
-  "sectorCmpDays": 25,
-  "excessSectorPct": -4.42,
-  "totRetSectorCmpPct": -10.88,
-  "benchSectorCmpRetPct": -6.46,
-  "benchSectorRetPct": -6.46,
-  "benchMainRetPct": -4.5,
-  "benchMainExcessPct": -6.38,
+  "days": 26,
+  "totRetPct": -13.17,
+  "benchRetPct": -11.35,
+  "excessPct": -1.82,
+  "comparableDays": 24,
+  "excessComparablePct": 2.66,
+  "totRetComparablePct": -8.69,
+  "benchRetComparablePct": -11.35,
+  "sectorCmpDays": 26,
+  "excessSectorPct": -4.99,
+  "totRetSectorCmpPct": -13.17,
+  "benchSectorCmpRetPct": -8.18,
+  "benchSectorRetPct": -8.18,
+  "benchMainRetPct": -5.76,
+  "benchMainExcessPct": -7.41,
   "byConf": {
    "高": {
     "days": 4,
@@ -375,9 +389,9 @@
     "maxDdPct": -5.34
    },
    "中": {
-    "days": 24,
-    "totRetPct": -12.03,
-    "maxDdPct": -12.03
+    "days": 25,
+    "totRetPct": -14.29,
+    "maxDdPct": -14.29
    }
   },
   "maxDdPct": -13.39,
@@ -387,10 +401,10 @@
    "stampDutySell": 0.05,
    "slippagePerSide": 0.1,
    "turnover": "T+1 次日兑现，单标的年化换手高；净值为毛收益，未扣费/税/滑点",
-   "sampleWindow": 25,
+   "sampleWindow": 26,
    "sampleEnough": true,
    "benchmarkNote": "★权威基准=同花顺一级行业涨跌幅中位数（benchSec，与预测对象同源）；bench=上证/深成/创业板/中证1000 四指数涨跌幅中位数（大盘参照）；benchMain=上证+深成等权（主板口径代理，低 beta）。三者均为对照线，不代表「买市场」的可交易组合。"
   },
-  "note": "组合=各预测日「置信度=高」板块（无高则取当日最高置信档）的预测标的等权平均涨跌幅累乘；基准=同日市场基准累乘；回撤按组合净值峰谷算。★权威超额=excessSectorPct（同源行业基准，只统计行业基准齐全的 25 天）——组合本身是一篮子行业板块，拿综合指数当尺子是量纲错配，普涨日会虚高。excessComparablePct（指数基准 23 天）与 excessPct 均留作对照。"
+  "note": "组合=各预测日「置信度=高」板块（无高则取当日最高置信档）的预测标的等权平均涨跌幅累乘；基准=同日市场基准累乘；回撤按组合净值峰谷算。★权威超额=excessSectorPct（同源行业基准，只统计行业基准齐全的 26 天）——组合本身是一篮子行业板块，拿综合指数当尺子是量纲错配，普涨日会虚高。excessComparablePct（指数基准 24 天）与 excessPct 均留作对照。"
  }
 }

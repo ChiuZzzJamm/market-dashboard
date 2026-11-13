@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611131007"></script>
+<script src="data.js?v=202611131948"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -10072,7 +10072,7 @@ function stkEnergyHtml(code) {
     tone = '';
   } else if (vRatio !== null && vRatio <= 40) {
     stage = '缩量但仍破位';
-    concl = '量能已缩到 ' + f1(vRatio) + '%，但低点还在往下走——缩量下跌既可能是洗盘尾声，也可能是没人接的阴跌，' +
+    concl = '量能已缩到断板日的 ' + f1(vRatio) + '%，但低点还在往下走——缩量下跌既可能是洗盘尾声，也可能是没人接的阴跌，' +
       '要看下一个交易日的低点能不能站住。';
     tone = '';
   } else if (vRatio !== null) {
