@@ -1160,7 +1160,7 @@
     "ashare.themePicks[].event",
     "ashare.themePicks[].logic",
     "ashare.themePicks[].stocks[].chg",
-    "ashare.themePicks[].stocks[].why",
+    "ashare.themePicks[].stocks[].note",
     "ashare.lianban[].reason",
     "ashare.lianban[].story",
     "ashare.updatedAt",
