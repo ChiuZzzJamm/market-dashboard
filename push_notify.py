@@ -126,6 +126,23 @@ def build_breakout_line(D):
     tail = '' if len(rows) <= 6 else f" 等{len(rows)}只"
     return '🔴 启动：' + ' / '.join(pieces) + tail + '（洗盘结束刚放量，非已涨完）'
 
+_TRAIL_PUNCT = '，。、；：！？,.;:!? 　…'
+
+
+def cut_text(s, n):
+    """按字数截断并清掉截断处遗留的标点。
+
+    R100z354（2026-11-16）：原来直接 `s[:20]`，6 个板块的主推句都正好在逗号处被切，
+    微信里推成「…而非需求改善，；」——读者看到的是半句话加两个标点。
+    截断过的补一个省略号（一眼能看出被截），未截断的原样返回。
+    """
+    s = str(s or '').strip()
+    if len(s) <= n:
+        return s
+    t = s[:n].rstrip(_TRAIL_PUNCT)
+    return (t or s[:n].strip()) + '…'
+
+
 def fmt_ai_line(ap, label):
     """AI 预测紧凑摘要：每板块「板块名方向(置信度)」，一行带过（微信不宜展开 6×8 明细）。
     若板块带 counter / deduce（fin-strategy-engine 内嵌推演），追加「↘反证/推演」附注。
@@ -142,9 +159,9 @@ def fmt_ai_line(ap, label):
         c = (s.get('confidence') or '').strip()
         items.append(f"{sec}{d}({c})" if c else f"{sec}{d}")
         if s.get('counter'):
-            notes.append(f"{sec}:{strip_dd_prefix(s['counter'])[:20]}")
+            notes.append("%s:%s" % (sec, cut_text(strip_dd_prefix(s['counter']), 20)))
         elif s.get('deduce') and s['deduce'].get('main'):
-            notes.append(f"{sec}:{str(s['deduce']['main'])[:20]}")
+            notes.append("%s:%s" % (sec, cut_text(s['deduce']['main'], 20)))
     if not items:
         return None
     base = f"🎯 {label}：{'｜'.join(items)}"
@@ -161,13 +178,13 @@ def fmt_deduce_brief(dd, max_main=26, max_counter=22):
         return ''
     parts = []
     if dd.get('main'):
-        m = str(dd['main'])[:max_main]
+        m = cut_text(dd['main'], max_main)
         if dd.get('conf'):
             m += '（' + str(dd['conf']) + '）'
         parts.append('推演：' + m)
     if dd.get('counter'):
         # R100z173：AI 常自写「反证是…」，不清洗会推成「反证：反证是…」
-        parts.append('反证：' + strip_dd_prefix(dd['counter'])[:max_counter])
+        parts.append('反证：' + cut_text(strip_dd_prefix(dd['counter']), max_counter))
     return ' '.join(parts)
 
 def fmt_bullish(t, idx):
