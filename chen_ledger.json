@@ -1426,7 +1426,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "expired",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-02",
+    "exitPrice": 35.99,
+    "buyPrice": 35.56,
+    "retPct": 1.21,
+    "note": "持仓 10 日未触目标也未破止损，收盘平"
+   },
    "settleVer": "R100z299",
    "stopAnchor": "legacy-unk"
   },
@@ -1528,7 +1537,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "expired",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-02",
+    "exitPrice": 10.4,
+    "buyPrice": 11.25,
+    "retPct": -7.56,
+    "note": "持仓 10 日未触目标也未破止损，收盘平"
+   },
    "settleVer": "R100z299",
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331"
@@ -1843,7 +1861,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-03",
+    "exitPrice": 17.79,
+    "buyPrice": 20.15,
+    "retPct": -11.71,
+    "note": "收盘跌破止损位"
+   },
    "settleVer": "R100z299",
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331"
@@ -2613,7 +2640,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-05",
+    "exitPrice": 8.03,
+    "buyPrice": 7.65,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -2903,7 +2939,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-06",
+    "exitPrice": 16.7,
+    "buyPrice": 18.27,
+    "retPct": -8.59,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -3226,7 +3271,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-09",
+    "exitPrice": 6.85,
+    "buyPrice": 7.72,
+    "retPct": -11.27,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -3292,7 +3346,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-09",
+    "exitPrice": 29.77,
+    "buyPrice": 32.7,
+    "retPct": -8.96,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -3433,7 +3496,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-09",
+    "exitPrice": 36.95,
+    "buyPrice": 43.65,
+    "retPct": -15.35,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -3452,7 +3524,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-09",
+    "exitPrice": 35.01,
+    "buyPrice": 39.9,
+    "retPct": -12.26,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -3941,7 +4022,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-10",
+    "exitPrice": 25.16,
+    "buyPrice": 27.72,
+    "retPct": -9.24,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -4304,7 +4394,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-10",
+    "exitPrice": 7.78,
+    "buyPrice": 8.62,
+    "retPct": -9.74,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "legacy-unk",
    "settleVer": "R100z299"
   },
@@ -4846,7 +4945,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-11",
+    "exitPrice": 5.54,
+    "buyPrice": 5.28,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -4928,7 +5036,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-11",
+    "exitPrice": 9.95,
+    "buyPrice": 9.48,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -5337,7 +5454,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-11",
+    "exitPrice": 9.88,
+    "buyPrice": 10.56,
+    "retPct": -6.44,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "legacy-unk",
    "settleVer": "R100z299"
   },
@@ -5724,7 +5850,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-12",
+    "exitPrice": 46.0,
+    "buyPrice": 50.26,
+    "retPct": -8.48,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "settleVer": "R100z299"
   },
@@ -6339,7 +6474,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-12",
+    "exitPrice": 6.79,
+    "buyPrice": 7.27,
+    "retPct": -6.6,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "settleVer": "R100z299"
   },
@@ -6458,7 +6602,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-12",
+    "exitPrice": 38.74,
+    "buyPrice": 47.96,
+    "retPct": -19.22,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "settleVer": "R100z299"
   },
@@ -6513,7 +6666,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-12",
+    "exitPrice": 60.91,
+    "buyPrice": 75.88,
+    "retPct": -19.73,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "settleVer": "R100z299"
   },
@@ -6689,7 +6851,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-13",
+    "exitPrice": 10.25,
+    "buyPrice": 9.76,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -6745,7 +6916,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-13",
+    "exitPrice": 9.86,
+    "buyPrice": 9.39,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -6821,7 +7001,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-13",
+    "exitPrice": 26.9,
+    "buyPrice": 25.62,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -6877,7 +7066,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-13",
+    "exitPrice": 5.18,
+    "buyPrice": 6.32,
+    "retPct": -18.04,
+    "note": "收盘跌破止损位"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -7009,7 +7207,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-16",
+    "buyDay": "2026-11-13",
+    "exitPrice": 5.39,
+    "buyPrice": 6.6,
+    "retPct": -18.33,
+    "note": "收盘跌破止损位"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -7123,9 +7330,234 @@
    "holdDays": 10,
    "result": null,
    "settleVer": "R100z299"
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "600853",
+   "name": "龙建股份",
+   "confirmDate": "2026-11-16",
+   "firstSeenDate": "2026-11-13",
+   "entryDate": "2026-11-16",
+   "cross": "both",
+   "preSnapshot": {
+    "theme": {
+     "label": "阴跌",
+     "day": null,
+     "score": 53.1,
+     "why": "今日-1.92% / 5日-1.24% / 涨停1只 / 扩散27%",
+     "fake": false
+    },
+    "pop": {
+     "label": "活跃",
+     "score": 78.7,
+     "why": "成交额池内分位 79"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 建筑装饰 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "中性",
+     "score": 65,
+     "text": "涨停 32（昨 37，↓） · 跌停 60（昨 33，↑） · 最高板 4（昨 4，→） · 连板股 11（昨 7，↑） · 分歧率 45%（昨 43，↑） · 接力率 34%（昨 19，↑）",
+     "why": "各项指标没有明确方向，按中性处理",
+     "gate": "open"
+    },
+    "total": 64.6,
+    "tier": "强",
+    "why": "题材阴跌(53)×55% + 人气79×45% = 65（情绪中性 作闸门）"
+   },
+   "ztDate": "2026-11-12",
+   "stopPrice": 3.8,
+   "stopAnchor": "zt_low",
+   "ztLow": 3.8,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "002124",
+   "name": "天邦食品",
+   "confirmDate": "2026-11-16",
+   "firstSeenDate": "2026-11-16",
+   "entryDate": "2026-11-16",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "回踩",
+     "day": null,
+     "score": 40.9,
+     "why": "今日-1.00% / 5日+0.96% / 涨停0只 / 扩散28%",
+     "fake": false
+    },
+    "pop": {
+     "label": "活跃",
+     "score": 80.3,
+     "why": "成交额池内分位 74 · 龙虎榜净买（+6）"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 养殖业 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "中性",
+     "score": 65,
+     "text": "涨停 32（昨 37，↓） · 跌停 60（昨 33，↑） · 最高板 4（昨 4，→） · 连板股 11（昨 7，↑） · 分歧率 45%（昨 43，↑） · 接力率 34%（昨 19，↑）",
+     "why": "各项指标没有明确方向，按中性处理",
+     "gate": "open"
+    },
+    "total": 58.6,
+    "tier": "强",
+    "why": "题材回踩(41)×55% + 人气80×45% = 59（情绪中性 作闸门）"
+   },
+   "ztDate": "2026-11-09",
+   "stopPrice": 2.03,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 2.03,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "002905",
+   "name": "金逸影视",
+   "confirmDate": "2026-11-16",
+   "firstSeenDate": "2026-11-16",
+   "entryDate": "2026-11-16",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "退潮",
+     "day": null,
+     "score": 8.0,
+     "why": "今日-1.35% / 5日+10.01% / 涨停2只 / 扩散25%",
+     "fake": false
+    },
+    "pop": {
+     "label": "梯队",
+     "score": 8.7,
+     "why": "成交额池内分位 1 · 连板梯队（+8）"
+    },
+    "ladder": {
+     "label": "本票在梯队",
+     "score": 100.0,
+     "why": "本票本身就在连板梯队，属于接力而非补涨",
+     "n": 1,
+     "maxLb": 2,
+     "names": [
+      "金逸影视"
+     ],
+     "themes": [
+      "电影院线",
+      "特色影厅"
+     ],
+     "topName": "金逸影视",
+     "inLadder": true,
+     "bonus": 12.0,
+     "tag": "接力"
+    },
+    "mood": {
+     "label": "中性",
+     "score": 65,
+     "text": "涨停 32（昨 37，↓） · 跌停 60（昨 33，↑） · 最高板 4（昨 4，→） · 连板股 11（昨 7，↑） · 分歧率 45%（昨 43，↑） · 接力率 34%（昨 19，↑）",
+     "why": "各项指标没有明确方向，按中性处理",
+     "gate": "open"
+    },
+    "total": 20.3,
+    "tier": "弱",
+    "why": "题材退潮(8)×55% + 人气9×45% + 连板本票在梯队+12 = 20（情绪中性 作闸门）"
+   },
+   "ztDate": "2026-11-10",
+   "stopPrice": 8.48,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 8.48,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "600408",
+   "name": "安泰集团",
+   "confirmDate": "2026-11-16",
+   "firstSeenDate": "2026-11-16",
+   "entryDate": "2026-11-16",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "温和",
+     "day": null,
+     "score": 47.2,
+     "why": "今日+1.20% / 5日+0.50% / 涨停0只 / 扩散76%",
+     "fake": false
+    },
+    "pop": {
+     "label": "活跃",
+     "score": 77.2,
+     "why": "成交额池内分位 77"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 煤炭开采加工 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "中性",
+     "score": 65,
+     "text": "涨停 32（昨 37，↓） · 跌停 60（昨 33，↑） · 最高板 4（昨 4，→） · 连板股 11（昨 7，↑） · 分歧率 45%（昨 43，↑） · 接力率 34%（昨 19，↑）",
+     "why": "各项指标没有明确方向，按中性处理",
+     "gate": "open"
+    },
+    "total": 60.7,
+    "tier": "强",
+    "why": "题材温和(47)×55% + 人气77×45% = 61（情绪中性 作闸门）"
+   },
+   "ztDate": "2026-11-10",
+   "stopPrice": 3.35,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 3.35,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
   }
  ],
- "updatedAt": "2026-11-13 16:03",
+ "updatedAt": "2026-11-16 16:03",
  "resettleAt": "R100z299",
  "anchorVer": "R100z331",
  "anchorNote": "止损锚＝涨停日（T日）最低价，断板与陈学长同口径；2026-11-10 22:1x 统一"

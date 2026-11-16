@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611161000"></script>
+<script src="data.js?v=202611161949"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -9917,7 +9917,9 @@ function stkEnergyHtml(code) {
   // 连续放量下跌：一天是噪音，两天是趋势
   var twoDown = (n - 1 !== d && n >= 3 && pct(n - 1) <= -2 && pct(n - 2) <= -2 && v[n - 1] >= v5p && v[n - 2] >= v5p);
   if (twoDown) {
-    rows.push('<b>连续两日放量下跌</b>——<b>结构在走弱</b>，是不是出货要看有没有跌破断板前的低点（见下）。');
+    rows.push('<b>连续两日放量下跌</b>：' + mmdd(dt[n - 2]) + ' 跌 ' + f1(Math.abs(pct(n - 2))) + '%、' +
+      mmdd(dt[n - 1]) + ' 跌 ' + f1(Math.abs(pct(n - 1))) + '%，两日量能最低仍有 5 日均量的 ' +
+      f1(Math.min(v[n - 1], v[n - 2]) / v5p * 100) + '%——<b>结构在走弱</b>，是不是出货要看有没有跌破断板前的低点（见下）。');
   }
 
   /* ⑦ 分时承接（R100z346，用户 2026-11-11 16:49 要求加深）。
