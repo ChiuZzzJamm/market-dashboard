@@ -90,7 +90,8 @@ ERRORS = []             # [(code, 异常摘要)]，只用于日志诊断，不�
 import threading                                        # noqa: E402
 _PACE = {'next': 0.0}
 _PLOCK = threading.Lock()
-_STOP = threading.Event()       # 被限流后置位：所有线程立刻停手，不再重试
+_STOP = threading.Event()       # 整体超时/被限流后置位：所有线程立刻停手，不再重试
+_EM_DOWN = threading.Event()    # 东财 push2his 整域连不上（R100z354）：置位后直接走腾讯兜底
 _STREAK = {'n': 0}              # 连续连接级失败计数（成功一次即归零）
 
 
@@ -120,10 +121,12 @@ def _mark(fail):
     with _PLOCK:
         _STREAK['n'] = _STREAK['n'] + 1 if fail else 0
         loop = _STREAK['n']
-    if loop >= BAN_STREAK and not _STOP.is_set():
-        _STOP.set()
-        print('[BAN] 连续 %d 次连接被重置 —— 认定整机限流，本轮停止抓取（保留旧值，'
-              '16:00/19:30 下一轮再补）' % loop)
+    if loop >= BAN_STREAK and not _EM_DOWN.is_set():
+        # R100z354（2026-11-16）：原来这里置 _STOP，等于「东财连不上 → 本轮整批放弃」。
+        # 实测 11-16 09:30 三个 host 全部连接级失败（000，0.03s 秒回，IPv4 强制也一样），
+        # 是整域不可用而非本机限流；这时**不该停手**，该换源（腾讯 m5 实测含 11-13 全量）。
+        _EM_DOWN.set()
+        print('[FALLBACK] 东财 push2his 连续 %d 次连接失败 —— 转腾讯 m5 兜底继续抓取' % loop)
 
 
 UA = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
@@ -160,6 +163,8 @@ def fetch_5m(code, beg, end):
     import urllib.request
     if _STOP.is_set():
         return None
+    if _EM_DOWN.is_set():
+        return _fetch_5m_tx(code, beg, end)
     q = ('/api/qt/stock/kline/get?secid=%s&klt=5&fqt=1&beg=%s&end=%s'
          '&fields1=f1,f2&fields2=f51,f52,f53,f54,f55,f56,f57' % (secid(code), beg, end))
     base = int(str(code)[-3:] or 0)                     # 固定偏移：同一只票每次落同一域，便于复现
@@ -185,7 +190,12 @@ def fetch_5m(code, beg, end):
             continue
     else:
         ERRORS.append((str(code), last_err or 'unknown'))
-        return None
+        if not _EM_DOWN.is_set() and 'HTTPError' not in (last_err or ''):
+            _EM_DOWN.set()
+            print('[FALLBACK] 东财 push2his 三个域均连不上（%s）—— 转腾讯 m5 兜底' % last_err)
+        return _fetch_5m_tx(code, beg, end)
+
+    # 只有 break（东财成功）才会走到这里；else 分支已在上面 return 兜底源
     kl = ((d or {}).get('data') or {}).get('klines') or []
 
     out = []
@@ -198,6 +208,61 @@ def fetch_5m(code, beg, end):
                         float(p[4]), float(p[5]), float(p[6])])
         except ValueError:
             continue
+    return out or None
+
+
+TX_GAP_S = 1.0          # 腾讯兜底的请求间隔（东财才是被限流的那一方，不必沿用 4s）
+
+
+def _fetch_5m_tx(code, beg, end):
+    """腾讯 5 分钟线兜底（R100z354，2026-11-16）。
+
+    由来：11-13 盘后与 11-15 22:18 两轮 `intraday_digest` 都是「抓到 0/78、失败 78」，
+    分时整批停在 11-12，G71 判 FAIL 拦部署。实测不是限流而是**东财整域不可用**：
+    push2his / 1.push2his / 82.push2his 全部 000（0.03s 秒回，IPv4 强制同样）。
+    腾讯 `ifzq.gtimg.cn` 的 m5 接口（需 UA + Referer）实测返回含 11-13 全量 48 根/日，
+    与东财同构，故作为兜底源。
+
+    返回与东财同构：[[day, open, close, high, low, vol, amt], ...]，
+    day='YYYY-MM-DD HH:MM'（day_digest 用 b[0][11:16] 分上下午，格式必须一致）；
+    vol 单位为手、amt 单位为元（腾讯不返成交额，按 vol×100×均价回推，量与价的关系仍同构）。
+    """
+    import urllib.request
+    sym = ('sh' if str(code).startswith(('6', '5', '9')) else 'sz') + str(code)
+    # 640 根 ≈ 13 个交易日，覆盖 KEEP_DAYS=20 的绝大部分；更早的日期靠缓存合并保留
+    url = 'https://ifzq.gtimg.cn/appstock/app/kline/mkline?param=%s,m5,,640' % sym
+    req = urllib.request.Request(url, headers={'User-Agent': UA,
+                                               'Referer': 'https://gu.qq.com/'})
+    _wait_turn(TX_GAP_S)
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            d = json.loads(r.read().decode('utf-8', 'ignore'))
+    except Exception as e:                                  # noqa: BLE001
+        ERRORS.append((str(code), 'tx:%s' % type(e).__name__))
+        return None
+    node = ((d or {}).get('data') or {}).get(sym) or {}
+    rows = node.get('m5') or []
+    beg_s, end_s = str(beg or '')[:8], str(end or '')[:8]
+    out = []
+    for k in rows:
+        if not isinstance(k, list) or len(k) < 6:
+            continue
+        t = str(k[0])
+        if len(t) != 12 or not t.isdigit():
+            continue
+        ymd = t[:8]
+        if beg_s and ymd < beg_s:
+            continue
+        if end_s and ymd > end_s:
+            continue
+        try:
+            o, c, h, l, vol = (float(k[1]), float(k[2]), float(k[3]),
+                               float(k[4]), float(k[5]))
+        except (TypeError, ValueError):
+            continue
+        amt = vol * 100 * ((o + c) / 2.0) if vol > 0 else 0.0
+        out.append(['%s-%s-%s %s:%s' % (t[0:4], t[4:6], t[6:8], t[8:10], t[10:12]),
+                    o, c, h, l, vol, amt])
     return out or None
 
 
@@ -595,7 +660,9 @@ def main():
     # 没有它，G71 只能看到「分时落后」；有了它就能说清是上界算错、还是这一步整批被东财拒了。
     _stat = {'at': datetime.datetime.now().strftime('%Y-%m-%d %H:%M'), 'tradeDate': td,
              'tasks': len(tasks), 'fetched': len(fresh), 'failed': len(failed),
-             'cached': skipped_fresh, 'ban': bool(_STOP.is_set()),
+             'cached': skipped_fresh,
+             'ban': bool(_STOP.is_set() or _EM_DOWN.is_set()),
+             'src': 'tencent' if _EM_DOWN.is_set() else 'eastmoney',
              'errs': [e for _, e in ERRORS[:3]]}
     try:
         os.makedirs(CACHE_DIR, exist_ok=True)
