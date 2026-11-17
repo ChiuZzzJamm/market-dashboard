@@ -94,6 +94,13 @@ def build(D, limit=4):
     for name, t in ((D.get("duanban") or {}).get("themes") or {}).items():
         if not isinstance(t, dict):
             continue
+        # R100z356：自动成组的题材（词表没收录、标了 auto）**不给补涨候选**。
+        # 它连"这是不是一个题材"都还没确认，此时按组名去 hot 里串捞，等于拿一个未经验证的
+        # 词去推荐可买名单——这正是 24.145「候选错读者会照着买」那一类。
+        # 确认路径：theme_map_promote.py 收进正式词表后，下一轮这里就会按 ckw 正常算。
+        if t.get("auto"):
+            out[name] = ([], "auto")
+            continue
         in_lb = set(str(b.get("code") or "") for b in (t.get("boardStocks") or []))
         keys = ckw.get(name) or [name]
         hits = []

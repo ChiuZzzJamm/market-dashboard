@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611171958"></script>
+<script src="data.js?v=202611172233"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -887,6 +887,10 @@
               border: 1px solid #e8c79a; border-radius: 999px; padding: 0 5px; white-space: nowrap; }
   /* 题材名与行业名不一致时的标记（灰、不抢眼，但一定要在） */
   .pre-th-m { font-size: var(--fs-xs); color: var(--ink2); opacity: .85; white-space: nowrap; }
+  /* R100z356：自动成组、尚未人工确认的题材。刻意用「虚线边 + 灰蓝」与「跨行业」（实线橙）区分：
+     这不是数据质量问题，是「这条结论还没人签字」，视觉上要像草稿而不是警告。 */
+  .pre-th-a { font-size: var(--fs-xs); color: #3f5f8a; background: #f2f6fc;
+              border: 1px dashed #a8bcd8; border-radius: 999px; padding: 0 5px; white-space: nowrap; }
   .pre-th-l2 { font-size: var(--fs-xs); color: var(--ink2); margin-top: 2px; line-height: 1.65; }
   .pre-th-r { cursor: pointer; margin-right: 7px; border-bottom: 1px dotted var(--ink2); }
   .pre-th-r:hover { color: var(--accent); }
@@ -6607,6 +6611,10 @@ function lbThemeSecHtml(db) {
     var usePool = cands.length > 0;
     var list = usePool ? cands : (t.refStocks || []);
     var lab = usePool ? '池内同题材可补涨' : '同题材可看（词表代表票，非可买名单）';
+    /* R100z356（用户 2026-11-17 22:22「那就前者」）：自动成组的题材只给「今天谁在连板」，
+       不给补涨候选——它连"这是不是一个真题材"都还没确认。未确认就先推荐可买名单，
+       是全站最贵的一类错（读者会照着买）。所以这里明确写出来，并指路怎么确认。 */
+    if (t.auto) lab = '待确认题材：只列今日连板成员，确认前不给补涨候选';
     var rf = list.map(function (r) {
       window._TH_GRP.push({ c: r.code, n: r.name, t: '题材「' + k + '」同题材 · ' + r.name });
       var gi = window._TH_GRP.length - 1;
@@ -6621,6 +6629,9 @@ function lbThemeSecHtml(db) {
     var _sec = (t.sectors || []).join('、');
     h += '<div class="pre-th"><div class="pre-th-l1"><b>' + esc(k) + '</b><em>' +
       (t.maxLb || 1) + '板</em>' + cur +
+      (t.auto ? '<span class="pre-th-a" title="' +
+        escAttr(String(t.why || '由今日连板 reason 自动成组，未经人工确认')) +
+        '">待确认</span>' : '') +
       (t.crossSector ? '<span class="pre-th-x" title="' +
         escAttr('这个题材横跨多个行业：' + _sec + '　按行业口径聚不出来，所以才需要题材维度') +
         '">跨行业</span>' : '') +
@@ -6628,7 +6639,7 @@ function lbThemeSecHtml(db) {
         escAttr('同花顺行业口径把它归到「' + _sec + '」，不是这个题材名——按行业找永远找不到它') +
         '">行业归' + esc(_sec) + '</span>' : '') +
       '</div>' +
-      (rf ? '<div class="pre-th-l2">' + lab + ' ' + rf + '</div>' : '') +
+      ((rf || t.auto) ? '<div class="pre-th-l2">' + lab + (rf ? ' ' + rf : '') + '</div>' : '') +
       '</div>';
   });
   return h + '</div>';

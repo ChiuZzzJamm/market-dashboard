@@ -697,6 +697,146 @@ def match_themes(text, name="", code=""):
     return out
 
 
+# ---- 自动成组（R100z356，2026-11-17 用户「那就前者」）----
+# 词表只有 12 个题材，市场轮动到表外时「题材掘金」整块空着（11-17：6 只连板、家电/消费电子/
+# 变压器/AI应用/GPU芯片，一个都没命中）。用户选定的方案：**当日连板 reason 自动成组，
+# ≥2 只同词才成组，标「待确认」，人工确认后才进正式词表**——比手工补表能跟上轮动。
+AUTO_MIN_STOCKS = 2      # 单只不成组（那是个股逻辑，不是题材）
+AUTO_MAX_GROUPS = 6      # 一天最多出几组，避免把看板刷成噪音
+# 事件类/属性类词不进「题材」：回购、增持、定增都是**由头**不是方向；
+# 国资/次新/概念这些是标签，把它们当成题材会得到「国资 2 只」这种没人能用的结论。
+AUTO_NOISE = {
+    "回购", "增持", "定增", "员工持股", "股权激励", "解禁", "分红", "减持",
+    "重组", "并购", "摘帽", "次新", "国资", "概念", "板块", "龙头", "预增", "扭亏",
+    "电子", "材料", "设备",     # 两个字的大类，跟「行业维度」没区别
+}
+
+
+def _theme_tokens(reason):
+    """连板 reason → 候选题材词（去重、去事件词/泛词）。只做切分与清洗，不做判断。"""
+    out = []
+    for p in theme_words(reason, limit=5):
+        p = str(p or "").strip()
+        if len(p) < 2 or len(p) > 12:
+            continue
+        if p in AUTO_NOISE:
+            continue
+        if re.match(r"^[0-9A-Za-z\.%]+$", p):        # 纯数字/纯英文（如 5G 之外的 2024）
+            continue
+        if p not in out:
+            out.append(p)
+    return out
+
+
+def auto_theme_groups(lianban, curated_names=None):
+    """把「词表没收录」的连板题材自动成组（R100z356）。返回 {题材名: {...}}，字段与
+    `theme_agg` 的正式题材同构，另加 `auto/needConfirm/why`，前端据此打「待确认」标。
+
+    判据（全部落在会被人工否掉的地方）：
+      a) **≥2 只不同标的**共享同一个词，或词之间存在包含关系（家电 ⊂ 小家电、变压器 ⊂ 干式变压器）；
+      b) 该词不能是正式词表的 name/alias/kw（正式题材优先，自动组不许抢名）；
+      c) 事件词/属性词（回购、增持、国资…见 AUTO_NOISE）不成组；
+      d) 每组代表名取**最短**的那个词（「家电」比「小家电」更适合当组名）；
+      e) 只给连板成员，**不给补涨候选**——未确认的题材不该出可买名单（cands 恒为空）。
+    """
+    lbs = [x for x in (lianban or []) if isinstance(x, dict)]
+    curated = set(curated_names or [])
+    if not curated:
+        for th in theme_map():
+            curated.add(str(th.get("name") or ""))
+            for a in (th.get("alias") or []):
+                curated.add(str(a))
+    # 正式词表的 kw 也算「已收录」：否则「AI应用」这种已由 AI漫剧覆盖的词会重复成组
+    curated_kw = set()
+    for th in theme_map():
+        for k in (th.get("kw") or []):
+            curated_kw.add(str(k))
+
+    # 词 → 出现的标的
+    owners = {}
+    for x in lbs:
+        code = str(x.get("code") or "")
+        if not code:
+            continue
+        for w in _theme_tokens(x.get("reason")):
+            owners.setdefault(w, set()).add(code)
+
+    # 包含关系合并：家电 ⊂ 小家电 → 同簇；用并查集，代表名取最短词
+    words = [w for w in owners if w not in curated and w not in curated_kw]
+    parent = {w: w for w in words}
+
+    def find(a):
+        while parent[a] != a:
+            parent[a] = parent[parent[a]]
+            a = parent[a]
+        return a
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            # 短词当根，代表名天然取到最短的那个
+            if len(ra) <= len(rb):
+                parent[rb] = ra
+            else:
+                parent[ra] = rb
+
+    for i, a in enumerate(words):
+        for b in words[i + 1:]:
+            if len(a) < 2 or len(b) < 2:
+                continue
+            if a in b or b in a:
+                union(a, b)
+
+    clusters = {}
+    for w in words:
+        clusters.setdefault(find(w), []).append(w)
+
+    by_code = {str(x.get("code")): x for x in lbs if x.get("code")}
+    out = {}
+    for root, ws in clusters.items():
+        codes = set()
+        for w in ws:
+            codes |= owners.get(w, set())
+        if len(codes) < AUTO_MIN_STOCKS:
+            continue
+        name = min(ws, key=lambda s: (len(s), s))
+        if name in curated:
+            continue
+        hit = [by_code[c] for c in codes if c in by_code]
+        # 板数排序：读者先看几板，再看几只（与正式题材同一口径）
+        bs = []
+        for x in hit:
+            try:
+                lbc = int(x.get("lbc") or 1)
+            except (TypeError, ValueError):
+                lbc = 1
+            bs.append({"code": str(x.get("code")), "name": str(x.get("name") or ""), "lbc": lbc})
+        bs.sort(key=lambda z: (-z["lbc"], z["code"]))
+        out[name] = {
+            "name": name,
+            "alias": [w for w in ws if w != name],
+            "n": len(bs),
+            "maxLb": max([b["lbc"] for b in bs] or [1]),
+            "boardStocks": bs,
+            "names": [b["name"] for b in bs if b["name"]],
+            "codes": sorted({b["code"] for b in bs}),
+            "sectors": sorted({str(x.get("hybk") or "") for x in hit if x.get("hybk")}),
+            "reasons": [str(x.get("reason") or "") for x in hit][:3],
+            "refStocks": [],            # 未确认的题材不给代表票（那是词表的职责）
+            "crossSector": len({str(x.get("hybk") or "") for x in hit if x.get("hybk")}) > 1,
+            "sectorMismatch": False,    # 名字就取自 reason，不存在「行业归错」的对比基准
+            "auto": True,
+            "needConfirm": True,
+            "why": ("由今日连板 reason 自动成组（%d 只同词「%s」），未经人工确认："
+                    "先观察一两天，确认是真题材再用 theme_map_promote.py 收进正式词表"
+                    % (len(bs), name)),
+            "cands": [],
+            "candKind": "auto",
+        }
+    ordered = sorted(out.items(), key=lambda kv: (-kv[1]["maxLb"], -kv[1]["n"], kv[0]))
+    return dict(ordered[:AUTO_MAX_GROUPS])
+
+
 def theme_agg(lianban):
     """按**题材**聚合连板梯队（R100z316）。返回 {题材名: {...}}。
 
@@ -769,6 +909,14 @@ def theme_agg(lianban):
                 str(name)[:2] in str(x.get("hybk") or "") for x in hit if x.get("hybk")
             ),
         }
+    # R100z356：正式题材之外，再补「当日连板 reason 自动成组」的待确认题材。
+    # 两组不抢名（auto_theme_groups 已排除正式 name/alias/kw），这里只做合并；
+    # 排序仍按「最高板 → 只数」，今天的真热点（哪怕词表没收录）该排在前面。
+    try:
+        for _k, _v in auto_theme_groups(lbs, curated_names=list(out)).items():
+            out.setdefault(_k, _v)
+    except Exception:                                        # noqa: BLE001
+        pass                                                  # 成组失败不该拖垮断板池落盘
     # 板数高的在前：读者先看「几板」，再看「几只」
     return dict(sorted(out.items(), key=lambda kv: (-kv[1]["maxLb"], -kv[1]["n"])))
 

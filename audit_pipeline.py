@@ -5545,10 +5545,34 @@ def g63_theme_cands_truth(r):
 
     bad, seen_in = [], {}
     n_cand = 0
+    n_auto = 0
+    lb_codes = {str(x.get("code")) for x in
+                (((D.get("ashare") or {}).get("lianban")) or []) if isinstance(x, dict)}
     for name, t in themes.items():
         if not isinstance(t, dict):
             continue
         in_lb = set(str(b.get("code") or "") for b in (t.get("boardStocks") or []))
+        # R100z356：自动成组（词表没收录、标了 auto）的题材，判据与正式题材不同——
+        # 它没有 ckw 词表、也**不该有**补涨候选。这里守四条：
+        # ① 成员 ≥2 只且都在今日连板梯队里（不然就是拿历史连板凑数）；
+        # ② cands 必须为空、candKind=auto（未确认的题材出可买名单是最贵的一类错）；
+        # ③ 不许带 refStocks（代表票是词表的职责，未确认的题材没有）；
+        # ④ 不许与正式词表重名（正式题材优先）。
+        if t.get("auto"):
+            codes = [str(b.get("code") or "") for b in (t.get("boardStocks") or [])]
+            if len(set(codes)) < 2:
+                bad.append(f"{name} 自动组只有 {len(set(codes))} 只（<2 不该成组）")
+            if (t.get("cands") or []) or t.get("candKind") != "auto":
+                bad.append(f"{name} 自动组给了补涨候选/kind≠auto（未确认题材不许出可买名单）")
+            if t.get("refStocks"):
+                bad.append(f"{name} 自动组带了词表代表票（未确认题材没有代表票）")
+            if name in ckw:
+                bad.append(f"{name} 与正式词表重名（正式题材优先）")
+            off = [c for c in codes if c not in lb_codes]
+            if off:
+                bad.append(f"{name} 的成员不在今日连板梯队：{off[:3]}")
+            n_auto += 1
+            continue
         keys = ckw.get(name) or [name]
         for c in (t.get("cands") or []):
             n_cand += 1
@@ -5579,12 +5603,22 @@ def g63_theme_cands_truth(r):
                    "；".join(f"{c}→{'/'.join(th)}" for c, th in list(leak.items())[:3]))
     if bad:
         r.fail("G63", f"题材候选有 {len(bad)} 处站不住：" + "；".join(bad[:5]))
+        return
+    # R100z356：数据对了不等于页面画出来了。新的一类条目（auto/待确认）最容易「看着正常」：
+    # 徽章没渲染 → 读者当成正式题材；候选行空着 → 读者以为这题材没票。
+    # 所以这里真跑一次 lbThemeSecHtml（与 G67/G68 同一套做法）。
+    rc, out, err = _run_tool("check_theme_row.py", timeout=180)
+    if rc != 0:
+        r.fail("G63", "题材行渲染没过：" + (out or err or "").strip()[:240])
+        return
     else:
         n_th = sum(1 for v in themes.values() if isinstance(v, dict) and v.get("candKind") == "theme")
-        n_ref = len(themes) - n_th
+        n_ref = len(themes) - n_th - n_auto
         r.ok("G63", f"题材候选 {n_cand} 只全部可回溯（在池内、非本题材成分、命中属于该题材的概念词）；"
                     f"{n_th}/{len(themes)} 个题材有同题材候选"
-                    + (f"，{n_ref} 个空着（不按行业凑数）" if n_ref else ""))
+                    + (f"，{n_ref} 个空着（不按行业凑数）" if n_ref else "")
+                    + (f"，{n_auto} 个自动成组待确认（成员均在连板梯队、未给候选）" if n_auto else "")
+                    + "；题材行渲染真跑通过")
 
 
 def g64_plan_scorecard(r):

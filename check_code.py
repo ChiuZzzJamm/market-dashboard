@@ -140,6 +140,8 @@ NON_DATA_WRITERS = {
 
 # 死脚本白名单：合法的「手工跑、不进自动化」工具，写明用途才准留
 DEAD_OK = {
+    'theme_map_promote.py': 'R100z356：把「今日自动成组的待确认题材」人工确认后写进 theme_map.json'
+                            '（默认 dry，--write 才落盘）。不进流水线——「确认」必须有人看过盘面',
     'resettle_ledger.py': 'R100z299：结算规则本身改过时（本轮：止盈从买入当天改成次日），把 chen_ledger 全部条目按新规则重算并只刷新 chenPool.compare/track。手工触发（--dry 只打对照），不进流水线',
     'migrate_ledger_pools.py': 'R100z297：一次性数据迁移（历史台账补池归属），迁移完即不再需要，'
                                '手工触发、幂等可重跑；留着是为了「同一份台账在别的机器/别的分支上'
