@@ -5511,7 +5511,17 @@ def g63_theme_cands_truth(r):
         return
     themes = ((D.get("duanban") or {}).get("themes")) or {}
     if not themes:
-        r.warn("G63", "duanban.themes 为空（今日无连板或 16:00 未跑），题材候选无从校验")
+        # R100z355：原来只说「今日无连板或 16:00 未跑」，而 2026-11-17 实测是**6 只连板、
+        # 但没有一只的 reason 命中 theme_map 词表**（GPU芯片/小家电/AI眼镜/干式变压器…全不在表里）。
+        # 「无连板」和「有连板但词表没收录」是两件事：前者正常，后者说明词表该补。
+        lb = (D.get("ashare") or {}).get("lianban") or []
+        if lb:
+            r.warn("G63", "duanban.themes 为空，但今日有 %d 只连板（%s）——它们的 reason 都没命中"
+                          "题材词表（common.theme_map/match_themes）。若其中有真题材，补词表；"
+                          "若确实是各自独立的小题材，空着是对的（页面不出题材行）"
+                   % (len(lb), "、".join(str(x.get("name") or x.get("code")) for x in lb[:4])))
+        else:
+            r.warn("G63", "duanban.themes 为空且今日无连板，题材候选无从校验（正常日度状态）")
         return
     missing = [k for k, v in themes.items() if isinstance(v, dict) and "cands" not in v]
     if missing:
@@ -6069,6 +6079,40 @@ def g68_pending_detail(r):
     od = cmp_.get("openMeta") or {}
     if od.get("shown") is not None and int(od["shown"]) != len(opens):
         bad.append("openMeta.shown=%s ≠ 实际 %d 条" % (od["shown"], len(opens)))
+
+    # R100z355（2026-11-17）：按纪律没进场的逐条明细。原来 `settleMeta.skip` 只有一个计数、
+    # 没有任何闸门核对，页面也只能写「另有 N 条…不列」。现在要求：
+    # ① skip == len(skipped)；② 每条有 code/name/buyDay，止损位与开盘价都是有效数；
+    # ③ 「如果照买」只能是数或 null（K 线不够就说不知道，不许填 0 冒充）；
+    # ④ 既然是「开盘价跌破止损位」，openPx 必须真的 < stopPx —— 这条防的是口径写反。
+    sm = cmp_.get("settleMeta") or {}
+    skip_n = int(sm.get("skip") or 0)
+    skl = sm.get("skipped")
+    if skip_n and not isinstance(skl, list):
+        bad.append("settleMeta.skip=%d 但没有 skipped 明细（页面只能显示计数）" % skip_n)
+    elif isinstance(skl, list):
+        if len(skl) != skip_n:
+            bad.append("skipped 明细 %d 条 ≠ skip 计数 %d" % (len(skl), skip_n))
+        sbad = []
+        for x in skl:
+            if not x.get("code") or not x.get("name") or not x.get("buyDay"):
+                sbad.append("%s 缺 code/name/buyDay" % x.get("code"))
+                continue
+            ap = x.get("afterPct")
+            if ap is not None and not isinstance(ap, (int, float)):
+                sbad.append("%s afterPct 非数非 null" % x.get("code"))
+            try:
+                op, st = float(x["openPx"]), float(x["stopPx"])
+                if op <= 0 or st <= 0:
+                    sbad.append("%s 止损/开盘价非正数" % x.get("code"))
+                elif op > st + 1e-9:
+                    # 相等是合法的（「开盘即贴到止损位」），严格高于才说明口径写反了
+                    sbad.append("%s 开盘价高于止损位却判没进场" % x.get("code"))
+            except (KeyError, TypeError, ValueError):
+                sbad.append("%s 止损/开盘价缺失" % x.get("code"))
+        if sbad:
+            bad.append("skipped 明细 %d 处不对：%s" % (len(sbad), sbad[:3]))
+
 
     if bad:
         r.fail("G68", "进行明细数据不自洽：" + "；".join(bad[:4]))

@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611171943"></script>
+<script src="data.js?v=202611171958"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -7591,7 +7591,7 @@ function openSettleDetail() {
     (meta.legacyShown ? '（含旧口径 ' + meta.legacyShown + ' 条）' : '') +
     '｜卖出后 <b>' + (meta.keepDays || 30) + '</b> 个交易日自动清除' +
     (meta.cleared ? '（已清除 ' + meta.cleared + ' 条）' : '（当前还没有到期清除的）') +
-    (meta.skip ? '｜另有 ' + meta.skip + ' 条开盘即破止损、按纪律没进场，没有成交所以不列' : '') +
+    (meta.skip ? '｜另有 <b>' + meta.skip + '</b> 条开盘即破止损、按纪律没进场（明细在下方）' : '') +
     '</div>';
   if (!rows.length) {
     h += '<div class="db-empty" style="margin-top:12px">暂无已结算样本（或都超过 30 个交易日已清除）</div>';
@@ -7623,6 +7623,49 @@ function openSettleDetail() {
     });
     h += '</tbody></table></div>';
     window._STL_GRP = _grp;
+  }
+  /* R100z355（用户 2026-11-17 19:14「台账部分是不是要更新的更完善」）：按纪律没进场的逐条留痕。
+     原来只给一个计数（「另有 6 条…没有成交所以不列」）。可读者真正想知道的是
+     「差几分钱没进场、后来涨没涨」——后者才是这条纪律有没有帮上忙的唯一证据：
+     没进场的票后来还在跌＝止损位救了钱；后来大涨＝止损位设得太紧（该复核 stopPct）。
+     数据由 chen_pool._skip_row 逐条算好（开盘价口径 = 纪律价被跌破的那个价，不是收盘价）。 */
+  if (meta.skip) {
+    var sk = meta.skipped || [];
+    var _sg = [];
+    h += '<div class="stl-bd" style="margin-top:10px"><div class="stl-sub">' +
+      '按纪律没进场 <b>' + meta.skip + '</b> 条：进场日开盘价已跌破止损位，按纪律不买。' +
+      '最后一列是<b>如果照买</b>到第 5 个交易日的收盘涨跌——用来检验止损位松紧，不是成交记录' +
+      '</div>';
+    if (!sk.length) {
+      h += '<div class="db-empty" style="margin-top:8px">这批是旧台账，只有计数没有明细；' +
+        '下一次 16:00 数据步会逐条补上</div>';
+    } else {
+      h += '<table class="stl-tbl"><thead><tr><th>标的</th><th>进场日</th><th>止损位</th>' +
+        '<th>开盘价</th><th>低多少</th><th>如果照买</th></tr></thead><tbody>';
+      sk.forEach(function (r) {
+        var gi2 = _sg.length;
+        _sg.push({ c: String(r.code || ''), n: String(r.name || ''),
+                   t: '按纪律没进场 · ' + (r.name || r.code) });
+        var gap = Number(r.gapPct);
+        var aft = (r.afterPct === null || r.afterPct === undefined) ? null : Number(r.afterPct);
+        var aCls = aft === null || !isFinite(aft) ? '' : (aft > 0 ? 'up' : (aft < 0 ? 'down' : ''));
+        var aTxt = aft === null || !isFinite(aft) ? '—'
+          : ((aft > 0 ? '+' : '') + aft.toFixed(2) + '%'
+             + ' <span class="cd2">' + esc(mmdd(r.afterDay)) +
+             (r.afterN ? '（' + r.afterN + '日）' : '') + '</span>');
+        h += '<tr><td><span class="nm stk-go" title="点击查看 K 线与个股消息" onclick="stkOpenIn(window._STL_SKIP,' +
+          gi2 + ')">' + esc(r.name || r.code) + '</span>' +
+          '<span class="cd2">' + esc(r.code) + '</span>' +
+          '<span class="pl">' + esc(r.poolZh || '') + (r.legacy ? ' · 旧口径' : '') + '</span></td>' +
+          '<td>' + mmdd(r.buyDay) + '</td><td>' + pxf(r.stopPx) + '</td>' +
+          '<td>' + pxf(r.openPx) + '</td>' +
+          '<td>' + (isFinite(gap) ? (Math.abs(gap)).toFixed(2) + '%' : '—') + '</td>' +
+          '<td class="' + aCls + '">' + aTxt + '</td></tr>';
+      });
+      h += '</tbody></table>';
+      window._STL_SKIP = _sg;
+    }
+    h += '</div>';
   }
   h += '<div class="stl-foot">日期年份 ' + esc(String(meta.today || '').slice(0, 4) || '2026') +
     '；按卖出日倒序，最新的在上面。' +

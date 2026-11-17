@@ -38,6 +38,9 @@ INDEX = os.path.join(HERE, "index.html")
 
 REQUIRED_HEADS = ["标的", "买入日", "买入价", "现价", "浮动盈亏", "进度"]
 SETTLE_HEADS = ["标的", "买入日", "买入价", "卖出日", "卖出价", "盈亏"]
+# R100z355：结算弹窗里新增的第二张表「按纪律没进场」。表头也必须一字不差——
+# 这张表的列语义与结算表不同（止损位/开盘价/如果照买），串列比空表更难发现。
+SKIP_HEADS = ["标的", "进场日", "止损位", "开盘价", "低多少", "如果照买"]
 NEED_FUNCS = ["esc", "escAttr", "poolLabel", "poolNowSet", "goneTip", "markNth", "nthTag",
               "stlModalEl", "stlEsc", "closeStlDetail",
               "closeSettleDetail", "closePendingDetail", "openPendingDetail", "openSettleDetail"]
@@ -289,14 +292,54 @@ try {
   const stl = REG['settle-modal'];
   if (!stl) bad('openSettleDetail() 没造出 #settle-modal');
   const sh = stl ? stl._box.innerHTML : '';
+  // R100z355：结算弹窗现在可能有**两张表**（结算明细 + 按纪律没进场），
+  // 表头/行数断言必须只认第一张，否则新增一张就把老断言撞红。
+  const tablesOf = function (html) { return (html.match(/<table[\s\S]*?<\/table>/g) || []); };
+  const stbl = tablesOf(sh);
   out.info.settleRows = rowOf(sh).length;
   out.info.settles = settles.length;
-  const shHeads = headsOf(sh);
+  const shHeads = headsOf(stbl[0] || '');
   if (shHeads.join('/') !== __SETTLE_HEADS__.join('/')) {
     bad('结算明细表头不对（可能被进行明细覆盖）：[' + shHeads.join(' | ') + ']');
   }
   if (rowOf(sh).length !== settles.length) {
     bad('结算明细行数 ' + rowOf(sh).length + ' ≠ settles ' + settles.length);
+  }
+
+  // ---- 按纪律没进场（R100z355）：有计数就必须有表，且逐行可读 ----
+  const smeta = cmp.settleMeta || {};
+  const skipN = Number(smeta.skip || 0);
+  const skl = smeta.skipped || [];
+  out.info.skip = skl.length + '/' + skipN;
+  if (skipN) {
+    if (stbl.length < 2) {
+      bad('settleMeta.skip=' + skipN + ' 但弹窗里没有「按纪律没进场」那张表（只显示计数）');
+    } else {
+      const kt = stbl[stbl.length - 1];
+      const kHeads = headsOf(kt);
+      if (kHeads.join('/') !== __SKIP_HEADS__.join('/')) {
+        bad('按纪律没进场表头不对：[' + kHeads.join(' | ') + ']');
+      }
+      const krows = rowOf(kt);
+      if (krows.length !== skipN) {
+        bad('没进场明细行数 ' + krows.length + ' ≠ skip 计数 ' + skipN);
+      }
+      const kbad = krows.map(function (r) { return (r.match(/<td[\s>]/g) || []).length; })
+                        .filter(function (n) { return n !== 6; });
+      if (kbad.length) bad(kbad.length + ' 行没进场明细列数不是 6');
+      const kUp = (kt.match(/<td class="up"/g) || []).length;
+      const kDn = (kt.match(/<td class="down"/g) || []).length;
+      const eUp = skl.filter(function (x) { return typeof x.afterPct === 'number' && x.afterPct > 0; }).length;
+      const eDn = skl.filter(function (x) { return typeof x.afterPct === 'number' && x.afterPct < 0; }).length;
+      out.info.skipUp = kUp + '/' + eUp;
+      if (kUp !== eUp) bad('没进场明细涨（红）' + kUp + ' 条 ≠ 事后上涨 ' + eUp + ' 条');
+      if (kDn !== eDn) bad('没进场明细跌（绿）' + kDn + ' 条 ≠ 事后下跌 ' + eDn + ' 条');
+      const kleak = ['undefined', 'NaN', '>null<'].filter(function (t) { return kt.indexOf(t) >= 0; });
+      if (kleak.length) bad('没进场明细出现字面量 ' + JSON.stringify(kleak) + '（拼接漏值）');
+      // 「没有事后数据」必须写成「—」，不能留空单元格
+      const kEmpty = (kt.match(/<td[^>]*>\s*<\/td>/g) || []).length;
+      if (kEmpty) bad('没进场明细有 ' + kEmpty + ' 个空单元格（取不到就写「—」）');
+    }
   }
   const sleak = ['undefined', 'NaN', '>null<'].filter(function (t) { return sh.indexOf(t) >= 0; });
   if (sleak.length) bad('结算明细产出里出现字面量 ' + JSON.stringify(sleak));
@@ -370,7 +413,8 @@ def main():
               .replace("__SRC__", repr(fn_path))
               .replace("__DATA__", repr(os.path.join(HERE, "data.js")))
               .replace("__PEND_HEADS__", repr(REQUIRED_HEADS).replace("'", '"'))
-              .replace("__SETTLE_HEADS__", repr(SETTLE_HEADS).replace("'", '"')))
+              .replace("__SETTLE_HEADS__", repr(SETTLE_HEADS).replace("'", '"'))
+              .replace("__SKIP_HEADS__", repr(SKIP_HEADS).replace("'", '"')))
 
     with open(fn_path, "w", encoding="utf-8") as f:
         f.write("\n".join(parts))

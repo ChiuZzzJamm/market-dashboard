@@ -1043,7 +1043,48 @@ def _next_trade_day(day):
     return cur.strftime("%Y-%m-%d")
 
 
-def settle_rows(ledger, today=None, keep_days=None):
+def _skip_row(e, r, kl_cache):
+    """按纪律没进场的那笔：把「差多少破的止损」和「要是照买会怎样」一起留痕（R100z355）。
+
+    用户 2026-11-17 19:14 问「台账部分是不是要更新的更完善」：这 6 条原来只有一个计数
+    （`settleMeta.skip`），页面上只写「另有 N 条按纪律没进场」。可读者真正想知道的是
+    「差几分钱没进场、后来涨没涨」——**后者才是纪律有没有帮上忙的唯一证据**
+    （11-11 我手工算过：19 笔没进场里 12 笔后来涨超 5%，但那个结论页面查不到）。
+
+    口径：买价取进场日**开盘价**（纪律价就是它被跌破才不进场），事后收益 =
+    进场日之后第 N 个交易日收盘 ÷ 开盘价 − 1；K 线不够就只给已有的那几根，并标 N。
+    """
+    code = str(e.get("code") or "")
+    buy_day = str(r.get("buyDay") or "")[:10]
+    open_px = r.get("buyPrice")
+    stop_px = e.get("stopPrice")
+    out = {"code": code, "name": str(e.get("name") or ""),
+           "poolZh": POOL_ZH.get(str(e.get("pool") or ""), str(e.get("pool") or "") or "—"),
+           "buyDay": buy_day, "openPx": open_px, "stopPx": stop_px,
+           "legacy": (e.get("ruleFrom") or "legacy") != RULE_FROZEN_AT,
+           "gapPct": None, "afterPct": None, "afterDay": "", "afterN": 0,
+           "note": str(r.get("note") or "")}
+    try:
+        if open_px and stop_px:
+            out["gapPct"] = round((float(open_px) / float(stop_px) - 1) * 100, 2)
+    except (TypeError, ValueError):
+        pass
+    kl = (kl_cache or {}).get(code) or []
+    idx = next((i for i, b in enumerate(kl)
+                if str((b or {}).get("day") or "")[:10] == buy_day), -1)
+    if idx >= 0 and open_px:
+        j = min(idx + 5, len(kl) - 1)
+        if j > idx:
+            try:
+                out["afterPct"] = round((float(kl[j]["close"]) / float(open_px) - 1) * 100, 2)
+                out["afterDay"] = str(kl[j].get("day") or "")[:10]
+                out["afterN"] = j - idx
+            except (TypeError, ValueError, KeyError):
+                pass
+    return out
+
+
+def settle_rows(ledger, today=None, keep_days=None, kl_cache=None):
     """结算明细（复盘台账弹窗）：逐笔带买卖两端的日期与价格。
 
     与 pool_stats 的分工：那边回答「这套口径准不准」（全量样本、按池聚合、不设窗口），
@@ -1054,10 +1095,11 @@ def settle_rows(ledger, today=None, keep_days=None):
     超出窗口的只从**这个列表**里消失，台账一条不删；`cleared` 记着消失了多少条，
     这样「已结算 28 条 / 明细只有 20 条」不会变成一个没人能解释的差。
 
-    `notExecuted`（开盘就破止损、按纪律没进场）不列——它没有成交，没有卖出价；
-    条数单独进 `skip`，与 pool_stats 的 skip 同源。
+    `notExecuted`（开盘就破止损、按纪律没进场）不进 `rows`——它没有成交、没有卖出价；
+    条数进 `skip`（与 pool_stats 的 skip 同源），逐条明细进 `skipped`（R100z355：
+    原来只有计数，读者看不到「差几分钱没进场、后来涨没涨」）。
     """
-    rows, cleared, skip, legacy_n = [], 0, 0, 0
+    rows, cleared, skip, legacy_n, skipped = [], 0, 0, 0, []
     keep = SETTLE_KEEP_DAYS if keep_days is None else int(keep_days)
     today = str(today or today_trade_date())[:10]
     for e in (ledger.get("entries") or []):
@@ -1066,6 +1108,7 @@ def settle_rows(ledger, today=None, keep_days=None):
             continue
         if r.get("result") == "notExecuted":
             skip += 1
+            skipped.append(_skip_row(e, r, kl_cache))
             continue
         ed = str(r.get("exitDay") or "")[:10]
         if not ed:
@@ -1097,8 +1140,10 @@ def settle_rows(ledger, today=None, keep_days=None):
         })
     # 新的在上：读者最关心「昨天那笔怎么样了」，不是两个月前那笔
     rows.sort(key=lambda x: (x["exitDay"], x["code"]), reverse=True)
+    skipped.sort(key=lambda x: (str(x.get("buyDay") or ""), str(x.get("code") or "")), reverse=True)
     return rows, {"keepDays": keep, "shown": len(rows), "cleared": cleared,
-                  "skip": skip, "legacyShown": legacy_n, "today": today}
+                  "skip": skip, "skipped": skipped,
+                  "legacyShown": legacy_n, "today": today}
 
 
 def open_rows(ledger, kl_cache=None, today=None):
@@ -1316,7 +1361,7 @@ def build_compare(chen_codes, db_codes, ledger, today=None, done=None, kl_cache=
     stats = {k: pool_stats(v) for k, v in groups.items()}
     for k, v in cross.items():
         stats["cross_" + k] = pool_stats(v)
-    settles, settle_meta = settle_rows(ledger, today)
+    settles, settle_meta = settle_rows(ledger, today, kl_cache=kl_cache)
     # R100z337（用户 2026-11-11 00:06）：「进行明细」——未结算、还在等收益的逐条浮盈。
     # 与 settles 同一份台账、同一套买价口径；结算完成后它自然从这边消失、出现在 settles 里。
     # kl_cache 由调用方给（main 结算时已经抓过，resettle 重结时也在循环里抓过）——
@@ -1692,6 +1737,13 @@ def main():
     open_codes = sorted({str(e.get("code")) for e in ledger.get("entries") or []
                          if (e.get("result") or {}).get("status") != "settled"
                          and str(e.get("code"))})
+    # R100z355：按纪律没进场的那几条也要 K 线——它们要给「如果照买，第 5 个交易日收盘多少」。
+    # 这几条是 **settled** 状态，原来不在 open_codes 里，于是 skipped[].afterPct 恒为 None
+    # （第一次跑就是这样：明细有了、结论列全是「—」）。
+    _skip_codes = sorted({str(e.get("code")) for e in ledger.get("entries") or []
+                          if (e.get("result") or {}).get("result") == "notExecuted"
+                          and str(e.get("code"))})
+    open_codes = sorted(set(open_codes) | set(_skip_codes))
     klc = {}
     with ThreadPoolExecutor(max_workers=6) as ex:
         futs = {ex.submit(CD.get_kline, c, CD.sina_symbol(c)): c
