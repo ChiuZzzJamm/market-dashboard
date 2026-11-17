@@ -47,6 +47,38 @@ import common  # noqa: E402
 
 CAP = 12            # 页面最多列几条（再多读者也看不完，且会把卡顶撑高）
 
+# ---- 重大性过滤（R100z357b，用户 2026-11-17 23:30 看图指出）----
+# 第一版把「与 16:00 快照做差」当唯一判据，于是「亿嘉和股东会会议资料」「龙江交通股东会决议」
+# 这种纯程序性公告也进了列表。用户原话：「都是个股公告吗？不是全球要闻吗？」
+# —— 问题有两层：① 程序性公告根本不是消息；② 这一块压根不该挂在「全球要闻」里。
+# 这个函数只管第①层（第②层靠把它搬到 A 股看板解决）。
+MATERIAL_KW = (
+    "收购", "重组", "重大合同", "中标", "停牌", "复牌", "异动", "风险提示",
+    "减持", "增持", "回购", "控制权", "实际控制人", "股权转让", "资产出售",
+    "资产注入", "剥离", "问询", "立案", "诉讼", "仲裁", "业绩预告", "预增",
+    "分红", "配股", "定增", "可转债", "对外投资", "签署", "战略合作", "订单",
+)
+PROCEDURAL_KW = (
+    "股东会", "董事会决议", "监事会", "会议资料", "法律意见书", "章程", "说明会",
+    "管理制度", "担保", "融资租赁", "募集资金", "专项账户", "独立董事",
+    "会计师事务所", "续聘", "换届", "选举",
+)
+
+
+def is_material(title):
+    """这条公告算不算「消息」：必须命中 MATERIAL_KW，且不能只命中程序性词。
+    纯程序性（股东会资料/决议/担保进展/募集资金账户）一律不算 —— 它们没有信息量，
+    放进「要闻」只会把真正的异动/收购淹掉。"""
+    t = str(title or "")
+    if not any(k in t for k in MATERIAL_KW):
+        return False
+    # 同时命中两类时看有没有 MATERIAL 里更强的词；只有「担保」这类程序词 → 不算
+    if any(k in t for k in PROCEDURAL_KW) and not any(
+            k in t for k in ("收购", "重组", "停牌", "复牌", "异动", "减持", "增持",
+                             "控制权", "立案", "中标", "业绩预告", "风险提示")):
+        return False
+    return True
+
 
 def _help_guard():
     ap = argparse.ArgumentParser(
@@ -117,7 +149,7 @@ def build(D, hours=16, budget=120.0):
 
     notices = CD.fetch_notices_batch(list(tgt), budget=budget)
     got = sum(1 for v in notices.values() if v)
-    items, dup = [], 0
+    items, dup, procedural = [], 0, 0
     for c, lst in notices.items():
         nm = (tgt.get(c) or {}).get("name") or ""
         for n in (lst or []):
@@ -129,6 +161,9 @@ def build(D, hours=16, budget=120.0):
                 continue
             if (d, title[:24]) in (snaps.get(c) or set()):
                 dup += 1
+                continue
+            if not is_material(title):
+                procedural += 1
                 continue
             # 时间槽（R100z357b）：以交易日为界——早于/等于 tradeDate 的是「盘后」，
             # 之后的看是不是周末。周末 22:00 那趟会带出周五盘后+周末公告，不能全叫「早间」。
@@ -158,7 +193,8 @@ def build(D, hours=16, budget=120.0):
         "note": ("昨日收盘后至今晨的 A 股公告（与 16:00 快照做差后的新增）；"
                  "时间只到日——公告 API 只给披露日期，页面写「盘后/早间」，不编具体分钟"),
     }
-    return mod, {"done": len(tgt), "got": got, "dup": dup, "kept": len(items)}
+    return mod, {"done": len(tgt), "got": got, "dup": dup,
+                  "kept": len(items), "procedural": procedural}
 
 
 def main():
@@ -173,8 +209,9 @@ def main():
         return 0
 
     mod, diag = build(D, hours=a.hours, budget=a.budget)
-    print("[after_hours] 盯 %d 只（主板）· 返回数据 %d 只 · 与 16:00 快照重复 %d 条 · 新增 %d 条"
-          % (diag["done"], diag["got"], diag["dup"], diag["kept"]))
+    print("[after_hours] 盯 %d 只（主板）· 返回数据 %d 只 · 与 16:00 快照重复 %d 条"
+          " · 程序性公告剔除 %d 条 · 留下消息 %d 条"
+          % (diag["done"], diag["got"], diag["dup"], diag["procedural"], diag["kept"]))
     if mod["degraded"]:
         print("[WARN] 只有 %d/%d 只抓到公告 —— 本轮按「未取到」处理，页面不会说「暂无公告」"
               % (diag["got"], diag["done"]))

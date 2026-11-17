@@ -6609,6 +6609,17 @@ def g76_after_hours(r):
             bad.append(f"{k} 缺失/非整数（抓取覆盖率必须可核）")
     if not isinstance(ah.get("degraded"), bool):
         bad.append("degraded 缺失/非布尔（抓不到时必须显式标记）")
+    # R100z357b：程序性公告不算「消息」——股东会资料/决议/担保进展/募集资金账户这类
+    # 出现在这里只会把真正的异动/收购淹掉（用户 2026-11-17 23:30 截图指出的就是这个）。
+    # 判据直接调 after_hours.is_material()，不在闸门里另写一份词表（两处各写一遍必然漂）。
+    try:
+        from after_hours import is_material
+        noise = [x for x in items if not is_material(x.get("title"))]
+        if noise:
+            bad.append("有 %d 条程序性公告混进来了（应被 is_material 过滤）：%s"
+                       % (len(noise), "、".join(str(x.get("title"))[:14] for x in noise[:2])))
+    except Exception as e:                                   # noqa: BLE001
+        bad.append(f"读不到 after_hours.is_material（{str(e)[:40]}），重大性过滤无法校验")
     if bad:
         r.fail("G76", "隔夜公告数据不自洽：" + "；".join(bad[:4]))
         return
@@ -6619,11 +6630,17 @@ def g76_after_hours(r):
     if html and "function afterHoursHtml" not in html:
         r.fail("G76", "前端没有 afterHoursHtml —— 数据生成了没人读（半成品）")
         return
+    # 归属约束：这块是**个股公告**，只能挂在 A 股看板（#db-pools），不许塞回「全球要闻」卡。
+    # 用户 2026-11-17 23:30 的原话就是「都是个股公告吗？不是全球要闻吗？」——这句断言就是那次修正的固化。
+    if html and "html = afterHoursHtml(" not in html:
+        r.fail("G76", "afterHoursHtml 没有挂在 A 股看板（#db-pools 组装处）——"
+                      "个股公告不该出现在「全球要闻」里")
+        return
     rc, out, err = _run_tool("check_after_hours.py", timeout=120)
     if rc != 0:
         r.fail("G76", "盘后·隔夜渲染没过：" + (out or err or "").strip()[:200])
         return
-    r.ok("G76", f"盘后·隔夜 {n} 条（覆盖 {ah.get('covered')}/{ah.get('targets')} 只池内标的，"
+    r.ok("G76", f"池内·昨夜公告 {n} 条（覆盖 {ah.get('covered')}/{ah.get('targets')} 只池内标的，"
                 f"截至 {ah.get('updatedAt')}）结构自洽、渲染真跑通过"
          + ("；本轮为降级状态（未取到，页面已写明）" if ah.get("degraded") else ""))
 
