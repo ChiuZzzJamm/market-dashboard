@@ -1849,6 +1849,80 @@ def k17_help_guard(r, verbose):
                     '「探参数变成改数据」这一类不会再发生' % (len(DATA_WRITERS) - len(EXEMPT)))
 
 
+def _num_conflicts(text, truth):
+    """纯函数：prompt 文本里写死的数字 vs 代码常量，返回冲突说明列表。
+
+    truth: [(正则, 真值, 说明)]，正则第 1 组是数字。
+    """
+    out = []
+    for pat, want, label in truth:
+        for m in re.finditer(pat, text or ''):
+            try:
+                got = int(m.group(1))
+            except (TypeError, ValueError):
+                continue
+            if got != int(want):
+                out.append('%s 写 %d（代码是 %d）' % (label, got, int(want)))
+    return out
+
+
+def k18_prompt_numbers(r, verbose=False):
+    """K18 prompt 里写死的数字必须等于代码常量（R100z354，2026-11-17）。
+
+    由来：11-17 体检发现三份 prompt 还在写「近60根日K线」「断板后 ≤10 日」「每天 7 个数字」，
+    而代码早已是 90 根 / 20 日 / 20 个字段（KEEP_DAYS 于 11-11 从 10 放宽到 20，
+    BARS_DEFAULT 自 R100z6g 起就是 90）。这类漂移**不报错、不影响渲染**，只让读 prompt 的
+    AI 按错的前提讲话——24.180「下发的 note 与真实门槛不是一回事」的同一族。
+
+    判据：把 prompt 里的「近N根」「断板后 ≤N 日」抽出来跟常量比；判 WARN 不判 FAIL
+    （文案错不该拦部署，但必须每次体检都看得见）。
+    """
+    try:
+        import embed_klines as EK
+        import intraday_digest as ID
+        truth = [
+            # 「近 60 根日K」与「近60根日K线」两种写法都要抓；⚠️ 不能写成 `近(\d+)根`——
+            # 「近30根**板块**日K线」是 check_duanban 的同花顺行业K线（days=30，另一个口径），
+            # 抓进来就变成每天 3 条假 WARN（本项目的老毛病：判据一放宽就淹掉真信号）。
+            (r'近\s*(\d+)\s*根日K', EK.BARS_DEFAULT, 'K 线根数'),
+            (r'断板后 ≤(\d+) 日', ID.KEEP_DAYS, '分时窗口天数'),
+        ]
+    except Exception as e:                                   # noqa: BLE001
+        r.warn('K18', '读不到常量模块（%s），跳过 prompt 数字对账' % str(e)[:60])
+        return
+
+    # 自检（24.173）：错样本必须被拦、对样本不许误伤 —— 判据本身先过一遍
+    _selftest = [
+        ('近60根日K线', True), ('近90根日K线', False),
+        ('近 60 根日K', True), ('近 90 根日K', False),
+        ('近30根板块日K线', False),          # 行业K线是另一个口径，绝不能误伤
+        ('断板后 ≤10 日', True), ('断板后 ≤20 日', False),
+    ]
+    _bad_st = [t for t, want_hit in _selftest if bool(_num_conflicts(t, truth)) != want_hit]
+    if _bad_st:
+        r.fail('K18', '自检失败：样本 %s 判定与预期相反（先修闸门）' % '、'.join(_bad_st))
+        return
+
+    try:
+        con = sqlite3.connect(DB)
+        rows = [(nm, pm or '') for nm, pm in con.execute(
+            "select name,prompt from automations where prompt like '%run-python %' order by name")]
+        con.close()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn('K18', '读不到自动化库（%s），跳过 prompt 数字对账' % str(e)[:60])
+        return
+
+    bad = []
+    for nm, pm in rows:
+        for x in _num_conflicts(pm, truth):
+            bad.append('%s：%s' % (nm.split('（')[0], x))
+    if bad:
+        for x in bad:
+            r.warn('K18', 'prompt 数字与代码不符 —— %s（改 prompt 走 DB 直改，别改代码迁就文案）' % x)
+    else:
+        r.ok('K18', 'prompt 里的 K 线根数 / 分时窗口天数与代码常量一致（%d 份已核对）' % len(rows))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--verbose', action='store_true')
@@ -1892,6 +1966,8 @@ def main():
         k16_backtest_lookahead(r, a.verbose)
     if not only or only == 'K17':
         k17_help_guard(r, a.verbose)
+    if not only or only == 'K18':
+        k18_prompt_numbers(r, a.verbose)
     return r.dump()
 
 

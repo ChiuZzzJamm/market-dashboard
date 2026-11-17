@@ -263,6 +263,11 @@ EMPTY_WHITELIST = [
      "industry 为空＝同花顺没给行业，两者互不替代时才真的空。G61 已有反向证明"
      "（hot 必须 ⊆ concepts、不得全是泛概念；既无题材又无行业会单独 WARN「徽章会整个空掉」）。"
      "前端 stkSecPillOf 依次退回 prefer/行业，不渲染空 pill"),
+    (r"chenPool\.compare\.today\.(both|chenOnly|duanbanOnly|done)$",
+     "R100z354（2026-11-17）：`compare.today` 是**今日新增确认**的四分组，今天没有该类标的"
+     "即空数组（实测 11-17：both=0 / chenOnly=1 / duanbanOnly=2 / done=1，那天确实没有双池票）。"
+     "前端**不渲染**这三组（只有 G66 拿 `today.done` 与池内 pct≥9.8 对账），"
+     "所以空数组不会在页面上印出空块；三个非 done 组由 G66 的同一份 today 结构保证同步生成"),
 ]
 
 DATA_KEYS_REQUIRED = [
@@ -359,13 +364,14 @@ PRODUCT_OWNERSHIP = {
     },
     "stkIntraday": {
         "require": ("stkIntraday", "分时", "均价线"),
-        "note": ("R100z345：断板后 ≤10 日标的的**5 分钟级承接摘要**（intraday_digest.py 产出，"
-                 "每天 16:00 在 embed_klines.py 之后跑）。每天 7 个数字：日期 / 收在当日VWAP下方占比 / "
-                 "收盘偏离VWAP / 最低点分钟 / 日内低点是否逐个抬高 / 砸后回升% / 回升段量÷下砸段量。"
+        "note": ("R100z345：断板后 ≤20 日标的的**5 分钟级承接摘要**（intraday_digest.py 产出，"
+                 "每天 19:30 在 embed_klines.py 之后跑）。每天 20 个字段：日期 / 全天·上午·下午收在"
+                 "VWAP 下方的根数占比 / 收盘偏离VWAP / 最低点分钟 / 日内低点是否逐个抬高 / 砸后回升% / "
+                 "回升段量÷下砸段量 / 站住根数 / 承接类型 / 爆量时刻·涨幅·倍数·回吐 / 收在昨收下方%。"
                  "为什么必须有：日线 OHLC 表达不了「下砸有没有人接」——长下影可能是全天阴跌尾盘拉一下，"
                  "也可能是开盘砸完立刻被买回，K 线画出来一模一样。用户 2026-11-11 15:52 原话："
                  "「什么算出货什么算洗盘要看盘中分时……不能一股脑只看量」。"
-                 "只存摘要不存原始 bar（实测 35 只 3.4KB）；抓不到就保留旧值，禁写空覆盖。"),
+                 "只存摘要不存原始 bar（实测 100 只上下、约 24KB）；抓不到就保留旧值，禁写空覆盖。"),
     },
     "stopTrack": {
         "require": ("stopTrack", "止损跟踪"),
@@ -1918,9 +1924,18 @@ def g18_policy_signals(r):
     dates = [str(x.get("date") or "")[:10] for x in ps if isinstance(x, dict)]
     dates = [d for d in dates if re.match(r"^20\d{2}-\d{2}-\d{2}$", d)]
     if ps and dates and re.match(r"^20\d{2}-\d{2}-\d{2}$", td) and max(dates) < td:
-        r.warn("G18", f"policySignals {len(ps)} 条全是 {max(dates)} 及更早的解码结果，"
-                      f"落后于交易日 {td} —— 多为 enrich_policy 降级保留（见该脚本 [DEGRADED] 输出），"
-                      f"页面政策卡展示的是旧交易日；补跑 enrich_policy.py，或核对 decode_policy 主体词表")
+        # R100z354：解码步 `decode_policy.py` 只在 19:30 那趟跑；16:00 的 enrich_policy
+        # 手上只有前一日的解码结果，落后是**时序**不是降级。19:30 之后仍落后才是降级。
+        import datetime as _dp
+        _dn = _dp.datetime.now()
+        if _dn.hour * 60 + _dn.minute < 19 * 60 + 30:
+            r.ok("G18", f"policySignals 最新 {max(dates)} 早于交易日 {td} —— 解码步在 19:30 才跑，"
+                        f"{_dn.strftime('%H:%M')} 之前属正常；之后仍落后才是降级保留")
+        else:
+            r.warn("G18", f"policySignals {len(ps)} 条全是 {max(dates)} 及更早的解码结果，"
+                          f"落后于交易日 {td} —— 多为 enrich_policy 降级保留（见该脚本 [DEGRADED] 输出），"
+                          f"页面政策卡展示的是旧交易日；补跑 enrich_policy.py，或核对 decode_policy 主体词表")
+
 
 
 def g19_summary_freshness(r):
@@ -2693,16 +2708,34 @@ def g28_freshness_consistency(r):
         else:
             top_ts = "%s %s" % (top.group(1), top.group(2))
             if top_ts != best_ts:
-                r.fail("G28", f"页头时间戳 {top_ts} ≠ 各格最新 {best_ts}（{best_label}）—— "
-                              f"顶层 updatedAt 被某个脚本覆盖成自己的时间了。"
-                              f"修法：跑 refresh_stamp.py（deploy.sh 已内置该步）（R100z167）")
+                # R100z354：16:00 数据步有多个脚本各写各的时间戳，顶层 updatedAt 必然落后于
+                # 「各格最新」；deploy.sh 里的 refresh_stamp.py 会在部署前归一。19:30 之前
+                # 判 FAIL 等于每天固定红一次（24.184① 的同一类噪音），之后仍不一致才是被覆盖。
+                import datetime as _dh
+                _hn = _dh.datetime.now()
+                if _hn.hour * 60 + _hn.minute < 19 * 60 + 30:
+                    r.ok("G28", f"页头戳 {top_ts} 落后各格最新 {best_ts}（{best_label}）—— "
+                                f"{_hn.strftime('%H:%M')} 未到 19:30，deploy 的 refresh_stamp 会归一")
+                else:
+                    r.fail("G28", f"页头时间戳 {top_ts} ≠ 各格最新 {best_ts}（{best_label}）—— "
+                                  f"顶层 updatedAt 被某个脚本覆盖成自己的时间了。"
+                                  f"修法：跑 refresh_stamp.py（deploy.sh 已内置该步）（R100z167）")
             else:
                 r.ok("G28", f"页头时间戳 = 各格最新 {top_ts}（{best_label}）")
 
     # ---- c) 分格戳落后于当日交易日 ----
     if old_slots:
-        r.warn("G28", f"{len(old_slots)} 格戳早于交易日 {td}：{'、'.join(old_slots[:5])}"
-                      f"——该格内容是旧交易日的货，页面照挂着（非交易日误标时属正常）")
+        # R100z354：`stop_tracker.py` 只在 19:30 那趟跑，16:00 之后「止损跟踪」这格的戳
+        # 必然还是上一交易日 —— 属时序，不是内容旧。19:30 之后仍落后才是真问题。
+        import datetime as _ds
+        _sn = _ds.datetime.now()
+        if _sn.hour * 60 + _sn.minute < 19 * 60 + 30:
+            r.ok("G28", f"{len(old_slots)} 格戳还是上一交易日（{'、'.join(old_slots[:5])}）—— "
+                        f"{_sn.strftime('%H:%M')} 未到 19:30，止损跟踪等格由 19:30 那趟刷新")
+        else:
+            r.warn("G28", f"{len(old_slots)} 格戳早于交易日 {td}：{'、'.join(old_slots[:5])}"
+                          f"——该格内容是旧交易日的货，页面照挂着（非交易日误标时属正常）")
+
 
     # ---- e) 四模块/断板 快照日期落后 ----
     # R100z178（2026-10-23）：断板与四模块**分级**处理。此前两者合并成一条 WARN，等于
@@ -5685,15 +5718,18 @@ def g65_stop_anchor(r):
                 return v if v > 0 else None
         return None
 
-    n_ok = n_unk = 0
+    n_ok = n_old = n_nokl = n_legacy = 0
     for e in ents:
         code = str(e.get("code") or "")
         nm = e.get("name") or code
         anchor = str(e.get("stopAnchor") or "")
         sp = float(e.get("stopPrice") or 0)
         low = zt_low(code, e.get("ztDate"))
-        if anchor == "legacy-unk" or low is None:
-            n_unk += 1
+        if anchor == "legacy-unk":
+            n_legacy += 1
+            continue
+        if low is None:
+            n_nokl += 1
             continue
         if anchor != "zt_low":
             bad.append(f"{nm} 锚标记是 {anchor!r}（应为 zt_low）")
@@ -5717,7 +5753,7 @@ def g65_stop_anchor(r):
             else:
                 n_ok += 1
         else:
-            n_unk += 1
+            n_old += 1
 
     items = ((D.get("atrStops") or {}).get("items")) or {}
     n_atr = 0
@@ -5798,7 +5834,13 @@ def g65_stop_anchor(r):
     elif warn:
         r.warn("G65", "；".join(warn))
     else:
-        r.ok("G65", f"止损锚统一为涨停日最低价：台账 {n_ok} 条逐条对齐（{n_unk} 条无 K 线未迁移）、"
+        # R100z354：原来这四个数混成一句「{n_unk} 条无 K 线未迁移」，与事实不符——
+        # 194 条里 174 条**今天仍有那天的 K 线**，它们缺的是 `ztLow`（11-12 才加的冻结字段）。
+        # 这个字段不能事后回填：ztLow 的语义是「记账当天冻结的价」，拿今天的复权价补进去
+        # 等于伪造冻结值（且会让 G65 拿复权漂移去判 FAIL）。所以只验锚标记、如实分四类报数。
+        r.ok("G65", f"止损锚统一为涨停日最低价：台账 {n_ok} 条按**冻结值**对齐；"
+                    f"{n_old} 条为 11-12 前记账、无冻结锚（只验锚标记，不回填复权价）；"
+                    f"{n_nokl} 条无该日 K 线、{n_legacy} 条锚口径未定；"
                     f"atrStops 两池 {n_atr} 只同锚、前端已改且目标与卡片同源")
 
 
@@ -6099,6 +6141,14 @@ def g70_kline_freshness(r):
     if now.hour * 60 + now.minute < 15 * 60 + 30:
         r.ok("G70", "尚未收盘（%s），不校验 K 线新鲜度" % now.strftime("%H:%M"))
         return
+    # R100z354（2026-11-17）：16:00 那趟 embed_klines 抓回来的常常还是**昨天那根**
+    # （数据源的日 K 收盘后要过一阵才出全），追平由 19:30 那趟负责。所以 19:30 之前
+    # K 线滞后是**结构性**的，判 FAIL 等于每天 16:00 固定红一次（24.184① 那类噪音）。
+    # 19:30 之后（deploy.sh 的审计在 19:30 的 embed 之后跑）仍滞后才是真滞后。
+    if now.hour * 60 + now.minute < 19 * 60 + 30:
+        r.ok("G70", "K 线追平窗口未到（%s < 19:30）—— 16:00 那趟取到的常是 T−1，"
+                    "由 19:30 的 embed_klines 追平；之后仍滞后才判 FAIL" % now.strftime("%H:%M"))
+        return
     K = D.get("stkKlines") or {}
     cnt = Counter(str(v[-1][0]) for v in K.values() if isinstance(v, list) and v)
     if not cnt:
@@ -6146,10 +6196,13 @@ def g71_intraday_freshness(r):
         return
     now = _dt.datetime.now()
     today = now.strftime("%Y-%m-%d")
-    if td == today and now.hour * 60 + now.minute < 18 * 60:
-        r.ok("G71", "tradeDate=%s 是今天且未到 18:00（16:00/19:30 数据步之后才算应到），"
-                    "不校验分时新鲜度" % td)
+    if td == today and now.hour * 60 + now.minute < 19 * 60 + 30:
+        # R100z354：分时抓取只在 **19:30** 那趟跑（16:00 的 prompt 里没有 intraday_digest），
+        # 原写 18:00 是按「16:00 抓分时」的旧排程定的，于是每个交易日 18:00~19:30 之间
+        # 跑审计都会红一次。19:30 之后仍未追上才是真问题。
+        r.ok("G71", "tradeDate=%s 是今天且未到 19:30（分时抓取排在这一趟），不校验分时新鲜度" % td)
         return
+
     if td > today:
         r.ok("G71", "tradeDate=%s 晚于今天，日历异常交给 G6，这里跳过" % td)
         return

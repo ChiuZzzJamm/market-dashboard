@@ -676,8 +676,8 @@
     "result": "win",
     "exitDay": "2026-11-05",
     "buyDay": "2026-10-28",
-    "exitPrice": 24.53,
-    "buyPrice": 23.36,
+    "exitPrice": 24.37,
+    "buyPrice": 23.21,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
@@ -816,8 +816,8 @@
     "result": "win",
     "exitDay": "2026-10-29",
     "buyDay": "2026-10-28",
-    "exitPrice": 8.21,
-    "buyPrice": 7.82,
+    "exitPrice": 8.12,
+    "buyPrice": 7.73,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
@@ -1759,7 +1759,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "expired",
+    "exitDay": "2026-11-17",
+    "buyDay": "2026-11-03",
+    "exitPrice": 5.13,
+    "buyPrice": 5.99,
+    "retPct": -14.36,
+    "note": "持仓 10 日未触目标也未破止损，收盘平"
+   },
    "settleVer": "R100z299",
    "stopAnchor": "legacy-unk"
   },
@@ -2006,8 +2015,8 @@
     "result": "win",
     "exitDay": "2026-11-13",
     "buyDay": "2026-11-04",
-    "exitPrice": 21.46,
-    "buyPrice": 20.44,
+    "exitPrice": 21.25,
+    "buyPrice": 20.24,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
@@ -2324,7 +2333,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-17",
+    "buyDay": "2026-11-05",
+    "exitPrice": 8.08,
+    "buyPrice": 8.37,
+    "retPct": -3.46,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -2399,7 +2417,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-17",
+    "buyDay": "2026-11-05",
+    "exitPrice": 13.57,
+    "buyPrice": 15.29,
+    "retPct": -11.25,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "legacy-unk",
    "settleVer": "R100z299"
   },
@@ -2696,7 +2723,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-17",
+    "buyDay": "2026-11-05",
+    "exitPrice": 37.72,
+    "buyPrice": 46.73,
+    "retPct": -19.28,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -3814,7 +3850,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-17",
+    "buyDay": "2026-11-10",
+    "exitPrice": 10.37,
+    "buyPrice": 9.88,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -4458,7 +4503,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-17",
+    "buyDay": "2026-11-10",
+    "exitPrice": 10.78,
+    "buyPrice": 11.98,
+    "retPct": -10.02,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -5101,7 +5155,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-17",
+    "buyDay": "2026-11-11",
+    "exitPrice": 7.3,
+    "buyPrice": 6.95,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -6364,7 +6427,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-17",
+    "buyDay": "2026-11-12",
+    "exitPrice": 3.15,
+    "buyPrice": 3.61,
+    "retPct": -12.74,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "settleVer": "R100z299"
   },
@@ -6419,7 +6491,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-17",
+    "buyDay": "2026-11-12",
+    "exitPrice": 4.32,
+    "buyPrice": 4.71,
+    "retPct": -8.28,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "settleVer": "R100z299"
   },
@@ -7272,7 +7353,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-17",
+    "buyDay": "2026-11-13",
+    "exitPrice": 4.26,
+    "buyPrice": 4.82,
+    "retPct": -11.62,
+    "note": "收盘跌破止损位"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -7328,7 +7418,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-17",
+    "buyDay": "2026-11-16",
+    "exitPrice": 104.32,
+    "buyPrice": 114.0,
+    "retPct": -8.49,
+    "note": "收盘跌破止损位"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -7384,7 +7483,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -7439,7 +7539,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -7499,7 +7600,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -7554,10 +7656,11 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "settleVer": "R100z299"
   }
  ],
- "updatedAt": "2026-11-16 16:03",
+ "updatedAt": "2026-11-17 16:03",
  "resettleAt": "R100z299",
  "anchorVer": "R100z331",
  "anchorNote": "止损锚＝涨停日（T日）最低价，断板与陈学长同口径；2026-11-10 22:1x 统一"
