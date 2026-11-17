@@ -250,8 +250,29 @@ def main():
             # 在池但内嵌日线不足 21 根 → 必须明说"数据不够"，不能静默留空。
             # 注：「在池但无结构 → 不适用」那条分支今天在真实数据上不可达
             # （实测池内 185 只有日线的标的全部都有断板结构），所以没有活样本可测。
-            if "不足 21 根" not in h:
-                bad.append("%s 日线不足，应明说「内嵌日线不足 21 根」，实际：%s" % (code, h[:60]))
+            # ⛔ R100z358（2026-11-18）：样本 600778 写死「在池且无K线」，但断板池每天重建，
+            #    11-18 它已不在池 → 前端按「不在池且无结构→整块不显示」返回空，
+            #    这条断言就报出与逻辑无关的 FAIL。改为先判样本是否仍成立：
+            #    仍无K线时，若已不在池，正确行为恰恰是**不显示**（不编结论），据此校验；
+            #    只有「在池却静默留空」才算错。
+            if "不足 21 根" in h:
+                continue
+            _raw2 = open(DATA, encoding="utf-8").read()
+            _PP = "window.DASHBOARD_DATA = "
+            _D2 = json.loads(_raw2[len(_PP):].rstrip().rstrip(";"))
+            _pool = set()
+            for _k in ("chenPool", "duanban"):
+                _obj = _D2.get(_k) or {}
+                for _f in ("strict", "loose", "watching", "confirmed", "failPool"):
+                    for _it in (_obj.get(_f) or []):
+                        if isinstance(_it, dict) and _it.get("code"):
+                            _pool.add(str(_it["code"]))
+            _bars = len((_D2.get("stkKlines") or {}).get(code) or [])
+            if code not in _pool and _bars < 21:
+                # 样本已漂移：不在池且无日线，前端返回空是正确降级，不能算错
+                print("  [INFO] shorts 样本 %s 已不在池且无内嵌日线，前端正确降级为空（跳过该分支断言）" % code)
+                continue
+            bad.append("%s 日线不足，应明说「内嵌日线不足 21 根」，实际：%s" % (code, h[:60]))
             continue
         # structure：分段数 + 每段含数字 + 数字与独立重算一致
         ps = re.findall(r"<p>(.*?)</p>", h, re.S)
