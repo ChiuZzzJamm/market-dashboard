@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611172233"></script>
+<script src="data.js?v=202611172323"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -500,6 +500,21 @@
   .dd-counter { display: block; margin-top: 3px; margin-bottom: 4px; color: #b06a2c; font-weight: 400; font-size: var(--fs-sm); }
 
   /* ===== 全球要闻 / 周末 ===== */
+  /* R100z357：盘后·隔夜公告（A股要闻卡顶部）。刻意比五节轻：灰底细行，不抢「利好/利空」的注意力，
+     但时间槽（11-17 盘后）必须显眼——读者靠它判断「这是昨晚的还是今早的」。 */
+  .wk-section.ah { background: var(--bg2, #f7f8fa); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
+  .wk-section.ah h4 { display: flex; align-items: baseline; gap: 8px; }
+  .wk-section.ah .ah-sub { font-weight: 400; font-size: var(--fs-xs); color: var(--ink2); }
+  .ah-list { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+  .ah-item { display: flex; align-items: baseline; gap: 8px; font-size: var(--fs-sm); line-height: 1.6; }
+  .ah-d { flex: 0 0 auto; font-size: var(--fs-xs); color: var(--ink2); font-variant-numeric: tabular-nums; }
+  .ah-nm { flex: 0 0 auto; cursor: pointer; border-bottom: 1px dotted var(--ink2); }
+  .ah-nm:hover { color: var(--accent); }
+  .ah-t { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ah-t.up { color: #f0435c; }
+  .ah-t.down { color: #0f9d78; }
+  .ah-note { font-size: var(--fs-xs); color: var(--ink2); margin-top: 5px; }
+  .ah-note.warn { color: #b4530a; }
   .wk-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 26px; margin-bottom: 20px; box-shadow: var(--shadow); }
   /* R100z111（用户 2026-10-10）：卡头下那条线去掉、留白压小——原 border-bottom+padding12+margin14，
      首节再有 border-top+padding16+margin22，双重分隔线夹出 ~64px 空白带 */
@@ -4733,6 +4748,44 @@ function wkAsNewsItems(market) {
   }).filter(function (x) { return x; });
 }
 
+/* R100z357（用户 2026-11-17 23:09「中国稀土收购这类新闻一般几点出？19:30 之后出的怎么办」）：
+   「盘后 · 隔夜」——昨日收盘后至今晨新增的 A 股公告，由 after_hours.py 产出（07:00 那趟写）。
+   为什么单列一节而不是塞进五节：① 五节回答「隔夜外盘怎么映射到 A 股」，这些是**国内个股事件**；
+   ② 它的时间粒度只到日（公告 API 只给披露日期），和五节条目的「事件+时间」不是一种东西；
+   ③ 读者要的是「我盯的票昨晚发了什么」，按池内短名单列，不是公告大全。
+   ⚠️ 抓不到 ≠ 没有（24.65）：degraded 时明确写「未取到」，绝不显示「暂无公告」。 */
+function afterHoursHtml(ah) {
+  if (!ah) return '';
+  var items = ah.items || [];
+  if (!items.length) {
+    if (!ah.degraded) return '';
+    return '<div class="wk-section ah"><h4>盘后 · 隔夜</h4>' +
+      '<div class="ah-note warn">未取到公告（公告源不可达，' + (ah.covered || 0) + '/' +
+      (ah.targets || 0) + ' 只返回数据）——这是「没抓到」，不是「没有公告」</div></div>';
+  }
+  window._AH_GRP = [];
+  var rows = items.map(function (x) {
+    var gi = window._AH_GRP.length;
+    window._AH_GRP.push({ c: String(x.code || ''), n: String(x.name || ''),
+                          t: '盘后公告 · ' + (x.name || x.code) });
+    var cls = x.dir === 'bull' ? 'up' : (x.dir === 'bear' ? 'down' : '');
+    var md = String(x.day || '').slice(5);
+    return '<div class="ah-item">' +
+      '<span class="ah-d">' + esc(md) + ' ' + esc(x.slot || '') + '</span>' +
+      '<span class="ah-nm stk-go" onclick="stkOpenIn(window._AH_GRP,' + gi + ')">' +
+      esc(x.name || x.code) + '</span>' +
+      '<span class="ah-t ' + cls + '" title="' + escAttr(x.column || x.title || '') + '">' +
+      esc(x.title || '') + '</span></div>';
+  }).join('');
+  var meta = '共 ' + (ah.n || items.length) + ' 条 · 截至 ' + esc(String(ah.updatedAt || '').slice(11)) +
+    ' · 覆盖 ' + (ah.covered || 0) + '/' + (ah.targets || 0) + ' 只池内标的 · ' +
+    '时间只到日（公告 API 只给披露日期）';
+  return '<div class="wk-section ah"><h4>盘后 · 隔夜 <span class="ah-sub">' +
+    esc(String(ah.sinceDay || '').slice(5)) + ' 收盘后至今晨</span></h4>' +
+    '<div class="ah-list">' + rows + '</div>' +
+    '<div class="ah-note">' + meta + '</div></div>';
+}
+
 function renderNewsCard(d, market) {
   // R100z109（用户 2026-10-10）：A股/美股要闻卡迁入「📄 全球要闻」独立页；
   // 原利好/利空两栏紧凑卡（news-cols/news-cell）废除，五节统一为通栏展开卡（wk-item，
@@ -4763,6 +4816,10 @@ function renderNewsCard(d, market) {
   var _dateLabel = (_ud && _tdm && _ud !== _tdm[1]) ? ('要闻更新 ' + _ud + ' · 数据 ' + _td) : _td;
   var html = '<div class="wk-card"><div class="wk-head"><h2>' + mkTitle + '</h2>'
     + '<span class="date">' + esc(_dateLabel) + '</span></div>';
+  // R100z357（用户 2026-11-17 23:09「19:30 之后出的新闻怎么办」）：A 股要闻卡顶部单列
+  // 「盘后·隔夜」——19:30 部署之后到次日 07:00 之间发的公告（实测 19~21 点占事件型公告的 76%），
+  // 以前这段时间两套都没有入口，只能被 07:00 顺手塞进「美股利好/利空」。现在归位到这里。
+  if (market === 'ashare') html += afterHoursHtml(d.afterHours);
   // 利好 / 利空方向（短线·盘面）：通栏展开卡，左侧色条表达方向（红=利好 / 绿=利空）
   if (bn.length) {
     html += '<div class="wk-section"><h4 class="bull">利好方向 · 短线盘面</h4>';

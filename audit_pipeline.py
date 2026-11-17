@@ -6461,6 +6461,173 @@ def g72_pool_industry_mix(r):
         r.ok("G72", "机械池 %d 个板块的成分行业与板块名基本对得上（异业均未过半）" % checked)
 
 
+def g74_us_news_domestic_subject(r):
+    """G74 美股五节要闻不许写 A 股主体（R100z357，2026-11-17，FAIL 级）。
+
+    由来（用户 2026-11-17 23:05）：「我之前发现全球要闻里面 A 股（国内）新闻会出现在美股
+    全球要闻里……收盘后产生的新闻不是由 16:00 和 19:30 来更新吗？」
+
+    查证：**08:30 不碰五节**（prompt 明写「不检索要闻」），写五节的是 07:00 与周日 22:00。
+    而 07:00 的检索结果里混着 A 股盘后公告（实测 11-13 那版 bullNews 有「中国稀土收中稀凉山
+    51%」「医保商保双目录落地」），原因是：A 股公告 19~21 点是主峰（占事件型 76%），
+    07:00 是那之后**唯一在跑**的任务，且 prompt 只写「生成美股当日利好/利空」、没有硬约束禁国内主体。
+
+    判据（两段，先证据后结论）：
+      a) 标题里出现**国内主体标记**（A股/沪指/创业板/涨停/异动公告/停牌/复牌/医保目录/发改委…）
+         → 直接算越界（这份名单只收「不可能是美股新闻」的词）；
+      b) 标题里出现 **A 股公司名**（取自 stockNews 的 1300 个名字），且标题+摘要里
+         **没有任何海外主体词**（美联储/美债/纳指/英伟达/彭博/路透/欧央行…）→ 算越界。
+         —— b 的第二个条件是这个闸门不误报的关键：『英伟达 CEO 辞任，光模块等 18 日财报定生死』
+         提到 A 股板块，但主体是英伟达，必须放行。
+    分节处置：bullNews/bearNews/intlNews/bankViews 越界 → FAIL；macroNews 越界 → 只 WARN
+    （「国内政策」是 3.85 明确允许的宏观位，但要求它带 A 股映射），不拦部署。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G74", f"data.js 读取失败，跳过美股要闻主体检查：{e}")
+        return
+    us = D.get("us") or {}
+    SECS = ("bullNews", "bearNews", "macroNews", "intlNews", "bankViews")
+    if not any(us.get(s) for s in SECS):
+        r.warn("G74", "美股五节要闻为空（07:00/周日 22:00 未跑），无从检查主体")
+        return
+
+    # A 股公司名（只取 3 字以上的，2 字名误命中太多，如「中国」「东方」）
+    names = set()
+    for code, rec in (D.get("stockNews") or {}).items():
+        nm = str((rec or {}).get("name") or "").strip()
+        if len(nm) >= 3:
+            names.add(nm)
+    for k in ("confirmed", "watching"):
+        for e in ((D.get("duanban") or {}).get(k) or []):
+            nm = str((e or {}).get("name") or "").strip()
+            if len(nm) >= 3:
+                names.add(nm)
+
+    DOMESTIC = ("A股", "沪指", "深证成指", "创业板指", "科创板", "北交所", "北向资金",
+                "龙虎榜", "涨停", "跌停", "异动公告", "停牌", "复牌", "医保目录",
+                "发改委", "工信部", "国资委", "证监会", "交易所问询", "中标公告", "业绩预告")
+    OVERSEAS = ("美联储", "美债", "美元", "美股", "纳指", "标普", "道指", "费半", "美光",
+                "英伟达", "苹果", "特斯拉", "微软", "谷歌", "亚马逊", "Meta", "台积电",
+                "欧央行", "日本央行", "英国央行", "OPEC", "布伦特", "WTI", "COMEX",
+                "彭博", "路透", "华尔街日报", "CNBC", "高盛", "摩根士丹利", "巴克莱",
+                "美国", "欧洲", "日本", "韩国", "德国", "英国", "印度", "越南")
+
+    bad, warn = [], []
+    for sec in SECS:
+        for it in (us.get(sec) or []):
+            if not isinstance(it, dict):
+                continue
+            title = str(it.get("title") or "")
+            sector = str(it.get("sector") or "")
+            body = title + " " + sector + " " + str(it.get("summary") or "")[:400]
+            nm_hit = [n for n in names if n in title]
+            # sector 是最强的证据：今日实测那条国内政策条的标题里一个国内词都没有
+            # （「10月投资降7.2%消费仅增1.1%」），只有 sector=「国内政策」——
+            # 第一版只扫 title，于是漏掉了真实样本（埋雷 B 直接照出来的）。
+            dom = [w for w in DOMESTIC if w in title]
+            if sector and (sector in DOMESTIC or "国内" in sector or "A股" in sector):
+                dom = dom or [sector]
+            over = [w for w in OVERSEAS if w in body]
+            why = ''
+            if dom:
+                why = "标题含国内主体词 " + "、".join(dom[:2])
+            elif nm_hit and not over:
+                why = ("标题只提到 A 股公司 " + "、".join(nm_hit[:2]) +
+                       "，且全篇没有海外主体（美联储/美债/英伟达…）")
+            if not why:
+                continue
+            line = f"{sec}「{title[:26]}」{why}"
+            if sec == "macroNews":
+                # 「国内政策」是 3.85 明确允许的宏观位——**只有没给 A 股映射才算问题**。
+                # 有 impacts 就已经回答了「利好谁」（实测 11-17 那条就是 1 组 impacts），
+                # 再报 WARN 就变成每天一条假警报（24.184① 的老毛病）。
+                if not (it.get("impacts") or []):
+                    warn.append(line + "，且没有 A 股映射（impacts 为空）")
+            else:
+                bad.append(line)
+
+    if bad:
+        r.fail("G74", "美股五节要闻里混进了 A 股主体 %d 条（读者会当成外盘驱动）：%s —— "
+                      "这些属于 19:30 的 ashare 五节 / 07:00 的 ashare.afterHours，"
+                      "不该写进 us.bullNews/bearNews/intlNews/bankViews"
+               % (len(bad), "；".join(bad[:3])))
+        return
+    if warn:
+        r.warn("G74", "us.macroNews 有 %d 条国内主体（该节允许「国内政策」，但必须带 A 股映射）：%s"
+               % (len(warn), "；".join(warn[:2])))
+        return
+    r.ok("G74", "美股五节要闻主体干净：%d 条均为海外/国际事件（A 股主体已归 ashare.afterHours）"
+         % sum(len(us.get(s) or []) for s in SECS))
+
+
+def g76_after_hours(r):
+    """G76 盘后·隔夜公告（ashare.afterHours）自洽 + 前端接线（R100z357，FAIL 级）。
+
+    这一节是「19:30 部署后到次日 07:00」之间唯一的 A 股出口（实测 A 股事件型公告 82% 落在
+    19:00–次晨 7:00）。它坏了不会白屏，只会安静地少一张表，所以必须机器盯：
+      a) n 与 items 自洽、slot ∈ {盘后,早间}、日期可解析、只许沪深主板、方向取值合法；
+      b) 抓不到时 degraded=true（页面写「未取到」而不是「暂无公告」，24.65）；
+      c) 接线：前端 afterHoursHtml 在位，且渲染函数真跑一遍（check_after_hours.py）。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G76", f"data.js 读取失败，跳过隔夜公告校验：{e}")
+        return
+    ah = ((D.get("ashare") or {}).get("afterHours"))
+    if not ah:
+        r.warn("G76", "ashare.afterHours 未生成（07:00 那步没跑？）——"
+                      "「昨日盘后至今晨的公告」这张表整块不会出现，读者只能等 16:00")
+        return
+    items = ah.get("items") or []
+    n = int(ah.get("n") or 0)
+    bad = []
+    CAPN = 12          # 与 after_hours.CAP 同值：页面只列前 12 条
+    if n < len(items):
+        bad.append(f"n={n} < items={len(items)}（条数比明细还少）")
+    elif n != len(items) and len(items) != CAPN:
+        bad.append(f"n={n} 与 items={len(items)} 对不上（只有 items 被 {CAPN} 条上限截断时才允许 n>items）")
+    need = ("code", "name", "day", "slot", "title", "dir")
+    for x in items:
+        miss = [k for k in need if not x.get(k)]
+        if miss:
+            bad.append(f"{x.get('code')} 缺 {','.join(miss)}")
+            continue
+        c = str(x["code"])
+        if not (len(c) == 6 and c.isdigit() and c.startswith(("60", "00"))):
+            bad.append(f"{c} 不是沪深主板")
+        if x["slot"] not in ("盘后", "早间", "周末"):
+            bad.append(f"{c} slot={x['slot']!r} 非法（只允许 盘后/早间/周末）")
+        if x["dir"] not in ("bull", "bear", "neutral"):
+            bad.append(f"{c} dir={x['dir']!r} 非法")
+        if not re.match(r"^20\d{2}-\d{2}-\d{2}$", str(x["day"])):
+            bad.append(f"{c} day={x['day']!r} 不是日期")
+    for k in ("covered", "targets"):
+        if not isinstance(ah.get(k), int):
+            bad.append(f"{k} 缺失/非整数（抓取覆盖率必须可核）")
+    if not isinstance(ah.get("degraded"), bool):
+        bad.append("degraded 缺失/非布尔（抓不到时必须显式标记）")
+    if bad:
+        r.fail("G76", "隔夜公告数据不自洽：" + "；".join(bad[:4]))
+        return
+    try:
+        html = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
+    except OSError:
+        html = ""
+    if html and "function afterHoursHtml" not in html:
+        r.fail("G76", "前端没有 afterHoursHtml —— 数据生成了没人读（半成品）")
+        return
+    rc, out, err = _run_tool("check_after_hours.py", timeout=120)
+    if rc != 0:
+        r.fail("G76", "盘后·隔夜渲染没过：" + (out or err or "").strip()[:200])
+        return
+    r.ok("G76", f"盘后·隔夜 {n} 条（覆盖 {ah.get('covered')}/{ah.get('targets')} 只池内标的，"
+                f"截至 {ah.get('updatedAt')}）结构自洽、渲染真跑通过"
+         + ("；本轮为降级状态（未取到，页面已写明）" if ah.get("degraded") else ""))
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -6544,6 +6711,8 @@ def main():
     g70_kline_freshness(r)
     g71_intraday_freshness(r)
     g72_pool_industry_mix(r)
+    g74_us_news_domestic_subject(r)
+    g76_after_hours(r)
 
     # R100z284：机器可读的结论行。
     #

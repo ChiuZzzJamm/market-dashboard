@@ -76,6 +76,7 @@ DB = os.path.expanduser('~/.workbuddy/workbuddy.db')
 # 或脚本内自己 `.tmp` + `os.replace`（历史实现，等价安全）。
 DATA_WRITERS = [
     'accumulation_score.py',    # 吸筹打分写 pool / 分数
+    'after_hours.py',           # R100z357：ashare.afterHours（昨日盘后至今晨的 A 股公告；走 write_data_js）
     'annotate_pool_meta.py',    # 池元信息
     'apply_narrative.py',       # AI 叙事写回
     'atr_stop.py',              # R100z160：atrStops（全站唯一权威止损源）
