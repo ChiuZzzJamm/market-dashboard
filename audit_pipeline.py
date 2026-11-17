@@ -6645,6 +6645,50 @@ def g76_after_hours(r):
          + ("；本轮为降级状态（未取到，页面已写明）" if ah.get("degraded") else ""))
 
 
+def g77_holiday_table(r):
+    """G77 日韩休市判定不许靠逐年硬编码（R100z358，2026-11-17 深度体检）。
+
+    由来：`update_kr_jp.py` 原本是「一张 2026 年的硬编码休市表 + 注释 TODO 2027 起需更新」。
+    这是**定时炸弹**：2027-01-01 起 `is_jp_holiday()` 恒 False → 日本休市日照常抓取 →
+    数据源返回上一交易日收盘，脚本把它当当日写进看板，页面看起来完全正常。
+
+    现在日本改成**规则引擎**（祝日规则 + 春分/秋分近似公式 + 振替休日/国民の休日 + 东证年始年末），
+    并用 2026 硬编码表做回归对账：**表里有、引擎算不出来的必须为空**（漏一天就是漏一个休市日）。
+    韩国因农历节日无法离库推算，仍用表，但超出覆盖年份要 WARN（不是 FAIL：跨年前提醒更新即可）。
+
+    这条闸门第一次跑就抓出旧表的真实遗漏：**2026-05-06**（5/3 憲法記念日是周日 → 振替休日），
+    东证当天休市，而旧表里没有 —— 那天脚本照抓，页面上的日韩数据是陈旧值。
+    """
+    try:
+        import update_kr_jp as U
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G77", f"读不到 update_kr_jp（{str(e)[:50]}），休市判定无从校验")
+        return
+    import datetime as _dt
+    y = _dt.date.today().year
+    try:
+        miss, extra = U.check_holidays(y)
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G77", f"休市规则对账失败：{str(e)[:60]}")
+        return
+    if miss:
+        r.fail("G77", "日本休市规则引擎漏掉了 %d 天（硬编码表里有、引擎算不出）：%s —— "
+                      "漏一天就意味着那天照常抓取、把上一交易日收盘当当日写进看板"
+               % (len(miss), "、".join(miss[:5])))
+        return
+    notes = []
+    if extra:
+        notes.append("引擎比旧表多找到 %d 天（旧表遗漏）：%s" % (len(extra), "、".join(extra[:3])))
+    if y not in U.KR_HOLIDAY_YEARS:
+        r.warn("G77", "韩国假期表只覆盖 %s–%s，%d 年的休市日无法判定（农历节日算不出来）——"
+                      "请更新 KR_HOLIDAYS_%d；日本已改规则引擎，不受影响"
+               % (U.KR_HOLIDAY_YEARS[0], U.KR_HOLIDAY_YEARS[-1], y, y))
+        return
+    r.ok("G77", "日韩休市判定可自证：日本规则引擎覆盖 %d 年全部祝日（与历史表零缺口）、"
+                "韩国表覆盖到 %d 年" % (y, U.KR_HOLIDAY_YEARS[-1])
+         + ("；" + "；".join(notes) if notes else ""))
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -6730,6 +6774,7 @@ def main():
     g72_pool_industry_mix(r)
     g74_us_news_domestic_subject(r)
     g76_after_hours(r)
+    g77_holiday_table(r)
 
     # R100z284：机器可读的结论行。
     #

@@ -91,12 +91,90 @@ KR_HOLIDAYS_2026 = {
 }
 
 
+# ---- 休市判定的两套实现（R100z358，2026-11-17 深度体检） ----
+# 原实现是「一张 2026 年的硬编码表 + 注释 TODO: 2027 起需更新」。这是一颗**定时炸弹**：
+# 2027-01-01 起 is_jp_holiday 恒 False → 日本休市日照常抓取 → 数据源返回上一交易日收盘，
+# 脚本会把它当当日写进看板（页面看起来完全正常）。所以在 2026 年底之前必须换掉。
+#
+# 日本：**改为按规则算**（祝日全部有明确规则 + 春分/秋分有公认近似公式 + 振替休日/国民の休日），
+#       外加交易所自己的年始年末休業（1/1-1/3、12/31，不是法定祝日但东证不开市）。
+#       规则引擎用 2026 的硬编码表做回归验证（`--check-holidays` 会逐日对账）。
+# 韩国：설날/추석/부처님 오신 날 是农历，没有农历库无法推算 → 仍用表，但加**覆盖年份守卫**：
+#       超出表的年份打 `[HOLIDAY-TABLE-STALE]` 横幅并在输出里置 krTableStale，闸门会 WARN。
+KR_HOLIDAY_YEARS = sorted({int(x[:4]) for x in KR_HOLIDAYS_2026})
+
+
+def _nth_monday(year, month, n):
+    """某月第 n 个周一（n 从 1 起）。"""
+    from datetime import date as _date
+    d = _date(year, month, 1)
+    off = (7 - d.weekday()) % 7 if d.weekday() != 0 else 0
+    return d + timedelta(days=off + 7 * (n - 1))
+
+
+def _equinox_day(year, spring=True):
+    """春分/秋分（日本用的近似公式，1900–2099 误差 ≤1 天，与公认祝日表一致）。"""
+    if spring:
+        return int(20.8431 + 0.242194 * (year - 1980) - (year - 1980) // 4)
+    return int(23.2488 + 0.242194 * (year - 1980) - (year - 1980) // 4)
+
+
+def jp_exchange_holidays(year):
+    """日本交易所休市日（祝日 + 振替休日 + 国民の休日 + 年始年末休業）。"""
+    from datetime import date as _date
+    d = _date
+    fixed = [d(year, 1, 1), d(year, 1, 2), d(year, 1, 3),      # 年始休業（东证）
+             d(year, 2, 11), d(year, 2, 23), d(year, 4, 29),
+             d(year, 5, 3), d(year, 5, 4), d(year, 5, 5),
+             d(year, 8, 11), d(year, 11, 3), d(year, 11, 23),
+             d(year, 12, 31)]                                   # 大晦日（东证）
+    rule = [_nth_monday(year, 1, 2),                             # 成人の日
+            _nth_monday(year, 7, 3),                             # 海の日
+            _nth_monday(year, 9, 3),                             # 敬老の日
+            _nth_monday(year, 10, 2),                            # スポーツの日
+            d(year, 3, _equinox_day(year, True)),                # 春分の日
+            d(year, 9, _equinox_day(year, False))]               # 秋分の日
+    hols = set(fixed) | set(rule)
+    # 振替休日：祝日落在周日 → 顺延到之后第一个非祝日
+    for h in sorted(set(rule) | {d(year, 2, 11), d(year, 2, 23), d(year, 4, 29),
+                                 d(year, 5, 3), d(year, 5, 4), d(year, 5, 5),
+                                 d(year, 8, 11), d(year, 11, 3), d(year, 11, 23)}):
+        if h.weekday() == 6:
+            x = h + timedelta(days=1)
+            while x in hols:
+                x += timedelta(days=1)
+            hols.add(x)
+    # 国民の休日：两个祝日之间只隔一天，那天也是休市（如 9/21 敬老 + 9/23 秋分 之间的 9/22）
+    for h in sorted(hols):
+        mid = h + timedelta(days=1)
+        if mid not in hols and mid.weekday() != 6 and (h + timedelta(days=2)) in hols:
+            hols.add(mid)
+    return hols
+
+
+_JP_CACHE = {}
+
+
 def is_jp_holiday(d):
-    return d.strftime('%Y-%m-%d') in JP_HOLIDAYS_2026
+    y = d.year
+    if y not in _JP_CACHE:
+        _JP_CACHE[y] = {x.strftime('%Y-%m-%d') for x in jp_exchange_holidays(y)}
+    return d.strftime('%Y-%m-%d') in _JP_CACHE[y]
 
 
 def is_kr_holiday(d):
+    if d.year not in KR_HOLIDAY_YEARS:
+        print('[HOLIDAY-TABLE-STALE] 韩国假期表只覆盖 %s–%s，%d 年的休市日无法判定 —— '
+              '请更新 update_kr_jp.KR_HOLIDAYS_%d（农历节日没有库算不出来）'
+              % (KR_HOLIDAY_YEARS[0], KR_HOLIDAY_YEARS[-1], d.year, d.year), file=sys.stderr)
     return d.strftime('%Y-%m-%d') in KR_HOLIDAYS_2026
+
+
+def check_holidays(year=2026):
+    """规则引擎 vs 硬编码表的回归对账（`--check-holidays`）。返回 (缺失, 多出)。"""
+    got = {x.strftime('%Y-%m-%d') for x in jp_exchange_holidays(year)}
+    want = {x for x in JP_HOLIDAYS_2026 if x.startswith(str(year))}
+    return sorted(want - got), sorted(got - want)
 
 
 def _upsert(markets, entry):
@@ -321,7 +399,15 @@ def main():
     parser.add_argument('--label', choices=['早盘', '收盘'], default=None,
                         help='数据时点标签；默认北京时间>=14:00 为收盘，否则早盘')
     parser.add_argument('--dry-run', action='store_true', help='只打印，不写回 data.js')
-    args = parser.parse_args()
+    parser.add_argument('--check-holidays', type=int, default=0, metavar='YEAR',
+                        help='对账日本休市规则引擎与历史硬编码表（例 2026），只打印不写盘')
+    _a = parser.parse_args()
+    if _a.check_holidays:
+        miss, extra = check_holidays(_a.check_holidays)
+        print('表有引擎无（必须为空）:', miss or '无')
+        print('引擎有表无（引擎多找到的休市日，通常是旧表漏了）:', extra or '无')
+        return 0 if not miss else 1
+    args = _a
 
     if args.label is None:
         args.label = '收盘' if datetime.now(TZ8).hour >= 14 else '早盘'
