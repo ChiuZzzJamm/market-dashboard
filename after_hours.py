@@ -1,39 +1,37 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""after_hours.py — 昨日收盘后至今晨的 A 股公告（07:00 那趟补盲区用，R100z357）。
+"""after_hours.py — 「盘后 · 隔夜」A 股要闻（昨日收盘后到今晨的**全市场**重要公告，R100z359）。
 
-## 为什么要有它
+## 它回答什么（用户 2026-11-17 23:09 的原问）
 
-用户 2026-11-17 23:09：「中国稀土收购这类新闻一般几点出的？会有可能 19:30 之后出吗？」
+「中国稀土收购这类新闻一般几点出的？会有可能 19:30 之后出吗？如果会，那美股早上更新掉是不是好事？」
 
-实测（`stockNews` 4877 条带时间戳的条目，事件型 746 条）：
-    19 点 239 / 20 点 179 / 21 点 149 —— **19~21 点占 76%**，19:00 后到次晨 7:00 前占 **82%**。
-也就是说：**19:30 叙事步部署完之后，A 股公告还在源源不断地出**（收购/重组/停牌/异动/减持
-几乎全在盘后发）。而 `stock_news.py` 16:00 只跑一次，19:30 到次日 16:00 之间 A 股这套
-**没有任何入口**——实测 11-16 21:08 的异动公告，直到 11-17 16:00 才进 stockNews（滞后 19 小时）。
+实测（stockNews 4877 条带时间戳的条目，事件型 746 条）：**19~21 点占 76%**，19:00 后到次晨 7:00
+前占 **82%**。而 A 股这套的入口只有 16:00 的 `stock_news.py`——19:30 部署完到次日 16:00 之间
+**没有任何地方能看到昨晚发的公告**（实测 11-16 21:08 的异动公告，直到 11-17 16:00 才进 stockNews）。
 
-07:00 那趟本来就在跑（美股收盘），它以前顺手把这类公告塞进了 `us.bullNews`，于是读者在
-「美股利好」里看到「中国稀土收购中稀凉山 51%」。**不是它多管闲事，是只有它在跑、又放错了口袋。**
+## 位置与范围（用户 2026-11-18 09:28 明确纠正过两次，别再自己发挥）
 
-本脚本负责把它放回该去的地方：读池内标的的公告 → 与 16:00 的 `stockNews.notices` 快照做差 →
-把「昨日盘后至今晨新增」的写成 `ashare.afterHours`，页面在 A 股要闻卡顶部单列一节。
+- **位置**：A 股要闻卡里的一节（`#gnews-view` 的 A 股卡），标题「盘后 · 隔夜（N 条 · 截至 HH:MM）」。
+  2026-11-18 凌晨我把它挪到了技术看板、还改名「池内 · 昨夜公告」——那是**我自己加的解读**，
+  用户原话是「我昨天说的是要 A 股要闻卡加一节」，已改回。
+- **范围**：**全市场**（沪深主板），不是只有池内那 90 多只。用户同样点名过「你怎么改的是池内标的」。
+- **筛选**：只留**事件型**公告（收购/重组/停牌复牌/异动/减持/增持/回购/控制权/立案/中标/业绩预告/
+  风险提示…），程序性公告（股东会/决议/会议资料/说明会/担保/融资租赁/募集资金账户）不列——
+  这是「要闻」，不是公告大全（2026-11-17 23:30 截图那次教训）。
 
-## 口径（宁少不编）
+## 时间口径（这版能给到分钟）
 
-- **时间只到日**：东财/巨潮的公告 API 只给披露日期（`notice_date` 恒为 00:00），
-  拿不到真实发布分钟。所以页面写「11-16 盘后」，**绝不编一个 21:08 出来**（那是媒体的发稿时间，
-  不是公告披露时间，混用会让读者拿错时间线去做决策）。
-- 「新增」= 与 16:00 快照的 (date, title) 差集。16:00 就收过的不会再列，避免同一件事说两遍。
-- 只覆盖**池内 + 今日候选**（约 100~150 只主板），不是全市场——它是「你关心的票昨晚发了什么」，
-  不是公告大全。
-- 抓不到就返回空 + `degraded=true`，页面显示「未取到」而不是「暂无公告」（24.65）。
+东财**单只**公告接口的 `notice_date` 恒为 00:00（只有日期），但**全市场**接口带 `display_time`
+（形如 `2026-11-17 21:08:09:735`，真实披露时刻）。所以按分钟过滤、页面也显示分钟——
+之前「时间只到日」的限制只适用于单只接口。
 
 ## 用法
 
     python3 after_hours.py --help
-    python3 after_hours.py                # 干跑：只打印，不写盘
-    python3 after_hours.py --write        # 写 data.js 的 ashare.afterHours（持锁）
-    python3 after_hours.py --hours 16 --write --budget 120
+    python3 after_hours.py                    # 干跑：只打印
+    python3 after_hours.py --write            # 写 data.js 的 ashare.afterHours（持锁）
+    python3 after_hours.py --hours 60 --write # 周末版（周五收盘 → 周日）
 """
 import argparse
 import os
@@ -45,13 +43,12 @@ sys.path.insert(0, HERE)
 
 import common  # noqa: E402
 
-CAP = 12            # 页面最多列几条（再多读者也看不完，且会把卡顶撑高）
+CAP = 20          # 页面最多列几条
+ANN_API = "https://np-anotice-stock.eastmoney.com/api/security/ann"
+PAGE_SIZE = 100
+MAX_PAGES = 8     # 800 条封顶：足够覆盖一个夜盘，再多就是爬全站了
 
-# ---- 重大性过滤（R100z357b，用户 2026-11-17 23:30 看图指出）----
-# 第一版把「与 16:00 快照做差」当唯一判据，于是「亿嘉和股东会会议资料」「龙江交通股东会决议」
-# 这种纯程序性公告也进了列表。用户原话：「都是个股公告吗？不是全球要闻吗？」
-# —— 问题有两层：① 程序性公告根本不是消息；② 这一块压根不该挂在「全球要闻」里。
-# 这个函数只管第①层（第②层靠把它搬到 A 股看板解决）。
+# ---- 重大性过滤（R100z357b，用户 2026-11-17 23:30：「都是个股公告吗？」那次）----
 MATERIAL_KW = (
     "收购", "重组", "重大合同", "中标", "停牌", "复牌", "异动", "风险提示",
     "减持", "增持", "回购", "控制权", "实际控制人", "股权转让", "资产出售",
@@ -59,20 +56,17 @@ MATERIAL_KW = (
     "分红", "配股", "定增", "可转债", "对外投资", "签署", "战略合作", "订单",
 )
 PROCEDURAL_KW = (
-    "股东会", "董事会决议", "监事会", "会议资料", "法律意见书", "章程", "说明会",
+    "股东会", "董事会决议", "监事会", "会议资料", "法律意见书", "章程",
     "管理制度", "担保", "融资租赁", "募集资金", "专项账户", "独立董事",
-    "会计师事务所", "续聘", "换届", "选举",
+    "会计师事务所", "续聘", "换届", "选举", "说明会",
 )
 
 
 def is_material(title):
-    """这条公告算不算「消息」：必须命中 MATERIAL_KW，且不能只命中程序性词。
-    纯程序性（股东会资料/决议/担保进展/募集资金账户）一律不算 —— 它们没有信息量，
-    放进「要闻」只会把真正的异动/收购淹掉。"""
+    """这条公告算不算「消息」：必须命中 MATERIAL_KW，且不能只命中程序性词。"""
     t = str(title or "")
     if not any(k in t for k in MATERIAL_KW):
         return False
-    # 同时命中两类时看有没有 MATERIAL 里更强的词；只有「担保」这类程序词 → 不算
     if any(k in t for k in PROCEDURAL_KW) and not any(
             k in t for k in ("收购", "重组", "停牌", "复牌", "异动", "减持", "增持",
                              "控制权", "立案", "中标", "业绩预告", "风险提示")):
@@ -80,121 +74,134 @@ def is_material(title):
     return True
 
 
+# 要闻排序：先「大事」再「时段」。增持计划/董事增持这类天天有几十条，按时间排会把重组/立案淹掉。
+# ⚠️ 「实际控制人」不进 TIER1：它更多出现在「实际控制人增持/提供资金支持」这种一般消息里，
+# 放进来会把「增持计划」顶到重组前面（11-18 实测第一条就是山鹰国际的增持计划）。
+TIER1_KW = ("重组", "收购", "出售", "资产注入", "资产出售", "停牌", "复牌", "控制权",
+            "立案", "问询", "重大合同", "中标", "业绩预告", "风险提示",
+            "破产", "重整", "仲裁", "诉讼")
+
+
+def tier_of(title):
+    """1=大事（重组/收购/停复牌/控制权/立案/中标/业绩预告…）2=一般（增持/减持/回购/异动…）。"""
+    return 1 if any(k in str(title or "") for k in TIER1_KW) else 2
+
+
 def _help_guard():
     ap = argparse.ArgumentParser(
-        description="昨日收盘后至今晨的 A 股公告（写 data.js 的 ashare.afterHours）")
+        description="盘后·隔夜 A 股要闻（全市场重要公告，写 data.js 的 ashare.afterHours）")
     ap.add_argument("--write", action="store_true", help="真写 data.js（默认干跑）")
     ap.add_argument("--data", default="data.js", help="data.js 路径")
     ap.add_argument("--hours", type=int, default=16,
-                    help="回看小时数（默认 16 = 昨日 15:00 → 今日 07:00）")
-    ap.add_argument("--budget", type=float, default=120, help="抓取预算秒（默认 120）")
+                    help="回看小时数（默认 16 = 昨日 15:00 → 今日 07:00；周末版用 60）")
     ap.add_argument("--cap", type=int, default=CAP, help="最多保留条数")
-    ap.add_argument("--all", action="store_true", help="打印全部条目（默认只打汇总）")
+    ap.add_argument("--all", action="store_true", help="打印全部条目（默认只打前几条）")
     return ap.parse_args()
 
 
-def targets(D):
-    """要盯的票：断板双池 + 陈学长三池 + 昨日精选 + AI 预测（主板 60/00，去重）。"""
-    out = {}
-
-    def take(e, zh):
-        if not isinstance(e, dict):
-            return
-        c = str(e.get("code") or "")[-6:]
-        if len(c) != 6 or not c.isdigit():
-            return
-        if not c.startswith(("60", "00")):      # 硬约束 3：只许沪深主板
-            return
-        if c not in out:
-            out[c] = {"code": c, "name": str(e.get("name") or ""), "from": zh}
-
-    db = D.get("duanban") or {}
-    cp = D.get("chenPool") or {}
-    for k, zh in (("confirmed", "断板·确认"), ("watching", "断板·观察")):
-        for e in (db.get(k) or []):
-            take(e, zh)
-    for k, zh in (("strict", "陈学长·严格"), ("loose", "陈学长·放宽"), ("watching", "陈学长·观察")):
-        for e in (cp.get(k) or []):
-            take(e, zh)
-    for e in ((db.get("star") or {}).get("picks") or []):
-        take(e, "开盘精选")
-    for sec in ((D.get("aiPrediction") or {}).get("sectors") or []):
-        for e in (sec.get("stocks") or []):
-            take(e, "AI预测")
-    return out
+def _dt(txt):
+    """接口时间 → datetime。`2026-11-17 21:08:09:735` / `2026-11-17 00:00:00` 都吃。"""
+    s = str(txt or "").strip()
+    if not s:
+        return None
+    s = s[:19].replace("T", " ")
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(s[:19] if fmt != "%Y-%m-%d" else s[:10], fmt)
+        except ValueError:
+            continue
+    return None
 
 
-def _shift(day, n):
-    return (datetime.strptime(day, "%Y-%m-%d") + timedelta(days=n)).strftime("%Y-%m-%d")
+def fetch_market(since, max_pages=MAX_PAGES, page_size=PAGE_SIZE):
+    """按页拉全市场公告，直到最老一条早于 since 或页数封顶。返回 (原始条目, 诊断)。"""
+    import check_duanban as CD          # 复用 get_json_curl（带 UA/重试/gap）
+    out, pages, err = [], 0, ""
+    for p in range(1, max_pages + 1):
+        url = ("%s?sr=-1&page_size=%d&page_index=%d&ann_type=A&client_source=web"
+               "&f_node=0&s_node=0" % (ANN_API, page_size, p))
+        try:
+            data = CD.get_json_curl(url, retries=1, gap=2)
+        except Exception as e:                               # noqa: BLE001
+            err = str(e)[:80]
+            break
+        lst = (((data or {}).get("data") or {}).get("list")) or []
+        if not lst:
+            break
+        pages = p
+        out.extend(lst)
+        times = [_dt(x.get("display_time") or x.get("notice_date")) for x in lst]
+        times = [t for t in times if t]
+        if times and min(times) < since:
+            break
+    return out, {"pages": pages, "raw": len(out), "err": err}
 
 
-def build(D, hours=16, budget=120.0):
-    """返回 (模块 dict, 诊断 dict)。不写盘。"""
-    import check_duanban as CD          # 复用公告抓取（含当日缓存/并发/预算/分类器）
-
+def build(D, hours=16, cap=CAP):
+    import check_duanban as CD
     now = datetime.now()
+    since = now - timedelta(hours=hours)
     td = str((D.get("ashare") or {}).get("tradeDate") or "")[:10]
-    # 昨日收盘 = tradeDate 那天的 15:00；但 07:00 跑的时候 tradeDate 还是**昨日**
-    # （16:00 才换日），所以起点直接取「昨天 15:00」，终点取现在。
-    since = (now - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M")
-    since_day = since[:10]
-    tgt = targets(D)
+    raw, diag = fetch_market(since)
 
-    snaps = {}
-    for c, rec in ((D.get("stockNews") or {})).items():
-        keys = set()
-        for n in (rec.get("notices") or []):
-            keys.add((str(n.get("date") or "")[:10], str(n.get("title") or "")[:24]))
-        snaps[str(c)[-6:]] = keys
+    seen, items, procedural, offboard = set(), [], 0, 0
+    for x in raw:
+        t = _dt(x.get("display_time") or x.get("notice_date"))
+        if not t or t < since:
+            continue
+        title = str(x.get("title") or "").strip()
+        if not title:
+            continue
+        codes = x.get("codes") or []
+        code = str((codes[0] or {}).get("stock_code") or "") if codes else ""
+        name = str((codes[0] or {}).get("short_name") or "") if codes else ""
+        if len(code) != 6 or not code.isdigit():
+            continue
+        # 硬约束 3：只许沪深主板（这里虽是新闻不是推荐，但页面出现 300/688 会与「只做主板」冲突）
+        if not code.startswith(("60", "00")):
+            offboard += 1
+            continue
+        if not is_material(title):
+            procedural += 1
+            continue
+        # 同一只票在同一分钟常常一口气发 4~5 份（重组报告书 + 摘要 + 财务顾问核查 + 风险提示）——
+        # 那是**一个事件**拆成多份文件，逐条列会把整个列表占满（11-18 实测：珠海中富 20:23 连发 4 份）。
+        # 按「代码 + 分钟」去重，留第一份（接口按时间倒序，第一份通常是主公告）。
+        key = (code, t.strftime("%Y-%m-%d %H:%M"))
+        if key in seen:
+            continue
+        seen.add(key)
+        day = t.strftime("%Y-%m-%d")
+        slot = "盘后" if day <= td else ("周末" if t.weekday() >= 5 else "早间")
+        items.append({
+            "code": code, "name": name,
+            "day": day, "clock": t.strftime("%H:%M"),
+            "slot": slot,
+            "title": title[:60],
+            "column": str(((x.get("columns") or [{}])[0] or {}).get("column_name") or ""),
+            "dir": (CD.classify_notice(title) or "neutral"),
+            "tier": tier_of(title),
+        })
 
-    notices = CD.fetch_notices_batch(list(tgt), budget=budget)
-    got = sum(1 for v in notices.values() if v)
-    items, dup, procedural = [], 0, 0
-    for c, lst in notices.items():
-        nm = (tgt.get(c) or {}).get("name") or ""
-        for n in (lst or []):
-            d = str(n.get("date") or "")[:10]
-            if not d or d < since_day:
-                continue
-            title = str(n.get("title") or "").strip()
-            if not title:
-                continue
-            if (d, title[:24]) in (snaps.get(c) or set()):
-                dup += 1
-                continue
-            if not is_material(title):
-                procedural += 1
-                continue
-            # 时间槽（R100z357b）：以交易日为界——早于/等于 tradeDate 的是「盘后」，
-            # 之后的看是不是周末。周末 22:00 那趟会带出周五盘后+周末公告，不能全叫「早间」。
-            _wd = datetime.strptime(d, "%Y-%m-%d").weekday() if d else 0
-            slot = ("盘后" if d <= td else ("周末" if _wd >= 5 else "早间"))
-            items.append({
-                "code": c, "name": nm,
-                "day": d,
-                "slot": slot,
-                "title": title[:60],
-                "column": str(n.get("column") or ""),
-                "dir": (CD.classify_notice(title) or "neutral"),
-                "from": (tgt.get(c) or {}).get("from") or "",
-            })
-    items.sort(key=lambda x: (x["day"], x["code"]), reverse=True)
+    # 大事在前、同档按时间倒序（早上扫一眼要看到「谁重组了」，不是「谁增持了 100 万股」）
+    items.sort(key=lambda z: (z["day"], z["clock"]), reverse=True)
+    items.sort(key=lambda z: z["tier"])
     mod = {
         "updatedAt": now.strftime("%Y-%m-%d %H:%M"),
-        "since": since,
-        "sinceDay": since_day,
+        "since": since.strftime("%Y-%m-%d %H:%M"),
+        "sinceDay": since.strftime("%Y-%m-%d"),
         "tradeDate": td,
+        "scope": "market",                 # 全市场（沪深主板），不是只池内
         "n": len(items),
-        "items": items[:CAP],
-        # 抓不到 ≠ 没有（24.65）：只统计「确实返回过数据的标的数」，否则页面要说「未取到」
-        "covered": got,
-        "targets": len(tgt),
-        "degraded": bool(tgt) and got * 2 < len(tgt),
-        "note": ("昨日收盘后至今晨的 A 股公告（与 16:00 快照做差后的新增）；"
-                 "时间只到日——公告 API 只给披露日期，页面写「盘后/早间」，不编具体分钟"),
+        "items": items[:cap],
+        "pages": diag["pages"],
+        "raw": diag["raw"],
+        # 一条都没抓到 ≠ 没有公告（24.65）：raw=0 才标降级，页面写「未取到」
+        "degraded": diag["raw"] == 0,
+        "note": ("昨日收盘后至今晨的 A 股重要公告（全市场·沪深主板，按披露时间过滤）；"
+                 "只列收购/重组/停牌复牌/异动/回购/减持/中标/业绩预告/风险提示这一类消息"),
     }
-    return mod, {"done": len(tgt), "got": got, "dup": dup,
-                  "kept": len(items), "procedural": procedural}
+    return mod, {"kept": len(items), "procedural": procedural, "offboard": offboard, **diag}
 
 
 def main():
@@ -204,31 +211,29 @@ def main():
     if not D:
         print("[ERR] 读不到 data.js")
         return 2
-    if not targets(D):
-        print("[SKIP] data.js 里没有池内/候选标的，无需抓隔夜公告")
-        return 0
 
-    mod, diag = build(D, hours=a.hours, budget=a.budget)
-    print("[after_hours] 盯 %d 只（主板）· 返回数据 %d 只 · 与 16:00 快照重复 %d 条"
-          " · 程序性公告剔除 %d 条 · 留下消息 %d 条"
-          % (diag["done"], diag["got"], diag["dup"], diag["procedural"], diag["kept"]))
+    mod, diag = build(D, hours=a.hours, cap=a.cap)
+    print("[after_hours] 近 %dh 全市场公告：翻 %d 页拿到 %d 条 → 程序性剔除 %d、非主板 %d、"
+          "留下消息 %d 条" % (a.hours, diag["pages"], diag["raw"], diag["procedural"],
+                              diag["offboard"], diag["kept"]))
+    if diag["err"]:
+        print("[WARN] 抓取中断：%s" % diag["err"])
     if mod["degraded"]:
-        print("[WARN] 只有 %d/%d 只抓到公告 —— 本轮按「未取到」处理，页面不会说「暂无公告」"
-              % (diag["got"], diag["done"]))
-    show = (mod["items"] if a.all else mod["items"][:6])
-    for x in show:
-        print("  %s %-6s %s %s | %s" % (x["day"], x["slot"], x["code"], x["name"], x["title"][:34]))
+        print("[WARN] 一条都没取到 —— 本轮按「未取到」处理，页面不会说「暂无公告」")
+    for x in (mod["items"] if a.all else mod["items"][:8]):
+        print("  %s %s %-6s %s | %s" % (x["day"][5:], x["clock"], x["code"], x["name"],
+                                         x["title"][:34]))
 
     if not a.write:
         print("（干跑：加 --write 才写 data.js）")
         return 0
-    if mod["degraded"] and not mod["items"]:
-        # 一只都没抓到：保留旧值，绝不写空覆盖（防清场 R91m）
-        print("[WARN] 全批未取到公告，保留旧值不写盘")
+    if mod["degraded"]:
+        print("[WARN] 全批未取到，保留旧值不写盘（防清场 R91m）")
         return 1
     D.setdefault("ashare", {})["afterHours"] = mod
     common.write_data_js(path, D, label="[after_hours]")
-    print("[OK] ashare.afterHours 已写入：%d 条（截至 %s）" % (mod["n"], mod["updatedAt"]))
+    print("[OK] ashare.afterHours 已写入：%d 条（%s → %s）"
+          % (mod["n"], mod["since"], mod["updatedAt"]))
     return 0
 
 

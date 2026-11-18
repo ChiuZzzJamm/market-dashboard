@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611180859"></script>
+<script src="data.js?v=202611180937"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -4759,7 +4759,7 @@ function afterHoursHtml(ah) {
   var items = ah.items || [];
   if (!items.length) {
     if (!ah.degraded) return '';
-    return '<div class="wk-section ah"><h4>池内 · 昨夜公告</h4>' +
+    return '<div class="wk-section ah"><h4>盘后 · 隔夜</h4>' +
       '<div class="ah-note warn">未取到公告（公告源不可达，' + (ah.covered || 0) + '/' +
       (ah.targets || 0) + ' 只返回数据）——这是「没抓到」，不是「没有公告」</div></div>';
   }
@@ -4770,19 +4770,20 @@ function afterHoursHtml(ah) {
                           t: '盘后公告 · ' + (x.name || x.code) });
     var cls = x.dir === 'bull' ? 'up' : (x.dir === 'bear' ? 'down' : '');
     var md = String(x.day || '').slice(5);
+    var tm = x.clock ? (md + ' ' + String(x.clock)) : (md + ' ' + (x.slot || ''));
     return '<div class="ah-item">' +
-      '<span class="ah-d">' + esc(md) + ' ' + esc(x.slot || '') + '</span>' +
+      '<span class="ah-d">' + esc(tm) + '</span>' +
       '<span class="ah-nm stk-go" onclick="stkOpenIn(window._AH_GRP,' + gi + ')">' +
       esc(x.name || x.code) + '</span>' +
       '<span class="ah-t ' + cls + '" title="' + escAttr(x.column || x.title || '') + '">' +
       esc(x.title || '') + '</span></div>';
   }).join('');
-  var meta = '共 ' + (ah.n || items.length) + ' 条 · 截至 ' + esc(String(ah.updatedAt || '').slice(11)) +
-    ' · 覆盖 ' + (ah.covered || 0) + '/' + (ah.targets || 0) + ' 只池内标的 · ' +
-    '时间只到日（公告 API 只给披露日期）';
-  return '<div class="wk-section ah"><h4>池内 · 昨夜公告 <span class="ah-sub">' +
-    esc(String(ah.sinceDay || '').slice(5)) + ' 收盘后至今晨 · 只保留收购/重组/异动/回购/减持等消息，'
-    + '程序性公告（股东会/决议/担保/募集资金账户）已剔除</span></h4>' +
+  var meta = '共 ' + (ah.n || items.length) + ' 条 · 全市场（沪深主板）· 按披露时间倒序 · '
+    + '程序性公告（股东会/决议/担保/募集资金账户）已剔除';
+  return '<div class="wk-section ah"><h4>盘后 · 隔夜 <span class="ah-sub">' +
+    (ah.n || items.length) + ' 条 · 截至 ' + esc(String(ah.updatedAt || '').slice(11)) +
+    ' · 昨日收盘后至今晨的全市场重要公告（收购/重组/停复牌/异动/回购/减持/中标/业绩预告）' +
+    '</span></h4>' +
     '<div class="ah-list">' + rows + '</div>' +
     '<div class="ah-note">' + meta + '</div></div>';
 }
@@ -4817,6 +4818,10 @@ function renderNewsCard(d, market) {
   var _dateLabel = (_ud && _tdm && _ud !== _tdm[1]) ? ('要闻更新 ' + _ud + ' · 数据 ' + _td) : _td;
   var html = '<div class="wk-card"><div class="wk-head"><h2>' + mkTitle + '</h2>'
     + '<span class="date">' + esc(_dateLabel) + '</span></div>';
+  // R100z359（用户 2026-11-18 09:28：「我昨天说的是要 A 股要闻卡加一节『盘后·隔夜（N 条 · 截至 07:xx）』」）：
+  // 这一节就该在 A 股要闻卡里。18 日凌晨我把它挪去技术看板、还改名「池内·昨夜公告」，
+  // 那是我自己加的解读 —— 用户要的是「隔夜要闻」，不是「我池子里那几只的公告」。
+  if (market === 'ashare') html += afterHoursHtml(d.afterHours);
   // 利好 / 利空方向（短线·盘面）：通栏展开卡，左侧色条表达方向（红=利好 / 绿=利空）
   if (bn.length) {
     html += '<div class="wk-section"><h4 class="bull">利好方向 · 短线盘面</h4>';
@@ -6088,7 +6093,11 @@ function duanbanData() { return window.DASHBOARD_DATA.duanban || null; }
 // R88 口径三色标签：利好(红)/利空(绿)/中性(灰)
 var DB_SENT = { bull: ['利好', 'bull'], bear: ['利空', 'bear'], neutral: ['中性', 'neu'] };
 function dbSentBadge(e, style) {
-  var s = (e && e.sentiment) || 'neutral';
+  // R100z359：有代码就统一走 stkSentiment（= 消息面计数 + AI tieBreak），
+  // 与弹窗「消息面」那行同源；没有代码的（陈学长条目传 {sentiment: sentKind}）沿用原值。
+  var s = (e && e.code && typeof stkSentiment === 'function')
+    ? stkSentiment(String(e.code))
+    : ((e && e.sentiment) || 'neutral');
   var map = DB_SENT[s] || DB_SENT.neutral;
   var st = style ? ' style="' + style + '"' : '';
   return '<span class="db-sent ' + map[1] + '"' + st + '>' + map[0] + '</span>';
@@ -6102,7 +6111,18 @@ function stkSentiment(code) {
   var db = D.duanban || {};
   var e = null;
   (db.confirmed || []).concat(db.watching || []).forEach(function (x) { if (!e && String(x.code) === code) e = x; });
-  if (e && e.sentiment) return e.sentiment;
+  var ai = (e && e.sentiment) || '';
+  /* R100z359（用户 2026-11-18 09:28 截图：「这里都写利空，但怎么下面是利好？」）：
+     卡片/弹窗的「利空」徽章原来直接取 `e.sentiment`（AI 给池子打的标），而同一弹窗下面的
+     「消息面」是按 stockNews 的公告/新闻逐条计数走 faceVerdict 算的 —— 两套引擎各说各话，
+     世运电路就是「徽章利空、消息面 4 利好 2 利空」。现在**徽章也走同一个引擎**：
+     先用消息面计数，AI 判定只在贴脸（净差 ≤1 且方向性条目 >2）时作 tieBreak。
+     没有个股消息（新入池/停牌的票）才退回原来的五节 impacts 加权。 */
+  var items = (typeof stockNewsItems === 'function') ? stockNewsItems(code) : [];
+  var fB = 0, fE = 0;
+  items.forEach(function (x) { if (x.dir === 'bull') fB++; else if (x.dir === 'bear') fE++; });
+  if (fB + fE > 0 && typeof faceVerdict === 'function') return faceVerdict(fB, fE, ai);
+  if (ai) return ai;
   var nB = 0, nBe = 0;
   ['bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews'].forEach(function (k) {
     ((D.ashare || {})[k] || []).forEach(function (it) {
@@ -7140,10 +7160,6 @@ function renderDuanban() {
   // R100m：固定区（TOP10 + 开盘精选）写入独立容器——切换子页时保持显示
   document.getElementById('db-fixed').innerHTML = fixed;
   // R100k：子页菜单移到内容流——断板页位于「开盘精选」与确认池说明之间（用户指定红框位置）
-  // R100z357b（用户 2026-11-17 23:30 截图：「都是个股公告吗？不是全球要闻吗？」）：
-  // 昨夜公告从「全球要闻」卡搬到 A 股看板的断板子页——它是个股维度（你盯的池内票昨晚发了什么），
-  // 塞进要闻页既不符合「要闻」的定义，也会把真正的事件新闻挤下去。
-  html = afterHoursHtml(((window.DASHBOARD_DATA || {}).ashare || {}).afterHours) + html;
   html += subnavHtml();
   // R100j/R100z4v：断板页口径说明置于确认池上方（TOP10 与 开盘精选 保持置顶不动）；R100z4v 起为静态 HTML，不再 esc
   html += _dbNote;

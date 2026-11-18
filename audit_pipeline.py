@@ -263,6 +263,10 @@ EMPTY_WHITELIST = [
      "industry 为空＝同花顺没给行业，两者互不替代时才真的空。G61 已有反向证明"
      "（hot 必须 ⊆ concepts、不得全是泛概念；既无题材又无行业会单独 WARN「徽章会整个空掉」）。"
      "前端 stkSecPillOf 依次退回 prefer/行业，不渲染空 pill"),
+    (r"duanban\.themes\.[^.]+(\.(refStocks|cands))$",
+     "R100z356：自动成组（auto=True）的题材**按设计**这两项都是空——refStocks 是词表代表票"
+     "（未确认的题材没有代表票），cands 是补涨候选（未确认不给可买名单）。"
+     "G63 已反向断言：auto 组必须 cands 为空且不带 refStocks，成员 ≥2 且都在当日连板梯队里"),
     (r"chenPool\.compare\.today\.(both|chenOnly|duanbanOnly|done)$",
      "R100z354（2026-11-17）：`compare.today` 是**今日新增确认**的四分组，今天没有该类标的"
      "即空数组（实测 11-17：both=0 / chenOnly=1 / duanbanOnly=2 / done=1，那天确实没有双池票）。"
@@ -6584,12 +6588,12 @@ def g76_after_hours(r):
     items = ah.get("items") or []
     n = int(ah.get("n") or 0)
     bad = []
-    CAPN = 12          # 与 after_hours.CAP 同值：页面只列前 12 条
+    CAPN = 20          # 与 after_hours.CAP 同值：页面只列前 20 条
     if n < len(items):
         bad.append(f"n={n} < items={len(items)}（条数比明细还少）")
     elif n != len(items) and len(items) != CAPN:
         bad.append(f"n={n} 与 items={len(items)} 对不上（只有 items 被 {CAPN} 条上限截断时才允许 n>items）")
-    need = ("code", "name", "day", "slot", "title", "dir")
+    need = ("code", "name", "day", "slot", "title", "dir", "tier")
     for x in items:
         miss = [k for k in need if not x.get(k)]
         if miss:
@@ -6604,9 +6608,11 @@ def g76_after_hours(r):
             bad.append(f"{c} dir={x['dir']!r} 非法")
         if not re.match(r"^20\d{2}-\d{2}-\d{2}$", str(x["day"])):
             bad.append(f"{c} day={x['day']!r} 不是日期")
-    for k in ("covered", "targets"):
-        if not isinstance(ah.get(k), int):
-            bad.append(f"{k} 缺失/非整数（抓取覆盖率必须可核）")
+        # R100z359：全市场接口带 display_time，能给到分钟 —— 没有 clock 就是退回了「只有日期」的旧口径
+        if not re.match(r"^\d{2}:\d{2}$", str(x.get("clock") or "")):
+            bad.append(f"{c} clock={x.get('clock')!r} 不是 HH:MM（全市场接口有 display_time，别退回日期口径）")
+    if str(ah.get("scope") or "") != "market":
+        bad.append("scope 不是 market（这一节是全市场要闻，不是池内公告）")
     if not isinstance(ah.get("degraded"), bool):
         bad.append("degraded 缺失/非布尔（抓不到时必须显式标记）")
     # R100z357b：程序性公告不算「消息」——股东会资料/决议/担保进展/募集资金账户这类
@@ -6632,16 +6638,21 @@ def g76_after_hours(r):
         return
     # 归属约束：这块是**个股公告**，只能挂在 A 股看板（#db-pools），不许塞回「全球要闻」卡。
     # 用户 2026-11-17 23:30 的原话就是「都是个股公告吗？不是全球要闻吗？」——这句断言就是那次修正的固化。
-    if html and "html = afterHoursHtml(" not in html:
-        r.fail("G76", "afterHoursHtml 没有挂在 A 股看板（#db-pools 组装处）——"
-                      "个股公告不该出现在「全球要闻」里")
+    # R100z359（用户 2026-11-18 09:28 第二次纠正）：这一节必须挂在**A 股要闻卡**（renderNewsCard），
+    # 不是技术看板、也不是「池内」。上一版把断言写成「必须在 #db-pools」，正好把错误口径固化了。
+    if html and "if (market === 'ashare') html += afterHoursHtml(" not in html:
+        r.fail("G76", "afterHoursHtml 没挂在 A 股要闻卡（renderNewsCard 的 ashare 分支）——"
+                      "用户要的是「A 股要闻卡加一节盘后·隔夜」")
+        return
+    if html and "html = afterHoursHtml(" in html:
+        r.fail("G76", "afterHoursHtml 又被挂到技术看板了（#db-pools）—— 它属于 A 股要闻卡")
         return
     rc, out, err = _run_tool("check_after_hours.py", timeout=120)
     if rc != 0:
         r.fail("G76", "盘后·隔夜渲染没过：" + (out or err or "").strip()[:200])
         return
-    r.ok("G76", f"池内·昨夜公告 {n} 条（覆盖 {ah.get('covered')}/{ah.get('targets')} 只池内标的，"
-                f"截至 {ah.get('updatedAt')}）结构自洽、渲染真跑通过"
+    r.ok("G76", f"盘后·隔夜 {n} 条（全市场沪深主板，截至 {ah.get('updatedAt')}）"
+                f"结构自洽（含分钟级时间与大事优先分级）、挂在 A 股要闻卡、渲染真跑通过"
          + ("；本轮为降级状态（未取到，页面已写明）" if ah.get("degraded") else ""))
 
 
@@ -6687,6 +6698,67 @@ def g77_holiday_table(r):
     r.ok("G77", "日韩休市判定可自证：日本规则引擎覆盖 %d 年全部祝日（与历史表零缺口）、"
                 "韩国表覆盖到 %d 年" % (y, U.KR_HOLIDAY_YEARS[-1])
          + ("；" + "；".join(notes) if notes else ""))
+
+
+def g78_sent_one_source(r):
+    """G78 情绪徽章与「消息面」必须同源（R100z359，2026-11-18，FAIL 级）。
+
+    由来（用户 2026-11-18 09:28 三张截图）：「这里都写利空，但怎么下面是利好？？？？」
+    世运电路 603920：卡片/弹窗徽章写「利空」（AI 给池子打的 sentiment），下面「消息面」
+    却按 stockNews 计数走 faceVerdict 算出「利好口径（利好 4 · 利空 2）」。两套引擎各说各话。
+
+    现在徽章也走 faceVerdict：消息面计数优先，AI 判定只在「净差 ≤1 且方向性条目 >2」时作 tieBreak。
+    这条闸门守的是**结构**（免得下次重构又把徽章改回直接读 e.sentiment）：
+      a) stkSentiment 必须调 faceVerdict 与 stockNewsItems；
+      b) dbSentBadge 有 code 时必须走 stkSentiment；
+      c) faceVerdict 本体在（K10 已用假数据测过它的语义，这里只防它被删/被改名）。
+    """
+    try:
+        html = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
+    except OSError:
+        r.warn("G78", "读不到 index.html，跳过情绪口径接线检查")
+        return
+    import re as _re
+
+    def body(fn):
+        m = _re.search(r"(?m)^function\s+%s\s*\(" % _re.escape(fn), html)
+        if not m:
+            return ""
+        i = html.find("{", m.end())
+        depth, j = 0, i
+        while j < len(html):
+            if html[j] == "{":
+                depth += 1
+            elif html[j] == "}":
+                depth -= 1
+                if depth == 0:
+                    return html[i:j + 1]
+            j += 1
+        return ""
+
+    bad = []
+    fb = body("faceVerdict")
+    if not fb:
+        bad.append("找不到 faceVerdict（口径判定本体被删/改名）")
+    ss = body("stkSentiment")
+    if not ss:
+        bad.append("找不到 stkSentiment")
+    else:
+        if "faceVerdict(" not in ss:
+            bad.append("stkSentiment 没有走 faceVerdict —— 徽章又变成第二套口径了")
+        if "stockNewsItems(" not in ss:
+            bad.append("stkSentiment 没有读 stockNews 计数 —— 与「消息面」不是同一份证据")
+    sb = body("dbSentBadge")
+    if sb and "stkSentiment(" not in sb:
+        bad.append("dbSentBadge 有 code 时没走 stkSentiment（失效卡/陈学长卡会与消息面打架）")
+    nf = body("newsFaceBlock")
+    if nf and "faceVerdict(" not in nf:
+        bad.append("newsFaceBlock 没有走 faceVerdict")
+    if bad:
+        r.fail("G78", "情绪口径不是单一来源：" + "；".join(bad[:3]))
+        return
+    r.ok("G78", "情绪徽章与「消息面」同源（stkSentiment → faceVerdict ← stockNews 计数），"
+                "AI 判定只在贴脸时作 tieBreak")
 
 
 def main():
@@ -6775,6 +6847,7 @@ def main():
     g74_us_news_domestic_subject(r)
     g76_after_hours(r)
     g77_holiday_table(r)
+    g78_sent_one_source(r)
 
     # R100z284：机器可读的结论行。
     #

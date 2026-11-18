@@ -2589,25 +2589,17 @@ def build_module(pairs, D):
               % (n_hit, len(entries), NOTICE_WINDOW_DAYS), file=sys.stderr)
     except Exception as ex:
         print("[warn] 公告抓取失败（不影响主流程）: %s" % ex, file=sys.stderr)
-    # ---- R100z310：反包条件三因子 + 杂毛硬门槛 ----
-    # 形态已由上面的 stage 筛过（必要条件）；这里补「题材/人气/情绪」（充分条件）。
-    # 剔掉的杂毛写进 module.junkCut 并在页面显示——静默少几只，读者会当成抓数失败。
+    # ---- R100z359（用户 2026-11-18 09:28）：「你还是不要剔除杂毛了，就放着，我自己看着办」 ----
+    # 原来这里有「低价 + 板块无涨停且 5 日下跌」的硬门槛（_is_junk），命中的票直接不进池、
+    # 只在页面顶部列一句「⚠️ 杂毛剔除 7 只」——**票没了，理由也只有一句话**，用户要看就得自己找回来。
+    # 现在不剔除了：该门槛判断的是「值不值得做」，那是读者的决定，不是流水线的决定。
+    # ⚠️ 不是删代码：`_is_junk` 与 `junkCut` 字段都保留（历史数据/G9 白名单仍引用），
+    #    只是不再调用、不再落任何条目标注——池子里该有的都在。
     _mday2 = market_last_day(D)
     _ctx = _pre_ctx(D, _mday2)
-    _junk, _keep = [], []
-    for e in entries:
-        _why = _is_junk(e, _ctx["boards"])
-        if _why:
-            _junk.append({"code": e["code"], "name": e["name"], "why": _why})
-            continue
-        _keep.append(e)
-    entries = _keep
+    _junk = []
     # 批量算（题材/人气用池内分位——逐条算绝对分在普跌日会全挤在一起，见 pre_batch 注释）
     pre_batch(entries, _ctx)
-    if _junk:
-        print("[杂毛] 剔除 %d 只：%s" % (len(_junk),
-              "、".join("%s %s(%s)" % (x["name"], x["code"], x["why"]) for x in _junk)),
-              file=sys.stderr)
 
     tagged = tag_entries(entries, D)
     confirmed = [e for e in tagged if e["stage"] == "全流程达标"]
