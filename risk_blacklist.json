@@ -2,12 +2,12 @@
  "ok": true,
  "nameSrc": "tx",
  "nameSrcDetail": {
-  "tx": 344,
+  "tx": 315,
   "sina": 0,
   "em": 0
  },
- "date": "2026-11-17",
- "checked": 344,
+ "date": "2026-11-18",
+ "checked": 315,
  "liftWindow": [
   2,
   5
@@ -17,38 +17,24 @@
  "dims": {
   "st": {
    "status": "ok",
-   "cover": "行情名源（腾讯344/新浪0/东财0）344/344 只取到"
+   "cover": "行情名源（腾讯315/新浪0/东财0）315/315 只取到"
   },
   "cut": {
    "status": "ok",
-   "cover": "公告源 344/344 只取到（东财344/巨潮0）"
+   "cover": "公告源 315/315 只取到（东财315/巨潮0）"
   },
   "lift": {
    "status": "ok",
-   "cover": "解禁源 344/344 只取到"
+   "cover": "解禁源 315/315 只取到"
   },
   "pledge": {
    "status": "ok",
-   "cover": "质押源 344/344 只取到（仅供参考）"
+   "cover": "质押源 315/315 只取到（仅供参考）"
   }
  },
  "verdict": "full",
  "uncheckedDims": [],
  "blacklist": {
-  "600908": {
-   "name": "无锡银行",
-   "reasons": [
-    "2026-11-14 减持已结束（利空出尽）"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 3.6%（截至 2026-07-03）"
-   ],
-   "severity": "yellow",
-   "progress": [
-    "减持已结束（利空出尽）"
-   ]
-  },
   "002158": {
    "name": "汉钟精机",
    "reasons": [
@@ -92,6 +78,20 @@
    ],
    "count": 1,
    "watch": [],
+   "severity": "yellow",
+   "progress": [
+    "减持已结束（利空出尽）"
+   ]
+  },
+  "600908": {
+   "name": "无锡银行",
+   "reasons": [
+    "2026-11-14 减持已结束（利空出尽）"
+   ],
+   "count": 1,
+   "watch": [
+    "参考·质押 3.6%（截至 2026-07-03）"
+   ],
    "severity": "yellow",
    "progress": [
     "减持已结束（利空出尽）"
