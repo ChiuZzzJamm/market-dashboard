@@ -55,6 +55,14 @@ if (!ah) {
     if (s.indexOf('nc-dtl') < 0) bad('第 ' + (i + 1) + ' 条缺标题+摘要（nc-dtl）');
     if (s.indexOf('nc-src') < 0) bad('第 ' + (i + 1) + ' 条缺来源行（与五节要闻同款）');
   });
+  // R100z362：每条要带映射标的（impacts）——渲染出来应是 nc-imp 分组头 + nc-stocks 里的股票 chips
+  const impN = (h.match(/class="nc-imp"/g) || []).length;
+  const chipN = (h.match(/class="stock-chip/g) || []).length;
+  const wantImp = (ah.items || []).filter(function (x) { return (x.impacts || []).length; }).length;
+  out.info.imp = impN + '/' + wantImp;
+  out.info.chips = chipN;
+  if (impN !== wantImp) bad('映射标的块渲染 ' + impN + ' 个 ≠ 带 impacts 的 ' + wantImp + ' 条');
+  if (chipN === 0) bad('一只标的 chip 都没渲染出来（impacts 有数据但页面没有可点的票）');
   if (h.indexOf('盘后 · 隔夜') < 0) bad('标题不对（应写「盘后 · 隔夜」）');
   if (h.indexOf('截至') < 0) bad('缺少「截至 HH:MM」');
   if (h.indexOf('公告') >= 0 && (h.match(/关于.*的公告/g) || []).length) bad('正文里出现「关于…的公告」——这一节不应是公告清单');

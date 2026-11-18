@@ -6615,6 +6615,47 @@ def g76_after_hours(r):
             macro_n += 1
     if items and macro_n * 2 < len(items):
         bad.append(f"只有 {macro_n}/{len(items)} 条是宏观/政策/行业级——这一节不是个股消息汇总")
+
+    # R100z362（用户 2026-11-18 10:24「要带」）：每条附映射标的。它一出现就意味着
+    # **这一节也进推荐位**了，所以三条一起管：主板、去重、过黑名单。
+    bl_path = os.path.join(HERE, "risk_blacklist.json")
+    bl = {}
+    try:
+        bl = (json.load(open(bl_path, encoding="utf-8")).get("blacklist") or {})
+    except Exception:                                        # noqa: BLE001
+        bl = {}
+    n_stk, seen_c = 0, {}
+    for x in items:
+        imps = x.get("impacts") or []
+        if not imps:
+            bad.append(f"「{str(x.get('title'))[:12]}」没有映射标的（impacts 为空，页面上就只剩一段话）")
+            continue
+        if len(imps) > 3:
+            bad.append(f"「{str(x.get('title'))[:12]}」有 {len(imps)} 组 impacts（≤3）")
+        for im in imps:
+            sts = im.get("stocks") or []
+            if not (1 <= len(sts) <= 6):
+                bad.append(f"「{str(x.get('title'))[:12]}」一组 {len(sts)} 只标的（1~6）")
+            for st in sts:
+                c = str(st.get("code") or "")
+                n_stk += 1
+                if len(c) != 6 or not c.isdigit() or not c.startswith(("60", "00")):
+                    bad.append(f"{c or '空代码'} 不是沪深主板")
+                    continue
+                if not str(st.get("name") or "").strip():
+                    bad.append(f"{c} 缺 name")
+                if not str(st.get("note") or "").strip():
+                    bad.append(f"{c} 缺 note（标的身份要写清：龙头/概念/小盘）")
+                seen_c[c] = seen_c.get(c, 0) + 1
+                sev = (bl.get(c) or {}).get("severity") or ""
+                if sev in ("red", "orange"):
+                    why = "、".join((bl.get(c) or {}).get("reasons") or [])[:40]
+                    bad.append(f"{c}（{st.get('name')}）在黑名单 {sev}：{why}")
+    # 同一只票在两条不同要闻下都出现是**合理的**（中兴通讯既算力也算 6G），
+    # 但不能超过 2 次——那才是刷屏。口径与五节「同一条要闻内同票复用 ≤2 次」对齐。
+    dup = [c for c, k in seen_c.items() if k > 2]
+    if dup:
+        bad.append(f"同一标的在节内出现 >2 次：{dup[:3]}（推荐位不该刷屏）")
     if bad:
         r.fail("G76", "盘后·隔夜不是要闻形态：" + "；".join(bad[:4]))
         return
@@ -6632,7 +6673,7 @@ def g76_after_hours(r):
     if rc != 0:
         r.fail("G76", "盘后·隔夜渲染没过：" + (out or err or "").strip()[:200])
         return
-    r.ok("G76", f"盘后·隔夜 {len(items)} 条要闻（宏观/政策/行业级 {macro_n} 条，"
+    r.ok("G76", f"盘后·隔夜 {len(items)} 条要闻（宏观/政策/行业级 {macro_n} 条，映射标的 {n_stk} 只全部主板且未命中黑名单，"
                 f"截至 {ah.get('at') or ah.get('updatedAt')}）结构自洽、挂在 A 股要闻卡、渲染真跑通过")
 
 

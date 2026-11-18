@@ -2,12 +2,12 @@
  "ok": true,
  "nameSrc": "tx",
  "nameSrcDetail": {
-  "tx": 315,
+  "tx": 320,
   "sina": 0,
   "em": 0
  },
  "date": "2026-11-18",
- "checked": 315,
+ "checked": 320,
  "liftWindow": [
   2,
   5
@@ -17,19 +17,19 @@
  "dims": {
   "st": {
    "status": "ok",
-   "cover": "行情名源（腾讯315/新浪0/东财0）315/315 只取到"
+   "cover": "行情名源（腾讯320/新浪0/东财0）320/320 只取到"
   },
   "cut": {
    "status": "ok",
-   "cover": "公告源 315/315 只取到（东财315/巨潮0）"
+   "cover": "公告源 320/320 只取到（东财320/巨潮0）"
   },
   "lift": {
    "status": "ok",
-   "cover": "解禁源 315/315 只取到"
+   "cover": "解禁源 320/320 只取到"
   },
   "pledge": {
    "status": "ok",
-   "cover": "质押源 315/315 只取到（仅供参考）"
+   "cover": "质押源 320/320 只取到（仅供参考）"
   }
  },
  "verdict": "full",

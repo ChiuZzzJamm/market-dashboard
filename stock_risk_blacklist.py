@@ -76,6 +76,14 @@ for (const mk of ['us', 'ashare']) {
     }
   }
   for (const key of ['bullish', 'bearish']) for (const g of (sec[key] || [])) { if (g && typeof g === 'object') for (const st of (g.stocks || [])) add(st); }
+  // R100z362：A 股要闻卡的「盘后 · 隔夜」也带映射标的（用户 2026-11-18 10:24「要带」），
+  // 它同样是「推荐位」——进了 impacts 就等于告诉读者可以看这几只，必须一起过黑名单，
+  // 否则 ST/解禁/减持的票会从这条新入口溜进页面。
+  for (const nw of ((sec.afterHours || {}).items || [])) {
+    if (!nw || typeof nw !== 'object') continue;
+    for (const st of (nw.stocks || [])) add(st);
+    for (const imp of (nw.impacts || [])) { if (imp && typeof imp === 'object') for (const st of (imp.stocks || [])) add(st); }
+  }
 }
 // 3) 四技术池（前端卡片 ⚠️ 角标也读这份黑名单）
 const db = d.duanban || {};
