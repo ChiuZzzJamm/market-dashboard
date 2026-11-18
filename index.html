@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611181005"></script>
+<script src="data.js?v=202611181013"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -502,9 +502,10 @@
   /* ===== 全球要闻 / 周末 ===== */
   /* R100z357：盘后·隔夜公告（A股要闻卡顶部）。刻意比五节轻：灰底细行，不抢「利好/利空」的注意力，
      但时间槽（11-17 盘后）必须显眼——读者靠它判断「这是昨晚的还是今早的」。 */
-  .wk-section.ah { background: var(--bg2, #f7f8fa); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
-  .wk-section.ah h4 { display: flex; align-items: baseline; gap: 8px; }
-  .wk-section.ah .ah-sub { font-weight: 400; font-size: var(--fs-xs); color: var(--ink2); }
+  /* R100z361（用户 2026-11-18 10:09「样式不对，参考图 2」）：不再给这一节自造底色/内边距。
+     直接复用五节要闻的 .wk-section + .wk-item + newsEntryInner —— 样式**由同一份 CSS 决定**，
+     才不会出现「同一张卡里两种长相」。h4 的副标题只是灰字，沿用 .wk-section h4 的排版。 */
+  .wk-section.ah .ah-sub { font-weight: 400; font-size: var(--fs-xs); color: var(--ink2); margin-left: 6px; }
   .ah-list { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
   .ah-item { display: flex; align-items: baseline; gap: 8px; font-size: var(--fs-sm); line-height: 1.6; }
   .ah-d { flex: 0 0 auto; font-size: var(--fs-xs); color: var(--ink2); font-variant-numeric: tabular-nums; }
@@ -4763,20 +4764,21 @@ function afterHoursHtml(ah) {
     return '<div class="wk-section ah"><h4>盘后 · 隔夜</h4>' +
       '<div class="ah-note warn">未取到隔夜要闻（检索失败）——这是「没抓到」，不是「没有消息」</div></div>';
   }
+  /* R100z361：**调用五节同一个渲染器**（newsEntryInner），不再自己拼一套。
+     上一版我手写了 nc-theme/nc-dtl/nc-src，虽然类名一样，但少了 persp-tag、等级徽标、
+     标题省略与间距规则，于是「同一张卡里两种长相」（用户 2026-11-18 10:09 截图）。
+     现在这一节的每条 = 五节要闻的每条，样式不可能再漂。 */
   var rows = items.map(function (it) {
     var dEnum = (typeof dirEnumOf === 'function') ? dirEnumOf(it.direction) : '';
-    var dcl = dEnum === '看涨' ? 'dir-up' : (dEnum === '看跌' ? 'dir-down' : 'dir-flat');
-    var dirBadge = it.direction ? '<span class="dir-badge ' + dcl + '">' + esc(dEnum) + '</span>' : '';
-    return '<div class="wk-item wk-dir-' + (dEnum === '看涨' ? 'up' : (dEnum === '看跌' ? 'down' : 'flat')) +
-      '" data-ntitle="' + escAttr(it.title || '') + '">' +
-      '<div class="nc-theme"><span class="nc-tt">' + esc(it.sector || '隔夜') + '</span>' + dirBadge + '</div>' +
-      '<div class="nc-dtl"><b>' + esc(it.title || '') + '</b> — ' + esc(it.summary || '') + '</div>' +
-      (it.source ? '<div class="nc-src">来源：' + esc(it.source) + (it.time ? ' · ' + esc(it.time) : '') + '</div>' : '') +
+    var cls = dEnum === '看涨' ? 'up' : (dEnum === '看跌' ? 'down' : 'flat');
+    return '<div class="wk-item wk-dir-' + cls + '" data-ntitle="' + escAttr(it.title || '') + '">' +
+      newsEntryInner(it, true, '盘后·隔夜', (window.DASHBOARD_DATA || {}).ashare && window.DASHBOARD_DATA.ashare.tradeDate) +
       '</div>';
   }).join('');
-  return '<div class="wk-section ah"><h4>盘后 · 隔夜 <span class="ah-sub">' +
-    (ah.n || items.length) + ' 条 · 截至 ' + esc(String(ah.at || ah.updatedAt || '').slice(11)) +
-    ' · 昨日收盘后至今晨的宏观 / 政策 / 行业要闻</span></h4>' + rows + '</div>';
+  return '<div class="wk-section ah"><h4>盘后 · 隔夜' +
+    '<span class="ah-sub">' + (ah.n || items.length) + ' 条 · 截至 ' +
+    esc(String(ah.at || ah.updatedAt || '').slice(11)) + ' · 昨日收盘后至今晨的宏观 / 政策 / 行业要闻</span></h4>' +
+    rows + '</div>';
 }
 
 function renderNewsCard(d, market) {

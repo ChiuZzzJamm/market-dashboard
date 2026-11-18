@@ -14,6 +14,7 @@ rc=2 表示检查器本身没跑成（node 缺 / 函数改名），此时**不�
 """
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -24,14 +25,17 @@ sys.path.insert(0, HERE)
 from check_pend_table import extract_func  # noqa: E402
 
 INDEX = os.path.join(HERE, "index.html")
-NEED_FUNCS = ("esc", "escAttr", "afterHoursHtml")
+NEED_FUNCS = ("esc", "escAttr", "dirEnumOf", "newsLevelOf", "newsEntryInner", "afterHoursHtml")
 
 NODE = r"""
 const fs = require('fs');
 global.window = {}; global.document = {};
 window.DASHBOARD_DATA = {};
 eval(fs.readFileSync(__DATA__, 'utf8'));
-function dirEnumOf(d) { return d === '看涨' ? '看涨' : (d === '看跌' ? '看跌' : (d === '中性' ? '中性' : '中性')); }
+function deduceConfBadge() { return ''; }
+function renderDeduce() { return ''; }
+function stkGoldCls() { return ''; }
+function stkSecPillOf() { return ''; }
 const D = window.DASHBOARD_DATA || {};
 const ah = (D.ashare || {}).afterHours;
 const out = {ok: true, errs: [], info: {}};
@@ -43,7 +47,7 @@ out.info.len = h.length;
 if (!ah) {
   if (h !== '') bad('没有 afterHours 时不该渲染任何东西');
 } else if ((ah.items || []).length) {
-  const cards = (h.match(/<div class="wk-item /g) || []).length;
+  const cards = (h.match(/<div class="wk-item wk-dir-/g) || []).length;
   if (cards !== (ah.items || []).length) bad('渲染 ' + cards + ' 张卡 ≠ items ' + (ah.items || []).length + ' 条');
   const segs = h.split('<div class="wk-item ');
   segs.slice(1).forEach(function (s, i) {
@@ -81,7 +85,13 @@ def main():
         print("[ERR] 找不到 index.html")
         return 2
     src = open(INDEX, encoding="utf-8").read()
-    parts, missing = [], []
+    # newsLevelOf 依赖模块级词表常量（不在任何函数里），必须一起带过去
+    consts = []
+    for name in ("NEWS_LV0", "NEWS_LV1"):
+        m = re.search(r"(?m)^var\s+%s\s*=\s*\[[\s\S]*?\];" % name, src)
+        if m:
+            consts.append(m.group(0))
+    parts, missing = list(consts), []
     for fn in NEED_FUNCS:
         b = extract_func(src, fn)
         (parts.append(b) if b else missing.append(fn))
