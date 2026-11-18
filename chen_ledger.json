@@ -1954,7 +1954,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "expired",
+    "exitDay": "2026-11-18",
+    "buyDay": "2026-11-04",
+    "exitPrice": 13.86,
+    "buyPrice": 14.82,
+    "retPct": -6.48,
+    "note": "持仓 10 日未触目标也未破止损，收盘平"
+   },
    "settleVer": "R100z299",
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331"
@@ -1973,7 +1982,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "expired",
+    "exitDay": "2026-11-18",
+    "buyDay": "2026-11-04",
+    "exitPrice": 24.11,
+    "buyPrice": 23.46,
+    "retPct": 2.77,
+    "note": "持仓 10 日未触目标也未破止损，收盘平"
+   },
    "settleVer": "R100z299",
    "stopAnchor": "legacy-unk"
   },
@@ -1991,7 +2009,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "expired",
+    "exitDay": "2026-11-18",
+    "buyDay": "2026-11-04",
+    "exitPrice": 43.32,
+    "buyPrice": 46.12,
+    "retPct": -6.07,
+    "note": "持仓 10 日未触目标也未破止损，收盘平"
+   },
    "settleVer": "R100z299",
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331"
@@ -2093,7 +2120,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "expired",
+    "exitDay": "2026-11-18",
+    "buyDay": "2026-11-04",
+    "exitPrice": 20.71,
+    "buyPrice": 20.82,
+    "retPct": -0.53,
+    "note": "持仓 10 日未触目标也未破止损，收盘平"
+   },
    "settleVer": "R100z299",
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331"
@@ -2139,7 +2175,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "expired",
+    "exitDay": "2026-11-18",
+    "buyDay": "2026-11-04",
+    "exitPrice": 1.87,
+    "buyPrice": 1.9,
+    "retPct": -1.58,
+    "note": "持仓 10 日未触目标也未破止损，收盘平"
+   },
    "settleVer": "R100z299",
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331"
@@ -2296,7 +2341,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-18",
+    "buyDay": "2026-11-05",
+    "exitPrice": 26.72,
+    "buyPrice": 28.37,
+    "retPct": -5.82,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -3410,7 +3464,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-18",
+    "buyDay": "2026-11-09",
+    "exitPrice": 20.57,
+    "buyPrice": 24.51,
+    "retPct": -16.08,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -4763,7 +4826,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-18",
+    "buyDay": "2026-11-10",
+    "exitPrice": 11.94,
+    "buyPrice": 14.62,
+    "retPct": -18.33,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -5070,7 +5142,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-18",
+    "buyDay": "2026-11-11",
+    "exitPrice": 4.27,
+    "buyPrice": 5.0,
+    "retPct": -14.6,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -5340,7 +5421,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-18",
+    "buyDay": "2026-11-11",
+    "exitPrice": 3.97,
+    "buyPrice": 4.8,
+    "retPct": -17.29,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -5728,7 +5818,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-18",
+    "buyDay": "2026-11-11",
+    "exitPrice": 47.36,
+    "buyPrice": 56.98,
+    "retPct": -16.88,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -6198,7 +6297,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-18",
+    "buyDay": "2026-11-12",
+    "exitPrice": 20.92,
+    "buyPrice": 24.24,
+    "retPct": -13.7,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "settleVer": "R100z299"
   },
@@ -7656,11 +7764,162 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-18",
+    "buyDay": "2026-11-17",
+    "exitPrice": 3.75,
+    "buyPrice": 3.57,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "000628",
+   "name": "高新发展",
+   "confirmDate": "2026-11-18",
+   "firstSeenDate": "2026-11-17",
+   "entryDate": "2026-11-18",
+   "cross": "chen",
+   "preSnapshot": {
+    "theme": {
+     "label": "阴跌",
+     "day": null,
+     "score": 51.8,
+     "why": "今日-0.71% / 5日-5.99% / 涨停0只 / 扩散29%",
+     "fake": false
+    },
+    "pop": {
+     "label": "活跃",
+     "score": 84.4,
+     "why": "成交额池内分位 76 · 放量2.0倍（+8）"
+    },
+    "ladder": {
+     "label": "2板",
+     "score": 70,
+     "why": "板块 建筑装饰 有 1 只连板、最高 2 板（全筑股份），全筑股份 的题材是「边缘AI算力+智慧建筑+建筑装饰」",
+     "n": 1,
+     "maxLb": 2,
+     "names": [
+      "全筑股份"
+     ],
+     "themes": [
+      "边缘AI算力",
+      "智慧建筑",
+      "建筑装饰"
+     ],
+     "topName": "全筑股份",
+     "inLadder": false,
+     "bonus": 6,
+     "tag": "可补涨"
+    },
+    "mood": {
+     "label": "中性",
+     "score": 65,
+     "text": "涨停 40（昨 36，↑） · 跌停 40（昨 67，↓） · 最高板 4（昨 3，↑） · 连板股 7（昨 6，↑） · 分歧率 0.00%（昨 33.00，↓） · 接力率 17%（昨 17，→）",
+     "why": "各项指标没有明确方向，按中性处理",
+     "gate": "open"
+    },
+    "total": 72.5,
+    "tier": "强",
+    "why": "题材阴跌(52)×55% + 人气84×45% + 连板2板+6 = 72（情绪中性 作闸门）"
+   },
+   "ztDate": "2026-11-16",
+   "stopPrice": 41.5,
+   "stopAnchor": "zt_low",
+   "ztLow": 41.5,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "605378",
+   "name": "野马电池",
+   "confirmDate": "2026-11-18",
+   "firstSeenDate": "2026-11-17",
+   "entryDate": "2026-11-18",
+   "cross": "chen",
+   "preSnapshot": {},
+   "ztDate": "2026-11-16",
+   "stopPrice": 14.0,
+   "stopAnchor": "zt_low",
+   "ztLow": 14.0,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "600410",
+   "name": "华胜天成",
+   "confirmDate": "2026-11-18",
+   "firstSeenDate": "2026-11-18",
+   "entryDate": "2026-11-18",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "启动",
+     "day": null,
+     "score": 83.6,
+     "why": "今日+0.84% / 5日-7.23% / 涨停2只 / 扩散46%",
+     "fake": false
+    },
+    "pop": {
+     "label": "梯队",
+     "score": 100,
+     "why": "成交额池内分位 93 · 连板梯队（+8）"
+    },
+    "ladder": {
+     "label": "本票在梯队",
+     "score": 100,
+     "why": "本票本身就在连板梯队，属于接力而非补涨",
+     "n": 2,
+     "maxLb": 2,
+     "names": [
+      "真视通",
+      "华胜天成"
+     ],
+     "themes": [
+      "华为昇腾",
+      "AI算力",
+      "算力服务"
+     ],
+     "topName": "华胜天成",
+     "inLadder": true,
+     "bonus": 12,
+     "tag": "接力"
+    },
+    "mood": {
+     "label": "中性",
+     "score": 65,
+     "text": "涨停 40（昨 36，↑） · 跌停 40（昨 67，↓） · 最高板 4（昨 3，↑） · 连板股 7（昨 6，↑） · 分歧率 0.00%（昨 33.00，↓） · 接力率 17%（昨 17，→）",
+     "why": "各项指标没有明确方向，按中性处理",
+     "gate": "open"
+    },
+    "total": 100,
+    "tier": "强",
+    "why": "题材启动(84)×55% + 人气100×45% + 连板本票在梯队+12 = 100（情绪中性 作闸门）"
+   },
+   "ztDate": "2026-11-13",
+   "stopPrice": 12.88,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 12.88,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
   }
  ],
- "updatedAt": "2026-11-17 19:51",
+ "updatedAt": "2026-11-18 16:05",
  "resettleAt": "R100z299",
  "anchorVer": "R100z331",
  "anchorNote": "止损锚＝涨停日（T日）最低价，断板与陈学长同口径；2026-11-10 22:1x 统一"
