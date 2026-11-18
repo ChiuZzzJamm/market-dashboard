@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611180937"></script>
+<script src="data.js?v=202611180954"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -4748,44 +4748,35 @@ function wkAsNewsItems(market) {
   }).filter(function (x) { return x; });
 }
 
-/* R100z357（用户 2026-11-17 23:09「中国稀土收购这类新闻一般几点出？19:30 之后出的怎么办」）：
-   「盘后 · 隔夜」——昨日收盘后至今晨新增的 A 股公告，由 after_hours.py 产出（07:00 那趟写）。
-   为什么单列一节而不是塞进五节：① 五节回答「隔夜外盘怎么映射到 A 股」，这些是**国内个股事件**；
-   ② 它的时间粒度只到日（公告 API 只给披露日期），和五节条目的「事件+时间」不是一种东西；
-   ③ 读者要的是「我盯的票昨晚发了什么」，按池内短名单列，不是公告大全。
-   ⚠️ 抓不到 ≠ 没有（24.65）：degraded 时明确写「未取到」，绝不显示「暂无公告」。 */
+/* R100z359（用户 2026-11-18 09:48：「都说了是全球要闻，为什么你更新的都是个股消息？要闻、新闻不懂吗？
+   格式也和下面的要闻不一样」）：
+   **这一节是要闻，不是公告清单。**
+   前两版都做错在同一处：把「盘后到隔夜」理解成「公告」，于是列表里全是「XX：关于…的公告」，
+   还和下面五节要闻长得完全两样。现在改成与五节**同构的卡片**（板块标签 + 标题 + 摘要 + 来源），
+   内容由 07:00 那趟 AI 按「宏观 / 政策 / 行业 / 板块」口径写成，格式与 `newsEntryInner` 对齐。
+   ⚠️ 抓不到 ≠ 没有（24.65）：degraded 时写「未取到」，绝不显示「暂无要闻」。 */
 function afterHoursHtml(ah) {
   if (!ah) return '';
   var items = ah.items || [];
   if (!items.length) {
     if (!ah.degraded) return '';
     return '<div class="wk-section ah"><h4>盘后 · 隔夜</h4>' +
-      '<div class="ah-note warn">未取到公告（公告源不可达，' + (ah.covered || 0) + '/' +
-      (ah.targets || 0) + ' 只返回数据）——这是「没抓到」，不是「没有公告」</div></div>';
+      '<div class="ah-note warn">未取到隔夜要闻（检索失败）——这是「没抓到」，不是「没有消息」</div></div>';
   }
-  window._AH_GRP = [];
-  var rows = items.map(function (x) {
-    var gi = window._AH_GRP.length;
-    window._AH_GRP.push({ c: String(x.code || ''), n: String(x.name || ''),
-                          t: '盘后公告 · ' + (x.name || x.code) });
-    var cls = x.dir === 'bull' ? 'up' : (x.dir === 'bear' ? 'down' : '');
-    var md = String(x.day || '').slice(5);
-    var tm = x.clock ? (md + ' ' + String(x.clock)) : (md + ' ' + (x.slot || ''));
-    return '<div class="ah-item">' +
-      '<span class="ah-d">' + esc(tm) + '</span>' +
-      '<span class="ah-nm stk-go" onclick="stkOpenIn(window._AH_GRP,' + gi + ')">' +
-      esc(x.name || x.code) + '</span>' +
-      '<span class="ah-t ' + cls + '" title="' + escAttr(x.column || x.title || '') + '">' +
-      esc(x.title || '') + '</span></div>';
+  var rows = items.map(function (it) {
+    var dEnum = (typeof dirEnumOf === 'function') ? dirEnumOf(it.direction) : '';
+    var dcl = dEnum === '看涨' ? 'dir-up' : (dEnum === '看跌' ? 'dir-down' : 'dir-flat');
+    var dirBadge = it.direction ? '<span class="dir-badge ' + dcl + '">' + esc(dEnum) + '</span>' : '';
+    return '<div class="wk-item wk-dir-' + (dEnum === '看涨' ? 'up' : (dEnum === '看跌' ? 'down' : 'flat')) +
+      '" data-ntitle="' + escAttr(it.title || '') + '">' +
+      '<div class="nc-theme"><span class="nc-tt">' + esc(it.sector || '隔夜') + '</span>' + dirBadge + '</div>' +
+      '<div class="nc-dtl"><b>' + esc(it.title || '') + '</b> — ' + esc(it.summary || '') + '</div>' +
+      (it.source ? '<div class="nc-src">来源：' + esc(it.source) + (it.time ? ' · ' + esc(it.time) : '') + '</div>' : '') +
+      '</div>';
   }).join('');
-  var meta = '共 ' + (ah.n || items.length) + ' 条 · 全市场（沪深主板）· 按披露时间倒序 · '
-    + '程序性公告（股东会/决议/担保/募集资金账户）已剔除';
   return '<div class="wk-section ah"><h4>盘后 · 隔夜 <span class="ah-sub">' +
-    (ah.n || items.length) + ' 条 · 截至 ' + esc(String(ah.updatedAt || '').slice(11)) +
-    ' · 昨日收盘后至今晨的全市场重要公告（收购/重组/停复牌/异动/回购/减持/中标/业绩预告）' +
-    '</span></h4>' +
-    '<div class="ah-list">' + rows + '</div>' +
-    '<div class="ah-note">' + meta + '</div></div>';
+    (ah.n || items.length) + ' 条 · 截至 ' + esc(String(ah.at || ah.updatedAt || '').slice(11)) +
+    ' · 昨日收盘后至今晨的宏观 / 政策 / 行业要闻</span></h4>' + rows + '</div>';
 }
 
 function renderNewsCard(d, market) {

@@ -31,48 +31,36 @@ const fs = require('fs');
 global.window = {}; global.document = {};
 window.DASHBOARD_DATA = {};
 eval(fs.readFileSync(__DATA__, 'utf8'));
-function stkOpenIn() {}
+function dirEnumOf(d) { return d === '看涨' ? '看涨' : (d === '看跌' ? '看跌' : (d === '中性' ? '中性' : '中性')); }
 const D = window.DASHBOARD_DATA || {};
 const ah = (D.ashare || {}).afterHours;
 const out = {ok: true, errs: [], info: {}};
 function bad(m) { out.ok = false; out.errs.push(m); }
-
 const h = afterHoursHtml(ah);
 out.info.n = ah ? (ah.n || 0) : -1;
 out.info.len = h.length;
 
 if (!ah) {
-  if (h !== '') { bad('没有 afterHours 时不该渲染任何东西（拿到 ' + h.length + ' 字符）'); }
+  if (h !== '') bad('没有 afterHours 时不该渲染任何东西');
 } else if ((ah.items || []).length) {
-  const rows = (h.match(/<div class="ah-item">/g) || []).length;
-  if (rows !== (ah.items || []).length) {
-    bad('渲染 ' + rows + ' 行 ≠ items ' + (ah.items || []).length + ' 条');
-  }
-  // 每行 4 个 span：时间槽 / 名称 / 标题（名称带 onclick 进 K 线）
-  const seg = h.split('<div class="ah-item">').slice(1);
-  seg.forEach(function (s, i) {
-    if ((s.match(/<span /g) || []).length < 3) bad('第 ' + (i + 1) + ' 行 span 少于 3 个（时间/名称/标题缺一）');
-    if (s.indexOf('stkOpenIn(') < 0) bad('第 ' + (i + 1) + ' 行的名称不可点（应接 stkOpenIn）');
+  const cards = (h.match(/<div class="wk-item /g) || []).length;
+  if (cards !== (ah.items || []).length) bad('渲染 ' + cards + ' 张卡 ≠ items ' + (ah.items || []).length + ' 条');
+  const segs = h.split('<div class="wk-item ');
+  segs.slice(1).forEach(function (s, i) {
+    if (s.indexOf('nc-theme') < 0) bad('第 ' + (i + 1) + ' 条缺板块标签（nc-theme）');
+    if (s.indexOf('nc-dtl') < 0) bad('第 ' + (i + 1) + ' 条缺标题+摘要（nc-dtl）');
+    if (s.indexOf('nc-src') < 0) bad('第 ' + (i + 1) + ' 条缺来源行（与五节要闻同款）');
   });
-  if (h.indexOf('盘后') < 0 && h.indexOf('早间') < 0) bad('时间槽没渲染（读者分不清昨晚还是今早）');
-  if (h.indexOf('盘后 · 隔夜') < 0) bad('标题不对（应写「盘后 · 隔夜」，用户 2026-11-18 09:28 的原话）');
-  if (h.indexOf('截至') < 0) bad('缺少「截至 HH:MM」——这一节的时效就是它存在的理由');
-  if (!/\d{2}-\d{2} \d{2}:\d{2}/.test(h)) bad('条目没有显示到分钟（全市场接口有 display_time，别退回只有日期）');
-  if (h.indexOf('池内') >= 0) bad('文案里出现「池内」——这一节是全市场，不是池内');
-  if (h.indexOf('截至') < 0) bad('缺少「截至 HH:MM」的时效标注');
+  if (h.indexOf('盘后 · 隔夜') < 0) bad('标题不对（应写「盘后 · 隔夜」）');
+  if (h.indexOf('截至') < 0) bad('缺少「截至 HH:MM」');
+  if (h.indexOf('公告') >= 0 && (h.match(/关于.*的公告/g) || []).length) bad('正文里出现「关于…的公告」——这一节不应是公告清单');
 } else if (ah.degraded) {
-  if (h.indexOf('未取到公告') < 0) bad('degraded 时必须写「未取到公告」，不能留空或写「暂无公告」');
-  if (h.indexOf('暂无公告') >= 0) bad('degraded 时禁止写「暂无公告」（那是把抓取失败说成没有新闻）');
+  if (h.indexOf('未取到') < 0) bad('degraded 时必须写「未取到」');
+  if (h.indexOf('暂无') >= 0) bad('degraded 时禁止写「暂无」');
 }
-
 ['undefined', 'NaN', '>null<'].forEach(function (t) {
-  if (h.indexOf(t) >= 0) bad('产出里出现字面量 ' + JSON.stringify(t) + '（拼接漏值）');
+  if (h.indexOf(t) >= 0) bad('产出里出现字面量 ' + JSON.stringify(t));
 });
-
-// 反向：抓到了却在页面上说「暂无公告」也是错
-if (ah && (ah.items || []).length && h.indexOf('暂无公告') >= 0) {
-  bad('有 ' + ah.items.length + ' 条公告却写着「暂无公告」');
-}
 process.stdout.write(JSON.stringify(out));
 """
 

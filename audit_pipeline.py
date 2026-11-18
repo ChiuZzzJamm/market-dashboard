@@ -6567,82 +6567,63 @@ def g74_us_news_domestic_subject(r):
 
 
 def g76_after_hours(r):
-    """G76 盘后·隔夜公告（ashare.afterHours）自洽 + 前端接线（R100z357，FAIL 级）。
+    """G76 「盘后 · 隔夜」必须是要闻，不是公告清单（R100z359，用户 2026-11-18 09:48，FAIL 级）。
 
-    这一节是「19:30 部署后到次日 07:00」之间唯一的 A 股出口（实测 A 股事件型公告 82% 落在
-    19:00–次晨 7:00）。它坏了不会白屏，只会安静地少一张表，所以必须机器盯：
-      a) n 与 items 自洽、slot ∈ {盘后,早间}、日期可解析、只许沪深主板、方向取值合法；
-      b) 抓不到时 degraded=true（页面写「未取到」而不是「暂无公告」，24.65）；
-      c) 接线：前端 afterHoursHtml 在位，且渲染函数真跑一遍（check_after_hours.py）。
+    两版都栽在同一处：把它做成「昨日盘后至今晨的**公告**列表」。用户三次纠正后定稿：
+    **它是「A 股要闻卡」里的一节要闻**，内容是昨日收盘后到今晨的宏观/政策/行业消息，
+    格式与五节同构（板块 + 标题 + 摘要 + 来源）。
+
+    判据（全部落在「会被做成公告清单」的那些形态上）：
+      a) 3~8 条；每条 sector/title/summary/source/time 齐，summary ≥100 字（要闻有摘要，公告没有）；
+      b) 标题**不许是公告句式**：`XX：关于…的公告` / 以「公告」「报告书」「决议」结尾；
+      c) 至少一半条目是宏观/政策/行业级（sector 或标题含 政策/部/委/规划/央行/证监会/工信部/
+         数据/指数/板块/行业 等词）——否则就是一堆个股消息；
+      d) 前端必须挂在 A 股要闻卡（renderNewsCard 的 ashare 分支），且不许再挂回技术看板。
     """
     try:
         D = load_data_json()
     except Exception as e:                                   # noqa: BLE001
-        r.warn("G76", f"data.js 读取失败，跳过隔夜公告校验：{e}")
+        r.warn("G76", f"data.js 读取失败，跳过隔夜要闻校验：{e}")
         return
     ah = ((D.get("ashare") or {}).get("afterHours"))
     if not ah:
         r.warn("G76", "ashare.afterHours 未生成（07:00 那步没跑？）——"
-                      "「昨日盘后至今晨的公告」这张表整块不会出现，读者只能等 16:00")
+                      "「盘后·隔夜」这一节不会出现，读者只能等 16:00")
         return
     items = ah.get("items") or []
     n = int(ah.get("n") or 0)
     bad = []
-    CAPN = 20          # 与 after_hours.CAP 同值：页面只列前 20 条
-    if n < len(items):
-        bad.append(f"n={n} < items={len(items)}（条数比明细还少）")
-    elif n != len(items) and len(items) != CAPN:
-        bad.append(f"n={n} 与 items={len(items)} 对不上（只有 items 被 {CAPN} 条上限截断时才允许 n>items）")
-    need = ("code", "name", "day", "slot", "title", "dir", "tier")
+    if not (3 <= len(items) <= 8):
+        bad.append(f"只有 {len(items)} 条（要闻节应在 3~8 条）")
+    if n != len(items):
+        bad.append(f"n={n} 与 items={len(items)} 不符")
+    need = ("sector", "title", "summary", "source", "time")
+    MACRO = ("政策", "部", "委", "规划", "央行", "证监会", "工信部", "发改委", "财政部",
+             "商务部", "数据", "指数", "板块", "行业", "出口", "关税", "利率", "资金面", "资本市场")
+    macro_n = 0
     for x in items:
-        miss = [k for k in need if not x.get(k)]
+        miss = [k for k in need if not str(x.get(k) or "").strip()]
         if miss:
-            bad.append(f"{x.get('code')} 缺 {','.join(miss)}")
+            bad.append(f"「{str(x.get('title'))[:12]}」缺 {','.join(miss)}")
             continue
-        c = str(x["code"])
-        if not (len(c) == 6 and c.isdigit() and c.startswith(("60", "00"))):
-            bad.append(f"{c} 不是沪深主板")
-        if x["slot"] not in ("盘后", "早间", "周末"):
-            bad.append(f"{c} slot={x['slot']!r} 非法（只允许 盘后/早间/周末）")
-        if x["dir"] not in ("bull", "bear", "neutral"):
-            bad.append(f"{c} dir={x['dir']!r} 非法")
-        if not re.match(r"^20\d{2}-\d{2}-\d{2}$", str(x["day"])):
-            bad.append(f"{c} day={x['day']!r} 不是日期")
-        # R100z359：全市场接口带 display_time，能给到分钟 —— 没有 clock 就是退回了「只有日期」的旧口径
-        if not re.match(r"^\d{2}:\d{2}$", str(x.get("clock") or "")):
-            bad.append(f"{c} clock={x.get('clock')!r} 不是 HH:MM（全市场接口有 display_time，别退回日期口径）")
-    if str(ah.get("scope") or "") != "market":
-        bad.append("scope 不是 market（这一节是全市场要闻，不是池内公告）")
-    if not isinstance(ah.get("degraded"), bool):
-        bad.append("degraded 缺失/非布尔（抓不到时必须显式标记）")
-    # R100z357b：程序性公告不算「消息」——股东会资料/决议/担保进展/募集资金账户这类
-    # 出现在这里只会把真正的异动/收购淹掉（用户 2026-11-17 23:30 截图指出的就是这个）。
-    # 判据直接调 after_hours.is_material()，不在闸门里另写一份词表（两处各写一遍必然漂）。
-    try:
-        from after_hours import is_material
-        noise = [x for x in items if not is_material(x.get("title"))]
-        if noise:
-            bad.append("有 %d 条程序性公告混进来了（应被 is_material 过滤）：%s"
-                       % (len(noise), "、".join(str(x.get("title"))[:14] for x in noise[:2])))
-    except Exception as e:                                   # noqa: BLE001
-        bad.append(f"读不到 after_hours.is_material（{str(e)[:40]}），重大性过滤无法校验")
+        t = str(x["title"])
+        if re.search(r"[：:].{0,20}(公告|报告书|决议|会议资料)$", t) or t.endswith(("公告", "报告书", "决议")):
+            bad.append(f"「{t[:16]}」是公告句式（这一节要发要闻，不是公告清单）")
+        if len(str(x["summary"])) < 100:
+            bad.append(f"「{t[:12]}」摘要只有 {len(str(x['summary']))} 字（要闻要有摘要）")
+        if any(k in (str(x.get("sector") or "") + t + str(x.get("summary") or "")[:60]) for k in MACRO):
+            macro_n += 1
+    if items and macro_n * 2 < len(items):
+        bad.append(f"只有 {macro_n}/{len(items)} 条是宏观/政策/行业级——这一节不是个股消息汇总")
     if bad:
-        r.fail("G76", "隔夜公告数据不自洽：" + "；".join(bad[:4]))
+        r.fail("G76", "盘后·隔夜不是要闻形态：" + "；".join(bad[:4]))
         return
     try:
         html = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
     except OSError:
         html = ""
-    if html and "function afterHoursHtml" not in html:
-        r.fail("G76", "前端没有 afterHoursHtml —— 数据生成了没人读（半成品）")
-        return
-    # 归属约束：这块是**个股公告**，只能挂在 A 股看板（#db-pools），不许塞回「全球要闻」卡。
-    # 用户 2026-11-17 23:30 的原话就是「都是个股公告吗？不是全球要闻吗？」——这句断言就是那次修正的固化。
-    # R100z359（用户 2026-11-18 09:28 第二次纠正）：这一节必须挂在**A 股要闻卡**（renderNewsCard），
-    # 不是技术看板、也不是「池内」。上一版把断言写成「必须在 #db-pools」，正好把错误口径固化了。
     if html and "if (market === 'ashare') html += afterHoursHtml(" not in html:
-        r.fail("G76", "afterHoursHtml 没挂在 A 股要闻卡（renderNewsCard 的 ashare 分支）——"
-                      "用户要的是「A 股要闻卡加一节盘后·隔夜」")
+        r.fail("G76", "afterHoursHtml 没挂在 A 股要闻卡（renderNewsCard 的 ashare 分支）")
         return
     if html and "html = afterHoursHtml(" in html:
         r.fail("G76", "afterHoursHtml 又被挂到技术看板了（#db-pools）—— 它属于 A 股要闻卡")
@@ -6651,9 +6632,8 @@ def g76_after_hours(r):
     if rc != 0:
         r.fail("G76", "盘后·隔夜渲染没过：" + (out or err or "").strip()[:200])
         return
-    r.ok("G76", f"盘后·隔夜 {n} 条（全市场沪深主板，截至 {ah.get('updatedAt')}）"
-                f"结构自洽（含分钟级时间与大事优先分级）、挂在 A 股要闻卡、渲染真跑通过"
-         + ("；本轮为降级状态（未取到，页面已写明）" if ah.get("degraded") else ""))
+    r.ok("G76", f"盘后·隔夜 {len(items)} 条要闻（宏观/政策/行业级 {macro_n} 条，"
+                f"截至 {ah.get('at') or ah.get('updatedAt')}）结构自洽、挂在 A 股要闻卡、渲染真跑通过")
 
 
 def g77_holiday_table(r):
