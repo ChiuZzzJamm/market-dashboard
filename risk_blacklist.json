@@ -2,12 +2,12 @@
  "ok": true,
  "nameSrc": "tx",
  "nameSrcDetail": {
-  "tx": 326,
+  "tx": 309,
   "sina": 0,
   "em": 0
  },
- "date": "2026-11-18",
- "checked": 326,
+ "date": "2026-11-19",
+ "checked": 309,
  "liftWindow": [
   2,
   5
@@ -17,25 +17,23 @@
  "dims": {
   "st": {
    "status": "ok",
-   "cover": "行情名源（腾讯326/新浪0/东财0）326/326 只取到"
+   "cover": "行情名源（腾讯309/新浪0/东财0）309/309 只取到"
   },
   "cut": {
-   "status": "partial",
-   "cover": "公告源 325/326 只取到（东财325/巨潮0）"
+   "status": "ok",
+   "cover": "公告源 309/309 只取到（东财309/巨潮0）"
   },
   "lift": {
    "status": "ok",
-   "cover": "解禁源 326/326 只取到"
+   "cover": "解禁源 309/309 只取到"
   },
   "pledge": {
    "status": "ok",
-   "cover": "质押源 326/326 只取到（仅供参考）"
+   "cover": "质押源 309/309 只取到（仅供参考）"
   }
  },
- "verdict": "partial",
- "uncheckedDims": [
-  "减持公告——公告源 325/326 只取到（东财325/巨潮0）"
- ],
+ "verdict": "full",
+ "uncheckedDims": [],
  "blacklist": {
   "603912": {
    "name": "佳力图",
@@ -124,9 +122,7 @@
    ]
   }
  },
- "unknown": [
-  "600489 公告源不可达（np-anotice URLError(TimeoutError('timed out'))），减持未下结论"
- ],
+ "unknown": [],
  "failed": [],
  "note": "硬风险黑名单（R100z276 severity 分级）：red=硬剔(ST/退市·减持进行中)、orange=警示可保留(减持预披露/计划·限售解禁窗口)、yellow=参考(库存股处置·减持已结束·股东质押≥30%)；ST/退市、T+2~T+5 解禁、减持公告 30 日内；业绩类公告不参与判定（不看业绩炒股）；源不可达不判安全（verdict=full 才算各维度全核查）"
 }
