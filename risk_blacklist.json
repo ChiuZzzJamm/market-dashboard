@@ -2,12 +2,12 @@
  "ok": true,
  "nameSrc": "tx",
  "nameSrcDetail": {
-  "tx": 308,
+  "tx": 301,
   "sina": 0,
   "em": 0
  },
- "date": "2026-11-19",
- "checked": 308,
+ "date": "2026-11-20",
+ "checked": 301,
  "liftWindow": [
   2,
   5
@@ -17,23 +17,25 @@
  "dims": {
   "st": {
    "status": "ok",
-   "cover": "行情名源（腾讯308/新浪0/东财0）308/308 只取到"
+   "cover": "行情名源（腾讯301/新浪0/东财0）301/301 只取到"
   },
   "cut": {
-   "status": "ok",
-   "cover": "公告源 308/308 只取到（东财308/巨潮0）"
+   "status": "partial",
+   "cover": "公告源 223/301 只取到（东财199/巨潮24）"
   },
   "lift": {
    "status": "ok",
-   "cover": "解禁源 308/308 只取到"
+   "cover": "解禁源 301/301 只取到"
   },
   "pledge": {
    "status": "ok",
-   "cover": "质押源 308/308 只取到（仅供参考）"
+   "cover": "质押源 301/301 只取到（仅供参考）"
   }
  },
- "verdict": "full",
- "uncheckedDims": [],
+ "verdict": "partial",
+ "uncheckedDims": [
+  "减持公告——公告源 223/301 只取到（东财199/巨潮24）"
+ ],
  "blacklist": {
   "600908": {
    "name": "无锡银行",
@@ -48,33 +50,89 @@
    "progress": [
     "减持已结束（利空出尽）"
    ]
-  },
-  "600909": {
-   "name": "华安证券",
-   "reasons": [
-    "2026-10-22 减持已结束（利空出尽）"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "yellow",
-   "progress": [
-    "减持已结束（利空出尽）"
-   ]
-  },
-  "001328": {
-   "name": "登康口腔",
-   "reasons": [
-    "2026-11-07 减持已结束（利空出尽）"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "yellow",
-   "progress": [
-    "减持已结束（利空出尽）"
-   ]
   }
  },
- "unknown": [],
+ "unknown": [
+  "000002 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持未下结论",
+  "000410 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "000423 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "000568 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "000591 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "000596 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持未下结论",
+  "000888 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "000932 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "001201 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "001226 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "001301 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "001328 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "001331 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "001360 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "001379 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "001979 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002035 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002095 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002128 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002149 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002197 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002222 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002226 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002244 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持未下结论",
+  "002271 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002310 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002322 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002517 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002535 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002582 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002596 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002648 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002652 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002739 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002748 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002889 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002955 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "002983 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "600026 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "600066 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "600096 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "600104 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "600111 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "600121 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "600156 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "600256 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "600405 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "600426 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "600467 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "600536 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "600657 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持未下结论",
+  "600863 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "600875 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "600909 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "601012 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "601118 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "601188 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "601360 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "601606 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "601717 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "601866 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "601988 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "603160 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "603198 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持未下结论",
+  "603206 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "603288 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "603305 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "603369 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持未下结论",
+  "603598 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "603887 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "603919 公告源不可达（np-anotice <HTTPError 567: 'Unknown Status'>），减持未下结论",
+  "603985 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "605169 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "605222 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "605318 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "605338 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "605378 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "605499 公告源不可达（np-anotice <HTTPError 403: 'Forbidden'>），减持未下结论",
+  "公告源（np-anotice）本轮连续 6 只失败（<HTTPError 567: 'Unknown Status'>）→ 已切巨潮资讯；巨潮成功 24 只 / 失败 71 只，失败部分减持维度未核查"
+ ],
  "failed": [],
  "note": "硬风险黑名单（R100z276 severity 分级）：red=硬剔(ST/退市·减持进行中)、orange=警示可保留(减持预披露/计划·限售解禁窗口)、yellow=参考(库存股处置·减持已结束·股东质押≥30%)；ST/退市、T+2~T+5 解禁、减持公告 30 日内；业绩类公告不参与判定（不看业绩炒股）；源不可达不判安全（verdict=full 才算各维度全核查）"
 }
