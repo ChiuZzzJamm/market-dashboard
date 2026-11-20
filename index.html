@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611202221"></script>
+<script src="data.js?v=202611202305"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -52,7 +52,7 @@
     /* R100z164：页面级标题单独一档。四个平级页面（每日市场看板 / 技术看板 / 全球要闻 / 复盘台账）
        必须同字号——上一轮首页 32px、其余三页 20px，用户切页时标题明显跳档（2026-10-24 截图实报）。
        24px 取两者中间：既不会小到 20px 那样在 1036px 内容宽里撑不住场，也不至于像 32px 那样喧宾夺主。
-       ⚠️ 改这一处，四页标题一起动；不要再给某一页单独写 font-size。 */
+       ⚠️ 改这一处，各页标题一起动；不要再给某一页单独写 font-size。 */
     --fs-page: 24px;
     --fs-emoji: 36px;      /* 卡内大 emoji（排行/信号图标） */
     --fs-emoji-lg: 42px;   /* 页面级 emoji（池头、结论图标） */
@@ -90,11 +90,11 @@
   .wrap { max-width: 1080px; margin: 0 auto; padding: 32px 22px 80px; }
 
   /* ===== 页面头部（R100z164：四个平级页面共用一套）=====
-     用户 2026-10-24 指出「几个标题大小都不一样」并连发四页标题截图：
+     用户 2026-10-24 指出「几个标题大小都不一样」并连发各页标题截图：
        首页 32px / 技术看板 20px / 全球要闻 20px / 复盘台账 20px —— 切页时标题肉眼可见地跳档。
      更麻烦的是结构本身三套：首页 = 大标题 + 副标题 + 两条白胶囊；独立页 = 小标题 + 一行日期。
      这里把「页面身份」收成一个组件：标题（--fs-page）+ 副标题（--fs-base）+ 元信息胶囊（--fs-sm），
-     四页三行同高同字号。首页多出的「自动更新排程」降为脚注小字（不再是第二个同等权重的胶囊）。
+     各页三行同高同字号。首页多出的「自动更新排程」降为脚注小字（不再是第二个同等权重的胶囊）。
      ⚠️ 新增页面时直接套 .page-head，不要自己写一套标题样式——这正是上一轮失控的原因。 */
   .hero, .db-topbar {
     background: var(--hero-grad);
@@ -908,6 +908,13 @@
   .pre-th-a { font-size: var(--fs-xs); color: #3f5f8a; background: #f2f6fc;
               border: 1px dashed #a8bcd8; border-radius: 999px; padding: 0 5px; white-space: nowrap; }
   .pre-th-l2 { font-size: var(--fs-xs); color: var(--ink2); margin-top: 2px; line-height: 1.65; }
+  /* R100z364：入场质量标签（追高 / 偏离MA5 / 顺势 / 止损收口）——只标注，不影响选股 */
+  .eg-row { display: inline-flex; gap: 5px; margin-right: 6px; vertical-align: middle; }
+  .eg { font-size: var(--fs-xs); padding: 0 5px; border-radius: 999px; white-space: nowrap; border: 1px solid; }
+  .eg-ok { color: #12735a; background: #eef8f3; border-color: #a8d9c8; }
+  .eg-warn { color: #8a5a12; background: #fdf6e8; border-color: #e5c99a; }
+  .eg-bad { color: #a3202f; background: #fdeef0; border-color: #e9b3ba; }
+  .eg-cap { color: #3f5f8a; background: #f2f6fc; border-color: #a8bcd8; }
   .pre-th-r { cursor: pointer; margin-right: 7px; border-bottom: 1px dotted var(--ink2); }
   .pre-th-r:hover { color: var(--accent); }
   .pre-pick b { font-weight: 700; color: var(--ink); white-space: nowrap; }
@@ -1024,8 +1031,8 @@
      页面头部改回纵向三行（标题 / 副标题 / 元信息胶囊），日期不再 absolute 贴右，
      而是独占一行居中——只要不换回 absolute，就不可能再重叠。
      .db-topbar / .db-title / .db-date 的视觉定义已上移到「页面头部」一节，与 .hero 共用，
-     这里不再重复声明（重复声明是上一轮四页标题字号失控的直接原因）。 */
-  /* R100z4v：.db-note 已删——断板页口径说明改静态 hz-sub（与谐波/九门/吸筹子页同款），不再读 db.note */
+     这里不再重复声明（重复声明是上一轮各页标题字号失控的直接原因）。 */
+  /* R100z4v：.db-note 已删——断板页口径说明改静态 hz-sub（与谐波子页同款），不再读 db.note */
   .db-pool { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
   .db-pool h2 { font-size: var(--fs-h2); font-weight: 700; display: flex; align-items: center; gap: 9px; margin: 0 0 4px; }
   .db-pool h2::before { content: ""; width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
@@ -1090,7 +1097,7 @@
   .db-sec .db-sec-n { font-size: var(--fs-sm); color: var(--ink2); font-weight: 600; }
   .db-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
   @media (max-width: 700px) { .db-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  /* R100y：板块胶囊基础版（谐波/横盘启动/吸筹/断板四页 .tc 卡片共用，R100z36 起只有这一处定义） */
+  /* R100y：板块胶囊基础版（谐波/横盘启动/断板三页 .tc 卡片共用，R100z36 起只有这一处定义） */
   .db-sec-pill { font-size: var(--fs-xs); font-weight: 700; color: var(--accent-deep); background: var(--accent-soft); border: 1px solid currentColor; border-radius: 4px; padding: 0.5px 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; flex-shrink: 0; }
   /* 口径三色标签（R88）：利好=红 / 利空=绿 / 中性=灰（R100r 统一徽标几何：圆角4px、字号11、内边距1px 7px，与全站徽标一致） */
   .db-sent { font-size: var(--fs-sm); font-weight: 700; border-radius: 4px; padding: 1px 7px; line-height: 1.5; white-space: nowrap; flex-shrink: 0; display: inline-block; letter-spacing: .5px; }
@@ -1109,7 +1116,7 @@
   .pool-badge.lhb-up { background: rgba(240,67,92,.13); color: var(--up); }
   .pool-badge.lhb-down { background: rgba(15,157,120,.13); color: var(--down); }
   /* R100z120 Q3：弹窗「新」徽章——与卡片 .tc .nb 同口径（poolFresh：entryDate === 模块交易日），
-     覆盖断板/谐波/横盘启动/吸筹的池内标的 + 四模块失效归档池（与卡片 fail-chip.fail-new 同口径）。 */
+     覆盖断板/谐波/横盘启动的池内标的 + 三模块失效归档池（与卡片 fail-chip.fail-new 同口径）。 */
   .m-nb { display:inline-block; font-size: var(--fs-xs); font-weight:800; color:#6b4a00; background:#ffc93c; border:1px solid #e3a008; border-radius:4px; padding:0.5px 3px; line-height:1.5; flex-shrink:0; }
   .db-empty { font-size: var(--fs-body); color: var(--ink2); padding: 14px 4px; }
 
@@ -1148,7 +1155,7 @@
   /* R100i：失败池（断板反包 / 谐波形态）——破位或超期失效归档，5 个交易日后清理 */
   .db-pool.p-fail h2::before { background: #98a2b3; box-shadow: 0 0 0 4px rgba(152,162,179,.18); }
   /* R100z60（用户「失效归档池紧贴着上面的标的，要留空白」）：`.db-pool` 只有 margin-bottom:20px、
-     没有 margin-top，失效池整块会直接贴在上方的标的网格/卡片下沿（吸筹/横盘启动/谐波三页都一样），
+     没有 margin-top，失效池整块会直接贴在上方的标的网格/卡片下沿（横盘启动/谐波两页都一样），
      看着像两张卡粘一起。这里给失效池块补 16px 上间距 = 用户要的「空白带」（块照旧保留，不删）。 */
   .db-pool.p-fail { margin-top: 16px; }
   .fail-chip { border: 1px dashed var(--line); border-radius: var(--r-note); padding: 8px 10px; background: var(--paper); cursor: pointer; transition: .15s; }
@@ -1165,7 +1172,7 @@
      在静态截图/缩略图里整个消失；卡片本体仍按 R100z59 走——平时白底、hover 才整卡转黄（R100z46）。 */
   .fail-chip.fail-new { border-style: solid; }
   .fail-chip .nb { font-size: var(--fs-xs); font-weight: 800; color: #6b4a00; background: #ffc93c; border: 1px solid #e3a008; border-radius: 4px; padding: 0.5px 3px; line-height: inherit; }
-  /* R100z44：新入池首日高亮——断板/谐波/横盘启动/吸筹确认·观察池与失效池新归档，
+  /* R100z44：新入池首日高亮——断板/谐波/横盘启动确认·观察池与失效池新归档，
      入池当天整卡淡黄底+琥珀边+「新」徽章（参考失效池既有样式），次日自动恢复。
      置于 .tc.dim 之后：归档态（dim 虚线灰字）遇「新」也要黄底优先。 */
   /* R100z45：首日高亮曾把边框/徽章改饱和琥珀 + 卡底/格底加深一档（用户反馈太淡）。
@@ -1221,7 +1228,7 @@
 
   footer.disclaimer { margin-top: 36px; font-size: var(--fs-base); color: var(--ink2); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 22px; line-height: 1.7; box-shadow: var(--shadow); }
 
-  /* ===== 选股扩展模块（谐波/吸筹/量化/必带数据，2026-09-26） ===== */
+  /* ===== 选股扩展模块（谐波/量化/必带数据，2026-09-26） ===== */
   .hz-badge { display:inline-block; font-size: var(--fs-sm); font-weight:700; color:#7a4d00; background:var(--paper)3d6; border:1px solid #f0c36d; border-radius:4px; padding:1px 7px; line-height:1.5; white-space:nowrap; flex-shrink:0; vertical-align:middle; margin-left:4px; }
   /* R100z275：`.tc-pill-tech`（R100z262 为今日可下单卡片的紧凑技术池徽章而加）已随徽章一起删除——
      那条通道上已经没有徽章了，留着这条规则只会让下次改徽章的人以为卡片上还有东西要调。 */
@@ -1237,18 +1244,8 @@
   .hz-side .hz-approx { font-size: var(--fs-xs); color:var(--ink2); margin-top:3px; opacity:.85; } /* R100z4x：失效前近似形态提示 */
   /* R100s：卡片 hz-stage（确认/观察）徽标已删，CSS 一并清理 */
 
-  /* R100j：主力吸筹卡片美化——左侧强调条 + 评分进度条 + 特征胶囊（通过亮/未过灰）。
-     R100z102c：原 .acc-grid 网格随池结构改版弃用（统一 .db-chips），仅保留卡内件样式。 */
-  .acc-head { display:flex; align-items:center; gap:6px; }
-  .acc-head .cd { font-size: var(--fs-sm); color:var(--ink2); }
-  .acc-grd { font-size: var(--fs-xs); font-weight:800; border-radius:999px; padding:1px 8px; margin-left:auto; flex-shrink:0; font-variant-numeric:tabular-nums; }
-  /* R100z28：强池/强评＝红（A股涨红惯例），观察池沿用琥珀黄 */
-  .acc-grd.strong { color:#fff; background:linear-gradient(135deg,#f0435c,#d02c44); }
-  .acc-grd.watch { color:#8a5800; background:#ffe9c2; border:1px solid #f0c36d; }
-  /* R100z102c：原 .acc-sub / .acc-sub-desc 池头小节样式已随「db-pool 独立卡」重构整体移除
-     （池头由 .db-pool h2 + .db-sub 接管，与断板/谐波/横盘启动三页共用同一套样式）。 */
-  /* R100m：横盘启动评分徽章——红色、与代码同行平行（与吸筹评级徽章 acc-grd 区分） */
-  /* R100m：全站标的池角标（谐波🌟/吸筹👀/横盘启动💡/断板❗️），可叠加 */
+  /* R100m：横盘启动评分徽章——红色、与代码同行平行 */
+  /* R100m：全站标的池角标（谐波🌟/横盘启动💡/断板❗️），可叠加 */
   .stk-tag { font-size: var(--fs-xs); line-height:1; margin-left:2px; flex-shrink:0; }
   /* R100z13：个股硬风险角标（减持/解禁/ST）——hover 看原因 */
   .risk-dot { font-size: var(--fs-sm); line-height:1; margin-left:3px; padding:2px 5px; border-radius:999px;
@@ -1333,7 +1330,7 @@
   .hz-side .hz-v { font-weight:700; }
   .hz-side .hz-lg { font-size: var(--fs-xs); color:var(--ink2); }
   .hz-sub { font-size: var(--fs-base); font-weight:700; color:var(--ink2); margin:10px 0 2px; }
-  /* R100z22：三技术子页（谐波/横盘启动/吸筹）口径说明从「一行文字 + 超长 title 悬停」改成可展开条目块——
+  /* R100z22：两技术子页（谐波/横盘启动）口径说明从「一行文字 + 超长 title 悬停」改成可展开条目块——
      原来要把 200+ 字口径塞进 title 属性，手机上根本看不到（iOS Safari 不显示 title 悬停），
      等于没写；改成 <details> 折叠 + 逐条列名，手机上点开即读。 */
   .tech-legend { margin:0 0 14px; border:1px solid var(--line); border-radius:var(--r-note); background:var(--paper); }
@@ -1347,8 +1344,8 @@
   .tech-legend .lg-tip { color:#8a5a00; background:var(--paper)8e6; border:1px solid #f0dcaa; border-radius:6px; padding:4px 8px; font-size: var(--fs-sm); line-height:1.7; }
   /* R100z45：四子页「口径条 → 首个池标题」间距统一 36px（口径条 mb14 + 容器上内边距 22，对齐断板/谐波 .db-pool）。
      R100z101：横盘启动页去掉 .card 大标题，#db-pw .card 规则移除。
-     R100z102c：吸筹页三池改 .db-pool 独立卡直排，#db-acc .card 两条规则随之失效移除。 */
-  /* 信号滞后灰标（R100z22）：吸筹是历史 K 线模型，同样分数信号新旧不同，滞后 ≥10 日转告警色 */
+     R100z102c：技术子页三池改 .db-pool 独立卡直排，外层 .card 两条规则随之失效移除。 */
+  /* 信号滞后灰标（R100z22）：历史 K 线模型同样分数信号新旧不同，滞后 ≥10 日转告警色 */
   /* R100z36：卡片内的价格/目标位强调（.exit-line .xt 只在退出纪律行内生效，tc 卡片需单列） */
   .tc .xt { font-weight: 800; font-variant-numeric: tabular-nums; }
   /* R100z222：脚注里的「⚠ 确认后第 N 天·非当日新信号」告警段（陈学长池专用）。
@@ -1360,7 +1357,7 @@
   /* ===== R100z36：技术看板四子页统一卡片（T2 指标矩阵）=====
      骨架固定六位：①板块 pill + 形态/状态 pill ②方向徽章 ③名称·代码
      ④2×2 指标矩阵（每格＝标签 + 数值）⑤虚线状态行。
-     四页（断板/谐波/吸筹/横盘启动）只用同一套类名，换内容不换位置。 */
+     三页（断板/谐波/横盘启动）只用同一套类名，换内容不换位置。 */
   .tc {
     background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-block);
     padding: 7px 9px 6px; cursor: pointer; transition: all .15s ease;
@@ -1422,7 +1419,7 @@
   .tc-ord.ord-hint { color: var(--ink2); font-weight: 400; }
   /* 价格数字压到最黑：这一行的重点就是「挂多少 / 破多少撤」，其余都是陪衬。 */
   .tc-ord b { color: var(--ink); font-variant-numeric: tabular-nums; }
-  /* 观察池 / 降级卡：虚线边 + 灰字，四页统一 */
+  /* 观察池 / 降级卡：虚线边 + 灰字，各页统一 */
   .tc.dim { border-style: dashed; background: var(--paper); }
   .tc.dim .tc-cell { background: #f2f4f7; }
   .tc.dim .tc-cell .v { color: var(--ink2); }
@@ -1722,7 +1719,7 @@
   <div class="float-group" id="float-group" title="整组可拖动到任意位置">
     <button class="mkt-toggle" id="mkt-toggle" title="切换到美股看板" aria-label="切换A股/美股看板" onclick="switchTab(currentMarket==='ashare'?'us':'ashare')">🐼</button>
     <button class="db-entry" id="gn-entry" title="点击进入全球要闻（A股/美股要闻 · 政策信号解码）" aria-label="全球要闻"><span class="db-emoji">📄</span></button>
-    <button class="db-entry" id="db-entry" title="点击进入策略工具箱（断板反包 / 陈学长 / 横盘启动 / 谐波形态 / 主力吸筹）" aria-label="策略工具箱"><span class="db-emoji">🧰</span><span class="db-badge" id="db-badge"></span></button>
+    <button class="db-entry" id="db-entry" title="点击进入策略工具箱（断板反包 / 陈学长 / 横盘启动 / 谐波形态）" aria-label="策略工具箱"><span class="db-emoji">🧰</span><span class="db-badge" id="db-badge"></span></button>
     <button class="db-entry" id="sc-entry" title="点击进入复盘台账（选股信号 · 方向判断，谁准谁不准）" aria-label="复盘台账"><span class="db-emoji">📋</span><span class="db-badge" id="sc-badge"></span></button>
   </div>
   <div class="hero">
@@ -1759,13 +1756,13 @@
          上一轮我把它挪到右下角固定站位、拿掉拖拽，等于替他做了取舍，被退回。 -->
     <div class="db-topbar">
       <div class="db-title">技术看板</div>
-      <div class="db-sub2">断板反包 · 陈学长 · 横盘启动 · 谐波形态 · 主力吸筹 · 开盘预测</div>
+      <div class="db-sub2">断板反包 · 陈学长 · 横盘启动 · 谐波形态 · 开盘预测</div>
       <div class="db-date" id="db-date"></div>
     </div>
     <button class="db-entry-in" id="db-entry-in" title="点击返回每日市场看板（可拖动）">🧰</button>
     <!-- R100k：子页菜单已移入各子页内容流（断板页位于开盘精选与确认池说明之间；谐波/横盘启动页位于页首） -->
 
-    <!-- R100m：TOP10 + 开盘精选固定区——切换谐波/横盘启动/吸筹子页时保持显示（用户要求固定不动） -->
+    <!-- R100m：TOP10 + 开盘精选固定区——切换谐波/横盘启动子页时保持显示（用户要求固定不动） -->
     <div id="db-fixed"></div>
     <!-- R100z162：开盘预测子页——盘前前瞻 + AI 预测分析合并成一页。
          用户 2026-10-24 要求「AI 预测分析整个模块挪到技术看板，新增开盘预测」。
@@ -1786,7 +1783,6 @@
     <div id="db-hz" class="db-subpage" style="display:none;"></div>
     <!-- R100z232：`db-pw`（日线九门）已撤，替换为 `db-bp`（横盘启动，breakout_pool.py） -->
     <div id="db-bp" class="db-subpage" style="display:none;"></div>
-    <div id="db-acc" class="db-subpage" style="display:none;"></div>
   </div>
 
   <!-- R100z109：全球要闻独立页（📄）——A股/美股五节要闻 + 政策信号解码，自主页面迁入 -->
@@ -2014,7 +2010,7 @@ function renderStructure(s, tradeDate) {
 // 兼容旧数据：仅有 leader 字段时按旧规则归一化。
 /* R100n→R100p：全站 code→板块 映射（stkSecOf）：来源=断板双池 / 谐波池 / 开盘精选 / 连板梯队 /
    领涨领跌板块 TOP 成分股。R100p 起主页胶囊不再显示板块徽标，仅弹窗板块徽章（stkSecBadge）使用。
-   R100q：新增 AI预测成分 / 横盘启动池 sector / 吸筹池 sector（三脚本已写入）+ 站内其余字段，
+   R100q：新增 AI预测成分 / 横盘启动池 sector（脚本已写入）+ 站内其余字段，
    弹窗板块徽章全覆盖（宁缺勿滥：查不到就不显示）。 */
 function stkSecOf(code) {
   code = String(code || '');
@@ -2039,7 +2035,6 @@ function stkSecOf(code) {
       (s.stocks || []).forEach(function (t) { if (t && t.code && s.sector && !M[String(t.code)]) M[String(t.code)] = s.sector; });
     });
     ((D.breakoutPool || {}).passed || []).forEach(function (x) { if (x && x.code && x.sector && !M[String(x.code)]) M[String(x.code)] = x.sector; });
-    ((D.accumulation || {}).scored || []).forEach(function (x) { if (x && x.code && x.sector && !M[String(x.code)]) M[String(x.code)] = x.sector; });
     /* R100v2：全局行业映射兜底（embed_klines.py 写入的顶层 sectorMap，新浪行业全量）——
        题材掘金/全球要闻等不在任何池内的标的也能出板块徽章 */
     var sm = D.sectorMap;
@@ -2114,7 +2109,7 @@ function stkSecBadge(code, prefer) {
   }).join('');
 }
 
-/* R100q：技术池归属（断板/陈学长/横盘启动/谐波/吸筹）——供弹窗技术徽章 + 全站分级边框共用。
+/* R100q：技术池归属（断板/陈学长/横盘启动/谐波）——供弹窗技术徽章 + 全站分级边框共用。
    R100t：池归属并入技术徽章（断板反包·确认池 / 谐波·XX·确认池 单枚徽标），美股代码非 6 位数字天然不命中。
    R100z260（用户 2026-10-28 20:00 第 6、7 条）：
      ① **陈学长算进技术池**——原来它被有意排除（R100z228 的理由是「16 只里 13 只与断板重叠，并进去等于
@@ -2131,8 +2126,8 @@ function stkTechMeta(code) {
   if (!/^\d{6}$/.test(code)) return null;
   var T = window._TECH_MAP;
   if (!T) {
-    T = { db: {}, hz: {}, bp: {}, acc: {}, chen: {},
-          fail: { db: {}, chen: {}, bp: {}, hz: {}, acc: {} } };
+    T = { db: {}, hz: {}, bp: {}, chen: {},
+          fail: { db: {}, chen: {}, bp: {}, hz: {} } };
     var D = window.DASHBOARD_DATA || {};
     var db = D.duanban || {};
     (db.confirmed || []).forEach(function (x) { if (x && x.code) T.db[String(x.code)] = '确认池'; });
@@ -2143,15 +2138,13 @@ function stkTechMeta(code) {
     (hz.confirmPool || []).forEach(function (x) { if (x && x.code) T.hz[String(x.code)] = { p: x.pattern || '谐波', pool: '确认池', g1: x.t1GapPct, g2: x.t2GapPct, r1: x.t1Reached, r2: x.t2Reached }; });
     (hz.watchPool || []).forEach(function (x) { if (x && x.code && !T.hz[String(x.code)]) T.hz[String(x.code)] = { p: x.pattern || '谐波', pool: '观察池', g1: x.t1GapPct, g2: x.t2GapPct, r1: x.t1Reached, r2: x.t2Reached }; });
     ((D.breakoutPool || {}).passed || []).forEach(function (x) { if (x && x.code) T.bp[String(x.code)] = 1; });
-    ((D.accumulation || {}).scored || []).forEach(function (x) { if (x && x.code) T.acc[String(x.code)] = 1; });
     var cp = D.chenPool || {};
     (cp.strict || []).forEach(function (x) { if (x && x.code) T.chen[String(x.code)] = '严格池'; });
     (cp.loose || []).forEach(function (x) { if (x && x.code && !T.chen[String(x.code)]) T.chen[String(x.code)] = '放宽池'; });
     (cp.watching || []).forEach(function (x) { if (x && x.code && !T.chen[String(x.code)]) T.chen[String(x.code)] = '观察中'; });
     // 五份失效归档。键名与 failPoolOf 白名单、dbFailHtml 的 onclick 逐字一致（db/chen/breakoutPool/…）
     [['db', db.failPool], ['chen', cp.failPool],
-     ['bp', (D.breakoutPool || {}).failPool], ['hz', hz.failPool],
-     ['acc', (D.accumulation || {}).failPool]].forEach(function (pr) {
+     ['bp', (D.breakoutPool || {}).failPool], ['hz', hz.failPool]].forEach(function (pr) {
       (pr[1] || []).forEach(function (x) {
         var c = String((x || {}).code || '');
         if (!c) return;
@@ -2170,7 +2163,7 @@ function stkTechMeta(code) {
     out.push({ k: k, label: label, pool: '失效', fail: true,
                failDate: f.entryDate, failReason: f.reason, limitDay: f.limitDay });
   };
-  // 顺序＝子页菜单顺序（断板反包 → 陈学长 → 横盘启动 → 谐波 → 吸筹），读者横向对账时顺序不变
+  // 顺序＝子页菜单顺序（断板反包 → 陈学长 → 横盘启动 → 谐波），读者横向对账时顺序不变
   if (T.db[code]) out.push({ k: 'db', label: '断板反包', pool: T.db[code] });
   else failOf('db', '断板反包');
   if (T.chen[code]) out.push({ k: 'chen', label: '陈学长', pool: T.chen[code] });
@@ -2191,14 +2184,12 @@ function stkTechMeta(code) {
     out.push({ k: 'hz', label: lbl, pool: hz0.pool, warn: hz0.r1 || hz0.r2,
                g1: hz0.g1, g2: hz0.g2 });
   } else failOf('hz', '谐波');
-  if (T.acc[code]) out.push({ k: 'acc', label: '主力吸筹' });
-  else failOf('acc', '主力吸筹');
   return out.length ? out : null;
 }
 /* 弹窗第二行技术徽章（板块徽章之后）。R100t：确认池/观察池并入对应技术徽章文案——
    谐波命中池 → 单枚金色徽标（谐波·AB=CD · 确认池）；断板命中池 → 断板反包 · 确认池（黄标）。
    noPoolMerge=true（断板弹窗用）时不合并，池归属由弹窗末尾专属徽章承载，避免重复。
-   R100z260：**五个技术指标全出，失效也出**。失效用 .pool-badge.fail（灰），与在池的金标区分开；
+   R100z260：**四个技术指标全出，失效也出**。失效用 .pool-badge.fail（灰），与在池的金标区分开；
    tooltip 写清失效原因 + 归档日，读者能自己判断「是形态走坏，还是口径收紧」。 */
 function stkTechBadgeHtml(code, noPoolMerge) {
   var tags = stkTechMeta(code);
@@ -2377,9 +2368,9 @@ function stkLhbBadge(code) {
    根因不在龙虎榜自己，在 `openStkModal(code, name, note)` 的 note —— 从龙虎榜列表点进来的行，
    我把榜单标题「龙虎榜 · 净买 +X亿 · 原因」当 note 传了进去，而 note 永远印在 meta 的第一行：
    有谐波的标的，谐波参数在 head（note 之后）→ 看起来「在谐波下面」；
-   只有横盘启动/吸筹的标的，那两行在 meta（note 之后）→ 看起来「在横盘启动上面」。
+   只有横盘启动的标的，那行在 meta（note 之后）→ 看起来「在横盘启动上面」。
    同一个字段，位置随标的技术面构成而变 —— 这正是用户截图里「一会在上一会在下」的机制。
-   修法：龙虎榜明细改成 `techMetaLines()` 的**最后一行**，与横盘启动/吸筹同一根 DOM 顺序，
+   修法：龙虎榜明细改成 `techMetaLines()` 的**最后一行**，与横盘启动同一根 DOM 顺序，
    任何标的都排在技术指标下面；note 只留一句清单定位（第几只/共几只），不再夹龙虎榜文案。 */
 function stkLhbLine(code) {
   var h = stkLhbOf(code);
@@ -2752,7 +2743,7 @@ function render(market) {
   // R100z109（用户 2026-10-10）：全球要闻与政策信号解码迁至「📄 全球要闻」独立页（renderGnews），
   // 主页面（A股/美股）不再渲染这两个模块。
 
-  // R100m：主力吸筹已移至「🧰 技术看板」第 4 子页（db-acc），主页面不再渲染（用户 2026-09-28 要求）。
+  // R100m：技术池已移至「🧰 技术看板」独立子页，主页面不再渲染（用户 2026-09-28 要求）。
   // 谐波形态 / 量化横盘启动此前已移入子页（R100i），子页渲染见 renderDuanban()。
 
   // 主力资金流向紧贴行业全景上方（2026-09-20 用户要求：挪到行业全景上面）
@@ -3343,15 +3334,14 @@ function preOfCode(code) {
   if (!c) return null;
   var D = window.DASHBOARD_DATA || {};
   var d = D.duanban || {};
-  var cp = D.chenPool || {}, hz = D.harmonic || {}, ac = D.accumulation || {},
-      bp = D.breakoutPool || {};
-  // R100z313：反查范围扩到**全部池**——原来只查断板三处，失效池/陈学长/谐波/吸筹的弹窗
+  var cp = D.chenPool || {}, hz = D.harmonic || {}, bp = D.breakoutPool || {};
+  // R100z313：反查范围扩到**全部池**——原来只查断板三处，失效池/陈学长/谐波的弹窗
   // 就都没有三因子标签（用户 2026-11-09 截图圈的正是这两种）。
   var pool = [].concat(
     d.confirmed || [], d.watching || [], (d.star && d.star.picks) || [], d.failPool || [],
     cp.strict || [], cp.loose || [], cp.watching || [],
     hz.confirmPool || [], hz.watchPool || [],
-    ac.scored || [], bp.passed || []
+    bp.passed || []
   );
   for (var i = 0; i < pool.length; i++) {
     if (pool[i] && String(pool[i].code || '').replace(/\D/g, '') === c && pool[i].pre) return pool[i].pre;
@@ -3359,7 +3349,7 @@ function preOfCode(code) {
   return null;
 }
 
-/* R100z313：降级版三因子——票不在断板池（失效池/陈学长/谐波/吸筹/横盘启动）时现算。
+/* R100z313：降级版三因子——票不在断板池（失效池/陈学长/谐波/横盘启动）时现算。
    能算的三项：题材（板块生命周期）、连板（duanban.ladder）、情绪（duanban.mood）；
    **人气算不了**（需要「当日全池成交额分位」，前端没有那份池子），所以不给人气、不给综合。
    宁可少两格，也不给一个编出来的分。 */
@@ -3605,7 +3595,7 @@ function loadRiskBlacklist() {
         var d = JSON.parse(xhr.responseText);
         RISK_BL = (d && d.blacklist) || null;
         // 黑名单是异步到的：已经渲染过一次卡片就重画一遍，把 ⚠️ 角标和汇总行补上
-        // R100z70：四技术池（断板/谐波/横盘启动/吸筹）卡片角标也走这里，一并重画
+        // R100z70：三技术池（断板/谐波/横盘启动）卡片角标也走这里，一并重画
         var aiBox = document.getElementById('ai-prediction');
         if (RISK_BL && aiBox && aiBox.innerHTML) renderAiPrediction();
         var dbPools = document.getElementById('db-pools');
@@ -3617,7 +3607,7 @@ function loadRiskBlacklist() {
 }
 
 /* 标的胶囊上的硬风险角标；无命中返回空串。
-   R100z70：poolMode=true 时用于四技术池卡片（口径是「打标不删」——观察池仅提示、不剔除，
+   R100z70：poolMode=true 时用于三技术池卡片（口径是「打标不删」——观察池仅提示、不剔除，
    措辞与 8 只池的硬闸语义区分开）。 */
 function riskBadge(code0, poolMode) {
   if (!RISK_BL || !code0) return '';
@@ -4093,7 +4083,7 @@ function renderAiPrediction() {
         // 语义靠两处兜住：脚注图例（.ai-foot）+ 悬停 title（触屏看不到 title，所以图例是必须的）。
         var _hit = st.poolHit === true;
         var _t1 = st.name + ' ' + st.code + (st.note ? ' · ' + st.note : '') +
-          (_hit ? '｜右上角蓝点：来自当日机械池候选（断板反包 / 谐波 / 吸筹 / 强势 四池之一），不是 AI 自由挑选' : '') +
+          (_hit ? '｜右上角蓝点：来自当日机械池候选（断板反包 / 谐波 / 横盘启动 三池之一），不是 AI 自由挑选' : '') +
           '（点击查看K线）';
         html += '<span class="stock-chip' + stkGoldCls(st.code) + (_hit ? ' pool-hit' : '') + '" data-stk="' + escAttr((st.code || '') + '|' + (st.name || '') + '|' + (st.note || '')) + '" title="' + escAttr(_t1) + '"><span class="nm"><b>' + esc(st.name) + '</b><span class="cd">' + esc(st.code) + '</span></span>' +
           (st.note ? '<span class="nt">' + esc(st.note) + '</span>' : '') + '</span>';
@@ -4113,7 +4103,7 @@ function renderAiPrediction() {
   var _vblk = renderVerificationBlock();
   // R100z248：脚注只留两样——圆点图例（G43 要求圆点必须有文字解释，删掉这排点就没人看得懂）
   // + 当日风险。标的筛选口径那段长文已删。图例与 class 必须同处一行（G43 按行抓 ai-foot）。
-  html += '</div>' + _vblk + '<div class="ai-foot">标的右上角<b>蓝圆点</b>＝该股来自当日机械池候选（断板反包 / 谐波 / 吸筹 / 强势）；无圆点为 AI 按四类配比补位。' + (p.riskNote ? '<br>⚠️ ' + esc(p.riskNote) : '') + '</div>';
+  html += '</div>' + _vblk + '<div class="ai-foot">标的右上角<b>蓝圆点</b>＝该股来自当日机械池候选（断板反包 / 谐波 / 横盘启动）；无圆点为 AI 按四类配比补位。' + (p.riskNote ? '<br>⚠️ ' + esc(p.riskNote) : '') + '</div>';
   html += '</div>';
   box.innerHTML = html;
   renderRiskLines();
@@ -4907,7 +4897,7 @@ function renderThemePicks(list, tradeDate) {
 
 /* R100z93b：renderBullBear（领涨/领跌题材独立卡）已删除——用户 2026-10-08 要求深度分析整合进
    板块异动「行业原因」与题材掘金，不另开模块。bullish/bearish 数据字段保留（校验器口径不变）。 */
-/* ===== 选股扩展模块渲染（2026-09-26 · 谐波 / 吸筹 / 量化 / 必带数据） ===== */
+/* ===== 选股扩展模块渲染（2026-09-26 · 谐波 / 量化 / 必带数据） ===== */
 function findHarmonic(code) {
   var h = window.DASHBOARD_DATA.harmonic;
   if (!h) return null;
@@ -4937,12 +4927,11 @@ function _hzFailClip(kl, hz) {
   return (out.length > 1) ? out : kl;
 }
 /* R100z56：失效池按 kind 分源（原写法非 harmonic 一律回落断板池——
-   传入 'breakoutPool'/'accumulation' 会静默串到断板 failPool，弹窗错票且无报错）。
+   传入 'breakoutPool'/'chen' 以外的新 kind 会静默串到断板 failPool，弹窗错票且无报错）。
    ⚠️ 新增 kind 必须同步 dbFailHtml 的 onclick 白名单与新生成侧字段名，别只改这里。 */
 function failPoolOf(kind) {
   var D = window.DASHBOARD_DATA || {};
   if (kind === 'harmonic') return (D.harmonic || {}).failPool || [];
-  if (kind === 'accumulation') return (D.accumulation || {}).failPool || [];
   if (kind === 'breakoutPool') return (D.breakoutPool || {}).failPool || [];
   if (kind === 'chen') return (D.chenPool || {}).failPool || [];  // R100z218：陈学长池自己的归档
   return (D.duanban || {}).failPool || []; // 兜底：断板反包（默认）
@@ -4991,7 +4980,7 @@ function failEntryOf(e, kind) {
    ① 谐波失效：hzFailOf 带失效前 D 点结构位（真实形态位），直接复用 exitForCode ③ 的全站口径（含 target1）；
    ② 断板失效：failPool 条目没存 ztDate/kline，但 form 串首段固定是「MM/DD涨停→…」（check_duanban.py 生成），
       解析涨停日 + 归档年 → 在内嵌/顶层 K 线里找断板日（涨停次日）最低价，与确认池同一证伪口径；
-   ③ 其余（横盘启动/吸筹失效、以及②解析失败时）：最近收盘 −2.5% 全站统一风控位，basis 自述「非形态位」。
+   ③ 其余（横盘启动失效、以及②解析失败时）：最近收盘 −2.5% 全站统一风控位，basis 自述「非形态位」。
    拿不到任何 K 线就返回 ''（整行不渲染）——绝不给空数字。目标价仅①（真实谐波目标位）提供，
    ②③ 已失效形态不再给 +6% 之类「目标」，避免误导。 */
 function failExitMetaLine(e) {
@@ -5050,11 +5039,11 @@ function stkSectorOf(code) {
   return stkSecOf(code);
 }
 
-/* R100n：通用标的弹窗消息面——谐波/横盘启动/吸筹卡片点开同样能看到个股利好/利空/中性消息（参考断板反包弹窗）。
+/* R100n：通用标的弹窗消息面——谐波/横盘启动卡片点开同样能看到个股利好/利空/中性消息（参考断板反包弹窗）。
    数据优先级叠加：① 断板双池条目（sentiment/story/bullRefs/bearRefs，与断板弹窗同款）；
    ② 全站要闻匹配（bullNews/bearNews/macroNews/intlNews/bankViews 的 impacts 成分股命中该代码，
       方向加权打标：看涨=利好、看跌=利空，同 retag_duanban 思路）；
-   ③ 技术池自带说明（谐波 story / 吸筹 note / 横盘启动 reasons）。
+   ③ 技术池自带说明（谐波 story / 横盘启动 reasons）。
    三者可同时出现；完全无信息则不渲染（宁缺勿滥）。 */
 // R100z4g：小作文段落统一渲染器——「个股消息/板块消息 + 旗标：」蓝色加粗（.db-refs b），全站弹窗共用。
 // 旗标规则（R100z4h 修订）：
@@ -5310,8 +5299,7 @@ function stkNewsHtml(code) {
   var e = null;
   (db.confirmed || []).concat(db.watching || []).forEach(function (x) { if (!e && String(x.code) === code) e = x; });
   var hzIt = findHarmonic(code);
-  var accIt = null, bpIt = null;
-  ((D.accumulation || {}).scored || []).forEach(function (x) { if (!accIt && String(x.code) === code) accIt = x; });
+  var bpIt = null;
   ((D.breakoutPool || {}).passed || []).forEach(function (x) { if (!bpIt && String(x.code) === code) bpIt = x; });
   // R100z209：板块级要闻命中改由 sectorNewsItems() 统一产出（原来这里手写一遍、
   // failNewsScan 又写一遍，且都标成「个股消息」——其实是板块级要闻）。
@@ -5328,7 +5316,7 @@ function stkNewsHtml(code) {
     if (aiHit || !s || !s.stocks) return;
     for (var i = 0; i < s.stocks.length; i++) { if (String((s.stocks[i] || {}).code) === code) { aiHit = s; break; } }
   });
-  if (!e && !secItems.length && !hzIt && !accIt && !bpIt && !secHit && !aiHit) {
+  if (!e && !secItems.length && !hzIt && !bpIt && !secHit && !aiHit) {
     // R100z149：只有个股消息库命中时仍要渲染（板块/池都没挂上，但公司自己发了公告）
     if (!stockNewsItems(code).length) return '';
   }
@@ -5548,13 +5536,13 @@ function openHzModal(code, name) {
   STK_IDX = i >= 0 ? i : 0;
   openStkModal(code, name || code, '');
 }
-// R100h：吸筹/横盘启动卡片固定本组导航——此前直接 openStkModal，STK_GRP 残留上一组导致箭头跳出本模块
+// R100h：横盘启动卡片固定本组导航——此前直接 openStkModal，STK_GRP 残留上一组导致箭头跳出本模块
 /* R100z82：弹窗按下标回取必须用与渲染同一份排序数组——
-   R100z76-③ 给横盘启动/吸筹加 sortByReso 排序后，tcCard 的 idx 是「排序+截断后」的位置，
+   R100z76-③ 给横盘启动加 sortByReso 排序后，tcCard 的 idx 是「排序+截断后」的位置，
    而 onclick 仍回取原始未排序池 → 点上海洗霸弹出传艺科技（硬教训#4 原样复发）。
    两页各存一份全局排序数组，渲染与 openGrpModal（含组内导航）共用；谐波页按 code 回取不受影响。
    R100z232：PW_SORTED → BP_SORTED（九门撤、横盘启动接位）。 */
-var BP_SORTED = [], ACC_SORTED = [];
+var BP_SORTED = [];
 function openGrpModal(list, idx) {
   if (!list || !list[idx]) return;
   STK_GRP = list.map(function (x) { return { c: x.code, n: (x.name && x.name !== x.code) ? x.name : x.code, t: '' }; });
@@ -5568,12 +5556,12 @@ function openGrpModal(list, idx) {
 /* R100z3：弹窗技术面展示共用三件套（断板弹窗 + 通用标的弹窗共用）
    ① hzMiniWrap：迷你谐波图（有谐波池归属才渲染）
    ② hzSideHtml：迷你图左侧的谐波参数文本（填充徽标行右侧空档，无 emoji 无底色）
-   ③ techMetaLines：横盘启动/吸筹纯文本行（<span class="lab"> 标签 + 内容，与断板弹窗 meta 同格式） */
+   ③ techMetaLines：横盘启动纯文本行（<span class="lab"> 标签 + 内容，与断板弹窗 meta 同格式） */
 function hzMiniWrap(hz) {
   return hz ? '<span class="hz-mini" title="谐波形态示意：红折线=X-A-B-C-D 五点结构 · 绿带=PRZ 潜在反转区 · 红虚线=止损 · 蓝虚线=T1/T2 目标位">' + hzMiniSvg(hz) + '</span>' : '';
 }
 // R100z4w：谐波确定性研判一句话（脚本字段推导，非 AI 叙事）——按池阶段 × 现价距反转区位置
-// 给出方向判断（企稳/看反弹/待确认/已兑现）+ 风险收益比（T1 空间 vs 止损距离）+ 吸筹共振加分
+// 给出方向判断（企稳/看反弹/待确认/已兑现）+ 风险收益比（T1 空间 vs 止损距离）
 function hzViewText(hz) {
   if (!hz || !hz.prz) return '';
   if (hz.stage === '失效前') return ''; // R100z4x：失效形态不给操作研判（只展示失效前几何）
@@ -5588,7 +5576,6 @@ function hzViewText(hz) {
   if (lc && typeof hz.target1 === 'number' && typeof hz.stop === 'number') {
     s += '；上行看 T1 ' + (hz.target1 - lc > 0 ? '+' : '') + ((hz.target1 - lc) / lc * 100).toFixed(1) + '%，下行止损 ' + ((hz.stop - lc) / lc * 100).toFixed(1) + '%';
   }
-  if (hz.accResonance) s += ' · 吸筹共振加分';
   return s;
 }
 function hzSideHtml(hz) {
@@ -5597,7 +5584,6 @@ function hzSideHtml(hz) {
   return '<span class="hz-side">谐波·' + esc(hz.pattern) + '（' + esc(hz.stage) + '）：PRZ <span class="hz-v">' + hz.prz[0] + '~' + hz.prz[1] + // R100z4b：（确认/观察）后加全角冒号
     '</span> · 止损 <span class="hz-v">' + hz.stop + '</span> · T1 <span class="hz-v">' + hz.target1 + '</span> · T2 <span class="hz-v">' + hz.target2 + '</span>' +
     (_r.AB ? ' · 比率 AB=' + esc(_r.AB) + ' BC=' + esc(_r.BC) + ' CD=' + esc(_r.CD) : '') +
-    (hz.accResonance ? ' · 吸筹共振' + esc(hz.accResonance) : '') +
     (function () { var v = hzViewText(hz); return v ? '<div class="hz-view">▸ ' + esc(v) + '</div>' : ''; })() + // R100z4w：确定性研判一句话
     (hz.stage === '失效前' && hz.reason ? '<div class="hz-approx" style="color:#c0392b">▸ 失效原因：' + esc(hz.reason) + '</div>' : '') + // R100z4y：失效原因直读
     (hz.stage === '失效前' && hz.approx ? '<div class="hz-approx">（失效当时形态可能已变化，结构仅供参考）</div>' : '') + // R100z4x：近似形态标记
@@ -5605,13 +5591,11 @@ function hzSideHtml(hz) {
 }
 function techMetaLines(code) {
   var D = window.DASHBOARD_DATA || {};
-  var bpTop = null, accTop = null;
+  var bpTop = null;
   ((D.breakoutPool || {}).passed || []).forEach(function (x) { if (!bpTop && x && String(x.code) === code) bpTop = x; });
-  ((D.accumulation || {}).scored || []).forEach(function (x) { if (!accTop && x && String(x.code) === code) accTop = x; });
   var out = '';
   // R100z232：九门「通过 G1-G9」那一行换成横盘启动的平台口径（同一位置、同样是纯文本行）。
   if (bpTop && bpTop.note) out += '<div><span class="lab">横盘启动：</span>' + esc(bpTop.note) + '</div>';
-  if (accTop && accTop.note) out += '<div><span class="lab">主力吸筹：</span>' + esc(accTop.note) + '</div>';
   // R100z202：龙虎榜固定排在技术指标**之后**（见 stkLhbLine 注释：位置必须与标的技术面构成无关）
   out += stkLhbLine(code);
   return out;
@@ -5624,7 +5608,6 @@ function renderHarmonic() {
   if (!c.length && !w.length) return '';
   var card = function (it) {
     var meta = 'PRZ ' + it.prz[0] + '~' + it.prz[1] + ' · 止损 ' + it.stop + ' · T1 ' + it.target1 + ' · T2 ' + it.target2;
-    if (it.accResonance) meta += ' · 吸筹共振' + it.accResonance;
     // R100g：名称缺失时只展示代码一次（禁 name/code 拼成 600613600613 双重渲染）
     var nm = (it.name && it.name !== it.code) ? it.name : '';
     // R100z36：谐波卡改用统一 T2 骨架；R100z40：四格＝距PRZ / 止损 / T1 / T2（全部数值位）。
@@ -5636,8 +5619,7 @@ function renderHarmonic() {
     var distCls = dist === null ? 'flat' : (dist <= 0 ? 'up' : 'flat');
     var foot = esc(hzPatCn(it.pattern)) + '形态 · ' +
       (conf ? '确认池 · XABCD 已到位' : '观察池 · 差最后一根确认K') +
-      ' · PRZ <span class="xt">' + it.prz[0] + '~' + it.prz[1] + '</span>' +
-      (it.accResonance ? ' · 吸筹共振' + esc(it.accResonance) : '');
+      ' · PRZ <span class="xt">' + it.prz[0] + '~' + it.prz[1] + '</span>';
     return tcCard({
       code: it.code, name: nm || it.code, chg: tcPctOf(it.code, null), dim: !conf,
       fresh: poolFresh(it, h.tradeDate), // R100z44：新入池首日黄色+「新」徽章
@@ -5654,7 +5636,7 @@ function renderHarmonic() {
     });
   };
   // R100l：三池样式对齐断板反包页——.db-pool 圆点标题容器（确认池红点 / 观察池蓝点 / 失效池灰点 dbFailHtml）
-  // R100z4x：谐波子页顶部术语说明段落（.hz-sub）曾按用户反馈删除——2026-09-30 用户要求恢复（与横盘启动/吸筹口径行同款）
+  // R100z4x：谐波子页顶部术语说明段落（.hz-sub）曾按用户反馈删除——2026-09-30 用户要求恢复（与横盘启动口径行同款）
   // R100z6l：恢复口径行（hz-sub 朴素样式 + 悬停详解），术语与 R100g 定稿一致
   var hzDef = '<details class="tech-legend"><summary>谐波口径 · XABCD 五点形态（点击查看技术指标）</summary><div class="lg-body">' +
     '<div><b>一句话逻辑</b>：涨一段、回一段、再涨一段、再回一段——每段回撤比例落在斐波那契区间，D 点就是「该止跌」的候选位。这套不预测能涨多少，只回答这里值不值得接。</div>' +
@@ -5674,132 +5656,6 @@ function renderHarmonic() {
   // R100i：谐波形态失败池（D 点破位 / 形态失效归档，5 交易日后自动清理）——样式与断板页失效池同款
   html += dbFailHtml(h.failPool, 'harmonic');
   return html;
-}
-
-function renderAccumulation() {
-  var a = window.DASHBOARD_DATA.accumulation;
-  if (!a || !a.scored || !a.scored.length) return '';
-  // R100z21：吸筹页分「强池 / 观察池」两节——强池=特征命中多、结构完整可直接跟；
-  // 观察池=缺 1-2 项只排队候补。渲染一律按 scored 内每张卡自己的 grade 分组（新旧数据通用）。
-  // R100z82：先固化排序数组到全局 ACC_SORTED，渲染与弹窗回取共用（否则 idx 错位串票，见 openGrpModal 上注释）
-  var pick = (ACC_SORTED = sortByReso(a.scored).slice(0, 20)); // R100z76-③：共振命中≥2池的标的排前
-  // R100z22：特征胶囊加 title 释义（原来只有「试盘/横盘」两个字，看不出触发条件）
-  var FEAT_TITLE = {
-    f1: 'F1 试盘（20分）：长上影≥2×实体、量≥1.5×5日均量，随后3日均量回落且收盘低于试盘价，当时处在近120日区间下部',
-    f2: 'F2 止跌（15分）：3日缩量连跌、末日量≤0.7×均量，第4-8日收复逾半跌幅',
-    f3: 'F3 横盘（20分）：近6个月同类试盘≥2次、近10日振幅收窄到20日的6成内、10日收盘贴中枢±6%',
-    f4: 'F4 缩量（15分）：6日内量不到前20日峰量的0.6倍、低点未破20日前低、全程横盘±3%',
-    f5: 'F5 缩量板（首次板22/接力板16分）：跳空高开≥5%的涨停、量≤前日0.8倍且收最高；首次板筹码干净，接力板防对倒',
-    f6: 'F6 流动性+热度（双达标10/单达标6分）：近20日日均成交额≥2亿（硬门禁）；近250日有涨停或距高点回撤25%-70%算热度'
-  };
-  var items = pick.map(function (it, idx) {
-    var gd = it.grade === '强' ? 'strong' : 'watch';
-    var feats = '';
-    var hitList = [];
-    if (it.features) {
-      [['f1', '试盘'], ['f2', '止跌'], ['f3', '横盘'], ['f4', '缩量'], ['f5', '缩量板'], ['f6', '流动']].forEach(function (f) {
-        var v = it.features[f[0]];
-        if (v) hitList.push(f[1]);
-        feats += '<span class="' + (v ? 'on' : 'off') + '" title="' + escAttr(FEAT_TITLE[f[0]]) + '">' + (v ? '✓ ' : '✕ ') + f[1] + (v ? ('·' + v) : '') + '</span>';
-      });
-    }
-    // R100z22：信号滞后灰标（lagDays 由 accumulation_score.py 算：最近一次试盘/涨停距今几个交易日）
-    var lagDays = Number(it.lagDays);
-    // R100g：名称缺失只展示代码一次
-    var nm = (it.name && it.name !== it.code) ? it.name : '';
-    // R100z36：吸筹卡改用统一 T2 骨架。四格＝强度 / 特征命中 / 滞后 / 止损。
-    // 滞后 ≥10 日按纪律已降入观察池（见下方分桶），此处用告警色标出，与降级逻辑同源。
-    var lagCls = lagDays >= 10 ? 'warn' : '';
-    var lagTxt = lagDays > 0 ? lagDays + ' 日' : '—';
-    // R100z101（用户 2026-10-09）：技术指标换行——池名·板型一行、「特征 …」独占一行，
-    // 修「接力板」等词被折行拆字的挤压观感（对齐谐波卡 foot 的换行留白）。
-    var foot = (it.grade === '强' ? '确认池' : '观察池') +
-      (it.f5Tier && it.f5Tier !== '-' ? ' · ' + esc(it.f5Tier) : '') +
-      '<br>特征 ' + (hitList.length ? hitList.join('-') : '无') +
-      (lagDays >= 10 ? ' · <span style="color:#b3541e">结构走旧·不得主推</span>' : '');
-    return tcCard({
-      code: it.code, name: nm || it.code, chg: tcPctOf(it.code, null), dim: it.grade !== '强',
-      fresh: poolFresh(it, a.tradeDate), // R100z44：新入池首日黄色+「新」徽章
-      pills: [stkSecPillOf(it.code, it.sector)], sent: true,
-      cells: [
-        tcCell('强度', '<span class="acc-grd ' + gd + '">' + esc(it.grade) + ' ' + it.score + '</span>', it.grade === '强' ? 'up' : ''),
-        tcCell('特征命中', (it.hitCount || 0) + ' / 6', ''),
-        tcCell('信号滞后', lagTxt, lagCls),
-        tcStopCell(it.code)
-      ],
-      foot: foot,
-      onclick: 'openGrpModal(ACC_SORTED,' + idx + ')', // R100z82：回取同一份排序数组，原写法传 a.scored 会串票
-      title: nm + ' ' + it.code + ' · ' + it.grade + ' ' + it.score + '分（六项合计 102 分）\n' +
-        '命中：' + (hitList.length ? hitList.join('、') : '无') + '\n点击查看六特征逐条触发说明'
-    });
-  });
-  // R100z21：items 是 map 出来的数组（不再 .join('')），下方按 grade 分桶后各自 join
-  // R100z29：分桶结果容器在下面「口径说明」之前声明——lg-tip 里要引用 demoted（降级只数），
-  // 否则 var 提升后是 undefined，页面上会印出「（本次共 undefined 只）」。
-  var sB = [], wB = [], demoted = 0;
-  // R100z4i：新增子页口径说明（与谐波/横盘启动同款位置与样式：子页导航下方、hz-sub 朴素文字、悬停详解）
-  // R100z22：吸筹口径（原一行文字 + 200 字 title，手机上 title 不显示＝白写）改可展开条目块
-  var accLeg = '<details class="tech-legend"><summary>吸筹口径 · 六特征打分（点击查看技术指标）</summary><div class="lg-body">' +
-    '<div><b>一句话逻辑</b>：主力拿货不留名，但会留痕——长上影试盘、缩量止跌、横盘不破、缩量涨停。六项把这套痕迹量化成分数，分数只是入场券，形态还得自己看。</div>' +
-    '<div><b>判定规则</b>：六项独立计分、满分 102 分，逐项核对——</div>' +
-    '<div><b>F1 试盘 · 20 分</b>：长上影≥2×实体、量≥1.5×5日均量，随后 3 日均量回落且收盘低于试盘价，当时处在近 120 日区间下部</div>' +
-    '<div><b>F2 止跌 · 15 分</b>：3 日缩量连跌、末日量≤0.7×均量，第 4-8 日收复逾半跌幅</div>' +
-    '<div><b>F3 横盘 · 20 分</b>：近 6 个月同类试盘≥2 次、近 10 日振幅收窄到 20 日的 6 成内、10 日收盘贴中枢±6%</div>' +
-    '<div><b>F4 缩量 · 15 分</b>：6 日内量不到前 20 日峰量的 0.6 倍、低点未破 20 日前低、全程横盘±3%</div>' +
-    '<div><b>F5 缩量板 · 首次板 22 / 接力板 16 分</b>：跳空高开≥5% 的涨停、量≤前一日 0.8 倍且收在最高；本轮首次涨停（上方筹码干净）给高分，20 日内已有涨停的算接力板（老资金接力、防对倒）给低分</div>' +
-    '<div><b>F6 流动性+热度 · 双达标 10 / 单达标 6 分</b>：近 20 日日均成交额≥2 亿（硬门禁，不足直接不入池）；热度＝近 250 日有涨停、或距高点回撤落在 25%-70%</div>' +
-    '<div class="lg-hr"></div>' +
-    '<div><b>分池</b>：六项合计 102 分 → ≥70 强（结构完整、可直接跟）｜50-69 观察（缺一两项、只排队）｜&lt;50 不入池。信号滞后超 10 个交易日的「强」一律降入观察池——跟一个 10 日前的结构是运气不是纪律。</div>' +
-    '<div><b>失效与离场</b>：跌破最近收盘 −2.5% 无条件离场；横盘下沿被破、量能形态走坏即出，不等打分变化。卡片上的「信号滞后 N 日」＝最近一次试盘/涨停距今几个交易日。</div>' +
-    '<div class="lg-tip">下一步：盯次日竞价与量能（吸筹最怕缩量破位）；<b>打分到强池线、但滞后超 10 日的标的，本页会强制降到观察池</b>（本次共 ' + demoted + ' 只）。</div>' +
-    '</div></details>';
-  // R100z21：强/观察两节渲染（空档不显示，避免「0 只」占位盖住真内容）
-  // R100z29：退出纪律——结构走旧（信号滞后 >10 个交易日）的「强」一律降入观察池。
-  // 跟一个 10 日前的吸筹结构不是纪律是运气；降级只在渲染时做，不动数据口径与打分。
-  sB = []; wB = []; demoted = 0;
-  pick.forEach(function (it, idx) {
-    var h = items[idx];
-    if (!h) return;
-    var stale = (it.grade === '强') && (Number(it.lagDays) > 10);
-    if (stale) demoted++;
-    if ((it.grade === '强') && !stale) sB.push(h); else wB.push(h);
-  });
-  // R100z43：强/观察两节标题换行排版对齐谐波页（池名 nowrap 不折断，说明文字可整体折到下一行），
-  // 修手机端「强/池」两字竖排断行（image#2）。池名包 .t 白空格 nowrap + 父级 flex-wrap。
-  // R100z101（用户 2026-10-09，对齐谐波页池头样式）：只数并入池名同行同字号（「确认池 · 6 只」），
-  // 说明文字整体下沉为独立小字行（.acc-sub-desc），不再用 11px .cnt 挤在同一行。
-  /* R100z102c（用户 2026-10-09 三页对比截图）：确认/观察池改成与断板/谐波完全同构的
-     .db-pool 独立卡（每池一张白底圆角卡、圆点标题+db-sub 说明在卡内）——原先是全池挤在
-     一张 .card 里用 .acc-sub 小节标题分隔，观察池标题裸在页面上，与另两页观感不一致。
-     网格同步换 .db-chips（4列/700px 折2列，与三页一致，原 .acc-grid 900px 折点弃用）。 */
-  var secS = sB.length
-    ? '<div class="db-pool p-conf"><h2>确认池 · ' + sB.length + ' 只</h2>' +
-      '<div class="db-sub">特征命中多、结构完整，可直接跟（盯次日量能与竞价）</div>' +
-      '<div class="db-chips">' + sB.join('') + '</div></div>' : '';
-  var secW = wB.length
-    ? '<div class="db-pool p-watch"><h2>观察池 · ' + wB.length + ' 只</h2>' +
-      '<div class="db-sub">缺 1-2 项，只排队候补，不主动做' +
-      (demoted ? '；其中 <b>' + demoted + '</b> 只打分虽到强池线，但信号滞后超 10 日、结构已走旧，按纪律<b>降级至此</b>' : '') +
-      '</div><div class="db-chips">' + wB.join('') + '</div></div>' : '';
-  // R100z43：去掉「🧲 主力吸筹 + 日期」大标题（image#1 用户要求）——tab 名与口径条已够定位，卡片直接进分池。
-  // R100z56（用户 2026-10-04 要求）：① 删掉下方原本渲染的 a.summary 口径条（「六特征打分：强 N / 观察 M」，
-  //   强弱只数这类口径随行情天天变、页面上最容易过期，卡片本身已有强度/滞后格，口径不再重复）；
-  //   ② 新增失效归档池——原在强/观察池内、本轮走坏的标的自失效日起留 5 个交易日
-  //   （生成侧 accumulation_score.py 走 roll_fail_pool 剔除），样式与断板反包/谐波页同款。
-  /* R100z58（用户 2026-10-04「吸筹/横盘启动失效池看不到」）：原写法 `a.failPool!==undefined` 才渲染，
-     而 failPool 字段只有脚本实跑过才会写入——节前 09-30 那次生成在 R100z56 加字段之前，
-     之后 10-01~10-04 国庆休市没再跑过 → 字段一直 undefined → 整块失效池连「0 只」都不显示，
-     看起来像功能没做，故改成无条件调用 dbFailHtml。
-     R100z60（同日再定，⚠️ 中间我误读过一次）：**空态照旧渲染**「失效归档池 · 0 只」整块——
-     用户说的"留空白"= 块与上方标的之间**留一条空白带**（`.db-pool.p-fail { margin-top:16px }`），
-     不是把块删掉。曾误改成 dbFailHtml 空态 return '' 把吸筹/横盘启动/谐波三页失效池整块抹了，已回滚。 */
-  var accFail = dbFailHtml(a.failPool || [], 'accumulation');
-  // R100z102（用户 2026-10-09 截图）：失效池移出 .card 直排——断板/谐波/横盘启动三页失效池都是
-  // 独立 .db-pool 卡（上方 16px 空白带），吸筹原先嵌在确认/观察池的 card 里成「卡中卡」，
-  // 双层边框 + 间距全不一样。
-  // R100z102c（同日三页对比截图）：确认/观察池也改为 .db-pool 独立卡后，外层 .card 整个
-  // 去掉——口径条 + 三池 .db-pool 直排，与断板/谐波/横盘启动完全同构。
-  return accLeg + secS + secW + accFail;
 }
 
 /* 横盘启动页（涨停锚口径）
@@ -5877,7 +5733,7 @@ function renderBreakoutPool() {
         (it.note || '') + '\n' + (en.note || '') + '\n点击查看K线与个股消息'
     });
   }).join('');
-  // 口径块与谐波/吸筹/陈学长同款五段（一句话逻辑 / 判定规则 / 分池 /
+  // 口径块与谐波/陈学长同款五段（一句话逻辑 / 判定规则 / 分池 /
   // 失效与离场 / 下一步黄条）。
   // ⚠️ 这里直接进网页正文，**不许出现 Markdown 星号**（esc 不解析，会原样显示 **）。
   var legend = '<details class="tech-legend"><summary>横盘启动口径 · 涨停后缩量洗盘（点击查看技术指标）</summary><div class="lg-body">' +
@@ -6193,8 +6049,8 @@ function stkMa5Of(code0, embKline) {
   }
   return s / 5;
 }
-/* R100z105：开盘精选技术池标的（src=hz/acc/pw/chen）回源查池内条目。
-   四格渲染需要来源池的专属字段（谐波 prz/stop/target1、吸筹 score/f5Tier/hitCount、横盘启动 entry/distTop/boxPct、
+/* R100z105：开盘精选技术池标的（src=hz/bp/chen）回源查池内条目。
+   四格渲染需要来源池的专属字段（谐波 prz/stop/target1、横盘启动 entry/distTop/boxPct、
    陈学长 trade.targetPrice/stopPrice/posPct + metrics.lbc/volRatio），
    star 循环合成的 e2 只带了 score/grade/story/deduce，不够用——按 src 回原池查全量条目，查不到返回 null。 */
 function starTechOf(code0, src) {
@@ -6204,8 +6060,7 @@ function starTechOf(code0, src) {
   var D = window.DASHBOARD_DATA || {};
   // R100z221：陈学长池分三档（严格/放宽/观察），按池展示优先级找——严格池的条目信息最全，
   // 同一只票同时满足两档时以严格池那条为准（与 chenNameOf / chenPoolBlock 的口径一致）。
-  var arr = src === 'acc' ? ((D.accumulation || {}).scored || [])
-          : src === 'bp' ? ((D.breakoutPool || {}).passed || [])
+  var arr = src === 'bp' ? ((D.breakoutPool || {}).passed || [])
           : src === 'chen' ? [].concat(((D.chenPool || {}).strict) || [],
                                        ((D.chenPool || {}).loose) || [],
                                        ((D.chenPool || {}).watching) || [])
@@ -6281,8 +6136,8 @@ function orderLineOf(code) {
    每一条都必须说清**是哪个池子不给价**，而不是只说「无」。原因按源写死在这里（不查数据），
    因为这些都是**口径决定**的结论，不是当日数据：
      bp   横盘启动·贴沿：7,783 个状态日单笔 +0.22%、T+5 超额 t=0.41（不显著）→ 不冒充下单价；
-     hz   谐波 / acc 吸筹：build_buy_list 的 BUY_ORDER 只收 陈学长严格池·断板反包确认池·
-          横盘启动，这两个池从来没有下单价口径（不是今天没命中）；
+     hz   谐波：build_buy_list 的 BUY_ORDER 只收 陈学长严格池·断板反包确认池·横盘启动，
+          该池从来没有下单价口径（不是今天没命中）；
      chen 放宽池：形态成立但没进严格池，清单只给严格池的价；
      pool 断板反包确认池命中却没进清单：被硬门槛挡了（深跌不接 / 涨停买不进 / 硬风险），
           具体原因在 buySummary.skipped 里逐条列着。 */
@@ -6293,7 +6148,6 @@ function orderLineOf(code) {
 var ORD_HINT = {
   bp: '不下单价 · 横盘启动单笔仅 +0.22%、T+5 超额不显著',
   hz: '不下单价 · 谐波池不在清单来源',
-  acc: '不下单价 · 吸筹池不在清单来源',
   chen: '不下单价 · 放宽池只观察',
   shrink: '不下单价 · 待确认档（放量阴后刚缩量，等它自己走出方向）',
   pool: '未进清单 · 被硬门槛挡（深跌/涨停/硬风险）'
@@ -6313,7 +6167,7 @@ function ordHintOf(e) {
 }
 /* R100z36：统一卡片骨架。o = {code,name,sector,pills[],sent,chg,cells[],foot,dim,attrs,onclick,title,fresh}
    R100z44：fresh=true → 整卡淡黄+「新」徽章（新入池首日高亮，次日恢复）。 */
-/* R100z76-③→R100z80：四技术池跨池共振——同票命中≥2个技术池（吸筹/谐波/横盘启动/断板反包）即高确信共振。
+/* R100z76-③→R100z80：三技术池跨池共振——同票命中≥2个技术池（谐波/横盘启动/断板反包）即高确信共振。
    全局 memoized 计算 code→命中池名列表（resoMap），仅供 sortByReso 排序共振目标页使用；
    全站边框分级由 stkGoldCls 直接基于 stkTechMeta 渲染，不再依赖共振徽标。
    ⚠️ 陈学长池**故意不并入**：它与断板反包是同一族形态的两套口径（16 只里 13 只同时命中断板池），
@@ -6331,7 +6185,6 @@ function resoMap() {
     });
   }
   var h = d.harmonic || {};
-  add(d.accumulation && d.accumulation.scored, '吸筹');
   add(h.confirmPool, '谐波'); add(h.watchPool, '谐波');
   add(d.breakoutPool && d.breakoutPool.passed, '横盘启动');   // R100z232：九门撤，横盘启动接位
   var db = d.duanban || {};
@@ -6376,7 +6229,7 @@ function poolFresh(it, modDate) {
   return !!(it && it.entryDate && modDate && String(it.entryDate) === String(modDate).slice(0, 10));
 }
 /* R100z120 Q3：弹窗「新」徽章——与卡片 .tc .nb / fail-chip.fail-new 同口径（poolFresh：entryDate === 模块交易日）。
-   池内标的：逐模块比对 entryDate 与各自交易日（duanban.generatedAt / harmonic·breakoutPool·accumulation 用 tradeDate）。
+   池内标的：逐模块比对 entryDate 与各自交易日（duanban.generatedAt / harmonic·breakoutPool 用 tradeDate）。
    失效归档池（key=f|kind|code）：entryDate === 该池最新归档日（failPoolLatest，与卡片 fail-chip.fail-new 同口径）。 */
 function modalFreshBadgeHtml(key, code) {
   code = String(code || '');
@@ -6396,7 +6249,6 @@ function modalFreshBadgeHtml(key, code) {
       { node: D.duanban || {}, date: ((D.duanban || {}).generatedAt || '').slice(0, 10), pools: ['confirmed', 'watching'] },
       { node: D.harmonic || {}, date: ((D.harmonic || {}).tradeDate || '').slice(0, 10), pools: ['confirmPool', 'watchPool'] },
       { node: D.breakoutPool || {}, date: ((D.breakoutPool || {}).tradeDate || '').slice(0, 10), pools: ['passed'] },
-      { node: D.accumulation || {}, date: ((D.accumulation || {}).tradeDate || '').slice(0, 10), pools: ['scored'] },
       // R100z218：陈学长池——不登记就会「卡片上有『新』、点开弹窗没有」，同一标的两种说法。
       { node: D.chenPool || {}, date: ((D.chenPool || {}).generatedAt || '').slice(0, 10), pools: ['strict', 'loose', 'watching'] }
     ];
@@ -6470,6 +6322,48 @@ function preTagsHtml(pre) {
       esc(String(Math.round(Number(pre.total) || 0))) + '</span>' : '');
 }
 
+/* R100z364（用户 2026-11-20「根据你的建议全部修改」）：**入场质量标签**。
+   edge_study.py 在 196 笔台账上算出：前 5 日涨幅 ≥10% 的那组胜率 39%、均值 −0.97%
+   （占样本一半以上，是全部亏损来源）；买价距 MA5 >8% 那组 42%/−0.87%。
+   ⚠️ 只标注、不剔除——用户 2026-11-18 定过「不要剔除，我自己看着办」。
+   数据全来自 stkKlines（前端已有），不新增任何字段、不改任何选股逻辑。 */
+function edgeStatsOf(code) {
+  var D = window.DASHBOARD_DATA || {};
+  var k = (D.stkKlines || {})[String(code || '').replace(/\D/g, '')];
+  if (!k || k.length < 8) return null;
+  var n = k.length, px = Number(k[n - 1][2]);
+  var c6 = Number(k[Math.max(0, n - 6)][2]);
+  var ret5 = c6 ? (Number(k[n - 2][2]) / c6 - 1) * 100 : 0;   // 前 5 日涨幅（用昨收，不含今日）
+  var ma5 = 0, cnt = 0;
+  for (var i = n - 5; i < n; i++) { ma5 += Number(k[i][2]); cnt++; }
+  ma5 = cnt ? ma5 / cnt : px;
+  return { ret5: ret5, ma5dev: ma5 ? (px / ma5 - 1) * 100 : 0, px: px };
+}
+function edgeChipHtml(e) {
+  var st = edgeStatsOf(e && e.code);
+  if (!st) return '';
+  var out = [];
+  if (st.ret5 >= 10) {
+    out.push('<span class="eg eg-bad" title="前 5 日涨幅 ' + st.ret5.toFixed(1) +
+      '%（≥10%）。edge_study 历史同期：胜率 39%、均值 −0.97%——这类单子占了一半样本，也是全部亏损来源">追高' +
+      st.ret5.toFixed(0) + '%</span>');
+  } else if (st.ma5dev >= 8) {
+    out.push('<span class="eg eg-warn" title="现价高于 MA5 ' + st.ma5dev.toFixed(1) +
+      '%（>8%）。历史同期胜率 42%、均值 −0.87%">偏离MA5</span>');
+  } else {
+    out.push('<span class="eg eg-ok" title="前 5 日涨幅 ' + st.ret5.toFixed(1) +
+      '%、距 MA5 ' + st.ma5dev.toFixed(1) + '%——落在历史正期望区间（67%、+1.74%）">顺势</span>');
+  }
+  var tr = (e && e.trade) || {};
+  if (tr.stopCapped) {
+    out.push('<span class="eg eg-cap" title="形态位止损原本 ' + (tr.rawStopPct || 0).toFixed(1) +
+      '%，已按纪律上限收口到 5%（买价 −5%）：上限封死 +5% 时，止损不能再敞开">止损收口' + '</span>');
+  } else if (tr.stopPct > 8) {
+    out.push('<span class="eg eg-warn" title="止损距 ' + tr.stopPct + '% 偏宽，仓位已被压到下限">止损偏宽</span>');
+  }
+  return out.length ? '<span class="eg-row">' + out.join('') + '</span>' : '';
+}
+
 function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
   var form = String(e.form || '');
   var mS = form.match(/(\d+)\s*日缩量/);
@@ -6483,9 +6377,9 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
   // R100z44：断板模块数据日取 generatedAt（该模块无 tradeDate 字段）
   var modD = String(((window.DASHBOARD_DATA || {}).duanban || {}).generatedAt || '').slice(0, 10);
   // R100z104→R100z105（用户 2026-10-09 两轮反馈）：开盘精选标的来自四池，但「板块涨幅/上涨概率/MA5买入/断板日止损」
-  // 全是断板反包专属口径——横盘启动/吸筹/谐波没有这些指标，硬套只会渲染一排「—」和口径错误的买入价。
+  // 全是断板反包专属口径——横盘启动/谐波没有这些指标，硬套只会渲染一排「—」和口径错误的买入价。
   // 改为按来源分派四格：断板=板块涨幅/上涨概率/建议买入价(MA5)/止损；谐波=买入区(PRZ)/距PRZ/止损(D点)/T1；
-  // 吸筹=吸筹评分/信号阶段/特征命中/止损(纪律位)；横盘启动=买入区间/证伪价/距箱顶/箱体振幅（无止损格）。取不到如实「—」，绝不编数。
+  // 横盘启动=买入区间/证伪价/距箱顶/箱体振幅（无止损格）。取不到如实「—」，绝不编数。
   var cells;
   if (star && e.src === 'shrink') {
     /* R102：缩量回踩档四格（票不在任何池里，回源查池必然空——所以不走下面那个按 src 分派的
@@ -6502,7 +6396,7 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
     ];
     foot = '<span class="xt">放量阴后已缩量 ' + (e.shrinkDays == null ? '—' : e.shrinkDays + ' 天')
       + '、小实体未反包 —— 待确认，不给买价</span>';
-  } else if (star && (e.src === 'hz' || e.src === 'acc' || e.src === 'bp' || e.src === 'chen')) {
+  } else if (star && (e.src === 'hz' || e.src === 'bp' || e.src === 'chen')) {
     var te = starTechOf(e.code, e.src);
     if (e.src === 'hz' && te && te.prz) {
       var hzDist = (typeof te.distToPrzPct === 'number') ? te.distToPrzPct : null;
@@ -6513,13 +6407,6 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
         tcCell('T1', '<span class="xt" title="一级目标位（T2=' + te.target2 + '）">' + te.target1 + '</span>', 'up')
       ];
       foot = '<span class="xt">' + esc(hzPatCn(te.pattern)) + '形态 · ' + (te.stage === '确认' ? '已确认' : '观察中') + '</span>';
-    } else if (e.src === 'acc' && te) {
-      cells = [
-        tcCell('吸筹评分', te.score == null ? '—' : te.score + ' 分', te.grade === '强' ? 'up' : ''),
-        tcCell('信号阶段', te.f5Tier ? esc(te.f5Tier) : '—', ''),
-        tcCell('特征命中', te.hitCount == null ? '—' : te.hitCount + ' / 6 项', ''),
-        tcStopCell(e.code) // 吸筹无形态止损位 → exitForCode 统一纪律位（最近收盘 −2.5%，basis 自述非形态位）
-      ];
     } else if (e.src === 'bp' && te) {
       // 涨停锚口径——四格与横盘启动页卡片逐格同源：
       // 买入区间 / 证伪价（涨停日最低×0.98）/ 涨停·洗盘天数 / 距涨停收盘。
@@ -6592,14 +6479,13 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
     pills: [star && e.tier === 'watch' ? '待确认' : null,
             showSec ? (e.sector || '其他') : null], sent: true,
     cells: cells,
-    foot: (e.pre ? '<div class="pre-row">' + preTagsHtml(e.pre) + '</div>' : '') + foot,
+    foot: (e.pre ? '<div class="pre-row">' + preTagsHtml(e.pre) + '</div>' : '') + edgeChipHtml(e) + foot,
     attrs: ' data-k="' + escAttr(key) + '"',
     title: e.name + ' ' + e.code + '（' + (e.sector || '') + '）\n' + (done ? '确认池 · 全流程达标' : '观察池 · ' + e.stage) +
       '\n今日：' + fmtPct(e.pct) + ' · 板块今日：' + (bpNow == null ? '—' : fmtPct(bpNow)) +
       '\n涨停日板块：' + (bpZt == null ? '—' : fmtPct(bpZt)) +
       (star ? '\n' + ({
         hz: '建议买入区＝PRZ 潜在反转区（回踩入区企稳介入）· 止损＝D 点结构失效位 · T1＝一级目标位',
-        acc: '吸筹评分＝六项特征加权（命中越多分越高）· 止损＝全站统一纪律位（最近收盘 −2.5%，非形态位）',
         bp: '买入区间＝箱顶×0.985~×1.005（越过上限不追）· 证伪价＝平台下沿×0.99（跌破即横盘作废）· 固定持有 10 日、不设百分比止损',
         chen: '目标 +3.5% 次日冲高兑现 · 止损＝洗盘段最低价（破位按收盘算）· 仓位＝1.5% 风险预算 ÷ 止损宽度 · 持仓 ≤2 日',
         shrink: '四格＝缩量第几天 / 放量阴的量比 / 涨停日 / 作废位（涨停日最低×0.98）；这是待确认档，不给买价'
@@ -6958,13 +6844,13 @@ function renderDuanban() {
   DB_INDEX = {}; DB_ORDER = [];
   var db = duanbanData();
   document.getElementById('db-date').textContent = db && db.generatedAt ? '数据生成：' + db.generatedAt + '（每日 16:00 数据更新 · 19:30 叙事部署 · 次日 07:00 隔夜复核）' : '数据生成：—（待 16:00 数据步首跑）';
-  // R100z4v：断板页口径说明改静态（与谐波/横盘启动/吸筹三子页同款 hz-sub + 悬停详解）——
+  // R100z4v：断板页口径说明改静态（与谐波/横盘启动两子页同款 hz-sub + 悬停详解）——
   // 原用动态 db.note，该字段被 07:00 自动化 AI 写回污染（写入流程说明而非口径），弃用。
-  // R100z26：断板页口径说明改成与谐波/横盘启动/吸筹同款的「可展开条目块」。
+  // R100z26：断板页口径说明改成与谐波/横盘启动同款的「可展开条目块」。
   // 原来是一行 hz-sub + 400 字 title 悬浮 —— 手机上 title 根本不显示，等于没写。
-  // R100z162（用户 2026-10-24）：四页口径块统一为同一套五段——
+  // R100z162（用户 2026-10-24）：各页口径块统一为同一套五段——
   // 一句话逻辑 / 判定规则 / 分池 / 失效与离场 / 下一步（黄条）。
-  // 原先四页各写各的：断板 9 行、谐波 6 行、吸筹 7 行、横盘启动 3 行，标签名互不对应
+  // 原先各页各写各的：断板 9 行、谐波 6 行、横盘启动 3 行，标签名互不对应
   // （「判定四步」vs「硬门禁」vs「F1 试盘」），并排看像四个不同产品的说明书。
   // 段名固定后，读者在任一页都能按同一顺序找同一类信息。
   var _dbNote = '<details class="tech-legend"><summary>断板反包口径 · 全流程与分池（点击查看技术指标）</summary><div class="lg-body">' +
@@ -6979,13 +6865,13 @@ function renderDuanban() {
     // 徽章本身仍显示在卡片上，只是不再解释深浅含义。
     // ⚠️ 注释里不要把这个图例的名字写回来：G30 在整份 index.html 里按关键词找图例锚点，
     // 注释命中也算命中，会误判「图例还在但缺档」。这件事本轮踩了两次。
-    '<div class="lg-tip">下一步：缩量不破位只算「跌不动」，反包日放量收复断板日最高价 / 站回 MA5 才算真确认；破位无条件走，不摊平不扛单。此页与「谐波 / 横盘启动 / 吸筹」同为技术面观察器，仓位按中等及以下确信度给。</div>' +
+    '<div class="lg-tip">下一步：缩量不破位只算「跌不动」，反包日放量收复断板日最高价 / 站回 MA5 才算真确认；破位无条件走，不摊平不扛单。此页与「谐波 / 横盘启动」同为技术面观察器，仓位按中等及以下确信度给。</div>' +
     '</div></details>';
   var conf = (db && db.confirmed) || [], watch = (db && db.watching) || [];
   var badge = document.getElementById('db-badge');
   badge.textContent = (conf.length + watch.length) ? ('确认 ' + conf.length + ' · 观察 ' + watch.length) : '';
   var dbEntryBtn = document.getElementById('db-entry');
-  if (dbEntryBtn) dbEntryBtn.title = '点击进入技术看板（断板反包/谐波/横盘启动/主力吸筹）· 确认 ' + conf.length + ' · 观察 ' + watch.length;
+  if (dbEntryBtn) dbEntryBtn.title = '点击进入技术看板（断板反包/谐波/横盘启动）· 确认 ' + conf.length + ' · 观察 ' + watch.length;
   var html = '';
   // R100m：TOP10 与 开盘精选 写入 #db-fixed 固定区——切换子页时保持显示
   var fixed = '';
@@ -7006,7 +6892,7 @@ function renderDuanban() {
       if (hasKl) { window._TB_KL[b.name] = b.kline; window._TB_LIST.push(b.name); }
       var clickAttr = hasKl ? ' onclick="openBoardKlineByName(\'' + esc(b.name) + '\')"' : '';
       var cursorStyle = hasKl ? ' style="cursor:pointer;"' : '';
-      // R100n 修复：单元格必须写入 fixed（此前误写 html → 落进随子页显隐的 #db-pools，谐波/横盘启动/吸筹子页下 TOP10 表体整体消失）
+      // R100n 修复：单元格必须写入 fixed（此前误写 html → 落进随子页显隐的 #db-pools，谐波/横盘启动子页下 TOP10 表体整体消失）
       fixed += '<div class="db-tb-cell"' + cursorStyle + clickAttr + '><div class="db-tb-rank"><b>' + (i + 1) + '</b>' +
         '<span class="db-tb-nm">' + esc(b.name) + '</span></div>' + p3cell +
         '<div class="db-tb-today">今日 <b class="' + (up1 ? 'up' : 'down') + '">' + (up1 ? '+' : '') + b.pctToday.toFixed(2) + '%</b></div>' +
@@ -7028,16 +6914,15 @@ function renderDuanban() {
   if (st && st.date === _tdStr && st.picks && st.picks.length) {
     var poolByCode = {};
     conf.concat(watch).forEach(function (e) { poolByCode[String(e.code)] = e; });
-    // R100m：精选候选扩展至四池——断板池标的带概率，技术池（谐波/横盘启动/吸筹）标的带 src 来源标记、
+    // R100m：精选候选扩展至技术池——断板池标的带概率，技术池（谐波/横盘启动）标的带 src 来源标记、
     // 无概率排断板池之后；前端对池外标的构造最小弹窗条目（K线由 stkFetchKline 网络兜底）。
     var starPool = st.picks.filter(function (p) { return poolByCode[String(p.code)]; });
     var starTech = st.picks.filter(function (p) { return !poolByCode[String(p.code)] && String(p.code || '').length === 6; });
-    // R100z4u：技术池 code→条目 映射（横盘启动→谐波→吸筹 顺序），精选卡补分数徽章 + 分数降序
+    // R100z4u：技术池 code→条目 映射（横盘启动→谐波 顺序），精选卡补分数徽章 + 分数降序
     var D0 = window.DASHBOARD_DATA || {};
     var _techMap = {};
     ((D0.breakoutPool || {}).passed || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
     [].concat((D0.harmonic || {}).confirmPool || [], (D0.harmonic || {}).watchPool || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
-    ((D0.accumulation || {}).scored || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
     // R100z222：陈学长池也进映射表（严格先于放宽，与 starTechOf 同序）。精选条目是 update_star.py
     // 合成的精简版（只有 code/name/sector/src/sentiment/label/score），story / probability / 形态原文
     // 全在池条目里——不挂进来，弹窗「个股消息」和利好依据就是空白，这正是 R100z4t 当初加 _techMap 的原因。
@@ -7081,11 +6966,11 @@ function renderDuanban() {
     var _starClosed = _minsNow >= 15 * 60;
     fixed += '<div class="db-pool p-star"><h2>' + (_starClosed ? '📋 开盘精选 · 已收盘' : '🌟 开盘精选') +
       ' · ' + starPicks.length + ' 只</h2>' +
-      // R100z228：副标题原文只列了「谐波/横盘启动/吸筹」，而 R100z222 起陈学长也有 2 个名额——
+      // R100z228：副标题原文只列了「谐波/横盘启动」，而 R100z222 起陈学长也有 2 个名额——
       // 名册里有、说明书里没有，读者就不知道那两枚「陈学长·XX池」徽标是怎么进来的。顺手把各池名额写出来。
       '<div class="db-sub">' +
       (_starClosed ? '⚠️ 已收盘 —— 下面是当日 9:45 生成的盘前名单，仅供复盘对照，不是现在还能挂的单　｜　' : '') +
-      esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：断板池按「板块情绪正向+主力净流入正向」挂钩+上涨概率降序，并可从谐波/横盘启动/吸筹/陈学长池直接取标的（名额 横盘启动 3 · 谐波 3 · 吸筹 2 · 陈学长 2）；确认档永远排在待确认档之前，待确认档＝断板观察池 + 陈学长观察池 + 缩量回踩（放量阴后缩 1~2 天），只给形态与作废位、不给买点；弹窗与池内一致）' +
+      esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：断板池按「板块情绪正向+主力净流入正向」挂钩+上涨概率降序，并可从谐波/横盘启动/陈学长池直接取标的（名额 横盘启动 3 · 谐波 3 · 陈学长 2）；确认档永远排在待确认档之前，待确认档＝断板观察池 + 陈学长观察池 + 缩量回踩（放量阴后缩 1~2 天），只给形态与作废位、不给买点；弹窗与池内一致）' +
         (st.tierSummary && st.tierSummary.text ? '　｜　' + esc(String(st.tierSummary.text)) : '') +
         /* R100z309：停牌剔除留痕（不写这句，读者会以为「昨天那只今天怎么没了」是故障） */
         suspNoteHtml(st.suspended) +
@@ -7111,7 +6996,7 @@ function renderDuanban() {
         e2 = { code: code, name: p.name || '', sector: p.sector || '', stage: '精选',
                sentiment: p.sentiment || 'neutral', probability: p.probability,
                src: p.src || '',
-               form: ({ hz: '谐波形态', bp: '横盘启动', acc: '主力吸筹', chen: '陈学长断板反包',
+               form: ({ hz: '谐波形态', bp: '横盘启动', chen: '陈学长断板反包',
                         shrink: '缩量回踩（放量阴后缩量）' }[p.src] || '技术池候选'), note: p.note || '' };
         if (p.score != null) e2.score = p.score;
         if (p.grade) e2.grade = p.grade;
@@ -7146,7 +7031,7 @@ function renderDuanban() {
       DB_INDEX[key] = e2;
       DB_ORDER.push(key);
       if (code.length === 6) { window._STAR_LIST.push(code); }
-      fixed += dbCardHtml(e2, key, false, true, false, true); // R100z36：与四子页同一套 T2 卡片；R100z105：star=true → 四格按来源分派（断板=板块涨幅/上涨概率/MA5买入/止损；谐波=买入区PRZ/距PRZ/D点止损/T1；吸筹=评分/阶段/命中/纪律止损；横盘启动=评分/量比/RSI/纪律止损；陈学长=目标/止损/仓位/连板·放量）
+      fixed += dbCardHtml(e2, key, false, true, false, true); // R100z36：与四子页同一套 T2 卡片；R100z105：star=true → 四格按来源分派（断板=板块涨幅/上涨概率/MA5买入/止损；谐波=买入区PRZ/距PRZ/D点止损/T1；横盘启动=评分/量比/RSI/纪律止损；陈学长=目标/止损/仓位/连板·放量）
     });
     fixed += '</div></div>';
   }
@@ -7183,9 +7068,6 @@ function renderDuanban() {
   var bpWrap = document.getElementById('db-bp');
   if (bpWrap) bpWrap.innerHTML = subnavHtml() +
     (renderBreakoutPool() || '<div class="db-empty">暂无横盘启动数据（16:00 数据步跑 breakout_pool.py 后出现；空池是常态——贴沿标的一天平均 0.6 只）</div>');
-  // R100m：主力吸筹成为第 4 个子页（主页面模块同步移除）
-  var accWrap = document.getElementById('db-acc');
-  if (accWrap) accWrap.innerHTML = subnavHtml() + (renderAccumulation() || '<div class="db-empty">暂无主力吸筹数据</div>');
   // R100z218：陈学长独立指标子页
   var chenWrap = document.getElementById('db-chen');
   if (chenWrap) chenWrap.innerHTML = subnavHtml() +
@@ -7193,7 +7075,7 @@ function renderDuanban() {
 
   // R100n：子页记忆——优先恢复上次选择的子页（localStorage），默认断板反包
   var _savedTab = (function () { try { return localStorage.getItem('dbSubTab'); } catch (e) { return null; } })();
-  switchSubTab(['od', 'db', 'chen', 'bp', 'hz', 'acc'].indexOf(_savedTab) >= 0 ? _savedTab : 'od');
+  switchSubTab(['od', 'db', 'chen', 'bp', 'hz'].indexOf(_savedTab) >= 0 ? _savedTab : 'od');
 }
 
 /* ==========================================================================
@@ -7232,9 +7114,9 @@ function chenDataDay(c) {
    R100z220（用户 2026-10-26 截图 8）：内容与版式向另外四个技术指标看齐——
    R100z162 定的五段固定顺序「一句话逻辑 / 判定规则 / (lg-hr) / 分池 / 失效与离场 / lg-tip 下一步」，
    陈学长这页原先是 6 个 .lg-p 大段（该类比全站没有 CSS，等于纯 div 堆叠）：没有分隔线、没有黄条结论、
-   每段一坨 200 字，和断板/谐波/横盘启动/吸筹并排看像两种产品的说明书。本轮改成同一套五段，
+   每段一坨 200 字，和断板/谐波/横盘启动并排看像两种产品的说明书。本轮改成同一套五段，
    原文的每个事实（首板与连板的口径、三档梯度、不采纳三条、日线缺口、交易参数与仓位警告）一条不删，
-   只按新段落归位，并补上另外四页都有、这页缺的「分期与离场」与「下一步」。 */
+   只按新段落归位，并补上另外各页都有、这页缺的「分期与离场」与「下一步」。 */
 function chenLegendHtml(c) {
   // 用户 2026-10-26：「不要有什么版本号，就只有一个版本」。
   // 只有一套口径时，版本标记是噪音：读者要花力气确认「我看的是哪一版」，而答案永远同一版。
@@ -7255,7 +7137,7 @@ function chenLegendHtml(c) {
     '在断板反包页却是唯一一道关。所以这是<b>并列的第二套指标，不是断板反包的升级版</b>：两池同口径留痕，一周后比胜率。</div>' +
     '<div><b>判定规则</b>：硬结构 8 条（严格池与放宽池都要过），逐条核对——</div>' +
     '<div><b>① 主板且股价 ≥ 4 元</b>：60/00 开头；他说「四块钱以下是心电图票」。' +
-    '另加一道<b>次新股门槛</b>：K 线不足 35 根的不进池——他要求首板之前有「横盘吸筹」，' +
+    '另加一道<b>次新股门槛</b>：K 线不足 35 根的不进池——他要求首板之前有「横盘整理」，' +
     '新股没有横盘，而连板数会把上市首日的 +44% 当成「涨停」</div>' +
     '<div><b>② T 日涨停</b>：<b>首板也算</b>——「连板 ≥2」不是他的准入门槛</div>' +
     '<div><b>③ 不要求连板</b>：他的原方法里没有这道门槛。连板数仍然算出来、写在卡片和标的页上、并按它排序——' +
@@ -8032,7 +7914,7 @@ function failPoolSorted(failPool) {
    绝不因拼错 kind 就在页面上印出错误的形态名）。 */
 function failKindName(kind) {
   var m = {'duanban': '断板反包形态', 'harmonic': '谐波形态',
-           'accumulation': '主力吸筹结构', 'breakoutPool': '横盘启动平台',
+           'breakoutPool': '横盘启动平台',
            'chen': '陈学长反包形态'};   // R100z218
   return m[String(kind)] || '原形态';
 }
@@ -8092,12 +7974,12 @@ function failTcHtml(e, i, latestD) {
   var bp = failBoardPct(e);
   var bpCls = bp === null ? 'flat' : (bp > 0 ? 'up' : (bp < 0 ? 'down' : 'flat'));
   var isNew = (latestD && e.entryDate === latestD);
-  // R100z44：「新」徽章统一由 tcCard fresh 在 tc-top 渲染（与四模块新入池同位置），foot 不再重复
+  // R100z44：「新」徽章统一由 tcCard fresh 在 tc-top 渲染（与各池新入池同位置），foot 不再重复
   var foot = '<span class="xt">' + esc(String(e.reason || '形态失效').replace(/（.*$/, '')) + '</span>' +
     ' · 归档 ' + esc(e.entryDate || '—');
   return tcCard({
     code: e.code, name: e.name, chg: tcPctOf(e.code, e.pct), dim: true,
-    fresh: isNew, // R100z44：失效池新归档首日同样整卡黄色（与四模块新入池同一样式）
+    fresh: isNew, // R100z44：失效池新归档首日同样整卡黄色（与各池新入池同一样式）
     pills: [stkSecPillOf(e.code, e.sector || '其他')],
     sent: true, // R100z84：失效卡同样带利好/利空/中性徽章（无 AI 写回，按当日要闻 impacts 加权，与全站同口径）
     cells: [
@@ -8148,9 +8030,9 @@ function failHzTcHtml(e, i, latestD) {
       '\n' + (e.reason || '形态失效') + '\n点击查看失效前K线与消息面'
   });
 }
-/* R100z93（用户 2026-10-08 截图要求）：吸筹 / 横盘启动失效池改用与确认/观察池、断板/谐波同款 T2 骨架——
-   吸筹横盘启动没有距 PRZ/止损 这类几何字段，故用各自有意义的字段：吸筹=评分/评级 + 宽格失效原因（滞后并入 foot）；
-   横盘启动=本轮评分/评级 + 宽格失效原因。foot 写「归档日期」，失效原因（归档原因）落宽格，与断板/谐波 foot 口径一致，
+/* R100z93（用户 2026-10-08 截图要求）：横盘启动失效池改用与确认/观察池、断板/谐波同款 T2 骨架——
+   横盘启动没有距 PRZ/止损 这类几何字段，故用各自有意义的字段：本轮评分/评级 + 宽格失效原因。
+   foot 写「归档日期」，失效原因（归档原因）落宽格，与断板/谐波 foot 口径一致，
    杜绝旧 fail-chip「小子」字号/粗细不统一、红字显粗的观感。 */
 function failGenericTcHtml(e, i, latestD, kind) {
   var isNew = (latestD && e.entryDate === latestD);
@@ -8163,16 +8045,6 @@ function failGenericTcHtml(e, i, latestD, kind) {
       tcCell('失效原因', esc(e.reason || '形态失效'), '', true)
     ];
     foot = esc(String(e.form || '').replace(/·/, '：')) || '原形态已不成立 · 自失效日起保留 5 个交易日';
-  } else if (kind === 'accumulation') {
-    var sc = Number(e.score);
-    var scCls = isFinite(sc) ? (sc >= 70 ? 'up' : (sc >= 50 ? '' : 'warn')) : '';
-    var lag = Number(e.lagDays);
-    cells = [
-      tcCell('评分', isFinite(sc) ? (sc + ' 分') : '—', scCls),
-      tcCell('评级', e.grade || '—', e.grade === '强' ? 'up' : ''),
-      tcCell('失效原因', esc(e.reason || '形态失效'), '', true)
-    ];
-    foot = (isFinite(lag) && lag > 0 ? ('信号滞后 ' + lag + ' 日 · ') : '') + '归档 ' + esc(e.entryDate || '—');
   } else { // breakoutPool 横盘启动——第二格是「涨停日 / 洗盘天数」
     // 归档时最该留的是「它当初是哪一根涨停起爆、洗了几天」，复盘才知道错在哪。
     // 失效时最该留的信息是「它当初是哪一根涨停起爆的、洗了几天」，复盘才知道错在哪。
@@ -8205,8 +8077,8 @@ function dbFailHtml(failPool, kind) {
   failPool = failPoolSorted(failPool);
   /* ⚠️ R100z60 修订（用户 2026-10-04 当场澄清，别再改回去）：空池**照旧渲染**整块
      「失效归档池 · 0 只 + 暂无失效标的」——用户说的"留空白"**不是删块**，是让这块跟上面的
-     标的网格之间**留出间距、别贴脸**。我先前误读成"空态不渲染"直接 return ''，把吸筹/横盘启动/谐波
-     三页的失效池整块抹掉了，属于误删，已回滚。真正做的是给 `.db-pool.p-fail` 加 margin-top
+     标的网格之间**留出间距、别贴脸**。我先前误读成"空态不渲染"直接 return ''，把横盘启动/谐波
+     两页的失效池整块抹掉了，属于误删，已回滚。真正做的是给 `.db-pool.p-fail` 加 margin-top
      （见 CSS 段 R100z60 那行）。 */
   if (!failPool.length) {
     return '<div class="db-pool p-fail"><h2>失效归档池 · 0 只</h2>' +
@@ -8226,10 +8098,10 @@ function dbFailHtml(failPool, kind) {
       '<div class="db-sub">原符合谐波形态、因破位或超期失效而归因失败；自失效日起保留 5 个交易日后剔除</div>' +
       '<div class="db-chips">' + hzItems + '</div></div>';
   }
-  // R100z93：吸筹/横盘启动失效池 → 与断板/谐波同款 T2 卡（failGenericTcHtml），foot 写归档原因，字号/粗细统一
+  // R100z93：横盘启动失效池 → 与断板/谐波同款 T2 卡（failGenericTcHtml），foot 写归档原因，字号/粗细统一
   var items = failPool.map(function (e, i) { return failGenericTcHtml(e, i, _latestD, kind); }).join('');
   return '<div class="db-pool p-fail"><h2>失效归档池 · ' + failPool.length + ' 只</h2>' +
-    // R100z56：kind 决定「原符合哪个形态」的措辞——吸筹/横盘启动页挂上来不会印错形态名
+    // R100z56：kind 决定「原符合哪个形态」的措辞——横盘启动页挂上来不会印错形态名
     '<div class="db-sub">原符合' + esc(failKindName(kind)) + '、因破位或超期失效而归因失败；自失效日起保留 5 个交易日后剔除</div>' +
     '<div class="db-chips">' + items + '</div></div>';
 }
@@ -8383,8 +8255,6 @@ function ordCardExitMeta(code0) {
    同步所有实例的 .on 高亮。断板页位置=开盘精选与确认池说明之间；谐波/横盘启动页位置=页首。 */
 var currentSubTab = 'db';
 function subnavHtml() {
-  // R100z28：用户指定把「主力吸筹」排到「日线横盘启动」前面（吸筹是唯一还在跟的买点型信号，
-  // 横盘启动已回测出负超额，不该占更靠前的位）；四个键的映射关系不变，仅调整视觉顺序。
   var tabs = [
     // R100z162（用户 2026-10-24）：新增「开盘预测」子页并排到最前——盘前前瞻 + AI 预测分析 +
     // （R100z234 起交易预案已删，这里只剩两块）。排第一是因为它是每天开盘前唯一要看的一页：先判断方向。
@@ -8395,13 +8265,9 @@ function subnavHtml() {
     { k: 'chen', t: '陈学长' },
     // R100z232（用户 2026-10-26「删九门模块 + 新增横盘启动模块」）：`pw` 整条链撤掉，
     // 换成 `bp`（横盘启动，breakout_pool.py）。位置放在「陈学长」后面——断板/陈学长/横盘启动
-    // 三个都是**买点型**池，排在一起读者才能横向比；谐波/吸筹排后面。
-    // 横盘启动撤掉的数据依据（不是偏好）：同跑道回测 t=−5.02、均超额 −0.390%/笔、胜率 45.6%，
-    // 是四个技术池里唯一突破 5 的负超额；且「次日留存 25%」＝每天换一份名单，追不进去。
-    // 横盘启动同跑道 t=0.41（不显著），但均超额 +0.148%/笔、胜率 54.0%，是四者里唯一非负的。
+    // 三个都是**买点型**池，排在一起读者才能横向比；谐波排后面。
     { k: 'bp', t: '横盘启动' },
-    { k: 'hz', t: '谐波形态' },
-    { k: 'acc', t: '主力吸筹' }
+    { k: 'hz', t: '谐波形态' }
   ];
   return '<div class="db-subnav">' + tabs.map(function (x) {
     return '<div class="db-subtab' + (x.k === currentSubTab ? ' on' : '') + '" data-k="' + x.k + '" onclick="switchSubTab(\'' + x.k + '\')">' + x.t + '</div>';
@@ -8410,10 +8276,10 @@ function subnavHtml() {
 function switchSubTab(k) {
   // R100z232：`pw`（九门）已删。老浏览器里 localStorage 可能还存着 'pw'，
   // 不拦的话 switchSubTab('pw') 找不到容器 → 所有子页 display:none → **整页空白且无报错**。
-  var map = { od: 'db-od', db: 'db-pools', chen: 'db-chen', bp: 'db-bp', hz: 'db-hz', acc: 'db-acc' };
+  var map = { od: 'db-od', db: 'db-pools', chen: 'db-chen', bp: 'db-bp', hz: 'db-hz' };
   if (!map[k]) k = 'db';
   currentSubTab = k;
-  try { localStorage.setItem('dbSubTab', k); } catch (e) {} // R100n：记住上次子页（开盘预测/断板/陈学长/横盘启动/谐波/吸筹）
+  try { localStorage.setItem('dbSubTab', k); } catch (e) {} // R100n：记住上次子页（开盘预测/断板/陈学长/横盘启动/谐波）
   Object.keys(map).forEach(function (m) {
     var el = document.getElementById(map[m]);
     if (el) el.style.display = (m === k) ? 'block' : 'none';
@@ -8979,7 +8845,7 @@ function openDbModal(key) {
     //   和被删的交易参数不是一回事，必须留。
     (isFail ? '<div><span class="lab">失效原因：</span>' + esc(e.reason || '—') + '</div>' +
       '<div><span class="lab">归档日：</span>' + esc(e.entryDate || '—') + '（自失效日起保留 5 个交易日后自动清理）</div>' : '') +
-    // R100z3：对应技术面（横盘启动/吸筹）纯文本行 + 龙虎榜，命中才渲染
+    // R100z3：对应技术面（横盘启动）纯文本行 + 龙虎榜，命中才渲染
     techMetaLines(String(e.code));
   // R100z6d：断板弹窗主图补画谐波 XABCD 连线（此前 dbKlineSvg 漏传 hz，仅头部迷你图有连线——用户反馈"有谐波技术但K线没连线"）
   // K线兜底链——池条目内嵌 → 顶层 stkKlines（embed 分级内嵌）→ 网络拉取后回填；
@@ -9069,7 +8935,7 @@ function openDbModal(key) {
     faceHtml = '<div class="db-ref-p"><b>中性口径：</b><span class="db-ref-sum" style="display:inline;">' +
       '暂无明确利好/利空消息（按当日要闻自动匹配，AI 复核可改判）</span></div>';
   }
-  if (e.deduce) faceHtml += renderDeduce(e.deduce, true); // R100z4t：技术池标的合并自 breakoutPool/harmonic/accumulation 的三候选推演
+  if (e.deduce) faceHtml += renderDeduce(e.deduce, true); // R100z4t：技术池标的合并自 breakoutPool/harmonic 的三候选推演
   document.getElementById('db-refs').innerHTML =
     faceHtml +
     '<br>' + (isChen
@@ -9532,7 +9398,7 @@ var KL_FULL = 90; // R100z19 K线定稿：顶层内嵌全量 90 根
 function stkEmbeddedKline(code) {
   if (!code) return null;
   var best = null;
-  // ① 池内嵌条目（断板/谐波/吸筹/横盘启动）——多个池都命中时同样比长度
+  // ① 池内嵌条目（断板/谐波/横盘启动）——多个池都命中时同样比长度
   if (DB_INDEX) {
     var keys = Object.keys(DB_INDEX);
     for (var i = 0; i < keys.length; i++) {
@@ -9903,7 +9769,7 @@ function stkEnergyHtml(code) {
   var posTxt = '';
   if (pre !== null) {
     if (pre < 10) posTxt = '前 20 日' + (pre >= 0 ? '仅 +' : '反而跌 ') + f1(Math.abs(pre)) +
-      '%——低位启动，这是<b>试盘</b>不是吸筹，主力手里还没有筹码。';
+      '%——低位启动，这是<b>试盘</b>不是建仓，主力手里还没有筹码。';
     else if (pre < 30) posTxt = '前 20 日已涨 +' + f1(pre) + '%，属<b>接力位</b>，抛压比低位首板重。';
     else posTxt = '前 20 日已涨 +' + f1(pre) + '%，这是<b>高位加速</b>，不是启动。';
   }
@@ -10045,7 +9911,7 @@ function stkEnergyHtml(code) {
 
   /* ⑦ 分时承接（R100z346，用户 2026-11-11 16:49 要求加深）。
      原话：「你量能关系写的太浅了…要告诉我上午和下午有没有站分时线、是一直站还是想站站不上、
-     盘中下跌有没有承接（无量承接靠大盘情绪 还是有量承接主力在吸筹）、收盘站线上还是线下、
+     盘中下跌有没有承接（无量承接靠大盘情绪 还是有量承接主力在收集筹码）、收盘站线上还是线下、
      全天都在线上吗、盘中有没有爆量拉升、爆量之后是回落还是横住」。
      读 `stkIntraday`（intraday_digest.py 从 5 分钟线算的 19 个字段），逐条回答，不再只给一个占比。
      ⚠️ 没这只票（不在池 / 断板太老没抓）时**整段不出现**，退回 ⑤ 的日线描述，不编。 */
@@ -10286,10 +10152,10 @@ function openStkModal(code, name, note) {
     '<div class="m-badge-row">' + stkSecBadge(code) + stkTechBadgeHtml(code) + stkPoolBadge(code) +
     stkLhbBadge(code) + // R100z201：当日龙虎榜归属（净买红/净卖绿 + 净额）
     riskTipBadge(code) + // R100z87：可见风险提示徽章（手机端可达，置于情绪徽章前）
-    (stkTechMeta(code) ? sentBadgeHtml(code) : '') + // R100z4c：横盘启动/谐波/吸筹标的徽标行末尾加 利好/中性/利空（非技术池标的不显示）
+    (stkTechMeta(code) ? sentBadgeHtml(code) : '') + // R100z4c：横盘启动/谐波标的徽标行末尾加 利好/中性/利空（非技术池标的不显示）
     '</div>' +
     (hz ? '<div class="hz-strip">' + hzSideHtml(hz) + hzMiniWrap(hz) + '</div>' : ''); // R100z4：谐波参数+迷你图独立成行，参数贴左填满消除空档
-  // R100z3：横盘启动/吸筹纯文本行（断板弹窗同格式）；R100z18 末尾补退出纪律行（止损/目标/证伪）
+  // R100z3：横盘启动纯文本行（断板弹窗同格式）；R100z18 末尾补退出纪律行（止损/目标/证伪）
   document.getElementById('stk-modal-meta').innerHTML =
     (note ? esc(note) + '<br>' : '') + techMetaLines(code) +
     (stkEnergyInPool(code) ? '' : exitMetaLine(code)); // R100z343：断板/陈学长走量能解读，不再重复退出纪律

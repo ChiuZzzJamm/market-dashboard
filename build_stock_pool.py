@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""机械选股池（R100z15 缺口②）——把「断板池 / 谐波池 / 吸筹池 / 强势池」接回决策链。
+"""机械选股池（R100z15 缺口②）——把「断板池 / 谐波池 / 横盘启动池」接回决策链。
 
 为什么需要它（2026-10-01 体检实测的最根本问题）：
-    项目自己造了四个选股引擎（check_duanban / harmonic_detect / accumulation_score / breakout_pool），
+    项目自己造了三个选股引擎（check_duanban / harmonic_detect / breakout_pool），
     旧 16:00 单步任务那个交易日里却只有 6/48 只（12.5%）来自断板池，剩下 42 只是 AI 看 note 手写的
     「板块龙头 / CPO概念 / 换手活跃」。而刚上的个股硬风险黑名单拦掉的 4 只（恒邦股份、豫光金铅、
     华钰矿业、立昂微），恰好全都是这类主观 pick——**黑名单拦得住坏票，却拦不住「好票是 AI 瞎挑的」**。
@@ -12,7 +12,7 @@
     配额（写死，AI 不得改）：
         断板确认池最多 4 只（按 probability 降序）
         谐波确认池最多 2 只（确认池优先于观察池；谐波自带形态失效位，直接当止损）
-        吸筹/横盘启动池最多 2 只（accumulation 分数 / breakoutPool 分数 降序）
+        横盘启动池最多 2 只（breakoutPool 分数降序）
         以上凑不满 8 只才允许「全局补位」，且补位≤2 只并强制标 [补位]
     板块匹配：精确同名 → 显式别名表 → 字符 Jaccard≥0.34 → 子串包含，逐级放宽。
 
@@ -75,7 +75,6 @@ process.stdout.write(JSON.stringify({
     watching: (d.duanban && d.duanban.watching) || []
   },
   harmonic: d.harmonic || {},
-  accumulation: d.accumulation || {},
   breakoutPool: d.breakoutPool || {}
 }));
 """
@@ -113,10 +112,9 @@ FILL_CAP = 2      # 单个板块补位上限（全局补位超 2 只说明机械
 NOISE_WORDS = ('行业', '设备', '制造', '材料', '装置', '器件', '服务', '产业', '金属', 'Ⅱ')
 
 # code → 最新收盘价索引（R100z163）。由 main() 在跑 pick_for 之前从四个池里扫一遍填好。
-# 为什么需要：accumulation.scored 的字段只有 {code,name,sector,score,grade,features,…}，
-# **完全不带价格**（无 lastClose、无 kline），单靠它 mk() 算出来的 stop/target 全是 None
-# → 机械池交出去的就是「止损 — / 目标 —」的空纪律位，AI 照抄必被 exit 三件套判 FAIL。
-# 同一只票通常也在 breakoutPool / harmonic / 断板里出现并带价，故用别的池兜底，零网络。
+# 为什么需要：技术池条目的字段未必带价格（无 lastClose、无 kline），单靠它 mk() 算出来的
+# stop/target 会是 None → 机械池交出去的就是「止损 — / 目标 —」的空纪律位，AI 照抄必被
+# exit 三件套判 FAIL。同一只票通常也在别的池里出现并带价，故用别的池兜底，零网络。
 PX = {}
 
 
@@ -193,18 +191,15 @@ def falsify_of(item):
         return '收盘跌破涨停日最低价（反包启动位下沿），或反包日冲高回落收阴——形态失败，无条件离场'
     if src == '谐波':
         return '跌破形态失效位（止损），或价格未进 PRZ 即先行破位——结构无效'
-    if src == '吸筹':
-        return '第 4-6 日仍不收复 MA5 且量能未放大——吸筹失败，视为假突破'
     if src == '强势':
         return '次日收阴且跌破前一日最低价——情绪退潮，不追高'
     return '跌破买入当日最低点——机械候选无形态位，一律按止损纪律执行'
 
 
-def pick_for(sector, pools, quota_duan=4, quota_harm=2, quota_acc=2, quota_fill=8):
+def pick_for(sector, pools, quota_duan=4, quota_harm=2, quota_fill=8):
     """给一个预测板块挑 8 只。返回 (list, coverage_note)"""
     duan = pools.get('duanban') or []
     harm = pools.get('harmonic') or []
-    acc = pools.get('accumulation') or []
     bp_ = pools.get('bp') or []
     aliases = SECTOR_ALIAS.get(sector, [])
 
@@ -242,18 +237,16 @@ def pick_for(sector, pools, quota_duan=4, quota_harm=2, quota_acc=2, quota_fill=
 
     (m_d, w_d, o_d) = match(duan)
     (m_h, w_h, o_h) = match(harm)
-    (m_a, w_a, o_a) = match(acc)
     (m_p, w_p, o_p) = match(bp_)
-    weak_all = w_d + w_h + w_a + w_p
-    orphans = o_d + o_h + o_a + o_p
+    weak_all = w_d + w_h + w_p
+    orphans = o_d + o_h + o_p
     got, notes = [], []
 
     def dup(it):
         """跨池去重（R100z163）。原实现只在每个 match() 内部去重，跨池没有：
-        2026-10-21 实测同一只票会以「谐波 + 强势」「吸筹 + 强势」两种身份
-        **同时进同一个板块的 8 只**（金域医学 603882、润建股份 002929），
-        8 只里有重复代码 → 下游去重后不足 8 只 / 配比点数对不上。
-        优先级即调用顺序：断板 > 谐波 > 吸筹 > 强势 > 补位。"""
+        2026-10-21 实测同一只票会以「谐波 + 强势」两种身份**同时进同一个板块的 8 只**
+        （金域医学 603882、润建股份 002929），8 只里有重复代码 → 下游去重后不足 8 只 /
+        配比点数对不上。优先级即调用顺序：断板 > 谐波 > 强势 > 补位。"""
         return any(g['code'] == code6(it) for g in got)
 
     unpriced = []
@@ -285,14 +278,8 @@ def pick_for(sector, pools, quota_duan=4, quota_harm=2, quota_acc=2, quota_fill=
         if dup(it):
             continue
         take(it, '谐波', stop_pct=0.0, use_harm_stop=True, tgt=r2(it.get('target1')))
-    # 3) 吸筹 / 强势（最多 2）
-    for it in m_a[:1]:
-        if len(got) >= quota_fill:
-            break
-        if dup(it):
-            continue
-        take(it, '吸筹', stop_pct=-3.0, tgt=8.0)
-    for it in m_p[:1]:
+    # 3) 横盘启动（最多 2）
+    for it in m_p[:2]:
         if len(got) >= quota_fill:
             break
         if dup(it):
@@ -319,10 +306,10 @@ def pick_for(sector, pools, quota_duan=4, quota_harm=2, quota_acc=2, quota_fill=
                      % (len(unpriced), '、'.join(unpriced[:4])))
 
     for g in got:
-        g['quota'] = '断板 %d / 谐波 %d / 吸筹强势 %d / 补位 %d' % (
+        g['quota'] = '断板 %d / 谐波 %d / 强势 %d / 补位 %d' % (
             sum(1 for x in got if x['src'] == '断板反包'),
             sum(1 for x in got if x['src'] == '谐波'),
-            sum(1 for x in got if x['src'] in ('吸筹', '强势')),
+            sum(1 for x in got if x['src'] == '强势'),
             sum(1 for x in got if x['src'] == '补位'))
     # 少于 3 只 = 这个板块机器根本选不出来：正确的反应是 19:30 叙事步换板块，不是硬凑 8 只
     if len(got) < 3:
@@ -387,7 +374,7 @@ def mk(it, src, last, stop_pct=0.0, tgt=6.0, use_harm_stop=False, filled=False, 
     """
     code = code6(it)
     name = norm(it.get('name'))
-    # R100z163：吸筹池不带价 → 用 PX 索引兜底，否则 stop/target 全是 None（空纪律位）
+    # R100z163：技术池条目未必带价 → 用 PX 索引兜底，否则 stop/target 全是 None（空纪律位）
     last = r2(last)
     if last is None:
         last = PX.get(code)
@@ -457,7 +444,6 @@ def main():
 
     du = d.get('duanban') or {}
     hm = d.get('harmonic') or {}
-    ac = d.get('accumulation') or {}
     ps = d.get('breakoutPool') or {}
 
     def flat(pool):
@@ -474,7 +460,6 @@ def main():
     pools = {
         'duanban': flat(du.get('confirmed')) + flat(du.get('watching')),
         'harmonic': flat(hm.get('confirmPool')) + flat(hm.get('watchPool')),
-        'accumulation': flat(ac.get('scored')),
         'bp': flat(ps.get('passed')),
     }
 
@@ -515,7 +500,7 @@ def main():
            'candidateDate': d.get('candidateDate'),
            'sectorsSource': sectors_source,
            'sectors': names,
-           'quotaRule': '断板反包≤4 + 谐波≤2 + 吸筹/强势≤2 + 补位≤2',
+           'quotaRule': '断板反包≤4 + 谐波≤2 + 强势≤2 + 补位≤2',
            'bySector': by_sector, 'coverage': coverage, 'note': '；'.join(sorted(set(allnotes))),
            'pools': {k: len(v) for k, v in pools.items()},
            'fail': fails,
@@ -546,9 +531,8 @@ def main():
         print('重键 diff：沿用 %d / 新增 %d / 丢弃旧键 %d' % (len(kept), len(added), len(dropped)))
         if dropped:
             print('   丢弃（已不再预测的旧键）：' + '、'.join(dropped))
-    print('候选池规模：断板 %d / 谐波 %d / 吸筹 %d / 横盘启动 %d' %
-          (len(pools['duanban']), len(pools['harmonic']),
-           len(pools['accumulation']), len(pools['bp'])))
+    print('候选池规模：断板 %d / 谐波 %d / 横盘启动 %d' %
+          (len(pools['duanban']), len(pools['harmonic']), len(pools['bp'])))
     for c in coverage:
         print('\n【%s】机械候选 %d 只' % (c['sector'], c['picked']))
         for it in by_sector.get(c['sector'], []):

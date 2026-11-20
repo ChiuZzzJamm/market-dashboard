@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """R100z9x：开盘精选 AI 文案写回（只改 duanban.star 的 sentiment / pushText）。
 
-纪律：唯一写入口 duanban.star；其余字段（ashare/us/断板池/谐波/九门/吸筹/fullScan…）
+纪律：唯一写入口 duanban.star；其余字段（ashare/us/断板池/谐波/横盘启动/fullScan…）
 一律按原样 round-trip 回去，不做任何加工。
 """
 import datetime

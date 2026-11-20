@@ -4,7 +4,7 @@
 
 ## 要解决什么
 
-这套系统有四个量化选股模块（谐波形态 / 吸筹打分 / 九门强势 / 断板反包）加一个
+这套系统有三个量化选股模块（谐波形态 / 横盘启动 / 断板反包）加一个
 AI 预测。它们**各自独立推荐**，但从来没有人回答一个最基本的问题：
 
     **这四个指标，哪一个现在是准的？**
@@ -79,7 +79,7 @@ ENTRY_MODE = {'ai': 'open', 'buy': 'close'}
 
 SRC_LABEL = {
     'ai': 'AI 预测',
-    'mech': '机械池（吸筹+横盘启动）',
+    'mech': '机械池（非形态止损）',
     'duanban': '断板反包',
     # R100z297：断板反包按池拆开（历史合并口径仍用上面那行，见 ROW_ORDER 的说明）
     'duanban_confirmed': '断板反包·确认池',
@@ -89,7 +89,6 @@ SRC_LABEL = {
     'chen_loose': '陈学长·放宽池',
     'breakoutPool': '横盘启动',
     'harmonic': '谐波形态',
-    'accumulation': '主力吸筹',
     # R100z255：全站唯一「明确告诉你现在能买」的清单，此前是唯一没有台账的源。
     # R100z301（用户 2026-11-03「今日可下单是不是开盘精选？是的话就改成开盘精选」）：
     # 是——它就是 9:45 那步「🌟 开盘精选」里带买点的那批（`duanban.star.buyList`），
@@ -123,7 +122,7 @@ SRC_LABEL = {
 ROW_ORDER = ('ai', 'mech',
              'duanban', 'duanban_confirmed', 'duanban_watching',
              'chen', 'chen_strict', 'chen_loose',
-             'breakoutPool', 'harmonic', 'accumulation',
+             'breakoutPool', 'harmonic',
              'buy', 'buy_zone')
 
 # 子池行 → 它的父汇总行。前端据此把子行缩进、去掉重复的「断板反包」前缀感。
@@ -134,8 +133,8 @@ SUB_OF = {
     'buy_zone': 'buy',
 }
 
-# stop_ledger 的 stopSrc → 主台账键名。stop_ledger 无法区分吸筹与横盘启动
-# （两者都落进 default-3%），所以合成一个 'mech'，不硬拆成两个假精度。
+# stop_ledger 的 stopSrc → 主台账键名。default-3% 那批标的无法细分到具体技术池，
+# 所以合成一个 'mech'，不硬拆成假精度。
 SRC_LEGACY_MAP = {'harmonic': 'harmonic', 'ai-exit': 'ai',
                   'T日低点': 'duanban', 'default-3.0%': 'mech', 'default-3%': 'mech'}
 
@@ -928,7 +927,7 @@ def stats_from_stops(D, bench):
         touch 止损口径（这个指标的止损位合不合适）
 
     局限（必须显示出来，不能假装没有）：
-      · `stopSrc` 无法区分「吸筹」与「九门」（两者都落进 default-3%）；
+      · `stopSrc` 无法区分具体技术池（default-3% 那批已被合并）；
       · 同一只票被多指标选中时，stop_ledger 只记首个来源（先到先得），
         会低估共振票。这两点由新的 signal_ledger 逐步接管。
 
@@ -1036,16 +1035,16 @@ def self_test():
 
     # ④ 权重：超额为正的才有权重，负的归零；合计为 1
     good = {}
-    for s, e in (('harmonic', 2.0), ('accumulation', -1.5), ('breakoutPool', 1.0)):
+    for s, e in (('harmonic', 2.0), ('duanban', -1.5), ('breakoutPool', 1.0)):
         good[s] = {'label': s, 'n': 100, 'days': 10, 'sampleEnough': True,
                    'h': {str(h): {'n': 100, 'ret': e, 'exc': e, 'win': 0.6, 'winExc': 0.6}
                          for h in HORIZONS}}
     w2, msg2 = suggest_weights(good)
     chk('超额为正的指标有权重', 'harmonic' in w2 and 'breakoutPool' in w2)
-    chk('超额为负的指标权重归零（不在表里）', 'accumulation' not in w2)
+    chk('超额为负的指标权重归零（不在表里）', 'duanban' not in w2)
     chk('权重合计 = 1.0（实测 %s）' % round(sum(w2.values()), 3),
         abs(sum(w2.values()) - 1.0) < 0.01)
-    chk('零权说明里点名了该指标', SRC_LABEL['accumulation'] in msg2)
+    chk('零权说明里点名了该指标', SRC_LABEL['duanban'] in msg2)
 
     # ⑤ 可执行口径：T+1 开盘买入
     b2 = [('2026-10-01', 100, 100, 101, 99, 1e6),      # 登记日：收 100

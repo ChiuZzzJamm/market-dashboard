@@ -117,8 +117,6 @@ def displayed_codes(D):
     hz = D.get("harmonic") or {}
     for e in (hz.get("confirmPool") or []) + (hz.get("watchPool") or []):
         add(e.get("code"), e.get("name"))
-    for e in ((D.get("accumulation") or {}).get("scored") or []):
-        add(e.get("code"), e.get("name"))
     for p in ((db.get("star") or {}).get("picks") or []):
         add(p.get("code"), p.get("name"))
     for x in ((D.get("ashare") or {}).get("lianban") or []):
@@ -151,8 +149,7 @@ def _industry(D, code):
     cp = D.get("chenPool") or {}
     holders = [db.get("confirmed") or [], db.get("watching") or [],
                cp.get("strict") or [], cp.get("loose") or [], cp.get("watching") or [],
-               (D.get("breakoutPool") or {}).get("passed") or [],
-               (D.get("accumulation") or {}).get("scored") or []]
+               (D.get("breakoutPool") or {}).get("passed") or []]
     for arr in holders:
         for e in arr:
             if str(e.get("code")) == code and e.get("sector"):

@@ -4,7 +4,7 @@
 
 ## 为什么要单独写一个，而不是改 backtest_indicators.py
 
-`backtest_indicators.replay()` 每根 K 线都要跑谐波/吸筹/九门三个重指标（ZigZag、
+`backtest_indicators.replay()` 每根 K 线都要跑谐波/横盘启动两个重指标（ZigZag、
 打分、九门九道门），2 年 × 1260 只跑一次要几十分钟。而「横盘启动」是纯算术，几百毫秒
 就能扫完全库。**共用跑道、只换信号源**，才能保证两边数字可比：
 

@@ -219,12 +219,18 @@ HOLD_DAYS_PREV = 2       # 换参前的持有上限（同上）
 MA5_GAP_MIN = 3.0        # 确认日收盘相对 MA5 的最小溢价（%）
 # R100z222（审核意见 §19.4）：次新股硬门槛。Tencent 主源回 70 根、新浪备用回 40 根，
 # 上市不足 35 个交易日的票两根源都会短于这个数——用它判「次新」比任何日期字段都可靠
-# （get_kline 只回 K 线，拿不到上市日）。他明确不做新股：首板要「横盘吸筹」之后，
+# （get_kline 只回 K 线，拿不到上市日）。他明确不做新股：首板要「横盘整理」之后，
 # 新股没有横盘；而 calc_lbc 会把上市首日的 +44% 当成「涨停 + 1 板」。
 NEW_STOCK_MIN_BARS = 35
 # 审核意见 §8：止损距离 > 10% 的票单独标记（本口径持有 10 日，宽止损是可达的，
 # 标记含义已从「止损形同虚设」改为「止损偏远、仓位压到底仍偏险」，见 trade_params）。
 STOP_FAR_PCT = 10.0
+# R100z364（2026-11-20 用户「根据你的建议全部修改」）：**纪律止损上限**。
+# 台账 196 笔的归因（edge_study.py）：胜率 62% 却累计 −217.8%，因为止盈封顶 +5%、
+# 止损却取形态位（涨停日最低价），R=(买价−止损)/买价 可以到 −25%，R>20% 那桶 67% 胜率、
+# 均值 −3.47%。所以止损不得宽于「买价 −5%」：取 max(形态位, 买价×0.95)。
+# 只对**新记账**生效（entry.stopCap>0）；老条目按冻结口径继续算，绝不回头改写历史。
+STOP_CAP_PCT = 5.0
 # 已删除 LBC_MIN（连板门槛）：连板数仍由 calc_lbc 算出，只展示/排序，不拦截。
 # 用户 2026-10-25：「陈学长没有要求连板≥2，首板也可以」。
 
@@ -288,7 +294,7 @@ def _structure(code, kl, zt_iso, min_days_ago):
     返回 dict（键见 return）或 None（不成立 / 窗口外）。
     """
     n = len(kl)
-    # 次新股门槛（§19.4）：K 线不足 35 根 → 上市太近，他明确不做（首板要有横盘吸筹）
+    # 次新股门槛（§19.4）：K 线不足 35 根 → 上市太近，他明确不做（首板要有横盘整理）
     if n < NEW_STOCK_MIN_BARS:
         return None
     if not re.match(r"^(60|00)\d{4}$", str(code)):
@@ -523,6 +529,11 @@ def trade_params(ref_close, stop_price):
     # 是止损设在噪音里。收紧到 2% 后仓位自然降到 ≤75%/上限 30%，风险预算仍守 1.5%。
     if (buy - stop) / buy * 100 < 2.0:
         stop = round(buy * 0.98, 2)
+    # R100z364：形态位过远时按纪律上限收口（见 STOP_CAP_PCT 注释）。
+    raw_dist = (buy - stop) / buy * 100
+    stop_capped = raw_dist > STOP_CAP_PCT
+    if stop_capped:
+        stop = round(buy * (1 - STOP_CAP_PCT / 100), 2)
     dist = (buy - stop) / buy * 100
     pos = min(30, max(5, round(RISK_BUDGET / dist * 100))) if dist > 0.2 else 5
     risk = round(pos * dist / 100, 2)
@@ -534,9 +545,8 @@ def trade_params(ref_close, stop_price):
     if breach:
         note += "｜⚠️ 止损 %.1f%% 过宽，%d%% 的仓位下限已顶破预算（实际单笔亏 %.2f%%）" % (
             dist, pos, risk)
-    if dist > STOP_FAR_PCT:
-        note += "｜⚠️ 止损距离 >%.0f%%，仓位已压到下限仍需 %.2f%% 单笔风险，别加仓" % (
-            STOP_FAR_PCT, risk)
+    if stop_capped:
+        note += "｜形态位距 %.1f%% 过宽，已按纪律上限收口到 %.1f%%" % (raw_dist, dist)
     return {
         "refClose": round(buy, 2),
         "buyRule": "确认日次日开盘买入（等洗盘缩量走完再进，不追涨）",
@@ -547,7 +557,9 @@ def trade_params(ref_close, stop_price):
         "holdDays": HOLD_DAYS,
         "posPct": pos,
         "riskPct": risk,
-        "stopFar": dist > STOP_FAR_PCT,
+        "stopCapped": stop_capped,
+        "rawStopPct": round(raw_dist, 2),
+        "stopFar": raw_dist > STOP_FAR_PCT,   # 保留：表示「形态位本身很远」，与是否收口无关
         "riskBreach": breach,
         "riskNote": note,
     }
@@ -708,6 +720,10 @@ def settle_one(e, kl):
         return None
     days, idx, buy = _b["days"], _b["idx"], _b["buy"]
     stop = float(e.get("stopPrice") or 0)
+    # R100z364：新条目按止损上限收口（老条目 stopCap 缺失 → 保持冻结口径，历史不改写）
+    _cap = float(e.get("stopCap") or 0)
+    if _cap and stop > 0 and buy > 0:
+        stop = max(stop, round(buy * (1 - _cap / 100), 2))
     if stop > 0 and buy <= stop:
         # §9：开盘就在止损位之下 → 纪律上不进场。记为 notExecuted，不进胜负分母。
         return {"status": "settled", "result": "notExecuted", "exitDay": days[idx + 1],
@@ -897,6 +913,8 @@ def record_entries(ledger, pool_key, entries, today, tier=None, cross=None, pre_
             "ruleFrom": RULE_FROZEN_AT,
             "tgtPct": TARGET_PCT,
             "holdDays": HOLD_DAYS,
+            # R100z364：止损上限也冻结在条目上，结算时按它收口（老条目没有这个字段 → 用原口径）
+            "stopCap": STOP_CAP_PCT,
             "result": None,
         })
         added += 1

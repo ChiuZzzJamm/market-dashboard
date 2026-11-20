@@ -48,8 +48,6 @@
 
 - 谐波：`harmonic_detect.scan_bars()` 当日返回候选且未死（收盘未破止损），
   以 `(形态名, D 点日期)` 去重，只记首次出现。
-- 吸筹：`accumulation_score.score_one()` 的 grade ≠ 不入池，以 `sigIdx` 变化去重
-  （同一根信号 K 线只触发一次）。
 - 横盘启动：`breakout_pool.evaluate(bars, k)` 返回 `active`，只在「连续 active 段的第一天」触发
   （即刚洗完、缩量达标的那个收盘）。
 - 断板：`check_duanban.check_form()` 达标（确认池口径），对最近 2~5 个交易日的
@@ -81,7 +79,6 @@ from datetime import datetime
 BASE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE)
 
-import accumulation_score as A      # noqa: E402
 import check_duanban as DUAN        # noqa: E402
 import harmonic_detect as H         # noqa: E402
 import kline_cache as K             # noqa: E402
@@ -97,9 +94,8 @@ COST = 0.0016
 UNFILLABLE_GAP = 0.095
 HORIZONS = (1, 3, 5, 10)
 WARMUP = 120
-IND_ZH = {'duanban': '断板反包', 'harmonic': '谐波形态',
-          'accum': '主力吸筹', 'bp': '横盘启动'}
-IND_ORDER = ('duanban', 'harmonic', 'accum', 'bp')
+IND_ZH = {'duanban': '断板反包', 'harmonic': '谐波形态', 'bp': '横盘启动'}
+IND_ORDER = ('duanban', 'harmonic', 'bp')
 
 
 # ---------------------------------------------------------------- 数据层
@@ -274,7 +270,6 @@ def replay(code, bars, window, start):
     out = []
     n = len(bars)
     seen_h, seen_zt = set(), set()
-    last_sigidx = None
     prev_pass = False
     for k in range(max(WARMUP, start), n):
         b = bars[k]
@@ -297,17 +292,6 @@ def replay(code, bars, window, start):
             sub = '80+' if sc >= 80 else ('60-79' if sc >= 60 else '<60')
             out.append((k, 'bp', sub, sc))
         prev_pass = passed
-
-        try:
-            a = A.score_one(win)
-        except Exception:
-            a = None
-        if a:
-            si, grade = a.get('sigIdx'), a.get('grade')
-            if grade and grade != '不入池' and si is not None and si != last_sigidx:
-                if tradeable:
-                    out.append((k, 'accum', grade, a.get('score') or 0))
-                last_sigidx = si
 
         try:
             h = H.scan_bars(win)

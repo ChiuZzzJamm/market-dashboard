@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """全量扫（R100m，2026-09-28 新增）：沪深主板 60/00 全市场扫描，产出候选集供
-harmonic_detect.py / accumulation_score.py 复用（用户需求：全量扫安排在交易日 16:00 数据步，
-之后谐波和主力吸筹都从全量扫里筛选标的）。
+harmonic_detect.py / breakout_pool.py 复用（用户需求：全量扫安排在交易日 16:00 数据步，
+之后谐波和横盘启动都从全量扫里筛选标的）。
 
-流水线（16:00 数据步先跑本脚本，再跑 harmonic/accumulation/power）：
+流水线（16:00 数据步先跑本脚本，再跑 harmonic/breakout_pool）：
   1. 新浪 Market_Center.getHQNodeData 分页拉全 A 快照（约 5600 只，56 页）；
   2. 预筛（快照级，零 K 线成本）：
      - 仅沪深主板 60/00（项目标的池铁律，排除 688/300/301 等）；
@@ -18,7 +18,7 @@ harmonic_detect.py / accumulation_score.py 复用（用户需求：全量扫安�
      scanned, candidates, names, note}。
 
 失败处理（R91m/R91n 风）：任一环节整体失败 → 不写 fullScan、exit 1；
-下游 harmonic/accumulation 检测到 fullScan 缺失或非今日时自动退回「池内扫描域」，不清场。
+下游 harmonic / breakout_pool 检测到 fullScan 缺失或非今日时自动退回「池内扫描域」，不清场。
 
 用法：FULLSCAN_MAX=500 KLINE_DEADLINE=900 python3 full_scan.py [--dry]
 """
@@ -46,7 +46,7 @@ try:
 except ValueError:
     FULLSCAN_MAX = 500
 
-MIN_AMOUNT = 2e8      # 成交额 2 亿（元），与吸筹 F6 硬门禁同口径
+MIN_AMOUNT = 2e8      # 成交额 2 亿（元），与横盘启动池流动性硬门禁同口径
 PCT_LO, PCT_HI = -6.0, 9.7
 MIN_BARS = 60
 
@@ -146,7 +146,7 @@ def main():
         print('[FULLSCAN][FAIL] 预筛后候选为空，不写 fullScan')
         sys.exit(1)
 
-    # K 线预抓进缓存（下游 harmonic/accumulation 直接读缓存，零网络等待）
+    # K 线预抓进缓存（下游 harmonic / breakout_pool 直接读缓存，零网络等待）
     codes = [c['code'] for c in cand]
     print(f'[FULLSCAN] 预抓 {len(codes)} 只日K进 .kline_cache（预算 {K.DEADLINE_S:.0f}s）…')
     bars_map = K.get_klines_bulk(codes, days=320, workers=8)
@@ -174,7 +174,7 @@ def main():
         'scanned': len(cand),
         'candidates': [c['code'] for c in cand],
         'names': names,
-        'note': f'沪深主板全市场快照预筛（成交额≥2亿/涨幅{PCT_LO}~{PCT_HI}%/非ST）后按成交额降序取前 {FULLSCAN_MAX} 只，K线≥{MIN_BARS}根；供谐波/吸筹筛选',
+        'note': f'沪深主板全市场快照预筛（成交额≥2亿/涨幅{PCT_LO}~{PCT_HI}%/非ST）后按成交额降序取前 {FULLSCAN_MAX} 只，K线≥{MIN_BARS}根；供谐波/横盘启动筛选',
     }
     D['fullScan'] = field
     print(f"[FULLSCAN][DRY] 候选 {len(cand)} 只，快照交易日 {trade_date}，未写回"

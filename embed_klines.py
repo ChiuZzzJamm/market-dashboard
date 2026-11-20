@@ -144,12 +144,10 @@ def collect_stocks(D):
         add_code(hp.get("code") or hp.get("thsCode"))
     for hp in (D.get("harmonic") or {}).get("watchPool") or []:
         add_code(hp.get("code") or hp.get("thsCode"))
-    # 8) 横盘启动池 / 吸筹池 —— R100z4t：开盘精选会直接从这两池取标的，弹窗 K 线走
+    # 8) 横盘启动池 —— R100z4t：开盘精选会直接从该池取标的，弹窗 K 线走
     #    stkGlobalKline 兜底读顶层 stkKlines，池内标的必须全部内嵌覆盖
     for pp in (D.get("breakoutPool") or {}).get("passed") or []:
         add_code(pp.get("code"))
-    for ap in (D.get("accumulation") or {}).get("scored") or []:
-        add_code(ap.get("code"))
     return codes, names, syms
 
 
@@ -237,7 +235,7 @@ def fetch_kline(code, timeout=15, bars=BARS_DEFAULT):
 
 # ---------------------------------------------------------------------------
 # R100z60：从已删除的 fix_pools_meta.py 内联过来的「池内缺名回填 + themePicks 校准」
-# 背景见 R100z4f：① 九门/吸筹/谐波池部分标的只有代码没名称 → 腾讯 qt.gtimg 实时接口（GBK）批量回补；
+# 背景见 R100z4f：① 技术池部分标的只有代码没名称 → 腾讯 qt.gtimg 实时接口（GBK）批量回补；
 # ② themePicks 的 note 被 AI 写成「·今日涨停」「·涨X%」这种行情字样（与 chg 重复且可能虚构），
 #    note 只留概念归属；chg 用 stkKlines 当日日K 重算校准（日期非当日则保留 AI 值）。
 # 防清场（R91m 铁律）：只回填空 name / 校准 themePicks，不碰其他字段；行情接口失败保留原值。
@@ -275,13 +273,10 @@ def _fetch_names(codes, timeout=10):
 
 
 def _iter_pools(D):
-    """产出 (容器描述, 条目列表)：横盘启动 / 吸筹 / 谐波三个选股池。"""
+    """产出 (容器描述, 条目列表)：横盘启动 / 谐波两个选股池。"""
     ps = D.get("breakoutPool") or {}
     if isinstance(ps.get("passed"), list):
         yield "breakoutPool.passed", ps["passed"]
-    acc = D.get("accumulation") or {}
-    if isinstance(acc.get("scored"), list):
-        yield "accumulation.scored", acc["scored"]
     hz = D.get("harmonic") or {}
     for key in ("confirmPool", "watchPool"):
         if isinstance(hz.get(key), list):

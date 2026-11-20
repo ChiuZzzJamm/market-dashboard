@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""R100z52：止损「只算不跟踪」的补丁 —— 四模块都在算止损位，但从来没人回过头看
+"""R100z52：止损「只算不跟踪」的补丁 —— 各模块都在算止损位，但从来没人回过头看
 「这个止损到底有没有被触及、触及之后是继续跌还是反手被洗出去」。
 
 算出来不执行的止损是纸面纪律：本脚本把每天各模块给出的止损位登记进台账
@@ -16,7 +16,7 @@
   - harmonic.confirmPool / watchPool 的几何 stop（形态位，最可信）；
   - aiPrediction.sectors[].stocks[].exit.stop（08:30 任务给自选股写的止损，
     口径为「最近收盘 −3%」）；
-  - 机械池 duanban.confirmed/watching、breakoutPool.passed、accumulation.scored
+  - 机械池 duanban.confirmed/watching、breakoutPool.passed
     **本身没有止损字段** → 按 DEFAULT_STOP_PCT（最近收盘 −3%，与 08:30 对自选股的
     口径一致）补齐，并在台账 stopSrc 标成 default-3% 以便回看时区分「真形态位」与「兜底值」。
 
@@ -68,8 +68,7 @@ process.stdout.write(JSON.stringify({
       return { code: t.code, name: t.name, lastClose: t.lastClose, exit: t.exit || null }; }) };
   }),
   duanban: { confirmed: (d.duanban || {}).confirmed || [], watching: (d.duanban || {}).watching || [] },
-  bp: (d.breakoutPool || {}).passed || [],
-  accum: (d.accumulation || {}).scored || []
+  bp: (d.breakoutPool || {}).passed || []
 }));
 """
 
@@ -100,7 +99,7 @@ def mech_stop(x, last_close, default_pct=DEFAULT_STOP_PCT):
        每日重算变化，天然固定锚。它与形态淘汰线**分离**：形态破位（check_duanban 判
        不破 T 日低点×0.98，破了移失效池）照常执行，但这里的止损位仍独立按 T 日低点
        记账 —— 两条线，别混成一个。
-    ② 其余机械池（九门/补位/强势/吸筹）= build_stock_pool 已锁定的 `entryClose` ×
+    ② 其余机械池（补位/强势）= build_stock_pool 已锁定的 `entryClose` ×
        (1−pct)。entryClose 是生成那天写死的入场日收盘，不随每日重算漂移。
     ③ 两者都取不到才回落「最新收盘 ×(1−pct)」—— 这个会漂移，仅作兜底并如实标注来源。
 
@@ -153,19 +152,17 @@ def collect_entries(D):
         plain.append((x, 'duanban'))
     for x in D.get('bp') or []:
         plain.append((x, 'breakoutPool'))
-    for x in D.get('accum') or []:
-        plain.append((x, 'accumulation'))
     for x, src in plain:
         c = str(x.get('code') or '')
         lc = _f(x.get('lastClose'))
         # R100z61：data.js 里断板池条目**只有 kline（60 根日 K），没有 lastClose 字段**，
         # 原来这里 `lc is None` 直接 continue → 机械池一只都进不了台账，下面那句
         # DEFAULT_STOP_PCT 兜底是条死路径；台账里 41 条全是 harmonic(26)+default-3%(15)，
-        # 断板/吸筹 0 条，"台账积累够→回测优化机械池止损"这条链路从数据源头就断了。
+        # 断板 0 条，"台账积累够→回测优化机械池止损"这条链路从数据源头就断了。
         # 用条目自带的 kline 最后一根收盘兜底 lastClose（= 最新收盘）。
         if lc is None:
             # duanban 条目 kline 为 dict 容器（[{day,open,close,high,low,volume}]），原写法只认
-            # list 容器 → kl 为空 → lc 永远 None → 整条断板/吸筹标的被静默剔出止损台账。
+            # list 容器 → kl 为空 → lc 永远 None → 整条断板标的被静默剔出止损台账。
             # 这里两种容器都兼容（见 mech_stop / zt_low 同款口径）。
             for b in reversed(x.get('kline') or []):
                 if isinstance(b, (list, tuple)) and len(b) > 2:

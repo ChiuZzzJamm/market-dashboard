@@ -3,13 +3,13 @@
 
 问题（当天真实发生）：
     页面头部「数据更新」读的是 data.js **顶层** `updatedAt`，而有 5 个脚本各自覆盖它
-    （update_ashare_sectors / update_us_from_quotes / update_kr_jp / stop_tracker / 各四模块）。
+    （update_ashare_sectors / update_us_from_quotes / update_kr_jp / stop_tracker / 各技术池模块）。
     谁最后跑谁赢 —— 实测 17:20 A股数据已更新，而头部还停在 `16:01（韩股 10/21 收盘 已更新…）`；
     同时 `ashare.updatedAt` 当时靠 AI 手写、没有脚本维护，于是报告里长期挂着
     「已知遗留：ashare.updatedAt 仍显示 10-20 17:22」。一条真问题被当成免责声明糊过去。
 
 修法（两个方向一起收口）：
-    1) **分格戳**：ashare / us / panorama / 四模块 / stopTrack 各自维护自己的戳，
+    1) **分格戳**：ashare / us / panorama / 技术池模块 / stopTrack 各自维护自己的戳，
        哪个脚本更新了哪块数据，就只写自己那一格（见 update_*.py 末尾 `stamp_self()`）；
     2) **顶层戳**：不再由任何脚本直写语义，部署时由本脚本从各格取**最大时间戳**生成——
        单一来源、幂等、不累积、不撒谎。头部因此永远等于「真正最新的那块数据」。
@@ -41,7 +41,6 @@ SLOTS = [
     ([("us", "updatedAt")], "美股收盘"),
     ([("panorama", "updatedAt")], "全球市场全景"),
     ([("harmonic", "updatedAt")], "谐波形态"),
-    ([("accumulation", "updatedAt")], "吸筹打分"),
     ([("breakoutPool", "updatedAt")], "横盘启动"),
     ([("fullScan", "updatedAt")], "全量扫描"),
     ([("stopTrack", "updatedAt")], "止损跟踪"),

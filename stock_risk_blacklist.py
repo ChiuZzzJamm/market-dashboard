@@ -21,7 +21,7 @@
 
     用法：
     python3 stock_risk_blacklist.py                 # 默认扫 data.js：aiPrediction + us/ashare 五节要闻
-                                                    #   + bullish/bearish + 四技术池 + 陈学长池
+                                                    #   + bullish/bearish + 三技术池 + 陈学长池
                                                     #   + 开盘精选（R100z70 扩域；R100z276 补齐后两者）
     python3 stock_risk_blacklist.py --json          # 只输出 JSON
     python3 stock_risk_blacklist.py --write         # 同时写 risk_blacklist.json（前端+闸门读）
@@ -53,7 +53,7 @@ let m = s.match(/window\s*\.\s*DASHBOARD_DATA\s*=\s*(\{[\s\S]*\});?\s*$/);
 if (!m) { console.error('data.js parse failed'); process.exit(1); }
 let d; try { d = eval('(' + m[1] + ')'); } catch (e) { console.error('eval failed', e.message); process.exit(1); }
 // R100z70：扫描域从「仅 aiPrediction」扩为 aiPrediction + us/ashare 五节要闻(含 impacts) +
-// bullish/bearish + 四技术池(断板/谐波/吸筹/九门)。此前 validate 的新闻闸/9:45 star 闸
+// bullish/bearish + 三技术池(断板/谐波/横盘启动)。此前 validate 的新闻闸/9:45 star 闸
 // 都拿本文件当日标的对象做命中，扫描域不含这些 code 时闸门等于对它们失明。
 const codes = []; const seen = {}; const names = {};
 function add(st) {
@@ -85,15 +85,13 @@ for (const mk of ['us', 'ashare']) {
     for (const imp of (nw.impacts || [])) { if (imp && typeof imp === 'object') for (const st of (imp.stocks || [])) add(st); }
   }
 }
-// 3) 四技术池（前端卡片 ⚠️ 角标也读这份黑名单）
+// 3) 三技术池（前端卡片 ⚠️ 角标也读这份黑名单）
 const db = d.duanban || {};
 for (const st of (db.confirmed || [])) add(st);
 for (const st of (db.watching || [])) add(st);
 const hz = d.harmonic || {};
 for (const st of (hz.confirmPool || [])) add(st);
 for (const st of (hz.watchPool || [])) add(st);
-const acc = d.accumulation || {};
-for (const st of (acc.scored || [])) add(st);
 for (const st of (((d.breakoutPool || {}).passed) || [])) add(st);
 // R100z276：陈学长池此前漏在扫描域外 —— risk_gate.py 明确把它当「推荐位」剔，
 //   但本文件的扫描域不含它，于是只在陈学长池里的票**从来没被扫过**，

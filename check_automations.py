@@ -945,7 +945,7 @@ def chk_steps(T, r):
 # 在字段名附近写明「多少字」。没写 = AI 靠猜，靠猜就会撞地板 → 静默失败。
 #
 # 前缀 → (负责的任务, 该字段在 prompt 里的短名（可给多个别名）, 样例 label)
-# 只登记「AI 亲手写」的字段；脚本模板生成的（us.summary / accumulation.*.note）
+# 只登记「AI 亲手写」的字段；脚本模板生成的（us.summary / 各池 note）
 # 不登记 —— 登记了会假报「prompt 没写字数」。
 RESP = [
     ('us.sectorsUp[].reason.detail',   ('A0700', 'W2100'), 'detail',  'us.sectorsUp[0].reason.detail'),

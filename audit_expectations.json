@@ -238,7 +238,6 @@
     "duanban.star",
     "harmonic",
     "breakoutPool",
-    "accumulation",
     "fullScan"
    ],
    "notes": [
@@ -531,7 +530,6 @@
     "run_push.sh star",
     "harmonic_detect.py",
     "breakout_pool.py",
-    "accumulation_score.py",
     "full_scan.py",
     "price-in→已计价",
     "盘口结构动作（R100z193，勿删勿改",
@@ -573,7 +571,6 @@
     "harmonic.confirmPool",
     "harmonic.watchPool",
     "breakoutPool.passed",
-    "accumulation.scored",
     "fullScan",
     "duanban.star.gapSummary",
     "duanban.star.tapeSummary",
@@ -598,7 +595,6 @@
     "panorama",
     "harmonic",
     "breakoutPool",
-    "accumulation",
     "fullScan",
     "duanban 池内标的 kline/story/refs/news/probability",
     "duanban 池成员增删",
@@ -685,12 +681,6 @@
      "cmd": "python3 full_scan.py",
      "flags": [],
      "file": "full_scan.py",
-     "step": "4"
-    },
-    {
-     "cmd": "python3 accumulation_score.py",
-     "flags": [],
-     "file": "accumulation_score.py",
      "step": "4"
     },
     {
@@ -799,7 +789,6 @@
     "duanban.confirmed/watching/topBoards",
     "fullScan",
     "harmonic",
-    "accumulation",
     "breakoutPool",
     "panorama.markets[kr]/markets[jp]",
     "atrStops",
@@ -811,7 +800,7 @@
     "ashare 行情字段（脚本生成：tradeDate/status/summary/indices/breadth/sectorsUp/sectorsDown/allBoards/lianban/fundIn/fundOut/fundNote/updatedAt）",
     "duanban（merge_duanban 合并，story 由 AI 按数据驱动填充复核）",
     "panorama.markets[kr]/markets[jp]（update_kr_jp）",
-    "fullScan/harmonic/accumulation/breakoutPool（四模块脚本产物）",
+    "fullScan/harmonic/breakoutPool（三模块脚本产物）",
     "atrStops（atr_stop.py：全站唯一权威止损源，151 只 ATR 止损位 + 宽度 + 风险预算仓位）",
     "signalPerf（signal_attribution.py：按指标来源的 T+1/3/5/10 收益归因与建议权重）",
     "forecastScore（forecast_scorecard.py：把 calibration_log.json 的板块预判与开盘前瞻台账结算成跨日命中率，按置信度/方向/近5日分层，usage 与 verdict 由阈值自动生成）",
@@ -1039,12 +1028,6 @@
      "step": "0（补跑分支）"
     },
     {
-     "cmd": "python3 accumulation_score.py",
-     "flags": [],
-     "file": "accumulation_score.py",
-     "step": "0（补跑分支）"
-    },
-    {
      "cmd": "python3 harmonic_detect.py",
      "flags": [],
      "file": "harmonic_detect.py",
@@ -1190,7 +1173,6 @@
     "panorama.markets[ashare]",
     "fullScan",
     "harmonic",
-    "accumulation",
     "breakoutPool",
     "stkKlines",
     "stkKlineNames",
@@ -1225,7 +1207,6 @@
     "weekendNews",
     "ashare 脚本生成字段（thsCode/tops/netInflow/upCount/downCount/lead/leadPct/ztCount/pct5/indices.code）",
     "duanban.star",
-    "harmonic/accumulation/breakoutPool/fullScan 的 AI 手改",
     "strategy/macroCalendar 顶层键（deploy.sh 自动生成）",
     "stopTrack 的 AI 手写"
    ],
@@ -1433,7 +1414,6 @@
     "stkKlines",
     "ashare",
     "harmonic",
-    "accumulation",
     "breakoutPool",
     "strategy",
     "macroCalendar"
@@ -1711,7 +1691,6 @@
     "duanban.topBoards",
     "duanban.star",
     "harmonic",
-    "accumulation",
     "breakoutPool",
     "fullScan",
     "stkKlines",
@@ -1750,7 +1729,6 @@
    "neverWrites": [
     "ashare",
     "harmonic",
-    "accumulation",
     "breakoutPool",
     "fullScan",
     "us.themePicks",
@@ -1762,7 +1740,7 @@
    ],
    "notes": [
     "第 5.5 步的 validate_stocks.py 已改为双跑：--no-fix --scope ai 与 --no-fix --scope us 各跑一次，两次 ALL OK 才可进入第 6 步部署（R95：禁止裸跑，裸跑会真实写回 data.js 并从后门改掉本任务写入边界外的字段）。",
-    "本任务明确不运行 accumulation_score / harmonic_detect / breakout_pool（沿用周五 16:00 数据步产物），三者仅出现在禁止/保持条款中，故未计入 scripts。",
+    "本任务明确不运行 harmonic_detect / breakout_pool（沿用周五 16:00 数据步产物），三者仅出现在禁止/保持条款中，故未计入 scripts。",
     "cal_factor.py 还支持 --date 逐日试算以判定 NEXT_DAY，未在 scripts 中单独列调用。"
    ]
   }

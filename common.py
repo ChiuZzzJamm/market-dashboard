@@ -28,7 +28,7 @@ def fetch_names(codes, timeout=8):
 
     背景：powerScreen.failPool 里出现过 4 条 `name=空串`（600860/603009/603418/603179），
     前端失效池渲染成空行 —— 根因是 `collect_pool_names` 的 code→name 反查只覆盖
-    「池内 + stkKlineNames」标的，九门/吸筹扩展扫描域里的标的天然查不到名。
+    「池内 + stkKlineNames」标的，技术池扩展扫描域里的标的天然查不到名。
     这里用腾讯行情（GBK，60 只/批，实测 75/80 命中）补一次，失败返回已取到的部分，
     调用方负责「取不到就降级」——绝不写空串进 data.js。
     """
@@ -1115,7 +1115,7 @@ def roll_fail_pool(old_fail, new_entries, today, keep_days=5, exclude_codes=None
     - 剔除：trading_days_between(entryDate, today) > keep_days 的超期归档；
     - 剔除：当前已在「在池」集合里的 code（exclude_codes，R100z120）。
       ⚠️ 口径修正（用户 2026-10-12 截图反馈「同一标的同时挂确认池与失效池」）：
-      旧归档滚动保留 5 日，若某票先失效归档、之后又重新达标回到在池（九门/吸筹逐日重算、
+      旧归档滚动保留 5 日，若某票先失效归档、之后又重新达标回到在池（技术池逐日重算、
       断板重走形态），旧归档仍会留着 → 同一标的既在确认池又在失效池。失效池语义 =
       「已失效 **且当前不在池**」，故在池 code 一律从失效池移除。
     - ⚠️ 一律用上面节假日感知的 trading_days_between，不许自己数周一~周五
@@ -1141,7 +1141,7 @@ def roll_fail_pool(old_fail, new_entries, today, keep_days=5, exclude_codes=None
     #   new_codes = {x.code for x in new_entries}
     #   out += [x for x in new_entries if x.code not in new_codes]
     # 里 new_codes 就是 new_entries 自己的 code 全集 → 过滤条件恒 False → new_entries
-    # **永远被丢弃**（九门/吸筹「本轮新失效」从未真正进过失效池，R100z56 起潜伏）。
+    # **永远被丢弃**（技术池「本轮新失效」从未真正进过失效池，R100z56 起潜伏）。
     # 正确口径（与 docstring「同 code 以新条目为准」一致）：carried 先剔除将被新条目覆盖的 code，
     # 再整体并入 new_entries。new_fails 的 code 由调用方保证 ∉ 在池集合（≠exclude_codes），无需再滤。
     new_list = [x for x in (new_entries or []) if isinstance(x, dict)]

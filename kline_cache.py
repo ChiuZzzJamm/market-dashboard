@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""K 线缓存共享模块（2026-09-26 谐波/吸筹扩展新增）。
-harmonic_detect.py 与 accumulation_score.py 共用，避免同日重复抓取。
+"""K 线缓存共享模块（2026-09-26 谐波扩展新增）。
+harmonic_detect.py 与 breakout_pool.py 共用，避免同日重复抓取。
 
 - 数据源：腾讯 ifzq fqkline（主源，与 check_duanban.py R81 口径一致），新浪备用。
 - 缓存：项目内 .kline_cache/<code>.json，TTL 默认 20h（CACHE_TTL_H 可覆盖）；
@@ -151,7 +151,7 @@ def _day_window():
     R100z240（2026-10-26 实盘发现）：上面这条「允许昨收缓存」在**收盘后**是有害的——
     16:00 数据步实测腾讯 K 线源全线返回空（fetch_kline_tencent 对 600000/002241/603341
     均 None），一份早盘抓的缓存末根停在上一交易日（10-23），`_EXPECTED_DAY <= last` 判它
-    「新鲜」直接复用，于是 full_scan 预抓形同虚设、accumulation/harmonic/power 三个模块
+    「新鲜」直接复用，于是 full_scan 预抓形同虚设、harmonic/breakout_pool 两个模块
     整池用上一交易日的 K 线算指标，只在 tradeDate 上留个「2026-10-23」——读者看不出这是
     滞后一天的结果。故 15:45（收盘 + 数据入库缓冲）之后、且今天是交易日时，expected 收紧为
     今天：缓存末根不是今天就不算新鲜，逼主流程走新浪备源重抓（实测 20 只 2.6s，664 只够快）。
@@ -177,7 +177,7 @@ def _cache_valid(path):
 
     R100z51 修复：原实现只看 mtime（TTL 20h），而缓存 key 只有 `<code>.json`、
     不含日期。10-01~10-07 国庆休市期间实测 653 份缓存里 645 份 mtime 仅 14h
-    （判「有效」），末根却全是 2026-09-30 —— harmonic_detect / accumulation_score /
+    （判「有效」），末根却全是 2026-09-30 —— harmonic_detect / breakout_pool /
     power_screener 就这样把节前最后一根 K 线当成「收盘数据」算指标，
     而 harmonic_detect.py:582 的 `fetch_ok >= 0.8` 还会绕过 R91m
     「抓取不全则保留旧池」闸门，把脏结果写进看板。
@@ -355,7 +355,7 @@ def collect_pool_codes(D):
 
 def collect_pool_names(D):
     """从 data.js 收集 code→name 映射（R100g：与 collect_pool_codes 同 walk 域，
-    供 accumulation/power/harmonic 脚本补简称——stkKlineNames 缺名时不再渲染成
+    供 harmonic/breakout_pool 脚本补简称——stkKlineNames 缺名时不再渲染成
     「600613600613」双重代码）。"""
     names = {}
 
@@ -514,7 +514,7 @@ def fetch_sector_single(code, timeout=10):
 
 
 def collect_sectors(D, use_sina=True, node_deadline=180):
-    """R100q：code→行业 映射（供 harmonic/power/accumulation 三脚本写 sector 字段，
+    """R100q：code→行业 映射（供 harmonic/breakout_pool 脚本写 sector 字段，
     与前端 stkSecOf 同口径）。优先级：站内真实字段（断板池/精选/谐波池/连板 hybk/
     板块TOP成分/AI预测成分/已有池 sector）→ 新浪行业全量兜底。失败只降级不清场。"""
     sec = {}
@@ -546,7 +546,7 @@ def collect_sectors(D, use_sina=True, node_deadline=180):
     for sct in ((D or {}).get('aiPrediction') or {}).get('sectors') or []:
         for st in sct.get('stocks') or []:
             put(st.get('code'), sct.get('sector'))
-    for key, field in (('breakoutPool', 'passed'), ('accumulation', 'scored')):
+    for key, field in (('breakoutPool', 'passed'),):
         for e in ((D or {}).get(key) or {}).get(field) or []:
             put(e.get('code'), e.get('sector'))
 

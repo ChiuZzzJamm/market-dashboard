@@ -178,7 +178,7 @@ def _sector_from_pools(D, code):
     pools = []
     db = D.get('duanban') or {}
     pools += [db.get('confirmed') or [], db.get('watching') or []]
-    for k in ('harmonic', 'accumulation', 'breakoutPool'):
+    for k in ('harmonic', 'breakoutPool'):
         blk = D.get(k) or {}
         for kk in ('confirmPool', 'watchPool', 'scored', 'passed'):
             pools.append(blk.get(kk) or [])

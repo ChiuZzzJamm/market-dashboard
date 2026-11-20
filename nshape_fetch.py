@@ -2,7 +2,7 @@
 """N 字形态研究：全市场日 K 抓取器（2026-10-26 新建）。
 
 为什么另起一份缓存而不是复用 .kline_cache：
-  看板用的 .kline_cache 只有 320 根（2025-06-30 起），且被 harmonic/accumulation
+  看板用的 .kline_cache 只有 320 根（2025-06-30 起），且被 harmonic/breakout_pool
   等线上模块共用；本次研究要 2024-01-01 至今日 + 前置窗口算 MA250，
   不能动线上缓存的 TTL / 条数语义。故独立目录 .kline_hist/。
 

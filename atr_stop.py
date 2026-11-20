@@ -120,7 +120,7 @@ def norm_bars(bars):
 
     data.js 的 stkKlines 是 `[day, open, close, high, low, vol]`（**close 在下标 2**，
     不是常见的 OHLC 顺序，写错一位整条止损会偏到开盘价上）；
-    断板/吸筹条目内嵌 kline 是 dict 容器。两种都收，缺字段的行直接丢（不补 0）。
+    断板/技术池条目内嵌 kline 是 dict 容器。两种都收，缺字段的行直接丢（不补 0）。
 
     ⚠️ 第 6 位 volume 必须保留：量能类因子（历史上是 signal_rank 的量能分，现由 breakout_pool/
     其他消费方读 K 线时也可用）依赖它，删了会让下游静默退回「中性」。
@@ -297,7 +297,7 @@ def compute_one(code, name, bars, sector='', src='', form_stop=None, form_date=N
     struct_low = min(b[4] for b in (bars[-STRUCT_LOOKBACK:] if len(bars) >= 5 else bars))
 
     # R100z331：断板/陈学长两池统一用「涨停日最低价」当止损锚，**不参与 ATR 宽度钳制**。
-    # 理由见 zt_low_of 的 docstring。其余标的（AI/谐波/横盘/吸筹）仍走 ATR 公式。
+    # 理由见 zt_low_of 的 docstring。其余标的（AI/谐波/横盘启动）仍走 ATR 公式。
     stop_anchor = 'atr'
     if form_stop and float(form_stop) > 0 and float(form_stop) < close:
         stop = float(form_stop)
@@ -406,9 +406,6 @@ def collect(D):
         for x in ((D.get('chenPool') or {}).get(_k) or []):
             _zd, _zl = zt_low_of(x, K.get(str(x.get('code') or '')))
             add(x.get('code'), x.get('name'), x.get('sector'), 'chen', form=_zl, form_date=_zd)
-    for x in (D.get('accumulation') or {}).get('scored') or []:
-        add(x.get('code'), x.get('name'), x.get('sector'), 'accumulation')
-
     for x in (D.get('breakoutPool') or {}).get('passed') or []:
         add(x.get('code'), x.get('name'), x.get('sector'), 'breakoutPool')
 

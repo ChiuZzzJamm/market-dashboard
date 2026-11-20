@@ -200,7 +200,7 @@ echo "🕒 归一时间戳（refresh_stamp.py）..."
 #      *ST荣华 已戴帽却显示成正常公司，还被摆在「板块受益标的」里。sync_names.py 以
 #      行情源为准校正（清洗空白/全角/除权前缀后再比，不误改「粤 传 媒」「XD工商银」）。
 #   ② 风险层：stock_risk_blacklist 每天算 red，但只有 update_star 会过滤；
-#      check_duanban / power_screener / accumulation_score 不读 → 603330 天洋新材
+#      check_duanban / breakout_pool 不读 → 603330 天洋新材
 #      10-09 就公告减持，到 10-21 仍挂在「断板确认池」「量化筛选」里当推荐标的。
 #      risk_gate.py 把 red 清出四个推荐池（公告日晚于交易日的「盘后新披露」保留：
 #      当日盘中不可知，指标有效，次日 09:45 自动剔）。

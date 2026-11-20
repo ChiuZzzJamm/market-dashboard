@@ -139,12 +139,12 @@ EMPTY_WHITELIST = [
     # --- 被动技术池：脚本只出形态/量化，AI 叙事由 19:30 叙事步 AI 写回，脚本阶段天然空 ---
     (r"harmonic\.(confirmPool|watchPool|failPool)\[\d+\]\.(story|deduce)",
      "R100z4q：harmonic_detect 从旧池继承叙事，新形态条目脚本阶段无叙事，等 AI 写回"),
-    (r"(accumulation|breakoutPool)\.(scored|passed|strong|watch)\[\d+\]\.(story|deduce)",
-     "R100z21：scored 全量 + strong/watch 分池副本同构，AI 叙事位脚本阶段为空、由 AI 写回"),
-    (r"(accumulation|breakoutPool)\.(scored|strong|watch)\[\d+\]\.sector",
-     "R100z21：strong/watch 分池副本沿用 scored 的板块字段，sec_map 查不到时留空"),
+    (r"breakoutPool\.(passed|watch)\[\d+\]\.(story|deduce)",
+     "R100z21：watch 分池副本与 passed 同构，AI 叙事位脚本阶段为空、由 AI 写回"),
+    (r"breakoutPool\.(passed|watch)\[\d+\]\.sector",
+     "R100z21：watch 分池副本沿用 passed 的板块字段，sec_map 查不到时留空"),
     # --- 结构化可选字段：脚本写 foo or ''，无值时该维度不存在 ---
-    (r"(harmonic|accumulation|breakoutPool)\.(confirmPool|watchPool|scored|passed|failPool)\[\d+\]\.sector",
+    (r"(harmonic|breakoutPool)\.(confirmPool|watchPool|passed|failPool)\[\d+\]\.sector",
      "sec_map 查不到板块时留空；前端按板块分组，无板块归入默认组不渲染空标签"),
     (r"duanban\.(confirmed|watching)\[\d+\]\.bullType",
      "R91p 打标加权制：个股×2/板块×1，既非利好也非利空即中性→留空"),
@@ -161,7 +161,7 @@ EMPTY_WHITELIST = [
      "R98j：主题速览模块已下线，字段保留防旧键丢失"),
     (r"excluded$",                      # 结构预留
      "无剔除项时为空数组"),
-    (r"(harmonic|accumulation|breakoutPool)\.summary$",
+    (r"(harmonic|breakoutPool)\.summary$",
      "脚本可能不给名，前端真值兜底"),
     (r"aiPrediction\.verification",     # 非交易日/null 属正常
      "08:30 未写 verification 时前端不渲染验证卡"),
@@ -228,10 +228,6 @@ EMPTY_WHITELIST = [
      "——2026-10-29 实测就是 0 只（放宽池 10 只、观察中 18 只）。同族 watching/failPool/failedDates "
      "R100z218 已豁免，唯独 strict 漏了，于是每天报一条。前端 (cp.strict || []) 全带兜底、"
      "分节渲染走 `if (!list.length) return 暂无标的`"),
-    (r"accumulation\.strong$",
-     "R100z280：strong 是 scored 里 grade='强' 的镜像分池，当天没有强吸筹标的即空数组，"
-     "属正常日度状态（今天 0 只、观察池有货）。前端**根本不读**这个键——吸筹页按 scored 内"
-     "每张卡自己的 grade 现分组（R100z21），分池副本只有生成侧在下游用"),
     (r"atrStops\.summary\.concentrationWarn$",
      "R100z280：atr_stops 的集中度告警只在「多只候选止损位挤在同一价格带」时才追加，"
      "无告警＝当日候选分散，是正常结果。前端只读 atrStops.items / evidenceRows，"
@@ -276,7 +272,7 @@ EMPTY_WHITELIST = [
 
 DATA_KEYS_REQUIRED = [
     "us", "ashare", "duanban", "panorama", "aiPrediction", "openOutlook",
-    "stkKlines", "stkKlineNames", "harmonic", "accumulation", "breakoutPool",
+    "stkKlines", "stkKlineNames", "harmonic", "breakoutPool",
 ]
 
 VALIDATE_SCOPES = ("all", "ai", "us", "star")
@@ -339,10 +335,6 @@ PRODUCT_OWNERSHIP = {
         "require": ("harmonic", "谐波"),
         "note": "谐波形态池",
     },
-    "accumulation": {
-        "require": ("accumulation", "吸筹"),
-        "note": "吸筹形态池",
-    },
     "breakoutPool": {
         "require": ("breakoutPool", "横盘启动", "breakout_pool"),
         "note": ("横盘启动池（breakout_pool.py，涨停锚口径）——"
@@ -398,7 +390,7 @@ PRODUCT_OWNERSHIP = {
     "fullScan": {
         "require": ("fullScan", "full_scan"),
         "note": ("R101 全市场扫描（full_scan.py，16:00 数据步产出）。读方三类："
-                 "① 脚本 harmonic_detect / accumulation_score；"
+                 "① 脚本 harmonic_detect / breakout_pool；"
                  "② **前端**：「明日可下单·缩量回踩」档要按代码给全市场票取名，"
                  "名字只认 stkKlineNames + fullScan.names 两处，拿不到就只剩代码、"
                  "卡片上认不出是哪只票（R100z270）。所以它不再是「不进前端」的中间产物，"
@@ -452,10 +444,10 @@ PRODUCT_OWNERSHIP = {
     "stockNews": {
         "require": ("stock_news.py", "个股消息库", "stockNews"),
         "note": "R100z149：stock_news.py 抓东财个股公告 + 资讯搜索，按 code 汇总成 {code:{name,notices,news}}，"
-                "覆盖断板（含失效池）/谐波/吸筹/横盘启动/连板/板块成分/AI预测/要闻影响标的；"
+                "覆盖断板（含失效池）/谐波/横盘启动/连板/板块成分/AI预测/要闻影响标的；"
                 "前端弹窗（网页 db-modal）统一渲染「个股消息」段。"
-                "16:00 数据步第 4.5 步点名（四模块之后、汇报之前；R100z162 更正：旧注记为「断板主生成前」，"
-                "与 16:00 实际步骤顺序（2 断板 → 3 要闻 → 4 四模块 → 4.5 个股消息）不符）。",
+                "16:00 数据步第 4.5 步点名（三模块之后、汇报之前；R100z162 更正：旧注记为「断板主生成前」，"
+                "与 16:00 实际步骤顺序（2 断板 → 3 要闻 → 4 三模块 → 4.5 个股消息）不符）。",
     },
     "atrStops": {
         "require": ("atrStops", "atr_stop", "ATR"),
@@ -1679,18 +1671,6 @@ def collect_g16_checks(D):
             if isinstance(e, dict):
                 add(f"duanban.{pool}[{i}].story", e.get("story"), 100)
 
-    # 吸筹 scored/strong/watch note
-    # R100z161c：路径修正——吸筹节点在**顶层** `accumulation`，`ashare` 里根本没有这个键
-    #   （2026-10-21 实测 ashare 子键 27 个、无 accumulation；顶层 accum 有 scored 20 + strong 2
-    #   + watch 18 = 40 条 note）。旧写法读 ashare.accumulation → 恒空 → **90 字地板从未生效**，
-    #   是 R100z148 把断板从 ashare.duanban 改到顶层 duanban 时漏改的孪生兄弟。
-    #   保留 ashare 兜底只为兼容万一回迁，正常走顶层。
-    _acc = D.get("accumulation") or (D.get("ashare") or {}).get("accumulation") or {}
-    for grp in ("scored", "strong", "watch"):
-        for i, e in enumerate(_acc.get(grp) or []):
-            if isinstance(e, dict):
-                add(f"accumulation.{grp}[{i}].note", e.get("note"), 90)
-
     # 9:45 开盘精选「深度分析」（R100z161c 补闸）。二节速查表早写着 pushText 300-700 /
     #   sentiment 120-200，但 G16/G17 都不扫 duanban.star → 两个字段长期零保护。
     #   只加地板不加上限（超上限归 check_narrative 的 OVER 清单，硬拦会逼 AI 删内容）。
@@ -1730,7 +1710,7 @@ def g16_narrative_depth(r):
 
     背景：用户复盘满意 A 股深度（板块 285-390 / 题材 371-411 / 要闻 333-431 字），
     但美股 us.* 长期只有 60-110 字（根因：07:00 / 周日两条自动化 prompt 把字数上限
-    写成 60-110）。量化页（谐波/横盘启动/吸筹）无叙事字段渲染，其空 story 是设计行为，不在这
+    写成 60-110）。量化页（谐波/横盘启动）无叙事字段渲染，其空 story 是设计行为，不在这
     里管；chip 标签类字段（lianban.reason / 各池 note / star.picks.note / failPool.reason）
     也非主叙事，不在这管。本闸只管「真正渲染给用户的长文主字段」。
 
@@ -1741,7 +1721,6 @@ def g16_narrative_depth(r):
         A 股 aiPrediction.summary → 240（R100z249：五路依据条下线后它是那张卡唯一的正文）
         A 股 开盘前瞻 openOutlook → 300
         A 股 lianban[].story → 120；duanban confirmed/watching[].story → 100
-        A 股 accumulation.{scored,strong,watch}[].note → 90
         美股 板块 reason.detail / 五节要闻 summary → 200
         美股 顶层 summary（脚本生成，数据驱动多维复盘）→ 150
     低于阈值即 FAIL（拦部署）；阈值取「当前已达标数据的最小值再下探一档」，
@@ -1816,12 +1795,6 @@ def collect_g17_owners(D):
         for i, e in enumerate(dbsec.get(pool) or []):
             if isinstance(e, dict):
                 put(e.get("story"), f"duanban.{pool}[{i}]")
-    # ⚠️ 吸筹 note **刻意不纳入 G17**（R100z161c 实测后决定，别再"补进来"）：
-    #   它的 90 字地板在 G16 里补了（此前读错路径恒空），但 note 正文由
-    #   accumulation_score.py 按形态分支**脚本拼装**，同一形态必然同句——
-    #   2026-10-21 试纳入 G17 立即报 8 句复读（最高「3日缩量连跌后已收复过半跌幅；」×40 处），
-    #   全部只落在 accumulation 域内。这不是 AI 偷懒，硬拦会天天 FAIL 且 AI 无从修。
-    #   要治只能改脚本文案多样性（见 PROJECT-MEMORY 三节），不归 G17 管。
     # R100z161c：9:45 深度分析纳入复读面（AI 手工文本，与 outlook/要闻常出自同一批措辞）
     _star17 = (D.get("duanban") or {}).get("star") or {}
     if isinstance(_star17, dict) and _star17.get("pushText"):
@@ -2088,8 +2061,8 @@ def g21_failpool_disjoint(r):
     某票先失效归档、之后又重新走完形态达标进池，旧归档未清，导致同一 code 两池共存。
     失效池语义本应为「已失效且当前不在池」。修复：common.roll_fail_pool 增 exclude_codes 参数，
     各模块生成脚本在滚动旧归档时剔除当前在池 code（check_duanban / harmonic_detect /
-    accumulation_score / breakout_pool）。本闸做硬校验，防止该 bug 回归：四模块 failPool 的
-    code 集合与各自在池（confirmed+watching / confirmPool+watchPool / scored / passed）的
+    breakout_pool）。本闸做硬校验，防止该 bug 回归：三模块 failPool 的
+    code 集合与各自在池（confirmed+watching / confirmPool+watchPool / passed）的
     code 集合必须互斥，有交集即 FAIL。"""
     try:
         D = load_data_json()
@@ -2100,7 +2073,6 @@ def g21_failpool_disjoint(r):
         ("duanban", ("confirmed", "watching"), "confirmed+watching"),
         ("harmonic", ("confirmPool", "watchPool"), "confirmPool+watchPool"),
         ("breakoutPool", ("passed",), "passed"),
-        ("accumulation", ("scored",), "scored"),
     ]
     problems = []
     for mod, fields, label in specs:
@@ -2124,7 +2096,7 @@ def g21_failpool_disjoint(r):
         r.fail("G21", "失效归档池与在池非互斥（bug 回归）：" + "；".join(problems)
                + "——失效池语义=已失效且当前不在池；生成侧 roll_fail_pool 必须传 exclude_codes 剔除在池 code")
     else:
-        r.ok("G21", "四模块 failPool 与各自在池 code 完全互斥（无重叠）")
+        r.ok("G21", "三模块 failPool 与各自在池 code 完全互斥（无重叠）")
 
 
 def g22_news_level_noise(r):
@@ -2557,7 +2529,6 @@ STAMP_SLOTS = [
     ([("us", "updatedAt")], "美股收盘"),
     ([("panorama", "updatedAt")], "全球市场全景"),
     ([("harmonic", "updatedAt")], "谐波形态"),
-    ([("accumulation", "updatedAt")], "吸筹打分"),
     ([("breakoutPool", "updatedAt")], "横盘启动"),
     ([("fullScan", "updatedAt")], "全量扫描"),
     ([("stopTrack", "updatedAt")], "止损跟踪"),
@@ -2621,7 +2592,7 @@ def g28_freshness_consistency(r):
     `16:01（韩股 10/21 收盘 已更新）`；第二天更糟，页头写 10-20 而数据已是 10-21。
     根因不是「某个脚本忘了写」，而是**这个字段没有单一主人**。
     修法：各市场/模块只写自己那一格（`ashare.updatedAt` / `us.updatedAt` /
-    `panorama.updatedAt` / 四模块 / `stopTrack`），部署时由 `refresh_stamp.py` 取**最大
+    `panorama.updatedAt` / 三模块 / `stopTrack`），部署时由 `refresh_stamp.py` 取**最大
     时间戳**生成顶层文案 —— 单一来源、幂等。本闸守的就是这件事有没有真的发生。
 
     事故二（ashare 那格没人写）：`ashare.updatedAt` 长期由 AI 手写，脚本只写 tradeDate。
@@ -2637,7 +2608,7 @@ def g28_freshness_consistency(r):
       e) `duanban.generatedAt` 早于 `ashare.tradeDate` → **FAIL**（断板是本看板核心模块，
          陈旧断板一路部署上线＝产品事故；prompt 侧 19:30 第 0 步的核验此前查的是两个不存在的键，
          闸门这边若再只给 WARN，就是双重不设防 —— R100z178）。
-         四模块 `tradeDate` 早于 `ashare.tradeDate` → WARN（full_scan 失败不清场是 16:00
+         三模块 `tradeDate` 早于 `ashare.tradeDate` → WARN（full_scan 失败不清场是 16:00
          prompt 显式允许的降级，不是漏跑，所以不升级）。
          `duanban.generatedAt` 缺失/不可解析 → WARN（无法判断，不拦；但要点出来）。
     非交易日（status 含「休市」）或 tradeDate 不可解析时整条跳过 —— 休市期数据不动是正常的。
@@ -2664,7 +2635,7 @@ def g28_freshness_consistency(r):
                           f"两处必须逐项一致，否则新加的那一格永远进不了页头（R100z167）")
         else:
             r.ok("G28", f"分格清单一致：{len(mine)} 格"
-                        f"（ashare/us/panorama/四模块/stopTrack/开盘精选）")
+                        f"（ashare/us/panorama/三模块/stopTrack/开盘精选）")
 
     a = D.get("ashare") or {}
     td = str(a.get("tradeDate") or "").strip()[:10]
@@ -2741,14 +2712,14 @@ def g28_freshness_consistency(r):
                           f"——该格内容是旧交易日的货，页面照挂着（非交易日误标时属正常）")
 
 
-    # ---- e) 四模块/断板 快照日期落后 ----
-    # R100z178（2026-10-23）：断板与四模块**分级**处理。此前两者合并成一条 WARN，等于
+    # ---- e) 三模块/断板 快照日期落后 ----
+    # R100z178（2026-10-23）：断板与三模块**分级**处理。此前两者合并成一条 WARN，等于
     # 「断板是昨天的」这件事上，prompt 侧的保险丝（19:30 第 0 步核验）查的字段名根本不存在、
     # 闸门这边又只给黄灯 —— **双重不设防**，陈旧的断板可以一路部署上线。断板是本看板的核心模块，
-    # 所以升级为 FAIL。四模块保持 WARN：16:00 prompt 显式允许 full_scan 失败时「不写 fullScan、
+    # 所以升级为 FAIL。三模块保持 WARN：16:00 prompt 显式允许 full_scan 失败时「不写 fullScan、
     # 继续跑后三脚本即可」，判 FAIL 会与既有容错设计正面冲突（那是有意为之的降级，不是漏跑）。
     lag_mod = []
-    for key in ("harmonic", "accumulation", "breakoutPool", "fullScan"):
+    for key in ("harmonic", "breakoutPool", "fullScan"):
         v = str((D.get(key) or {}).get("tradeDate") or "")[:10]
         if v and v < td:
             lag_mod.append(f"{key}.tradeDate={v}")
@@ -2764,7 +2735,7 @@ def g28_freshness_consistency(r):
     if lag_mod:
         r.warn("G28", f"模块快照落后于交易日 {td}：{'、'.join(lag_mod)}"
                       f"——16:00 数据步漏跑或未换日，页面对应板块展示的是旧交易日"
-                      f"（四模块保持 WARN：full_scan 失败不清场是 16:00 prompt 显式允许的降级）")
+                      f"（三模块保持 WARN：full_scan 失败不清场是 16:00 prompt 显式允许的降级）")
 
 
 def _run_tool(script, *args, timeout=180):
@@ -2797,7 +2768,7 @@ def g29_name_and_risk_hygiene(r):
         **已戴帽 ST 却显示成正常公司，还被摆在「板块受益标的」里**。
         黑名单自己取的是实时行情名，两边不一致 → 同一只票两套名字。
       · 风险层：`stock_risk_blacklist.py` 每天都在算 red，但只有 `update_star.py` 会过滤；
-        `check_duanban` / `breakout_pool` / `accumulation_score` 压根不读 →
+        `check_duanban` / `breakout_pool` 压根不读 →
         603330 天洋新材 10-09 就公告减持，到 10-21 仍挂在「断板确认池」和「量化筛选」里。
 
     分工：`sync_names.py` 负责校正、`risk_gate.py` 负责清理（均幂等，deploy.sh 已内置）；
@@ -2826,7 +2797,7 @@ def g29_name_and_risk_hygiene(r):
     # ---- b) 推荐位不得留 red ----
     rc, out, err = _run_tool("risk_gate.py", "--check")
     if rc == 0:
-        r.ok("G29", "四个推荐池（断板确认/观察、开盘精选、量化筛选、吸筹三池）无硬风险 red 标的")
+        r.ok("G29", "三个推荐池（断板确认/观察、开盘精选、量化筛选）无硬风险 red 标的")
     elif rc == 1:
         hits = [ln.strip() for ln in (out or "").splitlines() if "✂" in ln or "仍有" in ln]
         r.fail("G29", "硬风险 red 标的仍留在推荐位：%s —— 跑 risk_gate.py --write"
@@ -3989,7 +3960,7 @@ def g42_design_tokens(r):
 
     由来：R100z163 我已经建好了 --fs-* 全套令牌，并在 G41 里断言「字号只有 10 档」——
     但只断言了**取值**，没断言**写法**。实际那 255 处全是裸 px，只有 3 处用了变量。
-    结果用户切四页看到「几个标题大小都不一样」：首页 32px、其余三页 20px，
+    结果用户切各页看到「几个标题大小都不一样」：首页 32px、其余页 20px，
     而两边都「在白名单里」，G41 全绿。
     → 教训：白名单管得住「有没有跑偏的值」，管不住「值是不是同源」。
        只要还是各写各的 px，改一处就不会带动其他地方，「统一」只是这一次的巧合。
@@ -4019,7 +3990,7 @@ def g42_design_tokens(r):
 
     # b) 页面标题档位
     if not re.search(r"\.hero h1,\s*\.db-title\s*\{[^}]*font-size:\s*var\(--fs-page\)", s):
-        bad.append("页面标题（.hero h1 / .db-title）未使用 var(--fs-page) —— 四页标题会各走各的档位")
+        bad.append("页面标题（.hero h1 / .db-title）未使用 var(--fs-page) —— 各页标题会各走各的档位")
     if "--fs-page:" not in s:
         bad.append(":root 未定义 --fs-page —— 页面级标题没有独立档位")
 
@@ -4176,7 +4147,7 @@ def g44_zombie_mirror_nodes(r):
     副本既不被读、也不被查，还能继续被 prompt 喂着长大。
 
       ① `ashare.duanban`（2026-10-14 后无读写方）→ G16 改读顶层时才被发现；
-      ② `ashare.accumulation` → 吸筹 90 字地板**从未生效**（R100z161c 才发现），
+      ② `ashare.harmonic` 这类技术池镜像 → 叙事字数地板**从未生效**（R100z161c 才发现），
          因为 G16 读的是不存在的路径，恒空即恒过；
       ③ `ashare.aiPrediction`（本轮）→ 19,511 字符副本，前端注释第 2859 行早写着
          「只读顶层 aiPrediction.verification」，push_notify 也不读，**零读方零写方**；
@@ -4217,7 +4188,7 @@ def g45_modal_nav_group(r):
     """G45 弹窗导航分组（R100z200，2026-10-25）。
 
     事故：用户 2026-10-25 截图指出「标的页面的左右按钮不是跟着交易预案里面标的切换的」。
-    根因是同一个坑犯了第二次（第一次 R100h，吸筹/九门卡片）：`openStkModal()` 只认全局
+    根因是同一个坑犯了第二次（第一次 R100h，九门卡片）：`openStkModal()` 只认全局
     `STK_GRP`，而任何**内联 onclick 直接开弹窗**的列表都从不设置分组，于是箭头翻的是
     「上一位读者点过的那个列表」的残留顺序——点交易预案的票能翻到龙虎榜去。
 

@@ -537,13 +537,6 @@ def main():
     print(f"[HARMONIC] 抓取完成 {sum(1 for v in kl.values() if v)}/{len(codes)}，"
           f"耗时 {time.time()-t0:.0f}s")
 
-    # 吸筹共振表（accumulation_score.py 先跑则带 accResonance）
-    acc = {}
-    accd = D.get('accumulation') or {}
-    for it in accd.get('scored', []) or []:
-        if isinstance(it, dict) and it.get('code'):
-            acc[it['code']] = it.get('hitCount', 0)
-
     # R100z4q：旧池 AI 叙事保留表——盘中/中途重跑本脚本会把 story/deduce 清空，
     # 直到下一次自动化 AI 补写；同 code 同 pattern 的条目直接继承旧叙事
     _old_map = {}
@@ -575,7 +568,6 @@ def main():
             'ratios': r['ratios'],
             'prz': r['prz'], 'stop': r['stop'], 'target1': r['target1'],
             'target2': r['target2'], 'distToPrzPct': r['distToPrzPct'],
-            'accResonance': int(acc.get(c, 0)),
             'lastClose': round(bars[-1]['close'], 2), 'lastDay': bars[-1]['day'],
             'story': _sd[0], 'deduce': _sd[1],
         }
@@ -610,7 +602,7 @@ def main():
     # R100z44：入池首日标记——新入池标的 entryDate=今日，老标的沿用首次入池日（state 逐日携带）。
     # 前端据此给首日新入池卡片整体黄色高亮+「新」徽章，次日自动恢复（用户 2026-10-04 要求）。
     # ⚠️ R100z57：旧写法 `(prev_pools[code].entryDate) or today` 会在上一轮没留下 entryDate 时
-    # 一律写今天 → 整屏刷「新」。改三分支（与 accumulation_score / power_screener 同口径）：
+    # 一律写今天 → 整屏刷「新」。改三分支（与 breakout_pool 同口径）：
     # ① 旧池有 entryDate → 沿用；② 旧池没见过 → 写 today（确实是首次入池）；
     # ③ 旧池见过但无 entryDate（老数据、生成代码早于 R100z44）→ 不写，前端不挂徽章。
     for it in confirm + watch:

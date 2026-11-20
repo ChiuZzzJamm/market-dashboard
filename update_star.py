@@ -80,7 +80,7 @@ def gap_tag(open_pct):
 #                     所以买区只给「现价 ± 滑点」这条可执行带（回测按次日盘口成交，滑点容差
 #                     不是预测），证伪价复用 stop_tracker.mech_stop 的 **T 日最低价**（唯一
 #                     权威锚），**目标价与持有天数不给**——不编一个没被回测验证过的数
-#   · 谐波 / 吸筹   : 同样没有价格纪律字段 → **不进清单**。硬凑一个买区就是编数字，
+#   · 谐波          : 同样没有价格纪律字段 → **不进清单**。硬凑一个买区就是编数字，
 #                     而编出来的数字会被当成纪律执行，比不显示更危险。
 BUY_SLIP = 1.0          # 滑点容差 %：只是买区半宽，不是收益预测
 BUY_SRC_ZH = {
@@ -93,7 +93,7 @@ BUY_ORDER = ('chen_strict', 'duanban', 'bp', 'chen_loose')
 
 # ---------------------------------------------------------------- R102 候选两档
 # 用户 2026-10-28 第 2 条：「9:45 肯定是要根据当日早上大盘开盘的节奏、板块的强弱，去从
-# 明日可下单、陈学长、断板反包、吸筹、谐波这些技术池去选标的的，**待确认的我认为也可以
+# 明日可下单、陈学长、断板反包、横盘启动、谐波这些技术池去选标的的，**待确认的我认为也可以
 # 进去，但是排序是确认池在最前面**」。
 # 于是候选分两档（不是两个新池，是同一批池子的成熟度）：
 #   confirm 确认档：断板 confirmed（已企稳/已脱离）+ 陈学长 strict/loose（形态已确认）
@@ -859,7 +859,7 @@ def load_blacklist(base):
 
     R100z9y（2026-10-09 实战）：star 精选把硬风险黑名单标的（金溢科技 002869，
     red·两次减持公告）选进了 picks，直到 validate_stocks --scope star 才报 FAIL。
-    断板池由 16:00 数据步负责、谐波/横盘启动/吸筹池也不查减持，**开盘精选是唯一有机会
+    断板池由 16:00 数据步负责、谐波/横盘启动池也不查减持，**开盘精选是唯一有机会
     在选股环节拦住这类标的的闸口**，故在脚本里硬剔（severity=red），而不是让
     每天靠 AI 事后补救（AI 补救还会踩「配额已用尽、下一名也上不了」的坑）。
     文件缺失/损坏一律按空处理（源不可达不等于安全，但也不阻塞本任务）。
@@ -994,17 +994,17 @@ def build_star(D, base=None):
             if pool_tier.get(_c) != TIER_CONFIRM:
                 pool_tier[_c] = _tier
 
-    # ---- R100m（需求7）：技术池候选——直接从 谐波/横盘启动/吸筹 池取标的（前一日 16:00 数据步结果） ----
+    # ---- R100m（需求7）：技术池候选——直接从 谐波/横盘启动 池取标的（前一日 16:00 数据步结果） ----
     # 这些标的无 sentiment/probability（neutral 兜底），按池内得分排序，取头部，宁缺勿滥。
     # R100z85（量纲修正，2026-10-08 用户质询「标的映射只有断板+单一技术池」暴露）：原实现全池合并
     # 按 score 降序取前 8，但原九门量纲 score×10（8~10分=80~100）结构性碾压 谐波(确认65/观察55)
-    # 与 吸筹(60~76)——当时九门前 10 全为 90/80，top8 被它垄断，谐波 12 只/吸筹 6 只候选
+    # 与横盘启动(0~100)——当时九门前 10 全为 90/80，top8 被它垄断，谐波 12 只候选
     # 一个都进不了终选，AI 映射段随之只写断板+单池。改为**按池配额保底**：横盘启动≤3、谐波≤3、
-    # 吸筹≤2、陈学长≤2（配额决定入选资格，合并后分数只决定展示顺序），总量 10；
-    # 跨池去重按 横盘启动→谐波→吸筹→陈学长 优先级（多池命中取先处理池的 label）；
+    # 陈学长≤2（配额决定入选资格，合并后分数只决定展示顺序），总量 8；
+    # 跨池去重按 横盘启动→谐波→陈学长 优先级（多池命中取先处理池的 label）；
     # -2% 深跌/≥9.5% 涨停剔除守卫不变。R100z221 新增陈学长池，因此总量从 8 提到 10
     # （原因见下面「配额合计必须 ≤ 切片上限」那段）。
-    hz_list, bp_list, acc_list = [], [], []
+    hz_list, bp_list = [], []
     hz = D.get("harmonic") or {}
     _seen_hz = set()
     for it in (hz.get("confirmPool") or [])[:6] + (hz.get("watchPool") or [])[:6]:
@@ -1015,7 +1015,7 @@ def build_star(D, base=None):
                             "src": "hz", "label": f"谐波{it.get('pattern') or ''}",
                             "score": 65 if it.get("stage") == "确认" else 55})
     # R100z232：九门（powerScreen）已下线，换成横盘启动（breakoutPool）。
-    # 量纲变化：九门 score 是 0-10 的「过几门」，所以要 ×10 才和吸筹同量纲；
+    # 量纲变化：九门 score 是 0-10 的「过几门」，所以要 ×10 才进百分量纲；
     # 横盘启动 score_of() 直接出 0-100，**不能再 ×10**，否则单只票 900 分直接垄断配额。
     bp = D.get("breakoutPool") or {}
     _seen_bp = set()
@@ -1025,17 +1025,7 @@ def build_star(D, base=None):
             _seen_bp.add(c)
             bp_list.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
                             "src": "bp", "label": f"横盘启动{it.get('score') or ''}分",
-                            "score": int(it.get("score") or 0)})  # 量纲：0-100（已同吸筹）
-    acc = D.get("accumulation") or {}
-    for it in (acc.get("scored") or []):
-        try:
-            sc = int(it.get("score") or 0)
-        except Exception:
-            continue
-        c = str(it.get("code") or "")
-        if sc >= 60 and c.startswith(("60", "00")):
-            acc_list.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
-                             "src": "acc", "label": f"吸筹{sc}分", "score": sc})
+                            "score": int(it.get("score") or 0)})  # 量纲：0-100
     # ---- R100z221：陈学长池并入技术池 ----
     # 用户 2026-10-26：「开盘精选池子里也记得加入陈学长技术指标池，因为对胜率有帮助」。
     # 取严格池优先、放宽池次之；**观察中不进**——那是「还差一根确认 K 线」的票，
@@ -1127,11 +1117,11 @@ def build_star(D, base=None):
     # 待确认档的两个列表也并进来抓（否则它们进 picks 时 price 为空，渲染成「行情抓空」——
     # 那正是 R100z241 踩过的坑：不是数据源坏，是自己没去抓）。
     _tech_codes = []
-    for _l in (bp_list, hz_list, acc_list, chen_list, chen_watch_list, shr_list):
+    for _l in (bp_list, hz_list, chen_list, chen_watch_list, shr_list):
         _tech_codes.extend([t["code"] for t in _l])
     # R100z241（2026-10-27 用户问「开盘精选和今日买入清单两块的区别」时抓到）：
     # 买入清单要覆盖**整池**，而上面四个 _list 是为「精选配额」截断过的（bp 只取 passed[:10]、
-    # hz 取前 6+6、陈学长取严格/放宽全量但 acc 只取 ≥60 分）。于是 breakoutPool.passed 30 只里
+    # hz 取前 6+6、陈学长取严格/放宽全量）。于是 breakoutPool.passed 30 只里
     # 第 11~30 只**从未进过 quotes** → build_buy_list 里 last=None → 全部渲染成「价格抓空」。
     # 实测（2026-10-27 09:58 数据）：清单 32 只里 19 只 price 为空，**19 只全部落在池前 10 之外**，
     # 而同一批代码此刻直接用 curl 抓腾讯接口是 15/15 有返回 —— 说明不是数据源抖动，是我们没去抓。
@@ -1150,7 +1140,7 @@ def build_star(D, base=None):
     _tech_codes = list(dict.fromkeys(_tech_codes))
 
     if not pools and not _tech_codes:
-        return None, "断板反包双池与四个技术池（谐波/横盘启动/吸筹/陈学长）均为空"
+        return None, "断板反包双池与三个技术池（谐波/横盘启动/陈学长）均为空"
 
     # ---- 盘面：指数 / 行业涨幅 / 资金 ----
     idx = fetch_open_indices()
@@ -1164,7 +1154,7 @@ def build_star(D, base=None):
             continue
     sectors = [s for s in sectors if s["name"]]
     sectors.sort(key=lambda s: -s["pct"])
-    # R100z170：技术池标的（谐波/横盘启动/吸筹）身上只有 sector 名、没有板块涨幅字段，
+    # R100z170：技术池标的（谐波/横盘启动）身上只有 sector 名、没有板块涨幅字段，
     # 结果「开盘精选」里来自技术池的条目板块涨幅整片「—」。这里按同花顺一级行业名
     # 精确命中一次补上；名字不属同花顺一级（例如主题名「创新药·CXO」）就留空，
     # 由前端 boardPctOf 三级回落兜底，绝不硬套。
@@ -1180,7 +1170,7 @@ def build_star(D, base=None):
                              "同花顺行业资金接口抓空（主力净流入判据缺失）")
     degraded = gap_reason is not None
 
-    # ---- 个股快照（当日实时涨幅）：断板池 + 四个技术池候选一并快照 ----
+    # ---- 个股快照（当日实时涨幅）：断板池 + 三个技术池候选一并快照 ----
     # R100z221：原来抓的是「配额装配后那 10 只」，而装配已挪到后面（要看断板池选走了谁），
     # 所以这里改成抓四个池的全部候选——多抓十几只，换来装配阶段能按实时涨幅顺位递补。
     # R101b（2026-10-28 实测抓到的漏抓）：`timingPlan.orders`（昨夜挂单清单）的代码原本
@@ -1315,15 +1305,15 @@ def build_star(D, base=None):
     # 而陈学长严格池 16 只里有 13 只同时命中断板池 → 配额给它的 2 个座位几乎每次都被
     # 合并段那句 `if t["code"] in pool_codes: continue` 挡掉，实际贡献 0 席
     # （用户 2026-10-26「开盘精选池子里也记得加入陈学长技术指标池，因为对胜率有帮助」＝没兑现）。
-    # 现在先剔掉断板池已选走的票，再按 横盘启动→谐波→吸筹→陈学长 的顺序填配额，配额才真能兑现。
+    # 现在先剔掉断板池已选走的票，再按 横盘启动→谐波→陈学长 的顺序填配额，配额才真能兑现。
     # 开盘深跌(<-2%)/涨停(≥9.5%)的剔除也一起上移：原来被剔的票仍然占着一个配额位、不顺位递补，
     # 等于同一个池的座位凭空少几个（行情一差就整池消失）。
     pool_codes = {p["code"] for p in picks}
     tech, _used = [], set()
     # ⚠️ 配额合计必须 ≤ 下面切片上限：R100z85 的教训是「合并后按 score 降序取前 N」会让
-    # 量纲最大的池垄断名额，配额等于白写。所以这里配额和 = 10，切片也必须是 [:10]；
+    # 量纲最大的池垄断名额，配额等于白写。所以这里配额和 = 8，切片留 [:10] 余量；
     # 加池要同时改这两个数，只改一个就会静默把最后一个池全砍掉。
-    for _lst, _quota in ((bp_list, 3), (hz_list, 3), (acc_list, 2), (chen_list, 2)):
+    for _lst, _quota in ((bp_list, 3), (hz_list, 3), (chen_list, 2)):
         _cnt = 0
         for _t in _lst:
             if _cnt >= _quota:
@@ -1361,7 +1351,7 @@ def build_star(D, base=None):
         if live is not None:
             note += f"·现涨{live:+.1f}%"
         picks.append({"code": t["code"], "name": t["name"], "sector": t["sector"],
-                      # R100z221：技术池条目自带情绪（陈学长池有 sentiment，谐波/横盘启动/吸筹没有 →
+                      # R100z221：技术池条目自带情绪（陈学长池有 sentiment，谐波/横盘启动没有 →
                       # 落到 neutral）。以前这里写死 "neutral"，会把陈学长的利空票也标成中性；
                       # 利空票在 chen_list 构造时已经剔除，这里只是不覆盖真值。
                       "sentiment": t.get("sentiment") or "neutral", "probability": None,
@@ -1504,7 +1494,7 @@ def build_star(D, base=None):
         "⚠️ 本次开盘精选存在数据缺口：同花顺行业涨幅与主力资金接口连续两次抓取失败，"
         "板块情绪与资金流向两项判据缺失。脚本按既定纪律不做板块挂钩判定，"
         "因此断板反包池标的全部不参与本次精选，仅保留前一日 16:00 数据步筛出的"
-        "形态类技术池标的（横盘启动/谐波/吸筹）。指数与个股实时涨跌取自腾讯行情，正常可用。"
+        "形态类技术池标的（横盘启动/谐波）。指数与个股实时涨跌取自腾讯行情，正常可用。"
         "此为取数故障，不代表当日「无合格板块」或市场无机会，请勿据此判断强弱；"
         "可结合盘中资金回流情况另行观察，待接口恢复后按常规口径重跑。"
     )
@@ -1595,7 +1585,7 @@ def build_star(D, base=None):
         "tapeSummary": tape_summary,
         "tierSummary": tier_summary,
         "pushText": push_text,
-        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波/吸筹池直接取标的；R100z85：技术池按池配额 防单池量纲垄断；R100z232：九门下线换横盘启动（配额 横盘启动3/谐波3/吸筹2）+ 新增 star.buyList 今日买入清单（三池买区/证伪价/目标/持有天数/仓位，不含离场提示）；R100z156：行业/资金接口抓空重试+显式降级；R100z192：picks 增 gapTag 开盘价位置标注 + star.gapSummary 分布，只标注不排序；R100z193：接入 tape.py 分时量价结构（均价线/跌破次数/下跌分钟量占比/爆量倍数），picks 增 tape 字段 + star.tapeSummary，动作口径由盘口结构决定，gapTag 降级为价格事实；R101：新增 star.timingExec——读 16:00 timing_plan.py 生成的挂单清单，用 9:45 实时行情核对开盘是否破位，只核对不改单；R102：候选分「确认/待确认」两档（确认档恒在前、待确认档不给买点），待确认档新增陈学长观察池与缩量回踩档（shrink_scan.py，与前端 ordShrinkScan 孪生、由 check_shrink_parity.py 对账），star 增 tierSummary） + 自动化 AI 复核",
+        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波池直接取标的；R100z85：技术池按池配额 防单池量纲垄断；R100z232：九门下线换横盘启动（配额 横盘启动3/谐波3）+ 新增 star.buyList 今日买入清单（三池买区/证伪价/目标/持有天数/仓位，不含离场提示）；R100z156：行业/资金接口抓空重试+显式降级；R100z192：picks 增 gapTag 开盘价位置标注 + star.gapSummary 分布，只标注不排序；R100z193：接入 tape.py 分时量价结构（均价线/跌破次数/下跌分钟量占比/爆量倍数），picks 增 tape 字段 + star.tapeSummary，动作口径由盘口结构决定，gapTag 降级为价格事实；R101：新增 star.timingExec——读 16:00 timing_plan.py 生成的挂单清单，用 9:45 实时行情核对开盘是否破位，只核对不改单；R102：候选分「确认/待确认」两档（确认档恒在前、待确认档不给买点），待确认档新增陈学长观察池与缩量回踩档（shrink_scan.py，与前端 ordShrinkScan 孪生、由 check_shrink_parity.py 对账），star 增 tierSummary） + 自动化 AI 复核",
     }
     return star, None
 

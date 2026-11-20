@@ -381,7 +381,7 @@ def check_horizon(D):
 # 分派原则 =「写它的任务跑哪个 scope」，与 check_logic_depth(ai) / check_reason_depth(us) 对齐：
 #   ai 组 = 决策链（aiPrediction + A股利好/利空卡）
 #   us 组 = 叙事段落（A股/美股 板块理由、五节要闻、题材掘金 + ashare.fundNote_deduce）
-# 不入白名单：量化池（harmonic/accumulation/breakoutPool）的 deduce 恒为 None（纯指标页
+# 不入白名单：量化池（harmonic/breakoutPool）的 deduce 恒为 None（纯指标页
 #   by-design 占位，2026-10-19 实测 99 处全 None）、us.bullish/bearish 当前不带 deduce。
 # 列表节点用「有则校验」语义（deduce 缺失/非对象 = 未启用，跳过）；仅 aiPrediction.sectors
 #   保持「缺失即 FAIL」旧语义（三候挑选股是前端推演段硬依赖）。
@@ -1192,12 +1192,12 @@ def check_stock_pool(D):
         if not chosen:
             continue
 
-        # 池内「断板反包」类候选（其余 src=谐波/吸筹/强势/补位 可填任何槽位，不作硬约束）
+        # 池内「断板反包」类候选（其余 src=谐波/强势/补位 可填任何槽位，不作硬约束）
         db_pool = {_code(x.get('code')) for x in lst
                    if str(x.get('src') or '').startswith('断板')}
         db_pool.discard('000000')
         used_db = db_chosen & cand          # 断板槽位里取自池内的
-        used_all = chosen & cand            # 任意槽位里取自池内的（谐波/吸筹/强势被用上也算）
+        used_all = chosen & cand            # 任意槽位里取自池内的（谐波/强势被用上也算）
         # R100z165（2026-10-21 全链路体检·L4 未撞型）：原来 need_db = min(len(db_pool), 5)，
         #   拿「池内候选数」当应使用数。只要池里断板候选多于今日断板槽位数就必然误报：
         #   实测造 3 只池内候选、AI 断板槽位只有 1 个（TIERS[1]=(2,2,3) 合规），
@@ -1346,7 +1346,7 @@ def check_star_module(D):
     ② duanban.star（9:45 开盘精选）picks 数量不限（≥1，R98l）；
        picks 允许三类：a) 双池内标的（src='pool'）；b) src='board' 的板块动量标的
        （早盘真实强势板块领涨股，R98n，允许池外）；c) src='bp'/'hz'/'acc' 的技术池标的
-       （横盘启动/谐波/吸筹，R100m 前一日 16:00 数据步产物，允许池外）。
+       （横盘启动/谐波，R100m 前一日 16:00 数据步产物，允许池外）。
        纯池外且无合法 src/无板块依据的标的 → WARN。"""
     db = D.get('duanban')
     if not isinstance(db, dict):
@@ -1376,9 +1376,9 @@ def check_star_module(D):
                     # R98n：允许 src='board' 的板块动量标的（早盘真实强势板块领涨股，需有板块依据）
                     if src == 'board' and name_ok and str(p.get('sector') or '').strip():
                         continue
-                    # R100m：允许 src='bp'/'hz'/'acc' 的技术池标的（横盘启动/谐波/吸筹，前一日 16:00 数据步产物）
+                    # R100m：允许 src='bp'/'hz' 的技术池标的（横盘启动/谐波，前一日 16:00 数据步产物）
                     # R100z232：九门下线，'pw' 换成 'bp'；两个都留着是因为历史 star.picks 里还有 'pw'
-                    if src in ('bp', 'pw', 'hz', 'acc') and name_ok:
+                    if src in ('bp', 'pw', 'hz') and name_ok:
                         continue
                     # R100z233：src='chen'（陈学长严格/放宽池，update_star.py 自 10-26 起会选）
                     # 之前不在白名单 → 每天误报「非合规来源」。这里改为**核成员**而非只信 src：
@@ -1513,7 +1513,7 @@ def fix_duanban_inplace(D):
 
 
 def check_selection_modules(D):
-    """2026-09-26 选股扩展模块（谐波/吸筹/量化/必带数据）结构校验。
+    """2026-09-26 选股扩展模块（谐波/横盘启动/必带数据）结构校验。
 
     软闸门：仅 WARN 不阻断部署（与质量类一致）。这些模块由新脚本在 16:00 数据步流水线生成，
     缺失时不报（流水线未跑不代表坏）；存在时校验关键字段与主板约束。
@@ -1541,20 +1541,6 @@ def check_selection_modules(D):
                     for fld in ('pattern', 'stage', 'prz', 'stop', 'target1', 'target2', 'points', 'ratios'):
                         if fld not in it:
                             warns.append(f"harmonic.{pool}[{i}] 缺字段 {fld}")
-
-    a = D.get('accumulation')
-    if a is not None:
-        if not isinstance(a, dict):
-            warns.append("accumulation 应为对象")
-        else:
-            for i, it in enumerate(a.get('scored') or []):
-                if not isinstance(it, dict):
-                    warns.append(f"accumulation.scored[{i}] 非对象"); continue
-                c = str(it.get('code') or '')
-                if not MAIN.match(c):
-                    warns.append(f"accumulation.scored[{i}] code {c} 非 60/00 沪深主板")
-                if 'score' not in it or 'grade' not in it:
-                    warns.append(f"accumulation.scored[{i}] 缺 score/grade")
 
     p = D.get('breakoutPool')
     if p is not None:

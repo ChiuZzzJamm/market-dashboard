@@ -468,7 +468,7 @@ def collect_targets(D):
             add(_e.get('code'), _e.get('name'))
     for e in (db.get('star') or {}).get('picks') or []:
         add(e.get('code'), e.get('name'))
-    for key in ('harmonic', 'accumulation', 'breakoutPool'):
+    for key in ('harmonic', 'breakoutPool'):
         m = D.get(key) or {}
         for f in ('confirmPool', 'watchPool', 'passed', 'scored', 'strong', 'watch', 'failPool'):
             v = m.get(f)
@@ -768,7 +768,7 @@ def merge_depth(sn, old_sn, days=NEWS_DAYS):
 
     ⚠️ R100z206（2026-10-25 用户第二次追问「深度是不是和之前一致」时抓到的真 bug）：
     整只补回的旧判据是「code 在今天的 targets 里」，**这是错的**。`targets` 的语义是
-    「今天要抓谁」（由断板池/谐波/吸筹/板块 tops 等**当天会轮换**的渲染面拼出来），
+    「今天要抓谁」（由断板池/谐波/横盘启动/板块 tops 等**当天会轮换**的渲染面拼出来），
     不是「今天该显示谁」。池子一轮换，36 只票当天没进 targets，整份替换一冲，它们
     连同弹窗里的真公告一起消失 —— 赣锋锂业 3 条、三一重工 3 条、东方中科 3 条、
     诺德股份 3 条、杉杉股份 3 条…全没了，标的数 533 → 530 还看不出问题（因为有

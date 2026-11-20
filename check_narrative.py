@@ -58,7 +58,7 @@ def ceil_of(label):
       08:30 / 周日22:00  openOutlook                    1200-1700
       deduce             main 60-120 / counter 40-80 / cands.text 40-80 / eliminate 15-40
     未登记（prompt 未写区间，只受 G16 地板管）：ashare 板块 detail、ashare 五节 summary、
-    us.summary、accumulation note。硬设上限会逼 AI 无端删内容，宁可不设。
+    us.summary、技术池 note。硬设上限会逼 AI 无端删内容，宁可不设。
 
     ★R100z292 两个上限按实测修正（原 260 / 650 常年被越 1.5-2.6 倍，属**写死的旧口径**）：
       · `sectors[].logic` 260 → 420：prompt 同时要求「驱动链+资金量能依据+风险边界，严禁一两句
