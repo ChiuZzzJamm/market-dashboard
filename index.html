@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611202342"></script>
+<script src="data.js?v=202611202346"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -6359,6 +6359,15 @@ function edgeChipHtml(e) {
      只做 R=(买价−结构止损)/买价 ≤5% 的票：台账同一样本 n=25、胜率 56%、均值 +1.49%；
      而把止损硬收口到 −5% 去凑同样的 R，胜率只剩 48%、均值 −0.05%（被噪音扫掉）。
      R 5~8% 标「等回踩」并给出回踩价；>8% 标「不追」——票仍在池里，只是不按现价进。 */
+  // 断板池条目没有 trade 块（其止损来自 exitForCode），前端按同一阈值现算 R 闸，保证每张卡都有
+  if (!tr.entryGate && st) {
+    var sp0 = (typeof tcStopOf === 'function') ? tcStopOf(e.code) : null;
+    if (sp0 && sp0 > 0 && st.px > 0) {
+      var R0 = (st.px - sp0) / st.px * 100;
+      tr = { entryGate: (R0 <= 5 ? '可做' : (R0 <= 8 ? '等回踩' : '不追')),
+             stopPct: R0, pullbackPx: Number((sp0 * 1.05).toFixed(2)) };
+    }
+  }
   if (tr.entryGate) {
     var gcls = tr.entryGate === '可做' ? 'eg-ok' : (tr.entryGate === '等回踩' ? 'eg-warn' : 'eg-bad');
     var gtip = 'R（买价到结构止损的距离）' + Number(tr.stopPct || 0).toFixed(1) + '%：' +
