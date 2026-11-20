@@ -225,12 +225,17 @@ NEW_STOCK_MIN_BARS = 35
 # 审核意见 §8：止损距离 > 10% 的票单独标记（本口径持有 10 日，宽止损是可达的，
 # 标记含义已从「止损形同虚设」改为「止损偏远、仓位压到底仍偏险」，见 trade_params）。
 STOP_FAR_PCT = 10.0
-# R100z364（2026-11-20 用户「根据你的建议全部修改」）：**纪律止损上限**。
-# 台账 196 笔的归因（edge_study.py）：胜率 62% 却累计 −217.8%，因为止盈封顶 +5%、
-# 止损却取形态位（涨停日最低价），R=(买价−止损)/买价 可以到 −25%，R>20% 那桶 67% 胜率、
-# 均值 −3.47%。所以止损不得宽于「买价 −5%」：取 max(形态位, 买价×0.95)。
-# 只对**新记账**生效（entry.stopCap>0）；老条目按冻结口径继续算，绝不回头改写历史。
-STOP_CAP_PCT = 5.0
+# R100z365（2026-11-20 23:37「从专业交易员身份判断」）：**改买点，不改止损**。
+# 上一版把止损硬收口到「买价 −5%」，数值上把期望从 −1.36% 抬到 −0.05%，但那是**用错工具**：
+# 止损从「结构位」变成了与形态无关的固定百分比，代价是胜率 58% → 48%（被噪音扫掉）。
+# 同一样本换成「不买」实现同样的 5% 风险上限：
+#    只做 R≤5%（结构止损不动）→ n=25、胜率 56%、均值 **+1.49%**、最大亏 −4.1%；
+#    止损收口 −5%          → n=179、胜率 48%、均值 −0.05%。
+# 结论：**风险预算该由「买点」和「仓位」管，不该由「止损位」管**。
+# 所以：止损永远是结构位；R>5% 的票不给「可做」，改给「等回踩」+ 回踩目标价。
+ENTRY_R_MAX = 5.0        # R=(参考买价−结构止损)/参考买价，≤5% 才叫「可做」
+ENTRY_R_WATCH = 8.0      # 5~8% = 等回踩；>8% = 不追
+POS_FLOOR = 2.0          # 仓位下限 5% → 2%：R 大的单子自动缩到很小，靠仓位而不是止损控风险
 # 已删除 LBC_MIN（连板门槛）：连板数仍由 calc_lbc 算出，只展示/排序，不拦截。
 # 用户 2026-10-25：「陈学长没有要求连板≥2，首板也可以」。
 
@@ -529,13 +534,9 @@ def trade_params(ref_close, stop_price):
     # 是止损设在噪音里。收紧到 2% 后仓位自然降到 ≤75%/上限 30%，风险预算仍守 1.5%。
     if (buy - stop) / buy * 100 < 2.0:
         stop = round(buy * 0.98, 2)
-    # R100z364：形态位过远时按纪律上限收口（见 STOP_CAP_PCT 注释）。
-    raw_dist = (buy - stop) / buy * 100
-    stop_capped = raw_dist > STOP_CAP_PCT
-    if stop_capped:
-        stop = round(buy * (1 - STOP_CAP_PCT / 100), 2)
-    dist = (buy - stop) / buy * 100
-    pos = min(30, max(5, round(RISK_BUDGET / dist * 100))) if dist > 0.2 else 5
+    # R100z365：**不收口止损**。R 只用来决定「做不做 / 做多重」。
+    raw_dist = dist = (buy - stop) / buy * 100
+    pos = min(30, max(POS_FLOOR, round(RISK_BUDGET / dist * 100))) if dist > 0.2 else POS_FLOOR
     risk = round(pos * dist / 100, 2)
     # 只有「5% 的仓位下限」真的把预算顶破才算 breach：dist=26% 时 5.77→6 只是取整（1.56%），
     # 不值得报警；dist≥35% 才会变成 1.75% 以上，那才是预算失效。
@@ -545,8 +546,17 @@ def trade_params(ref_close, stop_price):
     if breach:
         note += "｜⚠️ 止损 %.1f%% 过宽，%d%% 的仓位下限已顶破预算（实际单笔亏 %.2f%%）" % (
             dist, pos, risk)
-    if stop_capped:
-        note += "｜形态位距 %.1f%% 过宽，已按纪律上限收口到 %.1f%%" % (raw_dist, dist)
+    if dist > ENTRY_R_WATCH:
+        gate = "不追"
+        note += "｜R %.1f%% > %.0f%%，形态位太远，本波不做（仓位已被动缩到 %d%%）" % (
+            dist, ENTRY_R_WATCH, pos)
+    elif dist > ENTRY_R_MAX:
+        gate = "等回踩"
+        note += "｜R %.1f%% 超预算：回到 %.2f 以内再进（仓位按 R 反向缩到 %d%%）" % (
+            dist, round(stop * 1.05, 2), pos)
+    else:
+        gate = "可做"
+        note += "｜R %.1f%% 在预算内，可按计划进场" % dist
     return {
         "refClose": round(buy, 2),
         "buyRule": "确认日次日开盘买入（等洗盘缩量走完再进，不追涨）",
@@ -557,8 +567,8 @@ def trade_params(ref_close, stop_price):
         "holdDays": HOLD_DAYS,
         "posPct": pos,
         "riskPct": risk,
-        "stopCapped": stop_capped,
-        "rawStopPct": round(raw_dist, 2),
+        "entryGate": gate,
+        "pullbackPx": round(stop * 1.05, 2),
         "stopFar": raw_dist > STOP_FAR_PCT,   # 保留：表示「形态位本身很远」，与是否收口无关
         "riskBreach": breach,
         "riskNote": note,
@@ -720,10 +730,6 @@ def settle_one(e, kl):
         return None
     days, idx, buy = _b["days"], _b["idx"], _b["buy"]
     stop = float(e.get("stopPrice") or 0)
-    # R100z364：新条目按止损上限收口（老条目 stopCap 缺失 → 保持冻结口径，历史不改写）
-    _cap = float(e.get("stopCap") or 0)
-    if _cap and stop > 0 and buy > 0:
-        stop = max(stop, round(buy * (1 - _cap / 100), 2))
     if stop > 0 and buy <= stop:
         # §9：开盘就在止损位之下 → 纪律上不进场。记为 notExecuted，不进胜负分母。
         return {"status": "settled", "result": "notExecuted", "exitDay": days[idx + 1],
@@ -913,8 +919,6 @@ def record_entries(ledger, pool_key, entries, today, tier=None, cross=None, pre_
             "ruleFrom": RULE_FROZEN_AT,
             "tgtPct": TARGET_PCT,
             "holdDays": HOLD_DAYS,
-            # R100z364：止损上限也冻结在条目上，结算时按它收口（老条目没有这个字段 → 用原口径）
-            "stopCap": STOP_CAP_PCT,
             "result": None,
         })
         added += 1

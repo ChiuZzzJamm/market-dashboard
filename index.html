@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611202312"></script>
+<script src="data.js?v=202611202342"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -3192,18 +3192,6 @@ function exitForCode(code0, st, allowFb) {
             }
           }
         }
-        /* R100z364（2026-11-20）：**纪律止损上限**——形态位不得宽于「买价 −5%」。
-           台账 196 笔归因：R>12% 那批 66% 胜率却均值 −1.6%，因为止盈封顶 +5%、止损敞开。
-           这里用「最近收盘 −5%」当买价的代理（真买价是次日开盘），与 chen_pool.trade_params /
-           settle_one 的收口口径一致；形态位更近时仍用形态位。 */
-        if (stop0 !== null && isFinite(stop0) && stop0 > 0) {
-          var _capPx0 = lastC0 * 0.95;
-          if (stop0 < _capPx0) {
-            basis0 = '形态位 ' + stop0.toFixed(2) + ' 距买价过宽，已按纪律上限收口到 ' +
-                     _capPx0.toFixed(2) + '（最近收盘 −5%）';
-            stop0 = _capPx0;
-          }
-        }
         if (stop0 === null || !isFinite(stop0) || stop0 <= 0) {
           // 断板日形态位没取到时，ATR 位比「−2.5%」靠谱得多：后者与这只票的波动率无关。
           if (ax) return ax;
@@ -6367,11 +6355,18 @@ function edgeChipHtml(e) {
       '%、距 MA5 ' + st.ma5dev.toFixed(1) + '%——落在历史正期望区间（67%、+1.74%）">顺势</span>');
   }
   var tr = (e && e.trade) || {};
-  if (tr.stopCapped) {
-    out.push('<span class="eg eg-cap" title="形态位止损原本 ' + (tr.rawStopPct || 0).toFixed(1) +
-      '%，已按纪律上限收口到 5%（买价 −5%）：上限封死 +5% 时，止损不能再敞开">止损收口' + '</span>');
-  } else if (tr.stopPct > 8) {
-    out.push('<span class="eg eg-warn" title="止损距 ' + tr.stopPct + '% 偏宽，仓位已被压到下限">止损偏宽</span>');
+  /* R100z365：止损回到结构位，**风险由买点与仓位管**。
+     只做 R=(买价−结构止损)/买价 ≤5% 的票：台账同一样本 n=25、胜率 56%、均值 +1.49%；
+     而把止损硬收口到 −5% 去凑同样的 R，胜率只剩 48%、均值 −0.05%（被噪音扫掉）。
+     R 5~8% 标「等回踩」并给出回踩价；>8% 标「不追」——票仍在池里，只是不按现价进。 */
+  if (tr.entryGate) {
+    var gcls = tr.entryGate === '可做' ? 'eg-ok' : (tr.entryGate === '等回踩' ? 'eg-warn' : 'eg-bad');
+    var gtip = 'R（买价到结构止损的距离）' + Number(tr.stopPct || 0).toFixed(1) + '%：' +
+      '≤5% 才是正赔率区间（历史 56% / +1.49%）。' +
+      (tr.entryGate === '等回踩' ? '回到 ' + tr.pullbackPx + ' 以内再进' :
+       (tr.entryGate === '不追' ? '形态位太远，本波不做' : '可按计划进场'));
+    out.push('<span class="eg ' + gcls + '" title="' + escAttr(gtip) + '">' +
+      esc(tr.entryGate) + ' R' + Number(tr.stopPct || 0).toFixed(0) + '%</span>');
   }
   return out.length ? '<span class="eg-row">' + out.join('') + '</span>' : '';
 }
