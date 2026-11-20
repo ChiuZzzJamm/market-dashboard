@@ -3529,7 +3529,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-20",
+    "buyDay": "2026-11-09",
+    "exitPrice": 11.86,
+    "buyPrice": 14.42,
+    "retPct": -17.75,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -3660,7 +3669,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-20",
+    "buyDay": "2026-11-09",
+    "exitPrice": 32.04,
+    "buyPrice": 40.96,
+    "retPct": -21.78,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -4204,7 +4222,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-20",
+    "buyDay": "2026-11-10",
+    "exitPrice": 8.72,
+    "buyPrice": 11.3,
+    "retPct": -22.83,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -5310,7 +5337,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-20",
+    "buyDay": "2026-11-11",
+    "exitPrice": 29.46,
+    "buyPrice": 34.99,
+    "retPct": -15.8,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -6955,7 +6991,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-20",
+    "buyDay": "2026-11-12",
+    "exitPrice": 13.99,
+    "buyPrice": 19.87,
+    "retPct": -29.59,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "settleVer": "R100z299"
   },
@@ -8357,9 +8402,28 @@
    "holdDays": 10,
    "result": null,
    "settleVer": "R100z299"
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "002685",
+   "name": "华东重机",
+   "confirmDate": "2026-11-20",
+   "firstSeenDate": "2026-11-19",
+   "entryDate": "2026-11-20",
+   "cross": "chen",
+   "preSnapshot": {},
+   "ztDate": "2026-11-18",
+   "stopPrice": 7.25,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 7.37,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 10,
+   "result": null
   }
  ],
- "updatedAt": "2026-11-19 16:04",
+ "updatedAt": "2026-11-20 16:03",
  "resettleAt": "R100z299",
  "anchorVer": "R100z331",
  "anchorNote": "止损锚＝涨停日（T日）最低价，断板与陈学长同口径；2026-11-10 22:1x 统一"

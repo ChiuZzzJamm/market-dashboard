@@ -196,7 +196,7 @@ def py_recompute(code):
     # 决定分时段出现在哪几天，措辞断言必须按同一口径算，不能写死「11-09/11-10」。
     low_d = min(range(d + 1, n), key=lambda i: l[i]) if d + 1 < n else d
     return {"mult": v[d] / vseg, "ratio": ratio, "vratio": vratio,
-            "prev_ratio": prev_ratio, "nban": z - z0 + 1, "d": d, "low_d": low_d,
+            "prev_ratio": prev_ratio, "nban": z - z0 + 1, "d": d, "n": n, "low_d": low_d,
             "q": v[n - 1] / v[d] * 100 if n - 1 > d else None,
             "lowPct": (min(l[d + 1:]) / c[z] - 1) * 100 if d + 1 < n else None}
 
@@ -279,7 +279,16 @@ def main():
         # 段数随「走到哪一步」变化：刚到断板只有 首板+断板，洗完才有沉淀，启动后才有第五段。
         # 所以不卡固定条数，卡**必须出现的两段**（首板、断板）——少这两段说明结构没认出来。
         if len(ps) < 3:
-            bad.append("%s 有断板结构，只输出了 %d 段（首板+断板+洗盘至少 3 段）" % (code, len(ps)))
+            # R100z359（2026-11-20）：断板日就落在 K 线最后一根时，洗盘期一根 bar 都还没走出来，
+            # 「洗完才有沉淀」那一段物理上不可能存在，页面只能输出「首板 + 断板」两段。
+            # 旧断言无条件要求 ≥3 段，与上方「不卡固定条数」的注释自相矛盾，遇到
+            # 首板→断板正好发生在今天的样本（600156，11-18、11-19 两连板、11-20 断板）必报 FAIL。
+            # 判据改为：断板后 0 天 → 至少 2 段；断板后 ≥1 天 → 至少 3 段。
+            _rt = py_recompute(code)
+            _need = 2 if (_rt and _rt["n"] - 1 - _rt["d"] == 0) else 3
+            if len(ps) < _need:
+                bad.append("%s 有断板结构，只输出了 %d 段（断板后 %d 天，至少 %d 段）"
+                           % (code, len(ps), (_rt["n"] - 1 - _rt["d"]) if _rt else -1, _need))
         joined = "".join(ps)
         for must in ("首板", "断板"):
             if must not in joined:
