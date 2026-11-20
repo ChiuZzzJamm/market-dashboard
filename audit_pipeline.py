@@ -2458,15 +2458,24 @@ def g27_memory_reachability(r):
     #    故障注入（把 `### 24.13` 改回 `### 二十四·十三、`）居然仍然 PASS。
     #    而原版 24.11 事故正是这个形状（主标题中文、子标题 24.11a 在）。
     #    收尾改成 `(?![0-9A-Za-z])`，子标题不再冒充主标题。
+    # R100z369（2026-11-21 记忆重构）：流水节已迁到 CHRONICLE.md，路由必须两个文件一起找。
+    # 只查 PROJECT-MEMORY 会把 88 个被迁走的节全部判成「不存在」，等于逼人把流水搬回来。
+    chp = os.path.join(base, "CHRONICLE.md")
+    ctxt = ""
+    if os.path.exists(chp):
+        try:
+            ctxt = open(chp, encoding="utf-8", errors="ignore").read()
+        except Exception:                                    # noqa: BLE001
+            ctxt = ""
     refs = sorted({m.group(0) for m in re.finditer(r"24\.\d+[a-z]?", mtxt)})
     missing = [x for x in refs
-               if not re.search(r"^#{2,4}\s*" + re.escape(x) + r"(?![0-9A-Za-z])", ptxt, re.M)]
+               if not re.search(r"^#{2,4}\s*" + re.escape(x) + r"(?![0-9A-Za-z])", ptxt + "\n" + ctxt, re.M)]
     if missing:
-        r.fail("G27", f"MEMORY.md 路由指向的节在 PROJECT-MEMORY.md 里 grep 不到："
+        r.fail("G27", f"MEMORY.md 路由指向的节在 PROJECT-MEMORY/CHRONICLE 里都 grep 不到："
                       f"{('、'.join(missing))}——给标题补阿拉伯数字（如「## 二十四·十一」→「### 24.11」）"
                       f"，否则该节等于不存在（R100z166）")
     else:
-        r.ok("G27", f"路由可达：MEMORY.md 引用 {len(refs)} 个 24.x，全部命中标题")
+        r.ok("G27", f"路由可达：MEMORY.md 引用 {len(refs)} 个 24.x，全部命中标题（RULES+CHRONICLE）")
 
     # ---- 2) 时效：关键字前 30 字符内的日期是否已过 ----
     today = dt_date.today()

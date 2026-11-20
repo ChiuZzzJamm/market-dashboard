@@ -58,9 +58,13 @@ else:
 
 # ---------------- M2 路由可达
 pm = rd(PM)
+# R100z369（2026-11-21 记忆重构）：流水节已迁到 CHRONICLE.md，路由（MEMORY.md 里的 24.x）
+# 必须两个文件一起找——否则每个被迁走的节都会报「无对应标题」，等于逼人把流水搬回来。
+CHF = os.path.join(os.path.dirname(os.path.abspath(PM)), "CHRONICLE.md")
+ch = rd(CHF) if os.path.exists(CHF) else ""
 heads = set()
 bad_level = []
-for m in re.finditer(r"(?m)^(#{2,4})\s*(\d+\.\d+[a-z]?)(?![0-9A-Za-z])", pm):
+for m in re.finditer(r"(?m)^(#{2,4})\s*(\d+\.\d+[a-z]?)(?![0-9A-Za-z])", pm + "\n" + ch):
     lvl, key = m.group(1), m.group(2)
     heads.add(key)
     # 24.13e / 2026-10-22 复发：24.15–24.24 十个主干节被写成 `##`，把「二十四」章切碎。
@@ -88,7 +92,7 @@ miss21 = sorted(set(miss21))
 if miss21:
     fail("M2 MEMORY.md 引用的 24.x 节号无对应标题：%s" % ", ".join(miss21))
 else:
-    ok("M2 MEMORY.md 引用的 24.x 全部命中 PROJECT-MEMORY 标题（%d 个）" % len(heads))
+    ok("M2 MEMORY.md 引用的 24.x 全部命中（RULES+CHRONICLE 共 %d 个标题）" % len(heads))
 
 # 中文章节路由
 misscn = [k for k in set(re.findall(r"([〇一二三四五六七八九十]+)节", mm)) if k not in cnsec]
@@ -132,6 +136,29 @@ if stale:
     warn("M4 共 %d 处过期未打标（不删原文，行尾补「⏳ 已过期」）" % len(stale))
 else:
     ok("M4 无「届时/下一个」+ 已过日期 的假未来陈述")
+
+# ---------------- M14 规则/流水分家（R100z369，2026-11-21 记忆重构）
+# 事故背景：PROJECT-MEMORY 单文件 551KB / 286 节，其中 88 节是按日期的决策流水（R100z…），
+# 找一条现行规则要在流水里翻。拆成 RULES（PROJECT-MEMORY）+ CHRONICLE（流水）之后，
+# 唯一的新风险是「拆完没人知道流水在哪」——文件变孤儿，下次又往里写。
+# 判据：CHRONICLE.md 必须存在、有足够节数、且 MEMORY.md 有一行指向它（结构说明就在首行块里）。
+try:
+    _ch = os.path.join(os.path.dirname(os.path.abspath(PM)), "CHRONICLE.md")
+    if not os.path.exists(_ch):
+        fail("M14 缺 CHRONICLE.md —— 流水节被拆到哪去了？拆了就必须留文件，否则等于删记忆")
+    else:
+        _chd = rd(_ch)
+        _n = len(re.findall(r"(?m)^### ", _chd))
+        _mm = rd(MM)
+        _ref = ("CHRONICLE" in _mm)
+        if _n < 20:
+            fail("M14 CHRONICLE.md 只有 %d 节（拆出时应为 80+）—— 文件被清空/截断" % _n)
+        elif not _ref:
+            fail("M14 MEMORY.md 没有指向 CHRONICLE.md —— 下次找不到流水，会又往 RULES 里堆")
+        else:
+            ok("M14 规则/流水分家完好：CHRONICLE %d 节（%.0fKB），MEMORY.md 已指向" % (_n, os.path.getsize(_ch) / 1024.0))
+except Exception as _e:                                     # noqa: BLE001
+    fail("M14 分家检查异常：%s" % str(_e)[:60])
 
 # ---------------- M5 日志积压
 logs = sorted(glob.glob(os.path.join(MEM, "20*.md")))
