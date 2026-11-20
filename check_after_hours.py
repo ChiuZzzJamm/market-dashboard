@@ -25,7 +25,8 @@ sys.path.insert(0, HERE)
 from check_pend_table import extract_func  # noqa: E402
 
 INDEX = os.path.join(HERE, "index.html")
-NEED_FUNCS = ("esc", "escAttr", "dirEnumOf", "newsLevelOf", "newsEntryInner", "afterHoursHtml")
+NEED_FUNCS = ("esc", "escAttr", "dirEnumOf", "newsLevelOf", "newsEntryInner",
+              "afterHoursAtLabel", "afterHoursHtml")
 
 NODE = r"""
 const fs = require('fs');

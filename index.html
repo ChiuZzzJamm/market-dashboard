@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611210056"></script>
+<script src="data.js?v=202611210114"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -4750,6 +4750,16 @@ function wkAsNewsItems(market) {
    还和下面五节要闻长得完全两样。现在改成与五节**同构的卡片**（板块标签 + 标题 + 摘要 + 来源），
    内容由 07:00 那趟 AI 按「宏观 / 政策 / 行业 / 板块」口径写成，格式与 `newsEntryInner` 对齐。
    ⚠️ 抓不到 ≠ 没有（24.65）：degraded 时写「未取到」，绝不显示「暂无要闻」。 */
+/* R100z370（2026-11-21 01:06 巡检）：这一节只有 07:00 重写，白天看时其实是「昨天的隔夜」。
+   只写「截至 07:00」会被读成「今天 07:00」——必须带日期，跨日再补一句「等 07:00 更新」。 */
+function afterHoursAtLabel(ah) {
+  var at = String((ah && (ah.at || ah.updatedAt)) || '');
+  if (!at) return '—';
+  var hhmm = at.slice(11), day = at.slice(0, 10);
+  var td = String(((window.DASHBOARD_DATA || {}).ashare || {}).tradeDate || '').slice(0, 10);
+  if (!td || day === td) return hhmm;
+  return day.slice(5) + ' ' + hhmm + '（非今日，等 07:00 更新）';
+}
 function afterHoursHtml(ah) {
   if (!ah) return '';
   var items = ah.items || [];
@@ -4771,7 +4781,7 @@ function afterHoursHtml(ah) {
   }).join('');
   return '<div class="wk-section ah"><h4>盘后 · 隔夜' +
     '<span class="ah-sub">' + (ah.n || items.length) + ' 条 · 截至 ' +
-    esc(String(ah.at || ah.updatedAt || '').slice(11)) + ' · 昨日收盘后至今晨的宏观 / 政策 / 行业要闻</span></h4>' +
+    esc(afterHoursAtLabel(ah)) + ' · 昨日收盘后至今晨的宏观 / 政策 / 行业要闻</span></h4>' +
     rows + '</div>';
 }
 

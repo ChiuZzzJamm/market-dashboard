@@ -6651,6 +6651,18 @@ def g76_after_hours(r):
     if html and "html = afterHoursHtml(" in html:
         r.fail("G76", "afterHoursHtml 又被挂到技术看板了（#db-pools）—— 它属于 A 股要闻卡")
         return
+    # R100z370：这一节只有 07:00 重写，节假日/漏跑时会静默变「前天的隔夜」。
+    # 超过 36 小时就 WARN（不是 FAIL：周末/长假属正常），让人知道自己在看旧闻。
+    try:
+        from datetime import datetime as _dt2, timedelta as _td2
+        _at = str(ah.get("at") or ah.get("updatedAt") or "")
+        _t = _dt2.strptime(_at[:16], "%Y-%m-%d %H:%M")
+        _age = _dt2.now() - _t
+        if _age > _td2(hours=36):
+            r.warn("G76", "盘后·隔夜已 %.0f 小时未更新（截至 %s）——周一是正常，工作日说明 07:00 那步没跑"
+                   % (_age.total_seconds() / 3600.0, _at))
+    except Exception:                                        # noqa: BLE001
+        pass
     rc, out, err = _run_tool("check_after_hours.py", timeout=120)
     if rc != 0:
         r.fail("G76", "盘后·隔夜渲染没过：" + (out or err or "").strip()[:200])
