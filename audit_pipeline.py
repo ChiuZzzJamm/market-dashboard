@@ -5834,7 +5834,7 @@ def g65_stop_anchor(r):
     for sec in (D.get("aiPrediction") or {}).get("sectors") or []:
         for stk in sec.get("stocks") or []:
             ex = stk.get("exit") or {}
-            if isinstance(ex, dict) and "断板日最低价" in str(ex.get("falsify") or ""):
+            if isinstance(ex, dict) and "断板日最低价" in str(ex.get("falsifyIf") or ""):
                 bad.append(f"AI 预测 {stk.get('name')} 的证伪条件仍写「断板日最低价」"
                            f"（止损锚已是涨停日最低价）")
 
@@ -6753,6 +6753,64 @@ def g78_sent_one_source(r):
                 "AI 判定只在贴脸时作 tieBreak")
 
 
+def g79_counter_score(r):
+    """G79 反证必须可核验（R100z366，WARN/FAIL 分级）。
+
+    背景：方向预测 43% 命中、跑赢基准 49.5%（≈抛硬币）；`deduce.counter` 一直是自由文本，
+    「反证准不准」无从回答。现在每条要闻的 deduce 必须带结构化 `falsify`，由 counter_check.py
+    在次一交易日核验，写 `ashare.counterScore`。
+
+    判据：
+      a) counterScore 结构自洽（n/trig/rate 一致，items ≤8）；
+      b) **有 counter 却有 falsify 的比例**：<50% → WARN（AI 没按要求写结构化反证，核验样本会太少）；
+      c) 前端必须渲染这一条（`counterScoreHtml` 在位），否则又变成「算出来没人看」。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G79", f"data.js 读取失败，跳过反证核验检查：{e}")
+        return
+    ash = D.get("ashare") or {}
+    cs = ash.get("counterScore")
+    cnt = 0
+    total = 0
+    for mk in ("ashare", "us"):
+        sec = D.get(mk) or {}
+        for key in ("bullNews", "bearNews", "macroNews", "intlNews", "bankViews"):
+            for it in (sec.get(key) or []):
+                dd = it.get("deduce") or {}
+                if dd.get("counter"):
+                    total += 1
+                    if isinstance(dd.get("falsifyIf"), dict):
+                        cnt += 1
+    if total and cnt * 2 < total:
+        r.warn("G79", f"只有 {cnt}/{total} 条要闻带结构化 falsifyIf——反证核验样本会不足，"
+                      f"19:30/22:00/07:00 的 prompt 已要求，这里提示执行方补")
+    if not cs:
+        r.warn("G79", "ashare.counterScore 未生成（counter_check.py 未跑）——「反证有多准」仍然无从回答")
+        return
+    bad = []
+    for k in ("n", "trig"):
+        if not isinstance(cs.get(k), int):
+            bad.append(f"{k} 非整数")
+    if isinstance(cs.get("n"), int) and isinstance(cs.get("trig"), int) and cs["trig"] > cs["n"]:
+        bad.append("trig > n")
+    if len(cs.get("items") or []) > 8:
+        bad.append("items 超过 8 条")
+    if bad:
+        r.fail("G79", "counterScore 结构不自洽：" + "；".join(bad))
+        return
+    try:
+        html = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
+    except OSError:
+        html = ""
+    if html and "function counterScoreHtml" not in html:
+        r.fail("G79", "前端没有 counterScoreHtml —— 反证核验算出来了却没人看")
+        return
+    r.ok("G79", f"反证可核验 {cs['n']} 条（触发 {cs['trig']}）· falsify 覆盖 {cnt}/{total}"
+                f" · 前端在位" + ("（样本不足，页面已注明只记录不下结论）" if cs.get("small") else ""))
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -6840,6 +6898,7 @@ def main():
     g76_after_hours(r)
     g77_holiday_table(r)
     g78_sent_one_source(r)
+    g79_counter_score(r)
 
     # R100z284：机器可读的结论行。
     #

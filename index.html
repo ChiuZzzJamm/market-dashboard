@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611202353"></script>
+<script src="data.js?v=202611210019"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -516,6 +516,10 @@
   .ah-t.down { color: #0f9d78; }
   .ah-note { font-size: var(--fs-xs); color: var(--ink2); margin-top: 5px; }
   .ah-note.warn { color: #b4530a; }
+  /* R100z366：反证核验条（A股要闻卡底部一行） */
+  .cs-line { margin-top: 10px; padding: 6px 10px; border-left: 3px solid #a8bcd8; background: #f2f6fc;
+             border-radius: 6px; font-size: var(--fs-sm); color: var(--ink); cursor: help; }
+  .cs-line .cs-tip { color: var(--ink2); font-size: var(--fs-xs); }
   .wk-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 26px; margin-bottom: 20px; box-shadow: var(--shadow); }
   /* R100z111（用户 2026-10-10）：卡头下那条线去掉、留白压小——原 border-bottom+padding12+margin14，
      首节再有 border-top+padding16+margin22，双重分隔线夹出 ~64px 空白带 */
@@ -4771,6 +4775,29 @@ function afterHoursHtml(ah) {
     rows + '</div>';
 }
 
+/* R100z366（用户 2026-11-21 00:09「反证只是文案，没人核验」）：**反证核验条**
+   把「若 X 则本判断作废」变成可核验的数字：触发率 + 触发组/未触发组的后续 5 日表现。
+   edge = 未触发均值 − 触发均值，>0 才说明「反证触发」真的对应更差的走势。
+   样本 <10 条时只报数字不下结论（`.cs-tip` 里写明）。 */
+function counterScoreHtml(cs) {
+  if (!cs || !cs.n) return '';
+  var f = function (v) { return (v === null || v === undefined) ? '—' : ((v > 0 ? '+' : '') + v + '%'); };
+  var small = !!cs.small;
+  var verdict = small ? '样本不足，仅记录' :
+    (cs.edge === null || cs.edge === undefined ? '后续窗口未走完' :
+      (cs.edge > 0 ? '反证有区分度（触发组后续更弱 ' + cs.edge + 'pp）'
+                   : '反证暂无区分度（edge ' + cs.edge + 'pp）'));
+  var rows = (cs.items || []).slice(0, 6).map(function (x) {
+    return (x.trig ? '✅触发 ' : '○未触发 ') + String(x.day).slice(5) + ' ' + x.code +
+      ' ' + (x.kind === 'gap' ? ('竞价 ' + x.obs + '%') : ('收盘 ' + x.obs)) +
+      '｜5日 ' + f(x.fwd);
+  }).join('\n');
+  return '<div class="cs-line" title="' + escAttr((cs.note || '') + '\n\n最近记录：\n' + rows) + '">' +
+    '反证核验 ' + cs.n + ' 条 · 触发 ' + (cs.rate === null ? '—' : cs.rate + '%') +
+    ' · 触发后 5 日 ' + f(cs.fwdTrig) + ' / 未触发 ' + f(cs.fwdNot) +
+    ' · <b>' + esc(verdict) + '</b>' +
+    ' <span class="cs-tip">（更新 ' + esc(String(cs.updatedAt || '').slice(5)) + '）</span></div>';
+}
 function renderNewsCard(d, market) {
   // R100z109（用户 2026-10-10）：A股/美股要闻卡迁入「📄 全球要闻」独立页；
   // 原利好/利空两栏紧凑卡（news-cols/news-cell）废除，五节统一为通栏展开卡（wk-item，
@@ -4834,6 +4861,7 @@ function renderNewsCard(d, market) {
     bank.forEach(function (it) { html += '<div class="wk-item wk-dir-' + (dirEnumOf(it.direction) === '看涨' ? 'up' : (dirEnumOf(it.direction) === '看跌' ? 'down' : 'flat')) + '" data-ntitle="' + escAttr(it.title||'') + '">' + newsEntryInner(it, true, '机构·观点', d.tradeDate) + '</div>'; });
     html += '</div>';
   }
+  if (market === 'ashare') html += counterScoreHtml(d.counterScore);
   if (d.source) html += '<div class="wk-src">来源：' + esc(d.source) + '</div>';
   html += '</div>';
   return html;

@@ -82,6 +82,7 @@ DATA_WRITERS = [
     'build_stock_pool.py',      # 机械选股池
     'chen_pool.py',             # R100z218：chenPool（陈学长第二套断板反包口径；走 write_data_js）
     'common.py',                # write_data_js() 本体（唯一入口，自身即实现）
+    'counter_check.py',         # R100z366：反证核验 → ashare.counterScore（走 write_data_js）
     'embed_klines.py',          # 内嵌 stkKlines
     'intraday_digest.py',       # R100z345：stkIntraday 5 分钟分时摘要（走 write_data_js）
     'enrich_policy.py',         # policySignals 解码
