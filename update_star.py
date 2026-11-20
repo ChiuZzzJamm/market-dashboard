@@ -319,6 +319,28 @@ def build_buy_list(D, picks, quotes, blacklist):
             "targetPct": (round((target / last - 1) * 100, 1)
                           if (target and last) else None),
         }
+        # R100z367（2026-11-21 00:27 交易员口径）：**下单价也要过赔率闸**。
+        # 台账 196 笔归因：R=(买价−证伪价)/买价 ≤5% 那批 56%/+1.49%，R>8% 那批 66% 胜率却均值 −1.6%。
+        # 9:45 是唯一真正下单的时点，所以闸必须在这里：R 与「按现价算的剩余赔率」一起看。
+        _risk = (last - row["invalid"]) if (row["invalid"] and last) else None
+        _rew = (row["target"] - last) if (row["target"] and last) else None
+        if _risk and _risk > 0:
+            rp = _risk / last * 100
+            rr = (_rew / _risk) if (_rew is not None) else None
+            if rp <= 5.0 and (rr is None or rr >= 1.0):
+                gate = "可做"
+            elif rp <= 8.0:
+                gate = "等回踩"
+            else:
+                gate = "不追"
+            row.update({"riskPct": round(rp, 1),
+                        "rr": (round(rr, 2) if rr is not None else None),
+                        "gate": gate,
+                        "tradeable": gate == "可做"})
+        else:
+            row.update({"riskPct": None, "rr": None, "gate": "价格不全", "tradeable": False})
+        if row["tradeable"] and row["state"] != "buy":
+            row["tradeable"] = False        # 不在买区内、或不追的，都不算「今天能下」
         if extra:
             row.update(extra)
         rows.append(row)
@@ -428,6 +450,8 @@ def build_buy_list(D, picks, quotes, blacklist):
                              -(r.get("score") or 0)))
 
     n_buy = sum(1 for r in rows if r["state"] == "buy")
+    n_trade = sum(1 for r in rows if r.get("tradeable"))
+    n_nogo = sum(1 for r in rows if r.get("gate") == "不追")
     by_src = {}
     for r in rows:
         by_src[r["srcZh"]] = by_src.get(r["srcZh"], 0) + 1
@@ -441,7 +465,9 @@ def build_buy_list(D, picks, quotes, blacklist):
         seg = "、".join("%s %d 只" % (k, v) for k, v in by_src.items())
         names = "、".join("%s(%s %.2f~%.2f)" % (r["name"], r["code"], r["low"], r["high"])
                           for r in rows[:6])
-        text = "今日买点 %d 只（%s）：其中在买区内 %d 只。%s" % (len(rows), seg, n_buy, names)
+        text = "今日买点 %d 只（%s）：在买区内 %d 只，过赔率闸可下单 %d 只%s。%s" % (
+            len(rows), seg, n_buy, n_trade,
+            ("（不追 %d 只：R>8%% 或剩余赔率<1）" % n_nogo) if n_nogo else "", names)
         if len(rows) > 6:
             text += " 等"
         if skipped:

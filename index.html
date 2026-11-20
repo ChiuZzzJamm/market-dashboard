@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611210019"></script>
+<script src="data.js?v=202611210037"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -6149,9 +6149,21 @@ function orderLineOf(code) {
   var out = [];
   if (s.buy) {
     var b = s.buy;
-    out.push('今可买 <b>' + p2(b.low) + '~' + p2(b.high) + '</b>' +
-      (b.stateZh ? '（' + esc(String(b.stateZh)) + '）' : '') +
-      ' · 破 ' + p2(b.invalid) + ' 撤');
+    /* R100z367：**下单价也要过赔率闸**。不追的票不再印「今可买」——
+       台账里 R>8% 那批 66% 胜率却均值 −1.6%，把它们摆在「今可买」就是在害人。 */
+    if (b.gate === '不追') {
+      out.push('不追 <b>R' + (b.riskPct == null ? '?' : Math.round(b.riskPct)) + '%</b>' +
+        '（证伪位太远 / 剩余赔率<1）· 破 ' + p2(b.invalid) + ' 才算错');
+    } else if (b.gate === '等回踩') {
+      out.push('等回踩 <b>' + p2(b.invalid * 1.05) + '</b> 以内（R' +
+        (b.riskPct == null ? '?' : Math.round(b.riskPct)) + '% 偏宽）· 破 ' + p2(b.invalid) + ' 撤');
+    } else {
+      out.push('今可买 <b>' + p2(b.low) + '~' + p2(b.high) + '</b>' +
+        (b.stateZh ? '（' + esc(String(b.stateZh)) + '）' : '') +
+        ' · R' + (b.riskPct == null ? '?' : Math.round(b.riskPct)) + '%' +
+        (b.rr ? ' · 赔率 ' + b.rr : '') +
+        ' · 破 ' + p2(b.invalid) + ' 撤');
+    }
   }
   if (s.ord) {
     var t = s.ord;

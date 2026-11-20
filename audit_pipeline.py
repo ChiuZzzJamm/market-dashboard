@@ -157,8 +157,10 @@ EMPTY_WHITELIST = [
     (r"us\.breadth\.",
      "R98i 预留口径位：非交易日/脚本未覆盖时为空，前端整体隐藏该卡"),
     # --- 结构性预留 / 已下线模块 ---
-    (r"themePicks$",                    # R98j 已下线
-     "R98j：主题速览模块已下线，字段保留防旧键丢失"),
+    (r"themePicks$",
+     "R100z368：themePicks **是活字段**（A 股「题材掘金」卡就在渲染它，见 renderThemePicks）。"
+     "空值是 by-design——某日没有够格的个股事件驱动就没有这一块，不是漏跑。"
+     "（旧说明写「R98j 模块已下线」，与实际相反，属墓碑注释，已纠正）"),
     (r"excluded$",                      # 结构预留
      "无剔除项时为空数组"),
     (r"(harmonic|breakoutPool)\.summary$",
@@ -6811,6 +6813,50 @@ def g79_counter_score(r):
                 f" · 前端在位" + ("（样本不足，页面已注明只记录不下结论）" if cs.get("small") else ""))
 
 
+def g80_buy_gate(r):
+    """G80 下单价必须过赔率闸（R100z367，FAIL 级）。
+
+    台账 196 笔：R=(买价−证伪价)/买价 ≤5% 那批 56%/+1.49%；R>8% 那批 66% 胜率却均值 −1.6%。
+    9:45 的 `duanban.star.buyList` 是**唯一真正下单的入口**，所以闸必须落在这里：
+    每条要么 `gate=可做`（R≤5 且 剩余赔率≥1），要么标明 等回踩/不追；「不追」的票不许
+    以「今可买」的姿态出现（前端 orderLineOf 已按 gate 分派）。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G80", f"data.js 读取失败，跳过买入闸检查：{e}")
+        return
+    st = ((D.get("duanban") or {}).get("star") or {})
+    rows = st.get("buyList") or []
+    if not rows:
+        r.ok("G80", "今日买入清单为空（空池是常态），无赔率可查")
+        return
+    bad, stat = [], {"可做": 0, "等回踩": 0, "不追": 0, "价格不全": 0}
+    for x in rows:
+        g = x.get("gate")
+        if g not in ("可做", "等回踩", "不追", "价格不全"):
+            bad.append(f"{x.get('code')} gate={g!r} 缺失或非法")
+            continue
+        stat[g] += 1
+        rp = x.get("riskPct")
+        if g == "可做":
+            if not isinstance(rp, (int, float)):
+                bad.append(f"{x.get('code')} 可做但没有 riskPct")
+            elif rp > 5.0 + 1e-6:
+                bad.append(f"{x.get('code')} 标「可做」但 R={rp}% > 5%")
+            elif not x.get("rr") or x["rr"] < 1.0:
+                bad.append(f"{x.get('code')} 标「可做」但剩余赔率 {x.get('rr')} < 1")
+            if x.get("state") != "buy":
+                bad.append(f"{x.get('code')} 标「可做」却不在买区内（state={x.get('state')}）")
+        if "tradeable" not in x:
+            bad.append(f"{x.get('code')} 缺 tradeable 字段（页面靠它算「今天能下几只」）")
+    if bad:
+        r.fail("G80", "买入清单没按赔率闸分派：" + "；".join(bad[:3]))
+        return
+    r.ok("G80", f"买入清单 {len(rows)} 条全部过闸：可做 {stat['可做']} / 等回踩 {stat['等回踩']}"
+                f" / 不追 {stat['不追']}（R>8% 或剩余赔率<1 一律不进「今可买」）")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -6899,6 +6945,7 @@ def main():
     g77_holiday_table(r)
     g78_sent_one_source(r)
     g79_counter_score(r)
+    g80_buy_gate(r)
 
     # R100z284：机器可读的结论行。
     #
