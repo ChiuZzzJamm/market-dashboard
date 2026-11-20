@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611202305"></script>
+<script src="data.js?v=202611202312"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -3190,6 +3190,18 @@ function exitForCode(code0, st, allowFb) {
                        '——反包启动位下沿，跌破即这波失败';
               break;
             }
+          }
+        }
+        /* R100z364（2026-11-20）：**纪律止损上限**——形态位不得宽于「买价 −5%」。
+           台账 196 笔归因：R>12% 那批 66% 胜率却均值 −1.6%，因为止盈封顶 +5%、止损敞开。
+           这里用「最近收盘 −5%」当买价的代理（真买价是次日开盘），与 chen_pool.trade_params /
+           settle_one 的收口口径一致；形态位更近时仍用形态位。 */
+        if (stop0 !== null && isFinite(stop0) && stop0 > 0) {
+          var _capPx0 = lastC0 * 0.95;
+          if (stop0 < _capPx0) {
+            basis0 = '形态位 ' + stop0.toFixed(2) + ' 距买价过宽，已按纪律上限收口到 ' +
+                     _capPx0.toFixed(2) + '（最近收盘 −5%）';
+            stop0 = _capPx0;
           }
         }
         if (stop0 === null || !isFinite(stop0) || stop0 <= 0) {
