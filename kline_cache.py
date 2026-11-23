@@ -178,7 +178,7 @@ def _cache_valid(path):
     R100z51 修复：原实现只看 mtime（TTL 20h），而缓存 key 只有 `<code>.json`、
     不含日期。10-01~10-07 国庆休市期间实测 653 份缓存里 645 份 mtime 仅 14h
     （判「有效」），末根却全是 2026-09-30 —— harmonic_detect / breakout_pool /
-    power_screener 就这样把节前最后一根 K 线当成「收盘数据」算指标，
+    旧脚本就这样把节前最后一根 K 线当成「收盘数据」算指标，
     而 harmonic_detect.py:582 的 `fetch_ok >= 0.8` 还会绕过 R91m
     「抓取不全则保留旧池」闸门，把脏结果写进看板。
     """

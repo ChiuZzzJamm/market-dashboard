@@ -3398,7 +3398,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "expired",
+    "exitDay": "2026-11-23",
+    "buyDay": "2026-11-09",
+    "exitPrice": 19.95,
+    "buyPrice": 20.12,
+    "retPct": -0.84,
+    "note": "持仓 10 日未触目标也未破止损，收盘平"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -3422,8 +3431,8 @@
     "result": "win",
     "exitDay": "2026-11-12",
     "buyDay": "2026-11-09",
-    "exitPrice": 41.35,
-    "buyPrice": 39.38,
+    "exitPrice": 41.27,
+    "buyPrice": 39.31,
     "retPct": 5.0,
     "note": "盘中触 +5.0% 当天兑现"
    },
@@ -7981,7 +7990,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-23",
+    "buyDay": "2026-11-19",
+    "exitPrice": 16.32,
+    "buyPrice": 15.54,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -8100,7 +8118,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-23",
+    "buyDay": "2026-11-20",
+    "exitPrice": 24.95,
+    "buyPrice": 23.76,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -8268,7 +8295,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-23",
+    "buyDay": "2026-11-20",
+    "exitPrice": 4.27,
+    "buyPrice": 4.59,
+    "retPct": -6.97,
+    "note": "收盘跌破止损位"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -8288,7 +8324,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-23",
+    "buyDay": "2026-11-20",
+    "exitPrice": 8.1,
+    "buyPrice": 7.71,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -8344,7 +8389,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-23",
+    "buyDay": "2026-11-20",
+    "exitPrice": 12.45,
+    "buyPrice": 11.86,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -8420,10 +8474,185 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null
+   "result": null,
+   "settleVer": "R100z299"
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "002165",
+   "name": "红宝丽",
+   "confirmDate": "2026-11-23",
+   "firstSeenDate": "2026-11-20",
+   "entryDate": "2026-11-23",
+   "cross": "chen",
+   "preSnapshot": {
+    "theme": {
+     "label": "启动",
+     "day": null,
+     "score": 85.8,
+     "why": "今日+2.65% / 5日-10.81% / 涨停2只 / 扩散89%",
+     "fake": false
+    },
+    "pop": {
+     "label": "活跃",
+     "score": 72.1,
+     "why": "成交额池内分位 64 · 放量3.0倍（+8）"
+    },
+    "ladder": {
+     "label": "2板",
+     "score": 70.0,
+     "why": "板块 化学制品 有 1 只连板、最高 2 板（鼎龙科技），鼎龙科技 的题材是「光刻胶+特种工程材料单体+染发剂原料」",
+     "n": 1,
+     "maxLb": 2,
+     "names": [
+      "鼎龙科技"
+     ],
+     "themes": [
+      "光刻胶",
+      "特种工程材料单体",
+      "染发剂原料"
+     ],
+     "topName": "鼎龙科技",
+     "inLadder": false,
+     "bonus": 6.0,
+     "tag": "可补涨"
+    },
+    "mood": {
+     "label": "中性",
+     "score": 65,
+     "text": "涨停 145（昨 28，↑） · 跌停 3（昨 58，↓） · 最高板 5（昨 4，↑） · 连板股 15（昨 3，↑） · 分歧率 40%（昨 33，↑） · 接力率 10%（昨 11，↓）",
+     "why": "各项指标没有明确方向，按中性处理",
+     "gate": "open"
+    },
+    "total": 85.6,
+    "tier": "强",
+    "why": "题材启动(86)×55% + 人气72×45% + 连板2板+6 = 86（情绪中性 作闸门）"
+   },
+   "ztDate": "2026-11-19",
+   "stopPrice": 5.62,
+   "stopAnchor": "zt_low",
+   "ztLow": 5.62,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null,
+   "settleVer": "R100z299"
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "600186",
+   "name": "莲花控股",
+   "confirmDate": "2026-11-23",
+   "firstSeenDate": "2026-11-23",
+   "entryDate": "2026-11-23",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "温和",
+     "day": null,
+     "score": 26.6,
+     "why": "今日+1.44% / 5日-7.27% / 涨停0只 / 扩散75%",
+     "fake": false
+    },
+    "pop": {
+     "label": "活跃",
+     "score": 85.9,
+     "why": "成交额池内分位 86"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 食品加工制造 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "中性",
+     "score": 65,
+     "text": "涨停 145（昨 28，↑） · 跌停 3（昨 58，↓） · 最高板 5（昨 4，↑） · 连板股 15（昨 3，↑） · 分歧率 40%（昨 33，↑） · 接力率 10%（昨 11，↓）",
+     "why": "各项指标没有明确方向，按中性处理",
+     "gate": "open"
+    },
+    "total": 53.3,
+    "tier": "弱",
+    "why": "题材温和(27)×55% + 人气86×45% = 53（情绪中性 作闸门）"
+   },
+   "ztDate": "2026-11-18",
+   "stopPrice": 8.07,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 8.07,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null,
+   "settleVer": "R100z299"
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "603629",
+   "name": "利通电子",
+   "confirmDate": "2026-11-23",
+   "firstSeenDate": "2026-11-23",
+   "entryDate": "2026-11-23",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "启动",
+     "day": null,
+     "score": 95.3,
+     "why": "今日+4.18% / 5日-14.52% / 涨停0只 / 扩散97%",
+     "fake": false
+    },
+    "pop": {
+     "label": "活跃",
+     "score": 89.1,
+     "why": "成交额池内分位 89"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 消费电子 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "中性",
+     "score": 65,
+     "text": "涨停 145（昨 28，↑） · 跌停 3（昨 58，↓） · 最高板 5（昨 4，↑） · 连板股 15（昨 3，↑） · 分歧率 40%（昨 33，↑） · 接力率 10%（昨 11，↓）",
+     "why": "各项指标没有明确方向，按中性处理",
+     "gate": "open"
+    },
+    "total": 92.5,
+    "tier": "强",
+    "why": "题材启动(95)×55% + 人气89×45% = 92（情绪中性 作闸门）"
+   },
+   "ztDate": "2026-11-18",
+   "stopPrice": 54.21,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 54.21,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null,
+   "settleVer": "R100z299"
   }
  ],
- "updatedAt": "2026-11-20 16:03",
+ "updatedAt": "2026-11-23 16:03",
  "resettleAt": "R100z299",
  "anchorVer": "R100z331",
  "anchorNote": "止损锚＝涨停日（T日）最低价，断板与陈学长同口径；2026-11-10 22:1x 统一"

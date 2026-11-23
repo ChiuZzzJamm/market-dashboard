@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611231001"></script>
+<script src="data.js?v=202611231948"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -1513,7 +1513,7 @@
   /* 页内定位锚点：给顶部留出呼吸空间 */
   #gn-ashare, #gn-us { scroll-margin-top: 12px; }
 
-  /* R100z234（2026-10-26 用户拍板「直接删掉」）：交易预案整块下线。
+  /* R100z234（2026-10-26 用户拍板「直接删掉」）：旧页面整块下线。
      signal_rank.py 已删除，data.js 的 tradeDesk 键已删，前端渲染函数与容器一并移除。
      它原来的 18 条 .td-* 样式（.td-scope/.td-mkt/.td-port/.td-warn/.td-item/.td-rank/.td-name/
      .td-sec/.td-q/.td-kv/.td-why/.td-fold/.td-x/.td-note/.td-plan/.td-valid/.td-h）同步删除——
@@ -1770,7 +1770,7 @@
     <div id="db-fixed"></div>
     <!-- R100z162：开盘预测子页——盘前前瞻 + AI 预测分析合并成一页。
          用户 2026-10-24 要求「AI 预测分析整个模块挪到技术看板，新增开盘预测」。
-         R100z234（2026-10-26 用户拍板）：原第三块「交易预案」已整块删除（与开盘精选交集仅 1 只），
+         R100z234（2026-10-26 用户拍板）：原第三块「旧页面」已整块删除（与开盘精选交集仅 1 只），
          所以这里只剩两个容器。两块各有独立渲染函数，容器常驻、只切 display，不重复 innerHTML。 -->
     <div id="db-od" class="db-subpage" style="display:none;">
       <div id="db-od-nav"></div>
@@ -1785,7 +1785,7 @@
          不改断板反包任何口径——用户 2026-10-25 要求「建一个陈学长技术指标，而不是更新断板反包」） -->
     <div id="db-chen" class="db-subpage" style="display:none;"></div>
     <div id="db-hz" class="db-subpage" style="display:none;"></div>
-    <!-- R100z232：`db-pw`（日线九门）已撤，替换为 `db-bp`（横盘启动，breakout_pool.py） -->
+    <!-- `db-bp`：横盘启动子页（breakout_pool.py） -->
     <div id="db-bp" class="db-subpage" style="display:none;"></div>
   </div>
 
@@ -2714,7 +2714,7 @@ function render(market) {
     renderTrendStrip(_tsA) + '</div>';
 
   // R100z162：预测相关两块迁入「🧰 技术看板 → 开盘预测」子页（用户 2026-10-24 要求：
-  // 先看方向再看依据）。主页面只留当日盘面。R100z234 起交易预案已删，这里不再有「看作法」那块。
+  // 先看方向再看依据）。主页面只留当日盘面。R100z234 起旧页面已删，这里不再有「看作法」那块。
 
   // R100z82：预测验证块按用户要求移回 AI 预测卡（renderAiPrediction 内渲染）；
   // 大盘趋势研判卡恢复为纯研判内容（2026-10-08 用户反馈：验证块应放在 AI 预测下面）
@@ -5579,7 +5579,7 @@ function openHzModal(code, name) {
    R100z76-③ 给横盘启动加 sortByReso 排序后，tcCard 的 idx 是「排序+截断后」的位置，
    而 onclick 仍回取原始未排序池 → 点上海洗霸弹出传艺科技（硬教训#4 原样复发）。
    两页各存一份全局排序数组，渲染与 openGrpModal（含组内导航）共用；谐波页按 code 回取不受影响。
-   R100z232：PW_SORTED → BP_SORTED（九门撤、横盘启动接位）。 */
+   BP_SORTED：横盘启动排序键。 */
 var BP_SORTED = [];
 function openGrpModal(list, idx) {
   if (!list || !list[idx]) return;
@@ -5632,7 +5632,7 @@ function techMetaLines(code) {
   var bpTop = null;
   ((D.breakoutPool || {}).passed || []).forEach(function (x) { if (!bpTop && x && String(x.code) === code) bpTop = x; });
   var out = '';
-  // R100z232：九门「通过 G1-G9」那一行换成横盘启动的平台口径（同一位置、同样是纯文本行）。
+  // 横盘启动的「平台口径」那一行（纯文本行）。
   if (bpTop && bpTop.note) out += '<div><span class="lab">横盘启动：</span>' + esc(bpTop.note) + '</div>';
   // R100z202：龙虎榜固定排在技术指标**之后**（见 stkLhbLine 注释：位置必须与标的技术面构成无关）
   out += stkLhbLine(code);
@@ -6236,7 +6236,7 @@ function resoMap() {
   }
   var h = d.harmonic || {};
   add(h.confirmPool, '谐波'); add(h.watchPool, '谐波');
-  add(d.breakoutPool && d.breakoutPool.passed, '横盘启动');   // R100z232：九门撤，横盘启动接位
+  add(d.breakoutPool && d.breakoutPool.passed, '横盘启动');
   var db = d.duanban || {};
   add(db.confirmed, '断板反包'); add(db.watching, '断板反包');
   _RESO_MAP = m; return m;
@@ -7130,7 +7130,7 @@ function renderDuanban() {
   // R100k：子页菜单嵌入页首（空数据态也保留菜单，避免困在子页无法返回）
   var hzWrap = document.getElementById('db-hz');
   if (hzWrap) hzWrap.innerHTML = subnavHtml() + (renderHarmonic() || '<div class="db-empty">暂无谐波形态数据</div>');
-  // R100z232：九门页 → 横盘启动页。九门已按同跑道回测（t=−5.02）撤掉，不再渲染。
+  // 横盘启动页的渲染口径。
   var bpWrap = document.getElementById('db-bp');
   if (bpWrap) bpWrap.innerHTML = subnavHtml() +
     (renderBreakoutPool() || '<div class="db-empty">暂无横盘启动数据（16:00 数据步跑 breakout_pool.py 后出现；空池是常态——贴沿标的一天平均 0.6 只）</div>');
@@ -8323,13 +8323,13 @@ var currentSubTab = 'db';
 function subnavHtml() {
   var tabs = [
     // R100z162（用户 2026-10-24）：新增「开盘预测」子页并排到最前——盘前前瞻 + AI 预测分析 +
-    // （R100z234 起交易预案已删，这里只剩两块）。排第一是因为它是每天开盘前唯一要看的一页：先判断方向。
+    // （R100z234 起旧页面已删，这里只剩两块）。排第一是因为它是每天开盘前唯一要看的一页：先判断方向。
     { k: 'od', t: '开盘预测' },
     { k: 'db', t: '断板反包' },
     // R100z218（用户 2026-10-25 红框指定位置）：陈学长独立指标——与断板反包并列，
     // 不是它的升级版。两套口径同时跑、同一结算口径回测，一周后比胜率与选股差异。
     { k: 'chen', t: '陈学长' },
-    // R100z232（用户 2026-10-26「删九门模块 + 新增横盘启动模块」）：`pw` 整条链撤掉，
+    // R100z232（用户 2026-10-26「删旧技术池模块 + 新增横盘启动模块」）：`pw` 整条链撤掉，
     // 换成 `bp`（横盘启动，breakout_pool.py）。位置放在「陈学长」后面——断板/陈学长/横盘启动
     // 三个都是**买点型**池，排在一起读者才能横向比；谐波排后面。
     { k: 'bp', t: '横盘启动' },
@@ -8340,7 +8340,7 @@ function subnavHtml() {
   }).join('') + '</div>';
 }
 function switchSubTab(k) {
-  // R100z232：`pw`（九门）已删。老浏览器里 localStorage 可能还存着 'pw'，
+  // R100z232：`pw`（旧技术池）已删。老浏览器里 localStorage 可能还存着 'pw'，
   // 不拦的话 switchSubTab('pw') 找不到容器 → 所有子页 display:none → **整页空白且无报错**。
   var map = { od: 'db-od', db: 'db-pools', chen: 'db-chen', bp: 'db-bp', hz: 'db-hz' };
   if (!map[k]) k = 'db';
@@ -8370,7 +8370,7 @@ function resizeOdCharts() {
 }
 /* R100z162：开盘预测页三块的渲染入口。三块各自独立取数、独立失败，一块挂了另两块照常出。 */
 function renderOpenDesk() {
-  // R100z234（2026-10-26 用户拍板「直接删掉」）：交易预案整块下线。
+  // R100z234（2026-10-26 用户拍板「直接删掉」）：旧页面整块下线。
   // 原因不是「准确率低」这句印象，而是它与开盘精选在同一天给出两套几乎不重叠的名单
   // （2026-10-26 实测：精选 10 只 / 预案 8 只 / 交集 1 只），两套止损仓位并存，
   // 任何一套都无法照做。signal_rank.py 已删除，data.js 的 tradeDesk 键已删。
@@ -8423,8 +8423,8 @@ function closeGnews() {
 
    R100z329（用户 2026-11-10「这块删掉，没什么用」）：原来的「强板块落后股 · 规则回测」
    整块下线——它的入场条件要等 9:25 集合竞价，给不出「提前一天」的名单；回测本身
-   t 值不显著（−0.20），页面却占一张卡。删除范围：渲染函数、挂载、CSS、lead_lag.py、
-   duanban.leadLag 节点与台账登记，均已清干净，别在这里再把它挂回来。 */
+   t 值不显著（−0.20），页面却占一张卡。删除范围：渲染函数、挂载、CSS、旧指标脚本.py、
+   duanban.旧指标 节点与台账登记，均已清干净，别在这里再把它挂回来。 */
 function renderScoreView() {
   var D = window.DASHBOARD_DATA || {};
   var box = document.getElementById('score-body');
@@ -9653,9 +9653,9 @@ function stkResolveByName(name, cb) {
     cb(null);
   });
 }
-// R100z200（用户 2026-10-25 截图 6：「标的页面的左右按钮不是跟着交易预案里面标的切换的」）：
+// R100z200（用户 2026-10-25 截图 6：「标的页面的左右按钮不是跟着旧页面里面标的切换的」）：
 // 根因与 R100h 同一类——`openStkModal()` 只认全局 STK_GRP，而**内联 onclick 直接开弹窗**的列表从不设置分组，
-// 于是箭头翻的是「上一位读者点过的那个列表」残留顺序（当年点交易预案的票能翻到龙虎榜去）。
+// 于是箭头翻的是「上一位读者点过的那个列表」残留顺序（当年点旧页面的票能翻到龙虎榜去）。
 // 现在两组约定：
 //   ① 任何列表开弹窗前调 `stkOpenIn(list, idx)`，把分组和下标一起定下来；
 //   ② `openStkModal` 入口处调 `stkSyncNav(code)`：代码不在当前分组里就**关掉箭头**，
@@ -10608,7 +10608,7 @@ loadPoolExit(function () {
   if (aiBox && aiBox.innerHTML) { renderAiPrediction(); }
 });
 loadRiskBlacklist();   // R100z13：先发请求，黑名单异步到后再自动重画一次
-// R100z162：两块（开盘前瞻 / AI 预测分析）统一入口，全部落在「🧰 技术看板 → 开盘预测」子页（交易预案已删）
+// R100z162：两块（开盘前瞻 / AI 预测分析）统一入口，全部落在「🧰 技术看板 → 开盘预测」子页（旧页面已删）
 renderOpenDesk();
 
   function closeChips() {

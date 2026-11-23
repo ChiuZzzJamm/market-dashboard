@@ -1,0 +1,6 @@
+{
+  "_why": "已删除模块的专名。任何源码/前端/记忆都不得再出现（除 allow 里登记的、必须按名字匹配历史数据的行）。新增一条 = 删一个模块时同时加一条，防「删了还在文里活着」。",
+  "names": ["九门", "交易预案", "吸筹", "accumulation_score", "power_screener", "powerScreen", "leadLag", "lead_lag"],
+  "allow": {"signal_attribution.py": 1},
+  "_allow_why": "signal_attribution.py 要用 'powerScreen' 这个字面量去过滤台账里的历史 src，属按名字匹配数据，不是叙述。"
+}

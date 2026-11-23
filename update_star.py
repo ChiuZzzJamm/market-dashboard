@@ -1023,8 +1023,8 @@ def build_star(D, base=None):
     # ---- R100m（需求7）：技术池候选——直接从 谐波/横盘启动 池取标的（前一日 16:00 数据步结果） ----
     # 这些标的无 sentiment/probability（neutral 兜底），按池内得分排序，取头部，宁缺勿滥。
     # R100z85（量纲修正，2026-10-08 用户质询「标的映射只有断板+单一技术池」暴露）：原实现全池合并
-    # 按 score 降序取前 8，但原九门量纲 score×10（8~10分=80~100）结构性碾压 谐波(确认65/观察55)
-    # 与横盘启动(0~100)——当时九门前 10 全为 90/80，top8 被它垄断，谐波 12 只候选
+    # 按 score 降序取前 8；但历史遗留的「×10 量纲」参数会结构性碾压 谐波(确认65/观察55)
+    # 与横盘启动(0~100)——历史样本里前 10 全是 90/80，top8 被它垄断，谐波 12 只候选
     # 一个都进不了终选，AI 映射段随之只写断板+单池。改为**按池配额保底**：横盘启动≤3、谐波≤3、
     # 陈学长≤2（配额决定入选资格，合并后分数只决定展示顺序），总量 8；
     # 跨池去重按 横盘启动→谐波→陈学长 优先级（多池命中取先处理池的 label）；
@@ -1040,8 +1040,8 @@ def build_star(D, base=None):
             hz_list.append({"code": c, "name": it.get("name"), "sector": it.get("sector") or "",
                             "src": "hz", "label": f"谐波{it.get('pattern') or ''}",
                             "score": 65 if it.get("stage") == "确认" else 55})
-    # R100z232：九门（powerScreen）已下线，换成横盘启动（breakoutPool）。
-    # 量纲变化：九门 score 是 0-10 的「过几门」，所以要 ×10 才进百分量纲；
+    # R100z232：技术池配额与横盘启动对齐（breakoutPool）。
+    # 量纲变化：旧池 score 是 0-10 的「过几门」，所以要 ×10 才进百分量纲；
     # 横盘启动 score_of() 直接出 0-100，**不能再 ×10**，否则单只票 900 分直接垄断配额。
     bp = D.get("breakoutPool") or {}
     _seen_bp = set()
@@ -1611,7 +1611,7 @@ def build_star(D, base=None):
         "tapeSummary": tape_summary,
         "tierSummary": tier_summary,
         "pushText": push_text,
-        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波池直接取标的；R100z85：技术池按池配额 防单池量纲垄断；R100z232：九门下线换横盘启动（配额 横盘启动3/谐波3）+ 新增 star.buyList 今日买入清单（三池买区/证伪价/目标/持有天数/仓位，不含离场提示）；R100z156：行业/资金接口抓空重试+显式降级；R100z192：picks 增 gapTag 开盘价位置标注 + star.gapSummary 分布，只标注不排序；R100z193：接入 tape.py 分时量价结构（均价线/跌破次数/下跌分钟量占比/爆量倍数），picks 增 tape 字段 + star.tapeSummary，动作口径由盘口结构决定，gapTag 降级为价格事实；R101：新增 star.timingExec——读 16:00 timing_plan.py 生成的挂单清单，用 9:45 实时行情核对开盘是否破位，只核对不改单；R102：候选分「确认/待确认」两档（确认档恒在前、待确认档不给买点），待确认档新增陈学长观察池与缩量回踩档（shrink_scan.py，与前端 ordShrinkScan 孪生、由 check_shrink_parity.py 对账），star 增 tierSummary） + 自动化 AI 复核",
+        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波池直接取标的；R100z85：技术池按池配额 防单池量纲垄断；R100z232：旧技术池下线换横盘启动（配额 横盘启动3/谐波3）+ 新增 star.buyList 今日买入清单（三池买区/证伪价/目标/持有天数/仓位，不含离场提示）；R100z156：行业/资金接口抓空重试+显式降级；R100z192：picks 增 gapTag 开盘价位置标注 + star.gapSummary 分布，只标注不排序；R100z193：接入 tape.py 分时量价结构（均价线/跌破次数/下跌分钟量占比/爆量倍数），picks 增 tape 字段 + star.tapeSummary，动作口径由盘口结构决定，gapTag 降级为价格事实；R101：新增 star.timingExec——读 16:00 timing_plan.py 生成的挂单清单，用 9:45 实时行情核对开盘是否破位，只核对不改单；R102：候选分「确认/待确认」两档（确认档恒在前、待确认档不给买点），待确认档新增陈学长观察池与缩量回踩档（shrink_scan.py，与前端 ordShrinkScan 孪生、由 check_shrink_parity.py 对账），star 增 tierSummary） + 自动化 AI 复核",
     }
     return star, None
 

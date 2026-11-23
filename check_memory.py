@@ -101,6 +101,29 @@ if misscn:
 else:
     ok("M2 中文章节引用（%d 个）全部命中" % len(cnsec))
 
+    # R100z374（2026-11-23）：「读哪节」这一列也会写错，而且错得不容易发现——
+    # 删掉「已下线模块」那张表后，这一格被写成「硬约束 3」，而二节里根本没有第 3 条编号
+    # （它是无序 bullet），指针等于指向空气。判据：每个「读哪节」格必须能被 M2 的
+    # 三种形态之一解析：中文章节「X节」/ 24.x 节号 / 具体文件名（.md）/ 破折号。
+    bad_cell = []
+    for ln in mm.split("\n"):
+        if not ln.strip().startswith("|") or "|" not in ln.strip()[1:]:
+            continue
+        c = [x.strip() for x in ln.strip().strip("|").split("|")]
+        if len(c) < 2 or c[0] in ("要动什么", "---") or set(c[0]) <= set("-"):
+            continue
+        cell = c[1]
+        if not cell or cell in ("读哪节",):
+            continue
+        if re.search(r"[〇一二三四五六七八九十]+节|\d+\s?节|2[0-9]\.\d+|\.md|^—$", cell):
+            continue
+        bad_cell.append("%s→%s" % (c[0][:14], cell[:18]))
+    if bad_cell:
+        warn("M2 「读哪节」有 %d 格不是章节/节号/文件名（指不到东西）：%s"
+             % (len(bad_cell), "；".join(bad_cell[:4])))
+    else:
+        ok("M2 「读哪节」全部可解析（章节 / 24.x / 文件名）")
+
 # ---------------- M3 现行 vs 历史混排
 MARK = ("已作废", "原版", "改动前", "勿再据", "已被推翻", "已废除", "已下线", "旧说法", "现行")
 pmL = pm.split("\n")
@@ -160,6 +183,59 @@ try:
 except Exception as _e:                                     # noqa: BLE001
     fail("M14 分家检查异常：%s" % str(_e)[:60])
 
+# ---------------- M15 节号唯一（R100z373，2026-11-23）
+# 事故：把压缩前的全文回填到 RULES/CHRONICLE 时，是「插入」而不是「替换」，
+# 于是同一节号出现两次——完整块一份 + 旧的「> 蒸馏：…」stub 一份，共 7 处。
+# M2 只查「引用是否有标题」、M11 只查「目录与正文顺序」，**都不查重**，
+# 所以 19 项全 PASS 而文件里明摆着两份。判据：RULES + CHRONICLE 合并后，
+# 每个 `### N.M[a-z]?` 键必须**恰好一次**；重复即 FAIL，并指出是哪几节。
+try:
+    _pm = rd(PM)
+    _chx = rd(CHF) if os.path.exists(CHF) else ""
+    _keys = re.findall(r"(?m)^###\s*(\d+\.\d+[a-z]?)(?![0-9A-Za-z])", _pm) + \
+            re.findall(r"(?m)^###\s*(\d+\.\d+[a-z]?)(?![0-9A-Za-z])", _chx)
+    _cnt = {}
+    for _k in _keys:
+        _cnt[_k] = _cnt.get(_k, 0) + 1
+    _dup = sorted(k for k, v in _cnt.items() if v > 1)
+    if _dup:
+        fail("M15 节号重复 %d 个：%s —— 同一节出现两份（多半是回填时插入而非替换），"
+             "删掉短的那份（stub），别两份都留" % (len(_dup), ", ".join(_dup[:8])))
+    else:
+        ok("M15 节号唯一：RULES+CHRONICLE 共 %d 节，无重复" % len(_keys))
+except Exception as _e:                                      # noqa: BLE001
+    warn("M15 查重异常：%s" % str(_e)[:60])
+
+# ---------------- M16 死名不许留（R100z376，2026-11-23）
+# 事故：记忆里删了模块，正文/清单/流水里还散着 53 处专名，而 M2 只查「节号在不在」，
+# 名字烂在句子里它看不见。现在与代码共用同一个名单 `dead_names.json`（单一事实源）：
+# 记忆任何 .md 出现其中之一即 FAIL。改名单只改那一份，两边同时生效。
+try:
+    import json as _json
+    _dn_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.abspath(PM)))), "dead_names.json")
+    if not os.path.exists(_dn_path):
+        _dn_path = os.path.join(os.getcwd(), "dead_names.json")
+    if os.path.exists(_dn_path):
+        _dn = _json.load(open(_dn_path, encoding="utf-8")).get("names") or []
+        _hits = []
+        for _f in sorted(os.listdir(os.path.dirname(os.path.abspath(PM)))):
+            if not _f.endswith(".md"):
+                continue
+            _t = rd(os.path.join(os.path.dirname(os.path.abspath(PM)), _f))
+            for _n in _dn:
+                if _n in _t:
+                    _hits.append("%s×%d(%s)" % (_f, _t.count(_n), _n))
+        if _hits:
+            fail("M16 记忆里仍有已删模块的专名：%s —— 名单见 dead_names.json，删干净别留名字"
+                 % "；".join(_hits[:5]))
+        else:
+            ok("M16 死名清零：%d 个专名在记忆 .md 里 0 处" % len(_dn))
+    else:
+        warn("M16 找不到 dead_names.json，跳过")
+except Exception as _e:                                      # noqa: BLE001
+    warn("M16 死名检查异常：%s" % str(_e)[:60])
+
 # ---------------- M5 日志积压
 logs = sorted(glob.glob(os.path.join(MEM, "20*.md")))
 today_log = os.path.join(MEM, "%s.md" % TODAY.isoformat())
@@ -179,6 +255,17 @@ else:
 if old:
     warn("M5 >30 天日志 %d 份未蒸馏：%s" % (len(old), ", ".join("%s(%d天)" % x for x in old[:5])))
 else:
+    # R100z371（2026-11-23 用户：「残留无用的记忆是否删除不要归档」）：归档=0。
+    # 之前我把蒸馏过的日志移到 archive/ 并登记 DISTILLED.md，等于把「删掉」换成了「换个目录留着」——
+    # 用户明确反对：结论进 CHRONICLE，原文直接删。这里加硬判据：archive/ 存在即 FAIL。
+    _arch = os.path.join(MEM, "archive")
+    if os.path.isdir(_arch):
+        _n = len([f for f in os.listdir(_arch) if f.endswith(".md")])
+        fail("M5 发现 archive/ 归档目录（%d 份）—— 铁律是「蒸馏即删除、不归档」："
+             "把结论并进 CHRONICLE.md 后删掉整个目录" % _n)
+    else:
+        ok("M5 归档=0（无 archive/ 目录，蒸馏即删除）")
+
     ok("M5 无 >30 天未蒸馏日志（共 %d 份，最老 %s）"
        % (len(logs), os.path.basename(logs[0])[:-3] if logs else "-"))
 # 蒸馏执行者

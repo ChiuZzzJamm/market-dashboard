@@ -26,7 +26,7 @@ def http_get(url, timeout=15, retries=3, decode='utf-8'):
 def fetch_names(codes, timeout=8):
     """腾讯行情批量取股票名 → {code: name}（R100z167）。
 
-    背景：powerScreen.failPool 里出现过 4 条 `name=空串`（600860/603009/603418/603179），
+    背景：旧池字段.failPool 里出现过 4 条 `name=空串`（600860/603009/603418/603179），
     前端失效池渲染成空行 —— 根因是 `collect_pool_names` 的 code→name 反查只覆盖
     「池内 + stkKlineNames」标的，技术池扩展扫描域里的标的天然查不到名。
     这里用腾讯行情（GBK，60 只/批，实测 75/80 命中）补一次，失败返回已取到的部分，
@@ -423,7 +423,7 @@ def today_trade_date():
     """今天对应的交易日——今天休市（周末/法定假日）就回退到最近一个交易日。"""
     # R100z64 修复：本文件顶层是 `import datetime as _dt`（R100z57 为免函数内 import 遮蔽
     # 模块级命名而改的），这里原先却写 `datetime.date.today()` → NameError。
-    # 该函数被 harmonic_detect / power_screener 当主路径日期口径调用，而 10-04 改完后
+    # 该函数被 harmonic_detect / 旧池脚本 当主路径日期口径调用，而 10-04 改完后
     # 恰逢国庆休市没跑过一次，错误一直休眠，10-08 复牌首日会直接崩掉 A 股流水线。
     return last_trade_day(_dt.date.today())
 

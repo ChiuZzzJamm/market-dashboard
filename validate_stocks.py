@@ -1377,7 +1377,7 @@ def check_star_module(D):
                     if src == 'board' and name_ok and str(p.get('sector') or '').strip():
                         continue
                     # R100m：允许 src='bp'/'hz' 的技术池标的（横盘启动/谐波，前一日 16:00 数据步产物）
-                    # R100z232：九门下线，'pw' 换成 'bp'；两个都留着是因为历史 star.picks 里还有 'pw'
+                    # R100z232：旧技术池下线，'pw' 换成 'bp'；两个都留着是因为历史 star.picks 里还有 'pw'
                     if src in ('bp', 'pw', 'hz') and name_ok:
                         continue
                     # R100z233：src='chen'（陈学长严格/放宽池，update_star.py 自 10-26 起会选）

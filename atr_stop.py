@@ -784,7 +784,7 @@ def main():
     print('单票上限 %.0f%%、单笔风险预算 %.1f%% —— 止损宽则仓位自动变小，'
           '所以每笔打掉的最大亏损恒为权益的 %.1f%%'
           % (MAX_POS_PCT, RISK_BUDGET_PCT, RISK_BUDGET_PCT))
-    # R100z234：signal_rank（交易预案）已下线，这句不再指向一个不存在的模块。
+    # R100z234：这段不再指向任何已删页面。
     print('（%d 只全买的理论合计仓位 %.0f%% 只是上界，实际取舍看开盘精选与技术池的买区/证伪价）'
           % (s['n'], s['sumPosPct']))
     if s['concentrationWarn']:

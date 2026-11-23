@@ -1928,6 +1928,46 @@ def k18_prompt_numbers(r, verbose=False):
         r.ok('K18', 'prompt 里的 K 线根数 / 分时窗口天数与代码常量一致（%d 份已核对）' % len(rows))
 
 
+def k19_dead_names(r):
+    """K19 已删模块的专名不许复活（R100z375，2026-11-23）。
+
+    事故：删掉三个模块之后，源码注释/前端注释/审计文案里仍散着 53 处专名——
+    逻辑上没跑，但下一个人 grep 到那些文件名会去找不存在的东西（名单见 dead_names.json）。
+    用户 2026-11-23：「已经没有的东西为什么不彻底清理」。
+    判据：`dead_names.json` 列出专名，`.py`/`index.html` 里出现即 FAIL；
+    只有 allow 里登记过、且必须按名字匹配历史数据的行（脚本计数）豁免。
+    """
+    import json as _json
+    try:
+        conf = _json.load(open(os.path.join(HERE, "dead_names.json"), encoding="utf-8"))
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("K19", "dead_names.json 读不到，跳过死名检查：%s" % str(e)[:40])
+        return
+    names = conf.get("names") or []
+    allow = conf.get("allow") or {}
+    bad, seen = [], {}
+    targets = [f for f in os.listdir(HERE) if f.endswith(".py")] + ["index.html"]
+    for f in targets:
+        p = os.path.join(HERE, f)
+        try:
+            s = open(p, encoding="utf-8").read()
+        except OSError:
+            continue
+        for n in names:
+            c = s.count(n)
+            if c:
+                seen[f] = seen.get(f, 0) + c
+                if c > allow.get(f, 0):
+                    ln = s[:s.index(n)].count("\n") + 1
+                    bad.append("%s:%d 「%s」" % (f, ln, n))
+    if bad:
+        r.fail("K19", "已删模块的专名仍在代码里 (%d 处)：%s —— 删干净，别只删逻辑留名字"
+                     % (len(bad), "；".join(bad[:5])))
+    else:
+        r.ok("K19", "死名清零：dead_names.json 的 %d 个专名在代码/前端 0 处（豁免 %d 处按名匹配数据）"
+             % (len(names), sum(allow.values())))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--verbose', action='store_true')
@@ -1948,7 +1988,8 @@ def main():
     if not only or only == 'K5':
         k5_dead(r, a.verbose)
     if not only or only == 'K6':
-        k6_contract(r, a.verbose)
+        k19_dead_names(r)
+    k6_contract(r, a.verbose)
     if not only or only == 'K7':
         k7_lock(r, a.verbose)
     if not only or only == 'K8':

@@ -25,7 +25,7 @@ mode = sys.argv[1] if len(sys.argv) > 1 else 'ashare'
 
 def fmt_pct(x):
     try: return f"{float(x):+.2f}%"
-    except: return str(x)
+    except (TypeError, ValueError): return str(x)
 
 def fmt_panorama_items(market, max_items=4):
     """把 panorama 一个市场的 items 格式化为紧凑字符串"""

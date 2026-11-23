@@ -575,7 +575,7 @@ def main():
     confirm.sort(key=lambda x: x['distToPrzPct'])
     watch.sort(key=lambda x: x['distToPrzPct'])
 
-    # ⚠️ R100z57：不许拿 date.today() 当交易日——见 power_screener.py 同处注释。
+    # ⚠️ R100z57：不许拿 date.today() 当交易日（同坑在 24.20 记过）。
     # 原先这里写的是 date.today()，10-03（周六）手工跑就把「周六收盘」写进了
     # updatedAt/tradeDate，26 只池内标的的 entryDate 也跟着落到周六（整屏误挂「新」）。
     today = common.today_trade_date()
