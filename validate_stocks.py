@@ -12,7 +12,7 @@
        N=1 : 龙头2 概念2 小盘3 断板1
        N=0 : 龙头2 概念2 小盘4 断板0
 2) aiPrediction.sectors 每个板块：同样恰好 8 只 + 上述配比。
-3) bullish/bearish 每个主题：恰好 4 只（不分层）。
+3) 每个主题的标的与主板范围校验。
 4) 所有标的 code 必须为 60/00 开头沪深主板（禁 688/689、300/301/302、4/8/92 开头）。
 5) macroNews/intlNews/bankViews 每条要闻卡应含 direction 字段（看涨/看跌/中性）；缺失或非法值
    在写回 data.js 时自动补为 中性（前端渲染为中性灰，降级表现与旧版一致），并输出 WARNING 日志，
@@ -58,7 +58,7 @@ BAD_PREFIX = ('688', '689', '300', '301', '302', '4', '8', '92')
 
 VALID_DIR = ('看涨', '看跌', '中性')
 
-# 仅这三节要闻需要 direction（页面涨跌徽标来源）；bullNews/bearish 落在利好/利空列。
+# 仅这三节要闻需要 direction（页面涨跌徽标来源）。
 DIR_KEYS = ('macroNews', 'intlNews', 'bankViews')
 
 TIERS = {
@@ -227,18 +227,6 @@ def check_impacts(nw, where, violations):
         violations.append(f"{where}: 同一标的跨 impacts 分组重复出现 {dup[:5]}（同一只票不得挂两个板块）")
 
 
-def check4(stocks, where, violations):
-    """bullish/bearish 每主题恰好 4 只 + 主板过滤（note 为自由文本，不要求四类前缀/顺序）。"""
-    if not isinstance(stocks, list) or not stocks:
-        violations.append(f"{where}: stocks 缺失或为空")
-        return
-    for s in stocks:
-        if isinstance(s, dict) and board_bad(s.get('code')):
-            violations.append(f"{where}: 含非沪深主板标的 {s.get('code')} {s.get('name','')}")
-    if len(stocks) != 4:
-        violations.append(f"{where}: 共 {len(stocks)} 只（应为 4）")
-
-
 def fix_direction_inplace(D, dry_run=False):
     """macroNews/intlNews/bankViews 每条应带 direction（看涨/看跌/中性）；缺失/非法自动补为 中性。
 
@@ -382,13 +370,11 @@ def check_horizon(D):
 #   ai 组 = 决策链（aiPrediction + A股利好/利空卡）
 #   us 组 = 叙事段落（A股/美股 板块理由、五节要闻、题材掘金 + ashare.fundNote_deduce）
 # 不入白名单：量化池（harmonic/breakoutPool）的 deduce 恒为 None（纯指标页
-#   by-design 占位，2026-10-19 实测 99 处全 None）、us.bullish/bearish 当前不带 deduce。
+#   by-design 占位，2026-10-19 实测 99 处全 None）。
 # 列表节点用「有则校验」语义（deduce 缺失/非对象 = 未启用，跳过）；仅 aiPrediction.sectors
 #   保持「缺失即 FAIL」旧语义（三候挑选股是前端推演段硬依赖）。
 _NARRATIVE_DEDUCE_AI = (
     ('aiPrediction', 'sectors', True),
-    ('ashare', 'bullish', False),
-    ('ashare', 'bearish', False),
 )
 _NARRATIVE_DEDUCE_US = (
     ('ashare', 'sectorsUp', False), ('ashare', 'sectorsDown', False),
@@ -885,7 +871,7 @@ def check_risk_blacklist(D, scope='all'):
 
     R100z16：scope 决定扫哪些节点——
       all / ai  → aiPrediction.sectors（19:30、08:30、周日任务职责）
-      all / us  → us + ashare 五节与 bullish/bearish（07:00、周日任务职责；
+      all / us  → us + ashare 五节（07:00、周日任务职责；
                   这两个任务自己就是这些标的的选股者，必须自己过闸，不能
                   把黑名单推给 19:30 叙事步去背，否则等于没闸）
       all / star→ duanban.star.picks（9:45 职责；star 同样由本任务自己挑，
@@ -963,7 +949,7 @@ def check_risk_blacklist(D, scope='all'):
     if scope in ('all', 'us'):
         for mk in ('us', 'ashare'):
             sec = D.get(mk) or {}
-            for key in ('bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews', 'bullish', 'bearish'):
+            for key in ('bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews'):
                 for nw in (sec.get(key) or []):
                     if not isinstance(nw, dict):
                         continue
@@ -1453,10 +1439,6 @@ def reorder_inplace(D):
                     for imp in (nw.get('impacts') or []):
                         if isinstance(imp, dict) and isinstance(imp.get('stocks'), list):
                             imp['stocks'] = r(imp['stocks'])
-        for key in ('bullish', 'bearish'):
-            for g in (sec.get(key) or []):
-                if isinstance(g, dict) and isinstance(g.get('stocks'), list):
-                    g['stocks'] = r(g['stocks'])
     ai = D.get('aiPrediction') or {}
     for s in (ai.get('sectors') or []):
         if isinstance(s, dict) and isinstance(s.get('stocks'), list):
@@ -1757,10 +1739,6 @@ def main():
                     # 取代 866bf30 的「整条扁平合计 8 只」——那版让多组只能切稀 8 只，
                     # 多板块传导实际死亡（A 股侧 0 条用多组）。
                     check_impacts(nw, f"{mk}.{key}[{i}]({(nw.get('sector') or '')[:14]})", violations)
-            for key in ('bullish', 'bearish'):
-                for i, g in enumerate(sec.get(key) or []):
-                    if isinstance(g, dict):
-                        check4(g.get('stocks'), f"{mk}.{key}[{i}]({(g.get('theme') or '')[:14]})", violations)
 
     if scope in ('all', 'ai'):
         violations.extend(board_fails)
@@ -1875,7 +1853,7 @@ def main():
                  f'（见上方 [WARN]，前端涨跌徽标会错）。')
     print("ALL OK: 五节要闻每条 impacts 主组（第 1 组）恰好 8 只且配比符合 N 分层表、"
           "顺序为龙头→概念→小盘人气→断板反包；次生组（第 2~4 组）各 2~4 只、只装小盘人气/断板反包；"
-          "aiPrediction 每板块恰好 8 只，bullish/bearish 恰好 4 只，全部标的为沪深主板；"
+          "aiPrediction 每板块恰好 8 只，全部标的为沪深主板；"
           + _dir_tail)
 
 

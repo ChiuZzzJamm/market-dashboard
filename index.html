@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611232016"></script>
+<script src="data.js?v=202611232054"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -2729,9 +2729,6 @@ function render(market) {
     sectorRankLine(d.sectorRank, false) +
     (d.sectorNote ? '<div class="src-line">' + esc(d.sectorNote) + '</div>' : '') +
     renderReasons(d.sectorsDown, d.tradeDate, false, market) + '</div>';
-
-  // R100z93b：主题型领涨/领跌（bullish/bearish）独立模块已按用户要求下线（2026-10-08：
-  // 深度分析应整合进板块异动的「行业原因」与题材掘金，而不是另开两张卡）。数据字段保留（校验器仍查 4 只），前端不再渲染。
 
   // R98j：题材掘金仅 A股页展示（美股页模块已按用户要求下线）
   if (isA && d.themePicks && d.themePicks.length) {

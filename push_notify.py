@@ -187,7 +187,7 @@ def fmt_deduce_brief(dd, max_main=26, max_counter=22):
         parts.append('反证：' + cut_text(strip_dd_prefix(dd['counter']), max_counter))
     return ' '.join(parts)
 
-def fmt_bullish(t, idx):
+def fmt_up_theme(t, idx):
     """利好板块：优先用题材（R100z326），没有才退回行业名 + 括号说明"""
     _tags = [str(x) for x in (t.get('themeTags') or []) if str(x).strip()]
     theme = ' / '.join(_tags) if _tags else t.get('theme', '').strip()
@@ -211,7 +211,7 @@ def fmt_bullish(t, idx):
         return f"{idx}. {theme}\n   {db}"
     return f"{idx}. {theme}"
 
-def fmt_bearish(t, idx):
+def fmt_down_theme(t, idx):
     """利空板块：优先题材（R100z326），没有才退回行业/方向说明"""
     _tags = [str(x) for x in (t.get('themeTags') or []) if str(x).strip()]
     theme = ' / '.join(_tags) if _tags else t.get('theme', '').strip()
@@ -331,9 +331,6 @@ if mode == 'ashare':
         if isinstance(_ol, dict):
             _ol = _ol.get('content') or _ol.get('text') or ''
         outlook_text = str(_ol).replace('\n', ' ').strip()
-        # 利好/利空方向（与美股/周末推送一致）
-        bullish_lines = [fmt_bullish(t, i+1) for i, t in enumerate((a.get('bullish') or [])[:3])]
-        bearish_lines = [fmt_bearish(t, i+1) for i, t in enumerate((a.get('bearish') or [])[:3])]
         lianban_line = build_lianban_line(a)
         desp_parts = [
             '🌐 https://chiuzzzjamm.github.io/market-dashboard',
@@ -368,12 +365,6 @@ elif mode == 'us':
     # 开盘前瞻（R72 起为顶层 openOutlook.content，带日期；微信端连续自然段）
     _oo = D.get('openOutlook') or {}
     open_outlook_text = str(_oo.get('content') or '').replace('\n', ' ').strip()
-    # 利好/利空板块：优先取当日 us.bullish/bearish（若 08:30 任务已生成），否则回退周末消息，格式同周日
-    w = D.get('weekendNews') or {}
-    bull_src = (u.get('bullish') or w.get('bullish', []))
-    bear_src = (u.get('bearish') or w.get('bearish', []))
-    bullish_lines = [fmt_bullish(t, i+1) for i, t in enumerate(bull_src[:3])]
-    bearish_lines = [fmt_bearish(t, i+1) for i, t in enumerate(bear_src[:3])]
     # 要闻：合并利好/利空/宏观/国际/投行五组，保底分配取 6 条，带 🇨🇳/🌍 图标与【宏观】【国际】【投行】标签（修复 B）
     news_parts = collect_news(u, 6)
     parts = [
@@ -386,10 +377,6 @@ elif mode == 'us':
     ai_line = fmt_ai_line(D.get('aiPrediction'), '今日AI预测')
     if ai_line:
         parts.append(ai_line)
-    if bullish_lines:
-        parts.append("✅ 利好：\n" + '\n'.join(bullish_lines))
-    if bearish_lines:
-        parts.append("⚠️ 利空：\n" + '\n'.join(bearish_lines))
     desp = '\n\n'.join(parts)
 
 elif mode == 'weekend':
@@ -439,13 +426,13 @@ elif mode == 'weekend':
     news_parts = [f"🇨🇳 {d}" for d in domestic] + [f"🌍 {i}" for i in international]
     weekend_news = ' '.join(news_parts) if news_parts else '（详见网页）'
 
-    # 利好/利空：映射 bullNews/bearNews → fmt_bullish/fmt_bearish 所需 {theme, stocks}
+    # 利好/利空：映射 bullNews/bearNews → 上面两个格式化函数所需 {theme, stocks}
     def news_to_theme(it):
         return {'theme': f"{(it.get('sector') or '').strip()}（{(it.get('title') or '').strip()}）",
                 'stocks': ((it.get('impacts') or [{}])[0].get('stocks') or []),
                 'deduce': it.get('deduce')}
-    bullish_lines = [fmt_bullish(news_to_theme(t), i+1) for i, t in enumerate((src.get('bullNews') or [])[:3])]
-    bearish_lines = [fmt_bearish(news_to_theme(t), i+1) for i, t in enumerate((src.get('bearNews') or [])[:3])]
+    up_lines = [fmt_up_theme(news_to_theme(t), i+1) for i, t in enumerate((src.get('bullNews') or [])[:3])]
+    down_lines = [fmt_down_theme(news_to_theme(t), i+1) for i, t in enumerate((src.get('bearNews') or [])[:3])]
 
     # 开盘前瞻（R72 起为顶层 openOutlook.content，带日期；周末/周一均适用）
     _oo = D.get('openOutlook') or {}
@@ -461,10 +448,10 @@ elif mode == 'weekend':
     ai_line = fmt_ai_line(D.get('aiPrediction'), '周一AI预测')
     if ai_line:
         parts.append(ai_line)
-    if bullish_lines:
-        parts.append("✅ 利好：\n" + '\n'.join(bullish_lines))
-    if bearish_lines:
-        parts.append("⚠️ 利空：\n" + '\n'.join(bearish_lines))
+    if up_lines:
+        parts.append("✅ 利好：\n" + '\n'.join(up_lines))
+    if down_lines:
+        parts.append("⚠️ 利空：\n" + '\n'.join(down_lines))
     desp = '\n\n'.join(parts)
 
 elif mode == 'star':

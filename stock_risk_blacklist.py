@@ -21,7 +21,7 @@
 
     用法：
     python3 stock_risk_blacklist.py                 # 默认扫 data.js：aiPrediction + us/ashare 五节要闻
-                                                    #   + bullish/bearish + 三技术池 + 陈学长池
+                                                    #   + 三技术池 + 陈学长池
                                                     #   + 开盘精选（R100z70 扩域；R100z276 补齐后两者）
     python3 stock_risk_blacklist.py --json          # 只输出 JSON
     python3 stock_risk_blacklist.py --write         # 同时写 risk_blacklist.json（前端+闸门读）
@@ -53,7 +53,7 @@ let m = s.match(/window\s*\.\s*DASHBOARD_DATA\s*=\s*(\{[\s\S]*\});?\s*$/);
 if (!m) { console.error('data.js parse failed'); process.exit(1); }
 let d; try { d = eval('(' + m[1] + ')'); } catch (e) { console.error('eval failed', e.message); process.exit(1); }
 // R100z70：扫描域从「仅 aiPrediction」扩为 aiPrediction + us/ashare 五节要闻(含 impacts) +
-// bullish/bearish + 三技术池(断板/谐波/横盘启动)。此前 validate 的新闻闸/9:45 star 闸
+// 三技术池(断板/谐波/横盘启动)。此前 validate 的新闻闸/9:45 star 闸
 // 都拿本文件当日标的对象做命中，扫描域不含这些 code 时闸门等于对它们失明。
 const codes = []; const seen = {}; const names = {};
 function add(st) {
@@ -65,7 +65,7 @@ function add(st) {
 }
 // 1) AI 预测（原口径）
 for (const sec of ((d.aiPrediction || {}).sectors || [])) for (const st of (sec.stocks || [])) add(st);
-// 2) us/ashare 五节要闻 + bullish/bearish
+// 2) us/ashare 五节要闻
 for (const mk of ['us', 'ashare']) {
   const sec = d[mk] || {};
   for (const key of ['bullNews', 'bearNews', 'macroNews', 'intlNews', 'bankViews']) {
@@ -75,7 +75,6 @@ for (const mk of ['us', 'ashare']) {
       for (const imp of (nw.impacts || [])) { if (imp && typeof imp === 'object') for (const st of (imp.stocks || [])) add(st); }
     }
   }
-  for (const key of ['bullish', 'bearish']) for (const g of (sec[key] || [])) { if (g && typeof g === 'object') for (const st of (g.stocks || [])) add(st); }
   // R100z362：A 股要闻卡的「盘后 · 隔夜」也带映射标的（用户 2026-11-18 10:24「要带」），
   // 它同样是「推荐位」——进了 impacts 就等于告诉读者可以看这几只，必须一起过黑名单，
   // 否则 ST/解禁/减持的票会从这条新入口溜进页面。

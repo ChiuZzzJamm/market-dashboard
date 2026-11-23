@@ -489,8 +489,6 @@ us_obj = {
     "intlNews": D.get('us', {}).get('intlNews', []),
     "bankViews": D.get('us', {}).get('bankViews', []),
     # 保留 08:30 任务写入的当日 AI 利好/利空主题，不得覆盖（否则微信推送会回退到周末旧数据）
-    "bullish": D.get('us', {}).get('bullish'),
-    "bearish": D.get('us', {}).get('bearish'),
     "outlook": D.get('us', {}).get('outlook', "关注美联储议息、美债收益率与地缘风险对高估值板块的影响。"),
     "themePicks": keep_tp,
     "source": "美股数据来自腾讯行情实时接口"

@@ -21,7 +21,7 @@ risk_gate.py —— 把「个股硬风险黑名单 red」落到三个推荐池�
     剔掉「化学制药」里的 ST人福 后剩 7 只 → 立刻 `[FAIL] 共 7 只（应为 8）`，
     自动化反而把部署拦死；而机械池同板块只有 4 只断板候选，补不出「概念」位。
     所以 impacts 归 **AI 换股**（prompt 已写明「受益标的不得含 ST/退市股」），
-    G29 只负责在非利空段发现 ST 时告警；利空段（bearNews/bearish）放 ST 股属合理分析。
+    G29 只负责在非利空段发现 ST 时告警；利空段（bearNews）放 ST 股属合理分析。
 
 剔除口径（与 validate_stocks.check_risk_blacklist 的 asof 语义一致）：
     · ST/退市型 red        → 无日期例外，一律剔（ST 不该出现在任何推荐位）

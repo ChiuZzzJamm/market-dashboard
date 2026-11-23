@@ -250,7 +250,6 @@
    "stepOrder": [
     "0",
     "1",
-    "2",
     "3",
     "3.4",
     "3.45",
@@ -391,13 +390,6 @@
    ],
    "forbiddenGap": [],
    "dataFields": [
-    "us.bullish",
-    "us.bearish",
-    "us.bullish[].theme",
-    "us.bullish[].detail",
-    "us.bullish[].stocks",
-    "us.bearish[].theme",
-    "us.bearish[].stocks",
     "aiPrediction.date",
     "aiPrediction.indexLine",
     "aiPrediction.basis",

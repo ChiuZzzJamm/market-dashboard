@@ -175,8 +175,6 @@ EMPTY_WHITELIST = [
      "不豁免则每天固定报一条假 WARN（16:00 带 --fetch 后此条恒空），闸门会被无视"),
     (r"aiPrediction\.sectors\[\d+\]\.exp",
      "R100z11：非预期型板块不落 exp，expBadge 返回空串不渲染"),
-    (r"(bullish|bearish)$",
-     "R98i：外盘方向每股独立写，无观点即空"),
     (r"harmonic\.failPool$",     # 当天无谐波失效标的即空数组
      "R100z27：失效池无新增即空数组，属正常日度状态（不是脚本漏跑）"
      "；前端 dbFailHtml/谐波失效区统一走 if(!x.length) 兜底显示『暂无失效标的』"),
@@ -314,7 +312,7 @@ PRODUCT_OWNERSHIP = {
     "us": {
         "require": ("us", "美股"),
         "note": "美股行情节点。三段分包：07:00 update_us_from_quotes.py 覆盖行情字段"
-                "（+panorama.markets 的 key=us）、08:30 写 bullish/bearish（A股休市则整步跳过）、"
+                "（+panorama.markets 的 key=us）、（A股休市则整步跳过）、"
                 "周日 21:00 写五节要闻/outlook/sectorsUp·Down 的 reason；22:00 只读不改"
                 "（R100z296 更正：旧 note 写「07:00 / 08:30 各负责一段」，漏了 21:00 这个五节要闻主写者）",
     },
@@ -766,10 +764,8 @@ def g5_source_assertions(r):
     # 3) 黑名单闸必须支持 scope 且扫到 us/ashare
     if "scope" not in src:
         r.fail("G5", "check_risk_blacklist 不支持 scope（us/ashare 侧漏闸）")
-    elif "bullish" not in src or "bearish" not in src:
-        r.fail("G5", "check_risk_blacklist 未覆盖 us.bullish/bearish")
     else:
-        r.ok("G5", "check_risk_blacklist(D, scope=) 已扩扫 us/ashare 五节与 bullish/bearish")
+        r.ok("G5", "check_risk_blacklist(D, scope=) 已扩扫 us/ashare 五节")
 
     # 4) 未来函数防线：判定/回测代码必须只用「决策时刻及之前」的 bar（R100z323，2026-11-09）
     #
@@ -1051,7 +1047,7 @@ def g8_g9_g10_data(r):
     # 从豁免规则里抽出被允许的「末尾字段名」
     guard_fields = ["story", "deduce", "sector", "bullType", "boardPctZt",
                     "boardPctToday", "bkCode", "hybk", "open_num", "summary",
-                    "exp", "verification", "bullish", "bearish", "themePicks",
+                    "exp", "verification", "themePicks",
                     "excluded"]
     # 判定原则：只抓「高置信的真事故」——字段被直接加进 HTML 字符串拼接（post 紧跟 +）
     # 且左侧 80 字符内完全没有 if/?/&&/||/typeof/esc(/函数参数位 等任何兜底迹象。
@@ -2846,7 +2842,7 @@ def g29_name_and_risk_hygiene(r):
     for mkt in ("ashare", "us"):
         node = D.get(mkt) or {}
         for sec in ("intlNews", "news", "policyNews", "annNews", "chipNews",
-                    "bullNews", "bullish"):
+                    "bullNews"):
             if sec in node:
                 walk(node[sec], "%s.%s" % (mkt, sec))
     if where:
@@ -2854,7 +2850,7 @@ def g29_name_and_risk_hygiene(r):
                       "受益位不得放 ST/退市股，请让 AI 换同板块非 ST 替代（名字已带 ST 前缀）" %
                       (len(where), "、".join(where[:6])))
     else:
-        r.ok("G29", "要闻「非利空段」impacts 无 ST/退市型标的（利空段 bearNews/bearish 不设限）")
+        r.ok("G29", "要闻「非利空段」impacts 无 ST/退市型标的（利空段 bearNews 不设限）")
 
 
 def _css_color(s, body, prop="background"):
