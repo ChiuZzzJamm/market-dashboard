@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611231948"></script>
+<script src="data.js?v=202611232001"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -599,6 +599,20 @@
   .tp-item { background: var(--accent-soft); border-radius: var(--r-block); padding: 11px 13px; margin-bottom: 10px; border-left: 4px solid var(--up); }
   .tp-item.tp-down { border-left-color: var(--down); }
   .tp-item:last-child { margin-bottom: 0; }
+  /* R100z377：多空题材（题材掘金卡内两列，不新增卡） */
+  .bb-wrap { margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 10px; }
+  .bb-cap { font-size: var(--fs-xs); color: var(--ink2); margin-bottom: 8px; }
+  .bb-col { display: grid; gap: 8px; margin-bottom: 8px; }
+  .bb-head { font-size: var(--fs-sm); font-weight: 700; }
+  .bb-up .bb-head { color: var(--up); }
+  .bb-down .bb-head { color: var(--down); }
+  .bb-item { background: var(--accent-soft); border-radius: var(--r-block); padding: 8px 11px;
+             border-left: 3px solid var(--up); }
+  .bb-down .bb-item { border-left-color: var(--down); }
+  .bb-t { font-weight: 700; font-size: var(--fs-sm); margin-bottom: 3px; }
+  .bb-d { font-size: var(--fs-sm); color: var(--ink2); line-height: 1.6; }
+  @media (min-width: 900px) { .bb-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+                              .bb-cap { grid-column: 1 / -1; margin-bottom: 0; } }
   .tp-event { font-size: var(--fs-body); font-weight: 800; color: var(--accent-deep); margin-bottom: 5px; line-height: 1.5; display: flex; align-items: center; flex-wrap: wrap; } /* R100x：事件行 flex 垂直居中 */
   .tp-logic { font-size: var(--fs-base); color: var(--ink); line-height: 1.65; margin-bottom: 9px; }
   .tp-logic .lc-step { display: flex; gap: 6px; align-items: baseline; margin-top: 4px; }
@@ -2733,8 +2747,11 @@ function render(market) {
   // 深度分析应整合进板块异动的「行业原因」与题材掘金，而不是另开两张卡）。数据字段保留（校验器仍查 4 只），前端不再渲染。
 
   // R98j：题材掘金仅 A股页展示（美股页模块已按用户要求下线）
-  if (isA && d.themePicks && d.themePicks.length) {
-    html += '<div class="card"><h2>题材掘金 · 个股事件驱动' + h2Date(d) + '</h2>' + renderThemePicks(d.themePicks, d.tradeDate) + '</div>';
+  var _tp = (isA && d.themePicks) || [];
+  var _bb = isA ? renderBullBear(d) : '';
+  if (isA && (_tp.length || _bb)) {
+    html += '<div class="card"><h2>题材掘金 · 个股事件驱动' + h2Date(d) + '</h2>' +
+      renderThemePicks(_tp, d.tradeDate) + _bb + '</div>';
   }
 
   if (isA && d.lianban && d.lianban.length) {
@@ -4933,8 +4950,45 @@ function renderThemePicks(list, tradeDate) {
   return s;
 }
 
-/* R100z93b：renderBullBear（领涨/领跌题材独立卡）已删除——用户 2026-10-08 要求深度分析整合进
-   板块异动「行业原因」与题材掘金，不另开模块。bullish/bearish 数据字段保留（校验器口径不变）。 */
+/* R100z377（2026-11-23 用户「不增加模块的情况下，上页面」）：**多空题材**。
+   历史：2026-10-08 用户要求「不另开模块」，当年的实现是把独立卡删掉、数据字段保留——
+   但从此 bullish/bearish 再没有任何地方渲染，AI 每天生成 4+4 条、页面一个字都不显示。
+   现在按当年的决定补上：**放在「题材掘金」这张卡内部**（不新增卡、不新增子页），
+   两列对照：利好左（红）/ 利空右（绿），每条 = 题材名 + 一句驱动 + 4 只标的（可点开 K 线）。 */
+function renderBullBear(d) {
+  var up = (d && d.bullish) || [], dn = (d && d.bearish) || [];
+  if (!up.length && !dn.length) return '';
+  function chips(sts) {
+    if (!sts || !sts.length) return '';
+    var h = '<div class="stock-chips">';
+    sts.forEach(function (st) {
+      var note = String(st.note || '').replace(/^·|·$/g, '').trim();
+      var ds = escAttr((st.code || '') + '|' + (st.name || '') + '|' + note);
+      var tt = escAttr((st.name || '') + ' ' + (st.code || '') + (note ? ' · ' + note : '') + '（点击查看K线）');
+      h += '<span class="stock-chip' + stkGoldCls(st.code) + '" data-stk="' + ds + '" title="' + tt + '">' +
+        '<span class="nm"><b>' + esc(st.name || '') + '</b><span class="cd">' + esc(st.code || '') +
+        '</span></span>' + (note ? '<span class="nt">' + esc(note) + '</span>' : '') + '</span>';
+    });
+    return h + '</div>';
+  }
+  function col(list, cls, label) {
+    if (!list.length) return '';
+    var h = '<div class="bb-col ' + cls + '"><div class="bb-head">' + label + ' · ' + list.length + ' 条</div>';
+    list.forEach(function (it) {
+      h += '<div class="bb-item"><div class="bb-t">' + esc(it.theme || '') + '</div>' +
+           (it.detail ? '<div class="bb-d">' + esc(it.detail) + '</div>' : '') +
+           chips(it.stocks) + '</div>';
+    });
+    return h + '</div>';
+  }
+  var l = col(up, 'bb-up', '利好题材'), r = col(dn, 'bb-down', '利空题材');
+  if (!l && !r) return '';
+  return '<div class="bb-wrap"><div class="bb-cap">多空题材 · 今日 ' + (up.length + dn.length) +
+    ' 条（左看多、右看空，点标的看 K 线）</div>' + l + r + '</div>';
+}
+
+/* R100z93b：领涨/领跌题材**独立卡**已删除（用户 2026-10-08「不另开模块」）；
+   R100z377 起数据改在「题材掘金」卡内部渲染，见上方 renderBullBear。 */
 /* ===== 选股扩展模块渲染（2026-09-26 · 谐波 / 量化 / 必带数据） ===== */
 function findHarmonic(code) {
   var h = window.DASHBOARD_DATA.harmonic;

@@ -6870,6 +6870,38 @@ def g80_buy_gate(r):
                 f" / 不追 {stat['不追']}（R>8% 或剩余赔率<1 一律不进「今可买」）")
 
 
+def g81_bullbear(r):
+    """G81 多空题材必须真画出来（R100z377，2026-11-23）。
+
+    事故：`ashare.bullish/bearish` 自 2026-10-08「不另开模块」之后**再没有任何地方渲染**——
+    AI 每天生成 4+4 条、脚本拿去做黑名单扫描，页面上一个字都没有，直到用户问「活字段没人看」。
+    现在挂进「题材掘金」卡（不新增模块）。判据：数据有 → 页面必须画出来且条数一致。
+    """
+    try:
+        D = load_data_json()
+    except Exception as e:                                   # noqa: BLE001
+        r.warn("G81", f"data.js 读取失败，跳过多空题材检查：{e}")
+        return
+    a = D.get("ashare") or {}
+    up, dn = a.get("bullish") or [], a.get("bearish") or []
+    for name, lst in (("bullish", up), ("bearish", dn)):
+        for it in lst[:8]:
+            if not (it.get("theme") or "").strip():
+                r.fail("G81", f"ashare.{name} 有条目没有 theme（页面会渲染成空行）")
+                return
+            for st in (it.get("stocks") or [])[:6]:
+                if not re.match(r"^[06]\d{5}$", str(st.get("code") or "")):
+                    r.fail("G81", f"ashare.{name}[{it.get('theme')}] 标的不在主板或代码缺失："
+                                  f"{st.get('code')}")
+                    return
+    rc, out, err = _run_tool("check_bullbear.py", timeout=180)
+    if rc != 0:
+        r.fail("G81", "多空题材渲染没过：" + (out or err or "").strip()[:240])
+        return
+    r.ok("G81", f"多空题材已上页面：利好 {len(up)} / 利空 {len(dn)} 条，渲染真跑通过"
+                + ("（今日无数据，卡片不生成）" if not (up or dn) else ""))
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -6959,6 +6991,7 @@ def main():
     g78_sent_one_source(r)
     g79_counter_score(r)
     g80_buy_gate(r)
+    g81_bullbear(r)
 
     # R100z284：机器可读的结论行。
     #
