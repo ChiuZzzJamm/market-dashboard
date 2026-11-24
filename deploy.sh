@@ -24,6 +24,10 @@ if [[ ! -f "$DEPLOY_KEY" ]]; then
     exit 1
 fi
 
+# 第三层兜底用的可达 IP（2026-11-24 08:30 实测：按主机名走的 443/22 全断，下面这些仍能认证）
+# 140.82.112.3 / 140.82.112.4 是 github.com 的 SSH 入口，20.205.243.166 是亚太节点。
+FALLBACK_IPS="${FALLBACK_IPS:-140.82.112.3 140.82.112.4 20.205.243.166}"
+
 # 用 GIT_SSH_COMMAND 显式指定私钥，不依赖 ssh-agent / macOS keychain，适合自动化环境
 # 注意：本环境 22 端口 SSH 被协议级过滤，改用 GitHub 的 443 端口 SSH（ssh.github.com:443）
 # ⚠️ 私钥路径必须用双引号包进 -i 的参数里：项目目录名含空格（"market dashboard"），
@@ -58,6 +62,20 @@ SSH_CFG="${TMPDIR:-/tmp}/mdashboard_gitssh.conf"
     echo "  IdentitiesOnly yes"
     echo "  StrictHostKeyChecking no"
     echo "  BatchMode yes"
+    # R100z307（2026-11-24 08:30 实测）：ssh.github.com:443 与 github.com:22 同时被
+    # 掐（github.com 解析到 140.82.112.35，握手即断），而 140.82.112.3 / 20.205.243.166
+    # 的 22 端口仍能完成 SSH 认证 —— 按主机名走的重试永远试不到这两个 IP。
+    # 所以给可达 IP 各配一个 Host 块，第三层兜底才有密钥可用。
+    for _ip in $FALLBACK_IPS; do
+        echo "Host $_ip"
+        echo "  HostName $_ip"
+        echo "  Port 22"
+        echo "  User git"
+        echo "  IdentityFile \"$DEPLOY_KEY\""
+        echo "  IdentitiesOnly yes"
+        echo "  StrictHostKeyChecking no"
+        echo "  BatchMode yes"
+    done
 } > "$SSH_CFG"
 export GIT_SSH_COMMAND="ssh -F \"$SSH_CFG\""
 
@@ -350,12 +368,24 @@ for d in $DELAYS; do
         git remote set-url origin "$REMOTE_443"
         echo "   22 也不通，换回 443。"
     fi
+
+    # 第三层：按主机名的两条路都断时，逐个试可达 IP（R100z307，2026-11-24 实测有效）
+    if [ "$i" -eq 3 ]; then
+        for _ip in $FALLBACK_IPS; do
+            echo "   按主机名的 443/22 均不通，改试 $FALLBACK_IPS 中的 $_ip:22 ..."
+            git remote set-url origin "ssh://git@$_ip/ChiuZzzJamm/market-dashboard.git"
+            if GIT_TERMINAL_PROMPT=0 git push origin main 2>&1; then SUCCESS; fi
+        done
+        git remote set-url origin "$REMOTE_443"
+        echo "   直连 IP 也不通，换回 443。"
+    fi
+
     echo "   推送失败，${d} 秒后重试..."
     sleep "$d"
 done
 
 # ---------- 全部重试失败：给能据此动手的原因，而不是一律甩「公钥」----------
-echo "❌ git push 连续 5 次失败（443 与 22 都试过），部署未触发。"
+echo "❌ git push 连续 5 次失败（443、22 与直连 IP 三层都试过），部署未触发。"
 case "$(probe_ssh)" in
     auth)
         echo "   原因: SSH 认证被拒（Permission denied）——.deploy_key 的公钥可能没加到 GitHub。"
@@ -363,8 +393,8 @@ case "$(probe_ssh)" in
         ;;
     net)
         echo "   原因: 到 github.com 的连接被重置/超时（不是密钥问题）——本机网络或代理把它掐了。"
-        echo "   判据: github.io 能打开、github.com 连不上 → 网络侧；两者都打不开 → 本地断网。"
-        echo "   处置: 检查路由器/代理规则里对 github.com 的分流；恢复后重跑 ./deploy.sh 即可（提交已留在本地）。"
+        echo "   判据: 国内站点正常、github.com 与 cloudflare 都不通 → 代理链路挂了，不是本地断网。"
+        echo "   处置: 检查路由器 Clash 对 github.com 的分流；或手工 git push 到 \$FALLBACK_IPS 里的某个 IP。提交已留在本地。"
         ;;
     ok)
         echo "   原因: SSH 认证本身是通的（本次探测成功），说明是推送瞬间的抖动或仓库侧限流。"
