@@ -107,8 +107,10 @@ def sanitize(mod):
                     e["story"] = _s1
                     warns.append(
                         f"[INFO] {pool}.{code} story 段落标记已归一化（【】内剥除旗标/emoji，R100z3）")
-            if not e.get("bullRefs"):
-                warns.append(f"[WARN] {pool}.{code} 无 bullRefs（利好依据为空，请复核）")
+            # R100z376：只在**标了利好**的标的上要求利好依据。原判据对中性/利空一律报警，
+            # 每天几十条「无 bullRefs」把真正的异常淹掉（中性标的本来就不该有 bullRefs）。
+            if e.get("sentiment") == "bull" and not e.get("bullRefs"):
+                warns.append(f"[WARN] {pool}.{code} 标利好但无 bullRefs（请复核）")
             kept.append(e)
         mod[pool] = kept
     mod["excluded"] = mod.get("excluded") or []

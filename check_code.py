@@ -136,6 +136,8 @@ NON_DATA_WRITERS = {
     'migrate_ledger_pools.py': 'R100z297：一次性迁移，把 signal_ledger.json 里三个汇总源的条目'
                                '按当日池归属拆成子源。原子写的是 signal_ledger.json（先 .bak 备份），'
                                'data.js 只读、用来取池成员与 K 线，从不写它',
+    'check_duanban.py': 'R100z377：原子写的是 SECTOR_SEED_FILE（板块名种子，os.replace）；'
+                        'data.js 只读，用来取既有池成员的 sector 与要闻做一致性交叉核验，从不写它',
 }
 
 # 死脚本白名单：合法的「手工跑、不进自动化」工具，写明用途才准留

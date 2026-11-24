@@ -361,6 +361,96 @@ def _em_hybk_map(date):
     return m
 
 
+_ZTHYBK_CACHE = {}
+
+# R100z376：code → 行业 的滚动缓存。解析出来的 sector 写在这里，下一轮直接复用——
+# 命中一次就永久记住，不再每天重新撞「其他」。文件是缓存不是事实源，删掉只会退化为
+# 「今天没归属」，不会读出错数据。
+SECTOR_SEED_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.sector_seed.json')
+
+
+def _load_sector_seed():
+    try:
+        with open(SECTOR_SEED_FILE, encoding='utf-8') as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+
+def _save_sector_seed(m):
+    try:
+        tmp = SECTOR_SEED_FILE + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(m, f, ensure_ascii=False, sort_keys=True)
+        os.replace(tmp, SECTOR_SEED_FILE)
+    except Exception:
+        pass
+
+
+def _hybk_by_ztdate(code, ztdate):
+    """按「该票的涨停日」回查东财涨停池拿 hybk（R100z376）。
+
+    `fetch_zt_pool` 只用**当日**涨停池补 hybk，而断板池是近 7 日窗口：更早涨停的票
+    hybk 恒空，sector 一律落到「其他」，story 只能写「当日无板块指数披露」
+    （2026-11-24 实测 79 只里 18 只）。按各自 ztDate 回查即可，最多 5 个交易日 = 5 次请求，
+    远比翻页拉全市场 clist 安全（那个会直接触发东财限流）。
+    """
+    d = str(ztdate or "")
+    if not d:
+        return ""
+    m = _ZTHYBK_CACHE.get(d)
+    if m is None:
+        try:
+            m = _em_hybk_map(d)
+        except Exception:
+            m = {}
+        _ZTHYBK_CACHE[d] = m
+    return m.get(str(code)) or ""
+
+
+def _sector_hints(D):
+    """从 data.js 既有池子收集 code → sector（R100z376）。
+
+    `hybk` 只有「当日涨停」的票能拿到，池子是近 7 日窗口，更早涨停的票 sector 会落到
+    「其他」（story 只能写「当日无板块指数披露」）。但**上一轮解析出来的 sector 已经
+    落在 data.js 的各个池子里**（duanban/chenPool/harmonic/breakoutPool 的条目都带 sector），
+    直接复用即可——不写死任何映射表，池子里出现过的票下次就有归属，自然沉淀。
+    """
+    if not isinstance(D, dict):
+        return {}
+    out = {}
+
+    def _take(items):
+        if not isinstance(items, list):
+            return
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            c = str(it.get("code") or "")
+            s = str(it.get("sector") or "").strip()
+            if c and s and s != "其他" and c not in out:
+                out[c] = s
+
+    db = D.get("duanban") or {}
+    for k in ("confirmed", "watching", "failPool", "star"):
+        v = db.get(k)
+        if isinstance(v, dict):
+            _take(v.get("picks"))
+        else:
+            _take(v)
+    cp = D.get("chenPool") or {}
+    for k in ("strict", "loose", "watching", "failPool"):
+        _take(cp.get(k))
+    hm = D.get("harmonic") or {}
+    for k in ("confirmPool", "watchPool", "failPool"):
+        _take(hm.get(k))
+    bp = D.get("breakoutPool") or {}
+    for k in ("passed", "failPool", "pool"):
+        _take(bp.get(k))
+    return out
+
+
 def fetch_zt_pool(date):
     """涨停池：主源=同花顺 limit_up_pool；失败回退东财 push2ex（含 hybk）。
     同花顺无申万 hybk，主源成功时也 best-effort 用东财映射补 hybk（失败不影响主源）。
@@ -392,6 +482,8 @@ EM_UT = "fa5c3db4f1ca16c5b6e3b9a3f3ae3dfa"
 # R100z60 清理：原 THS_KLINE_REFERER 在这之后零引用（收口到 common 后残留的死常量），删掉。
 
 _board_map_cache = None
+_CODE_IND_MAP = {}          # R100z376：code → 申万行业名（clist f100 全市场映射，hybk 兜底）
+_CUR_TRADE_DATE = ""        # R100z376：当日交易日（ISO），公告日期超出时按「盘后」归当日
 _board_pct_hist_cache = {}
 _THS_BOARD_CACHE = None
 _THS_KLINE_CACHE = {}
@@ -561,6 +653,11 @@ def match_ths_industry(hybk, ths_names):
         # story 板块段只能写「当日无板块指数披露，按个股量价定价」——但板块指数明明有：
         # 000628 高新发展（房屋建设）、600467 好当家（渔业）、603983 丸美生物（化妆品）。
         "房屋建设": "建筑装饰", "渔业": "养殖业", "化妆品": "美容护理",
+        # R100z376（2026-11-24）：历史池子里显式出现过的申万二级/截断名，前缀匹配救不回
+        # （『摩托车及』不以『汽车服务及其他』开头、『饰品』与同花顺 90 一级无交集）。
+        "摩托车及其他": "汽车服务及其他", "摩托车及": "汽车服务及其他",
+        "饰品": "服装家纺", "化纤行业": "化学纤维", "电子化学": "电子化学品",
+        "其他家电Ⅱ": "小家电", "林业": "种植业与林业",
     }
     if clean in SPECIAL and SPECIAL[clean] in ths_names:
         return SPECIAL[clean]
@@ -663,6 +760,9 @@ def _stock_clist_agg():
     返回 {行业名: {"pct": 均值, "pct3": 均值, "n": 成分数}}，全部失败返回 None。"""
     for host in CLIST_HOSTS:
         rows, pn = [], 1
+        # R100z376：pz 被服务端截到 100（total=5565 却只回 100 行），这里仍是**单页取样**——
+        # 想靠翻 56 页拉全市场会直接触发东财限流（实测连续请求后 clist 整片返回 None），
+        # 得不偿失。全市场行业归属改走「按涨停日回查涨停池」的轻量路径（见 _hybk_by_ztdate）。
         while pn <= 8:
             url = (f"{host}/api/qt/clist/get?pn={pn}&pz=1000&po=1&np=1&fltt=2&invt=2"
                    f"&fid=f12&fs=m:0%2Bt:6%2Cm:0%2Bt:80%2Cm:1%2Bt:2%2Cm:1%2Bt:23"
@@ -679,8 +779,16 @@ def _stock_clist_agg():
             time.sleep(0.3)
         if rows:
             agg = {}
+            # R100z376（2026-11-24）：code → 申万行业名。同花顺涨停池不带 hybk，东财只补
+            # 「当日涨停」那批——池子是近 7 日窗口，更早涨停的票 hybk 恒空，sector 落到
+            # 「其他」，story 只能写「当日无板块指数披露」（实测 79 只里 18 只）。
+            # 这次 clist 本来就拉了全市场 f100，顺手留下映射，别再多发一轮请求。
+            cmap = {}
             for r in rows:
                 name = str(r.get("f100") or "").strip()
+                _c = str(r.get("f12") or "")
+                if _c and name:
+                    cmap[_c] = name
                 if not name:
                     continue
                 try:
@@ -693,6 +801,7 @@ def _stock_clist_agg():
                 a["sp3"] += pct3
                 a["n"] += 1
             if agg:
+                _CODE_IND_MAP.update(cmap)
                 return {k: {"pct": v["sp"] / v["n"], "pct3": v["sp3"] / v["n"], "n": v["n"]}
                         for k, v in agg.items()}
         time.sleep(1)  # 换下一主机前稍歇
@@ -1055,7 +1164,13 @@ NOTICE_NEUTRAL_OVERRIDE = ("终止减持", "终止增持", "终止回购", "减�
                            "募集资金", "三方监管",
                            # 异动问询函回函＝交易所例行问询的书面说明，不含新增事实。
                            # 605169 洪通燃气 11-17、11-18 两轮被判 bear（命中「问询」）后手改中性。
-                           "的回函", "回函的公告")
+                           "的回函", "回函的公告",
+                           # R100z376（2026-11-24）：**否定式表述不进方向判定**。
+                           # 「2连板京蓝科技提示风险：靶材产线尚未量产，亦未产生相关营业收入及利润」
+                           # 命中 BULL 词「量产」→ 被判利好 70；11-23 同一只已手改成利空一次，
+                           # 第二天原样复发。这类标题里的「量产/投产」是被否定的，词表命中即误判。
+                           "提示风险", "尚未量产", "未量产", "未产生", "尚未产生",
+                           "尚未形成收入", "尚未投产")
 
 
 # ---------- R100z276 已退役：业绩方向判定（原 R100z223 的 classify_earnings） ----------
@@ -1891,7 +2006,14 @@ def build_story(e, refs=None, bear_refs=None):
                     + f"，{phrase}；{drv}，{name}{tail}。")
         elif notices:
             n0 = notices[0]
-            d0 = str(n0.get("date") or "")[5:].replace("-", "/")
+            _nd = str(n0.get("date") or "")
+            # R100z376：东财把盘后公告归到「次日」，story 里就写成「（11/25）」——
+            # 而 11/25 还没开盘，读者看到一个未来日期（11-16 已手改过 603686 一次）。
+            # 超出当日交易日的一律按「当日盘后」口径，不再逐个手改。
+            if _CUR_TRADE_DATE and _nd[:10] > _CUR_TRADE_DATE:
+                d0 = _CUR_TRADE_DATE[5:].replace("-", "/") + "盘后"
+            else:
+                d0 = _nd[5:].replace("-", "/")
             phrase = _pick(NO_NEWS_PHRASE, code)
             # R100z223：原写「未见方向性催化」——但"本函数认定的方向性公告"与
             # "读者点开弹窗看到的公告列表"不是同一个集合：stockNews/news 里的
@@ -2520,6 +2642,36 @@ def build_module(pairs, D):
     # 东财/申万兜底（THS 匹配失败时使用）
     board_map = fetch_board_map()
     ind_agg = _stock_clist_agg()
+    # R100z376：hybk 缺失时两级兜底——① clist f100 抽样映射（顺手留的，覆盖有限）
+    # ② 按各自涨停日回查涨停池（真正解决问题的路径）
+    global _CUR_TRADE_DATE
+    _CUR_TRADE_DATE = _mday or _CUR_TRADE_DATE
+    _nfill = 0
+    for p in pairs:
+        if p.get("hybk"):
+            continue
+        _v = _CODE_IND_MAP.get(str(p.get("code"))) if _CODE_IND_MAP else ""
+        if not _v:
+            _v = _hybk_by_ztdate(p.get("code"), p.get("ztDate"))
+        if _v:
+            p["hybk"] = _v
+            _nfill += 1
+    # 第三级：复用 data.js 既有池子里已解析的 sector（离线、零请求）
+    _hint = _sector_hints(D)
+    _seed = _load_sector_seed()
+    for k, v in _hint.items():
+        _seed.setdefault(k, v)
+    _nhint = 0
+    for p in pairs:
+        if p.get("hybk"):
+            continue
+        _v = _seed.get(str(p.get("code")))
+        if _v:
+            p["hybk"] = _v
+            _nhint += 1
+    if _nfill or _nhint:
+        print("[行业] hybk 补全 %d 只（涨停日回查/clist）+ %d 只（历史池/缓存复用）"
+              % (_nfill, _nhint), file=sys.stderr)
     for p in pairs:
         kl = p["kl"][-60:]
         bars = []
@@ -2590,6 +2742,10 @@ def build_module(pairs, D):
                         "pct": pct, "boardPctToday": bpt, "boardPctZt": bpz, "bkCode": bk_code,
                         "probability": None, "probNote": "",
                         "kline": bars})
+    # R100z376：把本轮解析出的 sector 写回滚动缓存（只写有归属的），下一轮同类票直接命中
+    _seed.update({str(e["code"]): e["sector"] for e in entries
+                  if e.get("sector") and e["sector"] != "其他"})
+    _save_sector_seed(_seed)
     # R100z148: 批量抓池内标的近 3 日公告（个股级利好/利空确定性打标，
     # 弥补 AI 要闻检索只覆盖板块级事件、抓不到单只个股公告的缺口）。
     # notices 是中间字段（不进 data.js），tag_entries 消费后由 merge 的白名单丢弃。

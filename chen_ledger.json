@@ -4491,7 +4491,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "loss",
+    "exitDay": "2026-11-24",
+    "buyDay": "2026-11-10",
+    "exitPrice": 19.85,
+    "buyPrice": 23.56,
+    "retPct": -15.75,
+    "note": "收盘跌破止损位"
+   },
    "stopAnchor": "zt_low",
    "anchorVer": "R100z331",
    "settleVer": "R100z299"
@@ -6561,7 +6570,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-24",
+    "buyDay": "2026-11-12",
+    "exitPrice": 4.66,
+    "buyPrice": 4.44,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "stopAnchor": "zt_low",
    "settleVer": "R100z299"
   },
@@ -8239,7 +8257,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-24",
+    "buyDay": "2026-11-20",
+    "exitPrice": 27.35,
+    "buyPrice": 26.05,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -8454,7 +8481,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-24",
+    "buyDay": "2026-11-20",
+    "exitPrice": 29.13,
+    "buyPrice": 27.74,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -8474,7 +8510,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-24",
+    "buyDay": "2026-11-23",
+    "exitPrice": 8.25,
+    "buyPrice": 7.86,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -8650,9 +8695,127 @@
    "holdDays": 5,
    "result": null,
    "settleVer": "R100z299"
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "603928",
+   "name": "兴业股份",
+   "confirmDate": "2026-11-24",
+   "firstSeenDate": "2026-11-24",
+   "entryDate": "2026-11-24",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "启动",
+     "day": null,
+     "score": 75.8,
+     "why": "今日+0.72% / 5日-6.74% / 涨停1只 / 扩散43%",
+     "fake": false
+    },
+    "pop": {
+     "label": "一般",
+     "score": 47.5,
+     "why": "成交额池内分位 48"
+    },
+    "ladder": {
+     "label": "2板",
+     "score": 70.0,
+     "why": "板块 塑料制品 有 1 只连板、最高 2 板（福莱新材），福莱新材 的题材是「柔性传感+数据采集手套+人形机器人」",
+     "n": 1,
+     "maxLb": 2,
+     "names": [
+      "福莱新材"
+     ],
+     "themes": [
+      "柔性传感",
+      "数据采集手套",
+      "人形机器人"
+     ],
+     "topName": "福莱新材",
+     "inLadder": false,
+     "bonus": 6.0,
+     "tag": "可补涨"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 55（昨 145，↓） · 跌停 2（昨 3，↓） · 最高板 4（昨 5，↓） · 连板股 25（昨 15，↑） · 分歧率 24%（昨 40，↓） · 接力率 45%（昨 10，↑）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 69.1,
+    "tier": "强",
+    "why": "题材启动(76)×55% + 人气48×45% + 连板2板+6 = 69（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-19",
+   "stopPrice": 10.92,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 10.92,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null,
+   "settleVer": "R100z299"
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "603206",
+   "name": "嘉环科技",
+   "confirmDate": "2026-11-24",
+   "firstSeenDate": "2026-11-24",
+   "entryDate": "2026-11-24",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "阴跌",
+     "day": null,
+     "score": 44.5,
+     "why": "今日-0.19% / 5日-5.05% / 涨停1只 / 扩散35%",
+     "fake": false
+    },
+    "pop": {
+     "label": "清淡",
+     "score": 12.4,
+     "why": "成交额池内分位 4 · 放量2.9倍（+8）"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 通信服务 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 55（昨 145，↓） · 跌停 2（昨 3，↓） · 最高板 4（昨 5，↓） · 连板股 25（昨 15，↑） · 分歧率 24%（昨 40，↓） · 接力率 45%（昨 10，↑）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 30.1,
+    "tier": "弱",
+    "why": "题材阴跌(44)×55% + 人气12×45% = 30（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-17",
+   "stopPrice": 13.13,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 13.13,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null,
+   "settleVer": "R100z299"
   }
  ],
- "updatedAt": "2026-11-23 16:03",
+ "updatedAt": "2026-11-24 16:14",
  "resettleAt": "R100z299",
  "anchorVer": "R100z331",
  "anchorNote": "止损锚＝涨停日（T日）最低价，断板与陈学长同口径；2026-11-10 22:1x 统一"

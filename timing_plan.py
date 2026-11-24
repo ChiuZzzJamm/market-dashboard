@@ -122,6 +122,11 @@ def _clean_sector(hybk):
         "非金属材": "非金属材料", "互联网电": "互联网电商",
         "汽车服务": "汽车服务及其他", "农化": "农化制品",
         "其他电源": "其他电源设备", "金属新材": "金属新材料", "军工": "军工装备",
+        # R100z376（2026-11-24）：001266 宏英智能的挂单卡写「自动化设」，同页断板卡写
+        # 「自动化设备」——4 字截断名又冒一个，同一张页面两个叫法。
+        "自动化设": "自动化设备", "计算机设": "计算机设备", "通用设": "通用设备",
+        "专用设": "专用设备", "通信设": "通信设备", "风电设": "风电设备",
+        "光伏设": "光伏设备", "电网设": "电网设备", "环保设": "环保设备",
     }
     return FIX.get(base, base) if base else hybk
 
@@ -229,6 +234,15 @@ def build_plan(D, base=None, trade_date=None):
             continue
         cands.append(dict(code=c, name=nm,
                           sector=_clean_sector(it.get('hybk')) or _sector_from_pools(D, c)))
+    # R100z376：涨停池会返回重复条目（2026-11-24 实测 002983 重复上卡、002036/002164
+    # 在「未入选」里各出现 2~4 次），同一只票重复占名额、还重复印一行丢弃原因。按 code 去重。
+    _seen, _uniq = set(), []
+    for x in cands:
+        if x['code'] in _seen:
+            continue
+        _seen.add(x['code'])
+        _uniq.append(x)
+    cands = _uniq
     if not cands:
         return None, ('T 日（%s）首板 0 只（涨停池 %d 只里没有主板首板）——'
                       '这是正常结果，不是抓取失败' % (t0s, len(pool)))

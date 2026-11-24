@@ -298,9 +298,13 @@ def main():
                 bad.append("%s 第 %d 段没有任何数字（纯形容词＝没证据）" % (code, i + 1))
         if kind == "multi":
             ref0 = py_recompute(code)
-            want = "%d 连板" % (ref0 or {}).get("nban", 0)
-            if want not in h:
-                bad.append("%s 是 %s，输出里没写出来（首板/二板没分清）" % (code, want))
+            _nb = (ref0 or {}).get("nban", 0)
+            # R100z367（2026-11-24）：nban==1 时页面按行情习惯写的是「首板」，
+            # 而旧断言无条件要求「1 连板」——001360（11-23 首板、11-24 断板）因此误报。
+            # 「首板」与「1 连板」是同一件事，两种写法都接受；2 板以上仍只认「N 连板」。
+            wants = ["首板", "1 连板"] if _nb <= 1 else ["%d 连板" % _nb]
+            if not any(w in h for w in wants):
+                bad.append("%s 是 %d 连板，输出里没写出来（首板/二板没分清）" % (code, _nb))
         if "阶段：" not in h:
             bad.append("%s 没有「阶段：」结论——分不出洗盘/出货就等于没解读" % code)
         if code in EARLY:

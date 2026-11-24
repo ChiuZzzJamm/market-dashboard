@@ -2,12 +2,12 @@
  "ok": true,
  "nameSrc": "tx",
  "nameSrcDetail": {
-  "tx": 243,
+  "tx": 275,
   "sina": 0,
   "em": 0
  },
  "date": "2026-11-24",
- "checked": 243,
+ "checked": 275,
  "liftWindow": [
   2,
   5
@@ -17,38 +17,24 @@
  "dims": {
   "st": {
    "status": "ok",
-   "cover": "行情名源（腾讯243/新浪0/东财0）243/243 只取到"
+   "cover": "行情名源（腾讯275/新浪0/东财0）275/275 只取到"
   },
   "cut": {
    "status": "ok",
-   "cover": "公告源 243/243 只取到（东财243/巨潮0）"
+   "cover": "公告源 275/275 只取到（东财275/巨潮0）"
   },
   "lift": {
    "status": "ok",
-   "cover": "解禁源 243/243 只取到"
+   "cover": "解禁源 275/275 只取到"
   },
   "pledge": {
    "status": "ok",
-   "cover": "质押源 243/243 只取到（仅供参考）"
+   "cover": "质押源 275/275 只取到（仅供参考）"
   }
  },
  "verdict": "full",
  "uncheckedDims": [],
  "blacklist": {
-  "600908": {
-   "name": "无锡银行",
-   "reasons": [
-    "2026-11-14 减持已结束（利空出尽）"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 3.6%（截至 2026-07-10）"
-   ],
-   "severity": "yellow",
-   "progress": [
-    "减持已结束（利空出尽）"
-   ]
-  },
   "001328": {
    "name": "登康口腔",
    "reasons": [
