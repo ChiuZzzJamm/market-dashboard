@@ -156,11 +156,11 @@ EMPTY_WHITELIST = [
      "非一字/无换手口径的连板条目留空；前端显示 '-' 兜底"),
     (r"us\.breadth\.",
      "R98i 预留口径位：非交易日/脚本未覆盖时为空，前端整体隐藏该卡"),
-    # --- 结构性预留 / 已下线模块 ---
+    # --- 结构性预留 ---
     (r"themePicks$",
      "R100z368：themePicks **是活字段**（A 股「题材掘金」卡就在渲染它，见 renderThemePicks）。"
      "空值是 by-design——某日没有够格的个股事件驱动就没有这一块，不是漏跑。"
-     "（旧说明写「R98j 模块已下线」，与实际相反，属墓碑注释，已纠正）"),
+     ),
     (r"excluded$",                      # 结构预留
      "无剔除项时为空数组"),
     (r"(harmonic|breakoutPool)\.summary$",
@@ -781,10 +781,6 @@ def g5_source_assertions(r):
          "--asof 不再过滤 asof 之后的 bar（历史复现会读到未来数据）"),
         ("breakout_watch.py", "kl[idx+1:-1]",
          "洗盘期不再剔掉当日 bar（量比基准被当日污染，启动判定失真）"),
-        ("backtest_entry.py", "d[i+1]",
-         "回测出场不再取次日 bar（信号日与出场日重合＝未来函数）"),
-        ("backtest_entry.py", "len(d)-1",
-         "缺「末尾无次日数据即丢弃」的边界判断（不足两日时会倒用当日收盘）"),
     ):
         p = os.path.join(HERE, fname)
         if not os.path.exists(p):
@@ -3123,7 +3119,7 @@ def g31_deduce_prefix(r):
         walk(D)
         if viol:
             r.fail("G31", "data.js 有 %d 处 deduce 自带「主推/反证」前缀（渲染层会再补一次 → "
-                          "页面显示「反证：反证是…」）：%s；跑 `python3 fix_dd_prefix.py --write` 清洗"
+                          "页面显示「反证：反证是…」）：%s；在写回前把前缀去掉（渲染层只加一次）"
                    % (len(viol), "；".join(viol[:3])))
         else:
             r.ok("G31", "data.js 的 %d 处 deduce.main/counter 均无自前缀（标签只在渲染层加）" % tot)
@@ -3642,8 +3638,7 @@ def g39_open_desk_page(r):
             bad.append("renderOpenDesk() 未调用 %s（该块搬进子页后没人画＝空白）"
                        % "、".join(miss))
         # R100z234：原来这里还查「getElementById('trade-desk') + td.innerHTML」两步，
-        # 旧页面删除后一并撤掉——留着会让闸门要求一个已经不存在的容器。
-
+    
     # ---- f) 子页自带菜单 ----
     if 'id="db-od-nav"' in s and not re.search(
             r"getElementById\('db-od-nav'\)[\s\S]{0,200}?innerHTML\s*=\s*subnavHtml\(\)", s):
@@ -3712,8 +3707,7 @@ def g40_score_page_and_slots(r):
       b) CSS 三件套齐（容器默认隐藏 + body.score-open 隐藏其余 + 显示本页）；
       c) renderScoreView() 同时渲染 renderSignalPerf / renderForecastScore / chenCompareHtml
          （少一张＝用户要的丢一半）。R100z329 起「强板块落后股」那张卡已整块删除，
-         那一整块（渲染函数 / 脚本 / 数据节点）已下线，判据里不再要求它。
-      d) hash '#score' 至少两处（初始直达 + popstate 返回）；
+           d) hash '#score' 至少两处（初始直达 + popstate 返回）；
       e) 槽位表 RAIL 把 4 个页内替身按「🐼→📄→🧰→📋」顺序指到组内第 0..3 个按钮；
          layout() 用实测偏移 gm.off[i] 落位，且 CSS 里不再出现 calc(50% ± N) 的槽位副本；
       f) 几何每次现算（读 flex-direction + gap + 按钮宽高），不缓存槽距、不写死常量。
@@ -4211,7 +4205,6 @@ def g45_modal_nav_group(r):
     n = s.count('onclick="openStkModal(') + s.count("onclick=\\\"openStkModal(")
     if n:
         bad.append("还有 %d 处内联 onclick 直开 openStkModal——必须先 stkOpenIn(list, idx) 建组" % n)
-    # R100z234：旧页面（_TD_GRP 两处清单）已下线，这里只留仍在用的龙虎榜行。
     for need, why in (("stkOpenIn(window._LHB_GRP,", "龙虎榜行"),):
         if need not in s:
             bad.append("%s 未走 stkOpenIn（箭头会跟着上一位读者点过的清单翻）" % why)

@@ -88,7 +88,6 @@ DATA_WRITERS = [
     'enrich_policy.py',         # policySignals 解码
     'entry_zone.py',            # R100z194：aiPrediction.sectors[].fundCheck/entry（走 write_data_js）
     'ledger_doctor.py',         # R100z380：ledgerDiag 台账诊断（走 write_data_js + 持锁）
-    'fix_dd_prefix.py',         # 去掉「DD」前缀
     'forecast_scorecard.py',    # R100z161：forecastScore（预测成绩单；只读 calibration_log.json）
     'full_scan.py',             # 全市场扫描
     'harmonic_detect.py',       # 谐波形态
@@ -150,16 +149,12 @@ DEAD_OK = {
                                '手工触发、幂等可重跑；留着是为了「同一份台账在别的机器/别的分支上'
                                '也能重放同一次迁移」，不是死脚本',
     'goldpit_study.py': '「黄金坑」形态/外盘映射原型研究，手工触发（--dump 才落盘），不进流水线',
-    'dryveto_study.py': 'R100z241：「昨日大跌+极度缩量」可否作为横盘启动池否决条件的事前验证，'
-                        '手工触发、只打印不落盘，不进流水线',
-    'fix_dd_prefix.py': '一次性修数工具（历史 DD 前缀），手工触发',
     'track_calibration.py': '校准曲线统计，手工触发',
     'score_openoutlook.py': '开盘前瞻打分，手工/被 import',
     'stock_fundflow.py': '个股资金流对照，手工触发',
     'decode_policy.py': '政策词表纯函数，被 enrich_policy import',
     'kline_cache.py': 'K 线缓存模块，被 harmonic_detect / breakout_pool import',
     'backtest_indicators.py': '四指标 2 年滚动回测（信号归因+组合年化），纯本地、手工触发',
-    'backtest_entry.py': '断板反包买点口径回测（涨停→倍量阴→缩量回均线尾盘买），纯本地、手工触发',
     'duanban_timing.py': 'R101：断板反包「时间口」对照回测（买点×卖点九宫格 + 限价挂单口径），'
                          '口径唯一来源（LIMIT_K/FLOOR_K/SLOTS 被 timing_plan import），纯本地、手工触发',
     'trend_state.py': 'R101：五指数趋势档（从 stkKlines 现算 MA20/斜率/60日分位→仓位上限），'
@@ -167,16 +162,11 @@ DEAD_OK = {
     'timing_plan.py': 'R101：时间口挂单清单（16:00 数据步跑，产出 data.js 顶层 timingPlan），'
                       '9:45 的 update_star 只做开盘核对、不改单',
     'nshape_fetch.py': 'N 字形态研究：全市场日K抓取（东财/腾讯双源→.kline_hist/），纯本地、手工触发',
-    'nshape_factors.py': 'N 字形态研究：因子分层+按年切分，纯本地、手工触发',
-    'nshape_rules.py': 'N 字形态研究：过滤规则组合搜索（双段验证），纯本地、手工触发',
-    'nshape_right.py': 'N 字形态研究：反包确认日买入+反包率，纯本地、手工触发',
-    'nshape_extra.py': 'N 字形态研究：跨度交叉表/市场开关/平台可买性，纯本地、手工触发',
     'backtest_breakout.py': '横盘启动接入 backtest_indicators 同一跑道的年化对照，纯本地、手工触发',
     'breakout_study.py': '横盘启动参数研究：振幅/粘合/地量/贴沿四维分层搜索，纯本地、手工触发',
     'chen_study.py': '陈学长口径研究：卖点/持有天数网格 + 训练-样本外切分，纯本地、手工触发',
     'duanban_study.py': '断板反包口径研究：买点/卖点/止损锚分层，纯本地、手工触发',
     'duanban_tune.py': '断板反包参数寻优（量比/回撤/确认日），纯本地、手工触发',
-    'duanban_extra.py': '断板反包补充维度（距MA5/板块/情绪分层），纯本地、手工触发',
     'rule_final_check.py': '陈学长口径终选：换参前后样本重算校验，纯本地、手工触发',
     'nshape_backtest.py': 'N 字形态研究：组合回测，纯本地、手工触发',
     'nshape_bt.py': 'N 字形态研究：回测口径对照，纯本地、手工触发',

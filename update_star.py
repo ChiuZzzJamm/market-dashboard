@@ -862,7 +862,7 @@ def build_star(D, base=None):
     # 这是用户 2026-10-28 说的「赌次日反包」那一类，正好切在断板池「待缩量」（还没缩量）
     # 与「待企稳」（已缩到 MA5 下方并站住）之间的缝里——现有任何池子都不收它。
     # 前端「明日可下单」用 ordShrinkScan 现扫同一套条件出卡，本脚本读 Python 孪生实现，
-    # 两边口径由 check_shrink_parity.py 对账（不一致直接 FAIL），不靠人记。
+    # 缩量档只有 shrink_scan.py 一份实现，别在前端重写第二份。
     shr_list, shr_err = [], None
     try:
         import shrink_scan as SS
@@ -1350,7 +1350,7 @@ def build_star(D, base=None):
         "tapeSummary": tape_summary,
         "tierSummary": tier_summary,
         "pushText": push_text,
-        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波池直接取标的；R100z85：技术池按池配额 防单池量纲垄断；R100z232：旧技术池下线换横盘启动（配额 横盘启动3/谐波3）+ 新增 star.buyList 今日买入清单（三池买区/证伪价/目标/持有天数/仓位，不含离场提示）；R100z156：行业/资金接口抓空重试+显式降级；R100z192：picks 增 gapTag 开盘价位置标注 + star.gapSummary 分布，只标注不排序；R100z193：接入 tape.py 分时量价结构（均价线/跌破次数/下跌分钟量占比/爆量倍数），picks 增 tape 字段 + star.tapeSummary，动作口径由盘口结构决定，gapTag 降级为价格事实；R101：新增 star.timingExec——读 16:00 timing_plan.py 生成的挂单清单，用 9:45 实时行情核对开盘是否破位，只核对不改单；R102：候选分「确认/待确认」两档（确认档恒在前、待确认档不给买点），待确认档新增陈学长观察池与缩量回踩档（shrink_scan.py，与前端 ordShrinkScan 孪生、由 check_shrink_parity.py 对账），star 增 tierSummary） + 自动化 AI 复核",
+        "generatedBy": "update_star.py：断板/谐波/横盘启动/陈学长四池确定性筛选（配额防单池垄断），开盘快照来自腾讯 gtimg + 同花顺行业资金",
     }
     return star, None
 

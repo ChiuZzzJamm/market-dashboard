@@ -234,12 +234,11 @@ def fetch_kline(code, timeout=15, bars=BARS_DEFAULT):
 
 
 # ---------------------------------------------------------------------------
-# R100z60：从已删除的 fix_pools_meta.py 内联过来的「池内缺名回填 + themePicks 校准」
+# R100z60：池内缺名回填 + themePicks 校准
 # 背景见 R100z4f：① 技术池部分标的只有代码没名称 → 腾讯 qt.gtimg 实时接口（GBK）批量回补；
 # ② themePicks 的 note 被 AI 写成「·今日涨停」「·涨X%」这种行情字样（与 chg 重复且可能虚构），
 #    note 只留概念归属；chg 用 stkKlines 当日日K 重算校准（日期非当日则保留 AI 值）。
 # 防清场（R91m 铁律）：只回填空 name / 校准 themePicks，不碰其他字段；行情接口失败保留原值。
-# ⚠️ 不再 import fix_pools_meta（该模块 2026-10-04 作死脚本删除，导致挂载点每轮静默失效）。
 # ---------------------------------------------------------------------------
 QTIMG_URL = "https://qt.gtimg.cn/q={q}"
 NOTE_TAIL_RE = re.compile(r"·(今日)?(涨停|[涨跌][0-9.]+%)")
@@ -252,9 +251,8 @@ def _fetch_names(codes, timeout=10):
     codes = [str(c).strip() for c in codes if re.fullmatch(r"\d{6}", str(c).strip())]
     for i in range(0, len(codes), 30):
         batch = codes[i:i + 30]
-        # R100z64 修复：这里原先调的是已删死脚本 fix_pools_meta.py 内部的 _sym()，
-        # 删模块时漏改消费者 → 只要哪一轮有标的不知名（missing 非空）就 NameError 崩在补名上，
-        # 平时 missing 为空就静默无事发生。内联同款 sh/sz 前缀逻辑（与 fetch_kline:200 一致）。
+        # sh/sz 前缀内联在这里（与 fetch_kline:200 一致），不要抽成跨文件工具：
+        # 抽出去以后哪一轮少了这个 import，就只在 missing 非空时崩，平时静默。
         url = QTIMG_URL.format(q=",".join(("sh" if c.startswith("6") else "sz") + c for c in batch))
         try:
             p = subprocess.run(
@@ -464,11 +462,6 @@ def main():
                 D["sectorMap"] = old_map
             print("[warn] 时间预算不足，跳过 sectorMap 刷新（保留既有值）")
         # R100z4f：池内缺名回填 + themePicks 行情字段校准（确定性逻辑，失败不阻塞不清场）
-        # R100z60（2026-10-05 修）：原挂载点是 `import fix_pools_meta → fix_pools_meta.patch(D)`，
-        # 但 fix_pools_meta.py 已在 commit b99fd69 当作死脚本删除 → 这段每次实跑都走 except，
-        # 每轮打一条 [warn] fix_pools_meta 异常(No module named ...)，**功能静默失效**（补名/校准都没做，
-        # 却看不出是缺功能，把功能丢失藏在一行 warn 里）。这里把逻辑内联成本文件私有函数（见
-        # pools_meta_patch()），不再依赖外部模块；原来 fix_pools_meta.py 的独立 CLI 入口已一并删掉。
         try:
             _rn, _cf, _nc = pools_meta_patch(D)
             print(f"[info] 池内缺名回填：补名 {_rn} 只 / themePicks chg 校准 {_cf} 条 / note 净化 {_nc} 条")

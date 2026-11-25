@@ -657,7 +657,6 @@
   .wk-src { font-size: var(--fs-sm); color: var(--ink2); margin-top: 8px; }
 
   /* ===== 行业全景（沿用原版样式：市场 tab + 板块网格） ===== */
-  /* pano-indices 卡片已删除：指数内嵌至市场 tab */
   .pano-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .pano-tab { padding: 6px 16px; border-radius: 999px; background: var(--accent-soft); color: var(--ink2); font-size: var(--fs-body); font-weight: 700; cursor: pointer; border: 1px solid var(--line); transition: all .25s ease; white-space: nowrap; }
   .pano-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
@@ -1062,12 +1061,6 @@
      要恢复折叠块，得连 DOM 生产者一起写回来，只恢复 CSS 不会让任何东西出现。 */
   /* 卡片区下沿留 6px：原来是与第一个折叠块的 20px 叠加用的，折叠块下线后只剩这一段。 */
   .p-ord .db-chips { margin-bottom: 6px; }
-  /* R100z255（2026-10-28 用户二次拍板「这两个模块删掉，改成给卡片赋能」）：
-     原来这里有一整套 .tb-wrap / .tb-head / .tb-th / .tb-row / .tb-grp / .tb-rule /
-     .tb-risk / .tb-bt ——「今日可下单」那张五列表的样式。表已整块删掉、信息压回卡片，
-     所以这套样式也一并删干净：留着的死样式会让下一个改这块的人以为还有第二个渲染分支
-     （24.110 删旧 .bl-* 时写过同一条）。当时的规则/风险/回测三块文字后来改由 .ord-fold 承载
-     （R100z258），R100z273 又连折叠块一起下线了——三块文字的最终归宿是卡片本身，别去这两处找。 */
   /* R91j: 近3日涨幅居前板块 TOP10 */
   .db-tb { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
   @media (max-width: 900px) { .db-tb { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -1479,12 +1472,6 @@
   /* 页内定位锚点：给顶部留出呼吸空间 */
   #gn-ashare, #gn-us { scroll-margin-top: 12px; }
 
-  /* R100z234（2026-10-26 用户拍板「直接删掉」）：旧页面整块下线。
-     signal_rank.py 已删除，data.js 的 tradeDesk 键已删，前端渲染函数与容器一并移除。
-     它原来的 18 条 .td-* 样式（.td-scope/.td-mkt/.td-port/.td-warn/.td-item/.td-rank/.td-name/
-     .td-sec/.td-q/.td-kv/.td-why/.td-fold/.td-x/.td-note/.td-plan/.td-valid/.td-h）同步删除——
-     留着就是死样式，下次谁看到都会以为这个模块还在。
-     只剩三条仍被别的卡复用，见下。 */
   .td-h2 { font-size: var(--fs-h2); gap: 6px; flex-wrap: nowrap; }
   .td-tag { display: none; }
   /* R100z161：预测复盘卡。基调是「报数」，不是「汇报成绩」——
@@ -1498,32 +1485,10 @@
   .fc-row.head { font-size: var(--fs-sm); border-bottom: 1px solid var(--line); padding-bottom: 4px; }
   .fc-row .fc-flag { font-size: var(--fs-xs); color: #a8541a; font-weight: 700; margin-left: 5px; white-space: nowrap; }
   .fc-sec { font-size: var(--fs-sm); font-weight: 700; color: var(--accent-deep); margin: 12px 0 4px; letter-spacing: .5px; }
-  .fc-use { margin-top: 11px; border-top: 1px dashed var(--line); padding-top: 9px; }
-  .fc-use > div { font-size: var(--fs-base); color: var(--ink); line-height: 1.75; padding: 6px 0 6px 20px; position: relative; }
-  .fc-use > div::before { content: '→'; position: absolute; left: 2px; color: var(--accent-deep); font-weight: 700; }
-  .fc-use b { color: var(--accent-deep); }
   /* 结论行：一行一句「能不能用」，依据折叠在下面（R100z230）。
      原来 5 条各带完整推理，默认展开占 289 字，把上面的 hero 数字和条形图全推下去了。 */
-  .fc-u-r { padding-top: 5px !important; padding-bottom: 5px !important; }
-  .fc-u-r .fc-u-h { font-size: var(--fs-base); font-weight: 700; }
-  .fc-u-d { margin: 3px 0 1px; }
-  .fc-u-d > summary { display: inline-block; cursor: pointer; font-size: var(--fs-xs);
-                      color: var(--ink2); padding: 1px 6px; border-radius: 4px;
-                      background: var(--bg-2); list-style: none; }
-  .fc-u-d > summary::-webkit-details-marker { display: none; }
-  .fc-u-d > summary::before { content: '▸ '; }
-  .fc-u-d[open] > summary::before { content: '▾ '; }
-  .fc-u-d > summary:hover { color: var(--accent-deep); }
-  .fc-u-x { font-size: var(--fs-sm); color: var(--ink2); line-height: 1.7;
-            padding: 4px 0 2px 10px; border-left: 2px solid var(--line); margin: 3px 0 2px 3px; }
   .fc-note { font-size: var(--fs-sm); color: var(--ink2); line-height: 1.65; padding: 5px 0 0 2px; }
   /* 开关区：重点是「它咬住了下一次预测」，所以用实心浅底 + 左侧竖线，和上面那排结论区分开 */
-  .fc-flags { margin-top: 10px; padding: 8px 10px; background: var(--accent-soft);
-              border-left: 3px solid var(--accent-deep); border-radius: var(--r-note); }
-  .fc-flags-t { display: block; font-size: var(--fs-sm); font-weight: 700; color: var(--accent-deep); margin-bottom: 5px; }
-  .fc-chip { display: inline-block; font-size: var(--fs-sm); color: var(--ink2); background: var(--paper);
-             border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; margin: 0 5px 5px 0; line-height: 1.5; }
-  .fc-chip em { font-style: normal; font-weight: 700; color: var(--accent-deep); margin-right: 5px; }
   /* R100z297：合并后卡内的分段分隔（成绩单 → 台账细节）。用细分隔线 + 小标题，
      不加背景块，避免把一张卡又切回「两张卡」的观感。 */
   .fc-hist-sep { margin: 20px 0 8px; padding-top: 13px; border-top: 1px solid var(--line); }
@@ -2919,7 +2884,7 @@ function psClose() { document.getElementById('ps-modal').classList.remove('open'
    「主推/反证」出现在值开头一律只剥标签二字。因为外层无条件补同名标签，
    内层留着必然重复（「反证证券跌1.21%」→「反证：反证证券跌1.21%」）。
    白名单不能省：「反证成立」剥成「反证：成立」句子就废了。
-   ⚠️ 本函数与 common.py 的 _DD_PREFIX_RE、fix_dd_prefix.py 的 PAT 三处同口径，
+   ⚠️ 本函数与 common.py 的 _DD_PREFIX_RE 同口径，
    改一处必须三处同改（audit_pipeline G31 拿同一组样例跑三方比对 + 扫数据残留）。 */
 function _ddClean(t) {
   var s = String(t || '');
@@ -7927,9 +7892,6 @@ function resizeOdCharts() {
 /* R100z162：开盘预测页三块的渲染入口。三块各自独立取数、独立失败，一块挂了另两块照常出。 */
 function renderOpenDesk() {
   // R100z234（2026-10-26 用户拍板「直接删掉」）：旧页面整块下线。
-  // 原因不是「准确率低」这句印象，而是它与开盘精选在同一天给出两套几乎不重叠的名单
-  // （2026-10-26 实测：精选 10 只 / 预案 8 只 / 交集 1 只），两套止损仓位并存，
-  // 任何一套都无法照做。signal_rank.py 已删除，data.js 的 tradeDesk 键已删。
   renderOpenOutlook();
   // R100z248：趋势档已并入主页面「大盘指数」卡，这里不再单独渲染
   renderAiPrediction();
