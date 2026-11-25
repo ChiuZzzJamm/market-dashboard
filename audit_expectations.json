@@ -522,12 +522,7 @@
     "breakout_pool.py",
     "full_scan.py",
     "price-in→已计价",
-    "盘口结构动作（R100z193，勿删勿改",
-    "这类无动作的空话",
-    "tapeSummary 的动作交代",
-    "star.spillover",
-    "spillover.text",
-    "stockConcepts"
+    "star.spillover"
    ],
    "forbidden": [
     "①",
@@ -548,33 +543,17 @@
     "duanban.star.time",
     "duanban.star.marketLine",
     "duanban.star.sentiment",
-    "duanban.star.picks",
-    "duanban.star.picks[].code",
-    "duanban.star.picks[].name",
-    "duanban.star.picks[].sector",
-    "duanban.star.picks[].sentiment",
-    "duanban.star.picks[].probability",
-    "duanban.star.picks[].note",
-    "duanban.star.picks[].src",
     "duanban.star.pushText",
     "duanban.star.generatedBy",
     "harmonic.confirmPool",
     "harmonic.watchPool",
     "breakoutPool.passed",
-    "fullScan",
-    "duanban.star.gapSummary",
-    "duanban.star.tapeSummary",
-    "duanban.star.picks[].tape",
-    "duanban.star.picks[].gapTag",
-    "duanban.star.buyList",
-    "duanban.star.buySummary",
-    "duanban.star.spillover"
+    "fullScan"
    ],
    "writesFields": [
     "duanban.star",
     "duanban.star.sentiment",
-    "duanban.star.pushText",
-    "duanban.star.picks"
+    "duanban.star.pushText"
    ],
    "neverWrites": [
     "ashare",
@@ -589,7 +568,6 @@
     "duanban 池内标的 kline/story/refs/news/probability",
     "duanban 池成员增删",
     "us.themePicks",
-    "duanban.star.spillover（脚本产出，AI 只读）",
     "stockConcepts（stock_concept.py 产出，AI 只读）"
    ],
    "notes": [
