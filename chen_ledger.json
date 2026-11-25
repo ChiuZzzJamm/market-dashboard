@@ -1875,9 +1875,9 @@
     "result": "loss",
     "exitDay": "2026-11-16",
     "buyDay": "2026-11-03",
-    "exitPrice": 17.79,
-    "buyPrice": 20.15,
-    "retPct": -11.71,
+    "exitPrice": 17.69,
+    "buyPrice": 20.05,
+    "retPct": -11.77,
     "note": "收盘跌破止损位"
    },
    "settleVer": "R100z299",
@@ -8876,7 +8876,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 5,
-   "result": null
+   "result": null,
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -8931,7 +8932,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 5,
-   "result": null
+   "result": null,
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -8992,7 +8994,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 5,
-   "result": null
+   "result": null,
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -9047,7 +9050,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 5,
-   "result": null
+   "result": null,
+   "settleVer": "R100z299"
   },
   {
    "pool": "duanban",
@@ -9102,7 +9106,8 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 5,
-   "result": null
+   "result": null,
+   "settleVer": "R100z299"
   }
  ],
  "updatedAt": "2026-11-25 16:04",

@@ -3386,8 +3386,10 @@ def g37_forecast_score_truth(r):
     为什么需要：这张卡的价值全在「数字可信」。如果 data.js 里的命中率
     与 calibration_log.json 算出来的不一致，那它就退化成了又一段 AI 自述，
     比没有更糟（因为它看起来像客观统计）。
-    所以本闸门**重算一遍台账**，逐项比对；并且要求 usage 非空——
-    有一堆数字却不给「该怎么用」，读者仍然不知道该信几分。
+    所以本闸门**重算一遍台账**，逐项比对。
+    （2026-11-25 起 usage 断言随字段下线：forecast_scorecard.py 已不再向 data.js 写 usage，
+      页面也不展示建议文案，留着就是死字段。闸门改为「字段存在时才校验条数与样本量是否匹配」，
+      否则脚本契约与闸门不一致，每天必 FAIL。）
     """
     import json as _json
     try:
@@ -3430,11 +3432,15 @@ def g37_forecast_score_truth(r):
         bad.append("开盘前瞻 %s 天而台账 %d 天" % ((F.get("forward") or {}).get("days"), len(op)))
 
     # 结论必须随数据走：样本够却没给 usage = 有账不解读；样本不够却给一堆结论 = 拿噪声装结论
-    usage = F.get("usage") or []
-    if F.get("enough") and not usage:
-        bad.append("样本已够但 usage 为空——只报数不解读，读者仍不知该信几分")
-    if (not F.get("enough")) and len(usage) > 1:
-        bad.append("样本不足却给出 %d 条结论——样本不够时任何结论都是噪声" % len(usage))
+    # R100z348（2026-11-25）：forecast_scorecard.py 自本日起停止写 usage（页面不再展示建议文案），
+    #   故 usage 缺失不再判 FAIL；若字段仍在（旧版产物 / 手工补写）则按原规则校验条数。
+    usage = F.get("usage")
+    if usage is not None:
+        usage = usage or []
+        if F.get("enough") and not usage:
+            bad.append("样本已够但 usage 为空——只报数不解读，读者仍不知该信几分")
+        if (not F.get("enough")) and len(usage) > 1:
+            bad.append("样本不足却给出 %d 条结论——样本不够时任何结论都是噪声" % len(usage))
     if not str(F.get("verdict") or ""):
         bad.append("verdict 为空")
     elif n and ("%d 条" % n) not in str(F.get("verdict")):
@@ -3450,7 +3456,7 @@ def g37_forecast_score_truth(r):
         r.fail("G37", "；".join(bad[:5]))
     else:
         r.ok("G37", "成绩单与台账一致（%d 条 / %d 日 / 前瞻 %d 天），结论 %d 条由阈值生成"
-             % (n, len(log), len(op), len(usage)))
+             % (n, len(log), len(op), len(usage or [])))
 
 
 def g38_flags_respected(r):

@@ -161,7 +161,25 @@
    "appliedAt": null,
    "before": null,
    "after": null
+  },
+  {
+   "id": "fe6ea3bf57",
+   "module": "harmonic",
+   "dim": "板块",
+   "slice": "房地产",
+   "kind": "filter",
+   "rule": "在「谐波形态」里剔除 板块 = 房地产（该切片 12% vs 整体 40%）",
+   "evidence": {
+    "delta": -0.274,
+    "horizon": 5,
+    "basis": "close→close 5d，切片与整体同口径"
+   },
+   "status": "proposed",
+   "createdAt": "2026-11-25 19:52",
+   "appliedAt": null,
+   "before": null,
+   "after": null
   }
  ],
- "updatedAt": "2026-11-25 17:05"
+ "updatedAt": "2026-11-25 20:03"
 }

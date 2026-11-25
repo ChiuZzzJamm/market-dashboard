@@ -2,12 +2,12 @@
  "ok": true,
  "nameSrc": "tx",
  "nameSrcDetail": {
-  "tx": 305,
+  "tx": 304,
   "sina": 0,
   "em": 0
  },
  "date": "2026-11-25",
- "checked": 305,
+ "checked": 304,
  "liftWindow": [
   2,
   5
@@ -17,36 +17,24 @@
  "dims": {
   "st": {
    "status": "ok",
-   "cover": "行情名源（腾讯305/新浪0/东财0）305/305 只取到"
+   "cover": "行情名源（腾讯304/新浪0/东财0）304/304 只取到"
   },
   "cut": {
    "status": "ok",
-   "cover": "公告源 305/305 只取到（东财305/巨潮0）"
+   "cover": "公告源 304/304 只取到（东财304/巨潮0）"
   },
   "lift": {
    "status": "ok",
-   "cover": "解禁源 305/305 只取到"
+   "cover": "解禁源 304/304 只取到"
   },
   "pledge": {
    "status": "ok",
-   "cover": "质押源 305/305 只取到（仅供参考）"
+   "cover": "质押源 304/304 只取到（仅供参考）"
   }
  },
  "verdict": "full",
  "uncheckedDims": [],
  "blacklist": {
-  "603629": {
-   "name": "利通电子",
-   "reasons": [
-    "解禁 2026-11-30（股权激励限售股份，占总股本 0.3%）"
-   ],
-   "count": 1,
-   "watch": [
-    "参考·质押 8.0%（截至 2026-07-10）"
-   ],
-   "severity": "orange",
-   "progress": []
-  },
   "001328": {
    "name": "登康口腔",
    "reasons": [

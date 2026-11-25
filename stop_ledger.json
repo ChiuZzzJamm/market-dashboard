@@ -83426,59 +83426,2484 @@
      "_done": true
     }
    }
+  ],
+  "2026-11-25": [
+   {
+    "code": "000001",
+    "name": "平安银行",
+    "sector": "金融行业",
+    "stop": 11.63,
+    "stopSrc": "harmonic",
+    "lastClose": 12.4,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "000423",
+    "name": "东阿阿胶",
+    "sector": "生物制药",
+    "stop": 43.69,
+    "stopSrc": "harmonic",
+    "lastClose": 51.9,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "000625",
+    "name": "长安汽车",
+    "sector": "汽车制造",
+    "stop": 6.38,
+    "stopSrc": "harmonic",
+    "lastClose": 6.53,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "000661",
+    "name": "长春高新",
+    "sector": "生物制品",
+    "stop": 65.17,
+    "stopSrc": "harmonic",
+    "lastClose": 68.78,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "000823",
+    "name": "超声电子",
+    "sector": "元件",
+    "stop": 13.88,
+    "stopSrc": "harmonic",
+    "lastClose": 19.32,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "000888",
+    "name": "峨眉山Ａ",
+    "sector": "酒店旅游",
+    "stop": 8.71,
+    "stopSrc": "harmonic",
+    "lastClose": 10.65,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "001979",
+    "name": "招商蛇口",
+    "sector": "",
+    "stop": 6.73,
+    "stopSrc": "harmonic",
+    "lastClose": 7.09,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002001",
+    "name": "新 和 成",
+    "sector": "生物制药",
+    "stop": 23.75,
+    "stopSrc": "harmonic",
+    "lastClose": 24.81,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002058",
+    "name": "紫竹高科",
+    "sector": "仪器仪表",
+    "stop": 15.9,
+    "stopSrc": "harmonic",
+    "lastClose": 18.34,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002128",
+    "name": "电投能源",
+    "sector": "煤炭行业",
+    "stop": 23.4,
+    "stopSrc": "harmonic",
+    "lastClose": 24.55,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002159",
+    "name": "三特索道",
+    "sector": "旅游及酒店",
+    "stop": 11.34,
+    "stopSrc": "harmonic",
+    "lastClose": 12.22,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002179",
+    "name": "中航光电",
+    "sector": "电子器件",
+    "stop": 31.38,
+    "stopSrc": "harmonic",
+    "lastClose": 32.7,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002273",
+    "name": "水晶光电",
+    "sector": "电子器件",
+    "stop": 19.14,
+    "stopSrc": "harmonic",
+    "lastClose": 21.54,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002402",
+    "name": "和而泰",
+    "sector": "电子器件",
+    "stop": 13.02,
+    "stopSrc": "harmonic",
+    "lastClose": 14.26,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002465",
+    "name": "海格通信",
+    "sector": "电子信息",
+    "stop": 7.65,
+    "stopSrc": "harmonic",
+    "lastClose": 8.44,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002611",
+    "name": "东方精工",
+    "sector": "机械行业",
+    "stop": 10.41,
+    "stopSrc": "harmonic",
+    "lastClose": 12.31,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002727",
+    "name": "一心堂",
+    "sector": "医药商业",
+    "stop": 12.87,
+    "stopSrc": "harmonic",
+    "lastClose": 13.6,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "600111",
+    "name": "北方稀土",
+    "sector": "有色金属",
+    "stop": 29.51,
+    "stopSrc": "harmonic",
+    "lastClose": 31.55,
+    "res": {
+     "noKline": false,
+     "pending": false,
+     "touched": false,
+     "p5Pct": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "600390",
+    "name": "五矿资本",
+    "sector": "保险",
+    "stop": 4.1,
+    "stopSrc": "harmonic",
+    "lastClose": 4.25,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "600406",
+    "name": "国电南瑞",
+    "sector": "电网设备",
+    "stop": 21.28,
+    "stopSrc": "harmonic",
+    "lastClose": 24.6,
+    "res": {
+     "noKline": false,
+     "pending": false,
+     "touched": false,
+     "p5Pct": 0.0,
+     "_done": true
+    }
+   },
+   {
+    "code": "600879",
+    "name": "航天电子",
+    "sector": "飞机制造",
+    "stop": 9.74,
+    "stopSrc": "harmonic",
+    "lastClose": 10.94,
+    "res": {
+     "noKline": false,
+     "pending": false,
+     "touched": false,
+     "p5Pct": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "601012",
+    "name": "隆基绿能",
+    "sector": "光伏设备",
+    "stop": 10.16,
+    "stopSrc": "harmonic",
+    "lastClose": 10.92,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "601108",
+    "name": "财通证券",
+    "sector": "",
+    "stop": 6.53,
+    "stopSrc": "harmonic",
+    "lastClose": 6.71,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "601688",
+    "name": "华泰证券",
+    "sector": "证券",
+    "stop": 16.15,
+    "stopSrc": "harmonic",
+    "lastClose": 17.0,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "601877",
+    "name": "正泰电器",
+    "sector": "发电设备",
+    "stop": 21.61,
+    "stopSrc": "harmonic",
+    "lastClose": 22.3,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "601881",
+    "name": "中国银河",
+    "sector": "",
+    "stop": 10.42,
+    "stopSrc": "harmonic",
+    "lastClose": 10.74,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "601916",
+    "name": "浙商银行",
+    "sector": "",
+    "stop": 2.96,
+    "stopSrc": "harmonic",
+    "lastClose": 3.06,
+    "res": {
+     "noKline": false,
+     "pending": false,
+     "touched": false,
+     "p5Pct": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "603037",
+    "name": "凯众股份",
+    "sector": "汽车零部件",
+    "stop": 7.82,
+    "stopSrc": "harmonic",
+    "lastClose": 9.75,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603288",
+    "name": "海天味业",
+    "sector": "食品行业",
+    "stop": 31.59,
+    "stopSrc": "harmonic",
+    "lastClose": 36.2,
+    "res": {
+     "noKline": false,
+     "pending": false,
+     "touched": false,
+     "p5Pct": -0.83,
+     "_done": true
+    }
+   },
+   {
+    "code": "605058",
+    "name": "澳弘电子",
+    "sector": "元件",
+    "stop": 31.58,
+    "stopSrc": "harmonic",
+    "lastClose": 38.62,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "605169",
+    "name": "洪通燃气",
+    "sector": "",
+    "stop": 9.6,
+    "stopSrc": "harmonic",
+    "lastClose": 10.73,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "000403",
+    "name": "派林生物",
+    "sector": "生物制品",
+    "stop": 8.21,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "000518",
+    "name": "四环生物",
+    "sector": "生物制品",
+    "stop": 2.57,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "000559",
+    "name": "万向钱潮",
+    "sector": "汽车零部件",
+    "stop": 9.31,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "000678",
+    "name": "襄阳轴承",
+    "sector": "汽车零部件",
+    "stop": 16.79,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "000712",
+    "name": "锦龙股份",
+    "sector": "证券",
+    "stop": 7.22,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "000750",
+    "name": "国海证券",
+    "sector": "证券",
+    "stop": 3.12,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "002007",
+    "name": "华兰生物",
+    "sector": "生物制品",
+    "stop": 10.86,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "002038",
+    "name": "双鹭药业",
+    "sector": "生物制品",
+    "stop": 4.32,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "002048",
+    "name": "宁波华翔",
+    "sector": "汽车零部件",
+    "stop": 17.56,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "002077",
+    "name": "大港股份",
+    "sector": "半导体",
+    "stop": 12.3,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "002079",
+    "name": "苏州固锝",
+    "sector": "半导体",
+    "stop": 6.8,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "002134",
+    "name": "天津普林",
+    "sector": "元件",
+    "stop": 15.15,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "002252",
+    "name": "上海莱士",
+    "sector": "生物制品",
+    "stop": 4.46,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "002371",
+    "name": "北方华创",
+    "sector": "半导体",
+    "stop": 530.82,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "002384",
+    "name": "东山精密",
+    "sector": "元件",
+    "stop": 70.52,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "002463",
+    "name": "沪电股份",
+    "sector": "元件",
+    "stop": 81.61,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "002815",
+    "name": "崇达技术",
+    "sector": "元件",
+    "stop": 13.51,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "002880",
+    "name": "卫光生物",
+    "sector": "生物制品",
+    "stop": 16.95,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "002913",
+    "name": "奥士康",
+    "sector": "元件",
+    "stop": 53.42,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "600030",
+    "name": "中信证券",
+    "sector": "证券",
+    "stop": 24.35,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "600161",
+    "name": "天坛生物",
+    "sector": "生物制品",
+    "stop": 10.72,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "600171",
+    "name": "上海贝岭",
+    "sector": "半导体",
+    "stop": 18.27,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "600183",
+    "name": "生益科技",
+    "sector": "元件",
+    "stop": 59.75,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "600520",
+    "name": "三佳科技",
+    "sector": "半导体",
+    "stop": 19.66,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "600584",
+    "name": "长电科技",
+    "sector": "半导体",
+    "stop": 49.68,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "600643",
+    "name": "爱建集团",
+    "sector": "保险",
+    "stop": 3.72,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "600660",
+    "name": "福耀玻璃",
+    "sector": "汽车零部件",
+    "stop": 54.81,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "600699",
+    "name": "均胜电子",
+    "sector": "汽车零部件",
+    "stop": 18.77,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "600739",
+    "name": "辽宁成大",
+    "sector": "保险",
+    "stop": 9.15,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "600741",
+    "name": "华域汽车",
+    "sector": "汽车零部件",
+    "stop": 15.1,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "600830",
+    "name": "香溢融通",
+    "sector": "保险",
+    "stop": 6.7,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "600864",
+    "name": "哈投股份",
+    "sector": "证券",
+    "stop": 4.43,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "600999",
+    "name": "招商证券",
+    "sector": "证券",
+    "stop": 15.13,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "601099",
+    "name": "太平洋",
+    "sector": "证券",
+    "stop": 3.07,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "601211",
+    "name": "国泰海通",
+    "sector": "证券",
+    "stop": 15.94,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "601318",
+    "name": "中国平安",
+    "sector": "保险",
+    "stop": 53.23,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "601336",
+    "name": "新华保险",
+    "sector": "保险",
+    "stop": 49.88,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "601601",
+    "name": "中国太保",
+    "sector": "保险",
+    "stop": 31.68,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "601628",
+    "name": "中国人寿",
+    "sector": "保险",
+    "stop": 34.65,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "603119",
+    "name": "浙江荣泰",
+    "sector": "汽车零部件",
+    "stop": 45.2,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "603286",
+    "name": "日盈电子",
+    "sector": "汽车零部件",
+    "stop": 43.1,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "603501",
+    "name": "豪威集团",
+    "sector": "半导体",
+    "stop": 84.08,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "603920",
+    "name": "世运电路",
+    "sector": "元件",
+    "stop": 31.0,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "603986",
+    "name": "兆易创新",
+    "sector": "半导体",
+    "stop": 206.12,
+    "stopSrc": "ai-exit",
+    "lastClose": null,
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "000026",
+    "name": "飞亚达",
+    "sector": "服装家纺",
+    "stop": 17.88,
+    "stopSrc": "T日低点",
+    "lastClose": 20.12,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "000156",
+    "name": "华数传媒",
+    "sector": "传媒娱乐",
+    "stop": 6.64,
+    "stopSrc": "default-3.0%",
+    "lastClose": 6.85,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "pending": false,
+     "touched": true,
+     "hitDay": "2026-11-20",
+     "hitLow": 6.46,
+     "daysToHit": 1,
+     "after5Pct": null,
+     "rebound5Pct": null,
+     "maxDD5Pct": -5.69,
+     "p5Pct": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "000530",
+    "name": "冰山冷热",
+    "sector": "通用设备",
+    "stop": 12.0,
+    "stopSrc": "T日低点",
+    "lastClose": 14.7,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "000596",
+    "name": "古井贡酒",
+    "sector": "酿酒行业",
+    "stop": 102.29,
+    "stopSrc": "default-3.0%",
+    "lastClose": 105.45,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "000607",
+    "name": "华媒控股",
+    "sector": "文化传媒",
+    "stop": 3.16,
+    "stopSrc": "T日低点",
+    "lastClose": 3.5,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "000636",
+    "name": "风华高科",
+    "sector": "元件",
+    "stop": 25.77,
+    "stopSrc": "T日低点",
+    "lastClose": 26.51,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "000700",
+    "name": "模塑科技",
+    "sector": "汽车零部件",
+    "stop": 12.85,
+    "stopSrc": "T日低点",
+    "lastClose": 14.2,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "000711",
+    "name": "京蓝科技",
+    "sector": "环境治理",
+    "stop": 3.68,
+    "stopSrc": "T日低点",
+    "lastClose": 4.52,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "pending": false,
+     "touched": true,
+     "hitDay": "2026-10-23",
+     "hitLow": 3.49,
+     "daysToHit": 11,
+     "after5Pct": -27.65,
+     "rebound5Pct": -6.3,
+     "maxDD5Pct": -27.88,
+     "p5Pct": -12.61,
+     "_done": true
+    }
+   },
+   {
+    "code": "000810",
+    "name": "创维数字",
+    "sector": "电子器件",
+    "stop": 9.03,
+    "stopSrc": "default-3.0%",
+    "lastClose": 9.31,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "000819",
+    "name": "岳阳兴长",
+    "sector": "石油加工贸易",
+    "stop": 14.49,
+    "stopSrc": "default-3.0%",
+    "lastClose": 14.94,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "001201",
+    "name": "东瑞股份",
+    "sector": "养殖业",
+    "stop": 16.97,
+    "stopSrc": "default-3.0%",
+    "lastClose": 17.49,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "001226",
+    "name": "拓山重工",
+    "sector": "金属制品",
+    "stop": 36.6,
+    "stopSrc": "default-3.0%",
+    "lastClose": 37.73,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "001266",
+    "name": "宏英智能",
+    "sector": "自动化设备",
+    "stop": 25.65,
+    "stopSrc": "T日低点",
+    "lastClose": 27.68,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "001283",
+    "name": "豪鹏科技",
+    "sector": "电池",
+    "stop": 43.88,
+    "stopSrc": "T日低点",
+    "lastClose": 48.02,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "001301",
+    "name": "尚太科技",
+    "sector": "电池",
+    "stop": 40.08,
+    "stopSrc": "default-3.0%",
+    "lastClose": 41.32,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "001326",
+    "name": "联域股份",
+    "sector": "照明设备",
+    "stop": 50.01,
+    "stopSrc": "T日低点",
+    "lastClose": 52.94,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "001328",
+    "name": "登康口腔",
+    "sector": "备注：此为申万行业分类",
+    "stop": 35.7,
+    "stopSrc": "default-3.0%",
+    "lastClose": 36.8,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "001360",
+    "name": "南矿集团",
+    "sector": "专用设备",
+    "stop": 15.61,
+    "stopSrc": "T日低点",
+    "lastClose": 16.19,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002086",
+    "name": "东方海洋",
+    "sector": "农产品加工",
+    "stop": 4.29,
+    "stopSrc": "T日低点",
+    "lastClose": 4.34,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "pending": false,
+     "touched": true,
+     "hitDay": "2026-11-17",
+     "hitLow": 3.91,
+     "daysToHit": 1,
+     "after5Pct": 4.61,
+     "rebound5Pct": 16.11,
+     "maxDD5Pct": -22.58,
+     "p5Pct": -4.84,
+     "_done": true
+    }
+   },
+   {
+    "code": "002148",
+    "name": "北纬科技",
+    "sector": "通信服务",
+    "stop": 10.11,
+    "stopSrc": "T日低点",
+    "lastClose": 10.27,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002172",
+    "name": "澳洋健康",
+    "sector": "医疗服务",
+    "stop": 4.59,
+    "stopSrc": "T日低点",
+    "lastClose": 5.05,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002173",
+    "name": "创新医疗",
+    "sector": "医疗服务",
+    "stop": 12.68,
+    "stopSrc": "T日低点",
+    "lastClose": 14.01,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002197",
+    "name": "证通电子",
+    "sector": "计算机设备",
+    "stop": 5.51,
+    "stopSrc": "T日低点",
+    "lastClose": 6.41,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002241",
+    "name": "歌尔股份",
+    "sector": "电子器件",
+    "stop": 21.17,
+    "stopSrc": "default-3.0%",
+    "lastClose": 21.82,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002291",
+    "name": "遥望科技",
+    "sector": "服装鞋类",
+    "stop": 4.76,
+    "stopSrc": "default-3.0%",
+    "lastClose": 4.91,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002343",
+    "name": "慈文传媒",
+    "sector": "影视院线",
+    "stop": 6.37,
+    "stopSrc": "T日低点",
+    "lastClose": 6.92,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002348",
+    "name": "高乐股份",
+    "sector": "文化传媒",
+    "stop": 8.0,
+    "stopSrc": "T日低点",
+    "lastClose": 7.9,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002387",
+    "name": "维信诺",
+    "sector": "光学光电子",
+    "stop": 5.67,
+    "stopSrc": "T日低点",
+    "lastClose": 6.53,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002414",
+    "name": "高德红外",
+    "sector": "军工电子",
+    "stop": 9.41,
+    "stopSrc": "T日低点",
+    "lastClose": 10.19,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "pending": false,
+     "touched": true,
+     "hitDay": "2026-11-23",
+     "hitLow": 9.41,
+     "daysToHit": 9,
+     "after5Pct": null,
+     "rebound5Pct": null,
+     "maxDD5Pct": -7.65,
+     "p5Pct": -4.91,
+     "_done": true
+    }
+   },
+   {
+    "code": "002510",
+    "name": "天汽模",
+    "sector": "汽车制造",
+    "stop": 5.28,
+    "stopSrc": "default-3.0%",
+    "lastClose": 5.44,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002565",
+    "name": "顺灏股份",
+    "sector": "包装印刷",
+    "stop": 7.12,
+    "stopSrc": "T日低点",
+    "lastClose": 7.66,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002582",
+    "name": "好想你",
+    "sector": "食品行业",
+    "stop": 8.89,
+    "stopSrc": "default-3.0%",
+    "lastClose": 9.16,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "pending": false,
+     "touched": true,
+     "hitDay": "2026-11-23",
+     "hitLow": 8.85,
+     "daysToHit": 20,
+     "after5Pct": null,
+     "rebound5Pct": null,
+     "maxDD5Pct": -3.38,
+     "p5Pct": 14.3,
+     "_done": true
+    }
+   },
+   {
+    "code": "002584",
+    "name": "西陇科学",
+    "sector": "电子化学品",
+    "stop": 7.38,
+    "stopSrc": "T日低点",
+    "lastClose": 8.79,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "pending": false,
+     "touched": true,
+     "hitDay": "2026-10-22",
+     "hitLow": 7.35,
+     "daysToHit": 14,
+     "after5Pct": -18.09,
+     "rebound5Pct": -2.04,
+     "maxDD5Pct": -20.93,
+     "p5Pct": -0.46,
+     "_done": true
+    }
+   },
+   {
+    "code": "002623",
+    "name": "亚玛顿",
+    "sector": "光伏设备",
+    "stop": 16.2,
+    "stopSrc": "T日低点",
+    "lastClose": 17.69,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002655",
+    "name": "共达电声",
+    "sector": "消费电子",
+    "stop": 21.06,
+    "stopSrc": "T日低点",
+    "lastClose": 24.36,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002696",
+    "name": "百洋股份",
+    "sector": "养殖业",
+    "stop": 6.73,
+    "stopSrc": "T日低点",
+    "lastClose": 7.01,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002739",
+    "name": "儒意电影",
+    "sector": "影视院线",
+    "stop": 9.57,
+    "stopSrc": "default-3.0%",
+    "lastClose": 9.87,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002741",
+    "name": "光华科技",
+    "sector": "电子化学品",
+    "stop": 17.36,
+    "stopSrc": "T日低点",
+    "lastClose": 17.3,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002747",
+    "name": "埃斯顿",
+    "sector": "自动化设备",
+    "stop": 23.77,
+    "stopSrc": "T日低点",
+    "lastClose": 26.0,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002749",
+    "name": "国光股份",
+    "sector": "农化制品",
+    "stop": 7.9,
+    "stopSrc": "T日低点",
+    "lastClose": 9.06,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002861",
+    "name": "瀛通通讯",
+    "sector": "",
+    "stop": 12.77,
+    "stopSrc": "default-3.0%",
+    "lastClose": 13.17,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002881",
+    "name": "美格智能",
+    "sector": "",
+    "stop": 34.0,
+    "stopSrc": "default-3.0%",
+    "lastClose": 35.05,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "pending": false,
+     "touched": true,
+     "hitDay": "2026-10-19",
+     "hitLow": 33.42,
+     "daysToHit": 2,
+     "after5Pct": 20.34,
+     "rebound5Pct": 26.21,
+     "maxDD5Pct": -4.65,
+     "p5Pct": 16.41,
+     "_done": true
+    }
+   },
+   {
+    "code": "002896",
+    "name": "中大力德",
+    "sector": "通用设备",
+    "stop": 47.51,
+    "stopSrc": "T日低点",
+    "lastClose": 51.48,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002945",
+    "name": "华林证券",
+    "sector": "证券",
+    "stop": 13.92,
+    "stopSrc": "default-3.0%",
+    "lastClose": 14.35,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002983",
+    "name": "芯瑞达",
+    "sector": "光学光电子",
+    "stop": 21.85,
+    "stopSrc": "T日低点",
+    "lastClose": 25.83,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "003021",
+    "name": "兆威机电",
+    "sector": "电机",
+    "stop": 76.0,
+    "stopSrc": "T日低点",
+    "lastClose": 80.14,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "003028",
+    "name": "振邦智能",
+    "sector": "小家电",
+    "stop": 19.21,
+    "stopSrc": "T日低点",
+    "lastClose": 21.19,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "600189",
+    "name": "泉阳泉",
+    "sector": "饮料制造",
+    "stop": 8.45,
+    "stopSrc": "T日低点",
+    "lastClose": 8.71,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "600285",
+    "name": "羚锐制药",
+    "sector": "生物制药",
+    "stop": 23.53,
+    "stopSrc": "default-3.0%",
+    "lastClose": 24.26,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "600371",
+    "name": "万向德农",
+    "sector": "种植业与林业",
+    "stop": 9.2,
+    "stopSrc": "T日低点",
+    "lastClose": 11.16,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "600400",
+    "name": "红豆股份",
+    "sector": "服装家纺",
+    "stop": 3.33,
+    "stopSrc": "T日低点",
+    "lastClose": 3.62,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "pending": false,
+     "touched": true,
+     "hitDay": "2026-10-23",
+     "hitLow": 3.06,
+     "daysToHit": 11,
+     "after5Pct": -16.85,
+     "rebound5Pct": -1.63,
+     "maxDD5Pct": -17.4,
+     "p5Pct": 9.67,
+     "_done": true
+    }
+   },
+   {
+    "code": "600570",
+    "name": "恒生电子",
+    "sector": "电子信息",
+    "stop": 18.39,
+    "stopSrc": "default-3.0%",
+    "lastClose": 18.96,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "600980",
+    "name": "北矿科技",
+    "sector": "专用设备",
+    "stop": 14.52,
+    "stopSrc": "T日低点",
+    "lastClose": 15.05,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "601177",
+    "name": "杭齿前进",
+    "sector": "通用设备",
+    "stop": 10.83,
+    "stopSrc": "T日低点",
+    "lastClose": 12.16,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "601595",
+    "name": "上海电影",
+    "sector": "影视院线",
+    "stop": 29.02,
+    "stopSrc": "T日低点",
+    "lastClose": 30.74,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603004",
+    "name": "鼎龙科技",
+    "sector": "化学制品",
+    "stop": 17.68,
+    "stopSrc": "T日低点",
+    "lastClose": 19.28,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603051",
+    "name": "鹿山新材",
+    "sector": "化学制品",
+    "stop": 18.82,
+    "stopSrc": "T日低点",
+    "lastClose": 19.8,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603131",
+    "name": "上海沪工",
+    "sector": "通用设备",
+    "stop": 11.47,
+    "stopSrc": "T日低点",
+    "lastClose": 13.04,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603166",
+    "name": "福达股份",
+    "sector": "汽车零部件",
+    "stop": 8.7,
+    "stopSrc": "T日低点",
+    "lastClose": 9.65,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603175",
+    "name": "超颖电子",
+    "sector": "元件",
+    "stop": 78.89,
+    "stopSrc": "T日低点",
+    "lastClose": 90.49,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "pending": false,
+     "touched": true,
+     "hitDay": "2026-11-23",
+     "hitLow": 78.89,
+     "daysToHit": 8,
+     "after5Pct": null,
+     "rebound5Pct": null,
+     "maxDD5Pct": -12.82,
+     "p5Pct": -4.7,
+     "_done": true
+    }
+   },
+   {
+    "code": "603179",
+    "name": "新泉股份",
+    "sector": "汽车零部件",
+    "stop": 38.24,
+    "stopSrc": "T日低点",
+    "lastClose": 40.83,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603206",
+    "name": "嘉环科技",
+    "sector": "通信服务",
+    "stop": 13.25,
+    "stopSrc": "T日低点",
+    "lastClose": 14.63,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603233",
+    "name": "大参林",
+    "sector": "",
+    "stop": 20.61,
+    "stopSrc": "default-3.0%",
+    "lastClose": 21.25,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603236",
+    "name": "移远通信",
+    "sector": "通信设备",
+    "stop": 72.51,
+    "stopSrc": "T日低点",
+    "lastClose": 77.64,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603259",
+    "name": "药明康德",
+    "sector": "医疗服务",
+    "stop": 138.51,
+    "stopSrc": "default-3.0%",
+    "lastClose": 142.79,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603266",
+    "name": "天龙股份",
+    "sector": "汽车零部件",
+    "stop": 13.63,
+    "stopSrc": "T日低点",
+    "lastClose": 14.09,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603278",
+    "name": "大业股份",
+    "sector": "通用设备",
+    "stop": 10.36,
+    "stopSrc": "T日低点",
+    "lastClose": 10.89,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603324",
+    "name": "盛剑科技",
+    "sector": "环保设备",
+    "stop": 26.0,
+    "stopSrc": "T日低点",
+    "lastClose": 32.27,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603337",
+    "name": "杰克科技",
+    "sector": "专用设备",
+    "stop": 34.95,
+    "stopSrc": "T日低点",
+    "lastClose": 35.29,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603386",
+    "name": "骏亚科技",
+    "sector": "元件",
+    "stop": 12.74,
+    "stopSrc": "T日低点",
+    "lastClose": 13.2,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603466",
+    "name": "风语筑",
+    "sector": "文化传媒",
+    "stop": 12.21,
+    "stopSrc": "T日低点",
+    "lastClose": 15.2,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603528",
+    "name": "多伦科技",
+    "sector": "软件开发",
+    "stop": 5.63,
+    "stopSrc": "T日低点",
+    "lastClose": 5.86,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603533",
+    "name": "掌阅科技",
+    "sector": "文化传媒",
+    "stop": 21.87,
+    "stopSrc": "T日低点",
+    "lastClose": 23.93,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603598",
+    "name": "引力传媒",
+    "sector": "文化传媒",
+    "stop": 16.2,
+    "stopSrc": "T日低点",
+    "lastClose": 18.04,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603662",
+    "name": "柯力传感",
+    "sector": "通用设备",
+    "stop": 48.99,
+    "stopSrc": "default-3.0%",
+    "lastClose": 50.51,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "pending": false,
+     "touched": true,
+     "hitDay": "2026-10-30",
+     "hitLow": 48.52,
+     "daysToHit": 4,
+     "after5Pct": 7.31,
+     "rebound5Pct": 11.71,
+     "maxDD5Pct": -7.66,
+     "p5Pct": 0.83,
+     "_done": true
+    }
+   },
+   {
+    "code": "603667",
+    "name": "五洲新春",
+    "sector": "通用设备",
+    "stop": 40.55,
+    "stopSrc": "T日低点",
+    "lastClose": 44.89,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603706",
+    "name": "东方环宇",
+    "sector": "燃气",
+    "stop": 20.86,
+    "stopSrc": "T日低点",
+    "lastClose": 20.48,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603728",
+    "name": "鸣志电器",
+    "sector": "电机",
+    "stop": 43.43,
+    "stopSrc": "T日低点",
+    "lastClose": 48.38,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603813",
+    "name": "原尚股份",
+    "sector": "物流",
+    "stop": 21.5,
+    "stopSrc": "T日低点",
+    "lastClose": 23.23,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603887",
+    "name": "城地香江",
+    "sector": "IT服务",
+    "stop": 7.34,
+    "stopSrc": "T日低点",
+    "lastClose": 8.48,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603893",
+    "name": "瑞芯微",
+    "sector": "集成电路",
+    "stop": 187.88,
+    "stopSrc": "default-3.0%",
+    "lastClose": 193.69,
+    "from": "breakoutPool",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603901",
+    "name": "永创智能",
+    "sector": "专用设备",
+    "stop": 8.59,
+    "stopSrc": "T日低点",
+    "lastClose": 9.23,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603928",
+    "name": "兴业股份",
+    "sector": "塑料制品",
+    "stop": 10.92,
+    "stopSrc": "T日低点",
+    "lastClose": 11.96,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "pending": false,
+     "touched": true,
+     "hitDay": "2026-11-19",
+     "hitLow": 10.92,
+     "daysToHit": 4,
+     "after5Pct": null,
+     "rebound5Pct": null,
+     "maxDD5Pct": -8.7,
+     "p5Pct": 5.18,
+     "_done": true
+    }
+   },
+   {
+    "code": "603956",
+    "name": "威派格",
+    "sector": "专用设备",
+    "stop": 5.88,
+    "stopSrc": "T日低点",
+    "lastClose": 5.85,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "605222",
+    "name": "起帆电缆",
+    "sector": "电网设备",
+    "stop": 18.18,
+    "stopSrc": "T日低点",
+    "lastClose": 18.17,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "605288",
+    "name": "凯迪股份",
+    "sector": "自动化设备",
+    "stop": 51.5,
+    "stopSrc": "T日低点",
+    "lastClose": 54.9,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "605398",
+    "name": "新炬网络",
+    "sector": "IT服务",
+    "stop": 17.55,
+    "stopSrc": "T日低点",
+    "lastClose": 20.7,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "605488",
+    "name": "福莱新材",
+    "sector": "塑料制品",
+    "stop": 49.77,
+    "stopSrc": "T日低点",
+    "lastClose": 49.61,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "605577",
+    "name": "龙版传媒",
+    "sector": "文化传媒",
+    "stop": 19.43,
+    "stopSrc": "default-3.0%",
+    "lastClose": 20.03,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   }
   ]
  },
  "stats": {
-  "total": 2127,
-  "touched": 722,
-  "touchRate": 0.339,
-  "avgP5Pct": -0.14,
-  "avgAfter5Pct": -4.09,
-  "avgRebound5Pct": 2.5,
-  "hitThenUp": 78,
-  "hitThenUpRate": 0.209,
+  "total": 2187,
+  "touched": 733,
+  "touchRate": 0.335,
+  "avgP5Pct": -0.11,
+  "avgAfter5Pct": -4.1,
+  "avgRebound5Pct": 2.58,
+  "hitThenUp": 81,
+  "hitThenUpRate": 0.213,
   "bySrc": {
    "harmonic": {
-    "n": 226,
-    "p5": 2.18
+    "n": 231,
+    "p5": 2.14
    },
    "ai-exit": {
-    "n": 1434,
+    "n": 1478,
     "p5": 0.59
    },
    "T日低点": {
-    "n": 321,
-    "p5": -1.27
+    "n": 328,
+    "p5": -1.28
    },
    "default-3.0%": {
-    "n": 146,
-    "p5": -1.1
+    "n": 150,
+    "p5": -0.71
    }
   },
   "bySrcTouch": {
    "harmonic": {
-    "n": 226,
+    "n": 231,
     "touched": 11,
-    "rate": 0.049
+    "rate": 0.048
    },
    "ai-exit": {
-    "n": 1434,
+    "n": 1478,
     "touched": 303,
-    "rate": 0.211
+    "rate": 0.205
    },
    "T日低点": {
-    "n": 321,
-    "touched": 293,
-    "rate": 0.913
+    "n": 328,
+    "touched": 300,
+    "rate": 0.915
    },
    "default-3.0%": {
-    "n": 146,
-    "touched": 115,
-    "rate": 0.788
+    "n": 150,
+    "touched": 119,
+    "rate": 0.793
    }
   },
-  "pending": 3217,
+  "pending": 3321,
   "noKline": 33
  },
- "updatedAt": "2026-11-24 19:43:39"
+ "updatedAt": "2026-11-25 19:43:05"
 }
