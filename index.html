@@ -597,26 +597,19 @@
   }
   .st-line { font-size: var(--fs-sm); color: var(--ink2); line-height: 1.85; }
   .st-body { font-size: var(--fs-base); color: var(--ink2); line-height: 1.85; margin-top: 6px; }
-  /* 台账诊断（闭环）：只做「哪块低 / 为什么低 / 建议怎么改 / 改完验证了没」四件事 */
-  .ldg-wrap { display: grid; gap: 10px; }
-  .ldg-alert { background: rgba(240,67,92,.08); border-left: 4px solid var(--up);
-               border-radius: var(--r-block); padding: 8px 11px; font-size: var(--fs-sm); line-height: 1.7; }
-  .ldg-alert b { color: var(--up); }
-  .ldg-tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
-  .ldg-tbl th, .ldg-tbl td { padding: 5px 6px; border-bottom: 1px solid var(--line); text-align: right; }
-  .ldg-tbl th:first-child, .ldg-tbl td:first-child { text-align: left; }
-  .ldg-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+  /* 台账诊断：两列紧凑列表，只给「哪个模块不准」 */
+  .ldg-head { font-size: var(--fs-sm); color: var(--ink2); margin-bottom: 8px; }
+  .ldg-asof { float: right; opacity: .7; }
+  .ldg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px 18px; }
+  .ldg-item { display: flex; align-items: baseline; gap: 8px; padding: 6px 2px;
+              border-bottom: 1px solid var(--line); }
+  .ldg-nm { flex: 1 1 auto; font-size: var(--fs-sm); color: var(--ink); }
+  .ldg-win { font-size: var(--fs-md); font-weight: 800; font-variant-numeric: tabular-nums; }
+  .ldg-n { font-size: var(--fs-xs); color: var(--ink2); min-width: 52px; text-align: right; }
+  .ldg-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
   .ldg-ok { background: var(--down); } .ldg-warn { background: #e8a33d; } .ldg-fail { background: var(--up); }
-  .ldg-act { border: 1px solid var(--line); border-radius: var(--r-block); padding: 8px 11px; }
-  .ldg-act + .ldg-act { margin-top: 8px; }
-  .ldg-tag { display: inline-block; font-size: var(--fs-xs); padding: 1px 7px; border-radius: var(--r-note);
-             border: 1px solid var(--line); margin-right: 6px; }
-  .ldg-tag.p { color: #8a6d3b; border-color: #d9c48a; }
-  .ldg-tag.a { color: #1f6f4a; border-color: #8fcfae; }
-  .ldg-tag.v { color: #1f5f8a; border-color: #8fb8cf; }
-  .ldg-tag.r { color: var(--up); border-color: #e2a3ad; }
-  .ldg-rule { font-size: var(--fs-sm); line-height: 1.7; }
-  .ldg-evi { font-size: var(--fs-xs); color: var(--ink2); margin-top: 3px; }
+  .ldg-ok-tx { color: var(--down); } .ldg-warn-tx { color: #b3762a; } .ldg-fail-tx { color: var(--up); }
+  .ldg-foot { font-size: var(--fs-xs); color: var(--ink2); margin-top: 8px; }
   /* 题材掘金 · 个股事件驱动 */
   .tp-item { background: var(--accent-soft); border-radius: var(--r-block); padding: 11px 13px; margin-bottom: 10px; border-left: 4px solid var(--up); }
   .tp-item.tp-down { border-left-color: var(--down); }
@@ -4178,8 +4171,7 @@ function renderSignalPerf() {
   // 一句话结论：从原来那段 pf-tip 里取出唯一需要「读」的那半句，其余下沉到 details。
   h += '<div class="rv-hero"><b>' + passed.length + ' / ' + withX.length + '</b>' +
     '<span>个指标 1 日胜率过 <em>60%</em>' +
-    (withX.length && !passed.length ? '，最高 ' + esc(best.label) + ' ' + rt(best.win1) : '') + '</span>' +
-    '<i>条＝1日胜率　竖线＝60%及格线　右＝5日超额（对全市场等权）</i></div>';
+    (withX.length && !passed.length ? '，最高 ' + esc(best.label) + ' ' + rt(best.win1) : '') + '</span>' + '</div>';
 
   h += '<div class="rv-bars">';
   // 表头：右侧三列没有表头就得靠 hero 那行图例去猜，加一行 11px 的标题最省事。
@@ -4356,16 +4348,6 @@ function renderForecastScore() {
   // 「一行结论 + 折叠依据」。上面已有三条 hero 数字和三组条形图，正文再铺半屏
   // 推理，读者根本滚不到。现在可见只有每行一句「能不能用」，想看推导再点开。
   // 「这张卡不是给预测打分好看用的」必须说清，否则读者会把「无效」当成一句评价——收进折叠区。
-  h += '<details class="rv-det"><summary>判定与口径 <span>· 结论怎么算出来的、样本门槛</span></summary>';
-  h += '<div class="pf-sub">判定：' + esc(F.verdict || '') +
-    '　结论文字由脚本按阈值自动生成——' +
-    '命中率变好它会自己变温和，变差会自己变严厉，不接受人工润色。</div>';
-  h += '<div class="pf-sub">口径：' + esc(((F.criteria || {}).strict) || '') +
-    '；' + esc(((F.criteria || {}).bench) || '') +
-    '。样本门槛 ' + ((F.criteria || {}).minN || 30) + ' 条且 ' + ((F.criteria || {}).minDays || 5) +
-    ' 个交易日，不足则不给结论；带 <b>*</b> 的分组样本少于 ' + ((F.criteria || {}).minGroupN || 5) +
-    ' 条，百分比只是巧合、不代表能力。与「指标复盘」的分工：那张量选出来的票赚不赚，这张量方向判得准不准。</div>';
-  h += '</details>';
   /* R100z297（用户 2026-11-03 截图 1+2）：「预测复盘」和「预测复盘 · 台账细节」是两张独立卡，
      内容高度重叠（都在讲命中率/分档/方向/开盘三项），并排看像两份文档。合并成一张。
      下面两个容器由 renderCalHistory() / renderStopTrack() 异步填充，本函数只负责给位置——
@@ -5770,7 +5752,7 @@ function renderLianban(list) {
   var groups = {};
   lb.forEach(function (s) { var k = s.lbc || 2; (groups[k] = groups[k] || []).push(s); });
   var keys = Object.keys(groups).map(Number).sort(function (a, b) { return b - a; });
-  var s = '<div class="lb-note">连板数取自同花顺涨停池；名字下面那行是<b>题材</b>（同花顺概念，R100z325 起；没有题材才退回连板理由/行业）· <b>点击标的查看深度解读</b></div>';
+  var s = '';
   // R100z318：情绪行（涨停/跌停/连板/分歧率/接力率）与连板梯队同源，放卡顶
   s += lbMoodHtml(duanbanData());
   keys.forEach(function (k) {
@@ -6869,29 +6851,6 @@ function chenCompareHtml(c) {
        R100z230：原来这里 + 末尾各一段（91 字 / 62 字）说的是同一件事，合并成「一句可见 + 一段折叠」。 */
     '<div class="cc-note">上表只统计<b>已走完持有窗口</b>的样本，上面今日名单里 <b>' + (tr.openN || 0) +
       '</b> 条还在窗口内——所以「100%」与今天几只下跌并不矛盾。</div>' +
-    '<details class="rv-det"><summary>结算规则与口径变更 <span>· 买价、止盈止损、旧样本怎么算</span></summary>' +
-      /* R100z302：这段原来在前端手写「持有 10 个交易日 / 止盈 +5.0%」——参数一改就
-         和结算代码对不上（24.144 就是这样把旧数字留在页面上的）。改成优先用 chen_pool
-         产出的 `track.settleRule`（与结算同一份常量），旧 data 缺字段才回退手写版。 */
-      '<div class="pf-sub">' + (tr.settleRule
-        ? esc(tr.settleRule)
-        : '确认日次日开盘买、<b>最早次日再卖</b>（A 股 T+1 交割），持有 10 个交易日；' +
-          '止盈按盘中触及 +5.0% 算（可挂单），' +
-          '止损按<b>收盘</b>跌破止损位算（盘中不算），开盘即破止损视为不进场（不进胜负分母），' +
-          '两条线都不触按窗口末收盘计。两个池用同一口径，胜率才可比。') + '</div>' +
-      ((skipTotal || noStopTotal)
-        ? '<div class="pf-sub">另有 <b>' + skipTotal + '</b> 条开盘价已跌破止损、按纪律没进场（不计胜负）；' +
-          '<b>' + noStopTotal + '</b> 条止损位取不到、已排除在胜负之外——否则只输时间不输钱，胜率会虚高。</div>'
-        : '') +
-      (cmpLegacyN
-        ? '<div class="pf-sub">另有 <b>' + cmpLegacyN + '</b> 条旧口径样本（2026-10-26 换口径前开仓）' +
-          '已按<b>开仓时</b>的参数（+3.5% / 持 2 日）单独结算，<b>不计入上表</b>——' +
-          '否则每改一次参数，历史胜率就在页面上被重新判分一遍。</div>'
-        : '') +
-      '<div class="pf-sub">换口径不从零开始算旧样本，是因为改口径不加样本：' +
-        '改完不收窄判定，等于自己骗自己。当前口径量到 20 条以上才有统计意义，' +
-        '少于 5 条的行只作记录，不构成结论。</div>' +
-    '</details>' +
     '</div>';
   // 组必须在整串拼完之后才挂到 window：_grp 是在拼字符串过程中逐只 push 的，
   // 提前挂会挂上一份长度还在变的数组引用（虽然 JS 里引用同一份也对，但显式放末尾读起来更清楚）。
@@ -7832,57 +7791,27 @@ function closeGnews() {
    读 data.js 的 `ledgerDiag`（由 ledger_doctor.py 生成）：模块健康 → 低胜率预警 →
    「为什么低」（切片证据）→ 建议动作 → 已应用动作的优化前后。这里只渲染，不重算。 */
 function renderLedgerDiag(dg) {
+  /* 2026-11-25 用户：「预警框删掉」「建议动作看不懂」「判定与口径文字太多」。
+     这张卡只回答一个问题——**哪个模块现在不准**：状态灯 + 模块名 + 胜率 + 样本。
+     动作台账、权重、计数、预警长句全部下线（数据仍在 data.js.ledgerDiag，脚本与闸门照用）。 */
   if (!dg || !(dg.modules || []).length) return '';
+  var P = dg.policy || {};
   var pct = function (v) { return (v == null) ? '—' : (v * 100).toFixed(0) + '%'; };
-  var h = '<div class="ldg-wrap">';
-
-  var al = dg.alerts || [];
-  if (al.length) {
-    h += '<div class="ldg-alert"><b>⚠️ ' + al.length + ' 个模块低于阈值</b>（' +
-      esc(String((dg.policy || {}).warnWR * 100)) + '% 警戒 / ' +
-      esc(String((dg.policy || {}).failWR * 100)) + '% 失败线，' + esc(String(dg.horizon)) + ' 日口径）：<br>' +
-      al.slice(0, 6).map(function (a) { return esc(a.text); }).join('<br>') + '</div>';
-  }
-
-  h += '<table class="ldg-tbl"><thead><tr><th>模块</th><th>样本</th><th>天数</th><th>' +
-    esc(String(dg.horizon)) + '日胜率</th><th>超额</th><th>t</th><th>状态</th></tr></thead><tbody>';
-  (dg.modules || []).forEach(function (m) {
+  var rows = (dg.modules || []).filter(function (m) { return !m.rollup; });
+  var h = '<div class="ldg-head">' + esc(String(dg.horizon)) + ' 日胜率 · 警戒 ' +
+    esc(String(P.warnWR * 100)) + '% / 失败 ' + esc(String(P.failWR * 100)) + '%' +
+    '<span class="ldg-asof">诊断 ' + esc(dg.asOf || '') + '</span></div>';
+  h += '<div class="ldg-grid">';
+  rows.forEach(function (m) {
     var cls = m.flag === 'fail' ? 'ldg-fail' : (m.flag === 'warn' ? 'ldg-warn' : 'ldg-ok');
-    var zh = m.flag === 'fail' ? '低于失败线' : (m.flag === 'warn' ? '低于警戒线' : '正常');
-    h += '<tr><td>' + (m.rollup ? '· ' : '') + esc(m.label || m.src) + '</td><td>' + (m.n || 0) + '</td><td>' +
-      (m.days || '—') + '</td><td>' + pct(m.win) + '</td><td>' + (m.exc == null ? '—' : (m.exc > 0 ? '+' : '') + m.exc + '%') +
-      '</td><td>' + (m.t == null ? '—' : m.t) + '</td><td><span class="ldg-dot ' + cls + '"></span>' + zh + '</td></tr>';
+    h += '<div class="ldg-item"><span class="ldg-dot ' + cls + '"></span>' +
+      '<span class="ldg-nm">' + esc(m.label || m.src) + '</span>' +
+      '<span class="ldg-win ' + cls + '-tx">' + pct(m.win) + '</span>' +
+      '<span class="ldg-n">' + (m.n || 0) + ' 条</span></div>';
   });
-  h += '</tbody></table>';
-
-  var acts = (dg.actions || []).filter(function (a) { return a.status !== 'closed'; }).slice(0, 8);
-  if (acts.length) {
-    h += '<div><div class="ldg-evi" style="margin:10px 0 6px;">建议动作（按样本切片生成，不自动改交易规则；改了请回填 appliedAt 以便验证）</div>';
-    var tag = { proposed: ['p', '待采纳'], applied: ['a', '已应用'], verified: ['v', '已验证'], rolledBack: ['r', '已回滚'] };
-    acts.forEach(function (a) {
-      var t = tag[a.status] || ['p', a.status];
-      var ev = a.evidence || {};
-      var line = '<div class="ldg-act"><span class="ldg-tag ' + t[0] + '">' + t[1] + '</span><span class="ldg-tag">' +
-        esc(a.dim || '') + '</span><span class="ldg-rule">' + esc(a.rule || '') + '</span>' +
-        '<div class="ldg-evi">证据：切片与整体差 ' + (ev.delta == null ? '—' : (ev.delta > 0 ? '+' : '') + (ev.delta * 100).toFixed(0) + 'pp') +
-        '｜口径 ' + esc(ev.basis || '') + '｜生成 ' + esc(a.createdAt || '') +
-        (a.before ? '｜改前 ' + pct(a.before.win) + (a.before.n ? '（n=' + a.before.n + '）' : '') : '') +
-        (a.after ? '｜改后 ' + pct(a.after.win) + '（n=' + a.after.n + '）' : '') + '</div></div>';
-      h += line;
-    });
-    h += '</div>';
-  }
-
-  var w = dg.weights || {};
-  if (w.before) {
-    var fmt = function (o) { return Object.keys(o).map(function (k) { return esc(k) + ' ' + (o[k] * 100).toFixed(0) + '%'; }).join(' · '); };
-    h += '<div class="ldg-evi">权重：' + fmt(w.before) + ' → ' + fmt(w.after || {}) + '（' +
-      (w.applied ? '已按诊断调整，单次位移 ' + w.maxShift : '未应用：' + esc(w.why || '')) + '）</div>';
-  }
-  var c = dg.counts || {};
-  h += '<div class="ldg-evi">动作台账：待采纳 ' + (c.proposed || 0) + ' / 已应用 ' + (c.applied || 0) +
-    ' / 已验证 ' + (c.verified || 0) + ' / 已回滚 ' + (c.rolledBack || 0) + '｜诊断于 ' + esc(dg.asOf || '') + '</div>';
   h += '</div>';
+  var low = rows.filter(function (m) { return m.flag !== 'ok'; }).length;
+  h += '<div class="ldg-foot">' + low + ' / ' + rows.length + ' 个模块低于阈值　·　诊断只看 5 日收盘口径</div>';
   return h;
 }
 

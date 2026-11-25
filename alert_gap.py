@@ -88,7 +88,7 @@ def compute(D):
         if abs(dev3) < TH_3D:
             stage = "normal"
             gap = round(TH_3D - abs(dev3), 2)
-            text = "距异动 %.1f 点" % gap
+            text = "距异动 %.1f%%" % gap
         else:
             stage = "alerted"
             if dev10 is None:
@@ -96,7 +96,7 @@ def compute(D):
                 text = "已异动"
             else:
                 gap = round(TH_10D - abs(dev10), 2)
-                text = ("异动中 · 距严重 %.1f 点" % gap) if gap > 0 else "严重异动"
+                text = ("异动中 · 距严重 %.1f%%" % gap) if gap > 0 else "严重异动"
         done[c] = {"dev3": dev3, "gap3": round(TH_3D - abs(dev3), 2),
                    "dev10": dev10, "gap10": (round(TH_10D - abs(dev10), 2)
                                              if dev10 is not None else None),
