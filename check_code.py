@@ -87,6 +87,7 @@ DATA_WRITERS = [
     'intraday_digest.py',       # R100z345：stkIntraday 5 分钟分时摘要（走 write_data_js）
     'enrich_policy.py',         # policySignals 解码
     'entry_zone.py',            # R100z194：aiPrediction.sectors[].fundCheck/entry（走 write_data_js）
+    'ledger_doctor.py',         # R100z380：ledgerDiag 台账诊断（走 write_data_js + 持锁）
     'fix_dd_prefix.py',         # 去掉「DD」前缀
     'forecast_scorecard.py',    # R100z161：forecastScore（预测成绩单；只读 calibration_log.json）
     'full_scan.py',             # 全市场扫描

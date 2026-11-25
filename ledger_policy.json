@@ -1,0 +1,18 @@
+{
+  "_why": "台账诊断的阈值与护栏。改这里就能改「多低算低胜率」「样本多少才算数」，不用改代码。",
+  "horizon": 5,
+  "minN": 30,
+  "minDays": 5,
+  "warnWR": 0.45,
+  "failWR": 0.40,
+  "sliceMinN": 15,
+  "sliceMinDates": 3,
+  "sliceDelta": 0.10,
+  "sliceGuard": 0.03,
+  "verifyDays": 10,
+  "maxActions": 8,
+  "autoWeight": true,
+  "autoWeightMinN": 80,
+  "autoWeightMaxShift": 0.10,
+  "note": "warnWR/failWR 是胜率档（0-1）；sliceDelta 是切片与整体的胜率差阈值；autoWeight 只调「已 >0 的权重」，单次位移封顶，参数记在 ledger_actions.json 可回滚。"
+}

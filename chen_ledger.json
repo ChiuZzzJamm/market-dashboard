@@ -8581,7 +8581,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 5,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-25",
+    "buyDay": "2026-11-24",
+    "exitPrice": 6.68,
+    "buyPrice": 6.36,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -8813,9 +8822,290 @@
    "holdDays": 5,
    "result": null,
    "settleVer": "R100z299"
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "002983",
+   "name": "芯瑞达",
+   "confirmDate": "2026-11-25",
+   "firstSeenDate": "2026-11-18",
+   "entryDate": "2026-11-25",
+   "cross": "chen",
+   "preSnapshot": {
+    "theme": {
+     "label": "阴跌",
+     "day": null,
+     "score": 42.6,
+     "why": "今日-5.53% / 5日-5.62% / 涨停0只 / 扩散7%",
+     "fake": false
+    },
+    "pop": {
+     "label": "一般",
+     "score": 48.4,
+     "why": "成交额池内分位 40 · 放量2.4倍（+8）"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 光学光电子 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "退潮",
+     "score": 25,
+     "text": "涨停 51（昨 55，↓） · 跌停 43（昨 2，↑） · 最高板 5（昨 4，↑） · 连板股 13（昨 25，↓） · 分歧率 31%（昨 24，↑） · 接力率 25%（昨 45，↓）",
+     "why": "涨停家数腰斩（55→51）+ 连板股收缩，高度和接力率是幸存者指标，不改变结论",
+     "gate": "block"
+    },
+    "total": 45.2,
+    "tier": "中",
+    "why": "题材阴跌(43)×55% + 人气48×45% = 45（情绪退潮 作闸门）"
+   },
+   "ztDate": "2026-11-23",
+   "stopPrice": 21.85,
+   "stopAnchor": "zt_low",
+   "ztLow": 21.85,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "603466",
+   "name": "风语筑",
+   "confirmDate": "2026-11-25",
+   "firstSeenDate": "2026-11-25",
+   "entryDate": "2026-11-25",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "阴跌",
+     "day": null,
+     "score": 51.2,
+     "why": "今日-2.12% / 5日-5.59% / 涨停2只 / 扩散16%",
+     "fake": false
+    },
+    "pop": {
+     "label": "活跃",
+     "score": 87.8,
+     "why": "成交额池内分位 88"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 文化传媒 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "退潮",
+     "score": 25,
+     "text": "涨停 51（昨 55，↓） · 跌停 43（昨 2，↑） · 最高板 5（昨 4，↑） · 连板股 13（昨 25，↓） · 分歧率 31%（昨 24，↑） · 接力率 25%（昨 45，↓）",
+     "why": "涨停家数腰斩（55→51）+ 连板股收缩，高度和接力率是幸存者指标，不改变结论",
+     "gate": "block"
+    },
+    "total": 67.7,
+    "tier": "强",
+    "why": "题材阴跌(51)×55% + 人气88×45% = 68（情绪退潮 作闸门）"
+   },
+   "ztDate": "2026-11-20",
+   "stopPrice": 12.21,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 12.21,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "000823",
+   "name": "超声电子",
+   "confirmDate": "2026-11-25",
+   "firstSeenDate": "2026-11-25",
+   "entryDate": "2026-11-25",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "退潮",
+     "day": null,
+     "score": 8.0,
+     "why": "今日-5.43% / 5日+5.01% / 涨停1只 / 扩散8%",
+     "fake": false
+    },
+    "pop": {
+     "label": "活跃",
+     "score": 94.2,
+     "why": "成交额池内分位 94"
+    },
+    "ladder": {
+     "label": "有龙头",
+     "score": 100.0,
+     "why": "板块 元件 有 1 只连板、最高 5 板（中京电子），中京电子 的题材是「高阶HDI+算力+光模块PCB」",
+     "n": 1,
+     "maxLb": 5,
+     "names": [
+      "中京电子"
+     ],
+     "themes": [
+      "高阶HDI",
+      "算力",
+      "光模块PCB"
+     ],
+     "topName": "中京电子",
+     "inLadder": false,
+     "bonus": 12.0,
+     "tag": "可补涨"
+    },
+    "mood": {
+     "label": "退潮",
+     "score": 25,
+     "text": "涨停 51（昨 55，↓） · 跌停 43（昨 2，↑） · 最高板 5（昨 4，↑） · 连板股 13（昨 25，↓） · 分歧率 31%（昨 24，↑） · 接力率 25%（昨 45，↓）",
+     "why": "涨停家数腰斩（55→51）+ 连板股收缩，高度和接力率是幸存者指标，不改变结论",
+     "gate": "block"
+    },
+    "total": 58.8,
+    "tier": "强",
+    "why": "题材退潮(8)×55% + 人气94×45% + 连板有龙头+12 = 59（情绪退潮 作闸门）"
+   },
+   "ztDate": "2026-11-20",
+   "stopPrice": 16.29,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 16.29,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "603887",
+   "name": "城地香江",
+   "confirmDate": "2026-11-25",
+   "firstSeenDate": "2026-11-25",
+   "entryDate": "2026-11-25",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "阴跌",
+     "day": null,
+     "score": 44.4,
+     "why": "今日-3.95% / 5日-5.77% / 涨停3只 / 扩散8%",
+     "fake": false
+    },
+    "pop": {
+     "label": "一般",
+     "score": 50.6,
+     "why": "成交额池内分位 51"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 IT服务 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "退潮",
+     "score": 25,
+     "text": "涨停 51（昨 55，↓） · 跌停 43（昨 2，↑） · 最高板 5（昨 4，↑） · 连板股 13（昨 25，↓） · 分歧率 31%（昨 24，↑） · 接力率 25%（昨 45，↓）",
+     "why": "涨停家数腰斩（55→51）+ 连板股收缩，高度和接力率是幸存者指标，不改变结论",
+     "gate": "block"
+    },
+    "total": 47.2,
+    "tier": "中",
+    "why": "题材阴跌(44)×55% + 人气51×45% = 47（情绪退潮 作闸门）"
+   },
+   "ztDate": "2026-11-18",
+   "stopPrice": 7.34,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 7.34,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "002197",
+   "name": "证通电子",
+   "confirmDate": "2026-11-25",
+   "firstSeenDate": "2026-11-25",
+   "entryDate": "2026-11-25",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "阴跌",
+     "day": null,
+     "score": 27.5,
+     "why": "今日-4.59% / 5日-5.78% / 涨停0只 / 扩散2%",
+     "fake": false
+    },
+    "pop": {
+     "label": "清淡",
+     "score": 34.3,
+     "why": "成交额池内分位 26 · 放量3.2倍（+8）"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 计算机设备 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "退潮",
+     "score": 25,
+     "text": "涨停 51（昨 55，↓） · 跌停 43（昨 2，↑） · 最高板 5（昨 4，↑） · 连板股 13（昨 25，↓） · 分歧率 31%（昨 24，↑） · 接力率 25%（昨 45，↓）",
+     "why": "涨停家数腰斩（55→51）+ 连板股收缩，高度和接力率是幸存者指标，不改变结论",
+     "gate": "block"
+    },
+    "total": 30.6,
+    "tier": "弱",
+    "why": "题材阴跌(28)×55% + 人气34×45% = 31（情绪退潮 作闸门）"
+   },
+   "ztDate": "2026-11-18",
+   "stopPrice": 5.51,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 5.51,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null
   }
  ],
- "updatedAt": "2026-11-24 16:14",
+ "updatedAt": "2026-11-25 16:04",
  "resettleAt": "R100z299",
  "anchorVer": "R100z331",
  "anchorNote": "止损锚＝涨停日（T日）最低价，断板与陈学长同口径；2026-11-10 22:1x 统一"

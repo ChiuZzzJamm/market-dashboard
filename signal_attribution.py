@@ -515,8 +515,33 @@ def summarize(stats):
     return out
 
 
-def suggest_weights(summary):
-    """建议权重。只有样本够的指标参与，超额为负的归零。"""
+def _ledger_prior(max_age_days=10):
+    """读台账诊断给出的权重先验（ledger_weights.json，由 ledger_doctor.py 写）。
+
+    R100z379：闭环的那一环——诊断发现某模块持续低胜率，就把它的权重压下去；
+    这里做**阻尼混合**（诊断先验只占 50%），并把日期限制在 10 天内，
+    免得一份过期先验把今天的实测权重带偏。
+    """
+    p = os.path.join(ROOT, "ledger_weights.json")
+    if not os.path.exists(p):
+        return None
+    try:
+        j = json.load(open(p, encoding="utf-8"))
+        from datetime import date as _d
+        age = (_d.today() - _d.fromisoformat(str(j.get("asOf"))[:10])).days
+        if age > max_age_days:
+            return None
+        return (j.get("weights") or None), age
+    except Exception:                                            # noqa: BLE001
+        return None
+
+
+def suggest_weights(summary, prior=None):
+    """建议权重。只有样本够的指标参与，超额为负的归零。
+
+    `prior`：可选的台账诊断先验（{src: w}）。给了就按 50/50 阻尼混合——
+    不让一天的实测把权重全翻过去，也不让诊断先验无视今天的样本。
+    """
     # R100z299c：`buy` / `buy_zone` 都不是独立信号——它们是上面几个池在 9:45 这个时点、
     # 经价格闸门过滤后的子集。放进权重表会把同一批票算两遍，还会让人以为「加一个清单
     # 就等于多一个策略」。清单的价值是「能不能执行」，不是「多加一份权重」。
@@ -786,7 +811,10 @@ def build(D, do_snapshot=True, backfill=0):
             'sub': ('自有口径 +5%/10日：' + '；'.join(bits)) if bits else '自有口径已结算 0 笔',
         }
 
-    weights, wmsg = suggest_weights(summ)
+    _pr = _ledger_prior()
+    weights, wmsg = suggest_weights(summ, prior=(_pr[0] if _pr else None))
+    if _pr:
+        wmsg += '；已混入台账诊断先验（%d 天前，阻尼 0.5）' % _pr[1]
 
     # R100z255：清单这一行的入场时点与另外七行**不同**，必须自己说出来。
     # 其余七行是「16:00 复盘时选出的票」，最早能买是次日开盘（所以 x = T+1 开盘买入）。

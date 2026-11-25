@@ -305,6 +305,13 @@ PRODUCT_OWNERSHIP = {
                 "verification 子字段（其余子字段一律不动）。旧 note 只写「19:30 写回」"
                 "（R100z296 更正：与实现不符，会把 19:30 误当主人）",
     },
+    "ledgerDiag": {
+        "require": ("ledgerDiag", "台账诊断", "闭环"),
+        "note": "台账诊断闭环（ledger_doctor.py --write 生成，deploy 前跑）。"
+                "内容：模块 5 日胜率与预警、切片证据、动作台账（ledger_actions.json 同源）、"
+                "权重先验（ledger_weights.json，signal_attribution 阻尼 0.5 混入）。"
+                "**它是产物不是输入**：任何脚本不得把它当数据源反写回台账。",
+    },
     "ashare": {
         "require": ("ashare", "A 股", "A股", "大盘"),
         "note": "A 股大盘与板块行情的主节点",
@@ -6866,6 +6873,88 @@ def g80_buy_gate(r):
                 f" / 不追 {stat['不追']}（R>8% 或剩余赔率<1 一律不进「今可买」）")
 
 
+def g82_ledger_loop(r):
+    """G82 台账诊断闭环必须自洽（R100z380，2026-11-25）。
+
+    用户：「台账只展示胜率低，缺少自主优化能力」。闭环的五件事——
+    诊断（模块健康）/ 归因（切片证据）/ 动作（可执行规则）/ 记录（谁改的、什么时候）/
+    验证（改前改后）——任何一环空着，台账就又退回成「只报数」。
+    判据（全部机检，不靠人读）：
+      1. `ledger_policy.json` 阈值合法：0 < failWR < warnWR < 1，minN ≥ 10，sliceMinN < minN；
+      2. `data.js.ledgerDiag` 存在且 asOf/modules 非空，horizon 与 policy 一致；
+      3. **低胜率（flag != ok）且非汇总行的模块，必须至少有 1 条动作**——否则就是「报了病不给方」；
+      4. 每条动作 id 10 位、status 合法、有 rule 与 evidence.delta、有 createdAt；
+      5. `ledger_actions.json` 与 data.js 的动作数一致（防两处各存一份、谁也不更新）。
+    """
+    import json as _json
+    import re as _re
+    pol_p = os.path.join(HERE, "ledger_policy.json")
+    if not os.path.exists(pol_p):
+        r.fail("G82", "缺 ledger_policy.json —— 阈值不可配置，等于写死在代码里")
+        return
+    try:
+        pol = _json.load(open(pol_p, encoding="utf-8"))
+    except Exception as e:                                       # noqa: BLE001
+        r.fail("G82", f"ledger_policy.json 解析失败：{str(e)[:40]}")
+        return
+    fail_w, warn_w = float(pol.get("failWR", 0)), float(pol.get("warnWR", 0))
+    min_n, smin = int(pol.get("minN", 0)), int(pol.get("sliceMinN", 0))
+    if not (0 < fail_w < warn_w < 1):
+        r.fail("G82", f"阈值不合法：failWR={fail_w} warnWR={warn_w}（须 0<失败线<警戒线<1）")
+        return
+    if min_n < 10 or smin >= min_n:
+        r.fail("G82", f"样本门槛不合法：minN={min_n} sliceMinN={smin}（minN≥10 且切片门槛 < 模块门槛）")
+        return
+    try:
+        D = load_data_json()
+    except Exception as e:                                       # noqa: BLE001
+        r.warn("G82", f"data.js 读取失败，跳过闭环检查：{e}")
+        return
+    dg = D.get("ledgerDiag") or {}
+    mods = dg.get("modules") or []
+    acts = dg.get("actions") or []
+    if not dg or not mods:
+        r.fail("G82", "data.js 没有 ledgerDiag.modules —— 台账诊断没落盘（跑 ledger_doctor.py --write）")
+        return
+    if int(dg.get("horizon") or 0) != int(pol.get("horizon") or 0):
+        r.fail("G82", f"诊断口径 {dg.get('horizon')} 日 ≠ 策略 horizon {pol.get('horizon')} 日")
+        return
+    bad_mod = [m.get("src") for m in mods
+               if m.get("flag") != "ok" and not m.get("rollup")
+               and not any(a.get("module") == m.get("src") for a in acts)]
+    if bad_mod:
+        r.fail("G82", f"{len(bad_mod)} 个低胜率模块没有任何优化动作：{'、'.join(map(str, bad_mod[:4]))}"
+                      "—— 诊断报了病却没给方，闭环断在第一环")
+        return
+    st_ok = {"proposed", "applied", "verified", "rolledBack", "closed"}
+    bad_act = []
+    for a in acts:
+        if not _re.fullmatch(r"[0-9a-f]{10}", str(a.get("id") or "")):
+            bad_act.append(f"{a.get('module')}: id 非法")
+        elif a.get("status") not in st_ok:
+            bad_act.append(f"{a.get('module')}: status={a.get('status')}")
+        elif not (a.get("rule") or "").strip() or (a.get("evidence") or {}).get("delta") is None:
+            bad_act.append(f"{a.get('module')}: 缺 rule 或 evidence.delta")
+        elif not a.get("createdAt"):
+            bad_act.append(f"{a.get('module')}: 缺 createdAt")
+    if bad_act:
+        r.fail("G82", "动作记录不完整：" + "；".join(bad_act[:4]))
+        return
+    ap = os.path.join(HERE, "ledger_actions.json")
+    try:
+        store = _json.load(open(ap, encoding="utf-8"))
+        n_store = len(store.get("actions") or [])
+    except Exception:                                            # noqa: BLE001
+        n_store = -1
+    if n_store != len(acts):
+        r.fail("G82", f"动作两处不一致：ledger_actions.json {n_store} 条 / data.js {len(acts)} 条"
+                      "—— 只写一处会让「改了什么」查不到")
+        return
+    al = dg.get("alerts") or []
+    r.ok("G82", f"闭环自洽：{len(mods)} 模块（低胜率 {len(al)}）/ {len(acts)} 条动作，"
+                f"阈值 {warn_w:.0%} 警戒 {fail_w:.0%} 失败线，动作文件与 data.js 一致")
+
+
 def main():
     argv = sys.argv[1:]
     as_json = "--json" in argv
@@ -6955,6 +7044,7 @@ def main():
     g78_sent_one_source(r)
     g79_counter_score(r)
     g80_buy_gate(r)
+    g82_ledger_loop(r)
 
     # R100z284：机器可读的结论行。
     #

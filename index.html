@@ -595,6 +595,26 @@
   @media (max-width: 560px) {
     .stock-chips, .nc-stocks, .lb-stocks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
+  /* 台账诊断（闭环）：只做「哪块低 / 为什么低 / 建议怎么改 / 改完验证了没」四件事 */
+  .ldg-wrap { display: grid; gap: 10px; }
+  .ldg-alert { background: rgba(240,67,92,.08); border-left: 4px solid var(--up);
+               border-radius: var(--r-block); padding: 8px 11px; font-size: var(--fs-sm); line-height: 1.7; }
+  .ldg-alert b { color: var(--up); }
+  .ldg-tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+  .ldg-tbl th, .ldg-tbl td { padding: 5px 6px; border-bottom: 1px solid var(--line); text-align: right; }
+  .ldg-tbl th:first-child, .ldg-tbl td:first-child { text-align: left; }
+  .ldg-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+  .ldg-ok { background: var(--down); } .ldg-warn { background: #e8a33d; } .ldg-fail { background: var(--up); }
+  .ldg-act { border: 1px solid var(--line); border-radius: var(--r-block); padding: 8px 11px; }
+  .ldg-act + .ldg-act { margin-top: 8px; }
+  .ldg-tag { display: inline-block; font-size: var(--fs-xs); padding: 1px 7px; border-radius: var(--r-note);
+             border: 1px solid var(--line); margin-right: 6px; }
+  .ldg-tag.p { color: #8a6d3b; border-color: #d9c48a; }
+  .ldg-tag.a { color: #1f6f4a; border-color: #8fcfae; }
+  .ldg-tag.v { color: #1f5f8a; border-color: #8fb8cf; }
+  .ldg-tag.r { color: var(--up); border-color: #e2a3ad; }
+  .ldg-rule { font-size: var(--fs-sm); line-height: 1.7; }
+  .ldg-evi { font-size: var(--fs-xs); color: var(--ink2); margin-top: 3px; }
   /* 题材掘金 · 个股事件驱动 */
   .tp-item { background: var(--accent-soft); border-radius: var(--r-block); padding: 11px 13px; margin-bottom: 10px; border-left: 4px solid var(--up); }
   .tp-item.tp-down { border-left-color: var(--down); }
@@ -8421,11 +8441,74 @@ function closeGnews() {
    整块下线——它的入场条件要等 9:25 集合竞价，给不出「提前一天」的名单；回测本身
    t 值不显著（−0.20），页面却占一张卡。删除范围：渲染函数、挂载、CSS、旧指标脚本.py、
    duanban.旧指标 节点与台账登记，均已清干净，别在这里再把它挂回来。 */
+/* R100z378（用户 2026-11-25）：台账从「只报胜率」升级成诊断闭环。
+   读 data.js 的 `ledgerDiag`（由 ledger_doctor.py 生成）：模块健康 → 低胜率预警 →
+   「为什么低」（切片证据）→ 建议动作 → 已应用动作的优化前后。这里只渲染，不重算。 */
+function renderLedgerDiag(dg) {
+  if (!dg || !(dg.modules || []).length) return '';
+  var pct = function (v) { return (v == null) ? '—' : (v * 100).toFixed(0) + '%'; };
+  var h = '<div class="ldg-wrap">';
+
+  var al = dg.alerts || [];
+  if (al.length) {
+    h += '<div class="ldg-alert"><b>⚠️ ' + al.length + ' 个模块低于阈值</b>（' +
+      esc(String((dg.policy || {}).warnWR * 100)) + '% 警戒 / ' +
+      esc(String((dg.policy || {}).failWR * 100)) + '% 失败线，' + esc(String(dg.horizon)) + ' 日口径）：<br>' +
+      al.slice(0, 6).map(function (a) { return esc(a.text); }).join('<br>') + '</div>';
+  }
+
+  h += '<table class="ldg-tbl"><thead><tr><th>模块</th><th>样本</th><th>天数</th><th>' +
+    esc(String(dg.horizon)) + '日胜率</th><th>超额</th><th>t</th><th>状态</th></tr></thead><tbody>';
+  (dg.modules || []).forEach(function (m) {
+    var cls = m.flag === 'fail' ? 'ldg-fail' : (m.flag === 'warn' ? 'ldg-warn' : 'ldg-ok');
+    var zh = m.flag === 'fail' ? '低于失败线' : (m.flag === 'warn' ? '低于警戒线' : '正常');
+    h += '<tr><td>' + (m.rollup ? '· ' : '') + esc(m.label || m.src) + '</td><td>' + (m.n || 0) + '</td><td>' +
+      (m.days || '—') + '</td><td>' + pct(m.win) + '</td><td>' + (m.exc == null ? '—' : (m.exc > 0 ? '+' : '') + m.exc + '%') +
+      '</td><td>' + (m.t == null ? '—' : m.t) + '</td><td><span class="ldg-dot ' + cls + '"></span>' + zh + '</td></tr>';
+  });
+  h += '</tbody></table>';
+
+  var acts = (dg.actions || []).filter(function (a) { return a.status !== 'closed'; }).slice(0, 8);
+  if (acts.length) {
+    h += '<div><div class="ldg-evi" style="margin:10px 0 6px;">建议动作（按样本切片生成，不自动改交易规则；改了请回填 appliedAt 以便验证）</div>';
+    var tag = { proposed: ['p', '待采纳'], applied: ['a', '已应用'], verified: ['v', '已验证'], rolledBack: ['r', '已回滚'] };
+    acts.forEach(function (a) {
+      var t = tag[a.status] || ['p', a.status];
+      var ev = a.evidence || {};
+      var line = '<div class="ldg-act"><span class="ldg-tag ' + t[0] + '">' + t[1] + '</span><span class="ldg-tag">' +
+        esc(a.dim || '') + '</span><span class="ldg-rule">' + esc(a.rule || '') + '</span>' +
+        '<div class="ldg-evi">证据：切片与整体差 ' + (ev.delta == null ? '—' : (ev.delta > 0 ? '+' : '') + (ev.delta * 100).toFixed(0) + 'pp') +
+        '｜口径 ' + esc(ev.basis || '') + '｜生成 ' + esc(a.createdAt || '') +
+        (a.before ? '｜改前 ' + pct(a.before.win) + (a.before.n ? '（n=' + a.before.n + '）' : '') : '') +
+        (a.after ? '｜改后 ' + pct(a.after.win) + '（n=' + a.after.n + '）' : '') + '</div></div>';
+      h += line;
+    });
+    h += '</div>';
+  }
+
+  var w = dg.weights || {};
+  if (w.before) {
+    var fmt = function (o) { return Object.keys(o).map(function (k) { return esc(k) + ' ' + (o[k] * 100).toFixed(0) + '%'; }).join(' · '); };
+    h += '<div class="ldg-evi">权重：' + fmt(w.before) + ' → ' + fmt(w.after || {}) + '（' +
+      (w.applied ? '已按诊断调整，单次位移 ' + w.maxShift : '未应用：' + esc(w.why || '')) + '）</div>';
+  }
+  var c = dg.counts || {};
+  h += '<div class="ldg-evi">动作台账：待采纳 ' + (c.proposed || 0) + ' / 已应用 ' + (c.applied || 0) +
+    ' / 已验证 ' + (c.verified || 0) + ' / 已回滚 ' + (c.rolledBack || 0) + '｜诊断于 ' + esc(dg.asOf || '') + '</div>';
+  h += '</div>';
+  return h;
+}
+
 function renderScoreView() {
   var D = window.DASHBOARD_DATA || {};
   var box = document.getElementById('score-body');
   if (!box) return;
-  var body = renderSignalPerf();
+  var body = '';
+  var dg = D.ledgerDiag;
+  if (dg) {
+    body += '<div class="card"><h2 class="td-h2">台账诊断 · 闭环</h2>' + renderLedgerDiag(dg) + '</div>';
+  }
+  body += renderSignalPerf();
   if (!body) {
     body = '<div class="card"><h2 class="td-h2">指标复盘</h2>' +
       '<div class="db-empty">暂无归因数据（16:00 数据步跑完 signal_attribution.py 后出现）</div></div>';

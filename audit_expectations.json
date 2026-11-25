@@ -445,8 +445,6 @@
     "updatedAt"
    ],
    "writesFields": [
-    "us.bullish",
-    "us.bearish",
     "aiPrediction",
     "openOutlook",
     "updatedAt",
