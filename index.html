@@ -627,6 +627,10 @@
   .tp-logic .lc-step { display: flex; gap: 6px; align-items: baseline; margin-top: 4px; }
   .tp-logic .lc-n { flex-shrink: 0; color: var(--accent-deep); font-weight: 800; }
   .tp-why { font-size: var(--fs-base); color: var(--ink2); line-height: 1.65; margin-top: 9px; padding-top: 9px; border-top: 1px dashed var(--line); }
+  /* 距异动点位：常态灰、已进异动区红 */
+  .lb-alert { font-size: var(--fs-xs); font-weight: 600; color: var(--ink2); background: #f2f4f7;
+              border-radius: var(--r-note); padding: 1px 6px; margin-left: 4px; white-space: nowrap; }
+  .lb-alert.on { color: var(--up); background: rgba(240,67,92,.08); }
   /* 连板梯队 */
   .lb-note { font-size: var(--fs-sm); color: var(--ink2); margin-bottom: 10px; line-height: 1.6; }
   .lb-row { display: flex; align-items: flex-start; padding: 8px 0; border-bottom: 1px dashed var(--line); }
@@ -5743,6 +5747,19 @@ function renderLhb(l) {
   return s + '</div>';
 }
 
+/* 距异动：读 duanban.alertGap[code]（alert_gap.py 按交易所偏离值口径算好，页面只显示）。
+   normal = 3 日那档没到 → 「距异动 2.3 点」；alerted = 已过 3 日 20% → 看 10 日 100% 那档。 */
+function alertGapHtml(code) {
+  var D = window.DASHBOARD_DATA || {};
+  var g = ((D.duanban || {}).alertGap || {})[String(code || '')];
+  if (!g || !g.text) return '';
+  var cls = g.stage === 'alerted' ? ' lb-alert on' : ' lb-alert';
+  var tip = '3 日累计偏离 ' + (g.dev3 > 0 ? '+' : '') + g.dev3 + '%'
+    + (g.dev10 != null ? '｜10 日 ' + (g.dev10 > 0 ? '+' : '') + g.dev10 + '%' : '')
+    + '（个股 − 指数，交易所异常波动口径）';
+  return '<span class="' + cls.trim() + '" title="' + escAttr(tip) + '">' + esc(g.text) + '</span>';
+}
+
 function renderLianban(list) {
   if (!list || !list.length) return '';
   // 连板（lbc>=2）作为梯队展示；首板仅统计数量（避免卡片过长）
@@ -5773,7 +5790,7 @@ function renderLianban(list) {
     + (st.role ? ' ｜ ' + st.role + (st.phase ? '·' + st.phase : '') : '')
     + (st.reason ? ' ｜ ' + st.reason : '') + '（点击查看深度解读）';
   // R100n：技术池边框描边 + 所属板块胶囊
-  s += '<span class="stock-chip lb-click' + stkGoldCls(st.code) + '" title="' + escAttr(title) + '" onclick="lbShow(' + idx + ')"><span class="nm"><b>' + esc(st.name || '') + '</b>' + roleBadge + '<span class="cd">' + esc(st.code || '') + '</span>' + (pct ? '<span class="rt">' + pct + '</span>' : '') + '</span>' + (ctx ? '<span class="nt">' + esc(ctx) + '</span>' : '') + '</span>';
+  s += '<span class="stock-chip lb-click' + stkGoldCls(st.code) + '" title="' + escAttr(title) + '" onclick="lbShow(' + idx + ')"><span class="nm"><b>' + esc(st.name || '') + '</b>' + roleBadge + '<span class="cd">' + esc(st.code || '') + '</span>' + (pct ? '<span class="rt">' + pct + '</span>' : '') + '</span>' + (ctx ? '<span class="nt">' + esc(ctx) + '</span>' : '') + alertGapHtml(st.code) + '</span>';
     });
     s += '</div></div>';
   });
@@ -5822,6 +5839,7 @@ function lbShow(idx) {
     (lbNav ? '<span class="cd2">' + (idx + 1) + '/' + LB_LIST.length + '</span>' : '') + // R100s：数量紧跟代码
     '<span class="lb-lbc">' + esc((st.lbc || 1) + ' 连板') + '</span>' +
     '<span class="rt" style="font-size: var(--fs-md);">' + pct + '</span>' +
+    alertGapHtml(st.code) +
     '<button class="db-modal-close" onclick="lbClose()">×</button>' +
     '<div class="m-badge-row">' + stkSecBadge(st.code, st.hybk || st.sector) + stkTechBadgeHtml(st.code) + stkPoolBadge(st.code) + '</div>'; // R100s：徽标统一第二行，池徽章最后
   var meta = // R100v2：板块行删除（徽标第二行已承载），仅留封单资金/涨停原因

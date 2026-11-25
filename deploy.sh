@@ -266,7 +266,11 @@ echo "🎯 补齐板块买点（entry_zone.py --write）..."
 # 闸门等于没有。下沉到 deploy.sh 后，不管哪条任务调它，闸口都在同一处。
 # 退出码：audit_pipeline.py 0=无 FAIL，1=有 FAIL。WARN 不拦（WARN 是历史遗留归对应任务处理）。
 if [ "${SKIP_AUDIT:-0}" != "1" ]; then
-    # 台账诊断闭环（R100z380）：在审计之前跑，G82 才有 ledgerDiag 可查。
+    # 连板标的「距异动」点数（R100z382）：按交易所偏离值口径算好写进 duanban.alertGap。
+echo "📐 距异动点数（alert_gap.py --write）..."
+"$PY" alert_gap.py --write || echo "[warn] 距异动计算失败，页面只是不显示这个标（不影响部署）"
+
+# 台账诊断闭环（R100z380）：在审计之前跑，G82 才有 ledgerDiag 可查。
 # 只写 data.js 的 ledgerDiag + ledger_actions.json / ledger_weights.json；不改任何交易规则。
 echo "🩺 台账诊断（ledger_doctor.py --write --quiet）..."
 "$PY" ledger_doctor.py --write --quiet || echo "[warn] 台账诊断失败，G82 会拦下（不阻断 deploy 本身的其它检查）"
