@@ -787,6 +787,14 @@
                border-radius: var(--r-note); background: var(--paper);
                font-size: var(--fs-sm); color: #8a5a00; line-height: 1.7; }
 
+  /* 反包复盘 · 顶部数字卡（2026-11-25） */
+  .cc-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; margin: 4px 0 12px; }
+  .cc-kpi { background: var(--accent-soft); border-radius: var(--r-block); padding: 8px 10px;
+            display: flex; flex-direction: column; gap: 2px; }
+  .cc-kpi b { font-size: var(--fs-md); font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .cc-kpi b.up { color: var(--up); } .cc-kpi b.down { color: var(--down); }
+  .cc-kpi span { font-size: var(--fs-xs); color: var(--ink2); line-height: 1.45; }
+  .cc-note-sm { font-size: var(--fs-xs); line-height: 1.65; opacity: .85; }
   .cc-sum { font-size: var(--fs-base); color: var(--ink); line-height: 1.8; }
   /* R100z297：汇总数字后面跟的「由哪些池拼成」小注——压低字号、降一级灰度，
      让「11 / 17」仍是视觉主角，构成说明只在需要核对时看得见。 */
@@ -6733,14 +6741,34 @@ function chenCompareHtml(c) {
        没写明由哪些池拼成，读者会以为是把 confirm/watching/strict/loose 四池全加起来了。
        实测 chenN = strict(0) + loose(11)、断板 = confirmed(17)（= both 交集 + doOnly 独有），
        观察池 watching(68) 与 chenPool.watching(26) 都**不在**其中。这里把构成直接写出来。 */
-    '<div class="cc-sum">今日选出：陈学长 <b>' + chenN + '</b> 只' +
-    '<span class="cc-src">严格池 ' + (c.strict || []).length + ' + 放宽池 ' + (c.loose || []).length +
-    '（观察池 ' + ((c.watching || []).length) + ' 只未计入）</span>' +
-    ' ｜ 断板反包 <b>' + (both.length + doOnly.length) + '</b> 只' +
-    '<span class="cc-src">确认池（观察池 ' + (((window.DASHBOARD_DATA || {}).duanban || {}).watching || []).length + ' 只未计入）</span>' +
-    ' ｜ 两个都选中 <b class="up">' + both.length + '</b> 只' +
-    ' ｜ 只有陈学长选中 <b>' + co.length + '</b> 只' +
-    ' ｜ 只有断板反包选中 <b>' + doOnly.length + '</b> 只</div>' +
+    (function () {
+      /* 2026-11-25：原来是一段 6 个「｜」的长句，读者要在一行里数 6 个数。
+         改成 5 格数字卡：选出几只 / 交集 / 已结算样本 / 胜率 / 累计净值。 */
+      var nAll = 0, wAll = 0, rAll = 0, wk = 0;
+      Object.keys(stats).forEach(function (k) {
+        var o = stats[k] || {};
+        if (!o.n) return;
+        nAll += o.n;
+        if (o.winRate != null) { wAll += o.winRate * o.n; wk += o.n; }
+        if (o.avgRet != null) rAll += o.avgRet * o.n;
+      });
+      var wr = wk ? (wAll / wk) : null, ar = nAll ? (rAll / nAll) : null;
+      var pf = cmp.perf || {};
+      var cum = (pf.cumPct === null || pf.cumPct === undefined) ? null : Number(pf.cumPct);
+      function cell(v, lab, cls) {
+        return '<div class="cc-kpi"><b class="' + (cls || '') + '">' + v + '</b><span>' + lab + '</span></div>';
+      }
+      return '<div class="cc-kpis">' +
+        cell(chenN + ' / ' + (both.length + doOnly.length), '今日选出 · 陈学长 / 断板') +
+        cell(both.length, '两个都选中', 'up') +
+        cell(nAll ? nAll + ' 条' : '—', '已结算样本') +
+        cell(wr === null ? '—' : wr.toFixed(0) + '%',
+             '结算胜率' + (ar === null ? '' : ' · 均值 ' + (ar > 0 ? '+' : '') + ar.toFixed(2) + '%'),
+             wr !== null && wr >= 50 ? 'up' : 'down') +
+        cell(cum === null ? '—' : (cum > 0 ? '+' : '') + cum.toFixed(1) + '%', '累计净值',
+             cum === null ? '' : (cum >= 0 ? 'up' : 'down')) +
+        '</div>';
+    })() +
     /* R100z300：三组名单（今天最多 22 只）原来把整张卡撑到两屏，故收进折叠。
        R100z301（用户 2026-11-03 第 5 问「今日名单是不是昨天买、今天卖的」）：
        ⛔ 不是。这三段是**今天 16:00 收盘后**各池的票（`chen.compare.today`，登记日＝今天），
@@ -6750,9 +6778,7 @@ function chenCompareHtml(c) {
        三组直接铺开，标题行右侧保留那三个数量。代价是这张卡长了一屏——用户要的就是
        「一眼看到今天选了什么」，不是「点一下才知道」。别再折回去。 */
     '<div class="cc-sec"><div class="cc-hd">今日名单' +
-      '<span class="cc-sub">今天收盘后选出、下一交易日开盘买 ｜ 交集 ' + both.length +
-      ' · 只有陈学长 ' + co.length + ' · 只有断板反包 ' + doOnly.length +
-      (done.length ? ' ｜ 今日已涨停 ' + done.length + ' 只不计入' : '') + '</span></div></div>' +
+      '<span class="cc-sub">今天收盘后选出 · 下一交易日开盘买</span></div></div>' +
     (done.length
       ? '<div class="cc-sec"><div class="cc-t">今日已反包兑现（' + done.length + '）' +
         '<span class="cc-sub">当日涨幅 ≥9.8% ＝ 形态今天已经走完</span>' +
@@ -6780,16 +6806,11 @@ function chenCompareHtml(c) {
        条目用同一个「／」分隔、结尾同一句「所以…有、…没有」。 */
     '<div class="cc-sec"><div class="cc-t">只有陈学长选中（' + co.length + '）' +
       '<em class="cc-buy">计入明日买入</em>' +
-      '<details class="cc-why"><summary>他有、断板没有</summary>' +
-      '<div class="cc-why-x">陈学长多给的两条：断板日放量<b>不设上限</b>（断板砍在 3.5 倍）／ ' +
-      '只比 T+2 一根缩量、不看趋势。另外他连首板也收、洗盘容忍 3 日、破位与 MA5 各留 2% / 3% 容忍度。' +
-      '所以他有、断板没有。</div></details></div>' +
+      '</div>' +
       '<div class="cc-list">' + chipsOf(co) + '</div></div>' +
     '<div class="cc-sec"><div class="cc-t">只有断板反包选中（' + doOnly.length + '）' +
       '<em class="cc-buy">计入明日买入</em>' +
-      '<details class="cc-why"><summary>断板有、他没有</summary>' +
-      '<div class="cc-why-x">他的硬条件：放量 ≥2 倍 ／ 洗盘 ≤3 日 ／ 收盘不破 T 日最低价 2% ／ ' +
-      '站稳 5 日线。任一条不满足就剔，所以断板有、他没有。</div></details></div>' +
+      '</div>' +
       '<div class="cc-list">' + chipsOf(doOnly) + '</div></div>' +
     '<div class="cc-sec"><div class="cc-t">留痕回测进度</div>' +
       '<div class="cc-note">起始 <b>' + esc(tr.since || '—') + '</b> ｜ 已结算 <b>' + (tr.settledN || 0) +
@@ -6837,10 +6858,8 @@ function chenCompareHtml(c) {
        于是合理怀疑这份回测只买不卖。出场规则必须摆在数字前面，而且不写死具体参数
        （止盈线 / 持有窗口在台账里逐条冻结，写死哪个都会和实际脱节）：
        参数用「止盈线 / 持有窗口」这样的词，具体值在下面折叠的 settleRule 里（数据侧给）。 */
-    '<div class="cc-note">出场（每笔都有卖出价）：盘中摸到<b>止盈线</b>就走——可挂单，赢的收益就封顶在这一档／' +
-      '<b>收盘</b>跌破止损位就走（盘中破不算，免得被日内噪音洗出去）／满<b>持有窗口</b>两条线都没碰，' +
-      '按窗口末收盘平。胜率＝赢 ÷ 全部样本（<b>平不算赢</b>），所以「胜率高、均值低」是这类口径的正常长相：' +
-      '赢的都只到止盈线，输的没有下限。</div>' +
+    '<div class="cc-note cc-note-sm">赢＝盘中摸<b>止盈线</b>走 ／ 输＝<b>收盘</b>破止损走 ／ 平＝满窗口都没碰按末日收盘平。' +
+      '胜率＝赢 ÷ 样本（平不算赢）。</div>' +
     '<div class="cc-tbl-w"><table class="cc-tbl"><thead><tr>' +
       '<th title="样本 = 赢 + 亏 + 平；平＝持仓满窗口两条线都没触，按窗口末收盘平">口径 · 样本</th>' +
       '<th title="赢 ÷ 样本（平不算赢）">胜率</th><th>均值</th></tr></thead>' +
@@ -6849,8 +6868,8 @@ function chenCompareHtml(c) {
        下面统计的是**已走完窗口**的样本，两者不是同一批票。不写明，读者会把「2 笔 100%」当成
        「今天这 5 只的胜率」。所以这句必须留在可见区，但只需要一句。
        R100z230：原来这里 + 末尾各一段（91 字 / 62 字）说的是同一件事，合并成「一句可见 + 一段折叠」。 */
-    '<div class="cc-note">上表只统计<b>已走完持有窗口</b>的样本，上面今日名单里 <b>' + (tr.openN || 0) +
-      '</b> 条还在窗口内——所以「100%」与今天几只下跌并不矛盾。</div>' +
+    '<div class="cc-note cc-note-sm">上表＝已走完窗口的样本；今日名单里还有 <b>' + (tr.openN || 0) +
+      '</b> 条在窗口内。</div>' +
     '</div>';
   // 组必须在整串拼完之后才挂到 window：_grp 是在拼字符串过程中逐只 push 的，
   // 提前挂会挂上一份长度还在变的数组引用（虽然 JS 里引用同一份也对，但显式放末尾读起来更清楚）。
