@@ -235,6 +235,8 @@ def make_actions(module, overall_win, slices, dim, policy, kind_hint="filter"):
         if d <= -delta_min and st["wilsonLo"] < overall_win - guard:
             out.append({
                 "module": module, "dim": dim, "slice": slc, "kind": "filter",
+                "sliceWin": round(st["win"], 3), "overallWin": round(overall_win, 3),
+                "n": st["n"],
                 "rule": "在「%s」里剔除 %s = %s（该切片 %.0f%% vs 整体 %.0f%%）"
                         % (LABEL.get(module, module), dim, slc, st["win"] * 100, overall_win * 100),
                 "delta": round(d, 3),
@@ -242,6 +244,8 @@ def make_actions(module, overall_win, slices, dim, policy, kind_hint="filter"):
         elif d >= delta_min and st["wilsonLo"] > overall_win + guard:
             out.append({
                 "module": module, "dim": dim, "slice": slc, "kind": "prefer",
+                "sliceWin": round(st["win"], 3), "overallWin": round(overall_win, 3),
+                "n": st["n"],
                 "rule": "在「%s」里优先 %s = %s（该切片 %.0f%% vs 整体 %.0f%%）"
                         % (LABEL.get(module, module), dim, slc, st["win"] * 100, overall_win * 100),
                 "delta": round(d, 3),
@@ -250,6 +254,54 @@ def make_actions(module, overall_win, slices, dim, policy, kind_hint="filter"):
 
 
 # ---------------------------------------------------------------- 主流程
+
+def merge_actions(raw, leaf_modules):
+    """同一「维度+切片+方向」在多个池都成立时，合成一条**全局结论**。
+
+    为什么合并（用户 2026-11-25：「写的乱七八糟」）：原来每个池各出一条，
+    「大盘红盘」在 4 个池里各印一次，读者要自己数「这是同一件事说了四遍」；
+    还有一个指向已删模块（buy_chen）的僵尸动作。合并后：
+      · 覆盖 ≥2 个池 → 一条，写明覆盖哪几个池、池间胜率区间；
+      · 只覆盖 1 个池 → 保留单条。
+    """
+    raw = [a for a in raw if a["module"] in leaf_modules]
+    groups = {}
+    for a in raw:
+        groups.setdefault((a["dim"], a["slice"], a["kind"]), []).append(a)
+    out = []
+    for (dim, slc, kind), lst in groups.items():
+        wins = [x["sliceWin"] for x in lst]
+        bases = [x["overallWin"] for x in lst]
+        mods = [x["module"] for x in lst]
+        w_lo, w_hi = min(wins), max(wins)
+        b_avg = sum(bases) / len(bases)
+        verb = "剔除" if kind == "filter" else "优先"
+        if dim == "大盘方向" and slc == "大盘绿盘":
+            rule = ("大盘绿盘日不开新仓：绿盘切片胜率 %.0f%%~%.0f%%，同期红盘 %.0f%%（覆盖 %d 个池）"
+                    % (w_lo * 100, w_hi * 100, b_avg * 100, len(mods)))
+        elif dim == "大盘方向":
+            rule = ("只在%s日开仓：该切片胜率 %.0f%%~%.0f%%，其余日子整体只有 %.0f%%（覆盖 %d 个池）"
+                    % (slc, w_lo * 100, w_hi * 100, b_avg * 100, len(mods)))
+        elif len(mods) >= 2:
+            rule = ("%s = %s 在 %d 个池里都偏%s（切片 %.0f%%~%.0f%% vs 整体 %.0f%%）→ 建议%s"
+                    % (dim, slc, len(mods), "弱" if kind == "filter" else "强",
+                       w_lo * 100, w_hi * 100, b_avg * 100, verb))
+        else:
+            rule = ("「%s」的 %s = %s 偏%s（%.0f%% vs 整体 %.0f%%）"
+                    % (LABEL.get(mods[0], mods[0]), dim, slc,
+                       "弱" if kind == "filter" else "强", w_lo * 100, b_avg * 100))
+        out.append({
+            "module": mods[0] if len(mods) == 1 else "all",
+            "modules": sorted(set(mods)), "dim": dim, "slice": slc, "kind": kind,
+            "rule": rule,
+            "sliceWin": round(w_lo, 3), "overallWin": round(b_avg, 3),
+            "n": sum(x["n"] for x in lst),
+            "delta": round(sum(x["delta"] for x in lst) / len(lst), 3),
+        })
+    out.sort(key=lambda a: -abs(a["delta"]))
+    return out
+
+
 def run(write=False, quiet=False):
     D, entries, chen, policy = load_inputs()
     h = int(policy.get("horizon", 5))
@@ -338,13 +390,18 @@ def run(write=False, quiet=False):
     cap = int(policy.get("maxActions", 8))
     # 配额分配：每个「低胜率且非汇总」的模块**先保底 1 条**（否则诊断报了病没给方，
     # G82 会直接拦），剩余名额再按证据强度（|delta|）填。上限因此是「软上限」。
+    # 先合并（同一维度+切片跨池只留一条），再挑：否则 8 条上限会被单池的大 delta 占满，
+    # 「大盘绿盘」这种覆盖 4 个池的全局结论反而被挤掉（2026-11-25 实测过）。
+    raw_actions = merge_actions(raw_actions, leaf)
     flagged = [m["src"] for m in modules if m["flag"] != "ok" and not m.get("rollup")]
     by_mod = {}
     for a in raw_actions:
         by_mod.setdefault(a["module"], []).append(a)
     picked, used = [], set()
+    def _covers(a, src):
+        return a["module"] == src or src in (a.get("modules") or [])
     for src in flagged:
-        lst = sorted(by_mod.get(src, []), key=lambda x: -abs(x["delta"]))
+        lst = sorted([a for a in raw_actions if _covers(a, src)], key=lambda x: -abs(x["delta"]))
         if lst:
             picked.append(lst[0])
             used.add(id(lst[0]))
@@ -362,7 +419,8 @@ def run(write=False, quiet=False):
         if added >= cap:
             break
         rec = {
-            "id": aid, "module": a["module"], "dim": a["dim"], "slice": a["slice"],
+            "id": aid, "module": a["module"], "modules": a.get("modules") or [a["module"]],
+            "dim": a["dim"], "slice": a["slice"],
             "kind": a["kind"], "rule": a["rule"],
             "evidence": {"delta": a["delta"], "horizon": h,
                          "basis": "close→close %dd，切片与整体同口径" % h},

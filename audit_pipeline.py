@@ -6188,7 +6188,8 @@ def g82_ledger_loop(r):
         return
     bad_mod = [m.get("src") for m in mods
                if m.get("flag") != "ok" and not m.get("rollup")
-               and not any(a.get("module") == m.get("src") for a in acts)]
+               and not any(a.get("module") == m.get("src")
+                           or m.get("src") in (a.get("modules") or []) for a in acts)]
     if bad_mod:
         r.fail("G82", f"{len(bad_mod)} 个低胜率模块没有任何优化动作：{'、'.join(map(str, bad_mod[:4]))}"
                       "—— 诊断报了病却没给方，闭环断在第一环")

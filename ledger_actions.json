@@ -1,127 +1,27 @@
 {
  "actions": [
   {
-   "id": "e39158ee33",
-   "module": "buy_chen",
+   "id": "7cc63946be",
+   "module": "all",
+   "modules": [
+    "ai",
+    "breakoutPool",
+    "chen_loose",
+    "duanban_confirmed",
+    "duanban_watching",
+    "harmonic"
+   ],
    "dim": "大盘方向",
    "slice": "大盘红盘",
    "kind": "prefer",
-   "rule": "在「开盘精选·陈学长」里优先 大盘方向 = 大盘红盘（该切片 47% vs 整体 26%）",
+   "rule": "只在大盘红盘日开仓：该切片胜率 49%~72%，其余日子整体只有 34%（覆盖 6 个池）",
    "evidence": {
-    "delta": 0.212,
+    "delta": 0.263,
     "horizon": 5,
     "basis": "close→close 5d，切片与整体同口径"
    },
    "status": "proposed",
-   "createdAt": "2026-11-25 15:55",
-   "appliedAt": null,
-   "before": null,
-   "after": null
-  },
-  {
-   "id": "7d8064bc94",
-   "module": "chen_loose",
-   "dim": "大盘方向",
-   "slice": "大盘红盘",
-   "kind": "prefer",
-   "rule": "在「陈学长·放宽池」里优先 大盘方向 = 大盘红盘（该切片 49% vs 整体 28%）",
-   "evidence": {
-    "delta": 0.215,
-    "horizon": 5,
-    "basis": "close→close 5d，切片与整体同口径"
-   },
-   "status": "proposed",
-   "createdAt": "2026-11-25 15:55",
-   "appliedAt": null,
-   "before": null,
-   "after": null
-  },
-  {
-   "id": "55aedb7053",
-   "module": "duanban_confirmed",
-   "dim": "大盘方向",
-   "slice": "大盘红盘",
-   "kind": "prefer",
-   "rule": "在「断板·确认池」里优先 大盘方向 = 大盘红盘（该切片 56% vs 整体 33%）",
-   "evidence": {
-    "delta": 0.234,
-    "horizon": 5,
-    "basis": "close→close 5d，切片与整体同口径"
-   },
-   "status": "proposed",
-   "createdAt": "2026-11-25 15:55",
-   "appliedAt": null,
-   "before": null,
-   "after": null
-  },
-  {
-   "id": "e5aa1b1d59",
-   "module": "duanban_watching",
-   "dim": "大盘方向",
-   "slice": "大盘红盘",
-   "kind": "prefer",
-   "rule": "在「断板·观察池」里优先 大盘方向 = 大盘红盘（该切片 72% vs 整体 34%）",
-   "evidence": {
-    "delta": 0.38,
-    "horizon": 5,
-    "basis": "close→close 5d，切片与整体同口径"
-   },
-   "status": "proposed",
-   "createdAt": "2026-11-25 15:55",
-   "appliedAt": null,
-   "before": null,
-   "after": null
-  },
-  {
-   "id": "10dd0c5115",
-   "module": "ai",
-   "dim": "板块",
-   "slice": "贵金属",
-   "kind": "filter",
-   "rule": "在「AI 预测」里剔除 板块 = 贵金属（该切片 0% vs 整体 37%）",
-   "evidence": {
-    "delta": -0.371,
-    "horizon": 5,
-    "basis": "close→close 5d，切片与整体同口径"
-   },
-   "status": "proposed",
-   "createdAt": "2026-11-25 15:55",
-   "appliedAt": null,
-   "before": null,
-   "after": null
-  },
-  {
-   "id": "d4f39fe4b5",
-   "module": "breakoutPool",
-   "dim": "板块",
-   "slice": "房地产",
-   "kind": "filter",
-   "rule": "在「横盘启动」里剔除 板块 = 房地产（该切片 6% vs 整体 37%）",
-   "evidence": {
-    "delta": -0.308,
-    "horizon": 5,
-    "basis": "close→close 5d，切片与整体同口径"
-   },
-   "status": "proposed",
-   "createdAt": "2026-11-25 15:55",
-   "appliedAt": null,
-   "before": null,
-   "after": null
-  },
-  {
-   "id": "913f7c2073",
-   "module": "harmonic",
-   "dim": "板块",
-   "slice": "有色金属",
-   "kind": "filter",
-   "rule": "在「谐波形态」里剔除 板块 = 有色金属（该切片 6% vs 整体 42%）",
-   "evidence": {
-    "delta": -0.358,
-    "horizon": 5,
-    "basis": "close→close 5d，切片与整体同口径"
-   },
-   "status": "proposed",
-   "createdAt": "2026-11-25 15:55",
+   "createdAt": "2026-11-25 22:12",
    "appliedAt": null,
    "before": null,
    "after": null
@@ -129,17 +29,105 @@
   {
    "id": "f2fda7f1a7",
    "module": "duanban_watching",
+   "modules": [
+    "duanban_watching"
+   ],
    "dim": "板块",
    "slice": "自动化设备",
    "kind": "prefer",
-   "rule": "在「断板·观察池」里优先 板块 = 自动化设备（该切片 63% vs 整体 34%）",
+   "rule": "「断板·观察池」的 板块 = 自动化设备 偏强（63% vs 整体 33%）",
    "evidence": {
-    "delta": 0.297,
+    "delta": 0.301,
     "horizon": 5,
     "basis": "close→close 5d，切片与整体同口径"
    },
    "status": "proposed",
-   "createdAt": "2026-11-25 15:55",
+   "createdAt": "2026-11-25 22:12",
+   "appliedAt": null,
+   "before": null,
+   "after": null
+  },
+  {
+   "id": "8a3bcad3b6",
+   "module": "all",
+   "modules": [
+    "breakoutPool",
+    "harmonic"
+   ],
+   "dim": "板块",
+   "slice": "房地产",
+   "kind": "filter",
+   "rule": "板块 = 房地产 在 2 个池里都偏弱（切片 6%~12% vs 整体 38%）→ 建议剔除",
+   "evidence": {
+    "delta": -0.283,
+    "horizon": 5,
+    "basis": "close→close 5d，切片与整体同口径"
+   },
+   "status": "proposed",
+   "createdAt": "2026-11-25 22:12",
+   "appliedAt": null,
+   "before": null,
+   "after": null
+  },
+  {
+   "id": "10dd0c5115",
+   "module": "ai",
+   "modules": [
+    "ai"
+   ],
+   "dim": "板块",
+   "slice": "贵金属",
+   "kind": "filter",
+   "rule": "「AI 预测」的 板块 = 贵金属 偏弱（2% vs 整体 37%）",
+   "evidence": {
+    "delta": -0.351,
+    "horizon": 5,
+    "basis": "close→close 5d，切片与整体同口径"
+   },
+   "status": "proposed",
+   "createdAt": "2026-11-25 22:12",
+   "appliedAt": null,
+   "before": null,
+   "after": null
+  },
+  {
+   "id": "913f7c2073",
+   "module": "harmonic",
+   "modules": [
+    "harmonic"
+   ],
+   "dim": "板块",
+   "slice": "有色金属",
+   "kind": "filter",
+   "rule": "「谐波形态」的 板块 = 有色金属 偏弱（5% vs 整体 40%）",
+   "evidence": {
+    "delta": -0.346,
+    "horizon": 5,
+    "basis": "close→close 5d，切片与整体同口径"
+   },
+   "status": "proposed",
+   "createdAt": "2026-11-25 22:12",
+   "appliedAt": null,
+   "before": null,
+   "after": null
+  },
+  {
+   "id": "dc8c3aef4f",
+   "module": "duanban_watching",
+   "modules": [
+    "duanban_watching"
+   ],
+   "dim": "板块",
+   "slice": "燃气",
+   "kind": "filter",
+   "rule": "「断板·观察池」的 板块 = 燃气 偏弱（5% vs 整体 33%）",
+   "evidence": {
+    "delta": -0.278,
+    "horizon": 5,
+    "basis": "close→close 5d，切片与整体同口径"
+   },
+   "status": "proposed",
+   "createdAt": "2026-11-25 22:12",
    "appliedAt": null,
    "before": null,
    "after": null
@@ -147,39 +135,24 @@
   {
    "id": "9b5f458f73",
    "module": "harmonic",
+   "modules": [
+    "harmonic"
+   ],
    "dim": "板块",
    "slice": "金融行业",
    "kind": "prefer",
-   "rule": "在「谐波形态」里优先 板块 = 金融行业（该切片 69% vs 整体 40%）",
+   "rule": "「谐波形态」的 板块 = 金融行业 偏强（67% vs 整体 40%）",
    "evidence": {
-    "delta": 0.288,
+    "delta": 0.268,
     "horizon": 5,
     "basis": "close→close 5d，切片与整体同口径"
    },
    "status": "proposed",
-   "createdAt": "2026-11-25 17:05",
-   "appliedAt": null,
-   "before": null,
-   "after": null
-  },
-  {
-   "id": "fe6ea3bf57",
-   "module": "harmonic",
-   "dim": "板块",
-   "slice": "房地产",
-   "kind": "filter",
-   "rule": "在「谐波形态」里剔除 板块 = 房地产（该切片 12% vs 整体 40%）",
-   "evidence": {
-    "delta": -0.274,
-    "horizon": 5,
-    "basis": "close→close 5d，切片与整体同口径"
-   },
-   "status": "proposed",
-   "createdAt": "2026-11-25 19:52",
+   "createdAt": "2026-11-25 22:12",
    "appliedAt": null,
    "before": null,
    "after": null
   }
  ],
- "updatedAt": "2026-11-25 21:59"
+ "updatedAt": "2026-11-25 22:12"
 }
