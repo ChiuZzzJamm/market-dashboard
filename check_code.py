@@ -107,7 +107,6 @@ DATA_WRITERS = [
     'stock_news.py',            # stockNews
     'stock_concept.py',        # R100z325：stockConcepts（个股题材/概念，抓同花顺 F10；走 write_data_js）
     'news_theme.py',           # R100z326：要闻 themeTags / poolHits（走 write_data_js）
-    'theme_cands.py',          # R100z327：duanban.themes[*].cands（同题材候选，走 write_data_js）
     'stop_tracker.py',          # 止损跟踪
     'strategy_engine.py',       # strategy 卡片（走 write_data_js）
     'sweep_news.py',            # 要闻分级（走 write_data_js）
@@ -146,8 +145,6 @@ DEAD_OK = {
     'edge_study.py': 'R100z363：用 chen_ledger 做胜率/期望归因（风险 R 分桶、出场口径对照、'
                      '入场因子分层）。只读 data.js 与台账、不写盘，手工触发——规则要不要改，'
                      '先看它跑出来的数字，别凭印象',
-    'theme_map_promote.py': 'R100z356：把「今日自动成组的待确认题材」人工确认后写进 theme_map.json'
-                            '（默认 dry，--write 才落盘）。不进流水线——「确认」必须有人看过盘面',
     'resettle_ledger.py': 'R100z299：结算规则本身改过时（本轮：止盈从买入当天改成次日），把 chen_ledger 全部条目按新规则重算并只刷新 chenPool.compare/track。手工触发（--dry 只打对照），不进流水线',
     'migrate_ledger_pools.py': 'R100z297：一次性数据迁移（历史台账补池归属），迁移完即不再需要，'
                                '手工触发、幂等可重跑；留着是为了「同一份台账在别的机器/别的分支上'

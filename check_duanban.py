@@ -2480,7 +2480,7 @@ def pre_batch(entries, ctx):
             # ⚠️ 必须用 r["e"] 取板块，不能写 e——第二个循环的变量是 r，`e` 只是上一个循环
             # 残留的最后一只票。实测症状：label（来自 r["llab"]）是对的，但 n/maxLb/names
             # 全是「最后那只票的板块」，于是「光伏设备 有龙头」却 maxLb=0，
-            # 连带 watchNext 的「有连板就放行」判断也一起失效。
+            # 连带「有连板就放行」的判断也一起失效。
             "ladder": {"label": r["llab"], "score": r["lsc"], "why": r["lwhy"],
                        "n": _lab.get("n", 0),
                        "maxLb": _lab.get("maxLb", 0),
@@ -2545,79 +2545,6 @@ def _is_junk(e, boards):
     if 0 < px < 5 and zt == 0 and p5 is not None and p5 < 0:
         return "低价 %.2f 元 + 板块无涨停且 5 日 %+.1f%%（杂毛）" % (px, p5)
     return ""
-
-
-def watch_next(confirmed, watching, ctx, limit=3, per=2):
-    """明日盯盘（R100z310）：活题材 + 每题材最值得盯的 1~2 只 + 触发条件。
-
-    这是整页唯一「盘前」能用的东西：题材还活着、票还没有买点，告诉你明天看什么、什么信号算确认。
-    为什么不是把池子按分排序就完事：池子是「今天形态达标的票」，而盯盘要的是
-    「明天可能达标、且题材还没死」——两者交集不大，混在一起读者只会按分数瞎买。
-
-    「退潮/无板块」直接不当盯盘对象：题材死了，形态再漂亮也是接刀。
-    """
-    def tot(e):
-        return float(((e.get("pre") or {}).get("total") or 0))
-
-    cands = sorted([e for e in (list(confirmed) + list(watching)) if e.get("pre")],
-                   key=tot, reverse=True)
-    # R100z310：情绪退潮/冰点 → 明日盯盘只留「启动」板块。
-    # 回测（55 条）里情绪档位对胜率没有区分度，所以它不该参与打分；但「退潮期别追主升尾巴」
-    # 是纪律不是统计——退潮日把「温和/主升」剔掉，等于强制只做刚启动的第一天。
-    # 白名单只留「板块顺风」两档：启动（刚有资金进场）/ 主升（有涨停确认）。
-    # 回踩、阴跌、温和都属于「板块没给顺风」——回测里它们不是最差就是样本不足，
-    # 放进「明日盯盘」会让读者以为板块在支持这只票。宁缺毋滥：今天只有 1 个就只出 1 个。
-    _allow = ("启动", "主升")
-    groups = {}
-    for e in cands:
-        pre = e.get("pre") or {}
-        life = (pre.get("theme") or {}).get("label") or ""
-        # 准入＝「板块顺风」**或**「板块有连板龙头」。
-        # R100z312（2026-11-08 实测漏了一个）：原先只按生命周期白名单，结果「光伏设备」
-        # 今天不在启动/主升里，就被挡掉了——可它有一只 4 板龙头（永臻股份），池里还有 4 只
-        # 后排票在观察。**有连板龙头比「今天涨了多少」更强**：那是资金已经投票、有补涨对象。
-        # 所以只要有 ≥2 板连板，生命周期不进白名单也照样盯。
-        _ld0 = ((pre.get("theme") and e.get("pre") or {}).get("ladder") or {})
-        _hasLad = int(_ld0.get("maxLb") or 0) >= 2
-        if life not in _allow and not _hasLad:
-            continue
-        sec = str(e.get("sector") or "其他")
-        g = groups.get(sec)
-        if not g:
-            _ld = ((e.get("pre") or {}).get("ladder") or {})
-            g = groups[sec] = {
-                "sector": sec, "life": life,
-                "why": (pre.get("theme") or {}).get("why") or "",
-                "mood": (pre.get("mood") or {}).get("label") or "",
-                # R100z312：这个板块有没有连板龙头——「明日盯盘」优先盯有主线的方向，
-                # 因为补涨/接力的资金来自板块内部，没有连板的板块只能靠大盘带。
-                "ladder": {"label": _ld.get("label") or "无连板",
-                           "maxLb": _ld.get("maxLb") or 0,
-                           "names": _ld.get("names") or [],
-                           # R100z313：题材词跟着进盯盘分组——「纺织制造」下面挂
-                           # 「连板 5 板（浙文影业）」会误导，必须同时说出它在炒 AI漫剧
-                           "themes": _ld.get("themes") or [],
-                           "topName": _ld.get("topName") or ""},
-                "hasLadder": bool((_ld.get("maxLb") or 0) >= 2),
-                "picks": [],
-            }
-        if len(g["picks"]) < per:
-            confirmed_flag = (e.get("stage") == "全流程达标")
-            g["picks"].append({
-                "code": str(e.get("code") or ""), "name": str(e.get("name") or ""),
-                "total": round(tot(e), 1), "tier": pre.get("tier") or "",
-                "stage": str(e.get("stage") or ""),
-                "trigger": ("明早开盘不高于今收 +1% 即可买（高于就是追）" if confirmed_flag
-                            else "再收一根缩量小阳、且收盘不破 T 日低点才算确认"),
-            })
-    out = [g for g in groups.values() if g["picks"]]
-    # 排序：有连板主线的板块优先，其次按组内最高分。
-    # 为什么主线优先而不是纯按分：明日盯盘要回答「明天钱会往哪去」，
-    # 有连板的板块自带资金记忆（龙头还在，跟风有对象），没连板的只能靠大盘。
-    out.sort(key=lambda g: (1 if g.get("hasLadder") else 0,
-                            max(p["total"] for p in g["picks"])), reverse=True)
-    return out[:limit]
-
 
 def build_module(pairs, D):
     """pairs: [{code,name,hybk,ztDate,stage_info,kl}] → 断板反包模块 dict。
@@ -2850,7 +2777,6 @@ def build_module(pairs, D):
         # （躺在数据里没人看，几个月后被当成死字段查出来）。等真要做「行业涨→哪个题材被点着」
         # 那块时再一起加。
         "junkCut": _junk,
-        "watchNext": watch_next(confirmed, watching, _ctx),
     }
 
 

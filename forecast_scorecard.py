@@ -409,7 +409,7 @@ def build(D=None):
     fwd = open_stat(op)
     enough = sector['n'] >= MIN_N and days >= MIN_DAYS
 
-    usage = build_usage(sector, conf, dirs, fwd, enough)
+    # 使用建议只在 `--view` 里打印，不再进 data.js（页面已不展示）
 
     return {
         # R100z296：原写 `common.now_str() if hasattr(common, 'now_str') else ''` ——
@@ -428,7 +428,8 @@ def build(D=None):
         'byConf': conf,
         'byDir': dirs,
         'forward': fwd,
-        'usage': usage,
+        # 'usage' 不再写进 data.js：2026-11-25 起页面不展示建议文案，留着就是死字段。
+        # 需要看结论跑 `python3 forecast_scorecard.py --view`。
         'flags': build_flags(sector, conf, dirs, fwd, enough),
         'verdict': build_verdict(sector, fwd, enough),
         'enough': enough,
@@ -465,11 +466,6 @@ def print_report(r):
     print()
     print('=== 结论 ===')
     print('  ' + r['verdict'])
-    for u in r['usage']:
-        # 2026-10-27：usage 每条改成 {'h': 结论, 'x': 依据}，页面只展开 h。
-        # 这里两段都打出来——终端是给我看的，越详细越好，和页面取舍相反。
-        print('  · ' + u['h'].replace('<b>', '').replace('</b>', ''))
-        print('    ' + u['x'].replace('<b>', '').replace('</b>', ''))
     # 这一段是给「生成下一步预测」的脚本/人看的：文字结论可以略读，开关不能
     F = r.get('flags') or {}
     print()

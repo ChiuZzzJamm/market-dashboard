@@ -198,17 +198,12 @@ EMPTY_WHITELIST = [
     (r"chenPool\.failedCodes$",
      "R100z218：failedCodes 只在「K 线缺口导致取不到价」时才有值，空数组＝全部标的取数正常。"
      "前端 `var fc = c.failedCodes || []` 后 `if (fc.length)` 才渲染⚠️行"),
-    (r"duanban\.(confirmed|watching|watchNext)\[\d+\]\.(pre\.)?ladder\.(names|themes|topName)$",
-     "R100z323：板块当日无连板时 check_duanban._pre_ctx 写 names=[]/themes=[]/topName=''，"
-     "89 只票里 87 只如此（真报会淹没闸门）。同一对象里 label='无连板'、why='板块 X 今日无连板股——…' "
-     "把原因写在页面上；反向证明见 G9d（n=0 必须有 label+why，n>0 必须有 names）"),
+
     (r"(duanban|duanban\.star|chenPool)\.suspended$",
      "R100z323：停牌名单，当日无停牌即为空数组（常态，不是漏抓）。前端 `if (list.length)` 才渲染"),
     (r"duanban\.junkCut$",
      "R100z323：垃圾剔除名单，当日没有命中剔除规则的标的即为空数组。前端按长度判断后整块隐藏"),
-    (r"duanban\.star\.spillover\.rows\[\d+\]\.matches$",
-     "R100z324：补涨映射里「该连板股没有同题材候选」时 matches=[] 就是结论（页面写「池内没有同题材标的 / "
-     "未续板不给候选」，不是漏跑）。反向证明在 G60：weak 行带候选即 FAIL、候选必须能回溯到池内"),
+
     (r"breakoutPool\.watch\.(triggered|near|started)$",
      "R100z323：横盘启动三档，没有命中票就是空数组（`bpWatchHtml` 里 `if (!trig.length) return ''` "
      "整卡不渲染，空值不会印到页面）"),
@@ -232,20 +227,9 @@ EMPTY_WHITELIST = [
      "R100z280：atr_stops 的集中度告警只在「多只候选止损位挤在同一价格带」时才追加，"
      "无告警＝当日候选分散，是正常结果。前端只读 atrStops.items / evidenceRows，"
      "不引用 summary.concentrationWarn（不渲染空段）"),
-    (r"duanban\.star\.spillover\.rows\[\d+\]\.(planTheme|planCandN)$",
-     "R100z353（2026-11-12）：补涨映射的「昨日计划」比对位。**空串就是结论本身**——"
-     "昨日收盘题材行里没有这只连板，前端据此打「今日新增」标签（index.html 用 "
-     "`r.planTheme ? 昨·X : 新增` 三目；planCandN=0 时不印「作废 N 只」）。"
-     "G64 反向证明：planTheme 必须与 .theme_plan.json 基线一致，基线没有就必须为空串，"
-     "不许为了不留空而编一个近似题材（那才是把「新增」标成「昨已列」）。"),
-    (r"duanban\.star\.spillover\.rows\[\d+\]\.matches\[\d+\]\.plannedUnder$",
-     "R100z353：候选的「昨日挂在哪一列」同理——wasListed=false（今日新增）时本来就是空串，"
-     "前端只在 `m.wasListed` 为真时才拼「（plannedUnder）」。反向证明同 G64："
-     "wasListed 为真时 plannedUnder 必须等于基线里的题材名，不能空"),
-    (r"duanban\.star\.spillover\.plan\.planDate$",
-     "R100z353：记分牌基线的日期。当日快照不自我兑现（G64 顶部就是这条守卫），"
-     "首次运行 / 隔了两个交易日以上时没有可比基线 → planDate 空串、nCand=0，"
-     "前端按 nCand 判断后整块不出分。G64 已在「nCand 为空」时直接 PASS 并说明原因"),
+
+
+
     (r"chenPool\.compare\.(settles|opens)\[\d+\]\.cross$",
      "R100z353：cross 是**记账时冻结**的池标签（db/chen/both）。旧口径样本（legacy）当年没有这个标签，"
      "空串＝当时未打标，不是漏写。前端不用它渲染——poolLabel() 读的是 pools/poolZh，"
@@ -991,7 +975,7 @@ def g8_g9_g10_data(r):
     #   ① n==0 时 `label` 必须是「无连板」且 `why` 非空（页面靠它解释「为什么没得补涨」）；
     #   ② n>0 时 names 必须非空（否则「有连板」却给不出名字，是最坏的一种：页面像有数据）。
     ladder_bad, ladder_n = [], 0
-    for grp in ("confirmed", "watching", "watchNext"):
+    for grp in ("confirmed", "watching"):
         for ent in ((D.get("duanban") or {}).get(grp) or []):
             if not isinstance(ent, dict):
                 continue
@@ -1009,7 +993,7 @@ def g8_g9_g10_data(r):
             # ② 「无连板」但 label 写成别的（有龙头/2板）＝字段自相矛盾
             if not has_lb and lad.get("label") != "无连板":
                 ladder_bad.append(f"{nm2}: 无连板但 label={lad.get('label')!r}")
-            # ③ 只有 pre.ladder 带 why（watchNext 的 ladder 是三字段简版，无 why 属正常）
+            # ③ 只有 pre.ladder 带 why
             if is_pre and not has_lb and not str(lad.get("why") or "").strip():
                 ladder_bad.append(f"{nm2}: 无连板且 why 为空（页面只剩一句「无连板」）")
     if ladder_bad:
@@ -5167,133 +5151,6 @@ def g59_news_section_volume(r):
         r.ok("G59", f"五节要闻条数达标（{markets} 个市场、每节 ≥2 条）")
 
 
-def g60_spillover_truth(r):
-    """G60 连板补涨映射真值（R100z324，2026-11-10）。
-
-    由来：用户要求「连板标的如果继续连板，列出题材+概念，然后匹配断板和陈学长池子里
-    有且符合形态的标的」。这张表是最容易**看起来很合理、实际全是编的**的一种：
-    连板股名字对、题材词对，但底下挂的候选只要错一只，读者就会去买一只不在池里的票。
-
-    判据（全部落在「会随 bug 变形」的地方）：
-      a) row.code 必须真的是 `ashare.lianban` 里的连板股（防止 AI 手写/旧数据）；
-      b) row.themes 必须是 `common.theme_words(reason)` 的子集（防止自己发明题材词）；
-      c) state 与 pct 自洽：reboard→pct≥9.5；weak→pct<3 且**不得带候选**（未续板就没扩散）；
-      d) matches[].code 必须能在断板双池或陈学长三池里找到（池外标的＝最严重的一类错）；
-      e) 档位与来源自洽：tier 必须**有某一个池支持它**（双池票可以既是断板·观察池、又是陈学长·严格池，
-        此时 confirm 成立）；kind 只能是 theme/dict/sector；
-      f) 同一只候选不得在两张连板行里重复出现（用户最反感的「同一信息在多处给」）。
-
-    spawn 期（9:45 之前）没有 spillover 是正常的 → WARN，不 FAIL。
-
-    **跨时点换血不算错**（照 G47 对 buyList 的同一口径）：16:00 数据步会重算断板池/陈学长池，
-    9:45 生成的映射里可能有一半票已被换出——那是时点差，不是造票。所以「连板不在梯队 /
-    候选不在池 / 档位变了」一律 WARN 并注明换血；只有**与池无关的生成逻辑错**
-    （state 与 pct 矛盾、kind 非法、同票跨行重复、候选指向自己）才 FAIL。
-    """
-    try:
-        D = load_data_json()
-    except Exception as e:                                   # noqa: BLE001
-        r.warn("G60", f"data.js 读取失败，跳过补涨映射校验：{e}")
-        return
-    st = ((D.get("duanban") or {}).get("star") or {})
-    sp = st.get("spillover") or {}
-    rows = sp.get("rows") or []
-    if not rows:
-        r.warn("G60", "star.spillover 未生成（9:45 未跑或旧数据）——补涨映射块不会渲染")
-        return
-
-    lb = {}
-    for x in ((D.get("ashare") or {}).get("lianban") or []):
-        if isinstance(x, dict):
-            lb[str(x.get("code"))] = x
-    db = D.get("duanban") or {}
-    cp = D.get("chenPool") or {}
-    pool = {}          # code -> {tier: [池名…]}。一只票可以同时在两个池里（见下方注释）
-    for key, tier, zh in (("confirmed", "confirm", "断板·确认池"),
-                          ("watching", "watch", "断板·观察池")):
-        for e in (db.get(key) or []):
-            if isinstance(e, dict):
-                pool.setdefault(str(e.get("code")), {}).setdefault(tier, []).append(zh)
-    for key, tier, zh in (("strict", "confirm", "陈学长·严格池"),
-                          ("loose", "confirm", "陈学长·放宽池"),
-                          ("watching", "watch", "陈学长·观察池")):
-        for e in (cp.get(key) or []):
-            if isinstance(e, dict):
-                pool.setdefault(str(e.get("code")), {}).setdefault(tier, []).append(zh)
-    # R100z353（2026-11-12）：原来按「先断板池、后陈学长池，已存在就不覆盖」建单值 pool，
-    # 于是**双池票**（声迅股份：断板·观察池=待再缩量 + 陈学长·严格池=缩量确认，两套口径本就不同）
-    # 每次都被判「档位 confirm 与当前池归属（断板·观察池=watch）不符」——一条永远为真的 WARN。
-    # 正确口径是「档位必须有**某一个**池支持它」，不是「必须等于某个优先级最高的池」。
-
-    from common import theme_words
-    bad, warned, stale = [], [], []
-    _sp_day = str(sp.get("tradeDate") or "")
-    _cur_day = str((D.get("ashare") or {}).get("tradeDate") or "")
-    if _sp_day and _cur_day and _sp_day != _cur_day:
-        r.warn("G60", f"补涨映射生成于 {_sp_day}，当前交易日 {_cur_day}——跨日旧数据，"
-                      f"下一交易日 9:45 自动重建（页面按 star.date 也不渲染它），跳过校验")
-        return
-    seen = {}
-    for i, row in enumerate(rows):
-        code = str(row.get("code") or "")
-        nm = row.get("name") or code or f"[{i}]"
-        x = lb.get(code)
-        if not x:
-            # 16:00 重算后连板梯队会换人：这是时点差，不是造票
-            stale.append(f"{nm} 已不在当前连板梯队（生成后重算）")
-            continue
-        pct = row.get("pct")
-        state = row.get("state")
-        if state == "reboard" and (pct is None or float(pct) < 9.5):
-            bad.append(f"{nm} 标「已续板」但涨幅 {pct}%")
-        if state == "weak" and (row.get("matches") or []):
-            bad.append(f"{nm} 未续板却给了补涨候选（`{len(row['matches'])}` 只）")
-        allow = set(theme_words(x.get("reason"), limit=4))
-        themes = [str(t) for t in (row.get("themes") or [])]
-        extra = [t for t in themes if t not in allow]
-        if extra:
-            # reason 也会随重算变化，同样按时点差处理
-            stale.append(f"{nm} 的题材词 {extra} 与当前 reason 不一致（生成后重算）")
-        if not themes and x.get("reason"):
-            warned.append(f"{nm} 题材词为空")
-        for m in (row.get("matches") or []):
-            mc = str(m.get("code") or "")
-            mnm = m.get("name") or mc
-            if mc not in pool:
-                stale.append(f"{nm}→{mnm} 已不在池内（生成后重算/失效归档）")
-                continue
-            tiers = pool[mc]
-            if m.get("tier") not in tiers:
-                stale.append(f"{nm}→{mnm} 档位 {m.get('tier')} 与当前池归属"
-                             f"（{'/'.join('%s=%s' % (z, t) for t, zs in tiers.items() for z in zs)}）不符")
-            # R100z333：不许再有 sector（同行业兜底）——用户 2026-11-10 两次截图指出
-            # 「利欧股份（快手/小红书概念）挂在航天紧固件下」，根因就是按行业匹配。
-            if m.get("kind") not in ("theme", "dict"):
-                bad.append(f"{nm}→{mnm} 命中口径 {m.get('kind')} 非法"
-                           + ("（同行业不是同题材，池内没有就空着）" if m.get("kind") == "sector" else ""))
-            if mc in seen:
-                if seen[mc] == nm:
-                    bad.append(f"{mnm} 在「{nm}」这一行里重复出现")
-                else:
-                    bad.append(f"{mnm} 在「{seen[mc]}」与「{nm}」两行重复出现")
-            else:
-                seen[mc] = nm
-            if mc == code:
-                bad.append(f"{nm} 的候选就是它自己")
-    if bad:
-        r.fail("G60", f"补涨映射有 {len(bad)} 处不会报错但会误导："
-                      + "；".join(bad[:6]))
-    elif stale:
-        r.warn("G60", f"补涨映射结构正确，但 {len(stale)} 处已被盘中重算换血"
-                      f"（下一交易日 9:45 自动重建，不拦部署）：" + "；".join(stale[:4]))
-    elif warned:
-        r.warn("G60", f"补涨映射结构正确，但有 {len(warned)} 处题材词为空："
-                      + "；".join(warned[:4]))
-    else:
-        r.ok("G60", f"补涨映射 {len(rows)} 行 / {len(seen)} 只候选全部可回溯"
-                    f"（连板来自梯队、候选来自池内、档位与来源一致、跨行不重复）")
-
-
 def g61_stock_concepts_truth(r):
     """G61 个股题材标签真值（R100z325，2026-11-10）。
 
@@ -5466,237 +5323,6 @@ def g62_news_theme_truth(r):
                      for it in (ash.get(sec) or []) if isinstance(it, dict))
         r.ok("G62", f"要闻题材 {tagged}/{total} 条可回溯（tag 均≥2 只标的共享）、"
                     f"池内候选 {n_hits} 只全部在池且档位一致")
-
-
-def g63_theme_cands_truth(r):
-    """G63 题材行「池内可补涨」候选真值（R100z327，2026-11-10）。
-
-    由来：用户截图里「光伏 7 板」下面挂着雪人集团 / 利欧股份 / 柯力传感，而这三只
-    跟光伏没有任何题材关系；同一天它们在算力、人形机器人、商业航天、核电四行里又各出现一次。
-    根因是候选按**行业**算（候选.sector ∈ 题材的 sectors），而「通用设备」是几百只票的大类。
-    改成按同花顺概念算（候选主题材 hot 命中该题材的 ckw）之后，这一层必须上闸——
-    候选一旦错，读者会照着买，而页面看起来完全正常。
-
-    判据：
-      a) cand.code 必须在断板双池/陈学长三池里，且不在本题材的连板成分里；
-      b) kind=theme 时，cand.hit 必须真的在该票的 hot（主题材）里，且命中词必须属于该题材的 ckw
-         —— 这条挡住「把泛概念当题材」和「跨题材串票」；
-      c) tier 与池归属一致；
-      d) 同一只票不得在 ≥3 个题材里被推荐（那就是当年「通用设备」那种泄漏的形态）。
-    16:00 之前 themes 没有 cands 属正常 → WARN。
-    """
-    try:
-        D = load_data_json()
-    except Exception as e:                                   # noqa: BLE001
-        r.warn("G63", f"data.js 读取失败，跳过题材候选校验：{e}")
-        return
-    themes = ((D.get("duanban") or {}).get("themes")) or {}
-    if not themes:
-        # R100z355：原来只说「今日无连板或 16:00 未跑」，而 2026-11-17 实测是**6 只连板、
-        # 但没有一只的 reason 命中 theme_map 词表**（GPU芯片/小家电/AI眼镜/干式变压器…全不在表里）。
-        # 「无连板」和「有连板但词表没收录」是两件事：前者正常，后者说明词表该补。
-        lb = (D.get("ashare") or {}).get("lianban") or []
-        if lb:
-            r.warn("G63", "duanban.themes 为空，但今日有 %d 只连板（%s）——它们的 reason 都没命中"
-                          "题材词表（common.theme_map/match_themes）。若其中有真题材，补词表；"
-                          "若确实是各自独立的小题材，空着是对的（页面不出题材行）"
-                   % (len(lb), "、".join(str(x.get("name") or x.get("code")) for x in lb[:4])))
-        else:
-            r.warn("G63", "duanban.themes 为空且今日无连板，题材候选无从校验（正常日度状态）")
-        return
-    missing = [k for k, v in themes.items() if isinstance(v, dict) and "cands" not in v]
-    if missing:
-        r.warn("G63", f"{len(missing)} 个题材没有 cands（16:00 未跑或旧数据）：{missing[:4]}——"
-                      f"页面会退回按行业算的旧口径")
-        return
-    items = ((D.get("stockConcepts") or {}).get("items")) or {}
-    db = D.get("duanban") or {}
-    cp = D.get("chenPool") or {}
-    pool = {}
-    for key, tier in (("confirmed", "confirm"), ("watching", "watch")):
-        for e in (db.get(key) or []):
-            if isinstance(e, dict):
-                pool.setdefault(str(e.get("code")), tier)
-    for key, tier in (("strict", "confirm"), ("loose", "confirm"), ("watching", "watch")):
-        for e in (cp.get(key) or []):
-            if isinstance(e, dict):
-                pool.setdefault(str(e.get("code")), tier)
-    from common import theme_map
-    ckw = {t["name"]: [str(k) for k in (t.get("ckw") or [t["name"]])] for t in theme_map()}
-
-    bad, seen_in = [], {}
-    n_cand = 0
-    n_auto = 0
-    lb_codes = {str(x.get("code")) for x in
-                (((D.get("ashare") or {}).get("lianban")) or []) if isinstance(x, dict)}
-    for name, t in themes.items():
-        if not isinstance(t, dict):
-            continue
-        in_lb = set(str(b.get("code") or "") for b in (t.get("boardStocks") or []))
-        # R100z356：自动成组（词表没收录、标了 auto）的题材，判据与正式题材不同——
-        # 它没有 ckw 词表、也**不该有**补涨候选。这里守四条：
-        # ① 成员 ≥2 只且都在今日连板梯队里（不然就是拿历史连板凑数）；
-        # ② cands 必须为空、candKind=auto（未确认的题材出可买名单是最贵的一类错）；
-        # ③ 不许带 refStocks（代表票是词表的职责，未确认的题材没有）；
-        # ④ 不许与正式词表重名（正式题材优先）。
-        if t.get("auto"):
-            codes = [str(b.get("code") or "") for b in (t.get("boardStocks") or [])]
-            if len(set(codes)) < 2:
-                bad.append(f"{name} 自动组只有 {len(set(codes))} 只（<2 不该成组）")
-            if (t.get("cands") or []) or t.get("candKind") != "auto":
-                bad.append(f"{name} 自动组给了补涨候选/kind≠auto（未确认题材不许出可买名单）")
-            if t.get("refStocks"):
-                bad.append(f"{name} 自动组带了词表代表票（未确认题材没有代表票）")
-            if name in ckw:
-                bad.append(f"{name} 与正式词表重名（正式题材优先）")
-            off = [c for c in codes if c not in lb_codes]
-            if off:
-                bad.append(f"{name} 的成员不在今日连板梯队：{off[:3]}")
-            n_auto += 1
-            continue
-        keys = ckw.get(name) or [name]
-        for c in (t.get("cands") or []):
-            n_cand += 1
-            code = str(c.get("code") or "")
-            nm = c.get("name") or code
-            kind = c.get("kind")
-            # R100z333：题材行同样禁止同行业兜底（见 theme_cands.build 的删因）
-            if kind != "theme":
-                bad.append(f"{name}→{nm} 的 kind={kind!r} 非法（只允许 theme）")
-            if code not in pool:
-                bad.append(f"{name}→{nm} 不在断板/陈学长池里（池外标的冒充池内）")
-                continue
-            if code in in_lb:
-                bad.append(f"{name}→{nm} 本身就是本题材的连板成分（自己推荐自己）")
-            if c.get("tier") != pool[code]:
-                bad.append(f"{name}→{nm} 档位 {c.get('tier')} 与池归属（{pool[code]}）不符")
-            if kind == "theme":
-                hot = [str(h) for h in (((items.get(code) or {}).get("hot")) or [])]
-                hit = str(c.get("hit") or "")
-                if hit not in hot:
-                    bad.append(f"{name}→{nm} 命中「{hit}」不在该票主题材 {hot[:3]} 里")
-                elif not any(k in hit for k in keys):
-                    bad.append(f"{name}→{nm} 命中「{hit}」不属于题材「{name}」的概念词")
-            seen_in.setdefault(code, []).append(name)
-    leak = {c: th for c, th in seen_in.items() if len(th) >= 3}
-    if leak:
-        bad.append("同一只票被挂到 ≥3 个题材（行业大类泄漏的形态）：" +
-                   "；".join(f"{c}→{'/'.join(th)}" for c, th in list(leak.items())[:3]))
-    if bad:
-        r.fail("G63", f"题材候选有 {len(bad)} 处站不住：" + "；".join(bad[:5]))
-        return
-    # R100z356：数据对了不等于页面画出来了。新的一类条目（auto/待确认）最容易「看着正常」：
-    # 徽章没渲染 → 读者当成正式题材；候选行空着 → 读者以为这题材没票。
-    # 所以这里真跑一次 lbThemeSecHtml（与 G67/G68 同一套做法）。
-    rc, out, err = _run_tool("check_theme_row.py", timeout=180)
-    if rc != 0:
-        r.fail("G63", "题材行渲染没过：" + (out or err or "").strip()[:240])
-        return
-    else:
-        n_th = sum(1 for v in themes.values() if isinstance(v, dict) and v.get("candKind") == "theme")
-        n_ref = len(themes) - n_th - n_auto
-        r.ok("G63", f"题材候选 {n_cand} 只全部可回溯（在池内、非本题材成分、命中属于该题材的概念词）；"
-                    f"{n_th}/{len(themes)} 个题材有同题材候选"
-                    + (f"，{n_ref} 个空着（不按行业凑数）" if n_ref else "")
-                    + (f"，{n_auto} 个自动成组待确认（成员均在连板梯队、未给候选）" if n_auto else "")
-                    + "；题材行渲染真跑通过")
-
-
-def g64_plan_scorecard(r):
-    """G64 「收盘计划 → 开盘验证」记分牌真值（R100z328，2026-11-10）。
-
-    用户「再往前一步」：题材行（收盘口径）与连板补涨（开盘口径）不能只是两份长得像的清单，
-    后者要对前者打分——昨天列的候选今天涨没涨、点名的连板今天续没续、没续板的昨天那批是否作废。
-
-    这一层最容易错的方式是**悄悄对不上**：标签还在、数字还在，但基线换了（16:00 重算把
-    themes 覆盖），于是「昨已列」标在昨天没列过的票上，读者以为计划兑现了。所以每条都要能回溯：
-      a) `.theme_plan.json` 里必须找得到 `spillover.plan.planDate` 那一代（latest 或 prev）；
-      b) nCand / nLb 必须等于基线里去重后的候选数 / 连板数；
-      c) up + down + flat + noQuote 必须等于 nCand（抓空单列，不许并进跌）；
-      d) 每行 planTheme 必须与基线一致（基线里没有这只连板 → 必须为空，前端才标「新增」）；
-      e) 每个候选的 wasListed 必须等于「它在不在基线候选清单里」，plannedUnder 同源；
-      f) 未续板行的 planCandN 必须等于基线该题材的候选数（作废数量不能瞎写）。
-    """
-    try:
-        D = load_data_json()
-    except Exception as e:                                   # noqa: BLE001
-        r.warn("G64", f"data.js 读取失败，跳过记分牌校验：{e}")
-        return
-    sp = (((D.get("duanban") or {}).get("star") or {}).get("spillover")) or {}
-    if not sp.get("rows"):
-        r.warn("G64", "star.spillover 未生成（9:45 未跑或旧数据），记分牌无从校验")
-        return
-    score = sp.get("plan") or {}
-    if not score.get("nCand"):
-        # 同一天的快照不参与打分（见 update_star.build_spillover 的日期守卫）：
-        # 开盘那一刻还没有「昨天的计划」时，这块本来就该是空的。
-        r.ok("G64", "本轮没有可打分的昨日计划（当日快照不自我兑现 / 首次运行），记分牌按空处理")
-        return
-    plan_path = os.path.join(HERE, ".theme_plan.json")
-    try:
-        with open(plan_path, encoding="utf-8") as f:
-            raw = json.load(f)
-    except Exception:                                        # noqa: BLE001
-        r.warn("G64", "缺少 .theme_plan.json（昨日计划快照）——这块的兑现读数无法回溯；"
-                      "确认 theme_cands.py 是否在收盘那步跑过")
-        return
-    gens = [g for g in (raw.get("latest"), raw.get("prev")) if isinstance(g, dict)]
-    want = str(score.get("planDate") or "")
-    base = next((g for g in gens if str(g.get("date") or "") == want), None)
-    if not base:
-        r.warn("G64", f"快照里没有 {want or '（空）'} 那一代计划（现有 "
-                      f"{[str(g.get('date') or '') for g in gens]}）——多为隔了两个交易日，"
-                      f"该轮记分牌不具可比性")
-        return
-
-    themes = base.get("themes") or {}
-    lb_theme, cand_theme = {}, {}
-    for th, v in themes.items():
-        if not isinstance(v, dict):
-            continue
-        for x in (v.get("stocks") or []):
-            c = str(x.get("code") or "")
-            if c:
-                lb_theme.setdefault(c, th)
-        for x in (v.get("cands") or []):
-            c = str(x.get("code") or "")
-            if c:
-                cand_theme.setdefault(c, th)
-
-    bad = []
-    if int(score.get("nCand") or 0) != len(cand_theme):
-        bad.append(f"plan.nCand={score.get('nCand')} 与基线候选数 {len(cand_theme)} 不符")
-    if int(score.get("nLb") or 0) != len(lb_theme):
-        bad.append(f"plan.nLb={score.get('nLb')} 与基线连板数 {len(lb_theme)} 不符")
-    tot = sum(int(score.get(k) or 0) for k in ("up", "down", "flat", "noQuote"))
-    if tot != int(score.get("nCand") or 0):
-        bad.append(f"涨/跌/平/抓空合计 {tot} ≠ nCand {score.get('nCand')}")
-
-    for row in (sp.get("rows") or []):
-        code = str(row.get("code") or "")
-        nm = row.get("name") or code
-        exp = lb_theme.get(code, "")
-        if str(row.get("planTheme") or "") != exp:
-            bad.append(f"{nm} 的 planTheme={row.get('planTheme')!r} 与基线（{exp!r}）不符")
-        if exp and row.get("state") == "weak":
-            n_exp = len(((themes.get(exp) or {}).get("cands") or []))
-            if int(row.get("planCandN") or 0) != n_exp:
-                bad.append(f"{nm} 未续板却写「作废 {row.get('planCandN')} 只」，基线是 {n_exp} 只")
-        for m in (row.get("matches") or []):
-            mc = str(m.get("code") or "")
-            listed = mc in cand_theme
-            if bool(m.get("wasListed")) != listed:
-                bad.append(f"{nm}→{m.get('name') or mc} 的 wasListed={m.get('wasListed')} 与基线不符")
-            if listed and str(m.get("plannedUnder") or "") != cand_theme[mc]:
-                bad.append(f"{nm}→{m.get('name') or mc} 的 plannedUnder 与基线（{cand_theme[mc]}）不符")
-
-    if bad:
-        r.fail("G64", f"记分牌有 {len(bad)} 处与昨日计划对不上：" + "；".join(bad[:5]))
-    else:
-        r.ok("G64", f"记分牌可回溯：基线 {want}，候选 {len(cand_theme)} 只（"
-                    f"{score.get('up')} 涨 / {score.get('down')} 跌 / {score.get('noQuote')} 抓空）、"
-                    f"连板 {len(lb_theme)} 只（续板 {score.get('nReboard')}）；"
-                    f"planTheme / wasListed / 作废数全部与快照一致")
 
 
 def g65_stop_anchor(r):
@@ -7025,11 +6651,8 @@ def main():
     g57_trend_asof(r)
     g58_modal_head_count(r)
     g59_news_section_volume(r)
-    g60_spillover_truth(r)
     g61_stock_concepts_truth(r)
     g62_news_theme_truth(r)
-    g63_theme_cands_truth(r)
-    g64_plan_scorecard(r)
     g65_stop_anchor(r)
     g66_done_excluded(r)
     g67_kline_hz_overlay(r)
