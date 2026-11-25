@@ -520,9 +520,7 @@
     "run_push.sh star",
     "harmonic_detect.py",
     "breakout_pool.py",
-    "full_scan.py",
-    "price-in→已计价",
-    "star.spillover"
+    "price-in→已计价"
    ],
    "forbidden": [
     "①",

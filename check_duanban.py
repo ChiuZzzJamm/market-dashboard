@@ -433,12 +433,8 @@ def _sector_hints(D):
                 out[c] = s
 
     db = D.get("duanban") or {}
-    for k in ("confirmed", "watching", "failPool", "star"):
-        v = db.get(k)
-        if isinstance(v, dict):
-            _take(v.get("picks"))
-        else:
-            _take(v)
+    for k in ("confirmed", "watching", "failPool"):
+        _take(db.get(k))
     cp = D.get("chenPool") or {}
     for k in ("strict", "loose", "watching", "failPool"):
         _take(cp.get(k))
@@ -949,7 +945,7 @@ def prioritize_cut(cut, D, limit=60):
     `duanban.star.timingExec.rows`（9:45 写）。结果是名单照旧按距离排、用户点名的
     8 只排到第 10~19 位 —— 修了跟没修一样，而且日志里看不出错（取的源不报错、只是空）。
     `ordPrep()` 的真实取数是三处：`duanban.star.timingExec.rows`（今早执行）／
-    顶层 `timingPlan.orders`（16:00 生成的明日挂单）／`duanban.star.buyList`（盘中买点）。
+    顶层 `timingPlan.orders`（16:00 生成的明日挂单）。
     三处都得算，且**空源不许当"没有"**——必须三处都试（见 24.16 显式降级同理）。
     """
     if not cut:
@@ -972,16 +968,12 @@ def prioritize_cut(cut, D, limit=60):
     _st = _db.get('star') or {}
     # ① 断板页「今日可下单」的真实来源（9:45 执行结果 + 盘中买点）→ 最高优先
     _scan((_st.get('timingExec') or {}).get('rows'), hot)
-    _scan(_st.get('buyList'), hot)
     # ② 顶层明日挂单（16:00 生成）与顶层执行结果（历史结构，留着不吃亏）
     _scan((D.get('timingPlan') or {}).get('orders'), hot)
     _scan((D.get('timingExec') or {}).get('rows'), hot)
     # ③ 开盘精选项、断板页上一版池子 → 次优先
-    _scan(_st.get('picks'), warm)
     _scan(_db.get('confirmed'), warm)
     _scan(_db.get('watching'), warm)
-    _scan((D.get('star') or {}).get('buyList'), warm)
-    _scan((D.get('star') or {}).get('picks'), warm)
 
     def _tier(x):
         c = str(x.get('code') or '')

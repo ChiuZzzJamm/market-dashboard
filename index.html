@@ -1368,20 +1368,6 @@
   .tc-cell .v.warn { color: #b3541e; }
   /* 虚线状态行 */
   .tc-foot { border-top: 1px dashed var(--line); padding-top: 3px; font-size: var(--fs-xs); color: var(--ink2); line-height: 1.4; font-weight: 400; }
-  /* R100z254：卡片上的「今日可下单」一行——把两张表的价格压回标的身上。
-     与 .tc-foot 同为虚线行，但用主色底强调：上面那行说形态，这行说钱。
-     R100z255 修正：原来「没进清单就不渲染」，结果开盘精选 11 张卡只有 3 张有这一行，
-     另外 8 张底部空白——空白同样被读成「有结论但没写」（用户 2026-10-28 二次拍板时指的就是这个）。
-     现在每张卡都有一行：有下单价就写价（.tc-ord），没有就写**为什么没有**（.tc-ord.ord-hint，灰字）。
-     原则不变——不许空着；变的是「空着」和「写一句原因」哪个更像是没结论。 */
-  .tc-ord { border-top: 1px dashed var(--line); margin-top: 1px; padding-top: 3px;
-    font-size: var(--fs-xs); line-height: 1.5; color: var(--accent-deep); font-weight: 700;
-    font-variant-numeric: tabular-nums; }
-  .tc-ord i { font-style: normal; font-weight: 400; color: var(--ink2); }
-  /* 没有下单价时的原因行：同位置同字号，但用灰字、不加粗——它是解释，不是报价。 */
-  .tc-ord.ord-hint { color: var(--ink2); font-weight: 400; }
-  /* 价格数字压到最黑：这一行的重点就是「挂多少 / 破多少撤」，其余都是陪衬。 */
-  .tc-ord b { color: var(--ink); font-variant-numeric: tabular-nums; }
   /* 观察池 / 降级卡：虚线边 + 灰字，各页统一 */
   .tc.dim { border-style: dashed; background: var(--paper); }
   .tc.dim .tc-cell { background: #f2f4f7; }
@@ -1952,7 +1938,7 @@ function stkSecOf(code) {
     var D = window.DASHBOARD_DATA || {};
     var db = D.duanban || {};
     (db.confirmed || []).concat(db.watching || []).forEach(function (x) { if (x && x.code && x.sector) M[String(x.code)] = x.sector; });
-    ((db.star || {}).picks || []).forEach(function (x) { if (x && x.code && x.sector && !M[String(x.code)]) M[String(x.code)] = x.sector; });
+    [].forEach(function (x) { if (x && x.code && x.sector && !M[String(x.code)]) M[String(x.code)] = x.sector; });
     var hz = D.harmonic || {};
     ((hz.confirmPool || []).concat(hz.watchPool || [])).forEach(function (x) { if (x && x.code && x.sector && !M[String(x.code)]) M[String(x.code)] = x.sector; });
     ['ashare'].forEach(function (mk) {
@@ -1980,7 +1966,7 @@ function stkSecOf(code) {
        002178 建筑建材→软件开发…），那不是修 bug，那是换全站口径。东财 hybk 排在陈学长
        （同花顺口径）之前，两套行业分类的差异另记 PROJECT-MEMORY 24.119。 */
     var _st = (db.star || {});
-    [(_st.timingExec || {}).rows, _st.buyList, (D.timingPlan || {}).orders, db.mcapCut, db.failPool]
+    [(D.timingPlan || {}).orders, db.mcapCut, db.failPool]
       .forEach(function (arr) {
         (arr || []).forEach(function (x) {
           if (x && x.code && x.sector && !M[String(x.code)]) M[String(x.code)] = x.sector;
@@ -2256,7 +2242,7 @@ function stkPoolBadge(code) {
   var P = window._STAR_POOL;
   if (!P) {
     P = {};
-    (st.picks || []).forEach(function (x) { if (x && x.code) P[String(x.code)] = 1; });
+    [].forEach(function (x) { if (x && x.code) P[String(x.code)] = 1; });
     window._STAR_POOL = P;
   }
   if (!P[code]) return '';
@@ -3266,7 +3252,7 @@ function preOfCode(code) {
   // R100z313：反查范围扩到**全部池**——原来只查断板三处，失效池/陈学长/谐波的弹窗
   // 就都没有三因子标签（用户 2026-11-09 截图圈的正是这两种）。
   var pool = [].concat(
-    d.confirmed || [], d.watching || [], (d.star && d.star.picks) || [], d.failPool || [],
+    d.confirmed || [], d.watching || [], d.failPool || [],
     cp.strict || [], cp.loose || [], cp.watching || [],
     hz.confirmPool || [], hz.watchPool || [],
     bp.passed || []
@@ -3337,11 +3323,11 @@ function fbIsDuanban(code0) {
   try {
     var d = (window.DASHBOARD_DATA || {}).duanban || {};
     /* R100z315（2026-11-09 体检，Proxy 探针抓到）：原来写 `[].concat(d.star || [], ...)`，
-       而 `d.star` 是**对象** `{picks, buyList, date…}`——`concat(对象)` 会把它整个当成
+       而 `d.star` 是**对象** `{date, time, marketLine…}`——`concat(对象)` 会把它整个当成
        **一个元素**塞进 pool，于是遍历时多出一个 `pool[i].code === undefined` 的垃圾项
        （探针实测 `duanban.star.code` / `duanban.star.stocks` 各被读 47 次）。
        那句 `Array.isArray(d.star)` 是「star 曾经是数组」时代的兼容分支，早已不成立。 */
-    var pool = [].concat(d.confirmed || [], d.watching || [], (d.star && d.star.picks) || []);
+    var pool = [].concat(d.confirmed || [], d.watching || []);
     for (var i = 0; i < pool.length; i++) {
       if (String((pool[i] && pool[i].code) || '').replace(/\D/g, '') === code0) return true;
     }
@@ -5998,117 +5984,6 @@ function starTechOf(code0, src) {
    口径以 harmonic_detect.py 的 PATTERNS 为准，取不到就原样显示英文，绝不猜译。 */
 var HZ_PAT_CN = { 'Bat': '蝙蝠', 'Gartley': '加特利', 'Butterfly': '蝶形', 'Crab': '蟹形', 'Shark': '鲨鱼', 'Cypher': '塞弗', 'AB=CD': 'AB等CD' };
 function hzPatCn(p) { return HZ_PAT_CN[p] || p; }
-/* R100z254（用户 2026-10-28「要么删掉，要么就辅佐卡片」）：把「今天挂什么价」压回标的自己身上。
-   并表之后读者仍要在表里按代码找人；而卡片的四格讲形态、.tc-foot 讲洗盘，**没有一行讲钱**——
-   恰恰「这只票今天能不能下单、挂多少、破多少撤」才是他真正要的东西。所以每张 .tc 卡片
-   只要这只票进了今日下单清单，底部就多一行 .tc-ord。
-   数据源只有两个，与并表同源，**页面不自己算价**：
-     duanban.star.buyList          9:45 三池命中（横盘启动·贴沿已在生成端剔除，此处同口径再兜一层）
-     duanban.star.timingExec.rows  昨晚定单 + 今开核对；缺则顶层 timingPlan.orders（未开盘回退态）
-   没进任何清单的票**不渲染空行**：空行会被读成「有结论但没写」。 */
-var _ORD_MAP = null;
-function orderMap() {
-  if (_ORD_MAP) return _ORD_MAP;
-  var D = window.DASHBOARD_DATA || {};
-  var st = ((D.duanban || {}).star) || {};
-  var m = {};
-  function slot(c) {
-    c = String(c || '').replace(/\D/g, '');
-    if (!c) return null;
-    if (!m[c]) m[c] = { buy: null, ord: null };
-    return m[c];
-  }
-  (st.buyList || []).forEach(function (r) {
-    if (String(r.src || '') === 'bp') return;        // 与生成端 BUY_INCLUDE_BP=False 同口径
-    var s = slot(r.code); if (s) s.buy = r;
-  });
-  var te = st.timingExec;
-  var rows = (te && te.rows && te.rows.length)
-    ? te.rows
-    : (((D.timingPlan || {}).orders) || []).map(function (o) {
-        return { code: o.code, limit: o.limit, floor: o.floor,
-                 state: 'pending', stateZh: '未开盘·照限价挂' };
-      });
-  rows.forEach(function (r) {
-    var s = slot(r.code); if (s) s.ord = r;
-  });
-  _ORD_MAP = m;
-  return m;
-}
-function orderLineOf(code) {
-  var s = orderMap()[String(code || '').replace(/\D/g, '')];
-  if (!s || (!s.buy && !s.ord)) return '';
-  var p2 = function (v) {
-    return (v === null || v === undefined || v === '' || !isFinite(Number(v))) ? '—' : Number(v).toFixed(2);
-  };
-  var out = [];
-  if (s.buy) {
-    var b = s.buy;
-    /* R100z367：**下单价也要过赔率闸**。不追的票不再印「今可买」——
-       台账里 R>8% 那批 66% 胜率却均值 −1.6%，把它们摆在「今可买」就是在害人。 */
-    if (b.gate === '不追') {
-      out.push('不追 <b>R' + (b.riskPct == null ? '?' : Math.round(b.riskPct)) + '%</b>' +
-        '（证伪位太远 / 剩余赔率<1）· 破 ' + p2(b.invalid) + ' 才算错');
-    } else if (b.gate === '等回踩') {
-      out.push('等回踩 <b>' + p2(b.invalid * 1.05) + '</b> 以内（R' +
-        (b.riskPct == null ? '?' : Math.round(b.riskPct)) + '% 偏宽）· 破 ' + p2(b.invalid) + ' 撤');
-    } else {
-      out.push('今可买 <b>' + p2(b.low) + '~' + p2(b.high) + '</b>' +
-        (b.stateZh ? '（' + esc(String(b.stateZh)) + '）' : '') +
-        ' · R' + (b.riskPct == null ? '?' : Math.round(b.riskPct)) + '%' +
-        (b.rr ? ' · 赔率 ' + b.rr : '') +
-        ' · 破 ' + p2(b.invalid) + ' 撤');
-    }
-  }
-  if (s.ord) {
-    var t = s.ord;
-    out.push('昨挂 <b>' + p2(t.limit) + '</b> · 下沿 ' + p2(t.floor) + ' 破了撤' +
-      (t.stateZh ? ' · ' + esc(String(t.stateZh)) : ''));
-  }
-  return '<i>下单</i> ' + out.join('<span style="opacity:.3;"> ｜ </span>');
-}
-/* R100z255：卡片底部那一行「今天怎么办」——有下单价走 orderLineOf，没有就走这里。
-   每一条都必须说清**是哪个池子不给价**，而不是只说「无」。原因按源写死在这里（不查数据），
-   因为这些都是**口径决定**的结论，不是当日数据：
-     bp   横盘启动·贴沿：7,783 个状态日单笔 +0.22%、T+5 超额 t=0.41（不显著）→ 不冒充下单价；
-     hz   谐波：build_buy_list 的 BUY_ORDER 只收 陈学长严格池·断板反包确认池·横盘启动，
-          该池从来没有下单价口径（不是今天没命中）；
-     chen 放宽池：形态成立但没进严格池，清单只给严格池的价；
-     pool 断板反包确认池命中却没进清单：被硬门槛挡了（深跌不接 / 涨停买不进 / 硬风险），
-          具体原因在 buySummary.skipped 里逐条列着。 */
-// 卡片上只写**短标签**，完整理由只写一次（原本写在「下单规则」那段折叠口径里）：
-// 同一句长解释在 3 张 bp 卡、3 张谐波卡上各印一遍，会被读成六条不同的约束（G17 同型）。
-// R100z273：那段折叠口径已下线，短标签里的「（见下单规则）」会指向不存在的东西——
-// 理由直接压缩进标签本身，不再让人去找。
-var ORD_HINT = {
-  bp: '不下单价 · 横盘启动单笔仅 +0.22%、T+5 超额不显著',
-  hz: '不下单价 · 谐波池不在清单来源',
-  chen: '不下单价 · 放宽池只观察',
-  shrink: '不下单价 · 待确认档（放量阴后刚缩量，等它自己走出方向）',
-  pool: '未进清单 · 被硬门槛挡（深跌/涨停/硬风险）'
-};
-function ordHintOf(e) {
-  if (!e) return '';
-  if (orderLineOf(e.code)) return '';                 // 有价就不写原因，两行会把卡片撑长
-  /* R102：待确认档的「没有价」是**设计如此**，不是被门槛挡掉——
-     原样落进 ORD_HINT.pool 会印成「被硬门槛挡（深跌/涨停/硬风险）」，
-     而那三样它一条都没触发，等于给读者一个假原因。档位优先于来源。 */
-  if (e.tier === 'watch') {
-    return e.src === 'shrink'
-      ? ORD_HINT.shrink
-      : '不下单价 · 待确认档（还差一根确认 K 线，候选进了、买点不给）';
-  }
-  return ORD_HINT[String(e.src || '')] || ORD_HINT.pool;
-}
-/* R100z36：统一卡片骨架。o = {code,name,sector,pills[],sent,chg,cells[],foot,dim,attrs,onclick,title,fresh}
-   R100z44：fresh=true → 整卡淡黄+「新」徽章（新入池首日高亮，次日恢复）。 */
-/* R100z76-③→R100z80：三技术池跨池共振——同票命中≥2个技术池（谐波/横盘启动/断板反包）即高确信共振。
-   全局 memoized 计算 code→命中池名列表（resoMap），仅供 sortByReso 排序共振目标页使用；
-   全站边框分级由 stkGoldCls 直接基于 stkTechMeta 渲染，不再依赖共振徽标。
-   ⚠️ 陈学长池**故意不并入**：它与断板反包是同一族形态的两套口径（16 只里 13 只同时命中断板池），
-   计进共振等于把「同一件事」数两遍——全部断板票边框会被整体提一档，共振信号随即失去区分度。
-   它的独立价值走「开盘精选配额（2 席）」和「反包复盘对比卡」体现，不走共振。 */
-var _RESO_MAP = null;
 function resoMap() {
   if (_RESO_MAP) return _RESO_MAP;
   var d = window.DASHBOARD_DATA || {};
@@ -6136,10 +6011,6 @@ function sortByReso(arr) {
   });
 }
 function tcCard(o) {
-  // R100z267：允许调用方**覆盖**「下单」行（o.ord）。默认仍走 orderLineOf（唯一价源）。
-  // 只有「今日可下单」的形态档需要覆盖——那一档不能印 timingExec 里今早已执行完的限价
-  // （详见 ordShapeOrderLine 的注释），但两处仍然共用同一套措辞与 .tc-ord 样式。
-  var ord = (o.ord === null || o.ord === undefined) ? orderLineOf(o.code) : o.ord;
   var pills = '';
   (o.pills || []).forEach(function (p) { if (p) pills += '<span class="db-sec-pill">' + esc(p) + '</span>'; });
   // R100z275：技术池短徽章（o.badges）这条通道已随唯一调用点一起撤掉——不再支持外部塞徽章，
@@ -6154,8 +6025,6 @@ function tcCard(o) {
     '<div class="tc-id"><b>' + esc(o.name || o.code) + '</b>' + riskBadge(o.code, 1) +
     ((o.name && o.name !== o.code) ? '<span class="cd">' + esc(o.code) + '</span>' : '') + tcChgHtml(o.chg) + '</div>' +
     '<div class="tc-g">' + (o.cells || []).join('') + '</div>' +
-    (ord ? '<div class="tc-ord">' + ord + '</div>'
-         : (o.ordHint ? '<div class="tc-ord ord-hint">' + o.ordHint + '</div>' : '')) +
     (o.foot ? '<div class="tc-foot">' + o.foot + '</div>' : '') + '</div>';
 }
 /* R100z44：入池首日判定——生成侧给每个池内标的写 entryDate（首次入池日，老标的逐日沿用），
@@ -6425,7 +6294,6 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
     code: e.code, name: e.name, chg: tcPctOf(e.code, e.pct), dim: !done,
     // R100z255：精选卡每张都要有「今天怎么办」那一行；只在 star（开盘精选/精选卡）传，
     // 四子页的池卡保持原样——那里没有「今天下不下单」这个问题，硬加一行会变成噪音。
-    ordHint: star ? ordHintOf(e) : '',
     fresh: poolFresh(e, modD), // R100z44：新入池首日黄色+「新」徽章
     pills: [star && e.tier === 'watch' ? '待确认' : null,
             showSec ? (e.sector || '其他') : null], sent: true,
@@ -6612,7 +6480,6 @@ function renderDuanban() {
   // R100e：🌟 开盘精选展示闸门——仅当 star.date == 本地今日 才渲染。
   // 依据：9:45 自动化唯一写入当日 star；16:00 数据步经 merge_duanban 仅保留「date==今日」的 star（展示）；
   // 07:00/08:30/周日22:00 流水线不写 star，但历史上会把前一交易日的 star 原样带出 data.js。
-  // 页面此前只看 st.picks.length，导致陈旧 star 在「不更新不展示」的时段被错误展示。
   // 加日期闸门后：非今日的 star 一律隐藏；今日的 star（9:45 写入 / 16:00 数据步保留）正常展示。
   var st = db && db.star;
   var _td = new Date();
@@ -7710,7 +7577,6 @@ function dbFailHtml(failPool, kind) {
      · 盘中买点：9:45 起现价落在买区内才成立，随现价重算——不是提前定死的价。
    已在「开盘精选」卡里的票在这里照样出现：精选是候选、这里是执行参数，
    同一只票出现在不同页不算重复，出现在同一页才算。
-   页面不自己算价：价格全部来自 data.js（duanban.star.buyList / timingExec / timingPlan）。
 /* R100z273：原 ordSg（带正负号的百分比片段）/ ordMd（去 ** 标记）已删——
    两个函数只服务被下线的 ④明早挂单 / ⑤今日盘中买点 两档卡片，删档后全文件零调用。
    同批删掉的还有 ordBoardOf / ordProbRows / mcapBandZh / chenPoolHit / chenBadgeHtml。 */

@@ -73,10 +73,6 @@
                       翻上一个读者点过的清单（R100h 犯过一次、R100z200 又犯一次，FAIL）
     G46 板块名可解析   预测板块名（AI 手写主题名）必须能落到 allBoards 的行业名；别名表
                       board_alias.json 与 index.html 的 pctAlias 逐字同源（R100z224，FAIL）
-    G47 买入清单真值   duanban.star.buyList 是**唯一会被当下单指令读**的字段，查的不是
-                      「有没有字段」而是「会不会让人做错事」：state 与现价必须自洽、
-                      票必须能回溯到对应池（防凭空造票）、买区上下沿不得颠倒、只能沪深主板、
-                      断板反包不得编目标价；外加生成端/渲染端接线断言（R100z232，FAIL）
     G48 盘前预测契约   本卡必须是**对今日的预测**而不是昨日回顾：dirMode=forecast、
                       forecastBasis 五路依据齐全且互不复制、direction 取自固定词表。
                       原「fundCheck.passed 决定方向」的机械映射已被用户当面否掉
@@ -207,10 +203,6 @@ EMPTY_WHITELIST = [
     (r"breakoutPool\.watch\.(triggered|near|started)$",
      "R100z323：横盘启动三档，没有命中票就是空数组（`bpWatchHtml` 里 `if (!trig.length) return ''` "
      "整卡不渲染，空值不会印到页面）"),
-    (r"duanban\.star\.picks\[\d+\]\.sector$",
-     "R100z242：开盘精选个股的行业映射随行情源覆盖度浮动，个别票当天查不到行业即留空串。"
-     "前端 line 1733 用 `if (x && x.code && x.sector && !M[...])` 过滤——空 sector 直接不参与"
-     "映射，不渲染空标签；不豁免会让 WARN 随覆盖率每天抖动"),
     # R101：趋势档的走强/走弱清单——空数组是「五个指数全在同一侧」的正常结果，不是漏跑。
     (r"trendState\.reasons\.(weak|strong)$",
      "R101：reasons.weak / reasons.strong 列出站在 MA20 弱侧 / 强侧的指数名。"
@@ -4279,213 +4271,6 @@ def g46_sector_board_names(r):
                 f"{len(warns)} 个主题名走别名映射（买点 basis 已注明按哪条指数算）")
 
 
-def g47_buy_list_truth(r):
-    """G47 今日买入清单：结构 / 价格自洽 / 票必须在池里（R100z232，2026-10-26）。
-
-    背景：用户第 4 项要求——当天若三池（断板反包确认池 / 横盘启动贴沿 / 陈学长双池）
-    命中，就要在开盘精选里直接给「当日买入 + 买入价格区间」。清单由
-    `update_star.py::build_buy_list()` 生成，写进 `duanban.star.buyList`。
-
-    这张清单和别的只读展示字段不同，它是**唯一会被当成下单指令读的东西**，
-    错的方式也特别安静，所以这里查的都是「页面照常漂亮、但读的人会做错事」的几种：
-
-      a) **state 与价格不自洽**：`state='buy'`（页面写「在买区内」）而现价其实在区间外。
-         改算法/改滑点参数时最容易脱节——页面不会报错，只会平静地骗人。
-      b) **凭空造票**：清单里的 code 在三个池里都找不到。这条最严重，等于页面自己编标的。
-      c) **买区上下沿颠倒**（low > high）：箱体几何算错时会出现。
-      d) **非沪深主板**（688/300/8xx）：硬约束 3，进了清单就等于推荐不能买的东西。
-      e) **断板反包被塞了目标价**：那一池回测只验证到「次日盘口成交 + T日低点作废」，
-         给它编一个 targetPrice 就是造假。反向断言。
-      f) **接线断了**：`build_buy_list` 没人调、`st.buyList` 前端没人渲染——
-         清单静默消失，而所有字段级校验都会「因为没有数据而跳过」显示全绿。
-
-    f 是这道闸存在的主要理由：字段校验只保护「有数据时的数据」，接线的完整性只能靠源码断言。
-    """
-    try:
-        D = load_data_json()
-    except Exception as e:                                   # noqa: BLE001
-        r.warn("G47", f"data.js 读取失败，跳过买入清单校验：{e}")
-        return
-
-    # ---- f) 接线完整性：生成端 + 渲染端 ----
-    try:
-        up = open(os.path.join(HERE, "update_star.py"), encoding="utf-8").read()
-        htm = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
-    except Exception as e:                                   # noqa: BLE001
-        r.fail("G47", f"无法读取 update_star.py / index.html，接线校验失效：{e}")
-        return
-    wire = []
-    if "def build_buy_list(" not in up:
-        wire.append("update_star.py 缺 build_buy_list()")
-    if '"buyList": buy_rows' not in up and '"buyList":buy_rows' not in up:
-        wire.append("update_star.py 未把 buy_rows 写进 star['buyList']")
-    if "build_buy_list(" not in up.split("def build_buy_list(", 1)[-1].split("\ndef ", 1)[-1]:
-        wire.append("update_star.py 的 build_buy_list 没有被调用（只定义不接线）")
-    if "st.buyList" not in htm:
-        wire.append("index.html 未渲染 st.buyList")
-    if wire:
-        r.fail("G47", "买入清单接线断了：" + "；".join(wire))
-        return
-
-    # ---- 结构 ----
-    star = ((D.get("duanban") or {}).get("star") or {})
-    bl = star.get("buyList")
-    summ = star.get("buySummary") or {}
-    if bl is None:
-        # 兼容窗口：9:45 任务升级前的存量 data.js 没有这个字段。不判 FAIL，
-        # 但必须说清「没跑」而不是「没买点」——两者在页面上长得一样。
-        r.warn("G47", "duanban.star.buyList 缺失（9:45 任务尚未按新口径重跑）；"
-                      "缺失 ≠ 今日无买点")
-        return
-    if not isinstance(bl, list):
-        r.fail("G47", f"duanban.star.buyList 类型应为 list，实际 {type(bl).__name__}")
-        return
-    if not isinstance(summ, dict) or summ.get("n") != len(bl):
-        r.fail("G47", "buySummary.n=%r 与 buyList 实际 %d 只不符（汇总与明细脱节）"
-                      % (summ.get("n") if isinstance(summ, dict) else None, len(bl)))
-        return
-
-    # 各池的真实成员集合（用于 b 造票检查）
-    duanban_pool = set()
-    for p in (D.get("duanban") or {}).get("confirmed") or []:
-        if isinstance(p, dict):
-            duanban_pool.add(str(p.get("code")))
-    bp_pool = {str(x.get("code")) for x in
-               ((D.get("breakoutPool") or {}).get("passed") or []) if isinstance(x, dict)}
-    chen_strict = {str(x.get("code")) for x in
-                   ((D.get("chenPool") or {}).get("strict") or []) if isinstance(x, dict)}
-    chen_loose = {str(x.get("code")) for x in
-                  ((D.get("chenPool") or {}).get("loose") or []) if isinstance(x, dict)}
-    pick_pool = {str(p.get("code")) for p in (star.get("picks") or []) if isinstance(p, dict)}
-    # R100z246：失效池成员也算**可回溯**（2026-10-27）。
-    # 名额挤占 / 形态到期 / 回到池外，票会从在池挪到失效归档——它没被编出来，
-    # 只是被后来的一轮重算移走了。判「凭空造票」时若不认失效池，
-    # 每一次正常的池换血都会被误报（实测 2026-10-27 误报 9 只）。
-    bp_fail = {str(x.get("code")) for x in
-               ((D.get("breakoutPool") or {}).get("failPool") or []) if isinstance(x, dict)}
-
-    # 跨时点比对豁免：清单是 9:45 盘中产物，横盘启动 / 断板 / 陈学长池都可能在此后的
-    # 收盘重算里换名单（实测 2026-10-27：清单 09:58 生成用 10-26 收盘池，
-    # 而 breakoutPool 16:17 已按 10-27 收盘重算，同一 tradeDate、不同时刻）。
-    # **必须比时刻，不能只比日期**——同一天里 09:58 与 16:17 是两个不同的池快照。
-    # 池的快照时刻晚于清单时刻 → 只校验「当时合法」，不追「现在还在」。
-
-    def _star_dt():
-        d = str(star.get("date") or "")
-        t = str(star.get("time") or "")
-        return (d + " " + (t if t else "00:00")).strip()[:16]
-
-    def _pool_dt(node, fallback_date=""):
-        raw = str((node or {}).get("updatedAt") or (node or {}).get("generatedAt") or "")
-        # updatedAt 形如「2026-10-27 16:17（横盘启动 2026-10-27 收盘 …）」——取前 16 字即时刻
-        m = re.search(r"(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})", raw)
-        if m:
-            return (m.group(1) + " " + m.group(2))[:16]
-        d = str((node or {}).get("tradeDate") or fallback_date or "")[:10]
-        return (d + " 00:00").strip()[:16]
-
-    _sd = _star_dt()
-
-    def _stale(pool_key):
-        """池的快照时刻是否晚于清单时刻（晚于 = 清单已过期，不再按当前池判造票）。"""
-        if not _sd:
-            return False
-        if pool_key == "breakout":
-            pd_ = _pool_dt(D.get("breakoutPool"))
-        elif pool_key == "chen":
-            pd_ = _pool_dt(D.get("chenPool"))
-        else:
-            pd_ = _pool_dt(D.get("duanban"))
-        return bool(pd_ and pd_ > _sd)
-
-    def _n(v):
-        try:
-            return None if v is None or v == "" else float(v)
-        except (TypeError, ValueError):
-            return None
-
-    bad = []
-    stale_note = []          # 跨时点比对豁免的条目（提示，不 FAIL）
-    for i, it in enumerate(bl):
-        tag = "buyList[%d]" % i
-        if not isinstance(it, dict):
-            bad.append("%s 不是对象" % tag)
-            continue
-        code = str(it.get("code") or "")
-        src = it.get("src")
-        tag = "buyList[%d](%s)" % (i, code or "?")
-        # 必需字段
-        miss = [k for k in ("code", "name", "src", "srcZh", "low", "high",
-                            "invalid", "state", "stateZh") if it.get(k) in (None, "")]
-        if miss:
-            bad.append("%s 缺字段 %s" % (tag, "/".join(miss)))
-            continue
-        if not code.startswith(("60", "00")):
-            bad.append("%s 非沪深主板（硬约束 3）" % tag)
-        if src not in ("chen_strict", "chen_loose", "duanban", "bp"):
-            bad.append("%s src=%r 不在白名单" % (tag, src))
-            continue
-        # d) 票必须在池里（或该池的失效归档里）
-        member = {"chen_strict": chen_strict, "chen_loose": chen_loose,
-                  "bp": bp_pool, "duanban": (duanban_pool | pick_pool)}[src]
-        # 失效归档也算可回溯：票是被后续重算挪走的，不是编出来的。
-        _archived = (code in bp_fail) if src == "bp" else False
-        if code not in member and not _archived:
-            # 池快照已跨日 → 清单反映的是当时那一版池，不按今日池判造票（降为 WARN 提示）。
-            if _stale("breakout" if src == "bp" else
-                      ("chen" if src.startswith("chen") else "duanban")):
-                stale_note.append(tag)
-            else:
-                bad.append("%s 声称来自 %s，但该池里没有这只票（凭空造票）" % (tag, src))
-        # c) 买区上下沿
-        lo, hi, last, inv = _n(it.get("low")), _n(it.get("high")), _n(it.get("price")), _n(it.get("invalid"))
-        if lo is None or hi is None:
-            bad.append("%s 买区缺数值" % tag)
-            continue
-        if lo > hi:
-            bad.append("%s 买区上下沿颠倒（low %.2f > high %.2f）" % (tag, lo, hi))
-        if inv is not None and lo > 0 and inv > lo:
-            bad.append("%s 证伪价 %.2f 高于买区下沿 %.2f（跌穿才算错，不该在买区上方）"
-                       % (tag, inv, lo))
-        # a) state 与价格自洽
-        st = it.get("state")
-        if last is None:
-            exp = "unknown"
-        elif last > hi * 1.0001:
-            exp = "over"
-        elif last < lo * 0.9999:
-            exp = "under"
-        else:
-            exp = "buy"
-        if st != exp:
-            bad.append("%s state=%s 但现价 %s 对买区 %.2f~%.2f 应为 %s（页面会写着「%s」而价格在区外）"
-                       % (tag, st, ("%.2f" % last) if last is not None else "缺失",
-                          lo, hi, exp, it.get("stateZh")))
-        # e) 断板反包不许给目标价
-        if src == "duanban" and it.get("target") not in (None, ""):
-            bad.append("%s 断板反包池给了目标价 %.2f——该池回测未验证目标价，属编数字"
-                       % (tag, _n(it.get("target")) or 0))
-
-    if bad:
-        r.fail("G47", "；".join(bad[:4]) + ("（共 %d 处）" % len(bad) if len(bad) > 4 else ""))
-        return
-    if not bl:
-        r.ok("G47", "买入清单为空（三池当日无买点，属常态）；接线与结构校验通过")
-        return
-    n_buy = sum(1 for x in bl if x.get("state") == "buy")
-    if stale_note:
-        # 不判 FAIL：清单是盘中产物、池是收盘重算，跨时点对不上属正常换血。
-        # 但必须点名——否则「9 只对不上」和「0 只对不上」在页面上没有区别，
-        # 真造票（同一时点还查不到）才会走上面的 FAIL 分支。
-        r.warn("G47", "买入清单 %d 只；其中 %d 只不在今日池（%s）——清单生成于 %s，"
-                      "池此后已收盘重算，属跨时点换血、非造票；同一时点仍查不到的会判 FAIL"
-                      % (len(bl), len(stale_note), "、".join(stale_note[:5]),
-                         _sd or "—"))
-    else:
-        r.ok("G47", "买入清单 %d 只（现价在买区内 %d 只）；买区/证伪价自洽、票全部可回溯到池、"
-                    "断板反包未编目标价；生成端与渲染端接线完整" % (len(bl), n_buy))
-
-
 def g48_forecast_contract(r):
     """G48 盘前预测契约（R100z248 重写，2026-10-27 深夜）。
 
@@ -4613,97 +4398,6 @@ def g49_excess_benchmark_consistency(r):
                 "underperform=%s 与符号一致" % (float(auth), "赢" if auth >= 0 else "输", up))
 
 
-def g51_buy_ledger_wiring(r):
-    """G51 「开盘精选」必须真的在记账（R100z255，2026-10-28）。
-
-    ## 背景
-
-    9:45 那份「开盘精选」清单（duanban.star.buyList），是全站唯一明确回答「现在能买哪只、买在哪个价带、
-    破哪个价撤」的出口——却也是**唯一没有后续台账**的模块。24.109 用回测证明了各源
-    edge 大小，但从没有一张表回答「照着这份清单真买，会怎样」。R100z255 把它接进
-    signal_attribution（源键 'buy'），这里盯住那条接线不断。
-
-    ## 为什么需要闸门
-
-    接线类失败的典型长相不是报错，而是**安静地断掉**：某天 buyList 换了字段名、
-    或 snapshot() 里那一段被重构掉，页面看起来完全正常——指标复盘卡还是那几行，
-    只是永远少了「开盘精选」这一行，没有任何人会发现「少了一行」。
-    与本项目反复踩的「登记了就当查过了」同源。
-
-    ## 判据（三段，越往后越严）
-
-      ① signalPerf.asOf 比清单日期旧 → 16:00 还没跑，WARN 放行（这不是错，只是还没到）。
-      ② asOf ≥ 清单日期，但 bySrc 里没有 buy → FAIL：接线断了，账面看不出来。
-      ③ 台账里该日 buy 条数 ≠ 当前清单非 bp 条数 → WARN：大概率是 9:45 重跑改了名单
-         （24.108 真实发生过一次），不是接线问题，但必须留痕，否则「登记过」会变成
-         「登记的是另一份名单」。
-    """
-    try:
-        D = load_data_json()
-    except Exception as e:                                   # noqa: BLE001
-        r.fail("G51", f"data.js 读取失败，清单台账接线无法检查：{e}")
-        return
-    st = ((D.get("duanban") or {}).get("star") or {})
-    star_date = str(st.get("date") or "")[:10]
-    if not star_date:
-        r.warn("G51", "duanban.star.date 缺失，无法判断清单台账是否跟上（跳过）")
-        return
-    # 与生成端同口径：bp 源（横盘启动·贴沿）不进清单，也不进台账
-    cur = [x for x in (st.get("buyList") or [])
-           if isinstance(x, dict) and str(x.get("src") or "") != "bp"]
-    if not cur:
-        r.warn("G51", f"{star_date} 清单无非 bp 标的（空清单），本轮无法验证接线")
-        return
-
-    sp = D.get("signalPerf") or {}
-    as_of = str(sp.get("asOf") or "")[:10]
-    has_buy = bool((sp.get("bySrc") or {}).get("buy"))
-    if not as_of:
-        r.warn("G51", "signalPerf.asOf 缺失，无法判断归因台账跑到哪一天（跳过）")
-        return
-    if as_of < star_date:
-        # R100z353：归因台账按「已收盘数据」结算，16:00 数据步还没跑时它必然停在前一交易日。
-        # 原文本自己都写着「非错误」，却占着一个 WARN 位置——每天固定一条，闸门被稀释。
-        r.ok("G51", f"归因台账停在 {as_of}（早于清单 {star_date}）—— 16:00 数据步还没跑，"
-                    f"那之后应自动出现「开盘精选」一行；届时仍缺才是接线问题，由本条下方逻辑拦")
-        return
-
-    if not has_buy:
-        r.fail("G51", f"清单 {star_date} 有 {len(cur)} 只非 bp 标的，但 signalPerf.bySrc 里没有 "
-                      f"buy —— 归因台账没登记这份清单，接线断了（页面只会少一行，不会报错）")
-        return
-
-    # 口径说明不能随代码一起丢：这一行的入场时点与另外七行不同（9:45 当天可买 vs 次日开盘）
-    if not (sp.get("criteria") or {}).get("buyBasis"):
-        r.warn("G51", "signalPerf.criteria.buyBasis 缺失 —— 「开盘精选」行的入场口径说明丢了，"
-                      "读者会把「当日收盘买」当成清单真实成交价")
-
-    # 台账条数 vs 当前清单条数
-    led_path = os.path.join(HERE, "signal_ledger.json")
-    if not os.path.exists(led_path):
-        r.warn("G51", "signal_ledger.json 不在，无法核对登记条数（接线本身已在上面验过）")
-        return
-    try:
-        led = json.load(open(led_path, encoding="utf-8"))
-    except Exception as e:                                   # noqa: BLE001
-        r.warn("G51", f"signal_ledger.json 读取失败，跳过条数核对：{e}")
-        return
-    # R100z299c：清单的登记键在 R100z297 已按来源拆成 buy_duanban / buy_chen / … 等，
-    # 只找 `buy` 会把「有记录」误判成「没记录」——闸门自己也得跟着口径走。
-    _g = ((led.get("entries") or {}).get(star_date) or {})
-    rows = [x for k, xs in _g.items() if k.startswith("buy") for x in (xs or [])]
-    if not rows:
-        r.fail("G51", f"signal_ledger 里没有 {star_date} 的 buy 记录 —— bySrc 有行但台账没有来源，"
-                      f"说明统计与登记脱节")
-        return
-    if len(rows) != len(cur):
-        r.warn("G51", f"{star_date} 登记 {len(rows)} 只 / 当前清单 {len(cur)} 只 —— "
-                      f"通常是 9:45 重跑改了名单（登记的是当时那份），不是接线问题，但账要留痕")
-        return
-    r.ok("G51", f"开盘精选已在记账：{star_date} 登记 {len(rows)} 只（与清单同口径，bp 源已剔），"
-                f"口径说明在位")
-
-
 def g50_markdown_leak(r):
     """G50 渲染文案里不许漏 markdown 记法（R100z254，2026-10-28）。
 
@@ -4749,9 +4443,6 @@ def g50_markdown_leak(r):
     st = ((D.get("duanban") or {}).get("star") or {})
     fields = [
         ("duanban.star.timingExec.rule", (st.get("timingExec") or {}).get("rule")),
-        ("duanban.star.timingExec.riskNote", (st.get("timingExec") or {}).get("riskNote")),
-        ("duanban.star.buySummary.rule", (st.get("buySummary") or {}).get("rule")),
-        ("duanban.star.buySummary.text", (st.get("buySummary") or {}).get("text")),
         ("timingPlan.rule", (D.get("timingPlan") or {}).get("rule")),
         ("timingPlan.riskNote", (D.get("timingPlan") or {}).get("riskNote")),
         # 趋势档这条目前只在 title/弹窗里露脸，但它是「给渲染层读的文案」——
@@ -4760,11 +4451,6 @@ def g50_markdown_leak(r):
         ("trendState.marketBasis", (D.get("trendState") or {}).get("marketBasis")),
         ("trendState.staleNote", (D.get("trendState") or {}).get("staleNote")),
     ]
-    for i, row in enumerate(st.get("buyList") or []):
-        if not isinstance(row, dict):
-            continue
-        fields.append(("duanban.star.buyList[%d].rule" % i, row.get("rule")))
-        fields.append(("duanban.star.buyList[%d].riskNote" % i, row.get("riskNote")))
     for path, val in fields:
         if isinstance(val, str) and "**" in val:
             bad.append(path + "：" + val[max(0, val.find("**") - 20):val.find("**") + 24])
@@ -4774,8 +4460,8 @@ def g50_markdown_leak(r):
                       "；".join(bad[:4]) + ("（共 %d 处）" % len(bad) if len(bad) > 4 else ""))
         return
     r.ok("G50", "渲染文案无 markdown 记法泄漏（内联 JS %d 字符剥注释后 0 处；"
-                "data.js %d 个文案字段 + %d 条买点逐条干净）"
-                % (len(js), len(fields), len(st.get("buyList") or [])))
+                "data.js %d 个文案字段逐条干净）"
+                % (len(js), len(fields)))
 
 
 def g53_name_hygiene(r):
@@ -6454,50 +6140,6 @@ def g79_counter_score(r):
                 f" · 前端在位" + ("（样本不足，页面已注明只记录不下结论）" if cs.get("small") else ""))
 
 
-def g80_buy_gate(r):
-    """G80 下单价必须过赔率闸（R100z367，FAIL 级）。
-
-    台账 196 笔：R=(买价−证伪价)/买价 ≤5% 那批 56%/+1.49%；R>8% 那批 66% 胜率却均值 −1.6%。
-    9:45 的 `duanban.star.buyList` 是**唯一真正下单的入口**，所以闸必须落在这里：
-    每条要么 `gate=可做`（R≤5 且 剩余赔率≥1），要么标明 等回踩/不追；「不追」的票不许
-    以「今可买」的姿态出现（前端 orderLineOf 已按 gate 分派）。
-    """
-    try:
-        D = load_data_json()
-    except Exception as e:                                   # noqa: BLE001
-        r.warn("G80", f"data.js 读取失败，跳过买入闸检查：{e}")
-        return
-    st = ((D.get("duanban") or {}).get("star") or {})
-    rows = st.get("buyList") or []
-    if not rows:
-        r.ok("G80", "今日买入清单为空（空池是常态），无赔率可查")
-        return
-    bad, stat = [], {"可做": 0, "等回踩": 0, "不追": 0, "价格不全": 0}
-    for x in rows:
-        g = x.get("gate")
-        if g not in ("可做", "等回踩", "不追", "价格不全"):
-            bad.append(f"{x.get('code')} gate={g!r} 缺失或非法")
-            continue
-        stat[g] += 1
-        rp = x.get("riskPct")
-        if g == "可做":
-            if not isinstance(rp, (int, float)):
-                bad.append(f"{x.get('code')} 可做但没有 riskPct")
-            elif rp > 5.0 + 1e-6:
-                bad.append(f"{x.get('code')} 标「可做」但 R={rp}% > 5%")
-            elif not x.get("rr") or x["rr"] < 1.0:
-                bad.append(f"{x.get('code')} 标「可做」但剩余赔率 {x.get('rr')} < 1")
-            if x.get("state") != "buy":
-                bad.append(f"{x.get('code')} 标「可做」却不在买区内（state={x.get('state')}）")
-        if "tradeable" not in x:
-            bad.append(f"{x.get('code')} 缺 tradeable 字段（页面靠它算「今天能下几只」）")
-    if bad:
-        r.fail("G80", "买入清单没按赔率闸分派：" + "；".join(bad[:3]))
-        return
-    r.ok("G80", f"买入清单 {len(rows)} 条全部过闸：可做 {stat['可做']} / 等回踩 {stat['等回踩']}"
-                f" / 不追 {stat['不追']}（R>8% 或剩余赔率<1 一律不进「今可买」）")
-
-
 def g82_ledger_loop(r):
     """G82 台账诊断闭环必须自洽（R100z380，2026-11-25）。
 
@@ -6638,11 +6280,9 @@ def main():
     g44_zombie_mirror_nodes(r)
     g45_modal_nav_group(r)
     g46_sector_board_names(r)
-    g47_buy_list_truth(r)
     g48_forecast_contract(r)
     g49_excess_benchmark_consistency(r)
     g50_markdown_leak(r)
-    g51_buy_ledger_wiring(r)
     g53_name_hygiene(r)
     g54_risk_scan_scope(r)
     g55_red_reason_grade(r)
@@ -6665,7 +6305,6 @@ def main():
     g77_holiday_table(r)
     g78_sent_one_source(r)
     g79_counter_score(r)
-    g80_buy_gate(r)
     g82_ledger_loop(r)
 
     # R100z284：机器可读的结论行。

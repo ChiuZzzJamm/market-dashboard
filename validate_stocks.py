@@ -1346,59 +1346,12 @@ def check_star_module(D):
     star = db.get('star')
     if star is not None:
         if not isinstance(star, dict):
-            warns.append("duanban.star 非对象（应为 {date,time,marketLine,sentiment,picks,pushText}）")
+            warns.append("duanban.star 非对象（应为 {date,time,marketLine,sentiment,pushText}）")
         else:
-            pool_codes = {str(e.get('code')) for e in entries}
-            picks = star.get('picks') or []
-            if not isinstance(picks, list) or len(picks) < 1:
-                warns.append("duanban.star.picks 缺失或为空（至少 1 只，数量不限——R98l）")
-            for p in picks:
-                if not isinstance(p, dict):
-                    continue
-                c = str(p.get('code') or '')
-                if c and c not in pool_codes:
-                    src = p.get('src')
-                    name_ok = bool(str(p.get('name') or '').strip())
-                    # R98n：允许 src='board' 的板块动量标的（早盘真实强势板块领涨股，需有板块依据）
-                    if src == 'board' and name_ok and str(p.get('sector') or '').strip():
-                        continue
-                    # R100m：允许 src='bp'/'hz' 的技术池标的（横盘启动/谐波，前一日 16:00 数据步产物）
-                    # R100z232：旧技术池下线，'pw' 换成 'bp'；两个都留着是因为历史 star.picks 里还有 'pw'
-                    if src in ('bp', 'pw', 'hz') and name_ok:
-                        continue
-                    # R100z233：src='chen'（陈学长严格/放宽池，update_star.py 自 10-26 起会选）
-                    # 之前不在白名单 → 每天误报「非合规来源」。这里改为**核成员**而非只信 src：
-                    # 必须真在 chenPool.strict/loose 里才放行，堵住「随便标个 chen 就绕过」的口子。
-                    if src == 'chen' and name_ok:
-                        _ch = D.get('chenPool') or {}
-                        _ch_codes = {str(e.get('code')) for _k in ('strict', 'loose')
-                                     for e in (_ch.get(_k) or []) if isinstance(e, dict)}
-                        if c in _ch_codes:
-                            continue
-                        # R102（2026-10-30）：陈学长观察池（chenPool.watching）是**待确认档**的合法来源，
-                        # 但只认 tier='watch'——同一只票若被放进确认档，等于悄悄删掉「还差一根确认 K 线」的前提，
-                        # 仍要 WARN。「核成员 + 档位」双条件，保住「随便标个 chen 就绕过」的口子。
-                        if str(p.get('tier') or 'confirm') == 'watch':
-                            _w_codes = {str(e.get('code')) for e in (_ch.get('watching') or [])
-                                        if isinstance(e, dict)}
-                            if c in _w_codes:
-                                continue
-                    # R102（2026-11-02）：src='shrink'（缩量回踩档，shrink_scan.py，待确认档的合法来源）
-                    # 之前不在白名单 → 每天误报「非合规来源」。同样**不能只信 src**：
-                    # 只认 tier='watch'，且必须带 shrink_scan 产出的四要素（ztDate/shrinkDays/volRatio/stop），
-                    # 数值还要落在四条硬条件的区间内（缩量 1~2 天、放量 1.1~3.5 倍）。
-                    # 缺任一或数值越界＝不是该扫描器的产物，照旧 WARN，堵住「随便标个 shrink 就绕过」。
-                    if src == 'shrink' and name_ok and str(p.get('tier') or 'confirm') == 'watch':
-                        _days = p.get('shrinkDays')
-                        _vr = p.get('volRatio')
-                        if (str(p.get('ztDate') or '').strip()
-                                and isinstance(_days, int) and 1 <= _days <= 2
-                                and isinstance(_vr, (int, float)) and 1.1 <= float(_vr) <= 3.5
-                                and isinstance(p.get('stop'), (int, float))):
-                            continue
-                    warns.append(f"duanban.star.picks {c} {p.get('name')} 不在断板反包双池内且非合规来源标的（精选只能从双池/板块动量/技术池筛）")
-            if not str(star.get('pushText') or '').strip():
-                warns.append("duanban.star.pushText 为空（微信推送深度分析缺失，10:00 自动化 AI 须补写）")
+            for _k, _lo in (('marketLine', 8), ('sentiment', 40), ('pushText', 120)):
+                _v = str(star.get(_k) or '').strip()
+                if len(_v) < _lo:
+                    warns.append(f"duanban.star.{_k} 过短或为空（{len(_v)} 字，应 ≥{_lo}）——空着等于没写")
     return warns
 
 
