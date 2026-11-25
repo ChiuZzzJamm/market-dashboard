@@ -40,7 +40,6 @@ LABEL = {
     "ai": "AI 预测", "harmonic": "谐波形态", "duanban_confirmed": "断板·确认池",
     "duanban_watching": "断板·观察池", "breakoutPool": "横盘启动", "chen_strict": "陈学长·严格池",
     "chen_loose": "陈学长·放宽池", "chen_watching": "陈学长·观察池",
-    "buy": "开盘精选", "buy_chen": "开盘精选·陈学长", "buy_zone": "买区内",
 }
 
 

@@ -143,7 +143,25 @@
    "appliedAt": null,
    "before": null,
    "after": null
+  },
+  {
+   "id": "9b5f458f73",
+   "module": "harmonic",
+   "dim": "板块",
+   "slice": "金融行业",
+   "kind": "prefer",
+   "rule": "在「谐波形态」里优先 板块 = 金融行业（该切片 69% vs 整体 40%）",
+   "evidence": {
+    "delta": 0.288,
+    "horizon": 5,
+    "basis": "close→close 5d，切片与整体同口径"
+   },
+   "status": "proposed",
+   "createdAt": "2026-11-25 17:05",
+   "appliedAt": null,
+   "before": null,
+   "after": null
   }
  ],
- "updatedAt": "2026-11-25 16:28"
+ "updatedAt": "2026-11-25 17:05"
 }

@@ -595,6 +595,8 @@
   @media (max-width: 560px) {
     .stock-chips, .nc-stocks, .lb-stocks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
+  .st-line { font-size: var(--fs-sm); color: var(--ink2); line-height: 1.85; }
+  .st-body { font-size: var(--fs-base); color: var(--ink2); line-height: 1.85; margin-top: 6px; }
   /* 台账诊断（闭环）：只做「哪块低 / 为什么低 / 建议怎么改 / 改完验证了没」四件事 */
   .ldg-wrap { display: grid; gap: 10px; }
   .ldg-alert { background: rgba(240,67,92,.08); border-left: 4px solid var(--up);
@@ -6650,133 +6652,15 @@ function renderDuanban() {
   var st = db && db.star;
   var _td = new Date();
   var _tdStr = _td.getFullYear() + '-' + String(_td.getMonth() + 1).padStart(2, '0') + '-' + String(_td.getDate()).padStart(2, '0');
-  if (st && st.date === _tdStr && st.picks && st.picks.length) {
-    var poolByCode = {};
-    conf.concat(watch).forEach(function (e) { poolByCode[String(e.code)] = e; });
-    // R100m：精选候选扩展至技术池——断板池标的带概率，技术池（谐波/横盘启动）标的带 src 来源标记、
-    // 无概率排断板池之后；前端对池外标的构造最小弹窗条目（K线由 stkFetchKline 网络兜底）。
-    var starPool = st.picks.filter(function (p) { return poolByCode[String(p.code)]; });
-    var starTech = st.picks.filter(function (p) { return !poolByCode[String(p.code)] && String(p.code || '').length === 6; });
-    // R100z4u：技术池 code→条目 映射（横盘启动→谐波 顺序），精选卡补分数徽章 + 分数降序
-    var D0 = window.DASHBOARD_DATA || {};
-    var _techMap = {};
-    ((D0.breakoutPool || {}).passed || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
-    [].concat((D0.harmonic || {}).confirmPool || [], (D0.harmonic || {}).watchPool || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
-    // R100z222：陈学长池也进映射表（严格先于放宽，与 starTechOf 同序）。精选条目是 update_star.py
-    // 合成的精简版（只有 code/name/sector/src/sentiment/label/score），story / probability / 形态原文
-    // 全在池条目里——不挂进来，弹窗「个股消息」和利好依据就是空白，这正是 R100z4t 当初加 _techMap 的原因。
-    [].concat(((D0.chenPool || {}).strict) || [], ((D0.chenPool || {}).loose) || [],
-              ((D0.chenPool || {}).watching) || []).forEach(function (x) { if (x && x.code != null && !_techMap[String(x.code)]) _techMap[String(x.code)] = x; });
-    starTech.forEach(function (p) { var tp = _techMap[String(p.code)]; if (tp) { if (tp.score != null) p.score = tp.score; if (tp.grade) p.grade = tp.grade; } });
-    /* R102（用户 2026-10-28「待确认的我认为也可以进去，但是排序是确认池在最前面」）：
-       picks 自 9:45 起带 tier（confirm / watch），排序**第一维就是档位**。
-       原来只按概率/分数排，观察池里概率 70 的票会压在确认池 66 的前面——读者第一眼
-       看到的是「还差一根确认 K 线」那只，等于把纪律暗示反了。同档内维持原口径
-       （断板按概率、技术池按分数）。缺 tier 的老数据一律当确认档，不让页面因为
-       一个字段缺失就整体降档。 */
-    var _tierRank = function (p) { return (p && p.tier === 'watch') ? 1 : 0; };
-    starPool.sort(function (a, b) {
-      var ta = _tierRank(a), tb = _tierRank(b);
-      if (ta !== tb) return ta - tb;
-      var ea = poolByCode[String(a.code)], eb = poolByCode[String(b.code)];
-      var pa = (ea.probability == null) ? -1 : ea.probability, pb = (eb.probability == null) ? -1 : eb.probability;
-      if (pb !== pa) return pb - pa;
-      var ra = ea.sentiment === 'bull' ? 0 : (ea.sentiment === 'bear' ? 2 : 1);
-      var rb = eb.sentiment === 'bull' ? 0 : (eb.sentiment === 'bear' ? 2 : 1);
-      return ra - rb;
-    });
-    starTech.sort(function (a, b) {
-      var ta = _tierRank(a), tb = _tierRank(b);
-      if (ta !== tb) return ta - tb;
-      return (b.score || b.probability || 0) - (a.score || a.probability || 0);
-    });
-    var starPicks = starPool.concat(starTech);
-    // R100z258（用户 2026-10-28 截图 3「开盘精选这部分删除」）：开盘价位置 / 盘口结构 / 追高区
-    // 三块整段下线，连同这段算「追高」的数据准备一起删——留着计算却没人用，下一个人会以为还有第二个渲染出口。
-    // 数据侧不动：duanban.star.gapSummary / tapeSummary / openPct 仍由脚本产出（闸门与复盘还用得到），
-    // 只是页面不再单独读它。要恢复，回记忆 24.114 看这三块原本长什么样，别凭印象重写。
-    /* R100z318（用户 2026-11-09 21:37：「开盘精选现在这个时间点也是显示的吗？」）：
-       原来闸门只按**日期**（star.date === 本地今日），所以当天全天显示——晚上九点半打开看板，
-       顶上还挂着一张「🌟 开盘精选」，读者会以为这是刚刚生成的。改成按**时段**换标记：
-       15:00 收盘后标题变「📋 开盘精选 · 已收盘」，副标题前置一句「仅供复盘对照」。
-       为什么不在收盘后直接隐藏：这张名单本身是当日的判断留痕，复盘时还要对照它看走了没有，
-       藏起来等于把留痕也藏了。信息留着，只把「什么时候生成的」说清楚。 */
-    var _minsNow = _td.getHours() * 60 + _td.getMinutes();
-    var _starClosed = _minsNow >= 15 * 60;
-    fixed += '<div class="db-pool p-star"><h2>' + (_starClosed ? '📋 开盘精选 · 已收盘' : '🌟 开盘精选') +
-      ' · ' + starPicks.length + ' 只</h2>' +
-      // R100z228：副标题原文只列了「谐波/横盘启动」，而 R100z222 起陈学长也有 2 个名额——
-      // 名册里有、说明书里没有，读者就不知道那两枚「陈学长·XX池」徽标是怎么进来的。顺手把各池名额写出来。
-      '<div class="db-sub">' +
-      (_starClosed ? '⚠️ 已收盘 —— 下面是当日 9:45 生成的盘前名单，仅供复盘对照，不是现在还能挂的单　｜　' : '') +
-      esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) + '（每日 9:45 更新：断板池按「板块情绪正向+主力净流入正向」挂钩+上涨概率降序，并可从谐波/横盘启动/陈学长池直接取标的（名额 横盘启动 3 · 谐波 3 · 陈学长 2）；确认档永远排在待确认档之前，待确认档＝断板观察池 + 陈学长观察池 + 缩量回踩（放量阴后缩 1~2 天），只给形态与作废位、不给买点；弹窗与池内一致）' +
-        (st.tierSummary && st.tierSummary.text ? '　｜　' + esc(String(st.tierSummary.text)) : '') +
-        /* R100z309：停牌剔除留痕（不写这句，读者会以为「昨天那只今天怎么没了」是故障） */
-        suspNoteHtml(st.suspended) +
-        (st.tierSummary && st.tierSummary.shrinkErr ? '　｜　⚠️ 缩量回踩档本次未生成（脚本故障，不是没有此类形态）' : '') +
-        '</div>' +
-      // R100z232 的下单清单 → R100z254 两表并一张 → **R100z255 表整块删掉**（用户二次拍板）。
-      // 现在价格的出口只有一个：每张票自己卡片底部的「下单」行。这里不再插任何表格。
-      // R100z258：开盘价位置 / 盘口结构 / 追高区 三块按用户截图 3 删除（正文见 24.114）。
-      // R99c：页面只放深度分析（pushText），指数/情绪/集合竞价等均在其中，不再单列 marketLine/sentiment
-      (st.pushText ? '<div style="font-size: var(--fs-base);color:var(--ink2);line-height:1.8;margin:6px 0 10px;white-space:pre-line;">' + esc(st.pushText) + '</div>' : '') +
-      '<div class="db-chips">';
-    window._STAR_LIST = [];
-    starPicks.forEach(function (p) {
-      var code = String(p.code);
-      var e = poolByCode[code];
-      var key = 's|' + code;
-      var e2;
-      if (e) {
-        e2 = Object.assign({}, e, { stage: '精选' });
-        if (p.tier === 'watch') e2.tier = 'watch';
-      } else {
-        e2 = { code: code, name: p.name || '', sector: p.sector || '', stage: '精选',
-               sentiment: p.sentiment || 'neutral', probability: p.probability,
-               src: p.src || '',
-               form: ({ hz: '谐波形态', bp: '横盘启动', chen: '陈学长断板反包',
-                        shrink: '缩量回踩（放量阴后缩量）' }[p.src] || '技术池候选'), note: p.note || '' };
-        if (p.score != null) e2.score = p.score;
-        if (p.grade) e2.grade = p.grade;
-        /* R102：档位与缩量回踩的形态事实都从 picks 直接搬——票不在任何池里（缩量回踩档就是
-           「谁都没收的那一段」），回源查池必然查不到，不搬就等于四格全「—」。 */
-        if (p.tier) e2.tier = p.tier;
-        if (p.src === 'shrink') {
-          if (p.ztDate) e2.ztDate = p.ztDate;
-          if (p.shrinkDays != null) e2.shrinkDays = p.shrinkDays;
-          if (p.volRatio != null) e2.volRatio = p.volRatio;
-          if (p.stop != null) e2.shrinkStop = p.stop;
-        }
-        // R100z4t：合并技术池条目字段——story/deduce（AI 写回后弹窗可见）、sector 补全。
-        // 注意不合并 pw.pct（那是涨停日涨幅，弹窗「今日」位会误标）。
-        (function () {
-          var tp = _techMap[code];
-          if (tp) {
-            if (tp.story) e2.story = tp.story;
-            if (tp.deduce) e2.deduce = tp.deduce;
-            if (tp.sector && !e2.sector) e2.sector = tp.sector;
-            // 陈学长池条目自带上涨概率与形态原文（form），精选合成体没有——补上，
-            // 否则弹窗里「形态」一栏写的是我们自己的池名，而不是他的形态原文。
-            if (p.src === 'chen') {
-              if (tp.probability != null && e2.probability == null) e2.probability = tp.probability;
-              if (tp.form) e2.form = tp.form;
-              if (tp.boardPctToday != null) e2.boardPctToday = tp.boardPctToday;
-              if (tp.boardPctZt != null) e2.boardPctZt = tp.boardPctZt;
-            }
-          }
-        })();
-      }
-      DB_INDEX[key] = e2;
-      DB_ORDER.push(key);
-      if (code.length === 6) { window._STAR_LIST.push(code); }
-      fixed += dbCardHtml(e2, key, false, true, false, true); // R100z36：与四子页同一套 T2 卡片；R100z105：star=true → 四格按来源分派（断板=板块涨幅/上涨概率/MA5买入/止损；谐波=买入区PRZ/距PRZ/D点止损/T1；横盘启动=评分/量比/RSI/纪律止损；陈学长=目标/止损/仓位/连板·放量）
-    });
-    fixed += '</div></div>';
+  if (st && st.date === _tdStr) {
+    fixed += '<div class="db-pool p-star"><h2>🌟 开盘精选 · 大盘与板块</h2>' +
+      '<div class="db-sub">' + esc(String(st.date || '')) + ' ' + esc(String(st.time || '')) +
+      '（每日 9:45 更新：只写大盘、板块方向、资金流向，不推荐个股）</div>' +
+      (st.marketLine ? '<div class="st-line">' + esc(st.marketLine) + '</div>' : '') +
+      (st.sentiment ? '<div class="st-line">' + esc(st.sentiment) + '</div>' : '') +
+      (st.pushText ? '<div class="st-body">' + st.pushText + '</div>' : '') +
+      '</div>';
   }
-  // R100m：固定区（TOP10 + 开盘精选）写入独立容器——切换子页时保持显示
-  document.getElementById('db-fixed').innerHTML = fixed;
-  // R100k：子页菜单移到内容流——断板页位于「开盘精选」与确认池说明之间（用户指定红框位置）
-  html += subnavHtml();
   // R100j/R100z4v：断板页口径说明置于确认池上方（TOP10 与 开盘精选 保持置顶不动）；R100z4v 起为静态 HTML，不再 esc
   html += _dbNote;
   /* R100z314：明日盯盘已并入「开盘预测 → 明日可下单」卡（见 ordBlockHtml），

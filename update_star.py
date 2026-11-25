@@ -1296,61 +1296,13 @@ def build_star(D, base=None):
             picks = _keep
 
 
-    buy_rows, buy_summary = [], None
-    try:
-        buy_rows, buy_summary = build_buy_list(D, picks, quotes, blacklist)
-    except Exception as _e:                                   # noqa: BLE001
-        buy_summary = {"n": 0, "nBuy": 0, "bySrc": {},
-                       "text": "买入清单生成失败（%s）——这是脚本故障，不代表今日无买点。" % _e,
-                       "rule": "", "skipped": [], "slipPct": BUY_SLIP}
-
-    # ---- R101：时间口挂单清单的开盘核对（用户 2026-10-27 第 1 问「能下单」）----
-    # 清单由 16:00 的 timing_plan.py 生成，这里**只核对开盘价有没有破位**。
-    # 与上面 buyList 的分工：buyList 回答「此刻现价在不在买区」（9:45 看盘口径），
-    # timingExec 回答「昨晚挂的单今天能不能成、要不要撤」（挂单口径）。两者并存、互不替代。
-    timing_exec = None
-    try:
-        timing_exec = build_timing_exec(D, quotes)
-    except Exception as _e:                                   # noqa: BLE001
-        timing_exec = {"rows": [], "n": 0, "nGo": 0, "nBroken": 0, "nMissed": 0,
-                       "rule": "挂单清单核对失败（%s）——这是脚本故障，不是今日无单。" % _e,
-                       "riskNote": "", "bt": {}, "asOf": "", "time": ""}
-
-    # R102：档位小账（页面副标题与推送直接读，别在三个地方各数一遍）
-    _by_tier = {"confirm": 0, "watch": 0}
-    _watch_src = {}
-    for _p in picks:
-        _t = _p.get("tier") or TIER_CONFIRM
-        _by_tier[_t] = _by_tier.get(_t, 0) + 1
-        if _t == TIER_WATCH:
-            _watch_src[_p.get("src") or "?"] = _watch_src.get(_p.get("src") or "?", 0) + 1
-    tier_summary = {
-        "confirm": _by_tier.get("confirm", 0), "watch": _by_tier.get("watch", 0),
-        "watchBySrc": _watch_src, "maxWatch": MAX_WATCH_PICKS,
-        "rule": ("确认档（断板已确认 + 陈学长严格/放宽）永远排在待确认档（断板观察 + 陈学长观察 + "
-                 "缩量回踩）之前；待确认档不给买点、只给形态与还差什么"),
-        "text": (f"确认档 {_by_tier.get('confirm', 0)} 只 / 待确认档 {_by_tier.get('watch', 0)} 只"
-                 + ("（" + "、".join(f"{k} {v}" for k, v in sorted(_watch_src.items())) + "）"
-                    if _watch_src else "")),
-        "shrinkErr": shr_err,
-    }
-
     star = {
         "date": now.strftime("%Y-%m-%d"),
         "time": now.strftime("%H:%M"),
         "marketLine": market_line,
         "sentiment": sentiment,
-        "picks": picks,
-        # R100z309：本次因停牌剔除的票（页面「开盘精选」副标题会点明，别让它无声消失）
-        "suspended": _susp,
-        "buyList": buy_rows,
-        "buySummary": buy_summary,
-        "timingExec": timing_exec,
-        "gapSummary": _gap_summary(picks),
-        "tapeSummary": tape_summary,
-        "tierSummary": tier_summary,
         "pushText": push_text,
-        "generatedBy": "update_star.py 确定性筛选（R99c：断板池板块情绪正向+资金净流入正向挂钩，按上涨概率降序；R100m：并从谐波池直接取标的；R100z85：技术池按池配额 防单池量纲垄断；R100z232：旧技术池下线换横盘启动（配额 横盘启动3/谐波3）+ 新增 star.buyList 今日买入清单（三池买区/证伪价/目标/持有天数/仓位，不含离场提示）；R100z156：行业/资金接口抓空重试+显式降级；R100z192：picks 增 gapTag 开盘价位置标注 + star.gapSummary 分布，只标注不排序；R100z193：接入 tape.py 分时量价结构（均价线/跌破次数/下跌分钟量占比/爆量倍数），picks 增 tape 字段 + star.tapeSummary，动作口径由盘口结构决定，gapTag 降级为价格事实；R101：新增 star.timingExec——读 16:00 timing_plan.py 生成的挂单清单，用 9:45 实时行情核对开盘是否破位，只核对不改单；R102：候选分「确认/待确认」两档（确认档恒在前、待确认档不给买点），待确认档新增陈学长观察池与缩量回踩档（shrink_scan.py，与前端 ordShrinkScan 孪生、由 check_shrink_parity.py 对账），star 增 tierSummary） + 自动化 AI 复核",
+        "generatedBy": "update_star.py：只产出大盘/板块/资金三块的文字与快照，不产出个股名单",
     }
     return star, None
 
@@ -1366,28 +1318,8 @@ def main():
     if err:
         print(f"[FAIL] {err}，不写入")
         sys.exit(1)
-    print(f"[star] {star['date']} {star['time']} | 精选 {len(star['picks'])} 只:"
-          f" {(star.get('tierSummary') or {}).get('text', '')}")
-    for p in star["picks"]:
-        _pv = p["probability"]
-        print(f"  {p['code']} {p['name']} | [{TIER_ZH.get(p.get('tier') or TIER_CONFIRM, '确认')}] "
-              + f"{p['note']} | "
-              + (f"score源概率 {_pv}%" if _pv is not None else "score源概率 未给"))
+    print(f"[star] {star['date']} {star['time']}")
     print("[star] marketLine:", star["marketLine"])
-    # R100z232：今日买入清单（用户第 4 项）——落库前先在日志里打出来，
-    # 出问题时能一眼分清「没买点」和「清单生成失败」。
-    _bs = star.get("buySummary") or {}
-    print("[star] 买入清单 %d 只（在买区内 %d 只）: %s"
-          % (_bs.get("n") or 0, _bs.get("nBuy") or 0, _bs.get("text") or ""))
-    for r in (star.get("buyList") or []):
-        print("   %-6s %-8s %-14s 买区 %.2f~%.2f | 现价 %s | %s | 证伪 %s | 目标 %s | 持 %s"
-              % (r["code"], r["name"][:8], r["srcZh"],
-                 r["low"] or 0, r["high"] or 0,
-                 ("%.2f" % r["price"]) if r["price"] is not None else "—",
-                 r["stateZh"],
-                 ("%.2f" % r["invalid"]) if r["invalid"] is not None else "—",
-                 ("%.2f" % r["target"]) if r["target"] is not None else "—",
-                 ("%d日" % r["holdDays"]) if r["holdDays"] else "—"))
     if args.dry:
         print("[DRY-RUN] 未写回")
         return

@@ -96,13 +96,10 @@ SRC_LABEL = {
     # 注意与 16:00 那张「💵 明日可下单」卡片区分：那张是收盘后给下一交易日用的挂单价。
     'buy': '开盘精选',
     # R100z297：按来源池拆开
-    'buy_duanban': '开盘精选·断板确认',
-    'buy_chen': '开盘精选·陈学长放宽',
     'buy_tech': '开盘精选·技术池',
     'buy_other': '开盘精选·其他来源',
     # R100z299c：与上面四个「按来源」的子行不同，这一行是**按当时能不能下单**过滤的同一批票——
     # 清单全部 vs 现价真落在买区里的。两者只差一个 state 字段，但答案差很远。
-    'buy_zone': '开盘精选·当时在买区内',
 }
 
 # 页面展示顺序（用户 2026-10-26 指定）：七个指标逐行分开，不再合并成「机械池」一行。
@@ -130,7 +127,6 @@ SUB_OF = {
     'duanban_confirmed': 'duanban', 'duanban_watching': 'duanban',
     'chen_strict': 'chen', 'chen_loose': 'chen',
     'buy_duanban': 'buy', 'buy_chen': 'buy', 'buy_tech': 'buy', 'buy_other': 'buy',
-    'buy_zone': 'buy',
 }
 
 # stop_ledger 的 stopSrc → 主台账键名。default-3% 那批标的无法细分到具体技术池，
@@ -237,26 +233,6 @@ def snapshot(D):
     # 但「按这套清单真买会怎样」从来没被自己的实盘快照验证过。剔掉横盘启动源
     # （24.110）这个决定是否正确，只能靠这张表回答。
     # 口径必须与生成端一致：剔除 src='bp'（T+5 超额 t=0.41 不显著），否则台账里会多出
-    # 21 条「本来就不让人买」的记录，把这份清单的胜率拉向一个没人执行过的结果。
-    # R100z297：再按来源池拆开（断板反包·确认池 / 陈学长·放宽池），否则读者看到一个
-    # 60.9% 却不知道是哪个池贡献的。srcZh 由 update_star.py 写好，按它分流。
-    bl = ((D.get('duanban') or {}).get('star') or {}).get('buyList') or []
-    for x in bl:
-        src = str(x.get('src') or '')
-        if src == 'bp':
-            continue
-        _zh = str(x.get('srcZh') or '')
-        if '陈学长' in _zh:
-            key = 'buy_chen'
-        elif '断板' in _zh:
-            key = 'buy_duanban'
-        elif '技术池' in _zh or '板块' in _zh:
-            key = 'buy_tech'
-        else:
-            key = 'buy_other'
-        _put(key, x.get('code'), x.get('name'), x.get('sector'), px=x.get('price'),
-             inZone=(x.get('state') == 'buy'))
-
     return {s: list(v.values()) for s, v in out.items()}
 
 
