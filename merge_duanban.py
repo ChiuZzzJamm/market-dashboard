@@ -147,35 +147,6 @@ def _inherit_enrich(mod, old_mod, warns):
                      f"（草稿环境取不到东财行情，防止覆盖自动化已填值）")
 
 
-def _inherit_star_enrich(mod):
-    """R100z170：给 star.picks 补 enrichment 字段（boardPctToday/boardPctZt/bkCode）。
-
-    ★为什么需要（2026-10-21 用户截图）：开盘精选卡片「板块涨幅」整排都是「—」。
-      根因有两层：① update_star.py 造 picks 时压根没带这三个字段（已在源头修好）；
-      ② 存量 picks 是 None，而本函数的姊妹 `_inherit_enrich` 只遍历 confirmed/watching，
-        star 不在覆盖范围内 → 缺了也永远不会自愈。
-    回填顺序：本次合并后的双池同 code → 旧 star.picks 同 code。缺什么补什么，绝不编数。
-    """
-    star = mod.get("star") or {}
-    picks = star.get("picks") or []
-    if not picks:
-        return 0
-    idx = {}
-    for pool in ("confirmed", "watching"):
-        for e in mod.get(pool) or []:
-            if isinstance(e, dict) and e.get("code"):
-                idx[str(e["code"])] = e
-    n = 0
-    for p in picks:
-        c = str(p.get("code") or "")
-        src = idx.get(c) or {}
-        for k in ENRICH_FIELDS:
-            if p.get(k) is None and src.get(k) is not None:
-                p[k] = src[k]
-                n += 1
-    return n
-
-
 def main():
     ap = argparse.ArgumentParser(description="断板反包模块合并进 data.js")
     ap.add_argument("draft", help="模块草稿 JSON（check_duanban.py --module --out 产出，AI 补概率后）")
@@ -249,14 +220,6 @@ def main():
             print(f"[merge] 丢弃过期 🌟 模块（{od}，早于最近交易日 {floor}），待 9:45 开盘精选自动化重建",
                   file=sys.stderr)
     D["duanban"] = mod
-    # R100z170：star.picks 的板块涨幅补齐（必须放在 star 保留逻辑之后，两种来源都覆盖到）
-    try:
-        _ns = _inherit_star_enrich(mod)
-        if _ns:
-            print(f"[merge] 开盘精选 enrichment 字段补齐 {_ns} 处（板块涨幅/涨停日板块涨幅）",
-                  file=sys.stderr)
-    except Exception as e:
-        print(f"[WARN] star enrichment 补齐失败（不影响合并）：{e}", file=sys.stderr)
     out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ";\n"
     # R100z165 硬约束：data.js 必须 _tmp + os.replace（open(...,'w') 会先 truncate，
     # 进程被杀就留 0 字节、全链断）。此处原先直接 open('w')，本轮一并改正。

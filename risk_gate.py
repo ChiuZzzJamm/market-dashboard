@@ -8,7 +8,7 @@ risk_gate.py —— 把「个股硬风险黑名单 red」落到三个推荐池�
       603330 天洋新材，到 10-21 还挂在「断板确认池」和「量化筛选」里当推荐标的。
 
 清理范围（只动「推荐位」，不动研究/跟踪位）：
-    duanban.confirmed / watching / star.picks
+    duanban.confirmed / watching
     chenPool.strict / loose（R100z218：第二套断板反包口径，同为推荐位）
     breakoutPool.passed
 刻意不动：
@@ -51,7 +51,6 @@ BL_JSON = os.path.join(ROOT, 'risk_blacklist.json')
 TARGETS = [
     (('duanban', 'confirmed'), '断板确认池'),
     (('duanban', 'watching'), '断板观察池'),
-    (('duanban', 'star', 'picks'), '开盘精选'),
     # R100z218：陈学长池是第二个「断板反包」推荐位，同一条理由必须同样生效——
     # 它每天给出的也是「可以买」的卡片，漏接这一步就等于 R100z168 修过的问题在第二套口径里复活。
     (('chenPool', 'strict'), '陈学长·严格池'),

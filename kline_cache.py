@@ -532,8 +532,6 @@ def collect_sectors(D, use_sina=True, node_deadline=180):
     for key in ('confirmed', 'watching'):
         for e in db.get(key) or []:
             put(e.get('code'), e.get('sector'))
-    for e in (db.get('star') or {}).get('picks') or []:
-        put(e.get('code'), e.get('sector'))
     hz = (D or {}).get('harmonic') or {}
     for e in (hz.get('confirmPool') or []) + (hz.get('watchPool') or []):
         put(e.get('code'), e.get('sector'))
