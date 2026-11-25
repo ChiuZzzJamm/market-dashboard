@@ -5964,6 +5964,13 @@ def g76_after_hours(r):
         _at = str(ah.get("at") or ah.get("updatedAt") or "")
         _t = _dt2.strptime(_at[:16], "%Y-%m-%d %H:%M")
         _age = _dt2.now() - _t
+        # 2026-11-25：07:00 的 5.3 步曾漏写，页面卡在前一天的「截至」41 小时，
+        # 而 36h 阈值要到第二天晚上才报警。交易日 08:30 后 at 还不是今天 → 当场 WARN。
+        _today = _dt2.now().strftime("%Y-%m-%d")
+        if ((D.get("ashare") or {}).get("tradeDate") == _today
+                and _dt2.now().hour >= 8 and _at[:10] < _today):
+            r.warn("G76", "今日 5.3（盘后·隔夜）没写回：at=%s，交易日 08:30 后应为今天 —— "
+                          "查 07:00 第 5.3 步是否执行（它是强制项，检索为空也要写 items:[]+degraded）" % _at)
         if _age > _td2(hours=36):
             r.warn("G76", "盘后·隔夜已 %.0f 小时未更新（截至 %s）——周一是正常，工作日说明 07:00 那步没跑"
                    % (_age.total_seconds() / 3600.0, _at))
