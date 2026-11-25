@@ -2193,6 +2193,15 @@ def tag_entries(entries, D):
         for r in refs:
             if r.get("kind") == "stock" and r.get("src") != "notice" and not _names_stock(r):
                 r["kind"] = "sector"
+        # R100z: kind='sector' 必须带 sec —— 前端「板块消息」段按 sec 出标题；新闻源
+        # 若缺 sector 字段会留空，审计（refs 板块新闻缺 sec）每天报 WARN。此处用个股
+        # 所属板块兜底，summary 为空时用标题兜底（同一口径，幂等）。
+        for r in refs + bear_refs:
+            if r.get("kind") == "sector":
+                if not str(r.get("sec") or "").strip():
+                    r["sec"] = str(hybk or e.get("sector") or "")
+                if not str(r.get("summary") or "").strip():
+                    r["summary"] = str(r.get("title") or "")
         # R100z340：标题本身在讲负面事实（亏损扩大/被立案/计提减值）时不能撑利好，
         # 改挂到利空列——实测 002362 汉王科技被判利好 70，依据却是「前三季度亏损
         # 1.38 亿元、扩大超五成」。
