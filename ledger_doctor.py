@@ -467,7 +467,10 @@ def run(write=False, quiet=False):
                                capture_output=True, text=True)
             locked = ("[LOCK][OK]" in r.stdout) or ("[STALE-STOLEN]" in r.stdout)
             if not locked:
-                print("[WARN] 拿不到 data 锁，跳过写盘：%s" % r.stdout.strip()[:60])
+                # 静默跳过等于「诊断只落了一半」：ledger_actions.json 写进去了、data.js 没有，
+                # 下一轮 G82 会报「两处动作数不一致」，而根因留在 90 秒前的这行日志里。
+                print("[FAIL] 拿不到 data 锁，本次诊断不完整（只写了 ledger_actions.json）：%s"
+                      % r.stdout.strip()[:80])
             else:
                 D = common.load_dashboard_data(HERE)              # 持锁后重读，防覆盖别人刚写的
                 D["ledgerDiag"] = diag
