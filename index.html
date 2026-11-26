@@ -10346,16 +10346,6 @@ if (location.hash === '#score') { document.body.classList.add('score-open'); if 
     inp.focus();
   };
 
-  function rbStat() {
-    var el = document.getElementById('rb-stat');
-    fetch('rebound_review.json?t=' + Date.now()).then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (j) {
-        if (!j) { el.textContent = ''; return; }
-        var a = j.avg || {};
-        el.textContent = '已登记 ' + (j.n || 0) + ' 条 · 成功组：断板 ' + (a.breakMult || '—') +
-          '× / 洗盘 ' + (a.washDays || '—') + ' 天 / 最低量 ' + (a.minVolPct || '—') + '%';
-      }).catch(function () { el.textContent = ''; });
-  }
   document.getElementById('rb-inp').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') { e.preventDefault(); window.rbAdd(); }
   });
