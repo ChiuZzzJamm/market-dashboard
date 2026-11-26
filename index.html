@@ -792,6 +792,16 @@
              border: 1px solid var(--line); border-radius: 999px; font-size: var(--fs-xs);
              cursor: pointer; background: var(--paper); }
   .rb-chip.on { border-color: var(--accent); background: var(--accent-soft); }
+  .rb-add { display: flex; gap: 6px; margin-bottom: 8px; }
+  .rb-add input { flex: 1 1 auto; padding: 6px 9px; font-size: var(--fs-sm);
+                  border: 1px solid var(--line); border-radius: var(--r-note); font-family: inherit; }
+  .rb-add input:focus { outline: none; border-color: var(--accent); }
+  .rb-plus { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--accent);
+             background: var(--accent); color: #fff; font-size: var(--fs-body); line-height: 1;
+             cursor: pointer; flex: none; }
+  .rb-plus:hover { filter: brightness(1.06); }
+  .rb-chip .x { color: var(--ink2); cursor: pointer; margin-left: 2px; }
+  .rb-chip .x:hover { color: var(--up); }
   .rb-chip .cd { color: var(--ink2); }
   .rb-chip .up { color: var(--up); font-weight: 700; }
   .rb-chip .pt { color: var(--ink2); }
@@ -1733,8 +1743,13 @@
     <div class="rb-head" id="rb-head"><b>反包登记</b><span class="rb-sub">断板反包 + 陈学长 · 勾选后复制给 AI</span>
       <button class="rb-close" onclick="rbClose()" title="关闭">×</button></div>
     <div class="rb-body">
-      <div class="rb-sec"><h4>断板反包 · 今日</h4><div class="rb-list" id="rb-duanban"></div></div>
-      <div class="rb-sec"><h4>陈学长 · 今日</h4><div class="rb-list" id="rb-chen"></div></div>
+      <div class="rb-sec"><h4>输入标的（名称或 6 位代码，回车即添加）</h4>
+        <div class="rb-add">
+          <input id="rb-inp" type="text" placeholder="如 崇达技术 / 002815" autocomplete="off">
+          <button class="rb-plus" onclick="rbAdd()" title="添加">+</button>
+        </div>
+        <div class="rb-list" id="rb-chips"></div>
+      </div>
       <div class="rb-sec"><h4>登记文本（复制后发给 AI 落库）</h4>
         <textarea class="rb-out" id="rb-out" readonly placeholder="勾选上面的标的，这里自动生成"></textarea></div>
     </div>
@@ -8229,6 +8244,16 @@ document.addEventListener('click', function (ev) {
       el.style.left = (l + (gm.off[i] ? gm.off[i].x : 0)) + 'px';
       el.style.top = (t + (gm.off[i] ? gm.off[i].y : 0)) + 'px';
       el.style.right = 'auto'; el.style.bottom = 'auto';
+      /* 🔍 跟着整组走：钉在 🧰 正上方一格（46 + 14 间距）。
+         用户 2026-11-26：「这两个上下排列整齐，拖拽就一起拖拽」。 */
+      if (RAIL[i].iPage === dei) {
+        var rbe2 = document.getElementById('rb-entry');
+        if (rbe2) {
+          rbe2.style.left = (l + (gm.off[i] ? gm.off[i].x : 0)) + 'px';
+          rbe2.style.top = (t + (gm.off[i] ? gm.off[i].y : 0) - 60) + 'px';
+          rbe2.style.right = 'auto'; rbe2.style.bottom = 'auto'; rbe2.style.marginBottom = '0';
+        }
+      }
     }
     if (save) {
       try { localStorage.setItem(POS_KEY, JSON.stringify({ lf: l / window.innerWidth, tf: t / window.innerHeight })); } catch (e) {}
@@ -10217,42 +10242,9 @@ if (location.hash === '#score') { document.body.classList.add('score-open'); if 
   var sel = {};
   try { sel = JSON.parse(localStorage.getItem(SKEY) || '{}') || {}; } catch (e) { sel = {}; }
 
-  /* --- 按钮拖动 + 位置记忆 --- */
-  (function () {
-    var saved = null;
-    try { saved = JSON.parse(localStorage.getItem(PKEY) || 'null'); } catch (e) {}
-    if (saved && typeof saved.x === 'number') {
-      btn.style.left = saved.x + 'px'; btn.style.top = saved.y + 'px';
-      btn.style.right = 'auto';
-    }
-    var dragging = false, moved = false, sx = 0, sy = 0, ox = 0, oy = 0;
-    btn.addEventListener('pointerdown', function (e) {
-      if (e.button) return;
-      dragging = true; moved = false;
-      var r = btn.getBoundingClientRect();
-      sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top;
-      btn.setPointerCapture && btn.setPointerCapture(e.pointerId);
-    });
-    btn.addEventListener('pointermove', function (e) {
-      if (!dragging) return;
-      var dx = e.clientX - sx, dy = e.clientY - sy;
-      if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
-      if (!moved) return;
-      btn.style.left = Math.max(4, ox + dx) + 'px';
-      btn.style.top = Math.max(4, oy + dy) + 'px';
-      btn.style.right = 'auto';
-    });
-    btn.addEventListener('pointerup', function () {
-      if (!dragging) return;
-      dragging = false;
-      if (moved) {
-        var r = btn.getBoundingClientRect();
-        try { localStorage.setItem(PKEY, JSON.stringify({ x: r.left, y: r.top })); } catch (e) {}
-      } else {
-        rbToggle();
-      }
-    });
-  })();
+  /* 🔍 的定位交给 layout()（跟着 🧰 走），所以这里只处理点击，不再自带拖拽——
+     两套拖拽同时存在会互相抢指针，表现是「拖一下跳回原位」。 */
+  btn.addEventListener('click', function () { rbToggle(); });
 
   /* --- 浮动窗拖动（标题栏） --- */
   (function () {
@@ -10275,72 +10267,98 @@ if (location.hash === '#score') { document.body.classList.add('score-open'); if 
     head.addEventListener('pointerup', function () { dragging = false; });
   })();
 
-  function pools() {
+  /* 名称 → 代码：库里没有全量名录（概念库只覆盖 241 只），所以按「代码 / 精确名 / 包含名」
+     三级匹配；都匹配不上就按用户输入原样记，代码留空——宁可标「未识别」，也不许编一个代码。 */
+  function nameIndex() {
     var D = window.DASHBOARD_DATA || {};
-    var out = [];
-    var db = D.duanban || {};
-    [['confirmed', '断板·确认'], ['watching', '断板·观察']].forEach(function (kv) {
-      (db[kv[0]] || []).forEach(function (e) {
-        out.push({ code: String(e.code || ''), name: e.name || '', pct: e.pct,
-                   pool: kv[1], group: 'duanban' });
-      });
+    var map = {}, add = function (code, name) {
+      code = String(code || ''); name = String(name || '').trim();
+      if (code && name && !map[name]) map[name] = code;
+    };
+    var items = (D.stockConcepts || {}).items || {};
+    Object.keys(items).forEach(function (c) { add(c, (items[c] || {}).name); });
+    var db = D.duanban || {}, cp = D.chenPool || {};
+    [db.confirmed, db.watching, db.failPool, cp.strict, cp.loose].forEach(function (arr) {
+      (arr || []).forEach(function (e) { add(e.code, e.name); });
     });
-    var cp = D.chenPool || {};
-    [['strict', '陈学长·严格'], ['loose', '陈学长·放宽']].forEach(function (kv) {
-      (cp[kv[0]] || []).forEach(function (e) {
-        out.push({ code: String(e.code || ''), name: e.name || '', pct: e.pct,
-                   pool: kv[1], group: 'chen' });
-      });
-    });
-    var seen = {};
-    return out.filter(function (x) {
-      var k = x.group + '|' + x.code;
-      if (!x.code || seen[k]) return false;
-      seen[k] = 1; return true;
-    });
+    (D.ashare && D.ashare.lianban || []).forEach(function (e) { add(e.code, e.name); });
+    return map;
   }
+  var NAMES = null;
 
-  function chipHtml(x, i) {
-    var on = sel[x.code] ? ' on' : '';
-    var pct = (typeof x.pct === 'number') ? (x.pct > 0 ? '+' : '') + x.pct.toFixed(1) + '%' : '';
-    return '<span class="rb-chip' + on + '" data-code="' + x.code + '" data-name="' +
-      String(x.name).replace(/"/g, '&quot;') + '" data-pool="' + x.pool + '">' +
-      '<b>' + (x.name || x.code) + '</b><span class="cd">' + x.code + '</span>' +
-      '<span class="pt">' + x.pool + '</span>' + (pct ? '<span class="up">' + pct + '</span>' : '') + '</span>';
+  function resolve(q) {
+    q = String(q || '').trim();
+    if (!q) return null;
+    if (/^\d{6}$/.test(q)) return { code: q, name: '', pool: '' };
+    if (!NAMES) NAMES = nameIndex();
+    if (NAMES[q]) return { code: NAMES[q], name: q, pool: '' };
+    var hit = Object.keys(NAMES).filter(function (k) { return k.indexOf(q) !== -1; });
+    if (hit.length === 1) return { code: NAMES[hit[0]], name: hit[0], pool: '' };
+    if (hit.length > 1) return { code: NAMES[hit[0]], name: hit[0], pool: '', ambiguous: hit.length };
+    return { code: '', name: q, pool: '', unknown: true };
   }
 
   function render() {
-    var all = pools();
-    var d = all.filter(function (x) { return x.group === 'duanban'; });
-    var c = all.filter(function (x) { return x.group === 'chen'; });
-    var box1 = document.getElementById('rb-duanban');
-    var box2 = document.getElementById('rb-chen');
-    box1.innerHTML = d.length ? d.map(chipHtml).join('') : '<span class="pt">今日无池内标的</span>';
-    box2.innerHTML = c.length ? c.map(chipHtml).join('') : '<span class="pt">今日无池内标的</span>';
-    [box1, box2].forEach(function (b) {
-      b.querySelectorAll('.rb-chip').forEach(function (el) {
-        el.addEventListener('click', function () {
-          var k = el.getAttribute('data-code');
-          if (sel[k]) delete sel[k]; else sel[k] = { name: el.getAttribute('data-name'),
-                                                     pool: el.getAttribute('data-pool') };
-          try { localStorage.setItem(SKEY, JSON.stringify(sel)); } catch (e) {}
-          el.classList.toggle('on');
-          syncOut();
-        });
+    var box = document.getElementById('rb-chips');
+    var keys = Object.keys(sel);
+    if (!keys.length) { box.innerHTML = '<span class="pt">还没有添加标的</span>'; syncOut(); return; }
+    box.innerHTML = keys.map(function (k) {
+      var v = sel[k] || {};
+      var lab = v.code ? ('<span class="cd">' + v.code + '</span>') : '<span class="pt">未识别</span>';
+      return '<span class="rb-chip on" data-code="' + k + '"><b>' + (v.name || k) + '</b>' + lab +
+        '<span class="x" data-del="' + k + '" title="移除">×</span></span>';
+    }).join('');
+    box.querySelectorAll('[data-del]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        delete sel[el.getAttribute('data-del')];
+        save(); render();
       });
     });
     syncOut();
   }
 
+  function save() { try { localStorage.setItem(SKEY, JSON.stringify(sel)); } catch (e) {} }
+
   function syncOut() {
     var keys = Object.keys(sel);
     if (!keys.length) { document.getElementById('rb-out').value = ''; return; }
-    var day = new Date();
-    var ds = day.getFullYear() + '-' + String(day.getMonth() + 1).padStart(2, '0') + '-' + String(day.getDate()).padStart(2, '0');
-    var parts = keys.map(function (k) { return k + ' ' + (sel[k].name || '') + '（' + (sel[k].pool || '') + '）'; });
-    document.getElementById('rb-out').value =
-      ds + ' 反包成功：' + parts.join('、') + '\n请落库并复盘。';
+    var d = new Date();
+    var ds = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    var parts = keys.map(function (k) {
+      var v = sel[k] || {};
+      return (v.code ? v.code + ' ' : '') + (v.name || k);
+    });
+    document.getElementById('rb-out').value = ds + ' 反包成功：' + parts.join('、') + '\n请落库并复盘。';
   }
+
+  window.rbAdd = function () {
+    var inp = document.getElementById('rb-inp');
+    var raw = (inp.value || '').trim();
+    if (!raw) return;
+    raw.split(/[\s,，、]+/).forEach(function (tok) {
+      var r = resolve(tok);
+      if (!r) return;
+      var key = r.code || ('?' + r.name);
+      sel[key] = { code: r.code, name: r.name || '', pool: r.pool || '', unknown: !!r.unknown };
+    });
+    inp.value = '';
+    save(); render();
+    inp.focus();
+  };
+
+  function rbStat() {
+    var el = document.getElementById('rb-stat');
+    fetch('rebound_review.json?t=' + Date.now()).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j) { el.textContent = ''; return; }
+        var a = j.avg || {};
+        el.textContent = '已登记 ' + (j.n || 0) + ' 条 · 成功组：断板 ' + (a.breakMult || '—') +
+          '× / 洗盘 ' + (a.washDays || '—') + ' 天 / 最低量 ' + (a.minVolPct || '—') + '%';
+      }).catch(function () { el.textContent = ''; });
+  }
+  document.getElementById('rb-inp').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); window.rbAdd(); }
+  });
 
   window.rbToggle = function () {
     if (panel.classList.contains('open')) { panel.classList.remove('open'); return; }
@@ -10354,8 +10372,7 @@ if (location.hash === '#score') { document.body.classList.add('score-open'); if 
   };
   window.rbClose = function () { panel.classList.remove('open'); };
   window.rbClear = function () {
-    sel = {}; try { localStorage.setItem(SKEY, '{}'); } catch (e) {}
-    render();
+    sel = {}; save(); render();
   };
   window.rbCopy = function () {
     var t = document.getElementById('rb-out');
