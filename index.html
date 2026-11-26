@@ -10353,6 +10353,14 @@ if (location.hash === '#score') { document.body.classList.add('score-open'); if 
     var inp = document.getElementById('rb-inp');
     var raw = (inp.value || '').trim();
     if (!raw) return;
+    /* 「603887 城地香江」这种「代码 + 名称」成对输入：先整体识别，否则会被空格拆成
+       两个 token，生成「603887 603887、城地香江」两条重复记录（2026-11-26 冒烟测试实测）。 */
+    var pair = raw.match(/^(\d{6})\s+(.+)$/);
+    if (pair) {
+      sel[pair[1]] = { code: pair[1], name: pair[2].trim(), pool: '' };
+      inp.value = ''; save(); render(); inp.focus();
+      return;
+    }
     raw.split(/[\s,，、]+/).forEach(function (tok) {
       var r = resolve(tok);
       if (!r) return;
