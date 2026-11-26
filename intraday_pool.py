@@ -18,9 +18,9 @@
 只覆盖池内 + 近 30 天反包登记的票（几十只），不对全市场跑。
 """
 import argparse
+import statistics
 import json
 import os
-import statistics
 import sys
 import time
 import subprocess
@@ -103,9 +103,7 @@ def analyse(rows):
     vols = base or [r["v"] for r in rows if r["v"] > 0]
     if not vols:
         return None
-    pos = sorted(v for v in vols if v > 0)
-    # 基线只用于日志/调试；爆量判定改看「全天最大 5 分钟且 ≥ 日均 2 倍」（见下）。
-    _ = statistics.median(pos) if pos else 0
+    # 爆量判定看「全天最大 5 分钟且 ≥ 日均 2 倍」（见下），不再算基线中位数
     red = green = flat = 0
     for i in range(1, len(rows)):
         if rows[i]["v"] <= 0:      # 无成交分钟不算红绿（价格只是没动）

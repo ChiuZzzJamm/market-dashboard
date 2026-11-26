@@ -6584,6 +6584,14 @@ function renderDuanban() {
   html += _dbNote;
   /* R100z314：明日盯盘已并入「开盘预测 → 明日可下单」卡（见 ordBlockHtml），
      断板页不再出这块——同一个内容在两页各出现一次，等于维护两份。 */
+  /* 2026-11-26 用户：成功（≥+7%，含未涨停）的票单独成池，且**排在确认池上面**。
+     数据由 pool_success.py 从 confirmed/watching 移出并写入 duanban.success。 */
+  var succ = (db && db.success) || [];
+  if (succ.length) {
+    html += dbPoolHtml('成功池', 'p-conf',
+      '今日涨幅 ≥ +7%（含未封板）已在形态上兑现：从确认/观察池移出，留在这里做兑现记录',
+      succ, true, 'w');
+  }
   html += dbPoolHtml('确认池', 'p-conf',
     '已走完「涨停 → 放量断板 → 缩量 → 不破T日低点与MA5」全流程' +
     suspNoteHtml((db && db.suspended) || []) +
@@ -6592,14 +6600,6 @@ function renderDuanban() {
       return jk.length ? '　｜　⚠️ 杂毛剔除 ' + jk.length + ' 只：' +
         jk.map(function (x) { return esc(x.name) + '（' + esc(x.why) + '）'; }).join('、') : '';
     })(), conf, true, 'c');
-  /* 2026-11-26 用户：反包成功（≥+7%，含未涨停）的票要单独成池，不再挂确认池。
-     数据由 pool_success.py 从 confirmed/watching 移出并写入 duanban.success。 */
-  var succ = (db && db.success) || [];
-  if (succ.length) {
-    html += dbPoolHtml('反包成功池', 'p-conf',
-      '今日涨幅 ≥ +7%（含未封板）已在形态上兑现：从确认/观察池移出，留在这里做兑现记录',
-      succ, true, 'w');
-  }
   html += dbPoolHtml('观察池', 'p-watch', '形态进行中、只差最后一根确认K线（待缩量 ＞ 待企稳 ＞ 待脱离）', watch, false, 'w');
   // R100i：断板反包失败池（破位 / 超期失效归档，5 交易日后自动清理）
   html += dbFailHtml(db && db.failPool, 'duanban');
@@ -7420,14 +7420,14 @@ function renderChen() {
   h += chenLegendHtml(c);
   // 对比与胜率表已搬到 📋 复盘台账（用户 2026-10-25：复盘要放在复盘台账页）。
   // 这里只留「今天买什么」，不再混入「过去谁更准」。
+  if ((c.success || []).length) {
+    h += chenPoolBlock('陈学长 · 成功池', 'p-conf',
+      '今日涨幅 ≥ +7%（含未封板）：形态已兑现，从严格/放宽/观察池移出', c.success, 'watch');
+  }
   h += chenPoolBlock('陈学长 · 严格池', 'p-conf',
     'T日涨停（首板也算）+ 断板放量≥2倍（无上限）+ 缩量洗盘≤3日 + 不破T日低点 + 站稳5日线，另加「T日缩量 + 断板日大阴」两条软条件', c.strict, 'strict');
   h += chenPoolBlock('陈学长 · 放宽池', 'p-watch',
     '只过硬结构、去掉两条软条件——用来单独检验「T日缩量 + 大阴」到底值不值钱', c.loose, 'loose');
-  if ((c.success || []).length) {
-    h += chenPoolBlock('陈学长 · 反包成功池', 'p-conf',
-      '今日涨幅 ≥ +7%（含未封板）：形态已兑现，从严格/放宽/观察池移出', c.success, 'watch');
-  }
   h += chenPoolBlock('形态进行中', 'p-watch',
     '硬结构已到「放量断板 + 未破位」，只差缩量 / 收复5日线 / 脱离MA5幅度这一根确认K线', c.watching, 'watch');
   // 失效归档：昨天还在池里、今天不在了——不写出来读者会以为池子被吞了。
