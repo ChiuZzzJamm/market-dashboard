@@ -118,6 +118,7 @@ DATA_WRITERS = [
     'update_us_from_quotes.py',  # 美股行情
     'validate_stocks.py',       # 标的校验（--no-fix 关掉重排写回）
     'alert_gap.py',            # R100z382：duanban.alertGap（距异动点数，走 write_data_js + 持锁）
+    'pool_success.py',         # 成功池（当日涨幅≥7% 的断板二次启动确认；走 write_data_js）
 ]
 
 # 「原子写 + 提到 data.js，但写的不是 data.js」—— 明确豁免，防止 heuristic 误判。
