@@ -10301,7 +10301,13 @@ if (location.hash === '#score') { document.body.classList.add('score-open'); if 
   function resolve(q) {
     q = String(q || '').trim();
     if (!q) return null;
-    if (/^\d{6}$/.test(q)) return { code: q, name: '', pool: '' };
+    if (/^\d{6}$/.test(q)) {
+      // 只给代码时反查一次名字——否则生成的登记文本会变成「603051 603051」（用户 2026-11-26 实见）
+      if (!NAMES) NAMES = nameIndex();
+      var nm = '';
+      Object.keys(NAMES).some(function (k) { if (NAMES[k] === q) { nm = k; return true; } return false; });
+      return { code: q, name: nm, pool: '' };
+    }
     if (!NAMES) NAMES = nameIndex();
     if (NAMES[q]) return { code: NAMES[q], name: q, pool: '' };
     var hit = Object.keys(NAMES).filter(function (k) { return k.indexOf(q) !== -1; });
