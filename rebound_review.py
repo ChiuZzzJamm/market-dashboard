@@ -177,6 +177,35 @@ def harvest_fail(D, log):
         print("          %s %s · %s" % (x["code"], x["name"], x["note"]))
     return added
 
+def ensure_klines(kl, codes):
+    """登记的票不一定在任何池里 → data.js 里可能根本没有它的 K 线（鹿山 603051 就是这样，
+    「结构未识别」其实是**没有数据**，不是识别逻辑的问题）。这里按需补抓一次。"""
+    miss = [c for c in codes if c and not kl.get(c)]
+    if not miss:
+        return 0
+    try:
+        import kline_cache
+    except Exception as e:                                     # noqa: BLE001
+        print("[warn] kline_cache 不可用，跳过补抓：%s" % e)
+        return 0
+    got = 0
+    for c in miss:
+        try:
+            bars = kline_cache.get_kline(c, days=320)
+        except Exception as e:                                 # noqa: BLE001
+            print("[warn] %s 取 K 线失败：%s" % (c, str(e)[:60]))
+            continue
+        if bars:
+            # kline_cache 返回 dict（day/open/close/high/low/volume），data.js 里是
+            # [date, open, close, high, low, volume] —— 这里统一成 data.js 的形态，
+            # 免得下游 features() 按 r[0] 取值时 KeyError（2026-11-26 实测）。
+            kl[c] = [[b.get("day"), b.get("open"), b.get("close"), b.get("high"),
+                      b.get("low"), b.get("volume")] for b in bars]
+            got += 1
+    if got:
+        print("[kline] 按需补抓 %d 只（不在池里的登记票）：%s" % (got, ",".join(miss)))
+    return got
+
 
 def main():
     ap = argparse.ArgumentParser(description="反包登记复盘")
@@ -214,6 +243,7 @@ def main():
         log = load_log()
     kl = D.get("stkKlines") or {}
     items = log.get("items") or []
+    ensure_klines(kl, [it.get("code") for it in items])
     rows = []
     for it in items:
         # 失败样本的 date 是**断板日**，不是反包日——再拿它当反包日去套 features()

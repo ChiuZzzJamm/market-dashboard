@@ -1,20 +1,20 @@
 {
- "asOf": "2026-11-26 16:54",
+ "asOf": "2026-11-26 17:01",
  "n": 28,
- "okN": 10,
+ "okN": 11,
  "failN": 17,
  "avg": {
   "breakMult": 1.7,
-  "washDays": 2.1,
-  "minVolPct": 69.0,
-  "reboundVolPct": 75.5
+  "washDays": 2.0,
+  "minVolPct": 68.8,
+  "reboundVolPct": 72.3
  },
  "failAvg": {
   "breakMult": 1.9,
   "washDays": 4.6,
   "minVolPct": 41.6
  },
- "brokeRate": 10,
+ "brokeRate": 9,
  "failBrokeRate": 71,
  "rows": [
   {
@@ -97,8 +97,15 @@
    "status": "成功",
    "source": "user",
    "note": "2026-11-26 用户统一录入",
-   "ok": false,
-   "why": "K 线不足"
+   "ok": true,
+   "ztDate": "2026-11-23",
+   "breakDate": "2026-11-24",
+   "breakMult": 1.26,
+   "washDays": 1,
+   "minVolPct": 67,
+   "brokePreLow": false,
+   "preLow": 18.82,
+   "reboundVolPct": 66
   },
   {
    "code": "002913",
