@@ -368,7 +368,7 @@ PRODUCT_OWNERSHIP = {
         "require": ("timingPlan", "时限挂单", "挂单清单", "timing_plan"),
         "note": ("R101：断板反包「时间口」挂单清单（timing_plan.py 16:00 数据步产出，"
                  "口径唯一来源 duanban_timing.py）。只在**前一日收盘后**定单，9:45 的 "
-                 "update_star 只做开盘核对（star.timingExec），不改单、不加票。"),
+                 "update_brief 只产大盘/板块/资金三段文案，不碰挂单（timingExec 已下线）。"),
     },
     "fullScan": {
         "require": ("fullScan", "full_scan"),

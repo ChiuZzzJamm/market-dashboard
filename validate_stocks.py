@@ -1425,7 +1425,7 @@ def fix_duanban_inplace(D):
             if not isinstance(p, (int, float)) or not (0 <= p <= 100):
                 # R100z197（2026-10-24 用户拍板）：**不再自动补 50**。
                 # 50 是一个凭空编出来的中位数，读者会把它当成「AI 认为五五开」，
-                # 而真相是「没人给过这个数」。缺失就留缺失：update_star 会把缺失排到
+                # 而真相是「没人给过这个数」。缺失就留缺失：update_brief 会把缺失排到
                 # 有值之后，前端渲染成「—」。WARN 保留——它是提示 AI 去补的唯一信号。
                 warns.append(f"duanban.{pool}: {code} probability 缺失/非法（{p!r}）"
                              f"→ 不补值，留空（精选排序置末、页面显示「—」）。"

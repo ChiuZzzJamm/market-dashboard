@@ -161,7 +161,7 @@ DEAD_OK = {
     'trend_state.py': 'R101：五指数趋势档（从 stkKlines 现算 MA20/斜率/60日分位→仓位上限），'
                       '被 strategy_engine 读作 positionBand 上限',
     'timing_plan.py': 'R101：时间口挂单清单（16:00 数据步跑，产出 data.js 顶层 timingPlan），'
-                      '9:45 的 update_star 只做开盘核对、不改单',
+                      '9:45 的 update_brief 只产大盘/板块/资金文案，不碰挂单',
     'nshape_fetch.py': 'N 字形态研究：全市场日K抓取（东财/腾讯双源→.kline_hist/），纯本地、手工触发',
     'backtest_breakout.py': '横盘启动接入 backtest_indicators 同一跑道的年化对照，纯本地、手工触发',
     'breakout_study.py': '横盘启动参数研究：振幅/粘合/地量/贴沿四维分层搜索，纯本地、手工触发',

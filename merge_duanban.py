@@ -81,7 +81,7 @@ def sanitize(mod):
                 # R100z197（2026-10-24 用户拍板）：**不再编任何基线**。
                 # R98k 曾把「一律补 50」改成按情绪补 69/50/31，但 neutral→50 依旧是
                 # 凭空的中位数：读者看到「基线 50%」会以为 AI 判过，其实没人给过。
-                # 现在缺失就留 None：update_star 排到有值之后、前端渲染「—」。
+                # 现在缺失就留 None：update_brief 排到有值之后、前端渲染「—」。
                 # WARN 保留，它是提示 AI 补这个数的唯一信号。
                 e["probability"] = None
                 warns.append(f"[WARN] {pool}.{code} probability 缺失/非法，留空不补"
