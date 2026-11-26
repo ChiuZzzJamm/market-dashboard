@@ -88422,16 +88422,240 @@
      "pending": true,
      "_done": true
     }
+   },
+   {
+    "code": "000530",
+    "name": "冰山冷热",
+    "sector": "通用设备",
+    "stop": 15.68,
+    "stopSrc": "default-3.0%",
+    "lastClose": 16.17,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "000678",
+    "name": "襄阳轴承",
+    "sector": "汽车零部件",
+    "stop": 21.3,
+    "stopSrc": "default-3.0%",
+    "lastClose": 21.96,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "000702",
+    "name": "正虹科技",
+    "sector": "养殖业",
+    "stop": 4.47,
+    "stopSrc": "T日低点",
+    "lastClose": 4.44,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "pending": false,
+     "touched": true,
+     "hitDay": "2026-11-25",
+     "hitLow": 4.47,
+     "daysToHit": 1,
+     "after5Pct": null,
+     "rebound5Pct": null,
+     "maxDD5Pct": -1.13,
+     "p5Pct": null,
+     "_done": true
+    }
+   },
+   {
+    "code": "000908",
+    "name": "石药景峰",
+    "sector": "化学制药",
+    "stop": 4.35,
+    "stopSrc": "T日低点",
+    "lastClose": 4.43,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002145",
+    "name": "钛能化学",
+    "sector": "化学原料",
+    "stop": 3.63,
+    "stopSrc": "T日低点",
+    "lastClose": 3.66,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002148",
+    "name": "北纬科技",
+    "sector": "通信服务",
+    "stop": 10.11,
+    "stopSrc": "T日低点",
+    "lastClose": 11.3,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002165",
+    "name": "红宝丽",
+    "sector": "化学制品",
+    "stop": 5.62,
+    "stopSrc": "T日低点",
+    "lastClose": 6.55,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002728",
+    "name": "特一药业",
+    "sector": "中药",
+    "stop": 7.78,
+    "stopSrc": "T日低点",
+    "lastClose": 8.64,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "002900",
+    "name": "哈三联",
+    "sector": "化学制药",
+    "stop": 8.72,
+    "stopSrc": "T日低点",
+    "lastClose": 9.15,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603069",
+    "name": "海汽集团",
+    "sector": "公路铁路运输",
+    "stop": 9.87,
+    "stopSrc": "T日低点",
+    "lastClose": 10.28,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603131",
+    "name": "上海沪工",
+    "sector": "通用设备",
+    "stop": 11.47,
+    "stopSrc": "T日低点",
+    "lastClose": 13.35,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603324",
+    "name": "盛剑科技",
+    "sector": "环保设备",
+    "stop": 34.44,
+    "stopSrc": "default-3.0%",
+    "lastClose": 35.5,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
+   },
+   {
+    "code": "603928",
+    "name": "兴业股份",
+    "sector": "塑料制品",
+    "stop": 10.92,
+    "stopSrc": "T日低点",
+    "lastClose": 11.25,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "pending": false,
+     "touched": true,
+     "hitDay": "2026-11-19",
+     "hitLow": 10.92,
+     "daysToHit": 1,
+     "after5Pct": 0.0,
+     "rebound5Pct": 3.02,
+     "maxDD5Pct": -3.11,
+     "p5Pct": 6.31,
+     "_done": true
+    }
+   },
+   {
+    "code": "603931",
+    "name": "格林达",
+    "sector": "电子化学品",
+    "stop": 26.41,
+    "stopSrc": "T日低点",
+    "lastClose": 27.69,
+    "from": "duanban",
+    "res": {
+     "noKline": false,
+     "touched": null,
+     "pending": true,
+     "_done": true
+    }
    }
   ]
  },
  "stats": {
-  "total": 2248,
-  "touched": 742,
-  "touchRate": 0.33,
-  "avgP5Pct": -0.12,
-  "avgAfter5Pct": -4.1,
-  "avgRebound5Pct": 2.6,
+  "total": 2250,
+  "touched": 744,
+  "touchRate": 0.331,
+  "avgP5Pct": -0.11,
+  "avgAfter5Pct": -4.09,
+  "avgRebound5Pct": 2.61,
   "hitThenUp": 82,
   "hitThenUpRate": 0.212,
   "bySrc": {
@@ -88444,8 +88668,8 @@
     "p5": 0.59
    },
    "T日低点": {
-    "n": 333,
-    "p5": -1.24
+    "n": 335,
+    "p5": -1.22
    },
    "default-3.0%": {
     "n": 154,
@@ -88464,8 +88688,8 @@
     "rate": 0.199
    },
    "T日低点": {
-    "n": 333,
-    "touched": 305,
+    "n": 335,
+    "touched": 307,
     "rate": 0.916
    },
    "default-3.0%": {
@@ -88474,8 +88698,8 @@
     "rate": 0.792
    }
   },
-  "pending": 3435,
+  "pending": 3447,
   "noKline": 33
  },
- "updatedAt": "2026-11-26 19:41:23"
+ "updatedAt": "2026-11-26 22:38:24"
 }
