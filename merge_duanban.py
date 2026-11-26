@@ -219,6 +219,15 @@ def main():
         else:
             print(f"[merge] 丢弃过期 🌟 模块（{od}，早于最近交易日 {floor}），待 9:45 开盘精选自动化重建",
                   file=sys.stderr)
+    # R100z383（2026-11-26）：`duanban.alertGap`（距异动点数，alert_gap.py 产出）不在
+    # check_duanban 的产物里，整块 `D["duanban"] = mod` 会把它连根抹掉 —— 于是 19:30 部署
+    # 刚写入的标，次日 16:00 一合并就消失，前端「距异动」列整体空掉，且 K6（prompt 里引用的
+    # data.js 路径必须存在）当日即 FAIL。它与 brief 同性质：不是本脚本产物，只做搬运。
+    # 数值会在 19:30 的 deploy.sh 里按新池重算，这里保留旧的只为「路径不消失」。
+    old_gap = (D.get("duanban") or {}).get("alertGap")
+    if old_gap and not mod.get("alertGap"):
+        mod["alertGap"] = old_gap
+        print(f"[merge] 保留 距异动标签（{len(old_gap)} 只，19:30 会按新池重算）", file=sys.stderr)
     D["duanban"] = mod
     out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ";\n"
     # R100z165 硬约束：data.js 必须 _tmp + os.replace（open(...,'w') 会先 truncate，

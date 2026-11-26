@@ -127,8 +127,20 @@ def _clean_sector(hybk):
         "自动化设": "自动化设备", "计算机设": "计算机设备", "通用设": "通用设备",
         "专用设": "专用设备", "通信设": "通信设备", "风电设": "风电设备",
         "光伏设": "光伏设备", "电网设": "电网设备", "环保设": "环保设备",
+        # R100z377（2026-11-26）：600223 福瑞达 hybk=「化妆品」（申万二级完整名），
+        # 挂单卡写「化妆品」而断板卡/行业全景写「美容护理」，又一处同名不同叫。
+        "化妆品": "美容护理", "纺织": "纺织制造", "渔业": "养殖业",
     }
     return FIX.get(base, base) if base else hybk
+
+
+# R100z377（2026-11-26）：涨停池的 hybk 偶尔整条是错的，不是截断也不是同名——
+# 002480 新筑股份（申万：公用事业/电力/光伏发电，THS 涨停池却给「纺织」）上卡后
+# 挂单卡写「纺织」、断板卡写「轨交设备」，两张卡互相打脸。这类只能按代码兜：
+# 值必须落在同花顺 90 一级行业名单内，且以申万一级为准。
+CODE_SECTOR = {
+    "002480": "电力",
+}
 
 
 def load_klines(codes, base):
@@ -233,7 +245,8 @@ def build_plan(D, base=None, trade_date=None):
         if 'ST' in nm.upper() or nm.startswith('*') or '退' in nm:
             continue
         cands.append(dict(code=c, name=nm,
-                          sector=_clean_sector(it.get('hybk')) or _sector_from_pools(D, c)))
+                          sector=CODE_SECTOR.get(c)
+                          or _clean_sector(it.get('hybk')) or _sector_from_pools(D, c)))
     # R100z376：涨停池会返回重复条目（2026-11-24 实测 002983 重复上卡、002036/002164
     # 在「未入选」里各出现 2~4 次），同一只票重复占名额、还重复印一行丢弃原因。按 code 去重。
     _seen, _uniq = set(), []
