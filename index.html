@@ -10394,8 +10394,11 @@ if (location.hash === '#score') { document.body.classList.add('score-open'); if 
       .then(function (j) {
         if (!j) { el.textContent = ''; return; }
         var a = j.avg || {};
-        el.textContent = '已登记 ' + (j.n || 0) + ' 条 · 成功组：断板 ' + (a.breakMult || '—') +
-          '× / 洗盘 ' + (a.washDays || '—') + ' 天 / 最低量 ' + (a.minVolPct || '—') + '%';
+        var f = j.failAvg || {};
+        el.textContent = '成功 ' + (j.okN || 0) + ' 条 · 断板 ' + (a.breakMult || '—') + '× / 洗盘 ' +
+          (a.washDays || '—') + ' 天 / 最低量 ' + (a.minVolPct || '—') + '%　｜　失败 ' +
+          (j.failN || 0) + ' 条（自动采集）· 断板 ' + (f.breakMult || '—') + '× / 洗盘 ' +
+          (f.washDays || '—') + ' 天 / 最低量 ' + (f.minVolPct || '—') + '%';
       }).catch(function () { el.textContent = ''; });
   }
 })();

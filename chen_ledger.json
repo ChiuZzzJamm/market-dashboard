@@ -6212,7 +6212,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "expired",
+    "exitDay": "2026-11-26",
+    "buyDay": "2026-11-12",
+    "exitPrice": 34.82,
+    "buyPrice": 39.3,
+    "retPct": -11.4,
+    "note": "持仓 10 日未触目标也未破止损，收盘平"
+   },
    "stopAnchor": "zt_low",
    "settleVer": "R100z299"
   },
@@ -6451,7 +6460,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "expired",
+    "exitDay": "2026-11-26",
+    "buyDay": "2026-11-12",
+    "exitPrice": 62.97,
+    "buyPrice": 65.84,
+    "retPct": -4.36,
+    "note": "持仓 10 日未触目标也未破止损，收盘平"
+   },
    "stopAnchor": "zt_low",
    "settleVer": "R100z299"
   },
@@ -8080,7 +8098,16 @@
    "ruleFrom": "2026-10-26",
    "tgtPct": 5.0,
    "holdDays": 10,
-   "result": null,
+   "result": {
+    "status": "settled",
+    "result": "win",
+    "exitDay": "2026-11-26",
+    "buyDay": "2026-11-19",
+    "exitPrice": 18.46,
+    "buyPrice": 17.58,
+    "retPct": 5.0,
+    "note": "盘中触 +5.0% 当天兑现"
+   },
    "settleVer": "R100z299"
   },
   {
@@ -9108,9 +9135,547 @@
    "holdDays": 5,
    "result": null,
    "settleVer": "R100z299"
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "605018",
+   "name": "长华集团",
+   "confirmDate": "2026-11-26",
+   "firstSeenDate": "2026-11-25",
+   "entryDate": "2026-11-26",
+   "cross": "chen",
+   "preSnapshot": {},
+   "ztDate": "2026-11-24",
+   "stopPrice": 12.42,
+   "stopAnchor": "zt_low",
+   "ztLow": 12.42,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null
+  },
+  {
+   "pool": "chen_loose",
+   "tier": "loose",
+   "code": "002708",
+   "name": "光洋股份",
+   "confirmDate": "2026-11-26",
+   "firstSeenDate": "2026-11-25",
+   "entryDate": "2026-11-26",
+   "cross": "chen",
+   "preSnapshot": {},
+   "ztDate": "2026-11-24",
+   "stopPrice": 22.79,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 23.09,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "603051",
+   "name": "鹿山新材",
+   "confirmDate": "2026-11-26",
+   "firstSeenDate": "2026-11-26",
+   "entryDate": "2026-11-26",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "阴跌",
+     "day": null,
+     "score": 53.1,
+     "why": "今日-0.25% / 5日-9.89% / 涨停0只 / 扩散37%",
+     "fake": false
+    },
+    "pop": {
+     "label": "清淡",
+     "score": 21.6,
+     "why": "成交额池内分位 22"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 化学制品 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 65（昨 51，↑） · 跌停 5（昨 43，↓） · 最高板 5（昨 5，→） · 连板股 14（昨 13，↑） · 分歧率 57%（昨 31，↑） · 接力率 22%（昨 25，↓）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 38.9,
+    "tier": "弱",
+    "why": "题材阴跌(53)×55% + 人气22×45% = 39（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-23",
+   "stopPrice": 18.82,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 18.82,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "603166",
+   "name": "福达股份",
+   "confirmDate": "2026-11-26",
+   "firstSeenDate": "2026-11-26",
+   "entryDate": "2026-11-26",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "阴跌",
+     "day": null,
+     "score": 30.8,
+     "why": "今日-1.19% / 5日-8.05% / 涨停0只 / 扩散18%",
+     "fake": false
+    },
+    "pop": {
+     "label": "清淡",
+     "score": 37.7,
+     "why": "成交额池内分位 38"
+    },
+    "ladder": {
+     "label": "有龙头",
+     "score": 100.0,
+     "why": "板块 汽车零部件 有 1 只连板、最高 5 板（克来机电），克来机电 的题材是「工业机器人+柔性自动化装备」",
+     "n": 1,
+     "maxLb": 5,
+     "names": [
+      "克来机电"
+     ],
+     "themes": [
+      "工业机器人",
+      "柔性自动化装备"
+     ],
+     "topName": "克来机电",
+     "inLadder": false,
+     "bonus": 12.0,
+     "tag": "可补涨"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 65（昨 51，↑） · 跌停 5（昨 43，↓） · 最高板 5（昨 5，→） · 连板股 14（昨 13，↑） · 分歧率 57%（昨 31，↑） · 接力率 22%（昨 25，↓）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 45.9,
+    "tier": "中",
+    "why": "题材阴跌(31)×55% + 人气38×45% + 连板有龙头+12 = 46（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-23",
+   "stopPrice": 8.7,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 8.7,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "002584",
+   "name": "西陇科学",
+   "confirmDate": "2026-11-26",
+   "firstSeenDate": "2026-11-26",
+   "entryDate": "2026-11-26",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "阴跌",
+     "day": null,
+     "score": 54.9,
+     "why": "今日-0.33% / 5日-9.82% / 涨停0只 / 扩散42%",
+     "fake": false
+    },
+    "pop": {
+     "label": "活跃",
+     "score": 80.9,
+     "why": "成交额池内分位 81"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 电子化学品 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 65（昨 51，↑） · 跌停 5（昨 43，↓） · 最高板 5（昨 5，→） · 连板股 14（昨 13，↑） · 分歧率 57%（昨 31，↑） · 接力率 22%（昨 25，↓）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 66.6,
+    "tier": "强",
+    "why": "题材阴跌(55)×55% + 人气81×45% = 67（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-23",
+   "stopPrice": 7.38,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 7.38,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "603278",
+   "name": "大业股份",
+   "confirmDate": "2026-11-26",
+   "firstSeenDate": "2026-11-26",
+   "entryDate": "2026-11-26",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "阴跌",
+     "day": null,
+     "score": 45.8,
+     "why": "今日-0.38% / 5日-8.66% / 涨停0只 / 扩散30%",
+     "fake": false
+    },
+    "pop": {
+     "label": "一般",
+     "score": 58.6,
+     "why": "成交额池内分位 59"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 通用设备 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 65（昨 51，↑） · 跌停 5（昨 43，↓） · 最高板 5（昨 5，→） · 连板股 14（昨 13，↑） · 分歧率 57%（昨 31，↑） · 接力率 22%（昨 25，↓）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 51.6,
+    "tier": "中",
+    "why": "题材阴跌(46)×55% + 人气59×45% = 52（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-23",
+   "stopPrice": 10.36,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 10.36,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "603004",
+   "name": "鼎龙科技",
+   "confirmDate": "2026-11-26",
+   "firstSeenDate": "2026-11-26",
+   "entryDate": "2026-11-26",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "阴跌",
+     "day": null,
+     "score": 53.1,
+     "why": "今日-0.25% / 5日-9.89% / 涨停0只 / 扩散37%",
+     "fake": false
+    },
+    "pop": {
+     "label": "清淡",
+     "score": 36.4,
+     "why": "成交额池内分位 36"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 化学制品 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 65（昨 51，↑） · 跌停 5（昨 43，↓） · 最高板 5（昨 5，→） · 连板股 14（昨 13，↑） · 分歧率 57%（昨 31，↑） · 接力率 22%（昨 25，↓）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 45.6,
+    "tier": "中",
+    "why": "题材阴跌(53)×55% + 人气36×45% = 46（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-23",
+   "stopPrice": 17.68,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 17.68,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "002815",
+   "name": "崇达技术",
+   "confirmDate": "2026-11-26",
+   "firstSeenDate": "2026-11-26",
+   "entryDate": "2026-11-26",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "启动",
+     "day": null,
+     "score": 95.7,
+     "why": "今日+3.94% / 5日-3.26% / 涨停0只 / 扩散89%",
+     "fake": false
+    },
+    "pop": {
+     "label": "活跃",
+     "score": 95.7,
+     "why": "成交额池内分位 96"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 元件 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 65（昨 51，↑） · 跌停 5（昨 43，↓） · 最高板 5（昨 5，→） · 连板股 14（昨 13，↑） · 分歧率 57%（昨 31，↑） · 接力率 22%（昨 25，↓）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 95.7,
+    "tier": "强",
+    "why": "题材启动(96)×55% + 人气96×45% = 96（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-23",
+   "stopPrice": 13.51,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 13.51,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "002655",
+   "name": "共达电声",
+   "confirmDate": "2026-11-26",
+   "firstSeenDate": "2026-11-26",
+   "entryDate": "2026-11-26",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "阴跌",
+     "day": null,
+     "score": 50.4,
+     "why": "今日-0.60% / 5日-9.42% / 涨停0只 / 扩散32%",
+     "fake": false
+    },
+    "pop": {
+     "label": "一般",
+     "score": 53.7,
+     "why": "成交额池内分位 54"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 消费电子 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 65（昨 51，↑） · 跌停 5（昨 43，↓） · 最高板 5（昨 5，→） · 连板股 14（昨 13，↑） · 分歧率 57%（昨 31，↑） · 接力率 22%（昨 25，↓）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 51.9,
+    "tier": "中",
+    "why": "题材阴跌(50)×55% + 人气54×45% = 52（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-23",
+   "stopPrice": 21.06,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 21.06,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "002414",
+   "name": "高德红外",
+   "confirmDate": "2026-11-26",
+   "firstSeenDate": "2026-11-26",
+   "entryDate": "2026-11-26",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "阴跌",
+     "day": null,
+     "score": 38.4,
+     "why": "今日-0.68% / 5日-11.27% / 涨停0只 / 扩散25%",
+     "fake": false
+    },
+    "pop": {
+     "label": "一般",
+     "score": 60.5,
+     "why": "成交额池内分位 68 · 缩量断板（-8）"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 军工电子 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 65（昨 51，↑） · 跌停 5（昨 43，↓） · 最高板 5（昨 5，→） · 连板股 14（昨 13，↑） · 分歧率 57%（昨 31，↑） · 接力率 22%（昨 25，↓）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 48.3,
+    "tier": "中",
+    "why": "题材阴跌(38)×55% + 人气60×45% = 48（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-23",
+   "stopPrice": 9.41,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 9.41,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null
+  },
+  {
+   "pool": "duanban",
+   "tier": null,
+   "code": "605398",
+   "name": "新炬网络",
+   "confirmDate": "2026-11-26",
+   "firstSeenDate": "2026-11-26",
+   "entryDate": "2026-11-26",
+   "cross": "db",
+   "preSnapshot": {
+    "theme": {
+     "label": "阴跌",
+     "day": null,
+     "score": 42.4,
+     "why": "今日-0.68% / 5日-10.25% / 涨停0只 / 扩散28%",
+     "fake": false
+    },
+    "pop": {
+     "label": "清淡",
+     "score": 12.3,
+     "why": "成交额池内分位 4 · 放量2.3倍（+8）"
+    },
+    "ladder": {
+     "label": "无连板",
+     "score": 25.0,
+     "why": "板块 IT服务 今日无连板股——没有资金在做这个方向，补涨只能跟大盘",
+     "n": 0,
+     "maxLb": 0,
+     "names": [],
+     "themes": [],
+     "topName": "",
+     "inLadder": false,
+     "bonus": 0.0,
+     "tag": "无主线"
+    },
+    "mood": {
+     "label": "分歧",
+     "score": 55,
+     "text": "涨停 65（昨 51，↑） · 跌停 5（昨 43，↓） · 最高板 5（昨 5，→） · 连板股 14（昨 13，↑） · 分歧率 57%（昨 31，↑） · 接力率 22%（昨 25，↓）",
+     "why": "炸板/分歧率抬升或涨停家数明显回落，但还没到退潮",
+     "gate": "open"
+    },
+    "total": 28.9,
+    "tier": "弱",
+    "why": "题材阴跌(42)×55% + 人气12×45% = 29（情绪分歧 作闸门）"
+   },
+   "ztDate": "2026-11-23",
+   "stopPrice": 17.55,
+   "stopAnchor": "legacy-unk",
+   "ztLow": 17.55,
+   "ruleFrom": "2026-10-26",
+   "tgtPct": 5.0,
+   "holdDays": 5,
+   "result": null
   }
  ],
- "updatedAt": "2026-11-25 16:04",
+ "updatedAt": "2026-11-26 16:05",
  "resettleAt": "R100z299",
  "anchorVer": "R100z331",
  "anchorNote": "止损锚＝涨停日（T日）最低价，断板与陈学长同口径；2026-11-10 22:1x 统一"

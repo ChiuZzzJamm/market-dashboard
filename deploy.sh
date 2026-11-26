@@ -268,7 +268,7 @@ echo "🎯 补齐板块买点（entry_zone.py --write）..."
 if [ "${SKIP_AUDIT:-0}" != "1" ]; then
     # 反包登记复盘（R100z388）：读 rebound_log.json 算证据 → rebound_review.json（页面 fetch）
 echo "🔍 反包登记复盘（rebound_review.py --write）..."
-"$PY" rebound_review.py --write || echo "[warn] 反包复盘失败，页面只是不显示均值（不影响部署）"
+"$PY" rebound_review.py --harvest-fail --write || echo "[warn] 反包复盘失败，页面只是不显示均值（不影响部署）"
 
 # 连板标的「距异动」点数（R100z382）：按交易所偏离值口径算好写进 duanban.alertGap。
 echo "📐 距异动点数（alert_gap.py --write）..."
