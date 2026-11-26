@@ -2758,8 +2758,12 @@ def build_module(pairs, D):
     pre_batch(entries, _ctx)
 
     tagged = tag_entries(entries, D)
-    confirmed = [e for e in tagged if e["stage"] == "全流程达标"]
-    watching = [e for e in tagged if e["stage"] != "全流程达标"]
+    # 2026-11-26：确认池兼容两种 stage——旧「全流程达标」+ 新「形态确认·待启动/已脱离MA5」。
+    # 原来只认字符串 "全流程达标"，新口径的票会被判成观察池（实测 confirmed 0 / watching 71）。
+    _is_conf = lambda e: (e.get("stage") == "全流程达标"
+                          or str(e.get("stage") or "").startswith("形态确认"))
+    confirmed = [e for e in tagged if _is_conf(e)]
+    watching = [e for e in tagged if not _is_conf(e)]
     # R98k：池级微调——确认池走完全流程形态更完整 +4；观察池仍在形成中 -2
     # R100z197（2026-10-24 用户拍板）：**只调 AI 真给过的值**。
     # 原写法 `(e.get("probability") or 50) ± 4/2` 才是「基线 48%/54%」的真正产地——

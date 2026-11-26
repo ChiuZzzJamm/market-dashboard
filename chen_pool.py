@@ -439,15 +439,21 @@ def chen_stage(code, kl, zt_iso):
     # 2026-11-26 重定义严格池：软条件达标 **且** 主题材 **且** 确认不超过 3 个交易日。
     # 依据：成功样本 11/11 在主线；洗盘 ≤4 日。缺一条就退到放宽池——不是剔除，
     # 是让它带着「为什么没进严格池」的理由待在放宽池里。
-    mainline = bool(_MAINLINE.get(str(code)))
+    # 概念库只覆盖 242 只（不是全市场）→ 查不到不能当「非主线」罚下去，
+    # 否则严格池会被覆盖缺口清零（2026-11-26 实测：加这条后 strict=0）。
+    # 三态：True 主线 / False 明确非主线 / None 未知（放行，但 form 里标出来）。
+    _ml = _MAINLINE.get(str(code))
+    mainline = (_ml is not False)
     tier = "strict" if (soft_ok and mainline and lag <= 3) else "loose"
     why_loose = ""
     if tier == "loose":
         miss = []
         if not soft_ok:
             miss.append("量能条件未达标")
-        if not mainline:
+        if _ml is False:
             miss.append("非当期主线")
+        elif _ml is None:
+            miss.append("题材未知（概念库未覆盖）")
         if lag > 3:
             miss.append("确认滞后 %d 日" % lag)
         why_loose = "、".join(miss)
