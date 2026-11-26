@@ -755,14 +755,16 @@
   /* 反包登记入口（R100z388，用户 2026-11-26）：🔍 与 🧰 同款圆钮，默认落在它正上方；
      可拖动、位置记忆；点开是**可自由拖动的浮动窗**（不是居中的遮罩弹窗）。 */
   .rb-entry {
-    position: fixed; right: var(--float-x); bottom: 50%; margin-bottom: 58px;
+    position: fixed; right: var(--float-x); bottom: 50%; margin-bottom: 127px;
     width: 46px; height: 46px; border-radius: 50%;
     background: transparent; border: none; padding: 0; box-shadow: none;
     cursor: grab; z-index: 1201; touch-action: none; user-select: none;
-    display: flex; align-items: center; justify-content: center;
+    display: none; align-items: center; justify-content: center;
     font-size: var(--fs-emoji-lg); line-height: 1;
     transition: transform .15s ease;
   }
+  /* 用户 2026-11-26：只在技术看板里出现（与 🧰 同一条显示条件），主页面不挂这颗钮。 */
+  body.db-open .rb-entry { display: flex; }
   .rb-entry:hover { transform: scale(1.1); }
   .rb-entry:active { transform: scale(.92); cursor: grabbing; }
   @media (max-width: 700px), (max-height: 460px) {
