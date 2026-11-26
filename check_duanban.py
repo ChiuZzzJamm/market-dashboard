@@ -1385,6 +1385,44 @@ def check_form(code, kline, zt_date_iso):
     return f"{zt_md}涨停→次{r1:.1f}倍量断板→{n_shrink}日缩量·站稳MA5"
 
 
+MINUTE_JSON = "intraday_minute.json"
+
+
+def load_minute_map():
+    """读 intraday_pool.py 的产出，返回 {code: metrics}（只用当日那一份）。
+
+    2026-11-26 用户：「没有分时那准确率就不高，一定要加上分时再做判断」。
+    分时只在**当日收盘后**抓（intraday_pool），对还在洗盘的票，当日分时就是明日的输入。
+    文件缺失/日期不符 → 返回空 dict，并在页面上标「无分时」，绝不当成「承接成立」。
+    """
+    try:
+        j = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), MINUTE_JSON),
+                           encoding="utf-8"))
+    except Exception:                                            # noqa: BLE001
+        return {}
+    st = j.get("stocks") or {}
+    return {str(k): v for k, v in st.items() if isinstance(v, dict)}
+
+
+def minute_tag(m):
+    """把分时证据压成一个可读标签（判据与 rules/duanban-framework.md §13 一致）。"""
+    if not m:
+        return "无分时", None
+    if m.get("limitUp"):
+        return "已封板（分时不适用）", None
+    hold = m.get("hold")
+    tail = m.get("tailRedPct")
+    if hold is False and (tail is None or tail < 35):
+        return "分时未承接", False
+    if hold is True and (tail is not None and tail >= 50):
+        return "分时强承接（尾盘红%d%%）" % tail, True
+    if hold is True:
+        return "分时承接成立", True
+    if tail is not None and tail >= 50:
+        return "尾盘红%d%%（无爆量）" % tail, True
+    return "分时中性", None
+
+
 def eval_stage(code, kline, zt_date_iso):
     """对单只候选做分池评估（R87）：
     - confirmed：全流程达标（直接复用 check_form 结论，口径不变）；
@@ -2764,6 +2802,36 @@ def build_module(pairs, D):
                           or str(e.get("stage") or "").startswith("形态确认"))
     confirmed = [e for e in tagged if _is_conf(e)]
     watching = [e for e in tagged if not _is_conf(e)]
+
+    # ══ 分时参与判定（2026-11-26 用户：没有分时准确率就不高）══════════════════
+    # 规则：确认池里「分时未承接」（爆量后创新低 且 尾盘红柱 <35%）→ 降到观察池并写明原因；
+    #      其余条目一律打上 minuteTag，让读者一眼看到「这次判断有没有分时依据」。
+    _mm = load_minute_map()
+    _demoted = []
+    for _e in list(confirmed):
+        _m = _mm.get(str(_e.get("code")))
+        _tag, _ok = minute_tag(_m)
+        _e["minuteTag"] = _tag
+        if _m:
+            _e["minute"] = {k: _m.get(k) for k in
+                            ("hold", "tailRedPct", "burstN", "earlyBurst", "limitUp", "red", "green")}
+        if _ok is False or _m is None:
+            confirmed.remove(_e)
+            # 用户口径：没有分时就不做判断——无分时的票不进确认池，降到观察池「无分时待补」。
+            _e["stage"] = "分时未承接" if _ok is False else "无分时待补"
+            watching.append(_e)
+            _demoted.append((_e.get("name") or _e.get("code")) + ("(未承接)" if _ok is False else "(无分时)"))
+    for _e in watching:
+        if "minuteTag" not in _e:
+            _tag, _ = minute_tag(_mm.get(str(_e.get("code"))))
+            _e["minuteTag"] = _tag
+            _m = _mm.get(str(_e.get("code")))
+            if _m:
+                _e["minute"] = {k: _m.get(k) for k in
+                                ("hold", "tailRedPct", "burstN", "earlyBurst", "limitUp", "red", "green")}
+    if _demoted:
+        print("[minute] 分时未承接 → 降观察池 %d 只：%s" % (len(_demoted), "、".join(_demoted[:6])),
+              file=sys.stderr)
     # R98k：池级微调——确认池走完全流程形态更完整 +4；观察池仍在形成中 -2
     # R100z197（2026-10-24 用户拍板）：**只调 AI 真给过的值**。
     # 原写法 `(e.get("probability") or 50) ± 4/2` 才是「基线 48%/54%」的真正产地——
