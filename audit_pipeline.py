@@ -1014,6 +1014,20 @@ def g8_g9_g10_data(r):
                                         % (grp, ent.get("code"), fld))
     if refs_bad:
         r.warn("G9c", "refs 板块新闻缺 sec / 缺 title：" + "; ".join(sorted(set(refs_bad))[:8]))
+    # 2026-11-26：check_duanban 曾用 title 顶 summary，页面出现「摘要就是标题」的复读。
+    # 兜底已删；这里加一条防回归——summary 与 title 逐字相同即 WARN（空 summary 是授权的）。
+    dup_sum = []
+    for _k in ("confirmed", "watching"):
+        for _e in (D.get("duanban") or {}).get(_k) or []:
+            if not isinstance(_e, dict):
+                continue
+            for _rk in ("bullRefs", "bearRefs"):
+                for _r in _e.get(_rk) or []:
+                    if isinstance(_r, dict) and _r.get("summary") and _r.get("summary") == _r.get("title"):
+                        dup_sum.append(str(_e.get("name") or _e.get("code")))
+    if dup_sum:
+        r.warn("G9c", "refs 的 summary 与 title 逐字相同（拿标题冒充摘要）："
+                      + "、".join(sorted(set(dup_sum))[:5]))
     else:
         r.ok("G9c", "refs 的 sec/summary 豁免成立（无 kind≠stock 的空 sec，无空 title）")
 
