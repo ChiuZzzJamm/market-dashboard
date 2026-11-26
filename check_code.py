@@ -129,13 +129,8 @@ NON_DATA_WRITERS = {
     'backtest_indicators.py': '原子写的是 .bt_cache K线缓存 + backtest_report.md/result.json，从不碰 data.js',
     'board_alias.py': 'R100z224：原子写的是 index.html 里的 pctAlias 段（从 board_alias.json 生成），'
                       '读 data.js 只为 --add 校验目标板块是否存在',
-    'goldpit_study.py': 'R100z234：黄金坑原型研究脚本，原子写的是 goldpit_study.json（--dump 时才写，'
-                        '可达数百 MB、已在 .gitignore 排除），纯离线统计、从不碰 data.js、不进任何自动化',
     'check_automations.py': 'R100z261：B6 规则 ⑥ 的哨兵状态，原子写 .cache/b6_selfwrite_state.json'
                             '（本机滚动状态，.cache/ 已在 .gitignore 排除）；data.js 只读不写',
-    'migrate_ledger_pools.py': 'R100z297：一次性迁移，把 signal_ledger.json 里三个汇总源的条目'
-                               '按当日池归属拆成子源。原子写的是 signal_ledger.json（先 .bak 备份），'
-                               'data.js 只读、用来取池成员与 K 线，从不写它',
     'check_duanban.py': 'R100z377：原子写的是 SECTOR_SEED_FILE（板块名种子，os.replace）；'
                         'data.js 只读，用来取既有池成员的 sector 与要闻做一致性交叉核验，从不写它',
 }
@@ -146,10 +141,6 @@ DEAD_OK = {
                      '入场因子分层）。只读 data.js 与台账、不写盘，手工触发——规则要不要改，'
                      '先看它跑出来的数字，别凭印象',
     'resettle_ledger.py': 'R100z299：结算规则本身改过时（本轮：止盈从买入当天改成次日），把 chen_ledger 全部条目按新规则重算并只刷新 chenPool.compare/track。手工触发（--dry 只打对照），不进流水线',
-    'migrate_ledger_pools.py': 'R100z297：一次性数据迁移（历史台账补池归属），迁移完即不再需要，'
-                               '手工触发、幂等可重跑；留着是为了「同一份台账在别的机器/别的分支上'
-                               '也能重放同一次迁移」，不是死脚本',
-    'goldpit_study.py': '「黄金坑」形态/外盘映射原型研究，手工触发（--dump 才落盘），不进流水线',
     'track_calibration.py': '校准曲线统计，手工触发',
     'score_openoutlook.py': '开盘前瞻打分，手工/被 import',
     'stock_fundflow.py': '个股资金流对照，手工触发',
@@ -164,14 +155,12 @@ DEAD_OK = {
                       '9:45 的 update_brief 只产大盘/板块/资金文案，不碰挂单',
     'nshape_fetch.py': 'N 字形态研究：全市场日K抓取（东财/腾讯双源→.kline_hist/），纯本地、手工触发',
     'backtest_breakout.py': '横盘启动接入 backtest_indicators 同一跑道的年化对照，纯本地、手工触发',
-    'breakout_study.py': '横盘启动参数研究：振幅/粘合/地量/贴沿四维分层搜索，纯本地、手工触发',
     'chen_study.py': '陈学长口径研究：卖点/持有天数网格 + 训练-样本外切分，纯本地、手工触发',
     'duanban_study.py': '断板反包口径研究：买点/卖点/止损锚分层，纯本地、手工触发',
     'duanban_tune.py': '断板反包参数寻优（量比/回撤/确认日），纯本地、手工触发',
     'rule_final_check.py': '陈学长口径终选：换参前后样本重算校验，纯本地、手工触发',
     'nshape_backtest.py': 'N 字形态研究：组合回测，纯本地、手工触发',
     'nshape_bt.py': 'N 字形态研究：回测口径对照，纯本地、手工触发',
-    'nshape_final.py': 'N 字形态研究：最终规则定稿统计，纯本地、手工触发',
     'duanban_mcap_bt.py': 'R100z277：断板反包按市值五档（≤100/200/300/400/500 亿）做年化回测，'
                           '回答「哪一档值得单独提仓」；组合层 8 槽位+波动拖累拆解，纯本地、手工触发',
     'nextday_bt.py': 'R100z295：断板反包/陈学长标的「涨停→倍量断板→T+2尾盘买→T+3卖」年化回测，'
