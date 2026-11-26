@@ -211,7 +211,6 @@
   .reason-block.rz-up { border-left-color: var(--up); }
   .reason-block.rz-down { border-left-color: var(--down); }
   .reason-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .reason-head .date-tag { background: var(--accent-deep); color: #fff; font-size: var(--fs-base); font-weight: 700; border-radius: 999px; padding: 2px 10px; }
   .reason-head .kw { font-size: var(--fs-h2); font-weight: 700; color: var(--ink); }
   /* R100z157：机械候选 / 自选补位标识（数据来自 annotate_pool_meta.py 的 poolMeta + 每只标的 poolHit） */
   .pool-line { font-size: var(--fs-base); color: var(--ink2); line-height: 1.75; margin: 2px 0 10px; padding: 8px 11px; background: var(--accent-soft); border-radius: var(--r-note); }
@@ -977,7 +976,6 @@
   .eg-ok { color: #12735a; background: #eef8f3; border-color: #a8d9c8; }
   .eg-warn { color: #8a5a12; background: #fdf6e8; border-color: #e5c99a; }
   .eg-bad { color: #a3202f; background: #fdeef0; border-color: #e9b3ba; }
-  .eg-cap { color: #3f5f8a; background: #f2f6fc; border-color: #a8bcd8; }
 
 
 
@@ -1104,7 +1102,6 @@
   .db-pool.p-ord h2::before { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
   /* 摘要行里的股票名不许被中文折行劈成两半（实测「百/洋股份」断在行尾，
      读者会以为是个叫「百」的票）。名字整体 nowrap，只在名字之间断。 */
-  .db-sub .ord-nw { white-space: nowrap; }
   .db-pool.p-star .tc { border-color: rgba(232,160,13,.45); }
   .db-pool.p-star .tc:hover { border-color: #e8a013; background: rgba(255,248,228,.9); }
   /* R100z324：连板补涨映射。连板是资金已经选出的方向，这一块回答「同题材里谁还没走」——
@@ -1248,7 +1245,6 @@
     border-radius: var(--r-note); font-size: var(--fs-sm); line-height: 1.7; color: var(--ink); }
   /* R100z345：阶段判定为「出货嫌疑」时，结论块换红底——它是唯一需要立刻行动的一档，
      和「洗盘到位」共用一个浅色底会让人一眼扫过去看不出区别。 */
-  .en-c-down { background: #fdf0f2; color: var(--ink); box-shadow: inset 3px 0 0 var(--up); }
   /* 量能解读进 db-modal 的 meta 区后，顶上要留一档空隙，不然会贴着「板块涨幅」那行 */
   .db-modal-meta .en-h { margin-top: 9px; }
   .db-modal-meta .en-b p { margin-bottom: 5px; }
