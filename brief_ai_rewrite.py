@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""R100z9x：开盘精选 AI 文案写回（只改 duanban.star 的 sentiment / pushText）。
+"""R100z9x：开盘精选 AI 文案写回（只改 duanban.brief 的 sentiment / pushText）。
 
-纪律：唯一写入口 duanban.star；其余字段（ashare/us/断板池/谐波/横盘启动/fullScan…）
+纪律：唯一写入口 duanban.brief；其余字段（ashare/us/断板池/谐波/横盘启动/fullScan…）
 一律按原样 round-trip 回去，不做任何加工。
 """
 import datetime
@@ -22,7 +22,7 @@ NODE = "/Users/loccco/.workbuddy/binaries/run-node"
 # 改为系统日期：守卫（star.date 必须等于今天）照旧生效，但不再需要人工维护。
 TODAY = datetime.date.today().isoformat()
 
-# 可选：picks 删减白名单（只删不加）。空集合=保持 update_star.py 原样。
+# 可选：picks 删减白名单（只删不加）。空集合=保持 update_brief.py 原样。
 DROP_CODES = set()
 
 SENTIMENT = (
@@ -41,9 +41,9 @@ def main():
     i = s.index("{")
     D = json.loads(s[i:s.rindex("}") + 1])
 
-    star = D.setdefault("duanban", {}).get("star")
+    star = D.setdefault("duanban", {}).get("brief")
     if not star:
-        print("[FAIL] duanban.star 不存在——须先跑 update_star.py，不允许凭空造 star")
+        print("[FAIL] duanban.brief 不存在——须先跑 update_brief.py，不允许凭空造 star")
         sys.exit(1)
     if star.get("date") != TODAY:
         print(f"[FAIL] star.date={star.get('date')} 非今日，拒绝改写")

@@ -102,7 +102,7 @@ DATA_WRITERS = [
     'retag_duanban.py',         # 断板重打标
     'risk_gate.py',             # 个股风险闸
     'signal_attribution.py',    # R100z160：signalPerf（指标归因台账）
-    'star_ai_rewrite.py',       # 09:45 精选文案
+    'brief_ai_rewrite.py',       # 09:45 精选文案
     'stock_news.py',            # stockNews
     'stock_concept.py',        # R100z325：stockConcepts（个股题材/概念，抓同花顺 F10；走 write_data_js）
     'news_theme.py',           # R100z326：要闻 themeTags / poolHits（走 write_data_js）
@@ -114,7 +114,7 @@ DATA_WRITERS = [
     'trend_state.py',           # R101：trendState（五指数趋势档；走 write_data_js）
     'update_ashare_sectors.py',  # A 股板块
     'update_kr_jp.py',          # 日韩早盘
-    'update_star.py',           # 09:45 精选落库
+    'update_brief.py',           # 09:45 精选落库
     'update_us_from_quotes.py',  # 美股行情
     'validate_stocks.py',       # 标的校验（--no-fix 关掉重排写回）
     'alert_gap.py',            # R100z382：duanban.alertGap（距异动点数，走 write_data_js + 持锁）

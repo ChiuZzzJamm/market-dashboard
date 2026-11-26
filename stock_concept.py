@@ -117,7 +117,7 @@ def displayed_codes(D):
     hz = D.get("harmonic") or {}
     for e in (hz.get("confirmPool") or []) + (hz.get("watchPool") or []):
         add(e.get("code"), e.get("name"))
-    for p in ((db.get("star") or {}).get("picks") or []):
+    for p in ((db.get("brief") or {}).get("picks") or []):
         add(p.get("code"), p.get("name"))
     for x in ((D.get("ashare") or {}).get("lianban") or []):
         add(x.get("code"), x.get("name"))
@@ -131,9 +131,9 @@ def displayed_codes(D):
                     add(t.get("code"), t.get("name"))
     # 这三处也会在页面上以「票 + 板块」的形式出现，漏了就会在那些位置回退成行业：
     # 今日买点清单 / 昨夜挂单核对 / 强板块落后股。
-    for b in ((db.get("star") or {}).get("buyList") or []):
+    for b in ((db.get("brief") or {}).get("buyList") or []):
         add(b.get("code"), b.get("name"))
-    for r in (((db.get("star") or {}).get("timingExec") or {}).get("rows") or []):
+    for r in (((db.get("brief") or {}).get("timingExec") or {}).get("rows") or []):
         add(r.get("code"), r.get("name"))
     for o in (((D.get("timingPlan") or {}).get("orders")) or []):
         add(o.get("code"), o.get("name"))

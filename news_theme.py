@@ -163,7 +163,7 @@ def process(D, verbose=True):
             hits.sort(key=lambda h: (0 if h["tier"] == "confirm" else 1,
                                      -(h["prob"] or 0)))
             hits = hits[:MAX_POOL_HITS]
-            picks = {str(p.get("code")) for p in (((D.get("duanban") or {}).get("star") or {})
+            picks = {str(p.get("code")) for p in (((D.get("duanban") or {}).get("brief") or {})
                                                   .get("picks") or [])}
             for h in hits:
                 h["inPicks"] = h["code"] in picks

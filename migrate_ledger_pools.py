@@ -122,7 +122,7 @@ def buy_map(D):
     m = {}
     if not D:
         return m
-    for x in ((D.get('duanban') or {}).get('star') or {}).get('buyList') or []:
+    for x in ((D.get('duanban') or {}).get('brief') or {}).get('buyList') or []:
         c = str(x.get('code') or '').strip()
         if not c or str(x.get('src') or '') == 'bp':
             continue

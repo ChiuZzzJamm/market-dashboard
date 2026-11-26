@@ -34,7 +34,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_JS = os.path.join(HERE, "data.js")
 
 # 分格戳：(路径组, 页头显示名)。路径组里多条路径的值按序拼成一段文本再匹配时间戳，
-# 用来兼容「日期和时间拆在两个字段」的数据（如 duanban.star 的 date + time）。
+# 用来兼容「日期和时间拆在两个字段」的数据（如 duanban.brief 的 date + time）。
 # 顺序即同刻平手时的优先级。
 SLOTS = [
     ([("ashare", "updatedAt")], "A股收盘"),
@@ -45,10 +45,10 @@ SLOTS = [
     ([("fullScan", "updatedAt")], "全量扫描"),
     ([("stopTrack", "updatedAt")], "止损跟踪"),
     # R100z276（2026-10-29 用户实报「页头还停在 08:36」）：09:45 那条自动化只写
-    #   duanban.star（开盘精选），但它拆成 date='2026-10-29' + time='09:56' 两个字段，
+    #   duanban.brief（开盘精选），但它拆成 date='2026-10-29' + time='09:56' 两个字段，
     #   没有 updatedAt，所以从来没被本脚本看见 → 精选 09:56 更新完了，页头还挂着 08:36。
     #   这里把两个字段拼起来当一格时间戳（拼成 '2026-10-29 09:56' 正好喂给 TS_RE）。
-    ([("duanban", "star", "date"), ("duanban", "star", "time")], "开盘精选"),
+    ([("duanban", "brief", "date"), ("duanban", "brief", "time")], "开盘精选"),
 ]
 
 TS_RE = re.compile(r"(20\d{2}-\d{2}-\d{2})\s+(\d{2}:\d{2})")

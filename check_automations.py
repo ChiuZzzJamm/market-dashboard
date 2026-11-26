@@ -962,8 +962,8 @@ RESP = [
     ('aiPrediction.openOutlook',       ('B0830', 'W2200'), ('openOutlook', 'content'), 'aiPrediction.openOutlook'),
     ('duanban.confirmed[].story',      ('A1600', 'A0700', 'W2200'), 'story', 'duanban.confirmed[0].story'),
     ('duanban.watching[].story',       ('A1600', 'A0700', 'W2200'), 'story', 'duanban.watching[0].story'),
-    ('duanban.star.pushText',          ('S0945',),         'pushText', 'duanban.star.pushText'),
-    ('duanban.star.sentiment',         ('S0945',),         'sentiment', 'duanban.star.sentiment'),
+    ('duanban.brief.pushText',          ('S0945',),         'pushText', 'duanban.brief.pushText'),
+    ('duanban.brief.sentiment',         ('S0945',),         'sentiment', 'duanban.brief.sentiment'),
     ('deduce#.main',                   ('A1700', 'B0830', 'W2100', 'W2200'), 'main', 'deduce#0.main'),
 ]
 # us / ashare 五节要闻 summary 单列（字段同名，靠任务区分）

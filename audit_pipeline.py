@@ -25,7 +25,7 @@
     G9b 前端兜底反证   被豁免的空字段必须①前端不引用②渲染前有真值兜底，
                       反证「空内容安全」这件事本身是可机器复验的，不靠人翻 index.html
     G10 日期新鲜度    aiPrediction/openOutlook/ashare/us 日期 vs 最近交易日；
-                      openOutlook.pos / duanban.star 按「下一个交易日是否已到」分流
+                      openOutlook.pos / duanban.brief 按「下一个交易日是否已到」分流
     G11 只读冒烟(--deep)
     G12 半死链路      data.js 顶层产出必须登记「流程主人」+ 被自动化点名 + 脚本零孤儿
     G13 节假日表      common 与 cal_factor 两份手工节假日表同源等价 + 覆盖到期前 30 天 WARN 提醒跨年更新
@@ -251,7 +251,7 @@ DATA_KEYS_REQUIRED = [
     "stkKlines", "stkKlineNames", "harmonic", "breakoutPool",
 ]
 
-VALIDATE_SCOPES = ("all", "ai", "us", "star")
+VALIDATE_SCOPES = ("all", "ai", "us", "brief")
 
 
 # ---------------------------------------------------------------- G12 表（产出 · 生产方 · 流程主人）
@@ -704,7 +704,7 @@ def g5_source_assertions(r):
         if "timedelta" not in src:
             r.fail("G5", "merge_duanban.py 未导入 timedelta（star 过期判定会算错）")
         elif not _star_retain_ok(src):
-            r.fail("G5", "merge_duanban.py 未采用「不早于最近交易日保留 star」逻辑（会清场 duanban.star）")
+            r.fail("G5", "merge_duanban.py 未采用「不早于最近交易日保留 star」逻辑（会清场 duanban.brief）")
         else:
             r.ok("G5", "merge_duanban.py：保留最近交易日 star（od >= 下界），不会清场")
 
@@ -1169,36 +1169,36 @@ def g8_g9_g10_data(r):
         r.ok("G10", f"openOutlook 尚未为下一交易日 {nxt} 写入前瞻（date={oo_date}）"
                     f"——08:30 自动化到期后补写；届时 audit 会校验 pos 是否完整，缺 pos 即 FAIL")
 
-    # duanban.star 存在性（R100z16 清场事故回归）
+    # duanban.brief 存在性（R100z16 清场事故回归）
     # 休市期缺失属预期（9:45 在下一个交易日才重建），仅当最近交易日刚过 1 天仍缺才判 FAIL
     # R100z83（2026-10-08 实战教训）：交易日 **10:00 前** star 缺失降为 WARN——
     #   star 由 9:45 任务写入，07:00/08:30 任务先于它部署，若此时判 FAIL 会逼着
-    #   前置任务按「FAIL 必须修正」条款提前跑 update_star.py 补造 star（08:11 实际发生），
+    #   前置任务按「FAIL 必须修正」条款提前跑 update_brief.py 补造 star（08:11 实际发生），
     #   违反「9:45 是 star 唯一写入口」的职责边界、产出开盘前低质量版本。
     #   10:00 后（9:45 窗口已过）仍缺才是真事故，恢复硬拦。
     today = datetime.now().strftime("%Y-%m-%d")
     _before_star_window = datetime.now().hour < 10  # 9:45 任务窗口（留 15 分钟宽限）未过
-    if "star" not in (D.get("duanban") or {}):
+    if "brief" not in (D.get("duanban") or {}):
         # 口径：star 由 9:45 在「交易日当天」写入。
         # ① 下一个交易日还没到（休市期）→ 缺失是必然，PASS（不是缺陷）
         # ② 下一交易日已到 / 就是今天、但当前 <10:00 → 9:45 尚未跑，WARN（不是缺陷）
         # ③ 下一交易日已到 / 就是今天、且已过 10:00 仍缺 → 真事故（历史上 merge 会把它清场）
         if not nxt or nxt > today:
-            r.ok("G10", f"duanban.star 当前缺失属预期：下一个交易日 {nxt or '—'} 尚未到"
+            r.ok("G10", f"duanban.brief 当前缺失属预期：下一个交易日 {nxt or '—'} 尚未到"
                         f"（9:45 开盘精选届时写入；R100z16 后 merge 不再清场）")
         elif _before_star_window:
-            r.warn("G10", f"duanban.star 缺失但当前在 10:00 前（下一交易日 {nxt} 当天、9:45 开盘精选"
-                          f"尚未跑）——属预期，07:00/08:30 任务**不要**跑 update_star.py 补造，照常部署；"
+            r.warn("G10", f"duanban.brief 缺失但当前在 10:00 前（下一交易日 {nxt} 当天、9:45 开盘精选"
+                          f"尚未跑）——属预期，07:00/08:30 任务**不要**跑 update_brief.py 补造，照常部署；"
                           f"10:00 后仍缺才升级 FAIL")
         else:
-            r.fail("G10", f"duanban.star（🌟开盘精选）缺失，而下一交易日 {nxt} 已到且已过 9:45 窗口"
+            r.fail("G10", f"duanban.brief（🌟开盘精选）缺失，而下一交易日 {nxt} 已到且已过 9:45 窗口"
                           f"——历史曾因 merge 时序被清场，属真事故，须排查清场根因并补回")
     else:
-        sd = (D["duanban"]["star"] or {}).get("date")
+        sd = (D["duanban"]["brief"] or {}).get("date")
         if sd and last and sd < last:
-            r.warn("G10", f"duanban.star.date={sd} 早于最近交易日 {last}（9:45 未跑则正常）")
+            r.warn("G10", f"duanban.brief.date={sd} 早于最近交易日 {last}（9:45 未跑则正常）")
         else:
-            r.ok("G10", f"duanban.star 存在（date={sd}）")
+            r.ok("G10", f"duanban.brief 存在（date={sd}）")
 
 
 # ---------------------------------------------------------------- G11
@@ -1663,14 +1663,14 @@ def collect_g16_checks(D):
                 add(f"duanban.{pool}[{i}].story", e.get("story"), 100)
 
     # 9:45 开盘精选「深度分析」（R100z161c 补闸）。二节速查表早写着 pushText 300-700 /
-    #   sentiment 120-200，但 G16/G17 都不扫 duanban.star → 两个字段长期零保护。
+    #   sentiment 120-200，但 G16/G17 都不扫 duanban.brief → 两个字段长期零保护。
     #   只加地板不加上限（超上限归 check_narrative 的 OVER 清单，硬拦会逼 AI 删内容）。
-    _star = (D.get("duanban") or {}).get("star") or {}
+    _star = (D.get("duanban") or {}).get("brief") or {}
     if isinstance(_star, dict):
         if _star.get("pushText"):
-            add("duanban.star.pushText", _star.get("pushText"), 300)
+            add("duanban.brief.pushText", _star.get("pushText"), 300)
         if _star.get("sentiment"):
-            add("duanban.star.sentiment", _star.get("sentiment"), 120)
+            add("duanban.brief.sentiment", _star.get("sentiment"), 120)
 
     # deduce 三候选推演（全站任意条目，R100z96：main/counter 曾被 prompt 定为「一句话」口径）
     def _deduce_walk(o, k=[0]):
@@ -1787,9 +1787,9 @@ def collect_g17_owners(D):
             if isinstance(e, dict):
                 put(e.get("story"), f"duanban.{pool}[{i}]")
     # R100z161c：9:45 深度分析纳入复读面（AI 手工文本，与 outlook/要闻常出自同一批措辞）
-    _star17 = (D.get("duanban") or {}).get("star") or {}
+    _star17 = (D.get("duanban") or {}).get("brief") or {}
     if isinstance(_star17, dict) and _star17.get("pushText"):
-        put(_star17.get("pushText"), "duanban.star.pushText")
+        put(_star17.get("pushText"), "duanban.brief.pushText")
     # 全站 deduce
     def _ded_walk(o):
         if isinstance(o, dict):
@@ -2523,7 +2523,7 @@ def g27_memory_reachability(r):
 # G28 分格时间戳表：与 refresh_stamp.py 的 SLOTS **必须逐项一致**，G28 会跨文件并排比。
 # 历史 bug 类型就是这类「两处各写一份清单」——只在一边加字段，另一边静默漏取。
 # 每格写成「路径组」：组内多条路径的值按序拼接后再找时间戳，用来兼容
-#   「日期和时间拆成两个字段」的数据（duanban.star 的 date + time 就是这种）。
+#   「日期和时间拆成两个字段」的数据（duanban.brief 的 date + time 就是这种）。
 STAMP_SLOTS = [
     ([("ashare", "updatedAt")], "A股收盘"),
     ([("us", "updatedAt")], "美股收盘"),
@@ -2532,7 +2532,7 @@ STAMP_SLOTS = [
     ([("breakoutPool", "updatedAt")], "横盘启动"),
     ([("fullScan", "updatedAt")], "全量扫描"),
     ([("stopTrack", "updatedAt")], "止损跟踪"),
-    ([("duanban", "star", "date"), ("duanban", "star", "time")], "开盘精选"),
+    ([("duanban", "brief", "date"), ("duanban", "brief", "time")], "开盘精选"),
 ]
 
 
@@ -2767,7 +2767,7 @@ def g29_name_and_risk_hygiene(r):
         `600079 人福医药→ST人福`、`600311 荣华实业→*ST荣华` 是最危险的 ——
         **已戴帽 ST 却显示成正常公司，还被摆在「板块受益标的」里**。
         黑名单自己取的是实时行情名，两边不一致 → 同一只票两套名字。
-      · 风险层：`stock_risk_blacklist.py` 每天都在算 red，但只有 `update_star.py` 会过滤；
+      · 风险层：`stock_risk_blacklist.py` 每天都在算 red，但只有 `update_brief.py` 会过滤；
         `check_duanban` / `breakout_pool` 压根不读 →
         603330 天洋新材 10-09 就公告减持，到 10-21 仍挂在「断板确认池」和「量化筛选」里。
 
@@ -4454,9 +4454,9 @@ def g50_markdown_leak(r):
     except Exception as e:                                   # noqa: BLE001
         r.fail("G50", f"data.js 读取失败，文案检查失效：{e}")
         return
-    st = ((D.get("duanban") or {}).get("star") or {})
+    st = ((D.get("duanban") or {}).get("brief") or {})
     fields = [
-        ("duanban.star.timingExec.rule", (st.get("timingExec") or {}).get("rule")),
+        ("duanban.brief.timingExec.rule", (st.get("timingExec") or {}).get("rule")),
         ("timingPlan.rule", (D.get("timingPlan") or {}).get("rule")),
         ("timingPlan.riskNote", (D.get("timingPlan") or {}).get("riskNote")),
         # 趋势档这条目前只在 title/弹窗里露脸，但它是「给渲染层读的文案」——
@@ -4530,7 +4530,7 @@ def g54_risk_scan_scope(r):
     """G54 黑名单扫描域必须覆盖所有「推荐位」（R100z276，2026-10-29）。
 
     由来：risk_gate.py 把 9 个列表当推荐位剔 red，但 stock_risk_blacklist.py 的扫描域
-    只覆盖其中一部分 —— **陈学长 strict/loose 与 duanban.star.picks 从来没进过扫描域**。
+    只覆盖其中一部分 —— **陈学长 strict/loose 与 duanban.brief.picks 从来没进过扫描域**。
     后果是「只在陈学长池里推出来的票从未被扫过」，risk_gate 手里没有它的 red 记录，
     自然也剔不掉：闸门对这两池全程失明，而 TARGETS 里明明写着它俩。
     实测扩域当刻补回 3 只（002982 湘佳股份 / 601900 南方传媒 / 605488 福莱新材）。

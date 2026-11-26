@@ -25,7 +25,7 @@ MAINBOARD = re.compile(r"^(60|00)\d{4}$")
 
 
 def _last_trading_day():
-    """最近一个交易日（含今天），用于判断 duanban.star 是否过期。
+    """最近一个交易日（含今天），用于判断 duanban.brief 是否过期。
 
     R100z291：原判据是「不早于自然日昨天」，注释却写着「最近一个交易日一律保留」——
     实现与注释不符。失效场景是周日与长假最后一天：22:00 步跑时「昨天」= 周六/假期，
@@ -208,13 +208,13 @@ def main():
     # 前端本就有 R100e 闸门（star.date===本地今日才渲染），旧 star 不会被展示，
     # 所以改为「最近一个交易日的 star 一律保留」，由 9:45 整字段覆盖刷新，
     # 既不产生过期展示，也不会被早跑的复核脚本清场。
-    old_star = (D.get("duanban") or {}).get("star")
-    if old_star and not mod.get("star"):
+    old_star = (D.get("duanban") or {}).get("brief")
+    if old_star and not mod.get("brief"):
         # R100z291：判据从「自然日昨天」改为「最近一个交易日」，见 _last_trading_day 注释
         floor = _last_trading_day()
         od = str(old_star.get("date") or "")
         if od >= floor:
-            mod["star"] = old_star
+            mod["brief"] = old_star
             print(f"[merge] 保留 🌟 开盘精选模块（{od}，不早于最近交易日 {floor}）", file=sys.stderr)
         else:
             print(f"[merge] 丢弃过期 🌟 模块（{od}，早于最近交易日 {floor}），待 9:45 开盘精选自动化重建",

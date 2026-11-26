@@ -72,7 +72,7 @@ REVERSE_T = -2.0    # 1 日期望的 t 值低于此 → 判「负期望」，不
 #   'next_open'  = 登记日次日开盘买（收盘后发布，默认）
 #   'close'      = 登记日收盘买（盘中发布、当天只剩收盘价可参考）
 ENTRY_MODE = {'ai': 'open', 'buy': 'close'}
-# `buy` = 9:45「🌟 开盘精选」的买点清单（duanban.star.buyList 由 update_star.py 生成）。
+# `buy` = 9:45「🌟 开盘精选」的买点清单（duanban.brief.buyList 由 update_brief.py 生成）。
 # 它在**盘中**发布，当天就能在买区内下单，最早卖点是次日收盘（T+1 交割）。
 # 按「次日开盘」记账会把它整体推迟一天，还额外吃一次隔夜跳空（系统选出的票跳空均值 −0.465%）。
 # mode='close' 时用当日收盘兜底；清单本身带 `px`（9:57 抓的现价）时优先用它——那才是你看到的价。
@@ -91,7 +91,7 @@ SRC_LABEL = {
     'harmonic': '谐波形态',
     # R100z255：全站唯一「明确告诉你现在能买」的清单，此前是唯一没有台账的源。
     # R100z301（用户 2026-11-03「今日可下单是不是开盘精选？是的话就改成开盘精选」）：
-    # 是——它就是 9:45 那步「🌟 开盘精选」里带买点的那批（`duanban.star.buyList`），
+    # 是——它就是 9:45 那步「🌟 开盘精选」里带买点的那批（`duanban.brief.buyList`），
     # 换名是为了让台账这一行和页面上的卡片同名，不再出现「同一份清单两个名字」。
     # 注意与 16:00 那张「💵 明日可下单」卡片区分：那张是收盘后给下一交易日用的挂单价。
     'buy': '开盘精选',
@@ -227,7 +227,7 @@ def snapshot(D):
         for x in cp.get(pool) or []:
             _put(key, x.get('code'), x.get('name'), x.get('sector'))
 
-    # ---- R100z255：开盘精选（duanban.star.buyList） ----
+    # ---- R100z255：开盘精选（duanban.brief.buyList） ----
     # 为什么单独登记这一源：它是全站唯一「明确告诉你现在能买、买在哪个价带、破哪个价撤」的清单，
     # 却也是唯一没有任何后续台账的出口——24.109 用**回测**证明过各源 edge 大小，
     # 但「按这套清单真买会怎样」从来没被自己的实盘快照验证过。剔掉横盘启动源
@@ -250,7 +250,7 @@ def buy_entry_date(D):
     这与 24.101「加护栏必须验证拦住之后落到哪」是同一类错：错在标杆选错了对象，
     而不是算错了数。清单的可下单日，只由清单自己的生成日决定。
     """
-    d = str((((D.get('duanban') or {}).get('star') or {}).get('date')) or '')[:10]
+    d = str((((D.get('duanban') or {}).get('brief') or {}).get('date')) or '')[:10]
     return d or None
 
 
@@ -659,7 +659,7 @@ def backfill_buy(L, D, commits=80, quiet=False):
             DD = json.loads(blob[m.end():].rstrip().rstrip(';'))
         except Exception:                                     # noqa: BLE001
             continue
-        stx = ((DD.get('duanban') or {}).get('star') or {})
+        stx = ((DD.get('duanban') or {}).get('brief') or {})
         d = str(stx.get('date') or '')[:10]
         rows = [x for x in (stx.get('buyList') or [])
                 if isinstance(x, dict) and str(x.get('src') or '') != 'bp']
@@ -803,7 +803,7 @@ def build(D, do_snapshot=True, backfill=0):
     # 16:00 的池，当天就能在买区下单，所以「今日」是对的。但 19:30 的叙事步只更新 duanban 池
     # （那是给**明日**用的），**不动 star**（merge_duanban 保留 9:45 产物），于是 19:30 之后
     # 再看这一行，它已经是当天早上的过期快照。不写清生成时刻，读者会拿它当「明日清单」。
-    _st = (D.get('duanban') or {}).get('star') or {}
+    _st = (D.get('duanban') or {}).get('brief') or {}
     _st_when = ('%s %s' % (_st.get('date') or '', _st.get('time') or '')).strip()
     # R100z298（用户 2026-11-03「同色圈出来的不是重复的吗？为什么还要合并成今日可下单」）：
     # 子行不再占页面行（见 ROW_ORDER 注释），构成改由这里一句话说清——否则读者看不出

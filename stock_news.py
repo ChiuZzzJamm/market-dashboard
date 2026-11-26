@@ -466,7 +466,7 @@ def collect_targets(D):
     for _k in ('strict', 'loose', 'watching'):
         for _e in ((D.get('chenPool') or {}).get(_k) or []):
             add(_e.get('code'), _e.get('name'))
-    for e in (db.get('star') or {}).get('picks') or []:
+    for e in (db.get('brief') or {}).get('picks') or []:
         add(e.get('code'), e.get('name'))
     for key in ('harmonic', 'breakoutPool'):
         m = D.get(key) or {}

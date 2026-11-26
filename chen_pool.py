@@ -1735,7 +1735,7 @@ def main():
     # 本函数作用域里没有 `D`，写错会 pyflakes 直接拦（K 闸门就是这么救回来的）。
     _dbd = (old.get("duanban") or {}) if isinstance(old, dict) else {}
     for _arr in (_dbd.get("confirmed") or [], _dbd.get("watching") or [],
-                 (_dbd.get("star") or {}).get("picks") or []):
+                 (_dbd.get("brief") or {}).get("picks") or []):
         for _x in _arr:
             if isinstance(_x, dict) and _x.get("code") and _x.get("pre"):
                 _pre_map.setdefault(str(_x["code"]), _x["pre"])

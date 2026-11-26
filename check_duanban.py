@@ -942,9 +942,9 @@ def prioritize_cut(cut, D, limit=60):
 
     R100z263b（同日 22:2x 实测纠错）：**第一版取源取错了**。我按顶层 `timingExec`
     取，而它当天是空对象 `{}`；「今日可下单」那 8 张卡的数据其实在
-    `duanban.star.timingExec.rows`（9:45 写）。结果是名单照旧按距离排、用户点名的
+    `duanban.brief.timingExec.rows`（9:45 写）。结果是名单照旧按距离排、用户点名的
     8 只排到第 10~19 位 —— 修了跟没修一样，而且日志里看不出错（取的源不报错、只是空）。
-    `ordPrep()` 的真实取数是三处：`duanban.star.timingExec.rows`（今早执行）／
+    `ordPrep()` 的真实取数是三处：`duanban.brief.timingExec.rows`（今早执行）／
     顶层 `timingPlan.orders`（16:00 生成的明日挂单）。
     三处都得算，且**空源不许当"没有"**——必须三处都试（见 24.16 显式降级同理）。
     """
@@ -965,7 +965,7 @@ def prioritize_cut(cut, D, limit=60):
 
     D = D if isinstance(D, dict) else {}
     _db = D.get('duanban') or {}
-    _st = _db.get('star') or {}
+    _st = _db.get('brief') or {}
     # ① 断板页「今日可下单」的真实来源（9:45 执行结果 + 盘中买点）→ 最高优先
     _scan((_st.get('timingExec') or {}).get('rows'), hot)
     # ② 顶层明日挂单（16:00 生成）与顶层执行结果（历史结构，留着不吃亏）

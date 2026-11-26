@@ -85,9 +85,9 @@ def ceil_of(label):
         return 500
     if label in ("openOutlook", "aiPrediction.openOutlook"):
         return 1700  # R100z292：原 650，六维度×2-4 句的数学下限就 ~700（实测 1683）
-    if label == "duanban.star.pushText":
+    if label == "duanban.brief.pushText":
         return 700   # 9:45 prompt 写死 300-700（页面🌟模块与微信推送共用）
-    if label == "duanban.star.sentiment":
+    if label == "duanban.brief.sentiment":
         return 200   # 9:45 prompt 写死 120-200
     if label.startswith("deduce#"):
         if label.endswith(".main"):

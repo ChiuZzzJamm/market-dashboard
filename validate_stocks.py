@@ -874,11 +874,11 @@ def check_risk_blacklist(D, scope='all'):
       all / us  → us + ashare 五节（07:00、周日任务职责；
                   这两个任务自己就是这些标的的选股者，必须自己过闸，不能
                   把黑名单推给 19:30 叙事步去背，否则等于没闸）
-      all / star→ duanban.star.picks（9:45 职责；star 同样由本任务自己挑，
+      all / star→ duanban.brief.picks（9:45 职责；star 同样由本任务自己挑，
                   9:45 又禁止池外补股，若不过闸就等于 star 这一支完全没有硬闸）
 
-    ⚠️ R100z41 补记：scope='star' 原本不在任何分支里，check_risk_blacklist 直接
-    返回空、main() 的 violations 也恒为空——「--scope star 跑出 ALL OK」其实是
+    ⚠️ R100z41 补记：scope='brief' 原本不在任何分支里，check_risk_blacklist 直接
+    返回空、main() 的 violations 也恒为空——「--scope brief 跑出 ALL OK」其实是
     闸门空转，不是真的校验通过。现已按上述口径补齐。"""
     root = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(root, 'risk_blacklist.json')
@@ -957,11 +957,11 @@ def check_risk_blacklist(D, scope='all'):
                     for imp in (nw.get('impacts') or []):
                         if isinstance(imp, dict):
                             scan(imp.get('stocks'), f"{mk}.{key}.impacts", hard=False)
-    if scope in ('all', 'star'):
+    if scope in ('all', 'brief'):
         # R100z41：🌟开盘精选的 picks 是本任务自己挑的，不许池外补股，
         # 那就必须自己过闸——否则 9:45 整条链路完全没有硬风险拦截面。
-        star = (D.get('duanban') or {}).get('star') or {}
-        scan(star.get('picks'), 'duanban.star.picks', asof=str(star.get('date') or '')[:10] or None)
+        star = (D.get('duanban') or {}).get('brief') or {}
+        scan(star.get('picks'), 'duanban.brief.picks', asof=str(star.get('date') or '')[:10] or None)
         # R100z167：断板确认池/观察池也要过一遍。它们是 check_duanban 的机械产物，
         # 没法「要求它换股」（会天天误报），但读者会当反包候选看 —— 命中就 WARN 让人看见。
         db = D.get('duanban') or {}
@@ -1329,7 +1329,7 @@ def check_story_quality(D):
 
 def check_star_module(D):
     """R98k 软闸门：① 双池上涨概率全池拉平（如全为 50%）→ 疑似未校准 WARN；
-    ② duanban.star（9:45 开盘精选）picks 数量不限（≥1，R98l）；
+    ② duanban.brief（9:45 开盘精选）picks 数量不限（≥1，R98l）；
        picks 允许三类：a) 双池内标的（src='pool'）；b) src='board' 的板块动量标的
        （早盘真实强势板块领涨股，R98n，允许池外）；c) src='bp'/'hz'/'acc' 的技术池标的
        （横盘启动/谐波，R100m 前一日 16:00 数据步产物，允许池外）。
@@ -1343,15 +1343,15 @@ def check_star_module(D):
     probs = [e.get('probability') for e in entries if isinstance(e.get('probability'), (int, float))]
     if len(probs) >= 8 and len(set(probs)) == 1:
         warns.append(f"断板反包上涨概率全部为 {probs[0]}%——疑似未校准拉平（R98k：脚本基线按情绪分布，AI 校准严禁全池统一）")
-    star = db.get('star')
+    star = db.get('brief')
     if star is not None:
         if not isinstance(star, dict):
-            warns.append("duanban.star 非对象（应为 {date,time,marketLine,sentiment,pushText}）")
+            warns.append("duanban.brief 非对象（应为 {date,time,marketLine,sentiment,pushText}）")
         else:
             for _k, _lo in (('marketLine', 8), ('sentiment', 40), ('pushText', 120)):
                 _v = str(star.get(_k) or '').strip()
                 if len(_v) < _lo:
-                    warns.append(f"duanban.star.{_k} 过短或为空（{len(_v)} 字，应 ≥{_lo}）——空着等于没写")
+                    warns.append(f"duanban.brief.{_k} 过短或为空（{len(_v)} 字，应 ≥{_lo}）——空着等于没写")
     return warns
 
 
@@ -1596,7 +1596,7 @@ def main():
         _print_help()
     as_json = '--json' in sys.argv
     # R100z16 --no-fix：纯只读校验，不自动补 direction / 不剔 duanban / 不重排 / 不写盘。
-    # 9:45 唯一写入口是 duanban.star，跑默认模式反会被 validate 改掉 duanban 池内
+    # 9:45 唯一写入口是 duanban.brief，跑默认模式反会被 validate 改掉 duanban 池内
     # probability 与池成员、重排 aiPrediction 标的，等于从后门绕过任务自己的禁令。
     no_fix = '--no-fix' in sys.argv
     # R100z16 --scope：让每个自动化只对自己写的节点负责，拆掉
@@ -1608,7 +1608,7 @@ def main():
             scope = sys.argv[_i + 1]
         elif _a.startswith('--scope='):
             scope = _a.split('=', 1)[1]
-    if scope not in ('all', 'ai', 'us', 'star'):
+    if scope not in ('all', 'ai', 'us', 'brief'):
         print(f"[ERROR] --scope 非法：{scope}（可选 all / ai / us / star）")
         sys.exit(2)
     D = load_data()
@@ -1677,7 +1677,7 @@ def main():
         violations.extend(exp_hards)
         violations.extend(logic_hards)
         violations.extend(pool_hards)
-    if scope in ('all', 'ai', 'us', 'star'):  # R100z41：star 也要计（此前空转，闸门形同虚设）
+    if scope in ('all', 'ai', 'us', 'brief'):  # R100z41：star 也要计（此前空转，闸门形同虚设）
         violations.extend(risk_fails)
 
     if scope in ('all', 'us'):

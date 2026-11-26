@@ -454,19 +454,19 @@ elif mode == 'weekend':
         parts.append("⚠️ 利空：\n" + '\n'.join(down_lines))
     desp = '\n\n'.join(parts)
 
-elif mode == 'star':
+elif mode == 'brief':
     # R98k→R99：🌟 开盘精选推送（每日 9:45 自动化）。
     # R99：删掉 📊指数快照与 💡情绪段（与 📖 分析重复）；📖 分析（原深度分析）挪到最上；
     # 不含集合竞价内容，只讲开盘后板块情绪与资金情绪；随后 🌟 精选清单。
     db = D.get('duanban') or {}
-    st = db.get('star') or {}
+    st = db.get('brief') or {}
     picks = st.get('picks') or []
     # 2026-11-25 用户口径（PROJECT-MEMORY 24.200）：开盘精选不再产个股，
-    # star 只有 marketLine/sentiment/pushText。旧判定以 picks 非空为前提 →
+    # brief 只有 marketLine/sentiment/pushText。旧判定以 picks 非空为前提 →
     # 口径改完后推送被静默跳过（2026-11-26 实测），故改为「有分析文字即推」。
     _has_text = bool(str(st.get('pushText') or '').strip() or str(st.get('sentiment') or '').strip())
     if not picks and not _has_text:
-        print('[warn] duanban.star 缺失/为空，跳过推送'); sys.exit(0)
+        print('[warn] duanban.brief 缺失/为空，跳过推送'); sys.exit(0)
     _d = str(st.get('date') or '')
     title = f"[断板反包🌟] {_d[5:].replace('-','/')} 开盘精选"
     stars_line = '  '.join(
@@ -482,7 +482,7 @@ elif mode == 'star':
         desp_parts.append(f"🌟 精选（{len(picks)} 只）：{stars_line}")
     # R100z324：连板补涨映射——连板是资金已选出的方向，同题材里还没走的票才是有赔率的一端。
     # 只列「已续板/盘中走强」且命中池内候选的连板，最多 3 行（推送是手机上看，长了两屏翻不完）。
-    # 名字与命中全部来自 update_star.py 的 spillover，这里不做任何匹配计算。
+    # 名字与命中全部来自 update_brief.py 的 spillover，这里不做任何匹配计算。
     sp = st.get('spillover') or {}
     _sp_rows = [r for r in (sp.get('rows') or [])
                 if (r.get('matches') or []) and r.get('state') in ('reboard', 'strong')]

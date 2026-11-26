@@ -7,7 +7,7 @@
   2. 抓开盘半小时盘面：指数涨跌+成交额（腾讯 gtimg，本机可达）、
      同花顺行业涨跌幅（fetch_ths_industries）、行业主力资金净额（fetch_ths_funds）；
   3. 个股当日实时涨幅批量快照（腾讯 gtimg，一次批量）；
-  4. 确定性筛选「板块挂钩」标的写入 duanban.star（R99b）：
+  4. 确定性筛选「板块挂钩」标的写入 duanban.brief（R99b）：
      合格板块 = 开盘涨幅>0（板块情绪正向）且 主力净流入>0（资金正向）的板块；
      精选 = 池内非利空标的、其板块与合格板块匹配（互含模糊匹配），按上涨概率降序；
      无合格板块则 picks 为空（宁缺勿滥），绝不放板块不挂钩的标的；
@@ -16,8 +16,8 @@
   5. marketLine / sentiment 写模板句（R99：只写开盘后板块情绪与资金情绪，不再含集合竞价），
      pushText 留空——由自动化 AI 复核改写为「📖 分析」。
 
-只写 duanban.star（含 generatedAt 不动），其余字段一律不动；东财被 WAF 不影响（同花顺/腾讯源）。
-用法：python3 update_star.py [--dry]
+只写 duanban.brief（含 generatedAt 不动），其余字段一律不动；东财被 WAF 不影响（同花顺/腾讯源）。
+用法：python3 update_brief.py [--dry]
 """
 import argparse
 import json
@@ -214,7 +214,7 @@ def build_star(D, base=None):
         "marketLine": market_line,
         "sentiment": sentiment,
         "pushText": push_text,
-        "generatedBy": "update_star.py：只产出大盘/板块/资金三段，不产出个股名单",
+        "generatedBy": "update_brief.py：只产出大盘/板块/资金三段，不产出个股名单",
     }
     return star, None
 
@@ -236,7 +236,7 @@ def main():
         print("[DRY-RUN] 未写回")
         return
     s, D = load_data(data_path)
-    D.setdefault("duanban", {})["star"] = star
+    D.setdefault("duanban", {})["brief"] = star
 
     out = "window.DASHBOARD_DATA = " + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ";\n"
     # R100z179（L11 硬约束）：先写临时文件、node --check 通过再 os.replace。

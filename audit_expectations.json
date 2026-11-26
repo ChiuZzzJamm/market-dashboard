@@ -194,7 +194,7 @@
     "panorama.markets[us].items",
     "duanban.confirmed[]/watching[]",
     "duanban.topBoards",
-    "duanban.star",
+    "duanban.brief",
     "stkKlines",
     "stkKlineNames"
    ],
@@ -235,7 +235,7 @@
     "panorama.markets[kr]",
     "panorama.markets[jp]",
     "us.themePicks",
-    "duanban.star",
+    "duanban.brief",
     "harmonic",
     "breakoutPool",
     "fullScan"
@@ -492,9 +492,9 @@
      "step": "0"
     },
     {
-     "cmd": "python3 update_star.py",
+     "cmd": "python3 update_brief.py",
      "flags": [],
-     "file": "update_star.py",
+     "file": "update_brief.py",
      "step": "1"
     },
     {
@@ -502,7 +502,7 @@
      "flags": [
       "--no-fix",
       "--scope",
-      "star"
+      "brief"
      ],
      "file": "validate_stocks.py",
      "step": "3"
@@ -512,12 +512,12 @@
    "mustContain": [
     "aShareClosed",
     "cal_factor.py --json",
-    "update_star.py",
-    "validate_stocks.py --no-fix --scope star",
-    "--no-fix --scope star",
-    "--scope star",
-    "duanban.star",
-    "run_push.sh star",
+    "update_brief.py",
+    "validate_stocks.py --no-fix --scope brief",
+    "--no-fix --scope brief",
+    "--scope brief",
+    "duanban.brief",
+    "run_push.sh brief",
     "harmonic_detect.py",
     "breakout_pool.py",
     "price-in→已计价"
@@ -537,21 +537,21 @@
    ],
    "forbiddenGap": [],
    "dataFields": [
-    "duanban.star.date",
-    "duanban.star.time",
-    "duanban.star.marketLine",
-    "duanban.star.sentiment",
-    "duanban.star.pushText",
-    "duanban.star.generatedBy",
+    "duanban.brief.date",
+    "duanban.brief.time",
+    "duanban.brief.marketLine",
+    "duanban.brief.sentiment",
+    "duanban.brief.pushText",
+    "duanban.brief.generatedBy",
     "harmonic.confirmPool",
     "harmonic.watchPool",
     "breakoutPool.passed",
     "fullScan"
    ],
    "writesFields": [
-    "duanban.star",
-    "duanban.star.sentiment",
-    "duanban.star.pushText"
+    "duanban.brief",
+    "duanban.brief.sentiment",
+    "duanban.brief.pushText"
    ],
    "neverWrites": [
     "ashare",
@@ -569,7 +569,7 @@
     "stockConcepts（stock_concept.py 产出，AI 只读）"
    ],
    "notes": [
-    "唯一写入口是 duanban.star；脚本产物（update_star.py）负责 picks，AI 只复核 sentiment/pushText 并可微调 picks（仅可删减或池内补入）。"
+    "唯一写入口是 duanban.brief；脚本产物（update_brief.py）负责 picks，AI 只复核 sentiment/pushText 并可微调 picks（仅可删减或池内补入）。"
    ]
   },
   {
@@ -778,7 +778,7 @@
     "aiPrediction",
     "openOutlook",
     "ashare.reason / 五节要闻 / themePicks / outlook 等叙述字段（19:30 叙事步职责）",
-    "duanban.star",
+    "duanban.brief",
     "stkKlines（19:30 叙事步 embed_klines 职责）",
     "strategy/macroCalendar 顶层键（deploy.sh 自动生成）"
    ],
@@ -1135,7 +1135,7 @@
     "openOutlook.verification.verdict",
     "duanban.confirmed[]/watching[]",
     "duanban.topBoards",
-    "duanban.star",
+    "duanban.brief",
     "panorama.markets[ashare]",
     "fullScan",
     "harmonic",
@@ -1172,7 +1172,7 @@
     "us（全部字段，仅复核）",
     "weekendNews",
     "ashare 脚本生成字段（thsCode/tops/netInflow/upCount/downCount/lead/leadPct/ztCount/pct5/indices.code）",
-    "duanban.star",
+    "duanban.brief",
     "strategy/macroCalendar 顶层键（deploy.sh 自动生成）",
     "stopTrack 的 AI 手写"
    ],
@@ -1655,7 +1655,7 @@
     "openOutlook.source",
     "duanban.confirmed[]/watching[]",
     "duanban.topBoards",
-    "duanban.star",
+    "duanban.brief",
     "harmonic",
     "breakoutPool",
     "fullScan",
@@ -1698,7 +1698,7 @@
     "breakoutPool",
     "fullScan",
     "us.themePicks",
-    "duanban.star",
+    "duanban.brief",
     "panorama.markets[kr]",
     "panorama.markets[jp]",
     "stock_pool.json",

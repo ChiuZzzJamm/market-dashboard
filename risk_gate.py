@@ -3,7 +3,7 @@
 """
 risk_gate.py —— 把「个股硬风险黑名单 red」落到三个推荐池（R100z168）
 
-背景：stock_risk_blacklist.py 每天都在算 red 名单，但只有 update_star.py 会过滤。
+背景：stock_risk_blacklist.py 每天都在算 red 名单，但只有 update_brief.py 会过滤。
       check_duanban / breakout_pool 压根不读 → 10-09 就公告减持的
       603330 天洋新材，到 10-21 还挂在「断板确认池」和「量化筛选」里当推荐标的。
 
