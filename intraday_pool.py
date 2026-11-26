@@ -143,6 +143,16 @@ def analyse(rows):
         win = rows[i0 + 1:i0 + 16]
         hold = bool(win) and min(r["c"] for r in win) >= base * 0.995
     limit_up = bool(tail) and len({round(r["c"], 2) for r in tail}) == 1 and tail[-1]["c"] >= max(r["c"] for r in rows)
+    # 2026-11-26 21:xx 用户：「也有标的全天绿多红少，第二天照样反包成功，不要一杆子打死」。
+    # 红绿数量只作辅助；真正看三件事：收盘离最低多远（托住没有）、尾盘 30 分钟拉起还是砸下、
+    # 最后一次爆量谁在进场。三者合起来才叫承接。
+    day_low = min(r["c"] for r in rows)
+    close_low_pct = round((rows[-1]["c"] / day_low - 1) * 100, 2) if day_low else None
+    tail_lift = (round((tail[-1]["c"] / tail[0]["c"] - 1) * 100, 2) if len(tail) >= 2 else None)
+    _vn = sum(r["c"] * r["v"] for r in rows); _vd = sum(r["v"] for r in rows)
+    vwap = round(_vn / _vd, 3) if _vd else None
+    above_vwap = (rows[-1]["c"] >= vwap) if vwap else None
+    last_burst_dir = bursts[-1]["dir"] if bursts else None
     early = [b for b in bursts if EARLY[0] <= b["t"] <= EARLY[1]]
     return {
         "date": rows[0]["t"] and datetime.now().strftime("%Y-%m-%d"),
@@ -151,6 +161,8 @@ def analyse(rows):
         "earlyBurst": len(early),
         "tailRedPct": (None if limit_up else tail_pct),
         "tailVolPct": tail_vol, "limitUp": limit_up,
+        "closeLowPct": close_low_pct, "tailLift": tail_lift,
+        "vwap": vwap, "aboveVwap": above_vwap, "lastBurstDir": last_burst_dir,
         "hold": hold,
         "verdict": ("红多且尾盘强" if red > green and tail_pct >= 55 else
                     "红绿相当" if abs(red - green) <= 0.2 * max(1, red + green) else

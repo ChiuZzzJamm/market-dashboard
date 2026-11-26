@@ -1405,22 +1405,54 @@ def load_minute_map():
 
 
 def minute_tag(m):
-    """把分时证据压成一个可读标签（判据与 rules/duanban-framework.md §13 一致）。"""
+    """分时承接判定（2026-11-26 用户两次强调：不要用红绿比例一杆子打死）。
+
+    只看四件事，红绿数量不进分（只进文案）：
+      ① 爆量后有没有再创新低（hold）
+      ② 收盘离当日最低多远（closeLowPct：托住 = 有承接，绿柱多也能托住）
+      ③ 尾盘 30 分钟是拉起还是砸下（tailLift）
+      ④ 收盘在均价线上方否（aboveVwap）+ 最后一次爆量方向（谁最后进场）
+    返回 (标签, True/False/None)；None = 中性或已封板，不参与降级。
+    """
     if not m:
         return "无分时", None
     if m.get("limitUp"):
         return "已封板（分时不适用）", None
-    hold = m.get("hold")
-    tail = m.get("tailRedPct")
-    if hold is False and (tail is None or tail < 35):
-        return "分时未承接", False
-    if hold is True and (tail is not None and tail >= 50):
-        return "分时强承接（尾盘红%d%%）" % tail, True
+    hold, tail = m.get("hold"), m.get("tailRedPct")
+    lift, clp = m.get("tailLift"), m.get("closeLowPct")
+    vw, lb = m.get("aboveVwap"), m.get("lastBurstDir")
+    sc = 0
     if hold is True:
-        return "分时承接成立", True
-    if tail is not None and tail >= 50:
-        return "尾盘红%d%%（无爆量）" % tail, True
-    return "分时中性", None
+        sc += 2
+    elif hold is False:
+        sc -= 1
+    if lift is not None:
+        sc += 2 if lift >= 1 else (1 if lift >= 0 else -1)
+    if clp is not None:
+        sc += 2 if clp >= 3 else (1 if clp >= 1.5 else (-1 if clp < 0.8 else 0))
+    if vw is True:
+        sc += 1
+    elif vw is False:
+        sc -= 1
+    if lb == "红":
+        sc += 1
+    elif lb == "绿":
+        sc -= 1
+    num = []
+    if lift is not None:
+        num.append("尾盘%+.1f%%" % lift)
+    if clp is not None:
+        num.append("距低点%.1f%%" % clp)
+    if tail is not None:
+        num.append("红柱%d%%" % tail)        # 仅展示，不进分
+    txt = "·".join(num)
+    if sc >= 4:
+        return "强承接（%s）" % txt, True
+    if sc >= 2:
+        return "承接成立（%s）" % txt, True
+    if sc <= -2:
+        return "未承接（%s）" % txt, False
+    return "中性（%s）" % txt, None
 
 
 def eval_stage(code, kline, zt_date_iso):
