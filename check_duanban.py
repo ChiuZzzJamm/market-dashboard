@@ -1449,15 +1449,27 @@ def eval_stage(code, kline, zt_date_iso):
 
     zt_md = f"{zt_date_iso[5:7]}/{zt_date_iso[8:10]}"
 
-    # ══ 2026-11-26 重定义确认池（有样本支撑）══════════════════════════════════
-    # 用 11 只反包成功票回测旧口径：**11 只里 0 只进确认池**，全卡在「收盘站上 MA5
-    # 且溢价 ≥2%」（它们反包前一日距 MA5 是 −0.25%~−2.45%）。旧口径要的是「已经启动」，
-    # 而反包恰恰发生在启动前一根 → 确认池永远慢半拍。
-    # 新口径：形态完整（涨停→1.1~4.5 倍量断板→已缩量）+ 未破 T 日低点 + 洗盘 2~4 日
-    #        + 收盘站回 T 日低点上方 → 确认池，**不再要求 MA5 溢价**（MA5 降为强弱标签）。
+    form_full = check_form(code, kline, zt_date_iso)
+    # ══ 2026-11-26 重定义（有样本支撑）════════════════════════════════════════
+    # 回测：11 只反包成功票，日线截到反包前一日，旧口径 **0 只** 进确认池——
+    # 全卡在「收盘站上 MA5 且溢价 ≥+2%」（当天距 MA5 是 −0.25%~−2.45%）。
+    # 旧口径要的是「已经启动」，而反包发生在启动前一根 → 永远慢半拍。
+    # 新口径分三档，按瑕疵降级，不再拿 MA5 溢价当门票：
+    #   形态完整 + 缩量 + 未破 T 日低点 + 洗 2~4 日 → 确认池（MA5 只做强弱标签）
+    #   同一个形态但「破过 T 日低点、2 日内收回」→ 观察池·挖坑已收回
+    #   同一个形态但「断板量比 3.5~4.5」→ 观察池·巨量待确认
     shrunk_done = any(0 < V(i) < V(i1) for i in range(iT + 2, n))
-    if (not pit and not huge and 2 <= days_ago <= 4 and shrunk_done
-            and (lowT <= 0 or C(n - 1) >= lowT * 0.98)):
+    base_ok = (2 <= days_ago <= 4 and shrunk_done
+               and (lowT <= 0 or C(n - 1) >= lowT * 0.98))
+    if base_ok and huge:
+        return {"pool": "watch", "stage": "巨量待确认",
+                "form": f"{zt_md}涨停→次{r1:.1f}倍量断板（>3.5 倍，需看分时承接）·已缩量",
+                "days_ago": days_ago}
+    if base_ok and pit:
+        return {"pool": "watch", "stage": "挖坑已收回",
+                "form": f"{zt_md}涨停→次{r1:.1f}倍量断板→曾破T日低点·2日内收回·已缩量",
+                "days_ago": days_ago}
+    if base_ok:
         ma5 = sum(C(i) for i in range(n - 5, n)) / 5.0
         gap = ((C(n - 1) / ma5 - 1) * 100) if ma5 > 0 else -99.0
         tag = "已脱离MA5" if gap >= MA5_GAP_MIN else "待启动"
@@ -1466,8 +1478,6 @@ def eval_stage(code, kline, zt_date_iso):
                 "form": (f"{zt_md}涨停→次{r1:.1f}倍量断板→已缩量·洗{days_ago - 1}日"
                          f"（距MA5 {gap:+.2f}%）"),
                 "days_ago": days_ago}
-    # 确认池优先：全流程达标（check_form 原口径）
-    form_full = check_form(code, kline, zt_date_iso)
     if form_full and not pit and not huge:
         return {"pool": "confirmed", "stage": "全流程达标",
                 "form": form_full, "days_ago": days_ago}
