@@ -278,6 +278,10 @@ if [ "${SKIP_AUDIT:-0}" != "1" ]; then
 echo "📈 分时承接体检（intraday_pool.py --write）..."
 "$PY" intraday_pool.py --write --limit 120 || echo "[warn] 分时体检失败，页面只是不显示那一行（不影响部署）"
 
+# 反包成功池（2026-11-26）：确认/观察池里当日 ≥+7% 的票移进 success，再从原池移除
+echo "🚀 反包成功池（pool_success.py --write）..."
+"$PY" pool_success.py --write || echo "[warn] 成功池归集失败（不影响部署，票会留在确认池）"
+
 # 反包登记复盘（R100z388）：读 rebound_log.json 算证据 → rebound_review.json（页面 fetch）
 echo "🔍 反包登记复盘（rebound_review.py --write）..."
 "$PY" rebound_review.py --harvest-fail --write || echo "[warn] 反包复盘失败，页面只是不显示均值（不影响部署）"

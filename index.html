@@ -9,7 +9,7 @@
 <title>每日市场看板 · A股 / 美股</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="data.js?v=202611262242"></script>
+<script src="data.js?v=202611262305"></script>
 <style>
   /* ===== 雾霾蓝主题（ins 风） ===== */
   :root {
@@ -6592,6 +6592,14 @@ function renderDuanban() {
       return jk.length ? '　｜　⚠️ 杂毛剔除 ' + jk.length + ' 只：' +
         jk.map(function (x) { return esc(x.name) + '（' + esc(x.why) + '）'; }).join('、') : '';
     })(), conf, true, 'c');
+  /* 2026-11-26 用户：反包成功（≥+7%，含未涨停）的票要单独成池，不再挂确认池。
+     数据由 pool_success.py 从 confirmed/watching 移出并写入 duanban.success。 */
+  var succ = (db && db.success) || [];
+  if (succ.length) {
+    html += dbPoolHtml('反包成功池', 'p-conf',
+      '今日涨幅 ≥ +7%（含未封板）已在形态上兑现：从确认/观察池移出，留在这里做兑现记录',
+      succ, true, 'w');
+  }
   html += dbPoolHtml('观察池', 'p-watch', '形态进行中、只差最后一根确认K线（待缩量 ＞ 待企稳 ＞ 待脱离）', watch, false, 'w');
   // R100i：断板反包失败池（破位 / 超期失效归档，5 交易日后自动清理）
   html += dbFailHtml(db && db.failPool, 'duanban');
@@ -7416,6 +7424,10 @@ function renderChen() {
     'T日涨停（首板也算）+ 断板放量≥2倍（无上限）+ 缩量洗盘≤3日 + 不破T日低点 + 站稳5日线，另加「T日缩量 + 断板日大阴」两条软条件', c.strict, 'strict');
   h += chenPoolBlock('陈学长 · 放宽池', 'p-watch',
     '只过硬结构、去掉两条软条件——用来单独检验「T日缩量 + 大阴」到底值不值钱', c.loose, 'loose');
+  if ((c.success || []).length) {
+    h += chenPoolBlock('陈学长 · 反包成功池', 'p-conf',
+      '今日涨幅 ≥ +7%（含未封板）：形态已兑现，从严格/放宽/观察池移出', c.success, 'watch');
+  }
   h += chenPoolBlock('形态进行中', 'p-watch',
     '硬结构已到「放量断板 + 未破位」，只差缩量 / 收复5日线 / 脱离MA5幅度这一根确认K线', c.watching, 'watch');
   // 失效归档：昨天还在池里、今天不在了——不写出来读者会以为池子被吞了。
@@ -8763,9 +8775,14 @@ function _dbk_option(kl, hz) {
       _ymin = (_ymin === undefined) ? _lo : Math.min(_ymin, _lo);
       _ymax = (_ymax === undefined) ? _hi : Math.max(_ymax, _hi);
     }
-    [hz.stop, hz.prz[0], hz.prz[1], hz.target1, hz.target2].forEach(function (v) {
-      if (typeof v === 'number' && isFinite(v)) { _ymin = (_ymin === undefined) ? v : Math.min(_ymin, v); _ymax = (_ymax === undefined) ? v : Math.max(_ymax, v); }
-    });
+    /* 2026-11-26 用户：谐波标的点开不该是缩小的——原来的做法是把止损/PRZ/T1/T2 全塞进 y 轴范围，
+       于是蜡烛被压扁。现在**默认只按蜡烛定价区**（与其他标的一致），谐波线超出就裁掉；
+       要完整看形态，自己滚轮/滑条缩出去即可（坐标线仍在，不会被删）。 */
+    if (window.HZ_FIT_ALL) {
+      [hz.stop, hz.prz[0], hz.prz[1], hz.target1, hz.target2].forEach(function (v) {
+        if (typeof v === 'number' && isFinite(v)) { _ymin = (_ymin === undefined) ? v : Math.min(_ymin, v); _ymax = (_ymax === undefined) ? v : Math.max(_ymax, v); }
+      });
+    }
     if (_ymin !== undefined) { var _pad = (_ymax - _ymin) * 0.03 || 1; _ymin = +(_ymin - _pad).toFixed(2); _ymax = +(_ymax + _pad).toFixed(2); } // R100z4z：取整两位，轴标签不再出现 13.0933000000000 浮点垃圾
   }
   var stg = _dbk_stage(hz);
@@ -8786,7 +8803,7 @@ function _dbk_option(kl, hz) {
     ],
     dataZoom: (function () {
       // R100z7：普通图默认只放大显示最近 30 根（用户 10/1 反馈），滑条/双指可缩回全量；谐波保留形态全窗
-      var init = (!hz || !hz.pointDays) ? { startValue: Math.max(0, kl.length - 30), endValue: kl.length - 1 } : {};
+      var init = { startValue: Math.max(0, kl.length - 30), endValue: kl.length - 1 }; // 2026-11-26：谐波同样只显示最近 30 根，缩出去才看全形态
       return [
         // R100z123（用户 2026-10-13）：取消「在K线图本体上左右滑动/拖拽平移」→ moveOnMouseMove:false。
         // ECharts 里该开关同时挡住鼠标拖拽与移动端单指滑动（zrender 把 touchmove 模拟成 mousemove 投给 roam，

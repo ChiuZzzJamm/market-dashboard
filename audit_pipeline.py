@@ -5204,9 +5204,9 @@ def g66_done_excluded(r):
 
     这类「重建入口绕过一层过滤」的 bug 会反复出现（同一个 compare 有两个写者），
     所以不能只测 build_compare 本身，要在**产物**上对账：
-      a) compare.today.done 必须等于「池内所有 pct≥9.8 的票」（去重），一个不能少；
+      a) compare.today.done 必须等于「池内所有 pct≥7% 的票」（去重），一个不能少；
       b) both / chenOnly / duanbanOnly 三组不得含任何 done 里的代码；
-      c) done 里每只必须在池内、且 pct 真的 ≥9.8（防止手写或旧数据残留）。
+      c) done 里每只必须在池内、且 pct 真的 ≥7%（防止手写或旧数据残留）。
     池子为空（无连板/周末）时只 WARN。
     """
     D = load_data_json()
@@ -5218,7 +5218,8 @@ def g66_done_excluded(r):
         return
 
     want = {}
-    for k in ("strict", "loose", "watching"):
+    # 2026-11-26：成功池同样算「池内」（它们是被移出确认池的已兑现票）
+    for k in ("strict", "loose", "watching", "success"):
         for e in (cp.get(k) or []):
             if not isinstance(e, dict):
                 continue
@@ -5226,9 +5227,9 @@ def g66_done_excluded(r):
                 v = float(e.get("pct"))
             except (TypeError, ValueError):
                 continue
-            if v >= 9.8:
+            if v >= 7.0:
                 want[str(e.get("code"))] = round(v, 2)
-    for k in ("confirmed", "watching"):
+    for k in ("confirmed", "watching", "success"):
         for e in ((D.get("duanban") or {}).get(k) or []):
             if not isinstance(e, dict):
                 continue
@@ -5236,7 +5237,7 @@ def g66_done_excluded(r):
                 v = float(e.get("pct"))
             except (TypeError, ValueError):
                 continue
-            if v >= 9.8:
+            if v >= 7.0:
                 want[str(e.get("code"))] = round(v, 2)
 
     done = {str(d.get("code")): d.get("pct") for d in (tdy.get("done") or []) if isinstance(d, dict)}
@@ -5246,7 +5247,7 @@ def g66_done_excluded(r):
         bad.append(f"{len(miss)} 只当日涨停/准涨停没进「今日已兑现」：{miss[:4]}")
     extra = [c for c in done if c not in want]
     if extra:
-        bad.append(f"「今日已兑现」里有 {len(extra)} 只不在池内或涨幅不足 9.8%：{extra[:4]}")
+        bad.append(f"「今日已兑现」里有 {len(extra)} 只不在池内或涨幅不足 +7%：{extra[:4]}")
     for grp, label in (("both", "两个都选中"), ("chenOnly", "只有陈学长"), ("duanbanOnly", "只有断板反包")):
         leaked = [c for c in (tdy.get(grp) or []) if str(c) in done]
         if leaked:
@@ -5805,7 +5806,7 @@ def g74_us_news_domestic_subject(r):
         nm = str((rec or {}).get("name") or "").strip()
         if len(nm) >= 3:
             names.add(nm)
-    for k in ("confirmed", "watching"):
+    for k in ("confirmed", "watching", "success"):
         for e in ((D.get("duanban") or {}).get(k) or []):
             nm = str((e or {}).get("name") or "").strip()
             if len(nm) >= 3:
