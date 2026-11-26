@@ -198,7 +198,14 @@ def main():
                    .split("=", 1)[1].rstrip().rstrip(";"))
     codes, names = collect_codes(D)
     codes = codes[:a.limit]
-    out = {"asOf": datetime.now().strftime("%Y-%m-%d %H:%M"), "stocks": {}, "miss": []}
+    today = datetime.now().strftime("%Y-%m-%d")
+    try:
+        old = json.load(open(OUT, encoding="utf-8"))
+    except Exception:                                            # noqa: BLE001
+        old = {}
+    hist = old.get("history") or {}
+    out = {"asOf": datetime.now().strftime("%Y-%m-%d %H:%M"), "stocks": {}, "miss": [],
+           "history": hist}
     for i, c in enumerate(codes, 1):
         rows = fetch_minutes(c)
         r = analyse(rows)
@@ -206,10 +213,34 @@ def main():
             out["miss"].append(c)
             continue
         r["name"] = names.get(c, "")
+        r["date"] = today
         out["stocks"][c] = r
+        # 按日归档：明天再跑一次，这只票就有了「今天」这一条，
+        # 后天复盘时「洗盘日 T-1」就是它（用户 2026-11-26：要看的是洗盘那天）。
+        hist.setdefault(c, {})[today] = {k: v for k, v in r.items() if k != "name"}
+        if len(hist[c]) > 10:
+            for d in sorted(hist[c])[:-10]:
+                hist[c].pop(d, None)
         if i % 20 == 0:
             print("  ... %d/%d" % (i, len(codes)))
         time.sleep(0.6)           # 两家都限流：0.6s/只，120 只约 75 秒
+    for c, days in hist.items():
+        ds = sorted(days)
+        prev = [d for d in ds if d != today]
+        if prev and c in out["stocks"]:
+            out["stocks"][c]["prevDate"] = prev[-1]
+            out["stocks"][c]["prev"] = days[prev[-1]]
+    # 失败保护：抓取被限流时绝不能用空结果覆盖上一次的成果（2026-11-26 实测：
+    # 腾讯连抓 120 只后限流，一次失败就把 108 条记录写成 0 条）。失败的多就整体放弃写盘。
+    got = len(out["stocks"])
+    if codes and got < max(3, int(len(codes) * 0.3)):
+        print("[abort] 只抓到 %d/%d 只（疑似限流），保留上一次的 %s 不覆盖"
+              % (got, len(codes), OUT))
+        return 2
+    # 抓失败的票沿用旧值，并打 stale 标记，不静默丢
+    for c in out["miss"]:
+        if c in (old.get("stocks") or {}):
+            out["stocks"][c] = dict(old["stocks"][c], stale=True)
     json.dump(out, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     print("[write] 分时承接 %d 只（缺 %d）→ intraday_minute.json"
           % (len(out["stocks"]), len(out["miss"])))

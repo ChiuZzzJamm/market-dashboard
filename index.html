@@ -9283,8 +9283,14 @@ function stkEnergyInPool(code) {
 /* 分时承接一行（2026-11-26 用户：「加强关注分时线上的爆量异动，尾盘红柱多要加强观察」）。
    数据来自 intraday_pool.py；没有就整行不渲染——不许用日线量能冒充分时。 */
 function stkMinLine(code) {
-  var m = (window.__stkMin || {})[code];
-  if (!m) return '';
+  var m0 = (window.__stkMin || {})[code];
+  if (!m0) return '';
+  /* 用户 2026-11-26：「反包都成功了，你分析当天量能有什么用？要看的是洗盘那天。」
+     所以默认展示**上一交易日**（＝这只票现在所处洗盘段的前一天，也就是明天判断的输入），
+     没有 T-1 档案时才退回当日，并标清楚是哪一天。 */
+  var m = (m0.prev && m0.prevDate) ? m0.prev : m0;
+  var tag = (m0.prev && m0.prevDate) ? ('上一交易日 ' + String(m0.prevDate).slice(5))
+                                     : ('今日' + (m0.stale ? '（抓取失败，沿用旧值）' : ''));
   var parts = [];
   parts.push('红 <b>' + m.red + '</b> / 绿 <b>' + m.green + '</b>');
   if (m.burstN) {
@@ -9297,7 +9303,7 @@ function stkMinLine(code) {
   else if (m.tailRedPct !== null && m.tailRedPct !== undefined) parts.push('尾盘红柱 <b>' + m.tailRedPct + '%</b>');
   parts.push(m.hold === true ? '爆量后 15 分钟<b>未创新低（承接成立）</b>'
                              : (m.hold === false ? '爆量后 15 分钟<b>创了新低（承接失败）</b>' : '承接未判定'));
-  return '<div class="en-min">分时（今日）：' + parts.join('　｜　') + '</div>';
+  return '<div class="en-min">分时（' + tag + '）：' + parts.join('　｜　') + '</div>';
 }
 
 function stkEnergyHtml(code) {
