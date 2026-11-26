@@ -1210,6 +1210,35 @@ def chk_risk_scope(T, r):
 
 
 # ---------------------------------------------------------------- main
+def chk_orphan_mem(T, r):
+    """I：automation 记忆目录必须有主（2026-11-27 外部审计发现，我自己没查出来）。
+
+    背景：平台删 automation 时**不会**连带删 `.workbuddy/memory/automations/<id>/`，
+    于是留下「automation 已删、memory 还在」的孤儿目录——没人读、M6 还把它算进「运行期记忆份数」。
+    这条闸门让同类残留第二次出现就 FAIL，不靠谁的眼睛。
+    """
+    base = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        '.workbuddy', 'memory', 'automations')
+    if not os.path.isdir(base):
+        r.warn('I1', '未找到运行期记忆目录（%s），跳过孤儿检查' % base)
+        return
+    try:
+        con = sqlite3.connect(DB)
+        live = {str(x[0]) for x in con.execute(
+            'select id from automations where deleted_at is null')}
+        con.close()
+    except Exception as e:                                       # noqa: BLE001
+        r.warn('I1', '读 automations 表失败（%s），跳过孤儿检查' % e)
+        return
+    dirs = [d for d in os.listdir(base) if os.path.isdir(os.path.join(base, d))]
+    orphan = sorted(d for d in dirs if d not in live)
+    if orphan:
+        r.fail('I1', '孤儿记忆目录 %d 个（automation 已删、memory 未删）：%s —— '
+                     '删目录即可，别删还在用的' % (len(orphan), '、'.join(orphan[:3])))
+    else:
+        r.ok('I1', '运行期记忆目录 %d 个全部有主（无孤儿）' % len(dirs))
+
+
 def main():
     ap_ = argparse.ArgumentParser(description='7 条看板自动化的机检（死链/死步骤/排程/区间冲突/冗余）')
     ap_.add_argument('--verbose', action='store_true')
@@ -1248,6 +1277,7 @@ def main():
     run('D', lambda: chk_steps(T, r))
     run('E', lambda: chk_coverage(T, r, a.verbose))
     run('F', lambda: chk_stamp_contract(T, r))
+    run('I', lambda: chk_orphan_mem(T, r))
     run('G', lambda: chk_dup(T, r, a.verbose))
     run('H', lambda: chk_risk_scope(T, r))
 

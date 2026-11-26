@@ -2834,6 +2834,13 @@ def build_module(pairs, D):
                           or str(e.get("stage") or "").startswith("形态确认"))
     confirmed = [e for e in tagged if _is_conf(e)]
     watching = [e for e in tagged if not _is_conf(e)]
+    # 2026-11-27 自证闸门：分池判据与 stage 字符串必须同源。
+    # 曾经因为判据只认 "全流程达标"、而生成侧写的是 "形态确认·待启动"，
+    # 71 只确认票被静默塞进观察池（confirmed=0），页面上看不出任何错。
+    _drift = [e for e in watching if str(e.get("stage") or "").startswith(("形态确认", "全流程达标"))]
+    if _drift:
+        sys.exit("[FAIL] 分池判据与 stage 不一致：%d 只确认票落在观察池（%s）"
+                 % (len(_drift), "、".join(str(x.get("code")) for x in _drift[:5])))
 
     # ══ 分时参与判定（2026-11-26 用户：没有分时准确率就不高）══════════════════
     # 规则：确认池里「分时未承接」（爆量后创新低 且 尾盘红柱 <35%）→ 降到观察池并写明原因；
