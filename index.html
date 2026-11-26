@@ -735,7 +735,7 @@
     width: 46px; height: 46px; border-radius: 50%;
     background: transparent; border: none; padding: 0; box-shadow: none;
     cursor: grab; z-index: 1200; touch-action: none; user-select: none;
-    display: none; align-items: center; justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     font-size: var(--fs-emoji-lg); line-height: 1;
     transition: transform .15s ease;
   }
@@ -759,12 +759,13 @@
     width: 46px; height: 46px; border-radius: 50%;
     background: transparent; border: none; padding: 0; box-shadow: none;
     cursor: grab; z-index: 1201; touch-action: none; user-select: none;
-    display: none; align-items: center; justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     font-size: var(--fs-emoji-lg); line-height: 1;
     transition: transform .15s ease;
   }
-  /* 用户 2026-11-26：只在技术看板里出现（与 🧰 同一条显示条件），主页面不挂这颗钮。 */
-  body.db-open .rb-entry { display: flex; }
+  /* 用户 2026-11-26：只在技术看板里出现——钮放在 #duanban-view 内部
+     （不能放外层：`body.db-open .wrap > *:not(#duanban-view){display:none !important}` 会把它连根隐藏，
+     症状就是「技术看板里也看不到 🔍」）。 */
   .rb-entry:hover { transform: scale(1.1); }
   .rb-entry:active { transform: scale(.92); cursor: grabbing; }
   @media (max-width: 700px), (max-height: 460px) {
@@ -1714,6 +1715,18 @@
     <b>免责声明</b>：以上内容基于公开数据和量化分析，仅供参考，不构成投资建议。市场有风险，投资需谨慎。任何投资决策应结合个人风险承受能力、资金状况和投资目标独立判断，必要时咨询持牌专业机构。过往表现不预示未来收益。
   </footer>
 
+  <div id="duanban-view">
+    <!-- R100z282：这颗 🧰 是「浮动组第 3 槽的页内替身」，与 📄/📋 完全同构——
+         进 RAIL 表（第 2 槽 → g.children[2]）、挂拖拽（见下方 bindDrag 调用）、点击 closeDuanban()。
+         三件套缺一个的症状是「拖不动」或「点了没反应」，不是报错（R100z163 踩过）。
+         用户 2026-10-29 21:35 原话：「我就要原来的 🧰，要有拖拽的，给我还原」——
+         上一轮我把它挪到右下角固定站位、拿掉拖拽，等于替他做了取舍，被退回。 -->
+    <div class="db-topbar">
+      <div class="db-title">技术看板</div>
+      <div class="db-sub2">断板反包 · 陈学长 · 横盘启动 · 谐波形态 · 开盘预测</div>
+      <div class="db-date" id="db-date"></div>
+    </div>
+    <button class="db-entry-in" id="db-entry-in" title="点击返回每日市场看板（可拖动）">🧰</button>
   <!-- 反包登记（R100z388）：🔍 圆钮与 🧰 同款，点开是可拖动的浮动窗。 -->
   <button class="rb-entry" id="rb-entry" title="反包登记（可拖动）· 断板反包 + 陈学长">🔍</button>
   <div id="rb-panel" role="dialog" aria-label="反包登记">
@@ -1731,18 +1744,6 @@
       <span class="rb-stat" id="rb-stat"></span>
     </div>
   </div>
-  <div id="duanban-view">
-    <!-- R100z282：这颗 🧰 是「浮动组第 3 槽的页内替身」，与 📄/📋 完全同构——
-         进 RAIL 表（第 2 槽 → g.children[2]）、挂拖拽（见下方 bindDrag 调用）、点击 closeDuanban()。
-         三件套缺一个的症状是「拖不动」或「点了没反应」，不是报错（R100z163 踩过）。
-         用户 2026-10-29 21:35 原话：「我就要原来的 🧰，要有拖拽的，给我还原」——
-         上一轮我把它挪到右下角固定站位、拿掉拖拽，等于替他做了取舍，被退回。 -->
-    <div class="db-topbar">
-      <div class="db-title">技术看板</div>
-      <div class="db-sub2">断板反包 · 陈学长 · 横盘启动 · 谐波形态 · 开盘预测</div>
-      <div class="db-date" id="db-date"></div>
-    </div>
-    <button class="db-entry-in" id="db-entry-in" title="点击返回每日市场看板（可拖动）">🧰</button>
     <!-- R100k：子页菜单已移入各子页内容流（断板页位于开盘精选与确认池说明之间；谐波/横盘启动页位于页首） -->
 
     <!-- R100m：TOP10 + 开盘精选固定区——切换谐波/横盘启动子页时保持显示（用户要求固定不动） -->
