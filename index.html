@@ -8296,13 +8296,15 @@ document.addEventListener('click', function (ev) {
   }
   /* 拖任意一个替身 = 拖整组：用「组内第 idx 槽的几何偏移」反推组左上角，横排竖排同一套算法。
      R100z163 的教训：新增悬浮按钮必须三件套齐全 —— ① 进 RAIL 表 ② bindDrag ③ 点击处理，缺一个就是「拖不动」。 */
-  function bindDrag(el, idx) {
+  function bindDrag(el, idx, dyOff) {
     if (!el) return;
     el.addEventListener('pointerdown', function (e) {
       if (e.button) return;
       sx = e.clientX; sy = e.clientY;
       var gm = geom(), r = el.getBoundingClientRect(), o = gm.off[idx] || { x: 0, y: 0 };
-      ox = r.left - o.x; oy = r.top - o.y;
+      /* dyOff：替身并非落在槽位上时（🔍 钉在 🧰 上方一格 = −60），反推组原点要把它补回去，
+         否则一按下就会跳 60px。 */
+      ox = r.left - o.x; oy = r.top - (o.y + (dyOff || 0));
       moved = false;
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
@@ -8317,6 +8319,16 @@ document.addEventListener('click', function (ev) {
   bindDrag(gnj, 0);
   bindDrag(gnei, 1);
   bindDrag(dei, 2);   // R100z282：🧰 恢复可拖拽（用户 21:35「要有拖拽的，给我还原」）
+  /* 🔍 没有自己的槽位——它钉在 🧰 上方一格（layout 里 top−60）。所以借 🧰 的槽位下标，
+     再用 dyOff=−60 把偏移补回去，这样「拖放大镜 = 拖整组」，不会跳。
+     用户 2026-11-26：「现在挪动放大镜拖拽不了，只有挪动工具箱才能拖拽」。 */
+  (function () {
+    var rbe = document.getElementById('rb-entry');
+    if (!rbe) return;
+    var idx = -1;
+    for (var k = 0; k < RAIL.length; k++) if (RAIL[k].iPage === dei) { idx = k; break; }
+    if (idx >= 0) bindDrag(rbe, idx, -60);
+  })();
   bindDrag(scei, 3);
   window.addEventListener('resize', applySaved);
   window.addEventListener('orientationchange', applySaved);
