@@ -751,6 +751,57 @@
      （R100z273 撤它的归因仍然是错的：用户那句「遮掉了利好/利空/中性」说的是卡片上的
      技术池徽章，不是这颗圆钮。这次不再拿那个误读当依据。） */
   body.db-open .db-entry-in { display: flex; }
+
+  /* 反包登记入口（R100z388，用户 2026-11-26）：🔍 与 🧰 同款圆钮，默认落在它正上方；
+     可拖动、位置记忆；点开是**可自由拖动的浮动窗**（不是居中的遮罩弹窗）。 */
+  .rb-entry {
+    position: fixed; right: var(--float-x); bottom: 50%; margin-bottom: 58px;
+    width: 46px; height: 46px; border-radius: 50%;
+    background: transparent; border: none; padding: 0; box-shadow: none;
+    cursor: grab; z-index: 1201; touch-action: none; user-select: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: var(--fs-emoji-lg); line-height: 1;
+    transition: transform .15s ease;
+  }
+  .rb-entry:hover { transform: scale(1.1); }
+  .rb-entry:active { transform: scale(.92); cursor: grabbing; }
+  @media (max-width: 700px), (max-height: 460px) {
+    .rb-entry { bottom: 116px; margin-bottom: 0; right: 12px; }
+  }
+  #rb-panel {
+    display: none; position: fixed; z-index: 1400; width: 400px; max-width: calc(100vw - 24px);
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-block);
+    box-shadow: 0 12px 34px rgba(20,35,50,.18); overflow: hidden;
+  }
+  #rb-panel.open { display: flex; flex-direction: column; max-height: 74vh; }
+  .rb-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+             border-bottom: 1px solid var(--line); cursor: move; background: var(--accent-soft);
+             user-select: none; }
+  .rb-head b { font-size: var(--fs-body); }
+  .rb-head .rb-sub { font-size: var(--fs-xs); color: var(--ink2); }
+  .rb-close { margin-left: auto; border: none; background: transparent; font-size: var(--fs-md);
+              cursor: pointer; color: var(--ink2); line-height: 1; }
+  .rb-body { padding: 10px 12px; overflow: auto; }
+  .rb-sec { margin-bottom: 10px; }
+  .rb-sec h4 { font-size: var(--fs-sm); color: var(--ink2); font-weight: 700; margin: 0 0 6px; }
+  .rb-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .rb-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px;
+             border: 1px solid var(--line); border-radius: 999px; font-size: var(--fs-xs);
+             cursor: pointer; background: var(--paper); }
+  .rb-chip.on { border-color: var(--accent); background: var(--accent-soft); }
+  .rb-chip .cd { color: var(--ink2); }
+  .rb-chip .up { color: var(--up); font-weight: 700; }
+  .rb-chip .pt { color: var(--ink2); }
+  .rb-out { width: 100%; min-height: 74px; font-size: var(--fs-xs); line-height: 1.6;
+            border: 1px solid var(--line); border-radius: var(--r-note); padding: 7px 8px;
+            background: #fafbfc; color: var(--ink); resize: vertical; font-family: inherit; }
+  .rb-foot { display: flex; gap: 8px; align-items: center; padding: 8px 12px;
+             border-top: 1px solid var(--line); }
+  .rb-btn { padding: 5px 12px; border-radius: 999px; border: 1px solid var(--accent);
+            background: var(--accent); color: #fff; font-size: var(--fs-xs); cursor: pointer; }
+  .rb-btn.ghost { background: transparent; color: var(--accent-deep); }
+  .rb-stat { font-size: var(--fs-xs); color: var(--ink2); margin-left: auto; }
+
   @media (max-width: 700px), (max-height: 460px) {
     :root { --float-x: 12px; }
     /* R100z165：手机端（用户 2026-10-24 截图：4 个图标竖排压在正文上）——
@@ -1661,6 +1712,23 @@
     <b>免责声明</b>：以上内容基于公开数据和量化分析，仅供参考，不构成投资建议。市场有风险，投资需谨慎。任何投资决策应结合个人风险承受能力、资金状况和投资目标独立判断，必要时咨询持牌专业机构。过往表现不预示未来收益。
   </footer>
 
+  <!-- 反包登记（R100z388）：🔍 圆钮与 🧰 同款，点开是可拖动的浮动窗。 -->
+  <button class="rb-entry" id="rb-entry" title="反包登记（可拖动）· 断板反包 + 陈学长">🔍</button>
+  <div id="rb-panel" role="dialog" aria-label="反包登记">
+    <div class="rb-head" id="rb-head"><b>反包登记</b><span class="rb-sub">断板反包 + 陈学长 · 勾选后复制给 AI</span>
+      <button class="rb-close" onclick="rbClose()" title="关闭">×</button></div>
+    <div class="rb-body">
+      <div class="rb-sec"><h4>断板反包 · 今日</h4><div class="rb-list" id="rb-duanban"></div></div>
+      <div class="rb-sec"><h4>陈学长 · 今日</h4><div class="rb-list" id="rb-chen"></div></div>
+      <div class="rb-sec"><h4>登记文本（复制后发给 AI 落库）</h4>
+        <textarea class="rb-out" id="rb-out" readonly placeholder="勾选上面的标的，这里自动生成"></textarea></div>
+    </div>
+    <div class="rb-foot">
+      <button class="rb-btn" onclick="rbCopy()">复制</button>
+      <button class="rb-btn ghost" onclick="rbClear()">清空</button>
+      <span class="rb-stat" id="rb-stat"></span>
+    </div>
+  </div>
   <div id="duanban-view">
     <!-- R100z282：这颗 🧰 是「浮动组第 3 槽的页内替身」，与 📄/📋 完全同构——
          进 RAIL 表（第 2 槽 → g.children[2]）、挂拖拽（见下方 bindDrag 调用）、点击 closeDuanban()。
@@ -10131,6 +10199,184 @@ if (location.hash === '#duanban') { document.body.classList.add('db-open'); wind
 if (location.hash === '#gnews') { document.body.classList.add('gnews-open'); if (window.__applyFloatSaved) window.__applyFloatSaved(); renderGnews(); window.scrollTo(0, 0); }
 // R100z162：🌟 复盘台账页直达（分享链接 #score 可直接落到成绩单）
 if (location.hash === '#score') { document.body.classList.add('score-open'); if (window.__applyFloatSaved) window.__applyFloatSaved(); renderScoreView(); window.scrollTo(0, 0); }
+
+/* ===== 反包登记浮动窗（R100z388，用户 2026-11-26）=====
+   ① 🔍 与 🧰 同款：46px 圆钮、可拖动、位置记 localStorage；
+   ② 点开是**可拖动**的浮动窗（拖标题栏），不是居中遮罩——用户要「能自由拖动」；
+   ③ 候选同时读断板池（confirmed/watching）与陈学长池（strict/loose）：
+      用户 2026-11-26 明确「陈学长也是断板反包，只是有区别，两套指标一起看」；
+   ④ 页面不写库：勾选只生成一段文本，复制给 AI 落进 rebound_log.json（静态站写不回去）。 */
+(function () {
+  var btn = document.getElementById('rb-entry');
+  var panel = document.getElementById('rb-panel');
+  if (!btn || !panel) return;
+  var PKEY = 'rbPos', SKEY = 'rbSel';
+  var sel = {};
+  try { sel = JSON.parse(localStorage.getItem(SKEY) || '{}') || {}; } catch (e) { sel = {}; }
+
+  /* --- 按钮拖动 + 位置记忆 --- */
+  (function () {
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem(PKEY) || 'null'); } catch (e) {}
+    if (saved && typeof saved.x === 'number') {
+      btn.style.left = saved.x + 'px'; btn.style.top = saved.y + 'px';
+      btn.style.right = 'auto';
+    }
+    var dragging = false, moved = false, sx = 0, sy = 0, ox = 0, oy = 0;
+    btn.addEventListener('pointerdown', function (e) {
+      if (e.button) return;
+      dragging = true; moved = false;
+      var r = btn.getBoundingClientRect();
+      sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top;
+      btn.setPointerCapture && btn.setPointerCapture(e.pointerId);
+    });
+    btn.addEventListener('pointermove', function (e) {
+      if (!dragging) return;
+      var dx = e.clientX - sx, dy = e.clientY - sy;
+      if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
+      if (!moved) return;
+      btn.style.left = Math.max(4, ox + dx) + 'px';
+      btn.style.top = Math.max(4, oy + dy) + 'px';
+      btn.style.right = 'auto';
+    });
+    btn.addEventListener('pointerup', function () {
+      if (!dragging) return;
+      dragging = false;
+      if (moved) {
+        var r = btn.getBoundingClientRect();
+        try { localStorage.setItem(PKEY, JSON.stringify({ x: r.left, y: r.top })); } catch (e) {}
+      } else {
+        rbToggle();
+      }
+    });
+  })();
+
+  /* --- 浮动窗拖动（标题栏） --- */
+  (function () {
+    var head = document.getElementById('rb-head');
+    var dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+    head.addEventListener('pointerdown', function (e) {
+      if (e.target.closest('.rb-close')) return;
+      dragging = true;
+      var r = panel.getBoundingClientRect();
+      sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top;
+      panel.style.left = ox + 'px'; panel.style.top = oy + 'px';
+      panel.style.right = 'auto'; panel.style.transform = 'none';
+      head.setPointerCapture && head.setPointerCapture(e.pointerId);
+    });
+    head.addEventListener('pointermove', function (e) {
+      if (!dragging) return;
+      panel.style.left = Math.max(2, ox + e.clientX - sx) + 'px';
+      panel.style.top = Math.max(2, oy + e.clientY - sy) + 'px';
+    });
+    head.addEventListener('pointerup', function () { dragging = false; });
+  })();
+
+  function pools() {
+    var D = window.DASHBOARD_DATA || {};
+    var out = [];
+    var db = D.duanban || {};
+    [['confirmed', '断板·确认'], ['watching', '断板·观察']].forEach(function (kv) {
+      (db[kv[0]] || []).forEach(function (e) {
+        out.push({ code: String(e.code || ''), name: e.name || '', pct: e.pct,
+                   pool: kv[1], group: 'duanban' });
+      });
+    });
+    var cp = D.chenPool || {};
+    [['strict', '陈学长·严格'], ['loose', '陈学长·放宽']].forEach(function (kv) {
+      (cp[kv[0]] || []).forEach(function (e) {
+        out.push({ code: String(e.code || ''), name: e.name || '', pct: e.pct,
+                   pool: kv[1], group: 'chen' });
+      });
+    });
+    var seen = {};
+    return out.filter(function (x) {
+      var k = x.group + '|' + x.code;
+      if (!x.code || seen[k]) return false;
+      seen[k] = 1; return true;
+    });
+  }
+
+  function chipHtml(x, i) {
+    var on = sel[x.code] ? ' on' : '';
+    var pct = (typeof x.pct === 'number') ? (x.pct > 0 ? '+' : '') + x.pct.toFixed(1) + '%' : '';
+    return '<span class="rb-chip' + on + '" data-code="' + x.code + '" data-name="' +
+      String(x.name).replace(/"/g, '&quot;') + '" data-pool="' + x.pool + '">' +
+      '<b>' + (x.name || x.code) + '</b><span class="cd">' + x.code + '</span>' +
+      '<span class="pt">' + x.pool + '</span>' + (pct ? '<span class="up">' + pct + '</span>' : '') + '</span>';
+  }
+
+  function render() {
+    var all = pools();
+    var d = all.filter(function (x) { return x.group === 'duanban'; });
+    var c = all.filter(function (x) { return x.group === 'chen'; });
+    var box1 = document.getElementById('rb-duanban');
+    var box2 = document.getElementById('rb-chen');
+    box1.innerHTML = d.length ? d.map(chipHtml).join('') : '<span class="pt">今日无池内标的</span>';
+    box2.innerHTML = c.length ? c.map(chipHtml).join('') : '<span class="pt">今日无池内标的</span>';
+    [box1, box2].forEach(function (b) {
+      b.querySelectorAll('.rb-chip').forEach(function (el) {
+        el.addEventListener('click', function () {
+          var k = el.getAttribute('data-code');
+          if (sel[k]) delete sel[k]; else sel[k] = { name: el.getAttribute('data-name'),
+                                                     pool: el.getAttribute('data-pool') };
+          try { localStorage.setItem(SKEY, JSON.stringify(sel)); } catch (e) {}
+          el.classList.toggle('on');
+          syncOut();
+        });
+      });
+    });
+    syncOut();
+  }
+
+  function syncOut() {
+    var keys = Object.keys(sel);
+    if (!keys.length) { document.getElementById('rb-out').value = ''; return; }
+    var day = new Date();
+    var ds = day.getFullYear() + '-' + String(day.getMonth() + 1).padStart(2, '0') + '-' + String(day.getDate()).padStart(2, '0');
+    var parts = keys.map(function (k) { return k + ' ' + (sel[k].name || '') + '（' + (sel[k].pool || '') + '）'; });
+    document.getElementById('rb-out').value =
+      ds + ' 反包成功：' + parts.join('、') + '\n请落库并复盘。';
+  }
+
+  window.rbToggle = function () {
+    if (panel.classList.contains('open')) { panel.classList.remove('open'); return; }
+    if (!panel.style.left) {
+      panel.style.left = Math.max(8, (window.innerWidth - 400) / 2) + 'px';
+      panel.style.top = '16vh';
+    }
+    panel.classList.add('open');
+    render();
+    rbStat();
+  };
+  window.rbClose = function () { panel.classList.remove('open'); };
+  window.rbClear = function () {
+    sel = {}; try { localStorage.setItem(SKEY, '{}'); } catch (e) {}
+    render();
+  };
+  window.rbCopy = function () {
+    var t = document.getElementById('rb-out');
+    if (!t.value) return;
+    t.select();
+    var done = function () {
+      var b = document.querySelector('#rb-panel .rb-btn');
+      if (b) { var old = b.textContent; b.textContent = '已复制'; setTimeout(function () { b.textContent = old; }, 1200); }
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t.value).then(done, function () { document.execCommand('copy'); done(); });
+    } else { document.execCommand('copy'); done(); }
+  };
+  function rbStat() {
+    var el = document.getElementById('rb-stat');
+    fetch('rebound_review.json?t=' + Date.now()).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j) { el.textContent = ''; return; }
+        var a = j.avg || {};
+        el.textContent = '已登记 ' + (j.n || 0) + ' 条 · 成功组：断板 ' + (a.breakMult || '—') +
+          '× / 洗盘 ' + (a.washDays || '—') + ' 天 / 最低量 ' + (a.minVolPct || '—') + '%';
+      }).catch(function () { el.textContent = ''; });
+  }
+})();
 </script>
 </body>
 </html>
