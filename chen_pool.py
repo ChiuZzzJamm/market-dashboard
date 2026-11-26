@@ -431,16 +431,32 @@ def chen_stage(code, kl, zt_iso):
     shrink_t = st["shrink_t"]
     drop1 = st["drop1"]
     soft_ok = (shrink_t is not None and shrink_t <= SHRINK_MAX and drop1 <= BIGDROP_MAX)
-    tier = "strict" if soft_ok else "loose"
 
     lbc, r1, wash_low = st["lbc"], st["r1"], st["wash_low"]
     # 止损锚 = T 日最低价（固定）；取不到才退回洗盘段最低价
     stop_anchor = st.get("zt_low") or wash_low
     lag = confirm_i - st["i1"]              # 断板日 → 确认日 间隔（交易日）
+    # 2026-11-26 重定义严格池：软条件达标 **且** 主题材 **且** 确认不超过 3 个交易日。
+    # 依据：成功样本 11/11 在主线；洗盘 ≤4 日。缺一条就退到放宽池——不是剔除，
+    # 是让它带着「为什么没进严格池」的理由待在放宽池里。
+    mainline = bool(_MAINLINE.get(str(code)))
+    tier = "strict" if (soft_ok and mainline and lag <= 3) else "loose"
+    why_loose = ""
+    if tier == "loose":
+        miss = []
+        if not soft_ok:
+            miss.append("量能条件未达标")
+        if not mainline:
+            miss.append("非当期主线")
+        if lag > 3:
+            miss.append("确认滞后 %d 日" % lag)
+        why_loose = "、".join(miss)
     since = n - 1 - confirm_i               # 确认后已过几个交易日（0 = 今天确认）
     lag_txt = "次日缩量确认" if lag == 1 else ("%d日缩量确认" % lag)
     form = "%s %s涨停→次%.1f倍量收%+.1f%%→%s·站稳MA5" % (
         st["zt_md"], _lbc_txt(lbc), r1, drop1, lag_txt)
+    if why_loose:
+        form += "·放宽：" + why_loose
     if shrink_t is not None:
         form += "（T日量%.2f倍均量）" % shrink_t
     form += "（较MA5+%.1f%%）" % gap_ma5
@@ -601,6 +617,21 @@ def collect_candidates(dates, limit):
                 rec["zt"].append(d)
         time.sleep(0.4)
     return cand, failed
+
+
+MAIN_WORDS = ("算力", "CPO", "共封装", "PCB", "机器人", "减速器", "存储", "封装",
+              "商业航天", "短剧", "AI", "光伏", "固态", "数据中心", "光模块")
+_MAINLINE = {}          # code -> bool，由 main() 从 data.js 的 stockConcepts 灌入
+
+
+def load_mainline(D):
+    """把「是否主题材」算成一张表，供 strict/loose 分档。
+    2026-11-26 重定义：11 只成功样本 11/11 在主线，题材不该只是页面标签，应当影响分档。"""
+    _MAINLINE.clear()
+    items = ((D or {}).get("stockConcepts") or {}).get("items") or {}
+    for c, v in items.items():
+        names = [str(x.get("n") or "") for x in (v.get("concepts") or [])]
+        _MAINLINE[str(c)] = any(any(w in n for w in MAIN_WORDS) for n in names)
 
 
 def eval_candidate(code, rec, kl):
@@ -1570,6 +1601,9 @@ def build_module(args):
         D = CD.load_dashboard(args.dashboard or DATA_JS)
     except Exception as e:
         print("[warn] data.js 解析失败（%s），情绪一律按 neutral 标注" % e, file=sys.stderr)
+
+    # 主线表必须在装配前灌好：strict 分档要用它（2026-11-26 重定义）
+    load_mainline(D)
 
     # §17：只装配一次，三份按 tier / pool 切——原先调三次＝三份网络抓取 + 三遍公告 + 三遍打标
     _all = build_entries(hits, D)

@@ -1380,6 +1380,7 @@ def check_form(code, kline, zt_date_iso):
         if pre20 > PRE20_MAX:
             return None
     zt_md = f"{zt_date_iso[5:7]}/{zt_date_iso[8:10]}"
+
     n_shrink = n - 1 - i1
     return f"{zt_md}涨停→次{r1:.1f}倍量断板→{n_shrink}日缩量·站稳MA5"
 
@@ -1422,18 +1423,65 @@ def eval_stage(code, kline, zt_date_iso):
     if i1 > n - 1:
         return None
     r1 = V(i1) / vT
-    if not (1.1 <= r1 <= 3.5) or pctchg(i1) >= th:
+    if pctchg(i1) >= th:
         return None
+    # 2026-11-26 重定义：断板量比 1.1~3.5 是形态带；3.5~4.5 的巨量阴不再直接剔除
+    # （失败组里 4.45× 的确全灭，但 >3.5 不等于死刑），降到观察池「巨量待确认」，
+    # 由人看分时承接再定。>4.5 才当形态不成立。
+    huge = False
+    if r1 < 1.1 or r1 > 4.5:
+        return None
+    if r1 > 3.5:
+        huge = True
     lowT = float(kline[iT].get("low") or 0)
-    if lowT > 0 and min(C(i) for i in range(i1, n)) < lowT * 0.98:
-        return None  # 已破T日低点，形态失效（确认/观察两池均排除）
+    pit = False
+    if lowT > 0:
+        broke = [i for i in range(i1, n) if C(i) < lowT * 0.98]
+        if broke:
+            # 2026-11-26 重定义（城地 603887 案例）：破 T 日低点不再一律判死——
+            # 破位后 2 个交易日内收盘收回（≥ lowT×0.98）算「挖坑」，仍可进观察池；
+            # 收不回才形态失效。
+            last = broke[-1]
+            if C(n - 1) >= lowT * 0.98 and (n - 1 - last) <= 2:
+                pit = True
+            else:
+                return None
 
     zt_md = f"{zt_date_iso[5:7]}/{zt_date_iso[8:10]}"
+
+    # ══ 2026-11-26 重定义确认池（有样本支撑）══════════════════════════════════
+    # 用 11 只反包成功票回测旧口径：**11 只里 0 只进确认池**，全卡在「收盘站上 MA5
+    # 且溢价 ≥2%」（它们反包前一日距 MA5 是 −0.25%~−2.45%）。旧口径要的是「已经启动」，
+    # 而反包恰恰发生在启动前一根 → 确认池永远慢半拍。
+    # 新口径：形态完整（涨停→1.1~4.5 倍量断板→已缩量）+ 未破 T 日低点 + 洗盘 2~4 日
+    #        + 收盘站回 T 日低点上方 → 确认池，**不再要求 MA5 溢价**（MA5 降为强弱标签）。
+    shrunk_done = any(0 < V(i) < V(i1) for i in range(iT + 2, n))
+    if (not pit and not huge and 2 <= days_ago <= 4 and shrunk_done
+            and (lowT <= 0 or C(n - 1) >= lowT * 0.98)):
+        ma5 = sum(C(i) for i in range(n - 5, n)) / 5.0
+        gap = ((C(n - 1) / ma5 - 1) * 100) if ma5 > 0 else -99.0
+        tag = "已脱离MA5" if gap >= MA5_GAP_MIN else "待启动"
+        return {"pool": "confirmed",
+                "stage": "形态确认·%s" % tag,
+                "form": (f"{zt_md}涨停→次{r1:.1f}倍量断板→已缩量·洗{days_ago - 1}日"
+                         f"（距MA5 {gap:+.2f}%）"),
+                "days_ago": days_ago}
     # 确认池优先：全流程达标（check_form 原口径）
     form_full = check_form(code, kline, zt_date_iso)
-    if form_full:
+    if form_full and not pit and not huge:
         return {"pool": "confirmed", "stage": "全流程达标",
                 "form": form_full, "days_ago": days_ago}
+    if form_full and (pit or huge):
+        # 形态全达标但带瑕疵：挖坑需要再看一根，巨量需要看承接 → 不进确认池
+        tag = "挖坑已收回" if pit else "巨量待确认"
+        return {"pool": "watch", "stage": tag,
+                "form": form_full + ("（曾破T日低点·已在2日内收回）" if pit else "（断板量比>3.5）"),
+                "days_ago": days_ago}
+    if days_ago >= 5:
+        # 成功样本 11/11 洗盘 ≤4 日；第 5 日仍未反包，只留「超期边缘」提醒，不再当新信号
+        return {"pool": "watch", "stage": "超期边缘",
+                "form": f"{zt_md}涨停→次{r1:.1f}倍量断板→已洗 {days_ago} 日·明日不反包即出",
+                "days_ago": days_ago}
     if days_ago == 1:
         return {"pool": "watch", "stage": "待缩量",
                 "form": f"{zt_md}涨停→次{r1:.1f}倍量断板·待缩量",
@@ -3134,7 +3182,7 @@ def main():
                 # R100z262：市值这条已经由上一条精确回答，这里不再把它并列进来——
                 # 原来那句「形态走完，或市值／启动幅度／距MA5 未达标」三选一，读者没法
                 # 据此判断该不该继续跟这只票。
-                reason = '形态不达标（启动前 20 日涨幅 >10%，或距 MA5 溢价 <2%），形态本身没坏'
+                reason = '未进池（洗盘未完成 / 破位未收回 / 洗盘超 4 日 / 断板量比越界），形态本身没坏'
             else:
                 reason = '超过观察窗口，形态失效'
             new_fails.append({'code': code, 'name': info.get('name', ''),
