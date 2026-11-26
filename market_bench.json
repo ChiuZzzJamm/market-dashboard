@@ -1,31 +1,31 @@
 {
- "date": "2026-11-25",
- "benchPct": -3.715,
+ "date": "2026-11-26",
+ "benchPct": -0.005,
  "benchSrc": "gtimg",
  "benchFormula": "上证指数/深证成指/创业板指/中证1000 涨跌幅**中位数**",
- "benchSectorPct": -3.065,
+ "benchSectorPct": -0.605,
  "sectorN": 90,
  "benchSectorFormula": "同花顺一级行业（allBoards）当日涨跌幅**中位数**",
  "names": [
   {
    "code": "sh000001",
    "name": "上证指数",
-   "pct": -2.03
+   "pct": 0.01
   },
   {
    "code": "sz399001",
    "name": "深证成指",
-   "pct": -3.24
+   "pct": -0.02
   },
   {
    "code": "sz399006",
    "name": "创业板指",
-   "pct": -4.19
+   "pct": 0.29
   },
   {
    "code": "sh000852",
    "name": "中证1000",
-   "pct": -4.44
+   "pct": -0.18
   }
  ],
  "errors": [],
@@ -282,6 +282,13 @@
    "benchSectorPct": -3.065,
    "sectorN": 90,
    "src": "git-backfill:00e63b7"
+  },
+  "2026-11-26": {
+   "date": "2026-11-26",
+   "benchPct": null,
+   "benchSectorPct": -0.605,
+   "sectorN": 90,
+   "src": "git-backfill:a4de933"
   }
  }
 }

@@ -152,7 +152,49 @@
    "appliedAt": null,
    "before": null,
    "after": null
+  },
+  {
+   "id": "028d5d33c6",
+   "module": "ai",
+   "modules": [
+    "ai"
+   ],
+   "dim": "板块",
+   "slice": "银行",
+   "kind": "prefer",
+   "rule": "「AI 预测」的 板块 = 银行 偏强（65% vs 整体 36%）",
+   "evidence": {
+    "delta": 0.289,
+    "horizon": 5,
+    "basis": "close→close 5d，切片与整体同口径"
+   },
+   "status": "proposed",
+   "createdAt": "2026-11-26 19:50",
+   "appliedAt": null,
+   "before": null,
+   "after": null
+  },
+  {
+   "id": "0d82d8c8c2",
+   "module": "duanban_watching",
+   "modules": [
+    "duanban_watching"
+   ],
+   "dim": "板块",
+   "slice": "影视院线",
+   "kind": "prefer",
+   "rule": "「断板·观察池」的 板块 = 影视院线 偏强（61% vs 整体 33%）",
+   "evidence": {
+    "delta": 0.283,
+    "horizon": 5,
+    "basis": "close→close 5d，切片与整体同口径"
+   },
+   "status": "proposed",
+   "createdAt": "2026-11-26 19:50",
+   "appliedAt": null,
+   "before": null,
+   "after": null
   }
  ],
- "updatedAt": "2026-11-26 15:52"
+ "updatedAt": "2026-11-26 19:58"
 }

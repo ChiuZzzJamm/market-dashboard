@@ -1,21 +1,21 @@
 {
- "asOf": "2026-11-26 17:01",
- "n": 28,
+ "asOf": "2026-11-26 19:56",
+ "n": 33,
  "okN": 11,
- "failN": 17,
+ "failN": 22,
  "avg": {
   "breakMult": 1.7,
   "washDays": 2.0,
   "minVolPct": 68.8,
-  "reboundVolPct": 72.3
+  "reboundVolPct": 71.0
  },
  "failAvg": {
-  "breakMult": 1.9,
+  "breakMult": 1.8,
   "washDays": 4.6,
-  "minVolPct": 41.6
+  "minVolPct": 46.4
  },
  "brokeRate": 9,
- "failBrokeRate": 71,
+ "failBrokeRate": 59,
  "rows": [
   {
    "code": "605058",
@@ -33,7 +33,7 @@
    "minVolPct": 63,
    "brokePreLow": false,
    "preLow": 37.28,
-   "reboundVolPct": null
+   "reboundVolPct": 56
   },
   {
    "code": "603386",
@@ -51,7 +51,7 @@
    "minVolPct": 61,
    "brokePreLow": false,
    "preLow": 12.74,
-   "reboundVolPct": null
+   "reboundVolPct": 29
   },
   {
    "code": "603278",
@@ -69,7 +69,7 @@
    "minVolPct": 79,
    "brokePreLow": false,
    "preLow": 10.1,
-   "reboundVolPct": null
+   "reboundVolPct": 71
   },
   {
    "code": "603166",
@@ -87,7 +87,7 @@
    "minVolPct": 73,
    "brokePreLow": false,
    "preLow": 8.7,
-   "reboundVolPct": null
+   "reboundVolPct": 77
   },
   {
    "code": "603051",
@@ -123,7 +123,7 @@
    "minVolPct": 63,
    "brokePreLow": false,
    "preLow": 52,
-   "reboundVolPct": null
+   "reboundVolPct": 117
   },
   {
    "code": "002815",
@@ -141,7 +141,7 @@
    "minVolPct": 68,
    "brokePreLow": false,
    "preLow": 13,
-   "reboundVolPct": null
+   "reboundVolPct": 78
   },
   {
    "code": "002077",
@@ -159,7 +159,7 @@
    "minVolPct": 76,
    "brokePreLow": false,
    "preLow": 10.83,
-   "reboundVolPct": null
+   "reboundVolPct": 80
   },
   {
    "code": "000158",
@@ -177,7 +177,7 @@
    "minVolPct": 78,
    "brokePreLow": false,
    "preLow": 10.9,
-   "reboundVolPct": null
+   "reboundVolPct": 56
   },
   {
    "code": "603887",
@@ -214,6 +214,23 @@
    "brokePreLow": false,
    "preLow": 5.41,
    "reboundVolPct": 33
+  },
+  {
+   "code": "603337",
+   "name": "杰克科技",
+   "date": "2026-11-24",
+   "pool": "断板·观察",
+   "status": "失败",
+   "source": "auto",
+   "note": "破位未收回（最低 33.85 < 前低 34.95）",
+   "ztDate": "2026-11-23",
+   "breakDate": "2026-11-24",
+   "breakMult": 1.14,
+   "washDays": 2,
+   "minVolPct": 46,
+   "brokePreLow": true,
+   "preLow": 34.95,
+   "segLow": 33.85
   },
   {
    "code": "605178",
@@ -301,6 +318,23 @@
    "segLow": 12.91
   },
   {
+   "code": "603629",
+   "name": "利通电子",
+   "date": "2026-11-19",
+   "pool": "断板·失效",
+   "status": "失败",
+   "source": "auto",
+   "note": "超 5 日未反包（已洗 5 日）",
+   "ztDate": "2026-11-18",
+   "breakDate": "2026-11-19",
+   "breakMult": 1.76,
+   "washDays": 5,
+   "minVolPct": 49,
+   "brokePreLow": false,
+   "preLow": 53.85,
+   "segLow": 55.56
+  },
+  {
    "code": "603220",
    "name": "中贝通信",
    "date": "2026-11-19",
@@ -318,6 +352,23 @@
    "segLow": 13.11
   },
   {
+   "code": "600410",
+   "name": "华胜天成",
+   "date": "2026-11-19",
+   "pool": "断板·失效",
+   "status": "失败",
+   "source": "auto",
+   "note": "超 5 日未反包（已洗 5 日）",
+   "ztDate": "2026-11-18",
+   "breakDate": "2026-11-19",
+   "breakMult": 1.55,
+   "washDays": 5,
+   "minVolPct": 91,
+   "brokePreLow": false,
+   "preLow": 11.44,
+   "segLow": 15.59
+  },
+  {
    "code": "600405",
    "name": "动力源",
    "date": "2026-11-19",
@@ -333,6 +384,40 @@
    "brokePreLow": true,
    "preLow": 4.01,
    "segLow": 3.65
+  },
+  {
+   "code": "600186",
+   "name": "莲花控股",
+   "date": "2026-11-19",
+   "pool": "断板·失效",
+   "status": "失败",
+   "source": "auto",
+   "note": "超 5 日未反包（已洗 5 日）",
+   "ztDate": "2026-11-18",
+   "breakDate": "2026-11-19",
+   "breakMult": 1.35,
+   "washDays": 5,
+   "minVolPct": 65,
+   "brokePreLow": false,
+   "preLow": 7.89,
+   "segLow": 8.38
+  },
+  {
+   "code": "000815",
+   "name": "美利云",
+   "date": "2026-11-19",
+   "pool": "断板·失效",
+   "status": "失败",
+   "source": "auto",
+   "note": "超 5 日未反包（已洗 5 日）",
+   "ztDate": "2026-11-18",
+   "breakDate": "2026-11-19",
+   "breakMult": 1.72,
+   "washDays": 5,
+   "minVolPct": 63,
+   "brokePreLow": false,
+   "preLow": 12.74,
+   "segLow": 12.79
   },
   {
    "code": "600206",

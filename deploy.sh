@@ -192,6 +192,14 @@ echo "📉 重算指数趋势档（trend_state.py --write --fetch）..."
 echo "🎯 生成盘前策略闭环（strategy_engine.py）..."
 "$PY" strategy_engine.py || true
 
+# ---------- R100z367：ATR 止损锚与顶层 K 线同源重算 ----------
+# atr_stop 的「涨停日最低价」锚是从顶层 stkKlines 反查的，而 16:00 数据步跑 atr_stop 时
+# stkKlines 还没被 19:30 的 embed_klines 重新抓过（前复权基准一旦平移，同一根 bar 的最低价就变了）。
+# 结果 G 闸「atrStops 止损 X ≠ 涨停日最低 Y」必 FAIL（2026-11-26 国光股份 7.90 vs 7.75 即此）。
+# deploy 跑在 embed_klines 之后，这里按当前 stkKlines 重算一次即可对齐；幂等、只改 atrStops。
+echo "🔧 重算 ATR 止损锚（atr_stop.py）..."
+"$PY" atr_stop.py > /dev/null || true
+
 # ---------- R100z158：回填历史行业基准（零网络，读 git 历史 data.js，绝不阻断部署）----------
 # 回测口径改「同源行业基准」后（量纲错配修复），历史预测日的超额要拿当日的行业中位当尺子。
 # 每次部署顺手把缺的历史行业基准补进 market_bench.json[history]，保证回测台账随时可重算、
