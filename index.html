@@ -1167,6 +1167,9 @@
   .en-h { font-size: var(--fs-md); font-weight: 800; color: var(--ink); margin-bottom: 7px; }
   .en-tag { font-size: var(--fs-xs); font-weight: 400; color: var(--ink2); border: 1px solid var(--line);
     border-radius: 3px; padding: 0 4px; margin-left: 6px; vertical-align: 2px; }
+  .en-next { margin-top: 7px; padding: 6px 9px; border-left: 3px solid var(--accent);
+             background: var(--accent-soft); border-radius: 0 var(--r-note) var(--r-note) 0;
+             font-size: var(--fs-sm); line-height: 1.65; color: var(--ink); }
   .en-b { border-left: 2px solid var(--accent-soft); padding: 1px 0 1px 11px; }
   .en-b p { margin: 0 0 7px; font-size: var(--fs-sm); line-height: 1.8; color: var(--ink2); }
   .en-b p b { color: var(--ink); font-weight: 700; }
@@ -9556,6 +9559,38 @@ function stkEnergyHtml(code) {
   var _vminT = null, _iT;
   for (_iT = d + 1; _iT <= n - 1; _iT++) { if (_vminT === null || v[_iT] < _vminT) _vminT = v[_iT]; }
   var vRatio = (_vminT !== null && v[d] > 0) ? _vminT / v[d] * 100 : null;
+  /* 前瞻：这一段治的是用户 2026-11-26 的批评——「量价关系全是马后炮」。
+     前面都是已经发生的事实，这里必须给出**下一根 K 线看什么才成立 / 什么情况直接否掉**，
+     且判据只用日线可观测值（前低 / 涨停日高 / MA5 / 断板日量），不含任何事后信息。 */
+  function nextWatch(stg) {
+    // 自算一遍（_stageAt 内部的变量不外泄）：MA5 / 断板前低 / 洗盘期最低
+    var _i, _m5 = 0, _cnt = 0;
+    for (_i = Math.max(0, n - 5); _i < n; _i++) { _m5 += c[_i]; _cnt++; }
+    _m5 = _m5 / Math.max(1, _cnt);
+    var _pre = null;
+    for (_i = Math.max(0, d - 10); _i < d; _i++) { if (_pre === null || l[_i] < _pre) _pre = l[_i]; }
+    var _low = null;
+    for (_i = d + 1; _i < n; _i++) { if (_low === null || l[_i] < _low) _low = l[_i]; }
+    var tgt = (c[n - 1]).toFixed(2), ma = _m5.toFixed(2);
+    if (stg === '反包完成') {
+      return '下一根看：次日能否高开溢价并守住 <b>' + tgt + '</b>；跌破且收盘落到 MA5（' + ma + '）下方，按一日游处理。';
+    }
+    if (stg === '起点' || stg === '洗盘第1天') {
+      return '下一根看：量能能否降到断板日的 <b>70%</b> 以下；若再放量收阴、且收盘跌破断板日最低 ' +
+        (_low !== null ? _low.toFixed(2) : '—') + '，形态作废。';
+    }
+    if (stg === '出货嫌疑') {
+      return '下一根看：收盘能否站回断板前低 <b>' + (_pre !== null ? _pre.toFixed(2) : '—') +
+        '</b>；站不回去就按出局处理，不要等下一波。';
+    }
+    if (stg.indexOf('洗盘完成') === 0 || stg === '洗盘到位') {
+      return '下一根看：能否<b>放量突破</b>涨停日高点 ' + (h[d - 1] !== undefined ? h[d - 1].toFixed(2) : '—') +
+        '；冲高回落、收盘回到 MA5（' + ma + '）下方 → 退出来。';
+    }
+    return '下一根看：收盘能否站回断板前低 <b>' + (_pre !== null ? _pre.toFixed(2) : '—') +
+      '</b> 且量能 ≤ 断板日 60%；两条都做不到，就当它还没洗完，别抢。';
+  }
+
   var stage, concl, tone;
   if (lp >= 9.8) {
     /* 今天涨停 = 反包完成（这是形态的终点，不该再报「还在洗」）。
@@ -9608,7 +9643,8 @@ function stkEnergyHtml(code) {
   return '<div class="en-h">量能解读 <span class="en-tag">推断 · 非事实</span></div>' +
     '<div class="en-b">' + body +
     (concl ? '<div class="en-c' + (tone ? ' en-c-' + tone : '') + '">' +
-      (stage ? '<b>阶段：' + stage + '</b>　' : '') + concl + '</div>' : '') + '</div>';
+      (stage ? '<b>阶段：' + stage + '</b>　' : '') + concl +
+      (stage ? '<div class="en-next">' + nextWatch(stage) + '</div>' : '') + '</div>' : '') + '</div>';
 }
 function stkRenderEnergy(code) {
   var box = document.getElementById('stk-energy');
