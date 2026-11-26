@@ -93,10 +93,30 @@ def main():
             done = []
         have = {str(x.get("code")) for x in done if isinstance(x, dict)}
         added = 0
+        # 名称兜底：录入口只有代码时（用户从 🔍 面板复制，历史上只有代码），
+        # 用全库名称表补，别让兑现列表出现「601086 601086」。
+        _nm = {}
+        for _node in ("duanban", "chenPool", "breakoutPool", "harmonic"):
+            _b = D.get(_node) or {}
+            for _k, _v in _b.items():
+                if isinstance(_v, list):
+                    for _e in _v:
+                        if isinstance(_e, dict) and _e.get("code") and _e.get("name"):
+                            _nm.setdefault(str(_e["code"]), str(_e["name"]))
+        for _c, _v in ((D.get("stockConcepts") or {}).get("items") or {}).items():
+            if isinstance(_v, dict) and _v.get("name"):
+                _nm.setdefault(str(_c), str(_v["name"]))
+        # 已有 done 条目若缺名也补上（历史那次只有代码）
+        for _d in done:
+            if isinstance(_d, dict) and not _d.get("name"):
+                _d["name"] = _nm.get(str(_d.get("code")), "")
         for e in (D.get("duanban") or {}).get("success") or []:
             c = str(e.get("code"))
             if c and c not in have:
-                done.append({"code": c, "name": e.get("name"), "pct": e.get("pct")})
+                nm = e.get("name") or _nm.get(c) or ""
+                if not e.get("name") and nm:
+                    e["name"] = nm
+                done.append({"code": c, "name": nm, "pct": e.get("pct")})
                 have.add(c); added += 1
         tdy["done"] = done
         if added:

@@ -6637,10 +6637,34 @@ function renderDuanban() {
    ⚠️ 卡片点击复用 openDbModal（key = 'x|<code>'），必须在渲染时把条目注册进
       DB_INDEX，否则点开是空白（这是断板页 R100z84 踩过的坑）。
    ========================================================================== */
+/* 全站名称兜底（2026-11-26 用户：兑现列表出现「601086 601086」，因为只查了陈学长池）。
+   查找顺序：陈学长各池 → 断板各池（含成功池）→ 概念库 → 横盘启动 → 谐波 → 题材池。 */
+function stkNameOf(code) {
+  var nm = chenNameOf(code);
+  if (nm) return nm;
+  var D = window.DASHBOARD_DATA || {};
+  var c = String(code);
+  var it = (D.stockConcepts || {}).items || {};
+  if (it[c] && it[c].name) return String(it[c].name);
+  var lists = [(D.breakoutPool || {}).passed, (D.breakoutPool || {}).watch,
+               (D.harmonic || {}).confirmPool, (D.harmonic || {}).watchPool,
+               (D.duanban || {}).success, (D.ashare || {}).lianban,
+               (D.ashare || {}).themePicks];
+  for (var i = 0; i < lists.length; i++) {
+    var arr = lists[i] || [];
+    for (var j = 0; j < arr.length; j++) {
+      var e = arr[j] || {};
+      if ((e.code || (e.stock || {}).code) == c) return String(e.name || (e.stock || {}).name || '');
+    }
+  }
+  return '';
+}
+
 function chenNameOf(code) {
   var D = window.DASHBOARD_DATA || {};
   var c = D.chenPool || {}, db = D.duanban || {};
-  var pools = [c.strict, c.loose, c.watching, db.confirmed, db.watching, db.failPool];
+  var pools = [c.strict, c.loose, c.watching, c.success, db.confirmed, db.watching,
+               db.success, db.failPool];
   for (var i = 0; i < pools.length; i++) {
     var arr = pools[i] || [];
     for (var j = 0; j < arr.length; j++) {
@@ -6867,10 +6891,10 @@ function chenCompareHtml(c) {
       '<span class="cc-sub">今天收盘后选出 · 下一交易日开盘买</span></div></div>' +
     (done.length
       ? '<div class="cc-sec"><div class="cc-t">今日已反包兑现（' + done.length + '）' +
-        '<span class="cc-sub">当日涨幅 ≥9.8% ＝ 形态今天已经走完</span>' +
+        '<span class="cc-sub">当日涨幅 ≥+7% ＝ 形态今天已经走完（含未封板）</span>' +
         '<em class="cc-buy off">不计入明日买入</em></div>' +
         '<div class="cc-list">' + done.map(function (x) {
-          var nm = chenNameOf(x.code);
+          var nm = stkNameOf(x.code);
           var gi = _grp.length;
           _grp.push({ c: String(x.code), n: String(nm || ''), t: '反包复盘 · 今日已兑现 · ' + (nm || x.code) });
           return '<span class="cc-chip go done" title="今日已涨停/准涨停：反包已兑现，明天不是在这里买" onclick="stkOpenIn(window._CC_GRP,' + gi + ')">' +
