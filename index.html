@@ -1231,6 +1231,7 @@
   .en-h { font-size: var(--fs-md); font-weight: 800; color: var(--ink); margin-bottom: 7px; }
   .en-tag { font-size: var(--fs-xs); font-weight: 400; color: var(--ink2); border: 1px solid var(--line);
     border-radius: 3px; padding: 0 4px; margin-left: 6px; vertical-align: 2px; }
+  .en-min { margin-top: 6px; font-size: var(--fs-xs); color: var(--ink2); line-height: 1.6; }
   .en-next { margin-top: 7px; padding: 6px 9px; border-left: 3px solid var(--accent);
              background: var(--accent-soft); border-radius: 0 var(--r-note) var(--r-note) 0;
              font-size: var(--fs-sm); line-height: 1.65; color: var(--ink); }
@@ -9278,6 +9279,27 @@ function stkEnergyInPool(code) {
   return false;
 }
 
+
+/* 分时承接一行（2026-11-26 用户：「加强关注分时线上的爆量异动，尾盘红柱多要加强观察」）。
+   数据来自 intraday_pool.py；没有就整行不渲染——不许用日线量能冒充分时。 */
+function stkMinLine(code) {
+  var m = (window.__stkMin || {})[code];
+  if (!m) return '';
+  var parts = [];
+  parts.push('红 <b>' + m.red + '</b> / 绿 <b>' + m.green + '</b>');
+  if (m.burstN) {
+    var b0 = (m.bursts && m.bursts[0]) ? m.bursts[0].t + ' ' + m.bursts[0].dir : '';
+    parts.push('爆量 <b>' + m.burstN + '</b> 次（早盘 ' + m.earlyBurst + ' 次' + (b0 ? '，首个 ' + b0 : '') + '）');
+  } else {
+    parts.push('无爆量（全天最大 5 分钟不足日均 2 倍）');
+  }
+  if (m.limitUp) parts.push('已封板（尾盘无成交，尾盘红柱不适用）');
+  else if (m.tailRedPct !== null && m.tailRedPct !== undefined) parts.push('尾盘红柱 <b>' + m.tailRedPct + '%</b>');
+  parts.push(m.hold === true ? '爆量后 15 分钟<b>未创新低（承接成立）</b>'
+                             : (m.hold === false ? '爆量后 15 分钟<b>创了新低（承接失败）</b>' : '承接未判定'));
+  return '<div class="en-min">分时（今日）：' + parts.join('　｜　') + '</div>';
+}
+
 function stkEnergyHtml(code) {
   var kl = stkParseKline(stkGlobalKline(code));
   if (!kl || kl.length < 21) {
@@ -9752,7 +9774,8 @@ function stkEnergyHtml(code) {
     '<div class="en-b">' + body +
     (concl ? '<div class="en-c' + (tone ? ' en-c-' + tone : '') + '">' +
       (stage ? '<b>阶段：' + stage + '</b>　' : '') + concl +
-      (stage ? '<div class="en-next">' + nextWatch(stage) + '</div>' : '') + '</div>' : '') + '</div>';
+      (stage ? '<div class="en-next">' + nextWatch(stage) + '</div>' : '') +
+      stkMinLine(code) + '</div>' : '') + '</div>';
 }
 function stkRenderEnergy(code) {
   var box = document.getElementById('stk-energy');
@@ -10239,6 +10262,15 @@ if (location.hash === '#duanban') { document.body.classList.add('db-open'); wind
 if (location.hash === '#gnews') { document.body.classList.add('gnews-open'); if (window.__applyFloatSaved) window.__applyFloatSaved(); renderGnews(); window.scrollTo(0, 0); }
 // R100z162：🌟 复盘台账页直达（分享链接 #score 可直接落到成绩单）
 if (location.hash === '#score') { document.body.classList.add('score-open'); if (window.__applyFloatSaved) window.__applyFloatSaved(); renderScoreView(); window.scrollTo(0, 0); }
+
+/* 分时承接（intraday_pool.py 产出）：池内标的今日分钟线体检结果，一次预取，弹窗直接读。
+   缺文件/离线时静默为空，不影响任何既有渲染。 */
+(function () {
+  fetch('intraday_minute.json?t=' + Date.now())
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (j) { window.__stkMin = (j && j.stocks) || {}; })
+    .catch(function () { window.__stkMin = {}; });
+})();
 
 /* ===== 反包登记浮动窗（R100z388，用户 2026-11-26）=====
    ① 🔍 与 🧰 同款：46px 圆钮、可拖动、位置记 localStorage；

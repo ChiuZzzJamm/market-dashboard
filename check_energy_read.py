@@ -28,7 +28,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 INDEX = os.path.join(HERE, "index.html")
 DATA = os.path.join(HERE, "data.js")
 
-NEED = ["esc", "escAttr", "stkParseKline", "stkGlobalKline", "stkEnergyInPool", "stkEnergyHtml"]
+NEED = ["esc", "escAttr", "stkParseKline", "stkGlobalKline", "stkEnergyInPool", "stkMinLine", "stkEnergyHtml"]
 # kind: structure=有断板结构 / multi=多连板 / outflow=必须判出货 / degrade=在池无结构 / silent=不显示
 CASES = {"603536": "structure", "600865": "structure", "600207": "structure",
          "001360": "multi", "600156": "structure", "600778": "shorts", "600519": "silent",

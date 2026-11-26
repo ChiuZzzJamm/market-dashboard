@@ -274,7 +274,11 @@ echo "🎯 补齐板块买点（entry_zone.py --write）..."
 # 闸门等于没有。下沉到 deploy.sh 后，不管哪条任务调它，闸口都在同一处。
 # 退出码：audit_pipeline.py 0=无 FAIL，1=有 FAIL。WARN 不拦（WARN 是历史遗留归对应任务处理）。
 if [ "${SKIP_AUDIT:-0}" != "1" ]; then
-    # 反包登记复盘（R100z388）：读 rebound_log.json 算证据 → rebound_review.json（页面 fetch）
+    # 池内分时承接（R100z389）：腾讯分钟线 → intraday_minute.json（页面「分时」行）
+echo "📈 分时承接体检（intraday_pool.py --write）..."
+"$PY" intraday_pool.py --write --limit 120 || echo "[warn] 分时体检失败，页面只是不显示那一行（不影响部署）"
+
+# 反包登记复盘（R100z388）：读 rebound_log.json 算证据 → rebound_review.json（页面 fetch）
 echo "🔍 反包登记复盘（rebound_review.py --write）..."
 "$PY" rebound_review.py --harvest-fail --write || echo "[warn] 反包复盘失败，页面只是不显示均值（不影响部署）"
 
