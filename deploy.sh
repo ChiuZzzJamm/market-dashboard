@@ -16,6 +16,31 @@ if [ -z "$PY" ]; then echo "❌ 找不到 python3"; exit 1; fi
 if [ -z "$NODE" ]; then echo "❌ 找不到 node"; exit 1; fi
 echo "[info] using python3: $PY | node: $NODE"
 
+# ---------- R100z3xx（2026-11-27）：把「本脚本由已持 data 锁的任务调用」显式告知子脚本 ----------
+# deploy 内部有一批会写 data.js 的步骤（pool_success / alert_gap / ledger_doctor …），
+# 它们各自 acquire 同一把锁 → 被**父任务自己的锁**挡住。2026-11-27 09:53 实测三处
+# `[FAIL] 拿不到 data 锁`：成功池归集、距异动、台账诊断当天的 data.js 部分都没写，
+# 而这三处都自报「不影响部署」，最容易被当成噪音漏掉（连续几天就会是「某块数据突然不更新」）。
+# 判定只用锁文件本身：锁存在且心跳未僵死 → 导出它的 task 标签；没锁就不导出，
+# 子脚本照常抢锁（被别人持有时该等就等，行为完全不变）。
+LOCK_FILE="$REPO_DIR/.pipeline-data.lock"
+if [[ -f "$LOCK_FILE" ]]; then
+    LOCK_TASK=$("$PY" - "$LOCK_FILE" <<'PYEOF'
+import json, sys, time
+try:
+    m = json.load(open(sys.argv[1], encoding='utf-8'))
+    age = time.time() - float(m.get('beat') or m.get('ts') or 0)
+    print((m.get('task') or '') if age <= 3600 else '')
+except Exception:
+    print('')
+PYEOF
+)
+    if [[ -n "$LOCK_TASK" ]]; then
+        export PIPELINE_LOCK_TASK="$LOCK_TASK"
+        echo "[lock] 继承 data 锁 task=${LOCK_TASK}：内部写盘步骤按同链放行（不重复抢锁）"
+    fi
+fi
+
 # ---------- 配置 git 使用部署专用 SSH 私钥 ----------
 DEPLOY_KEY="$REPO_DIR/.deploy_key"
 if [[ ! -f "$DEPLOY_KEY" ]]; then

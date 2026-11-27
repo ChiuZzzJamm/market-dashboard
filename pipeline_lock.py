@@ -40,6 +40,7 @@ import argparse
 import json
 import os
 import socket
+import subprocess
 import sys
 import time
 
@@ -104,6 +105,33 @@ def _describe(meta):
             % (meta.get("task"), meta.get("pid"), meta.get("host"), _age(meta)))
 
 
+def _is_ancestor(pid):
+    """pid 是否是当前进程的祖先（同一执行链）。
+
+    R100z3xx（2026-11-27）：持锁任务跑 `deploy.sh` 时，deploy 内部还会调
+    pool_success / alert_gap / ledger_doctor 等写盘脚本，它们各自 acquire 同一把锁，
+    于是被**自己父进程的锁**挡住 —— 09:53 实测三处 `[FAIL] 拿不到 data 锁`，
+    成功池/距异动/台账诊断当天的 data.js 部分没写（脚本自报「不影响部署」，最易漏）。
+    同一条链里的写入本来就是串行的，重入放行既不放宽并发（仍是同一写者）、
+    也不需要给每个子脚本传任务标签。
+    """
+    if not pid:
+        return False
+    cur = os.getpid()
+    for _ in range(24):                     # 祖先链深度上限，防 ps 异常时死循环
+        if cur <= 1:
+            return False
+        if cur == pid:
+            return True
+        try:
+            out = subprocess.run(["ps", "-o", "ppid=", "-p", str(cur)],
+                                 capture_output=True, text=True, timeout=5).stdout.strip()
+            cur = int(out.split()[0]) if out else 0
+        except Exception:                                   # noqa: BLE001
+            return False
+    return False
+
+
 def cmd_acquire(name, task, wait, ttl):
     deadline = time.time() + max(0, wait)
     bad_reads = 0
@@ -132,6 +160,22 @@ def cmd_acquire(name, task, wait, ttl):
                 return 3
             print("[LOCK][STALE-REMOVED] 锁文件无法解析，已挪到 .bad 存档后重试（第 %d 次）" % bad_reads)
             continue
+        # R100z3xx：同一条执行链内可重入。
+        # ① 环境继承：deploy.sh 把「当前锁的 task 标签」导出成 PIPELINE_LOCK_TASK ——
+        #    自动化每次 Bash 调用都是新进程，deploy 内部的写盘脚本拿不到父进程 pid。
+        #    只在锁未僵死 + 同主机 + 标签一致时放行；锁被别人持有时 env 不匹配，照常等待。
+        # ② 祖先判定：同一进程内嵌套调用（直接 subprocess 起子进程）时兜住。
+        # 必须放在判死分支之前：父锁心跳是新的，否则会白等满 --wait 秒。
+        env_task = os.environ.get("PIPELINE_LOCK_TASK") or ""
+        if (env_task and meta.get("task") == env_task
+                and meta.get("host") == socket.gethostname() and _age(meta) <= ttl):
+            print("[LOCK][REENTRANT] %s 锁由同任务继承（task=%s），子步骤放行、不改锁"
+                  % (name, env_task))
+            return 0
+        if meta.get("host") == socket.gethostname() and _is_ancestor(meta.get("pid")):
+            print("[LOCK][REENTRANT] %s 锁由本任务父进程持有（%s），同链放行、不改锁"
+                  % (name, _describe(meta)))
+            return 0
         if _age(meta) > ttl:
             # R100z284：旧锁留档改成**固定槽位覆盖写**，不再 glob 删历史留档 —— 同一条沙箱垃圾根因
             # （os.remove 在自动化里 = 移到废纸篓）。留档只用于排查「谁被判死了」，最近一份就够；
