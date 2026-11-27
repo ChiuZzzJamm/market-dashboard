@@ -7,6 +7,7 @@
 """
 import json, re, os, sys, argparse
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 from common import load_dashboard_data, http_get
 
 # R100z6 防护：本脚本为模块级流程脚本（无 main 函数），被 import 会直接抓行情并写回
@@ -424,6 +425,20 @@ if trade_iso != "未知日期":
             print(f"[warn] 行情日期 {trade_iso} 早于应更新的最近交易日 {_expected.isoformat()}，"
                   f"判定为休市/数据过期，保留上一交易日数据，不覆盖")
             D['updatedAt'] = f"{_now_bj.strftime('%Y-%m-%d %H:%M')}（美股休市/行情过期，保留上一交易日数据）"
+            # 2026-11-27 修：休市时原来不改 us.status → 推送标题继续写「11-25 道指+0.33%」，
+            # 读者以为昨夜又涨了一次（用户截图质问）。这里把「今天休市」写进数据，
+            # tradeDate 仍是上一交易日（那是真实收盘），另用 sessionDate/lastSessionDate 区分。
+            try:
+                import common as _C
+                _et = _now_bj.astimezone(ZoneInfo('America/New_York'))
+                _hol = _C.us_holiday_name(_et.date())
+                _us = D.setdefault('us', {})
+                _us['status'] = '休市'
+                _us['holidayName'] = _hol or '休市'
+                _us['sessionDate'] = _et.strftime('%Y-%m-%d')
+                _us['lastSessionDate'] = trade_iso
+            except Exception as _e:                              # noqa: BLE001
+                print(f"[warn] 休市标记写入失败：{_e}")
             if not ARGS.dry_run:
                 # R100z165（L10 写盘原子化）：先 .tmp 再 os.replace
                 _tmp = 'data.js.tmp'
@@ -444,6 +459,16 @@ index_name_map = {
     'usKWEB': '中概互联网',
 }
 
+# —— 今天（美东）是不是美股交易日 ——
+_US_ET_TODAY = datetime.now(timezone.utc).astimezone(ZoneInfo('America/New_York')).date()
+try:
+    import common as _C
+    _US_HOLIDAY_NAME = _C.us_holiday_name(_US_ET_TODAY)
+    _US_CLOSED_TODAY = bool(_US_HOLIDAY_NAME) or _US_ET_TODAY.weekday() >= 5
+except Exception:                                                # noqa: BLE001
+    _US_HOLIDAY_NAME = ''
+    _US_CLOSED_TODAY = _US_ET_TODAY.weekday() >= 5
+
 # 三大指数涨跌趋势：三大齐涨/齐跌才用“收涨/收跌”，否则“涨跌不一”
 _di, _ix, _sp = pct('usDJI'), pct('usIXIC'), pct('usINX')
 _trend = '涨跌不一'
@@ -463,7 +488,12 @@ if not keep_tp and _old_tp:
 
 us_obj = {
     "tradeDate": f"{trade_iso}（美东）" if trade_iso != "未知日期" else "未知日期",
-    "status": "收盘",
+    # 2026-11-27：休市日（周末/美国法定假日）即便行情日期==上一交易日，也不能自称「收盘已更新」。
+    # 用户截图：「美股昨天休市你微信推送怎么写 25 号的情况？」→ 标题与 updatedAt 都要标休市。
+    "status": _US_CLOSED_TODAY and "休市" or "收盘",
+    "holidayName": (_US_HOLIDAY_NAME or None) if _US_CLOSED_TODAY else None,
+    "sessionDate": _US_ET_TODAY.isoformat(),
+    "lastSessionDate": trade_iso if trade_iso != "未知日期" else None,
     "summary": _us_summary(trade_md, _trend, sorted_up, sorted_down),
     "indices": [
         {"name": index_name_map.get('usDJI','道琼斯'), "point": point('usDJI'), "changePct": pct('usDJI'), "openPct": open_pct('usDJI')},
@@ -501,9 +531,13 @@ else:
     D['us'] = us_obj
     for m in D.get('panorama', {}).get('markets', []):
         if m.get('key') == 'us':
-            m['date'] = f"{trade_md} 收盘（美东）" if trade_md != "未知" else "未知日期"
+            m['date'] = ((f"{trade_md} 收盘（美东）· {_US_ET_TODAY.strftime('%m/%d')} 休市")
+                         if _US_CLOSED_TODAY and trade_md != "未知"
+                         else (f"{trade_md} 收盘（美东）" if trade_md != "未知" else "未知日期"))
             m['items'] = sorted(pano_items, key=lambda x: (x.get('pct') is None, -(x.get('pct') or 0)))
-    D['updatedAt'] = f"{datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d %H:%M')}（美股收盘数据已自动更新）"
+    _now_txt = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d %H:%M')
+    D['updatedAt'] = (_now_txt + "（美股休市·沿用 %s 收盘）" % trade_md) if _US_CLOSED_TODAY \
+        else (_now_txt + "（美股收盘数据已自动更新）")
     # R100z167：美股这一格由脚本自己维护，供 refresh_stamp.py 取最大时间戳生成页头。
     # 休市/过期分支刻意**不写**这格——数据没更新就不该自称已更新。
     us_obj['updatedAt'] = D['updatedAt']

@@ -356,7 +356,15 @@ elif mode == 'us':
     us_trade = u.get('tradeDate', '') or ''
     us_date = (us_trade.split('（')[0][5:] if us_trade else '')
     idx0 = (u.get('indices') or [{}])[0]
-    title = f"[美股] {us_date} 道指{fmt_pct(idx0.get('changePct'))}"
+    # 2026-11-27 修：休市日不能把「上一交易日」写成今天的行情（用户截图质问）。
+    _closed = (u.get('status') or '') == '休市'
+    if _closed:
+        _sd = str(u.get('sessionDate') or '')[5:]
+        _last = str(u.get('lastSessionDate') or us_trade or '').split('（')[0][5:]
+        title = (f"[美股] {_sd} 休市（{u.get('holidayName') or '节假日'}）"
+                 f"｜上一交易日 {_last} 道指{fmt_pct(idx0.get('changePct'))}")
+    else:
+        title = f"[美股] {us_date} 道指{fmt_pct(idx0.get('changePct'))}"
     # 微信端保持连续自然段，避免被截断；outlook 为 {date,content} 对象时取 content
     _ol = u.get('outlook') or ''
     if isinstance(_ol, dict):
@@ -369,7 +377,7 @@ elif mode == 'us':
     news_parts = collect_news(u, 6)
     parts = [
         '🌐 https://chiuzzzjamm.github.io/market-dashboard',
-        f"📊 美股：{u.get('summary','')}",
+        ("📊 美股（休市·上一交易日）：" if _closed else "📊 美股：") + str(u.get('summary','')),
         f"📈 前瞻：{open_outlook_text}" if open_outlook_text else '',
         build_panorama_line(D.get('panorama')),
     ]

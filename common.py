@@ -146,6 +146,30 @@ def us_holidays(year):
     return h
 
 
+def us_holiday_name(d):
+    """返回某天对应的美股节日中文名（不是节日返回 ''）。
+
+    2026-11-27 用户截图：「美股昨天休市你微信推送怎么写 25 号的情况？」——
+    休市时只保留旧数据、不改 status，于是推送标题仍写「11-25 道指+0.33%」，
+    读者会以为昨夜又涨了一次。判定要能给出「休市（感恩节）」这种可读标签。
+    """
+    y = d.year
+    cand = {
+        _nth_weekday(y, 1, 0, 3): '马丁·路德·金日',
+        _nth_weekday(y, 2, 0, 3): '总统日',
+        _easter(y) - _dt.timedelta(days=2): '耶稣受难日',
+        _last_weekday(y, 5, 0): '阵亡将士纪念日',
+        _nth_weekday(y, 9, 0, 1): '劳动节',
+        _nth_weekday(y, 11, 3, 4): '感恩节',
+    }
+    for base, nm in ((_dt.date(y, 1, 1), '元旦'), (_dt.date(y, 6, 19), '六月节'),
+                     (_dt.date(y, 7, 4), '独立日'), (_dt.date(y, 12, 25), '圣诞')):
+        w = base.weekday()
+        obs = base - _dt.timedelta(days=1) if w == 5 else (base + _dt.timedelta(days=1) if w == 6 else base)
+        cand[obs] = nm
+    return cand.get(d, '')
+
+
 _HOLIDAYS = {}
 def _holidays_for(year):
     if year not in _HOLIDAYS:

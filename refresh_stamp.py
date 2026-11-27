@@ -85,7 +85,12 @@ def main():
 
     best_ts, best_label = None, None
     detail = []
+    # 2026-11-27：美股休市日，updatedAt 写的是「休市·沿用 11/25 收盘」，
+    # 页头却仍标「美股收盘」→ 读者以为今天又收了一次盘。这里按 us.status 动态改名。
+    _us_closed = str(((D.get("us") or {}).get("status")) or "") == "休市"
     for paths, label in SLOTS:
+        if label == "美股收盘" and _us_closed:
+            label = "美股休市"
         vals = []
         for path in paths:
             v = get(D, path)
@@ -106,7 +111,8 @@ def main():
         print("[STAMP] 各格都没有可解析的时间戳，跳过")
         return 0
 
-    new = "%s（%s 已更新）" % (best_ts, best_label)
+    new = ("%s（%s）" % (best_ts, best_label)) if best_label == "美股休市" \
+        else ("%s（%s 已更新）" % (best_ts, best_label))
     try:
         old = json.loads(hm.group(2))
     except Exception:                                        # noqa: BLE001
