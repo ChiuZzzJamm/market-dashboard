@@ -1909,13 +1909,17 @@ def k20_us_holiday(r, data=None):
             bad.append('status=休市 但 updatedAt 不含「休市」：%r' % up[:40])
         if '已更新' in up:
             bad.append('status=休市 但 updatedAt 自称「已更新」：%r' % up[:40])
-    if (not closed) and status == '休市':
+    # ③ 只在「声称今天休市」时才判矛盾：ET 已进入下一交易日、但数据仍是上一交易日休市
+    #    （sessionDate=昨天）属于正常过渡（美东凌晨 4 点、A股这边 16 点），不算错。
+    if (not closed) and status == '休市' and str(us.get('sessionDate') or '')[:10] == et.date().isoformat():
         bad.append('今天美东是交易日（%s），却标成「休市」' % et.strftime('%m-%d %a'))
     if bad:
         r.fail('K20', '休市口径不一致：' + '；'.join(bad[:3]))
     else:
-        r.ok('K20', '休市口径一致（美东 %s %s，status=%s）'
-             % (et.strftime('%m-%d'), hol or ('交易日' if not closed else '周末'), status or '—'))
+        _desc = ('美东 %s %s' % (et.strftime('%m-%d'), hol or ('交易日' if not closed else '周末')))
+        if status == '休市' and not closed:
+            _desc += '；数据仍为 %s 休市，今日待收盘' % (str(us.get('sessionDate') or '')[:10])
+        r.ok('K20', '休市口径一致（%s，status=%s）' % (_desc, status or '—'))
 
 
 def main():
