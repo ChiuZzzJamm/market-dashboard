@@ -183,8 +183,10 @@ echo "🏷️  抓个股题材概念（stock_concept.py）..."
 # 本步用该条要闻 8 只标的的同花顺概念反推「这条要闻在说什么题材」（≥2 只共享才算），
 # 再拿题材去断板/陈学长池找同题材且形态就绪的标的，写回条目内的 themeTags / poolHits
 # （嵌在要闻条目里，不新建模块）。口径与 pill 共用 stock_concept.is_generic。
-echo "🏷️  标注要闻题材与池内候选（news_theme.py）..."
-"$PY" news_theme.py || true
+echo "🏷️  要闻题材标注后移至「反包成功池」之后（见下文 news_theme.py）"
+# R100z390（2026-11-27）：本步必须排在 pool_success **之后**。pool_success 会把当日 ≥+7% 的票
+# 从确认池/观察池移进成功池；若先按旧池标好 poolHits 再移池，G62 会判「池内候选不在断板/陈学长池里」
+# 直接 FAIL 拦住部署（2026-11-27 实测 5 处：赛腾股份/超声电子/骏亚科技/超颖电子）。真正的调用见下文。
 
 # ---------- R100z327：题材行的「池内同题材候选」 ----------
 # 原来这行由前端按行业算，而「通用设备」这种大类会把同一批票挂到五个题材下（光伏里出现
@@ -306,6 +308,11 @@ echo "📈 分时承接体检（intraday_pool.py --write）..."
 # 反包成功池（2026-11-26）：确认/观察池里当日 ≥+7% 的票移进 success，再从原池移除
 echo "🚀 反包成功池（pool_success.py --write）..."
 "$PY" pool_success.py --write || echo "[warn] 成功池归集失败（不影响部署，票会留在确认池）"
+
+# 要闻题材 + 同题材池内候选（R100z326）：必须在 pool_success 之后跑，否则 poolHits 会指向
+# 已被移进成功池的票，G62 判「池内候选不在池里」FAIL（R100z390，2026-11-27 实测拦住部署）。
+echo "🏷️  标注要闻题材与池内候选（news_theme.py）..."
+"$PY" news_theme.py || true
 
 # 反包登记复盘（R100z388）：读 rebound_log.json 算证据 → rebound_review.json（页面 fetch）
 echo "🔍 反包登记复盘（rebound_review.py --write）..."

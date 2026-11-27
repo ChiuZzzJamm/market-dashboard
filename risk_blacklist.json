@@ -2,12 +2,12 @@
  "ok": true,
  "nameSrc": "tx",
  "nameSrcDetail": {
-  "tx": 374,
+  "tx": 413,
   "sina": 0,
   "em": 0
  },
  "date": "2026-11-27",
- "checked": 374,
+ "checked": 413,
  "liftWindow": [
   2,
   5
@@ -17,34 +17,24 @@
  "dims": {
   "st": {
    "status": "ok",
-   "cover": "行情名源（腾讯374/新浪0/东财0）374/374 只取到"
+   "cover": "行情名源（腾讯413/新浪0/东财0）413/413 只取到"
   },
   "cut": {
    "status": "ok",
-   "cover": "公告源 374/374 只取到（东财374/巨潮0）"
+   "cover": "公告源 413/413 只取到（东财413/巨潮0）"
   },
   "lift": {
    "status": "ok",
-   "cover": "解禁源 374/374 只取到"
+   "cover": "解禁源 413/413 只取到"
   },
   "pledge": {
    "status": "ok",
-   "cover": "质押源 374/374 只取到（仅供参考）"
+   "cover": "质押源 413/413 只取到（仅供参考）"
   }
  },
  "verdict": "full",
  "uncheckedDims": [],
  "blacklist": {
-  "600062": {
-   "name": "华润双鹤",
-   "reasons": [
-    "解禁 2026-11-30（股权激励限售股份，占总股本 0.0%）"
-   ],
-   "count": 1,
-   "watch": [],
-   "severity": "orange",
-   "progress": []
-  },
   "001328": {
    "name": "登康口腔",
    "reasons": [

@@ -537,6 +537,42 @@
    "pool": "断板反包",
    "status": "成功",
    "note": "手动登记"
+  },
+  {
+   "code": "603928",
+   "name": "兴业股份",
+   "date": "2026-11-20",
+   "pool": "断板·失效",
+   "status": "失败",
+   "source": "auto",
+   "note": "超 5 日未反包（已洗 5 日）",
+   "ztDate": "2026-11-19",
+   "breakDate": "2026-11-20",
+   "breakMult": 1.16,
+   "breakType": "倍量",
+   "washDays": 5,
+   "minVolPct": 58,
+   "brokePreLow": false,
+   "preLow": 10.31,
+   "segLow": 10.9
+  },
+  {
+   "code": "002165",
+   "name": "红宝丽",
+   "date": "2026-11-20",
+   "pool": "断板·失效",
+   "status": "失败",
+   "source": "auto",
+   "note": "超 5 日未反包（已洗 5 日）",
+   "ztDate": "2026-11-19",
+   "breakDate": "2026-11-20",
+   "breakMult": 2.95,
+   "breakType": "倍量",
+   "washDays": 5,
+   "minVolPct": 86,
+   "brokePreLow": false,
+   "preLow": 5.46,
+   "segLow": 5.9
   }
  ],
  "note": "成功样本由用户统一给；失败样本由 --harvest-fail 自动采。"

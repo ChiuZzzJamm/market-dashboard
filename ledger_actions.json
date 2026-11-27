@@ -194,7 +194,28 @@
    "appliedAt": null,
    "before": null,
    "after": null
+  },
+  {
+   "id": "cce81ad448",
+   "module": "duanban_watching",
+   "modules": [
+    "duanban_watching"
+   ],
+   "dim": "板块",
+   "slice": "IT服务",
+   "kind": "prefer",
+   "rule": "「断板·观察池」的 板块 = IT服务 偏强（62% vs 整体 33%）",
+   "evidence": {
+    "delta": 0.297,
+    "horizon": 5,
+    "basis": "close→close 5d，切片与整体同口径"
+   },
+   "status": "proposed",
+   "createdAt": "2026-11-27 19:50",
+   "appliedAt": null,
+   "before": null,
+   "after": null
   }
  ],
- "updatedAt": "2026-11-27 10:14"
+ "updatedAt": "2026-11-27 20:09"
 }
