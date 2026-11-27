@@ -41,6 +41,7 @@
                  —— 「检查器自己坏了」不报错，只安静地变绿，只能靠拿已知字段反问它来发现
   K16 回测未来函数  回测/研究脚本的判定窗口右端不得取「全长 n」切片（`x[a:n]`，n=len 全序列）
                  —— chen_study S7 就这样把止损样本从分母抹掉，胜率 83.9%（R100z289/293）
+  K20 休市口径    休市日不得把上一交易日写成今日行情（status/updatedAt 双向）
   K17 --help 守卫  会写 data.js 的脚本必须接住 `--help`（argparse / 显式判断 / _help_guard）
                  —— validate_stocks 手写 sys.argv，`--help` 被忽略后直接重写 data.js（R100z296）
 
@@ -53,7 +54,7 @@
 用法:
     python3 check_code.py            # 全部检查（FAIL 时 exit 1）
     python3 check_code.py --verbose  # 附明细（谁引用了谁、每个写者的原子实现位置）
-    python3 check_code.py --only K3  # 只跑某一类（K1-K17）
+    python3 check_code.py --only K3  # 只跑某一类（K1-K20）
 """
 import argparse
 import ast
@@ -1861,6 +1862,62 @@ def k19_dead_names(r):
              % (len(names), sum(allow.values())))
 
 
+# ---------------------------------------------------------------- K18
+def k20_us_holiday(r, data=None):
+    """K18 休市口径一致（2026-11-27 用户截图：「美股昨天休市你微信推送怎么写 25 号的情况？」）。
+
+    那条 bug 每年感恩节/圣诞/元旦都会复发，所以必须有闸门。判三件事：
+      ① 今天（美东）非交易日（周末或美国法定假日）→ us.status 必须是「休市」；
+      ② us.status == 「休市」→ updatedAt 必须含「休市」，且**不得**含「已更新」（数据没更新就别自称更新）；
+      ③ 今天（美东）是交易日 → us.status 不得写成「休市」（防反向误标）。
+
+    data 参数只为测试可注入；生产路径读 data.js。
+    """
+    from zoneinfo import ZoneInfo
+    import datetime as _dtm
+    try:
+        import common as _C
+    except Exception as e:                                       # noqa: BLE001
+        r.warn('K20', 'common 导入失败（%s），跳过休市口径' % e)
+        return
+    if data is None:
+        path = os.path.join(HERE, 'data.js')
+        if not os.path.exists(path):
+            r.warn('K20', 'data.js 不存在，跳过休市口径')
+            return
+        raw = _read(path)
+        try:
+            data = json.loads(raw.split('=', 1)[1].rstrip().rstrip(';'))
+        except Exception as e:                                   # noqa: BLE001
+            r.warn('K20', 'data.js 解析失败（%s），跳过' % e)
+            return
+    us = (data or {}).get('us') or {}
+    if not us:
+        r.warn('K20', 'us 节点缺失，跳过休市口径')
+        return
+    et = _dtm.datetime.now(_dtm.timezone.utc).astimezone(ZoneInfo('America/New_York'))
+    hol = _C.us_holiday_name(et.date())
+    closed = bool(hol) or et.weekday() >= 5
+    status = str(us.get('status') or '')
+    up = str(us.get('updatedAt') or '')
+    bad = []
+    if closed and status != '休市':
+        bad.append('今天美东是%s，但 us.status=%r（应为「休市」）'
+                   % (hol or '周末', status))
+    if status == '休市':
+        if '休市' not in up:
+            bad.append('status=休市 但 updatedAt 不含「休市」：%r' % up[:40])
+        if '已更新' in up:
+            bad.append('status=休市 但 updatedAt 自称「已更新」：%r' % up[:40])
+    if (not closed) and status == '休市':
+        bad.append('今天美东是交易日（%s），却标成「休市」' % et.strftime('%m-%d %a'))
+    if bad:
+        r.fail('K20', '休市口径不一致：' + '；'.join(bad[:3]))
+    else:
+        r.ok('K20', '休市口径一致（美东 %s %s，status=%s）'
+             % (et.strftime('%m-%d'), hol or ('交易日' if not closed else '周末'), status or '—'))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--verbose', action='store_true')
@@ -1883,6 +1940,8 @@ def main():
     if not only or only == 'K6':
         k19_dead_names(r)
     k6_contract(r, a.verbose)
+    if not only or only == 'K20':
+        k20_us_holiday(r)
     if not only or only == 'K7':
         k7_lock(r, a.verbose)
     if not only or only == 'K8':
