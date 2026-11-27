@@ -146,6 +146,13 @@ EMPTY_WHITELIST = [
      "R91p 打标加权制：个股×2/板块×1，既非利好也非利空即中性→留空"),
     (r"duanban\.(confirmed|watching)\[\d+\]\.(boardPctZt|boardPctToday|bkCode)",
      "非板块（个股）断板条目没有板块涨幅/板块代码，结构可选字段"),
+    # --- 2026-11-27：两处「抓不到/天然为空」显式登记（用户点名的 423 处 WARN 主要来源） ---
+    (r"chenPool\.compare\.settleMeta\.skipped\[\d+\]\.afterDay",
+     "结算跳过的条目还没到第 N 日 → afterDay 天然空（结构性可选字段）"),
+    (r"panorama\.markets\[\d+\]\.indices",
+     "kr/jp 指数源当日缺失（个股板块正常）→ 前端显式标注「KOSPI/日经 未取到」，不是静默空白"),
+    (r"duanban\.(confirmed|watching|success)\[\d+\]\.pre\.ladder\.(names|themes|topName)",
+     "pre.ladder=同题材连板梯队，独立行情票当天没有同题材连板时天然为空（结构可选字段）"),
     (r"ashare\.lianban\[\d+\]\.hybk",
      "连板条目无对应行业板块时为空；前端按行业分组并做空组过滤"),
     (r"ashare\.lianban\[\d+\]\.open_num",

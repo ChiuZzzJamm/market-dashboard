@@ -657,6 +657,9 @@
   .pano-tab .tn { font-size: var(--fs-sm); font-weight: 600; margin-left: 7px; letter-spacing: 0; font-variant-numeric: tabular-nums; }
   .pano-tab .n-up { color: var(--up); }
   .pano-tab .n-down { color: var(--down); }
+  /* 2026-11-27：指数源没取到时显式占位（「抓不到≠没有」），灰字不冒充涨跌 */
+  .pano-tab .n-na { color: var(--ink2); opacity: .75; }
+  .pano-idx .n-na { color: var(--ink2); opacity: .75; }
   .pano-tab.active .n-up { color: #ffe3e7; }
   .pano-tab.active .n-down { color: #c9f7ea; }
   .pano-idx { display: none; }
@@ -2810,10 +2813,20 @@ function renderPano() {
       ['道琼斯', '标普500', '纳斯达克'].forEach(function (n) {
         ui.forEach(function (i) { if (i.name === n && i.changePct != null) out.push({ name: PANO_IDX_SHORT[n], pct: i.changePct }); });
       });
-    } else if (m.key === 'kr' && m.indices && m.indices.length) {
-      out.push({ name: 'KOSPI', pct: m.indices[0].changePct });
-    } else if (m.key === 'jp' && m.indices && m.indices.length) {
-      out.push({ name: '日经225', pct: m.indices[0].changePct });
+    } else if (m.key === 'kr') {
+      // 2026-11-27：指数源失败时原来直接跳过 → 页面长期空白且看不出是「没抓到」还是「没有」。
+      // 按项目铁律显式降级：占位一行「KOSPI 未取到」。
+      if (m.indices && m.indices.length && m.indices[0].changePct != null) {
+        out.push({ name: 'KOSPI', pct: m.indices[0].changePct });
+      } else {
+        out.push({ name: 'KOSPI', pct: null });
+      }
+    } else if (m.key === 'jp') {
+      if (m.indices && m.indices.length && m.indices[0].changePct != null) {
+        out.push({ name: '日经225', pct: m.indices[0].changePct });
+      } else {
+        out.push({ name: '日经225', pct: null });
+      }
     } else if (m.key === 'ashare' && m.indices && m.indices.length) {
       var ASHORT = { '上证指数': '上证', '深证成指': '深成', '创业板指': '创业板', '科创50': '科创50', '上证50': '上证50' };
       m.indices.slice(0, 3).forEach(function (i) { out.push({ name: ASHORT[i.name] || i.name, pct: i.changePct }); });
@@ -2823,6 +2836,9 @@ function renderPano() {
   var tabsHtml = '';
   pano.markets.forEach(function (m) {
     var nums = panoTabIdx(m).map(function (i) {
+      if (i.pct == null) {
+        return '<span class="tn n-na" title="指数源当日未取到，不是没有数据源">' + esc(i.name) + ' 未取到</span>';
+      }
       return '<span class="tn n-' + (i.pct >= 0 ? 'up' : 'down') + '">' + esc(i.name) + fmtPct(i.pct) + '</span>';
     }).join('');
     tabsHtml += '<div class="pano-tab' + (m.key === panoCurrent ? ' active' : '') + '" onclick="switchPano(\'' + m.key + '\')">' + esc(m.name) + nums + '</div>';
@@ -2833,6 +2849,9 @@ function renderPano() {
   var idxEl = document.getElementById('pano-idx');
   if (idxEl) {
     idxEl.innerHTML = panoTabIdx(cur).map(function (i) {
+      if (i.pct == null) {
+        return '<span class="tn n-na">' + esc(i.name) + ' 未取到</span>';
+      }
       return '<span class="tn n-' + (i.pct >= 0 ? 'up' : 'down') + '">' + esc(i.name) + fmtPct(i.pct) + '</span>';
     }).join('');
   }
