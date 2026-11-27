@@ -6584,8 +6584,8 @@ function renderDuanban() {
      数据由 pool_success.py 从 confirmed/watching 移出并写入 duanban.success。 */
   var succ = (db && db.success) || [];
   if (succ.length) {
-    html += dbPoolHtml('成功池', 'p-conf',
-      '今日涨幅 ≥ +7%（含未封板）已在形态上兑现：从确认/观察池移出，留在这里做兑现记录',
+    html += dbPoolHtml('今日成功池', 'p-conf',
+      '今日涨幅 ≥ +7%（含未封板）已在形态上兑现：从确认/观察池移出；本池每日重建，历史见复盘台账',
       succ, true, 'w');
   }
   html += dbPoolHtml('确认池', 'p-conf',
@@ -7441,8 +7441,8 @@ function renderChen() {
   // 对比与胜率表已搬到 📋 复盘台账（用户 2026-10-25：复盘要放在复盘台账页）。
   // 这里只留「今天买什么」，不再混入「过去谁更准」。
   if ((c.success || []).length) {
-    h += chenPoolBlock('陈学长 · 成功池', 'p-conf',
-      '今日涨幅 ≥ +7%（含未封板）：形态已兑现，从严格/放宽/观察池移出', c.success, 'watch');
+    h += chenPoolBlock('陈学长 · 今日成功池', 'p-conf',
+      '今日涨幅 ≥ +7%（含未封板）：形态已兑现，从严格/放宽/观察池移出（每日重建）', c.success, 'watch');
   }
   h += chenPoolBlock('陈学长 · 严格池', 'p-conf',
     'T日涨停（首板也算）+ 断板放量≥2倍（无上限）+ 缩量洗盘≤3日 + 不破T日低点 + 站稳5日线，另加「T日缩量 + 断板日大阴」两条软条件', c.strict, 'strict');

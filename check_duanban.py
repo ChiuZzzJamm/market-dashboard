@@ -1538,8 +1538,12 @@ def eval_stage(code, kline, zt_date_iso):
     base_ok = (2 <= days_ago <= 4 and shrunk_done
                and (lowT <= 0 or C(n - 1) >= lowT * 0.98))
     if base_ok and thin:
-        return {"pool": "watch", "stage": "缩量断板",
-                "form": f"{zt_md}涨停→次{r1:.2f}倍量断板（缩量，非倍量）·已缩量·洗{days_ago - 1}日",
+        # 0.9~1.1 只是「不叫倍量」，不是缩量；<0.9 才是真缩量（600162 是 0.92，仍算缩量）。
+        # 两档分开，免得 14 只「非倍量」全被写成「缩量」误导读者。
+        _tag = "缩量断板" if r1 < 0.90 else "非倍量断板"
+        _why = "缩量断板" if r1 < 0.90 else "未放量（非倍量）"
+        return {"pool": "watch", "stage": _tag,
+                "form": f"{zt_md}涨停→次{r1:.2f}倍量断板（{_why}）·已缩量·洗{days_ago - 1}日",
                 "days_ago": days_ago}
     if base_ok and huge:
         return {"pool": "watch", "stage": "巨量待确认",
