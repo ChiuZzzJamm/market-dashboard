@@ -57,10 +57,11 @@ def features(kl, code, rebound_date):
     v = [r[5] for r in pre]
     n = len(c)
     d = -1
+    # 2026-11-27：600162 香江控股 = 11-18 涨停(量×1.92) → 11-19 **缩量**断板(0.92×) → 洗 5 日 → 11-27 涨停。
+    # 原规则要求断板日放量 ≥1.10×，于是它退回去匹配 11-11 那波，把 washDays 算成 10 天（与实际不符）。
+    # 现在把「涨停次日收阴」都算作断板，另记 breakType 区分，避免复盘结构被拉歪。
     for k in range(n - 1, 20, -1):
         if c[k - 1] / c[k - 2] - 1 < 0.098:
-            continue
-        if v[k] < 1.10 * v[k - 1]:
             continue
         if c[k] / c[k - 1] - 1 >= 0.098:
             continue
@@ -78,6 +79,7 @@ def features(kl, code, rebound_date):
         "ztDate": str(pre[d - 1][0]),
         "breakDate": str(pre[d][0]),
         "breakMult": round(v[d] / v[d - 1], 2),
+        "breakType": ("倍量" if v[d] >= 1.10 * v[d - 1] else "缩量"),
         "washDays": len(seg),
         "minVolPct": round(min(seg) / v[d] * 100) if seg else None,
         "brokePreLow": bool(wash_low is not None and wash_low < pre_low * 0.995),
@@ -120,7 +122,8 @@ def analyze(kl, code):
     seg_low = min(lo[d + 1:]) if seg else None
     info = {
         "ztDate": str(bars[d - 1][0]), "breakDate": str(bars[d][0]),
-        "breakMult": round(v[d] / v[d - 1], 2), "washDays": len(seg),
+        "breakMult": round(v[d] / v[d - 1], 2),
+        "breakType": ("倍量" if v[d] >= 1.10 * v[d - 1] else "缩量"), "washDays": len(seg),
         "minVolPct": round(min(seg) / v[d] * 100) if seg else None,
         "brokePreLow": bool(seg_low is not None and seg_low < pre_low * 0.995),
         "preLow": round(pre_low, 2), "segLow": round(seg_low, 2) if seg_low else None,
@@ -176,6 +179,54 @@ def harvest_fail(D, log):
     for x in added[:6]:
         print("          %s %s · %s" % (x["code"], x["name"], x["note"]))
     return added
+
+def fill_names_and_today(rows, kl):
+    """补名字 + 反包日涨幅/量比（当日的 K 线还没内嵌时）。
+
+    2026-11-27 实测：16:00 之前 stkKlines 只到前一日，--write 出来的 name 是空、
+    reboundPct/reboundVolPct 是 None，页面就会出现「601086 601086」那类只有代码的行。
+    这里用腾讯行情快照（一次批量）补，量换算成股（快照单位是手）。
+    """
+    import urllib.request
+    need = [r for r in rows if not r.get("name") or r.get("reboundPct") is None or r.get("reboundVolPct") is None]
+    if not need:
+        return 0
+    syms = ",".join((("sh" if str(r["code"]).startswith("6") else "sz") + str(r["code"])) for r in need)
+    try:
+        req = urllib.request.Request("https://qt.gtimg.cn/q=" + syms,
+                                     headers={"Referer": "https://gu.qq.com/", "User-Agent": "Mozilla/5.0"})
+        raw = urllib.request.urlopen(req, timeout=15).read().decode("gbk", "ignore")
+    except Exception:                                            # noqa: BLE001
+        return 0
+    snap = {}
+    for line in raw.split("\n"):
+        if '="' not in line:
+            continue
+        key = line.split("=")[0].replace("v_", "").strip()
+        f = line.split('="')[1].rstrip('";').split("~")
+        try:
+            snap[key] = {"name": f[1], "price": float(f[3]), "prev": float(f[4]), "vol": float(f[6]) * 100}
+        except Exception:                                        # noqa: BLE001
+            continue
+    n = 0
+    for r in need:
+        sym = ("sh" if str(r["code"]).startswith("6") else "sz") + str(r["code"])
+        x = snap.get(sym)
+        if not x:
+            continue
+        if not r.get("name"):
+            r["name"] = x["name"]
+        if x["prev"]:
+            r["reboundPct"] = round((x["price"] / x["prev"] - 1) * 100, 2)
+        bvol = None
+        for b in kl.get(str(r["code"])) or []:
+            if str(b[0]) == str(r.get("breakDate")):
+                bvol = float(b[5])
+        if bvol:
+            r["reboundVolPct"] = round(x["vol"] / bvol * 100)
+        n += 1
+    return n
+
 
 def ensure_klines(kl, codes):
     """登记的票不一定在任何池里 → data.js 里可能根本没有它的 K 线（鹿山 603051 就是这样，
@@ -256,6 +307,9 @@ def main():
         row = dict(it)
         row.update(f)
         rows.append(row)
+
+    # 名字/当日涨幅/反包量兜底（16:00 内嵌 K 线之前 stkKlines 没有当日 bar）
+    fill_names_and_today(rows, kl)
 
     # 有效行 = 算出了结构（breakMult 非空）；再按 status 分成功/失败。
     # 不能再用 analyze() 的 ok 标志——自动采集的行没有那个键（2026-11-26 实测 failN 恒为 0）。

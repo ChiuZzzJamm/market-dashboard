@@ -1498,11 +1498,17 @@ def eval_stage(code, kline, zt_date_iso):
     # 2026-11-26 重定义：断板量比 1.1~3.5 是形态带；3.5~4.5 的巨量阴不再直接剔除
     # （失败组里 4.45× 的确全灭，但 >3.5 不等于死刑），降到观察池「巨量待确认」，
     # 由人看分时承接再定。>4.5 才当形态不成立。
+    # 2026-11-27 复盘：600162 香江控股 断板量 0.92×（缩量断板）次日洗 5 日后涨停；
+    # 002708 光洋股份 断板量 23.86×（极端巨量）也涨停。两个方向都被真实样本击穿，
+    # 所以量比不再是「否决器」，只做分档：确认池要 1.1~4.5，边缘形态进观察池并标注。
     huge = False
-    if r1 < 1.1 or r1 > 4.5:
-        return None
+    thin = False
+    if r1 < 0.8 or r1 > 40.0:
+        return None                     # 低于 0.8 或高到 40 倍以上，连观察价值都没有
     if r1 > 3.5:
         huge = True
+    if r1 < 1.1:
+        thin = True                     # 缩量断板
     lowT = float(kline[iT].get("low") or 0)
     pit = False
     if lowT > 0:
@@ -1531,6 +1537,10 @@ def eval_stage(code, kline, zt_date_iso):
     shrunk_done = any(0 < V(i) < V(i1) for i in range(iT + 2, n))
     base_ok = (2 <= days_ago <= 4 and shrunk_done
                and (lowT <= 0 or C(n - 1) >= lowT * 0.98))
+    if base_ok and thin:
+        return {"pool": "watch", "stage": "缩量断板",
+                "form": f"{zt_md}涨停→次{r1:.2f}倍量断板（缩量，非倍量）·已缩量·洗{days_ago - 1}日",
+                "days_ago": days_ago}
     if base_ok and huge:
         return {"pool": "watch", "stage": "巨量待确认",
                 "form": f"{zt_md}涨停→次{r1:.1f}倍量断板（>3.5 倍，需看分时承接）·已缩量",
@@ -1558,9 +1568,10 @@ def eval_stage(code, kline, zt_date_iso):
                 "form": form_full + ("（曾破T日低点·已在2日内收回）" if pit else "（断板量比>3.5）"),
                 "days_ago": days_ago}
     if days_ago >= 5:
-        # 成功样本 11/11 洗盘 ≤4 日；第 5 日仍未反包，只留「超期边缘」提醒，不再当新信号
-        return {"pool": "watch", "stage": "超期边缘",
-                "form": f"{zt_md}涨停→次{r1:.1f}倍量断板→已洗 {days_ago} 日·明日不反包即出",
+        # 11-27 复盘：600162 洗 5 日才反包（成功）。原来写「明日不反包即出」是过硬的判断，
+        # 改成「超期观察」——继续留在池里，只是排在后面，不再下逐客令。
+        return {"pool": "watch", "stage": "超期观察",
+                "form": f"{zt_md}涨停→次{r1:.1f}倍量断板→已洗 {days_ago} 日（超 4 日，仍可观察）",
                 "days_ago": days_ago}
     if days_ago == 1:
         return {"pool": "watch", "stage": "待缩量",

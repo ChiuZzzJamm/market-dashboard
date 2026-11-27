@@ -1,22 +1,174 @@
 {
- "asOf": "2026-11-27 10:13",
- "n": 33,
- "okN": 11,
+ "asOf": "2026-11-27 15:33",
+ "n": 41,
+ "okN": 19,
  "failN": 22,
  "avg": {
-  "breakMult": 1.7,
+  "breakMult": 2.9,
   "washDays": 2.0,
-  "minVolPct": 68.8,
-  "reboundVolPct": 71.0
+  "minVolPct": 67.8,
+  "reboundVolPct": 94.3
  },
  "failAvg": {
   "breakMult": 1.8,
   "washDays": 4.6,
   "minVolPct": 46.4
  },
- "brokeRate": 9,
+ "brokeRate": 16,
  "failBrokeRate": 59,
  "rows": [
+  {
+   "code": "603956",
+   "name": "威派格",
+   "date": "2026-11-27",
+   "pool": "断板反包",
+   "status": "成功",
+   "note": "手动登记",
+   "ok": true,
+   "ztDate": "2026-11-24",
+   "breakDate": "2026-11-25",
+   "breakMult": 3.3,
+   "breakType": "倍量",
+   "washDays": 1,
+   "minVolPct": 66,
+   "brokePreLow": false,
+   "preLow": 5.18,
+   "reboundVolPct": 104,
+   "reboundPct": 10.07
+  },
+  {
+   "code": "603626",
+   "name": "科森科技",
+   "date": "2026-11-27",
+   "pool": "断板反包",
+   "status": "成功",
+   "note": "手动登记",
+   "ok": true,
+   "ztDate": "2026-11-24",
+   "breakDate": "2026-11-25",
+   "breakMult": 4.08,
+   "breakType": "倍量",
+   "washDays": 1,
+   "minVolPct": 74,
+   "brokePreLow": false,
+   "preLow": 20.79,
+   "reboundVolPct": 95,
+   "reboundPct": 9.99
+  },
+  {
+   "code": "603236",
+   "name": "移远通信",
+   "date": "2026-11-27",
+   "pool": "断板反包",
+   "status": "成功",
+   "note": "手动登记",
+   "ok": true,
+   "ztDate": "2026-11-23",
+   "breakDate": "2026-11-24",
+   "breakMult": 1.31,
+   "breakType": "倍量",
+   "washDays": 2,
+   "minVolPct": 65,
+   "brokePreLow": false,
+   "preLow": 72.51,
+   "reboundVolPct": 63,
+   "reboundPct": 10.01
+  },
+  {
+   "code": "600162",
+   "name": "香江控股",
+   "date": "2026-11-27",
+   "pool": "断板反包",
+   "status": "成功",
+   "note": "手动登记",
+   "ok": true,
+   "ztDate": "2026-11-18",
+   "breakDate": "2026-11-19",
+   "breakMult": 0.92,
+   "breakType": "缩量",
+   "washDays": 5,
+   "minVolPct": 49,
+   "brokePreLow": true,
+   "preLow": 2.88,
+   "reboundVolPct": 77,
+   "reboundPct": 10.16
+  },
+  {
+   "code": "002708",
+   "name": "光洋股份",
+   "date": "2026-11-27",
+   "pool": "断板反包",
+   "status": "成功",
+   "note": "手动登记",
+   "ok": true,
+   "ztDate": "2026-11-24",
+   "breakDate": "2026-11-25",
+   "breakMult": 23.86,
+   "breakType": "倍量",
+   "washDays": 1,
+   "minVolPct": 94,
+   "brokePreLow": false,
+   "preLow": 18.77,
+   "reboundVolPct": 86,
+   "reboundPct": 10.02
+  },
+  {
+   "code": "001326",
+   "name": "联域股份",
+   "date": "2026-11-27",
+   "pool": "断板反包",
+   "status": "成功",
+   "note": "手动登记",
+   "ok": true,
+   "ztDate": "2026-11-23",
+   "breakDate": "2026-11-24",
+   "breakMult": 1.2,
+   "breakType": "倍量",
+   "washDays": 2,
+   "minVolPct": 66,
+   "brokePreLow": true,
+   "preLow": 50.01,
+   "reboundVolPct": 50,
+   "reboundPct": 10.0
+  },
+  {
+   "code": "000700",
+   "name": "模塑科技",
+   "date": "2026-11-27",
+   "pool": "断板反包",
+   "status": "成功",
+   "note": "手动登记",
+   "ok": true,
+   "ztDate": "2026-11-23",
+   "breakDate": "2026-11-24",
+   "breakMult": 1.47,
+   "breakType": "倍量",
+   "washDays": 2,
+   "minVolPct": 63,
+   "brokePreLow": false,
+   "preLow": 12.85,
+   "reboundVolPct": 81,
+   "reboundPct": 10.01
+  },
+  {
+   "code": "000636",
+   "name": "风华高科",
+   "date": "2026-11-27",
+   "pool": "断板反包",
+   "status": "成功",
+   "note": "手动登记",
+   "ok": true,
+   "ztDate": "2026-11-23",
+   "breakDate": "2026-11-24",
+   "breakMult": 1.33,
+   "breakType": "倍量",
+   "washDays": 2,
+   "minVolPct": 55,
+   "brokePreLow": false,
+   "preLow": 25.77,
+   "reboundVolPct": 84,
+   "reboundPct": 10.01
+  },
   {
    "code": "605058",
    "name": "澳弘电子",
@@ -29,11 +181,13 @@
    "ztDate": "2026-11-20",
    "breakDate": "2026-11-23",
    "breakMult": 1.85,
+   "breakType": "倍量",
    "washDays": 2,
    "minVolPct": 63,
    "brokePreLow": false,
    "preLow": 37.28,
-   "reboundVolPct": 56
+   "reboundVolPct": 102,
+   "reboundPct": 8.15
   },
   {
    "code": "603386",
@@ -47,11 +201,13 @@
    "ztDate": "2026-11-20",
    "breakDate": "2026-11-23",
    "breakMult": 1.55,
+   "breakType": "倍量",
    "washDays": 2,
    "minVolPct": 61,
    "brokePreLow": false,
    "preLow": 12.74,
-   "reboundVolPct": 29
+   "reboundVolPct": 85,
+   "reboundPct": 9.99
   },
   {
    "code": "603278",
@@ -65,11 +221,13 @@
    "ztDate": "2026-11-23",
    "breakDate": "2026-11-24",
    "breakMult": 1.33,
+   "breakType": "倍量",
    "washDays": 1,
    "minVolPct": 79,
    "brokePreLow": false,
    "preLow": 10.1,
-   "reboundVolPct": 71
+   "reboundVolPct": 155,
+   "reboundPct": 5.34
   },
   {
    "code": "603166",
@@ -83,11 +241,13 @@
    "ztDate": "2026-11-23",
    "breakDate": "2026-11-24",
    "breakMult": 1.72,
+   "breakType": "倍量",
    "washDays": 1,
    "minVolPct": 73,
    "brokePreLow": false,
    "preLow": 8.7,
-   "reboundVolPct": 77
+   "reboundVolPct": 132,
+   "reboundPct": 5.46
   },
   {
    "code": "603051",
@@ -101,11 +261,13 @@
    "ztDate": "2026-11-23",
    "breakDate": "2026-11-24",
    "breakMult": 1.26,
+   "breakType": "倍量",
    "washDays": 1,
    "minVolPct": 67,
    "brokePreLow": false,
    "preLow": 18.82,
-   "reboundVolPct": 66
+   "reboundVolPct": 34,
+   "reboundPct": 10.01
   },
   {
    "code": "002913",
@@ -119,11 +281,13 @@
    "ztDate": "2026-11-23",
    "breakDate": "2026-11-24",
    "breakMult": 1.31,
+   "breakType": "倍量",
    "washDays": 1,
    "minVolPct": 63,
    "brokePreLow": false,
    "preLow": 52,
-   "reboundVolPct": 117
+   "reboundVolPct": 121,
+   "reboundPct": 10.0
   },
   {
    "code": "002815",
@@ -137,11 +301,13 @@
    "ztDate": "2026-11-23",
    "breakDate": "2026-11-24",
    "breakMult": 1.42,
+   "breakType": "倍量",
    "washDays": 1,
    "minVolPct": 68,
    "brokePreLow": false,
    "preLow": 13,
-   "reboundVolPct": 78
+   "reboundVolPct": 120,
+   "reboundPct": 10.03
   },
   {
    "code": "002077",
@@ -155,11 +321,13 @@
    "ztDate": "2026-11-19",
    "breakDate": "2026-11-20",
    "breakMult": 1.42,
+   "breakType": "倍量",
    "washDays": 3,
    "minVolPct": 76,
    "brokePreLow": false,
    "preLow": 10.83,
-   "reboundVolPct": 80
+   "reboundVolPct": 167,
+   "reboundPct": 10.01
   },
   {
    "code": "000158",
@@ -173,11 +341,13 @@
    "ztDate": "2026-11-18",
    "breakDate": "2026-11-19",
    "breakMult": 2.28,
+   "breakType": "倍量",
    "washDays": 4,
    "minVolPct": 78,
    "brokePreLow": false,
    "preLow": 10.9,
-   "reboundVolPct": 56
+   "reboundVolPct": 14,
+   "reboundPct": 10.01
   },
   {
    "code": "603887",
@@ -191,11 +361,13 @@
    "ztDate": "2026-11-18",
    "breakDate": "2026-11-19",
    "breakMult": 1.15,
+   "breakType": "倍量",
    "washDays": 3,
    "minVolPct": 83,
    "brokePreLow": true,
    "preLow": 7.34,
-   "reboundVolPct": 118
+   "reboundVolPct": 211,
+   "reboundPct": 6.62
   },
   {
    "code": "002197",
@@ -209,11 +381,13 @@
    "ztDate": "2026-11-18",
    "breakDate": "2026-11-19",
    "breakMult": 3.19,
+   "breakType": "倍量",
    "washDays": 3,
    "minVolPct": 46,
    "brokePreLow": false,
    "preLow": 5.41,
-   "reboundVolPct": 33
+   "reboundVolPct": 10,
+   "reboundPct": 10.07
   },
   {
    "code": "603337",
@@ -230,7 +404,9 @@
    "minVolPct": 46,
    "brokePreLow": true,
    "preLow": 34.95,
-   "segLow": 33.85
+   "segLow": 33.85,
+   "reboundPct": 10.0,
+   "reboundVolPct": 73
   },
   {
    "code": "605178",
@@ -247,7 +423,9 @@
    "minVolPct": 57,
    "brokePreLow": true,
    "preLow": 47.5,
-   "segLow": 43.42
+   "segLow": 43.42,
+   "reboundPct": 9.99,
+   "reboundVolPct": 88
   },
   {
    "code": "601616",
@@ -264,7 +442,9 @@
    "minVolPct": 43,
    "brokePreLow": true,
    "preLow": 3.3,
-   "segLow": 3.08
+   "segLow": 3.08,
+   "reboundPct": 4.47,
+   "reboundVolPct": 32
   },
   {
    "code": "600520",
@@ -281,7 +461,9 @@
    "minVolPct": 43,
    "brokePreLow": true,
    "preLow": 19.37,
-   "segLow": 18.24
+   "segLow": 18.24,
+   "reboundPct": 10.02,
+   "reboundVolPct": 35
   },
   {
    "code": "002418",
@@ -298,7 +480,9 @@
    "minVolPct": 56,
    "brokePreLow": true,
    "preLow": 3.5,
-   "segLow": 3.26
+   "segLow": 3.26,
+   "reboundPct": 8.45,
+   "reboundVolPct": 64
   },
   {
    "code": "603985",
@@ -315,7 +499,9 @@
    "minVolPct": 60,
    "brokePreLow": true,
    "preLow": 13.12,
-   "segLow": 12.91
+   "segLow": 12.91,
+   "reboundPct": 8.49,
+   "reboundVolPct": 57
   },
   {
    "code": "603629",
@@ -332,7 +518,9 @@
    "minVolPct": 49,
    "brokePreLow": false,
    "preLow": 53.85,
-   "segLow": 55.56
+   "segLow": 55.56,
+   "reboundPct": 10.0,
+   "reboundVolPct": 68
   },
   {
    "code": "603220",
@@ -349,7 +537,9 @@
    "minVolPct": 41,
    "brokePreLow": true,
    "preLow": 13.91,
-   "segLow": 13.11
+   "segLow": 13.11,
+   "reboundPct": 10.03,
+   "reboundVolPct": 43
   },
   {
    "code": "600410",
@@ -366,7 +556,9 @@
    "minVolPct": 91,
    "brokePreLow": false,
    "preLow": 11.44,
-   "segLow": 15.59
+   "segLow": 15.59,
+   "reboundPct": 10.0,
+   "reboundVolPct": 84
   },
   {
    "code": "600405",
@@ -383,7 +575,9 @@
    "minVolPct": 23,
    "brokePreLow": true,
    "preLow": 4.01,
-   "segLow": 3.65
+   "segLow": 3.65,
+   "reboundPct": 5.59,
+   "reboundVolPct": 22
   },
   {
    "code": "600186",
@@ -400,7 +594,9 @@
    "minVolPct": 65,
    "brokePreLow": false,
    "preLow": 7.89,
-   "segLow": 8.38
+   "segLow": 8.38,
+   "reboundPct": 9.95,
+   "reboundVolPct": 96
   },
   {
    "code": "000815",
@@ -417,7 +613,9 @@
    "minVolPct": 63,
    "brokePreLow": false,
    "preLow": 12.74,
-   "segLow": 12.79
+   "segLow": 12.79,
+   "reboundPct": 6.9,
+   "reboundVolPct": 104
   },
   {
    "code": "600206",
@@ -434,7 +632,9 @@
    "minVolPct": 44,
    "brokePreLow": false,
    "preLow": 31.77,
-   "segLow": 36.45
+   "segLow": 36.45,
+   "reboundPct": 10.0,
+   "reboundVolPct": 67
   },
   {
    "code": "002959",
@@ -451,7 +651,9 @@
    "minVolPct": 45,
    "brokePreLow": true,
    "preLow": 32.35,
-   "segLow": 31.61
+   "segLow": 31.61,
+   "reboundPct": -2.23,
+   "reboundVolPct": 60
   },
   {
    "code": "002889",
@@ -468,7 +670,9 @@
    "minVolPct": 48,
    "brokePreLow": true,
    "preLow": 12.54,
-   "segLow": 11.88
+   "segLow": 11.88,
+   "reboundPct": 10.03,
+   "reboundVolPct": 64
   },
   {
    "code": "002652",
@@ -485,7 +689,9 @@
    "minVolPct": 50,
    "brokePreLow": true,
    "preLow": 3.76,
-   "segLow": 3.45
+   "segLow": 3.45,
+   "reboundPct": 6.38,
+   "reboundVolPct": 50
   },
   {
    "code": "002535",
@@ -502,7 +708,9 @@
    "minVolPct": 6,
    "brokePreLow": true,
    "preLow": 2.4,
-   "segLow": 2.17
+   "segLow": 2.17,
+   "reboundPct": 4.27,
+   "reboundVolPct": 35
   },
   {
    "code": "000521",
@@ -519,7 +727,9 @@
    "minVolPct": 54,
    "brokePreLow": false,
    "preLow": 3.92,
-   "segLow": 3.92
+   "segLow": 3.92,
+   "reboundPct": -0.21,
+   "reboundVolPct": 68
   },
   {
    "code": "002748",
@@ -536,7 +746,9 @@
    "minVolPct": 41,
    "brokePreLow": false,
    "preLow": 9.98,
-   "segLow": 10.27
+   "segLow": 10.27,
+   "reboundPct": 8.44,
+   "reboundVolPct": 38
   },
   {
    "code": "002035",
@@ -553,7 +765,9 @@
    "minVolPct": 35,
    "brokePreLow": true,
    "preLow": 4.24,
-   "segLow": 3.84
+   "segLow": 3.84,
+   "reboundPct": 3.81,
+   "reboundVolPct": 30
   },
   {
    "code": "000628",
@@ -570,7 +784,9 @@
    "minVolPct": 34,
    "brokePreLow": false,
    "preLow": 37.52,
-   "segLow": 40.5
+   "segLow": 40.5,
+   "reboundPct": 10.01,
+   "reboundVolPct": 49
   },
   {
    "code": "002739",
@@ -587,7 +803,9 @@
    "minVolPct": 27,
    "brokePreLow": false,
    "preLow": 8.23,
-   "segLow": 9.15
+   "segLow": 9.15,
+   "reboundPct": 7.0,
+   "reboundVolPct": 34
   }
  ],
  "note": "成功样本均值为「成功组」口径；失败组从 failPool 补登记后才有值。只有成功样本时会系统性高估——别拿这份均值当门槛。"
