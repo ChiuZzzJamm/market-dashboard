@@ -157,15 +157,7 @@ def main():
                 rows, prev = fetch_minutes(str(e["code"]))
                 m = metrics(rows, prev) if rows else None
                 kind, active, why = classify(m)
-                # 卡片上直接可读：形态串尾部挂一枚质量标记（主动=★，情绪=·）
-                _mark = (" ★" + kind) if active else (" · " + kind)
-                if _mark.strip() not in (e.get("form") or ""):
-                    e["form"] = (e.get("form") or "") + _mark
                 _w = wash_behavior(str(e["code"]), e.get("successDate") or (D.get("ashare") or {}).get("tradeDate") or "9999-12-31")
-                if _w:
-                    _mk = "｜洗盘日:" + _w["tag"]
-                    if _mk not in (e.get("form") or ""):
-                        e["form"] = (e.get("form") or "") + _mk
                 e["quality"] = {"type": kind, "active": active, "why": why, "wash": _w,
                                 "slope": (m or {}).get("slope"), "burst": (m or {}).get("burst"),
                                 "runShare": (m or {}).get("runShare"), "seal": (m or {}).get("seal"),

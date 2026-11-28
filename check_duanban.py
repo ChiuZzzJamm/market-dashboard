@@ -2872,11 +2872,8 @@ def build_module(pairs, D):
         _m = _mm.get(str(_e.get("code")))
         _tag, _ok = minute_tag(_m)
         _e["minuteTag"] = _tag
-        # 2026-11-28 用户②：确认池的判断依据必须**在卡上看得见**——分时标签此前只写进数据、
-        # 前端从不渲染（grep minuteTag = 0 处）。这里把简称挂进 form，卡片直接可读。
-        _short = str(_tag).split("（")[0]
-        if _short and _short not in ("无分时", "") and "·分时" not in str(_e.get("form") or ""):
-            _e["form"] = str(_e.get("form") or "") + "·分时" + _short
+        # 分时判读只在弹窗「量能解读」末行展示（那里有红绿/爆量/承接完整一句），
+        # 卡片不再追加同义标签——同一结论说两遍，读者只会更慢。
         if _m:
             _e["minute"] = {k: _m.get(k) for k in
                             ("hold", "tailRedPct", "burstN", "earlyBurst", "limitUp", "red", "green")}
