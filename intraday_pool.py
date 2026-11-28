@@ -165,6 +165,60 @@ def analyse(rows):
         nxt = rows[k + 1]["c"] - r["c"] if k + 1 < len(rows) else 0
         bursts.append({"t": r["t"], "x": round(r["v"] / max(1e-9, day_mean), 1),
                        "dir": "红" if nxt > 0 else ("绿" if nxt < 0 else "平")})
+    # ---- 承接 vs 出货：看「砸盘绿柱」与「承接红柱」的量能对比（2026-11-28 用户）----
+    # 用户举的两种典型：① 开盘一堆长绿柱往下砸，后面一堆小红柱承接；
+    #                  ② 开盘 1 根长绿 → 几根中长绿 → 出现等量红柱。
+    # 判的不是「红多绿多」，而是**接盘量能不能对上砸盘量、低位有没有大单接、低点还下不下移**。
+    def _runs(seq, pred):
+        out, cur = [], []
+        for i, x in enumerate(seq):
+            if pred(i):
+                cur.append(i)
+            elif cur:
+                out.append(cur); cur = []
+        if cur:
+            out.append(cur)
+        return out
+    dirs = [0] * len(rows)
+    for i in range(1, len(rows)):
+        d = rows[i]["c"] - rows[i - 1]["c"]
+        dirs[i] = 1 if d > 0 else (-1 if d < 0 else 0)
+    g_runs = _runs(rows, lambda i: dirs[i] < 0 and rows[i]["v"] > 0)
+    r_runs = _runs(rows, lambda i: dirs[i] > 0 and rows[i]["v"] > 0)
+    absorb = None
+    if not g_runs:
+        absorb = {"verdict": "无砸盘", "ratio": None, "redN": 0, "greenN": 0}
+    if g_runs:
+        g_best = max(g_runs, key=lambda g: sum(rows[i]["v"] for i in g))
+        g_sum = sum(rows[i]["v"] for i in g_best)
+        g_max = max(rows[i]["v"] for i in g_best)
+        g_end = g_best[-1]
+        # 承接窗口：砸盘结束后 60 分钟内
+        win_r = [r for r in r_runs if g_end < r[0] <= g_end + 60]
+        r_sum = sum(rows[i]["v"] for r in win_r for i in r)
+        r_max = max((rows[i]["v"] for r in win_r for i in r), default=0)
+        low_after = min(rows[i]["c"] for i in range(g_end, len(rows)))
+        low_at = min(rows[i]["c"] for i in g_best)
+        new_low = low_after < low_at * 0.995
+        r_n = sum(1 for r in win_r for i in r)          # 承接窗口里红柱根数
+        ratio = round(r_sum / g_sum, 2) if g_sum else None
+        # 用户 2026-11-28 的两种典型：①一堆长绿后「一堆小红」也能接住 → 红柱根数是证据；
+        # ②1 根长绿 + 几根中绿后「等量红柱」→ 量比是证据。两者都要认，不能只看量比。
+        if ratio is None:
+            verdict = "无砸盘"
+        elif new_low and ratio < 0.6:
+            verdict = "出货嫌疑"                            # 砸完还创新低、买盘接不住
+        elif ratio < 0.30:
+            verdict = "出货嫌疑"                            # 接盘量不到砸盘量 3 成
+        elif (ratio >= 0.5 or r_n >= 5) and not new_low:
+            verdict = "承接到位"                            # 量能对得上，或小红柱持续接
+        else:
+            verdict = "承接不足"
+        absorb = {"verdict": verdict, "ratio": ratio, "greenSum": round(g_sum),
+                  "redSum": round(r_sum), "greenMax": round(g_max), "redMax": round(r_max),
+                  "greenN": len(g_best), "redN": r_n, "newLow": bool(new_low),
+                  "greenStart": rows[g_best[0]]["t"], "greenEnd": rows[g_end]["t"]}
+
     # 尾盘红柱占比
     tail = [r for r in rows if TAIL[0] <= r["t"] <= TAIL[1] and r["v"] > 0]
     tail_red = sum(1 for i in range(1, len(tail)) if tail[i]["c"] > tail[i - 1]["c"])
@@ -234,7 +288,7 @@ def analyse(rows):
         "abovePct": above_pct, "breakN": break_n, "belowMaxMin": below_max,
         "firstRecoverMin": first_rec, "touchN": touch_n,
         "endAbove": bool(above[-1]), "wasAbove": any(above),
-        "hold": hold,
+        "hold": hold, "absorb": absorb,
         "verdict": ("红多且尾盘强" if red > green and tail_pct >= 55 else
                     "红绿相当" if abs(red - green) <= 0.2 * max(1, red + green) else
                     "绿多" if green > red else "红多"),
@@ -313,7 +367,7 @@ def main():
     if a.fill_fields:
         # 2026-11-28：均价线明细（abovePct/breakN/…）是新增字段，老条目没有 → 只重抓这批。
         cur = json.load(open(OUT, encoding="utf-8"))
-        todo = [c for c, v in (cur.get("stocks") or {}).items() if "abovePct" not in v]
+        todo = [c for c, v in (cur.get("stocks") or {}).items() if "abovePct" not in v or "absorb" not in v]
         print("[fields] 需补 %d 只" % len(todo))
         got = 0
         for c in todo:

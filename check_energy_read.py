@@ -154,7 +154,7 @@ process.stdout.write(JSON.stringify(out));
 """
 
 
-VERDICTS = ("有承接", "承接失败", "偏承接", "温和换手", "像出货")
+VERDICTS = ("承接到位", "承接不足", "出货嫌疑", "无砸盘", "有承接", "承接失败", "偏承接", "温和换手", "像出货")
 
 
 def _check_compact(code, h):

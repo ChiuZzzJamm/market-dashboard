@@ -9399,7 +9399,16 @@ function stkEnergyHtml(code) {
   var m = usePrev ? m0.prev : m0;
 
   var kind, kcls;
-  if (m.hold === true) { kind = '有承接（主力在接）'; kcls = 'ok'; }
+  /* 2026-11-28 用户：要从**分时量能图形**判「承接到位 / 承接不足 / 出货」——
+     一堆长绿后一堆小红接住（根数是证据）、或 1 根长绿+几根中绿后等量红柱（量比是证据）。
+     数据侧 intraday_pool 已算好 absorb，这里直接用；没有该字段时退回旧的 hold 判定。 */
+  var ab = m.absorb;
+  if (ab && ab.verdict) {
+    var _v = ab.verdict;
+    kcls = (_v === '承接到位') ? 'ok' : ((_v === '出货嫌疑') ? 'bad' : '');
+    kind = _v;
+    if (ab.ratio != null) kind += '（红/绿量能 ' + ab.ratio + '）';
+  } else if (m.hold === true) { kind = '有承接（主力在接）'; kcls = 'ok'; }
   else if (m.hold === false) { kind = '承接失败（爆量后创新低）'; kcls = 'bad'; }
   else if (m.aboveVwap === true && (m.closeLowPct || 0) >= 1.5) { kind = '偏承接（站上均价线）'; kcls = 'ok'; }
   else if (m.aboveVwap === false && (m.closeLowPct || 0) < 1.2) { kind = '像出货（收在低位、破均价线）'; kcls = 'bad'; }
