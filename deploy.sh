@@ -314,6 +314,10 @@ echo "🚀 反包成功池（pool_success.py --write）..."
 echo "🏷️  标注要闻题材与池内候选（news_theme.py）..."
 "$PY" news_theme.py || true
 
+# 反包质量：成功池拆「主动/情绪」（2026-11-28 用户：看量能关系与斜率，不看封板时间）
+echo "🎯 反包质量判定（rebound_quality.py --write）..."
+"$PY" rebound_quality.py --write --limit 90 || echo "[warn] 反包质量判定失败（不影响部署，卡片少一枚标记）"
+
 # 反包登记复盘（R100z388）：读 rebound_log.json 算证据 → rebound_review.json（页面 fetch）
 echo "🔍 反包登记复盘（rebound_review.py --write）..."
 "$PY" rebound_review.py --harvest-fail --write || echo "[warn] 反包复盘失败，页面只是不显示均值（不影响部署）"
