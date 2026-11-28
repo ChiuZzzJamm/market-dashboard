@@ -130,7 +130,18 @@ def wash_behavior(code, rebound_date):
     sc += 2 if hold is True else (-1 if hold is False else 0)
     sc += 2 if (lift or 0) >= 1 else (1 if (lift or 0) >= 0 else -1)
     sc += 2 if (clp or 0) >= 3 else (1 if (clp or 0) >= 1.5 else (-1 if (clp or 0) < 0.8 else 0))
-    tag = "承接" if sc >= 3 else ("派发" if sc <= -2 else "中性")
+    # 2026-11-28 实测：原始三档把 38/44 全打成「中性」，命中率只有 14%——
+    # 那不是判据错，是档位太粗（没爆量的票一律归中性）。按分数细成五档。
+    if sc >= 5:
+        tag = "强承接"
+    elif sc >= 3:
+        tag = "承接"
+    elif sc >= 1:
+        tag = "偏承接"
+    elif sc >= -1:
+        tag = "中性"
+    else:
+        tag = "派发"
     return {"date": d, "tag": tag, "hold": hold, "tailRedPct": tail,
             "closeLowPct": clp, "tailLift": lift, "burstN": m.get("burstN")}
 
@@ -139,6 +150,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--write", action="store_true")
     ap.add_argument("--limit", type=int, default=90)
+    ap.add_argument("--verify-only", action="store_true",
+                    help="只补「洗盘日判断 vs 次日结果」的一致性，不抓分钟线（反爬时也能跑）")
     a = ap.parse_args()
     sys.path.insert(0, HERE)
     import common
@@ -152,13 +165,28 @@ def main():
         stat = {}
         for node in ("duanban", "chenPool"):
             for e in (D.get(node) or {}).get("success") or []:
-                if not isinstance(e, dict) or (e.get("quality") or {}).get("wash"):
+                if not isinstance(e, dict) or ((e.get("quality") or {}).get("wash") and (e.get("quality") or {}).get("verify")):
                     continue
-                rows, prev = fetch_minutes(str(e["code"]))
-                m = metrics(rows, prev) if rows else None
-                kind, active, why = classify(m)
+                if a.verify_only and (e.get("quality") or {}).get("type"):
+                    kind, active, why = (e["quality"]["type"], e["quality"].get("active"),
+                                         e["quality"].get("why") or "")
+                    m = None
+                else:
+                    rows, prev = fetch_minutes(str(e["code"]))
+                    m = metrics(rows, prev) if rows else None
+                    kind, active, why = classify(m)
                 _w = wash_behavior(str(e["code"]), e.get("successDate") or (D.get("ashare") or {}).get("tradeDate") or "9999-12-31")
-                e["quality"] = {"type": kind, "active": active, "why": why, "wash": _w,
+                # 2026-11-28 用户③：反包成功要回头验**前一天的分时判断准不准**，
+                # 判错要写原因，而不是只记一句「成功」。
+                _vf = None
+                if _w:
+                    _hit = (_w["tag"] in ("强承接", "承接", "偏承接"))
+                    _note = ("洗盘日判%s → 次日反包，判断成立" % _w["tag"] if _hit else
+                             ("洗盘日判派发 → 次日反包，说明那天的「派发」其实是洗盘尾段，判据要回看"
+                              if _w["tag"] == "派发" else
+                              "洗盘日判中性 → 次日反包，承接证据不足但结果成立（分时不是唯一变量）"))
+                    _vf = {"prev": _w["tag"], "hit": _hit, "note": _note, "prevDate": _w["date"]}
+                e["quality"] = {"type": kind, "active": active, "why": why, "wash": _w, "verify": _vf,
                                 "slope": (m or {}).get("slope"), "burst": (m or {}).get("burst"),
                                 "runShare": (m or {}).get("runShare"), "seal": (m or {}).get("seal"),
                                 "band": (m or {}).get("band")}
@@ -169,6 +197,21 @@ def main():
                     break
         if a.write:
             common.write_data_js(os.path.join(HERE, "data.js"), D, label="[rebound-quality]")
+        # 一致性统计：洗盘日判断 vs 次日反包结果
+        vf = [e["quality"]["verify"] for node in ("duanban", "chenPool")
+              for e in (D.get(node) or {}).get("success") or []
+              if isinstance(e, dict) and (e.get("quality") or {}).get("verify")]
+        if vf:
+            hit = sum(1 for v in vf if v["hit"])
+            print("[verify] 昨日分时判断 vs 今日反包：命中 %d / %d（%.0f%%）"
+                  % (hit, len(vf), hit / len(vf) * 100))
+            for v in vf:
+                if not v["hit"]:
+                    print("   落空：%s → %s" % (v["prevDate"], v["note"]))
+            json.dump({"asOf": time.strftime("%Y-%m-%d %H:%M"), "n": len(vf), "hit": hit,
+                       "rows": vf},
+                      open(os.path.join(HERE, "rebound_verify.json"), "w", encoding="utf-8"),
+                      ensure_ascii=False, indent=1)
         print("[quality] 判定 %d 只：%s" % (n, json.dumps(stat, ensure_ascii=False)))
     finally:
         if a.write:

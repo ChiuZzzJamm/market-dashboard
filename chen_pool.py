@@ -969,6 +969,39 @@ def record_entries(ledger, pool_key, entries, today, tier=None, cross=None, pre_
 
 
 # ---------------------------------------------------------------- 元信息装配
+def _attach_minute(entries):
+    """给陈学长三池挂分时摘要（2026-11-28 用户：陈学长和断板 K 线形态差不多，
+    严格/放宽/观察/成功池也要一样看分时量——承接、红柱爆量、尾盘红绿）。
+
+    与断板同一口径、同一份数据（intraday_minute.json），只做摘要不做判定：
+    判定仍由 check_duanban.minute_tag 负责，这里只保证陈学长池**看得到**。
+    """
+    import os, json as _j
+    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "intraday_minute.json")
+    try:
+        st = (_j.load(open(p, encoding="utf-8")).get("stocks") or {})
+    except Exception:                                            # noqa: BLE001
+        return
+    for e in entries:
+        if not isinstance(e, dict):
+            continue
+        m0 = st.get(str(e.get("code") or ""))
+        if not m0:
+            e["minuteTag"] = "无分时"
+            continue
+        m = (m0.get("prev") or m0) if m0.get("limitUp") else m0   # 今天涨停才回看昨天
+        hold = m.get("hold")
+        red = sum(1 for b in (m.get("bursts") or []) if b.get("dir") == "红")
+        tail = m.get("tailRedPct")
+        parts = ["承接" + ("✓" if hold is True else ("✗" if hold is False else "·")),
+                 "红爆%d" % red]
+        if tail is not None:
+            parts.append("尾红%d%%" % int(tail))
+        e["minuteTag"] = " ".join(parts)
+        e["minute"] = {"hold": hold, "redBurst": red, "tailRedPct": tail,
+                       "abovePct": m.get("abovePct")}
+
+
 def build_entries(hits, D, tier_filter=None):
     """把命中记录装配成前端要的卡片结构（含 K 线/板块/情绪/交易参数）。
 
@@ -1054,6 +1087,7 @@ def build_entries(hits, D, tier_filter=None):
             e.setdefault("story", "")
     for e in entries:
         e.pop("notices", None)   # 中间字段，不落 data.js
+    _attach_minute(entries)
     return entries
 
 

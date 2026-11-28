@@ -659,6 +659,8 @@
   .pano-tab .n-down { color: var(--down); }
   /* 2026-11-27：指数源没取到时显式占位（「抓不到≠没有」），灰字不冒充涨跌 */
   .pano-tab .n-na { color: var(--ink2); opacity: .75; }
+  .xt-min { margin-left: 6px; color: var(--accent-deep); font-variant-numeric: tabular-nums; }
+  .xt-min.xt-na { color: var(--ink2); opacity: .6; }
   .pano-idx .n-na { color: var(--ink2); opacity: .75; }
   .pano-tab.active .n-up { color: #ffe3e7; }
   .pano-tab.active .n-down { color: #c9f7ea; }
@@ -6304,6 +6306,13 @@ function dbCardHtml(e, key, done, showSec, scoreBadge, star) {
   var bpZt = boardPctZtOf(e);
   var bCls = bpNow > 0 ? 'up' : (bpNow < 0 ? 'down' : '');
   var foot = '<span class="xt">' + esc(form.replace(/^.*?断板/, '断板').replace(/·/, '：')) + '</span>';
+  /* 2026-11-28 用户：确认池也要看当日分时量（承接/红柱爆量/尾盘红绿），
+     不能只在弹窗里看。这里在卡片上挂一行摘要，简到一眼扫完。 */
+  if (e.minuteTag && e.minuteTag !== '无分时') {
+    foot += '<span class="xt xt-min" title="洗盘日分时：承接 / 红柱爆量次数 / 尾盘红柱占比">分时 ' + esc(e.minuteTag) + '</span>';
+  } else if (e.minuteTag === '无分时') {
+    foot += '<span class="xt xt-min xt-na" title="当日分钟线未取到">分时 无数据</span>';
+  }
   // R100z44：断板模块数据日取 generatedAt（该模块无 tradeDate 字段）
   var modD = String(((window.DASHBOARD_DATA || {}).duanban || {}).generatedAt || '').slice(0, 10);
   // R100z104→R100z105（用户 2026-10-09 两轮反馈）：开盘精选标的来自四池，但「板块涨幅/上涨概率/MA5买入/断板日止损」
@@ -7386,6 +7395,11 @@ function chenPoolBlock(title, cls, sub, list, tierTag) {
       tcCell('连板 / 放量', '<span class="nw">' + lbcTxt + '</span> <span class="nw">' + volTxt + '</span>', '', false, true)
     ];
     var foot = '<span class="xt">' + esc(String(e.form || '').replace(/·/, '：')) + '</span>';
+    if (e.minuteTag && e.minuteTag !== '无分时') {
+      foot += '<span class="xt xt-min" title="洗盘日分时：承接 / 红柱爆量 / 尾盘红柱占比">分时 ' + esc(e.minuteTag) + '</span>';
+    } else if (e.minuteTag === '无分时') {
+      foot += '<span class="xt xt-min xt-na">分时 无数据</span>';
+    }
     // R100z222（审核意见 §2）：确认后第 ≥2 天才进池的票必须自曝——页面原来把「确认后第 3 天」
     // 当今天的买入信号展示，而目标价/止损是按今天收盘重算的，等于让人在一个已经走完 2 天的
     // 形态上重新开仓。这里加一条前置提醒，卡片不隐藏（形态确实还在），但读者一眼知道它不是新信号。
