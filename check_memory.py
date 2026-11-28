@@ -84,6 +84,14 @@ if bad_level:
 cnsec = set(re.findall(r"(?m)^##\s*([〇一二三四五六七八九十]+)、", pm))
 mm = rd(MM)
 miss21 = []
+# 2026-11-28 用户指出 M2 盲区：路由表写 `24.1·130·166`（后两个省了「24.」前缀），
+# 旧正则只认 `24.N`，于是 130/166 从来没被验过——闸门看着 PASS，其实漏了两个号。
+# 这里先把简写组展开成 24.X 再逐个核对。
+for m in re.finditer(r"\b(2[0-9])\.(\d+)((?:·\d+)+)", mm):
+    for n in [m.group(2)] + m.group(3).strip("·").split("·"):
+        k = "%s.%s" % (m.group(1), n)
+        if k not in heads:
+            miss21.append(k)
 for m in re.finditer(r"\b(2[0-9]\.\d+[a-z]?)(?![0-9A-Za-z])", mm):
     k = m.group(1)
     if k not in heads:
