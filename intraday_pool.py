@@ -48,6 +48,29 @@ def _tx_prefix(code):
     return ("sh" if code.startswith(("5", "6", "9")) else "sz") + code
 
 
+def _sina_rows(code, scale=1, datalen=300):
+    """新浪分时（2026-11-28 新增备源）：scale=1 为 1 分钟、5 为 5 分钟，均带 amount。
+
+    为什么加它：腾讯 `minute/query` 抓 180+ 只后开始返回 JS 挑战页，本机 IP 被挡，
+    50 只票只能标「无分时」。新浪是不同机房、不同限流，实测在腾讯被挡时仍可取。
+    """
+    sym = ("sh" if code.startswith("6") else "sz") + code
+    url = ("https://quotes.sina.cn/cn/api/json_v2.php/CN_MarketDataService.getKLineData"
+           "?symbol=%s&scale=%d&ma=no&datalen=%d" % (sym, scale, datalen))
+    txt = _curl(url, "https://finance.sina.com.cn/")
+    arr = json.loads(txt)
+    rows = []
+    for b in arr or []:
+        day = str(b.get("day") or "")
+        if " " not in day:
+            continue
+        t = day.split(" ")[1][:5]
+        rows.append({"t": t, "c": float(b["close"]), "v": float(b.get("volume") or 0)})
+    if rows:
+        rows[0]["res"] = scale
+    return rows
+
+
 def fetch_minutes(code, retries=2):
     """腾讯分钟线为主（cum 量 → 差分），东财为备。两家都限流：失败就退避，不硬打。"""
     for attempt in range(retries):
@@ -72,7 +95,21 @@ def fetch_minutes(code, retries=2):
                 return rows
         except Exception:                                       # noqa: BLE001
             pass
-        # ② 东财兜底
+        # ② 新浪 1 分钟兜底（与腾讯不同机房，腾讯反爬时常仍可用）
+        try:
+            rows = _sina_rows(code, 1, 300)
+            if len(rows) >= 60:
+                return rows
+        except Exception:                                       # noqa: BLE001
+            pass
+        # ②b 新浪 5 分钟（再被挡时的最后可用粒度；analyse 会按 res=5 放宽行数门槛）
+        try:
+            rows = _sina_rows(code, 5, 120)
+            if len(rows) >= 30:
+                return rows
+        except Exception:                                       # noqa: BLE001
+            pass
+        # ③ 东财兜底
         try:
             txt = _curl("https://push2his.eastmoney.com/api/qt/stock/trends2/get"
                         "?secid=%s&fields1=f1,f2,f3,f4,f5&fields2=f51,f52,f53,f54,f55,f56,f57"
@@ -94,8 +131,9 @@ def fetch_minutes(code, retries=2):
 def analyse(rows):
     # 腾讯会给到 15:00 之后（15:00–15:30 收盘竞价区，量=0、价不动）——不裁掉会把
     # 「尾盘红柱占比」算成 0%、「尾盘量占比」算成 1%（2026-11-26 实测）。
+    coarse = bool(rows and rows[0].get("res") == 5)
     rows = [r for r in rows if "09:30" <= r["t"] <= "15:00"]
-    if len(rows) < 60:
+    if len(rows) < (30 if coarse else 60):
         return None
     # 基线取 09:40–14:30：开盘 5 分钟与尾盘 30 分钟的量天然偏大，
     # 放进基线会把它们自己标成「爆量」（实测虚高到 35 次）。
@@ -249,6 +287,8 @@ def main():
     ap.add_argument("--write", action="store_true")
     ap.add_argument("--limit", type=int, default=300)
     ap.add_argument("--if-fresh", action="store_true", help="当日已抓够就跳过，防止低上限的短跑覆盖长跑成果")
+    ap.add_argument("--fill-fields", action="store_true",
+                    help="只重算缺新字段（abovePct 等均价线明细）的旧条目，不重抓全量")
     ap.add_argument("--fill-miss", action="store_true", help="只补上次 miss 的少数标的（被反爬挡掉的），不重抓全部")
     a = ap.parse_args()
     if not a.write:
@@ -270,6 +310,26 @@ def main():
     except Exception:
         pass
     today = datetime.now().strftime("%Y-%m-%d")
+    if a.fill_fields:
+        # 2026-11-28：均价线明细（abovePct/breakN/…）是新增字段，老条目没有 → 只重抓这批。
+        cur = json.load(open(OUT, encoding="utf-8"))
+        todo = [c for c, v in (cur.get("stocks") or {}).items() if "abovePct" not in v]
+        print("[fields] 需补 %d 只" % len(todo))
+        got = 0
+        for c in todo:
+            r = analyse(fetch_minutes(c))
+            if not r:
+                time.sleep(1.0)
+                continue
+            r["name"] = names.get(c, cur["stocks"][c].get("name", ""))
+            r["date"] = today
+            cur["stocks"][c] = r
+            cur.setdefault("history", {}).setdefault(c, {})[today] = {k: v for k, v in r.items() if k != "name"}
+            got += 1
+            time.sleep(0.5)
+        json.dump(cur, open(OUT, "w", encoding="utf-8"), ensure_ascii=False)
+        print("[fields] 补到 %d 只" % got)
+        return 0
     if a.fill_miss:
         # 反爬场景：168/188 已拿到，只剩少数被挡。这里只补 miss，每只间隔 2.5s，
         # 不去碰已抓到的（避免又一次把文件整体重写、也避免继续加剧限流）。
