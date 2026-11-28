@@ -214,6 +214,7 @@ def main():
     ap.add_argument("--write", action="store_true")
     ap.add_argument("--limit", type=int, default=300)
     ap.add_argument("--if-fresh", action="store_true", help="当日已抓够就跳过，防止低上限的短跑覆盖长跑成果")
+    ap.add_argument("--fill-miss", action="store_true", help="只补上次 miss 的少数标的（被反爬挡掉的），不重抓全部")
     a = ap.parse_args()
     if not a.write:
         print(__doc__)
@@ -234,6 +235,30 @@ def main():
     except Exception:
         pass
     today = datetime.now().strftime("%Y-%m-%d")
+    if a.fill_miss:
+        # 反爬场景：168/188 已拿到，只剩少数被挡。这里只补 miss，每只间隔 2.5s，
+        # 不去碰已抓到的（避免又一次把文件整体重写、也避免继续加剧限流）。
+        cur = json.load(open(OUT, encoding="utf-8"))
+        miss = list(cur.get("miss") or [])
+        if not miss:
+            print("[fill] 没有待补项")
+            return 0
+        got = 0
+        for c in miss[:]:
+            r = analyse(fetch_minutes(c, retries=2))
+            if not r:
+                time.sleep(1.0)
+                continue
+            r["name"] = names.get(c, "")
+            r["date"] = today
+            cur["stocks"][c] = r
+            cur.setdefault("history", {}).setdefault(c, {})[today] = {k: v for k, v in r.items() if k != "name"}
+            cur["miss"].remove(c)
+            got += 1
+            time.sleep(2.5)
+        json.dump(cur, open(OUT, "w", encoding="utf-8"), ensure_ascii=False)
+        print("[fill] 补到 %d 只，仍缺 %d 只" % (got, len(cur.get("miss") or [])))
+        return 0
     try:
         old = json.load(open(OUT, encoding="utf-8"))
     except Exception:                                            # noqa: BLE001
