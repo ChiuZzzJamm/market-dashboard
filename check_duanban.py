@@ -2872,6 +2872,11 @@ def build_module(pairs, D):
         _m = _mm.get(str(_e.get("code")))
         _tag, _ok = minute_tag(_m)
         _e["minuteTag"] = _tag
+        # 2026-11-28 用户②：确认池的判断依据必须**在卡上看得见**——分时标签此前只写进数据、
+        # 前端从不渲染（grep minuteTag = 0 处）。这里把简称挂进 form，卡片直接可读。
+        _short = str(_tag).split("（")[0]
+        if _short and _short not in ("无分时", "") and "·分时" not in str(_e.get("form") or ""):
+            _e["form"] = str(_e.get("form") or "") + "·分时" + _short
         if _m:
             _e["minute"] = {k: _m.get(k) for k in
                             ("hold", "tailRedPct", "burstN", "earlyBurst", "limitUp", "red", "green")}
@@ -2916,24 +2921,16 @@ def build_module(pairs, D):
     # 原来由前端按**行业**算（候选.sector ∈ 题材的 sectors），而「通用设备」是几百只票的大类，
     # 于是同一批票被挂到五个题材下。改成按**同花顺概念**算（候选主题材命中该题材的概念词），
     # 逻辑收在 theme_cands.py 里一份——这里算好，19:30 部署链还会用当天的概念再刷一次。
-    try:
-        import theme_cands as _tc
-        _td = {"duanban": {"themes": _ctx["themes"], "confirmed": confirmed, "watching": watching},
-               "chenPool": D.get("chenPool") or {},
-               "stockConcepts": D.get("stockConcepts") or {}}
-        for _tn, (_cs, _kd) in _tc.build(_td).items():
-            _ctx["themes"][_tn]["cands"] = _cs
-            _ctx["themes"][_tn]["candKind"] = _kd
-    except Exception as _e:  # noqa: BLE001
-        # 候选算不出来不该拦住断板池落盘：前端 `t.cands` 缺失时会退回旧口径并把标签写成「同行业」。
-        print(f"[check_duanban] 题材候选计算失败（页面退回同行业口径）：{str(_e)[:120]}")
+    # 2026-11-28：`theme_cands.py` 已于 11-25（745aaa0「删连板补涨/题材/明日盯谁」）删除，
+    # 这里却还 import 它 → 每次跑都吞异常、打印「题材候选计算失败」。已删模块不留死引用。
     return {
         "generatedAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "note": ("确认池=走完「涨停→放量断板→缩量→不破T日低点与MA5」全流程；"
                  "观察池=形态进行中、只差最后一根确认K线（待企稳＞待缩量）。"
                  "形态之外另有三条量化门槛，同时满足才进池："
                  + mcap_band_txt(CAP_MIN, CAP_MAX) +
-                 "、启动前 20 个交易日涨幅 ≤10%、收盘距 MA5 ≥+2%。"
+                 "、启动前 20 个交易日涨幅 ≤10%；**收盘距 MA5 不再是门槛**（11-26 起只作"
+                 "「已脱离MA5 / 待启动」的标签，仅在「全流程达标」那一档仍要求 ≥+2%）。"
                  # R100z348（用户 2026-11-11 17:31「不是说好了是 400 亿以内吗」）：
                  # 这里原来硬编码「流通市值 100~400 亿」——而 CAP_MIN 早在 2026-10-28 就放开成 0，
                  # 已有 mcap_band_txt() 作唯一文案出口，本行却没用它，于是下发给页面的说明

@@ -104,6 +104,37 @@ def classify(m):
     return "情绪反包·拖沓", False, "拉升 %s 分/斜率 %.1f/7-9%% %d 分" % (rm, sl or 0, m["band"])
 
 
+WASH_MIN_JSON = os.path.join(HERE, "intraday_minute.json")
+
+
+def wash_behavior(code, rebound_date):
+    """洗盘日（反包日前一有数据的交易日）的量价行为推断。
+
+    用户 2026-11-28 ③：反包成功不能只入成功池就完事，尤其**大盘情绪差仍反包**的样本，
+    要回头研究前一日洗盘的量价关系，反推主力是「承接」还是「派发」。
+    数据来自 intraday_minute.json 的 history（每日 16:00 抓洗盘日分时，按键为交易日）。
+    """
+    try:
+        j = json.load(open(WASH_MIN_JSON, encoding="utf-8"))
+    except Exception:                                            # noqa: BLE001
+        return None
+    hist = (j.get("history") or {}).get(str(code)) or {}
+    days = sorted(d for d in hist if str(d) < str(rebound_date))
+    if not days:
+        return None
+    d = days[-1]
+    m = hist[d] or {}
+    hold, tail = m.get("hold"), m.get("tailRedPct")
+    clp, lift = m.get("closeLowPct"), m.get("tailLift")
+    sc = 0
+    sc += 2 if hold is True else (-1 if hold is False else 0)
+    sc += 2 if (lift or 0) >= 1 else (1 if (lift or 0) >= 0 else -1)
+    sc += 2 if (clp or 0) >= 3 else (1 if (clp or 0) >= 1.5 else (-1 if (clp or 0) < 0.8 else 0))
+    tag = "承接" if sc >= 3 else ("派发" if sc <= -2 else "中性")
+    return {"date": d, "tag": tag, "hold": hold, "tailRedPct": tail,
+            "closeLowPct": clp, "tailLift": lift, "burstN": m.get("burstN")}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--write", action="store_true")
@@ -121,7 +152,7 @@ def main():
         stat = {}
         for node in ("duanban", "chenPool"):
             for e in (D.get(node) or {}).get("success") or []:
-                if not isinstance(e, dict) or e.get("quality"):
+                if not isinstance(e, dict) or (e.get("quality") or {}).get("wash"):
                     continue
                 rows, prev = fetch_minutes(str(e["code"]))
                 m = metrics(rows, prev) if rows else None
@@ -130,7 +161,12 @@ def main():
                 _mark = (" ★" + kind) if active else (" · " + kind)
                 if _mark.strip() not in (e.get("form") or ""):
                     e["form"] = (e.get("form") or "") + _mark
-                e["quality"] = {"type": kind, "active": active, "why": why,
+                _w = wash_behavior(str(e["code"]), e.get("successDate") or (D.get("ashare") or {}).get("tradeDate") or "9999-12-31")
+                if _w:
+                    _mk = "｜洗盘日:" + _w["tag"]
+                    if _mk not in (e.get("form") or ""):
+                        e["form"] = (e.get("form") or "") + _mk
+                e["quality"] = {"type": kind, "active": active, "why": why, "wash": _w,
                                 "slope": (m or {}).get("slope"), "burst": (m or {}).get("burst"),
                                 "runShare": (m or {}).get("runShare"), "seal": (m or {}).get("seal"),
                                 "band": (m or {}).get("band")}
