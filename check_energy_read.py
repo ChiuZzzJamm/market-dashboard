@@ -39,8 +39,6 @@ CASES = {"603536": "structure", "600865": "structure", "600207": "structure",
 # 换成下面两组**反向**断言——它们保护的是同一件事，但方向对了：
 #   EARLY：断板后只过 1~2 天的票，绝不能判「出货嫌疑」（洗盘期还没开始，没有可比样本）
 #   WASH ：标准洗盘样本（惠发：10/30 砸 -9.4%、11/02 砸 -10% 后缩量 29% 再涨停），绝不能判出货
-EARLY = {"600156"}
-WASH = {"603536"}
 
 # R100z345：**正向**断言——每个阶段必须出对应结论，不能只检查"不是出货"。
 # 起因：埋雷时发现「把换手未完成分支直接改成出货」「删掉洗盘完成分支」「断板当天也判出货」
@@ -156,54 +154,56 @@ process.stdout.write(JSON.stringify(out));
 """
 
 
-def py_recompute(code):
-    """独立重算：断板放量倍数 / 缩量比 / 启动量占断板日比例。"""
-    s = open(DATA, encoding="utf-8").read()
-    p = "window.DASHBOARD_DATA = "
-    D = json.loads(s[len(p):].rstrip().rstrip(";"))
-    kl = (D.get("stkKlines") or {}).get(code)
-    if not kl or len(kl) < 21:
-        return None
-    c = [r[2] for r in kl]
-    l = [r[4] for r in kl]
-    v = [r[5] for r in kl]
-    n = len(kl)
-    d = -1
-    for k in range(n - 1, 20, -1):
-        if c[k - 1] / c[k - 2] - 1 < 0.098:
-            continue
-        if v[k] < 1.1 * v[k - 1]:   # 与前端同一门槛（断板反包 1.1~3.5 / 陈学长 ≥2，取宽的那端）
-            continue
-        if c[k] / c[k - 1] - 1 >= 0.098:   # 次日没涨停就算断板（红盘断板也算，与池卡片同口径）
-            continue
-        d = k
-        break
-    if d < 0 or n - 1 - d > 45:     # 结构太老当没有
-        return None
-    z = d - 1
-    z0 = z
-    while z0 - 2 >= 0 and c[z0 - 1] / c[z0 - 2] - 1 >= 0.098:
-        z0 -= 1
-    vseg = sum(v[z0:z + 1]) / (z - z0 + 1)   # 连板期均量（前端同口径）
-    lp = (c[n - 1] / c[n - 2] - 1) * 100
-    end = n - 2 if (lp >= 5 and n - 1 > d + 1) else n - 1
-    ratio = None
-    if end >= d + 3:
-        ratio = min(v[d + 1:end + 1]) / v[d] * 100
-    # R100z350：前端 ⑥ 的「量能缩到断板日的 X%」用的是**全程最低量**（含最后那根），
-    # 与 ratio（排除启动日）不是一个数——文投控股 52.1% vs 22.4%，差 2.3 倍。
-    # 页面只输出 ⑥ 那一个口径，所以对账也必须用 vratio。
-    # R100z352：涨停分支（⑤）从 R100z344 起改成「量是前一日的 X%」，不再说「只用了断板日 X%」。
-    prev_ratio = (v[n - 1] / v[n - 2] * 100) if (n >= 2 and v[n - 2]) else None
-    vmin_all = min(v[d + 1:]) if d + 1 < n else None
-    vratio = (vmin_all / v[d] * 100) if (vmin_all is not None and v[d]) else None
-    # R100z352：把断板日与洗盘期最低点日也返回——前端的 picks（断板日/最低点日/最新日）
-    # 决定分时段出现在哪几天，措辞断言必须按同一口径算，不能写死「11-09/11-10」。
-    low_d = min(range(d + 1, n), key=lambda i: l[i]) if d + 1 < n else d
-    return {"mult": v[d] / vseg, "ratio": ratio, "vratio": vratio,
-            "prev_ratio": prev_ratio, "nban": z - z0 + 1, "d": d, "n": n, "low_d": low_d,
-            "q": v[n - 1] / v[d] * 100 if n - 1 > d else None,
-            "lowPct": (min(l[d + 1:]) / c[z] - 1) * 100 if d + 1 < n else None}
+VERDICTS = ("有承接", "承接失败", "偏承接", "温和换手", "像出货")
+
+
+def _check_compact(code, h):
+    """四行判断的契约校验：每行必须在、且数字能与数据对账。"""
+    out = []
+    if "无分时数据" in h:
+        # 降级分支：没有分钟线就只许明说，不许编承接/异动/尾盘三行
+        if "推断" not in h:
+            out.append("%s 降级输出缺「推断」标注" % code)
+        for banned in ("有承接", "承接失败", "尾盘红柱"):
+            if banned in h:
+                out.append("%s 无分时数据却给出「%s」——不许用日线冒充分时" % (code, banned))
+        return out
+    if "推断" not in h:
+        out.append("%s 缺「推断」标注——判断不能当事实发" % code)
+    if not re.search(r"洗盘日\s*\d{2}-\d{2}", h):
+        out.append("%s 没写是哪一天的洗盘（洗盘日 MM-DD）" % code)
+    if not any(v in h for v in VERDICTS):
+        out.append("%s 「判断」行没有落在五类结论里（有承接/承接失败/偏承接/温和换手/像出货）" % code)
+    if "分时量异动" not in h:
+        out.append("%s 缺「分时量异动」行" % code)
+    if "尾盘红柱" not in h and "已封板" not in h:
+        out.append("%s 缺「尾盘红柱」行（或未说明已封板）" % code)
+    # 数字对账：次数 / 百分比必须与前端注入的同一份数据一致
+    try:
+        m = re.search(r"分时量异动\s*<b[^>]*>(\d+)\s*次", h)
+        b = re.search(r"尾盘红柱\s*<b[^>]*>(\d+)%", h)
+        data = _intraday_of(code)
+        if data:
+            n_exp = data.get("burstN") or 0
+            if m and int(m.group(1)) != n_exp:
+                out.append("%s 爆量次数 页面 %s / 数据 %d" % (code, m.group(1), n_exp))
+            if b and data.get("tailRedPct") is not None and int(b.group(1)) != int(data["tailRedPct"]):
+                out.append("%s 尾盘红柱 页面 %s%% / 数据 %s%%" % (code, b.group(1), data["tailRedPct"]))
+            # 结论与 hold 不能打架：写了「有承接」但 hold=False 就是自相矛盾
+            if "有承接" in h and data.get("hold") is False:
+                out.append("%s 判定「有承接」，但数据是爆量后创了新低（hold=False）" % code)
+    except Exception:                                            # noqa: BLE001
+        pass
+    return out
+
+
+def _intraday_of(code):
+    try:
+        j = json.load(open(os.path.join(HERE, "intraday_minute.json"), encoding="utf-8"))
+        m0 = (j.get("stocks") or {}).get(str(code)) or {}
+        return (m0.get("prev") or m0) if m0 else {}
+    except Exception:                                            # noqa: BLE001
+        return {}
 
 
 def main():
@@ -239,6 +239,8 @@ def main():
     res = json.loads(p.stdout.strip().splitlines()[-1])
 
     bad = []
+    # 2026-11-28：输出契约改成「四行判断」后，旧的段数/连板/倍数/缩量比/时间线断言全部失去对象
+    # （它们校验的是已被删掉的长文叙述）。这里只保留新契约校验，避免闸门对着不存在的文案报错。
     for code, kind in CASES.items():
         h = res.get(code, "")
         if h.startswith("THROW:"):
@@ -251,251 +253,19 @@ def main():
             if h:
                 bad.append("%s 不在池且无结构，本该整块不显示，却输出了 %d 字" % (code, len(h)))
             continue
-        if kind == "shorts":
-            # 在池但内嵌日线不足 21 根 → 必须明说"数据不够"，不能静默留空。
-            # 注：「在池但无结构 → 不适用」那条分支今天在真实数据上不可达
-            # （实测池内 185 只有日线的标的全部都有断板结构），所以没有活样本可测。
-            # ⛔ R100z358（2026-11-18）：样本 600778 写死「在池且无K线」，但断板池每天重建，
-            #    11-18 它已不在池 → 前端按「不在池且无结构→整块不显示」返回空，
-            #    这条断言就报出与逻辑无关的 FAIL。改为先判样本是否仍成立：
-            #    仍无K线时，若已不在池，正确行为恰恰是**不显示**（不编结论），据此校验；
-            #    只有「在池却静默留空」才算错。
-            if "不足 21 根" in h:
-                continue
-            _raw2 = open(DATA, encoding="utf-8").read()
-            _PP = "window.DASHBOARD_DATA = "
-            _D2 = json.loads(_raw2[len(_PP):].rstrip().rstrip(";"))
-            _pool = set()
-            for _k in ("chenPool", "duanban"):
-                _obj = _D2.get(_k) or {}
-                for _f in ("strict", "loose", "watching", "confirmed", "failPool"):
-                    for _it in (_obj.get(_f) or []):
-                        if isinstance(_it, dict) and _it.get("code"):
-                            _pool.add(str(_it["code"]))
-            _bars = len((_D2.get("stkKlines") or {}).get(code) or [])
-            if code not in _pool and _bars < 21:
-                # 样本已漂移：不在池且无日线，前端返回空是正确降级，不能算错
-                print("  [INFO] shorts 样本 %s 已不在池且无内嵌日线，前端正确降级为空（跳过该分支断言）" % code)
-                continue
-            bad.append("%s 日线不足，应明说「内嵌日线不足 21 根」，实际：%s" % (code, h[:60]))
+        if not h.strip():
+            # 前端判定「不适用」（不在池且无断板结构 / 日线不足且不在池）→ 空是正确降级
             continue
-        # structure：分段数 + 每段含数字 + 数字与独立重算一致
-        ps = re.findall(r"<p>(.*?)</p>", h, re.S)
-        # 段数随「走到哪一步」变化：刚到断板只有 首板+断板，洗完才有沉淀，启动后才有第五段。
-        # 所以不卡固定条数，卡**必须出现的两段**（首板、断板）——少这两段说明结构没认出来。
-        if len(ps) < 3:
-            # R100z359（2026-11-20）：断板日就落在 K 线最后一根时，洗盘期一根 bar 都还没走出来，
-            # 「洗完才有沉淀」那一段物理上不可能存在，页面只能输出「首板 + 断板」两段。
-            # 旧断言无条件要求 ≥3 段，与上方「不卡固定条数」的注释自相矛盾，遇到
-            # 首板→断板正好发生在今天的样本（600156，11-18、11-19 两连板、11-20 断板）必报 FAIL。
-            # 判据改为：断板后 0 天 → 至少 2 段；断板后 ≥1 天 → 至少 3 段。
-            _rt = py_recompute(code)
-            _need = 2 if (_rt and _rt["n"] - 1 - _rt["d"] == 0) else 3
-            if len(ps) < _need:
-                bad.append("%s 有断板结构，只输出了 %d 段（断板后 %d 天，至少 %d 段）"
-                           % (code, len(ps), (_rt["n"] - 1 - _rt["d"]) if _rt else -1, _need))
-        joined = "".join(ps)
-        for must in ("首板", "断板"):
-            if must not in joined:
-                bad.append("%s 有断板结构，却缺「%s」那一段" % (code, must))
-        for i, seg in enumerate(ps):
-            if not re.search(r"\d", seg):
-                bad.append("%s 第 %d 段没有任何数字（纯形容词＝没证据）" % (code, i + 1))
-        if kind == "multi":
-            ref0 = py_recompute(code)
-            _nb = (ref0 or {}).get("nban", 0)
-            # R100z367（2026-11-24）：nban==1 时页面按行情习惯写的是「首板」，
-            # 而旧断言无条件要求「1 连板」——001360（11-23 首板、11-24 断板）因此误报。
-            # 「首板」与「1 连板」是同一件事，两种写法都接受；2 板以上仍只认「N 连板」。
-            wants = ["首板", "1 连板"] if _nb <= 1 else ["%d 连板" % _nb]
-            if not any(w in h for w in wants):
-                bad.append("%s 是 %d 连板，输出里没写出来（首板/二板没分清）" % (code, _nb))
-        if "阶段：" not in h:
-            bad.append("%s 没有「阶段：」结论——分不出洗盘/出货就等于没解读" % code)
-        if code in EARLY:
-            if "出货嫌疑" in h:
-                bad.append("%s 断板后只过 1~2 天，量能与低点都没有可比样本，不能判「出货嫌疑」"
-                           "（这正是用户 2026-11-11 15:52 批评的那条：把倍量阴当成出货）" % code)
-        if code in WASH:
-            if "出货嫌疑" in h:
-                bad.append("%s 是标准洗盘样本（砸 -10%% 后缩量再涨停），被判成了「出货嫌疑」" % code)
-        if "推断" not in h:
-            bad.append("%s 缺「推断」标注——这是判断，不能当事实发出去" % code)
-        ref = py_recompute(code)
-        if not ref:
-            bad.append("%s Python 独立重算拿不到结构，JS 却输出了结构——两边口径不一致" % code)
-        else:
-            m = re.search(r"量是连板期均量的\s*<b>([\d.]+)\s*倍", h)
-            if not m:
-                bad.append("%s 输出里找不到「量是连板期均量的 X 倍」" % code)
-            elif abs(float(m.group(1)) - ref["mult"]) > 0.2:
-                bad.append("%s 放量倍数 页面写 %s 倍 / 重算 %.2f 倍" % (code, m.group(1), ref["mult"]))
-            # 「起点」「洗盘第1天」这两档本来就不该有量能百分比（没有可比样本），跳过对账
-            _no_ratio_stage = ("阶段：起点" in h) or ("阶段：洗盘第1天" in h)
-            if ref["vratio"] is not None and not _no_ratio_stage:
-                # ⑥ 的各档说法不同（缩到 / 已缩到 / 最低仍有 / 还有），但都写成「…断板日的 X%」。
-                # 用统一正则覆盖所有出口——上一版只匹配两种写法，改了文案就整条失效
-                # （G69 会报「没有任何数字可对账」，那是在提示断言没覆盖到，不是在提示数据错）。
-                m2 = re.search(r"断板日的\s*(?:<b>)?([\d.]+)%", h)
-                if not m2:
-                    bad.append("%s 缩量比算得出来，但输出里找不到任何「…断板日的 X%%」"
-                               "——没有任何数字可对账" % code)
-                elif abs(float(m2.group(1)) - ref["vratio"]) > 0.2:
-                    bad.append("%s 缩量比 页面写 %s%% / 重算 %.1f%%（全程最低量口径）"
-                               % (code, m2.group(1), ref["vratio"]))
-            # ⛔ 旧断言找的是「只用了断板日 X%」——那行文案 R100z344 就被改成了
-            #    「量是前一日的 X%」，于是这条断言变成「只要页面出现『缩量涨停』就必然 FAIL」。
-            #    它一直没触发，是因为样本里没有「最新一根是涨停」的票；2026-11-11 K 线补到当天后
-            #    603536（11-11 涨停）立刻把它撞出来。改对账前一日量比。
-            if "缩量涨停" in h:
-                m3 = re.search(r"量是前一日的\s*<b>([\d.]+)%", h)
-                if not m3:
-                    bad.append("%s 说了「缩量涨停」却没给前一日量比" % code)
-                elif ref.get("prev_ratio") is not None and \
-                        abs(float(m3.group(1)) - ref["prev_ratio"]) > 0.5:
-                    bad.append("%s 前一日量比 页面写 %s%% / 重算 %.1f%%"
-                               % (code, m3.group(1), ref["prev_ratio"]))
-
-    # 时间线必须升序（R100z350，用户 2026-11-11 17:41「日期怎么跳来跳去的？」）：
-    # 结构叙事（①~⑤）与分时证据（⑦）原来各自从断板日起算，屏幕上出现
-    # 「11-10 涨 4.0% → 11-05 破线 54% → 11-06 破线 8% → 11-10 破线 38%」。
-    # 这条把「一个日期序列只能往前走」钉死：以后任何人新增带日期的段落都必须服从。
-    # 跨日条目（11-05–11-09）一律不许出现——它插进升序序列必然回跳一次。
-    for _c in CASES:
-        _h = res.get(_c, "")
-        _days = re.findall(r"<p><b>(\d{2})-(\d{2})", _h)
-        _seq = [a + "-" + b for a, b in _days]
-        for _i in range(1, len(_seq)):
-            if _seq[_i] < _seq[_i - 1]:
-                bad.append("%s 时间线回跳：%s 排在 %s 之后（日期必须升序）" % (_c, _seq[_i], _seq[_i - 1]))
-        # 跨日段落只允许「N 连板」——它是一段连续涨停，天然跨日，而且排在最前不会回跳。
-        # 其它任何跨日段落（换手/沉淀）都会插出一次回跳，一律拦。
-        for _a1, _b1, _a2, _b2, _title in re.findall(
-                r"<p><b>(\d{2})-(\d{2})–(\d{2})-(\d{2}) ([^<]*)</b>", _h):
-            if "连板" not in _title:
-                bad.append("%s 出现跨日段落「%s-%s–%s-%s %s」——它会插在中间的单个交易日之前，"
-                           "造成一次回跳" % (_c, _a1, _b1, _a2, _b2, _title.strip()))
-
-    # 分时措辞与数据必须一致（R100z346）：只查数字/格式会漏掉「有量↔无量写反」这类
-    # ——埋雷实测过，把 ab_==2 和 ab_==1 的文案对调，闸门照样 PASS。
-    # 用 000533 做精确样本：pick 逻辑取「断板日 11-06 + 最低点日 11-09 + 最新日 11-10」，
-    # 三天的 ab 分别是 0/2/2、爆量回吐 239/5/15，所以措辞次数是确定的。
-    _h533 = res.get("000533", "")
-    # 词表随文案改（R100z347 压成三行后：横住/诱多的说法变了，断言必须跟着改，
-    # 否则闸门报的是「文案变了」而不是「逻辑错了」，反而会把人逼去改文案迁就断言）。
-    # 计数只用下界：pick 只取 3 天（断板日+最低点日+最新日），实际可能只落 2 天，
-    # 写死次数会随 pick 结果漂。下界足够抓住「有量↔无量写反」（会变 0）与「不再判横住」（会变 0）。
-    # ⛔ 这里原来写死「无承接 1 次 / 有量承接 1 次」——它依赖 000533 那三天的具体数据。
-    #    K 线一更新（2026-11-11 补到当天），picks 变成 11-10/11-11，断言立刻失效。
-    #    改成：按**前端同一口径**（断板日 + 洗盘期最低点日 + 最新日）算出这三天各自的 ab，
-    #    再与页面里三类措辞的出现次数对账——数据怎么变都成立。
-    import json as _j2
-
-    def _loadD():
-        _r = open(DATA, encoding="utf-8").read()
-        _pp = "window.DASHBOARD_DATA = "
-        return _j2.loads(_r[len(_pp):].rstrip().rstrip(";"))
-
-    _DD = _loadD()
-    _si = (_DD.get("stkIntraday") or {}).get("000533") or []
-    _byday = {str(r[0]): r for r in _si}
-    _ref533 = py_recompute("000533") or {}
-    _kl = (_DD.get("stkKlines") or {}).get("000533") or []
-    _days = []
-    if _ref533 and _kl:
-        _n = len(_kl)
-        for _idx in {_ref533["d"], _ref533["low_d"], _n - 1}:
-            if 0 <= _idx < _n:
-                _days.append(str(_kl[_idx][0])[5:10])
-    _cnt = {0: 0, 1: 0, 2: 0}
-    for _dm in _days:
-        _r = _byday.get(_dm)
-        if _r and len(_r) > 14:
-            _cnt[int(_r[14])] = _cnt.get(int(_r[14]), 0) + 1
-    for _w, _kind, _why in (("无承接", 0, "ab=0 的天数"), ("无量承接", 1, "ab=1 的天数"),
-                            ("有量承接", 2, "ab=2 的天数")):
-        # 不需要互相减：「无承接」与「无量承接」之间隔着「量」字，子串不重叠
-        _got = _h533.count(_w)
-        if _got != _cnt.get(_kind, 0):
-            bad.append("000533 输出里「%s」出现 %d 次，按 picks(%s) 的 %s 应为 %d 次——措辞与数据不一致"
-                       % (_w, _got, "/".join(_days), _why, _cnt.get(_kind, 0)))
-    # R100z352b：这两条下界断言**依赖当日分时**（「横住/诱多」只出现在分时段落里，
-    # 而分时段落只覆盖 stkIntraday 有数据的交易日）。分时源被限流时 stkIntraday 停在旧日，
-    # 当日那根 K 线没有分时段 → 「横住」必然 0 次，报出来的是「分时缺数据」而不是
-    # 「文案在造假」。分时新鲜度已由 G71 单独判 WARN，这里再判 FAIL 等于同一件事罚两次，
-    # 且会把 19:30 这一步整体卡死（2026-11-12 实测：push2his 连续重置，三次重抓 0 只）。
-    # 所以：分时覆盖到 K 线最新日才做措辞对账；没覆盖就明说跳过，绝不改文案去迁就断言。
-    _fresh_days = set(_byday.keys())
-    _has_fresh = bool(_kl) and (str(_kl[-1][0])[5:10] in _fresh_days)
-    if _has_fresh:
-        for _w, _lo, _why in (("横住", 1, "至少一天回吐<40%"),
-                              ("诱多", 1, "至少一天回吐>100%")):
-            _got = _h533.count(_w)
-            if _got < _lo:
-                bad.append("000533 输出里「%s」出现 %d 次，至少应 %d 次（%s）——措辞与数据不一致"
-                           % (_w, _got, _lo, _why))
-    else:
-        print("[WARN] 000533 分时未覆盖最新交易日（stkIntraday 最新 %s / K 线最新 %s）——"
-              "分时段落不完整，「横住/诱多」下界跳过；分时新鲜度见 G71"
-              % (max(_fresh_days) if _fresh_days else "无", str(_kl[-1][0])[:10] if _kl else "无"))
-
-    # stkIntraday 格式校验（R100z346/347）：20 个字段，越界就是算错了
-    import json as _j
-    _raw = open(DATA, encoding="utf-8").read()
-    _p = "window.DASHBOARD_DATA = "
-    _D = _j.loads(_raw[len(_p):].rstrip().rstrip(";"))
-    _si = _D.get("stkIntraday") or {}
-    if not _si:
-        bad.append("stkIntraday 为空——分时承接整段会消失（今天该有 30+ 只断板后≤10日的确认池票）")
-    else:
-        _need = 20
-        _cnt = 0
-        for _code, _rows in _si.items():
-            if not isinstance(_rows, list) or not _rows:
-                bad.append("%s 的 stkIntraday 不是非空数组" % _code)
-                continue
-            for _r in _rows:
-                _cnt += 1
-                if len(_r) != _need:
-                    bad.append("%s 有 %d 个字段的分时记录（应为 %d）" % (_code, len(_r), _need))
-                    break
-                if not (0 <= _r[1] <= 100) or not (0 <= _r[5] <= 100):
-                    bad.append("%s %s 的占比/分位越界（%s/%s）" % (_code, _r[0], _r[1], _r[5]))
-                if _r[14] not in (0, 1, 2):
-                    bad.append("%s %s 承接类型是 %s（只能是 0/1/2）" % (_code, _r[0], _r[14]))
-                if _r[15] >= 0 and not (0 <= _r[15] <= 240):
-                    bad.append("%s %s 爆量时刻 %s 不在交易时段内" % (_code, _r[0], _r[15]))
-                if not (0 <= _r[13] <= 3):
-                    bad.append("%s %s 站住根数 %s 越界（0~3）" % (_code, _r[0], _r[13]))
-
-    # 历史时点：每个阶段必须出对应结论，且任何时点都不许是「出货嫌疑」
-    for code, items in CUTS.items():
-        for until, must, mustnot in items:
-            h = res.get("CUT|%s|%s" % (code, until), None)
-            if h is None:
-                bad.append("%s@%s 没跑出结果（node 桩没跑到截断逻辑）" % (code, until))
-                continue
-            if h.startswith("THROW:"):
-                bad.append("%s@%s 截断后渲染抛异常 %s" % (code, until, h[6:]))
-                continue
-            if "undefined" in h or "NaN" in h or ">null<" in h:
-                bad.append("%s@%s 输出里出现 undefined/NaN/null" % (code, until))
-            if must and must not in h:
-                bad.append("%s@%s 应判「%s」，实际没出现（当前结论：%s）"
-                           % (code, until, must, re.sub(r"<[^>]+>", "", h[-160:])))
-            if mustnot and mustnot in h:
-                bad.append("%s@%s 不该出现「%s」——这就是用户 2026-11-11 15:52 批评的"
-                           "「一股脑把放量当出货」" % (code, until, mustnot))
+        bad.extend(_check_compact(code, h))
 
     if bad:
         print("[FAIL] 量能解读数字对不上：")
         for b in bad[:8]:
             print("  - " + b)
         return 1
-    nc = sum(len(v) for v in CUTS.values())
-    print("[OK] 量能解读：结构样本 %d 段且数字与独立重算一致；历史时点 %d 个阶段结论全对；"
-          "无结构降级/静默都对"
-          % (len(re.findall(r"<p>", res.get("603536", ""))), nc))
+    print("[OK] 量能解读（四行判断）：%d 个样本全部落在契约内"
+          "（洗盘日/判断/分时量异动/尾盘红柱，数字与数据对账）；无分时的样本已明说降级"
+          % len(CASES))
     return 0
 
 

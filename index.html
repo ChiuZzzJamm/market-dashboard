@@ -9387,7 +9387,33 @@ function stkEnergyHtml(code) {
       是否有异动爆量；尾盘（收盘前 5-10 分钟）红柱是否比绿柱多。」
      所以这个弹窗只出**四行判断**，不再叙述首板/断板/逐日推演的原始过程。 */
   var m0 = (window.__stkMin || {})[String(code)];
-  if (!m0) return '';
+  if (!m0) {
+    // 没有分时数据就明说，不要拿日线量能冒充分时判断（项目铁律：抓不到≠没有）
+    var _kk = stkParseKline(stkGlobalKline(String(code))) || [];
+    // 不在池且没有分时证据：只有历史上确实走过「涨停→放量断板」才给降级说明，否则整块不显示
+    if (!stkEnergyInPool(String(code))) {
+      var _has = false;
+      var _kb = stkParseKline(stkGlobalKline(String(code))) || [];
+      for (var _i = _kb.length - 1; _i > 21; _i--) {
+        var _p1 = (_kb[_i - 1][2] / _kb[_i - 2][2] - 1) * 100;
+        var _p0 = (_kb[_i][2] / _kb[_i - 1][2] - 1) * 100;
+        if (_p1 >= 9.8 && _p0 < 9.8 && _kb[_i][5] >= 1.1 * _kb[_i - 1][5]) { _has = true; break; }
+      }
+      if (!_has) return '';
+    }
+    if (_kk.length < 21) {
+      return '<div class="en-h">量能解读<span class="en-tag">推断 · 非事实</span></div>' +
+        '<div class="en-min"><div class="en-mrow">无分时数据<span class="en-md">' +
+        '分钟线未取到、内嵌日线也不足 21 根，这块暂时算不出来（不是没有，是数据不够）</span></div></div>';
+    }
+    var _l = _kk[_kk.length - 1], _pv = _kk[_kk.length - 6] ? _kk[_kk.length - 6][5] : 0;
+    var _vr = _pv ? (_l[5] / ((_kk[_kk.length - 2][5] + _kk[_kk.length - 3][5] + _kk[_kk.length - 4][5] + _kk[_kk.length - 5][5] + _pv) / 5)) : null;
+    return '<div class="en-h">量能解读<span class="en-tag">推断 · 非事实</span></div>' +
+      '<div class="en-min"><div class="en-mrow">无分时数据<span class="en-md">当日分钟线未取到，承接 / 量能异动 / 尾盘红绿都无法判断' +
+      '（不是没有，是没抓到）</span></div>' +
+      (_vr == null ? '' : '<div class="en-mrow">日线参考 <b>' + _vr.toFixed(1) + '×</b><span class="en-md">最新一根相对近 5 日均量</span></div>') +
+      '</div>';
+  }
   var m = (m0.prev && m0.prevDate) ? m0.prev : m0;
   var day = (m0.prev && m0.prevDate) ? String(m0.prevDate).slice(5) : '今日';
 
