@@ -303,7 +303,7 @@ echo "🎯 补齐板块买点（entry_zone.py --write）..."
 if [ "${SKIP_AUDIT:-0}" != "1" ]; then
     # 池内分时承接（R100z389）：腾讯分钟线 → intraday_minute.json（页面「分时」行）
 echo "📈 分时承接体检（intraday_pool.py --write）..."
-"$PY" intraday_pool.py --write --limit 120 || echo "[warn] 分时体检失败，页面只是不显示那一行（不影响部署）"
+"$PY" intraday_pool.py --write --limit 300 --if-fresh || echo "[warn] 分时体检失败，页面只是不显示那一行（不影响部署）"
 
 # 反包成功池（2026-11-26）：确认/观察池里当日 ≥+7% 的票移进 success，再从原池移除
 echo "🚀 反包成功池（pool_success.py --write）..."

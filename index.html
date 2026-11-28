@@ -9381,23 +9381,21 @@ function stkMinLine(code) {
 }
 
 function stkEnergyHtml(code) {
-  /* 2026-11-28 用户第二次纠正：
-     「不是让你改成折叠，是让你提炼重点。他当天分时什么走势你自己清楚明白就好，不用写出来告诉我，
-      只要告诉我你的判断：今天是洗盘有承接、还是出货、还是温和换手；全天站分时线上还是线下；
-      是否有异动爆量；尾盘（收盘前 5-10 分钟）红柱是否比绿柱多。」
-     所以这个弹窗只出**四行判断**，不再叙述首板/断板/逐日推演的原始过程。 */
+  /* 2026-11-28 用户四条：
+     ① 「哪里封板了？」——选错日子：这只票今天在洗盘（断板第 1 天），却拿昨天涨停日当洗盘日，
+        于是出现「已封板，尾盘无成交」。改为：**今天没涨停就今天的洗盘日=今天**；今天涨停才回看昨天。
+     ② 删掉「洗盘日 11-26 · +10.0% 量 0.9×」那一行，不要过程。
+     ③ 「分时量异动」只数**红柱（买盘）**爆量，绿柱卖盘异动不算。
+     ④ 无分时的原因在抓取上限（见 intraday_pool），已在数据侧修。 */
   var m0 = (window.__stkMin || {})[String(code)];
   if (!m0) {
-    // 没有分时数据就明说，不要拿日线量能冒充分时判断（项目铁律：抓不到≠没有）
     var _kk = stkParseKline(stkGlobalKline(String(code))) || [];
-    // 不在池且没有分时证据：只有历史上确实走过「涨停→放量断板」才给降级说明，否则整块不显示
     if (!stkEnergyInPool(String(code))) {
       var _has = false;
-      var _kb = stkParseKline(stkGlobalKline(String(code))) || [];
-      for (var _i = _kb.length - 1; _i > 21; _i--) {
-        var _p1 = (_kb[_i - 1][2] / _kb[_i - 2][2] - 1) * 100;
-        var _p0 = (_kb[_i][2] / _kb[_i - 1][2] - 1) * 100;
-        if (_p1 >= 9.8 && _p0 < 9.8 && _kb[_i][5] >= 1.1 * _kb[_i - 1][5]) { _has = true; break; }
+      for (var _i = _kk.length - 1; _i > 21; _i--) {
+        var _p1 = (_kk[_i - 1][2] / _kk[_i - 2][2] - 1) * 100;
+        var _p0 = (_kk[_i][2] / _kk[_i - 1][2] - 1) * 100;
+        if (_p1 >= 9.8 && _p0 < 9.8 && _kk[_i][5] >= 1.1 * _kk[_i - 1][5]) { _has = true; break; }
       }
       if (!_has) return '';
     }
@@ -9406,7 +9404,8 @@ function stkEnergyHtml(code) {
         '<div class="en-min"><div class="en-mrow">无分时数据<span class="en-md">' +
         '分钟线未取到、内嵌日线也不足 21 根，这块暂时算不出来（不是没有，是数据不够）</span></div></div>';
     }
-    var _l = _kk[_kk.length - 1], _pv = _kk[_kk.length - 6] ? _kk[_kk.length - 6][5] : 0;
+    var _l = _kk[_kk.length - 1];
+    var _pv = _kk[_kk.length - 6] ? _kk[_kk.length - 6][5] : 0;
     var _vr = _pv ? (_l[5] / ((_kk[_kk.length - 2][5] + _kk[_kk.length - 3][5] + _kk[_kk.length - 4][5] + _kk[_kk.length - 5][5] + _pv) / 5)) : null;
     return '<div class="en-h">量能解读<span class="en-tag">推断 · 非事实</span></div>' +
       '<div class="en-min"><div class="en-mrow">无分时数据<span class="en-md">当日分钟线未取到，承接 / 量能异动 / 尾盘红绿都无法判断' +
@@ -9414,52 +9413,42 @@ function stkEnergyHtml(code) {
       (_vr == null ? '' : '<div class="en-mrow">日线参考 <b>' + _vr.toFixed(1) + '×</b><span class="en-md">最新一根相对近 5 日均量</span></div>') +
       '</div>';
   }
-  var m = (m0.prev && m0.prevDate) ? m0.prev : m0;
-  var day = (m0.prev && m0.prevDate) ? String(m0.prevDate).slice(5) : '今日';
 
-  // 洗盘日涨跌幅与量（日线取同一交易日）
-  var kl = stkParseKline(stkGlobalKline(String(code))) || [];
-  var kd = null, ki = -1;
-  for (var i = kl.length - 1; i > 0; i--) {
-    if (String(kl[i][0]).slice(5) === day) { kd = kl[i]; ki = i; break; }
-  }
-  var pct = (kd && ki > 0) ? (kd[2] / kl[ki - 1][2] - 1) * 100 : null;
-  var vr = (kd && ki > 4) ? (kd[5] / ((kl[ki - 1][5] + kl[ki - 2][5] + kl[ki - 3][5] + kl[ki - 4][5] + kl[ki - 5][5]) / 5)) : null;
+  // 选哪一天：今天涨停 → 看昨天（=洗盘日）；今天没涨停 → 今天就是正在洗的那一天
+  var usePrev = !!(m0.limitUp && m0.prev && m0.prevDate);
+  var m = usePrev ? m0.prev : m0;
 
-  // 性质：承接 / 温和换手 / 出货嫌疑
   var kind, kcls;
-  /* 主判据是「爆量之后有没有再创新低」（hold）：这是「承接」的直接证据；
-     收盘位置（站不站均价线）只在 hold 未判定时兜底——否则会出现
-     「爆量后创了新低」却写「有承接」的自相矛盾。 */
-  if (m.hold === true) {
-    kind = '有承接（主力在接）'; kcls = 'ok';
-  } else if (m.hold === false) {
-    kind = '承接失败（爆量后创新低）'; kcls = 'bad';
-  } else if (m.aboveVwap === true && (m.closeLowPct || 0) >= 1.5) {
-    kind = '偏承接（站上均价线）'; kcls = 'ok';
-  } else if (m.aboveVwap === false && (m.closeLowPct || 0) < 1.2) {
-    kind = '像出货（收在低位、破均价线）'; kcls = 'bad';
-  } else {
-    kind = '温和换手'; kcls = '';
-  }
+  if (m.hold === true) { kind = '有承接（主力在接）'; kcls = 'ok'; }
+  else if (m.hold === false) { kind = '承接失败（爆量后创新低）'; kcls = 'bad'; }
+  else if (m.aboveVwap === true && (m.closeLowPct || 0) >= 1.5) { kind = '偏承接（站上均价线）'; kcls = 'ok'; }
+  else if (m.aboveVwap === false && (m.closeLowPct || 0) < 1.2) { kind = '像出货（收在低位、破均价线）'; kcls = 'bad'; }
+  else { kind = '温和换手'; kcls = ''; }
   var pos = (m.aboveVwap === true) ? '收盘站上分时均价线'
           : (m.aboveVwap === false ? '全天压在均价线下方' : '均价线关系未取到');
 
+  // 只认红柱（买盘）爆量
+  var bs = m.bursts || [];
+  var redB = 0, greenB = 0, firstRed = '', redEarly = 0;
+  for (var bi = 0; bi < bs.length; bi++) {
+    if (bs[bi].dir === '红') {
+      redB++;
+      if (!firstRed) firstRed = bs[bi].t;
+      if (parseInt(String(bs[bi].t).replace(':', ''), 10) <= 1000) redEarly++;   // 含 10:00
+    } else { greenB++; }
+  }
   var rows = [];
-  rows.push('<div class="en-mrow en-mdate">洗盘日 ' + day +
-    (pct == null ? '' : ' · <b class="' + (pct >= 0 ? 'up' : 'down') + '">' + (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%</b>') +
-    (vr == null ? '' : '<span class="en-md">量 ' + vr.toFixed(1) + '×（近5日均）</span>') + '</div>');
   rows.push('<div class="en-mrow">判断 <b class="' + kcls + '">' + kind + '</b><span class="en-md">' + pos + '</span></div>');
-  var b = m.burstN || 0;
-  var b0 = (m.bursts && m.bursts[0]) ? (m.bursts[0].t + ' ' + m.bursts[0].dir) : '';
-  rows.push('<div class="en-mrow">分时量异动 <b class="' + (b ? 'ok' : '') + '">' + (b ? b + ' 次' : '无') + '</b>' +
-    (b ? '<span class="en-md">早盘 ' + m.earlyBurst + ' 次' + (b0 ? '，首个 ' + b0 : '') + '</span>' : '') + '</div>');
+  rows.push('<div class="en-mrow">分时量异动 <b class="' + (redB ? 'ok' : (greenB ? 'bad' : '')) + '">' +
+    (redB ? redB + ' 次' : '无') + '</b>' +
+    (redB ? '<span class="en-md">早盘 ' + redEarly + ' 次，首个 ' + (firstRed || '—') + ' 红</span>'
+          : (greenB ? '<span class="en-md">绿柱爆量 ' + greenB + ' 次属卖盘，不算买盘异动</span>' : '')) + '</div>');
   if (m.limitUp) {
-    rows.push('<div class="en-mrow">尾盘红柱 <b>—</b><span class="en-md">已封板，尾盘无成交</span></div>');
+    rows.push('<div class="en-mrow">尾盘红柱 <b>—</b><span class="en-md">该日涨停封板，尾盘无成交</span></div>');
   } else if (m.tailRedPct !== null && m.tailRedPct !== undefined) {
     var more = m.tailRedPct >= 50;
     rows.push('<div class="en-mrow">尾盘红柱 <b class="' + (more ? 'ok' : 'bad') + '">' + m.tailRedPct + '%</b>' +
-      '<span class="en-md">' + (more ? '红多' : '绿多') + '（红 ' + m.red + ' / 绿 ' + m.green + '）</span></div>');
+      '<span class="en-md">' + (more ? '尾盘红柱占多数' : '尾盘绿柱占多数') + '</span></div>');
   }
   return '<div class="en-h">量能解读<span class="en-tag">推断 · 非事实</span></div>' +
          '<div class="en-min">' + rows.join('') + '</div>';

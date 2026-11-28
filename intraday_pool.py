@@ -178,7 +178,20 @@ def collect_codes(D):
             if c:
                 codes.append(c)
                 names[c] = e.get("name") or ""
-    for key in ("strict", "loose"):
+    for key in ("strict", "loose", "watching"):
+        for e in cp.get(key) or []:
+            c = str(e.get("code") or "")
+            if c:
+                codes.append(c)
+                names[c] = e.get("name") or ""
+    # 2026-11-28 用户「很多标的都没分时」真正的根因：成功池的票当天已从确认/观察池移出，
+    # 这里从来没采过它们 → 弹窗「量能解读」只能显示「无分时数据」。成功池也要抓（判定主动/情绪要用）。
+    for key in ("success",):
+        for e in db.get(key) or []:
+            c = str(e.get("code") or "")
+            if c:
+                codes.append(c)
+                names[c] = e.get("name") or ""
         for e in cp.get(key) or []:
             c = str(e.get("code") or "")
             if c:
@@ -199,7 +212,8 @@ def collect_codes(D):
 def main():
     ap = argparse.ArgumentParser(description="池内标的分时承接体检")
     ap.add_argument("--write", action="store_true")
-    ap.add_argument("--limit", type=int, default=120)
+    ap.add_argument("--limit", type=int, default=300)
+    ap.add_argument("--if-fresh", action="store_true", help="当日已抓够就跳过，防止低上限的短跑覆盖长跑成果")
     a = ap.parse_args()
     if not a.write:
         print(__doc__)
@@ -208,6 +222,17 @@ def main():
                    .split("=", 1)[1].rstrip().rstrip(";"))
     codes, names = collect_codes(D)
     codes = codes[:a.limit]
+    # 2026-11-28 用户「很多标的都没分时」根因：deploy 链用 --limit 120 覆盖了 16:00 抓到的 260 份，
+    # 池子却有两百多只。① 上限提到 300；② 当日已抓够（≥80% 池内标的）就不重抓，避免覆盖。
+    try:
+        _old = json.load(open(OUT, encoding="utf-8"))
+        _od = (_old.get("asOf") or "")[:10]
+        _oc = set((_old.get("stocks") or {}).keys())
+        if a.if_fresh and _od == datetime.now().strftime("%Y-%m-%d") and len(_oc & set(codes)) >= int(len(codes) * 0.8):
+            print("[skip] 当日分时已覆盖 %d/%d，跳过重抓（--if-fresh）" % (len(_oc & set(codes)), len(codes)))
+            return 0
+    except Exception:
+        pass
     today = datetime.now().strftime("%Y-%m-%d")
     try:
         old = json.load(open(OUT, encoding="utf-8"))
@@ -216,12 +241,7 @@ def main():
     hist = old.get("history") or {}
     out = {"asOf": datetime.now().strftime("%Y-%m-%d %H:%M"), "stocks": {}, "miss": [],
            "history": hist}
-    for i, c in enumerate(codes, 1):
-        rows = fetch_minutes(c)
-        r = analyse(rows)
-        if not r:
-            out["miss"].append(c)
-            continue
+    def _store(c, r):
         r["name"] = names.get(c, "")
         r["date"] = today
         out["stocks"][c] = r
@@ -231,9 +251,32 @@ def main():
         if len(hist[c]) > 10:
             for d in sorted(hist[c])[:-10]:
                 hist[c].pop(d, None)
+
+    for i, c in enumerate(codes, 1):
+        r = analyse(fetch_minutes(c))
+        if not r:
+            out["miss"].append(c)
+            continue
+        _store(c, r)
         if i % 20 == 0:
             print("  ... %d/%d" % (i, len(codes)))
         time.sleep(0.6)           # 两家都限流：0.6s/只，120 只约 75 秒
+    # 2026-11-28：一次跑 188 只必被腾讯限流（实测缺 50 只，冷却后再抓就正常）。
+    # 冷却 25s 对缺失名单补抓一轮，仍失败才记 miss。
+    if out["miss"]:
+        print("[retry] 第一轮缺 %d 只，冷却 25s 后补抓" % len(out["miss"]))
+        time.sleep(25)
+        still = []
+        for c in list(out["miss"]):
+            r = analyse(fetch_minutes(c, retries=3))
+            if not r:
+                still.append(c)
+                time.sleep(1.0)
+                continue
+            _store(c, r)
+            time.sleep(0.8)
+        out["miss"] = still
+
     for c, days in hist.items():
         ds = sorted(days)
         prev = [d for d in ds if d != today]

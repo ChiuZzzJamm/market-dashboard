@@ -170,8 +170,6 @@ def _check_compact(code, h):
         return out
     if "推断" not in h:
         out.append("%s 缺「推断」标注——判断不能当事实发" % code)
-    if not re.search(r"洗盘日\s*\d{2}-\d{2}", h):
-        out.append("%s 没写是哪一天的洗盘（洗盘日 MM-DD）" % code)
     if not any(v in h for v in VERDICTS):
         out.append("%s 「判断」行没有落在五类结论里（有承接/承接失败/偏承接/温和换手/像出货）" % code)
     if "分时量异动" not in h:
@@ -184,7 +182,9 @@ def _check_compact(code, h):
         b = re.search(r"尾盘红柱\s*<b[^>]*>(\d+)%", h)
         data = _intraday_of(code)
         if data:
-            n_exp = data.get("burstN") or 0
+            # 2026-11-28 用户：只认红柱（买盘）爆量，绿柱卖盘不算异动
+            _bs = data.get("bursts") or []
+            n_exp = sum(1 for x in _bs if x.get("dir") == "红")
             if m and int(m.group(1)) != n_exp:
                 out.append("%s 爆量次数 页面 %s / 数据 %d" % (code, m.group(1), n_exp))
             if b and data.get("tailRedPct") is not None and int(b.group(1)) != int(data["tailRedPct"]):
