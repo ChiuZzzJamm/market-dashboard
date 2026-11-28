@@ -83,9 +83,20 @@ def main():
         "破前低": stats(rows, lambda r: "破前低" if r.get("brokePreLow") else "未破前低"),
     }
     print("=" * 66)
+    # 2026-11-28：日志里现在有两种来源——user（用户当面给的反包成功）与 auto（脚本抓的）。
+    # 口径不同不能混算：user 只包含「用户挑出来的成功票」，auto 才是全池。分栏打印，避免互相污染。
+    _src = {}
+    for r in rows:
+        _src.setdefault(r.get("source") or "未标", []).append(r)
+    print("来源分布：" + "｜".join("%s %d 例（成功 %d）"
+          % (k, len(v), sum(1 for x in v if x["status"] == "成功")) for k, v in _src.items()))
     print("断板反包 · 规则体检（已结算 %d 例：成功 %d / 失败 %d）"
           % (len(rows), sum(1 for r in rows if r["status"] == "成功"),
              sum(1 for r in rows if r["status"] != "成功")))
+    _user = [r for r in rows if (r.get("source") or "") == "user"]
+    if _user:
+        print("\n[仅用户样本 %d 例] " % len(_user) + " ｜ ".join(
+            "%s 胜率 %s%%" % (k, v["rate"]) for k, v in stats(_user, lambda r: "全部").items()))
     for g, bs in groups.items():
         print("\n[%s]" % g)
         for k in sorted(bs, key=lambda x: (-bs[x]["n"])):

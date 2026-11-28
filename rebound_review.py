@@ -55,6 +55,12 @@ def features(kl, code, rebound_date):
     c = [r[2] for r in pre]
     lo = [r[4] for r in pre]
     v = [r[5] for r in pre]
+    # 2026-11-28：自动登记 57 只后，「反包量」均值飙到 7785% —— 原因是不同来源的成交量单位不一致
+    # （腾讯 kline 是手、本地缓存是股，混在一只票里就会出现 100 倍误差）。
+    # 统一归一到「股」：中位量 < 5e6 认为单位是手，×100。
+    _med = sorted(v)[len(v) // 2] if v else 0
+    if 0 < _med < 5e6:
+        v = [x * 100 for x in v]
     n = len(c)
     d = -1
     # 2026-11-27：600162 香江控股 = 11-18 涨停(量×1.92) → 11-19 **缩量**断板(0.92×) → 洗 5 日 → 11-27 涨停。
@@ -74,6 +80,14 @@ def features(kl, code, rebound_date):
     wash_low = min(lo[d + 1:]) if seg else None
     today = [r for r in rows if str(r[0]) == rebound_date]
     reb_vol = today[0][5] if today else None
+    # 反包日那根 bar 可能来自另一路数据（16:00 内嵌是手、按需补抓的缓存是股），
+    # 和断板日差 100 倍时会把「反包量」算成 16909%。按中位量做双向校验后归一。
+    if reb_vol and v:
+        _m = sorted(v)[len(v) // 2]
+        if _m and reb_vol < _m / 20:
+            reb_vol *= 100
+        elif _m and reb_vol > _m * 20:
+            reb_vol /= 100
     return {
         "ok": True,
         "ztDate": str(pre[d - 1][0]),
@@ -132,7 +146,13 @@ def analyze(kl, code):
     for k in range(d + 1, n):
         if c[k] / c[k - 1] - 1 >= 0.098:
             info["reboundDate"] = str(bars[k][0])
-            info["reboundVolPct"] = round(v[k] / v[d] * 100)
+            _rv, _bv = v[k], v[d]
+            if _bv and _rv:
+                if _rv < _bv / 20:
+                    _rv *= 100
+                elif _rv > _bv * 20:
+                    _rv /= 100
+            info["reboundVolPct"] = round(_rv / _bv * 100)
             return info, "ok", "断板后 %d 日反包" % (k - d)
     # 未反包：看破位与超期
     if seg_low is not None and seg_low < pre_low * BREAK_TOL and c[n - 1] < pre_low:
@@ -140,6 +160,35 @@ def analyze(kl, code):
     if len(seg) >= FAIL_MAX_WASH:
         return info, "fail", "超 %d 日未反包（已洗 %d 日）" % (FAIL_MAX_WASH, len(seg))
     return info, "pending", "洗盘中（第 %d 日）" % len(seg)
+
+
+def harvest_ok(D, log):
+    """把「脚本自己抓到的反包成功」也登进台账（2026-11-28 用户问「会不会搞混乱」）。
+
+    现状：`--harvest-fail` 自动收失败样本，成功样本却只有用户手动给的几条 →
+    台账里「成功」总是少、「失败」总是全，统计天然偏悲观；且用户手给的票若脚本当天也抓到，
+    两条链路各存一份，容易让人以为是重复。
+    去重键统一用 (code, date=反包日)：手动给过的（source=user）优先，不再重复登记。
+    """
+    today = (D.get("ashare") or {}).get("tradeDate") or ""
+    if not today:
+        return 0
+    have = {(str(it.get("code")), str(it.get("date"))) for it in log["items"]}
+    added = 0
+    for node, pool in (("duanban", "断板反包"), ("chenPool", "陈学长")):
+        for e in (D.get(node) or {}).get("success") or []:
+            if not isinstance(e, dict):
+                continue
+            c = str(e.get("code") or "")
+            d = str(e.get("successDate") or today)
+            if not c or (c, d) in have:
+                continue
+            log["items"].append({"code": c, "name": e.get("name") or "", "date": d,
+                                 "pool": pool, "status": "成功", "source": "auto",
+                                 "note": "脚本判定当日 ≥+7%%（成功池）自动登记"})
+            have.add((c, d))
+            added += 1
+    return added
 
 
 def harvest_fail(D, log):
@@ -223,6 +272,12 @@ def fill_names_and_today(rows, kl):
             if str(b[0]) == str(r.get("breakDate")):
                 bvol = float(b[5])
         if bvol:
+            # 快照量已换算成「股」（×100），而日线断板日的量可能是手 → 两边差 100 倍，
+            # 会把「反包量」写成 5438%（实测）。这里按数量级对齐后再算。
+            if x["vol"] and bvol and bvol < x["vol"] / 20:
+                bvol *= 100
+            elif x["vol"] and bvol > x["vol"] * 20:
+                bvol /= 100
             r["reboundVolPct"] = round(x["vol"] / bvol * 100)
         n += 1
     return n
@@ -264,6 +319,7 @@ def main():
     ap.add_argument("--add", default="")
     ap.add_argument("--pool", default="断板反包")
     ap.add_argument("--harvest-fail", action="store_true")
+    ap.add_argument("--harvest-ok", action="store_true", help="自动登记脚本抓到的反包成功样本")
     a = ap.parse_args()
     log = load_log()
 
@@ -289,6 +345,11 @@ def main():
         return 0
 
     D = load_data()
+    if a.harvest_ok:
+        _n = harvest_ok(D, log)
+        print("[harvest-ok] 自动登记成功样本 %d 条" % _n)
+        log["updatedAt"] = datetime.now().strftime("%Y-%m-%d")
+        json.dump(log, open(LOG, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     if a.harvest_fail:
         harvest_fail(D, log)
         log = load_log()
@@ -339,7 +400,10 @@ def main():
                       if ok else None),
         "failBrokeRate": (round(sum(1 for r in fail if r.get("brokePreLow")) / len(fail) * 100)
                           if fail else None),
-        "rows": sorted(rows, key=lambda r: (r.get("date") or "", r.get("code") or ""), reverse=True)[:60],
+        # 2026-11-28：这里原来硬切 [:60]，把更早的「失败」样本全切掉了 →
+        # learn_ledger 读到的 rows 只剩最新 60 条成功，统计直接变成「100% 胜率」。
+        # 页面只用聚合值（okN/failN/avg），行数不设上限；要展示再让前端自己切。
+        "rows": sorted(rows, key=lambda r: (r.get("date") or "", r.get("code") or ""), reverse=True),
         "note": ("成功样本均值为「成功组」口径；失败组从 failPool 补登记后才有值。"
                  "只有成功样本时会系统性高估——别拿这份均值当门槛。"),
     }
