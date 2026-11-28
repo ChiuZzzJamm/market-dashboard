@@ -113,6 +113,26 @@ def main():
     show("红柱爆量次数", lambda r: ("0 次" if not r["redBurst"] else
                                   "1 次" if r["redBurst"] == 1 else "≥2 次"),
          ["0 次", "1 次", "≥2 次"])
+    # ---- 成功样本内部的分层（复盘侧）：主动 vs 情绪、以及各形态计数 ----
+    print("\n[成功样本分层 · 复盘侧]")
+    cnt = {}
+    for node in ("duanban", "chenPool"):
+        for e in (D.get(node) or {}).get("success") or []:
+            if not isinstance(e, dict):
+                continue
+            q = e.get("quality") or {}
+            k = q.get("type") or "未分层"
+            w = q.get("wash") or {}
+            key = k + ("（洗盘日" + w.get("tag") + "）" if w.get("tag") else "")
+            cnt[key] = cnt.get(key, 0) + 1
+    if cnt:
+        for k, v in sorted(cnt.items(), key=lambda x: -x[1]):
+            print("  %-28s %d 只" % (k, v))
+        print("  说明：分层只对**成功样本**有意义（失败样本没有「反包日」可分层），"
+              "它回答「哪些成功更值得学」，不参与次日预测。")
+    else:
+        print("  暂无（成功池还没有 quality 字段）")
+
     print("\n注意：这是**同日横截面**证据（n 小、且只有一天），不能直接当权重。"
           "连续两日同向且样本 ≥30 再改权重，改完在 24.210 记账。")
     return 0

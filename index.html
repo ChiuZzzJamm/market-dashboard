@@ -818,6 +818,13 @@
             background: var(--accent); color: #fff; font-size: var(--fs-xs); cursor: pointer; }
   .rb-btn.ghost { background: transparent; color: var(--accent-deep); }
   .rb-stat { font-size: var(--fs-xs); color: var(--ink2); margin-left: auto; }
+  /* 政策信号台账（2026-11-28） */
+  .pl-row { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-top: 1px dashed var(--line); }
+  .pl-d { width: 44px; flex: none; font-size: var(--fs-xs); color: var(--ink2); padding-top: 2px; }
+  .pl-b { flex: 1; min-width: 0; }
+  .pl-b b { font-size: var(--fs-sm); }
+  .pl-t { font-size: var(--fs-sm); color: var(--ink); line-height: 1.5; }
+  .pl-s { flex: none; font-size: var(--fs-xs); text-align: right; min-width: 96px; }
 
   @media (max-width: 700px), (max-height: 460px) {
     :root { --float-x: 12px; }
@@ -7985,6 +7992,40 @@ function renderLedgerDiag(dg) {
   return h;
 }
 
+function renderPolicyLedger() {
+  /* 2026-11-28 用户：「台账页面没看到政策信号的台账」——policy_ledger.py 已落数据，
+     但页面从来没有它的位置。这里补一块：命中率 + 最近信号逐条结算结果。 */
+  var box = document.getElementById('policy-ledger');
+  if (!box) return;
+  fetch('policy_ledger.json?t=' + Date.now()).then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (j) {
+      if (!j || !(j.items || []).length) {
+        box.innerHTML = '<div class="db-empty">暂无政策信号（16:00 数据步跑 policy_ledger.py 后出现）</div>';
+        return;
+      }
+      var items = (j.items || []).slice().sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+      var settled = items.filter(function (x) { return x.settle; });
+      var ok = settled.filter(function (x) { return x.settle.hit; }).length;
+      var head = '政策信号台账<span class="rb-stat" style="margin-left:10px">'
+        + (settled.length ? ('已结算 ' + settled.length + ' 条 · 命中 ' + ok + ' 条（'
+                            + Math.round(ok / settled.length * 100) + '%）') : '待次日结算') + '</span>';
+      var rows = items.slice(0, 12).map(function (x) {
+        var st = x.settle;
+        var tag = st ? ('<b class="' + (st.hit ? 'up' : 'down') + '">' + (st.hit ? '命中' : '落空')
+                       + ' ' + (st.avgPct > 0 ? '+' : '') + st.avgPct + '%</b>（' + st.date.slice(5) + '·'
+                       + st.n + ' 板块）')
+                     : '<span class="en-md">待结算</span>';
+        return '<div class="pl-row"><div class="pl-d">' + esc(String(x.date).slice(5)) + '</div>'
+          + '<div class="pl-b"><b>' + esc(x.tier || '—') + ' ' + esc(x.score == null ? '' : x.score) + '</b>'
+          + '<span class="en-md">' + esc(x.cls || '') + '</span><div class="pl-t">' + esc(x.title || '') + '</div></div>'
+          + '<div class="pl-s">' + tag + '</div></div>';
+      }).join('');
+      box.innerHTML = '<h2 class="td-h2">' + head + '</h2>' + rows
+        + '<div class="en-md" style="margin-top:6px">结算口径：信号发布后下一个交易日的「点名板块平均涨幅」，>0 记命中。'
+        + '政策价值不在写得多漂亮，在资金第二天认不认。</div>';
+    }).catch(function () { box.innerHTML = ''; });
+}
+
 function renderScoreView() {
   var D = window.DASHBOARD_DATA || {};
   var box = document.getElementById('score-body');
@@ -7994,6 +8035,7 @@ function renderScoreView() {
   if (dg) {
     body += '<div class="card"><h2 class="td-h2">台账诊断 · 闭环</h2>' + renderLedgerDiag(dg) + '</div>';
   }
+  body += '<div class="card" id="policy-ledger-wrap"><div id="policy-ledger"></div></div>';
   body += renderSignalPerf();
   if (!body) {
     body = '<div class="card"><h2 class="td-h2">指标复盘</h2>' +
@@ -8039,6 +8081,7 @@ function renderScoreView() {
     var n = ((D.forecastScore || {}).sector || {}).n;
     bd.textContent = n ? ('复盘 ' + n + ' 条') : '';
   }
+  renderPolicyLedger();
 }
 function openScore() {
   if (location.hash !== '#score') history.pushState(null, '', '#score');
@@ -8151,7 +8194,7 @@ window.addEventListener('popstate', function () {
   if (openGn) renderGnews();
   // R100z162：🌟 复盘台账页
   document.body.classList.toggle('score-open', openSc);
-  if (openSc) renderScoreView();
+  if (openSc) { renderScoreView(); renderPolicyLedger(); }
 });
 /* R100z114（用户 2026-10-10）：政策信号解码卡点击 → 跳转到对应新闻条目。
    依据：enrich_policy.py 的 ps.title 就是五节要闻的原始 title（同源精确相等），
