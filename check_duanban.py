@@ -1360,18 +1360,10 @@ def check_form(code, kline, zt_date_iso):
         return None
     # 不破 T 日低点（容差 2%：收盘 < 低点×LOW_TOL 才算破位）
     # R100z52：原注释写「容差 0.5%」是过时口径——实现一直是 ×0.98（2%）。改注释不改实现。
-    lowT = float(kline[iT].get("low") or 0)
-    if lowT > 0 and min(C(i) for i in range(i1, n)) < lowT * LOW_TOL:
-        return None
-    # 不破 MA5（最新收盘 ≥ MA5×MA5_TOL）
-    # R100z52：原注释写「≥ MA5×0.99」同样过时，实现一直是 ×0.97（容差 3%）。
-    # 口径统一提到模块级常量，避免注释再和实现分家。
-    ma5 = sum(C(i) for i in range(n - 5, n)) / 5.0
-    if C(n - 1) < ma5 * MA5_TOL:
-        return None
-    # ---- 距 MA5 的最小溢价（见 CAP_MIN 上方注释 ①）----
-    if ma5 > 0 and (C(n - 1) / ma5 - 1) * 100 < MA5_GAP_MIN:
-        return None
+    # 2026-11-28 全市场回测（150,943 样本）后的口径修正，三条都**从否决位改成打分位**：
+    #   ① 破 T 日低点：破 39.6% vs 未破 38.6%，无区分度 → 只记录
+    #   ② 不破 MA5 / 距 MA5 ≥+2%：42.7% vs 37.2%（+5.5pp），有效但不必否决 → 进排序分
+    # 破前低 / 距 MA5 不再在这一层判定——统一由 eval_stage 记录并进排序分（见 eval_stage 注释）。
     # ---- 启动前 20 日涨幅上限 ----
     # 取 T 日**之前**的 20 日（iT-21 → iT-1），不含涨停日本身，
     # 否则涨停那 10% 会把所有票都顶到阈值以上。
@@ -1511,6 +1503,7 @@ def eval_stage(code, kline, zt_date_iso):
         thin = True                     # 缩量断板
     lowT = float(kline[iT].get("low") or 0)
     pit = False
+    pit_deep = False          # 破位且未收回（2026-11-28 起不再否决，只降权）
     if lowT > 0:
         broke = [i for i in range(i1, n) if C(i) < lowT * 0.98]
         if broke:
@@ -1521,7 +1514,9 @@ def eval_stage(code, kline, zt_date_iso):
             if C(n - 1) >= lowT * 0.98 and (n - 1 - last) <= 2:
                 pit = True
             else:
-                return None
+                # 2026-11-28 回测：破位未收回 39.6% vs 未破 38.6%，**没有区分度**
+                # → 不再一票否决，改为记录 + 排序降权（实测比「凭感觉剔除」诚实）
+                pit_deep = True
 
     zt_md = f"{zt_date_iso[5:7]}/{zt_date_iso[8:10]}"
 
@@ -1566,16 +1561,24 @@ def eval_stage(code, kline, zt_date_iso):
                 "stage": "形态确认·%s" % tag,
                 "form": (f"{zt_md}涨停→次{r1:.1f}倍量断板→已缩量{_deep}·洗{days_ago - 1}日"
                          f"（距MA5 {gap:+.2f}%）"),
-                "minVolPct": _mvp,
+                "minVolPct": _mvp, "ma5gap": round(gap, 2),
+                "brokeLow": bool(pit or pit_deep),
                 "days_ago": days_ago}
     if form_full and not pit and not huge:
+        _m5 = sum(C(i) for i in range(n - 5, n)) / 5.0
+        _gap = ((C(n - 1) / _m5 - 1) * 100) if _m5 > 0 else None
+        _mv2 = [V(i) for i in range(iT + 2, n)]
         return {"pool": "confirmed", "stage": "全流程达标",
-                "form": form_full, "days_ago": days_ago}
+                "form": form_full, "days_ago": days_ago,
+                "minVolPct": (round(min(_mv2) / V(i1) * 100) if _mv2 and V(i1) else None),
+                "ma5gap": (round(_gap, 2) if _gap is not None else None),
+                "brokeLow": bool(pit_deep)}
     if form_full and (pit or huge):
         # 形态全达标但带瑕疵：挖坑需要再看一根，巨量需要看承接 → 不进确认池
         tag = "挖坑已收回" if pit else "巨量待确认"
         return {"pool": "watch", "stage": tag,
                 "form": form_full + ("（曾破T日低点·已在2日内收回）" if pit else "（断板量比>3.5）"),
+                "brokeLow": bool(pit or pit_deep),
                 "days_ago": days_ago}
     if days_ago >= 5:
         # 11-27 复盘：600162 洗 5 日才反包（成功）。原来写「明日不反包即出」是过硬的判断，
@@ -2610,7 +2613,23 @@ def pre_batch(entries, ctx):
         # 加分档：≥4 板龙头 +12 / 3 板 +9 / 2 板 +6 / 仅首板 +2 / 无连板 0
         lbonus = (12.0 if r["lsc"] >= 100 else (9.0 if r["lsc"] >= 85 else
                   (6.0 if r["lsc"] >= 70 else (2.0 if r["lsc"] >= 50 else 0.0))))
-        total = round(min(100.0, THEME_W * theme + POP_W * pop + lbonus), 1)
+        # 2026-11-28 回测（150,943 样本）落地的**形态修正分**：只调排序、不改进池资格。
+        #   洗盘最低量 <50% → −12 / 50~70 → +8 / ≥70 → +20（最强单因子，44.3% vs 35.9%）
+        #   距 MA5 ≥2% → +10 / 0~2 → +4 / <0 → −6（42.7% vs 37.2%）
+        #   洗盘 ≤2 日 → +8 / 3~4 日 → +2 / ≥5 日 → −10（40.3% 递减到 37.8%）
+        #   破前低 → 不扣分（实测无区分度），只记录
+        _q = 50.0
+        _mv = r["e"].get("minVolPct")
+        if _mv is not None:
+            _q += 20.0 if _mv >= 70 else (8.0 if _mv >= 50 else -12.0)
+        _g = r["e"].get("ma5gap")
+        if _g is not None:
+            _q += 10.0 if _g >= MA5_GAP_MIN else (4.0 if _g >= 0 else -6.0)
+        _d = r["e"].get("days_ago") or 0
+        if _d:
+            _q += 8.0 if _d <= 2 else (2.0 if _d <= 4 else -10.0)
+        _adj = round((max(0.0, min(100.0, _q)) - 50.0) * 0.2, 1)      # ±10 分
+        total = round(min(100.0, THEME_W * theme + POP_W * pop + lbonus + _adj), 1)
         r["e"]["pre"] = {
             "theme": {"label": lab or "—", "day": r["life"].get("day"), "score": round(theme, 1),
                       "why": r["life"].get("why") or "", "fake": r["life"].get("fake")},
@@ -2653,10 +2672,14 @@ def pre_batch(entries, ctx):
                      "why": m.get("why"),
                      "gate": ("block" if m["label"] in ("退潮", "冰点") else "open")},
             "total": total, "tier": "",   # tier 在下面按池内分位给
-            "why": "题材%s(%.0f)×55%% + 人气%.0f×45%%%s = %.0f（情绪%s 作闸门）"
+            "why": "题材%s(%.0f)×55%% + 人气%.0f×45%%%s%s = %.0f（情绪%s 作闸门）"
                    % (lab or "—", theme, pop,
                       (" + 连板%s%+.0f" % (r["llab"], lbonus)) if lbonus else "",
+                      (" + 形态修正%+.0f" % _adj) if _adj else "",
                       total, m["label"]),
+            "form": {"q": round(max(0.0, min(100.0, _q)), 0), "adj": _adj,
+                     "minVolPct": _mv, "ma5gap": _g, "daysAgo": _d,
+                     "brokeLow": bool(r["e"].get("brokeLow"))},
         }
     # tier 用池内分位：普跌日绝对分都低，按绝对值分档会全员「弱」，看不出差别
     totals = sorted([r["e"]["pre"]["total"] for r in rows], reverse=True)
@@ -2817,6 +2840,11 @@ def build_module(pairs, D):
         entries.append({"code": p["code"], "name": p["name"],
                         "sector": sector, "ztDate": p["ztDate"],
                         "stage": p["stage_info"]["stage"], "form": p["stage_info"]["form"],
+                        # 2026-11-28：形态三因子带进条目，排序分要用（minVolPct/ma5gap/days_ago）
+                        "minVolPct": p["stage_info"].get("minVolPct"),
+                        "ma5gap": p["stage_info"].get("ma5gap"),
+                        "brokeLow": p["stage_info"].get("brokeLow"),
+                        "days_ago": p["stage_info"].get("days_ago"),
                         "pct": pct, "boardPctToday": bpt, "boardPctZt": bpz, "bkCode": bk_code,
                         "probability": None, "probNote": "",
                         "kline": bars})

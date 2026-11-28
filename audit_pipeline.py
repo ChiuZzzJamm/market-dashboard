@@ -1377,8 +1377,14 @@ def g12_deadlinks(r):
             srcs[f] = open(os.path.join(HERE, f), encoding="utf-8", errors="ignore").read()
         except Exception:                                    # noqa: BLE001
             pass
+    # 2026-11-28：手工/按需触发的分析脚本不算孤儿，但必须写明用途（否则就是真孤儿）
+    ORPHAN_OK = {
+        "newrules_bt.py": "新口径全市场回测，手工触发；改判据前先看它的分桶结果",
+    }
     orphan = []
     for f in pyfiles:
+        if f in ORPHAN_OK:
+            continue
         mod = f[:-3]
         if mod in allp:
             continue                                  # 自动化 prompt 直接点名
