@@ -1232,7 +1232,7 @@
   .en-tag { font-size: var(--fs-xs); font-weight: 400; color: var(--ink2); border: 1px solid var(--line);
     border-radius: 3px; padding: 0 4px; margin-left: 6px; vertical-align: 2px; }
   .en-min { margin-top: 6px; font-size: var(--fs-sm); color: var(--ink2); line-height: 1.6; }
-  /* 2026-11-28：量能解读只留三件事（承接 / 盘中量异动 / 尾盘红柱），其余收进「展开明细」 */
+  /* 2026-11-28：量能解读只留四行判断（洗盘日 / 判断 / 分时量异动 / 尾盘红柱），不写过程 */
   .en-mrow { display: flex; align-items: baseline; gap: 8px; padding: 2px 0; flex-wrap: wrap; }
   .en-mrow > b { font-weight: 800; color: var(--ink); min-width: 4.2em; }
   .en-mdate { font-size: var(--fs-xs); opacity: .8; }
@@ -9352,7 +9352,7 @@ function stkMinLine(code) {
   if (!m0) return '';
   /* 2026-11-28 用户：「量能解读提炼重点即可，我实际只在意三件事——
      洗盘当天有没有承接、盘中分时量有没有异动、尾盘（临近收盘 5-10 分钟）红柱是否多于绿柱。」
-     所以这里只出三行，日线推演全部收进「展开明细」。 */
+     所以这里只出四行判断，日线推演一律不写。 */
   var m = (m0.prev && m0.prevDate) ? m0.prev : m0;
   var day = (m0.prev && m0.prevDate) ? String(m0.prevDate).slice(5) : '今日';
   var rows = [];
