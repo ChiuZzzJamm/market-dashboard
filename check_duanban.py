@@ -1557,10 +1557,16 @@ def eval_stage(code, kline, zt_date_iso):
         ma5 = sum(C(i) for i in range(n - 5, n)) / 5.0
         gap = ((C(n - 1) / ma5 - 1) * 100) if ma5 > 0 else -99.0
         tag = "已脱离MA5" if gap >= MA5_GAP_MIN else "待启动"
+        # 2026-11-28 台账：洗盘期最低量 <断板量 50% 的样本胜率只有 12%（16 例），
+        # 50~70% 是 56%、≥70% 是 78% —— 缩得过头通常意味着资金已经撤了，只标不剔。
+        _mv = [V(i) for i in range(iT + 2, n)]
+        _mvp = round(min(_mv) / V(i1) * 100) if _mv and V(i1) else None
+        _deep = "·缩量过深(历史12%)" if (_mvp is not None and _mvp < 50) else ""
         return {"pool": "confirmed",
                 "stage": "形态确认·%s" % tag,
-                "form": (f"{zt_md}涨停→次{r1:.1f}倍量断板→已缩量·洗{days_ago - 1}日"
+                "form": (f"{zt_md}涨停→次{r1:.1f}倍量断板→已缩量{_deep}·洗{days_ago - 1}日"
                          f"（距MA5 {gap:+.2f}%）"),
+                "minVolPct": _mvp,
                 "days_ago": days_ago}
     if form_full and not pit and not huge:
         return {"pool": "confirmed", "stage": "全流程达标",
@@ -1575,7 +1581,7 @@ def eval_stage(code, kline, zt_date_iso):
         # 11-27 复盘：600162 洗 5 日才反包（成功）。原来写「明日不反包即出」是过硬的判断，
         # 改成「超期观察」——继续留在池里，只是排在后面，不再下逐客令。
         return {"pool": "watch", "stage": "超期观察",
-                "form": f"{zt_md}涨停→次{r1:.1f}倍量断板→已洗 {days_ago} 日（超 4 日，仍可观察）",
+                "form": f"{zt_md}涨停→次{r1:.1f}倍量断板→已洗 {days_ago} 日（历史 1/17 成功，仅作对照）",
                 "days_ago": days_ago}
     if days_ago == 1:
         return {"pool": "watch", "stage": "待缩量",
