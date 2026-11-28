@@ -318,6 +318,10 @@ echo "🏷️  标注要闻题材与池内候选（news_theme.py）..."
 echo "📚 学习台账（learn_ledger.py --write）..."
 "$PY" learn_ledger.py --write 2>&1 | tail -14 || echo "[warn] 学习台账失败（不影响部署）"
 
+# 政策信号台账：记录当日信号 + 板块涨幅快照，次日结算命中率（2026-11-28 用户）
+echo "🏛 政策信号台账（policy_ledger.py --write）..."
+"$PY" policy_ledger.py --write 2>&1 | tail -6 || echo "[warn] 政策台账失败（不影响部署）"
+
 # 反包质量：成功池拆「主动/情绪」（2026-11-28 用户：看量能关系与斜率，不看封板时间）
 echo "🎯 反包质量判定（rebound_quality.py --write）..."
 "$PY" rebound_quality.py --write --limit 90 || echo "[warn] 反包质量判定失败（不影响部署，卡片少一枚标记）"
