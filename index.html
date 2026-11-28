@@ -6474,7 +6474,6 @@ function lbMoodHtml(db) {
   return h + '</div>';
 }
 
-/* 明日盯谁：活题材 + 连板龙头所在板块，每题材最多 2 只，带触发条件。 */
 function dbPoolHtml(title, cls, sub, list, done, poolKey) {
   var h = '<div class="db-pool ' + cls + '"><h2>' + esc(title) + ' · ' + list.length + ' 只</h2>' +
     '<div class="db-sub">' + esc(sub) + '</div>';
@@ -9361,39 +9360,6 @@ function stkEnergyInPool(code) {
 
 /* 分时承接一行（2026-11-26 用户：「加强关注分时线上的爆量异动，尾盘红柱多要加强观察」）。
    数据来自 intraday_pool.py；没有就整行不渲染——不许用日线量能冒充分时。 */
-function stkMinLine(code) {
-  var m0 = (window.__stkMin || {})[code];
-  if (!m0) return '';
-  /* 2026-11-28 用户：「量能解读提炼重点即可，我实际只在意三件事——
-     洗盘当天有没有承接、盘中分时量有没有异动、尾盘（临近收盘 5-10 分钟）红柱是否多于绿柱。」
-     所以这里只出四行判断，日线推演一律不写。 */
-  var m = (m0.prev && m0.prevDate) ? m0.prev : m0;
-  var day = (m0.prev && m0.prevDate) ? String(m0.prevDate).slice(5) : '今日';
-  var rows = [];
-  rows.push('<div class="en-mrow en-mdate">洗盘日 <b>' + day + '</b></div>');
-  var holdTxt, holdCls;
-  if (m.hold === true) { holdTxt = '有承接'; holdCls = 'ok'; }
-  else if (m.hold === false) { holdTxt = '无承接'; holdCls = 'bad'; }
-  else if (m.limitUp) { holdTxt = '已封板（不适用）'; holdCls = ''; }
-  else { holdTxt = '未判定'; holdCls = ''; }
-  rows.push('<div class="en-mrow">承接 <b class="' + holdCls + '">' + holdTxt + '</b>' +
-    (m.hold === true ? '<span class="en-md">爆量后 15 分钟未创新低</span>'
-     : m.hold === false ? '<span class="en-md">爆量后 15 分钟创了新低</span>' : '') + '</div>');
-  var b = m.burstN || 0;
-  var b0 = (m.bursts && m.bursts[0]) ? (m.bursts[0].t + ' ' + m.bursts[0].dir) : '';
-  rows.push('<div class="en-mrow">盘中量异动 <b class="' + (b ? 'ok' : 'bad') + '">' +
-    (b ? b + ' 次' : '无') + '</b>' +
-    (b ? '<span class="en-md">早盘 ' + m.earlyBurst + ' 次' + (b0 ? '，首个 ' + b0 : '') + '</span>' : '') + '</div>');
-  if (m.limitUp) {
-    rows.push('<div class="en-mrow">尾盘红柱 <b>—</b><span class="en-md">已封板，尾盘无成交</span></div>');
-  } else if (m.tailRedPct !== null && m.tailRedPct !== undefined) {
-    var more = m.tailRedPct >= 50;
-    rows.push('<div class="en-mrow">尾盘红柱 <b class="' + (more ? 'ok' : 'bad') + '">' + m.tailRedPct + '%</b>' +
-      '<span class="en-md">红 ' + m.red + ' / 绿 ' + m.green + (more ? '，红多' : '，绿多') + '</span></div>');
-  }
-  return '<div class="en-min">' + rows.join('') + '</div>';
-}
-
 function stkEnergyHtml(code) {
   /* 2026-11-28 用户四条：
      ① 「哪里封板了？」——选错日子：这只票今天在洗盘（断板第 1 天），却拿昨天涨停日当洗盘日，
