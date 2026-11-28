@@ -367,7 +367,7 @@ def main():
     if a.fill_fields:
         # 2026-11-28：均价线明细（abovePct/breakN/…）是新增字段，老条目没有 → 只重抓这批。
         cur = json.load(open(OUT, encoding="utf-8"))
-        todo = [c for c, v in (cur.get("stocks") or {}).items() if "abovePct" not in v or "absorb" not in v]
+        todo = [c for c, v in (cur.get("stocks") or {}).items() if "abovePct" not in v or not v.get("absorb")]
         print("[fields] 需补 %d 只" % len(todo))
         got = 0
         for c in todo:

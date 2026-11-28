@@ -32,7 +32,9 @@ NEED = ["esc", "escAttr", "stkParseKline", "stkGlobalKline", "stkEnergyInPool", 
 # kind: structure=有断板结构 / multi=多连板 / outflow=必须判出货 / degrade=在池无结构 / silent=不显示
 CASES = {"603536": "structure", "600865": "structure", "600207": "structure",
          "001360": "multi", "600156": "structure", "600778": "shorts", "600519": "silent",
-         "000533": "structure"}
+         "000533": "structure",
+    # 2026-11-28：加三个**当前有分时**的样本，否则闸门只跑降级分支（空转）
+    "603324": "minute", "000700": "minute", "000636": "minute"}
 
 # R100z345：旧断言「600156 最近放量下跌 → 必须判出货」是错的，已删。
 # 它把「倍量阴 + 之后一天的回落」当成出货证据，而这就是断板反包形态本身。
@@ -132,6 +134,7 @@ const window = {};
 const ctx = vm.createContext({ document, window, console, Math, Number, String, isFinite, JSON, parseFloat, isNaN });
 vm.runInContext(fs.readFileSync(__SRC__, 'utf8'), ctx);   // data.js
 vm.runInContext(fs.readFileSync(__FNS__, 'utf8'), ctx);   // 从 index.html 抠出来的函数
+window.__stkMin = __MINS__;   // 2026-11-28：不注入分时 → 所有样本走「无分时」降级，闸门等于空转
 const out = {};
 for (const code of __CODES__) {
   try { out[code] = vm.runInContext('stkEnergyHtml', ctx)(code) || ''; }
@@ -206,6 +209,21 @@ def _intraday_of(code):
         return {}
 
 
+def build_mins(codes):
+    """把 intraday_minute.json 里真实的分时摘要喂进渲染，闸门才有数字可对账。"""
+    import json as _j
+    try:
+        st = _j.load(open(os.path.join(HERE, "intraday_minute.json"), encoding="utf-8")).get("stocks") or {}
+    except Exception:                                            # noqa: BLE001
+        return {}
+    out = {}
+    for c in codes:
+        m = st.get(str(c))
+        if m:
+            out[str(c)] = m
+    return out
+
+
 def main():
     if "--help" in sys.argv:
         print(__doc__)
@@ -227,11 +245,13 @@ def main():
     fns = os.path.join(tdir, "mdashboard_energy_funcs.js")
     run = os.path.join(tdir, "mdashboard_energy_run.js")
     open(fns, "w", encoding="utf-8").write("\n".join(parts))
+    MINS = build_mins(CASES.keys())
     open(run, "w", encoding="utf-8").write(
         NODE.replace("__SRC__", repr(DATA))
             .replace("__FNS__", repr(fns))
             .replace("__CODES__", json.dumps(list(CASES)))
-            .replace("__CUTS__", json.dumps(CUTS)))
+            .replace("__CUTS__", json.dumps(CUTS))
+            .replace("__MINS__", json.dumps(MINS, ensure_ascii=False)))
     p = subprocess.run([node, run], capture_output=True, text=True, timeout=120)
     if p.returncode != 0:
         print("[ERR] 检查器没跑成：%s" % (p.stderr.strip()[-400:] or "rc=%s" % p.returncode))
@@ -257,6 +277,31 @@ def main():
             # 前端判定「不适用」（不在池且无断板结构 / 日线不足且不在池）→ 空是正确降级
             continue
         bad.extend(_check_compact(code, h))
+
+    # 自检：故意把某只票的尾盘红柱改错，闸门必须抓到（否则就是空转）
+    if "--selftest" in sys.argv:
+        import copy as _copy
+        _mk = [c for c in CASES if MINS.get(c, {}).get("tailRedPct") is not None]
+        if _mk:
+            _c = _mk[0]
+            _mut = _copy.deepcopy(MINS)
+            _old = _mut[_c]["tailRedPct"]
+            _mut[_c]["tailRedPct"] = (int(_old) + 13) % 100
+            open(run, "w", encoding="utf-8").write(
+                NODE.replace("__SRC__", repr(DATA))
+                    .replace("__FNS__", repr(fns))
+                    .replace("__CODES__", json.dumps([_c]))
+                    .replace("__CUTS__", json.dumps({}))
+                    .replace("__MINS__", json.dumps(_mut, ensure_ascii=False)))
+            _p2 = subprocess.run([node, run], capture_output=True, text=True, timeout=120)
+            _h2 = json.loads(_p2.stdout.strip().splitlines()[-1]).get(_c, "")
+            _e2 = _check_compact(_c, _h2)
+            if _e2:
+                print("[SELFTEST OK] 篡改 %s 尾盘红柱 %s→%s 被抓住：%s"
+                      % (_c, _old, _mut[_c]["tailRedPct"], _e2[0]))
+            else:
+                print("[SELFTEST FAIL] 尾盘红柱被改错却没报错——闸门空转")
+                bad.append("selftest: 数字篡改未被检出")
 
     if bad:
         print("[FAIL] 量能解读数字对不上：")
