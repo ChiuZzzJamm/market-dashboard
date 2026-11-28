@@ -9424,8 +9424,22 @@ function stkEnergyHtml(code) {
   else if (m.aboveVwap === true && (m.closeLowPct || 0) >= 1.5) { kind = '偏承接（站上均价线）'; kcls = 'ok'; }
   else if (m.aboveVwap === false && (m.closeLowPct || 0) < 1.2) { kind = '像出货（收在低位、破均价线）'; kcls = 'bad'; }
   else { kind = '温和换手'; kcls = ''; }
-  var pos = (m.aboveVwap === true) ? '收盘站上分时均价线'
-          : (m.aboveVwap === false ? '全天压在均价线下方' : '均价线关系未取到');
+  /* 2026-11-28 用户：光写「收盘站上均价线」不够，要说明盘中的过程——
+     有没有站上过、破了几次、跌破多久才收回、收盘没站上但盘中站过、还是全天被压制只触碰几次。 */
+  var pos;
+  if (m.abovePct == null) {
+    pos = (m.aboveVwap === true) ? '收盘站上分时均价线'
+        : (m.aboveVwap === false ? '收盘在均价线下' : '均价线关系未取到');
+  } else if (m.endAbove && !m.breakN) {
+    pos = '全天站在均价线上，未跌破';
+  } else if (m.endAbove) {
+    pos = '收盘站上（盘中破 ' + m.breakN + ' 次，最长 ' + m.belowMaxMin + ' 分钟，' +
+          (m.firstRecoverMin != null ? '首次 ' + m.firstRecoverMin + ' 分钟收回' : '') + '）';
+  } else if (m.wasAbove) {
+    pos = '收盘失守（盘中站上过 ' + m.abovePct + '% 的时间，尾盘跌破）';
+  } else {
+    pos = '全天被压制，没站上过均价线' + (m.touchN ? '（触碰 ' + m.touchN + ' 次都被打回）' : '');
+  }
 
   // 只认红柱（买盘）爆量
   var bs = m.bursts || [];

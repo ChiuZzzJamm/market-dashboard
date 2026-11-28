@@ -150,6 +150,38 @@ def analyse(rows):
     _vn = sum(r["c"] * r["v"] for r in rows); _vd = sum(r["v"] for r in rows)
     vwap = round(_vn / _vd, 3) if _vd else None
     above_vwap = (rows[-1]["c"] >= vwap) if vwap else None
+    # 2026-11-28 用户：不要只写「收盘站上均价线」——要说明**盘中**站上没站上、
+    # 破了几次、跌破多久才收回、收盘没站上但盘中站上过、还是全天被压制只触碰过几次。
+    # 这里按「运行均价线」（每分钟累计成交额/累计量，与行情软件一致）逐分钟判位置。
+    run_v, amt, vol = [], 0.0, 0.0
+    for r in rows:
+        amt += r["c"] * r["v"]; vol += r["v"]
+        run_v.append(amt / vol if vol else r["c"])
+    above = [rows[i]["c"] >= run_v[i] for i in range(len(rows))]
+    above_pct = round(sum(1 for x in above if x) / len(above) * 100)
+    # 跌破区间（由上→下，到回线为止）
+    segs, inb, st = [], False, 0
+    for i, a in enumerate(above):
+        if not a and not inb:
+            inb, st = True, i
+        elif a and inb:
+            inb = False; segs.append((st, i))
+    if inb:
+        segs.append((st, len(above)))
+    break_n = len(segs)
+    below_max = max((b - a for a, b in segs), default=0)
+    first_rec = (segs[0][1] - segs[0][0]) if segs else None
+    # 触碰：在下方但距线 ≤0.3%（含刚突破一点又被打回），按连续段计数
+    touch_n, prev_t = 0, False
+    for i in range(1, len(rows)):
+        if not above[i]:
+            gap = (run_v[i] - rows[i]["c"]) / max(1e-9, run_v[i]) * 100
+            t = gap <= 0.3
+            if t and not prev_t:
+                touch_n += 1
+            prev_t = t
+        else:
+            prev_t = False
     last_burst_dir = bursts[-1]["dir"] if bursts else None
     early = [b for b in bursts if EARLY[0] <= b["t"] <= EARLY[1]]
     return {
@@ -161,6 +193,9 @@ def analyse(rows):
         "tailVolPct": tail_vol, "limitUp": limit_up,
         "closeLowPct": close_low_pct, "tailLift": tail_lift,
         "vwap": vwap, "aboveVwap": above_vwap, "lastBurstDir": last_burst_dir,
+        "abovePct": above_pct, "breakN": break_n, "belowMaxMin": below_max,
+        "firstRecoverMin": first_rec, "touchN": touch_n,
+        "endAbove": bool(above[-1]), "wasAbove": any(above),
         "hold": hold,
         "verdict": ("红多且尾盘强" if red > green and tail_pct >= 55 else
                     "红绿相当" if abs(red - green) <= 0.2 * max(1, red + green) else
