@@ -1231,7 +1231,21 @@
   .en-h { font-size: var(--fs-md); font-weight: 800; color: var(--ink); margin-bottom: 7px; }
   .en-tag { font-size: var(--fs-xs); font-weight: 400; color: var(--ink2); border: 1px solid var(--line);
     border-radius: 3px; padding: 0 4px; margin-left: 6px; vertical-align: 2px; }
-  .en-min { margin-top: 6px; font-size: var(--fs-xs); color: var(--ink2); line-height: 1.6; }
+  .en-min { margin-top: 6px; font-size: var(--fs-sm); color: var(--ink2); line-height: 1.6; }
+  /* 2026-11-28：量能解读只留三件事（承接 / 盘中量异动 / 尾盘红柱），其余收进「展开明细」 */
+  .en-mrow { display: flex; align-items: baseline; gap: 8px; padding: 2px 0; flex-wrap: wrap; }
+  .en-mrow > b { font-weight: 800; color: var(--ink); min-width: 4.2em; }
+  .en-mdate { font-size: var(--fs-xs); opacity: .8; }
+  .en-md { color: var(--ink2); font-size: var(--fs-xs); opacity: .85; }
+  /* 用涨红 / 警示橙，不用绿色——绿色在本站代表「跌」，拿来标「好」会误读 */
+  .en-mrow b.ok { color: var(--up, #f0435c); }
+  .en-mrow b.bad { color: #b4761f; }
+  .en-details { margin-top: 8px; }
+  .en-details > summary { cursor: pointer; font-size: var(--fs-xs); color: var(--ink2);
+    padding: 3px 0; list-style: none; }
+  .en-details > summary::-webkit-details-marker { display: none; }
+  .en-details > summary::before { content: "▸ "; }
+  .en-details[open] > summary::before { content: "▾ "; }
   .en-next { margin-top: 7px; padding: 6px 9px; border-left: 3px solid var(--accent);
              background: var(--accent-soft); border-radius: 0 var(--r-note) var(--r-note) 0;
              font-size: var(--fs-sm); line-height: 1.65; color: var(--ink); }
@@ -8515,7 +8529,7 @@ function openDbModal(key) {
   //   不跟着 K 线异步补拉重画——否则每次补拉都要重算一遍量能文案。
   (function () {
     var _en = document.getElementById('db-energy');
-    if (_en) _en.innerHTML = stkEnergyHtml(String(e.code));
+    if (_en) { _en.innerHTML = stkEnergyHtml(String(e.code)); enCollapse(_en); }
   })();
   // R100z209（用户 2026-10-25 三条要求）：消息面统一走 newsFaceBlock ——
   //   ① 汇总条数上移到口径行（原「个股公告与新闻：公告 3 条 · 新闻 6 条」标题行删除）；
@@ -9341,25 +9355,51 @@ function stkEnergyInPool(code) {
 function stkMinLine(code) {
   var m0 = (window.__stkMin || {})[code];
   if (!m0) return '';
-  /* 用户 2026-11-26：「反包都成功了，你分析当天量能有什么用？要看的是洗盘那天。」
-     所以默认展示**上一交易日**（＝这只票现在所处洗盘段的前一天，也就是明天判断的输入），
-     没有 T-1 档案时才退回当日，并标清楚是哪一天。 */
+  /* 2026-11-28 用户：「量能解读提炼重点即可，我实际只在意三件事——
+     洗盘当天有没有承接、盘中分时量有没有异动、尾盘（临近收盘 5-10 分钟）红柱是否多于绿柱。」
+     所以这里只出三行，日线推演全部收进「展开明细」。 */
   var m = (m0.prev && m0.prevDate) ? m0.prev : m0;
-  var tag = (m0.prev && m0.prevDate) ? ('上一交易日 ' + String(m0.prevDate).slice(5))
-                                     : ('今日' + (m0.stale ? '（抓取失败，沿用旧值）' : ''));
-  var parts = [];
-  parts.push('红 <b>' + m.red + '</b> / 绿 <b>' + m.green + '</b>');
-  if (m.burstN) {
-    var b0 = (m.bursts && m.bursts[0]) ? m.bursts[0].t + ' ' + m.bursts[0].dir : '';
-    parts.push('爆量 <b>' + m.burstN + '</b> 次（早盘 ' + m.earlyBurst + ' 次' + (b0 ? '，首个 ' + b0 : '') + '）');
-  } else {
-    parts.push('无爆量（全天最大 5 分钟不足日均 2 倍）');
+  var day = (m0.prev && m0.prevDate) ? String(m0.prevDate).slice(5) : '今日';
+  var rows = [];
+  rows.push('<div class="en-mrow en-mdate">洗盘日 <b>' + day + '</b></div>');
+  var holdTxt, holdCls;
+  if (m.hold === true) { holdTxt = '有承接'; holdCls = 'ok'; }
+  else if (m.hold === false) { holdTxt = '无承接'; holdCls = 'bad'; }
+  else if (m.limitUp) { holdTxt = '已封板（不适用）'; holdCls = ''; }
+  else { holdTxt = '未判定'; holdCls = ''; }
+  rows.push('<div class="en-mrow">承接 <b class="' + holdCls + '">' + holdTxt + '</b>' +
+    (m.hold === true ? '<span class="en-md">爆量后 15 分钟未创新低</span>'
+     : m.hold === false ? '<span class="en-md">爆量后 15 分钟创了新低</span>' : '') + '</div>');
+  var b = m.burstN || 0;
+  var b0 = (m.bursts && m.bursts[0]) ? (m.bursts[0].t + ' ' + m.bursts[0].dir) : '';
+  rows.push('<div class="en-mrow">盘中量异动 <b class="' + (b ? 'ok' : 'bad') + '">' +
+    (b ? b + ' 次' : '无') + '</b>' +
+    (b ? '<span class="en-md">早盘 ' + m.earlyBurst + ' 次' + (b0 ? '，首个 ' + b0 : '') + '</span>' : '') + '</div>');
+  if (m.limitUp) {
+    rows.push('<div class="en-mrow">尾盘红柱 <b>—</b><span class="en-md">已封板，尾盘无成交</span></div>');
+  } else if (m.tailRedPct !== null && m.tailRedPct !== undefined) {
+    var more = m.tailRedPct >= 50;
+    rows.push('<div class="en-mrow">尾盘红柱 <b class="' + (more ? 'ok' : 'bad') + '">' + m.tailRedPct + '%</b>' +
+      '<span class="en-md">红 ' + m.red + ' / 绿 ' + m.green + (more ? '，红多' : '，绿多') + '</span></div>');
   }
-  if (m.limitUp) parts.push('已封板（尾盘无成交，尾盘红柱不适用）');
-  else if (m.tailRedPct !== null && m.tailRedPct !== undefined) parts.push('尾盘红柱 <b>' + m.tailRedPct + '%</b>');
-  parts.push(m.hold === true ? '爆量后 15 分钟<b>未创新低（承接成立）</b>'
-                             : (m.hold === false ? '爆量后 15 分钟<b>创了新低（承接失败）</b>' : '承接未判定'));
-  return '<div class="en-min">分时（' + tag + '）：' + parts.join('　｜　') + '</div>';
+  return '<div class="en-min">' + rows.join('') + '</div>';
+}
+
+function enCollapse(el) {
+  if (!el) return;
+  var rest = [];
+  Array.prototype.slice.call(el.childNodes).forEach(function (nd) {
+    if (nd.nodeType === 1 && (nd.classList.contains('en-h') || nd.classList.contains('en-min'))) return;
+    rest.push(nd);
+  });
+  if (!rest.length) return;
+  var d = document.createElement('details');
+  d.className = 'en-details';
+  var sm = document.createElement('summary');
+  sm.textContent = '展开明细（首板 / 断板 / 逐日分时推演）';
+  d.appendChild(sm);
+  rest.forEach(function (nd) { d.appendChild(nd); });
+  el.appendChild(d);
 }
 
 function stkEnergyHtml(code) {
@@ -9840,7 +9880,7 @@ function stkEnergyHtml(code) {
       stkMinLine(code) + '</div>' : '') + '</div>';
 }
 function stkRenderEnergy(code) {
-  var box = document.getElementById('stk-energy');
+  var box = document.getElementById('stk-energy'); enCollapse(box);
   if (!box) return;
   var h = '';
   try { h = stkEnergyHtml(code); } catch (e) {
